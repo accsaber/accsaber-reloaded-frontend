@@ -1,0 +1,26 @@
+@import './reset.css';
+@import './tokens.css';
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  line-height: 1.5;
+}
+
+.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,132 @@
+:root {
+  /* --- Base Palette (Dark Mode - Default) --- */
+  --bg-base: #0a0a0f;
+  --bg-surface: #14141f;
+  --bg-elevated: #1e1e2e;
+  --bg-overlay: #2a2a3a;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a0;
+  --text-tertiary: #5a5a72;
+
+  /* --- Category Accents --- */
+  --accent-true-acc: #22c55e;
+  --accent-standard-acc: #3b82f6;
+  --accent-tech-acc: #ef4444;
+  --accent-low-mid: #eab308;
+  --accent-overall: #a855f7;
+
+  /* --- Category Tints (Dark) --- */
+  --tint-true-acc: #0f3d1e;
+  --tint-standard-acc: #162650;
+  --tint-tech-acc: #3d1414;
+  --tint-low-mid: #3d3508;
+  --tint-overall: #2d1650;
+
+  /* --- Semantic Colors --- */
+  --success: #22c55e;
+  --warning: #eab308;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  /* --- Difficulty Colors --- */
+  --diff-easy: #3cb371;
+  --diff-normal: #4a90d9;
+  --diff-hard: #f97316;
+  --diff-expert: #ef4444;
+  --diff-expert-plus: #8b5cf6;
+
+  /* --- Milestone Tiers --- */
+  --tier-bronze: #cd7f32;
+  --tier-silver: #c0c0c0;
+  --tier-gold: #ffd700;
+  --tier-platinum: #4dd9e0;
+  --tier-diamond: #b9f2ff;
+
+  /* --- Level Tier Colors --- */
+  --tier-newcomer: #6b7280;
+  --tier-apprentice: #3b82f6;
+  --tier-adept: #10b981;
+  --tier-skilled: #cd7f32;
+  --tier-expert: #c0c0d0;
+  --tier-master: #fbbf24;
+  --tier-grandmaster: #8b5cf6;
+  --tier-legend: #f97316;
+  --tier-transcendent: #22d3ee;
+  --tier-mythic: #ef4444;
+  --tier-ascendant: #f472b6;
+
+  /* --- Role Colors --- */
+  --role-admin: #ef4444;
+  --role-developer: #3b82f6;
+  --role-moderator: #22c55e;
+  --role-head-ranking: #eab308;
+  --role-ranking: #a855f7;
+
+  /* --- Chart --- */
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-text: #8888a0;
+
+  /* --- Default Accent (Overall) --- */
+  --accent: var(--accent-overall);
+
+  /* --- Spacing --- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* --- Border Radius --- */
+  --radius-btn: 4px;
+  --radius-input: 4px;
+  --radius-card: 6px;
+  --radius-avatar: 8px;
+  --radius-modal: 8px;
+  --radius-pill: 12px;
+
+  /* --- Typography --- */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', ui-monospace, 'Cascadia Code', monospace;
+
+  /* --- Font Sizes --- */
+  --text-page-title: 1.75rem;
+  --text-section-heading: 1.25rem;
+  --text-card-title: 1rem;
+  --text-body: 0.875rem;
+  --text-caption: 0.75rem;
+  --text-stat-lg: 1.5rem;
+  --text-stat-inline: 0.875rem;
+}
+
+/* --- Light Mode --- */
+[data-theme='light'] {
+  --bg-base: #f4f4f8;
+  --bg-surface: #ffffff;
+  --bg-elevated: #eaeaf0;
+  --bg-overlay: #d0d0dc;
+  --text-primary: #1a1a2e;
+  --text-secondary: #6a6a82;
+  --text-tertiary: #9a9ab2;
+
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-text: #6a6a82;
+
+  /* Category Tints (Light) */
+  --tint-true-acc: #d4f5e0;
+  --tint-standard-acc: #d4e4fd;
+  --tint-tech-acc: #fdd4d4;
+  --tint-low-mid: #faf0c8;
+  --tint-overall: #ead4fd;
+}
+
+/* --- Theme transition --- */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
