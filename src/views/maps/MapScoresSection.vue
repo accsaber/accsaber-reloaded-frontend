@@ -56,7 +56,7 @@ const loading = ref(true)
 
 const detailOpen = ref(false)
 const detailScore = ref<ScoreDisplay | null>(null)
-const detailSteamId = ref('')
+const detailUserId = ref('')
 
 const showStreak115 = computed(() =>
   sortState.value.key === 'streak115' || scores.value.some((s) => s.streak115 != null && s.streak115 > 0),
@@ -102,19 +102,19 @@ const rows = computed(() => {
 const countryOptions = COUNTRY_OPTIONS
 
 function scoreRowClass(row: Record<string, unknown>): Record<string, boolean> | undefined {
-  if (!authStore.steamId) return undefined
-  return { 'data-table__row--self-highlight': row._userId === authStore.steamId }
+  if (!authStore.userId) return undefined
+  return { 'data-table__row--self-highlight': row._userId === authStore.userId }
 }
 
 function handleRowClick(row: Record<string, unknown>) {
-  router.push({ name: 'player-profile', params: { steamId: row._userId as string } })
+  router.push({ name: 'player-profile', params: { userId: row._userId as string } })
 }
 
 function openDetail(index: number, event: Event) {
   event.stopPropagation()
   const s = scores.value[index]
   if (!s) return
-  detailSteamId.value = s.userId
+  detailUserId.value = s.userId
   detailScore.value = {
     mapId: props.mapId,
     mapDifficultyId: props.difficultyId,
@@ -251,7 +251,7 @@ watch(
       </template>
 
       <template #mobile-card="{ row }">
-        <div class="ms-card" :class="{ 'ms-card--self-highlight': !!authStore.steamId && row._userId === authStore.steamId }" @click="handleRowClick(row)">
+        <div class="ms-card" :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }" @click="handleRowClick(row)">
           <span class="ms-card__rank map-scores__rank" :class="getRankClass(countryFilter ? (row.countryRank as number) : (row.rank as number))">
             #{{ countryFilter ? row.countryRank : row.rank }}
           </span>
@@ -279,7 +279,7 @@ watch(
     <ScoreDetailModal
       :open="detailOpen"
       :score="detailScore"
-      :steam-id="detailSteamId"
+      :user-id="detailUserId"
       :accent-color="accentColor"
       @close="detailOpen = false"
     />

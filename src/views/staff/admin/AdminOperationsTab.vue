@@ -83,15 +83,15 @@ async function recalcXpSums() {
 }
 
 const playerStats = ref(makeOp())
-const statsSteamId = ref('')
+const statsUserId = ref('')
 const statsCategoryId = ref('')
 
 async function recalcPlayerStats() {
-  if (!statsSteamId.value) return
+  if (!statsUserId.value) return
   run(playerStats.value, async () => {
     const { recalculatePlayerStats } = await import('@/api/admin/recalculation')
-    await recalculatePlayerStats(statsSteamId.value, statsCategoryId.value || undefined)
-    statsSteamId.value = ''
+    await recalculatePlayerStats(statsUserId.value, statsCategoryId.value || undefined)
+    statsUserId.value = ''
   }, 'Player stats recalculation queued.')
 }
 const backfill = ref(makeOp())
@@ -112,15 +112,15 @@ async function backfillScores() {
 }
 
 const playerRefresh = ref(makeOp())
-const refreshSteamId = ref('')
+const refreshUserId = ref('')
 const refreshAllOp = ref(makeOp())
 
 async function refreshPlayer() {
-  if (!refreshSteamId.value) return
+  if (!refreshUserId.value) return
   run(playerRefresh.value, async () => {
     const { refreshPlayer: api } = await import('@/api/admin/recalculation')
-    await api(refreshSteamId.value)
-    refreshSteamId.value = ''
+    await api(refreshUserId.value)
+    refreshUserId.value = ''
   }, 'Player refresh queued.')
 }
 
@@ -186,7 +186,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="scope scope--targeted">targeted</span>
         </div>
         <p class="op-card__desc">Recalculate statistics for a specific player. Optionally filter to one category.</p>
-        <BaseInput v-model="statsSteamId" placeholder="Steam ID" />
+        <BaseInput v-model="statsUserId" placeholder="User ID" />
         <div class="cat-row">
           <button
             class="cat-btn" :class="{ 'cat-btn--active': !statsCategoryId }"
@@ -199,7 +199,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           >{{ cat.name }}</button>
         </div>
         <div class="op-card__foot">
-          <BaseButton variant="primary" :loading="playerStats.loading" :disabled="!statsSteamId" @click="recalcPlayerStats">Run</BaseButton>
+          <BaseButton variant="primary" :loading="playerStats.loading" :disabled="!statsUserId" @click="recalcPlayerStats">Run</BaseButton>
           <span v-if="playerStats.result" class="result" :class="playerStats.ok ? 'result--ok' : 'result--err'">{{ playerStats.result }}</span>
         </div>
       </div>
@@ -225,9 +225,9 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="scope scope--targeted">targeted</span>
         </div>
         <p class="op-card__desc">Re-fetch player data from external sources.</p>
-        <BaseInput v-model="refreshSteamId" placeholder="Steam ID" />
+        <BaseInput v-model="refreshUserId" placeholder="User ID" />
         <div class="op-card__foot">
-          <BaseButton :loading="playerRefresh.loading" :disabled="!refreshSteamId" @click="refreshPlayer">Refresh Player</BaseButton>
+          <BaseButton :loading="playerRefresh.loading" :disabled="!refreshUserId" @click="refreshPlayer">Refresh Player</BaseButton>
           <BaseButton variant="destructive" :loading="refreshAllOp.loading" @click="refreshAll">Refresh All</BaseButton>
           <span v-if="playerRefresh.result" class="result" :class="playerRefresh.ok ? 'result--ok' : 'result--err'">{{ playerRefresh.result }}</span>
           <span v-if="refreshAllOp.result" class="result" :class="refreshAllOp.ok ? 'result--ok' : 'result--err'">{{ refreshAllOp.result }}</span>

@@ -31,8 +31,8 @@ export function recalculateXpSums(): Promise<void> {
 
 // --- Stats recalculation ---
 
-export function recalculatePlayerStats(steamId: string, categoryId?: string): Promise<void> {
-  return post<void>(`/admin/recalculate/stats/player/${steamId}${buildQuery({ categoryId })}`)
+export function recalculatePlayerStats(userId: string, categoryId?: string): Promise<void> {
+  return post<void>(`/admin/recalculate/stats/player/${userId}${buildQuery({ categoryId })}`)
 }
 
 // --- Score backfill ---
@@ -47,8 +47,8 @@ export function backfillScoresByDifficulty(difficultyId: string): Promise<void> 
 
 // --- Player refresh ---
 
-export function refreshPlayer(steamId: string): Promise<void> {
-  return post<void>(`/admin/import/players/${steamId}/refresh`)
+export function refreshPlayer(userId: string): Promise<void> {
+  return post<void>(`/admin/import/players/${userId}/refresh`)
 }
 
 export function refreshAllPlayers(): Promise<void> {

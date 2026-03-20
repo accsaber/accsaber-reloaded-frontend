@@ -61,7 +61,7 @@ const countryFilter = computed<string>({
 const searchQuery = ref('')
 const loading = ref(false)
 const pageData = ref<Page<LeaderboardResponse> | null>(null)
-const highlightedSteamId = ref<string | null>(null)
+const highlightedUserId = ref<string | null>(null)
 
 const players = computed<PlayerDisplay[]>(() => {
   if (!pageData.value) return []
@@ -72,7 +72,7 @@ const rows = computed(() =>
   players.value.map((p) => ({
     rank: p.rank,
     countryRank: p.countryRank,
-    steamId: p.steamId,
+    userId: p.userId,
     name: p.name,
     country: p.country,
     avatarUrl: p.avatarUrl,
@@ -116,24 +116,24 @@ async function fetchData() {
 
   const highlightId = route.query.highlight as string | undefined
   if (highlightId) {
-    highlightedSteamId.value = highlightId
+    highlightedUserId.value = highlightId
     router.replace({ query: { ...route.query, highlight: undefined } })
     await nextTick()
-    const row = document.querySelector(`[data-steam-id="${highlightId}"]`)
+    const row = document.querySelector(`[data-user-id="${highlightId}"]`)
     if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setTimeout(() => { highlightedSteamId.value = null }, 2000)
+    setTimeout(() => { highlightedUserId.value = null }, 2000)
   }
 }
 
 function rowClass(row: Record<string, unknown>): Record<string, boolean> {
   return {
-    'data-table__row--highlighted': row.steamId === highlightedSteamId.value,
-    'data-table__row--self-highlight': !!authStore.steamId && row.steamId === authStore.steamId,
+    'data-table__row--highlighted': row.userId === highlightedUserId.value,
+    'data-table__row--self-highlight': !!authStore.userId && row.userId === authStore.userId,
   }
 }
 
 function handleRowClick(row: Record<string, unknown>) {
-  router.push({ name: 'player-profile', params: { steamId: row.steamId as string } })
+  router.push({ name: 'player-profile', params: { userId: row.userId as string } })
 }
 
 function handleCategoryChange(code: CategoryCode) {
@@ -193,7 +193,7 @@ watch(() => categoryStore.loaded, (loaded) => {
         </template>
 
         <template #cell-player="{ row }">
-          <div class="player-cell" :data-steam-id="row.steamId">
+          <div class="player-cell" :data-user-id="row.userId">
             <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="32" />
             <span class="player-cell__name">{{ row.name }}</span>
             <CountryFlag :country="(row.country as string)" />
@@ -213,10 +213,10 @@ watch(() => categoryStore.loaded, (loaded) => {
 
         <template #mobile-card="{ row }">
           <div class="lb-card" :class="[
-            { 'lb-card--highlighted': row.steamId === highlightedSteamId },
-            { 'lb-card--self-highlight': !!authStore.steamId && row.steamId === authStore.steamId },
+            { 'lb-card--highlighted': row.userId === highlightedUserId },
+            { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
             rowClass(row)
-          ]" :data-steam-id="row.steamId" @click="handleRowClick(row)">
+          ]" :data-user-id="row.userId" @click="handleRowClick(row)">
             <span class="lb-card__rank rank-cell" :class="getRankClass(countryFilter && row.countryRank ? row.countryRank as number : row.rank as number)">
               #{{ countryFilter && row.countryRank ? row.countryRank : row.rank }}
             </span>

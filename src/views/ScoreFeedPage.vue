@@ -29,7 +29,7 @@ const filteredScores = computed(() => {
 
 const modalOpen = ref(false)
 const modalScore = ref<ScoreDisplay | null>(null)
-const modalSteamId = ref('')
+const modalUserId = ref('')
 
 function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
   return {
@@ -60,7 +60,7 @@ function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
 
 function onSelectScore(entry: ScoreFeedEntry) {
   modalScore.value = toScoreDisplay(entry)
-  modalSteamId.value = entry.userId
+  modalUserId.value = entry.userId
   modalOpen.value = true
 }
 
@@ -99,7 +99,7 @@ onMounted(connect)
     <ScoreDetailModal
       :open="modalOpen"
       :score="modalScore"
-      :steam-id="modalSteamId"
+      :user-id="modalUserId"
       @close="modalOpen = false"
     />
   </div>

@@ -19,7 +19,7 @@ const ROLE_HIERARCHY: Record<StaffRole, number> = {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const steamId = ref<string | null>(localStorage.getItem('steamId'))
+  const userId = ref<string | null>(localStorage.getItem('userId'))
   const staffToken = ref<string | null>(localStorage.getItem('staffToken'))
   const staffRefreshToken = ref<string | null>(localStorage.getItem('staffRefreshToken'))
   const staffRole = ref<StaffRole | null>(
@@ -30,7 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
   )
   const userProfile = ref<UserProfile | null>(null)
 
-  const isLoggedIn = computed(() => steamId.value !== null)
+  const isLoggedIn = computed(() => userId.value !== null)
   const isStaffAuthenticated = computed(() => staffToken.value !== null)
   const isAdmin = computed(() => staffRole.value === 'ADMIN')
   const isTokenExpiringSoon = computed(
@@ -42,15 +42,15 @@ export const useAuthStore = defineStore('auth', () => {
     return ROLE_HIERARCHY[staffRole.value] >= ROLE_HIERARCHY[requiredRole]
   }
 
-  function setSteamId(id: string) {
-    steamId.value = id
-    localStorage.setItem('steamId', id)
+  function setUserId(id: string) {
+    userId.value = id
+    localStorage.setItem('userId', id)
   }
 
-  function clearSteamId() {
-    steamId.value = null
+  function clearUserId() {
+    userId.value = null
     userProfile.value = null
-    localStorage.removeItem('steamId')
+    localStorage.removeItem('userId')
   }
 
   function setProfile(user: { name: string; avatarUrl: string; country: string }) {
@@ -130,9 +130,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchProfile(): Promise<void> {
-    if (!steamId.value) return
+    if (!userId.value) return
     try {
-      const user = await getUser(steamId.value)
+      const user = await getUser(userId.value)
       userProfile.value = {
         name: user.name,
         avatarUrl: user.avatarUrl,
@@ -144,7 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    steamId,
+    userId,
     staffToken,
     staffRefreshToken,
     staffRole,
@@ -155,8 +155,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isTokenExpiringSoon,
     hasRole,
-    setSteamId,
-    clearSteamId,
+    setUserId,
+    clearUserId,
     setProfile,
     setStaffAuth,
     clearStaffAuth,

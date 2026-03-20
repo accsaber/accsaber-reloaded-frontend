@@ -28,7 +28,7 @@ async function handleLogin() {
   try {
     const { linkUser } = await import('@/api/users')
     const user = await linkUser(input.value.trim())
-    authStore.setSteamId(user.id)
+    authStore.setUserId(user.id)
     authStore.setProfile(user)
     input.value = ''
     emit('close')
@@ -39,7 +39,7 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-  authStore.clearSteamId()
+  authStore.clearUserId()
   emit('close')
 }
 </script>

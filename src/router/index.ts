@@ -39,7 +39,7 @@ const router = createRouter({
       component: () => import('@/views/MapDetailPage.vue'),
     },
     {
-      path: '/players/:steamId',
+      path: '/players/:userId',
       name: 'player-profile',
       component: () => import('@/views/PlayerProfilePage.vue'),
     },

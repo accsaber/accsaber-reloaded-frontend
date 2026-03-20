@@ -14,8 +14,8 @@ import type { Page, PaginationParams } from '@/types/pagination'
 import { get } from './client'
 import { buildQuery } from './utils'
 
-export function getUser(steamId: string): Promise<UserResponse> {
-  return get<UserResponse>(`/users/${steamId}`)
+export function getUser(userId: string): Promise<UserResponse> {
+  return get<UserResponse>(`/users/${userId}`)
 }
 
 export function linkUser(url: string): Promise<UserResponse> {
@@ -23,73 +23,73 @@ export function linkUser(url: string): Promise<UserResponse> {
 }
 
 export function getUserScores(
-  steamId: string,
+  userId: string,
   params?: UserScoresParams,
 ): Promise<Page<ScoreResponse>> {
-  return get<Page<ScoreResponse>>(`/users/${steamId}/scores${buildQuery(params)}`)
+  return get<Page<ScoreResponse>>(`/users/${userId}/scores${buildQuery(params)}`)
 }
 
-export function getUserLevel(steamId: string): Promise<LevelResponse> {
-  return get<LevelResponse>(`/users/${steamId}/level`)
+export function getUserLevel(userId: string): Promise<LevelResponse> {
+  return get<LevelResponse>(`/users/${userId}/level`)
 }
 
 export function getUserMilestones(
-  steamId: string,
+  userId: string,
   params?: PaginationParams,
 ): Promise<Page<UserMilestoneProgressResponse>> {
   return get<Page<UserMilestoneProgressResponse>>(
-    `/users/${steamId}/milestones${buildQuery(params)}`,
+    `/users/${userId}/milestones${buildQuery(params)}`,
   )
 }
 
 export function getUserCampaignProgress(
-  steamId: string,
+  userId: string,
   campaignId: string,
 ): Promise<CampaignProgressResponse> {
-  return get<CampaignProgressResponse>(`/users/${steamId}/campaigns/${campaignId}/progress`)
+  return get<CampaignProgressResponse>(`/users/${userId}/campaigns/${campaignId}/progress`)
 }
 
 export function getUserOverallStatistics(
-  steamId: string,
+  userId: string,
 ): Promise<UserCategoryStatisticsResponse> {
-  return get<UserCategoryStatisticsResponse>(`/users/${steamId}/statistics`)
+  return get<UserCategoryStatisticsResponse>(`/users/${userId}/statistics`)
 }
 
 export function getUserCategoryStatistics(
-  steamId: string,
+  userId: string,
   category?: string,
 ): Promise<UserCategoryStatisticsResponse[]> {
   if (category) {
     return get<UserCategoryStatisticsResponse[]>(
-      `/users/${steamId}/statistics${buildQuery({ category })}`,
+      `/users/${userId}/statistics${buildQuery({ category })}`,
     )
   }
-  return get<UserCategoryStatisticsResponse[]>(`/users/${steamId}/statistics/all`)
+  return get<UserCategoryStatisticsResponse[]>(`/users/${userId}/statistics/all`)
 }
 
 export function getUserHistoricStatistics(
-  steamId: string,
+  userId: string,
   params: HistoricStatisticsParams,
 ): Promise<UserCategoryStatisticsResponse[]> {
   return get<UserCategoryStatisticsResponse[]>(
-    `/users/${steamId}/statistics/historic${buildQuery(params)}`,
+    `/users/${userId}/statistics/historic${buildQuery(params)}`,
   )
 }
 
 export function getUserStatsDiff(
-  steamId: string,
+  userId: string,
   category?: string,
 ): Promise<StatsDiffResponse | null> {
   return get<StatsDiffResponse | undefined>(
-    `/users/${steamId}/stats-diff${buildQuery({ category })}`,
+    `/users/${userId}/stats-diff${buildQuery({ category })}`,
   )
     .then((res) => res ?? null)
     .catch(() => null)
 }
 
 export function getUserScoresHistoric(
-  steamId: string,
+  userId: string,
   params: HistoricScoresParams,
 ): Promise<ScoreResponse[]> {
-  return get<ScoreResponse[]>(`/users/${steamId}/scores/historic${buildQuery(params)}`)
+  return get<ScoreResponse[]>(`/users/${userId}/scores/historic${buildQuery(params)}`)
 }

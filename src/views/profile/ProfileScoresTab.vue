@@ -13,7 +13,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = withDefaults(defineProps<{
-  steamId: string
+  userId: string
   category: CategoryCode
   search?: string
 }>(), {
@@ -109,7 +109,7 @@ async function fetchScores() {
       search,
     }
 
-    scoreData.value = await getUserScores(props.steamId, params)
+    scoreData.value = await getUserScores(props.userId, params)
   } catch {
     scoreData.value = null
   }
@@ -133,7 +133,7 @@ watch(() => props.search, () => { resetPage() })
 watch(() => props.category, () => { resetPage() })
 
 watch(
-  [() => props.steamId, () => props.category, paginationParams, () => props.search],
+  [() => props.userId, () => props.category, paginationParams, () => props.search],
   () => { fetchScores() },
   { immediate: true },
 )
@@ -209,7 +209,7 @@ watch(
       </template>
     </ScoreTable>
 
-    <ScoreDetailModal :open="detailOpen" :score="detailScore" :steam-id="steamId" :accent-color="accent"
+    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="userId" :accent-color="accent"
       @close="detailOpen = false" />
   </div>
 </template>

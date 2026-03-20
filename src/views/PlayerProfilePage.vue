@@ -21,7 +21,7 @@ const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
 
-const steamId = computed(() => route.params.steamId as string)
+const userId = computed(() => route.params.userId as string)
 
 const user = ref<UserResponse | null>(null)
 const level = ref<LevelResponse | null>(null)
@@ -51,7 +51,7 @@ const accent = computed(() => categoryStore.getAccent(activeCategory.value))
 async function fetchStatsDiff() {
   try {
     const { getUserStatsDiff } = await import('@/api/users')
-    statsDiff.value = await getUserStatsDiff(steamId.value, activeCategory.value)
+    statsDiff.value = await getUserStatsDiff(userId.value, activeCategory.value)
   } catch {
     statsDiff.value = null
   }
@@ -69,7 +69,7 @@ function navigateToGlobalRank() {
   router.push({
     name: 'leaderboards-category',
     params: { categoryCode: activeCategory.value },
-    query: { page: String(page), highlight: steamId.value },
+    query: { page: String(page), highlight: userId.value },
   })
 }
 
@@ -80,7 +80,7 @@ function navigateToCountryRank() {
   router.push({
     name: 'leaderboards-category',
     params: { categoryCode: activeCategory.value },
-    query: { country: user.value.country, page: String(page), highlight: steamId.value },
+    query: { country: user.value.country, page: String(page), highlight: userId.value },
   })
 }
 
@@ -94,12 +94,12 @@ async function fetchProfile() {
   try {
     const { getUser, getUserLevel, getUserCategoryStatistics } = await import('@/api/users')
 
-    const userRes = await getUser(steamId.value)
+    const userRes = await getUser(userId.value)
     user.value = userRes
 
     const [levelRes, statsRes] = await Promise.allSettled([
-      getUserLevel(steamId.value),
-      getUserCategoryStatistics(steamId.value),
+      getUserLevel(userId.value),
+      getUserCategoryStatistics(userId.value),
     ])
 
     if (levelRes.status === 'fulfilled') {
@@ -119,7 +119,7 @@ async function fetchProfile() {
   loading.value = false
 }
 
-watch(steamId, () => { fetchProfile() }, { immediate: true })
+watch(userId, () => { fetchProfile() }, { immediate: true })
 watch(activeCategory, () => { if (user.value) fetchStatsDiff() })
 </script>
 
@@ -207,10 +207,10 @@ watch(activeCategory, () => { if (user.value) fetchStatsDiff() })
       </div>
 
       <div class="profile-page__content">
-        <ProfileScoresTab v-if="activeTab === 'scores'" :steam-id="steamId" :category="activeCategory"
+        <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
           :search="scoreSearch" />
-        <ProfileStatisticsTab v-if="activeTab === 'statistics'" :steam-id="steamId" :category="activeCategory" />
-        <ProfileMilestonesTab v-if="activeTab === 'milestones'" :steam-id="steamId" />
+        <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory" />
+        <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
       </div>
     </template>
   </div>

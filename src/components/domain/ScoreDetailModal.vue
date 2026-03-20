@@ -16,7 +16,7 @@ import { useRouter } from 'vue-router'
 const props = defineProps<{
   open: boolean
   score: ScoreDisplay | null
-  steamId: string
+  userId: string
 }>()
 
 const emit = defineEmits<{
@@ -65,7 +65,7 @@ const chartFormatValue = computed(() =>
 
 function goToProfile() {
   emit('close')
-  router.push({ name: 'player-profile', params: { steamId: props.steamId } })
+  router.push({ name: 'player-profile', params: { userId: props.userId } })
 }
 
 function goToMap() {
@@ -79,7 +79,7 @@ async function fetchHistoric() {
   try {
     const { getUserScoresHistoric } = await import('@/api/users')
     const params = TIME_RANGE_PARAMS[selectedRange.value]
-    historicData.value = await getUserScoresHistoric(props.steamId, {
+    historicData.value = await getUserScoresHistoric(props.userId, {
       mapDifficultyId: props.score.mapDifficultyId,
       amount: params.amount,
       unit: params.unit,

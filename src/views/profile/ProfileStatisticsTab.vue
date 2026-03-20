@@ -7,7 +7,7 @@ import type { CategoryCode, MetricType, TimeRange, TimeSeriesPoint } from '@/typ
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
-  steamId: string
+  userId: string
   category: CategoryCode
 }>()
 
@@ -136,7 +136,7 @@ async function fetchChartData() {
   try {
     const { getUserHistoricStatistics } = await import('@/api/users')
     const params = timeRangeParams[selectedRange.value]
-    chartData.value = await getUserHistoricStatistics(props.steamId, {
+    chartData.value = await getUserHistoricStatistics(props.userId, {
       category: props.category,
       ...params,
     })
@@ -149,7 +149,7 @@ async function fetchChartData() {
 async function fetchAllTimeData() {
   try {
     const { getUserHistoricStatistics } = await import('@/api/users')
-    allTimeData.value = await getUserHistoricStatistics(props.steamId, {
+    allTimeData.value = await getUserHistoricStatistics(props.userId, {
       category: props.category,
       amount: 120,
       unit: 'mo',
@@ -160,13 +160,13 @@ async function fetchAllTimeData() {
 }
 
 watch(
-  [() => props.steamId, () => props.category, selectedRange],
+  [() => props.userId, () => props.category, selectedRange],
   () => { fetchChartData() },
   { immediate: true },
 )
 
 watch(
-  [() => props.steamId, () => props.category],
+  [() => props.userId, () => props.category],
   () => { fetchAllTimeData() },
   { immediate: true },
 )

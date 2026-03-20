@@ -31,7 +31,7 @@ export interface SortState {
 }
 
 export interface PlayerDisplay {
-  steamId: string
+  userId: string
   name: string
   country: string
   avatarUrl: string

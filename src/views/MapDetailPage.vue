@@ -359,8 +359,8 @@ watch(selectedStatsRange, () => fetchHistoricStats())
                 :class="{ 'map-detail__top-history-row--current': i === 0 }"
                 tabindex="0"
                 role="button"
-                @click="router.push({ name: 'player-profile', params: { steamId: entry.userId } })"
-                @keydown.enter="router.push({ name: 'player-profile', params: { steamId: entry.userId } })"
+                @click="router.push({ name: 'player-profile', params: { userId: entry.userId } })"
+                @keydown.enter="router.push({ name: 'player-profile', params: { userId: entry.userId } })"
               >
                 <img class="map-detail__top-avatar" :src="entry.avatarUrl" :alt="entry.userName" />
                 <span class="map-detail__top-name">{{ entry.userName }}</span>

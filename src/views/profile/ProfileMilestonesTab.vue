@@ -10,7 +10,7 @@ import { toMilestoneDisplay } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
-  steamId: string
+  userId: string
 }>()
 
 const categoryStore = useCategoryStore()
@@ -85,7 +85,7 @@ async function fetchMilestones() {
     ])
 
     const [milestoneRes, setRes] = await Promise.all([
-      getUserMilestones(props.steamId, { size: 100 }),
+      getUserMilestones(props.userId, { size: 100 }),
       getMilestoneSets({ size: 100 }),
     ]) as [Page<UserMilestoneProgressResponse>, Page<MilestoneSetResponse>]
 
@@ -102,7 +102,7 @@ async function fetchMilestones() {
   loading.value = false
 }
 
-watch(() => props.steamId, () => { fetchMilestones() }, { immediate: true })
+watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
 </script>
 
 <template>

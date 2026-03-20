@@ -15,7 +15,7 @@ export function formatDifficulty(diff: MapDifficultyResponse['difficulty']): str
 
 export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
   return {
-    steamId: entry.userId,
+    userId: entry.userId,
     name: entry.userName,
     country: entry.country,
     avatarUrl: entry.avatarUrl,
