@@ -1,3 +1,5 @@
+import { useAuthStore } from '@/stores/auth'
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -9,7 +11,6 @@ export class ApiError extends Error {
 }
 
 async function getAuthToken(): Promise<string | null> {
-  const { useAuthStore } = await import('@/stores/auth')
   const auth = useAuthStore()
 
   if (auth.staffToken && auth.isTokenExpiringSoon) {

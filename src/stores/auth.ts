@@ -1,3 +1,5 @@
+import { login as apiLogin, refreshToken as apiRefresh, logout as apiLogout } from '@/api/staff-auth'
+import { getUser } from '@/api/users'
 import type { StaffRole } from '@/types/enums'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
@@ -72,7 +74,6 @@ export const useAuthStore = defineStore('auth', () => {
   let refreshPromise: Promise<void> | null = null
 
   async function login(identifier: string, password: string): Promise<void> {
-    const { login: apiLogin } = await import('@/api/staff-auth')
     const res = await apiLogin({ identifier, password })
     staffToken.value = res.accessToken
     staffRefreshToken.value = res.refreshToken
@@ -93,7 +94,6 @@ export const useAuthStore = defineStore('auth', () => {
           clearStaffAuth()
           return
         }
-        const { refreshToken: apiRefresh } = await import('@/api/staff-auth')
         const res = await apiRefresh({ refreshToken: staffRefreshToken.value })
         staffToken.value = res.accessToken
         staffRefreshToken.value = res.refreshToken
@@ -115,7 +115,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout(): Promise<void> {
     try {
-      const { logout: apiLogout } = await import('@/api/staff-auth')
       await apiLogout()
     } catch {
     }
@@ -125,7 +124,6 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchProfile(): Promise<void> {
     if (!steamId.value) return
     try {
-      const { getUser } = await import('@/api/users')
       const user = await getUser(steamId.value)
       userProfile.value = {
         name: user.name,

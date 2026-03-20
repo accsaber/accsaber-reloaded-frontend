@@ -1,3 +1,4 @@
+import { getCategories } from '@/api/categories'
 import type { CategoryResponse } from '@/types/api/categories'
 import type { CategoryCode, CategoryInfo } from '@/types/display'
 import { defineStore } from 'pinia'
@@ -72,7 +73,6 @@ export const useCategoryStore = defineStore('categories', () => {
 
   async function fetchCategories(): Promise<void> {
     try {
-      const { getCategories } = await import('@/api/categories')
       categories.value = await getCategories()
       loaded.value = true
     } catch {

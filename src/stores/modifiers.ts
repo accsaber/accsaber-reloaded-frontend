@@ -1,3 +1,4 @@
+import { getModifiers } from '@/api/modifiers'
 import type { ModifierResponse } from '@/types/api/modifiers'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
@@ -28,7 +29,6 @@ export const useModifierStore = defineStore('modifiers', () => {
 
   async function fetchModifiers(): Promise<void> {
     try {
-      const { getModifiers } = await import('@/api/modifiers')
       modifiers.value = await getModifiers()
       loaded.value = true
     } catch {
