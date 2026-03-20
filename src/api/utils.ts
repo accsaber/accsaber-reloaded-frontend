@@ -7,14 +7,15 @@ export function buildQuery(params?: object): string {
 
   if (entries.length === 0) return ''
 
-  const searchParams = new URLSearchParams()
+  const parts: string[] = []
   for (const [key, value] of entries) {
+    const encodedKey = encodeURIComponent(key)
     if (Array.isArray(value)) {
-      for (const v of value) searchParams.append(key, String(v))
+      for (const v of value) parts.push(`${encodedKey}=${encodeURIComponent(String(v))}`)
     } else {
-      searchParams.set(key, String(value))
+      parts.push(`${encodedKey}=${encodeURIComponent(String(value))}`)
     }
   }
 
-  return `?${searchParams.toString()}`
+  return `?${parts.join('&').split('%2C').join(',')}`
 }
