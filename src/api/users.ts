@@ -87,6 +87,12 @@ export function getUserStatsDiff(
     .catch(() => null)
 }
 
+export function getUserCompletedMilestones(
+  userId: string,
+): Promise<UserMilestoneProgressResponse[]> {
+  return get<UserMilestoneProgressResponse[]>(`/users/${userId}/milestones/completed`)
+}
+
 export function getUserScoresHistoric(
   userId: string,
   params: HistoricScoresParams,

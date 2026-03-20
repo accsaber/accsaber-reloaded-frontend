@@ -19,6 +19,10 @@ export function getMilestone(id: string): Promise<MilestoneResponse> {
   return get<MilestoneResponse>(`/milestones/${id}`)
 }
 
+export function getMilestonesBySet(setId: string): Promise<MilestoneResponse[]> {
+  return get<MilestoneResponse[]>(`/milestones/sets/${setId}/milestones`)
+}
+
 export function getLevels(): Promise<{ levels: { level: number; xpRequired: number }[] }> {
   return get('/milestones/levels')
 }

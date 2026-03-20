@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
-import type { CreateMilestoneRequest, CreateMilestoneSetRequest } from '@/types/api/admin'
-import type { MilestoneTier, MilestoneType } from '@/types/enums'
-import type { CategoryResponse } from '@/types/api/categories'
 import type { QuerySpec, Schema } from '@/components/admin/MilestoneQueryBuilder.vue'
 import MilestoneQueryBuilder from '@/components/admin/MilestoneQueryBuilder.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
-import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
+import type { CreateMilestoneRequest, CreateMilestoneSetRequest } from '@/types/api/admin'
+import type { CategoryResponse } from '@/types/api/categories'
+import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
+import type { MilestoneStatus, MilestoneTier, MilestoneType } from '@/types/enums'
+import { computed, ref, watch } from 'vue'
 
 const categoryStore = useCategoryStore()
 
@@ -36,9 +36,7 @@ const sets = ref<MilestoneSetResponse[]>([])
 const setsLoading = ref(false)
 const selectedSetId = ref<string | null>(null)
 const showSetModal = ref(false)
-const editingSet = ref<MilestoneSetResponse | null>(null)
 const setForm = ref<CreateMilestoneSetRequest>({ title: '', description: '', setBonusXp: 0 })
-const setActionLoading = ref<Record<string, boolean>>({})
 
 async function fetchSets() {
   setsLoading.value = true
@@ -54,52 +52,27 @@ async function fetchSets() {
 fetchSets()
 
 function openCreateSet() {
-  editingSet.value = null
   setForm.value = { title: '', description: '', setBonusXp: 0 }
-  showSetModal.value = true
-}
-
-function openEditSet(s: MilestoneSetResponse) {
-  editingSet.value = s
-  setForm.value = { title: s.title, description: s.description, setBonusXp: s.setBonusXp }
   showSetModal.value = true
 }
 
 async function saveSet() {
   try {
-    const mod = await import('@/api/admin/milestones')
-    if (editingSet.value) {
-      const updated = await mod.updateMilestoneSet(editingSet.value.id, setForm.value)
-      const idx = sets.value.findIndex((s) => s.id === editingSet.value!.id)
-      if (idx !== -1) sets.value[idx] = updated
-    } else {
-      const created = await mod.createMilestoneSet(setForm.value)
-      sets.value.push(created)
-      selectedSetId.value = created.id
-    }
+    const { createMilestoneSet } = await import('@/api/admin/milestones')
+    const created = await createMilestoneSet(setForm.value)
+    sets.value.push(created)
+    selectedSetId.value = created.id
     showSetModal.value = false
   } catch {
   }
 }
 
-async function deleteSet(s: MilestoneSetResponse) {
-  if (!confirm(`Delete set "${s.title}"? This will also delete all milestones in it.`)) return
-  setActionLoading.value[s.id] = true
-  try {
-    const { deleteMilestoneSet } = await import('@/api/admin/milestones')
-    await deleteMilestoneSet(s.id)
-    sets.value = sets.value.filter((x) => x.id !== s.id)
-    if (selectedSetId.value === s.id) selectedSetId.value = sets.value[0]?.id ?? null
-  } finally {
-    delete setActionLoading.value[s.id]
-  }
-}
-
+const statusFilter = ref<MilestoneStatus>('DRAFT')
 const milestones = ref<MilestoneResponse[]>([])
 const milestonesLoading = ref(false)
 const showMilestoneModal = ref(false)
-const editingMilestone = ref<MilestoneResponse | null>(null)
 const milestoneActionLoading = ref<Record<string, boolean>>({})
+const bulkActivating = ref(false)
 
 const EMPTY_QUERY: QuerySpec = {
   select: { function: 'MAX', column: '*' },
@@ -126,15 +99,15 @@ const TIERS: MilestoneTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND
 const TYPES: MilestoneType[] = ['MILESTONE', 'ACHIEVEMENT']
 const COMPARISONS = [{ value: 'GTE', label: '>= (at least)' }, { value: 'LTE', label: '<= (at most)' }]
 
-watch(selectedSetId, (id) => {
+watch([selectedSetId, statusFilter], ([id]) => {
   if (id) fetchMilestones(id)
 })
 
 async function fetchMilestones(setId: string) {
   milestonesLoading.value = true
   try {
-    const { getMilestones } = await import('@/api/milestones')
-    const res = await getMilestones({ setId, size: 100 })
+    const { getAdminMilestones } = await import('@/api/admin/milestones')
+    const res = await getAdminMilestones({ setId, status: statusFilter.value, size: 100 })
     milestones.value = res.content
   } finally {
     milestonesLoading.value = false
@@ -143,7 +116,6 @@ async function fetchMilestones(setId: string) {
 
 function openCreateMilestone() {
   if (!selectedSetId.value) return
-  editingMilestone.value = null
   milestoneForm.value = {
     setId: selectedSetId.value,
     categoryId: '',
@@ -165,25 +137,6 @@ function openCreateMilestone() {
   showMilestoneModal.value = true
 }
 
-function openEditMilestone(m: MilestoneResponse) {
-  editingMilestone.value = m
-  milestoneForm.value = {
-    setId: m.setId,
-    categoryId: m.categoryId ?? '',
-    title: m.title,
-    description: m.description,
-    type: m.type,
-    tier: m.tier,
-    xp: m.xp,
-    querySpec: m.querySpec,
-    targetValue: m.targetValue,
-    comparison: m.comparison,
-    _query: (m.querySpec as unknown as QuerySpec) ?? { ...EMPTY_QUERY },
-    _mapDifficultyIds: '',
-  }
-  showMilestoneModal.value = true
-}
-
 async function saveMilestone() {
   const ids = milestoneForm.value._mapDifficultyIds.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)
   const { _query, _mapDifficultyIds, ...rest } = milestoneForm.value
@@ -194,13 +147,9 @@ async function saveMilestone() {
     mapDifficultyIds: ids.length ? ids : undefined,
   }
   try {
-    const mod = await import('@/api/admin/milestones')
-    if (editingMilestone.value) {
-      const updated = await mod.updateMilestone(editingMilestone.value.id, payload)
-      const idx = milestones.value.findIndex((m) => m.id === editingMilestone.value!.id)
-      if (idx !== -1) milestones.value[idx] = updated
-    } else {
-      const created = await mod.createMilestone(payload)
+    const { createMilestone } = await import('@/api/admin/milestones')
+    const created = await createMilestone(payload)
+    if (statusFilter.value === 'DRAFT') {
       milestones.value.push(created)
     }
     showMilestoneModal.value = false
@@ -208,15 +157,54 @@ async function saveMilestone() {
   }
 }
 
-async function deleteMilestone(m: MilestoneResponse) {
-  if (!confirm(`Delete "${m.title}"?`)) return
+async function deactivate(m: MilestoneResponse) {
+  if (!confirm(`Deactivate "${m.title}"?`)) return
   milestoneActionLoading.value[m.id] = true
   try {
-    const { deleteMilestone: apiDelete } = await import('@/api/admin/milestones')
-    await apiDelete(m.id)
+    const { deactivateMilestone } = await import('@/api/admin/milestones')
+    await deactivateMilestone(m.id)
     milestones.value = milestones.value.filter((x) => x.id !== m.id)
   } finally {
     delete milestoneActionLoading.value[m.id]
+  }
+}
+
+async function activate(m: MilestoneResponse) {
+  milestoneActionLoading.value[m.id] = true
+  try {
+    const { activateMilestone } = await import('@/api/admin/milestones')
+    const updated = await activateMilestone(m.id)
+    const idx = milestones.value.findIndex((x) => x.id === m.id)
+    if (idx !== -1) {
+      if (statusFilter.value === 'DRAFT') {
+        milestones.value.splice(idx, 1)
+      } else {
+        milestones.value[idx] = updated
+      }
+    }
+  } finally {
+    delete milestoneActionLoading.value[m.id]
+  }
+}
+
+const draftMilestoneIds = computed(() =>
+  milestones.value.filter((m) => m.status === 'DRAFT').map((m) => m.id),
+)
+
+async function activateAll() {
+  if (!draftMilestoneIds.value.length) return
+  if (!confirm(`Activate all ${draftMilestoneIds.value.length} draft milestones in this set?`)) return
+  bulkActivating.value = true
+  try {
+    const { activateMilestones } = await import('@/api/admin/milestones')
+    await activateMilestones(draftMilestoneIds.value)
+    if (statusFilter.value === 'DRAFT') {
+      milestones.value = []
+    } else if (selectedSetId.value) {
+      await fetchMilestones(selectedSetId.value)
+    }
+  } finally {
+    bulkActivating.value = false
   }
 }
 
@@ -281,6 +269,11 @@ const TIER_COLORS: Record<string, string> = {
   PLATINUM: 'var(--tier-platinum)',
   DIAMOND: 'var(--tier-diamond)',
 }
+
+const STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'ACTIVE', label: 'Active' },
+]
 </script>
 
 <template>
@@ -303,12 +296,7 @@ const TIER_COLORS: Record<string, string> = {
         <div v-for="(tableDef, tableName) in schema.tables" :key="tableName" class="schema-table">
           <h4 class="schema-table__name">{{ tableName }}</h4>
           <div class="schema-table__cols">
-            <span
-              v-for="(colDef, colName) in tableDef.columns"
-              :key="colName"
-              class="schema-col"
-              :title="colDef.type"
-            >
+            <span v-for="(colDef, colName) in tableDef.columns" :key="colName" class="schema-col" :title="colDef.type">
               {{ colName }}
               <span class="schema-col__type">{{ colDef.type }}</span>
             </span>
@@ -322,8 +310,10 @@ const TIER_COLORS: Record<string, string> = {
         <div class="sets-panel__header">
           <span class="sets-panel__title">Sets</span>
           <button class="sets-panel__add" aria-label="New set" @click="openCreateSet">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
         </div>
@@ -331,28 +321,10 @@ const TIER_COLORS: Record<string, string> = {
           <SkeletonLoader v-for="i in 4" :key="i" variant="text" style="margin: 4px 0" />
         </div>
         <div v-else class="sets-panel__items">
-          <button
-            v-for="s in sets"
-            :key="s.id"
-            class="set-item"
-            :class="{ 'set-item--active': selectedSetId === s.id }"
-            @click="selectedSetId = s.id"
-          >
+          <button v-for="s in sets" :key="s.id" class="set-item" :class="{ 'set-item--active': selectedSetId === s.id }"
+            @click="selectedSetId = s.id">
             <span class="set-item__title">{{ s.title }}</span>
             <span class="set-item__xp">+{{ s.setBonusXp }} XP</span>
-            <div class="set-item__actions">
-              <button class="icon-btn" aria-label="Edit set" @click.stop="openEditSet(s)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-              </button>
-              <button class="icon-btn icon-btn--danger" aria-label="Delete set" @click.stop="deleteSet(s)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" />
-                </svg>
-              </button>
-            </div>
           </button>
         </div>
       </div>
@@ -365,7 +337,14 @@ const TIER_COLORS: Record<string, string> = {
               <h3 class="milestones-title">{{ selectedSet?.title }}</h3>
               <p class="milestones-meta">Set bonus: +{{ selectedSet?.setBonusXp }} XP</p>
             </div>
-            <BaseButton variant="primary" size="sm" @click="openCreateMilestone">New Milestone</BaseButton>
+            <div class="milestones-header__actions">
+              <BaseSelect v-model="statusFilter" :options="STATUS_OPTIONS" />
+              <BaseButton v-if="statusFilter === 'DRAFT' && draftMilestoneIds.length" size="sm" variant="primary"
+                :loading="bulkActivating" @click="activateAll">
+                Activate All ({{ draftMilestoneIds.length }})
+              </BaseButton>
+              <BaseButton variant="primary" size="sm" @click="openCreateMilestone">New Milestone</BaseButton>
+            </div>
           </div>
 
           <div v-if="milestonesLoading" class="milestone-list">
@@ -378,6 +357,10 @@ const TIER_COLORS: Record<string, string> = {
               <div class="milestone-card__body">
                 <div class="milestone-card__top">
                   <span class="milestone-card__title">{{ m.title }}</span>
+                  <span class="milestone-card__status"
+                    :class="m.status === 'DRAFT' ? 'milestone-card__status--draft' : 'milestone-card__status--active'">
+                    {{ m.status }}
+                  </span>
                   <span class="milestone-card__type">{{ m.type }}</span>
                   <span class="milestone-card__xp">+{{ m.xp }} XP</span>
                 </div>
@@ -391,10 +374,16 @@ const TIER_COLORS: Record<string, string> = {
                 </div>
               </div>
               <div class="milestone-card__actions">
-                <BaseButton size="sm" @click="openEditMilestone(m)">Edit</BaseButton>
+                <BaseButton v-if="m.status === 'DRAFT'" size="sm" variant="primary"
+                  :loading="milestoneActionLoading[m.id]" @click="activate(m)">
+                  Activate
+                </BaseButton>
                 <BaseButton size="sm" @click="openLinkMaps(m)">Link Maps</BaseButton>
                 <BaseButton size="sm" :loading="milestoneActionLoading[m.id]" @click="backfill(m)">Backfill</BaseButton>
-                <BaseButton size="sm" variant="destructive" :loading="milestoneActionLoading[m.id]" @click="deleteMilestone(m)">Delete</BaseButton>
+                <BaseButton v-if="m.status === 'ACTIVE'" size="sm" variant="destructive"
+                  :loading="milestoneActionLoading[m.id]" @click="deactivate(m)">
+                  Deactivate
+                </BaseButton>
               </div>
             </div>
           </div>
@@ -403,7 +392,7 @@ const TIER_COLORS: Record<string, string> = {
     </div>
   </div>
 
-  <BaseModal :open="showSetModal" :title="editingSet ? 'Edit Set' : 'New Milestone Set'" @close="showSetModal = false">
+  <BaseModal :open="showSetModal" title="New Milestone Set" @close="showSetModal = false">
     <div class="modal-form">
       <BaseInput v-model="setForm.title" label="Title" required />
       <BaseInput v-model="setForm.description" label="Description" />
@@ -411,11 +400,12 @@ const TIER_COLORS: Record<string, string> = {
     </div>
     <template #footer>
       <BaseButton @click="showSetModal = false">Cancel</BaseButton>
-      <BaseButton variant="primary" @click="saveSet">{{ editingSet ? 'Save' : 'Create' }}</BaseButton>
+      <BaseButton variant="primary" @click="saveSet">Create</BaseButton>
     </template>
   </BaseModal>
 
-  <BaseModal :open="showMilestoneModal" :title="editingMilestone ? `Edit - ${editingMilestone.title}` : 'New Milestone'" @close="showMilestoneModal = false" style="--modal-width: 720px">
+  <BaseModal :open="showMilestoneModal" title="New Milestone" @close="showMilestoneModal = false"
+    style="--modal-width: 720px">
     <div class="modal-form milestone-form">
       <div class="milestone-form__row">
         <BaseInput v-model="milestoneForm.title" label="Title" style="flex: 2" required />
@@ -432,7 +422,8 @@ const TIER_COLORS: Record<string, string> = {
         </div>
         <div class="form-field">
           <label class="form-label">Tier</label>
-          <BaseSelect v-model="milestoneForm.tier" :options="TIERS.map((t) => ({ value: t, label: t.charAt(0) + t.slice(1).toLowerCase() }))" />
+          <BaseSelect v-model="milestoneForm.tier"
+            :options="TIERS.map((t) => ({ value: t, label: t.charAt(0) + t.slice(1).toLowerCase() }))" />
         </div>
         <BaseInput v-model.number="milestoneForm.xp" label="XP" type="number" style="width: 100px" />
       </div>
@@ -445,13 +436,8 @@ const TIER_COLORS: Record<string, string> = {
 
       <div class="form-field">
         <label class="form-label">Map Difficulty IDs (optional)</label>
-        <textarea
-          v-model="milestoneForm._mapDifficultyIds"
-          class="ids-input"
-          placeholder="Comma or newline separated UUIDs"
-          rows="2"
-          spellcheck="false"
-        />
+        <textarea v-model="milestoneForm._mapDifficultyIds" class="ids-input"
+          placeholder="Comma or newline separated UUIDs" rows="2" spellcheck="false" />
       </div>
 
       <div class="form-divider" />
@@ -459,19 +445,18 @@ const TIER_COLORS: Record<string, string> = {
       <div class="form-section">
         <h4 class="form-section__title">Query Definition</h4>
         <p class="form-section__hint">
-          Defines what value to measure. User/category/ranked-status filters are injected automatically at evaluation time.
+          Defines what value to measure. User/category/ranked-status filters are injected automatically at evaluation
+          time.
         </p>
-        <MilestoneQueryBuilder
-          v-if="Object.keys(schema.tables).length"
-          :schema="schema"
-          v-model="milestoneForm._query"
-        />
+        <MilestoneQueryBuilder v-if="Object.keys(schema.tables).length" :schema="schema"
+          v-model="milestoneForm._query" />
         <p v-else class="form-hint">Loading schema…</p>
       </div>
 
       <div class="form-divider" />
       <div class="milestone-form__row">
-        <BaseInput v-model.number="milestoneForm.targetValue" label="Target Value" type="number" step="any" style="flex: 1" />
+        <BaseInput v-model.number="milestoneForm.targetValue" label="Target Value" type="number" step="any"
+          style="flex: 1" />
         <div class="form-field">
           <label class="form-label">Comparison</label>
           <BaseSelect v-model="milestoneForm.comparison" :options="COMPARISONS" />
@@ -486,7 +471,7 @@ const TIER_COLORS: Record<string, string> = {
     </div>
     <template #footer>
       <BaseButton @click="showMilestoneModal = false">Cancel</BaseButton>
-      <BaseButton variant="primary" @click="saveMilestone">{{ editingMilestone ? 'Save' : 'Create' }}</BaseButton>
+      <BaseButton variant="primary" @click="saveMilestone">Create</BaseButton>
     </template>
   </BaseModal>
 
@@ -494,29 +479,43 @@ const TIER_COLORS: Record<string, string> = {
     <div class="modal-form">
       <div class="form-field">
         <label class="form-label">Map Difficulty IDs</label>
-        <textarea
-          v-model="linkMapIds"
-          class="ids-input"
-          placeholder="Comma or newline separated UUIDs"
-          rows="4"
-          spellcheck="false"
-        />
+        <textarea v-model="linkMapIds" class="ids-input" placeholder="Comma or newline separated UUIDs" rows="4"
+          spellcheck="false" />
       </div>
       <p v-if="linkError" class="form-error">{{ linkError }}</p>
     </div>
     <template #footer>
       <BaseButton @click="showLinkModal = false">Cancel</BaseButton>
-      <BaseButton variant="primary" :loading="linkLoading" :disabled="!linkMapIds.trim()" @click="submitLinkMaps">Link Maps</BaseButton>
+      <BaseButton variant="primary" :loading="linkLoading" :disabled="!linkMapIds.trim()" @click="submitLinkMaps">Link
+        Maps</BaseButton>
     </template>
   </BaseModal>
 </template>
 
 <style scoped>
-.tab { display: flex; flex-direction: column; gap: var(--space-lg); }
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
 
-.tab__header { display: flex; align-items: center; justify-content: space-between; }
-.tab__title { font-size: var(--text-section-heading); font-weight: 600; color: var(--text-primary); margin: 0; }
-.header-actions { display: flex; gap: var(--space-sm); }
+.tab__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tab__title {
+  font-size: var(--text-section-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
 
 .schema-panel {
   background: var(--bg-surface);
@@ -526,9 +525,28 @@ const TIER_COLORS: Record<string, string> = {
   max-height: 300px;
   overflow-y: auto;
 }
-.schema-tables { display: flex; flex-direction: column; gap: var(--space-md); }
-.schema-table__name { font-size: var(--text-caption); font-weight: 700; font-family: var(--font-mono); color: var(--accent); margin: 0 0 var(--space-xs); text-transform: uppercase; }
-.schema-table__cols { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.schema-tables {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.schema-table__name {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  margin: 0 0 var(--space-xs);
+  text-transform: uppercase;
+}
+
+.schema-table__cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .schema-col {
   font-size: 11px;
   font-family: var(--font-mono);
@@ -541,9 +559,18 @@ const TIER_COLORS: Record<string, string> = {
   align-items: center;
   gap: 4px;
 }
-.schema-col__type { color: var(--text-tertiary); font-size: 10px; }
 
-.layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-lg); align-items: start; }
+.schema-col__type {
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
 
 .sets-panel {
   background: var(--bg-surface);
@@ -551,6 +578,7 @@ const TIER_COLORS: Record<string, string> = {
   border-radius: var(--radius-card);
   overflow: hidden;
 }
+
 .sets-panel__header {
   display: flex;
   align-items: center;
@@ -558,10 +586,37 @@ const TIER_COLORS: Record<string, string> = {
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
 }
-.sets-panel__title { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
-.sets-panel__add { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: none; border: 1px solid var(--bg-overlay); border-radius: var(--radius-btn); color: var(--text-secondary); cursor: pointer; transition: all 100ms; }
-.sets-panel__add:hover { border-color: var(--accent); color: var(--accent); }
-.sets-panel__items { padding: var(--space-xs); }
+
+.sets-panel__title {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sets-panel__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 100ms;
+}
+
+.sets-panel__add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sets-panel__items {
+  padding: var(--space-xs);
+}
 
 .set-item {
   display: flex;
@@ -576,21 +631,76 @@ const TIER_COLORS: Record<string, string> = {
   position: relative;
   transition: background-color 100ms;
 }
-.set-item:hover { background: var(--bg-elevated); }
-.set-item--active { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.set-item--active .set-item__title { color: var(--accent); }
-.set-item__title { font-size: var(--text-body); font-weight: 500; color: var(--text-primary); }
-.set-item__xp { font-size: var(--text-caption); color: var(--text-secondary); font-family: var(--font-mono); }
-.set-item__actions { display: none; position: absolute; right: var(--space-sm); top: 50%; transform: translateY(-50%); gap: 4px; }
-.set-item:hover .set-item__actions { display: flex; }
 
-.milestones-panel { display: flex; flex-direction: column; gap: var(--space-md); }
-.empty-hint { color: var(--text-tertiary); font-size: var(--text-body); padding: var(--space-xl); text-align: center; }
-.milestones-header { display: flex; align-items: flex-start; justify-content: space-between; }
-.milestones-title { font-size: var(--text-card-title); font-weight: 600; color: var(--text-primary); margin: 0; }
-.milestones-meta { font-size: var(--text-caption); color: var(--text-secondary); margin: 2px 0 0; font-family: var(--font-mono); }
+.set-item:hover {
+  background: var(--bg-elevated);
+}
 
-.milestone-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.set-item--active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.set-item--active .set-item__title {
+  color: var(--accent);
+}
+
+.set-item__title {
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.set-item__xp {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.milestones-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.empty-hint {
+  color: var(--text-tertiary);
+  font-size: var(--text-body);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.milestones-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.milestones-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.milestones-title {
+  font-size: var(--text-card-title);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.milestones-meta {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+}
+
+.milestone-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
 .milestone-card {
   display: flex;
   align-items: stretch;
@@ -600,26 +710,144 @@ const TIER_COLORS: Record<string, string> = {
   overflow: hidden;
   transition: border-color 150ms;
 }
-.milestone-card:hover { border-color: var(--text-tertiary); }
-.milestone-card__tier { width: 4px; flex-shrink: 0; }
-.milestone-card__body { flex: 1; padding: var(--space-sm) var(--space-md); }
-.milestone-card__top { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
-.milestone-card__title { font-size: var(--text-body); font-weight: 600; color: var(--text-primary); }
-.milestone-card__type { font-size: var(--text-caption); color: var(--text-tertiary); text-transform: uppercase; }
-.milestone-card__xp { font-size: var(--text-caption); font-family: var(--font-mono); color: var(--success); margin-left: auto; }
-.milestone-card__desc { font-size: var(--text-caption); color: var(--text-secondary); margin: 4px 0 0; }
-.milestone-card__meta { display: flex; gap: var(--space-md); margin-top: 4px; }
-.milestone-card__stat { font-size: var(--text-caption); color: var(--text-tertiary); font-family: var(--font-mono); }
-.milestone-card__actions { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-left: 1px solid var(--bg-overlay); }
 
-.modal-form { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-sm) 0; }
-.milestone-form__row { display: flex; gap: var(--space-md); flex-wrap: wrap; }
-.form-field { display: flex; flex-direction: column; gap: var(--space-xs); flex: 1; min-width: 120px; }
-.form-label { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
-.form-divider { height: 1px; background: var(--bg-overlay); margin: var(--space-xs) 0; }
-.form-section__title { font-size: var(--text-body); font-weight: 600; color: var(--text-primary); margin: 0 0 var(--space-xs); }
-.form-section__hint { font-size: var(--text-caption); color: var(--text-secondary); margin: 0 0 var(--space-md); }
-.form-hint { font-size: var(--text-caption); color: var(--text-tertiary); }
+.milestone-card:hover {
+  border-color: var(--text-tertiary);
+}
+
+.milestone-card__tier {
+  width: 4px;
+  flex-shrink: 0;
+}
+
+.milestone-card__body {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.milestone-card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.milestone-card__title {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.milestone-card__status {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.milestone-card__status--draft {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+}
+
+.milestone-card__status--active {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+}
+
+.milestone-card__type {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+.milestone-card__xp {
+  font-size: var(--text-caption);
+  font-family: var(--font-mono);
+  color: var(--success);
+  margin-left: auto;
+}
+
+.milestone-card__desc {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+.milestone-card__meta {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: 4px;
+}
+
+.milestone-card__stat {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.milestone-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-left: 1px solid var(--bg-overlay);
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+.milestone-form__row {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+  min-width: 120px;
+}
+
+.form-label {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-divider {
+  height: 1px;
+  background: var(--bg-overlay);
+  margin: var(--space-xs) 0;
+}
+
+.form-section__title {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-xs);
+}
+
+.form-section__hint {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-md);
+}
+
+.form-hint {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
 
 .query-preview {
   display: flex;
@@ -631,13 +859,22 @@ const TIER_COLORS: Record<string, string> = {
   border-radius: var(--radius-btn);
   font-family: var(--font-mono);
 }
-.query-preview__label { font-size: var(--text-caption); color: var(--text-secondary); }
-.query-preview__op { font-size: var(--text-body); font-weight: 700; color: var(--accent); }
-.query-preview__value { font-size: var(--text-body); color: var(--text-primary); }
 
-.icon-btn { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: none; border: none; color: var(--text-secondary); cursor: pointer; border-radius: 3px; transition: color 100ms; }
-.icon-btn:hover { color: var(--text-primary); }
-.icon-btn--danger:hover { color: var(--error); }
+.query-preview__label {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.query-preview__op {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.query-preview__value {
+  font-size: var(--text-body);
+  color: var(--text-primary);
+}
 
 .ids-input {
   padding: var(--space-sm);
@@ -650,6 +887,15 @@ const TIER_COLORS: Record<string, string> = {
   width: 100%;
   resize: vertical;
 }
-.ids-input:focus { border-color: var(--accent); outline: none; }
-.form-error { font-size: var(--text-caption); color: var(--error); margin: 0; }
+
+.ids-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.form-error {
+  font-size: var(--text-caption);
+  color: var(--error);
+  margin: 0;
+}
 </style>

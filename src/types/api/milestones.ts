@@ -1,5 +1,5 @@
 import type { MilestoneTier } from '../display'
-import type { MilestoneComparison, MilestoneType } from '../enums'
+import type { MilestoneComparison, MilestoneStatus, MilestoneType } from '../enums'
 import type { PaginationParams } from '../pagination'
 
 export interface MilestoneResponse {
@@ -14,6 +14,7 @@ export interface MilestoneResponse {
   querySpec: Record<string, unknown>
   targetValue: number
   comparison: MilestoneComparison
+  status: MilestoneStatus
   completionPercentage: number
   completions: number
   totalPlayers: number
@@ -32,4 +33,12 @@ export interface MilestoneListParams extends PaginationParams {
   setId?: string
   categoryId?: string
   type?: MilestoneType
+}
+
+export interface AdminMilestoneListParams extends MilestoneListParams {
+  status?: MilestoneStatus
+}
+
+export interface ActivateMilestonesRequest {
+  milestoneIds: string[]
 }

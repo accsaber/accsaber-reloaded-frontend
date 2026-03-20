@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import MilestoneCard from '@/components/domain/MilestoneCard.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import MilestoneCard from '@/components/domain/MilestoneCard.vue'
 import { useCategoryStore } from '@/stores/categories'
-import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import type { MilestoneSetResponse } from '@/types/api/milestones'
+import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import type { MilestoneDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { toMilestoneDisplay } from '@/utils/mappers'
@@ -16,8 +16,10 @@ const props = defineProps<{
 const categoryStore = useCategoryStore()
 const loading = ref(false)
 const milestones = ref<UserMilestoneProgressResponse[]>([])
+const completedMilestones = ref<UserMilestoneProgressResponse[]>([])
 const sets = ref<MilestoneSetResponse[]>([])
 const expandedSets = ref<Set<string>>(new Set())
+const viewMode = ref<'all' | 'completed'>('all')
 
 interface MilestoneGroup {
   setId: string
@@ -29,6 +31,10 @@ interface MilestoneGroup {
   milestones: MilestoneDisplay[]
 }
 
+const activeMilestones = computed(() =>
+  viewMode.value === 'completed' ? completedMilestones.value : milestones.value,
+)
+
 const groups = computed<MilestoneGroup[]>(() => {
   const setMap = new Map<string, MilestoneSetResponse>()
   for (const s of sets.value) {
@@ -36,7 +42,7 @@ const groups = computed<MilestoneGroup[]>(() => {
   }
 
   const grouped = new Map<string, UserMilestoneProgressResponse[]>()
-  for (const m of milestones.value) {
+  for (const m of activeMilestones.value) {
     const key = m.setId || 'uncategorized'
     if (!grouped.has(key)) grouped.set(key, [])
     grouped.get(key)!.push(m)
@@ -79,17 +85,19 @@ function isExpanded(setId: string): boolean {
 async function fetchMilestones() {
   loading.value = true
   try {
-    const [{ getUserMilestones }, { getMilestoneSets }] = await Promise.all([
+    const [{ getUserMilestones, getUserCompletedMilestones }, { getMilestoneSets }] = await Promise.all([
       import('@/api/users'),
       import('@/api/milestones'),
     ])
 
-    const [milestoneRes, setRes] = await Promise.all([
+    const [milestoneRes, completedRes, setRes] = await Promise.all([
       getUserMilestones(props.userId, { size: 100 }),
+      getUserCompletedMilestones(props.userId),
       getMilestoneSets({ size: 100 }),
-    ]) as [Page<UserMilestoneProgressResponse>, Page<MilestoneSetResponse>]
+    ]) as [Page<UserMilestoneProgressResponse>, UserMilestoneProgressResponse[], Page<MilestoneSetResponse>]
 
     milestones.value = milestoneRes.content
+    completedMilestones.value = completedRes
     sets.value = setRes.content
 
     if (groups.value.length > 0) {
@@ -97,6 +105,7 @@ async function fetchMilestones() {
     }
   } catch {
     milestones.value = []
+    completedMilestones.value = []
     sets.value = []
   }
   loading.value = false
@@ -107,24 +116,30 @@ watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
 
 <template>
   <div class="milestones-tab">
+    <div class="milestones-tab__header">
+      <button class="milestones-tab__toggle" :class="{ 'milestones-tab__toggle--active': viewMode === 'all' }"
+        @click="viewMode = 'all'">
+        All Progress
+      </button>
+      <button class="milestones-tab__toggle" :class="{ 'milestones-tab__toggle--active': viewMode === 'completed' }"
+        @click="viewMode = 'completed'">
+        Completed ({{ completedMilestones.length }})
+      </button>
+    </div>
+
     <template v-if="loading">
       <SkeletonLoader v-for="i in 3" :key="i" variant="card" />
     </template>
 
     <template v-else-if="groups.length === 0">
-      <p class="milestones-tab__empty">No milestone progress found</p>
+      <p class="milestones-tab__empty">
+        {{ viewMode === 'completed' ? 'No completed milestones yet' : 'No milestone progress found' }}
+      </p>
     </template>
 
     <template v-else>
-      <div
-        v-for="group in groups"
-        :key="group.setId"
-        class="milestone-set"
-      >
-        <button
-          class="milestone-set__header"
-          @click="toggleSet(group.setId)"
-        >
+      <div v-for="group in groups" :key="group.setId" class="milestone-set">
+        <button class="milestone-set__header" @click="toggleSet(group.setId)">
           <div class="milestone-set__info">
             <h3 class="milestone-set__title">{{ group.setTitle }}</h3>
             <span class="milestone-set__count">
@@ -135,10 +150,7 @@ watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
             <span v-if="group.setBonusXp > 0" class="milestone-set__bonus">
               +{{ group.setBonusXp }} XP bonus
             </span>
-            <span
-              class="milestone-set__toggle"
-              :class="{ 'milestone-set__toggle--open': isExpanded(group.setId) }"
-            >
+            <span class="milestone-set__toggle" :class="{ 'milestone-set__toggle--open': isExpanded(group.setId) }">
               &#9660;
             </span>
           </div>
@@ -148,15 +160,8 @@ watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
           {{ group.setDescription }}
         </p>
 
-        <div
-          v-if="isExpanded(group.setId)"
-          class="milestone-set__grid"
-        >
-          <MilestoneCard
-            v-for="milestone in group.milestones"
-            :key="milestone.id"
-            :milestone="milestone"
-          />
+        <div v-if="isExpanded(group.setId)" class="milestone-set__grid">
+          <MilestoneCard v-for="milestone in group.milestones" :key="milestone.id" :milestone="milestone" />
         </div>
       </div>
     </template>
@@ -168,6 +173,34 @@ watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+}
+
+.milestones-tab__header {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.milestones-tab__toggle {
+  padding: var(--space-xs) var(--space-md);
+  background: none;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.milestones-tab__toggle:hover {
+  border-color: var(--text-tertiary);
+  color: var(--text-primary);
+}
+
+.milestones-tab__toggle--active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .milestones-tab__empty {

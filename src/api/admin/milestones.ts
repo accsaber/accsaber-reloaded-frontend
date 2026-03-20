@@ -1,40 +1,43 @@
-import type { CreateMilestoneRequest, CreateMilestoneSetRequest, LinkMilestoneMapRequest } from '@/types/api/admin'
-import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { Schema } from '@/components/admin/MilestoneQueryBuilder.vue'
-import { del, get, post, put } from '../client'
+import type {
+  ActivateMilestonesRequest,
+  AdminMilestoneListParams,
+  CreateMilestoneRequest,
+  CreateMilestoneSetRequest,
+  LinkMilestoneMapRequest,
+} from '@/types/api/admin'
+import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
+import type { Page } from '@/types/pagination'
+import { get, patch, post } from '../client'
+import { buildQuery } from '../utils'
+
+export function getAdminMilestones(params?: AdminMilestoneListParams): Promise<Page<MilestoneResponse>> {
+  return get<Page<MilestoneResponse>>(`/admin/milestones${buildQuery(params)}`)
+}
 
 export function createMilestone(req: CreateMilestoneRequest): Promise<MilestoneResponse> {
   return post<MilestoneResponse>('/admin/milestones', req)
 }
 
-export function updateMilestone(
-  id: string,
-  req: CreateMilestoneRequest,
-): Promise<MilestoneResponse> {
-  return put<MilestoneResponse>(`/admin/milestones/${id}`, req)
-}
-
-export function deleteMilestone(id: string): Promise<void> {
-  return del<void>(`/admin/milestones/${id}`)
+export function deactivateMilestone(id: string): Promise<MilestoneResponse> {
+  return patch<MilestoneResponse>(`/admin/milestones/${id}`)
 }
 
 export function createMilestoneSet(req: CreateMilestoneSetRequest): Promise<MilestoneSetResponse> {
   return post<MilestoneSetResponse>('/admin/milestones/sets', req)
 }
 
-export function updateMilestoneSet(
-  id: string,
-  req: CreateMilestoneSetRequest,
-): Promise<MilestoneSetResponse> {
-  return put<MilestoneSetResponse>(`/admin/milestones/sets/${id}`, req)
-}
-
-export function deleteMilestoneSet(id: string): Promise<void> {
-  return del<void>(`/admin/milestones/sets/${id}`)
-}
-
 export function getMilestoneSchema(): Promise<Schema> {
   return get<Schema>('/admin/milestones/schema')
+}
+
+export function activateMilestone(id: string): Promise<MilestoneResponse> {
+  return post<MilestoneResponse>(`/admin/milestones/activate/${id}`)
+}
+
+export function activateMilestones(ids: string[]): Promise<MilestoneResponse[]> {
+  const body: ActivateMilestonesRequest = { milestoneIds: ids }
+  return post<MilestoneResponse[]>('/admin/milestones/activate', body)
 }
 
 export function backfillMilestone(id: string): Promise<void> {

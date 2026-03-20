@@ -12,6 +12,8 @@ export type MilestoneType = 'MILESTONE' | 'ACHIEVEMENT'
 
 export type MilestoneComparison = 'GTE' | 'LTE'
 
+export type MilestoneStatus = 'DRAFT' | 'ACTIVE'
+
 export type VoteType = 'RANK' | 'UNRANK' | 'REWEIGHT'
 
 export type CurveType = 'POINT_LOOKUP' | 'FORMULA'

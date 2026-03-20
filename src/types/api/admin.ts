@@ -171,6 +171,8 @@ export interface CreateMilestoneSetRequest {
   setBonusXp: number
 }
 
+export type { ActivateMilestonesRequest, AdminMilestoneListParams } from './milestones'
+
 export interface CreateCampaignRequest {
   name: string
   description: string
