@@ -10,12 +10,16 @@ import type {
   UpdatePrerequisiteRequest,
 } from '@/types/api/admin'
 import type { MilestoneResponse, MilestoneSetResponse, PrerequisiteLinkResponse } from '@/types/api/milestones'
-import type { Page } from '@/types/pagination'
+import type { Page, PaginationParams } from '@/types/pagination'
 import { del, get, patch, post, put } from '../client'
 import { buildQuery } from '../utils'
 
 export function getAdminMilestones(params?: AdminMilestoneListParams): Promise<Page<MilestoneResponse>> {
   return get<Page<MilestoneResponse>>(`/admin/milestones${buildQuery(params)}`)
+}
+
+export function getAdminMilestoneSets(params?: PaginationParams): Promise<Page<MilestoneSetResponse>> {
+  return get<Page<MilestoneSetResponse>>(`/admin/milestones/sets${buildQuery(params)}`)
 }
 
 export function createMilestone(req: CreateMilestoneRequest): Promise<MilestoneResponse> {

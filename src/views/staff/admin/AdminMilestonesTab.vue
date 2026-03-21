@@ -42,8 +42,8 @@ const setForm = ref<CreateMilestoneSetRequest>({ title: '', description: '', set
 async function fetchSets() {
   setsLoading.value = true
   try {
-    const { getMilestoneSets } = await import('@/api/milestones')
-    const res = await getMilestoneSets({ size: 100 })
+    const { getAdminMilestoneSets } = await import('@/api/admin/milestones')
+    const res = await getAdminMilestoneSets({ size: 100 })
     sets.value = res.content
     if (!selectedSetId.value && sets.value.length) selectedSetId.value = sets.value[0].id
   } finally {
