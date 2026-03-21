@@ -128,7 +128,7 @@ const batchSortKey = computed<string>({
 const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
   defaultSort: 'releaseDate',
   defaultOrder: 'desc',
-  defaultSize: 24,
+  defaultSize: 20,
   sortFieldMap: {
     releaseDate: 'rankedAt',
     complexity: 'complexity',
