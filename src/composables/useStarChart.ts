@@ -99,7 +99,7 @@ export function useStarChart(
         highways.push({
           from: from.position,
           to: to.position,
-          opacity: Math.min(0.4, 0.15 + edge.count * 0.05),
+          opacity: Math.min(0.6, 0.3 + edge.count * 0.08),
         })
       }
     }
@@ -135,7 +135,7 @@ export function useStarChart(
         highways.push({
           from: node.position,
           to: neighbor.position,
-          opacity: Math.max(0.05, 0.15 - (dist / maxDist) * 0.12),
+          opacity: Math.max(0.15, 0.35 - (dist / maxDist) * 0.2),
         })
       }
     }

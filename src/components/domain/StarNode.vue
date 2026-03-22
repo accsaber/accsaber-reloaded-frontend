@@ -171,6 +171,7 @@ function handleClick() {
 .star-node--ghost .star-node__core {
   background: transparent;
   border: 1.5px dashed var(--tier-color);
+  box-sizing: border-box;
   color: var(--tier-color);
 }
 

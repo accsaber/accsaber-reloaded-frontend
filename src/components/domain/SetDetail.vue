@@ -266,11 +266,11 @@ const starPositions = computed<StarLayout[]>(() => {
     const h = hashString(id)
 
     const xBase = compMaxDepth === 0 ? 50 : padding + (d / compMaxDepth) * xRange
-    const xNudge = (seededRandom(h) - 0.5) * 2
+    const xNudge = (seededRandom(h) - 0.5) * 3.5
     const x = Math.min(100 - padding, Math.max(padding, xBase + xNudge))
 
     const yCenter = (yMin + yMax) / 2
-    const yNudge = (seededRandom(h + 7) - 0.5) * 1
+    const yNudge = (seededRandom(h + 7) - 0.5) * 1.5
     const y = Math.min(100 - padding, Math.max(padding, yCenter + yNudge))
 
     positions.set(id, { x, y })
@@ -327,15 +327,42 @@ const ghostStarPositions = computed<StarLayout[]>(() => {
   const ghosts = ghostMilestones.value
   if (ghosts.length === 0) return []
 
-  const yStep = 80 / (ghosts.length + 1)
+  const realPosMap = new Map<string, { x: number; y: number }>()
+  for (const star of starPositions.value) {
+    realPosMap.set(star.milestone.milestoneId, star.position)
+  }
 
-  return ghosts.map((m, i) => ({
-    milestone: m,
-    position: {
-      x: 4 + seededRandom(hashString(m.milestoneId) + 30) * 3,
-      y: 10 + yStep * (i + 1) + (seededRandom(hashString(m.milestoneId) + 31) - 0.5) * 4,
-    },
-  }))
+  return ghosts.map((m) => {
+    const h = hashString(m.milestoneId)
+
+    const childPrereqs = crossSetPrereqs.value.filter(
+      (p) => p.prerequisiteMilestoneId === m.milestoneId,
+    )
+    let anchorY = 50
+    let anchorX = 50
+    if (childPrereqs.length > 0) {
+      let sumX = 0, sumY = 0, count = 0
+      for (const p of childPrereqs) {
+        const pos = realPosMap.get(p.milestoneId)
+        if (pos) { sumX += pos.x; sumY += pos.y; count++ }
+      }
+      if (count > 0) {
+        anchorX = sumX / count
+        anchorY = sumY / count
+      }
+    }
+
+    const offsetX = Math.max(8, 12 + (seededRandom(h + 30) - 0.5) * 4)
+    const yNudge = (seededRandom(h + 31) - 0.5) * 6
+
+    return {
+      milestone: m,
+      position: {
+        x: Math.max(4, anchorX - offsetX),
+        y: Math.min(95, Math.max(5, anchorY + yNudge)),
+      },
+    }
+  })
 })
 
 const allPositionsMap = computed(() => {
@@ -669,7 +696,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 .set-detail__constellation-line--cross {
   stroke-dasharray: 1.5 1.5;
-  opacity: 0.35;
+  opacity: 0.15;
 }
 
 .set-detail__legend {
