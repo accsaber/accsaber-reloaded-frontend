@@ -196,7 +196,11 @@ function rowClass(row: Record<string, unknown>): Record<string, boolean> {
 }
 
 function playerRowTo(row: Record<string, unknown>) {
-  return { name: 'player-profile', params: { userId: row.userId as string } }
+  const query: Record<string, string> = {}
+  if (activeCategory.value && activeCategory.value !== 'overall') {
+    query.category = activeCategory.value
+  }
+  return { name: 'player-profile', params: { userId: row.userId as string }, query }
 }
 
 function handleRowClick(row: Record<string, unknown>) {
@@ -289,7 +293,7 @@ watch(() => categoryStore.loaded, (loaded) => {
         </template>
 
         <template #mobile-card="{ row }">
-          <router-link :to="{ name: 'player-profile', params: { userId: row.userId as string } }" class="lb-card"
+          <router-link :to="playerRowTo(row)" class="lb-card"
             :class="[
               { 'lb-card--highlighted': row.userId === highlightedUserId },
               { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
