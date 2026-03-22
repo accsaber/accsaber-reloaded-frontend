@@ -23,14 +23,22 @@ const modifiersText = computed(() =>
 )
 
 const mapHref = computed(() =>
-  props.score.mapId ? router.resolve({ path: `/maps/${props.score.mapId}` }).href : undefined,
+  props.score.mapId
+    ? router.resolve({
+      path: `/maps/${props.score.mapId}`,
+      query: { difficultyId: props.score.mapDifficultyId },
+    }).href
+    : undefined,
 )
 
 function handleClick(e: MouseEvent) {
   if (!mapHref.value) return
   if (e.ctrlKey || e.metaKey || e.button === 1) return // let the <a> handle it
   e.preventDefault()
-  router.push({ path: `/maps/${props.score.mapId}` })
+  router.push({
+    path: `/maps/${props.score.mapId}`,
+    query: { difficultyId: props.score.mapDifficultyId },
+  })
 }
 </script>
 

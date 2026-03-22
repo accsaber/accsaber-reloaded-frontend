@@ -183,7 +183,7 @@ const DIFF_COLOR: Record<string, string> = {
             >
               → {{ NEXT_STATUS[item.status] }}
             </BaseButton>
-            <BaseButton size="sm" :href="`/maps/${item.mapId}`">View</BaseButton>
+            <BaseButton size="sm" :href="`/maps/${item.mapId}?difficultyId=${item.id}`">View</BaseButton>
           </div>
         </td>
       </template>
