@@ -125,7 +125,10 @@ function goToProfile() {
 function goToMap() {
   if (!props.score?.mapId) return
   emit('close')
-  router.push({ path: `/maps/${props.score.mapId}` })
+  router.push({
+    path: `/maps/${props.score.mapId}`,
+    query: { difficultyId: props.score.mapDifficultyId },
+  })
 }
 
 async function fetchHistoric() {

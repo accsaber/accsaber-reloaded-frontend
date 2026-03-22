@@ -276,12 +276,16 @@ async function fetchBatches() {
   batchLoading.value = false
 }
 
-function navigateToMap(mapId: string) {
-  router.push({ name: 'map-detail', params: { mapId } })
+function navigateToMap(mapId: string, difficultyId?: string) {
+  router.push({
+    name: 'map-detail',
+    params: { mapId },
+    query: difficultyId ? { difficultyId } : undefined,
+  })
 }
 
 function handleListRowClick(row: Record<string, unknown>) {
-  navigateToMap(row.id as string)
+  navigateToMap(row.id as string, row.difficultyId as string)
 }
 
 function batchDifficultiesByCategory(batch: BatchResponse) {
@@ -439,7 +443,8 @@ watch(
         </template>
         <template v-else>
           <div class="maps-page__grid">
-            <MapCard v-for="m in mapDisplays" :key="m.difficultyId" :map="m" @click="navigateToMap(m.id)" />
+            <MapCard v-for="m in mapDisplays" :key="m.difficultyId" :map="m"
+              @click="navigateToMap(m.id, m.difficultyId)" />
           </div>
         </template>
       </template>
@@ -514,7 +519,7 @@ watch(
                 </div>
                 <div class="maps-page__batch-cards">
                   <MapCardCompact v-for="m in group.diffs" :key="m.difficultyId" :map="m"
-                    @click="navigateToMap(m.id)" />
+                    @click="navigateToMap(m.id, m.difficultyId)" />
                 </div>
               </div>
             </div>

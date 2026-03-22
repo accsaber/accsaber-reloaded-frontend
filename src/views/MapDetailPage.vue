@@ -174,13 +174,26 @@ async function fetchMap() {
 
     const ranked = map.value.difficulties.filter((d) => d.status === 'RANKED' && d.active)
     if (ranked.length > 0) {
-      activeDifficultyId.value = ranked[0].id
+      const queryDiffId = route.query.difficultyId as string
+      if (queryDiffId && ranked.some(d => d.id === queryDiffId)) {
+        activeDifficultyId.value = queryDiffId
+      } else {
+        activeDifficultyId.value = ranked[0].id
+      }
     }
   } catch {
     error.value = true
   }
   loading.value = false
 }
+
+watch(() => route.query.difficultyId, (newId) => {
+  if (newId && typeof newId === 'string' && activeDifficultyId.value !== newId) {
+    if (rankedDifficulties.value.some(d => d.id === newId)) {
+      activeDifficultyId.value = newId
+    }
+  }
+})
 
 async function fetchDifficultyStats() {
   if (!activeDifficultyId.value) return
@@ -215,10 +228,14 @@ async function fetchHistoricStats() {
 
 watch(mapId, () => fetchMap(), { immediate: true })
 
-watch(activeDifficultyId, () => {
-  if (activeDifficultyId.value) {
+watch(activeDifficultyId, (newId) => {
+  if (newId) {
     fetchDifficultyStats()
     fetchHistoricStats()
+
+    if (route.query.difficultyId !== newId) {
+      router.replace({ query: { ...route.query, difficultyId: newId } })
+    }
   }
 })
 
@@ -362,7 +379,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
                 </template>
                 <template v-else>
                   <span class="map-detail__complexity-val">{{ change.from.toFixed(1) }} → {{ change.to.toFixed(1)
-                    }}</span>
+                  }}</span>
                   <span class="map-detail__complexity-tag"
                     :class="change.type === 'BUFF' ? 'map-detail__complexity-tag--buff' : 'map-detail__complexity-tag--nerf'">
                     {{ change.type === 'BUFF' ? '↑ BUFF' : '↓ NERF' }}

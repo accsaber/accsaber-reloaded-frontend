@@ -118,12 +118,20 @@ async function fetchScores() {
 }
 
 function scoreRowTo(row: Record<string, unknown>) {
-  return row.mapId ? { path: `/maps/${row.mapId}` } : undefined
+  return row.mapId
+    ? {
+      path: `/maps/${row.mapId as string}`,
+      query: { difficultyId: row.mapDifficultyId as string },
+    }
+    : undefined
 }
 
 function handleRowClick(row: Record<string, unknown>) {
   if (row.mapId) {
-    router.push({ path: `/maps/${row.mapId}` })
+    router.push({
+      path: `/maps/${row.mapId as string}`,
+      query: { difficultyId: row.mapDifficultyId as string },
+    })
   }
 }
 
