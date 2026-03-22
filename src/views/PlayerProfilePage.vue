@@ -274,7 +274,7 @@ watch(activeCategory, () => { if (user.value) fetchStatsDiff() })
 
 .profile-page>*:not(.profile-page__bg) {
   width: 100%;
-  max-width: 1030px;
+  max-width: 1040px;
   position: relative;
   z-index: 1;
 }

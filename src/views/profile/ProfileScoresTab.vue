@@ -56,9 +56,10 @@ const rows = computed(() =>
     coverUrl: s.coverUrl,
     mapName: s.mapName,
     difficulty: s.difficulty,
+    category: (categoryStore.getCategoryInfo(s.categoryCode)?.name ?? s.categoryCode).replace(/ Acc$/, ''),
+    categoryCode: s.categoryCode,
     ap: s.ap,
     accuracy: s.accuracy,
-    score: s.score,
     weighted: s.weightedAp,
     streak115: s.streak115,
     date: s.date,
@@ -80,9 +81,9 @@ const allColumns: TableColumn[] = [
   { key: 'mapName', label: 'Map', align: 'left' },
   { key: 'difficulty', label: 'Diff', align: 'center', width: '70px' },
   { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '80px' },
-  { key: 'score', label: 'Score', sortable: true, align: 'right', mono: true, width: '80px' },
   { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '80px' },
   { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '80px' },
+  { key: 'category', label: 'Category', align: 'center', width: '100px' },
   { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
   { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
   { key: 'detail', label: '', align: 'center', width: '40px' },
@@ -170,6 +171,13 @@ watch(
         </span>
       </template>
 
+      <template #cell-category="{ row }">
+        <span class="scores-tab__category"
+          :style="{ '--cat-accent': categoryStore.getAccent(row.categoryCode as string) }">
+          {{ row.category }}
+        </span>
+      </template>
+
       <template #cell-difficulty="{ value }">
         <span class="scores-tab__difficulty">{{ value }}</span>
       </template>
@@ -226,6 +234,11 @@ watch(
   gap: var(--space-lg);
 }
 
+.scores-tab__category {
+  color: color-mix(in srgb, var(--cat-accent) 30%, var(--text-secondary));
+  font-size: var(--text-caption);
+}
+
 .scores-tab__map-name {
   font-weight: 500;
   color: var(--text-primary);
@@ -243,6 +256,8 @@ watch(
 }
 
 .scores-tab__detail-btn {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;

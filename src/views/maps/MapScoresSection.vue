@@ -323,6 +323,8 @@ watch(
 }
 
 .map-scores__detail-btn {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
