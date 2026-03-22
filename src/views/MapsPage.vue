@@ -37,21 +37,15 @@ const MAPS_VIEW_KEY = 'accsaber:maps-view'
 const viewMode = computed<ViewMode>({
   get() {
     const v = route.query.view as string
-    if (v === 'list' || v === 'batch') return v
-    if (!route.query.view) {
-      const stored = localStorage.getItem(MAPS_VIEW_KEY) as ViewMode | null
-      if (stored === 'list' || stored === 'batch') return stored
-    }
+    if (v === 'grid' || v === 'list' || v === 'batch') return v
+    const stored = localStorage.getItem(MAPS_VIEW_KEY) as ViewMode | null
+    if (stored === 'list' || stored === 'batch') return stored
     return 'grid'
   },
   set(val) {
     localStorage.setItem(MAPS_VIEW_KEY, val)
     const query = { ...route.query }
-    if (val === 'grid') {
-      delete query.view
-    } else {
-      query.view = val
-    }
+    query.view = val
     delete query.page
     router.replace({ query })
   },
