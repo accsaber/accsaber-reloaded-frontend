@@ -68,9 +68,9 @@ const hoveredCompletedCount = computed(() => {
 const NODE_TOOLTIP_OFFSET = 50
 const TOOLTIP_MAX_WIDTH = 200
 const TOOLTIP_MARGIN = 8
-const TOOLTIP_FLIP_THRESHOLD = 80
 
 const tooltipFlipped = ref(false)
+const tooltipRef = ref<HTMLElement | null>(null)
 
 function onSetHover(set: MilestoneSetResponse, position: { x: number; y: number }) {
   hoveredSet.value = set
@@ -78,14 +78,20 @@ function onSetHover(set: MilestoneSetResponse, position: { x: number; y: number 
   const halfTooltip = TOOLTIP_MAX_WIDTH / 2
   const clampedX = Math.max(halfTooltip + TOOLTIP_MARGIN, Math.min(position.x, containerWidth.value - halfTooltip - TOOLTIP_MARGIN))
 
-  const aboveY = position.y - NODE_TOOLTIP_OFFSET
-  if (aboveY < TOOLTIP_FLIP_THRESHOLD) {
-    tooltipFlipped.value = true
-    tooltipPos.value = { x: clampedX, y: position.y + NODE_TOOLTIP_OFFSET }
-  } else {
-    tooltipFlipped.value = false
-    tooltipPos.value = { x: clampedX, y: aboveY }
-  }
+  tooltipFlipped.value = true
+  tooltipPos.value = { x: clampedX, y: position.y + NODE_TOOLTIP_OFFSET }
+
+  requestAnimationFrame(() => {
+    if (!tooltipRef.value || !containerRef.value) return
+    const tooltipHeight = tooltipRef.value.offsetHeight
+    const containerRect = containerRef.value.getBoundingClientRect()
+    const anchorScreenY = containerRect.top + position.y - NODE_TOOLTIP_OFFSET
+
+    if (anchorScreenY - tooltipHeight > TOOLTIP_MARGIN) {
+      tooltipFlipped.value = false
+      tooltipPos.value = { x: clampedX, y: position.y - NODE_TOOLTIP_OFFSET }
+    }
+  })
 }
 
 function onResize() {
@@ -121,7 +127,7 @@ onUnmounted(() => {
       :class="{ 'set-chart-map__node--hidden': selectedSetId !== null }" />
 
     <Transition name="tooltip">
-      <div v-if="hoveredSet" class="set-chart-map__tooltip"
+      <div v-if="hoveredSet" ref="tooltipRef" class="set-chart-map__tooltip"
         :class="{ 'set-chart-map__tooltip--flipped': tooltipFlipped }"
         :style="{ left: `${tooltipPos.x}px`, top: `${tooltipPos.y}px` }">
         <span class="set-chart-map__tooltip-title">{{ hoveredSet.title }}</span>

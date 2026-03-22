@@ -130,6 +130,7 @@ function isActive(to: string): boolean {
     <div class="sidebar__bottom">
       <component
         :is="authStore.isLoggedIn && authStore.userId ? 'router-link' : 'button'"
+        :key="authStore.isLoggedIn ? 'profile-link' : 'login-btn'"
         :to="authStore.isLoggedIn && authStore.userId ? { name: 'player-profile', params: { userId: authStore.userId } } : undefined"
         class="sidebar__item sidebar__user-btn"
         aria-label="User profile"
