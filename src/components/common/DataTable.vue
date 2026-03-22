@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { SortState, TableColumn } from '@/types/display';
-import type { RouteLocationRaw } from 'vue-router';
 import { computed, useSlots } from 'vue';
+import type { RouteLocationRaw } from 'vue-router';
+import { useRouter } from 'vue-router';
 import DataTableCardFallback from './DataTableCardFallback.vue';
 import SkeletonLoader from './SkeletonLoader.vue';
 
@@ -10,7 +11,8 @@ const props = defineProps<{
   rows: Record<string, unknown>[]
   sortState?: SortState
   rowClickable?: boolean
-  rowTo?: (row: Record<string, unknown>) => RouteLocationRaw
+  rowTo?: (row: Record<string, unknown>) => RouteLocationRaw | undefined
+  rowKey?: string | ((row: Record<string, unknown>, index: number) => string | number)
   loading?: boolean
   loadingRows?: number
   emptyMessage?: string
@@ -22,8 +24,30 @@ const emit = defineEmits<{
   rowClick: [row: Record<string, unknown>, index: number]
 }>()
 
+const router = useRouter()
 const slots = useSlots()
 const skeletonCount = computed(() => props.loadingRows ?? 5)
+
+function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
+  if (!props.rowKey) return index
+  if (typeof props.rowKey === 'function') return props.rowKey(row, index)
+  return (row[props.rowKey] as string | number) ?? index
+}
+
+function handleRowClick(row: Record<string, unknown>, index: number, event: MouseEvent) {
+  if (props.rowTo) {
+    const route = props.rowTo(row)
+    if (!route) return
+    if (event.ctrlKey || event.metaKey || event.button === 1) {
+      const resolved = router.resolve(route)
+      window.open(resolved.href, '_blank')
+    } else {
+      router.push(route)
+    }
+  } else if (props.rowClickable) {
+    emit('rowClick', row, index)
+  }
+}
 
 function handleSort(col: TableColumn) {
   if (col.sortable) emit('sort', col.key)
@@ -70,16 +94,13 @@ function sortIcon(col: TableColumn): string {
             </tr>
           </template>
           <template v-else>
-            <tr v-for="(row, index) in rows" :key="index" class="data-table__row"
+            <tr v-for="(row, index) in rows" :key="resolveRowKey(row, index)" class="data-table__row"
               :class="[{ 'data-table__row--clickable': rowClickable || !!rowTo }, rowClass?.(row, index)]"
-              @click="rowClickable && !rowTo && emit('rowClick', row, index)">
-              <td v-for="(col, colIdx) in columns" :key="col.key" class="data-table__td" :class="{
+              @click="handleRowClick(row, index, $event)">
+              <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
                 'data-table__td--mono': col.mono,
                 [`data-table__td--${col.align ?? 'left'}`]: true,
               }">
-                <router-link v-if="colIdx === 0 && rowTo" :to="rowTo(row)" class="data-table__row-link">
-                  <span class="sr-only">View details</span>
-                </router-link>
                 <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="index">
                   {{ row[col.key] }}
                 </slot>
@@ -100,13 +121,13 @@ function sortIcon(col: TableColumn): string {
         </div>
       </template>
       <template v-else-if="slots['mobile-card']">
-        <div v-for="(row, index) in rows" :key="index" class="data-table-cards__custom">
+        <div v-for="(row, index) in rows" :key="resolveRowKey(row, index)" class="data-table-cards__custom">
           <slot name="mobile-card" :row="row" :index="index" />
         </div>
       </template>
       <template v-else>
-        <DataTableCardFallback v-for="(row, index) in rows" :key="index" :columns="columns" :row="row"
-          :clickable="rowClickable" @click="emit('rowClick', row, index)">
+        <DataTableCardFallback v-for="(row, index) in rows" :key="resolveRowKey(row, index)" :columns="columns"
+          :row="row" :clickable="rowClickable" @click="emit('rowClick', row, index)">
           <template v-for="col in columns" :key="col.key" #[`cell-${col.key}`]="slotProps">
             <slot :name="`cell-${col.key}`" :row="slotProps.row" :value="slotProps.value" :index="index">
               {{ slotProps.value }}
@@ -174,7 +195,6 @@ function sortIcon(col: TableColumn): string {
 }
 
 .data-table__row {
-  position: relative;
   height: 48px;
   border-left: 2px solid transparent;
   transition: border-color 120ms ease, background-color 120ms ease;
@@ -202,20 +222,6 @@ function sortIcon(col: TableColumn): string {
   font-size: var(--text-body);
   color: var(--text-primary);
   vertical-align: middle;
-}
-
-.data-table__row-link {
-  position: static;
-  display: inline;
-  text-decoration: none;
-  color: inherit;
-}
-
-.data-table__row-link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
 }
 
 .data-table__td--left {
@@ -250,17 +256,6 @@ function sortIcon(col: TableColumn): string {
   display: none;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
 }
 
 @media (max-width: 767px) {

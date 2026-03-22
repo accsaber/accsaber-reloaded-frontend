@@ -15,7 +15,8 @@ withDefaults(defineProps<{
   loadingRows?: number
   emptyMessage?: string
   rowClickable?: boolean
-  rowTo?: (row: Record<string, unknown>) => RouteLocationRaw
+  rowTo?: (row: Record<string, unknown>) => RouteLocationRaw | undefined
+  rowKey?: string | ((row: Record<string, unknown>, index: number) => string | number)
   page?: number
   totalPages?: number
   medalRanks?: boolean
@@ -61,6 +62,7 @@ const customSlots = computed(() => {
       :loading-rows="loadingRows"
       :row-clickable="rowClickable"
       :row-to="rowTo"
+      :row-key="rowKey"
       :row-class="rowClass"
       :empty-message="emptyMessage"
       @sort="emit('sort', $event)"

@@ -251,7 +251,7 @@ watch(() => categoryStore.loaded, (loaded) => {
 
     <div class="leaderboards__table">
       <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
-        :row-class="rowClass" row-clickable :row-to="playerRowTo"
+        :row-class="rowClass" row-clickable :row-to="playerRowTo" row-key="userId"
         empty-message="No players found" @sort="setSort"
         @row-click="handleRowClick">
         <template #cell-rank="{ value, row }">

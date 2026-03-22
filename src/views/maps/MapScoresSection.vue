@@ -83,7 +83,6 @@ const columns = computed(() =>
 const rows = computed(() => {
   const pageOffset = (paginationParams.value.page ?? 0) * (paginationParams.value.size ?? 50)
   return scores.value.map((s, i) => ({
-    _index: i,
     _userId: s.userId,
     rank: s.rank,
     countryRank: countryFilter.value ? pageOffset + i + 1 : 0,
@@ -124,9 +123,9 @@ function handleRowClick(row: Record<string, unknown>) {
   router.push(playerRowTo(row))
 }
 
-function openDetail(index: number, event: Event) {
+function openDetail(userId: string, event: Event) {
   event.stopPropagation()
-  const s = scores.value[index]
+  const s = scores.value.find((sc) => sc.userId === userId)
   if (!s) return
   detailUserId.value = s.userId
   detailScore.value = {
@@ -204,8 +203,8 @@ watch(
 
     <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
       :page="currentPage" :total-pages="totalPages" medal-ranks row-clickable :row-to="playerRowTo"
-      :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort" @row-click="handleRowClick"
-      @update:page="setPage">
+      row-key="_userId" :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort"
+      @row-click="handleRowClick" @update:page="setPage">
       <template #cell-rank="{ value, row }">
         <span v-if="countryFilter" class="map-scores__rank" :class="getRankClass(row.countryRank as number)">
           #{{ row.countryRank }}
@@ -234,7 +233,7 @@ watch(
 
       <template #cell-detail="{ row }">
         <button class="map-scores__detail-btn" aria-label="View score details"
-          @click="openDetail(row._index as number, $event)">
+          @click="openDetail(row._userId as string, $event)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
               stroke-linejoin="round" />
@@ -260,7 +259,7 @@ watch(
             <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
           </div>
           <button class="ms-card__detail-btn" aria-label="View score details"
-            @click.stop="openDetail(row._index as number, $event)">
+            @click.stop="openDetail(row._userId as string, $event)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
                 stroke-linejoin="round" />

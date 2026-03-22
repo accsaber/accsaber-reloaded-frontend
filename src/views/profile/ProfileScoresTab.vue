@@ -50,8 +50,8 @@ const scores = computed<ScoreDisplay[]>(() => {
 })
 
 const rows = computed(() =>
-  scores.value.map((s, i) => ({
-    _index: i,
+  scores.value.map((s) => ({
+    mapDifficultyId: s.mapDifficultyId,
     mapId: s.mapId,
     coverUrl: s.coverUrl,
     mapName: s.mapName,
@@ -127,9 +127,9 @@ function handleRowClick(row: Record<string, unknown>) {
   }
 }
 
-function openDetail(index: number, event: Event) {
+function openDetail(diffId: string, event: Event) {
   event.stopPropagation()
-  detailScore.value = scores.value[index] ?? null
+  detailScore.value = scores.value.find((s) => s.mapDifficultyId === diffId) ?? null
   detailOpen.value = true
 }
 
@@ -156,6 +156,7 @@ watch(
       :total-pages="totalPages"
       row-clickable
       :row-to="scoreRowTo"
+      row-key="mapDifficultyId"
       :empty-message="props.search ? `No maps matching &quot;${props.search}&quot;` : 'No scores found'"
       @sort="setSort"
       @row-click="handleRowClick"
@@ -189,7 +190,7 @@ watch(
 
       <template #cell-detail="{ row }">
         <button class="scores-tab__detail-btn" aria-label="View score details"
-          @click="openDetail(row._index as number, $event)">
+          @click="openDetail(row.mapDifficultyId as string, $event)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
               stroke-linejoin="round" />
@@ -211,7 +212,7 @@ watch(
             <span class="ps-card__ap">{{ (row.ap as number).toFixed(2) }} AP</span>
           </div>
           <button class="ps-card__detail-btn" aria-label="View score details"
-            @click.stop="openDetail(row._index as number, $event)">
+            @click.stop="openDetail(row.mapDifficultyId as string, $event)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
                 stroke-linejoin="round" />
