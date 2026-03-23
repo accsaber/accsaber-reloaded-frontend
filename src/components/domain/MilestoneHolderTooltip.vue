@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CountryFlag from '@/components/domain/CountryFlag.vue';
 import type { MilestoneHolderResponse } from '@/types/api/milestones';
-import { onUnmounted, ref } from 'vue';
+import { nextTick, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
   milestoneId: string
@@ -12,14 +12,27 @@ const holders = ref<MilestoneHolderResponse[]>([])
 const loading = ref(true)
 const fetched = ref(false)
 const showTooltip = ref(false)
+const triggerEl = ref<HTMLElement | null>(null)
+const popupPos = ref({ bottom: '0px', right: '0px' })
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 let leaveTimer: ReturnType<typeof setTimeout> | null = null
 
-function onMouseEnter() {
+function updatePosition() {
+  if (!triggerEl.value) return
+  const rect = triggerEl.value.getBoundingClientRect()
+  popupPos.value = {
+    bottom: `${window.innerHeight - rect.top}px`,
+    right: `${window.innerWidth - rect.right}px`,
+  }
+}
+
+async function onMouseEnter() {
   if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null }
   if (showTooltip.value) return
-  hoverTimer = setTimeout(() => {
+  hoverTimer = setTimeout(async () => {
+    updatePosition()
     showTooltip.value = true
+    await nextTick()
     if (!fetched.value) fetchHolders()
   }, 600)
 }
@@ -72,7 +85,7 @@ function formatRelative(dateStr: string): string {
 </script>
 
 <template>
-  <span class="holder-trigger" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <span ref="triggerEl" class="holder-trigger" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <span class="holder-trigger__pill">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -81,35 +94,38 @@ function formatRelative(dateStr: string): string {
       </svg>
     </span>
 
-    <Transition name="holder-tooltip">
-      <div v-if="showTooltip" class="holder-popup" @mouseenter="onPopupEnter" @mouseleave="onPopupLeave">
-        <div class="holder-popup__bridge" />
-        <div class="holder-popup__card">
-          <div class="holder-popup__header">
-            <span class="holder-popup__title">Completed by</span>
-            <span class="holder-popup__count">{{ completions }}</span>
-          </div>
+    <Teleport to="body">
+      <Transition name="holder-tooltip">
+        <div v-if="showTooltip" class="holder-popup" :style="{ bottom: popupPos.bottom, right: popupPos.right }"
+          @mouseenter="onPopupEnter" @mouseleave="onPopupLeave">
+          <div class="holder-popup__bridge" />
+          <div class="holder-popup__card">
+            <div class="holder-popup__header">
+              <span class="holder-popup__title">Completed by</span>
+              <span class="holder-popup__count">{{ completions }}</span>
+            </div>
 
-          <div v-if="loading" class="holder-popup__loading">
-            <div v-for="i in Math.min(completions, 5)" :key="i" class="holder-popup__shimmer" />
-          </div>
+            <div v-if="loading" class="holder-popup__loading">
+              <div v-for="i in Math.min(completions, 5)" :key="i" class="holder-popup__shimmer" />
+            </div>
 
-          <div v-else-if="holders.length === 0" class="holder-popup__empty">
-            No holders found
-          </div>
+            <div v-else-if="holders.length === 0" class="holder-popup__empty">
+              No holders found
+            </div>
 
-          <div v-else class="holder-popup__list">
-            <router-link v-for="h in holders" :key="h.userId"
-              :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
-              <img :src="h.avatarUrl" :alt="h.name" class="holder-popup__avatar" loading="lazy" />
-              <span class="holder-popup__name">{{ h.name }}</span>
-              <CountryFlag :country="h.country" />
-              <span class="holder-popup__time">{{ formatRelative(h.completedAt) }}</span>
-            </router-link>
+            <div v-else class="holder-popup__list">
+              <router-link v-for="h in holders" :key="h.userId"
+                :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
+                <img :src="h.avatarUrl" :alt="h.name" class="holder-popup__avatar" loading="lazy" />
+                <span class="holder-popup__name">{{ h.name }}</span>
+                <CountryFlag :country="h.country" />
+                <span class="holder-popup__time">{{ formatRelative(h.completedAt) }}</span>
+              </router-link>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </span>
 </template>
 
@@ -119,11 +135,6 @@ function formatRelative(dateStr: string): string {
   display: inline-flex;
   align-items: center;
   cursor: help;
-  z-index: 2;
-}
-
-.holder-trigger:hover {
-  z-index: 10000;
 }
 
 .holder-trigger__pill {
@@ -146,11 +157,8 @@ function formatRelative(dateStr: string): string {
 }
 
 .holder-popup {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
+  position: fixed;
   z-index: 10000;
-  pointer-events: auto;
   padding-bottom: 8px;
 }
 
@@ -209,16 +217,6 @@ function formatRelative(dateStr: string): string {
 
 .holder-popup__row:hover {
   background: var(--bg-elevated);
-}
-
-.holder-popup__link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  text-decoration: none;
-  color: inherit;
-  flex: 1;
-  min-width: 0;
 }
 
 .holder-popup__avatar {
