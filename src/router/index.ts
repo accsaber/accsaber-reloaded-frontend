@@ -24,6 +24,11 @@ const router = createRouter({
       meta: isAdminSubdomain ? { requiresStaff: true, requiredRole: 'ADMIN' as StaffRole } : {},
     },
     {
+      path: '/getting-started',
+      name: 'getting-started',
+      component: () => import('@/views/GettingStartedPage.vue'),
+    },
+    {
       path: '/leaderboards',
       name: 'leaderboards',
       component: () => import('@/views/LeaderboardsPage.vue'),

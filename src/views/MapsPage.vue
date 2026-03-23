@@ -13,6 +13,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import MapCard from '@/components/domain/MapCard.vue'
 import MapCardCompact from '@/components/domain/MapCardCompact.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
 import type { MapDifficultyResponse } from '@/types/api/maps'
@@ -54,23 +55,10 @@ const viewMode = computed<ViewMode>({
 const filtersOpen = ref(false)
 const searchQuery = ref('')
 const playlistDropdownOpen = ref(false)
-
-const playlistCategories = computed(() =>
-  categoryStore.categories
-    .filter((c) => c.code !== 'xp')
-    .map((c) => ({
-      code: c.code,
-      name: c.name,
-      accent: categoryStore.getAccent(c.code),
-    }))
-)
+const { playlistCategories, downloadPlaylist: dlPlaylist } = usePlaylistDownload()
 
 function downloadPlaylist(categoryCode: string) {
-  const baseUrl = import.meta.env.VITE_API_BASE as string
-  const a = document.createElement('a')
-  a.href = `${baseUrl}/playlists?category=${categoryCode}`
-  a.download = `accsaber-${categoryCode.replace('_', '-')}.json`
-  a.click()
+  dlPlaylist(categoryCode)
   playlistDropdownOpen.value = false
 }
 
