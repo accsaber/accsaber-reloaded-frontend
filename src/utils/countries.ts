@@ -118,6 +118,12 @@ export const COUNTRIES: CountryOption[] = [
   { value: 'YE', label: 'Yemen' },
 ]
 
+const COUNTRY_MAP = new Map(COUNTRIES.map((c) => [c.value, c.label]))
+
+export function countryName(code: string): string {
+  return COUNTRY_MAP.get(code) ?? code
+}
+
 export const COUNTRY_OPTIONS: CountryOption[] = [
   { value: '', label: 'All Countries' },
   ...COUNTRIES,

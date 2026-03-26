@@ -20,6 +20,7 @@ import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, MetricType, ScoreDisplay, TableColumn, TimeRange, TimeSeriesPoint } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { TIME_RANGE_PARAMS } from '@/utils/constants'
+import { countryName } from '@/utils/countries'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty, toScoreDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
@@ -278,9 +279,12 @@ async function fetchDistributions() {
   if (distributionsLoaded.value) return
   try {
     const api = await import('@/api/statistics')
-      ;[hmdData.value, countryData.value, categoryData.value] = await Promise.all([
-        api.getPlayersByHmd(), api.getPlayersPerCountry(), api.getScoresPerCategory(),
-      ])
+    const [hmd, country, category] = await Promise.all([
+      api.getPlayersByHmd(), api.getPlayersPerCountry(), api.getScoresPerCategory(),
+    ])
+    hmdData.value = hmd
+    countryData.value = country.map((c) => ({ ...c, label: countryName(c.label) }))
+    categoryData.value = category
     distributionsLoaded.value = true
   } catch (error) {
     console.error('Failed to fetch distributions:', error)
