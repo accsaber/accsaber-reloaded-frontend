@@ -117,18 +117,18 @@ const chartFormatValue = computed(() => {
   return undefined
 })
 
-function goToProfile() {
+function navigateAway(to: Parameters<typeof router.push>[0]) {
   emit('close')
-  window.open(router.resolve({ name: 'player-profile', params: { userId: props.userId } }).href, '_self')
+  requestAnimationFrame(() => router.push(to))
+}
+
+function goToProfile() {
+  navigateAway({ name: 'player-profile', params: { userId: props.userId } })
 }
 
 function goToMap() {
   if (!props.score?.mapId) return
-  emit('close')
-  window.open(router.resolve({
-    path: `/maps/${props.score.mapId}`,
-    query: { difficultyId: props.score.mapDifficultyId },
-  }).href, '_self')
+  navigateAway({ path: `/maps/${props.score.mapId}`, query: { difficultyId: props.score.mapDifficultyId } })
 }
 
 async function fetchHistoric() {

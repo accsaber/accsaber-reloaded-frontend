@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 function isActive(to: string): boolean {
   if (to === '/') return route.path === '/'
-  return route.path.startsWith(to)
+  return route.path === to || route.path.startsWith(to + '/')
 }
 </script>
 

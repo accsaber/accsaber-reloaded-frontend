@@ -184,7 +184,10 @@ function rowTo(row: Record<string, unknown>) {
   return undefined
 }
 
+let lbRequestId = 0
+
 async function fetchLeaderboardData() {
+  const requestId = ++lbRequestId
   loading.value = true
   try {
     const categoryId = TABS_WITH_CATEGORY.has(activeTab.value) && activeCategory.value !== 'overall'
@@ -204,9 +207,12 @@ async function fetchLeaderboardData() {
       default: result = { content: [], totalElements: 0, totalPages: 0, size: 0, number: 0, first: true, last: true, empty: true }
     }
 
+    if (requestId !== lbRequestId) return
     if (isScoreTab.value) scoreResponses.value = result.content as ScoreResponse[]
     pageData.value = result
-  } catch {
+  } catch (error) {
+    if (requestId !== lbRequestId) return
+    console.error('Failed to fetch leaderboard:', error)
     pageData.value = null
   }
   loading.value = false
@@ -240,6 +246,8 @@ const METRIC_ENDPOINTS = {
   totalScores: 'getCumulativeScores',
 } as const
 
+let chartRequestId = 0
+
 async function fetchChart(metric: MetricType, range: TimeRange) {
   const key = `${metric}:${range}`
   if (chartCache.value[key]) {
@@ -247,6 +255,7 @@ async function fetchChart(metric: MetricType, range: TimeRange) {
     growthLoading.value = false
     return
   }
+  const requestId = ++chartRequestId
   growthLoading.value = true
   growthChartData.value = []
   try {
@@ -254,9 +263,12 @@ async function fetchChart(metric: MetricType, range: TimeRange) {
     const endpoint = METRIC_ENDPOINTS[metric as keyof typeof METRIC_ENDPOINTS]
     if (!endpoint) { growthChartData.value = []; return }
     const data = await api[endpoint](TIME_RANGE_PARAMS[range])
+    if (requestId !== chartRequestId) return
     chartCache.value[key] = data
     growthChartData.value = toChartPoints(data)
-  } catch {
+  } catch (error) {
+    if (requestId !== chartRequestId) return
+    console.error('Failed to fetch chart:', error)
     growthChartData.value = []
   }
   growthLoading.value = false
@@ -270,7 +282,9 @@ async function fetchDistributions() {
         api.getPlayersByHmd(), api.getPlayersPerCountry(), api.getScoresPerCategory(),
       ])
     distributionsLoaded.value = true
-  } catch { /* keep empty */ }
+  } catch (error) {
+    console.error('Failed to fetch distributions:', error)
+  }
 }
 
 function onMetricChange(m: MetricType) { growthMetric.value = m; fetchChart(m, growthRange.value) }
@@ -284,8 +298,8 @@ watch(
 watch(activeSection, (s) => {
   if (s === 'platform') { fetchChart(growthMetric.value, growthRange.value); fetchDistributions() }
 }, { immediate: true })
-watch(() => categoryStore.loaded, (loaded) => {
-  if (loaded && activeSection.value === 'leaderboards') fetchLeaderboardData()
+watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
+  if (loaded && !wasLoaded && activeSection.value === 'leaderboards') fetchLeaderboardData()
 })
 </script>
 

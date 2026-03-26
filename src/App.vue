@@ -17,7 +17,7 @@ onMounted(() => {
   <AppSidebar v-model:collapsed="sidebarCollapsed" />
   <main class="main-content" :class="{ 'main-content--sidebar-collapsed': sidebarCollapsed }">
     <router-view v-slot="{ Component }">
-      <transition name="page" mode="out-in">
+      <transition name="page">
         <component :is="Component" />
       </transition>
     </router-view>

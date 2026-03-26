@@ -64,7 +64,7 @@ function isActive(to: string): boolean {
     return route.query.tab === tab
   }
   if (to === '/') return route.path === '/' && !route.query.tab
-  return route.path.startsWith(to)
+  return route.path === to || route.path.startsWith(to + '/')
 }
 </script>
 
