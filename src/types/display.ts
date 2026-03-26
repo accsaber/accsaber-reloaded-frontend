@@ -175,7 +175,7 @@ export interface TimeSeriesPoint {
 
 export type TimeRange = '24h' | '7d' | '14d' | '30d' | '90d' | '1y' | 'all'
 
-export type MetricType = 'ap' | 'avgAccuracy' | 'rankedPlays' | 'rank' | 'xpCumulative' | 'xpPerAttempt'
+export type MetricType = 'ap' | 'avgAccuracy' | 'rankedPlays' | 'rank' | 'xpCumulative' | 'xpPerAttempt' | 'newPlayers' | 'totalPlayers' | 'dailyScores' | 'totalScores'
 
 export interface ScoreFeedEntry {
   key: string

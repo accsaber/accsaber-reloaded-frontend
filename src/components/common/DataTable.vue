@@ -46,7 +46,8 @@ function handleRowClick(row: Record<string, unknown>, index: number, event: Mous
     if (!route) return
     if (event.ctrlKey || event.metaKey || event.button === 1) return
     event.preventDefault()
-    router.push(route)
+    const href = router.resolve(route).href
+    window.open(href, '_self')
   } else if (props.rowClickable) {
     emit('rowClick', row, index)
   }

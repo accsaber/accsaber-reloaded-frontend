@@ -295,8 +295,8 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
 
   <BaseModal :open="showLinkModal" title="Create Duplicate Link" @close="showLinkModal = false">
     <div class="modal-form">
-      <BaseInput v-model="manualPrimary" label="Primary User ID (keep)" type="number" required />
-      <BaseInput v-model="manualSecondary" label="Secondary User ID (merge away)" type="number" required />
+      <BaseInput v-model="manualPrimary" label="Primary User ID (keep)" required />
+      <BaseInput v-model="manualSecondary" label="Secondary User ID (merge away)" required />
       <BaseInput v-model="manualReason" label="Reason (optional)" />
       <p v-if="manualError" class="form-error">{{ manualError }}</p>
     </div>

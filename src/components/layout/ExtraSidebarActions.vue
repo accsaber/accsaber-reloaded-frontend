@@ -1,17 +1,49 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
 const theme = useThemeStore()
+const route = useRoute()
+
+defineProps<{
+  mobileNavItems?: { to: string; label: string; icon: string }[]
+}>()
 
 const emit = defineEmits<{
   'action': []
   'login': []
 }>()
+
+function isActive(to: string): boolean {
+  if (to === '/') return route.path === '/'
+  return route.path.startsWith(to)
+}
 </script>
 
 <template>
+  <template v-if="mobileNavItems?.length">
+    <router-link v-for="item in mobileNavItems" :key="item.to" :to="item.to"
+      class="sidebar__item sidebar__item--mobile-only" :class="{ 'sidebar__item--active': isActive(item.to) }"
+      :aria-label="item.label" @click="emit('action')">
+      <span class="sidebar__icon">
+        <svg v-if="item.icon === 'stats'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+          <path d="M22 12A10 10 0 0 0 12 2v10z" />
+        </svg>
+        <svg v-else-if="item.icon === 'feed'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+      </span>
+      <span class="sidebar__label">{{ item.label }}</span>
+      <span class="sidebar__tooltip">{{ item.label }}</span>
+    </router-link>
+    <div class="sidebar__divider sidebar__item--mobile-only"></div>
+  </template>
+
   <component :is="authStore.isLoggedIn && authStore.userId ? 'router-link' : 'button'"
     :key="authStore.isLoggedIn ? 'profile-link' : 'login-btn'"
     :to="authStore.isLoggedIn && authStore.userId ? { name: 'player-profile', params: { userId: authStore.userId } } : undefined"
@@ -90,3 +122,25 @@ const emit = defineEmits<{
     </span>
   </button>
 </template>
+
+<style>
+.sidebar__item--mobile-only {
+  display: none;
+}
+
+.sidebar__divider {
+  height: 1px;
+  background: var(--bg-overlay);
+  margin: var(--space-xs, 4px) var(--space-md, 16px);
+}
+
+@media (max-width: 767px) {
+  .sidebar__item--mobile-only {
+    display: flex;
+  }
+
+  .sidebar__divider.sidebar__item--mobile-only {
+    display: block;
+  }
+}
+</style>

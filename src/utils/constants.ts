@@ -7,7 +7,7 @@ export const TIME_RANGE_PARAMS: Record<TimeRange, { amount: number; unit: 'h' | 
   '30d': { amount: 30, unit: 'd' },
   '90d': { amount: 90, unit: 'd' },
   '1y': { amount: 12, unit: 'mo' },
-  'all': { amount: 120, unit: 'mo' },
+  'all': { amount: 240, unit: 'mo' },
 }
 
 export const DIFFICULTY_ORDER = ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'EXPERT_PLUS'] as const

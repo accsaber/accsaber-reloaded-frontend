@@ -1,0 +1,69 @@
+export interface MapAvgApResponse {
+  mapDifficultyId: string
+  mapId: string
+  songName: string
+  songAuthor: string
+  mapAuthor: string
+  coverUrl: string
+  difficulty: string
+  categoryId: string
+  categoryName: string
+  averageAp: number
+  scoreCount: number
+}
+
+export interface MapRetryResponse {
+  mapDifficultyId: string
+  mapId: string
+  songName: string
+  songAuthor: string
+  mapAuthor: string
+  coverUrl: string
+  difficulty: string
+  categoryId: string
+  categoryName: string
+  supersededCount: number
+}
+
+export interface UserImprovementsResponse {
+  userId: string
+  userName: string
+  avatarUrl: string
+  country: string
+  improvementCount: number
+}
+
+export interface UserMapImprovementsResponse {
+  userId: string
+  userName: string
+  avatarUrl: string
+  country: string
+  mapDifficultyId: string
+  mapId: string
+  songName: string
+  songAuthor: string
+  mapAuthor: string
+  coverUrl: string
+  difficulty: string
+  categoryId: string
+  categoryName: string
+  improvementCount: number
+}
+
+export interface MilestoneCollectorResponse {
+  userId: string
+  userName: string
+  avatarUrl: string
+  country: string
+  milestoneCount: number
+}
+
+export interface TimeSeriesPointResponse {
+  date: string
+  value: number
+}
+
+export interface DistributionEntryResponse {
+  label: string
+  count: number
+}

@@ -2,9 +2,9 @@
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import ExtraSidebarActions from '@/components/layout/ExtraSidebarActions.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useThemeStore } from '@/stores/theme'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
 const props = defineProps<{
   collapsed: boolean
 }>()
@@ -13,20 +13,19 @@ const emit = defineEmits<{
   'update:collapsed': [value: boolean]
 }>()
 
-const theme = useThemeStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const loginModalOpen = ref(false)
-const mobileMenuOpen = ref(false)
 
 function handleUserClick() {
   if (authStore.isLoggedIn && authStore.userId) {
-    router.push({ name: 'player-profile', params: { userId: authStore.userId } })
+    window.open(router.resolve({ name: 'player-profile', params: { userId: authStore.userId } }).href, '_self')
   } else {
     loginModalOpen.value = true
   }
 }
+const mobileMenuOpen = ref(false)
 
 const isAdminSubdomain = window.location.hostname.startsWith('admin.')
 
@@ -35,8 +34,15 @@ const publicNavItems = [
   { to: '/leaderboards', label: 'Leaderboards', icon: 'leaderboard' },
   { to: '/maps', label: 'Maps', icon: 'map' },
   { to: '/milestones', label: 'Milestones', icon: 'milestone' },
+  { to: '/stats', label: 'Stats', icon: 'stats' },
   { to: '/score-feed', label: 'Score Feed', icon: 'feed' },
 ]
+
+const mobileDropdownItems = [
+  { to: '/stats', label: 'Stats', icon: 'stats' },
+  { to: '/score-feed', label: 'Score Feed', icon: 'feed' },
+]
+const mobileDropdownPaths = new Set(mobileDropdownItems.map(i => i.to))
 
 const adminNavItems = [
   { to: '/?tab=users', label: 'Users', icon: 'admin' },
@@ -66,7 +72,8 @@ function isActive(to: string): boolean {
   <nav class="sidebar" :class="{ 'sidebar--collapsed': props.collapsed }">
     <div class="sidebar__nav">
       <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="sidebar__item"
-        :class="{ 'sidebar__item--active': isActive(item.to) }" :aria-label="item.label">
+        :class="{ 'sidebar__item--active': isActive(item.to), 'sidebar__item--desktop-only': mobileDropdownPaths.has(item.to) }"
+        :aria-label="item.label">
         <span class="sidebar__icon">
           <svg v-if="item.icon === 'home'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -108,7 +115,8 @@ function isActive(to: string): boolean {
           <svg v-else-if="item.icon === 'admin'" width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
           <svg v-else-if="item.icon === 'campaign'" width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -130,10 +138,8 @@ function isActive(to: string): boolean {
     </div>
 
     <div class="sidebar__bottom">
-      <ExtraSidebarActions 
-        @action="mobileMenuOpen = false"
-        @login="loginModalOpen = true; mobileMenuOpen = false" 
-      />
+      <ExtraSidebarActions :mobile-nav-items="mobileDropdownItems" @action="mobileMenuOpen = false"
+        @login="loginModalOpen = true; mobileMenuOpen = false" />
 
       <button class="sidebar__item sidebar__collapse-toggle"
         :aria-label="props.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
@@ -154,24 +160,24 @@ function isActive(to: string): boolean {
   </nav>
 
   <div v-if="mobileMenuOpen" class="mobile__backdrop" @click="mobileMenuOpen = false"></div>
-  
+
   <button class="mobile__btn" aria-label="Mobile Menu" @click="mobileMenuOpen = !mobileMenuOpen">
-    <svg v-if="!mobileMenuOpen" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg v-if="!mobileMenuOpen" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="12" x2="21" y2="12"></line>
       <line x1="3" y1="6" x2="21" y2="6"></line>
       <line x1="3" y1="18" x2="21" y2="18"></line>
     </svg>
-    <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
   </button>
 
   <div class="mobile__dropdown" :class="{ 'mobile__dropdown--open': mobileMenuOpen }">
-    <ExtraSidebarActions 
-      @action="mobileMenuOpen = false"
-      @login="loginModalOpen = true; mobileMenuOpen = false" 
-    />
+    <ExtraSidebarActions :mobile-nav-items="mobileDropdownItems" @action="mobileMenuOpen = false"
+      @login="loginModalOpen = true; mobileMenuOpen = false" />
   </div>
 
   <PseudoLoginModal :open="loginModalOpen" @close="loginModalOpen = false" />
@@ -367,6 +373,10 @@ function isActive(to: string): boolean {
     display: none;
   }
 
+  .sidebar__item--desktop-only {
+    display: none;
+  }
+
   .sidebar__item {
     justify-content: center;
     padding: 0;
@@ -460,9 +470,10 @@ function isActive(to: string): boolean {
     display: block;
     color: var(--text-secondary);
   }
-  
+
   .mobile__dropdown .sidebar__item:hover .sidebar__label {
     color: var(--text-primary);
   }
+
 }
 </style>

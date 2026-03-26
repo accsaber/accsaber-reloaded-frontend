@@ -155,6 +155,10 @@ const complexityChanges = computed<ComplexityChange[]>(() => {
   return changes.reverse()
 })
 
+function goToPlayer(userId: string) {
+  window.open(router.resolve({ name: 'player-profile', params: { userId } }).href, '_self')
+}
+
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
     day: 'numeric',
@@ -357,8 +361,8 @@ watch(selectedStatsRange, () => fetchHistoricStats())
             <div class="map-detail__top-history">
               <div v-for="(entry, i) in topScoreHistory" :key="entry.scoreId" class="map-detail__top-history-row"
                 :class="{ 'map-detail__top-history-row--current': i === 0 }" tabindex="0" role="button"
-                @click="router.push({ name: 'player-profile', params: { userId: entry.userId } })"
-                @keydown.enter="router.push({ name: 'player-profile', params: { userId: entry.userId } })">
+                @click="goToPlayer(entry.userId)"
+                @keydown.enter="goToPlayer(entry.userId)">
                 <img class="map-detail__top-avatar" :src="entry.avatarUrl" :alt="entry.userName" />
                 <span class="map-detail__top-name">{{ entry.userName }}</span>
                 <span class="map-detail__top-acc">{{ (entry.accuracy * 100).toFixed(2) }}%</span>

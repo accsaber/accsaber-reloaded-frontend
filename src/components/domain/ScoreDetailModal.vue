@@ -119,16 +119,16 @@ const chartFormatValue = computed(() => {
 
 function goToProfile() {
   emit('close')
-  router.push({ name: 'player-profile', params: { userId: props.userId } })
+  window.open(router.resolve({ name: 'player-profile', params: { userId: props.userId } }).href, '_self')
 }
 
 function goToMap() {
   if (!props.score?.mapId) return
   emit('close')
-  router.push({
+  window.open(router.resolve({
     path: `/maps/${props.score.mapId}`,
     query: { difficultyId: props.score.mapDifficultyId },
-  })
+  }).href, '_self')
 }
 
 async function fetchHistoric() {
@@ -170,11 +170,7 @@ watch(
           <div class="score-detail__cover-glow" :style="{ backgroundImage: `url(${score.coverUrl})` }" />
         </div>
         <div class="score-detail__primary">
-          <StatBlock
-            label="Accuracy"
-            :value="`${(score.accuracy * 100).toFixed(2)}%`"
-            :accent-color="resolvedAccent"
-          />
+          <StatBlock label="Accuracy" :value="`${(score.accuracy * 100).toFixed(2)}%`" :accent-color="resolvedAccent" />
           <StatBlock label="AP" :value="score.ap.toFixed(2)" :accent-color="resolvedAccent" />
           <StatBlock label="Weighted AP" :value="score.weightedAp.toFixed(2)" />
           <div v-if="totalMapXp > 0" class="score-detail__xp-wrap">
@@ -193,12 +189,14 @@ watch(
                 </span>
                 <span class="score-detail__xp-tooltip-row">
                   <span class="score-detail__xp-tooltip-label">Bonus XP</span>
-                  <span class="score-detail__xp-tooltip-value"><span class="score-detail__xp-tooltip-value--bonus">{{ totalBonusXp.toFixed(1) }}</span></span>
+                  <span class="score-detail__xp-tooltip-value"><span class="score-detail__xp-tooltip-value--bonus">{{
+                    totalBonusXp.toFixed(1) }}</span></span>
                 </span>
                 <span class="score-detail__xp-tooltip-divider" />
                 <span class="score-detail__xp-tooltip-row">
                   <span class="score-detail__xp-tooltip-label score-detail__xp-tooltip-label--total">Total</span>
-                  <span class="score-detail__xp-tooltip-value score-detail__xp-tooltip-value--total">{{ totalMapXp.toFixed(1) }} XP</span>
+                  <span class="score-detail__xp-tooltip-value score-detail__xp-tooltip-value--total">{{
+                    totalMapXp.toFixed(1) }} XP</span>
                 </span>
               </span>
             </span>
@@ -296,42 +294,37 @@ watch(
         <h3 class="score-detail__heading">Links</h3>
         <div class="score-detail__links">
           <BaseButton size="sm" @click="goToProfile">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
             View Profile
           </BaseButton>
           <BaseButton v-if="score.mapId" size="sm" @click="goToMap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
               <line x1="8" y1="2" x2="8" y2="18" />
               <line x1="16" y1="6" x2="16" y2="22" />
             </svg>
             Map Leaderboard
           </BaseButton>
-          <BaseButton
-            v-if="score.blScoreId"
-            size="sm"
-            :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`"
-          >
-            <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20" style="border-radius: 3px;" />
+          <BaseButton v-if="score.blScoreId" size="sm"
+            :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`">
+            <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20"
+              style="border-radius: 3px;" />
             Replay
           </BaseButton>
-          <BaseButton
-            v-if="score.blScoreId"
-            size="sm"
-            :href="`https://allpoland.github.io/ArcViewer/?scoreID=${score.blScoreId}`"
-          >
-            <img src="https://beatleader.com/assets/ArcViewerIcon.webp" alt="ArcViewer" width="20" height="20" style="border-radius: 3px;" />
+          <BaseButton v-if="score.blScoreId" size="sm"
+            :href="`https://allpoland.github.io/ArcViewer/?scoreID=${score.blScoreId}`">
+            <img src="https://beatleader.com/assets/ArcViewerIcon.webp" alt="ArcViewer" width="20" height="20"
+              style="border-radius: 3px;" />
             ArcViewer
           </BaseButton>
-          <BaseButton
-            v-if="score.blScoreId"
-            size="sm"
-            :href="`https://beatleader.com/score/${score.blScoreId}`"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <BaseButton v-if="score.blScoreId" size="sm" :href="`https://beatleader.com/score/${score.blScoreId}`">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
@@ -343,17 +336,11 @@ watch(
 
       <div class="score-detail__section">
         <h3 class="score-detail__heading">History</h3>
-        <TimeSeriesChart
-          :data="chartPoints"
-          :metric-label="selectedMetric"
-          :accent-color="resolvedAccent"
-          :available-metrics="SCORE_DETAIL_METRICS"
-          :selected-metric="selectedMetric as MetricType"
-          :selected-range="selectedRange"
-          :format-value="chartFormatValue"
+        <TimeSeriesChart :data="chartPoints" :metric-label="selectedMetric" :accent-color="resolvedAccent"
+          :available-metrics="SCORE_DETAIL_METRICS" :selected-metric="selectedMetric as MetricType"
+          :selected-range="selectedRange" :format-value="chartFormatValue"
           @update:selected-metric="selectedMetric = $event as ScoreMetric"
-          @update:selected-range="selectedRange = $event"
-        />
+          @update:selected-range="selectedRange = $event" />
       </div>
     </div>
   </BaseModal>
@@ -388,11 +375,9 @@ watch(
   left: calc(-1 * var(--space-lg));
   right: calc(-1 * var(--space-lg));
   height: 160px;
-  background: radial-gradient(
-    ellipse at 50% 0%,
-    color-mix(in srgb, var(--detail-accent) 20%, transparent),
-    transparent 70%
-  );
+  background: radial-gradient(ellipse at 50% 0%,
+      color-mix(in srgb, var(--detail-accent) 20%, transparent),
+      transparent 70%);
   pointer-events: none;
 }
 
@@ -492,6 +477,7 @@ watch(
   margin: 0;
   position: relative;
 }
+
 .score-detail__mapper-line strong {
   color: var(--text-secondary);
   font-weight: 500;
@@ -596,6 +582,7 @@ watch(
 
 .score-detail__links {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
