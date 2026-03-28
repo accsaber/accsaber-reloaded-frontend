@@ -9,6 +9,7 @@ export interface UserResponse {
   xpRanking: number
   xpCountryRanking: number
   ssInactive: boolean
+  banned: boolean
   createdAt: string
 }
 

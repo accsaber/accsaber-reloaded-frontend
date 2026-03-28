@@ -122,6 +122,11 @@ async function fetchProfile() {
     const userRes = await getUser(userId.value)
     user.value = userRes
 
+    if (userRes.banned) {
+      loading.value = false
+      return
+    }
+
     const [levelRes, allStatsRes] = await Promise.allSettled([
       getUserLevel(userId.value),
       getUserAllStatistics(userId.value),
@@ -202,7 +207,7 @@ watch(activeCategory, (newCategory) => {
         <div class="profile-hero__level-col">
           <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
             :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="user.avatarUrl" :title="level?.title" />
-          <span v-if="totalXpDiff" class="profile-hero__xp-trend"
+          <span v-if="!user.banned && totalXpDiff" class="profile-hero__xp-trend"
             :class="totalXpDiff > 0 ? 'profile-hero__xp-trend--up' : 'profile-hero__xp-trend--down'">
             {{ totalXpDiff > 0 ? '\u25B2' : '\u25BC' }}
             {{ totalXpDiff > 0 ? '+' : '' }}{{ Math.round(totalXpDiff) }} XP
@@ -240,49 +245,66 @@ watch(activeCategory, (newCategory) => {
           <div class="profile-hero__name-row">
             <h1 class="profile-hero__name">{{ user.name }}</h1>
             <CountryFlag :country="user.country" />
-            <span v-if="user.ssInactive" class="profile-hero__inactive-badge">Inactive</span>
+            <span v-if="user.ssInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
           </div>
 
-          <CategoryTabs :model-value="activeCategory" :exclude="['xp']" @update:model-value="activeCategory = $event" />
-
-          <div class="profile-hero__stats">
-            <StatBlock label="Total AP" :value="activeStats?.ap ?? 0" :trend="statsDiff?.apDiff" />
-            <div class="profile-hero__rank-block profile-hero__rank-block--clickable" role="button" tabindex="0"
-              aria-label="View on global leaderboard" @click="navigateToGlobalRank"
-              @keydown.enter="navigateToGlobalRank">
-              <router-link v-if="globalRankRoute" :to="globalRankRoute" class="profile-hero__rank-link" tabindex="-1" aria-hidden="true" />
-              <StatBlock label="Global Rank" :value="activeStats?.ranking ?? 0" :decimals="0"
-                :trend="statsDiff?.rankingDiff ? -statsDiff.rankingDiff : undefined" />
-              <span v-if="activeStats?.ranking && activeStats.ranking <= 3" class="profile-hero__rank-badge"
-                :class="getRankClass(activeStats.ranking)">#{{ activeStats.ranking }}</span>
-            </div>
-            <div class="profile-hero__rank-block profile-hero__rank-block--clickable" role="button" tabindex="0"
-              aria-label="View on country leaderboard" @click="navigateToCountryRank"
-              @keydown.enter="navigateToCountryRank">
-              <router-link v-if="countryRankRoute" :to="countryRankRoute" class="profile-hero__rank-link" tabindex="-1" aria-hidden="true" />
-              <StatBlock label="Country Rank" :value="activeStats?.countryRanking ?? 0" :decimals="0"
-                :trend="statsDiff?.countryRankingDiff ? -statsDiff.countryRankingDiff : undefined" />
-              <span v-if="activeStats?.countryRanking && activeStats.countryRanking <= 3"
-                class="profile-hero__rank-badge" :class="getRankClass(activeStats.countryRanking)">#{{
-                  activeStats.countryRanking }}</span>
-            </div>
-            <StatBlock label="Ranked Plays" :value="activeStats?.rankedPlays ?? 0" :decimals="0"
-              :trend="statsDiff?.rankedPlaysDiff" />
+          <div v-if="user.banned" class="profile-hero__banned">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            </svg>
+            <span>This account is banned.</span>
           </div>
+
+          <template v-else>
+            <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
+              @update:model-value="activeCategory = $event" />
+
+            <div class="profile-hero__stats">
+              <StatBlock label="Total AP" :value="activeStats?.ap ?? 0" :trend="statsDiff?.apDiff" />
+              <div class="profile-hero__rank-block profile-hero__rank-block--clickable" role="button" tabindex="0"
+                aria-label="View on global leaderboard" @click="navigateToGlobalRank"
+                @keydown.enter="navigateToGlobalRank">
+                <router-link v-if="globalRankRoute" :to="globalRankRoute" class="profile-hero__rank-link" tabindex="-1"
+                  aria-hidden="true" />
+                <StatBlock label="Global Rank" :value="activeStats?.ranking ?? 0" :decimals="0"
+                  :trend="statsDiff?.rankingDiff ? -statsDiff.rankingDiff : undefined" />
+                <span v-if="activeStats?.ranking && activeStats.ranking <= 3" class="profile-hero__rank-badge"
+                  :class="getRankClass(activeStats.ranking)">#{{ activeStats.ranking }}</span>
+              </div>
+              <div class="profile-hero__rank-block profile-hero__rank-block--clickable" role="button" tabindex="0"
+                aria-label="View on country leaderboard" @click="navigateToCountryRank"
+                @keydown.enter="navigateToCountryRank">
+                <router-link v-if="countryRankRoute" :to="countryRankRoute" class="profile-hero__rank-link"
+                  tabindex="-1" aria-hidden="true" />
+                <StatBlock label="Country Rank" :value="activeStats?.countryRanking ?? 0" :decimals="0"
+                  :trend="statsDiff?.countryRankingDiff ? -statsDiff.countryRankingDiff : undefined" />
+                <span v-if="activeStats?.countryRanking && activeStats.countryRanking <= 3"
+                  class="profile-hero__rank-badge" :class="getRankClass(activeStats.countryRanking)">#{{
+                    activeStats.countryRanking }}</span>
+              </div>
+              <StatBlock label="Ranked Plays" :value="activeStats?.rankedPlays ?? 0" :decimals="0"
+                :trend="statsDiff?.rankedPlaysDiff" />
+            </div>
+          </template>
         </div>
       </div>
 
-      <div class="profile-page__tabs-row">
-        <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
-        <SearchBox v-if="activeTab === 'scores'" v-model="scoreSearch" placeholder="Search maps..." />
-      </div>
+      <template v-if="!user.banned">
+        <div class="profile-page__tabs-row">
+          <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
+          <SearchBox v-if="activeTab === 'scores'" v-model="scoreSearch" placeholder="Search maps..." />
+        </div>
 
-      <div class="profile-page__content">
-        <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
-          :search="scoreSearch" />
-        <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory" :xp-stats="xpStats" />
-        <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
-      </div>
+        <div class="profile-page__content">
+          <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
+            :search="scoreSearch" />
+          <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
+            :xp-stats="xpStats" />
+          <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
+        </div>
+      </template>
     </template>
   </div>
 </template>
@@ -471,6 +493,19 @@ watch(activeCategory, (newCategory) => {
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+}
+
+.profile-hero__banned {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  border-radius: var(--radius-card);
+  color: var(--error);
+  font-size: var(--text-body);
+  font-weight: 500;
 }
 
 .profile-hero__inactive-badge {
