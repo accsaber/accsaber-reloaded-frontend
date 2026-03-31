@@ -202,7 +202,7 @@ const starPositions = computed<StarLayout[]>(() => {
   }
 
   const ghostCount = ghostNodes.value.length
-  const padding = ghostCount > 0 ? 22 : 18
+  const padding = ghostCount > 0 ? 14 : 10
   const yRange = 100 - padding * 2
   const positions = new Map<string, { x: number; y: number }>()
 
@@ -253,7 +253,7 @@ const starPositions = computed<StarLayout[]>(() => {
 
   components.sort((a, b) => b.weight - a.weight)
 
-  const stepSize = Math.min(12, (100 - padding * 2) / Math.max(maxDepth, 1))
+  const stepSize = Math.min(16, (100 - padding * 2) / Math.max(maxDepth, 1))
 
   function layoutNode(id: string, parentX: number, yMin: number, yMax: number, bandYMin: number, bandYMax: number) {
     const h = hashString(id)
@@ -262,14 +262,12 @@ const starPositions = computed<StarLayout[]>(() => {
     const r3 = seededRandom(h + 13)
 
     const xBase = parentX + stepSize
-    const xNudge = (r1 - 0.5) * 4
+    const xNudge = (r1 - 0.5) * 2
     const x = Math.min(100 - padding, Math.max(padding, xBase + xNudge))
 
     const yCenter = (yMin + yMax) / 2
-    const bandSpan = bandYMax - bandYMin
-    const yDrift = (r2 - 0.5) * bandSpan * 0.15
-    const yWobble = (r3 - 0.5) * 2
-    const y = Math.min(100 - padding, Math.max(padding, yCenter + yDrift + yWobble))
+    const yWobble = (r2 - 0.5) * 1.5
+    const y = Math.min(100 - padding, Math.max(padding, yCenter + yWobble))
 
     positions.set(id, { x, y })
 
@@ -327,6 +325,31 @@ const starPositions = computed<StarLayout[]>(() => {
     }
   }
 
+  const minDistY = 15
+  const ids = [...positions.keys()]
+  for (let pass = 0; pass < 8; pass++) {
+    let anyPush = false
+    for (let i = 0; i < ids.length; i++) {
+      const a = positions.get(ids[i])!
+      for (let j = i + 1; j < ids.length; j++) {
+        const b = positions.get(ids[j])!
+        const dy = Math.abs(b.y - a.y)
+        const dx = Math.abs(b.x - a.x)
+        if (dy >= minDistY || dx > stepSize * 0.8) continue
+        anyPush = true
+        const push = (minDistY - dy) / 2 + 0.5
+        if (a.y <= b.y) {
+          a.y = Math.max(padding, a.y - push)
+          b.y = Math.min(100 - padding, b.y + push)
+        } else {
+          a.y = Math.min(100 - padding, a.y + push)
+          b.y = Math.max(padding, b.y - push)
+        }
+      }
+    }
+    if (!anyPush) break
+  }
+
   const prereqEdges = allPrereqs
     .filter((p) => positions.has(p.prerequisiteMilestoneId) && positions.has(p.milestoneId))
     .map((p) => ({ from: p.prerequisiteMilestoneId, to: p.milestoneId }))
@@ -376,29 +399,6 @@ const starPositions = computed<StarLayout[]>(() => {
       }
     }
     if (!improved) break
-  }
-
-  const minDist = 8
-  const ids = [...positions.keys()]
-  for (let pass = 0; pass < 3; pass++) {
-    for (let i = 0; i < ids.length; i++) {
-      const a = positions.get(ids[i])!
-      for (let j = i + 1; j < ids.length; j++) {
-        const b = positions.get(ids[j])!
-        const dx = b.x - a.x
-        const dy = b.y - a.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist >= minDist || dist === 0) continue
-
-        const overlap = (minDist - dist) / 2
-        const nx = dx / dist
-        const ny = dy / dist
-        a.x = Math.max(padding, Math.min(100 - padding, a.x - nx * overlap))
-        a.y = Math.max(padding, Math.min(100 - padding, a.y - ny * overlap))
-        b.x = Math.max(padding, Math.min(100 - padding, b.x + nx * overlap))
-        b.y = Math.max(padding, Math.min(100 - padding, b.y + ny * overlap))
-      }
-    }
   }
 
   return sorted.map((m) => ({

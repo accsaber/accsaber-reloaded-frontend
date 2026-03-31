@@ -181,7 +181,7 @@ const ariaLabel = computed(() =>
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
-  max-width: 100px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: color 150ms ease;
