@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import GlintOverlay from '@/components/common/GlintOverlay.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useThemeStore } from '@/stores/theme'
 
 const themeStore = useThemeStore()
 const { playlistCategories, downloadPlaylist } = usePlaylistDownload()
+
+usePageMeta({
+  title: 'Getting Started | AccSaber Reloaded',
+  description: 'Learn how to get started with AccSaber and start competing on accuracy leaderboards.',
+})
 </script>
 
 <template>

@@ -6,6 +6,7 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
 import type { MapComplexityHistoryResponse, MapDifficultyResponse, MapDifficultyStatisticsResponse, MapResponse, TopScoreSnapshot } from '@/types/api/maps'
@@ -82,6 +83,41 @@ const breadcrumbs = computed(() => [
   { label: 'Maps', to: '/maps' },
   { label: map.value?.songName ?? 'Map' },
 ])
+
+const metaTitle = computed(() => {
+  if (!map.value) return undefined
+  const diff = activeDifficulty.value
+  return diff
+    ? `${map.value.songAuthor} - ${map.value.songName} [${formatDifficulty(diff.difficulty)}] | AccSaber Reloaded`
+    : `${map.value.songAuthor} - ${map.value.songName} | AccSaber Reloaded`
+})
+
+const metaDescription = computed(() => {
+  if (!map.value) return undefined
+  const diff = activeDifficulty.value
+  const parts = [`Mapped by ${map.value.mapAuthor}`]
+  if (diff) {
+    parts.push(`${categoryName.value}`, `Complexity ${diff.complexity.toFixed(2)}`)
+  }
+  if (diffStats.value) {
+    parts.push(`${diffStats.value.totalScores} scores`)
+  }
+  return parts.join(' · ')
+})
+
+const metaImage = computed(() => map.value?.coverUrl)
+
+const metaUrl = computed(() => {
+  const base = `${import.meta.env.VITE_SITE_URL}/maps/${mapId.value}`
+  return activeDifficultyId.value ? `${base}?difficultyId=${activeDifficultyId.value}` : base
+})
+
+usePageMeta({
+  title: metaTitle,
+  description: metaDescription,
+  image: metaImage,
+  url: metaUrl,
+})
 
 const selectedStatsMetric = ref<MetricType>('ap')
 const selectedStatsRange = ref<TimeRange>('14d')

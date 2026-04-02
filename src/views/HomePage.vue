@@ -5,12 +5,18 @@ import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { useThemeStore } from '@/stores/theme'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const themeStore = useThemeStore()
+
+usePageMeta({
+  title: 'AccSaber Reloaded',
+  description: 'Accuracy-based leaderboard platform for Beat Saber.',
+})
 
 const levels = ref<LevelThreshold[]>([])
 const levelsLoading = ref(true)

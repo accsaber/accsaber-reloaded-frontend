@@ -9,6 +9,7 @@ import DistributionRanking from '@/components/domain/DistributionRanking.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
@@ -31,6 +32,11 @@ const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
+
+usePageMeta({
+  title: 'Stats | AccSaber Reloaded',
+  description: 'Platform-wide statistics, leaderboards, and score distributions across AccSaber.',
+})
 
 type SectionKey = 'leaderboards' | 'platform'
 type LeaderboardTab = 'streaks' | 'max-ap' | 'avg-ap' | 'most-retried' | 'grinders' | 'dedication' | 'collectors'

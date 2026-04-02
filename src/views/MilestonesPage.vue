@@ -5,6 +5,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
 import SetChartMap from '@/components/domain/SetChartMap.vue'
 import SetDetail from '@/components/domain/SetDetail.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { useSetGroups } from '@/composables/useSetGroups'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -27,6 +28,11 @@ const isMobile = ref(false)
 const viewMode = ref<'chart' | 'list'>('chart')
 
 const { resolvedGroups, standaloneSets, fetchGroups, resetGroups } = useSetGroups(sets)
+
+usePageMeta({
+  title: 'Milestones | AccSaber Reloaded',
+  description: 'Track your milestone progress and earn XP across AccSaber achievement sets.',
+})
 
 const selectedSetId = computed({
   get: (): string | null => (route.query.set as string) || null,

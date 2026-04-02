@@ -2,6 +2,7 @@
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { useScoreWebSocket } from '@/composables/useScoreWebSocket'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreDisplay, ScoreFeedEntry } from '@/types/display'
@@ -10,6 +11,11 @@ import { computed, onMounted, ref } from 'vue'
 const categoryStore = useCategoryStore()
 const { scores, status, connect } = useScoreWebSocket()
 const activeTab = ref('all')
+
+usePageMeta({
+  title: 'Score Feed | AccSaber Reloaded',
+  description: 'Live score feed showing real-time score submissions across AccSaber.',
+})
 
 const tabs = computed(() => {
   const categoryTabs = categoryStore.categoryInfoList

@@ -12,6 +12,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import MapCard from '@/components/domain/MapCard.vue'
 import MapCardCompact from '@/components/domain/MapCardCompact.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useAuthStore } from '@/stores/auth'
@@ -30,6 +31,11 @@ const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const authStore = useAuthStore()
+
+usePageMeta({
+  title: 'Maps | AccSaber Reloaded',
+  description: 'Browse all ranked maps on AccSaber across categories and difficulties.',
+})
 
 const CATEGORY_ORDER = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid', 'overall']
 

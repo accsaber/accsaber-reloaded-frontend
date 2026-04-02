@@ -7,6 +7,7 @@ import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
@@ -77,6 +78,32 @@ const breadcrumbs = computed(() => [
   { label: 'Leaderboards', to: '/leaderboards' },
   { label: user.value?.name ?? 'Player' },
 ])
+
+const metaTitle = computed(() => {
+  if (!user.value) return undefined
+  const rank = activeStats.value?.ranking
+  return rank
+    ? `${user.value.name} - #${rank} | AccSaber Reloaded`
+    : `${user.value.name} | AccSaber Reloaded`
+})
+
+const metaDescription = computed(() => {
+  if (!user.value || !activeStats.value) return undefined
+  const s = activeStats.value
+  return `${user.value.name} - ${s.ap.toFixed(2)} AP, #${s.ranking} Global, ${s.averageAcc.toFixed(2)}% Avg Accuracy, ${s.rankedPlays} Ranked Plays`
+})
+
+const metaImage = computed(() => user.value?.avatarUrl)
+
+const metaUrl = computed(() => `${import.meta.env.VITE_SITE_URL}/players/${userId.value}`)
+
+usePageMeta({
+  title: metaTitle,
+  description: metaDescription,
+  image: metaImage,
+  url: metaUrl,
+  type: 'profile',
+})
 
 const globalRankRoute = computed(() => {
   const ranking = activeStats.value?.ranking

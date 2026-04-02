@@ -7,6 +7,7 @@ import RankChange from '@/components/common/RankChange.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
@@ -36,6 +37,17 @@ const activeCategory = computed<CategoryCode>({
 })
 
 const isXpMode = computed(() => activeCategory.value === 'xp')
+
+const metaTitle = computed(() => {
+  const info = categoryStore.getCategoryInfo(activeCategory.value)
+  const name = info?.name ?? 'Overall'
+  return `${name} Leaderboard | AccSaber Reloaded`
+})
+
+usePageMeta({
+  title: metaTitle,
+  description: 'AccSaber accuracy leaderboards - compete across True Acc, Standard Acc, Tech Acc, and more.',
+})
 
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
   defaultSort: computed(() => isXpMode.value ? 'totalXp' : 'ap'),
