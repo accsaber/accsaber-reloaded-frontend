@@ -30,6 +30,7 @@ const axes = computed(() => {
       return { stat, info }
     })
     .filter((c): c is NonNullable<typeof c> => c !== null)
+    .sort((a, b) => a.info.name.localeCompare(b.info.name))
 
   const count = valid.length
   if (count === 0) return []
