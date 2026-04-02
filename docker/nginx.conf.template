@@ -33,6 +33,11 @@ http {
         application/xml
         image/svg+xml;
 
+    map $http_user_agent $is_crawler {
+        default 0;
+        ~*(Discordbot|Twitterbot|Slackbot|facebookexternalhit|LinkedInBot|WhatsApp|TelegramBot|Googlebot|Embedly|Pinterest) 1;
+    }
+
     server {
         listen 80;
         server_name _;
@@ -80,6 +85,22 @@ http {
             expires 1h;
             add_header Cache-Control "public";
             include /etc/nginx/security-headers.conf;
+        }
+
+        location ~ ^/players/(.+)$ {
+            set $og_upstream ${API_PROXY_TARGET}/v1/og/players/$1;
+            if ($is_crawler) {
+                proxy_pass $og_upstream;
+            }
+            try_files /index.html =404;
+        }
+
+        location ~ ^/maps/([^?]+)$ {
+            set $og_upstream ${API_PROXY_TARGET}/v1/og/maps/$1$is_args$args;
+            if ($is_crawler) {
+                proxy_pass $og_upstream;
+            }
+            try_files /index.html =404;
         }
 
         location / {
