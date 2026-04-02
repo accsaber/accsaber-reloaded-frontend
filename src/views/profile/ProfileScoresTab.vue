@@ -25,7 +25,7 @@ const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
 
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
-  defaultSort: 'ap',
+  defaultSort: 'weighted',
   defaultOrder: 'desc',
   defaultSize: 20,
   sortFieldMap: { leaderboardRank: 'rank', weighted: 'weightedAp', date: 'timeSet' },
