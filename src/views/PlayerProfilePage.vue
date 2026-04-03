@@ -81,29 +81,10 @@ const breadcrumbs = computed(() => [
 
 const metaTitle = computed(() => {
   if (!user.value) return undefined
-  const rank = activeStats.value?.ranking
-  return rank
-    ? `${user.value.name} - #${rank} | AccSaber Reloaded`
-    : `${user.value.name} | AccSaber Reloaded`
+  return `${user.value.name} | AccSaber Reloaded`
 })
 
-const metaDescription = computed(() => {
-  if (!user.value || !activeStats.value) return undefined
-  const s = activeStats.value
-  return `${s.ap.toFixed(2)} AP\n#${s.ranking} Global\n${s.averageAcc.toFixed(2)}% Avg Accuracy\n${s.rankedPlays} Ranked Plays`
-})
-
-const metaImage = computed(() => user.value?.avatarUrl)
-
-const metaUrl = computed(() => `${window.location.origin}/players/${userId.value}`)
-
-usePageMeta({
-  title: metaTitle,
-  description: metaDescription,
-  image: metaImage,
-  url: metaUrl,
-  type: 'profile',
-})
+usePageMeta({ title: metaTitle })
 
 const globalRankRoute = computed(() => {
   const ranking = activeStats.value?.ranking

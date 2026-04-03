@@ -86,38 +86,10 @@ const breadcrumbs = computed(() => [
 
 const metaTitle = computed(() => {
   if (!map.value) return undefined
-  const diff = activeDifficulty.value
-  return diff
-    ? `${map.value.songAuthor} - ${map.value.songName} [${formatDifficulty(diff.difficulty)}] | AccSaber Reloaded`
-    : `${map.value.songAuthor} - ${map.value.songName} | AccSaber Reloaded`
+  return `${map.value.songAuthor} - ${map.value.songName} | AccSaber Reloaded`
 })
 
-const metaDescription = computed(() => {
-  if (!map.value) return undefined
-  const diff = activeDifficulty.value
-  const parts = [`Mapped by ${map.value.mapAuthor}`]
-  if (diff) {
-    parts.push(categoryName.value, `Complexity ${diff.complexity.toFixed(2)}`)
-  }
-  if (diffStats.value) {
-    parts.push(`${diffStats.value.totalScores} scores`)
-  }
-  return parts.join('\n')
-})
-
-const metaImage = computed(() => map.value?.coverUrl)
-
-const metaUrl = computed(() => {
-  const base = `${window.location.origin}/maps/${mapId.value}`
-  return activeDifficultyId.value ? `${base}?difficultyId=${activeDifficultyId.value}` : base
-})
-
-usePageMeta({
-  title: metaTitle,
-  description: metaDescription,
-  image: metaImage,
-  url: metaUrl,
-})
+usePageMeta({ title: metaTitle })
 
 const selectedStatsMetric = ref<MetricType>('ap')
 const selectedStatsRange = ref<TimeRange>('14d')
