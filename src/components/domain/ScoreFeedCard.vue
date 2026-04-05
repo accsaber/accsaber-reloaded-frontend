@@ -128,6 +128,10 @@ function goToPlayer() {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.feed-card:has(.feed-card__player-tab:hover) {
+  z-index: 10;
+}
+
 .feed-card__player-tab {
   position: absolute;
   bottom: 100%;
