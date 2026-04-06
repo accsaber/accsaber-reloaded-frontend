@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import GlintOverlay from '@/components/common/GlintOverlay.vue'
+import type { GlintPosition } from '@/components/common/GlintOverlay.vue'
+import { computed } from 'vue'
+
+const BORDER_SPARKLES: GlintPosition[] = [
+  { top: '-2px', left: '20%', delay: '0s', duration: '2.6s' },
+  { top: '-2px', right: '15%', delay: '1.2s', duration: '3s' },
+  { top: '25%', right: '-2px', delay: '0.4s', duration: '2.8s' },
+  { bottom: '20%', right: '-2px', delay: '1.8s', duration: '3.2s' },
+  { bottom: '-2px', right: '25%', delay: '0.8s', duration: '2.5s' },
+  { bottom: '-2px', left: '20%', delay: '2.2s', duration: '3.4s' },
+  { top: '65%', left: '-2px', delay: '1.5s', duration: '2.7s' },
+  { top: '15%', left: '-2px', delay: '0.6s', duration: '3.1s' },
+]
 
 const props = defineProps<{
   level: number
@@ -29,6 +42,7 @@ const progressPercent = computed(() => {
       <div v-if="avatarUrl" class="level-badge__avatar-wrap">
         <img class="level-badge__avatar" :src="avatarUrl" alt="Avatar" loading="lazy" />
       </div>
+      <GlintOverlay v-if="tierKey === 'ascendant'" :positions="BORDER_SPARKLES" :count="8" />
     </div>
 
     <div class="level-badge__below">
@@ -133,23 +147,14 @@ const progressPercent = computed(() => {
 
 .level-badge__frame--ascendant {
   padding: 5px;
-  background: linear-gradient(var(--angle, 0deg), #f472b6, #fb923c, #facc15, #4ade80, #38bdf8, #a78bfa, #f472b6);
+  background: linear-gradient(var(--angle, 0deg), #f472b6, #a78bfa, #818cf8, #60a5fa, #a78bfa, #e879f9, #f472b6);
   box-shadow:
     0 0 18px rgba(244, 114, 182, 0.5),
-    0 0 36px rgba(167, 139, 250, 0.2),
-    0 0 54px rgba(56, 189, 248, 0.1);
+    0 0 36px rgba(167, 139, 250, 0.25),
+    0 0 54px rgba(129, 140, 248, 0.1);
   animation: frame-rotate 2.5s linear infinite;
 }
 
-.level-badge__frame--ascendant::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: calc(var(--radius-avatar) + 2px);
-  background: linear-gradient(var(--angle, 0deg), transparent 40%, rgba(255, 255, 255, 0.4) 50%, transparent 60%);
-  animation: frame-rotate 2.5s linear infinite;
-  pointer-events: none;
-}
 
 @property --angle {
   syntax: '<angle>';
@@ -241,8 +246,7 @@ const progressPercent = computed(() => {
   .level-badge__frame--legend,
   .level-badge__frame--transcendent,
   .level-badge__frame--mythic,
-  .level-badge__frame--ascendant,
-  .level-badge__frame--ascendant::after {
+  .level-badge__frame--ascendant {
     animation: none;
   }
 

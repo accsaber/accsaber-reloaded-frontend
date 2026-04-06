@@ -1,26 +1,46 @@
 <script setup lang="ts">
-defineProps<{
-  count?: number
-}>()
+import { computed } from 'vue'
 
-const positions = [
+export interface GlintPosition {
+  top?: string
+  left?: string
+  right?: string
+  bottom?: string
+  delay: string
+  duration: string
+}
+
+const props = withDefaults(defineProps<{
+  count?: number
+  positions?: GlintPosition[]
+}>(), {
+  count: 5,
+})
+
+const DEFAULT_POSITIONS: GlintPosition[] = [
   { top: '20%', left: '12%', delay: '0s', duration: '2.8s' },
   { top: '60%', left: '38%', delay: '1s', duration: '3.2s' },
   { top: '25%', left: '65%', delay: '2s', duration: '2.5s' },
   { top: '70%', left: '82%', delay: '0.5s', duration: '3.5s' },
   { top: '35%', left: '50%', delay: '2.8s', duration: '3s' },
 ]
+
+const activePositions = computed(() =>
+  (props.positions ?? DEFAULT_POSITIONS).slice(0, props.count),
+)
 </script>
 
 <template>
   <span class="glint-overlay" aria-hidden="true">
     <span
-      v-for="(pos, i) in positions.slice(0, count ?? 5)"
+      v-for="(pos, i) in activePositions"
       :key="i"
       class="glint-overlay__dot"
       :style="{
         top: pos.top,
         left: pos.left,
+        right: pos.right,
+        bottom: pos.bottom,
         animationDelay: pos.delay,
         animationDuration: pos.duration,
       }"
