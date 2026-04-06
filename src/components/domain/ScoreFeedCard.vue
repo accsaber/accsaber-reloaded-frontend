@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   entry: ScoreFeedEntry
+  tick: number
 }>()
 
 const emit = defineEmits<{
@@ -24,7 +25,10 @@ const accent = computed(() => categoryStore.getAccent(props.entry.categoryCode))
 const categoryName = computed(() =>
   categoryStore.getCategoryInfo(props.entry.categoryCode)?.name ?? props.entry.categoryCode,
 )
-const relativeTime = computed(() => formatRelativeDate(props.entry.timeSet))
+const relativeTime = computed(() => {
+  void props.tick
+  return formatRelativeDate(props.entry.timeSet)
+})
 
 const totalMistakes = computed(() => props.entry.misses + props.entry.badCuts)
 const hasObstacleHits = computed(() => props.entry.wallHits > 0 || props.entry.bombHits > 0)
@@ -43,19 +47,10 @@ function goToPlayer() {
 <template>
   <div class="feed-card" :style="{ '--card-accent': accent }" @click="handleClick">
     <div class="feed-card__player-tab" @click.stop="goToPlayer">
-      <PlayerTooltipTrigger
-        :user-id="entry.userId"
-        :user-name="entry.userName"
-        :avatar-url="entry.avatarUrl"
-        :country="entry.country"
-      >
-        <img
-          v-if="entry.avatarUrl"
-          :src="entry.avatarUrl"
-          :alt="entry.userName"
-          class="feed-card__avatar"
-          loading="lazy"
-        />
+      <PlayerTooltipTrigger :user-id="entry.userId" :user-name="entry.userName" :avatar-url="entry.avatarUrl"
+        :country="entry.country">
+        <img v-if="entry.avatarUrl" :src="entry.avatarUrl" :alt="entry.userName" class="feed-card__avatar"
+          loading="lazy" />
         <span class="feed-card__player-name">{{ entry.userName }}</span>
         <CountryFlag :country="entry.country" />
       </PlayerTooltipTrigger>
@@ -94,14 +89,18 @@ function goToPlayer() {
           <span class="feed-card__streak">115s: {{ entry.streak115 }}</span>
           <span v-if="isFC" class="feed-card__fc">FC</span>
           <span v-else-if="isXFC" class="feed-card__xfc">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
             FC
           </span>
           <span v-else class="feed-card__misses">{{ totalMistakes }}
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </span>
           <span class="feed-card__time">{{ relativeTime }}</span>
@@ -191,9 +190,17 @@ function goToPlayer() {
   white-space: nowrap;
 }
 
-.feed-card__rank.rank--gold { color: var(--tier-gold); }
-.feed-card__rank.rank--silver { color: var(--tier-silver); }
-.feed-card__rank.rank--bronze { color: var(--tier-bronze); }
+.feed-card__rank.rank--gold {
+  color: var(--tier-gold);
+}
+
+.feed-card__rank.rank--silver {
+  color: var(--tier-silver);
+}
+
+.feed-card__rank.rank--bronze {
+  color: var(--tier-bronze);
+}
 
 .feed-card__cover {
   flex-shrink: 0;

@@ -6,7 +6,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { useScoreWebSocket } from '@/composables/useScoreWebSocket'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreDisplay, ScoreFeedEntry } from '@/types/display'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const categoryStore = useCategoryStore()
 const { scores, status, connect } = useScoreWebSocket()
@@ -70,7 +70,14 @@ function onSelectScore(entry: ScoreFeedEntry) {
   modalOpen.value = true
 }
 
-onMounted(connect)
+const tick = ref(0)
+let tickInterval: ReturnType<typeof setInterval>
+
+onMounted(() => {
+  connect()
+  tickInterval = setInterval(() => tick.value++, 60_000)
+})
+onUnmounted(() => clearInterval(tickInterval))
 </script>
 
 <template>
@@ -93,6 +100,7 @@ onMounted(connect)
           v-for="entry in filteredScores"
           :key="entry.key"
           :entry="entry"
+          :tick="tick"
           @select="onSelectScore"
         />
       </TransitionGroup>
