@@ -5,6 +5,7 @@ import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreFeedEntry } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
+import { getRankClass } from '@/utils/ranking'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -61,7 +62,7 @@ function goToPlayer() {
     </div>
 
     <div class="feed-card__body">
-      <span class="feed-card__rank">#{{ entry.rank }}</span>
+      <span class="feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
 
       <div class="feed-card__cover">
         <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48" />
@@ -189,6 +190,10 @@ function goToPlayer() {
   text-align: center;
   white-space: nowrap;
 }
+
+.feed-card__rank.rank--gold { color: var(--tier-gold); }
+.feed-card__rank.rank--silver { color: var(--tier-silver); }
+.feed-card__rank.rank--bronze { color: var(--tier-bronze); }
 
 .feed-card__cover {
   flex-shrink: 0;

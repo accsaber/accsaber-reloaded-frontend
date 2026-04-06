@@ -291,6 +291,10 @@ watch(
   color: var(--text-secondary);
 }
 
+.map-scores__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.map-scores__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.map-scores__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+
 .map-scores__rank-global {
   font-size: var(--text-caption);
   color: var(--text-tertiary);

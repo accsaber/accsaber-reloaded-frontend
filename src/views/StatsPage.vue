@@ -709,6 +709,10 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
   color: var(--text-secondary);
 }
 
+.rank-cell.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.rank-cell.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.rank-cell.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+
 .player-cell {
   display: flex;
   align-items: center;

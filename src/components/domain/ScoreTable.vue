@@ -78,7 +78,9 @@ const customSlots = computed(() => {
 
       <template #cell-leaderboardRank="sp">
         <slot name="cell-leaderboardRank" v-bind="sp">
-          <span class="score-table__rank">#{{ sp.value }}</span>
+          <span class="score-table__rank" :class="medalRanks ? getRankClass(sp.value as number) : ''">
+            #{{ sp.value }}
+          </span>
         </slot>
       </template>
 
@@ -140,6 +142,10 @@ const customSlots = computed(() => {
   font-weight: 500;
   color: var(--text-secondary);
 }
+
+.score-table__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.score-table__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.score-table__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .score-table__ap {
   font-weight: 500;

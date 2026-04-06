@@ -175,6 +175,7 @@ watch(
   <div class="scores-tab">
     <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="8"
       :page="currentPage" :total-pages="totalPages" row-clickable :row-to="scoreRowTo" row-key="mapDifficultyId"
+      medal-ranks
       :empty-message="props.search ? `No maps matching &quot;${props.search}&quot;` : 'No scores found'" @sort="setSort"
       @row-click="handleRowClick" @update:page="setPage">
       <template #cell-cover="{ row }">

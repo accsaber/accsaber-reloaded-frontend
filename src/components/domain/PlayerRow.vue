@@ -46,6 +46,10 @@ defineProps<{
   text-align: right;
 }
 
+.player-row__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.player-row__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.player-row__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+
 .player-row__avatar {
   width: 32px;
   height: 32px;

@@ -465,6 +465,10 @@ watch(() => categoryStore.loaded, (loaded) => {
   color: var(--text-secondary);
 }
 
+.rank-cell.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.rank-cell.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.rank-cell.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+
 .rank-cell__global {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
