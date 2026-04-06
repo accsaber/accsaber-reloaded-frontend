@@ -389,7 +389,7 @@ watch(
           @update:model-value="setSort($event)" />
         <BaseSelect v-if="isBatchView" :options="batchSortOptions" :model-value="batchSortKey"
           @update:model-value="batchSortKey = $event" />
-        <SearchBox v-if="!isBatchView" v-model="searchQuery" placeholder="Search maps..." />
+        <SearchBox v-if="!isBatchView" v-model="searchQuery" placeholder="Search by song, artist, or mapper..." />
       </div>
       <div class="maps-page__controls-right">
         <div class="maps-page__view-toggle" role="radiogroup" aria-label="View mode">
