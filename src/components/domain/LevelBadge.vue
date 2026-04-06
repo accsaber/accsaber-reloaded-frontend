@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import GlintOverlay from '@/components/common/GlintOverlay.vue'
-import type { GlintPosition } from '@/components/common/GlintOverlay.vue'
-import { computed } from 'vue'
+import type { GlintPosition } from '@/components/common/GlintOverlay.vue';
+import GlintOverlay from '@/components/common/GlintOverlay.vue';
+import { computed } from 'vue';
 
 const BORDER_SPARKLES: GlintPosition[] = [
   { top: '-2px', left: '20%', delay: '0s', duration: '2.6s' },
@@ -138,11 +138,71 @@ const progressPercent = computed(() => {
 
 .level-badge__frame--mythic {
   padding: 4px;
-  background: linear-gradient(var(--angle, 0deg), #b91c1c, #ef4444, #fca5a5, #ef4444, #b91c1c);
+  background: linear-gradient(var(--angle, 0deg), #7f1d1d, #dc2626, #f97316, #fbbf24, #f97316, #dc2626, #7f1d1d);
   box-shadow:
-    0 0 16px rgba(239, 68, 68, 0.5),
-    0 0 32px rgba(239, 68, 68, 0.2);
+    0 0 14px rgba(220, 38, 38, 0.6),
+    0 0 28px rgba(249, 115, 22, 0.25);
   animation: frame-rotate 3s linear infinite;
+}
+
+.level-badge__frame--mythic::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--radius-avatar) + 3px);
+  background:
+    radial-gradient(ellipse at 30% 15%, rgba(251, 191, 36, 0.4), transparent 45%),
+    radial-gradient(ellipse at 75% 85%, rgba(251, 191, 36, 0.35), transparent 45%);
+  animation: ember-a 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.level-badge__frame--mythic::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--radius-avatar) + 3px);
+  background:
+    radial-gradient(ellipse at 80% 25%, rgba(249, 115, 22, 0.3), transparent 45%),
+    radial-gradient(ellipse at 15% 70%, rgba(249, 115, 22, 0.25), transparent 45%);
+  animation: ember-b 4.7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ember-a {
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes ember-b {
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  30% {
+    opacity: 0.2;
+  }
+
+  60% {
+    opacity: 0.9;
+  }
+
+  85% {
+    opacity: 0.35;
+  }
 }
 
 .level-badge__frame--ascendant {
@@ -246,6 +306,8 @@ const progressPercent = computed(() => {
   .level-badge__frame--legend,
   .level-badge__frame--transcendent,
   .level-badge__frame--mythic,
+  .level-badge__frame--mythic::before,
+  .level-badge__frame--mythic::after,
   .level-badge__frame--ascendant {
     animation: none;
   }
