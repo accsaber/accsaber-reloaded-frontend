@@ -98,7 +98,7 @@ const rows = computed(() => {
         avatarUrl: p.avatarUrl,
         totalXp: p.totalXp,
         level: p.level,
-        ssInactive: p.ssInactive,
+        playerInactive: p.playerInactive,
       }
     })
   }
@@ -116,7 +116,7 @@ const rows = computed(() => {
       ap: p.ap,
       avgAccuracy: p.avgAccuracy,
       rankedPlays: p.rankedPlays,
-      ssInactive: p.ssInactive,
+      playerInactive: p.playerInactive,
     }
   })
 })
@@ -161,14 +161,14 @@ const countryOptions = computed(() => {
 async function fetchData() {
   loading.value = true
   try {
-    const inactiveUsers = showInactive.value ? undefined : false
+    const includeInactive = showInactive.value ? true : undefined
     if (isXpMode.value) {
       const { getXpLeaderboard } = await import('@/api/leaderboards')
       const params = {
         ...paginationParams.value,
         search: searchQuery.value.trim() || undefined,
         country: countryFilter.value || undefined,
-        inactiveUsers,
+        includeInactive,
       }
       xpPageData.value = await getXpLeaderboard(params)
     } else {
@@ -178,7 +178,7 @@ async function fetchData() {
         return
       }
       const { getLeaderboard, getCountryLeaderboard } = await import('@/api/leaderboards')
-      const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, inactiveUsers }
+      const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, includeInactive }
       if (countryFilter.value) {
         apPageData.value = await getCountryLeaderboard(categoryId, countryFilter.value, params)
       } else {
@@ -209,7 +209,7 @@ function rowClass(row: Record<string, unknown>): Record<string, boolean> {
   return {
     'data-table__row--highlighted': row.userId === highlightedUserId.value,
     'data-table__row--self-highlight': !!authStore.userId && row.userId === authStore.userId,
-    'data-table__row--inactive': !!row.ssInactive,
+    'data-table__row--inactive': !!row.playerInactive,
   }
 }
 
@@ -263,10 +263,10 @@ watch(() => categoryStore.loaded, (loaded) => {
       <div class="leaderboards__filter">
         <button class="leaderboards__inactive-toggle" :class="{ 'leaderboards__inactive-toggle--active': showInactive }"
           :aria-pressed="showInactive" aria-label="Show inactive players" @click="showInactive = !showInactive">
-          <span class="leaderboards__inactive-track" hidden>
+          <span class="leaderboards__inactive-track">
             <span class="leaderboards__inactive-thumb" />
           </span>
-          <span class="leaderboards__inactive-label" hidden>Inactive</span>
+          <span class="leaderboards__inactive-label">Inactive</span>
         </button>
         <SearchBox v-model="searchQuery" placeholder="Search players..." />
         <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
@@ -322,7 +322,7 @@ watch(() => categoryStore.loaded, (loaded) => {
             :class="[
               { 'lb-card--highlighted': row.userId === highlightedUserId },
               { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
-              { 'lb-card--inactive': !!row.ssInactive },
+              { 'lb-card--inactive': !!row.playerInactive },
               rowClass(row)
             ]" :data-user-id="row.userId">
             <span class="lb-card__rank rank-cell"
@@ -486,7 +486,6 @@ watch(() => categoryStore.loaded, (loaded) => {
 }
 
 :deep(.data-table__row--inactive) {
-  opacity: 0.45;
 }
 
 @keyframes row-highlight {
@@ -581,7 +580,6 @@ watch(() => categoryStore.loaded, (loaded) => {
 }
 
 .lb-card--inactive {
-  opacity: 0.45;
 }
 
 @media (max-width: 767px) {

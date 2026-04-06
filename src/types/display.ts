@@ -43,7 +43,7 @@ export interface PlayerDisplay {
   ap: number
   avgAccuracy?: number
   rankedPlays?: number
-  ssInactive?: boolean
+  playerInactive?: boolean
 }
 
 export interface XpPlayerDisplay {
@@ -56,7 +56,7 @@ export interface XpPlayerDisplay {
   rankChange?: number | null
   totalXp: number
   level: number
-  ssInactive?: boolean
+  playerInactive?: boolean
 }
 
 export interface MapDisplay {

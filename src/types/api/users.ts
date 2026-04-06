@@ -8,7 +8,7 @@ export interface UserResponse {
   country: string
   xpRanking: number
   xpCountryRanking: number
-  ssInactive: boolean
+  playerInactive: boolean
   banned: boolean
   createdAt: string
 }
@@ -67,7 +67,7 @@ export interface LeaderboardResponse {
   averageAp: number
   rankedPlays: number
   topPlayId: string
-  ssInactive: boolean
+  playerInactive: boolean
 }
 
 export interface XpLeaderboardResponse {
@@ -80,7 +80,7 @@ export interface XpLeaderboardResponse {
   avatarUrl: string
   totalXp: number
   level: number
-  ssInactive: boolean
+  playerInactive: boolean
 }
 
 export interface UserAllStatisticsResponse {

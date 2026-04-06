@@ -253,7 +253,7 @@ watch(activeCategory, (newCategory) => {
           <div class="profile-hero__name-row">
             <h1 class="profile-hero__name">{{ user.name }}</h1>
             <CountryFlag :country="user.country" />
-            <span v-if="user.ssInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
+            <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
           </div>
 
           <div v-if="user.banned" class="profile-hero__banned">
