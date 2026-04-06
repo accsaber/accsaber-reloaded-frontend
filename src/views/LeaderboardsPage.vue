@@ -263,10 +263,10 @@ watch(() => categoryStore.loaded, (loaded) => {
       <div class="leaderboards__filter">
         <button class="leaderboards__inactive-toggle" :class="{ 'leaderboards__inactive-toggle--active': showInactive }"
           :aria-pressed="showInactive" aria-label="Show inactive players" @click="showInactive = !showInactive">
-          <span class="leaderboards__inactive-track">
+          <span class="leaderboards__inactive-track" hidden>
             <span class="leaderboards__inactive-thumb" />
           </span>
-          <span class="leaderboards__inactive-label">Inactive</span>
+          <span class="leaderboards__inactive-label" hidden>Inactive</span>
         </button>
         <SearchBox v-model="searchQuery" placeholder="Search players..." />
         <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
