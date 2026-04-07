@@ -321,7 +321,6 @@ watch(() => categoryStore.loaded, (loaded) => {
             { 'lb-card--highlighted': row.userId === highlightedUserId },
             { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
             { 'lb-card--inactive': !!row.playerInactive },
-            rowClass(row)
           ]" :data-user-id="row.userId">
             <span class="lb-card__rank rank-cell"
               :class="getRankClass(countryFilter && row.countryRank ? row.countryRank as number : row.rank as number)">

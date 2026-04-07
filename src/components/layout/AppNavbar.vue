@@ -6,7 +6,7 @@ import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
@@ -20,6 +20,11 @@ const showLogoutConfirm = ref(false)
 const showStaffLogoutConfirm = ref(false)
 const mobileDrawerOpen = ref(false)
 const scrolled = ref(false)
+const avatarFailed = ref(false)
+
+watch(() => authStore.userProfile?.avatarUrl, () => {
+  avatarFailed.value = false
+})
 
 const isAdminSubdomain = window.location.hostname.startsWith('admin.')
 
@@ -151,8 +156,10 @@ onUnmounted(() => {
 
         <button class="navbar__icon-btn" :aria-label="authStore.isLoggedIn ? 'Profile' : 'Log in'"
           @click="handleUserClick">
-          <img v-if="authStore.isLoggedIn && authStore.userProfile?.avatarUrl" :src="authStore.userProfile.avatarUrl"
-            :alt="authStore.userProfile.name" class="navbar__avatar" />
+          <img
+            v-if="authStore.isLoggedIn && authStore.userProfile?.avatarUrl && !avatarFailed"
+            :src="authStore.userProfile.avatarUrl" :alt="authStore.userProfile.name" class="navbar__avatar"
+            @error="avatarFailed = true" />
           <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />

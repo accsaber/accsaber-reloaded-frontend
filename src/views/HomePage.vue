@@ -223,11 +223,6 @@ onUnmounted(() => {
   padding: calc(var(--navbar-height) + var(--space-md)) var(--space-md) var(--space-3xl);
 }
 
-@media (max-width: 767px) {
-  .hero {
-    margin-top: calc((var(--navbar-height) + var(--space-md)) * -1);
-  }
-}
 
 .hero__glow {
   position: absolute;
@@ -567,8 +562,8 @@ onUnmounted(() => {
 
 @media (max-width: 767px) {
   .hero {
-    min-height: calc(100svh - 56px);
-    padding: var(--space-2xl) var(--space-md);
+    margin-top: calc((var(--navbar-height) + var(--space-md)) * -1);
+    padding: calc(var(--navbar-height) + var(--space-md)) var(--space-md) var(--space-2xl);
   }
 
   .hero__logo {

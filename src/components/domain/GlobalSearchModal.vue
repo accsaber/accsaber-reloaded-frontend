@@ -52,6 +52,7 @@ watch(() => props.open, async (open) => {
 watch(searchValue, (val) => {
   const trimmed = val.trim()
   if (trimmed.length < MIN_CHARS) {
+    requestId++
     players.value = []
     maps.value = []
     loadingPlayers.value = false
