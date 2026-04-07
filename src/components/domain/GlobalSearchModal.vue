@@ -186,7 +186,6 @@ const mapResults = computed<MapResult[]>(() =>
                 <span class="search-modal__row-title">{{ p.userName }}</span>
                 <span class="search-modal__row-sub">
                   <CountryFlag :country="p.country" />
-                  <span>{{ p.country }}</span>
                 </span>
               </span>
               <span class="search-modal__row-meta">
