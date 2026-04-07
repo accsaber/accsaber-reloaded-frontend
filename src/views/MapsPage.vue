@@ -441,8 +441,7 @@ watch(
           <MapFilterSidebar :selected-categories="selectedCategories" :complexity-range="complexityRange"
             :unplayed-only="unplayedOnly" :show-unplayed="authStore.isLoggedIn"
             @update:selected-categories="selectedCategories = $event"
-            @update:complexity-range="complexityRange = $event"
-            @update:unplayed-only="unplayedOnly = $event" />
+            @update:complexity-range="complexityRange = $event" @update:unplayed-only="unplayedOnly = $event" />
         </FilterPopover>
       </div>
     </div>
@@ -597,6 +596,13 @@ watch(
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.maps-page__controls-left :deep(.search-box) {
+  min-width: 320px;
+  flex: 1 1 320px;
 }
 
 .maps-page__controls-right {
@@ -927,6 +933,16 @@ watch(
 
   .maps-page__controls {
     flex-wrap: wrap;
+  }
+
+  .maps-page__controls-left {
+    width: 100%;
+  }
+
+  .maps-page__controls-left :deep(.search-box) {
+    min-width: 0;
+    flex: 1 1 100%;
+    width: 100%;
   }
 }
 </style>
