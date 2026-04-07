@@ -289,7 +289,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 100;
-  height: 64px;
+  height: var(--navbar-height);
   background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -484,10 +484,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 767px) {
-  .navbar {
-    height: 56px;
-  }
-
   .navbar__inner {
     padding: 0 var(--space-md);
     gap: var(--space-sm);
@@ -537,7 +533,7 @@ onUnmounted(() => {
   .navbar__drawer {
     display: flex;
     position: fixed;
-    top: 56px;
+    top: var(--navbar-height);
     left: var(--space-md);
     right: var(--space-md);
     z-index: 101;

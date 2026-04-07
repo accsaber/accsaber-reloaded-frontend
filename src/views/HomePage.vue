@@ -214,12 +214,19 @@ onUnmounted(() => {
 .hero {
   position: relative;
   min-height: 100svh;
+  margin-top: calc((var(--navbar-height) + var(--space-xl)) * -1);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-xl);
-  padding: var(--space-3xl) var(--space-md);
+  padding: calc(var(--navbar-height) + var(--space-md)) var(--space-md) var(--space-3xl);
+}
+
+@media (max-width: 767px) {
+  .hero {
+    margin-top: calc((var(--navbar-height) + var(--space-md)) * -1);
+  }
 }
 
 .hero__glow {

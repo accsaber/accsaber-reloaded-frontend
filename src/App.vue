@@ -25,9 +25,9 @@ onMounted(() => {
 
 <style scoped>
 .main-content {
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - var(--navbar-height));
   padding: var(--space-xl);
-  padding-top: calc(64px + var(--space-xl));
+  padding-top: calc(var(--navbar-height) + var(--space-xl));
 }
 
 .page-enter-active,
@@ -49,9 +49,9 @@ onMounted(() => {
 
 @media (max-width: 767px) {
   .main-content {
-    min-height: calc(100vh - 56px);
+    min-height: calc(100vh - var(--navbar-height));
     padding: var(--space-md);
-    padding-top: calc(56px + var(--space-md));
+    padding-top: calc(var(--navbar-height) + var(--space-md));
   }
 }
 </style>
