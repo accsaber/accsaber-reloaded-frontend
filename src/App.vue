@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import AppSidebar from '@/components/layout/AppSidebar.vue'
+import AppNavbar from '@/components/layout/AppNavbar.vue'
 import { useAuthStore } from '@/stores/auth'
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 
-const sidebarCollapsed = ref(false)
 const authStore = useAuthStore()
 
 onMounted(() => {
@@ -14,8 +13,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <AppSidebar v-model:collapsed="sidebarCollapsed" />
-  <main class="main-content" :class="{ 'main-content--sidebar-collapsed': sidebarCollapsed }">
+  <AppNavbar />
+  <main class="main-content">
     <router-view v-slot="{ Component }">
       <transition name="page">
         <component :is="Component" />
@@ -26,16 +25,10 @@ onMounted(() => {
 
 <style scoped>
 .main-content {
-  margin-left: 200px;
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
   padding: var(--space-xl);
-  transition: margin-left 200ms ease;
+  padding-top: calc(64px + var(--space-xl));
 }
-
-.main-content--sidebar-collapsed {
-  margin-left: 56px;
-}
-
 
 .page-enter-active,
 .page-leave-active {
@@ -56,9 +49,9 @@ onMounted(() => {
 
 @media (max-width: 767px) {
   .main-content {
-    margin-left: 0;
-    margin-bottom: 56px;
+    min-height: calc(100vh - 56px);
     padding: var(--space-md);
+    padding-top: calc(56px + var(--space-md));
   }
 }
 </style>

@@ -76,7 +76,12 @@ const countryFilter = computed<string>({
   },
 })
 
-const searchQuery = ref('')
+const searchQuery = ref((route.query.search as string) || '')
+
+watch(() => route.query.search, (val) => {
+  const next = (val as string) || ''
+  if (next !== searchQuery.value) searchQuery.value = next
+})
 const showInactive = ref(true)
 const loading = ref(false)
 const apPageData = ref<Page<LeaderboardResponse> | null>(null)

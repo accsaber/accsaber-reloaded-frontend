@@ -1,0 +1,617 @@
+<script setup lang="ts">
+import logoUrl from '@/assets/logo.png'
+import BaseButton from '@/components/common/BaseButton.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
+import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const authStore = useAuthStore()
+const themeStore = useThemeStore()
+const route = useRoute()
+const router = useRouter()
+
+const loginModalOpen = ref(false)
+const showLogoutConfirm = ref(false)
+const showStaffLogoutConfirm = ref(false)
+const mobileDrawerOpen = ref(false)
+const scrolled = ref(false)
+const searchValue = ref('')
+
+const isAdminSubdomain = window.location.hostname.startsWith('admin.')
+
+const publicNavItems = [
+  { to: '/leaderboards', label: 'Leaderboards', icon: 'leaderboard' },
+  { to: '/maps', label: 'Maps', icon: 'map' },
+  { to: '/milestones', label: 'Milestones', icon: 'milestone' },
+  { to: '/stats', label: 'Stats', icon: 'stats' },
+  { to: '/score-feed', label: 'Score Feed', icon: 'feed' },
+]
+
+const adminNavItems = [
+  { to: '/?tab=users', label: 'Users', icon: 'admin' },
+  { to: '/?tab=staff', label: 'Staff', icon: 'admin' },
+  { to: '/?tab=maps', label: 'Maps', icon: 'map' },
+  { to: '/?tab=batches', label: 'Batches', icon: 'admin' },
+  { to: '/?tab=milestones', label: 'Milestones', icon: 'milestone' },
+  { to: '/?tab=campaigns', label: 'Campaigns', icon: 'admin' },
+  { to: '/?tab=curves', label: 'Curves', icon: 'admin' },
+  { to: '/?tab=operations', label: 'Operations', icon: 'admin' },
+  { to: '/?tab=duplicates', label: 'Duplicates', icon: 'admin' },
+]
+
+const navItems = isAdminSubdomain ? adminNavItems : publicNavItems
+
+const mobileQuickItems = isAdminSubdomain
+  ? []
+  : [
+    { to: '/leaderboards', label: 'Leaderboards', icon: 'leaderboard' },
+    { to: '/maps', label: 'Maps', icon: 'map' },
+    { to: '/milestones', label: 'Milestones', icon: 'milestone' },
+  ]
+
+function isActive(to: string): boolean {
+  if (to.includes('?tab=')) {
+    const tab = to.split('?tab=')[1]
+    return route.query.tab === tab
+  }
+  if (to === '/') return route.path === '/' && !route.query.tab
+  return route.path === to || route.path.startsWith(to + '/')
+}
+
+function handleUserClick() {
+  if (authStore.isLoggedIn && authStore.userId) {
+    router.push({ name: 'player-profile', params: { userId: authStore.userId } })
+  } else {
+    loginModalOpen.value = true
+  }
+  mobileDrawerOpen.value = false
+}
+
+function confirmLogout() {
+  showLogoutConfirm.value = false
+  authStore.clearUserId()
+  mobileDrawerOpen.value = false
+}
+
+function confirmStaffLogout() {
+  showStaffLogoutConfirm.value = false
+  authStore.logout()
+  mobileDrawerOpen.value = false
+}
+
+function onSearchSubmit() {
+  const q = searchValue.value.trim()
+  if (!q) return
+  router.push({ name: 'leaderboards', query: { search: q } })
+  searchValue.value = ''
+  mobileDrawerOpen.value = false
+}
+
+function onScroll() {
+  scrolled.value = window.scrollY > 4
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', onScroll, { passive: true })
+  onScroll()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
+})
+</script>
+
+<template>
+  <header class="navbar" :class="{ 'navbar--scrolled': scrolled }">
+    <div class="navbar__inner">
+      <router-link to="/" class="navbar__logo" aria-label="Home">
+        <img :src="logoUrl" alt="AccSaber" class="navbar__logo-img" />
+      </router-link>
+
+      <div class="navbar__mobile-quick">
+        <router-link v-for="item in mobileQuickItems" :key="item.to" :to="item.to" class="navbar__icon-btn"
+          :class="{ 'navbar__icon-btn--active': isActive(item.to) }" :aria-label="item.label">
+          <svg v-if="item.icon === 'leaderboard'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </svg>
+          <svg v-else-if="item.icon === 'map'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+            <line x1="8" y1="2" x2="8" y2="18" />
+            <line x1="16" y1="6" x2="16" y2="22" />
+          </svg>
+          <svg v-else-if="item.icon === 'milestone'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" y1="22" x2="4" y2="15" />
+          </svg>
+        </router-link>
+      </div>
+
+      <nav class="navbar__nav" aria-label="Main navigation">
+        <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="navbar__link"
+          :class="{ 'navbar__link--active': isActive(item.to) }">
+          {{ item.label }}
+        </router-link>
+      </nav>
+
+      <div class="navbar__actions">
+        <form class="navbar__search" @submit.prevent="onSearchSubmit">
+          <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input v-model="searchValue" class="navbar__search-input" type="text" placeholder="Search players..." />
+        </form>
+
+        <button class="navbar__icon-btn" :aria-label="authStore.isLoggedIn ? 'Profile' : 'Log in'"
+          @click="handleUserClick">
+          <img v-if="authStore.isLoggedIn && authStore.userProfile?.avatarUrl" :src="authStore.userProfile.avatarUrl"
+            :alt="authStore.userProfile.name" class="navbar__avatar" />
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
+
+        <button v-if="authStore.isLoggedIn" class="navbar__icon-btn navbar__logout navbar__icon-btn--desktop-only"
+          aria-label="Log out" @click="showLogoutConfirm = true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
+
+        <button v-if="authStore.isStaffAuthenticated && authStore.isAdmin"
+          class="navbar__icon-btn navbar__logout navbar__icon-btn--desktop-only" aria-label="Staff log out"
+          @click="showStaffLogoutConfirm = true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </button>
+
+        <button class="navbar__icon-btn navbar__icon-btn--desktop-only"
+          :aria-label="themeStore.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="themeStore.toggle()">
+          <svg v-if="themeStore.theme === 'dark'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+
+        <button class="navbar__icon-btn navbar__hamburger" aria-label="Menu"
+          @click="mobileDrawerOpen = !mobileDrawerOpen">
+          <svg v-if="!mobileDrawerOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+          <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div v-if="mobileDrawerOpen" class="navbar__backdrop" @click="mobileDrawerOpen = false"></div>
+
+  <div class="navbar__drawer" :class="{ 'navbar__drawer--open': mobileDrawerOpen }">
+    <section class="navbar__drawer-section">
+      <form class="navbar__drawer-search" @submit.prevent="onSearchSubmit">
+        <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input v-model="searchValue" class="navbar__search-input" type="text" placeholder="Search players..." />
+      </form>
+    </section>
+
+    <section class="navbar__drawer-section">
+      <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="navbar__drawer-link"
+        :class="{ 'navbar__drawer-link--active': isActive(item.to) }" @click="mobileDrawerOpen = false">
+        {{ item.label }}
+      </router-link>
+    </section>
+
+    <section class="navbar__drawer-section">
+      <button class="navbar__drawer-link" @click="themeStore.toggle()">
+        {{ themeStore.theme === 'dark' ? 'Light mode' : 'Dark mode' }}
+      </button>
+      <button v-if="authStore.isLoggedIn" class="navbar__drawer-link navbar__drawer-link--danger"
+        @click="mobileDrawerOpen = false; showLogoutConfirm = true">
+        Log out
+      </button>
+      <button v-if="authStore.isStaffAuthenticated && authStore.isAdmin"
+        class="navbar__drawer-link navbar__drawer-link--danger"
+        @click="mobileDrawerOpen = false; showStaffLogoutConfirm = true">
+        Staff log out
+      </button>
+    </section>
+  </div>
+
+  <PseudoLoginModal :open="loginModalOpen" @close="loginModalOpen = false" />
+
+  <BaseModal :open="showLogoutConfirm" title="Log Out" max-width="340px" @close="showLogoutConfirm = false">
+    <p class="logout-confirm__message">Are you sure you want to log out?</p>
+    <template #footer>
+      <div class="logout-confirm__actions">
+        <BaseButton @click="showLogoutConfirm = false">Cancel</BaseButton>
+        <BaseButton variant="destructive" @click="confirmLogout">Log Out</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
+
+  <BaseModal :open="showStaffLogoutConfirm" title="Staff Log Out" max-width="340px"
+    @close="showStaffLogoutConfirm = false">
+    <p class="logout-confirm__message">Are you sure you want to log out of the staff panel?</p>
+    <template #footer>
+      <div class="logout-confirm__actions">
+        <BaseButton @click="showStaffLogoutConfirm = false">Cancel</BaseButton>
+        <BaseButton variant="destructive" @click="confirmStaffLogout">Log Out</BaseButton>
+      </div>
+    </template>
+  </BaseModal>
+</template>
+
+<style>
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 64px;
+  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: box-shadow 200ms ease, background 200ms ease;
+}
+
+.navbar--scrolled {
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  box-shadow: 0 1px 0 var(--bg-overlay), 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.navbar__inner {
+  max-width: 1440px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.navbar__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--space-xs);
+  border-radius: var(--radius-btn);
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+
+.navbar__logo:hover {
+  background: var(--bg-elevated);
+}
+
+.navbar__logo-img {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.navbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: 1;
+}
+
+.navbar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--space-md);
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-btn);
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.navbar__link:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.navbar__link--active {
+  color: var(--text-primary);
+}
+
+.navbar__link--active::after {
+  content: '';
+  position: absolute;
+  left: var(--space-md);
+  right: var(--space-md);
+  bottom: -4px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.navbar__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 220px;
+}
+
+.navbar__search-icon {
+  position: absolute;
+  left: var(--space-sm);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.navbar__search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-sm) 0 calc(var(--space-sm) + 22px);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.navbar__search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.navbar__search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.navbar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-btn);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.navbar__icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.navbar__logout:hover {
+  color: var(--error);
+}
+
+.navbar__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-btn);
+  object-fit: cover;
+}
+
+.navbar__hamburger {
+  display: none;
+}
+
+.navbar__mobile-quick {
+  display: none;
+}
+
+.navbar__icon-btn--active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.navbar__backdrop,
+.navbar__drawer {
+  display: none;
+}
+
+.logout-confirm__message {
+  color: var(--text-secondary);
+  font-size: var(--text-body);
+  margin: 0;
+}
+
+.logout-confirm__actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+@media (max-width: 1023px) {
+  .navbar__search {
+    width: 160px;
+  }
+}
+
+@media (max-width: 767px) {
+  .navbar {
+    height: 56px;
+  }
+
+  .navbar__inner {
+    padding: 0 var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .navbar__logo-img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .navbar__nav,
+  .navbar__search,
+  .navbar__icon-btn--desktop-only {
+    display: none;
+  }
+
+  .navbar__mobile-quick {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .navbar__mobile-quick .navbar__icon-btn {
+    flex: 1;
+    width: auto;
+    height: 44px;
+  }
+
+  .navbar__hamburger {
+    display: flex;
+  }
+
+  .navbar__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+  }
+
+  .navbar__drawer {
+    display: flex;
+    position: fixed;
+    top: 56px;
+    left: var(--space-md);
+    right: var(--space-md);
+    z-index: 101;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    background: color-mix(in srgb, var(--bg-elevated) 96%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--bg-overlay);
+    border-radius: var(--radius-card);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+
+  .navbar__drawer--open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .navbar__drawer-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+  }
+
+  .navbar__drawer-link {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--space-md);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    background: none;
+    border: none;
+    border-radius: var(--radius-btn);
+    cursor: pointer;
+    text-align: left;
+    transition: color 120ms ease, background 120ms ease;
+  }
+
+  .navbar__drawer-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+  }
+
+  .navbar__drawer-link--active {
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .navbar__drawer-link--danger {
+    color: var(--error);
+  }
+
+  .navbar__drawer-link--danger:hover {
+    color: var(--error);
+    background: color-mix(in srgb, var(--error) 12%, transparent);
+  }
+
+  .navbar__drawer-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .navbar__drawer-section+.navbar__drawer-section {
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--bg-overlay);
+  }
+}
+</style>

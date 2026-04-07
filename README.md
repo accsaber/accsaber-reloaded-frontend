@@ -71,7 +71,7 @@ src/
     admin/          Admin-only components (AdminTable, MilestoneQueryBuilder)
     common/         Design system components (BaseButton, DataTable, StatBlock)
     domain/         Domain components (PlayerRow, MapCard, ScoreRow)
-    layout/         AppSidebar, PageHeader
+    layout/         AppNavbar, PageHeader
   composables/      Vue composables (useCountUp, useTiltEffect, useColorExtract)
   router/           Route definitions and guards
   stores/           Pinia stores (auth, theme, categories, modifiers)
