@@ -25,15 +25,9 @@ defineEmits<{
 <style scoped>
 .base-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-xs);
   border-bottom: 1px solid var(--bg-overlay);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.base-tabs::-webkit-scrollbar {
-  display: none;
 }
 
 .base-tabs__tab {
@@ -74,11 +68,6 @@ defineEmits<{
 }
 
 @media (max-width: 767px) {
-  .base-tabs {
-    flex-wrap: wrap;
-    gap: var(--space-xs);
-  }
-
   .base-tabs__tab {
     white-space: normal;
     flex-shrink: 0;
