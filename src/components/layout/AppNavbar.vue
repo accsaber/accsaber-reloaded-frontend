@@ -2,6 +2,7 @@
 import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -14,43 +15,43 @@ const route = useRoute()
 const router = useRouter()
 
 const loginModalOpen = ref(false)
+const searchModalOpen = ref(false)
 const showLogoutConfirm = ref(false)
 const showStaffLogoutConfirm = ref(false)
 const mobileDrawerOpen = ref(false)
 const scrolled = ref(false)
-const searchValue = ref('')
 
 const isAdminSubdomain = window.location.hostname.startsWith('admin.')
 
-const publicNavItems = [
-  { to: '/leaderboards', label: 'Leaderboards', icon: 'leaderboard' },
-  { to: '/maps', label: 'Maps', icon: 'map' },
-  { to: '/milestones', label: 'Milestones', icon: 'milestone' },
-  { to: '/stats', label: 'Stats', icon: 'stats' },
-  { to: '/score-feed', label: 'Score Feed', icon: 'feed' },
+type MobileIcon = 'leaderboard' | 'map' | 'milestone'
+interface NavItem {
+  to: string
+  label: string
+  mobileIcon?: MobileIcon
+}
+
+const publicNavItems: NavItem[] = [
+  { to: '/leaderboards', label: 'Leaderboards', mobileIcon: 'leaderboard' },
+  { to: '/maps', label: 'Maps', mobileIcon: 'map' },
+  { to: '/milestones', label: 'Milestones', mobileIcon: 'milestone' },
+  { to: '/stats', label: 'Stats' },
+  { to: '/score-feed', label: 'Score Feed' },
 ]
 
-const adminNavItems = [
-  { to: '/?tab=users', label: 'Users', icon: 'admin' },
-  { to: '/?tab=staff', label: 'Staff', icon: 'admin' },
-  { to: '/?tab=maps', label: 'Maps', icon: 'map' },
-  { to: '/?tab=batches', label: 'Batches', icon: 'admin' },
-  { to: '/?tab=milestones', label: 'Milestones', icon: 'milestone' },
-  { to: '/?tab=campaigns', label: 'Campaigns', icon: 'admin' },
-  { to: '/?tab=curves', label: 'Curves', icon: 'admin' },
-  { to: '/?tab=operations', label: 'Operations', icon: 'admin' },
-  { to: '/?tab=duplicates', label: 'Duplicates', icon: 'admin' },
+const adminNavItems: NavItem[] = [
+  { to: '/?tab=users', label: 'Users' },
+  { to: '/?tab=staff', label: 'Staff' },
+  { to: '/?tab=maps', label: 'Maps' },
+  { to: '/?tab=batches', label: 'Batches' },
+  { to: '/?tab=milestones', label: 'Milestones' },
+  { to: '/?tab=campaigns', label: 'Campaigns' },
+  { to: '/?tab=curves', label: 'Curves' },
+  { to: '/?tab=operations', label: 'Operations' },
+  { to: '/?tab=duplicates', label: 'Duplicates' },
 ]
 
 const navItems = isAdminSubdomain ? adminNavItems : publicNavItems
-
-const mobileQuickItems = isAdminSubdomain
-  ? []
-  : [
-    { to: '/leaderboards', label: 'Leaderboards', icon: 'leaderboard' },
-    { to: '/maps', label: 'Maps', icon: 'map' },
-    { to: '/milestones', label: 'Milestones', icon: 'milestone' },
-  ]
+const mobileQuickItems = navItems.filter((item): item is NavItem & { mobileIcon: MobileIcon } => !!item.mobileIcon)
 
 function isActive(to: string): boolean {
   if (to.includes('?tab=')) {
@@ -82,11 +83,8 @@ function confirmStaffLogout() {
   mobileDrawerOpen.value = false
 }
 
-function onSearchSubmit() {
-  const q = searchValue.value.trim()
-  if (!q) return
-  router.push({ name: 'leaderboards', query: { search: q } })
-  searchValue.value = ''
+function openSearch() {
+  searchModalOpen.value = true
   mobileDrawerOpen.value = false
 }
 
@@ -114,19 +112,19 @@ onUnmounted(() => {
       <div class="navbar__mobile-quick">
         <router-link v-for="item in mobileQuickItems" :key="item.to" :to="item.to" class="navbar__icon-btn"
           :class="{ 'navbar__icon-btn--active': isActive(item.to) }" :aria-label="item.label">
-          <svg v-if="item.icon === 'leaderboard'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          <svg v-if="item.mobileIcon === 'leaderboard'" width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="20" x2="18" y2="10" />
             <line x1="12" y1="20" x2="12" y2="4" />
             <line x1="6" y1="20" x2="6" y2="14" />
           </svg>
-          <svg v-else-if="item.icon === 'map'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          <svg v-else-if="item.mobileIcon === 'map'" width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
             <line x1="8" y1="2" x2="8" y2="18" />
             <line x1="16" y1="6" x2="16" y2="22" />
           </svg>
-          <svg v-else-if="item.icon === 'milestone'" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          <svg v-else-if="item.mobileIcon === 'milestone'" width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
             <line x1="4" y1="22" x2="4" y2="15" />
@@ -142,14 +140,14 @@ onUnmounted(() => {
       </nav>
 
       <div class="navbar__actions">
-        <form class="navbar__search" @submit.prevent="onSearchSubmit">
+        <button type="button" class="navbar__search" @click="openSearch">
           <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          <input v-model="searchValue" class="navbar__search-input" type="text" placeholder="Search players..." />
-        </form>
+          <span class="navbar__search-placeholder">Search anything...</span>
+        </button>
 
         <button class="navbar__icon-btn" :aria-label="authStore.isLoggedIn ? 'Profile' : 'Log in'"
           @click="handleUserClick">
@@ -225,14 +223,14 @@ onUnmounted(() => {
 
   <div class="navbar__drawer" :class="{ 'navbar__drawer--open': mobileDrawerOpen }">
     <section class="navbar__drawer-section">
-      <form class="navbar__drawer-search" @submit.prevent="onSearchSubmit">
+      <button type="button" class="navbar__drawer-search" @click="openSearch">
         <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input v-model="searchValue" class="navbar__search-input" type="text" placeholder="Search players..." />
-      </form>
+        <span class="navbar__search-placeholder">Search anything...</span>
+      </button>
     </section>
 
     <section class="navbar__drawer-section">
@@ -257,6 +255,8 @@ onUnmounted(() => {
       </button>
     </section>
   </div>
+
+  <GlobalSearchModal :open="searchModalOpen" @close="searchModalOpen = false" />
 
   <PseudoLoginModal :open="loginModalOpen" @close="loginModalOpen = false" />
 
@@ -385,6 +385,28 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   width: 220px;
+  height: 36px;
+  padding: 0 var(--space-sm) 0 calc(var(--space-sm) + 22px);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
+}
+
+.navbar__search:hover {
+  border-color: var(--text-tertiary);
+  color: var(--text-secondary);
+}
+
+.navbar__search:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .navbar__search-icon {
@@ -394,27 +416,10 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.navbar__search-input {
-  width: 100%;
-  height: 36px;
-  padding: 0 var(--space-sm) 0 calc(var(--space-sm) + 22px);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  outline: none;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
-}
-
-.navbar__search-input::placeholder {
-  color: var(--text-tertiary);
-}
-
-.navbar__search-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+.navbar__search-placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar__icon-btn {
@@ -453,11 +458,6 @@ onUnmounted(() => {
 
 .navbar__mobile-quick {
   display: none;
-}
-
-.navbar__icon-btn--active {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .navbar__backdrop,
@@ -518,6 +518,11 @@ onUnmounted(() => {
     height: 44px;
   }
 
+  .navbar__icon-btn--active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
   .navbar__hamburger {
     display: flex;
   }
@@ -561,7 +566,22 @@ onUnmounted(() => {
     position: relative;
     display: flex;
     align-items: center;
-    margin-bottom: var(--space-xs);
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--space-md) 0 calc(var(--space-md) + 24px);
+    background: var(--bg-base);
+    border: 1px solid var(--bg-overlay);
+    border-radius: var(--radius-btn);
+    color: var(--text-tertiary);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .navbar__drawer-search .navbar__search-icon {
+    position: absolute;
+    left: var(--space-md);
   }
 
   .navbar__drawer-link {

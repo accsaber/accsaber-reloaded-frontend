@@ -76,12 +76,7 @@ const countryFilter = computed<string>({
   },
 })
 
-const searchQuery = ref((route.query.search as string) || '')
-
-watch(() => route.query.search, (val) => {
-  const next = (val as string) || ''
-  if (next !== searchQuery.value) searchQuery.value = next
-})
+const searchQuery = ref('')
 const showInactive = ref(true)
 const loading = ref(false)
 const apPageData = ref<Page<LeaderboardResponse> | null>(null)
@@ -281,9 +276,8 @@ watch(() => categoryStore.loaded, (loaded) => {
 
     <div class="leaderboards__table">
       <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
-        :row-class="rowClass" row-clickable :row-to="playerRowTo" row-key="userId"
-        empty-message="No players found" @sort="setSort"
-        @row-click="handleRowClick">
+        :row-class="rowClass" row-clickable :row-to="playerRowTo" row-key="userId" empty-message="No players found"
+        @sort="setSort" @row-click="handleRowClick">
         <template #cell-rank="{ value, row }">
           <span v-if="countryFilter && row.countryRank" class="rank-cell"
             :class="getRankClass(row.countryRank as number)">
@@ -323,13 +317,12 @@ watch(() => categoryStore.loaded, (loaded) => {
         </template>
 
         <template #mobile-card="{ row }">
-          <router-link :to="playerRowTo(row)" class="lb-card"
-            :class="[
-              { 'lb-card--highlighted': row.userId === highlightedUserId },
-              { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
-              { 'lb-card--inactive': !!row.playerInactive },
-              rowClass(row)
-            ]" :data-user-id="row.userId">
+          <router-link :to="playerRowTo(row)" class="lb-card" :class="[
+            { 'lb-card--highlighted': row.userId === highlightedUserId },
+            { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
+            { 'lb-card--inactive': !!row.playerInactive },
+            rowClass(row)
+          ]" :data-user-id="row.userId">
             <span class="lb-card__rank rank-cell"
               :class="getRankClass(countryFilter && row.countryRank ? row.countryRank as number : row.rank as number)">
               #{{ countryFilter && row.countryRank ? row.countryRank : row.rank }}
@@ -340,7 +333,8 @@ watch(() => categoryStore.loaded, (loaded) => {
               <CountryFlag :country="(row.country as string)" />
             </div>
             <RankChange :value="(row.rankChange as number) ?? 0" class="lb-card__change" />
-            <span v-if="isXpMode" class="lb-card__ap ap-cell">{{ Math.round(row.totalXp as number).toLocaleString() }} XP</span>
+            <span v-if="isXpMode" class="lb-card__ap ap-cell">{{ Math.round(row.totalXp as number).toLocaleString() }}
+              XP</span>
             <span v-else class="lb-card__ap ap-cell">{{ (row.ap as number).toFixed(2) }}</span>
           </router-link>
         </template>
@@ -470,9 +464,20 @@ watch(() => categoryStore.loaded, (loaded) => {
   color: var(--text-secondary);
 }
 
-.rank-cell.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.rank-cell.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.rank-cell.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+.rank-cell.rank--gold {
+  color: var(--tier-gold);
+  font-weight: 700;
+}
+
+.rank-cell.rank--silver {
+  color: var(--tier-silver);
+  font-weight: 700;
+}
+
+.rank-cell.rank--bronze {
+  color: var(--tier-bronze);
+  font-weight: 700;
+}
 
 .rank-cell__global {
   font-size: var(--text-caption);
@@ -490,8 +495,7 @@ watch(() => categoryStore.loaded, (loaded) => {
   border-left: 2px solid color-mix(in srgb, var(--page-accent) 40%, transparent);
 }
 
-:deep(.data-table__row--inactive) {
-}
+:deep(.data-table__row--inactive) {}
 
 @keyframes row-highlight {
   0% {
@@ -584,8 +588,7 @@ watch(() => categoryStore.loaded, (loaded) => {
   border-left-color: color-mix(in srgb, var(--page-accent) 40%, transparent);
 }
 
-.lb-card--inactive {
-}
+.lb-card--inactive {}
 
 @media (max-width: 767px) {
   .leaderboards__controls {

@@ -1,7 +1,6 @@
 @import './reset.css';
 @import './tokens.css';
 
-
 html {
   overflow-x: hidden;
   max-width: 100vw;
@@ -18,9 +17,20 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+.rank--gold {
+  color: var(--tier-gold);
+  font-weight: 700;
+}
+
+.rank--silver {
+  color: var(--tier-silver);
+  font-weight: 700;
+}
+
+.rank--bronze {
+  color: var(--tier-bronze);
+  font-weight: 700;
+}
 
 @media (prefers-reduced-motion: reduce) {
 
