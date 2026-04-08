@@ -124,6 +124,11 @@ const statsChartPoints = computed<TimeSeriesPoint[]>(() => {
     .sort((a, b) => a.timestamp - b.timestamp)
 })
 
+function findScoreByExactAp(maxAp: number): DifficultyScoreDisplay | null {
+  if (!topScoresFirstPage.value.length) return null
+  return topScoresFirstPage.value.find((s) => Math.abs(s.ap - maxAp) < 0.005) ?? null
+}
+
 function snapshotFromScore(score: DifficultyScoreDisplay): TopScoreSnapshot {
   return {
     scoreId: score.id,
@@ -140,29 +145,31 @@ function snapshotFromScore(score: DifficultyScoreDisplay): TopScoreSnapshot {
 const topScoreHistory = computed<TopScoreSnapshot[]>(() => {
   const seen = new Set<string>()
   const entries: TopScoreSnapshot[] = []
+  const sorted = [...historicStats.value].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
 
-  const chronoScores = [...topScoresFirstPage.value]
-    .filter((s) => Number.isFinite(s.ap) && !!s.date)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-
-  let runningMax = -Infinity
-  for (const score of chronoScores) {
-    if (score.ap > runningMax) {
-      runningMax = score.ap
-      const snapshot = snapshotFromScore(score)
+  const knownAps: number[] = []
+  for (const stat of sorted) {
+    const snapshot = stat.topScore
+    if (snapshot && !seen.has(snapshot.scoreId)) {
       seen.add(snapshot.scoreId)
+      knownAps.push(snapshot.ap)
       entries.push(snapshot)
     }
   }
 
-  const sortedStats = [...historicStats.value].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  )
-  for (const stat of sortedStats) {
-    const snapshot = stat.topScore
-    if (snapshot && !seen.has(snapshot.scoreId)) {
-      seen.add(snapshot.scoreId)
-      entries.push(snapshot)
+  const triedAps: number[] = []
+  for (const stat of sorted) {
+    if (stat.topScore || stat.maxAp == null) continue
+    const ap = stat.maxAp
+    if (triedAps.some((t) => Math.abs(t - ap) < 0.005)) continue
+    triedAps.push(ap)
+    if (knownAps.some((k) => Math.abs(k - ap) < 0.005)) continue
+    const matched = findScoreByExactAp(ap)
+    if (matched && !seen.has(matched.id)) {
+      seen.add(matched.id)
+      entries.push(snapshotFromScore(matched))
     }
   }
 
