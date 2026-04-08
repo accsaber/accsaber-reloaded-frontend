@@ -11,7 +11,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
 import type { MapComplexityHistoryResponse, MapDifficultyResponse, MapDifficultyStatisticsResponse, MapResponse, TopScoreSnapshot } from '@/types/api/maps'
-import type { MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
+import type { DifficultyScoreDisplay, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { DIFFICULTY_ORDER, MAP_STATS_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -32,6 +32,11 @@ const activeDifficultyId = ref<string>('')
 const diffStats = ref<MapDifficultyStatisticsResponse | null>(null)
 const complexityHistory = ref<MapComplexityHistoryResponse[]>([])
 const historicStats = ref<MapDifficultyStatisticsResponse[]>([])
+const topScoresFirstPage = ref<DifficultyScoreDisplay[]>([])
+
+function onTopScoresLoaded(scores: DifficultyScoreDisplay[]) {
+  topScoresFirstPage.value = scores
+}
 const loading = ref(true)
 const error = ref(false)
 
@@ -115,21 +120,53 @@ const statsChartPoints = computed<TimeSeriesPoint[]>(() => {
           ? s.averageAp
           : s.totalScores,
     }))
+    .filter((p) => p.value != null && Number.isFinite(p.value))
     .sort((a, b) => a.timestamp - b.timestamp)
 })
+
+function snapshotFromScore(score: DifficultyScoreDisplay): TopScoreSnapshot {
+  return {
+    scoreId: score.id,
+    userId: score.userId,
+    userName: score.userName,
+    avatarUrl: score.avatarUrl,
+    score: score.score,
+    accuracy: score.accuracy,
+    ap: score.ap,
+    timeSet: score.date,
+  }
+}
 
 const topScoreHistory = computed<TopScoreSnapshot[]>(() => {
   const seen = new Set<string>()
   const entries: TopScoreSnapshot[] = []
-  const sorted = [...historicStats.value].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  )
-  for (const stat of sorted) {
-    if (stat.topScore && !seen.has(stat.topScore.scoreId)) {
-      seen.add(stat.topScore.scoreId)
-      entries.push(stat.topScore)
+
+  const chronoScores = [...topScoresFirstPage.value]
+    .filter((s) => Number.isFinite(s.ap) && !!s.date)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  let runningMax = -Infinity
+  for (const score of chronoScores) {
+    if (score.ap > runningMax) {
+      runningMax = score.ap
+      const snapshot = snapshotFromScore(score)
+      seen.add(snapshot.scoreId)
+      entries.push(snapshot)
     }
   }
+
+  const sortedStats = [...historicStats.value].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+  for (const stat of sortedStats) {
+    const snapshot = stat.topScore
+    if (snapshot && !seen.has(snapshot.scoreId)) {
+      seen.add(snapshot.scoreId)
+      entries.push(snapshot)
+    }
+  }
+
+  entries.sort((a, b) => new Date(a.timeSet).getTime() - new Date(b.timeSet).getTime())
   return entries.reverse()
 })
 
@@ -252,6 +289,7 @@ watch(mapId, () => fetchMap(), { immediate: true })
 
 watch(activeDifficultyId, (newId) => {
   if (newId) {
+    topScoresFirstPage.value = []
     fetchDifficultyStats()
     fetchHistoricStats()
 
@@ -378,13 +416,13 @@ watch(selectedStatsRange, () => fetchHistoricStats())
       <BaseTabs :tabs="contentTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
 
       <div class="map-detail__content">
-        <template v-if="activeTab === 'leaderboard'">
+        <div v-show="activeTab === 'leaderboard'">
           <MapScoresSection v-if="activeDifficultyId" :difficulty-id="activeDifficultyId" :map-id="map?.id"
             :map-name="map?.songName" :artist-name="map?.songAuthor" :map-author="map?.mapAuthor"
             :cover-url="map?.coverUrl" :category-code="categoryCode"
             :difficulty="activeDifficulty ? formatDifficulty(activeDifficulty.difficulty) : undefined"
-            :accent-color="resolvedAccent" />
-        </template>
+            :accent-color="resolvedAccent" @top-scores-loaded="onTopScoresLoaded" />
+        </div>
 
         <template v-if="activeTab === 'statistics'">
           <div v-if="topScoreHistory.length > 0" class="map-detail__section">

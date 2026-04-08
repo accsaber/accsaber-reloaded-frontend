@@ -28,6 +28,10 @@ const props = defineProps<{
   mapAuthor?: string
 }>()
 
+const emit = defineEmits<{
+  'top-scores-loaded': [scores: DifficultyScoreDisplay[]]
+}>()
+
 const router = useRouter()
 const authStore = useAuthStore()
 const modifierStore = useModifierStore()
@@ -172,6 +176,16 @@ async function fetchScores() {
       toDifficultyScoreDisplay(s, modifierStore.resolveModifierCodes(s.modifierIds))
     )
     totalPages.value = res.totalPages
+
+    const isCanonicalView =
+      currentPage.value === 1 &&
+      sortState.value.key === 'ap' &&
+      sortState.value.direction === 'desc' &&
+      !searchQuery.value.trim() &&
+      !countryFilter.value
+    if (isCanonicalView) {
+      emit('top-scores-loaded', scores.value)
+    }
   } catch {
     scores.value = []
     totalPages.value = 0
