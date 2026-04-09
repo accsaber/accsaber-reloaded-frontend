@@ -10,10 +10,10 @@ export function listDeactivatedVotes(difficultyId: string): Promise<VoteListResp
   return get<VoteListResponse>(`/ranking/maps/difficulties/${difficultyId}/votes/deactivated`)
 }
 
-export function castVote(req: CastVoteRequest): Promise<VoteResponse> {
-  return post<VoteResponse>('/ranking/maps/difficulties/votes', req)
+export function castVote(difficultyId: string, req: CastVoteRequest): Promise<VoteResponse> {
+  return post<VoteResponse>(`/ranking/maps/difficulties/${difficultyId}/votes`, req)
 }
 
-export function deactivateVote(voteId: string): Promise<void> {
-  return del<void>(`/ranking/maps/difficulties/votes/${voteId}`)
+export function deactivateVote(difficultyId: string, voteId: string): Promise<void> {
+  return del<void>(`/ranking/maps/difficulties/${difficultyId}/votes/${voteId}`)
 }

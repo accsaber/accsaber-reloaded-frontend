@@ -12,7 +12,7 @@ interface UserProfile {
 
 const ROLE_HIERARCHY: Record<StaffRole, number> = {
   RANKING: 2,
-  HEAD_RANKING: 3,
+  RANKING_HEAD: 3,
   ADMIN: 5,
   DEVELOPER: 4,
   MODERATOR: 1
@@ -81,8 +81,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   let refreshPromise: Promise<void> | null = null
 
-  async function login(identifier: string, password: string): Promise<void> {
-    const res = await apiLogin({ identifier, password })
+  async function login(identifier: string, password: string, role?: StaffRole): Promise<void> {
+    const res = await apiLogin({ identifier, password, role })
     staffToken.value = res.accessToken
     staffRefreshToken.value = res.refreshToken
     staffRole.value = res.role

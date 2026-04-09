@@ -44,7 +44,7 @@ const linkError = ref('')
 const passwordLoading = ref(false)
 const passwordError = ref('')
 
-const ROLES: StaffRole[] = ['MODERATOR', 'RANKING', 'HEAD_RANKING', 'DEVELOPER', 'ADMIN']
+const ROLES: StaffRole[] = ['MODERATOR', 'RANKING', 'RANKING_HEAD', 'DEVELOPER', 'ADMIN']
 const roleOptions = ROLES.map((r) => ({ value: r, label: r.replace('_', ' ') }))
 
 async function fetchUsers() {

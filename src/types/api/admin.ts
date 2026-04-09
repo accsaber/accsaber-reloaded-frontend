@@ -1,4 +1,4 @@
-import type { BatchStatus, MapDifficultyStatus, StaffRole, StaffUserStatus, VoteType } from '../enums'
+import type { BatchStatus, Difficulty, MapDifficultyStatus, MapVoteAction, StaffRole, StaffUserStatus, VoteType } from '../enums'
 
 export interface CreateStaffUserRequest {
   username: string
@@ -52,8 +52,12 @@ export interface StaffOAuthLinkResponse {
 }
 
 export interface ImportMapFromLeaderboardIdsRequest {
-  ssLeaderboardId?: number
-  blLeaderboardId?: number
+  ssLeaderboardId: string
+  blLeaderboardId: string
+  categoryId: string
+  difficulty: Difficulty
+  characteristic: string
+  batchId?: string | null
 }
 
 export interface UpdateMapStatusRequest {
@@ -74,11 +78,11 @@ export interface UpdateBatchStatusRequest {
 }
 
 export interface CastVoteRequest {
-  mapDifficultyId: string
-  vote: boolean
-  type: VoteType
+  vote: VoteType
+  type: MapVoteAction
   suggestedComplexity?: number
-  criteriaVote?: boolean
+  criteriaVote?: VoteType
+  criteriaVoteOverride?: boolean
   reason?: string
 }
 

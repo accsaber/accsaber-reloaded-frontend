@@ -112,6 +112,7 @@ const selectedStatsRange = ref<TimeRange>('14d')
 
 const statsChartPoints = computed<TimeSeriesPoint[]>(() => {
   return historicStats.value
+    .filter((s) => s.totalScores > 0)
     .map((s) => ({
       timestamp: new Date(s.createdAt).getTime(),
       value: selectedStatsMetric.value === 'ap'

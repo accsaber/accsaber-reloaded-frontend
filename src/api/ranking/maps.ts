@@ -7,8 +7,16 @@ import type {
   UpdateMapComplexityRequest,
   UpdateMapStatusRequest,
 } from '@/types/api/admin'
-import type { MapDifficultyResponse } from '@/types/api/maps'
-import { del, post, put } from '../client'
+import type { DifficultyListParams, MapDifficultyResponse } from '@/types/api/maps'
+import type { Page } from '@/types/pagination'
+import { del, get, patch, post } from '../client'
+import { buildQuery } from '../utils'
+
+export function getDeactivatedDifficulties(
+  params?: DifficultyListParams,
+): Promise<Page<MapDifficultyResponse>> {
+  return get<Page<MapDifficultyResponse>>(`/ranking/maps/difficulties/deactivated${buildQuery(params)}`)
+}
 
 export function importMap(req: ImportMapFromLeaderboardIdsRequest): Promise<MapDifficultyResponse> {
   return post<MapDifficultyResponse>('/ranking/maps/import', req)
@@ -18,14 +26,14 @@ export function updateMapStatus(
   difficultyId: string,
   req: UpdateMapStatusRequest,
 ): Promise<MapDifficultyResponse> {
-  return put<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/status`, req)
+  return patch<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/status`, req)
 }
 
 export function updateMapComplexity(
   difficultyId: string,
   req: UpdateMapComplexityRequest,
 ): Promise<MapDifficultyResponse> {
-  return put<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/complexity`, req)
+  return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/complexity`, req)
 }
 
 export function deactivateMapDifficulty(difficultyId: string): Promise<void> {

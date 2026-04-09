@@ -12,11 +12,13 @@ export const TIME_RANGE_PARAMS: Record<TimeRange, { amount: number; unit: 'h' | 
 
 export const DIFFICULTY_ORDER = ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'EXPERT_PLUS'] as const
 
+export const CATEGORY_ORDER = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid', 'overall'] as const
+
 export const ROLE_ORDER: Record<string, number> = {
   ADMIN: 0,
   DEVELOPER: 1,
   MODERATOR: 2,
-  HEAD_RANKING: 3,
+  RANKING_HEAD: 3,
   RANKING: 4,
 }
 
@@ -24,7 +26,7 @@ export const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin',
   DEVELOPER: 'Developer',
   MODERATOR: 'Moderator',
-  HEAD_RANKING: 'Head Ranking',
+  RANKING_HEAD: 'Head Ranking',
   RANKING: 'Ranking',
 }
 

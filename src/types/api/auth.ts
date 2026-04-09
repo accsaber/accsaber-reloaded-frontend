@@ -10,8 +10,16 @@ export interface AuthResponse {
 export interface LoginRequest {
   identifier: string
   password: string
+  role?: StaffRole
 }
 
 export interface RefreshRequest {
   refreshToken: string
+}
+
+export interface RequestAccessRequest {
+  username: string
+  email: string
+  password: string
+  role: StaffRole
 }

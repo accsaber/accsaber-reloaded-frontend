@@ -11,6 +11,19 @@ declare module 'vue-router' {
 }
 
 const isAdminSubdomain = window.location.hostname.startsWith('admin.')
+const isRankingSubdomain = window.location.hostname.startsWith('ranking.')
+
+function getHomeComponent() {
+  if (isAdminSubdomain) return () => import('@/views/staff/AdminPage.vue')
+  if (isRankingSubdomain) return () => import('@/views/staff/ranking/RankingDashboardPage.vue')
+  return () => import('@/views/HomePage.vue')
+}
+
+function getHomeMeta(): Record<string, unknown> {
+  if (isAdminSubdomain) return { requiresStaff: true, requiredRole: 'ADMIN' as StaffRole }
+  if (isRankingSubdomain) return { requiresStaff: true, requiredRole: 'RANKING' as StaffRole }
+  return {}
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,10 +31,8 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: isAdminSubdomain
-        ? () => import('@/views/staff/AdminPage.vue')
-        : () => import('@/views/HomePage.vue'),
-      meta: isAdminSubdomain ? { requiresStaff: true, requiredRole: 'ADMIN' as StaffRole } : {},
+      component: getHomeComponent(),
+      meta: getHomeMeta(),
     },
     {
       path: '/getting-started',
@@ -94,16 +105,41 @@ const router = createRouter({
       component: () => import('@/views/staff/AdminLoginPage.vue'),
     },
     {
-      path: '/staff/ranking',
-      name: 'staff-ranking',
-      component: () => import('@/views/staff/RankingPage.vue'),
-      meta: { requiresStaff: true, requiredRole: 'RANKING' },
+      path: isRankingSubdomain ? '/login' : '/staff/ranking/login',
+      name: 'ranking-login',
+      component: () => import('@/views/staff/ranking/RankingLoginPage.vue'),
+    },
+    ...(!isRankingSubdomain ? [
+      {
+        path: '/staff/ranking',
+        name: 'staff-ranking',
+        component: () => import('@/views/staff/ranking/RankingDashboardPage.vue'),
+        meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+      },
+    ] : []),
+    {
+      path: isRankingSubdomain ? '/map/:difficultyId' : '/staff/ranking/map/:difficultyId',
+      name: 'ranking-map-detail',
+      component: () => import('@/views/staff/ranking/RankingMapDetailPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
     },
     {
-      path: '/staff/ranking-head',
+      path: isRankingSubdomain ? '/import' : '/staff/ranking/import',
+      name: 'ranking-import',
+      component: () => import('@/views/staff/ranking/MapImportPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+    },
+    {
+      path: isRankingSubdomain ? '/batches' : '/staff/ranking/batches',
       name: 'staff-ranking-head',
-      component: () => import('@/views/staff/RankingHeadPage.vue'),
-      meta: { requiresStaff: true, requiredRole: 'HEAD_RANKING' },
+      component: () => import('@/views/staff/ranking/RankingHeadPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+    },
+    {
+      path: isRankingSubdomain ? '/batches/build/:batchId?' : '/staff/ranking/batches/build/:batchId?',
+      name: 'ranking-batch-builder',
+      component: () => import('@/views/staff/ranking/BatchBuilderPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING_HEAD' as StaffRole },
     },
     {
       path: '/admin',
@@ -119,12 +155,24 @@ const router = createRouter({
   ],
 })
 
+export { isRankingSubdomain, isAdminSubdomain }
+
+export const rankingDashboardRoute = isRankingSubdomain ? 'home' : 'staff-ranking'
+
+function getLoginRoute(requiredRole?: StaffRole): string {
+  if (isRankingSubdomain || requiredRole === 'RANKING' || requiredRole === 'RANKING_HEAD') {
+    return 'ranking-login'
+  }
+  return 'staff-login'
+}
+
 router.beforeEach(async (to) => {
   if (to.meta.requiresStaff) {
     const auth = useAuthStore()
+    const loginRoute = getLoginRoute(to.meta.requiredRole)
 
     if (!auth.isStaffAuthenticated) {
-      return { name: 'staff-login', query: { redirect: to.fullPath } }
+      return { name: loginRoute, query: { redirect: to.fullPath } }
     }
 
     if (auth.isTokenExpiringSoon) {
@@ -132,12 +180,12 @@ router.beforeEach(async (to) => {
         await auth.refreshStaffToken()
       } catch {
         auth.clearStaffAuth()
-        return { name: 'staff-login', query: { redirect: to.fullPath } }
+        return { name: loginRoute, query: { redirect: to.fullPath } }
       }
     }
 
     if (to.meta.requiredRole && !auth.hasRole(to.meta.requiredRole)) {
-      return { name: 'staff-ranking' }
+      return { name: rankingDashboardRoute }
     }
   }
 })

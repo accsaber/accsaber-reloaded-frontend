@@ -21,3 +21,7 @@ export function isRecentDate(dateString: string, withinDays = 7): boolean {
   const days = (Date.now() - new Date(dateString).getTime()) / 86400000
   return days < withinDays
 }
+
+export function truncate(str: string, max: number): string {
+  return str.length > max ? str.slice(0, max) + '...' : str
+}

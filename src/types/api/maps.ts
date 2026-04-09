@@ -1,4 +1,4 @@
-import type { Difficulty, MapDifficultyStatus, VoteType } from '../enums'
+import type { Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
 import type { PaginationParams } from '../pagination'
 
 export interface MapResponse {
@@ -17,6 +17,7 @@ export interface MapDifficultyResponse {
   id: string
   mapId: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   mapAuthor: string
   coverUrl: string
@@ -32,8 +33,17 @@ export interface MapDifficultyResponse {
   maxScore: number
   complexity: number
   rankedAt: string | null
+  createdAt: string
+  createdBy: string | null
+  createdByUsername: string | null
+  createdByAvatarUrl: string | null
   lastUpdatedBy: string | null
   lastUpdatedByUsername: string | null
+  rankUpvotes: number
+  rankDownvotes: number
+  criteriaUpvotes: number
+  criteriaDownvotes: number
+  headCriteriaVote: VoteType | null
   statistics: MapDifficultyStatisticsResponse | null
 }
 
@@ -69,20 +79,27 @@ export interface VoteResponse {
   id: string
   mapDifficultyId: string
   staffId: string
-  vote: boolean
-  type: VoteType
+  staffUsername: string | null
+  staffAvatarUrl: string | null
+  vote: VoteType
+  type: MapVoteAction
   suggestedComplexity: number | null
-  criteriaVote: boolean | null
-  criteriaVoteOverride: boolean | null
+  criteriaVote: VoteType | null
+  criteriaVoteOverride: boolean
   reason: string | null
   active: boolean
+  createdAt: string
   updatedAt: string
 }
 
 export interface VoteListResponse {
   votes: VoteResponse[]
-  rankThresholdMet: boolean
-  criteriaThresholdMet: boolean
+  rankReady: boolean
+  reweightReady: boolean
+  unrankReady: boolean
+  criteriaUpvotes: number
+  criteriaDownvotes: number
+  headCriteriaVote: VoteType | null
 }
 
 export interface MapListParams extends PaginationParams {

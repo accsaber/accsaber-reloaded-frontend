@@ -41,12 +41,53 @@ function apiProxy(target: string): Plugin {
   }
 }
 
+function externalProxy(prefix: string, target: string): Plugin {
+  const url = new URL(target)
+  const requester = url.protocol === 'https:' ? https : http
+
+  return {
+    name: `proxy-${prefix.replace(/\//g, '-')}`,
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.startsWith(prefix)) return next()
+        const path = req.url.slice(prefix.length)
+        const opts = {
+          hostname: url.hostname,
+          port: url.port || (url.protocol === 'https:' ? 443 : 80),
+          path,
+          method: req.method,
+          headers: {
+            'accept': 'application/json',
+            'host': url.hostname,
+          },
+        }
+        const proxyReq = requester.request(opts, (proxyRes) => {
+          res.setHeader('access-control-allow-origin', '*')
+          res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers)
+          proxyRes.pipe(res)
+        })
+        proxyReq.on('error', (err) => {
+          console.error(`[${prefix}-proxy]`, err.message)
+          res.writeHead(502)
+          res.end('Proxy error')
+        })
+        req.pipe(proxyReq)
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'https://api.accsaberreloaded.com'
 
   return {
-    plugins: [vue(), apiProxy(proxyTarget)],
+    plugins: [
+      vue(),
+      apiProxy(proxyTarget),
+      externalProxy('/proxy/beatleader', 'https://api.beatleader.com'),
+      externalProxy('/proxy/scoresaber', 'https://scoresaber.com'),
+    ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

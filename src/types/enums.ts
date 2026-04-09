@@ -1,6 +1,6 @@
 export type { MilestoneTier } from './display'
 
-export type StaffRole = 'RANKING' | 'HEAD_RANKING' | 'ADMIN' | 'DEVELOPER' | 'MODERATOR'
+export type StaffRole = 'RANKING' | 'RANKING_HEAD' | 'ADMIN' | 'DEVELOPER' | 'MODERATOR'
 
 export type StaffUserStatus = 'REQUESTED' | 'ACCEPTED' | 'DENIED'
 
@@ -14,7 +14,11 @@ export type MilestoneComparison = 'GTE' | 'LTE'
 
 export type MilestoneStatus = 'DRAFT' | 'ACTIVE'
 
-export type VoteType = 'RANK' | 'UNRANK' | 'REWEIGHT'
+export type MapVoteAction = 'RANK' | 'UNRANK' | 'REWEIGHT'
+
+export type VoteType = 'UPVOTE' | 'DOWNVOTE' | 'NEUTRAL'
+
+export type CriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED'
 
 export type CurveType = 'POINT_LOOKUP' | 'FORMULA'
 

@@ -1,4 +1,4 @@
-import type { AuthResponse, LoginRequest, RefreshRequest } from '@/types/api/auth'
+import type { AuthResponse, LoginRequest, RefreshRequest, RequestAccessRequest } from '@/types/api/auth'
 import { post } from './client'
 
 export function login(req: LoginRequest): Promise<AuthResponse> {
@@ -11,4 +11,8 @@ export function refreshToken(req: RefreshRequest): Promise<AuthResponse> {
 
 export function logout(): Promise<void> {
   return post<void>('/staff/auth/logout')
+}
+
+export function requestAccess(req: RequestAccessRequest): Promise<void> {
+  return post<void>('/staff/auth/request', req)
 }

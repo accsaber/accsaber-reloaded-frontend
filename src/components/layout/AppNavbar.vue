@@ -6,7 +6,7 @@ import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
@@ -27,6 +27,7 @@ watch(() => authStore.userProfile?.avatarUrl, () => {
 })
 
 const isAdminSubdomain = window.location.hostname.startsWith('admin.')
+const isRankingSubdomain = window.location.hostname.startsWith('ranking.')
 
 type MobileIcon = 'leaderboard' | 'map' | 'milestone'
 interface NavItem {
@@ -55,8 +56,31 @@ const adminNavItems: NavItem[] = [
   { to: '/?tab=duplicates', label: 'Duplicates' },
 ]
 
-const navItems = isAdminSubdomain ? adminNavItems : publicNavItems
-const mobileQuickItems = navItems.filter((item): item is NavItem & { mobileIcon: MobileIcon } => !!item.mobileIcon)
+const rankingPrefix = isRankingSubdomain ? '' : '/staff/ranking'
+
+const batchesPath = isRankingSubdomain ? '/batches' : '/staff/ranking/batches'
+
+const rankingNavItems: NavItem[] = [
+  { to: rankingPrefix || '/', label: 'Queue' },
+  { to: `${rankingPrefix}/import`, label: 'Import' },
+  { to: batchesPath, label: 'Batches' },
+]
+
+const isRankingContext = computed(() =>
+  isRankingSubdomain || route.path.startsWith('/staff/ranking')
+)
+
+const navItems = computed(() => {
+  if (isRankingContext.value && authStore.isStaffAuthenticated) {
+    return rankingNavItems
+  }
+  if (isAdminSubdomain) return adminNavItems
+  if (isRankingSubdomain) return rankingNavItems
+  return publicNavItems
+})
+const mobileQuickItems = computed(() =>
+  navItems.value.filter((item): item is NavItem & { mobileIcon: MobileIcon } => !!item.mobileIcon)
+)
 
 function isActive(to: string): boolean {
   if (to.includes('?tab=')) {
@@ -177,7 +201,7 @@ onUnmounted(() => {
           </svg>
         </button>
 
-        <button v-if="authStore.isStaffAuthenticated && authStore.isAdmin"
+        <button v-if="authStore.isStaffAuthenticated"
           class="navbar__icon-btn navbar__logout navbar__icon-btn--desktop-only" aria-label="Staff log out"
           @click="showStaffLogoutConfirm = true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -255,7 +279,7 @@ onUnmounted(() => {
         @click="mobileDrawerOpen = false; showLogoutConfirm = true">
         Log out
       </button>
-      <button v-if="authStore.isStaffAuthenticated && authStore.isAdmin"
+      <button v-if="authStore.isStaffAuthenticated"
         class="navbar__drawer-link navbar__drawer-link--danger"
         @click="mobileDrawerOpen = false; showStaffLogoutConfirm = true">
         Staff log out
