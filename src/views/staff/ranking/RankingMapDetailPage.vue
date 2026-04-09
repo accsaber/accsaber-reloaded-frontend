@@ -114,17 +114,19 @@ const mapBeatsaverCode = ref<string | null>(null)
 async function fetchDifficulty() {
   loading.value = true
   try {
-    const { getDifficulties } = await import('@/api/maps')
-    const res = await getDifficulties({ page: 0, size: 500 } as never)
-    const found = res.content.find((d: MapDifficultyResponse) => d.id === difficultyId.value) ?? null
-    difficulty.value = found
-    if (found) {
-      const { getMap } = await import('@/api/maps')
-      const map = await getMap(found.mapId)
-      mapBeatsaverCode.value = map.beatsaverCode
-    }
+    const { getDifficulty } = await import('@/api/maps')
+    difficulty.value = await getDifficulty(difficultyId.value)
   } catch {
     difficulty.value = null
+  }
+  if (difficulty.value) {
+    try {
+      const { getMap } = await import('@/api/maps')
+      const map = await getMap(difficulty.value.mapId)
+      mapBeatsaverCode.value = map.beatsaverCode
+    } catch {
+      mapBeatsaverCode.value = null
+    }
   }
   loading.value = false
 }
@@ -160,6 +162,11 @@ watch(difficultyId, () => {
 async function submitVote() {
   voteSubmitting.value = true
   voteError.value = ''
+  if (voteAction.value === 'REWEIGHT' && !voteSuggestedComplexity.value) {
+    voteError.value = 'Suggested complexity is required for reweight votes.'
+    voteSubmitting.value = false
+    return
+  }
   try {
     const { castVote } = await import('@/api/ranking/voting')
     await castVote(difficultyId.value, {
@@ -167,8 +174,8 @@ async function submitVote() {
       type: voteAction.value,
       reason: voteReason.value || undefined,
       suggestedComplexity: voteSuggestedComplexity.value || undefined,
-      criteriaVote: voteCriteriaVote.value || undefined,
-      criteriaVoteOverride: voteCriteriaOverride.value || undefined,
+      criteriaVote: difficulty.value?.status !== 'RANKED' ? (voteCriteriaVote.value || undefined) : undefined,
+      criteriaVoteOverride: difficulty.value?.status !== 'RANKED' ? (voteCriteriaOverride.value || undefined) : undefined,
     })
     voteReason.value = ''
     voteSuggestedComplexity.value = undefined
@@ -334,7 +341,13 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
               <span class="rank-detail__status-badge" :class="statusBadgeClass(difficulty.status)">
                 {{ difficulty.status }}
               </span>
-              <span class="rank-detail__criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
+              <span v-if="voteData?.headCriteriaVote" class="rank-detail__criteria-badge" :class="voteData.headCriteriaVote === 'UPVOTE' ? 'criteria-badge--passed' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'criteria-badge--failed' : 'criteria-badge--pending'">
+                Criteria: HEAD {{ voteData.headCriteriaVote === 'UPVOTE' ? 'PASS' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
+              </span>
+              <span v-else-if="voteData && (voteData.criteriaUpvotes > 0 || voteData.criteriaDownvotes > 0)" class="rank-detail__criteria-badge" :class="voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'criteria-badge--passed' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'criteria-badge--failed' : 'criteria-badge--pending'">
+                Criteria: {{ voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'PASS' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'FAIL' : 'PENDING' }}
+              </span>
+              <span v-else class="rank-detail__criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
                 Criteria: {{ difficulty.criteriaStatus }}
               </span>
             </div>
@@ -466,7 +479,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
             placeholder="e.g. 8.5"
           />
 
-          <div class="rank-detail__criteria-vote-section">
+          <div v-if="difficulty.status !== 'RANKED'" class="rank-detail__criteria-vote-section">
             <label class="rank-detail__field-label">Criteria Vote</label>
             <div class="rank-detail__criteria-vote-row">
               <button

@@ -24,6 +24,10 @@ export function getMapDifficulties(mapId: string): Promise<MapDifficultyResponse
   return get<MapDifficultyResponse[]>(`/maps/${mapId}/difficulties`)
 }
 
+export function getDifficulty(difficultyId: string): Promise<MapDifficultyResponse> {
+  return get<MapDifficultyResponse>(`/maps/difficulties/${difficultyId}`)
+}
+
 export function getDifficulties(params?: DifficultyListParams): Promise<Page<MapDifficultyResponse>> {
   return get<Page<MapDifficultyResponse>>(`/maps/difficulties${buildQuery(params)}`)
 }

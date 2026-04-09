@@ -114,8 +114,8 @@ async function fetchQueue() {
   try {
     const { getDifficulties } = await import('@/api/maps')
     const [qualifiedRes, queueRes] = await Promise.all([
-      getDifficulties({ page: 0, size: 500, status: 'QUALIFIED', sort: 'createdAt,desc' } as never),
-      getDifficulties({ page: 0, size: 500, status: 'QUEUE', sort: 'createdAt,desc' } as never),
+      getDifficulties({ page: 0, size: 200, status: 'QUALIFIED', sort: 'createdAt,desc' } as never),
+      getDifficulties({ page: 0, size: 200, status: 'QUEUE', sort: 'createdAt,desc' } as never),
     ])
     queueDifficulties.value = [...qualifiedRes.content, ...queueRes.content]
   } catch {
@@ -165,8 +165,12 @@ function requestAdd(diffId: string) {
     warnings.push('This map is still in QUEUE and has not been qualified yet.')
   }
 
-  if (diff.criteriaStatus === 'FAILED') {
-    warnings.push('Criteria check failed - requires a RANKING_HEAD override vote to proceed.')
+  if (diff.headCriteriaVote === 'DOWNVOTE') {
+    warnings.push('Head ranker voted criteria fail on this map.')
+  } else if (diff.criteriaDownvotes > diff.criteriaUpvotes) {
+    warnings.push('Criteria votes are negative - may require a RANKING_HEAD override.')
+  } else if (diff.criteriaUpvotes === 0 && diff.criteriaDownvotes === 0 && diff.criteriaStatus !== 'PASSED') {
+    warnings.push('No criteria votes yet.')
   }
 
   const otherBatch = diffBatchMap.value.get(diffId)
