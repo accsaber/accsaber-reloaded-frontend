@@ -85,6 +85,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       apiProxy(proxyTarget),
+      externalProxy('/proxy/beatsaver', 'https://api.beatsaver.com'),
       externalProxy('/proxy/beatleader', 'https://api.beatleader.com'),
       externalProxy('/proxy/scoresaber', 'https://scoresaber.com'),
     ],

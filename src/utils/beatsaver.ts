@@ -52,13 +52,11 @@ const BL_DIFF_VALUE_TO_NAME: Record<number, string> = {
   9: 'ExpertPlus',
 }
 
-const isDev = import.meta.env.DEV
 
 export async function fetchBeatLeaderLeaderboards(hash: string): Promise<Map<string, string>> {
   const map = new Map<string, string>()
   try {
-    const base = isDev ? '/proxy/beatleader' : 'https://api.beatleader.com'
-    const res = await fetch(`${base}/leaderboards/hash/${hash}`)
+    const res = await fetch(`/proxy/beatleader/leaderboards/hash/${hash}`)
     if (!res.ok) return map
     const data = await res.json()
     const leaderboards: BeatLeaderLeaderboardEntry[] = data.leaderboards ?? []
@@ -91,7 +89,7 @@ export function formatBsDifficulty(bsDifficulty: string): string {
 }
 
 export async function fetchBeatSaverMap(code: string): Promise<BeatSaverMapResponse> {
-  const res = await fetch(`https://api.beatsaver.com/maps/id/${code}`)
+  const res = await fetch(`/proxy/beatsaver/maps/id/${code}`)
   if (!res.ok) {
     throw new Error(`BeatSaver API returned ${res.status}`)
   }
@@ -116,8 +114,7 @@ const SS_DIFF_VALUE_TO_NAME: Record<number, string> = {
 export async function fetchScoreSaberLeaderboards(hash: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
   try {
-    const base = isDev ? '/proxy/scoresaber' : 'https://scoresaber.com'
-    const res = await fetch(`${base}/api/leaderboard/get-difficulties/${hash}`)
+    const res = await fetch(`/proxy/scoresaber/api/leaderboard/get-difficulties/${hash}`)
     if (!res.ok) return map
     const data: ScoreSaberDifficulty[] = await res.json()
     for (const entry of data) {
