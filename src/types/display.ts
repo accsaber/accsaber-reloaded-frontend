@@ -23,6 +23,7 @@ export interface TableColumn {
   align?: 'left' | 'center' | 'right'
   width?: string
   mono?: boolean
+  noLink?: boolean
 }
 
 export type SortDirection = 'asc' | 'desc'

@@ -113,7 +113,7 @@ const allColumns: TableColumn[] = [
   { key: 'category', label: 'Category', align: 'center', width: '100px' },
   { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
   { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
-  { key: 'detail', label: '', align: 'center', width: '40px' },
+  { key: 'detail', label: '', align: 'center', width: '40px', noLink: true },
 ]
 
 const columns = computed(() =>

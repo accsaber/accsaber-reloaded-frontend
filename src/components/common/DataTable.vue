@@ -103,9 +103,9 @@ function sortIcon(col: TableColumn): string {
               <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
                 'data-table__td--mono': col.mono,
                 [`data-table__td--${col.align ?? 'left'}`]: true,
-                'data-table__td--linked': !!resolveRowHref(row),
+                'data-table__td--linked': !!resolveRowHref(row) && !col.noLink,
               }">
-                <a v-if="resolveRowHref(row)" :href="resolveRowHref(row)" class="data-table__cell-link" tabindex="-1">
+                <a v-if="resolveRowHref(row) && !col.noLink" :href="resolveRowHref(row)" class="data-table__cell-link" tabindex="-1">
                   <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="index">
                     {{ row[col.key] }}
                   </slot>

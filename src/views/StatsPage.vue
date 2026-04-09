@@ -101,7 +101,7 @@ function categoryDotColor(categoryId: string): string {
   return categoryStore.getAccent(code ?? 'overall')
 }
 
-const detailColumn: TableColumn = { key: 'detail', label: '', width: '44px', align: 'center' }
+const detailColumn: TableColumn = { key: 'detail', label: '', width: '44px', align: 'center', noLink: true }
 
 const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
   'streaks': [
