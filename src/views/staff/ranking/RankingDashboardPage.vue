@@ -110,7 +110,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   secondarySort: null,
 })
 
-const columns: TableColumn[] = [
+const baseColumns: TableColumn[] = [
   { key: 'cover', label: '', width: '48px' },
   { key: 'song', label: 'Song', align: 'left' },
   { key: 'mapper', label: 'Mapper', align: 'left', width: '120px' },
@@ -121,6 +121,12 @@ const columns: TableColumn[] = [
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'right', width: '100px' },
   { key: 'submittedBy', label: 'By', align: 'left', width: '120px' },
 ]
+
+const columns = computed(() =>
+  activeStatus.value === 'RANKED'
+    ? baseColumns.filter((c) => c.key !== 'criteria')
+    : baseColumns
+)
 
 const difficulties = ref<MapDifficultyResponse[]>([])
 const totalPages = ref(0)
