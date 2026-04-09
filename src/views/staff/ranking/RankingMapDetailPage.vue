@@ -1,25 +1,24 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
-import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { rankingDashboardRoute } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
-import type { MapDifficultyResponse, VoteListResponse, VoteResponse } from '@/types/api/maps'
+import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { MapVoteAction, VoteType } from '@/types/enums'
 import { brightenRgb } from '@/utils/color'
-import { formatDifficulty } from '@/utils/mappers'
 import { formatRelativeDate } from '@/utils/formatters'
+import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { rankingDashboardRoute } from '@/router'
 
 const route = useRoute()
 const router = useRouter()
@@ -88,13 +87,24 @@ function toggleTweaker(event: Event) {
   tweakerAnchor.value = tweakerOpen.value ? (event.currentTarget as HTMLElement) : null
 }
 
+const staffId = computed(() => {
+  const token = authStore.staffToken
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.sub as string
+  } catch {
+    return null
+  }
+})
+
 const managementOpen = ref(false)
 const voteFormOpen = ref(false)
 
 const voteType = ref<VoteType>('UPVOTE')
 const voteAction = ref<MapVoteAction>('RANK')
 const voteReason = ref('')
-const voteSuggestedComplexity = ref<number | undefined>(undefined)
+const voteSuggestedComplexity = ref<number | string>('')
 const voteCriteriaVote = ref<VoteType | undefined>(undefined)
 const voteCriteriaOverride = ref(false)
 const voteSubmitting = ref(false)
@@ -130,6 +140,20 @@ async function fetchVotes() {
     voteData.value = null
   }
   voteLoading.value = false
+  prefillFromExistingVote()
+}
+
+function prefillFromExistingVote() {
+  if (!voteData.value || !staffId.value) return
+  const existing = voteData.value.votes.find(
+    (v) => v.staffId === staffId.value && v.type === voteAction.value
+  )
+  if (!existing) return
+  voteType.value = existing.vote
+  voteReason.value = existing.reason ?? ''
+  voteSuggestedComplexity.value = existing.suggestedComplexity ?? ''
+  voteCriteriaVote.value = existing.criteriaVote ?? undefined
+  voteCriteriaOverride.value = existing.criteriaVoteOverride ?? false
 }
 
 async function fetchBatches() {
@@ -168,7 +192,7 @@ async function submitVote() {
       criteriaVoteOverride: difficulty.value?.status !== 'RANKED' ? (voteCriteriaOverride.value || undefined) : undefined,
     })
     voteReason.value = ''
-    voteSuggestedComplexity.value = undefined
+    voteSuggestedComplexity.value = ''
     voteCriteriaVote.value = undefined
     voteCriteriaOverride.value = false
     await fetchVotes()
@@ -266,6 +290,7 @@ watch(availableActions, (actions) => {
   if (actions.length > 0 && !actions.find((a) => a.value === voteAction.value)) {
     voteAction.value = actions[0].value
   }
+  prefillFromExistingVote()
 }, { immediate: true })
 
 const statusTransitions = computed<{ value: string; label: string }[]>(() => {
@@ -293,8 +318,10 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
       <div class="rank-detail__content">
         <div class="rank-detail__nav">
-          <button class="rank-detail__back" @click="router.push({ name: rankingDashboardRoute })" aria-label="Back to queue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button class="rank-detail__back" @click="router.push({ name: rankingDashboardRoute })"
+            aria-label="Back to queue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
             Back to Queue
@@ -320,22 +347,30 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
               <span class="rank-detail__category-badge" :style="{ '--cat-accent': categoryAccent }">
                 {{ categoryName }}
               </span>
-              <span v-if="isHeadRanking" class="rank-detail__complexity-editable" @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
+              <span v-if="isHeadRanking" class="rank-detail__complexity-editable"
+                @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
                 <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
                 <span v-else class="rank-detail__complexity-unset">Set complexity</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </span>
               <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
               <span class="rank-detail__status-badge" :class="statusBadgeClass(difficulty.status)">
                 {{ difficulty.status }}
               </span>
-              <span v-if="voteData?.headCriteriaVote" class="rank-detail__criteria-badge" :class="voteData.headCriteriaVote === 'UPVOTE' ? 'criteria-badge--passed' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'criteria-badge--failed' : 'criteria-badge--pending'">
-                Criteria: HEAD {{ voteData.headCriteriaVote === 'UPVOTE' ? 'PASS' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
+              <span v-if="voteData?.headCriteriaVote" class="rank-detail__criteria-badge"
+                :class="voteData.headCriteriaVote === 'UPVOTE' ? 'criteria-badge--passed' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'criteria-badge--failed' : 'criteria-badge--pending'">
+                Criteria: HEAD {{ voteData.headCriteriaVote === 'UPVOTE' ? 'PASS' : voteData.headCriteriaVote ===
+                  'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
               </span>
-              <span v-else-if="voteData && (voteData.criteriaUpvotes > 0 || voteData.criteriaDownvotes > 0)" class="rank-detail__criteria-badge" :class="voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'criteria-badge--passed' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'criteria-badge--failed' : 'criteria-badge--pending'">
-                Criteria: {{ voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'PASS' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'FAIL' : 'PENDING' }}
+              <span v-else-if="voteData && (voteData.criteriaUpvotes > 0 || voteData.criteriaDownvotes > 0)"
+                class="rank-detail__criteria-badge"
+                :class="voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'criteria-badge--passed' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'criteria-badge--failed' : 'criteria-badge--pending'">
+                Criteria: {{ voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'PASS' : voteData.criteriaDownvotes
+                  > voteData.criteriaUpvotes ? 'FAIL' : 'PENDING' }}
               </span>
               <span v-else class="rank-detail__criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
                 Criteria: {{ difficulty.criteriaStatus }}
@@ -343,36 +378,53 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
             </div>
 
             <div class="rank-detail__links">
-              <BaseButton v-if="beatsaverCode" size="sm" :href="`beatsaver://${beatsaverCode}`" aria-label="One-Click Install" title="One-Click Install">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M8 13V4.5a1.5 1.5 0 0 1 3 0V12" /><path d="M11 11.5V6.5a1.5 1.5 0 0 1 3 0V12" /><path d="M14 10.5V8.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2a1.5 1.5 0 0 1 3 0V12" />
+              <BaseButton v-if="beatsaverCode" size="sm" :href="`beatsaver://${beatsaverCode}`"
+                aria-label="One-Click Install" title="One-Click Install">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 13V4.5a1.5 1.5 0 0 1 3 0V12" />
+                  <path d="M11 11.5V6.5a1.5 1.5 0 0 1 3 0V12" />
+                  <path d="M14 10.5V8.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2a1.5 1.5 0 0 1 3 0V12" />
                 </svg>
               </BaseButton>
-              <BaseButton v-if="beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${beatsaverCode}`" aria-label="View on BeatSaver">
-                <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16" style="border-radius: 3px;" />
+              <BaseButton v-if="beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${beatsaverCode}`"
+                aria-label="View on BeatSaver">
+                <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
+                  style="border-radius: 3px;" />
               </BaseButton>
               <BaseButton v-if="beatleaderUrl" size="sm" :href="beatleaderUrl" aria-label="View on BeatLeader">
-                <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16" style="border-radius: 3px;" />
+                <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
+                  style="border-radius: 3px;" />
               </BaseButton>
               <BaseButton v-if="scoresaberUrl" size="sm" :href="scoresaberUrl" aria-label="View on ScoreSaber">
-                <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16" style="border-radius: 3px;" />
+                <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
+                  style="border-radius: 3px;" />
               </BaseButton>
-              <BaseButton v-if="scoreCurveId && difficulty.complexity != null" size="sm" aria-label="AP Tweaker" @click="toggleTweaker($event)">
+              <BaseButton v-if="scoreCurveId && difficulty.complexity != null" size="sm" aria-label="AP Tweaker"
+                @click="toggleTweaker($event)">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M16.2 12.5a1.4 1.4 0 00.28 1.54l.05.05a1.7 1.7 0 11-2.4 2.4l-.05-.05a1.4 1.4 0 00-1.54-.28 1.4 1.4 0 00-.84 1.28v.14a1.7 1.7 0 11-3.4 0v-.07a1.4 1.4 0 00-.92-1.28 1.4 1.4 0 00-1.54.28l-.05.05a1.7 1.7 0 11-2.4-2.4l.05-.05a1.4 1.4 0 00.28-1.54 1.4 1.4 0 00-1.28-.84H2.3a1.7 1.7 0 110-3.4h.07a1.4 1.4 0 001.28-.92 1.4 1.4 0 00-.28-1.54l-.05-.05a1.7 1.7 0 112.4-2.4l.05.05a1.4 1.4 0 001.54.28h.07a1.4 1.4 0 00.84-1.28V2.3a1.7 1.7 0 113.4 0v.07a1.4 1.4 0 00.84 1.28 1.4 1.4 0 001.54-.28l.05-.05a1.7 1.7 0 112.4 2.4l-.05.05a1.4 1.4 0 00-.28 1.54v.07a1.4 1.4 0 001.28.84h.14a1.7 1.7 0 110 3.4h-.07a1.4 1.4 0 00-1.28.84z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M16.2 12.5a1.4 1.4 0 00.28 1.54l.05.05a1.7 1.7 0 11-2.4 2.4l-.05-.05a1.4 1.4 0 00-1.54-.28 1.4 1.4 0 00-.84 1.28v.14a1.7 1.7 0 11-3.4 0v-.07a1.4 1.4 0 00-.92-1.28 1.4 1.4 0 00-1.54.28l-.05.05a1.7 1.7 0 11-2.4-2.4l.05-.05a1.4 1.4 0 00.28-1.54 1.4 1.4 0 00-1.28-.84H2.3a1.7 1.7 0 110-3.4h.07a1.4 1.4 0 001.28-.92 1.4 1.4 0 00-.28-1.54l-.05-.05a1.7 1.7 0 112.4-2.4l.05.05a1.4 1.4 0 001.54.28h.07a1.4 1.4 0 00.84-1.28V2.3a1.7 1.7 0 113.4 0v.07a1.4 1.4 0 00.84 1.28 1.4 1.4 0 001.54-.28l.05-.05a1.7 1.7 0 112.4 2.4l-.05.05a1.4 1.4 0 00-.28 1.54v.07a1.4 1.4 0 001.28.84h.14a1.7 1.7 0 110 3.4h-.07a1.4 1.4 0 00-1.28.84z"
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </BaseButton>
-              <ApTweaker v-if="scoreCurveId && difficulty.complexity != null" :open="tweakerOpen" :curve-id="scoreCurveId" :anchor-el="tweakerAnchor" :complexity="difficulty.complexity" :show-weighted="false" @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
+              <ApTweaker v-if="scoreCurveId && difficulty.complexity != null" :open="tweakerOpen"
+                :curve-id="scoreCurveId" :anchor-el="tweakerAnchor" :complexity="difficulty.complexity"
+                :show-weighted="false"
+                @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
             </div>
           </div>
         </div>
 
         <div v-if="voteData" class="rank-detail__thresholds">
-          <span v-if="difficulty.status !== 'RANKED'" class="rank-detail__threshold" :class="{ 'rank-detail__threshold--met': voteData.rankReady }">
+          <span v-if="difficulty.status !== 'RANKED'" class="rank-detail__threshold"
+            :class="{ 'rank-detail__threshold--met': voteData.rankReady }">
             {{ voteData.rankReady ? 'Rank Ready' : 'Not Rank Ready' }}
           </span>
-          <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold" :class="{ 'rank-detail__threshold--met': voteData.reweightReady }">
+          <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold"
+            :class="{ 'rank-detail__threshold--met': voteData.reweightReady }">
             {{ voteData.reweightReady ? 'Reweight Ready' : 'Not Reweight Ready' }}
           </span>
           <span class="rank-detail__threshold rank-detail__threshold--criteria" :class="{
@@ -386,127 +438,109 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
             'rank-detail__threshold--override-fail': voteData.headCriteriaVote === 'DOWNVOTE',
             'rank-detail__threshold--override': voteData.headCriteriaVote === 'NEUTRAL',
           }">
-            Head: {{ voteData.headCriteriaVote === 'UPVOTE' ? 'Pass' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'Fail' : 'Neutral' }}
+            Head: {{ voteData.headCriteriaVote === 'UPVOTE' ? 'Pass' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'Fail'
+              : 'Neutral' }}
           </span>
         </div>
 
         <div v-if="isHeadRanking" class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="managementOpen = !managementOpen">
             <h3 class="rank-detail__section-title">Management</h3>
-            <svg class="rank-detail__collapsible-chevron" :class="{ 'rank-detail__collapsible-chevron--open': managementOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            <svg class="rank-detail__collapsible-chevron"
+              :class="{ 'rank-detail__collapsible-chevron--open': managementOpen }" width="16" height="16"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </button>
           <div v-if="managementOpen" class="rank-detail__action-row">
-            <BaseButton
-              v-for="transition in statusTransitions"
-              :key="transition.value"
-              variant="primary"
-              size="sm"
-              @click="statusTarget = transition.value; showStatusModal = true"
-            >
+            <BaseButton v-for="transition in statusTransitions" :key="transition.value" variant="primary" size="sm"
+              @click="statusTarget = transition.value; showStatusModal = true">
               {{ transition.label }}
             </BaseButton>
-            <BaseSelect
-              v-if="batchOptions.length"
-              :options="[{ value: '', label: 'Add to Batch...' }, ...batchOptions]"
-              model-value=""
-              @update:model-value="(v: string) => v && addToBatch(v)"
-            />
+            <BaseSelect v-if="batchOptions.length" :options="[{ value: '', label: 'Add to Batch...' }, ...batchOptions]"
+              model-value="" @update:model-value="(v: string) => v && addToBatch(v)" />
             <BaseButton variant="destructive" size="sm" @click="handleDeactivate">Deactivate</BaseButton>
           </div>
         </div>
 
         <div class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="voteFormOpen = !voteFormOpen">
-            <h3 class="rank-detail__section-title">{{ difficulty.status === 'RANKED' ? 'Cast Reweight Vote' : 'Cast Rank Vote' }}</h3>
-            <svg class="rank-detail__collapsible-chevron" :class="{ 'rank-detail__collapsible-chevron--open': voteFormOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            <h3 class="rank-detail__section-title">{{ difficulty.status === 'RANKED' ? 'Cast Reweight Vote' : 'Cast Rank
+              Vote' }}</h3>
+            <svg class="rank-detail__collapsible-chevron"
+              :class="{ 'rank-detail__collapsible-chevron--open': voteFormOpen }" width="16" height="16"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </button>
           <div v-if="voteFormOpen" class="rank-detail__vote-form-content">
-          <div class="rank-detail__vote-type-row">
-            <button
-              class="rank-detail__vote-btn rank-detail__vote-btn--up"
-              :class="{ 'rank-detail__vote-btn--active': voteType === 'UPVOTE' }"
-              @click="voteType = 'UPVOTE'"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-              </svg>
-              Upvote
-            </button>
-            <button
-              class="rank-detail__vote-btn rank-detail__vote-btn--down"
-              :class="{ 'rank-detail__vote-btn--active': voteType === 'DOWNVOTE' }"
-              @click="voteType = 'DOWNVOTE'"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
-              </svg>
-              Downvote
-            </button>
-            <button
-              class="rank-detail__vote-btn rank-detail__vote-btn--neutral"
-              :class="{ 'rank-detail__vote-btn--active': voteType === 'NEUTRAL' }"
-              @click="voteType = 'NEUTRAL'"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Neutral
-            </button>
-          </div>
-
-          <div v-if="availableActions.length > 1" class="rank-detail__vote-action-row">
-            <BaseSelect
-              :model-value="voteAction"
-              :options="availableActions"
-              @update:model-value="voteAction = $event as MapVoteAction"
-            />
-          </div>
-
-          <BaseInput
-            v-model.number="voteSuggestedComplexity"
-            type="number"
-            label="Suggested Complexity"
-            placeholder="e.g. 8.5"
-          />
-
-          <div v-if="difficulty.status !== 'RANKED'" class="rank-detail__criteria-vote-section">
-            <label class="rank-detail__field-label">Criteria Vote</label>
-            <div class="rank-detail__criteria-vote-row">
-              <button
-                class="rank-detail__vote-btn rank-detail__vote-btn--up rank-detail__vote-btn--sm"
-                :class="{ 'rank-detail__vote-btn--active': voteCriteriaVote === 'UPVOTE' }"
-                @click="voteCriteriaVote = voteCriteriaVote === 'UPVOTE' ? undefined : 'UPVOTE'"
-              >Pass</button>
-              <button
-                class="rank-detail__vote-btn rank-detail__vote-btn--down rank-detail__vote-btn--sm"
-                :class="{ 'rank-detail__vote-btn--active': voteCriteriaVote === 'DOWNVOTE' }"
-                @click="voteCriteriaVote = voteCriteriaVote === 'DOWNVOTE' ? undefined : 'DOWNVOTE'"
-              >Fail</button>
-              <button
-                class="rank-detail__vote-btn rank-detail__vote-btn--neutral rank-detail__vote-btn--sm"
-                :class="{ 'rank-detail__vote-btn--active': voteCriteriaVote === 'NEUTRAL' }"
-                @click="voteCriteriaVote = voteCriteriaVote === 'NEUTRAL' ? undefined : 'NEUTRAL'"
-              >Neutral</button>
+            <div class="rank-detail__vote-type-row">
+              <button class="rank-detail__vote-btn rank-detail__vote-btn--up"
+                :class="{ 'rank-detail__vote-btn--active': voteType === 'UPVOTE' }" @click="voteType = 'UPVOTE'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                </svg>
+                Upvote
+              </button>
+              <button class="rank-detail__vote-btn rank-detail__vote-btn--down"
+                :class="{ 'rank-detail__vote-btn--active': voteType === 'DOWNVOTE' }" @click="voteType = 'DOWNVOTE'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                </svg>
+                Downvote
+              </button>
+              <button class="rank-detail__vote-btn rank-detail__vote-btn--neutral"
+                :class="{ 'rank-detail__vote-btn--active': voteType === 'NEUTRAL' }" @click="voteType = 'NEUTRAL'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Neutral
+              </button>
             </div>
-            <label v-if="isHeadRanking" class="rank-detail__override-toggle">
-              <input type="checkbox" v-model="voteCriteriaOverride" />
-              <span>Override criteria check</span>
-              <span class="rank-detail__override-hint">Signals that the automated criteria verdict should be bypassed</span>
-            </label>
-          </div>
 
-          <textarea
-            v-model="voteReason"
-            class="rank-detail__reason-input"
-            placeholder="Reason (optional)"
-            rows="3"
-          />
+            <div v-if="availableActions.length > 1" class="rank-detail__vote-action-row">
+              <BaseSelect :model-value="voteAction" :options="availableActions"
+                @update:model-value="voteAction = $event as MapVoteAction" />
+            </div>
 
-          <div v-if="voteError" class="rank-detail__vote-error">{{ voteError }}</div>
+            <BaseInput v-model.number="voteSuggestedComplexity" type="number" label="Suggested Complexity"
+              placeholder="e.g. 8.5" />
 
-          <BaseButton variant="primary" :loading="voteSubmitting" @click="submitVote">
-            Submit Vote
-          </BaseButton>
+            <div v-if="difficulty.status !== 'RANKED'" class="rank-detail__criteria-vote-section">
+              <label class="rank-detail__field-label">Criteria Vote</label>
+              <div class="rank-detail__criteria-vote-row">
+                <button class="rank-detail__vote-btn rank-detail__vote-btn--up rank-detail__vote-btn--sm"
+                  :class="{ 'rank-detail__vote-btn--active': voteCriteriaVote === 'UPVOTE' }"
+                  @click="voteCriteriaVote = voteCriteriaVote === 'UPVOTE' ? undefined : 'UPVOTE'">Pass</button>
+                <button class="rank-detail__vote-btn rank-detail__vote-btn--down rank-detail__vote-btn--sm"
+                  :class="{ 'rank-detail__vote-btn--active': voteCriteriaVote === 'DOWNVOTE' }"
+                  @click="voteCriteriaVote = voteCriteriaVote === 'DOWNVOTE' ? undefined : 'DOWNVOTE'">Fail</button>
+                <button class="rank-detail__vote-btn rank-detail__vote-btn--neutral rank-detail__vote-btn--sm"
+                  :class="{ 'rank-detail__vote-btn--active': voteCriteriaVote === 'NEUTRAL' }"
+                  @click="voteCriteriaVote = voteCriteriaVote === 'NEUTRAL' ? undefined : 'NEUTRAL'">Neutral</button>
+              </div>
+              <label v-if="isHeadRanking" class="rank-detail__override-toggle">
+                <input type="checkbox" v-model="voteCriteriaOverride" />
+                <span>Override criteria check</span>
+                <span class="rank-detail__override-hint">Signals that the automated criteria verdict should be
+                  bypassed</span>
+              </label>
+            </div>
+
+            <textarea v-model="voteReason" class="rank-detail__reason-input" placeholder="Reason (optional)" rows="3" />
+
+            <div v-if="voteError" class="rank-detail__vote-error">{{ voteError }}</div>
+
+            <BaseButton variant="primary" :loading="voteSubmitting" @click="submitVote">
+              Submit Vote
+            </BaseButton>
           </div>
         </div>
 
@@ -522,53 +556,47 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </div>
 
           <div v-else-if="voteData && voteData.votes.length" class="rank-detail__vote-list">
-            <div
-              v-for="vote in voteData.votes"
-              :key="vote.id"
-              class="rank-detail__vote-card"
-            >
+            <div v-for="vote in voteData.votes" :key="vote.id" class="rank-detail__vote-card">
               <div class="rank-detail__vote-header">
-                <img
-                  v-if="vote.staffAvatarUrl"
-                  :src="vote.staffAvatarUrl"
-                  alt=""
-                  class="rank-detail__vote-avatar"
-                />
+                <img v-if="vote.staffAvatarUrl" :src="vote.staffAvatarUrl" alt="" class="rank-detail__vote-avatar" />
                 <div v-else class="rank-detail__vote-avatar rank-detail__vote-avatar--placeholder">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
                   </svg>
                 </div>
                 <span class="rank-detail__vote-username">{{ vote.staffUsername ?? 'Unknown' }}</span>
                 <span class="rank-detail__vote-icon" :class="voteIconClass(vote.vote)">
                   <template v-if="vote.vote === 'UPVOTE'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path
+                        d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
                     </svg>
                   </template>
                   <template v-else-if="vote.vote === 'DOWNVOTE'">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path
+                        d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
                     </svg>
                   </template>
                   <template v-else>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
                       <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                   </template>
                 </span>
                 <span class="rank-detail__vote-action-label">{{ vote.type }}</span>
-                <span v-if="vote.suggestedComplexity != null" class="rank-detail__vote-complexity" :class="{ 'rank-detail__vote-complexity--highlight': vote.vote === 'UPVOTE' }">
+                <span v-if="vote.suggestedComplexity != null" class="rank-detail__vote-complexity"
+                  :class="{ 'rank-detail__vote-complexity--highlight': vote.vote === 'UPVOTE' }">
                   {{ vote.suggestedComplexity }}
                 </span>
                 <span class="rank-detail__vote-date">{{ formatRelativeDate(vote.createdAt) }}</span>
-                <BaseButton
-                  v-if="isHeadRanking"
-                  size="sm"
-                  variant="destructive"
-                  class="rank-detail__vote-deactivate"
-                  @click="deactivateVote(vote.id)"
-                >
+                <BaseButton v-if="isHeadRanking" size="sm" variant="destructive" class="rank-detail__vote-deactivate"
+                  @click="deactivateVote(vote.id)">
                   Deactivate
                 </BaseButton>
               </div>
@@ -578,10 +606,12 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                   'rank-detail__vote-criteria--fail': vote.criteriaVote === 'DOWNVOTE',
                   'rank-detail__vote-criteria--neutral': vote.criteriaVote === 'NEUTRAL',
                 }">
-                  Criteria: {{ vote.criteriaVote === 'UPVOTE' ? 'Pass' : vote.criteriaVote === 'DOWNVOTE' ? 'Fail' : 'Neutral' }}
+                  Criteria: {{ vote.criteriaVote === 'UPVOTE' ? 'Pass' : vote.criteriaVote === 'DOWNVOTE' ? 'Fail' :
+                    'Neutral' }}
                 </span>
                 <span v-if="vote.criteriaVoteOverride" class="rank-detail__vote-override">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                   Criteria Override
@@ -617,7 +647,8 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
       </template>
     </BaseModal>
 
-    <BaseModal :open="showComplexityModal" title="Set Complexity" max-width="400px" @close="showComplexityModal = false">
+    <BaseModal :open="showComplexityModal" title="Set Complexity" max-width="400px"
+      @close="showComplexityModal = false">
       <BaseInput v-model.number="complexityValue" type="number" label="Complexity" placeholder="e.g. 8.5" />
       <template #footer>
         <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
@@ -635,7 +666,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   min-height: 100vh;
 }
 
-.rank-detail > *:not(.rank-detail__bg) {
+.rank-detail>*:not(.rank-detail__bg) {
   position: relative;
   z-index: 1;
 }
@@ -1238,9 +1269,17 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   align-items: center;
 }
 
-.vote-icon--up { color: var(--success); }
-.vote-icon--down { color: var(--error); }
-.vote-icon--neutral { color: var(--text-tertiary); }
+.vote-icon--up {
+  color: var(--success);
+}
+
+.vote-icon--down {
+  color: var(--error);
+}
+
+.vote-icon--neutral {
+  color: var(--text-tertiary);
+}
 
 .rank-detail__vote-action-label {
   font-size: var(--text-caption);
