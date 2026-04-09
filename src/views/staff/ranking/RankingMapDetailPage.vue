@@ -64,7 +64,7 @@ usePageMeta({ title: metaTitle })
 
 const isHeadRanking = computed(() => authStore.hasRole('RANKING_HEAD'))
 
-const beatsaverCode = computed(() => mapBeatsaverCode.value)
+const beatsaverCode = computed(() => difficulty.value?.beatsaverCode ?? null)
 
 const beatleaderUrl = computed(() => {
   if (!difficulty.value?.blLeaderboardId) return null
@@ -109,7 +109,6 @@ const complexityValue = ref<number>(0)
 const complexityLoading = ref(false)
 
 const batchOptions = ref<{ value: string; label: string }[]>([])
-const mapBeatsaverCode = ref<string | null>(null)
 
 async function fetchDifficulty() {
   loading.value = true
@@ -118,15 +117,6 @@ async function fetchDifficulty() {
     difficulty.value = await getDifficulty(difficultyId.value)
   } catch {
     difficulty.value = null
-  }
-  if (difficulty.value) {
-    try {
-      const { getMap } = await import('@/api/maps')
-      const map = await getMap(difficulty.value.mapId)
-      mapBeatsaverCode.value = map.beatsaverCode
-    } catch {
-      mapBeatsaverCode.value = null
-    }
   }
   loading.value = false
 }

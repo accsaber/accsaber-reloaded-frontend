@@ -19,6 +19,7 @@ export interface MapDifficultyResponse {
   songName: string
   songSubName: string | null
   songAuthor: string
+  beatsaverCode: string | null
   mapAuthor: string
   coverUrl: string
   categoryId: string
