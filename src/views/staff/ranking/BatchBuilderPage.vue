@@ -309,6 +309,13 @@ async function saveComplexity(diffId: string) {
   }
 }
 
+function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
+  if (diff.headCriteriaVote === 'UPVOTE') return 'batch-builder__criteria--pass'
+  if (diff.headCriteriaVote === 'DOWNVOTE') return 'batch-builder__criteria--fail'
+  if (diff.criteriaUpvotes > diff.criteriaDownvotes) return 'batch-builder__criteria--pass'
+  if (diff.criteriaDownvotes > diff.criteriaUpvotes) return 'batch-builder__criteria--fail'
+  return 'batch-builder__criteria--pending'
+}
 </script>
 
 <template>
@@ -360,6 +367,11 @@ async function saveComplexity(diffId: string) {
             :key="diff.id"
             class="batch-builder__card batch-builder__card--selected"
           >
+            <span class="batch-builder__criteria-indicator" :class="criteriaIndicatorClass(diff)">
+              <svg v-if="diff.criteriaUpvotes > diff.criteriaDownvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg v-else-if="diff.criteriaDownvotes > diff.criteriaUpvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </span>
             <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
@@ -414,6 +426,11 @@ async function saveComplexity(diffId: string) {
             :key="diff.id"
             class="batch-builder__card"
           >
+            <span class="batch-builder__criteria-indicator" :class="criteriaIndicatorClass(diff)">
+              <svg v-if="diff.criteriaUpvotes > diff.criteriaDownvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg v-else-if="diff.criteriaDownvotes > diff.criteriaUpvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </span>
             <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
@@ -444,6 +461,11 @@ async function saveComplexity(diffId: string) {
             :key="diff.id"
             class="batch-builder__card"
           >
+            <span class="batch-builder__criteria-indicator" :class="criteriaIndicatorClass(diff)">
+              <svg v-if="diff.criteriaUpvotes > diff.criteriaDownvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg v-else-if="diff.criteriaDownvotes > diff.criteriaUpvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </span>
             <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
@@ -627,6 +649,7 @@ async function saveComplexity(diffId: string) {
 }
 
 .batch-builder__card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -635,6 +658,34 @@ async function saveComplexity(diffId: string) {
   background: var(--bg-elevated);
   border: 1px solid transparent;
   transition: border-color 120ms ease, background 120ms ease;
+}
+
+.batch-builder__criteria-indicator {
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.batch-builder__criteria--pass {
+  background: var(--success);
+  color: var(--bg-base);
+}
+
+.batch-builder__criteria--fail {
+  background: var(--error);
+  color: var(--bg-base);
+}
+
+.batch-builder__criteria--pending {
+  background: var(--text-tertiary);
+  color: var(--bg-base);
 }
 
 .batch-builder__card-cover,

@@ -124,6 +124,12 @@ function navigateToMap(map: MapDisplay) {
   router.push({ name: 'ranking-map-detail', params: { difficultyId: map.difficultyId } })
 }
 
+const expandedBatch = ref<string | null>(null)
+
+function toggleBatch(batchId: string) {
+  expandedBatch.value = expandedBatch.value === batchId ? null : batchId
+}
+
 function batchStatusClass(status: string): string {
   if (status === 'RELEASED') return 'batch-status--released'
   if (status === 'RELEASE_READY') return 'batch-status--ready'
@@ -155,7 +161,7 @@ function batchStatusClass(status: string): string {
         :key="batch.id"
         class="batches-page__batch"
       >
-        <div class="batches-page__batch-header">
+        <div class="batches-page__batch-header" @click="toggleBatch(batch.id)">
           <div class="batches-page__batch-info">
             <h2 class="batches-page__batch-name">{{ batch.name }}</h2>
             <div class="batches-page__batch-meta">
@@ -163,12 +169,11 @@ function batchStatusClass(status: string): string {
               <span v-if="batch.releasedAt">{{ formatRelativeDate(batch.releasedAt) }}</span>
               <span v-else>{{ formatRelativeDate(batch.createdAt) }}</span>
             </div>
-            <p v-if="batch.description" class="batches-page__batch-desc">{{ batch.description }}</p>
           </div>
           <span class="batches-page__batch-status" :class="batchStatusClass(batch.status)">
             {{ batch.status.replace('_', ' ') }}
           </span>
-          <div v-if="isHead" class="batches-page__batch-actions">
+          <div v-if="isHead" class="batches-page__batch-actions" @click.stop>
             <BaseButton
               v-if="batch.status === 'DRAFT'"
               size="sm"
@@ -185,9 +190,16 @@ function batchStatusClass(status: string): string {
               Release
             </BaseButton>
           </div>
+          <svg
+            class="batches-page__chevron"
+            :class="{ 'batches-page__chevron--open': expandedBatch === batch.id }"
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
         </div>
 
-        <div v-if="batch.difficulties.length" class="batches-page__batch-categories">
+        <div v-if="expandedBatch === batch.id && batch.difficulties.length" class="batches-page__batch-categories">
           <div
             v-for="group in batchDiffsByCategory(batch)"
             :key="group.code"
@@ -293,12 +305,28 @@ function batchStatusClass(status: string): string {
 
 .batches-page__batch-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-md);
-  padding: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.batches-page__batch-header:hover {
+  background: var(--bg-elevated);
+}
+
+.batches-page__chevron {
+  color: var(--text-tertiary);
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.batches-page__chevron--open {
+  transform: rotate(180deg);
 }
 
 .batches-page__batch-info {
@@ -321,12 +349,6 @@ function batchStatusClass(status: string): string {
   margin-top: 2px;
 }
 
-.batches-page__batch-desc {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  margin: var(--space-xs) 0 0;
-  line-height: 1.4;
-}
 
 .batches-page__batch-status {
   font-size: var(--text-caption);

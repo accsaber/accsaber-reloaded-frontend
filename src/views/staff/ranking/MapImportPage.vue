@@ -216,21 +216,23 @@ function goToDetail(difficultyId: string) {
         <h3 class="map-import__section-title">Difficulties</h3>
 
         <div class="map-import__diff-list">
+          <div class="map-import__diff-header">
+            <span class="map-import__diff-col map-import__diff-col--name">Difficulty</span>
+            <span class="map-import__diff-col map-import__diff-col--cat">Category</span>
+            <span class="map-import__diff-col map-import__diff-col--comp">Complexity</span>
+          </div>
           <div
-            v-for="(diff, i) in diffSelections"
+            v-for="diff in diffSelections"
             :key="`${diff.characteristic}-${diff.difficulty}`"
             class="map-import__diff-row"
-            :class="{ 'map-import__diff-row--selected': diff.selected, 'map-import__diff-row--imported': diff.imported }"
+            :class="{
+              'map-import__diff-row--selected': diff.selected,
+              'map-import__diff-row--imported': diff.imported,
+              'map-import__diff-row--clickable': !diff.imported && !isImporting,
+            }"
+            @click="!diff.imported && !isImporting && (diff.selected = !diff.selected)"
           >
-            <label class="map-import__diff-check">
-              <input
-                type="checkbox"
-                v-model="diff.selected"
-                :disabled="diff.imported || isImporting"
-              />
-            </label>
-
-            <div class="map-import__diff-info">
+            <div class="map-import__diff-col map-import__diff-col--name">
               <span class="map-import__diff-name">
                 {{ formatBsDifficulty(diff.difficulty) }}
                 <span v-if="diff.characteristic !== 'Standard'" class="map-import__diff-char">{{ diff.characteristic }}</span>
@@ -243,18 +245,22 @@ function goToDetail(difficultyId: string) {
               </span>
             </div>
 
-            <div v-if="diff.selected && !diff.imported" class="map-import__diff-config">
+            <div class="map-import__diff-col map-import__diff-col--cat" @click.stop>
               <BaseSelect
+                v-if="diff.selected && !diff.imported"
                 v-model="diff.categoryId"
                 :options="categoryOptions"
                 :disabled="isImporting"
               />
+            </div>
+
+            <div class="map-import__diff-col map-import__diff-col--comp" @click.stop>
               <BaseInput
+                v-if="diff.selected && !diff.imported"
                 v-model.number="diff.complexity"
                 type="number"
-                placeholder="Suggested complexity"
+                placeholder="0.0"
                 :disabled="isImporting"
-                style="width: 100px"
               />
             </div>
 
@@ -263,7 +269,7 @@ function goToDetail(difficultyId: string) {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Imported
-              <BaseButton size="sm" @click="goToDetail(diff.importedDifficultyId!)">View</BaseButton>
+              <BaseButton size="sm" @click.stop="goToDetail(diff.importedDifficultyId!)">View</BaseButton>
             </div>
 
             <div v-if="diff.importing" class="map-import__diff-status">
@@ -423,8 +429,27 @@ function goToDetail(difficultyId: string) {
 .map-import__diff-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
+
+.map-import__diff-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 0 var(--space-md);
+}
+
+.map-import__diff-header .map-import__diff-col {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.map-import__diff-col--name { flex: 1; min-width: 0; }
+.map-import__diff-col--cat { width: 160px; flex-shrink: 0; }
+.map-import__diff-col--comp { width: 100px; flex-shrink: 0; }
 
 .map-import__diff-row {
   display: flex;
@@ -433,31 +458,27 @@ function goToDetail(difficultyId: string) {
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-btn);
   background: var(--bg-elevated);
-  border: 1px solid transparent;
-  transition: border-color 120ms ease;
+  border: 2px solid transparent;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.map-import__diff-row--clickable {
+  cursor: pointer;
+}
+
+.map-import__diff-row--clickable:hover {
+  background: var(--bg-overlay);
 }
 
 .map-import__diff-row--selected {
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-elevated));
 }
 
 .map-import__diff-row--imported {
   border-color: color-mix(in srgb, var(--success) 30%, transparent);
   opacity: 0.8;
-}
-
-.map-import__diff-check input {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.map-import__diff-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 120px;
+  cursor: default;
 }
 
 .map-import__diff-name {
@@ -482,13 +503,6 @@ function goToDetail(difficultyId: string) {
 .map-import__diff-warn {
   color: var(--error);
   font-weight: 600;
-}
-
-.map-import__diff-config {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-left: auto;
 }
 
 .map-import__diff-status {
@@ -527,14 +541,16 @@ function goToDetail(difficultyId: string) {
     padding: var(--space-md);
   }
 
+  .map-import__diff-header { display: none; }
+
   .map-import__diff-row {
     flex-wrap: wrap;
   }
 
-  .map-import__diff-config {
-    margin-left: 0;
-    width: 100%;
-    flex-wrap: wrap;
+  .map-import__diff-col--cat,
+  .map-import__diff-col--comp {
+    width: auto;
+    flex: 1;
   }
 }
 </style>

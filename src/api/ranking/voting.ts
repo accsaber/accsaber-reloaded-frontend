@@ -1,6 +1,12 @@
 import type { CastVoteRequest } from '@/types/api/admin'
 import type { VoteListResponse, VoteResponse } from '@/types/api/maps'
+import type { Page } from '@/types/pagination'
 import { del, get, post } from '../client'
+import { buildQuery } from '../utils'
+
+export function getVoteActivity(params?: Record<string, unknown>): Promise<Page<VoteResponse>> {
+  return get<Page<VoteResponse>>(`/ranking/maps/difficulties/votes/activity${buildQuery(params)}`)
+}
 
 export function listVotes(difficultyId: string): Promise<VoteListResponse> {
   return get<VoteListResponse>(`/ranking/maps/difficulties/${difficultyId}/votes`)

@@ -90,6 +90,12 @@ export interface VoteResponse {
   active: boolean
   createdAt: string
   updatedAt: string
+  songName: string | null
+  songAuthor: string | null
+  mapAuthor: string | null
+  coverUrl: string | null
+  difficulty: Difficulty | null
+  categoryId: string | null
 }
 
 export interface VoteListResponse {

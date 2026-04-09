@@ -5,6 +5,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -63,11 +64,7 @@ usePageMeta({ title: metaTitle })
 
 const isHeadRanking = computed(() => authStore.hasRole('RANKING_HEAD'))
 
-const beatsaverUrl = computed(() => {
-  if (!difficulty.value) return null
-  const code = (difficulty.value as unknown as { beatsaverCode?: string }).beatsaverCode
-  return code ? `https://beatsaver.com/maps/${code}` : null
-})
+const beatsaverCode = computed(() => mapBeatsaverCode.value)
 
 const beatleaderUrl = computed(() => {
   if (!difficulty.value?.blLeaderboardId) return null
@@ -78,6 +75,21 @@ const scoresaberUrl = computed(() => {
   if (!difficulty.value?.ssLeaderboardId) return null
   return `https://scoresaber.com/leaderboard/${difficulty.value.ssLeaderboardId}`
 })
+
+const scoreCurveId = computed(() =>
+  categoryStore.byCode.get(categoryCode.value)?.scoreCurve?.id ?? null
+)
+
+const tweakerOpen = ref(false)
+const tweakerAnchor = ref<HTMLElement | null>(null)
+
+function toggleTweaker(event: Event) {
+  tweakerOpen.value = !tweakerOpen.value
+  tweakerAnchor.value = tweakerOpen.value ? (event.currentTarget as HTMLElement) : null
+}
+
+const managementOpen = ref(false)
+const voteFormOpen = ref(false)
 
 const voteType = ref<VoteType>('UPVOTE')
 const voteAction = ref<MapVoteAction>('RANK')
@@ -90,22 +102,27 @@ const voteError = ref('')
 
 const showStatusModal = ref(false)
 const statusTarget = ref<string>('')
-const statusReason = ref('')
 const statusLoading = ref(false)
 
 const showComplexityModal = ref(false)
 const complexityValue = ref<number>(0)
-const complexityReason = ref('')
 const complexityLoading = ref(false)
 
 const batchOptions = ref<{ value: string; label: string }[]>([])
+const mapBeatsaverCode = ref<string | null>(null)
 
 async function fetchDifficulty() {
   loading.value = true
   try {
     const { getDifficulties } = await import('@/api/maps')
     const res = await getDifficulties({ page: 0, size: 500 } as never)
-    difficulty.value = res.content.find((d: MapDifficultyResponse) => d.id === difficultyId.value) ?? null
+    const found = res.content.find((d: MapDifficultyResponse) => d.id === difficultyId.value) ?? null
+    difficulty.value = found
+    if (found) {
+      const { getMap } = await import('@/api/maps')
+      const map = await getMap(found.mapId)
+      mapBeatsaverCode.value = map.beatsaverCode
+    }
   } catch {
     difficulty.value = null
   }
@@ -182,7 +199,6 @@ async function handleStatusChange() {
     await updateMapStatus(difficultyId.value, { status: statusTarget.value as never })
     showStatusModal.value = false
     statusTarget.value = ''
-    statusReason.value = ''
     await fetchDifficulty()
   } catch {
   } finally {
@@ -244,7 +260,6 @@ const availableActions = computed<{ value: MapVoteAction; label: string }[]>(() 
   if (difficulty.value.status === 'RANKED') {
     return [
       { value: 'REWEIGHT', label: 'Reweight' },
-      { value: 'UNRANK', label: 'Unrank' },
     ]
   }
   return [{ value: 'RANK', label: 'Rank' }]
@@ -325,9 +340,27 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
             </div>
 
             <div class="rank-detail__links">
-              <BaseButton v-if="beatsaverUrl" :href="beatsaverUrl" size="sm">BeatSaver</BaseButton>
-              <BaseButton v-if="beatleaderUrl" :href="beatleaderUrl" size="sm">BeatLeader</BaseButton>
-              <BaseButton v-if="scoresaberUrl" :href="scoresaberUrl" size="sm">ScoreSaber</BaseButton>
+              <BaseButton v-if="beatsaverCode" size="sm" :href="`beatsaver://${beatsaverCode}`" aria-label="One-Click Install" title="One-Click Install">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 13V4.5a1.5 1.5 0 0 1 3 0V12" /><path d="M11 11.5V6.5a1.5 1.5 0 0 1 3 0V12" /><path d="M14 10.5V8.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2a1.5 1.5 0 0 1 3 0V12" />
+                </svg>
+              </BaseButton>
+              <BaseButton v-if="beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${beatsaverCode}`" aria-label="View on BeatSaver">
+                <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16" style="border-radius: 3px;" />
+              </BaseButton>
+              <BaseButton v-if="beatleaderUrl" size="sm" :href="beatleaderUrl" aria-label="View on BeatLeader">
+                <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16" style="border-radius: 3px;" />
+              </BaseButton>
+              <BaseButton v-if="scoresaberUrl" size="sm" :href="scoresaberUrl" aria-label="View on ScoreSaber">
+                <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16" style="border-radius: 3px;" />
+              </BaseButton>
+              <BaseButton v-if="scoreCurveId && difficulty.complexity != null" size="sm" aria-label="AP Tweaker" @click="toggleTweaker($event)">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M16.2 12.5a1.4 1.4 0 00.28 1.54l.05.05a1.7 1.7 0 11-2.4 2.4l-.05-.05a1.4 1.4 0 00-1.54-.28 1.4 1.4 0 00-.84 1.28v.14a1.7 1.7 0 11-3.4 0v-.07a1.4 1.4 0 00-.92-1.28 1.4 1.4 0 00-1.54.28l-.05.05a1.7 1.7 0 11-2.4-2.4l.05-.05a1.4 1.4 0 00.28-1.54 1.4 1.4 0 00-1.28-.84H2.3a1.7 1.7 0 110-3.4h.07a1.4 1.4 0 001.28-.92 1.4 1.4 0 00-.28-1.54l-.05-.05a1.7 1.7 0 112.4-2.4l.05.05a1.4 1.4 0 001.54.28h.07a1.4 1.4 0 00.84-1.28V2.3a1.7 1.7 0 113.4 0v.07a1.4 1.4 0 00.84 1.28 1.4 1.4 0 001.54-.28l.05-.05a1.7 1.7 0 112.4 2.4l-.05.05a1.4 1.4 0 00-.28 1.54v.07a1.4 1.4 0 001.28.84h.14a1.7 1.7 0 110 3.4h-.07a1.4 1.4 0 00-1.28.84z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </BaseButton>
+              <ApTweaker v-if="scoreCurveId && difficulty.complexity != null" :open="tweakerOpen" :curve-id="scoreCurveId" :anchor-el="tweakerAnchor" :complexity="difficulty.complexity" :show-weighted="false" @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
             </div>
           </div>
         </div>
@@ -338,9 +371,6 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </span>
           <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold" :class="{ 'rank-detail__threshold--met': voteData.reweightReady }">
             {{ voteData.reweightReady ? 'Reweight Ready' : 'Not Reweight Ready' }}
-          </span>
-          <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold rank-detail__threshold--danger" :class="{ 'rank-detail__threshold--met': voteData.unrankReady }">
-            {{ voteData.unrankReady ? 'Unrank Ready' : 'Not Unrank Ready' }}
           </span>
           <span class="rank-detail__threshold rank-detail__threshold--criteria" :class="{
             'rank-detail__threshold--criteria-pass': voteData.criteriaUpvotes > voteData.criteriaDownvotes,
@@ -357,9 +387,12 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </span>
         </div>
 
-        <div v-if="isHeadRanking" class="rank-detail__head-actions">
-          <h3 class="rank-detail__section-title">Management</h3>
-          <div class="rank-detail__action-row">
+        <div v-if="isHeadRanking" class="rank-detail__collapsible">
+          <button class="rank-detail__collapsible-header" @click="managementOpen = !managementOpen">
+            <h3 class="rank-detail__section-title">Management</h3>
+            <svg class="rank-detail__collapsible-chevron" :class="{ 'rank-detail__collapsible-chevron--open': managementOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+          </button>
+          <div v-if="managementOpen" class="rank-detail__action-row">
             <BaseButton
               v-for="transition in statusTransitions"
               :key="transition.value"
@@ -379,8 +412,12 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </div>
         </div>
 
-        <div class="rank-detail__vote-form">
-          <h3 class="rank-detail__section-title">Cast Vote</h3>
+        <div class="rank-detail__collapsible">
+          <button class="rank-detail__collapsible-header" @click="voteFormOpen = !voteFormOpen">
+            <h3 class="rank-detail__section-title">{{ difficulty.status === 'RANKED' ? 'Cast Reweight Vote' : 'Cast Rank Vote' }}</h3>
+            <svg class="rank-detail__collapsible-chevron" :class="{ 'rank-detail__collapsible-chevron--open': voteFormOpen }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+          </button>
+          <div v-if="voteFormOpen" class="rank-detail__vote-form-content">
           <div class="rank-detail__vote-type-row">
             <button
               class="rank-detail__vote-btn rank-detail__vote-btn--up"
@@ -467,6 +504,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           <BaseButton variant="primary" :loading="voteSubmitting" @click="submitVote">
             Submit Vote
           </BaseButton>
+          </div>
         </div>
 
         <div class="rank-detail__votes-section">
@@ -922,12 +960,42 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   color: var(--text-tertiary);
 }
 
-.rank-detail__head-actions {
+.rank-detail__collapsible {
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  padding: var(--space-lg);
   margin-bottom: var(--space-lg);
+  overflow: hidden;
+}
+
+.rank-detail__collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.rank-detail__collapsible-header:hover {
+  background: var(--bg-elevated);
+}
+
+.rank-detail__collapsible-header .rank-detail__section-title {
+  margin: 0;
+}
+
+.rank-detail__collapsible-chevron {
+  color: var(--text-tertiary);
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.rank-detail__collapsible-chevron--open {
+  transform: rotate(180deg);
 }
 
 .rank-detail__action-row {
@@ -935,17 +1003,14 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   flex-wrap: wrap;
   gap: var(--space-sm);
   align-items: center;
+  padding: 0 var(--space-lg) var(--space-lg);
 }
 
-.rank-detail__vote-form {
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+.rank-detail__vote-form-content {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  padding: 0 var(--space-lg) var(--space-lg);
 }
 
 .rank-detail__vote-type-row {

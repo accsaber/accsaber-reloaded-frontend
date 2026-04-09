@@ -33,8 +33,12 @@ usePageMeta({
 const statusTabs: Tab[] = [
   { key: 'QUEUE', label: 'Queue' },
   { key: 'QUALIFIED', label: 'Qualified' },
-  { key: 'RANKED', label: 'Ranked' },
+  { key: 'RANKED', label: 'Reweighting' },
 ]
+
+const pageTitle = computed(() =>
+  activeStatus.value === 'RANKED' ? 'Ranking Reweighting Queue' : 'Ranking Queue'
+)
 
 const activeStatus = computed<MapDifficultyStatus>({
   get() {
@@ -139,6 +143,8 @@ const rows = computed(() =>
       categoryAccent: catInfo?.accent ?? '#a855f7',
       complexity: d.complexity,
       criteriaStatus: d.criteriaStatus,
+      criteriaUpvotes: d.criteriaUpvotes,
+      criteriaDownvotes: d.criteriaDownvotes,
       headCriteriaVote: d.headCriteriaVote,
       rating: d.rankUpvotes - d.rankDownvotes,
       createdAt: d.createdAt,
@@ -194,11 +200,6 @@ function ratingClass(rating: number): string {
   return 'ranking-dashboard__rating--neutral'
 }
 
-function criteriaClass(status: string): string {
-  if (status === 'PASSED') return 'criteria--passed'
-  if (status === 'FAILED') return 'criteria--failed'
-  return 'criteria--pending'
-}
 
 function headCriteriaClass(vote: string): string {
   if (vote === 'UPVOTE') return 'criteria--head-pass'
@@ -210,12 +211,12 @@ function headCriteriaClass(vote: string): string {
 <template>
   <div class="ranking-dashboard">
     <div class="ranking-dashboard__header">
-      <h1 class="ranking-dashboard__title">Ranking Queue</h1>
+      <h1 class="ranking-dashboard__title">{{ pageTitle }}</h1>
 
       <div class="ranking-dashboard__controls">
         <BaseTabs :tabs="statusTabs" :model-value="activeStatus" @update:model-value="activeStatus = $event as MapDifficultyStatus" />
         <div class="ranking-dashboard__filters">
-          <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." />
+          <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." style="flex: 1; min-width: 240px;" />
           <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
             <template #trigger>
               <button class="ranking-dashboard__filter-btn" :class="{ 'ranking-dashboard__filter-btn--active': filtersOpen || hasActiveFilters }" aria-label="Toggle filters">
@@ -278,11 +279,11 @@ function headCriteriaClass(vote: string): string {
 
       <template #cell-criteria="{ row }">
         <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria" :class="headCriteriaClass(row.headCriteriaVote as string)">
-          {{ row.headCriteriaVote === 'UPVOTE' ? 'HEAD PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'HEAD FAIL' : 'HEAD NEUTRAL' }}
+          HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
         </span>
-        <span v-else class="ranking-dashboard__criteria" :class="criteriaClass(row.criteriaStatus as string)">
-          {{ row.criteriaStatus }}
-        </span>
+        <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria--passed">PASS</span>
+        <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria--failed">FAIL</span>
+        <span v-else class="ranking-dashboard__criteria criteria--pending">PENDING</span>
       </template>
 
       <template #cell-rating="{ row }">
@@ -316,10 +317,12 @@ function headCriteriaClass(vote: string): string {
             <span class="ranking-dashboard__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>
             <div class="ranking-dashboard__mobile-meta">
               <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" />
-              <span v-if="row.criteriaOverridden" class="ranking-dashboard__criteria criteria--overridden">OVERRIDDEN</span>
-              <span v-else class="ranking-dashboard__criteria" :class="criteriaClass(row.criteriaStatus as string)">
-                {{ row.criteriaStatus }}
+              <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria" :class="headCriteriaClass(row.headCriteriaVote as string)">
+                HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
               </span>
+              <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria--passed">PASS</span>
+              <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria--failed">FAIL</span>
+              <span v-else class="ranking-dashboard__criteria criteria--pending">PENDING</span>
               <span class="ranking-dashboard__rating" :class="ratingClass(row.rating as number)">
                 {{ (row.rating as number) > 0 ? '+' : '' }}{{ row.rating }}
               </span>

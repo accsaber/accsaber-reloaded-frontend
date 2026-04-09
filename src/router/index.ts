@@ -130,6 +130,12 @@ const router = createRouter({
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
     },
     {
+      path: isRankingSubdomain ? '/activity' : '/staff/ranking/activity',
+      name: 'ranking-activity',
+      component: () => import('@/views/staff/ranking/VoteActivityPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+    },
+    {
       path: isRankingSubdomain ? '/batches' : '/staff/ranking/batches',
       name: 'staff-ranking-head',
       component: () => import('@/views/staff/ranking/RankingHeadPage.vue'),

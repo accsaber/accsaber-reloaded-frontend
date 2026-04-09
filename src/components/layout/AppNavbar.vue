@@ -59,11 +59,13 @@ const adminNavItems: NavItem[] = [
 const rankingPrefix = isRankingSubdomain ? '' : '/staff/ranking'
 
 const batchesPath = isRankingSubdomain ? '/batches' : '/staff/ranking/batches'
+const activityPath = isRankingSubdomain ? '/activity' : '/staff/ranking/activity'
 
 const rankingNavItems: NavItem[] = [
   { to: rankingPrefix || '/', label: 'Queue' },
   { to: `${rankingPrefix}/import`, label: 'Import' },
   { to: batchesPath, label: 'Batches' },
+  { to: activityPath, label: 'Activity' },
 ]
 
 const isRankingContext = computed(() =>
