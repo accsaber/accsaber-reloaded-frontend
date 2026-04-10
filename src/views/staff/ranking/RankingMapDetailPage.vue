@@ -187,7 +187,7 @@ async function submitVote() {
       vote: voteType.value,
       type: voteAction.value,
       reason: voteReason.value || undefined,
-      suggestedComplexity: voteSuggestedComplexity.value || undefined,
+      suggestedComplexity: Number(voteSuggestedComplexity.value) || undefined,
       criteriaVote: difficulty.value?.status !== 'RANKED' ? (voteCriteriaVote.value || undefined) : undefined,
       criteriaVoteOverride: difficulty.value?.status !== 'RANKED' ? (voteCriteriaOverride.value || undefined) : undefined,
     })
@@ -275,6 +275,10 @@ function voteIconClass(vote: VoteType): string {
   if (vote === 'DOWNVOTE') return 'vote-icon--down'
   return 'vote-icon--neutral'
 }
+
+const voteFormTitle = computed(() =>
+  difficulty.value?.status === 'RANKED' ? 'Cast Reweight Vote' : 'Cast Rank Vote'
+)
 
 const availableActions = computed<{ value: MapVoteAction; label: string }[]>(() => {
   if (!difficulty.value) return []
@@ -466,8 +470,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
         <div class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="voteFormOpen = !voteFormOpen">
-            <h3 class="rank-detail__section-title">{{ difficulty.status === 'RANKED' ? 'Cast Reweight Vote' : 'Cast Rank
-              Vote' }}</h3>
+            <h3 class="rank-detail__section-title">{{ voteFormTitle }}</h3>
             <svg class="rank-detail__collapsible-chevron"
               :class="{ 'rank-detail__collapsible-chevron--open': voteFormOpen }" width="16" height="16"
               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
