@@ -51,6 +51,7 @@ export interface ScoreResponse {
   baseXp: number
   bonusXp: number
   modifierIds: string[]
+  active: boolean
   createdAt: string
 }
 

@@ -184,6 +184,12 @@ const rows = computed(() => {
   return pageData.value.content.map((item, i) => addRank(item as Record<string, unknown>, i))
 })
 
+function supersededRowClass(row: Record<string, unknown>) {
+  if (isScoreTab.value && row.active === false) return 'data-table__row--superseded'
+  return undefined
+}
+
+const hasSupersededRows = computed(() => isScoreTab.value && rows.value.some((r) => r.active === false))
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalElements = computed(() => pageData.value?.totalElements ?? 0)
 
@@ -402,9 +408,19 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
         </button>
       </div>
 
+      <div v-if="hasSupersededRows" class="stats__disclaimer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <p>Dimmed rows indicate scores that have been superseded by a newer score on the same map.</p>
+      </div>
+
       <div class="stats__table" :style="{ '--accent': accent }">
         <DataTable :columns="columns" :rows="rows" :loading="loading" :loading-rows="10" row-clickable :row-to="rowTo"
-          row-key="rank" empty-message="No records found">
+          row-key="rank" empty-message="No records found" :row-class="supersededRowClass">
 
           <template #cell-rank="{ value }">
             <span class="rank-cell" :class="getRankClass(value as number)">#{{ value }}</span>
@@ -466,7 +482,7 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
           </template>
 
           <template #mobile-card="{ row }">
-            <div class="stats-card" @click="rowTo(row) && $router.push(rowTo(row)!)">
+            <div class="stats-card" :class="{ 'stats-card--superseded': isScoreTab && row.active === false }" @click="rowTo(row) && $router.push(rowTo(row)!)">
               <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
               <div v-if="row.userName" class="stats-card__player">
                 <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
@@ -932,6 +948,35 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-md);
+}
+
+.stats__disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.stats__disclaimer svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stats__disclaimer p {
+  margin: 0;
+}
+
+:deep(.data-table__row--superseded) {
+  opacity: 0.4;
+}
+
+.stats-card--superseded {
+  opacity: 0.4;
 }
 
 @media (max-width: 767px) {
