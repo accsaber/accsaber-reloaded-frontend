@@ -236,7 +236,7 @@ if (props.defaultExpanded) {
           </button>
 
           <div v-if="expandedSets.has(ms.setId)" class="milestone-set__rows">
-            <div v-if="DISCLAIMER_SET_IDS.has(ms.setId)" class="milestone-set__disclaimer">
+            <div v-if="DISCLAIMER_SET_IDS.has(ms.setId) && !(loggedIn && ms.milestones.some(m => m.userProgress != null))" class="milestone-set__disclaimer">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" />
