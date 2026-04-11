@@ -423,19 +423,9 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
         </div>
 
         <div v-if="voteData" class="rank-detail__thresholds">
-          <span v-if="difficulty.status !== 'RANKED'" class="rank-detail__threshold"
-            :class="{ 'rank-detail__threshold--met': voteData.rankReady }">
-            {{ voteData.rankReady ? 'Rank Ready' : 'Not Rank Ready' }}
-          </span>
           <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold"
             :class="{ 'rank-detail__threshold--met': voteData.reweightReady }">
             {{ voteData.reweightReady ? 'Reweight Ready' : 'Not Reweight Ready' }}
-          </span>
-          <span class="rank-detail__threshold rank-detail__threshold--criteria" :class="{
-            'rank-detail__threshold--criteria-pass': voteData.criteriaUpvotes > voteData.criteriaDownvotes,
-            'rank-detail__threshold--criteria-fail': voteData.criteriaDownvotes > voteData.criteriaUpvotes,
-          }">
-            Criteria {{ voteData.criteriaUpvotes }}/{{ voteData.criteriaDownvotes }}
           </span>
           <span v-if="voteData.headCriteriaVote" class="rank-detail__threshold" :class="{
             'rank-detail__threshold--override-pass': voteData.headCriteriaVote === 'UPVOTE',
