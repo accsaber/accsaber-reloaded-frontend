@@ -158,6 +158,12 @@ export interface HistoricStatisticsParams {
   unit: 'h' | 'd' | 'mo'
 }
 
+export interface RankingHistoryResponse {
+  ranking: number
+  countryRanking: number
+  recordedAt: string
+}
+
 export interface HistoricScoresParams {
   mapDifficultyId: string
   amount?: number

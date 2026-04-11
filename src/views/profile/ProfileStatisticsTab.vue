@@ -3,7 +3,11 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import SkillPrism from '@/components/domain/SkillPrism.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useCategoryStore } from '@/stores/categories'
-import type { UserAllStatisticsResponse, UserCategoryStatisticsResponse } from '@/types/api/users'
+import type {
+  RankingHistoryResponse,
+  UserAllStatisticsResponse,
+  UserCategoryStatisticsResponse,
+} from '@/types/api/users'
 import type { CategoryCode, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { computed, ref, watch } from 'vue'
 
@@ -17,6 +21,7 @@ const categoryStore = useCategoryStore()
 const selectedMetric = ref<MetricType>('ap')
 const selectedRange = ref<TimeRange>('14d')
 const chartData = ref<UserCategoryStatisticsResponse[]>([])
+const rankHistoryData = ref<RankingHistoryResponse[]>([])
 const allTimeData = ref<UserCategoryStatisticsResponse[]>([])
 
 const timeRangeParams: Record<TimeRange, { amount: number; unit: 'h' | 'd' | 'mo' }> = {
@@ -30,13 +35,18 @@ const timeRangeParams: Record<TimeRange, { amount: number; unit: 'h' | 'd' | 'mo
 }
 
 const chartPoints = computed<TimeSeriesPoint[]>(() => {
-  if (chartData.value.length === 0) return []
-
-  const points = chartData.value
-    .map((s) => ({ timestamp: new Date(s.createdAt).getTime(), value: getMetricValue(s) }))
-    .sort((a, b) => a.timestamp - b.timestamp)
+  const points: TimeSeriesPoint[] = selectedMetric.value === 'rank'
+    ? rankHistoryData.value.map((d) => ({
+      timestamp: new Date(d.recordedAt).getTime(),
+      value: d.ranking,
+    }))
+    : chartData.value.map((s) => ({
+      timestamp: new Date(s.createdAt).getTime(),
+      value: getMetricValue(s),
+    }))
 
   if (points.length === 0) return []
+  points.sort((a, b) => a.timestamp - b.timestamp)
 
   const timeSpan = points[points.length - 1].timestamp - points[0].timestamp
   const targetBuckets = 150
@@ -145,6 +155,18 @@ async function fetchChartData() {
   }
 }
 
+async function fetchRankHistory() {
+  try {
+    const { getUserRankingHistory } = await import('@/api/users')
+    rankHistoryData.value = await getUserRankingHistory(props.userId, {
+      category: props.category,
+      ...timeRangeParams[selectedRange.value],
+    })
+  } catch {
+    rankHistoryData.value = []
+  }
+}
+
 async function fetchAllTimeData() {
   try {
     const { getUserHistoricStatistics } = await import('@/api/users')
@@ -161,6 +183,14 @@ async function fetchAllTimeData() {
 watch(
   [() => props.userId, () => props.category, selectedRange],
   () => { fetchChartData() },
+  { immediate: true },
+)
+
+watch(
+  [() => props.userId, () => props.category, selectedRange, selectedMetric],
+  () => {
+    if (selectedMetric.value === 'rank') fetchRankHistory()
+  },
   { immediate: true },
 )
 
@@ -191,23 +221,11 @@ watch(
     <section v-if="peakStats" class="statistics-tab__peaks">
       <h3 class="statistics-tab__section-title">Peak Stats</h3>
       <div class="statistics-tab__peaks-grid">
-        <StatBlock
-          v-if="peakStats.peakRank != null"
-          label="Peak Global Rank"
-          :value="peakStats.peakRank"
-          :decimals="0"
-        />
-        <StatBlock
-          v-if="peakStats.peakCountryRank != null"
-          label="Peak Country Rank"
-          :value="peakStats.peakCountryRank"
-          :decimals="0"
-        />
-        <StatBlock
-          v-if="peakStats.peakAp != null"
-          label="Peak AP"
-          :value="peakStats.peakAp"
-        />
+        <StatBlock v-if="peakStats.peakRank != null" label="Peak Global Rank" :value="peakStats.peakRank"
+          :decimals="0" />
+        <StatBlock v-if="peakStats.peakCountryRank != null" label="Peak Country Rank" :value="peakStats.peakCountryRank"
+          :decimals="0" />
+        <StatBlock v-if="peakStats.peakAp != null" label="Peak AP" :value="peakStats.peakAp" />
       </div>
     </section>
 

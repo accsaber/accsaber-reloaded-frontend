@@ -4,6 +4,7 @@ import type {
   HistoricScoresParams,
   HistoricStatisticsParams,
   LevelResponse,
+  RankingHistoryResponse,
   ScoreResponse,
   StatsDiffResponse,
   UserAllStatisticsResponse,
@@ -69,6 +70,15 @@ export function getUserHistoricStatistics(
 ): Promise<UserCategoryStatisticsResponse[]> {
   return get<UserCategoryStatisticsResponse[]>(
     `/users/${userId}/statistics/historic${buildQuery(params)}`,
+  )
+}
+
+export function getUserRankingHistory(
+  userId: string,
+  params: HistoricStatisticsParams,
+): Promise<RankingHistoryResponse[]> {
+  return get<RankingHistoryResponse[]>(
+    `/users/${userId}/ranking-history${buildQuery(params)}`,
   )
 }
 
