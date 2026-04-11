@@ -80,7 +80,7 @@ async function runSearch(query: string) {
     : Promise.resolve(null)
 
   const mapPromise = import('@/api/maps').then(({ getMaps }) =>
-    getMaps({ search: query, size: RESULTS_PER_SECTION, page: 0 }),
+    getMaps({ search: query, size: RESULTS_PER_SECTION, page: 0, status: 'RANKED' }),
   )
 
   try {
