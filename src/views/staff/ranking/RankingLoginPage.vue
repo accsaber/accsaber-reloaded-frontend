@@ -220,6 +220,7 @@ async function handleRequestAccess() {
 <style scoped>
 .ranking-login {
   min-height: 100vh;
+  margin-top: calc(-1 * var(--navbar-height, 64px));
   display: flex;
   align-items: center;
   justify-content: center;
