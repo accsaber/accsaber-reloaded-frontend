@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ inheritAttrs: false })
+
 defineProps<{
   modelValue: string | number
   label?: string
@@ -16,8 +18,9 @@ defineEmits<{
 <template>
   <div class="base-input" :class="{ 'base-input--error': error, 'base-input--disabled': disabled }">
     <label v-if="label" class="base-input__label">{{ label }}</label>
-    <input class="base-input__field" :type="type ?? 'text'" :value="modelValue" :placeholder="placeholder"
-      :disabled="disabled" @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
+    <input class="base-input__field" v-bind="$attrs" :type="type ?? 'text'" :value="modelValue"
+      :placeholder="placeholder" :disabled="disabled"
+      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
     <span v-if="error" class="base-input__error">{{ error }}</span>
   </div>
 </template>

@@ -3,9 +3,11 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import LeaderboardPreviewPanel from '@/components/domain/LeaderboardPreviewPanel.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { rankingDashboardRoute } from '@/router'
@@ -13,6 +15,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
+import type { Tab } from '@/types/display'
 import type { MapVoteAction, VoteType } from '@/types/enums'
 import { brightenRgb } from '@/utils/color'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -100,6 +103,11 @@ const staffId = computed(() => {
 
 const managementOpen = ref(false)
 const voteFormOpen = ref(false)
+const activeTab = ref<'voting' | 'leaderboard'>('voting')
+const detailTabs: Tab[] = [
+  { key: 'voting', label: 'Voting' },
+  { key: 'leaderboard', label: 'Leaderboard Preview' },
+]
 
 const voteType = ref<VoteType>('UPVOTE')
 const voteAction = ref<MapVoteAction>('RANK')
@@ -437,7 +445,15 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </span>
         </div>
 
-        <div v-if="isHeadRanking" class="rank-detail__collapsible">
+        <div class="rank-detail__tabs">
+          <BaseTabs :tabs="detailTabs" :model-value="activeTab"
+            @update:model-value="(v: string) => activeTab = v as 'voting' | 'leaderboard'" />
+        </div>
+
+        <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'" :bl-leaderboard-id="difficulty.blLeaderboardId"
+          :original-complexity="difficulty.complexity" :max-score="difficulty.maxScore" :category-code="categoryCode" />
+
+        <div v-if="activeTab === 'voting' && isHeadRanking" class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="managementOpen = !managementOpen">
             <h3 class="rank-detail__section-title">Management</h3>
             <svg class="rank-detail__collapsible-chevron"
@@ -458,7 +474,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </div>
         </div>
 
-        <div class="rank-detail__collapsible">
+        <div v-if="activeTab === 'voting'" class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="voteFormOpen = !voteFormOpen">
             <h3 class="rank-detail__section-title">{{ voteFormTitle }}</h3>
             <svg class="rank-detail__collapsible-chevron"
@@ -537,7 +553,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </div>
         </div>
 
-        <div class="rank-detail__votes-section">
+        <div v-if="activeTab === 'voting'" class="rank-detail__votes-section">
           <h3 class="rank-detail__section-title">
             Votes
             <span v-if="voteData" class="rank-detail__vote-count">({{ voteData.votes.length }})</span>
@@ -919,6 +935,10 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   gap: var(--space-sm);
   margin-bottom: var(--space-lg);
   flex-wrap: wrap;
+}
+
+.rank-detail__tabs {
+  margin-bottom: var(--space-lg);
 }
 
 .rank-detail__threshold {

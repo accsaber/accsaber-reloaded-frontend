@@ -53,6 +53,49 @@ const BL_DIFF_VALUE_TO_NAME: Record<number, string> = {
 }
 
 
+export interface BeatLeaderScore {
+  id: number
+  baseScore: number
+  modifiedScore: number
+  accuracy: number
+  rank: number
+  modifiers: string
+  player: {
+    id: string
+    name: string
+    avatar: string
+    country: string
+  }
+}
+
+export interface BeatLeaderLeaderboardPayload {
+  scores: BeatLeaderScore[]
+  maxScore: number
+}
+
+interface BeatLeaderLeaderboardResponse {
+  scores?: { data?: BeatLeaderScore[] } | BeatLeaderScore[]
+  difficulty?: { maxScore?: number; maxScoreGraph?: unknown }
+  song?: { difficulties?: Array<{ maxScore?: number }> }
+}
+
+export async function fetchBeatLeaderScores(
+  leaderboardId: string,
+  count = 100,
+): Promise<BeatLeaderLeaderboardPayload> {
+  const url = `/proxy/beatleader/leaderboard/${encodeURIComponent(leaderboardId)}?page=1&count=${count}`
+  const res = await fetch(url, { headers: { accept: 'application/json' } })
+  if (!res.ok) throw new Error(`BeatLeader request failed: ${res.status}`)
+  const data = (await res.json()) as BeatLeaderLeaderboardResponse
+  const rawScores = Array.isArray(data.scores)
+    ? data.scores
+    : (data.scores?.data ?? [])
+  const maxScore = data.difficulty?.maxScore
+    ?? data.song?.difficulties?.[0]?.maxScore
+    ?? 0
+  return { scores: rawScores, maxScore }
+}
+
 export async function fetchBeatLeaderLeaderboards(hash: string): Promise<Map<string, string>> {
   const map = new Map<string, string>()
   try {
