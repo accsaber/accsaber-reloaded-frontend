@@ -19,7 +19,7 @@ const props = defineProps<{
 
 const categoryStore = useCategoryStore()
 const selectedMetric = ref<MetricType>('ap')
-const selectedRange = ref<TimeRange>('14d')
+const selectedRange = ref<TimeRange>('all')
 const chartData = ref<UserCategoryStatisticsResponse[]>([])
 const rankHistoryData = ref<RankingHistoryResponse[]>([])
 const allTimeData = ref<UserCategoryStatisticsResponse[]>([])

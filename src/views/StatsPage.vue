@@ -236,7 +236,7 @@ async function fetchLeaderboardData() {
 }
 
 const growthMetric = ref<MetricType>('newPlayers')
-const growthRange = ref<TimeRange>('30d')
+const growthRange = ref<TimeRange>('all')
 const growthChartData = ref<TimeSeriesPoint[]>([])
 const growthLoading = ref(false)
 const hmdData = ref<DistributionEntryResponse[]>([])

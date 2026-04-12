@@ -107,7 +107,7 @@ const metaTitle = computed(() => {
 usePageMeta({ title: metaTitle })
 
 const selectedStatsMetric = ref<MetricType>('ap')
-const selectedStatsRange = ref<TimeRange>('14d')
+const selectedStatsRange = ref<TimeRange>('all')
 
 
 const statsChartPoints = computed<TimeSeriesPoint[]>(() => {

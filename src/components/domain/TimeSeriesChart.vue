@@ -39,7 +39,9 @@ const timeRanges: { key: TimeRange; label: string }[] = [
   { key: 'all', label: 'All' },
 ]
 
-const activeRange = computed(() => props.selectedRange ?? '14d')
+const activeRange = computed(() => props.selectedRange ?? 'all')
+
+const hasData = computed(() => props.data.length > 0)
 
 async function loadChart() {
   isLoading.value = true
@@ -184,7 +186,10 @@ onUnmounted(() => {
     </div>
     <div class="chart-container__canvas-wrap">
       <SkeletonLoader v-if="isLoading" variant="card" height="240px" />
-      <canvas v-show="!isLoading" ref="canvasRef" />
+      <div v-else-if="!hasData" class="chart-container__empty">
+        No scores could be found with the timeframe selected.
+      </div>
+      <canvas v-show="!isLoading && hasData" ref="canvasRef" />
     </div>
   </div>
 </template>
@@ -236,5 +241,14 @@ onUnmounted(() => {
 .chart-container__canvas-wrap canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+.chart-container__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: var(--text-body);
 }
 </style>
