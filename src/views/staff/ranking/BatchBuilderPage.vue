@@ -398,7 +398,7 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
             </template>
             <template v-else>
               <span v-if="diff.complexity != null" class="batch-builder__complexity-value" @click="startEditComplexity(diff)">
-                <ComplexityBadge :complexity="diff.complexity" />
+                <ComplexityBadge :complexity="diff.complexity" :difficulty="diff.difficulty" />
               </span>
             </template>
             <button v-if="isDraft" class="batch-builder__card-action batch-builder__card-action--remove" @click.stop="removeFromBatch(diff.id)" aria-label="Remove from batch">
@@ -444,7 +444,7 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
               </span>
             </div>
             <span v-if="diffBatchMap.has(diff.id)" class="batch-builder__card-badge batch-builder__card-badge--batch">{{ diffBatchMap.get(diff.id) }}</span>
-            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" />
+            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" :difficulty="diff.difficulty" />
             <button class="batch-builder__card-action batch-builder__card-action--add" @click.stop="requestAdd(diff.id)" aria-label="Add to batch">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -479,7 +479,7 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
               </span>
             </div>
             <span v-if="diffBatchMap.has(diff.id)" class="batch-builder__card-badge batch-builder__card-badge--batch">{{ diffBatchMap.get(diff.id) }}</span>
-            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" />
+            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" :difficulty="diff.difficulty" />
             <button class="batch-builder__card-action batch-builder__card-action--add" @click.stop="requestAdd(diff.id)" aria-label="Add to batch">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />

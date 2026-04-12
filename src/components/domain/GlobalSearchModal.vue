@@ -224,7 +224,7 @@ const mapResults = computed<MapResult[]>(() =>
               <span class="search-modal__row-meta">
                 <template v-if="r.primary">
                   <span class="search-modal__category-dot" :style="{ background: r.accent }" />
-                  <ComplexityBadge :complexity="r.primary.complexity" />
+                  <ComplexityBadge :complexity="r.primary.complexity" :difficulty="r.primary.difficulty" />
                 </template>
               </span>
             </button>

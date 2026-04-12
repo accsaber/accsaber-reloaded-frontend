@@ -279,7 +279,7 @@ function headCriteriaClass(vote: string): string {
       </template>
 
       <template #cell-complexity="{ row }">
-        <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" />
+        <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" :difficulty="row.difficulty as string" />
         <span v-else class="ranking-dashboard__rating--neutral">-</span>
       </template>
 
@@ -322,7 +322,7 @@ function headCriteriaClass(vote: string): string {
             <span class="ranking-dashboard__song-name">{{ row.songName }}</span>
             <span class="ranking-dashboard__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>
             <div class="ranking-dashboard__mobile-meta">
-              <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" />
+              <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" :difficulty="row.difficulty as string" />
               <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria" :class="headCriteriaClass(row.headCriteriaVote as string)">
                 HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
               </span>

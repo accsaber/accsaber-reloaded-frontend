@@ -361,7 +361,8 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
               </span>
               <span v-if="isHeadRanking" class="rank-detail__complexity-editable"
                 @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
-                <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
+                <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity"
+                  :difficulty="difficulty.difficulty" />
                 <span v-else class="rank-detail__complexity-unset">Set complexity</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -369,7 +370,8 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </span>
-              <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
+              <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity"
+                :difficulty="difficulty.difficulty" />
               <span class="rank-detail__status-badge" :class="statusBadgeClass(difficulty.status)">
                 {{ difficulty.status }}
               </span>
