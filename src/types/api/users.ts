@@ -125,6 +125,7 @@ export interface UserMilestoneProgressResponse {
   xp: number
   targetValue: number
   progress: number
+  normalizedProgress: number | null
   completed: boolean
   completedAt: string | null
   completionPercentage: number

@@ -21,10 +21,8 @@ const accentColor = computed(() =>
 const completionText = computed(() => `${formatPercent(props.milestone.completionPercent)}% of players`)
 
 const progressPercent = computed(() => {
-  if (props.milestone.userProgress == null || !props.milestone.targetValue) return null
-  const raw = (props.milestone.userProgress / props.milestone.targetValue) * 100
-  if (!props.milestone.isCompleted && raw >= 100) return 99.9
-  return raw
+  if (props.milestone.normalizedProgress == null) return null
+  return props.milestone.normalizedProgress * 100
 })
 
 const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0))

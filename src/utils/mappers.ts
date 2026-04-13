@@ -149,6 +149,7 @@ export function toMilestoneDisplay(
     xp: m.xp,
     targetValue: m.targetValue,
     userProgress: m.progress,
+    normalizedProgress: m.normalizedProgress,
     completionPercent: m.completionPercentage,
     isCompleted: m.completed,
     categoryCode,

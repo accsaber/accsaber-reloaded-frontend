@@ -148,6 +148,7 @@ export interface MilestoneDisplay {
   xp: number
   targetValue: number
   userProgress?: number
+  normalizedProgress?: number | null
   completionPercent: number
   isCompleted?: boolean
   categoryCode?: CategoryCode
