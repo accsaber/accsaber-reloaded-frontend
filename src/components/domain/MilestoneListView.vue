@@ -76,9 +76,18 @@ const completedMilestones = computed(() =>
   props.milestones.filter((m) => m.userCompleted === true),
 )
 
-const activeMilestones = computed(() =>
-  viewMode.value === 'completed' ? completedMilestones.value : props.milestones,
-)
+const activeMilestones = computed(() => {
+  const base = viewMode.value === 'completed' ? completedMilestones.value : props.milestones
+  if (activeSort.value === 'progress') {
+    return [...base].sort((a, b) => {
+      const aCompleted = a.userCompleted ? 1 : 0
+      const bCompleted = b.userCompleted ? 1 : 0
+      if (aCompleted !== bCompleted) return aCompleted - bCompleted
+      return (b.userNormalizedProgress ?? 0) - (a.userNormalizedProgress ?? 0)
+    })
+  }
+  return base
+})
 
 const isFlatSort = computed(() => activeSort.value !== 'tier')
 

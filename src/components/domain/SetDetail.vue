@@ -32,9 +32,17 @@ const pinnedMilestone = ref<MilestoneCompletionResponse | null>(null)
 const hoveredMilestone = ref<MilestoneCompletionResponse | null>(null)
 const previewMilestone = computed(() => hoveredMilestone.value ?? pinnedMilestone.value)
 
-const sortedMilestones = computed(() =>
-  [...props.milestones].sort((a, b) => (TIER_ORDER[a.tier] ?? 0) - (TIER_ORDER[b.tier] ?? 0)),
-)
+const sortedMilestones = computed(() => {
+  if (props.sort === 'progress') {
+    return [...props.milestones].sort((a, b) => {
+      const aCompleted = a.userCompleted ? 1 : 0
+      const bCompleted = b.userCompleted ? 1 : 0
+      if (aCompleted !== bCompleted) return aCompleted - bCompleted
+      return (b.userNormalizedProgress ?? 0) - (a.userNormalizedProgress ?? 0)
+    })
+  }
+  return [...props.milestones].sort((a, b) => (TIER_ORDER[a.tier] ?? 0) - (TIER_ORDER[b.tier] ?? 0))
+})
 
 const completedCount = computed(() =>
   props.milestones.filter((m) => m.userCompleted).length,
