@@ -46,6 +46,7 @@ const sortOptions = computed(() => {
   ]
   if (props.loggedIn) {
     options.push({ value: 'completedAt', label: 'Recently Completed' })
+    options.push({ value: 'progress', label: 'Progress' })
   }
   return options
 })

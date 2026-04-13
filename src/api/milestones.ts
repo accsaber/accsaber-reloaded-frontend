@@ -50,7 +50,7 @@ export function getSetGroupLinks(groupId: string): Promise<SetGroupLinkResponse[
   return get<SetGroupLinkResponse[]>(`/milestones/set-groups/${groupId}/links`)
 }
 
-export type MilestoneSort = 'tier' | 'completions' | 'completedAt'
+export type MilestoneSort = 'tier' | 'completions' | 'completedAt' | 'progress'
 
 export function getMilestoneCompletionStats(
   userId?: string,
