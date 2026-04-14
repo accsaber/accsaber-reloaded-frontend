@@ -1,19 +1,20 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import BaseTabs from '@/components/common/BaseTabs.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
-import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
+import { useRankingQueueStore } from '@/stores/rankingQueue'
+import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
 
 import type { MapDifficultyResponse } from '@/types/api/maps'
-import type { TableColumn, Tab } from '@/types/display'
+import type { Tab, TableColumn } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
 import { formatRelativeDate, truncate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
@@ -23,6 +24,7 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
+const queueCache = useRankingQueueStore()
 
 
 usePageMeta({
@@ -162,23 +164,43 @@ const rows = computed(() =>
   })
 )
 
+function buildFetchParams(): Record<string, unknown> {
+  const params: Record<string, unknown> = {
+    ...paginationParams.value,
+    status: activeStatus.value,
+  }
+  if (selectedCategories.value.length === 1) {
+    params.categoryId = selectedCategories.value[0]
+  }
+  if (complexityRange.value[0] > 0) params.complexityMin = complexityRange.value[0]
+  if (complexityRange.value[1] < 20) params.complexityMax = complexityRange.value[1]
+  if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
+  return params
+}
+
 async function fetchDifficulties() {
+  const params = buildFetchParams()
+  const cached = queueCache.getCached(params)
+  if (cached) {
+    difficulties.value = cached.content
+    totalPages.value = cached.totalPages
+    loading.value = false
+    try {
+      const { getDifficulties } = await import('@/api/maps')
+      const res = await getDifficulties(params as never)
+      difficulties.value = res.content
+      totalPages.value = res.totalPages
+      queueCache.setCache(params, res.content, res.totalPages)
+    } catch { }
+    return
+  }
   loading.value = true
   try {
-    const params: Record<string, unknown> = {
-      ...paginationParams.value,
-      status: activeStatus.value,
-    }
-    if (selectedCategories.value.length === 1) {
-      params.categoryId = selectedCategories.value[0]
-    }
-    if (complexityRange.value[0] > 0) params.complexityMin = complexityRange.value[0]
-    if (complexityRange.value[1] < 20) params.complexityMax = complexityRange.value[1]
-    if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
     const { getDifficulties } = await import('@/api/maps')
     const res = await getDifficulties(params as never)
     difficulties.value = res.content
     totalPages.value = res.totalPages
+    queueCache.setCache(params, res.content, res.totalPages)
   } catch {
     difficulties.value = []
     totalPages.value = 0

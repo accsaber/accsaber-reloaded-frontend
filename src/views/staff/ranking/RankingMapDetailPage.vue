@@ -375,20 +375,36 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
               <span class="rank-detail__status-badge" :class="statusBadgeClass(difficulty.status)">
                 {{ difficulty.status }}
               </span>
-              <span v-if="voteData?.headCriteriaVote" class="rank-detail__criteria-badge"
-                :class="voteData.headCriteriaVote === 'UPVOTE' ? 'criteria-badge--passed' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'criteria-badge--failed' : 'criteria-badge--pending'">
-                Criteria: HEAD {{ voteData.headCriteriaVote === 'UPVOTE' ? 'PASS' : voteData.headCriteriaVote ===
-                  'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
-              </span>
-              <span v-else-if="voteData && (voteData.criteriaUpvotes > 0 || voteData.criteriaDownvotes > 0)"
-                class="rank-detail__criteria-badge"
-                :class="voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'criteria-badge--passed' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'criteria-badge--failed' : 'criteria-badge--pending'">
-                Criteria: {{ voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'PASS' : voteData.criteriaDownvotes
-                  > voteData.criteriaUpvotes ? 'FAIL' : 'PENDING' }}
-              </span>
-              <span v-else class="rank-detail__criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
-                Criteria: {{ difficulty.criteriaStatus }}
-              </span>
+              <template v-if="difficulty.status !== 'RANKED'">
+                <span v-if="voteData?.headCriteriaVote" class="rank-detail__criteria-badge"
+                  :class="voteData.headCriteriaVote === 'UPVOTE' ? 'criteria-badge--passed' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'criteria-badge--failed' : 'criteria-badge--pending'">
+                  Criteria: HEAD {{ voteData.headCriteriaVote === 'UPVOTE' ? 'PASS' : voteData.headCriteriaVote ===
+                    'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
+                </span>
+                <span v-else-if="voteData && (voteData.criteriaUpvotes > 0 || voteData.criteriaDownvotes > 0)"
+                  class="rank-detail__criteria-badge"
+                  :class="voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'criteria-badge--passed' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'criteria-badge--failed' : 'criteria-badge--pending'">
+                  Criteria: {{ voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'PASS' : voteData.criteriaDownvotes
+                    > voteData.criteriaUpvotes ? 'FAIL' : 'PENDING' }}
+                </span>
+                <span v-else class="rank-detail__criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
+                  Criteria: {{ difficulty.criteriaStatus }}
+                </span>
+              </template>
+              <template v-if="voteData">
+                <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold"
+                  :class="{ 'rank-detail__threshold--met': voteData.reweightReady }">
+                  {{ voteData.reweightReady ? 'Reweight Ready' : 'Not Reweight Ready' }}
+                </span>
+                <span v-if="voteData.headCriteriaVote" class="rank-detail__threshold" :class="{
+                  'rank-detail__threshold--override-pass': voteData.headCriteriaVote === 'UPVOTE',
+                  'rank-detail__threshold--override-fail': voteData.headCriteriaVote === 'DOWNVOTE',
+                  'rank-detail__threshold--override': voteData.headCriteriaVote === 'NEUTRAL',
+                }">
+                  Head: {{ voteData.headCriteriaVote === 'UPVOTE' ? 'Pass' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'Fail'
+                    : 'Neutral' }}
+                </span>
+              </template>
             </div>
 
             <div class="rank-detail__links">
@@ -430,21 +446,6 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                 @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
             </div>
           </div>
-        </div>
-
-        <div v-if="voteData" class="rank-detail__thresholds">
-          <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold"
-            :class="{ 'rank-detail__threshold--met': voteData.reweightReady }">
-            {{ voteData.reweightReady ? 'Reweight Ready' : 'Not Reweight Ready' }}
-          </span>
-          <span v-if="voteData.headCriteriaVote" class="rank-detail__threshold" :class="{
-            'rank-detail__threshold--override-pass': voteData.headCriteriaVote === 'UPVOTE',
-            'rank-detail__threshold--override-fail': voteData.headCriteriaVote === 'DOWNVOTE',
-            'rank-detail__threshold--override': voteData.headCriteriaVote === 'NEUTRAL',
-          }">
-            Head: {{ voteData.headCriteriaVote === 'UPVOTE' ? 'Pass' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'Fail'
-              : 'Neutral' }}
-          </span>
         </div>
 
         <div class="rank-detail__tabs">
@@ -932,13 +933,6 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   margin-top: var(--space-sm);
 }
 
-.rank-detail__thresholds {
-  display: flex;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
-  flex-wrap: wrap;
-}
-
 .rank-detail__tabs {
   margin-bottom: var(--space-lg);
 }
@@ -946,7 +940,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 .rank-detail__threshold {
   font-size: var(--text-caption);
   font-weight: 600;
-  padding: 4px 12px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
   background: var(--bg-elevated);
   color: var(--text-tertiary);

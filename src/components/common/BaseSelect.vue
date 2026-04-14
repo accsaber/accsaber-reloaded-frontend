@@ -129,10 +129,17 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.base-select__trigger--open,
 .base-select__trigger:focus {
   border-color: var(--accent);
   outline: none;
+}
+
+.base-select__trigger--open {
+  border-color: var(--text-tertiary);
+  outline: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: var(--bg-overlay);
 }
 
 .base-select__chevron {
@@ -149,10 +156,11 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: var(--space-xs);
+  margin-top: 0;
   background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  border: 1px solid var(--text-tertiary);
+  border-top: 1px solid var(--bg-overlay);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
   z-index: 100;
   overflow: hidden;
 }
