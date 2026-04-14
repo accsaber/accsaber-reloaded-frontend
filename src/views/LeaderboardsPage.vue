@@ -11,6 +11,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
+import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -24,6 +25,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
+const lbCache = useLeaderboardCacheStore()
 
 const activeCategory = computed<CategoryCode>({
   get: () => (route.params.categoryCode as CategoryCode) || 'overall',
@@ -158,33 +160,48 @@ const countryOptions = computed(() => {
   ]
 })
 
+function buildCacheKey(): Record<string, unknown> {
+  const includeInactive = showInactive.value ? true : undefined
+  if (isXpMode.value) {
+    return {
+      _type: 'xp',
+      ...paginationParams.value,
+      search: searchQuery.value.trim() || undefined,
+      country: countryFilter.value || undefined,
+      includeInactive,
+    }
+  }
+  return {
+    _type: 'ap',
+    category: activeCategory.value,
+    ...paginationParams.value,
+    search: searchQuery.value.trim() || undefined,
+    country: countryFilter.value || undefined,
+    includeInactive,
+  }
+}
+
 async function fetchData() {
+  const cacheKey = buildCacheKey()
+  const cached = lbCache.getCached<Page<LeaderboardResponse> | Page<XpLeaderboardResponse>>(cacheKey)
+
+  if (cached) {
+    if (isXpMode.value) {
+      xpPageData.value = cached as Page<XpLeaderboardResponse>
+    } else {
+      apPageData.value = cached as Page<LeaderboardResponse>
+    }
+    loading.value = false
+    try {
+      await fetchFromApi(cacheKey)
+    } catch { /* keep cached data */ }
+    await handleHighlight()
+    return
+  }
+
   loading.value = true
   try {
-    const includeInactive = showInactive.value ? true : undefined
-    if (isXpMode.value) {
-      const { getXpLeaderboard } = await import('@/api/leaderboards')
-      const params = {
-        ...paginationParams.value,
-        search: searchQuery.value.trim() || undefined,
-        country: countryFilter.value || undefined,
-        includeInactive,
-      }
-      xpPageData.value = await getXpLeaderboard(params)
-    } else {
-      const categoryId = categoryStore.getCategoryId(activeCategory.value)
-      if (!categoryId) {
-        loading.value = false
-        return
-      }
-      const { getLeaderboard, getCountryLeaderboard } = await import('@/api/leaderboards')
-      const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, includeInactive }
-      if (countryFilter.value) {
-        apPageData.value = await getCountryLeaderboard(categoryId, countryFilter.value, params)
-      } else {
-        apPageData.value = await getLeaderboard(categoryId, params)
-      }
-    }
+    await fetchFromApi(cacheKey)
   } catch {
     if (isXpMode.value) {
       xpPageData.value = null
@@ -193,7 +210,39 @@ async function fetchData() {
     }
   }
   loading.value = false
+  await handleHighlight()
+}
 
+async function fetchFromApi(cacheKey: Record<string, unknown>) {
+  const includeInactive = showInactive.value ? true : undefined
+  if (isXpMode.value) {
+    const { getXpLeaderboard } = await import('@/api/leaderboards')
+    const params = {
+      ...paginationParams.value,
+      search: searchQuery.value.trim() || undefined,
+      country: countryFilter.value || undefined,
+      includeInactive,
+    }
+    const res = await getXpLeaderboard(params)
+    xpPageData.value = res
+    lbCache.setCache(cacheKey, res)
+  } else {
+    const categoryId = categoryStore.getCategoryId(activeCategory.value)
+    if (!categoryId) return
+    const { getLeaderboard, getCountryLeaderboard } = await import('@/api/leaderboards')
+    const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, includeInactive }
+    let res: Page<LeaderboardResponse>
+    if (countryFilter.value) {
+      res = await getCountryLeaderboard(categoryId, countryFilter.value, params)
+    } else {
+      res = await getLeaderboard(categoryId, params)
+    }
+    apPageData.value = res
+    lbCache.setCache(cacheKey, res)
+  }
+}
+
+async function handleHighlight() {
   const highlightId = route.query.highlight as string | undefined
   if (highlightId) {
     highlightedUserId.value = highlightId
