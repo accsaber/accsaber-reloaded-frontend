@@ -267,15 +267,15 @@ async function addToBatch(batchId: string) {
 }
 
 function statusBadgeClass(status: string): string {
-  if (status === 'RANKED') return 'status-badge--ranked'
-  if (status === 'QUALIFIED') return 'status-badge--qualified'
-  return 'status-badge--queue'
+  if (status === 'RANKED') return 'status-pill status-pill--ranked'
+  if (status === 'QUALIFIED') return 'status-pill status-pill--qualified'
+  return 'status-pill status-pill--queue'
 }
 
 function criteriaBadgeClass(status: string): string {
-  if (status === 'PASSED') return 'criteria-badge--passed'
-  if (status === 'FAILED') return 'criteria-badge--failed'
-  return 'criteria-badge--pending'
+  if (status === 'PASSED') return 'criteria-badge criteria-badge--passed'
+  if (status === 'FAILED') return 'criteria-badge criteria-badge--failed'
+  return 'criteria-badge criteria-badge--pending'
 }
 
 function voteIconClass(vote: VoteType): string {
@@ -372,22 +372,22 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
               </span>
               <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity"
                 :difficulty="difficulty.difficulty" />
-              <span class="rank-detail__status-badge" :class="statusBadgeClass(difficulty.status)">
+              <span :class="statusBadgeClass(difficulty.status)">
                 {{ difficulty.status }}
               </span>
               <template v-if="difficulty.status !== 'RANKED'">
-                <span v-if="voteData?.headCriteriaVote" class="rank-detail__criteria-badge"
+                <span v-if="voteData?.headCriteriaVote" class="criteria-badge"
                   :class="voteData.headCriteriaVote === 'UPVOTE' ? 'criteria-badge--passed' : voteData.headCriteriaVote === 'DOWNVOTE' ? 'criteria-badge--failed' : 'criteria-badge--pending'">
                   Criteria: HEAD {{ voteData.headCriteriaVote === 'UPVOTE' ? 'PASS' : voteData.headCriteriaVote ===
                     'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
                 </span>
                 <span v-else-if="voteData && (voteData.criteriaUpvotes > 0 || voteData.criteriaDownvotes > 0)"
-                  class="rank-detail__criteria-badge"
+                  class="criteria-badge"
                   :class="voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'criteria-badge--passed' : voteData.criteriaDownvotes > voteData.criteriaUpvotes ? 'criteria-badge--failed' : 'criteria-badge--pending'">
                   Criteria: {{ voteData.criteriaUpvotes > voteData.criteriaDownvotes ? 'PASS' : voteData.criteriaDownvotes
                     > voteData.criteriaUpvotes ? 'FAIL' : 'PENDING' }}
                 </span>
-                <span v-else class="rank-detail__criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
+                <span v-else class="criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
                   Criteria: {{ difficulty.criteriaStatus }}
                 </span>
               </template>
@@ -843,58 +843,6 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   background: color-mix(in srgb, var(--cat-accent, var(--accent)) 15%, transparent);
   color: var(--cat-accent, var(--accent));
   border: 1px solid color-mix(in srgb, var(--cat-accent, var(--accent)) 30%, transparent);
-}
-
-.rank-detail__status-badge {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.status-badge--queue {
-  background: color-mix(in srgb, var(--warning) 15%, transparent);
-  color: var(--warning);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-}
-
-.status-badge--qualified {
-  background: color-mix(in srgb, var(--info) 15%, transparent);
-  color: var(--info);
-  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
-}
-
-.status-badge--ranked {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-}
-
-.rank-detail__criteria-badge {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-}
-
-.criteria-badge--passed {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-}
-
-.criteria-badge--failed {
-  background: color-mix(in srgb, var(--error) 15%, transparent);
-  color: var(--error);
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
-}
-
-.criteria-badge--pending {
-  background: color-mix(in srgb, var(--warning) 15%, transparent);
-  color: var(--warning);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
 }
 
 .rank-detail__complexity-editable {

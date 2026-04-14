@@ -7,6 +7,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import { DIFF_COLOR } from '@/utils/constants'
 
 const page = ref(1)
 const size = 15
@@ -66,13 +67,6 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-const DIFF_COLOR: Record<string, string> = {
-  EASY: 'var(--diff-easy)',
-  NORMAL: 'var(--diff-normal)',
-  HARD: 'var(--diff-hard)',
-  EXPERT: 'var(--diff-expert)',
-  EXPERT_PLUS: 'var(--diff-expert-plus)',
-}
 </script>
 
 <template>

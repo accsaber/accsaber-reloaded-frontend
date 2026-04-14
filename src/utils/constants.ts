@@ -12,6 +12,20 @@ export const TIME_RANGE_PARAMS: Record<TimeRange, { amount: number; unit: 'h' | 
 
 export const DIFFICULTY_ORDER = ['EASY', 'NORMAL', 'HARD', 'EXPERT', 'EXPERT_PLUS'] as const
 
+export const DIFF_COLOR: Record<string, string> = {
+  EASY: 'var(--diff-easy)',
+  NORMAL: 'var(--diff-normal)',
+  HARD: 'var(--diff-hard)',
+  EXPERT: 'var(--diff-expert)',
+  EXPERT_PLUS: 'var(--diff-expert-plus)',
+}
+
+export const MAP_STATUS_ACCENT: Record<string, string> = {
+  QUEUE: 'var(--accent-overall)',
+  QUALIFIED: 'var(--accent-low-mid)',
+  RANKED: 'var(--accent-standard-acc)',
+}
+
 export const CATEGORY_ORDER = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid', 'overall'] as const
 
 export const ROLE_ORDER: Record<string, number> = {

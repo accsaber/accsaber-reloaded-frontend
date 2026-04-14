@@ -32,6 +32,82 @@ body {
   font-weight: 700;
 }
 
+/* --- Status Pill (reusable) --- */
+.status-pill {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-pill--queue {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.status-pill--qualified {
+  background: color-mix(in srgb, var(--info) 15%, transparent);
+  color: var(--info);
+  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
+}
+
+.status-pill--ranked {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+/* --- Criteria Badge (reusable) --- */
+.criteria-badge {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.criteria-badge--passed {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.criteria-badge--failed {
+  background: color-mix(in srgb, var(--error) 15%, transparent);
+  color: var(--error);
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+}
+
+.criteria-badge--pending {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+/* --- Criteria Text (inline, no background) --- */
+.criteria-text--passed { color: var(--success); }
+.criteria-text--failed { color: var(--error); }
+.criteria-text--pending { color: var(--warning); }
+.criteria-text--head { font-style: italic; }
+
+/* --- Difficulty Badge (reusable) --- */
+.diff-badge {
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.diff-badge--easy { background: color-mix(in srgb, var(--diff-easy) 20%, transparent); color: var(--diff-easy); }
+.diff-badge--normal { background: color-mix(in srgb, var(--diff-normal) 20%, transparent); color: var(--diff-normal); }
+.diff-badge--hard { background: color-mix(in srgb, var(--diff-hard) 20%, transparent); color: var(--diff-hard); }
+.diff-badge--expert { background: color-mix(in srgb, var(--diff-expert) 20%, transparent); color: var(--diff-expert); }
+.diff-badge--expert_plus { background: color-mix(in srgb, var(--diff-expert-plus) 20%, transparent); color: var(--diff-expert-plus); }
+
 @media (prefers-reduced-motion: reduce) {
 
   *,

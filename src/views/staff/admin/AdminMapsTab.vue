@@ -9,6 +9,7 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { DIFF_COLOR } from '@/utils/constants'
 
 const searchInput = ref('')
 const search = useDebouncedRef(searchInput, 300)
@@ -97,13 +98,6 @@ const NEXT_STATUS: Partial<Record<MapDifficultyStatus, MapDifficultyStatus>> = {
   QUALIFIED: 'RANKED',
 }
 
-const DIFF_COLOR: Record<string, string> = {
-  EASY: 'var(--diff-easy)',
-  NORMAL: 'var(--diff-normal)',
-  HARD: 'var(--diff-hard)',
-  EXPERT: 'var(--diff-expert)',
-  EXPERT_PLUS: 'var(--diff-expert-plus)',
-}
 </script>
 
 <template>
@@ -208,18 +202,6 @@ const DIFF_COLOR: Record<string, string> = {
 .map-author { font-size: var(--text-caption); color: var(--text-secondary); }
 
 .diff-label { font-size: var(--text-caption); font-weight: 600; font-family: var(--font-mono); }
-
-.status-pill {
-  font-size: var(--text-caption);
-  font-family: var(--font-mono);
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  border: 1px solid;
-}
-.status-pill--ranked { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); background: color-mix(in srgb, var(--success) 8%, transparent); }
-.status-pill--qualified { color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); background: color-mix(in srgb, var(--info) 8%, transparent); }
-.status-pill--queue { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 30%, transparent); background: color-mix(in srgb, var(--warning) 8%, transparent); }
 
 .complexity-cell { display: flex; align-items: center; gap: var(--space-xs); }
 .complexity-input {

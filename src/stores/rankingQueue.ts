@@ -6,6 +6,7 @@ import { ref } from 'vue'
 interface CachedPage {
   content: MapDifficultyResponse[]
   totalPages: number
+  totalElements: number
   fetchedAt: number
   paramsKey: string
 }
@@ -30,11 +31,13 @@ export const useRankingQueueStore = defineStore('rankingQueue', () => {
     params: Record<string, unknown>,
     content: MapDifficultyResponse[],
     totalPages: number,
+    totalElements: number,
   ) {
     const key = buildKey(params)
     cache.value.set(key, {
       content,
       totalPages,
+      totalElements,
       fetchedAt: Date.now(),
       paramsKey: key,
     })

@@ -16,6 +16,7 @@ import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
 import type { MapDifficultyResponse } from '@/types/api/maps'
 import type { Tab, TableColumn } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
+import { MAP_STATUS_ACCENT } from '@/utils/constants'
 import { formatRelativeDate, truncate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
@@ -39,8 +40,17 @@ const statusTabs: Tab[] = [
 ]
 
 const pageTitle = computed(() =>
-  activeStatus.value === 'RANKED' ? 'Ranking Reweighting Queue' : 'Ranking Queue'
+  activeStatus.value === 'RANKED' ? 'Reweighting Queue' : activeStatus.value === 'QUALIFIED' ? 'Qualified Queue' : 'Ranking Queue'
 )
+
+const accent = computed(() => MAP_STATUS_ACCENT[activeStatus.value] ?? 'var(--accent-overall)')
+
+const subtitleText = computed(() => {
+  if (!totalElements.value) return ''
+  if (activeStatus.value === 'RANKED') return `${totalElements.value} ranked maps`
+  if (activeStatus.value === 'QUALIFIED') return `${totalElements.value} maps in queue with 3+ upvotes and criteria pass`
+  return `${totalElements.value} maps in queue`
+})
 
 const activeStatus = computed<MapDifficultyStatus>({
   get() {
@@ -81,12 +91,12 @@ const selectedCategories = computed<string[]>({
 })
 
 const complexityRange = computed<[number, number]>({
-  get() {
+  get(): [number, number] {
     const min = Number(route.query.complexityMin) || 0
     const max = Number(route.query.complexityMax) || 20
     return [min, max]
   },
-  set(val) {
+  set(val: [number, number]) {
     const query = { ...route.query }
     if (val[0] <= 0) { delete query.complexityMin } else { query.complexityMin = String(val[0]) }
     if (val[1] >= 20) { delete query.complexityMax } else { query.complexityMax = String(val[1]) }
@@ -132,6 +142,7 @@ const columns = computed(() =>
 
 const difficulties = ref<MapDifficultyResponse[]>([])
 const totalPages = ref(0)
+const totalElements = ref(0)
 const loading = ref(true)
 
 const rows = computed(() =>
@@ -184,13 +195,15 @@ async function fetchDifficulties() {
   if (cached) {
     difficulties.value = cached.content
     totalPages.value = cached.totalPages
+    totalElements.value = cached.totalElements
     loading.value = false
     try {
       const { getDifficulties } = await import('@/api/maps')
       const res = await getDifficulties(params as never)
       difficulties.value = res.content
       totalPages.value = res.totalPages
-      queueCache.setCache(params, res.content, res.totalPages)
+      totalElements.value = res.totalElements
+      queueCache.setCache(params, res.content, res.totalPages, res.totalElements)
     } catch { }
     return
   }
@@ -200,10 +213,12 @@ async function fetchDifficulties() {
     const res = await getDifficulties(params as never)
     difficulties.value = res.content
     totalPages.value = res.totalPages
-    queueCache.setCache(params, res.content, res.totalPages)
+    totalElements.value = res.totalElements
+    queueCache.setCache(params, res.content, res.totalPages, res.totalElements)
   } catch {
     difficulties.value = []
     totalPages.value = 0
+    totalElements.value = 0
   }
   loading.value = false
 }
@@ -230,41 +245,46 @@ function ratingClass(rating: number): string {
 
 
 function headCriteriaClass(vote: string): string {
-  if (vote === 'UPVOTE') return 'criteria--head-pass'
-  if (vote === 'DOWNVOTE') return 'criteria--head-fail'
-  return 'criteria--head-neutral'
+  if (vote === 'UPVOTE') return 'criteria-text--passed'
+  if (vote === 'DOWNVOTE') return 'criteria-text--failed'
+  return 'criteria-text--pending'
 }
 </script>
 
 <template>
-  <div class="ranking-dashboard">
-    <div class="ranking-dashboard__header">
-      <h1 class="ranking-dashboard__title">{{ pageTitle }}</h1>
+  <div class="ranking-dashboard" :style="{ '--page-accent': accent, '--accent': accent }">
+    <header class="ranking-dashboard__header">
+      <div class="ranking-dashboard__header-bleed" />
+      <div class="ranking-dashboard__header-content">
+        <h1 class="ranking-dashboard__title">{{ pageTitle }}</h1>
+        <p v-if="subtitleText" class="ranking-dashboard__subtitle">{{ subtitleText }}</p>
+      </div>
+    </header>
 
-      <div class="ranking-dashboard__controls">
-        <BaseTabs :tabs="statusTabs" :model-value="activeStatus" @update:model-value="activeStatus = $event as MapDifficultyStatus" />
-        <div class="ranking-dashboard__filters">
-          <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." style="flex: 1; min-width: 240px;" />
-          <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
-            <template #trigger>
-              <button class="ranking-dashboard__filter-btn" :class="{ 'ranking-dashboard__filter-btn--active': filtersOpen || hasActiveFilters }" aria-label="Toggle filters">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                </svg>
-                <span v-if="hasActiveFilters" class="ranking-dashboard__filter-dot" />
-              </button>
-            </template>
-            <MapFilterSidebar
-              :selected-categories="selectedCategories"
-              :complexity-range="complexityRange"
-              @update:selected-categories="selectedCategories = $event"
-              @update:complexity-range="complexityRange = $event"
-            />
-          </FilterPopover>
-        </div>
+    <div class="ranking-dashboard__controls">
+      <BaseTabs :tabs="statusTabs" :model-value="activeStatus" @update:model-value="activeStatus = $event as MapDifficultyStatus" />
+      <div class="ranking-dashboard__filters">
+        <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." style="flex: 1; min-width: 240px;" />
+        <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
+          <template #trigger>
+            <button class="ranking-dashboard__filter-btn" :class="{ 'ranking-dashboard__filter-btn--active': filtersOpen || hasActiveFilters }" aria-label="Toggle filters">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              <span v-if="hasActiveFilters" class="ranking-dashboard__filter-dot" />
+            </button>
+          </template>
+          <MapFilterSidebar
+            :selected-categories="selectedCategories"
+            :complexity-range="complexityRange"
+            @update:selected-categories="selectedCategories = $event"
+            @update:complexity-range="complexityRange = $event"
+          />
+        </FilterPopover>
       </div>
     </div>
 
+    <div class="ranking-dashboard__table">
     <DataTable
       :columns="columns"
       :rows="rows"
@@ -286,7 +306,7 @@ function headCriteriaClass(vote: string): string {
           <span class="ranking-dashboard__song-name">{{ row.songName }}</span>
           <span class="ranking-dashboard__song-meta">
             {{ row.songAuthor }}
-            <span class="ranking-dashboard__diff-badge" :class="'diff--' + (row.difficulty as string).toLowerCase()">
+            <span class="diff-badge" :class="'diff-badge--' + (row.difficulty as string).toLowerCase()">
               {{ formatDifficulty(row.difficulty as string) }}
             </span>
           </span>
@@ -306,12 +326,12 @@ function headCriteriaClass(vote: string): string {
       </template>
 
       <template #cell-criteria="{ row }">
-        <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria" :class="headCriteriaClass(row.headCriteriaVote as string)">
+        <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria criteria-text--head" :class="headCriteriaClass(row.headCriteriaVote as string)">
           HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
         </span>
-        <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria--passed">PASS</span>
-        <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria--failed">FAIL</span>
-        <span v-else class="ranking-dashboard__criteria criteria--pending">PENDING</span>
+        <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria-text--passed">PASS</span>
+        <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria-text--failed">FAIL</span>
+        <span v-else class="ranking-dashboard__criteria criteria-text--pending">PENDING</span>
       </template>
 
       <template #cell-rating="{ row }">
@@ -345,12 +365,12 @@ function headCriteriaClass(vote: string): string {
             <span class="ranking-dashboard__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>
             <div class="ranking-dashboard__mobile-meta">
               <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" :difficulty="row.difficulty as string" />
-              <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria" :class="headCriteriaClass(row.headCriteriaVote as string)">
+              <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria criteria-text--head" :class="headCriteriaClass(row.headCriteriaVote as string)">
                 HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
               </span>
-              <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria--passed">PASS</span>
-              <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria--failed">FAIL</span>
-              <span v-else class="ranking-dashboard__criteria criteria--pending">PENDING</span>
+              <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria-text--passed">PASS</span>
+              <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria-text--failed">FAIL</span>
+              <span v-else class="ranking-dashboard__criteria criteria-text--pending">PENDING</span>
               <span class="ranking-dashboard__rating" :class="ratingClass(row.rating as number)">
                 {{ (row.rating as number) > 0 ? '+' : '' }}{{ row.rating }}
               </span>
@@ -363,6 +383,7 @@ function headCriteriaClass(vote: string): string {
         <EmptyState message="No maps in this queue" />
       </template>
     </DataTable>
+    </div>
 
     <PaginationControls
       v-if="totalPages > 1"
@@ -375,25 +396,53 @@ function headCriteriaClass(vote: string): string {
 
 <style scoped>
 .ranking-dashboard {
-  max-width: 1280px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 1030px;
   margin: 0 auto;
-  padding: var(--space-xl) var(--space-xl) var(--space-3xl);
+  width: 100%;
 }
 
 .ranking-dashboard__header {
-  margin-bottom: var(--space-lg);
+  position: relative;
+  text-align: center;
+  padding: var(--space-2xl) 0 var(--space-lg);
+}
+
+.ranking-dashboard__header-bleed {
+  position: absolute;
+  inset: -32px -64px 0 -64px;
+  background: radial-gradient(ellipse at 50% 0%,
+      color-mix(in srgb, var(--page-accent) 15%, transparent),
+      transparent 70%);
+  pointer-events: none;
+}
+
+.ranking-dashboard__header-content {
+  position: relative;
+  z-index: 1;
 }
 
 .ranking-dashboard__title {
   font-size: var(--text-page-title);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 var(--space-lg);
+  margin: 0;
+}
+
+.ranking-dashboard__subtitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--page-accent);
+  margin: var(--space-xs) 0 0;
+  letter-spacing: 0.02em;
 }
 
 .ranking-dashboard__controls {
   display: flex;
-  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: var(--space-md);
 }
 
@@ -461,21 +510,6 @@ function headCriteriaClass(vote: string): string {
   gap: var(--space-xs);
 }
 
-.ranking-dashboard__diff-badge {
-  font-size: 0.65rem;
-  padding: 1px 5px;
-  border-radius: var(--radius-pill);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.diff--easy { background: color-mix(in srgb, var(--diff-easy) 20%, transparent); color: var(--diff-easy); }
-.diff--normal { background: color-mix(in srgb, var(--diff-normal) 20%, transparent); color: var(--diff-normal); }
-.diff--hard { background: color-mix(in srgb, var(--diff-hard) 20%, transparent); color: var(--diff-hard); }
-.diff--expert { background: color-mix(in srgb, var(--diff-expert) 20%, transparent); color: var(--diff-expert); }
-.diff--expert_plus { background: color-mix(in srgb, var(--diff-expert-plus) 20%, transparent); color: var(--diff-expert-plus); }
-
 .ranking-dashboard__category {
   display: flex;
   align-items: center;
@@ -497,13 +531,6 @@ function headCriteriaClass(vote: string): string {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-
-.criteria--passed { color: var(--success); }
-.criteria--failed { color: var(--error); }
-.criteria--pending { color: var(--warning); }
-.criteria--head-pass { color: var(--success); font-style: italic; }
-.criteria--head-fail { color: var(--error); font-style: italic; }
-.criteria--head-neutral { color: var(--warning); font-style: italic; }
 
 .ranking-dashboard__rating {
   font-family: var(--font-mono);
@@ -562,13 +589,18 @@ function headCriteriaClass(vote: string): string {
 }
 
 @media (max-width: 767px) {
-  .ranking-dashboard {
-    padding: var(--space-md) var(--space-md) var(--space-2xl);
+  .ranking-dashboard__controls {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .ranking-dashboard__filters {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .ranking-dashboard__header {
+    padding: var(--space-lg) 0 var(--space-md);
   }
 }
 </style>
