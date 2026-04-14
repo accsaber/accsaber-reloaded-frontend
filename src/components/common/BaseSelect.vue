@@ -157,6 +157,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   margin-top: 0;
+  padding-top: var(--space-xs);
   background: var(--bg-elevated);
   border: 1px solid var(--text-tertiary);
   border-top: 1px solid var(--bg-overlay);

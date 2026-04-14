@@ -91,7 +91,8 @@ export interface ApproveReweightRequest {
 }
 
 export interface BulkReweightRequest {
-  difficulties: { id: string; complexity: number }[]
+  items: { mapDifficultyId: string; complexity: number }[]
+  reason: string
 }
 
 export interface ApproveUnrankRequest {

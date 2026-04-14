@@ -46,7 +46,6 @@ export interface Schema {
 const props = defineProps<{
   schema: Schema
   modelValue: QuerySpec
-  /** > 0 means this is a subquery !!*/
   depth?: number
 }>()
 

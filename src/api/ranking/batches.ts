@@ -40,3 +40,14 @@ export function removeDifficultyFromBatch(
 export function releaseBatch(batchId: string): Promise<BatchResponse> {
   return post<BatchResponse>(`/ranking/batches/${batchId}/release`)
 }
+
+export function reweightBatch(
+  batchId: string,
+  req: { items: { mapDifficultyId: string; complexity: number }[]; reason: string },
+): Promise<void> {
+  return post<void>(`/ranking/batches/${batchId}/reweight`, req)
+}
+
+export function recalculateBatch(batchId: string): Promise<void> {
+  return post<void>(`/ranking/batches/${batchId}/recalculate`)
+}

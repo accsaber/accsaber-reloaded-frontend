@@ -48,7 +48,7 @@ export function approveReweight(
 }
 
 export function bulkReweight(req: BulkReweightRequest): Promise<void> {
-  return post<void>('/ranking/maps/difficulties/reweight', req)
+  return post<void>('/ranking/maps/difficulties/bulk-reweight', req)
 }
 
 export function approveUnrank(req: ApproveUnrankRequest): Promise<void> {

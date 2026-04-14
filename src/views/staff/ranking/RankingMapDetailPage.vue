@@ -90,16 +90,7 @@ function toggleTweaker(event: Event) {
   tweakerAnchor.value = tweakerOpen.value ? (event.currentTarget as HTMLElement) : null
 }
 
-const staffId = computed(() => {
-  const token = authStore.staffToken
-  if (!token) return null
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.sub as string
-  } catch {
-    return null
-  }
-})
+const staffId = computed(() => authStore.staffId)
 
 const managementOpen = ref(false)
 const voteFormOpen = ref(false)

@@ -33,6 +33,15 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => userId.value !== null)
   const isStaffAuthenticated = computed(() => staffToken.value !== null)
   const isAdmin = computed(() => staffRole.value === 'ADMIN')
+  const staffId = computed<string | null>(() => {
+    const token = staffToken.value
+    if (!token) return null
+    try {
+      return JSON.parse(atob(token.split('.')[1])).sub as string
+    } catch {
+      return null
+    }
+  })
   const isTokenExpiringSoon = computed(
     () => staffTokenExpiresAt.value > 0 && Date.now() > staffTokenExpiresAt.value - 60_000,
   )
@@ -149,6 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
     staffRefreshToken,
     staffRole,
     staffTokenExpiresAt,
+    staffId,
     userProfile,
     isLoggedIn,
     isStaffAuthenticated,

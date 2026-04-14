@@ -8,8 +8,9 @@ export function getVoteActivity(params?: Record<string, unknown>): Promise<Page<
   return get<Page<VoteResponse>>(`/ranking/maps/difficulties/votes/activity${buildQuery(params)}`)
 }
 
-export function listVotes(difficultyId: string): Promise<VoteListResponse> {
-  return get<VoteListResponse>(`/ranking/maps/difficulties/${difficultyId}/votes`)
+export function listVotes(difficultyId: string, type?: string): Promise<VoteListResponse> {
+  const query = type ? `?type=${type}` : ''
+  return get<VoteListResponse>(`/ranking/maps/difficulties/${difficultyId}/votes${query}`)
 }
 
 export function listDeactivatedVotes(difficultyId: string): Promise<VoteListResponse> {

@@ -8,7 +8,6 @@ interface CachedPage {
   totalPages: number
   totalElements: number
   fetchedAt: number
-  paramsKey: string
 }
 
 export const useRankingQueueStore = defineStore('rankingQueue', () => {
@@ -39,7 +38,6 @@ export const useRankingQueueStore = defineStore('rankingQueue', () => {
       totalPages,
       totalElements,
       fetchedAt: Date.now(),
-      paramsKey: key,
     })
     if (cache.value.size > 20) {
       const oldest = [...cache.value.entries()].sort(

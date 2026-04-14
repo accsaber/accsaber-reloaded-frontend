@@ -194,7 +194,7 @@ async function fetchData() {
     loading.value = false
     try {
       await fetchFromApi(cacheKey)
-    } catch { /* keep cached data */ }
+    } catch { }
     await handleHighlight()
     return
   }

@@ -61,12 +61,20 @@ const rankingPrefix = isRankingSubdomain ? '' : '/staff/ranking'
 const batchesPath = isRankingSubdomain ? '/batches' : '/staff/ranking/batches'
 const activityPath = isRankingSubdomain ? '/activity' : '/staff/ranking/activity'
 
-const rankingNavItems: NavItem[] = [
-  { to: rankingPrefix || '/', label: 'Queue' },
-  { to: `${rankingPrefix}/import`, label: 'Import' },
-  { to: batchesPath, label: 'Batches' },
-  { to: activityPath, label: 'Activity' },
-]
+const reweightPath = isRankingSubdomain ? '/reweight' : '/staff/ranking/reweight'
+
+const rankingNavItems = computed<NavItem[]>(() => {
+  const items: NavItem[] = [
+    { to: rankingPrefix || '/', label: 'Queue' },
+    { to: `${rankingPrefix}/import`, label: 'Import' },
+    { to: batchesPath, label: 'Batches' },
+  ]
+  if (authStore.hasRole('RANKING_HEAD')) {
+    items.push({ to: reweightPath, label: 'Reweight' })
+  }
+  items.push({ to: activityPath, label: 'Activity' })
+  return items
+})
 
 const isRankingContext = computed(() =>
   isRankingSubdomain || route.path.startsWith('/staff/ranking')
@@ -74,10 +82,10 @@ const isRankingContext = computed(() =>
 
 const navItems = computed(() => {
   if (isRankingContext.value && authStore.isStaffAuthenticated) {
-    return rankingNavItems
+    return rankingNavItems.value
   }
   if (isAdminSubdomain) return adminNavItems
-  if (isRankingSubdomain) return rankingNavItems
+  if (isRankingSubdomain) return rankingNavItems.value
   return publicNavItems
 })
 const mobileQuickItems = computed(() =>
