@@ -1046,14 +1046,14 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   flex-wrap: wrap;
   gap: var(--space-sm);
   align-items: center;
-  padding: 0 var(--space-lg) var(--space-lg);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
 }
 
 .rank-detail__vote-form-content {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: 0 var(--space-lg) var(--space-lg);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
 }
 
 .rank-detail__vote-type-row {
