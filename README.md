@@ -37,7 +37,6 @@ docker compose up -d --build
 ```
 
 Available at `http://localhost`. The container builds the frontend and serves it via nginx, which reverse-proxies `/v1/` requests to the `API_PROXY_TARGET`. No CORS issues since all requests go through the same origin.
-
 Rebuild after changes: `docker compose up -d --build`. Tear down: `docker compose down`.
 
 ### Hot-Reload (Development Only)
