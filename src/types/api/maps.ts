@@ -42,6 +42,10 @@ export interface MapDifficultyResponse {
   lastUpdatedByUsername: string | null
   rankUpvotes: number
   rankDownvotes: number
+  reweightUpvotes: number
+  reweightDownvotes: number
+  unrankUpvotes: number
+  unrankDownvotes: number
   criteriaUpvotes: number
   criteriaDownvotes: number
   headCriteriaVote: VoteType | null

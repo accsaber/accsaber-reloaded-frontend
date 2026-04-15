@@ -165,7 +165,9 @@ const rows = computed(() =>
       criteriaUpvotes: d.criteriaUpvotes,
       criteriaDownvotes: d.criteriaDownvotes,
       headCriteriaVote: d.headCriteriaVote,
-      rating: d.rankUpvotes - d.rankDownvotes,
+      rating: activeStatus.value === 'RANKED'
+        ? d.reweightUpvotes - d.reweightDownvotes
+        : d.rankUpvotes - d.rankDownvotes,
       createdAt: d.createdAt,
       createdByUsername: d.createdByUsername,
       createdByAvatarUrl: d.createdByAvatarUrl,

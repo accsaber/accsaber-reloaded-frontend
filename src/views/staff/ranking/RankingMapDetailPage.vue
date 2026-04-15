@@ -134,7 +134,8 @@ async function fetchVotes() {
   voteLoading.value = true
   try {
     const { listVotes } = await import('@/api/ranking/voting')
-    voteData.value = await listVotes(difficultyId.value)
+    const type = difficulty.value?.status === 'RANKED' ? 'REWEIGHT' : 'RANK'
+    voteData.value = await listVotes(difficultyId.value, type)
   } catch {
     voteData.value = null
   }
