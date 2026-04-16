@@ -12,6 +12,7 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
+import { useLevelStore } from '@/stores/levels'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -26,6 +27,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const lbCache = useLeaderboardCacheStore()
+const levelStore = useLevelStore()
 
 const activeCategory = computed<CategoryCode>({
   get: () => (route.params.categoryCode as CategoryCode) || 'overall',
@@ -361,8 +363,11 @@ watch(() => categoryStore.loaded, (loaded) => {
           <template v-else>-</template>
         </template>
 
-        <template #cell-totalXp="{ value }">
-          <span class="ap-cell">{{ Math.round(value as number).toLocaleString() }}</span>
+        <template #cell-totalXp="{ value, row }">
+          <span class="xp-cell" :style="{ color: levelStore.getTierColorForLevel(row.level as number) }"
+            :title="levelStore.getTitleForLevel(row.level as number) ?? undefined">
+            {{ Math.round(value as number).toLocaleString() }}
+          </span>
         </template>
 
         <template #mobile-card="{ row }">
@@ -381,8 +386,14 @@ watch(() => categoryStore.loaded, (loaded) => {
               <CountryFlag :country="(row.country as string)" />
             </div>
             <RankChange :value="(row.rankChange as number) ?? 0" class="lb-card__change" />
-            <span v-if="isXpMode" class="lb-card__ap ap-cell">{{ Math.round(row.totalXp as number).toLocaleString() }}
-              XP</span>
+            <template v-if="isXpMode">
+              <span class="lb-card__level">Lv. {{ row.level }}</span>
+              <span class="lb-card__ap xp-cell"
+                :style="{ color: levelStore.getTierColorForLevel(row.level as number) }"
+                :title="levelStore.getTitleForLevel(row.level as number) ?? undefined">
+                {{ Math.round(row.totalXp as number).toLocaleString() }} XP
+              </span>
+            </template>
             <span v-else class="lb-card__ap ap-cell">{{ (row.ap as number).toFixed(2) }}</span>
           </router-link>
         </template>
@@ -578,6 +589,11 @@ watch(() => categoryStore.loaded, (loaded) => {
   font-weight: 600;
 }
 
+.xp-cell {
+  font-weight: 600;
+  transition: color 120ms ease;
+}
+
 .lb-card {
   display: flex;
   align-items: center;
@@ -625,6 +641,14 @@ watch(() => categoryStore.loaded, (loaded) => {
   font-family: var(--font-mono);
   font-weight: 600;
   flex-shrink: 0;
+}
+
+.lb-card__level {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: color 120ms ease;
 }
 
 .lb-card--highlighted {

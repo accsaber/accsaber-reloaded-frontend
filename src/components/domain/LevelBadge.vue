@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { GlintPosition } from '@/components/common/GlintOverlay.vue';
 import GlintOverlay from '@/components/common/GlintOverlay.vue';
+import { tierKey as toTierKey } from '@/stores/levels';
 import { computed } from 'vue';
 
 const BORDER_SPARKLES: GlintPosition[] = [
@@ -22,10 +23,7 @@ const props = defineProps<{
   title?: string
 }>()
 
-const tierKey = computed(() => {
-  if (props.title) return props.title.toLowerCase().replace(/\s+/g, '-')
-  return 'newcomer'
-})
+const tierKey = computed(() => props.title ? toTierKey(props.title) : 'newcomer')
 
 const tierColor = computed(() => `var(--tier-${tierKey.value})`)
 

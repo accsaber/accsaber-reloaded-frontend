@@ -1,31 +1,28 @@
 <script setup lang="ts">
 import type { LevelThreshold } from '@/api/levels'
-import { getLevelThresholds } from '@/api/levels'
 import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { tierKey, useLevelStore } from '@/stores/levels'
 import { useThemeStore } from '@/stores/theme'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const themeStore = useThemeStore()
+const levelStore = useLevelStore()
 
 usePageMeta({
   title: 'AccSaber Reloaded',
   description: 'Accuracy-based leaderboard platform for Beat Saber.',
 })
 
-const levels = ref<LevelThreshold[]>([])
-const levelsLoading = ref(true)
+const levels = computed(() => levelStore.thresholds)
+const levelsLoading = computed(() => !levelStore.loaded)
 const marqueeRef = ref<HTMLElement | null>(null)
 let rafId = 0
-
-function tierKey(title: string): string {
-  return title.toLowerCase().replace(/\s+/g, '-')
-}
 
 function levelRange(level: number, index: number, all: LevelThreshold[]): string {
   const next = all[index + 1]
@@ -53,12 +50,7 @@ function updateCarousel() {
 }
 
 onMounted(async () => {
-  try {
-    levels.value = await getLevelThresholds()
-  } catch { } finally {
-    levelsLoading.value = false
-  }
-
+  if (!levelStore.loaded) await levelStore.fetchThresholds()
   rafId = requestAnimationFrame(updateCarousel)
 })
 
