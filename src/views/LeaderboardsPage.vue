@@ -88,12 +88,18 @@ const xpPageData = ref<Page<XpLeaderboardResponse> | null>(null)
 const highlightedUserId = ref<string | null>(null)
 
 const rows = computed(() => {
+  const pageSize = paginationParams.value.size ?? 50
+  const pageOffset = (currentPage.value - 1) * pageSize
+  const usePositional = !showInactive.value
+  const filteringCountry = !!countryFilter.value
+
   if (isXpMode.value) {
     if (!xpPageData.value) return []
-    return xpPageData.value.content.map((entry) => {
+    return xpPageData.value.content.map((entry, i) => {
       const p = toXpPlayerDisplay(entry)
+      const positionalRank = pageOffset + i + 1
       return {
-        rank: p.rank,
+        rank: usePositional ? positionalRank : p.rank,
         countryRank: p.countryRank,
         rankChange: p.rankChange,
         userId: p.userId,
@@ -107,11 +113,12 @@ const rows = computed(() => {
     })
   }
   if (!apPageData.value) return []
-  return apPageData.value.content.map((entry) => {
+  return apPageData.value.content.map((entry, i) => {
     const p = toPlayerDisplay(entry)
+    const positionalRank = pageOffset + i + 1
     return {
-      rank: p.rank,
-      countryRank: p.countryRank,
+      rank: usePositional && !filteringCountry ? positionalRank : p.rank,
+      countryRank: usePositional && filteringCountry ? positionalRank : p.countryRank,
       rankChange: p.rankChange,
       userId: p.userId,
       name: p.name,
