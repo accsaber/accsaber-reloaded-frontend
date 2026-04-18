@@ -163,14 +163,14 @@ const countryOptions = computed(() => {
 })
 
 function buildCacheKey(): Record<string, unknown> {
-  const includeInactive = showInactive.value
+  const inactiveUsers = showInactive.value
   if (isXpMode.value) {
     return {
       _type: 'xp',
       ...paginationParams.value,
       search: searchQuery.value.trim() || undefined,
       country: countryFilter.value || undefined,
-      includeInactive,
+      inactiveUsers,
     }
   }
   return {
@@ -179,7 +179,7 @@ function buildCacheKey(): Record<string, unknown> {
     ...paginationParams.value,
     search: searchQuery.value.trim() || undefined,
     country: countryFilter.value || undefined,
-    includeInactive,
+    inactiveUsers,
   }
 }
 
@@ -216,14 +216,14 @@ async function fetchData() {
 }
 
 async function fetchFromApi(cacheKey: Record<string, unknown>) {
-  const includeInactive = showInactive.value
+  const inactiveUsers = showInactive.value
   if (isXpMode.value) {
     const { getXpLeaderboard } = await import('@/api/leaderboards')
     const params = {
       ...paginationParams.value,
       search: searchQuery.value.trim() || undefined,
       country: countryFilter.value || undefined,
-      includeInactive,
+      inactiveUsers,
     }
     const res = await getXpLeaderboard(params)
     xpPageData.value = res
@@ -232,7 +232,7 @@ async function fetchFromApi(cacheKey: Record<string, unknown>) {
     const categoryId = categoryStore.getCategoryId(activeCategory.value)
     if (!categoryId) return
     const { getLeaderboard, getCountryLeaderboard } = await import('@/api/leaderboards')
-    const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, includeInactive }
+    const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, inactiveUsers }
     let res: Page<LeaderboardResponse>
     if (countryFilter.value) {
       res = await getCountryLeaderboard(categoryId, countryFilter.value, params)

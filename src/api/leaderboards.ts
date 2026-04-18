@@ -4,7 +4,7 @@ import { get } from './client'
 import { buildQuery } from './utils'
 
 export interface LeaderboardParams extends PaginationParams {
-  includeInactive?: boolean
+  inactiveUsers?: boolean
 }
 
 export function getLeaderboard(
