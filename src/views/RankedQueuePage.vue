@@ -9,7 +9,9 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import RankedQueueRow from '@/components/domain/RankedQueueRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
+import type { Page } from '@/types/pagination'
 import { MAP_STATUS_ACCENT } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -17,6 +19,7 @@ import MapFilterSidebar from './maps/MapFilterSidebar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const queueCache = useLeaderboardCacheStore()
 
 usePageMeta({
   title: 'Ranking Queue | AccSaber Reloaded',
@@ -72,24 +75,55 @@ const subtitle = computed(() => {
   return `${totalElements.value} ${noun} in the ranking queue`
 })
 
+function buildCacheKey(): Record<string, unknown> {
+  return {
+    _type: 'ranked-queue',
+    ...paginationParams.value,
+    status: 'QUEUE',
+    categoryId: selectedCategories.value.length === 1 ? selectedCategories.value[0] : undefined,
+    search: searchQuery.value.trim() || undefined,
+  }
+}
+
+function applyPage(res: Page<PublicMapDifficultyResponse>) {
+  difficulties.value = res.content
+  totalPages.value = res.totalPages
+  totalElements.value = res.totalElements
+}
+
+async function fetchFromApi(cacheKey: Record<string, unknown>) {
+  const params: Record<string, unknown> = {
+    ...paginationParams.value,
+    status: 'QUEUE',
+  }
+  if (selectedCategories.value.length === 1) {
+    params.categoryId = selectedCategories.value[0]
+  }
+  if (searchQuery.value.trim()) {
+    params.search = searchQuery.value.trim()
+  }
+  const { getDifficulties } = await import('@/api/maps')
+  const res = await getDifficulties(params as never)
+  applyPage(res)
+  queueCache.setCache(cacheKey, res)
+}
+
 async function fetchDifficulties() {
+  const cacheKey = buildCacheKey()
+  const cached = queueCache.getCached<Page<PublicMapDifficultyResponse>>(cacheKey)
+
+  if (cached) {
+    applyPage(cached)
+    loading.value = false
+    try {
+      await fetchFromApi(cacheKey)
+    } catch { }
+    return
+  }
+
   loading.value = true
   try {
-    const params: Record<string, unknown> = {
-      ...paginationParams.value,
-      status: 'QUEUE',
-    }
-    if (selectedCategories.value.length === 1) {
-      params.categoryId = selectedCategories.value[0]
-    }
-    if (searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim()
-    }
-    const { getDifficulties } = await import('@/api/maps')
-    const res = await getDifficulties(params as never)
-    difficulties.value = res.content
-    totalPages.value = res.totalPages
-    totalElements.value = res.totalElements
+    await fetchFromApi(cacheKey)
   } catch {
     difficulties.value = []
     totalPages.value = 0
