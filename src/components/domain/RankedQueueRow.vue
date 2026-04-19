@@ -38,7 +38,7 @@ const criteriaClass = computed(() => {
 
 const diffColor = computed(() => DIFF_COLOR[props.entry.difficulty] ?? 'var(--text-secondary)')
 
-const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T16:00:00Z')
+const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T18:00:00Z')
 
 const dateLabel = computed(() => {
   const ts = Date.parse(props.entry.createdAt)
