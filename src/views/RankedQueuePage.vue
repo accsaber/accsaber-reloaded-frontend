@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
@@ -52,12 +51,7 @@ const activeStatus = computed<MapDifficultyStatus>({
 
 const accent = computed(() => MAP_STATUS_ACCENT[activeStatus.value] ?? 'var(--accent-overall)')
 
-const sortOptions = [
-  { value: 'dateAdded', label: 'Date Added' },
-  { value: 'rating', label: 'Rating' },
-]
-
-const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
+const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'dateAdded',
   defaultOrder: 'desc',
   defaultSize: 20,
@@ -163,6 +157,20 @@ const emptyMessage = computed(() =>
   <div class="queue-page" :style="{ '--page-accent': accent, '--accent': accent }">
     <PageHeaderBleed title="Ranking Queue" :subtitle="subtitle" />
 
+    <aside class="queue-page__notice" role="note">
+      <svg class="queue-page__notice-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <p class="queue-page__notice-text">
+        Ratings and vote counts are hidden for now. AccSaber Reloaded currently relies on the original
+        AccSaber ranking team and pipeline to rank maps, so the numbers shown here would not reflect
+        actual ranking activity. This page is informational only.
+      </p>
+    </aside>
+
     <div class="queue-page__controls">
       <BaseTabs
         :tabs="statusTabs"
@@ -170,11 +178,6 @@ const emptyMessage = computed(() =>
         @update:model-value="activeStatus = $event as MapDifficultyStatus"
       />
       <div class="queue-page__filters">
-        <BaseSelect
-          :options="sortOptions"
-          :model-value="sortState.key"
-          @update:model-value="setSort($event)"
-        />
         <SearchBox
           v-model="searchQuery"
           placeholder="Search by song, artist, or mapper..."
@@ -228,6 +231,30 @@ const emptyMessage = computed(() =>
   max-width: 1030px;
   margin: 0 auto;
   width: 100%;
+}
+
+.queue-page__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: color-mix(in srgb, var(--warning) 8%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  border-left: 2px solid var(--warning);
+  border-radius: var(--radius-card);
+}
+
+.queue-page__notice-icon {
+  flex-shrink: 0;
+  color: var(--warning);
+  margin-top: 1px;
+}
+
+.queue-page__notice-text {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .queue-page__controls {
