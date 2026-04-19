@@ -253,6 +253,29 @@ function headCriteriaClass(vote: string): string {
   if (vote === 'DOWNVOTE') return 'criteria-text--failed'
   return 'criteria-text--pending'
 }
+
+function criteriaVerdict(row: Record<string, unknown>): 'passed' | 'failed' | 'pending' {
+  const status = row.criteriaStatus as string | null
+  const up = (row.criteriaUpvotes as number) ?? 0
+  const down = (row.criteriaDownvotes as number) ?? 0
+  if (status === 'PASSED' || up > down) return 'passed'
+  if (status === 'FAILED' || down > up) return 'failed'
+  return 'pending'
+}
+
+function criteriaLabel(row: Record<string, unknown>): string {
+  const v = criteriaVerdict(row)
+  if (v === 'passed') return 'PASS'
+  if (v === 'failed') return 'FAIL'
+  return 'PENDING'
+}
+
+function criteriaClassName(row: Record<string, unknown>): string {
+  const v = criteriaVerdict(row)
+  if (v === 'passed') return 'criteria-text--passed'
+  if (v === 'failed') return 'criteria-text--failed'
+  return 'criteria-text--pending'
+}
 </script>
 
 <template>
@@ -322,9 +345,7 @@ function headCriteriaClass(vote: string): string {
         <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria criteria-text--head" :class="headCriteriaClass(row.headCriteriaVote as string)">
           HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
         </span>
-        <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria-text--passed">PASS</span>
-        <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria-text--failed">FAIL</span>
-        <span v-else class="ranking-dashboard__criteria criteria-text--pending">PENDING</span>
+        <span v-else class="ranking-dashboard__criteria" :class="criteriaClassName(row)">{{ criteriaLabel(row) }}</span>
       </template>
 
       <template #cell-rating="{ row }">
@@ -361,9 +382,7 @@ function headCriteriaClass(vote: string): string {
               <span v-if="row.headCriteriaVote" class="ranking-dashboard__criteria criteria-text--head" :class="headCriteriaClass(row.headCriteriaVote as string)">
                 HEAD {{ row.headCriteriaVote === 'UPVOTE' ? 'PASS' : row.headCriteriaVote === 'DOWNVOTE' ? 'FAIL' : 'NEUTRAL' }}
               </span>
-              <span v-else-if="(row.criteriaUpvotes as number) > (row.criteriaDownvotes as number)" class="ranking-dashboard__criteria criteria-text--passed">PASS</span>
-              <span v-else-if="(row.criteriaDownvotes as number) > (row.criteriaUpvotes as number)" class="ranking-dashboard__criteria criteria-text--failed">FAIL</span>
-              <span v-else class="ranking-dashboard__criteria criteria-text--pending">PENDING</span>
+              <span v-else class="ranking-dashboard__criteria" :class="criteriaClassName(row)">{{ criteriaLabel(row) }}</span>
               <span class="ranking-dashboard__rating" :class="ratingClass(row.rating as number)">
                 {{ (row.rating as number) > 0 ? '+' : '' }}{{ row.rating }}
               </span>
