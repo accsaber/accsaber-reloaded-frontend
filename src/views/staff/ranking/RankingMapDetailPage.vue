@@ -119,6 +119,8 @@ const complexityLoading = ref(false)
 
 const batchOptions = ref<{ value: string; label: string }[]>([])
 
+const songHash = ref<string | null>(null)
+
 async function fetchDifficulty() {
   loading.value = true
   try {
@@ -129,6 +131,22 @@ async function fetchDifficulty() {
   }
   loading.value = false
 }
+
+async function fetchSongHash() {
+  if (!difficulty.value || difficulty.value.status !== 'RANKED') {
+    songHash.value = null
+    return
+  }
+  try {
+    const { getRankingMap } = await import('@/api/ranking/maps')
+    const m = await getRankingMap(difficulty.value.mapId)
+    songHash.value = m.songHash ?? null
+  } catch {
+    songHash.value = null
+  }
+}
+
+watch(() => difficulty.value?.id, () => fetchSongHash())
 
 async function fetchVotes() {
   voteLoading.value = true
@@ -446,7 +464,9 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
         </div>
 
         <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'" :bl-leaderboard-id="difficulty.blLeaderboardId"
-          :original-complexity="difficulty.complexity" :max-score="difficulty.maxScore" :category-code="categoryCode" />
+          :original-complexity="difficulty.complexity" :max-score="difficulty.maxScore" :category-code="categoryCode"
+          :song-hash="songHash" :difficulty="difficulty.difficulty" :characteristic="difficulty.characteristic"
+          :ai-available="difficulty.status === 'RANKED' && !!songHash" />
 
         <div v-if="activeTab === 'voting' && isHeadRanking" class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="managementOpen = !managementOpen">

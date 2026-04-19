@@ -3,12 +3,15 @@ import RangeSlider from '@/components/common/RangeSlider.vue'
 import { useCategoryStore } from '@/stores/categories'
 import { computed, ref, watch } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   selectedCategories: string[]
   complexityRange: [number, number]
   unplayedOnly?: boolean
   showUnplayed?: boolean
-}>()
+  showComplexity?: boolean
+}>(), {
+  showComplexity: true,
+})
 
 const emit = defineEmits<{
   'update:selectedCategories': [categories: string[]]
@@ -73,7 +76,7 @@ function toggleCategory(categoryId: string, selected: string[]) {
       </div>
     </div>
 
-    <div class="map-filters__section">
+    <div v-if="showComplexity" class="map-filters__section">
       <RangeSlider
         label="Complexity"
         :min="0"

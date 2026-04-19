@@ -136,6 +136,12 @@ const router = createRouter({
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
     },
     {
+      path: isRankingSubdomain ? '/deactivated' : '/staff/ranking/deactivated',
+      name: 'ranking-deactivated',
+      component: () => import('@/views/staff/ranking/DeactivatedMapsPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+    },
+    {
       path: isRankingSubdomain ? '/batches' : '/staff/ranking/batches',
       name: 'staff-ranking-head',
       component: () => import('@/views/staff/ranking/RankingHeadPage.vue'),

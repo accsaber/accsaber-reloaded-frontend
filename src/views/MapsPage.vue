@@ -4,6 +4,7 @@ import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -429,14 +430,7 @@ watch(
 
         <FilterPopover v-if="!isBatchView" :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>
-            <button class="maps-page__filter-btn"
-              :class="{ 'maps-page__filter-btn--active': filtersOpen || hasActiveFilters }" aria-label="Toggle filters">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              <span v-if="hasActiveFilters" class="maps-page__filter-dot" />
-            </button>
+            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
           <MapFilterSidebar :selected-categories="selectedCategories" :complexity-range="complexityRange"
             :unplayed-only="unplayedOnly" :show-unplayed="authStore.isLoggedIn"
@@ -644,40 +638,6 @@ watch(
 .maps-page__view-btn--active {
   background: var(--bg-elevated);
   color: var(--text-primary);
-}
-
-.maps-page__filter-btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-xs) var(--space-sm);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.maps-page__filter-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.maps-page__filter-btn--active {
-  border-color: var(--accent, var(--text-tertiary));
-  color: var(--accent, var(--text-primary));
-}
-
-.maps-page__filter-dot {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent, var(--text-primary));
 }
 
 .maps-page__content {

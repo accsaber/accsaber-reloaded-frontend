@@ -41,6 +41,7 @@ const publicNavItems: NavItem[] = [
   { to: '/maps', label: 'Maps', mobileIcon: 'map' },
   { to: '/milestones', label: 'Milestones', mobileIcon: 'milestone' },
   { to: '/stats', label: 'Stats' },
+  { to: '/ranked-queue', label: 'Ranking Queue' },
   { to: '/score-feed', label: 'Score Feed' },
 ]
 
@@ -60,6 +61,7 @@ const rankingPrefix = isRankingSubdomain ? '' : '/staff/ranking'
 
 const batchesPath = isRankingSubdomain ? '/batches' : '/staff/ranking/batches'
 const activityPath = isRankingSubdomain ? '/activity' : '/staff/ranking/activity'
+const deactivatedPath = isRankingSubdomain ? '/deactivated' : '/staff/ranking/deactivated'
 
 const reweightPath = isRankingSubdomain ? '/reweight' : '/staff/ranking/reweight'
 
@@ -73,6 +75,7 @@ const rankingNavItems = computed<NavItem[]>(() => {
     items.push({ to: reweightPath, label: 'Reweight' })
   }
   items.push({ to: activityPath, label: 'Activity' })
+  items.push({ to: deactivatedPath, label: 'Deactivated' })
   return items
 })
 

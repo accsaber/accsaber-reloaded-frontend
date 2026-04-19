@@ -57,8 +57,7 @@ const resolvedAccent = computed(() => {
 
 const rankedDifficulties = computed<PublicMapDifficultyResponse[]>(() => {
   if (!map.value) return []
-  return map.value.difficulties
-    .filter((d) => d.status === 'RANKED')
+  return [...map.value.difficulties]
     .sort((a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty))
 })
 
@@ -239,13 +238,13 @@ async function fetchMap() {
     const { getMap } = await import('@/api/maps')
     map.value = await getMap(mapId.value)
 
-    const ranked = map.value.difficulties.filter((d) => d.status === 'RANKED')
-    if (ranked.length > 0) {
+    const all = map.value.difficulties
+    if (all.length > 0) {
       const queryDiffId = route.query.difficultyId as string
-      if (queryDiffId && ranked.some(d => d.id === queryDiffId)) {
+      if (queryDiffId && all.some(d => d.id === queryDiffId)) {
         activeDifficultyId.value = queryDiffId
       } else {
-        activeDifficultyId.value = ranked[0].id
+        activeDifficultyId.value = all[0].id
       }
     }
   } catch {

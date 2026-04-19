@@ -9,8 +9,23 @@ import type {
 } from '@/types/api/admin'
 import type { DifficultyListParams, MapDifficultyResponse, MapListParams, MapResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
+import type { Difficulty } from '@/types/enums'
 import { del, get, patch, post } from '../client'
 import { buildQuery } from '../utils'
+
+export interface AiComplexityResponse {
+  complexity: number | null
+}
+
+export function getAiComplexity(params: {
+  songHash: string
+  difficulty: Difficulty
+  characteristic: string
+}): Promise<AiComplexityResponse> {
+  return get<AiComplexityResponse>(
+    `/ranking/maps/difficulties/ai-complexity${buildQuery(params)}`,
+  )
+}
 
 export function getRankingMaps(params?: MapListParams): Promise<Page<MapResponse>> {
   return get<Page<MapResponse>>(`/ranking/maps${buildQuery(params)}`)

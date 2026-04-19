@@ -2,8 +2,10 @@
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
+import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
@@ -255,13 +257,7 @@ function headCriteriaClass(vote: string): string {
 
 <template>
   <div class="ranking-dashboard" :style="{ '--page-accent': accent, '--accent': accent }">
-    <header class="ranking-dashboard__header">
-      <div class="ranking-dashboard__header-bleed" />
-      <div class="ranking-dashboard__header-content">
-        <h1 class="ranking-dashboard__title">{{ pageTitle }}</h1>
-        <p v-if="subtitleText" class="ranking-dashboard__subtitle">{{ subtitleText }}</p>
-      </div>
-    </header>
+    <PageHeaderBleed :title="pageTitle" :subtitle="subtitleText" />
 
     <div class="ranking-dashboard__controls">
       <BaseTabs :tabs="statusTabs" :model-value="activeStatus" @update:model-value="activeStatus = $event as MapDifficultyStatus" />
@@ -269,12 +265,7 @@ function headCriteriaClass(vote: string): string {
         <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." style="flex: 1; min-width: 240px;" />
         <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>
-            <button class="ranking-dashboard__filter-btn" :class="{ 'ranking-dashboard__filter-btn--active': filtersOpen || hasActiveFilters }" aria-label="Toggle filters">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              <span v-if="hasActiveFilters" class="ranking-dashboard__filter-dot" />
-            </button>
+            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
           <MapFilterSidebar
             :selected-categories="selectedCategories"
@@ -406,41 +397,6 @@ function headCriteriaClass(vote: string): string {
   width: 100%;
 }
 
-.ranking-dashboard__header {
-  position: relative;
-  text-align: center;
-  padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.ranking-dashboard__header-bleed {
-  position: absolute;
-  inset: -32px -64px 0 -64px;
-  background: radial-gradient(ellipse at 50% 0%,
-      color-mix(in srgb, var(--page-accent) 15%, transparent),
-      transparent 70%);
-  pointer-events: none;
-}
-
-.ranking-dashboard__header-content {
-  position: relative;
-  z-index: 1;
-}
-
-.ranking-dashboard__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.ranking-dashboard__subtitle {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--page-accent);
-  margin: var(--space-xs) 0 0;
-  letter-spacing: 0.02em;
-}
-
 .ranking-dashboard__controls {
   display: flex;
   align-items: flex-end;
@@ -453,40 +409,6 @@ function headCriteriaClass(vote: string): string {
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
-}
-
-.ranking-dashboard__filter-btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-xs) var(--space-sm);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.ranking-dashboard__filter-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.ranking-dashboard__filter-btn--active {
-  border-color: var(--accent, var(--text-tertiary));
-  color: var(--accent, var(--text-primary));
-}
-
-.ranking-dashboard__filter-dot {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 
 .ranking-dashboard__song-cell {
@@ -599,10 +521,6 @@ function headCriteriaClass(vote: string): string {
   .ranking-dashboard__filters {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .ranking-dashboard__header {
-    padding: var(--space-lg) 0 var(--space-md);
   }
 }
 </style>

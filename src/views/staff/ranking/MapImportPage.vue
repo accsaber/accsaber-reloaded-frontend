@@ -8,6 +8,7 @@ import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import type { Difficulty } from '@/types/enums'
+import { ApiError } from '@/api/client'
 import { brightenRgb } from '@/utils/color'
 import {
   type BeatSaverMapResponse,
@@ -57,6 +58,8 @@ interface DiffSelection {
   imported: boolean
   importError: string
   importedDifficultyId: string | null
+  existingDifficultyId: string | null
+  existingStatus: string | null
 }
 
 const diffSelections = ref<DiffSelection[]>([])
@@ -88,14 +91,31 @@ async function handleFetch() {
     bsMap.value = map
 
     const hash = map.versions[0]?.hash ?? ''
-    const [blMap, ssMap] = await Promise.all([
+    const { getRankingMapByHash } = await import('@/api/ranking/maps')
+    const [blMap, ssMap, existingMap] = await Promise.all([
       fetchBeatLeaderLeaderboards(hash),
       fetchScoreSaberLeaderboards(hash),
+      getRankingMapByHash(hash).catch((e) => {
+        if (e instanceof ApiError && e.status === 404) return null
+        throw e
+      }),
     ])
+
+    const existingByKey = new Map<string, { id: string; status: string }>()
+    if (existingMap) {
+      for (const d of existingMap.difficulties) {
+        existingByKey.set(`${d.difficulty}-${d.characteristic}`, {
+          id: d.id,
+          status: d.status,
+        })
+      }
+    }
 
     const diffs = map.versions[0]?.diffs ?? []
     diffSelections.value = diffs.map((d) => {
       const key = `${d.difficulty}-${d.characteristic}`
+      const enumKey = `${difficultyToEnum(d.difficulty)}-${d.characteristic}`
+      const existing = existingByKey.get(enumKey)
       return {
         characteristic: d.characteristic,
         difficulty: d.difficulty,
@@ -110,6 +130,8 @@ async function handleFetch() {
         imported: false,
         importError: '',
         importedDifficultyId: null,
+        existingDifficultyId: existing?.id ?? null,
+        existingStatus: existing?.status ?? null,
       }
     })
   } catch {
@@ -127,6 +149,10 @@ async function handleSubmit() {
   const { castVote } = await import('@/api/ranking/voting')
 
   for (const diff of selected) {
+    if (diff.existingDifficultyId) {
+      diff.importError = 'This difficulty is already in the system.'
+      continue
+    }
     diff.importing = true
     diff.importError = ''
     try {
@@ -151,11 +177,22 @@ async function handleSubmit() {
         })
       }
     } catch (e) {
-      diff.importError = e instanceof Error ? e.message : 'Import failed'
+      if (e instanceof ApiError && e.status === 409) {
+        diff.importError = 'This difficulty is already in the system.'
+      } else {
+        diff.importError = e instanceof Error ? e.message : 'Import failed'
+      }
     } finally {
       diff.importing = false
     }
   }
+}
+
+function formatExistingStatus(status: string | null): string {
+  if (status === 'RANKED') return 'Ranked'
+  if (status === 'QUALIFIED') return 'Qualified'
+  if (status === 'QUEUE') return 'In Queue'
+  return 'In System'
 }
 
 function goToDashboard() {
@@ -228,9 +265,10 @@ function goToDetail(difficultyId: string) {
             :class="{
               'map-import__diff-row--selected': diff.selected,
               'map-import__diff-row--imported': diff.imported,
-              'map-import__diff-row--clickable': !diff.imported && !isImporting,
+              'map-import__diff-row--existing': !!diff.existingDifficultyId && !diff.imported,
+              'map-import__diff-row--clickable': !diff.imported && !isImporting && !diff.existingDifficultyId,
             }"
-            @click="!diff.imported && !isImporting && (diff.selected = !diff.selected)"
+            @click="!diff.imported && !isImporting && !diff.existingDifficultyId && (diff.selected = !diff.selected)"
           >
             <div class="map-import__diff-col map-import__diff-col--name">
               <span class="map-import__diff-name">
@@ -247,7 +285,7 @@ function goToDetail(difficultyId: string) {
 
             <div class="map-import__diff-col map-import__diff-col--cat" @click.stop>
               <BaseSelect
-                v-if="diff.selected && !diff.imported"
+                v-if="diff.selected && !diff.imported && !diff.existingDifficultyId"
                 v-model="diff.categoryId"
                 :options="categoryOptions"
                 :disabled="isImporting"
@@ -256,12 +294,22 @@ function goToDetail(difficultyId: string) {
 
             <div class="map-import__diff-col map-import__diff-col--comp" @click.stop>
               <BaseInput
-                v-if="diff.selected && !diff.imported"
+                v-if="diff.selected && !diff.imported && !diff.existingDifficultyId"
                 v-model.number="diff.complexity"
                 type="number"
                 placeholder="0.0"
                 :disabled="isImporting"
               />
+            </div>
+
+            <div v-if="diff.existingDifficultyId && !diff.imported" class="map-import__diff-status map-import__diff-status--existing">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Already in system - {{ formatExistingStatus(diff.existingStatus) }}
+              <BaseButton size="sm" @click.stop="goToDetail(diff.existingDifficultyId!)">View</BaseButton>
             </div>
 
             <div v-if="diff.imported" class="map-import__diff-status map-import__diff-status--success">
@@ -481,6 +529,12 @@ function goToDetail(difficultyId: string) {
   cursor: default;
 }
 
+.map-import__diff-row--existing {
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+  background: color-mix(in srgb, var(--warning) 5%, var(--bg-elevated));
+  cursor: not-allowed;
+}
+
 .map-import__diff-name {
   font-weight: 600;
   color: var(--text-primary);
@@ -520,6 +574,10 @@ function goToDetail(difficultyId: string) {
 
 .map-import__diff-status--error {
   color: var(--error);
+}
+
+.map-import__diff-status--existing {
+  color: var(--warning);
 }
 
 .map-import__actions {

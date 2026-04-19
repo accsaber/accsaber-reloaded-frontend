@@ -4,10 +4,12 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import { ApiError } from '@/api/client'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { CurveResponse } from '@/types/api/categories'
 import type { TableColumn } from '@/types/display'
+import type { Difficulty } from '@/types/enums'
 import type { BeatLeaderScore } from '@/utils/beatsaver'
 import { calculateAp } from '@/utils/curveEval'
 import { computed, ref, watch } from 'vue'
@@ -17,6 +19,10 @@ const props = defineProps<{
   originalComplexity: number | null
   maxScore: number
   categoryCode: string
+  songHash?: string | null
+  difficulty?: Difficulty | null
+  characteristic?: string | null
+  aiAvailable?: boolean
 }>()
 
 const categoryStore = useCategoryStore()
@@ -54,6 +60,56 @@ function setPreviewComplexity(v: string | number) {
   const n = Number(v)
   previewComplexity.value = Number.isFinite(n) ? n : 0
 }
+
+const aiLoading = ref(false)
+const aiError = ref('')
+const aiNotice = ref('')
+
+const canFetchAi = computed(() =>
+  !!props.aiAvailable && !!props.songHash && !!props.difficulty && !!props.characteristic,
+)
+
+async function fetchAiComplexity() {
+  if (!canFetchAi.value) return
+  aiLoading.value = true
+  aiError.value = ''
+  aiNotice.value = ''
+  try {
+    const { getAiComplexity } = await import('@/api/ranking/maps')
+    const res = await getAiComplexity({
+      songHash: props.songHash!,
+      difficulty: props.difficulty!,
+      characteristic: props.characteristic!,
+    })
+    if (res.complexity == null) {
+      aiNotice.value = 'BeatLeader has no AI accuracy for this map.'
+    } else {
+      previewComplexity.value = res.complexity
+    }
+  } catch (e) {
+    if (e instanceof ApiError) {
+      if (e.status === 400) {
+        aiError.value = 'AI complexity is only available for ranked difficulties.'
+      } else if (e.status === 404) {
+        aiError.value = 'No matching ranked difficulty found.'
+      } else {
+        aiError.value = 'Failed to fetch AI complexity.'
+      }
+    } else {
+      aiError.value = 'Failed to fetch AI complexity.'
+    }
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+watch(
+  [() => props.songHash, () => props.difficulty, () => props.characteristic, () => props.aiAvailable],
+  () => {
+    aiError.value = ''
+    aiNotice.value = ''
+  },
+)
 
 const columns: TableColumn[] = [
   { key: 'rank', label: '#', align: 'right', mono: true, width: '56px' },
@@ -134,6 +190,9 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
         <input type="range" class="lb-preview__slider" :min="sliderMin" :max="sliderMax" step="0.1"
           :value="previewComplexity" @input="setPreviewComplexity(($event.target as HTMLInputElement).value)" />
         <BaseButton size="sm" @click="previewComplexity = base">Reset</BaseButton>
+        <BaseButton v-if="canFetchAi" size="sm" :loading="aiLoading" @click="fetchAiComplexity">
+          Get AI Complexity
+        </BaseButton>
       </div>
       <p class="lb-preview__hint">
         Original: <span class="lb-preview__mono">{{ base.toFixed(2) }}</span>
@@ -144,6 +203,8 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
           </span>
         </span>
       </p>
+      <p v-if="aiError" class="lb-preview__ai-error">{{ aiError }}</p>
+      <p v-else-if="aiNotice" class="lb-preview__ai-notice">{{ aiNotice }}</p>
     </div>
 
     <EmptyState v-if="!blLeaderboardId" message="No BeatLeader leaderboard linked to this difficulty." />
@@ -253,6 +314,18 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
 
 .lb-preview__delta--down {
   color: var(--error);
+}
+
+.lb-preview__ai-error {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--error);
+}
+
+.lb-preview__ai-notice {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .lb-preview__player {
