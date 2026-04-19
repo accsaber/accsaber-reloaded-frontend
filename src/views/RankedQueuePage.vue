@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
@@ -11,8 +10,6 @@ import RankedQueueRow from '@/components/domain/RankedQueueRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import type { Tab } from '@/types/display'
-import type { MapDifficultyStatus } from '@/types/enums'
 import { MAP_STATUS_ACCENT } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -26,30 +23,7 @@ usePageMeta({
   description: 'Maps awaiting ranking review on AccSaber. See community votes and criteria status.',
 })
 
-const statusTabs: Tab[] = [
-  { key: 'QUEUE', label: 'In Queue' },
-  { key: 'QUALIFIED', label: 'Qualified' },
-]
-
-const activeStatus = computed<MapDifficultyStatus>({
-  get() {
-    const s = route.query.status as string
-    if (s === 'QUALIFIED') return 'QUALIFIED'
-    return 'QUEUE'
-  },
-  set(val) {
-    const query = { ...route.query }
-    if (val === 'QUEUE') {
-      delete query.status
-    } else {
-      query.status = val
-    }
-    delete query.page
-    router.replace({ query })
-  },
-})
-
-const accent = computed(() => MAP_STATUS_ACCENT[activeStatus.value] ?? 'var(--accent-overall)')
+const accent = MAP_STATUS_ACCENT.QUEUE ?? 'var(--accent-overall)'
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'dateAdded',
@@ -95,9 +69,7 @@ const subtitle = computed(() => {
   if (loading.value) return ''
   if (totalElements.value === 0) return 'No maps awaiting review'
   const noun = totalElements.value === 1 ? 'map' : 'maps'
-  return activeStatus.value === 'QUALIFIED'
-    ? `${totalElements.value} qualified ${noun} awaiting release`
-    : `${totalElements.value} ${noun} in the ranking queue`
+  return `${totalElements.value} ${noun} in the ranking queue`
 })
 
 async function fetchDifficulties() {
@@ -105,7 +77,7 @@ async function fetchDifficulties() {
   try {
     const params: Record<string, unknown> = {
       ...paginationParams.value,
-      status: activeStatus.value,
+      status: 'QUEUE',
     }
     if (selectedCategories.value.length === 1) {
       params.categoryId = selectedCategories.value[0]
@@ -133,7 +105,7 @@ watch(searchQuery, () => {
 })
 
 watch(
-  [activeStatus, selectedCategories, paginationParams, searchQuery],
+  [selectedCategories, paginationParams, searchQuery],
   fetchDifficulties,
   { immediate: true, deep: true },
 )
@@ -146,11 +118,7 @@ function navigateToMap(entry: PublicMapDifficultyResponse) {
   })
 }
 
-const emptyMessage = computed(() =>
-  activeStatus.value === 'QUALIFIED'
-    ? 'No qualified maps awaiting release. Check back soon.'
-    : 'No maps currently in the ranking queue. Check back soon.',
-)
+const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'
 </script>
 
 <template>
@@ -172,11 +140,6 @@ const emptyMessage = computed(() =>
     </aside>
 
     <div class="queue-page__controls">
-      <BaseTabs
-        :tabs="statusTabs"
-        :model-value="activeStatus"
-        @update:model-value="activeStatus = $event as MapDifficultyStatus"
-      />
       <div class="queue-page__filters">
         <SearchBox
           v-model="searchQuery"
@@ -269,9 +232,11 @@ const emptyMessage = computed(() =>
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .queue-page__search {
+  flex: 1;
   min-width: 240px;
 }
 

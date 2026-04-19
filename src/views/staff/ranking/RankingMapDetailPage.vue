@@ -117,6 +117,17 @@ const showComplexityModal = ref(false)
 const complexityValue = ref<number>(0)
 const complexityLoading = ref(false)
 
+const showCategoryModal = ref(false)
+const categoryValue = ref<string>('')
+const categoryLoading = ref(false)
+const categoryError = ref('')
+
+const categoryOptions = computed(() =>
+  categoryStore.categories.map((c) => ({ value: c.id, label: c.name })),
+)
+
+const canEditCategory = computed(() => isHeadRanking.value)
+
 const batchOptions = ref<{ value: string; label: string }[]>([])
 
 const songHash = ref<string | null>(null)
@@ -258,6 +269,43 @@ async function handleComplexityChange() {
   }
 }
 
+function openCategoryModal() {
+  if (!difficulty.value) return
+  categoryValue.value = difficulty.value.categoryId
+  categoryError.value = ''
+  showCategoryModal.value = true
+}
+
+async function handleCategoryChange() {
+  if (!categoryValue.value) return
+  categoryLoading.value = true
+  categoryError.value = ''
+  try {
+    const { updateMapCategory } = await import('@/api/ranking/maps')
+    const { ApiError } = await import('@/api/client')
+    try {
+      await updateMapCategory(difficultyId.value, { categoryId: categoryValue.value })
+      showCategoryModal.value = false
+      await fetchDifficulty()
+    } catch (e) {
+      if (e instanceof ApiError) {
+        try {
+          const parsed = JSON.parse(e.message)
+          categoryError.value = typeof parsed?.message === 'string'
+            ? parsed.message
+            : `Update failed (${e.status}).`
+        } catch {
+          categoryError.value = `Update failed (${e.status}).`
+        }
+      } else {
+        categoryError.value = e instanceof Error ? e.message : 'Update failed.'
+      }
+    }
+  } finally {
+    categoryLoading.value = false
+  }
+}
+
 async function handleDeactivate() {
   if (!confirm('Are you sure you want to deactivate this difficulty?')) return
   try {
@@ -366,8 +414,22 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                 {{ formatDifficulty(difficulty.difficulty) }}
                 <span v-if="difficulty.characteristic !== 'Standard'"> ({{ difficulty.characteristic }})</span>
               </span>
-              <span class="rank-detail__category-badge" :style="{ '--cat-accent': categoryAccent }">
+              <span
+                class="rank-detail__category-badge"
+                :class="{ 'rank-detail__category-badge--editable': canEditCategory }"
+                :style="{ '--cat-accent': categoryAccent }"
+                :role="canEditCategory ? 'button' : undefined"
+                :tabindex="canEditCategory ? 0 : undefined"
+                @click="canEditCategory && openCategoryModal()"
+                @keydown.enter="canEditCategory && openCategoryModal()"
+              >
                 {{ categoryName }}
+                <svg v-if="canEditCategory" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
               </span>
               <span v-if="isHeadRanking" class="rank-detail__complexity-editable"
                 @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
@@ -681,6 +743,18 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
         </div>
       </template>
     </BaseModal>
+
+    <BaseModal :open="showCategoryModal" title="Change Category" max-width="400px"
+      @close="showCategoryModal = false">
+      <BaseSelect v-model="categoryValue" :options="categoryOptions" label="Category" />
+      <p v-if="categoryError" class="rank-detail__category-error">{{ categoryError }}</p>
+      <template #footer>
+        <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
+          <BaseButton @click="showCategoryModal = false">Cancel</BaseButton>
+          <BaseButton variant="primary" :loading="categoryLoading" @click="handleCategoryChange">Save</BaseButton>
+        </div>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -848,6 +922,9 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 }
 
 .rank-detail__category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--text-caption);
   font-weight: 600;
   padding: 2px 8px;
@@ -855,6 +932,24 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   background: color-mix(in srgb, var(--cat-accent, var(--accent)) 15%, transparent);
   color: var(--cat-accent, var(--accent));
   border: 1px solid color-mix(in srgb, var(--cat-accent, var(--accent)) 30%, transparent);
+}
+
+.rank-detail__category-badge--editable {
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.rank-detail__category-badge--editable:hover,
+.rank-detail__category-badge--editable:focus-visible {
+  background: color-mix(in srgb, var(--cat-accent, var(--accent)) 25%, transparent);
+  border-color: color-mix(in srgb, var(--cat-accent, var(--accent)) 50%, transparent);
+  outline: none;
+}
+
+.rank-detail__category-error {
+  margin: var(--space-sm) 0 0;
+  font-size: var(--text-caption);
+  color: var(--error);
 }
 
 .rank-detail__complexity-editable {

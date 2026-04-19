@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 interface SelectOption {
   value: string
@@ -22,7 +22,11 @@ const emit = defineEmits<{
 const isOpen = ref(false)
 const search = ref('')
 const containerRef = ref<HTMLElement | null>(null)
+const triggerRef = ref<HTMLElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
 const searchRef = ref<HTMLInputElement | null>(null)
+
+const panelStyle = ref<Record<string, string>>({})
 
 const selectedLabel = computed(() => {
   const opt = props.options.find((o) => o.value === props.modelValue)
@@ -35,11 +39,25 @@ const filteredOptions = computed(() => {
   return props.options.filter((o) => o.label.toLowerCase().includes(q))
 })
 
+function updatePanelPosition() {
+  const trigger = triggerRef.value
+  if (!trigger) return
+  const rect = trigger.getBoundingClientRect()
+  panelStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+    minWidth: `${rect.width}px`,
+  }
+}
+
 function toggle() {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     search.value = ''
-    setTimeout(() => searchRef.value?.focus(), 0)
+    updatePanelPosition()
+    nextTick(() => searchRef.value?.focus())
   }
 }
 
@@ -49,30 +67,40 @@ function select(value: string) {
 }
 
 function onClickOutside(e: MouseEvent) {
-  if (containerRef.value && !containerRef.value.contains(e.target as Node)) {
-    isOpen.value = false
-  }
+  const target = e.target as Node
+  if (containerRef.value?.contains(target)) return
+  if (panelRef.value?.contains(target)) return
+  isOpen.value = false
 }
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') isOpen.value = false
 }
 
+function onReposition() {
+  if (isOpen.value) updatePanelPosition()
+}
+
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
   document.addEventListener('keydown', onKeydown)
+  window.addEventListener('scroll', onReposition, true)
+  window.addEventListener('resize', onReposition)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onClickOutside)
   document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('scroll', onReposition, true)
+  window.removeEventListener('resize', onReposition)
 })
 </script>
 
 <template>
   <div ref="containerRef" class="base-select">
     <label v-if="label" class="base-select__label">{{ label }}</label>
-    <button class="base-select__trigger" :class="{ 'base-select__trigger--open': isOpen }" @click="toggle">
+    <button ref="triggerRef" class="base-select__trigger" :class="{ 'base-select__trigger--open': isOpen }"
+      @click="toggle">
       <span class="base-select__value">{{ selectedLabel }}</span>
       <svg class="base-select__chevron" :class="{ 'base-select__chevron--open': isOpen }" width="12" height="12"
         viewBox="0 0 12 12" fill="none">
@@ -80,18 +108,20 @@ onUnmounted(() => {
           stroke-linejoin="round" />
       </svg>
     </button>
-    <div v-if="isOpen" class="base-select__panel">
-      <input v-if="searchable" ref="searchRef" v-model="search" class="base-select__search" placeholder="Search..."
-        @click.stop />
-      <div class="base-select__options">
-        <button v-for="opt in filteredOptions" :key="opt.value" class="base-select__option"
-          :class="{ 'base-select__option--selected': opt.value === modelValue }" @click="select(opt.value)">
-          <span v-if="opt.icon" class="base-select__option-icon">{{ opt.icon }}</span>
-          {{ opt.label }}
-        </button>
-        <div v-if="filteredOptions.length === 0" class="base-select__empty">No results</div>
+    <Teleport to="body">
+      <div v-if="isOpen" ref="panelRef" class="base-select__panel" :style="panelStyle">
+        <input v-if="searchable" ref="searchRef" v-model="search" class="base-select__search" placeholder="Search..."
+          @click.stop />
+        <div class="base-select__options">
+          <button v-for="opt in filteredOptions" :key="opt.value" class="base-select__option"
+            :class="{ 'base-select__option--selected': opt.value === modelValue }" @click="select(opt.value)">
+            <span v-if="opt.icon" class="base-select__option-icon">{{ opt.icon }}</span>
+            {{ opt.label }}
+          </button>
+          <div v-if="filteredOptions.length === 0" class="base-select__empty">No results</div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -151,19 +181,18 @@ onUnmounted(() => {
   transform: rotate(180deg);
 }
 
+</style>
+
+<style>
 .base-select__panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 0;
   padding-top: var(--space-xs);
   background: var(--bg-elevated);
   border: 1px solid var(--text-tertiary);
   border-top: 1px solid var(--bg-overlay);
   border-radius: 0 0 var(--radius-card) var(--radius-card);
-  z-index: 100;
+  z-index: 1000;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .base-select__search {

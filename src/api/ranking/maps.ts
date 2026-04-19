@@ -81,6 +81,13 @@ export function updateMapComplexity(
   return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/complexity`, req)
 }
 
+export function updateMapCategory(
+  difficultyId: string,
+  req: { categoryId: string },
+): Promise<MapDifficultyResponse> {
+  return patch<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/category`, req)
+}
+
 export function deactivateMapDifficulty(difficultyId: string): Promise<void> {
   return del<void>(`/ranking/maps/difficulties/${difficultyId}`)
 }
