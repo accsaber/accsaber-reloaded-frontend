@@ -37,6 +37,16 @@ const criteriaClass = computed(() => {
 })
 
 const diffColor = computed(() => DIFF_COLOR[props.entry.difficulty] ?? 'var(--text-secondary)')
+
+const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T16:00:00Z')
+
+const dateLabel = computed(() => {
+  const ts = Date.parse(props.entry.createdAt)
+  if (Number.isFinite(ts) && ts < IMPORT_CUTOFF_MS) {
+    return 'Imported from AccSaber Ranking Queue'
+  }
+  return formatRelativeDate(props.entry.createdAt)
+})
 </script>
 
 <template>
@@ -92,7 +102,7 @@ const diffColor = computed(() => DIFF_COLOR[props.entry.difficulty] ?? 'var(--te
           -
         </span>
       </div>
-      <span class="queue-row__date">{{ formatRelativeDate(entry.createdAt) }}</span>
+      <span class="queue-row__date">{{ dateLabel }}</span>
     </div>
   </div>
 </template>
