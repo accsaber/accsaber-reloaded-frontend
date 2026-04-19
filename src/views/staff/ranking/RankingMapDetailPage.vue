@@ -123,7 +123,9 @@ const categoryLoading = ref(false)
 const categoryError = ref('')
 
 const categoryOptions = computed(() =>
-  categoryStore.categories.map((c) => ({ value: c.id, label: c.name })),
+  categoryStore.categories
+    .filter((c) => c.code !== 'overall')
+    .map((c) => ({ value: c.id, label: c.name })),
 )
 
 const canEditCategory = computed(() => isHeadRanking.value)

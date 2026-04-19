@@ -50,7 +50,6 @@ interface DiffSelection {
   notes: number
   selected: boolean
   categoryId: string
-  complexity: number
   blLeaderboardId: string | null
   ssLeaderboardId: number | null
   importing: boolean
@@ -61,8 +60,12 @@ interface DiffSelection {
 
 const diffSelections = ref<DiffSelection[]>([])
 
+const selectableCategories = computed(() =>
+  categoryStore.categories.filter((c) => c.code !== 'overall'),
+)
+
 const categoryOptions = computed(() =>
-  categoryStore.categories.map((c) => ({ value: c.id, label: c.name }))
+  selectableCategories.value.map((c) => ({ value: c.id, label: c.name })),
 )
 
 const hasSelections = computed(() => diffSelections.value.some((d) => d.selected))
@@ -102,8 +105,7 @@ async function handleFetch() {
         njs: d.njs,
         notes: d.notes,
         selected: false,
-        categoryId: categoryStore.categories[0]?.id ?? '',
-        complexity: 0,
+        categoryId: selectableCategories.value[0]?.id ?? '',
         blLeaderboardId: blMap.get(key) ?? null,
         ssLeaderboardId: ssMap.get(key) ?? null,
         importing: false,
@@ -133,7 +135,6 @@ async function handleSubmit() {
 
   const selected = diffSelections.value.filter((d) => d.selected)
   const { importMap } = await import('@/api/ranking/maps')
-  const { castVote } = await import('@/api/ranking/voting')
 
   for (const diff of selected) {
     diff.importing = true
@@ -151,14 +152,6 @@ async function handleSubmit() {
       })
       diff.imported = true
       diff.importedDifficultyId = result.id
-
-      if (diff.complexity > 0) {
-        await castVote(result.id, {
-          vote: 'UPVOTE',
-          type: 'RANK',
-          suggestedComplexity: diff.complexity,
-        })
-      }
     } catch (e) {
       if (e instanceof ApiError) {
         diff.importError = extractApiErrorMessage(e.message) ?? `Import failed (${e.status}).`
@@ -224,7 +217,6 @@ function goToDetail(difficultyId: string) {
           <div class="map-import__diff-header">
             <span class="map-import__diff-col map-import__diff-col--name">Difficulty</span>
             <span class="map-import__diff-col map-import__diff-col--cat">Category</span>
-            <span class="map-import__diff-col map-import__diff-col--comp">Complexity</span>
           </div>
           <div v-for="diff in diffSelections" :key="`${diff.characteristic}-${diff.difficulty}`"
             class="map-import__diff-row" :class="{
@@ -250,11 +242,6 @@ function goToDetail(difficultyId: string) {
             <div class="map-import__diff-col map-import__diff-col--cat" @click.stop>
               <BaseSelect v-if="diff.selected && !diff.imported" v-model="diff.categoryId" :options="categoryOptions"
                 :disabled="isImporting" />
-            </div>
-
-            <div class="map-import__diff-col map-import__diff-col--comp" @click.stop>
-              <BaseInput v-if="diff.selected && !diff.imported" v-model.number="diff.complexity" type="number"
-                placeholder="0.0" :disabled="isImporting" />
             </div>
 
             <div v-if="diff.imported" class="map-import__diff-status map-import__diff-status--success">
@@ -446,11 +433,6 @@ function goToDetail(difficultyId: string) {
   flex-shrink: 0;
 }
 
-.map-import__diff-col--comp {
-  width: 100px;
-  flex-shrink: 0;
-}
-
 .map-import__diff-row {
   display: flex;
   align-items: center;
@@ -549,8 +531,7 @@ function goToDetail(difficultyId: string) {
     flex-wrap: wrap;
   }
 
-  .map-import__diff-col--cat,
-  .map-import__diff-col--comp {
+  .map-import__diff-col--cat {
     width: auto;
     flex: 1;
   }
