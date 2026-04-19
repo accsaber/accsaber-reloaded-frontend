@@ -17,8 +17,8 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
-import type { BatchResponse } from '@/types/api/batches'
-import type { MapDifficultyResponse } from '@/types/api/maps'
+import type { PublicBatchResponse } from '@/types/api/batches'
+import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MapDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -180,12 +180,12 @@ const listColumns: TableColumn[] = [
   { key: 'rankedAt', label: 'Released', sortable: true, align: 'right', width: '100px' },
 ]
 
-const difficulties = ref<MapDifficultyResponse[]>([])
+const difficulties = ref<PublicMapDifficultyResponse[]>([])
 const totalPages = ref(0)
 const totalElements = ref(0)
 const loading = ref(true)
 
-const batches = ref<BatchResponse[]>([])
+const batches = ref<PublicBatchResponse[]>([])
 const batchTotalPages = ref(0)
 const batchLoading = ref(true)
 
@@ -249,7 +249,7 @@ async function fetchDifficulties() {
     if (searchQuery.value.trim()) {
       params.search = searchQuery.value.trim()
     }
-    let res: Page<MapDifficultyResponse>
+    let res: Page<PublicMapDifficultyResponse>
     if (unplayedOnly.value && authStore.userId) {
       const { getUserMissingMaps } = await import('@/api/users')
       res = await getUserMissingMaps(authStore.userId, params as never)
@@ -302,7 +302,7 @@ function handleListRowClick(row: Record<string, unknown>) {
   navigateToMap(row.id as string, row.difficultyId as string)
 }
 
-function batchDifficultiesByCategory(batch: BatchResponse) {
+function batchDifficultiesByCategory(batch: PublicBatchResponse) {
   const grouped = new Map<string, MapDisplay[]>()
   for (const diff of batch.difficulties) {
     const display = toMapDisplay(diff, (id) => categoryStore.getCategoryCode(id))

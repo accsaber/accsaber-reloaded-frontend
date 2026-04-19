@@ -10,7 +10,7 @@ import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
-import type { MapComplexityHistoryResponse, MapDifficultyResponse, MapDifficultyStatisticsResponse, MapResponse, TopScoreSnapshot } from '@/types/api/maps'
+import type { MapComplexityHistoryResponse, MapDifficultyStatisticsResponse, PublicMapDifficultyResponse, PublicMapResponse, TopScoreSnapshot } from '@/types/api/maps'
 import type { DifficultyScoreDisplay, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { DIFFICULTY_ORDER, MAP_STATS_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
@@ -27,7 +27,7 @@ const categoryStore = useCategoryStore()
 
 const mapId = computed(() => route.params.mapId as string)
 
-const map = ref<MapResponse | null>(null)
+const map = ref<PublicMapResponse | null>(null)
 const activeDifficultyId = ref<string>('')
 const diffStats = ref<MapDifficultyStatisticsResponse | null>(null)
 const complexityHistory = ref<MapComplexityHistoryResponse[]>([])
@@ -55,10 +55,10 @@ const resolvedAccent = computed(() => {
   return themeStore.theme === 'dark' ? brightenRgb(raw, 60) : raw
 })
 
-const rankedDifficulties = computed<MapDifficultyResponse[]>(() => {
+const rankedDifficulties = computed<PublicMapDifficultyResponse[]>(() => {
   if (!map.value) return []
   return map.value.difficulties
-    .filter((d) => d.status === 'RANKED' && d.active)
+    .filter((d) => d.status === 'RANKED')
     .sort((a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty))
 })
 
@@ -239,7 +239,7 @@ async function fetchMap() {
     const { getMap } = await import('@/api/maps')
     map.value = await getMap(mapId.value)
 
-    const ranked = map.value.difficulties.filter((d) => d.status === 'RANKED' && d.active)
+    const ranked = map.value.difficulties.filter((d) => d.status === 'RANKED')
     if (ranked.length > 0) {
       const queryDiffId = route.query.difficultyId as string
       if (queryDiffId && ranked.some(d => d.id === queryDiffId)) {
@@ -399,7 +399,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
               </svg>
             </BaseButton>
             <ApTweaker v-if="scoreCurveId && activeDifficulty" :open="tweakerOpen" :curve-id="scoreCurveId"
-              :anchor-el="tweakerAnchor" :complexity="activeDifficulty.complexity" :show-weighted="false"
+              :anchor-el="tweakerAnchor" :complexity="activeDifficulty.complexity ?? undefined" :show-weighted="false"
               @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
           </div>
 
@@ -408,7 +408,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 
           <div v-if="activeDifficulty" class="map-detail__stats-strip">
             <div class="map-detail__diff-meta">
-              <ComplexityBadge :complexity="activeDifficulty.complexity" :difficulty="activeDifficulty.difficulty" />
+              <ComplexityBadge :complexity="activeDifficulty.complexity ?? 0" :difficulty="activeDifficulty.difficulty" />
               <span class="map-detail__category-name" :style="{ color: categoryAccent }">{{ categoryName }}</span>
             </div>
             <div class="map-detail__stats">

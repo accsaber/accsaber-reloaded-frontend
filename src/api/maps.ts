@@ -2,34 +2,34 @@ import type {
   DifficultyListParams,
   DifficultyScoreParams,
   MapComplexityHistoryResponse,
-  MapDifficultyResponse,
   MapDifficultyStatisticsResponse,
   MapListParams,
-  MapResponse,
+  PublicMapDifficultyResponse,
+  PublicMapResponse,
 } from '@/types/api/maps'
 import type { ScoreResponse } from '@/types/api/users'
 import type { Page } from '@/types/pagination'
 import { get } from './client'
 import { buildQuery } from './utils'
 
-export function getMaps(params?: MapListParams): Promise<Page<MapResponse>> {
-  return get<Page<MapResponse>>(`/maps${buildQuery(params)}`)
+export function getMaps(params?: MapListParams): Promise<Page<PublicMapResponse>> {
+  return get<Page<PublicMapResponse>>(`/maps${buildQuery(params)}`)
 }
 
-export function getMap(mapId: string): Promise<MapResponse> {
-  return get<MapResponse>(`/maps/${mapId}`)
+export function getMap(mapId: string): Promise<PublicMapResponse> {
+  return get<PublicMapResponse>(`/maps/${mapId}`)
 }
 
-export function getMapDifficulties(mapId: string): Promise<MapDifficultyResponse[]> {
-  return get<MapDifficultyResponse[]>(`/maps/${mapId}/difficulties`)
+export function getMapDifficulties(mapId: string): Promise<PublicMapDifficultyResponse[]> {
+  return get<PublicMapDifficultyResponse[]>(`/maps/${mapId}/difficulties`)
 }
 
-export function getDifficulty(difficultyId: string): Promise<MapDifficultyResponse> {
-  return get<MapDifficultyResponse>(`/maps/difficulties/${difficultyId}`)
+export function getDifficulty(difficultyId: string): Promise<PublicMapDifficultyResponse> {
+  return get<PublicMapDifficultyResponse>(`/maps/difficulties/${difficultyId}`)
 }
 
-export function getDifficulties(params?: DifficultyListParams): Promise<Page<MapDifficultyResponse>> {
-  return get<Page<MapDifficultyResponse>>(`/maps/difficulties${buildQuery(params)}`)
+export function getDifficulties(params?: DifficultyListParams): Promise<Page<PublicMapDifficultyResponse>> {
+  return get<Page<PublicMapDifficultyResponse>>(`/maps/difficulties${buildQuery(params)}`)
 }
 
 export function getDifficultyScores(

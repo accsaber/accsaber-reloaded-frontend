@@ -4,7 +4,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
-import type { MapDifficultyResponse, MapResponse } from '@/types/api/maps'
+import type { PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
 import type { LeaderboardResponse } from '@/types/api/users'
 import { getRankClass } from '@/utils/ranking'
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
@@ -28,7 +28,7 @@ const MIN_CHARS = 3
 const searchValue = ref('')
 const debouncedSearch = useDebouncedRef(searchValue, DEBOUNCE_MS)
 const players = ref<LeaderboardResponse[]>([])
-const maps = ref<MapResponse[]>([])
+const maps = ref<PublicMapResponse[]>([])
 const loadingPlayers = ref(false)
 const loadingMaps = ref(false)
 const playersCollapsed = ref(false)
@@ -118,14 +118,14 @@ function formatAp(ap: number): string {
   return ap.toLocaleString(undefined, { maximumFractionDigits: 2 })
 }
 
-function primaryDifficulty(map: MapResponse): MapDifficultyResponse | null {
+function primaryDifficulty(map: PublicMapResponse): PublicMapDifficultyResponse | null {
   if (!map.difficulties?.length) return null
-  return map.difficulties.reduce((a, b) => (b.complexity > a.complexity ? b : a))
+  return map.difficulties.reduce((a, b) => ((b.complexity ?? 0) > (a.complexity ?? 0) ? b : a))
 }
 
 interface MapResult {
-  map: MapResponse
-  primary: MapDifficultyResponse | null
+  map: PublicMapResponse
+  primary: PublicMapDifficultyResponse | null
   accent: string
 }
 
@@ -224,7 +224,7 @@ const mapResults = computed<MapResult[]>(() =>
               <span class="search-modal__row-meta">
                 <template v-if="r.primary">
                   <span class="search-modal__category-dot" :style="{ background: r.accent }" />
-                  <ComplexityBadge :complexity="r.primary.complexity" :difficulty="r.primary.difficulty" />
+                  <ComplexityBadge :complexity="r.primary.complexity ?? 0" :difficulty="r.primary.difficulty" />
                 </template>
               </span>
             </button>

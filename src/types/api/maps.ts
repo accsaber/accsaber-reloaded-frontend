@@ -1,6 +1,8 @@
 import type { Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
 import type { PaginationParams } from '../pagination'
 
+export type CriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED'
+
 export interface MapResponse {
   id: string
   songName: string
@@ -10,6 +12,18 @@ export interface MapResponse {
   beatsaverCode: string
   coverUrl: string
   difficulties: MapDifficultyResponse[]
+  createdAt: string
+}
+
+export interface PublicMapResponse {
+  id: string
+  songName: string
+  songAuthor: string
+  songHash: string
+  mapAuthor: string
+  beatsaverCode: string
+  coverUrl: string
+  difficulties: PublicMapDifficultyResponse[]
   createdAt: string
 }
 
@@ -49,6 +63,31 @@ export interface MapDifficultyResponse {
   criteriaUpvotes: number
   criteriaDownvotes: number
   headCriteriaVote: VoteType | null
+  statistics: MapDifficultyStatisticsResponse | null
+}
+
+export interface PublicMapDifficultyResponse {
+  id: string
+  mapId: string
+  songName: string
+  songSubName: string | null
+  songAuthor: string
+  beatsaverCode: string | null
+  mapAuthor: string
+  coverUrl: string
+  categoryId: string
+  difficulty: Difficulty
+  characteristic: string
+  status: MapDifficultyStatus
+  criteriaStatus: CriteriaStatus | null
+  ssLeaderboardId: string | null
+  blLeaderboardId: string | null
+  maxScore: number
+  complexity: number | null
+  rankedAt: string | null
+  createdAt: string
+  rankUpvotes: number | null
+  rankDownvotes: number | null
   statistics: MapDifficultyStatisticsResponse | null
 }
 

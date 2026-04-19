@@ -1,4 +1,4 @@
-import type { MapDifficultyResponse } from '@/types/api/maps'
+import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MilestoneCompletionResponse } from '@/types/api/milestones'
 import type { LeaderboardResponse, ScoreResponse, UserMilestoneProgressResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, XpPlayerDisplay } from '@/types/display'
@@ -83,7 +83,7 @@ export function toScoreDisplay(
 }
 
 export function toMapDisplay(
-  diff: MapDifficultyResponse,
+  diff: PublicMapDifficultyResponse,
   getCategoryCode: (id: string) => CategoryCode | undefined,
 ): MapDisplay {
   return {
@@ -93,7 +93,7 @@ export function toMapDisplay(
     artistName: diff.songAuthor,
     mapperName: diff.mapAuthor,
     coverUrl: diff.coverUrl,
-    complexity: diff.complexity,
+    complexity: diff.complexity ?? 0,
     categoryCode: getCategoryCode(diff.categoryId) ?? 'overall',
     difficulty: diff.difficulty,
     difficultyLabel: formatDifficulty(diff.difficulty),

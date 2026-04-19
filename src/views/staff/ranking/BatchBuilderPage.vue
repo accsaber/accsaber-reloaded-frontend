@@ -112,10 +112,10 @@ const diffBatchMap = ref<Map<string, string>>(new Map())
 async function fetchQueue() {
   queueLoading.value = true
   try {
-    const { getDifficulties } = await import('@/api/maps')
+    const { getRankingDifficulties } = await import('@/api/ranking/maps')
     const [qualifiedRes, queueRes] = await Promise.all([
-      getDifficulties({ page: 0, size: 200, status: 'QUALIFIED', sort: 'createdAt,desc' } as never),
-      getDifficulties({ page: 0, size: 200, status: 'QUEUE', sort: 'createdAt,desc' } as never),
+      getRankingDifficulties({ page: 0, size: 200, status: 'QUALIFIED', sort: 'createdAt,desc' } as never),
+      getRankingDifficulties({ page: 0, size: 200, status: 'QUEUE', sort: 'createdAt,desc' } as never),
     ])
     queueDifficulties.value = [...qualifiedRes.content, ...queueRes.content]
   } catch {

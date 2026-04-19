@@ -30,8 +30,8 @@ const editComplexityValue = ref('')
 async function fetchDifficulties() {
   loading.value = true
   try {
-    const { getDifficulties } = await import('@/api/maps')
-    const res = await getDifficulties({
+    const { getRankingDifficulties } = await import('@/api/ranking/maps')
+    const res = await getRankingDifficulties({
       page: page.value - 1,
       size,
       search: search.value || undefined,

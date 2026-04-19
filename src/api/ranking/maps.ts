@@ -7,10 +7,40 @@ import type {
   UpdateMapComplexityRequest,
   UpdateMapStatusRequest,
 } from '@/types/api/admin'
-import type { DifficultyListParams, MapDifficultyResponse } from '@/types/api/maps'
+import type { DifficultyListParams, MapDifficultyResponse, MapListParams, MapResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import { del, get, patch, post } from '../client'
 import { buildQuery } from '../utils'
+
+export function getRankingMaps(params?: MapListParams): Promise<Page<MapResponse>> {
+  return get<Page<MapResponse>>(`/ranking/maps${buildQuery(params)}`)
+}
+
+export function getRankingMap(mapId: string): Promise<MapResponse> {
+  return get<MapResponse>(`/ranking/maps/${mapId}`)
+}
+
+export function getRankingMapByHash(songHash: string): Promise<MapResponse> {
+  return get<MapResponse>(`/ranking/maps/hash/${songHash}`)
+}
+
+export function getRankingMapByCode(beatsaverCode: string): Promise<MapResponse> {
+  return get<MapResponse>(`/ranking/maps/by-code/${beatsaverCode}`)
+}
+
+export function getRankingMapDifficulties(mapId: string): Promise<MapDifficultyResponse[]> {
+  return get<MapDifficultyResponse[]>(`/ranking/maps/${mapId}/difficulties`)
+}
+
+export function getRankingDifficulty(difficultyId: string): Promise<MapDifficultyResponse> {
+  return get<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}`)
+}
+
+export function getRankingDifficulties(
+  params?: DifficultyListParams,
+): Promise<Page<MapDifficultyResponse>> {
+  return get<Page<MapDifficultyResponse>>(`/ranking/maps/difficulties${buildQuery(params)}`)
+}
 
 export function getDeactivatedDifficulties(
   params?: DifficultyListParams,

@@ -200,8 +200,8 @@ async function fetchDifficulties() {
     totalElements.value = cached.totalElements
     loading.value = false
     try {
-      const { getDifficulties } = await import('@/api/maps')
-      const res = await getDifficulties(params as never)
+      const { getRankingDifficulties } = await import('@/api/ranking/maps')
+      const res = await getRankingDifficulties(params as never)
       difficulties.value = res.content
       totalPages.value = res.totalPages
       totalElements.value = res.totalElements
@@ -211,8 +211,8 @@ async function fetchDifficulties() {
   }
   loading.value = true
   try {
-    const { getDifficulties } = await import('@/api/maps')
-    const res = await getDifficulties(params as never)
+    const { getRankingDifficulties } = await import('@/api/ranking/maps')
+    const res = await getRankingDifficulties(params as never)
     difficulties.value = res.content
     totalPages.value = res.totalPages
     totalElements.value = res.totalElements

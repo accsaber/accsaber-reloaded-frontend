@@ -34,8 +34,8 @@ const STATUS_STYLE: Record<string, string> = {
 async function fetchBatches() {
   loading.value = true
   try {
-    const { getBatches } = await import('@/api/batches')
-    const res = await getBatches({
+    const { listBatches } = await import('@/api/ranking/batches')
+    const res = await listBatches({
       page: page.value - 1,
       size,
       status: statusFilter.value || undefined,

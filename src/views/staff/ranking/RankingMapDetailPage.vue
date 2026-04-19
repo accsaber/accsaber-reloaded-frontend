@@ -122,8 +122,8 @@ const batchOptions = ref<{ value: string; label: string }[]>([])
 async function fetchDifficulty() {
   loading.value = true
   try {
-    const { getDifficulty } = await import('@/api/maps')
-    difficulty.value = await getDifficulty(difficultyId.value)
+    const { getRankingDifficulty } = await import('@/api/ranking/maps')
+    difficulty.value = await getRankingDifficulty(difficultyId.value)
   } catch {
     difficulty.value = null
   }
