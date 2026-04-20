@@ -22,5 +22,13 @@ export function usePlaylistDownload() {
     a.click()
   }
 
-  return { playlistCategories, downloadPlaylist }
+  function downloadUnrankedPlaylist(categoryCode: string) {
+    const baseUrl = import.meta.env.VITE_API_BASE as string
+    const a = document.createElement('a')
+    a.href = `${baseUrl}/playlists/unranked/${categoryCode}`
+    a.download = `accsaber-queued-${categoryCode.replace('_', '-')}.json`
+    a.click()
+  }
+
+  return { playlistCategories, downloadPlaylist, downloadUnrankedPlaylist }
 }
