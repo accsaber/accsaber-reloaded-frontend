@@ -63,7 +63,7 @@ const rankedDifficulties = computed<PublicMapDifficultyResponse[]>(() => {
 })
 
 const activeDifficulty = computed(() =>
-  rankedDifficulties.value.find((d) => d.id === activeDifficultyId.value) ?? null
+  map.value?.difficulties.find((d) => d.id === activeDifficultyId.value) ?? null
 )
 
 const categoryCode = computed(() => {
@@ -239,16 +239,17 @@ async function fetchMap() {
     const { getMap } = await import('@/api/maps')
     map.value = await getMap(mapId.value)
 
-    const ranked = map.value.difficulties
+    const all = map.value.difficulties
+    const ranked = all
       .filter((d) => d.status === 'RANKED')
       .sort((a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty))
-    if (ranked.length > 0) {
-      const queryDiffId = route.query.difficultyId as string
-      if (queryDiffId && ranked.some(d => d.id === queryDiffId)) {
-        activeDifficultyId.value = queryDiffId
-      } else {
-        activeDifficultyId.value = ranked[0].id
-      }
+    const queryDiffId = route.query.difficultyId as string
+    if (queryDiffId && all.some(d => d.id === queryDiffId)) {
+      activeDifficultyId.value = queryDiffId
+    } else if (ranked.length > 0) {
+      activeDifficultyId.value = ranked[0].id
+    } else if (all.length > 0) {
+      activeDifficultyId.value = all[0].id
     }
   } catch {
     error.value = true
@@ -258,7 +259,7 @@ async function fetchMap() {
 
 watch(() => route.query.difficultyId, (newId) => {
   if (newId && typeof newId === 'string' && activeDifficultyId.value !== newId) {
-    if (rankedDifficulties.value.some(d => d.id === newId)) {
+    if (map.value?.difficulties.some(d => d.id === newId)) {
       activeDifficultyId.value = newId
     }
   }
