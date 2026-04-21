@@ -23,17 +23,39 @@ const categoryName = computed(() =>
   categoryStore.getCategoryInfo(categoryCode.value)?.name ?? categoryCode.value,
 )
 
-const criteriaLabel = computed(() => {
+const criteriaVerdict = computed<{
+  verdict: 'passed' | 'failed' | 'pending' | 'unavailable'
+  source: 'staff' | 'auto'
+}>(() => {
   const c = props.entry.criteriaStatus
-  if (c === 'PASSED') return 'Criteria Pass'
-  if (c === 'FAILED') return 'Criteria Fail'
-  return 'Criteria Pending'
+  if (c === 'PASSED') return { verdict: 'passed', source: 'staff' }
+  if (c === 'FAILED') return { verdict: 'failed', source: 'staff' }
+  const auto = props.entry.autoCriteriaStatus
+  if (auto === 'PASSED') return { verdict: 'passed', source: 'auto' }
+  if (auto === 'FAILED') return { verdict: 'failed', source: 'auto' }
+  if (auto === 'UNAVAILABLE') return { verdict: 'unavailable', source: 'auto' }
+  return { verdict: 'pending', source: 'staff' }
 })
+
+const criteriaLabel = computed(() => {
+  const { verdict, source } = criteriaVerdict.value
+  const base =
+    verdict === 'passed' ? 'Criteria Pass'
+    : verdict === 'failed' ? 'Criteria Fail'
+    : verdict === 'unavailable' ? 'Criteria Unavailable'
+    : 'Criteria Pending'
+  return source === 'auto' ? `Auto ${base}` : base
+})
+
 const criteriaClass = computed(() => {
-  const c = props.entry.criteriaStatus
-  if (c === 'PASSED') return 'queue-row__criteria--passed'
-  if (c === 'FAILED') return 'queue-row__criteria--failed'
-  return 'queue-row__criteria--pending'
+  const { verdict, source } = criteriaVerdict.value
+  const classes: string[] = []
+  if (verdict === 'passed') classes.push('queue-row__criteria--passed')
+  else if (verdict === 'failed') classes.push('queue-row__criteria--failed')
+  else if (verdict === 'unavailable') classes.push('queue-row__criteria--unavailable')
+  else classes.push('queue-row__criteria--pending')
+  if (source === 'auto') classes.push('queue-row__criteria--auto')
+  return classes
 })
 
 const diffColor = computed(() => DIFF_COLOR[props.entry.difficulty] ?? 'var(--text-secondary)')
@@ -233,6 +255,15 @@ const dateLabel = computed(() => {
 
 .queue-row__criteria--pending {
   color: var(--text-tertiary);
+}
+
+.queue-row__criteria--unavailable {
+  color: var(--warning);
+}
+
+.queue-row__criteria--auto {
+  opacity: 0.8;
+  font-style: italic;
 }
 
 .queue-row__right {

@@ -88,6 +88,7 @@ export interface PublicMapDifficultyResponse {
   characteristic: string
   status: MapDifficultyStatus
   criteriaStatus: CriteriaStatus | null
+  autoCriteriaStatus: AutoCriteriaStatus | null
   ssLeaderboardId: string | null
   blLeaderboardId: string | null
   maxScore: number
