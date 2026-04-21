@@ -135,6 +135,7 @@ async function handleSubmit() {
 
   const selected = diffSelections.value.filter((d) => d.selected)
   const { importMap } = await import('@/api/ranking/maps')
+  const { castVote } = await import('@/api/ranking/voting')
 
   for (const diff of selected) {
     diff.importing = true
@@ -152,6 +153,10 @@ async function handleSubmit() {
       })
       diff.imported = true
       diff.importedDifficultyId = result.id
+      try {
+        await castVote(result.id, { vote: 'UPVOTE', type: 'RANK' })
+      } catch {
+      }
     } catch (e) {
       if (e instanceof ApiError) {
         diff.importError = extractApiErrorMessage(e.message) ?? `Import failed (${e.status}).`
