@@ -235,6 +235,12 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => route.fullPath,
+  (path) => queueCache.rememberReturnUrl(path),
+  { immediate: true },
+)
+
 function navigateToDetail(row: Record<string, unknown>) {
   router.push({
     name: 'ranking-map-detail',

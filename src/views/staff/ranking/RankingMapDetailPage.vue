@@ -17,6 +17,7 @@ import { useThemeStore } from '@/stores/theme'
 import type { AutoCriteriaStatus, MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { Tab } from '@/types/display'
 import type { MapVoteAction, VoteType } from '@/types/enums'
+import { useRankingQueueStore } from '@/stores/rankingQueue'
 import { brightenRgb } from '@/utils/color'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
@@ -28,6 +29,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const themeStore = useThemeStore()
+const queueCache = useRankingQueueStore()
 
 const difficultyId = computed(() => route.params.difficultyId as string)
 
@@ -142,6 +144,15 @@ function toggleTweaker(event: Event) {
 }
 
 const staffId = computed(() => authStore.staffId)
+
+function goBackToQueue() {
+  const saved = queueCache.lastReturnUrl
+  if (saved) {
+    router.push(saved)
+  } else {
+    router.push({ name: rankingDashboardRoute })
+  }
+}
 
 const managementOpen = ref(false)
 const voteFormOpen = ref(false)
@@ -445,7 +456,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
       <div class="rank-detail__content">
         <div class="rank-detail__nav">
-          <button class="rank-detail__back" @click="router.push({ name: rankingDashboardRoute })"
+          <button class="rank-detail__back" @click="goBackToQueue"
             aria-label="Back to queue">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
@@ -810,7 +821,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
     <template v-else>
       <div class="rank-detail__not-found">
         <h2>Difficulty not found</h2>
-        <BaseButton @click="router.push({ name: rankingDashboardRoute })">Back to Queue</BaseButton>
+        <BaseButton @click="goBackToQueue">Back to Queue</BaseButton>
       </div>
     </template>
 
