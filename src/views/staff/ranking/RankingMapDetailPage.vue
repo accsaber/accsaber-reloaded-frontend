@@ -145,6 +145,22 @@ function toggleTweaker(event: Event) {
 
 const staffId = computed(() => authStore.staffId)
 
+const staffRoleByStaffId = ref<Map<string, string>>(new Map())
+
+async function loadStaffRoles() {
+  try {
+    const { getStaffUsers } = await import('@/api/staff')
+    const res = await getStaffUsers({ page: 0, size: 100 })
+    const map = new Map<string, string>()
+    for (const s of res.content) {
+      map.set(s.id, s.role)
+    }
+    staffRoleByStaffId.value = map
+  } catch {
+  }
+}
+loadStaffRoles()
+
 function goBackToQueue() {
   const saved = queueCache.lastReturnUrl
   if (saved) {
@@ -757,6 +773,8 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                   </svg>
                 </div>
                 <span class="rank-detail__vote-username">{{ vote.staffUsername ?? 'Unknown' }}</span>
+                <span v-if="staffRoleByStaffId.get(vote.staffId) === 'RANKING_HEAD'"
+                  class="rank-detail__vote-head-pill" title="Head Ranking Staff">Head</span>
                 <span class="rank-detail__vote-icon" :class="voteIconClass(vote.vote)">
                   <template v-if="vote.vote === 'UPVOTE'">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -1551,6 +1569,19 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   font-weight: 600;
   color: var(--text-primary);
   font-size: var(--text-body);
+}
+
+.rank-detail__vote-head-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .rank-detail__vote-icon {
