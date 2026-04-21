@@ -199,9 +199,9 @@ export async function fetchScoreSaberScores(
       maxScore = data.metadata?.maxScore ?? data.leaderboard?.maxScore ?? 0
     }
     for (const s of batch) {
-      if (s.leaderboardPlayerInfo) all.push(s)
+      if (s.score && s.leaderboardPlayerInfo) all.push(s)
     }
-    if (batch.length === 0 || all.length >= count) break
+    if (batch.length < pageSize || all.length >= count) break
   }
   return { scores: all.slice(0, count), maxScore }
 }

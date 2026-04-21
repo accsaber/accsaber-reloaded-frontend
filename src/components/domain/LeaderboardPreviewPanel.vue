@@ -195,6 +195,7 @@ async function loadScores() {
     ? fetchScoreSaberScores(props.ssLeaderboardId!, 100).catch(() => null)
     : Promise.resolve(null)
 
+  try {
   const [blResult, ssResult] = await Promise.all([blPromise, ssPromise])
 
   if (hasBl && !blResult) blFailed.value = true
@@ -214,13 +215,14 @@ async function loadScores() {
   if (ssResult) {
     for (const s of ssResult.scores) {
       const info = s.leaderboardPlayerInfo
-      if (!info?.id) continue
+      const score = s.score
+      if (!info?.id || !score) continue
       const norm: NormalizedScore = {
-        id: `ss-${s.score.id}`,
+        id: `ss-${score.id}`,
         userId: info.id,
-        baseScore: s.score.baseScore,
-        modifiedScore: s.score.modifiedScore,
-        modifiers: s.score.modifiers,
+        baseScore: score.baseScore,
+        modifiedScore: score.modifiedScore,
+        modifiers: score.modifiers,
         player: {
           id: info.id,
           name: info.name,
@@ -245,8 +247,13 @@ async function loadScores() {
   } else if (!hasBl && hasSs && !ssResult) {
     error.value = 'Failed to load ScoreSaber scores.'
   }
-
-  loading.value = false
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to load scores'
+    scores.value = []
+    fetchedMaxScore.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadCurve() {
