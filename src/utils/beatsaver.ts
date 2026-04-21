@@ -155,13 +155,11 @@ const SS_DIFF_VALUE_TO_NAME: Record<number, string> = {
 }
 
 export interface ScoreSaberScoreEntry {
-  score: {
-    id: number
-    baseScore: number
-    modifiedScore: number
-    modifiers: string
-    rank: number
-  }
+  id: number
+  baseScore: number
+  modifiedScore: number
+  modifiers: string
+  rank: number
   leaderboardPlayerInfo: {
     id: string
     name: string
@@ -179,6 +177,34 @@ export interface ScoreSaberLeaderboardScoresResponse {
 export interface ScoreSaberScoresPayload {
   scores: ScoreSaberScoreEntry[]
   maxScore: number
+}
+
+export async function fetchScoreSaberLeaderboardMaxScore(leaderboardId: string): Promise<number> {
+  try {
+    const res = await fetch(
+      `/proxy/scoresaber/api/leaderboard/by-id/${encodeURIComponent(leaderboardId)}/info`,
+      { headers: { accept: 'application/json' } },
+    )
+    if (!res.ok) return 0
+    const data = (await res.json()) as { maxScore?: number }
+    return data.maxScore ?? 0
+  } catch {
+    return 0
+  }
+}
+
+export async function fetchBeatLeaderLeaderboardMaxScore(leaderboardId: string): Promise<number> {
+  try {
+    const res = await fetch(
+      `/proxy/beatleader/leaderboard/${encodeURIComponent(leaderboardId)}?page=1&count=1`,
+      { headers: { accept: 'application/json' } },
+    )
+    if (!res.ok) return 0
+    const data = (await res.json()) as BeatLeaderLeaderboardResponse
+    return data.difficulty?.maxScore ?? data.song?.difficulties?.[0]?.maxScore ?? 0
+  } catch {
+    return 0
+  }
 }
 
 export async function fetchScoreSaberScores(
@@ -199,9 +225,12 @@ export async function fetchScoreSaberScores(
       maxScore = data.metadata?.maxScore ?? data.leaderboard?.maxScore ?? 0
     }
     for (const s of batch) {
-      if (s.score && s.leaderboardPlayerInfo) all.push(s)
+      if (s.leaderboardPlayerInfo) all.push(s)
     }
     if (batch.length < pageSize || all.length >= count) break
+  }
+  if (!maxScore) {
+    maxScore = await fetchScoreSaberLeaderboardMaxScore(leaderboardId)
   }
   return { scores: all.slice(0, count), maxScore }
 }

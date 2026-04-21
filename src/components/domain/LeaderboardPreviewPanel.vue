@@ -140,18 +140,18 @@ const rows = computed(() => {
   const c = curve.value
   const complexity = previewComplexity.value
   const max = effectiveMaxScore.value
-  if (!c || max <= 0) return []
   return [...scores.value]
     .sort((a, b) => b.modifiedScore - a.modifiedScore)
     .map((s, i) => {
-      const accuracy = (s.baseScore * modifierMultiplier(s.modifiers)) / max
+      const accuracy = max > 0 ? (s.baseScore * modifierMultiplier(s.modifiers)) / max : 0
+      const ap = c && max > 0 ? calculateAp(c, accuracy, complexity) : 0
       return {
         key: s.id,
         rank: i + 1,
         player: s.player,
         score: s.modifiedScore,
         accuracy,
-        ap: calculateAp(c, accuracy, complexity),
+        ap,
       }
     })
 })
@@ -215,14 +215,13 @@ async function loadScores() {
   if (ssResult) {
     for (const s of ssResult.scores) {
       const info = s.leaderboardPlayerInfo
-      const score = s.score
-      if (!info?.id || !score) continue
+      if (!info?.id) continue
       const norm: NormalizedScore = {
-        id: `ss-${score.id}`,
+        id: `ss-${s.id}`,
         userId: info.id,
-        baseScore: score.baseScore,
-        modifiedScore: score.modifiedScore,
-        modifiers: score.modifiers,
+        baseScore: s.baseScore,
+        modifiedScore: s.modifiedScore,
+        modifiers: s.modifiers,
         player: {
           id: info.id,
           name: info.name,
@@ -314,8 +313,8 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
         {{ blFailed && ssFailed
           ? 'Failed to load scores from BeatLeader and ScoreSaber.'
           : blFailed
-            ? 'BeatLeader scores failed to load — showing ScoreSaber only.'
-            : 'ScoreSaber scores failed to load — showing BeatLeader only.' }}
+            ? 'BeatLeader scores failed to load - showing ScoreSaber only.'
+            : 'ScoreSaber scores failed to load - showing BeatLeader only.' }}
       </p>
       <DataTable :columns="columns" :rows="rows" :loading="loading" row-key="key"
         empty-message="No scores found.">
