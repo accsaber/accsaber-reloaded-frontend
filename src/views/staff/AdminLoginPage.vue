@@ -19,7 +19,7 @@ async function handleLogin() {
   loading.value = true
   error.value = ''
   try {
-    await auth.login(identifier.value, password.value)
+    await auth.login(identifier.value, password.value, 'ADMIN')
 
     if (!auth.isAdmin) {
       auth.clearStaffAuth()
