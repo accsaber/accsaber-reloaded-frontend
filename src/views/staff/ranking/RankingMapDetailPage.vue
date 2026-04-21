@@ -618,8 +618,9 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
         </div>
 
         <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'" :bl-leaderboard-id="difficulty.blLeaderboardId"
-          :original-complexity="difficulty.complexity" :max-score="difficulty.maxScore" :category-code="categoryCode"
-          :song-hash="songHash" :difficulty="difficulty.difficulty" :characteristic="difficulty.characteristic"
+          :ss-leaderboard-id="difficulty.ssLeaderboardId" :original-complexity="difficulty.complexity"
+          :max-score="difficulty.maxScore" :category-code="categoryCode" :song-hash="songHash"
+          :difficulty="difficulty.difficulty" :characteristic="difficulty.characteristic"
           :ai-available="difficulty.status === 'RANKED' && !!songHash" />
 
         <div v-if="activeTab === 'voting' && isHeadRanking" class="rank-detail__collapsible">

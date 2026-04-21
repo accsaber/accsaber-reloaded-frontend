@@ -154,6 +154,58 @@ const SS_DIFF_VALUE_TO_NAME: Record<number, string> = {
   9: 'ExpertPlus',
 }
 
+export interface ScoreSaberScoreEntry {
+  score: {
+    id: number
+    baseScore: number
+    modifiedScore: number
+    modifiers: string
+    rank: number
+  }
+  leaderboardPlayerInfo: {
+    id: string
+    name: string
+    profilePicture: string
+    country: string
+  } | null
+}
+
+export interface ScoreSaberLeaderboardScoresResponse {
+  scores?: ScoreSaberScoreEntry[]
+  metadata?: { maxScore?: number }
+  leaderboard?: { maxScore?: number }
+}
+
+export interface ScoreSaberScoresPayload {
+  scores: ScoreSaberScoreEntry[]
+  maxScore: number
+}
+
+export async function fetchScoreSaberScores(
+  leaderboardId: string,
+  count = 100,
+): Promise<ScoreSaberScoresPayload> {
+  const all: ScoreSaberScoreEntry[] = []
+  let maxScore = 0
+  const pageSize = 12
+  const maxPages = Math.ceil(count / pageSize)
+  for (let page = 1; page <= maxPages; page++) {
+    const url = `/proxy/scoresaber/api/leaderboard/by-id/${encodeURIComponent(leaderboardId)}/scores?page=${page}&withMetadata=true`
+    const res = await fetch(url, { headers: { accept: 'application/json' } })
+    if (!res.ok) throw new Error(`ScoreSaber request failed: ${res.status}`)
+    const data = (await res.json()) as ScoreSaberLeaderboardScoresResponse
+    const batch = data.scores ?? []
+    if (!maxScore) {
+      maxScore = data.metadata?.maxScore ?? data.leaderboard?.maxScore ?? 0
+    }
+    for (const s of batch) {
+      if (s.leaderboardPlayerInfo) all.push(s)
+    }
+    if (batch.length === 0 || all.length >= count) break
+  }
+  return { scores: all.slice(0, count), maxScore }
+}
+
 export async function fetchScoreSaberLeaderboards(hash: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
   try {
