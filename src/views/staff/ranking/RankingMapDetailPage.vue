@@ -14,7 +14,7 @@ import { rankingDashboardRoute } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
-import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
+import type { AutoCriteriaStatus, MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { Tab } from '@/types/display'
 import type { MapVoteAction, VoteType } from '@/types/enums'
 import { brightenRgb } from '@/utils/color'
@@ -65,6 +65,57 @@ const metaTitle = computed(() => {
 usePageMeta({ title: metaTitle })
 
 const isHeadRanking = computed(() => authStore.hasRole('RANKING_HEAD'))
+const isRanking = computed(() => authStore.hasRole('RANKING'))
+
+const autoCriteriaStatus = ref<AutoCriteriaStatus | null>(null)
+const autoCriteriaFailures = ref<string[]>([])
+const autoCriteriaFailuresOpen = ref(false)
+const autoCriteriaRunning = ref(false)
+const autoCriteriaError = ref('')
+
+watch(
+  () => difficulty.value?.autoCriteriaStatus,
+  (s) => {
+    autoCriteriaStatus.value = s ?? null
+  },
+  { immediate: true },
+)
+
+const autoCriteriaLabel = computed(() => {
+  switch (autoCriteriaStatus.value) {
+    case 'PASSED': return 'Auto: Passed'
+    case 'FAILED': return 'Auto: Failed'
+    case 'UNAVAILABLE': return 'Auto: Unavailable'
+    default: return 'Auto: Pending'
+  }
+})
+
+function autoCriteriaBadgeClass(status: AutoCriteriaStatus | null): string {
+  if (status === 'PASSED') return 'auto-criteria-badge--passed'
+  if (status === 'FAILED') return 'auto-criteria-badge--failed'
+  if (status === 'UNAVAILABLE') return 'auto-criteria-badge--unavailable'
+  return 'auto-criteria-badge--pending'
+}
+
+async function runAutoCriteria() {
+  if (autoCriteriaRunning.value) return
+  autoCriteriaRunning.value = true
+  autoCriteriaError.value = ''
+  try {
+    const { runAutoCriteriaCheck } = await import('@/api/ranking/maps')
+    const res = await runAutoCriteriaCheck(difficultyId.value)
+    autoCriteriaStatus.value = res.status
+    autoCriteriaFailures.value = res.failures ?? []
+    autoCriteriaFailuresOpen.value = autoCriteriaFailures.value.length > 0
+  } catch {
+    autoCriteriaError.value = 'Failed to run auto criteria check'
+    window.setTimeout(() => {
+      autoCriteriaError.value = ''
+    }, 4000)
+  } finally {
+    autoCriteriaRunning.value = false
+  }
+}
 
 const beatsaverCode = computed(() => difficulty.value?.beatsaverCode ?? null)
 
@@ -129,6 +180,10 @@ const categoryOptions = computed(() =>
 )
 
 const canEditCategory = computed(() => isHeadRanking.value)
+
+const canEditComplexity = computed(
+  () => isHeadRanking.value && difficulty.value?.status !== 'RANKED'
+)
 
 const batchOptions = ref<{ value: string; label: string }[]>([])
 
@@ -433,7 +488,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </span>
-              <span v-if="isHeadRanking" class="rank-detail__complexity-editable"
+              <span v-if="canEditComplexity" class="rank-detail__complexity-editable"
                 @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
                 <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity"
                   :difficulty="difficulty.difficulty" />
@@ -464,6 +519,23 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                 <span v-else class="criteria-badge" :class="criteriaBadgeClass(difficulty.criteriaStatus)">
                   Criteria: {{ difficulty.criteriaStatus }}
                 </span>
+                <button v-if="isRanking" type="button"
+                  :class="['auto-criteria-badge', 'auto-criteria-badge--interactive', autoCriteriaBadgeClass(autoCriteriaStatus)]"
+                  :disabled="autoCriteriaRunning" @click="runAutoCriteria"
+                  :aria-label="autoCriteriaRunning ? 'Running auto criteria check' : 'Run auto criteria check'"
+                  :title="autoCriteriaStatus === 'UNAVAILABLE' ? 'The automated checker couldn\'t process this map. Check criteria manually. Click to re-run.' : 'Click to run the automated criteria check'">
+                  <span v-if="autoCriteriaRunning" class="auto-criteria-run__spinner" aria-hidden="true" />
+                  <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  {{ autoCriteriaLabel }}
+                </button>
+                <span v-else :class="['auto-criteria-badge', autoCriteriaBadgeClass(autoCriteriaStatus)]"
+                  :title="autoCriteriaStatus === 'UNAVAILABLE' ? 'The automated checker couldn\'t process this map. Check criteria manually.' : undefined">
+                  {{ autoCriteriaLabel }}
+                </span>
               </template>
               <template v-if="voteData">
                 <span v-if="difficulty.status === 'RANKED'" class="rank-detail__threshold"
@@ -479,6 +551,24 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                     : 'Neutral' }}
                 </span>
               </template>
+            </div>
+
+            <div v-if="autoCriteriaError" class="auto-criteria-error">{{ autoCriteriaError }}</div>
+
+            <div v-if="autoCriteriaFailures.length" class="auto-criteria-failures">
+              <button class="auto-criteria-failures__header"
+                @click="autoCriteriaFailuresOpen = !autoCriteriaFailuresOpen">
+                <svg class="auto-criteria-failures__chevron"
+                  :class="{ 'auto-criteria-failures__chevron--open': autoCriteriaFailuresOpen }" width="14" height="14"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+                Violations ({{ autoCriteriaFailures.length }})
+              </button>
+              <ul v-if="autoCriteriaFailuresOpen" class="auto-criteria-failures__list">
+                <li v-for="(f, i) in autoCriteriaFailures" :key="i">{{ f }}</li>
+              </ul>
             </div>
 
             <div class="rank-detail__links">
@@ -988,6 +1078,127 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   display: flex;
   gap: var(--space-sm);
   margin-top: var(--space-sm);
+}
+
+.auto-criteria-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.auto-criteria-badge--interactive {
+  cursor: pointer;
+  background: transparent;
+  font-family: inherit;
+  transition: filter 120ms ease, transform 120ms ease;
+}
+
+.auto-criteria-badge--interactive:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.auto-criteria-badge--interactive:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.auto-criteria-badge--interactive:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.auto-criteria-badge--pending {
+  background: color-mix(in srgb, var(--text-tertiary) 15%, transparent);
+  color: var(--text-secondary);
+  border-color: color-mix(in srgb, var(--text-tertiary) 30%, transparent);
+}
+
+.auto-criteria-badge--passed {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.auto-criteria-badge--failed {
+  background: color-mix(in srgb, var(--error) 15%, transparent);
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 30%, transparent);
+}
+
+.auto-criteria-badge--unavailable {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+  cursor: help;
+}
+
+.auto-criteria-run__spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--text-tertiary) 40%, transparent);
+  border-top-color: var(--text-primary);
+  animation: auto-criteria-spin 700ms linear infinite;
+}
+
+@keyframes auto-criteria-spin {
+  to { transform: rotate(360deg); }
+}
+
+.auto-criteria-error {
+  margin-top: var(--space-sm);
+  font-size: var(--text-caption);
+  color: var(--error);
+}
+
+.auto-criteria-failures {
+  margin-top: var(--space-sm);
+  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  border-radius: var(--radius-btn);
+  overflow: hidden;
+}
+
+.auto-criteria-failures__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--error);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.auto-criteria-failures__chevron {
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.auto-criteria-failures__chevron--open {
+  transform: rotate(180deg);
+}
+
+.auto-criteria-failures__list {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm) var(--space-sm) calc(var(--space-sm) + 18px);
+  list-style: disc;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .rank-detail__tabs {

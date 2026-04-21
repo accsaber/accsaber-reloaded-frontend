@@ -7,7 +7,13 @@ import type {
   UpdateMapComplexityRequest,
   UpdateMapStatusRequest,
 } from '@/types/api/admin'
-import type { DifficultyListParams, MapDifficultyResponse, MapListParams, MapResponse } from '@/types/api/maps'
+import type {
+  AutoCriteriaCheckResponse,
+  DifficultyListParams,
+  MapDifficultyResponse,
+  MapListParams,
+  MapResponse,
+} from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import type { Difficulty } from '@/types/enums'
 import { del, get, patch, post } from '../client'
@@ -79,6 +85,14 @@ export function updateMapComplexity(
   req: UpdateMapComplexityRequest,
 ): Promise<MapDifficultyResponse> {
   return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/complexity`, req)
+}
+
+export function runAutoCriteriaCheck(
+  difficultyId: string,
+): Promise<AutoCriteriaCheckResponse> {
+  return post<AutoCriteriaCheckResponse>(
+    `/ranking/maps/difficulties/${difficultyId}/auto-criteria-check`,
+  )
 }
 
 export function updateMapCategory(

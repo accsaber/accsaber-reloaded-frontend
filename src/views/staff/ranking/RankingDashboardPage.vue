@@ -9,6 +9,7 @@ import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import QueuedPlaylistsButton from '@/components/domain/QueuedPlaylistsButton.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
@@ -164,6 +165,7 @@ const rows = computed(() =>
       categoryAccent: catInfo?.accent ?? '#a855f7',
       complexity: d.complexity,
       criteriaStatus: d.criteriaStatus,
+      autoCriteriaStatus: d.autoCriteriaStatus,
       criteriaUpvotes: d.criteriaUpvotes,
       criteriaDownvotes: d.criteriaDownvotes,
       headCriteriaVote: d.headCriteriaVote,
@@ -254,27 +256,37 @@ function headCriteriaClass(vote: string): string {
   return 'criteria-text--pending'
 }
 
-function criteriaVerdict(row: Record<string, unknown>): 'passed' | 'failed' | 'pending' {
+function criteriaVerdict(row: Record<string, unknown>): {
+  verdict: 'passed' | 'failed' | 'pending' | 'unavailable'
+  source: 'staff' | 'auto' | 'none'
+} {
   const status = row.criteriaStatus as string | null
   const up = (row.criteriaUpvotes as number) ?? 0
   const down = (row.criteriaDownvotes as number) ?? 0
-  if (status === 'PASSED' || up > down) return 'passed'
-  if (status === 'FAILED' || down > up) return 'failed'
-  return 'pending'
+  if (status === 'PASSED' || up > down) return { verdict: 'passed', source: 'staff' }
+  if (status === 'FAILED' || down > up) return { verdict: 'failed', source: 'staff' }
+  const auto = row.autoCriteriaStatus as string | null
+  if (auto === 'PASSED') return { verdict: 'passed', source: 'auto' }
+  if (auto === 'FAILED') return { verdict: 'failed', source: 'auto' }
+  if (auto === 'UNAVAILABLE') return { verdict: 'unavailable', source: 'auto' }
+  return { verdict: 'pending', source: 'none' }
 }
 
 function criteriaLabel(row: Record<string, unknown>): string {
-  const v = criteriaVerdict(row)
-  if (v === 'passed') return 'PASS'
-  if (v === 'failed') return 'FAIL'
-  return 'PENDING'
+  const { verdict, source } = criteriaVerdict(row)
+  const base = verdict === 'passed' ? 'PASS' : verdict === 'failed' ? 'FAIL' : verdict === 'unavailable' ? 'N/A' : 'PENDING'
+  return source === 'auto' ? `AUTO ${base}` : base
 }
 
 function criteriaClassName(row: Record<string, unknown>): string {
-  const v = criteriaVerdict(row)
-  if (v === 'passed') return 'criteria-text--passed'
-  if (v === 'failed') return 'criteria-text--failed'
-  return 'criteria-text--pending'
+  const { verdict, source } = criteriaVerdict(row)
+  const classes: string[] = []
+  if (verdict === 'passed') classes.push('criteria-text--passed')
+  else if (verdict === 'failed') classes.push('criteria-text--failed')
+  else if (verdict === 'unavailable') classes.push('criteria-text--unavailable')
+  else classes.push('criteria-text--pending')
+  if (source === 'auto') classes.push('criteria-text--auto')
+  return classes.join(' ')
 }
 </script>
 
@@ -285,6 +297,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
     <div class="ranking-dashboard__controls">
       <BaseTabs :tabs="statusTabs" :model-value="activeStatus" @update:model-value="activeStatus = $event as MapDifficultyStatus" />
       <div class="ranking-dashboard__filters">
+        <QueuedPlaylistsButton />
         <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." style="flex: 1; min-width: 240px;" />
         <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>

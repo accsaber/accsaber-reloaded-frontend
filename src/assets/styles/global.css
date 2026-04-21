@@ -90,7 +90,9 @@ body {
 .criteria-text--passed { color: var(--success); }
 .criteria-text--failed { color: var(--error); }
 .criteria-text--pending { color: var(--warning); }
+.criteria-text--unavailable { color: var(--text-tertiary); }
 .criteria-text--head { font-style: italic; }
+.criteria-text--auto { opacity: 0.75; }
 
 /* --- Difficulty Badge (reusable) --- */
 .diff-badge {

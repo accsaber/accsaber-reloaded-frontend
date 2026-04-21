@@ -3,6 +3,13 @@ import type { PaginationParams } from '../pagination'
 
 export type CriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED'
 
+export type AutoCriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'UNAVAILABLE'
+
+export interface AutoCriteriaCheckResponse {
+  status: Exclude<AutoCriteriaStatus, 'PENDING'>
+  failures: string[]
+}
+
 export interface MapResponse {
   id: string
   songName: string
@@ -43,6 +50,7 @@ export interface MapDifficultyResponse {
   active: boolean
   status: MapDifficultyStatus
   criteriaStatus: string
+  autoCriteriaStatus: AutoCriteriaStatus
   ssLeaderboardId: string | null
   blLeaderboardId: string | null
   maxScore: number
