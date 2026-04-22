@@ -19,7 +19,7 @@ export interface RefreshRequest {
 
 export interface RequestAccessRequest {
   username: string
-  email: string
+  email?: string
   password: string
   role: StaffRole
 }

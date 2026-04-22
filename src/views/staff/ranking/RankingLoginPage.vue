@@ -93,7 +93,7 @@ async function handleLogin() {
 }
 
 async function handleRequestAccess() {
-  if (!requestUsername.value || !requestEmail.value || !requestPassword.value) return
+  if (!requestUsername.value || !requestPassword.value) return
   if (requestPassword.value !== requestConfirmPassword.value) {
     requestError.value = 'Passwords do not match.'
     return
@@ -104,7 +104,7 @@ async function handleRequestAccess() {
     const { requestAccess } = await import('@/api/staff-auth')
     await requestAccess({
       username: requestUsername.value,
-      email: requestEmail.value,
+      email: requestEmail.value || undefined,
       password: requestPassword.value,
       role: 'RANKING',
     })
@@ -231,8 +231,13 @@ const providerMeta: Record<OAuthProvider, string> = {
             <div class="ranking-login__form-fields">
               <BaseInput v-model="requestUsername" label="Username" placeholder="Your username"
                 autocomplete="username" :disabled="requestLoading" />
-              <BaseInput v-model="requestEmail" label="Email" type="email" placeholder="your@email.com"
-                autocomplete="email" :disabled="requestLoading" />
+              <div class="ranking-login__field">
+                <BaseInput v-model="requestEmail" label="Email (optional)" type="email"
+                  placeholder="your@email.com" autocomplete="email" :disabled="requestLoading" />
+                <span class="ranking-login__field-hint">
+                  Optional - only used if an admin needs to reach you about your request.
+                </span>
+              </div>
               <BaseInput v-model="requestPassword" label="Password" type="password" placeholder="Password"
                 autocomplete="new-password" :disabled="requestLoading" />
               <BaseInput v-model="requestConfirmPassword" label="Confirm Password" type="password"
@@ -250,7 +255,7 @@ const providerMeta: Record<OAuthProvider, string> = {
             </div>
 
             <BaseButton type="submit" variant="primary" size="lg" :loading="requestLoading"
-              :disabled="!requestUsername || !requestEmail || !requestPassword || !requestConfirmPassword"
+              :disabled="!requestUsername || !requestPassword || !requestConfirmPassword"
               style="width: 100%; margin-top: var(--space-md)">
               Submit Request
             </BaseButton>
@@ -478,6 +483,18 @@ const providerMeta: Record<OAuthProvider, string> = {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.ranking-login__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.ranking-login__field-hint {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  line-height: 1.4;
 }
 
 .ranking-login__error {

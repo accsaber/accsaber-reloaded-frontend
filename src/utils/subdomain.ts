@@ -17,9 +17,3 @@ export function mainSiteUrl(path: string): string {
 export function playerProfileHref(userId: string | number): string {
   return mainSiteUrl(`/players/${userId}`)
 }
-
-export function oauthCallbackUrl(): string {
-  const configured = import.meta.env.VITE_OAUTH_CALLBACK_URL?.trim()
-  if (configured) return configured
-  return `${mainSiteBase()}/auth/callback`
-}

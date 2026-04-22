@@ -5,7 +5,6 @@ import type {
   PlayerLogoutRequest,
   PlayerRefreshRequest,
 } from '@/types/api/player-auth'
-import { oauthCallbackUrl } from '@/utils/subdomain'
 import { del, get, post } from './client'
 
 export function getAuthMe(): Promise<AuthMeResponse> {
@@ -41,5 +40,5 @@ export function buildOAuthStartUrl(
 }
 
 export function getDefaultCallbackUrl(): string {
-  return oauthCallbackUrl()
+  return `${window.location.origin}/auth/callback`
 }
