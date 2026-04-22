@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/stores/auth'
 import type { StaffRole } from '@/types/enums'
+import { isAdminSubdomain, isRankingSubdomain } from '@/utils/subdomain'
 import { createRouter, createWebHistory } from 'vue-router'
 
 declare module 'vue-router' {
@@ -9,9 +10,6 @@ declare module 'vue-router' {
     requiredRole?: StaffRole
   }
 }
-
-const isAdminSubdomain = window.location.hostname.startsWith('admin.')
-const isRankingSubdomain = window.location.hostname.startsWith('ranking.')
 
 function getHomeComponent() {
   if (isAdminSubdomain) return () => import('@/views/staff/AdminPage.vue')
@@ -98,6 +96,21 @@ const router = createRouter({
       path: '/whats-new',
       name: 'whats-new',
       component: () => import('@/views/WhatsNewPage.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsPage.vue'),
+    },
+    {
+      path: '/auth/callback',
+      name: 'auth-callback',
+      component: () => import('@/views/auth/AuthCallbackPage.vue'),
+    },
+    {
+      path: '/login/finish',
+      name: 'login-finish',
+      component: () => import('@/views/auth/LoginFinishPage.vue'),
     },
     {
       path: '/staff/login',
@@ -189,16 +202,18 @@ router.beforeEach(async (to) => {
     const auth = useAuthStore()
     const loginRoute = getLoginRoute(to.meta.requiredRole)
 
-    if (!auth.isStaffAuthenticated) {
+    if (!auth.isStaffAuthorized) {
       return { name: loginRoute, query: { redirect: to.fullPath } }
     }
 
-    if (auth.isTokenExpiringSoon) {
+    if (auth.staffToken && auth.isTokenExpiringSoon) {
       try {
         await auth.refreshStaffToken()
       } catch {
         auth.clearStaffAuth()
-        return { name: loginRoute, query: { redirect: to.fullPath } }
+        if (!auth.isStaffAuthorized) {
+          return { name: loginRoute, query: { redirect: to.fullPath } }
+        }
       }
     }
 

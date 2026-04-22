@@ -277,7 +277,6 @@ async function fetchBatches() {
       ? 'difficultyCount,desc'
       : 'releasedAt,desc'
     const res = await getBatches({
-      status: 'RELEASED',
       page: currentPage.value - 1,
       size: 10,
       sort: sortParam,

@@ -8,6 +8,7 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
+import { playerProfileHref } from '@/utils/subdomain'
 
 const categoryStore = useCategoryStore()
 
@@ -140,7 +141,7 @@ async function unbanUser(user: LeaderboardResponse) {
             >
               Unban
             </BaseButton>
-            <BaseButton size="sm" :href="`/players/${item.userId}`">Profile</BaseButton>
+            <BaseButton size="sm" :href="playerProfileHref(item.userId)">Profile</BaseButton>
           </div>
         </td>
       </template>

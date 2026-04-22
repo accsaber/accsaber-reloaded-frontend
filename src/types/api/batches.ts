@@ -25,5 +25,10 @@ export interface PublicBatchResponse {
 }
 
 export interface BatchListParams extends PaginationParams {
+  search?: string
+}
+
+export interface RankingBatchListParams extends PaginationParams {
   status?: BatchStatus
+  search?: string
 }

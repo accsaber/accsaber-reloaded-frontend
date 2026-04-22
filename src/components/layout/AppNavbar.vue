@@ -5,18 +5,16 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useThemeStore } from '@/stores/theme'
+import { isAdminSubdomain, isRankingSubdomain, isStaffSubdomain, playerProfileHref } from '@/utils/subdomain'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
 const route = useRoute()
 const router = useRouter()
 
 const loginModalOpen = ref(false)
 const searchModalOpen = ref(false)
-const showLogoutConfirm = ref(false)
 const showStaffLogoutConfirm = ref(false)
 const mobileDrawerOpen = ref(false)
 const scrolled = ref(false)
@@ -25,9 +23,6 @@ const avatarFailed = ref(false)
 watch(() => authStore.userProfile?.avatarUrl, () => {
   avatarFailed.value = false
 })
-
-const isAdminSubdomain = window.location.hostname.startsWith('admin.')
-const isRankingSubdomain = window.location.hostname.startsWith('ranking.')
 
 type MobileIcon = 'leaderboard' | 'map' | 'milestone'
 interface NavItem {
@@ -84,7 +79,7 @@ const isRankingContext = computed(() =>
 )
 
 const navItems = computed(() => {
-  if (isRankingContext.value && authStore.isStaffAuthenticated) {
+  if (isRankingContext.value && authStore.isStaffAuthorized) {
     return rankingNavItems.value
   }
   if (isAdminSubdomain) return adminNavItems
@@ -106,23 +101,21 @@ function isActive(to: string): boolean {
 
 function handleUserClick() {
   if (authStore.isLoggedIn && authStore.userId) {
-    router.push({ name: 'player-profile', params: { userId: authStore.userId } })
+    if (isStaffSubdomain) {
+      window.location.assign(playerProfileHref(authStore.userId))
+    } else {
+      router.push({ name: 'player-profile', params: { userId: authStore.userId } })
+    }
   } else {
     loginModalOpen.value = true
   }
   mobileDrawerOpen.value = false
 }
 
-function confirmLogout() {
-  showLogoutConfirm.value = false
-  authStore.clearUserId()
-  mobileDrawerOpen.value = false
-}
-
-function confirmStaffLogout() {
+async function confirmStaffLogout() {
   showStaffLogoutConfirm.value = false
-  authStore.logout()
   mobileDrawerOpen.value = false
+  await authStore.staffLogout()
 }
 
 function openSearch() {
@@ -204,17 +197,7 @@ onUnmounted(() => {
           </svg>
         </button>
 
-        <button v-if="authStore.isLoggedIn" class="navbar__icon-btn navbar__logout navbar__icon-btn--desktop-only"
-          aria-label="Log out" @click="showLogoutConfirm = true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
-
-        <button v-if="authStore.isStaffAuthenticated"
+        <button v-if="authStore.isAdmin"
           class="navbar__icon-btn navbar__logout navbar__icon-btn--desktop-only" aria-label="Staff log out"
           @click="showStaffLogoutConfirm = true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -224,26 +207,15 @@ onUnmounted(() => {
           </svg>
         </button>
 
-        <button class="navbar__icon-btn navbar__icon-btn--desktop-only"
-          :aria-label="themeStore.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
-          @click="themeStore.toggle()">
-          <svg v-if="themeStore.theme === 'dark'" width="20" height="20" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-          </svg>
-          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        <router-link to="/settings" class="navbar__icon-btn navbar__icon-btn--desktop-only"
+          :class="{ 'navbar__icon-btn--active': isActive('/settings') }" aria-label="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-        </button>
+        </router-link>
 
         <button class="navbar__icon-btn navbar__hamburger" aria-label="Menu"
           @click="mobileDrawerOpen = !mobileDrawerOpen">
@@ -285,14 +257,11 @@ onUnmounted(() => {
     </section>
 
     <section class="navbar__drawer-section">
-      <button class="navbar__drawer-link" @click="themeStore.toggle()">
-        {{ themeStore.theme === 'dark' ? 'Light mode' : 'Dark mode' }}
-      </button>
-      <button v-if="authStore.isLoggedIn" class="navbar__drawer-link navbar__drawer-link--danger"
-        @click="mobileDrawerOpen = false; showLogoutConfirm = true">
-        Log out
-      </button>
-      <button v-if="authStore.isStaffAuthenticated"
+      <router-link to="/settings" class="navbar__drawer-link"
+        :class="{ 'navbar__drawer-link--active': isActive('/settings') }" @click="mobileDrawerOpen = false">
+        Settings
+      </router-link>
+      <button v-if="authStore.isAdmin"
         class="navbar__drawer-link navbar__drawer-link--danger"
         @click="mobileDrawerOpen = false; showStaffLogoutConfirm = true">
         Staff log out
@@ -303,16 +272,6 @@ onUnmounted(() => {
   <GlobalSearchModal :open="searchModalOpen" @close="searchModalOpen = false" />
 
   <PseudoLoginModal :open="loginModalOpen" @close="loginModalOpen = false" />
-
-  <BaseModal :open="showLogoutConfirm" title="Log Out" max-width="340px" @close="showLogoutConfirm = false">
-    <p class="logout-confirm__message">Are you sure you want to log out?</p>
-    <template #footer>
-      <div class="logout-confirm__actions">
-        <BaseButton @click="showLogoutConfirm = false">Cancel</BaseButton>
-        <BaseButton variant="destructive" @click="confirmLogout">Log Out</BaseButton>
-      </div>
-    </template>
-  </BaseModal>
 
   <BaseModal :open="showStaffLogoutConfirm" title="Staff Log Out" max-width="340px"
     @close="showStaffLogoutConfirm = false">

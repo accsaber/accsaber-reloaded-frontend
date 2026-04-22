@@ -21,10 +21,6 @@ export function getUser(userId: string): Promise<UserResponse> {
   return get<UserResponse>(`/users/${userId}`)
 }
 
-export function linkUser(url: string): Promise<UserResponse> {
-  return get<UserResponse>(`/users/link${buildQuery({ url })}`)
-}
-
 export function getUserScores(
   userId: string,
   params?: UserScoresParams,

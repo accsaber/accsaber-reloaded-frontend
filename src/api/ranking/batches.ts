@@ -1,10 +1,10 @@
 import type { CreateBatchRequest, UpdateBatchStatusRequest } from '@/types/api/admin'
-import type { BatchResponse } from '@/types/api/batches'
+import type { BatchResponse, RankingBatchListParams } from '@/types/api/batches'
 import type { Page } from '@/types/pagination'
 import { del, get, patch, post } from '../client'
 import { buildQuery } from '../utils'
 
-export function listBatches(params?: Record<string, unknown>): Promise<Page<BatchResponse>> {
+export function listBatches(params?: RankingBatchListParams): Promise<Page<BatchResponse>> {
   return get<Page<BatchResponse>>(`/ranking/batches${buildQuery(params)}`)
 }
 

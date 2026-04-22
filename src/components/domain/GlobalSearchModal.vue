@@ -7,6 +7,7 @@ import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
 import type { LeaderboardResponse } from '@/types/api/users'
 import { getRankClass } from '@/utils/ranking'
+import { isStaffSubdomain, playerProfileHref, mainSiteUrl } from '@/utils/subdomain'
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -105,11 +106,19 @@ async function runSearch(query: string) {
 }
 
 function goToPlayer(userId: string) {
+  if (isStaffSubdomain) {
+    window.location.assign(playerProfileHref(userId))
+    return
+  }
   router.push({ name: 'player-profile', params: { userId } })
   emit('close')
 }
 
 function goToMap(mapId: string) {
+  if (isStaffSubdomain) {
+    window.location.assign(mainSiteUrl(`/maps/${mapId}`))
+    return
+  }
   router.push({ name: 'map-detail', params: { mapId } })
   emit('close')
 }
