@@ -6,6 +6,12 @@ import {
 import { login as apiLogin, refreshToken as apiRefresh, logout as apiLogout } from '@/api/staff-auth'
 import type { AuthMeResponse, OAuthProvider } from '@/types/api/player-auth'
 import type { StaffRole } from '@/types/enums'
+import {
+  clearPlayerSession,
+  migrateLegacyPlayerSession,
+  readPlayerSession,
+  writePlayerSession,
+} from '@/utils/playerSession'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -19,12 +25,9 @@ const ROLE_HIERARCHY: Record<StaffRole, number> = {
 
 const PROACTIVE_REFRESH_MS = 24 * 60 * 60 * 1000
 
-const LS_ACCESS_TOKEN = 'playerAccessToken'
-const LS_REFRESH_TOKEN = 'playerRefreshToken'
-const LS_EXPIRES_AT = 'playerTokenExpiresAt'
-const LS_USER_ID = 'playerUserId'
-
 const LEGACY_LS_USER_ID = 'userId'
+
+migrateLegacyPlayerSession()
 
 interface UserProfileShape {
   name: string
@@ -33,10 +36,11 @@ interface UserProfileShape {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const accessToken = ref<string | null>(localStorage.getItem(LS_ACCESS_TOKEN))
-  const refreshTokenValue = ref<string | null>(localStorage.getItem(LS_REFRESH_TOKEN))
-  const expiresAt = ref<number>(Number(localStorage.getItem(LS_EXPIRES_AT)) || 0)
-  const userId = ref<string | null>(localStorage.getItem(LS_USER_ID))
+  const initialSession = readPlayerSession()
+  const accessToken = ref<string | null>(initialSession.accessToken)
+  const refreshTokenValue = ref<string | null>(initialSession.refreshToken)
+  const expiresAt = ref<number>(initialSession.expiresAt)
+  const userId = ref<string | null>(initialSession.userId)
 
   const authMe = ref<AuthMeResponse | null>(null)
 
@@ -116,10 +120,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshTokenValue.value = session.refreshToken
     expiresAt.value = session.expiresAt
     userId.value = session.userId
-    localStorage.setItem(LS_ACCESS_TOKEN, session.accessToken)
-    localStorage.setItem(LS_REFRESH_TOKEN, session.refreshToken)
-    localStorage.setItem(LS_EXPIRES_AT, String(session.expiresAt))
-    localStorage.setItem(LS_USER_ID, session.userId)
+    writePlayerSession(session)
     clearStaffAuth()
   }
 
@@ -129,10 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
     expiresAt.value = 0
     userId.value = null
     authMe.value = null
-    localStorage.removeItem(LS_ACCESS_TOKEN)
-    localStorage.removeItem(LS_REFRESH_TOKEN)
-    localStorage.removeItem(LS_EXPIRES_AT)
-    localStorage.removeItem(LS_USER_ID)
+    clearPlayerSession()
   }
 
   let playerRefreshPromise: Promise<boolean> | null = null
@@ -171,8 +169,16 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const me = await getAuthMe()
       authMe.value = me
-      userId.value = String(me.userId)
-      localStorage.setItem(LS_USER_ID, String(me.userId))
+      const nextUserId = String(me.userId)
+      if (userId.value !== nextUserId && accessToken.value && refreshTokenValue.value) {
+        writePlayerSession({
+          accessToken: accessToken.value,
+          refreshToken: refreshTokenValue.value,
+          expiresAt: expiresAt.value,
+          userId: nextUserId,
+        })
+      }
+      userId.value = nextUserId
       return me
     } catch {
       authMe.value = null

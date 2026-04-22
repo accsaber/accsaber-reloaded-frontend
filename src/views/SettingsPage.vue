@@ -9,6 +9,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import type { OAuthProvider } from '@/types/api/player-auth'
+import { isRankingSubdomain } from '@/utils/subdomain'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -31,17 +32,21 @@ const route = useRoute()
 
 const me = computed(() => authStore.authMe)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
+const canAccessAccount = computed(
+  () => isLoggedIn.value || (isRankingSubdomain && authStore.isStaffAuthorized),
+)
+const canAccessConnections = computed(() => isLoggedIn.value)
 
 const activeSection = ref<SectionKey>('appearance')
 const connectionError = ref('')
 const logoutConfirm = ref(false)
 const loginModalOpen = ref(false)
 
-const sections: SectionDef[] = [
+const sections = computed<SectionDef[]>(() => [
   { key: 'appearance', label: 'Appearance', requiresLogin: false },
-  { key: 'account', label: 'Account', requiresLogin: true },
-  { key: 'connections', label: 'Connections', requiresLogin: true },
-]
+  { key: 'account', label: 'Account', requiresLogin: !canAccessAccount.value },
+  { key: 'connections', label: 'Connections', requiresLogin: !canAccessConnections.value },
+])
 
 const providerLabels: Record<OAuthProvider, string> = {
   discord: 'Discord',
@@ -73,7 +78,11 @@ async function disconnect(provider: OAuthProvider) {
 
 async function confirmLogout() {
   logoutConfirm.value = false
-  await authStore.logout()
+  if (isRankingSubdomain) {
+    await Promise.all([authStore.staffLogout(), authStore.logout()])
+  } else {
+    await authStore.logout()
+  }
   activeSection.value = 'appearance'
 }
 
@@ -94,10 +103,10 @@ function selectSection(section: SectionDef) {
       <nav class="settings__nav" aria-label="Settings sections">
         <button v-for="section in sections" :key="section.key" type="button" class="settings__nav-btn" :class="{
           'settings__nav-btn--active': activeSection === section.key,
-          'settings__nav-btn--locked': section.requiresLogin && !isLoggedIn,
+          'settings__nav-btn--locked': section.requiresLogin,
         }" @click="selectSection(section)">
           <span class="settings__nav-label">{{ section.label }}</span>
-          <svg v-if="section.requiresLogin && !isLoggedIn" class="settings__nav-lock" width="14" height="14"
+          <svg v-if="section.requiresLogin" class="settings__nav-lock" width="14" height="14"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round" aria-label="Locked">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -152,7 +161,7 @@ function selectSection(section: SectionDef) {
             </div>
           </section>
 
-          <section v-if="!isLoggedIn" class="settings-card settings-card--gated">
+          <section v-if="!canAccessAccount" class="settings-card settings-card--gated">
             <header class="settings-card__header">
               <h2 class="settings-card__title">More options locked</h2>
               <p class="settings-card__desc">
@@ -163,14 +172,14 @@ function selectSection(section: SectionDef) {
           </section>
         </template>
 
-        <template v-else-if="activeSection === 'account' && me">
+        <template v-else-if="activeSection === 'account' && canAccessAccount">
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Account</h2>
               <p class="settings-card__desc">Your public profile across AccSaber.</p>
             </header>
 
-            <div class="settings-profile">
+            <div v-if="me" class="settings-profile">
               <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="settings-profile__avatar" />
               <div class="settings-profile__text">
                 <span class="settings-profile__name">{{ me.name }}</span>
@@ -181,14 +190,18 @@ function selectSection(section: SectionDef) {
             <div class="settings-row settings-row--danger">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sign out</span>
-                <span class="settings-row__hint">Clears your session on this device.</span>
+                <span class="settings-row__hint">
+                  {{ isRankingSubdomain
+                    ? 'Signs you out of ranking and across AccSaber.'
+                    : 'Clears your session on this device.' }}
+                </span>
               </div>
               <BaseButton variant="destructive" @click="logoutConfirm = true">Log out</BaseButton>
             </div>
           </section>
         </template>
 
-        <template v-else-if="activeSection === 'connections' && me">
+        <template v-else-if="activeSection === 'connections' && canAccessConnections && me">
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Linked accounts</h2>
