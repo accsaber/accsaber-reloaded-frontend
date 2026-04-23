@@ -5,6 +5,7 @@ import AdminTable from '@/components/admin/AdminTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
@@ -82,6 +83,59 @@ async function unbanUser(user: LeaderboardResponse) {
     delete actionLoading.value[user.userId]
   }
 }
+
+const countryModalOpen = ref(false)
+const countryTarget = ref<LeaderboardResponse | null>(null)
+const countryInput = ref('')
+const countryLoading = ref(false)
+const countryError = ref('')
+
+function openCountryOverride(user: LeaderboardResponse) {
+  countryTarget.value = user
+  countryInput.value = user.country?.toUpperCase() ?? ''
+  countryError.value = ''
+  countryModalOpen.value = true
+}
+
+async function saveCountryOverride() {
+  if (!countryTarget.value) return
+  const code = countryInput.value.trim().toUpperCase()
+  if (!/^[A-Z]{2}$/.test(code)) {
+    countryError.value = 'Use a 2-letter ISO code (e.g. US, DE, JP).'
+    return
+  }
+  countryLoading.value = true
+  countryError.value = ''
+  try {
+    const { setCountryOverride } = await import('@/api/admin/users')
+    const updated = await setCountryOverride(countryTarget.value.userId, { country: code })
+    const idx = users.value.findIndex((u) => u.userId === updated.id)
+    if (idx !== -1) users.value[idx] = { ...users.value[idx], country: updated.country }
+    countryModalOpen.value = false
+  } catch {
+    countryError.value = 'Failed to set country override.'
+  } finally {
+    countryLoading.value = false
+  }
+}
+
+async function clearCountry() {
+  if (!countryTarget.value) return
+  if (!confirm('Clear country override and restore the provider-reported country?')) return
+  countryLoading.value = true
+  countryError.value = ''
+  try {
+    const { clearCountryOverride } = await import('@/api/admin/users')
+    const updated = await clearCountryOverride(countryTarget.value.userId)
+    const idx = users.value.findIndex((u) => u.userId === updated.id)
+    if (idx !== -1) users.value[idx] = { ...users.value[idx], country: updated.country }
+    countryModalOpen.value = false
+  } catch {
+    countryError.value = 'Failed to clear override.'
+  } finally {
+    countryLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -114,10 +168,10 @@ async function unbanUser(user: LeaderboardResponse) {
           </div>
         </td>
         <td>
-          <div class="country-cell">
+          <button type="button" class="country-cell country-cell--btn" @click="openCountryOverride(item)" title="Edit country override">
             <CountryFlag :country="item.country" />
             <span class="country-code">{{ item.country }}</span>
-          </div>
+          </button>
         </td>
         <td class="mono right">{{ item.ap.toFixed(2) }}</td>
         <td class="mono right">{{ (item.averageAcc * 100).toFixed(2) }}%</td>
@@ -149,6 +203,19 @@ async function unbanUser(user: LeaderboardResponse) {
 
     <PaginationControls :page="page" :total-pages="totalPages" @update:page="(p: number) => { page = p }" />
   </div>
+
+  <BaseModal :open="countryModalOpen" :title="`Country Override - ${countryTarget?.userName ?? ''}`" @close="countryModalOpen = false">
+    <div class="country-modal">
+      <p class="country-modal__hint">Set a manual country override (ISO 3166-1 alpha-2). Clearing restores the provider-reported country.</p>
+      <BaseInput v-model="countryInput" label="Country code" placeholder="e.g. US" maxlength="2" />
+      <p v-if="countryError" class="country-modal__error">{{ countryError }}</p>
+    </div>
+    <template #footer>
+      <BaseButton variant="destructive" :loading="countryLoading" @click="clearCountry">Clear Override</BaseButton>
+      <BaseButton @click="countryModalOpen = false">Cancel</BaseButton>
+      <BaseButton variant="primary" :loading="countryLoading" @click="saveCountryOverride">Save</BaseButton>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -188,5 +255,22 @@ async function unbanUser(user: LeaderboardResponse) {
 .country-cell { display: flex; align-items: center; gap: 6px; }
 .country-code { font-size: var(--text-caption); color: var(--text-secondary); }
 
+.country-cell--btn {
+  background: none;
+  border: 1px dashed transparent;
+  border-radius: var(--radius-btn);
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: border-color 100ms, background-color 100ms;
+}
+.country-cell--btn:hover {
+  border-color: var(--text-tertiary);
+  background: var(--bg-elevated);
+}
+
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
+
+.country-modal { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-sm) 0; }
+.country-modal__hint { font-size: var(--text-caption); color: var(--text-secondary); margin: 0; line-height: 1.5; }
+.country-modal__error { font-size: var(--text-caption); color: var(--error); margin: 0; }
 </style>

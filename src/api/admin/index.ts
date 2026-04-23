@@ -1,3 +1,4 @@
+export * as adminBadges from './badges'
 export * as adminCampaigns from './campaigns'
 export * as adminCurves from './curves'
 export * as adminMilestones from './milestones'

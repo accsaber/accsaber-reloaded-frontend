@@ -3,31 +3,38 @@ import type {
   CreateCampaignRequest,
   UpdateCampaignRequest,
 } from '@/types/api/admin'
-import type { CampaignDetailResponse } from '@/types/api/campaigns'
-import { del, post, put } from '../client'
+import type {
+  CampaignDetailResponse,
+  CampaignMapResponse,
+  CampaignResponse,
+} from '@/types/api/campaigns'
+import { patch, post } from '../client'
 
-export function createCampaign(req: CreateCampaignRequest): Promise<CampaignDetailResponse> {
-  return post<CampaignDetailResponse>('/admin/campaigns', req)
+export function createCampaign(req: CreateCampaignRequest): Promise<CampaignResponse> {
+  return post<CampaignResponse>('/admin/campaigns', req)
 }
 
 export function updateCampaign(
-  id: string,
+  campaignId: string,
   req: UpdateCampaignRequest,
 ): Promise<CampaignDetailResponse> {
-  return put<CampaignDetailResponse>(`/admin/campaigns/${id}`, req)
+  return patch<CampaignDetailResponse>(`/admin/campaigns/${campaignId}`, req)
 }
 
-export function deactivateCampaign(id: string): Promise<void> {
-  return del<void>(`/admin/campaigns/${id}`)
+export function deactivateCampaign(campaignId: string): Promise<void> {
+  return patch<void>(`/admin/campaigns/${campaignId}/deactivate`)
 }
 
 export function addCampaignMap(
   campaignId: string,
   req: AddCampaignMapRequest,
-): Promise<CampaignDetailResponse> {
-  return post<CampaignDetailResponse>(`/admin/campaigns/${campaignId}/maps`, req)
+): Promise<CampaignMapResponse> {
+  return post<CampaignMapResponse>(`/admin/campaigns/${campaignId}/maps`, req)
 }
 
-export function deactivateCampaignMap(campaignId: string, mapId: string): Promise<void> {
-  return del<void>(`/admin/campaigns/${campaignId}/maps/${mapId}`)
+export function deactivateCampaignMap(
+  campaignId: string,
+  campaignMapId: string,
+): Promise<void> {
+  return patch<void>(`/admin/campaigns/${campaignId}/maps/${campaignMapId}/deactivate`)
 }

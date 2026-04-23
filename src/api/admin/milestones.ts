@@ -9,7 +9,13 @@ import type {
   UpdateMilestoneRequest,
   UpdatePrerequisiteRequest,
 } from '@/types/api/admin'
-import type { MilestoneResponse, MilestoneSetResponse, PrerequisiteLinkResponse } from '@/types/api/milestones'
+import type {
+  MilestoneResponse,
+  MilestoneSetResponse,
+  PrerequisiteLinkResponse,
+  SetGroupLinkResponse,
+  SetGroupResponse,
+} from '@/types/api/milestones'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { del, get, patch, post, put } from '../client'
 import { buildQuery } from '../utils'
@@ -63,8 +69,8 @@ export function linkMilestoneMaps(id: string, req: LinkMilestoneMapRequest): Pro
   return post<void>(`/admin/milestones/${id}/map-links`, req)
 }
 
-export function unlinkMilestoneMaps(id: string): Promise<void> {
-  return del<void>(`/admin/milestones/${id}/map-links`)
+export function unlinkMilestoneMaps(id: string, req: LinkMilestoneMapRequest): Promise<void> {
+  return del<void>(`/admin/milestones/${id}/map-links`, req)
 }
 
 export function createPrerequisite(req: CreatePrerequisiteRequest): Promise<PrerequisiteLinkResponse> {
@@ -81,4 +87,63 @@ export function deletePrerequisite(linkId: string): Promise<void> {
 
 export function getAdminPrerequisites(milestoneId: string): Promise<PrerequisiteLinkResponse[]> {
   return get<PrerequisiteLinkResponse[]>(`/admin/milestones/${milestoneId}/prerequisites`)
+}
+
+export function deleteMilestone(id: string): Promise<void> {
+  return del<void>(`/admin/milestones/${id}`)
+}
+
+export function backfillAllMilestones(): Promise<void> {
+  return post<void>('/admin/milestones/backfill-all')
+}
+
+// --- Milestone set groups ---
+
+export interface CreateSetGroupRequest {
+  name: string
+  description?: string
+}
+
+export type UpdateSetGroupRequest = CreateSetGroupRequest
+
+export function createSetGroup(req: CreateSetGroupRequest): Promise<SetGroupResponse> {
+  return post<SetGroupResponse>('/admin/milestones/set-groups', req)
+}
+
+export function updateSetGroup(
+  groupId: string,
+  req: UpdateSetGroupRequest,
+): Promise<SetGroupResponse> {
+  return put<SetGroupResponse>(`/admin/milestones/set-groups/${groupId}`, req)
+}
+
+export function deleteSetGroup(groupId: string): Promise<void> {
+  return del<void>(`/admin/milestones/set-groups/${groupId}`)
+}
+
+// --- Milestone set links (group membership + ordering) ---
+
+export interface CreateSetLinkRequest {
+  groupId: string
+  setId: string
+  sortOrder?: number
+}
+
+export interface UpdateSetLinkRequest {
+  sortOrder: number
+}
+
+export function createSetLink(req: CreateSetLinkRequest): Promise<SetGroupLinkResponse> {
+  return post<SetGroupLinkResponse>('/admin/milestones/set-links', req)
+}
+
+export function updateSetLink(
+  linkId: string,
+  req: UpdateSetLinkRequest,
+): Promise<SetGroupLinkResponse> {
+  return put<SetGroupLinkResponse>(`/admin/milestones/set-links/${linkId}`, req)
+}
+
+export function deleteSetLink(linkId: string): Promise<void> {
+  return del<void>(`/admin/milestones/set-links/${linkId}`)
 }

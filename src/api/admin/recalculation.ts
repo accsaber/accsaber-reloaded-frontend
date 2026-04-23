@@ -1,3 +1,4 @@
+import type { UserResponse } from '@/types/api/users'
 import { get, post } from '../client'
 import { buildQuery } from '../utils'
 
@@ -45,14 +46,34 @@ export function backfillScoresByDifficulty(difficultyId: string): Promise<void> 
   return post<void>(`/admin/import/scores/backfill/${difficultyId}`)
 }
 
+export function backfillScoresByUser(userId: string): Promise<void> {
+  return post<void>(`/admin/import/scores/backfill-user/${userId}`)
+}
+
+export function backfillScoresByUsers(userIds: string[]): Promise<void> {
+  return post<void>('/admin/import/scores/backfill-users', userIds)
+}
+
+// --- Score removal ---
+
+export interface RemoveScoreParams {
+  userId: string
+  mapDifficultyId: string
+  reason?: string
+}
+
+export function removeScore(params: RemoveScoreParams): Promise<void> {
+  return post<void>(`/admin/recalculate/scores/remove${buildQuery(params)}`)
+}
+
 // --- Player refresh ---
 
-export function refreshPlayer(userId: string): Promise<void> {
-  return post<void>(`/admin/import/players/${userId}/refresh`)
+export function refreshPlayer(userId: string): Promise<UserResponse> {
+  return post<UserResponse>(`/admin/users/${userId}/refresh`)
 }
 
 export function refreshAllPlayers(): Promise<void> {
-  return post<void>('/admin/import/players/refresh-all')
+  return post<void>('/admin/users/refresh')
 }
 
 // --- WebSocket management ---

@@ -172,6 +172,18 @@ async function deactivate(m: MilestoneResponse) {
   }
 }
 
+async function removeMilestone(m: MilestoneResponse) {
+  if (!confirm(`Delete "${m.title}"?\n\nThis deactivates the milestone AND recalculates XP for every user who had it.`)) return
+  milestoneActionLoading.value[m.id] = true
+  try {
+    const { deleteMilestone } = await import('@/api/admin/milestones')
+    await deleteMilestone(m.id)
+    milestones.value = milestones.value.filter((x) => x.id !== m.id)
+  } finally {
+    delete milestoneActionLoading.value[m.id]
+  }
+}
+
 const showEditModal = ref(false)
 const editTarget = ref<MilestoneResponse | null>(null)
 const editForm = ref({ title: '', description: '' })
@@ -469,6 +481,10 @@ const STATUS_OPTIONS = [
                 <BaseButton v-if="m.status === 'ACTIVE'" size="sm" variant="destructive"
                   :loading="milestoneActionLoading[m.id]" @click="deactivate(m)">
                   Deactivate
+                </BaseButton>
+                <BaseButton size="sm" variant="destructive"
+                  :loading="milestoneActionLoading[m.id]" @click="removeMilestone(m)">
+                  Delete
                 </BaseButton>
               </div>
             </div>

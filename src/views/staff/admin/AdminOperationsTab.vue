@@ -111,6 +111,56 @@ async function backfillScores() {
   }, id ? 'Backfill queued for difficulty.' : 'Full score backfill queued.')
 }
 
+const userBackfill = ref(makeOp())
+const userBackfillIds = ref('')
+
+async function backfillUserScores() {
+  const raw = userBackfillIds.value.trim()
+  if (!raw) return
+  const ids = raw.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean)
+  if (!ids.length) return
+  run(userBackfill.value, async () => {
+    const mod = await import('@/api/admin/recalculation')
+    if (ids.length === 1) {
+      await mod.backfillScoresByUser(ids[0])
+    } else {
+      await mod.backfillScoresByUsers(ids)
+    }
+    userBackfillIds.value = ''
+  }, `Backfill queued for ${ids.length} user${ids.length === 1 ? '' : 's'}.`)
+}
+
+const removeScoreOp = ref(makeOp())
+const removeScoreUserId = ref('')
+const removeScoreDiffId = ref('')
+const removeScoreReason = ref('')
+
+async function removeScore() {
+  if (!removeScoreUserId.value || !removeScoreDiffId.value) return
+  if (!confirm('Remove this score? The user will be re-fetched to avoid re-importing it.')) return
+  run(removeScoreOp.value, async () => {
+    const { removeScore: api } = await import('@/api/admin/recalculation')
+    await api({
+      userId: removeScoreUserId.value,
+      mapDifficultyId: removeScoreDiffId.value,
+      reason: removeScoreReason.value || undefined,
+    })
+    removeScoreUserId.value = ''
+    removeScoreDiffId.value = ''
+    removeScoreReason.value = ''
+  }, 'Score removal queued.')
+}
+
+const milestoneBackfillAll = ref(makeOp())
+
+async function backfillAllMilestonesOp() {
+  if (!confirm('Backfill every active milestone for all users? This is very heavy.')) return
+  run(milestoneBackfillAll.value, async () => {
+    const { backfillAllMilestones } = await import('@/api/admin/milestones')
+    await backfillAllMilestones()
+  }, 'Milestone backfill queued.')
+}
+
 const playerRefresh = ref(makeOp())
 const refreshUserId = ref('')
 const refreshAllOp = ref(makeOp())
@@ -231,6 +281,46 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <BaseButton variant="destructive" :loading="refreshAllOp.loading" @click="refreshAll">Refresh All</BaseButton>
           <span v-if="playerRefresh.result" class="result" :class="playerRefresh.ok ? 'result--ok' : 'result--err'">{{ playerRefresh.result }}</span>
           <span v-if="refreshAllOp.result" class="result" :class="refreshAllOp.ok ? 'result--ok' : 'result--err'">{{ refreshAllOp.result }}</span>
+        </div>
+      </div>
+
+      <div class="op-card">
+        <div class="op-card__head">
+          <span class="op-card__title">Backfill User Scores</span>
+          <span class="scope scope--targeted">targeted</span>
+        </div>
+        <p class="op-card__desc">Re-fetch all BeatLeader scores for one or more users. Comma or newline separated IDs.</p>
+        <textarea v-model="userBackfillIds" class="ids-input" placeholder="User IDs..." rows="2" spellcheck="false" />
+        <div class="op-card__foot">
+          <BaseButton variant="primary" :loading="userBackfill.loading" :disabled="!userBackfillIds.trim()" @click="backfillUserScores">Run</BaseButton>
+          <span v-if="userBackfill.result" class="result" :class="userBackfill.ok ? 'result--ok' : 'result--err'">{{ userBackfill.result }}</span>
+        </div>
+      </div>
+
+      <div class="op-card">
+        <div class="op-card__head">
+          <span class="op-card__title">Remove Score</span>
+          <span class="scope scope--targeted">targeted</span>
+        </div>
+        <p class="op-card__desc">Remove a wrongly-attributed score. User will be re-fetched afterwards.</p>
+        <BaseInput v-model="removeScoreUserId" placeholder="User ID" />
+        <BaseInput v-model="removeScoreDiffId" placeholder="Map Difficulty UUID" />
+        <BaseInput v-model="removeScoreReason" placeholder="Reason (optional)" />
+        <div class="op-card__foot">
+          <BaseButton variant="destructive" :loading="removeScoreOp.loading" :disabled="!removeScoreUserId || !removeScoreDiffId" @click="removeScore">Remove</BaseButton>
+          <span v-if="removeScoreOp.result" class="result" :class="removeScoreOp.ok ? 'result--ok' : 'result--err'">{{ removeScoreOp.result }}</span>
+        </div>
+      </div>
+
+      <div class="op-card op-card--warn">
+        <div class="op-card__head">
+          <span class="op-card__title">Backfill All Milestones</span>
+          <span class="scope scope--global">global</span>
+        </div>
+        <p class="op-card__desc">Re-evaluate every active milestone for every user. Very heavy.</p>
+        <div class="op-card__foot">
+          <BaseButton variant="destructive" :loading="milestoneBackfillAll.loading" @click="backfillAllMilestonesOp">Run</BaseButton>
+          <span v-if="milestoneBackfillAll.result" class="result" :class="milestoneBackfillAll.ok ? 'result--ok' : 'result--err'">{{ milestoneBackfillAll.result }}</span>
         </div>
       </div>
 
@@ -392,4 +482,17 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
 }
 .ws-card__name { font-size: var(--text-body); font-weight: 600; color: var(--text-primary); }
 .ws-card__status { font-size: var(--text-caption); font-family: var(--font-mono); color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+.ids-input {
+  padding: var(--space-sm);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-input);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  width: 100%;
+  resize: vertical;
+}
+.ids-input:focus { border-color: var(--accent); outline: none; }
 </style>
