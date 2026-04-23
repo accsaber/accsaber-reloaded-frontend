@@ -1,3 +1,5 @@
+import { isAdminSubdomain } from './subdomain'
+
 const COOKIE_ACCESS = 'playerAccessToken'
 const COOKIE_REFRESH = 'playerRefreshToken'
 const COOKIE_EXPIRES = 'playerTokenExpiresAt'
@@ -50,7 +52,15 @@ export interface PlayerSession {
   userId: string | null
 }
 
+const EMPTY_SESSION: PlayerSession = {
+  accessToken: null,
+  refreshToken: null,
+  expiresAt: 0,
+  userId: null,
+}
+
 export function readPlayerSession(): PlayerSession {
+  if (isAdminSubdomain) return { ...EMPTY_SESSION }
   return {
     accessToken: readCookie(COOKIE_ACCESS),
     refreshToken: readCookie(COOKIE_REFRESH),
@@ -65,6 +75,7 @@ export function writePlayerSession(session: {
   expiresAt: number
   userId: string
 }) {
+  if (isAdminSubdomain) return
   writeCookie(COOKIE_ACCESS, session.accessToken)
   writeCookie(COOKIE_REFRESH, session.refreshToken)
   writeCookie(COOKIE_EXPIRES, String(session.expiresAt))
@@ -72,10 +83,12 @@ export function writePlayerSession(session: {
 }
 
 export function clearPlayerSession() {
+  if (isAdminSubdomain) return
   for (const key of COOKIE_KEYS) deleteCookie(key)
 }
 
 export function migrateLegacyPlayerSession() {
+  if (isAdminSubdomain) return
   if (readCookie(COOKIE_ACCESS)) return
   const access = localStorage.getItem(COOKIE_ACCESS)
   const refresh = localStorage.getItem(COOKIE_REFRESH)
