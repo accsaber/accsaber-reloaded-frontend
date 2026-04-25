@@ -27,7 +27,7 @@ function categoryDotColor(): string {
         <span class="map-card-compact__dot" :style="{ background: categoryDotColor() }" />
         <span class="map-card-compact__song">{{ map.songName }}</span>
       </div>
-      <span class="map-card-compact__artist">{{ map.artistName }}</span>
+      <span class="map-card-compact__artist">{{ map.artistName }}<template v-if="map.beatsaverCode"> ({{ map.beatsaverCode }})</template></span>
       <div class="map-card-compact__meta">
         <span class="map-card-compact__mapper">{{ map.mapperName }}</span>
         <span v-if="map.difficultyLabel" class="map-card-compact__diff">{{ map.difficultyLabel }}</span>

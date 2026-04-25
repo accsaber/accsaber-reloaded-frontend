@@ -74,6 +74,7 @@ export interface MapDisplay {
   totalScores?: number
   rankedAt?: string
   batchName?: string
+  beatsaverCode?: string
 }
 
 export interface ScoreDisplay {

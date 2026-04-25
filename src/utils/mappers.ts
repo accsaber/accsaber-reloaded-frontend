@@ -99,6 +99,7 @@ export function toMapDisplay(
     difficultyLabel: formatDifficulty(diff.difficulty),
     totalScores: diff.statistics?.totalScores,
     rankedAt: diff.rankedAt ?? undefined,
+    beatsaverCode: diff.beatsaverCode ?? undefined,
   }
 }
 

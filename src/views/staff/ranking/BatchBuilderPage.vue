@@ -44,7 +44,7 @@ const isReleaseReady = computed(() => batch.value?.status === 'RELEASE_READY')
 const activeCategories = computed<CategoryInfo[]>(() =>
   categoryStore.categoryInfoList
     .filter((c) => c.code !== 'xp' && c.code !== 'overall')
-    .sort((a, b) => CATEGORY_ORDER.indexOf(a.code) - CATEGORY_ORDER.indexOf(b.code))
+    .sort((a, b) => CATEGORY_ORDER.indexOf(a.code as typeof CATEGORY_ORDER[number]) - CATEGORY_ORDER.indexOf(b.code as typeof CATEGORY_ORDER[number]))
 )
 
 const batchByCategory = computed(() => {
