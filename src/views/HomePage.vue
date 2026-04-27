@@ -4,6 +4,7 @@ import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import NewsHighlightBanner from '@/components/domain/NewsHighlightBanner.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { tierKey, useLevelStore } from '@/stores/levels'
 import { useThemeStore } from '@/stores/theme'
@@ -62,6 +63,9 @@ onUnmounted(() => {
 <template>
   <div class="home">
     <section class="hero">
+      <div class="hero__banner-slot">
+        <NewsHighlightBanner />
+      </div>
       <div class="hero__glow" />
       <ParticleCanvas class="hero__particles" :dark-mode="themeStore.theme === 'dark'" />
       <div class="hero__content">
@@ -215,6 +219,20 @@ onUnmounted(() => {
   padding: calc(var(--navbar-height) + var(--space-md)) var(--space-md) var(--space-3xl);
 }
 
+.hero__banner-slot {
+  position: absolute;
+  top: calc(var(--navbar-height) + var(--space-md));
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 0 var(--space-md);
+  pointer-events: none;
+}
+
+.hero__banner-slot > * {
+  pointer-events: auto;
+  margin-bottom: 0;
+}
 
 .hero__glow {
   position: absolute;
