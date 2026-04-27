@@ -92,11 +92,18 @@ const router = createRouter({
       name: 'campaign-detail',
       component: () => import('@/views/CampaignDetailPage.vue'),
     },
-    {
-      path: '/whats-new',
-      name: 'whats-new',
-      component: () => import('@/views/WhatsNewPage.vue'),
-    },
+    ...(!isRankingSubdomain ? [
+      {
+        path: '/news',
+        name: 'news',
+        component: () => import('@/views/NewsPage.vue'),
+      },
+      {
+        path: '/news/:slug',
+        name: 'news-detail',
+        component: () => import('@/views/NewsDetailPage.vue'),
+      },
+    ] : []),
     {
       path: '/settings',
       name: 'settings',
@@ -159,6 +166,12 @@ const router = createRouter({
       name: 'staff-ranking-head',
       component: () => import('@/views/staff/ranking/RankingHeadPage.vue'),
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+    },
+    {
+      path: isRankingSubdomain ? '/news' : '/staff/ranking/news',
+      name: 'staff-ranking-news',
+      component: () => import('@/views/staff/ranking/RankingNewsPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING_HEAD' as StaffRole },
     },
     {
       path: isRankingSubdomain ? '/reweight' : '/staff/ranking/reweight',

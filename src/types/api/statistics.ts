@@ -8,7 +8,7 @@ export interface MapAvgApResponse {
   difficulty: string
   categoryId: string
   categoryName: string
-  averageAp: number
+  averageWeightedAp: number
   scoreCount: number
   latestScoreId: string
   latestScoreTimeSet: string

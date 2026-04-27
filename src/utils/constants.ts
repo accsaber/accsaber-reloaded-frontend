@@ -26,6 +26,26 @@ export const MAP_STATUS_ACCENT: Record<string, string> = {
   RANKED: 'var(--accent-standard-acc)',
 }
 
+import type { NewsType } from '@/types/enums'
+
+export const NEWS_TYPE_LABELS: Record<NewsType, string> = {
+  BATCH: 'Batch',
+  CAMPAIGN: 'Campaign',
+  MILESTONE_SET: 'Milestones',
+  CURVE: 'Curve',
+  GENERAL: 'General',
+}
+
+export const NEWS_TYPE_ACCENT: Record<NewsType, string> = {
+  BATCH: 'var(--accent-standard-acc)',
+  CAMPAIGN: 'var(--accent-overall)',
+  MILESTONE_SET: 'var(--tier-gold)',
+  CURVE: 'var(--accent-true-acc)',
+  GENERAL: 'var(--text-secondary)',
+}
+
+export const NEWS_TYPE_ORDER: NewsType[] = ['GENERAL', 'BATCH', 'CAMPAIGN', 'CURVE', 'MILESTONE_SET']
+
 export const CATEGORY_ORDER = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid', 'overall'] as const
 
 export const ROLE_ORDER: Record<string, number> = {

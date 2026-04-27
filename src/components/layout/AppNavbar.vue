@@ -48,6 +48,7 @@ const adminNavItems: NavItem[] = [
   { to: '/?tab=milestones', label: 'Milestones' },
   { to: '/?tab=campaigns', label: 'Campaigns' },
   { to: '/?tab=curves', label: 'Curves' },
+  { to: '/?tab=news', label: 'News' },
   { to: '/?tab=operations', label: 'Operations' },
   { to: '/?tab=duplicates', label: 'Duplicates' },
 ]
@@ -59,6 +60,7 @@ const activityPath = isRankingSubdomain ? '/activity' : '/staff/ranking/activity
 const deactivatedPath = isRankingSubdomain ? '/deactivated' : '/staff/ranking/deactivated'
 
 const reweightPath = isRankingSubdomain ? '/reweight' : '/staff/ranking/reweight'
+const newsPath = isRankingSubdomain ? '/news' : '/staff/ranking/news'
 
 const rankingNavItems = computed<NavItem[]>(() => {
   const items: NavItem[] = [
@@ -68,6 +70,7 @@ const rankingNavItems = computed<NavItem[]>(() => {
   ]
   if (authStore.hasRole('RANKING_HEAD')) {
     items.push({ to: reweightPath, label: 'Reweight' })
+    items.push({ to: newsPath, label: 'News' })
   }
   items.push({ to: activityPath, label: 'Activity' })
   items.push({ to: deactivatedPath, label: 'Deactivated' })
@@ -76,6 +79,10 @@ const rankingNavItems = computed<NavItem[]>(() => {
 
 const isRankingContext = computed(() =>
   isRankingSubdomain || route.path.startsWith('/staff/ranking')
+)
+
+const showNewsAction = computed(() =>
+  !isAdminSubdomain && !(isRankingContext.value && authStore.isStaffAuthorized),
 )
 
 const navItems = computed(() => {
@@ -175,6 +182,19 @@ onUnmounted(() => {
       </nav>
 
       <div class="navbar__actions">
+        <router-link
+          v-if="showNewsAction"
+          to="/news"
+          class="navbar__icon-btn navbar__icon-btn--desktop-only"
+          :class="{ 'navbar__icon-btn--active': isActive('/news') }"
+          aria-label="News"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11l18-8v18L3 13z" />
+            <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+          </svg>
+        </router-link>
+
         <button type="button" class="navbar__search" @click="openSearch">
           <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -257,6 +277,10 @@ onUnmounted(() => {
     </section>
 
     <section class="navbar__drawer-section">
+      <router-link v-if="showNewsAction" to="/news" class="navbar__drawer-link"
+        :class="{ 'navbar__drawer-link--active': isActive('/news') }" @click="mobileDrawerOpen = false">
+        News
+      </router-link>
       <router-link to="/settings" class="navbar__drawer-link"
         :class="{ 'navbar__drawer-link--active': isActive('/settings') }" @click="mobileDrawerOpen = false">
         Settings

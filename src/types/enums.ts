@@ -23,3 +23,7 @@ export type CriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED'
 export type CurveType = 'POINT_LOOKUP' | 'FORMULA'
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'EXPERT' | 'EXPERT_PLUS'
+
+export type NewsStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+
+export type NewsType = 'BATCH' | 'CAMPAIGN' | 'MILESTONE_SET' | 'CURVE' | 'GENERAL'

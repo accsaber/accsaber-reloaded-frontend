@@ -56,7 +56,7 @@ const TABS_WITH_CATEGORY = new Set<LeaderboardTab>([
 ])
 
 const DEFAULT_SORTS: Record<LeaderboardTab, string> = {
-  'streaks': 'streak115', 'max-ap': 'ap', 'avg-ap': 'averageAp',
+  'streaks': 'streak115', 'max-ap': 'ap', 'avg-ap': 'averageWeightedAp',
   'most-retried': 'supersededCount', 'grinders': 'improvementCount',
   'dedication': 'improvementCount', 'collectors': 'milestoneCount',
 }
@@ -127,7 +127,7 @@ const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
     { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
     { key: 'map', label: 'Map', align: 'left' },
     { key: 'categoryName', label: 'Category', align: 'left', width: '130px' },
-    { key: 'averageAp', label: 'Avg AP', align: 'right', mono: true, width: '110px' },
+    { key: 'averageWeightedAp', label: 'Avg AP', align: 'right', mono: true, width: '110px' },
     { key: 'scoreCount', label: 'Scores', align: 'right', mono: true, width: '100px' },
     { key: 'latestScoreTimeSet', label: 'Latest', align: 'right', width: '110px' },
   ],
@@ -458,7 +458,7 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
           <template #cell-streak115="{ value }"><span class="stat-accent">{{ value }}</span></template>
           <template #cell-accuracy="{ value }">{{ ((value as number) * 100).toFixed(2) }}%</template>
           <template #cell-ap="{ value }"><span class="stat-accent">{{ (value as number).toFixed(2) }}</span></template>
-          <template #cell-averageAp="{ value }"><span class="stat-accent">{{ (value as number).toFixed(2)
+          <template #cell-averageWeightedAp="{ value }"><span class="stat-accent">{{ (value as number).toFixed(2)
               }}</span></template>
           <template #cell-supersededCount="{ value }"><span class="stat-accent">{{ (value as number).toLocaleString()
               }}</span></template>
@@ -503,7 +503,7 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
               <span class="stats-card__stat stat-accent">
                 <template v-if="activeTab === 'streaks'">{{ row.streak115 }}</template>
                 <template v-else-if="activeTab === 'max-ap'">{{ (row.ap as number).toFixed(2) }}</template>
-                <template v-else-if="activeTab === 'avg-ap'">{{ (row.averageAp as number).toFixed(2) }}</template>
+                <template v-else-if="activeTab === 'avg-ap'">{{ (row.averageWeightedAp as number).toFixed(2) }}</template>
                 <template v-else-if="activeTab === 'most-retried'">{{ (row.supersededCount as number).toLocaleString()
                   }}</template>
                 <template v-else-if="activeTab === 'grinders' || activeTab === 'dedication'">{{ (row.improvementCount as

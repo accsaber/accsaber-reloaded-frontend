@@ -22,6 +22,7 @@ import type { PublicBatchResponse } from '@/types/api/batches'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MapDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
+import { groupBatchByCategory } from '@/utils/batches'
 import { formatRelativeDate } from '@/utils/formatters'
 import { toMapDisplay } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
@@ -37,8 +38,6 @@ usePageMeta({
   title: 'Maps | AccSaber Reloaded',
   description: 'Browse all ranked maps on AccSaber across categories and difficulties.',
 })
-
-const CATEGORY_ORDER = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid', 'overall']
 
 type ViewMode = 'grid' | 'list' | 'batch'
 
@@ -303,25 +302,12 @@ function handleListRowClick(row: Record<string, unknown>) {
 }
 
 function batchDifficultiesByCategory(batch: PublicBatchResponse) {
-  const grouped = new Map<string, MapDisplay[]>()
-  for (const diff of batch.difficulties) {
-    const display = toMapDisplay(diff, (id) => categoryStore.getCategoryCode(id))
-    const code = display.categoryCode
-    if (!grouped.has(code)) grouped.set(code, [])
-    grouped.get(code)!.push(display)
-  }
-  return Array.from(grouped.entries())
-    .sort(([a], [b]) => {
-      const ai = CATEGORY_ORDER.indexOf(a)
-      const bi = CATEGORY_ORDER.indexOf(b)
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-    })
-    .map(([code, diffs]) => ({
-      categoryCode: code,
-      accent: categoryStore.getAccent(code),
-      name: categoryStore.getCategoryInfo(code)?.name ?? code,
-      diffs,
-    }))
+  return groupBatchByCategory(
+    batch,
+    (id) => categoryStore.getCategoryCode(id),
+    (code) => categoryStore.getAccent(code),
+    (code) => categoryStore.getCategoryInfo(code)?.name ?? code,
+  )
 }
 
 watch(searchQuery, () => {
