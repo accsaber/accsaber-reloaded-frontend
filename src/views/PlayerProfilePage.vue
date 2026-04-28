@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -256,6 +257,17 @@ watch(activeCategory, (newCategory) => {
             <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
           </div>
 
+          <div class="profile-hero__links">
+            <BaseButton size="sm" :href="`https://www.beatleader.com/u/${userId}`" aria-label="View on BeatLeader">
+              <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
+                style="border-radius: 3px;" />
+            </BaseButton>
+            <BaseButton size="sm" :href="`https://scoresaber.com/u/${userId}`" aria-label="View on ScoreSaber">
+              <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
+                style="border-radius: 3px;" />
+            </BaseButton>
+          </div>
+
           <div v-if="user.banned" class="profile-hero__banned">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
@@ -494,6 +506,13 @@ watch(activeCategory, (newCategory) => {
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+}
+
+.profile-hero__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs);
 }
 
 .profile-hero__name {
