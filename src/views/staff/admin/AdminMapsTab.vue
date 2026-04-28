@@ -156,7 +156,7 @@ const NEXT_STATUS: Partial<Record<MapDifficultyStatus, MapDifficultyStatus>> = {
               />
             </template>
             <template v-else>
-              <ComplexityBadge :complexity="item.complexity" :difficulty="item.difficulty" />
+              <ComplexityBadge :complexity="item.complexity" />
               <button class="edit-btn" aria-label="Edit complexity" @click="startEdit(item)">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />

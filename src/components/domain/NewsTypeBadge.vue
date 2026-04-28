@@ -14,7 +14,6 @@ const label = computed(() => NEWS_TYPE_LABELS[props.type])
 
 <template>
   <span class="news-type-badge" :class="`news-type-badge--${size ?? 'md'}`" :style="{ '--badge-accent': accent }">
-    <span class="news-type-badge__dot" />
     {{ label }}
   </span>
 </template>
@@ -23,7 +22,6 @@ const label = computed(() => NEWS_TYPE_LABELS[props.type])
 .news-type-badge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
   padding: 2px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid color-mix(in srgb, var(--badge-accent) 35%, transparent);
@@ -38,12 +36,5 @@ const label = computed(() => NEWS_TYPE_LABELS[props.type])
 .news-type-badge--sm {
   padding: 1px 8px;
   font-size: 0.7rem;
-}
-
-.news-type-badge__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--badge-accent);
 }
 </style>

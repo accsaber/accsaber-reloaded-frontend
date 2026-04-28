@@ -5,6 +5,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
@@ -12,7 +13,6 @@ import type { MapDifficultyResponse } from '@/types/api/maps'
 import type { CategoryInfo } from '@/types/display'
 import { CATEGORY_ORDER } from '@/utils/constants'
 import { truncate } from '@/utils/formatters'
-import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -379,7 +379,11 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
             <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
-              <span class="batch-builder__card-meta">{{ truncate(diff.songAuthor, 20) }} - {{ formatDifficulty(diff.difficulty) }}</span>
+              <span class="batch-builder__card-meta">
+                <DifficultyBadge :difficulty="diff.difficulty" />
+                <span class="batch-builder__card-author">{{ truncate(diff.songAuthor, 18) }}</span>
+                <span v-if="diff.mapAuthor" class="batch-builder__card-mapper">· {{ truncate(diff.mapAuthor, 16) }}</span>
+              </span>
             </div>
             <template v-if="editingComplexity === diff.id">
               <input
@@ -398,7 +402,7 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
             </template>
             <template v-else>
               <span v-if="diff.complexity != null" class="batch-builder__complexity-value" @click="startEditComplexity(diff)">
-                <ComplexityBadge :complexity="diff.complexity" :difficulty="diff.difficulty" />
+                <ComplexityBadge :complexity="diff.complexity" />
               </span>
             </template>
             <button v-if="isDraft" class="batch-builder__card-action batch-builder__card-action--remove" @click.stop="removeFromBatch(diff.id)" aria-label="Remove from batch">
@@ -439,12 +443,13 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
               <span class="batch-builder__card-meta">
-                {{ truncate(diff.songAuthor, 20) }} - {{ formatDifficulty(diff.difficulty) }}
-                <span class="batch-builder__card-cat-dot" :style="{ background: categoryStore.getAccent(categoryStore.getCategoryCode(diff.categoryId) ?? 'overall') }" />
+                <DifficultyBadge :difficulty="diff.difficulty" />
+                <span class="batch-builder__card-author">{{ truncate(diff.songAuthor, 18) }}</span>
+                <span v-if="diff.mapAuthor" class="batch-builder__card-mapper">· {{ truncate(diff.mapAuthor, 16) }}</span>
               </span>
             </div>
             <span v-if="diffBatchMap.has(diff.id)" class="batch-builder__card-badge batch-builder__card-badge--batch">{{ diffBatchMap.get(diff.id) }}</span>
-            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" :difficulty="diff.difficulty" />
+            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" />
             <button class="batch-builder__card-action batch-builder__card-action--add" @click.stop="requestAdd(diff.id)" aria-label="Add to batch">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -474,12 +479,13 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
               <span class="batch-builder__card-meta">
-                {{ truncate(diff.songAuthor, 20) }} - {{ formatDifficulty(diff.difficulty) }}
-                <span class="batch-builder__card-cat-dot" :style="{ background: categoryStore.getAccent(categoryStore.getCategoryCode(diff.categoryId) ?? 'overall') }" />
+                <DifficultyBadge :difficulty="diff.difficulty" />
+                <span class="batch-builder__card-author">{{ truncate(diff.songAuthor, 18) }}</span>
+                <span v-if="diff.mapAuthor" class="batch-builder__card-mapper">· {{ truncate(diff.mapAuthor, 16) }}</span>
               </span>
             </div>
             <span v-if="diffBatchMap.has(diff.id)" class="batch-builder__card-badge batch-builder__card-badge--batch">{{ diffBatchMap.get(diff.id) }}</span>
-            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" :difficulty="diff.difficulty" />
+            <ComplexityBadge v-if="diff.complexity != null" :complexity="diff.complexity" />
             <button class="batch-builder__card-action batch-builder__card-action--add" @click.stop="requestAdd(diff.id)" aria-label="Add to batch">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -742,11 +748,15 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
   border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
 }
 
-.batch-builder__card-cat-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.batch-builder__card-author,
+.batch-builder__card-mapper {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-builder__card-mapper {
+  color: var(--text-tertiary);
 }
 
 .batch-builder__card-action {

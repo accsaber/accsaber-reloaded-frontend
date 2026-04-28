@@ -1,39 +1,33 @@
 <script setup lang="ts">
 import GlowImage from '@/components/common/GlowImage.vue';
-import { useCategoryStore } from '@/stores/categories';
 import type { MapDisplay } from '@/types/display';
 import { isRankingSubdomain } from '@/utils/subdomain';
 import ComplexityBadge from './ComplexityBadge.vue';
+import DifficultyBadge from './DifficultyBadge.vue';
 
-const props = defineProps<{
+defineProps<{
   map: MapDisplay
 }>()
 
 defineEmits<{
   click: []
 }>()
-
-const categoryStore = useCategoryStore()
-
-function categoryDotColor(): string {
-  return categoryStore.getAccent(props.map.categoryCode)
-}
 </script>
 
 <template>
   <div class="map-card-compact" tabindex="0" role="button" @click="$emit('click')" @keydown.enter="$emit('click')">
     <GlowImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover" />
     <div class="map-card-compact__info">
-      <div class="map-card-compact__title-row">
-        <span class="map-card-compact__dot" :style="{ background: categoryDotColor() }" />
-        <span class="map-card-compact__song">{{ map.songName }}</span>
+      <span class="map-card-compact__song">{{ map.songName }}</span>
+      <div class="map-card-compact__primary">
+        <DifficultyBadge :difficulty="map.difficulty" />
+        <ComplexityBadge :complexity="map.complexity" />
       </div>
-      <span class="map-card-compact__artist">{{ map.artistName }}<template v-if="isRankingSubdomain && map.beatsaverCode"> ({{ map.beatsaverCode }})</template></span>
-      <div class="map-card-compact__meta">
+      <span class="map-card-compact__secondary">
+        <span class="map-card-compact__artist">{{ map.artistName }}<template v-if="isRankingSubdomain && map.beatsaverCode"> ({{ map.beatsaverCode }})</template></span>
+        <span class="map-card-compact__sep">·</span>
         <span class="map-card-compact__mapper">{{ map.mapperName }}</span>
-        <span v-if="map.difficultyLabel" class="map-card-compact__diff">{{ map.difficultyLabel }}</span>
-        <ComplexityBadge :complexity="map.complexity" :difficulty="map.difficulty" />
-      </div>
+      </span>
     </div>
   </div>
 </template>
@@ -67,21 +61,8 @@ function categoryDotColor(): string {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
-  min-width: 0;
-}
-
-.map-card-compact__title-row {
-  display: flex;
-  align-items: center;
   gap: var(--space-xs);
-}
-
-.map-card-compact__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .map-card-compact__song {
@@ -93,28 +74,42 @@ function categoryDotColor(): string {
   white-space: nowrap;
 }
 
-.map-card-compact__artist {
+.map-card-compact__primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.map-card-compact__secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.map-card-compact__artist,
+.map-card-compact__mapper {
   font-size: var(--text-caption);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.map-card-compact__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-top: 2px;
+.map-card-compact__artist {
+  color: var(--text-secondary);
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .map-card-compact__mapper {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  flex-shrink: 1;
+  min-width: 0;
 }
 
-.map-card-compact__diff {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.map-card-compact__sep {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 </style>

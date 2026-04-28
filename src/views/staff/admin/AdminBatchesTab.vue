@@ -130,7 +130,7 @@ function formatDate(iso: string | null) {
           <span class="diff-card__diff" :style="{ color: DIFF_COLOR[diff.difficulty] ?? 'var(--text-secondary)' }">
             {{ diff.difficulty.replace('EXPERT_PLUS', 'Ex+').replace('EXPERT', 'Ex') }}
           </span>
-          <ComplexityBadge :complexity="diff.complexity" :difficulty="diff.difficulty" />
+          <ComplexityBadge :complexity="diff.complexity" />
         </div>
       </div>
     </div>

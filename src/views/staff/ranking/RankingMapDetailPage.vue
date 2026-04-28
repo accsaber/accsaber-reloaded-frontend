@@ -6,7 +6,9 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
+import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LeaderboardPreviewPanel from '@/components/domain/LeaderboardPreviewPanel.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -20,7 +22,6 @@ import type { MapVoteAction, VoteType } from '@/types/enums'
 import { useRankingQueueStore } from '@/stores/rankingQueue'
 import { brightenRgb } from '@/utils/color'
 import { formatRelativeDate } from '@/utils/formatters'
-import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -489,36 +490,34 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           </div>
 
           <div class="rank-detail__hero-info">
+            <span
+              class="rank-detail__category"
+              :class="{ 'rank-detail__category--editable': canEditCategory }"
+              :role="canEditCategory ? 'button' : undefined"
+              :tabindex="canEditCategory ? 0 : undefined"
+              @click="canEditCategory && openCategoryModal()"
+              @keydown.enter="canEditCategory && openCategoryModal()"
+            >
+              <CategoryBadge :category="categoryCode" size="sm" />
+              <svg v-if="canEditCategory" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </span>
             <h1 class="rank-detail__song-name">{{ difficulty.songName }}</h1>
             <p v-if="difficulty.songSubName" class="rank-detail__song-sub">{{ difficulty.songSubName }}</p>
             <p class="rank-detail__song-meta">{{ difficulty.songAuthor }} - Mapped by {{ difficulty.mapAuthor }}</p>
 
-            <div class="rank-detail__badges">
-              <span class="rank-detail__diff-label">
-                {{ formatDifficulty(difficulty.difficulty) }}
-                <span v-if="difficulty.characteristic !== 'Standard'"> ({{ difficulty.characteristic }})</span>
-              </span>
-              <span
-                class="rank-detail__category-badge"
-                :class="{ 'rank-detail__category-badge--editable': canEditCategory }"
-                :style="{ '--cat-accent': categoryAccent }"
-                :role="canEditCategory ? 'button' : undefined"
-                :tabindex="canEditCategory ? 0 : undefined"
-                @click="canEditCategory && openCategoryModal()"
-                @keydown.enter="canEditCategory && openCategoryModal()"
-              >
-                {{ categoryName }}
-                <svg v-if="canEditCategory" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                  aria-hidden="true">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
+            <div class="rank-detail__primary">
+              <DifficultyBadge :difficulty="difficulty.difficulty" />
+              <span v-if="difficulty.characteristic !== 'Standard'" class="rank-detail__characteristic">
+                {{ difficulty.characteristic }}
               </span>
               <span v-if="canEditComplexity" class="rank-detail__complexity-editable"
                 @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
-                <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity"
-                  :difficulty="difficulty.difficulty" />
+                <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
                 <span v-else class="rank-detail__complexity-unset">Set complexity</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -526,8 +525,10 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </span>
-              <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity"
-                :difficulty="difficulty.difficulty" />
+              <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
+            </div>
+
+            <div class="rank-detail__badges">
               <span :class="statusBadgeClass(difficulty.status)">
                 {{ difficulty.status }}
               </span>
@@ -1037,35 +1038,38 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
   margin-top: var(--space-sm);
 }
 
-.rank-detail__diff-label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.rank-detail__category-badge {
+.rank-detail__category {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--cat-accent, var(--accent)) 15%, transparent);
-  color: var(--cat-accent, var(--accent));
-  border: 1px solid color-mix(in srgb, var(--cat-accent, var(--accent)) 30%, transparent);
+  gap: var(--space-xs);
+  margin-bottom: -2px;
+  color: var(--text-tertiary);
 }
 
-.rank-detail__category-badge--editable {
+.rank-detail__category--editable {
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  border-radius: var(--radius-btn);
+  transition: opacity 120ms ease;
 }
 
-.rank-detail__category-badge--editable:hover,
-.rank-detail__category-badge--editable:focus-visible {
-  background: color-mix(in srgb, var(--cat-accent, var(--accent)) 25%, transparent);
-  border-color: color-mix(in srgb, var(--cat-accent, var(--accent)) 50%, transparent);
+.rank-detail__category--editable:hover,
+.rank-detail__category--editable:focus-visible {
+  opacity: 0.8;
   outline: none;
+}
+
+.rank-detail__primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.rank-detail__characteristic {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
 }
 
 .rank-detail__category-error {

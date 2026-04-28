@@ -5,6 +5,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -411,7 +412,8 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 
           <div v-if="activeDifficulty" class="map-detail__stats-strip">
             <div class="map-detail__diff-meta">
-              <ComplexityBadge :complexity="activeDifficulty.complexity ?? 0" :difficulty="activeDifficulty.difficulty" />
+              <DifficultyBadge :difficulty="activeDifficulty.difficulty" />
+              <ComplexityBadge :complexity="activeDifficulty.complexity ?? 0" />
               <span class="map-detail__category-name" :style="{ color: categoryAccent }">{{ categoryName }}</span>
             </div>
             <div class="map-detail__stats">

@@ -11,6 +11,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapCard from '@/components/domain/MapCard.vue'
 import MapCardCompact from '@/components/domain/MapCardCompact.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -175,6 +176,7 @@ const listColumns: TableColumn[] = [
   { key: 'artistName', label: 'Artist', align: 'left' },
   { key: 'mapperName', label: 'Mapper', align: 'left' },
   { key: 'category', label: 'Category', sortable: true, align: 'center', width: '100px' },
+  { key: 'difficulty', label: 'Difficulty', align: 'center', width: '100px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '100px' },
   { key: 'totalScores', label: 'Scores', sortable: true, align: 'right', mono: true, width: '80px' },
   { key: 'rankedAt', label: 'Released', sortable: true, align: 'right', width: '100px' },
@@ -462,8 +464,11 @@ watch(
               {{ row.category }}
             </span>
           </template>
+          <template #cell-difficulty="{ row }">
+            <DifficultyBadge :difficulty="row.difficulty as string" />
+          </template>
           <template #cell-complexity="{ row }">
-            <ComplexityBadge :complexity="row.complexity as number" :difficulty="(row.difficulty as string)" />
+            <ComplexityBadge :complexity="row.complexity as number" />
           </template>
           <template #cell-totalScores="{ value }">
             <span class="maps-page__mono">{{ (value as number).toLocaleString() }}</span>
@@ -482,8 +487,8 @@ watch(
                 <span class="maps-page__list-card-meta">{{ row.artistName }} · {{ row.mapperName }}</span>
               </div>
               <div class="maps-page__list-card-badges">
-                <span v-if="row.difficultyLabel" class="maps-page__diff-label">{{ row.difficultyLabel }}</span>
-                <ComplexityBadge :complexity="row.complexity as number" :difficulty="(row.difficulty as string)" />
+                <DifficultyBadge :difficulty="(row.difficulty as string)" />
+                <ComplexityBadge :complexity="row.complexity as number" />
               </div>
             </div>
           </template>

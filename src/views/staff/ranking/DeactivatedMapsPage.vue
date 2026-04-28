@@ -224,7 +224,6 @@ watch(
           <ComplexityBadge
             v-if="row.complexity != null"
             :complexity="row.complexity as number"
-            :difficulty="row.difficulty as string"
           />
           <span v-else class="deactivated-page__muted">-</span>
         </template>
@@ -250,7 +249,6 @@ watch(
                 <ComplexityBadge
                   v-if="row.complexity != null"
                   :complexity="row.complexity as number"
-                  :difficulty="row.difficulty as string"
                 />
                 <span class="deactivated-page__date">{{ formatRelativeDate(row.createdAt as string) }}</span>
               </div>

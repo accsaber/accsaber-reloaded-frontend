@@ -4,10 +4,11 @@ import { useCategoryStore } from '@/stores/categories'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
 import type { ScoreResponse } from '@/types/api/users'
 import { formatRelativeDate } from '@/utils/formatters'
-import { formatDifficulty } from '@/utils/mappers'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import CategoryBadge from './CategoryBadge.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
+import DifficultyBadge from './DifficultyBadge.vue'
 
 const props = defineProps<{
   comparison: SnipeComparisonResponse
@@ -27,11 +28,6 @@ const sniper = computed(() => props.comparison.sniperScore)
 const target = computed(() => props.comparison.targetScore)
 
 const categoryCode = computed(() => categoryStore.getCategoryCode(map.value.categoryId))
-const categoryName = computed(() => {
-  const code = categoryCode.value
-  if (!code) return ''
-  return (categoryStore.getCategoryInfo(code)?.name ?? code).replace(/ Acc$/, '')
-})
 const categoryAccent = computed(() =>
   categoryCode.value ? categoryStore.getAccent(categoryCode.value) : 'var(--accent)',
 )
@@ -85,11 +81,11 @@ function navigateToMap(e: MouseEvent) {
         </span>
         <span class="snipe-row__mapper">{{ map.mapAuthor }}</span>
         <div class="snipe-row__badges">
-          <span class="snipe-row__category">{{ categoryName }}</span>
-          <span class="snipe-row__difficulty">{{ formatDifficulty(map.difficulty) }}</span>
+          <DifficultyBadge :difficulty="map.difficulty" />
+          <ComplexityBadge v-if="map.complexity != null" :complexity="map.complexity" />
+          <CategoryBadge v-if="categoryCode" :category="categoryCode" />
           <span v-if="map.characteristic && map.characteristic !== 'Standard'"
             class="snipe-row__characteristic">{{ map.characteristic }}</span>
-          <ComplexityBadge v-if="map.complexity != null" :complexity="map.complexity" :difficulty="map.difficulty" />
         </div>
       </div>
     </a>
@@ -213,6 +209,9 @@ function navigateToMap(e: MouseEvent) {
 .snipe-row__mapper {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .snipe-row__badges {
@@ -223,13 +222,7 @@ function navigateToMap(e: MouseEvent) {
   margin-top: var(--space-xs);
 }
 
-.snipe-row__category {
-  font-size: var(--text-caption);
-  color: color-mix(in srgb, var(--row-accent) 40%, var(--text-secondary));
-  font-weight: 500;
-}
 
-.snipe-row__difficulty,
 .snipe-row__characteristic {
   font-size: var(--text-caption);
   color: var(--text-secondary);

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useTiltEffect } from '@/composables/useTiltEffect'
-import { useCategoryStore } from '@/stores/categories'
 import type { MapDisplay } from '@/types/display'
 import { ref } from 'vue'
+import CategoryBadge from './CategoryBadge.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
+import DifficultyBadge from './DifficultyBadge.vue'
 
-const props = defineProps<{
+defineProps<{
   map: MapDisplay
 }>()
 
@@ -13,13 +14,8 @@ defineEmits<{
   click: []
 }>()
 
-const categoryStore = useCategoryStore()
 const cardRef = ref<HTMLElement | null>(null)
 const { style: tiltStyle } = useTiltEffect(cardRef)
-
-function categoryDotColor(): string {
-  return categoryStore.getAccent(props.map.categoryCode)
-}
 </script>
 
 <template>
@@ -29,17 +25,15 @@ function categoryDotColor(): string {
       <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" />
     </div>
     <div class="map-card__body">
-      <div class="map-card__title-row">
-        <span class="map-card__dot" :style="{ background: categoryDotColor() }" />
-        <span class="map-card__song">{{ map.songName }}</span>
+      <CategoryBadge :category="map.categoryCode" size="sm" class="map-card__category" />
+      <span class="map-card__song">{{ map.songName }}</span>
+      <div class="map-card__primary">
+        <DifficultyBadge :difficulty="map.difficulty" />
+        <ComplexityBadge :complexity="map.complexity" />
       </div>
-      <span class="map-card__artist">{{ map.artistName }}</span>
-      <div class="map-card__footer">
+      <div class="map-card__secondary">
+        <span class="map-card__artist">{{ map.artistName }}</span>
         <span class="map-card__mapper">{{ map.mapperName }}</span>
-        <div class="map-card__badges">
-          <span v-if="map.difficultyLabel" class="map-card__diff">{{ map.difficultyLabel }}</span>
-          <ComplexityBadge :complexity="map.complexity" :difficulty="map.difficulty" />
-        </div>
       </div>
     </div>
   </div>
@@ -78,20 +72,11 @@ function categoryDotColor(): string {
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.map-card__title-row {
-  display: flex;
-  align-items: center;
   gap: var(--space-sm);
 }
 
-.map-card__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.map-card__category {
+  margin-bottom: -3px;
 }
 
 .map-card__song {
@@ -101,24 +86,24 @@ function categoryDotColor(): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.map-card__artist {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.map-card__footer {
+.map-card__primary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-sm);
-  margin-top: var(--space-xs);
+  flex-wrap: wrap;
 }
 
+.map-card__secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.map-card__artist,
 .map-card__mapper {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
@@ -127,15 +112,7 @@ function categoryDotColor(): string {
   white-space: nowrap;
 }
 
-.map-card__badges {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-}
-
-.map-card__diff {
-  font-size: var(--text-caption);
+.map-card__artist {
   color: var(--text-secondary);
 }
 
