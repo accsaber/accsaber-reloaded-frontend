@@ -63,6 +63,11 @@ const router = createRouter({
       component: () => import('@/views/PlayerProfilePage.vue'),
     },
     {
+      path: '/players/:userId/snipe',
+      name: 'player-snipe',
+      component: () => import('@/views/SnipePage.vue'),
+    },
+    {
       path: '/ranked-queue',
       name: 'ranked-queue',
       component: () => import('@/views/RankedQueuePage.vue'),

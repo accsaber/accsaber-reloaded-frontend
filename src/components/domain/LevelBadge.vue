@@ -21,6 +21,7 @@ const props = defineProps<{
   requiredXp: number
   avatarUrl?: string
   title?: string
+  hideProgress?: boolean
 }>()
 
 const tierKey = computed(() => props.title ? toTierKey(props.title) : 'newcomer')
@@ -48,7 +49,7 @@ const progressPercent = computed(() => {
         <span class="level-badge__level">Lv. {{ level }}</span>
         <span v-if="title" class="level-badge__title">{{ title }}</span>
       </span>
-      <div class="level-badge__bar-wrap">
+      <div v-if="!hideProgress" class="level-badge__bar-wrap">
         <div class="level-badge__bar">
           <div class="level-badge__fill" :style="{
             width: progressPercent + '%',

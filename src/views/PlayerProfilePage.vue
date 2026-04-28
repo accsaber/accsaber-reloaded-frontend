@@ -9,6 +9,7 @@ import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
@@ -22,8 +23,13 @@ import ProfileStatisticsTab from './profile/ProfileStatisticsTab.vue'
 const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
+const authStore = useAuthStore()
 
 const userId = computed(() => route.params.userId as string)
+
+const canSnipe = computed(
+  () => authStore.isLoggedIn && !!authStore.userId && authStore.userId !== userId.value,
+)
 
 const user = ref<UserResponse | null>(null)
 const level = ref<LevelResponse | null>(null)
@@ -267,6 +273,20 @@ watch(activeCategory, (newCategory) => {
               aria-label="View on ScoreSaber">
               <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
                 style="border-radius: 3px;" />
+            </BaseButton>
+            <BaseButton v-if="canSnipe" size="sm" variant="primary"
+              aria-label="Snipe this player" title="Snipe this player"
+              @click="router.push({ name: 'player-snipe', params: { userId: userId } })">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="3" />
+                <line x1="12" y1="2" x2="12" y2="6" />
+                <line x1="12" y1="18" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="6" y2="12" />
+                <line x1="18" y1="12" x2="22" y2="12" />
+              </svg>
+              <span>Snipe</span>
             </BaseButton>
           </div>
 
