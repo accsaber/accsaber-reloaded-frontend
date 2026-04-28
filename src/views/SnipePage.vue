@@ -42,7 +42,7 @@ const SIZE_OPTIONS = [
 
 const snipeCategoryCodes = computed(() =>
   categoryStore.categoryInfoList
-    .filter((c) => c.code !== 'xp')
+    .filter((c) => c.code !== 'xp' && c.code !== 'overall')
     .map((c) => c.code),
 )
 
