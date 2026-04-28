@@ -9,7 +9,9 @@ import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
+import { formatRelativeDate } from '@/utils/formatters'
 import { toScoreDisplay } from '@/utils/mappers'
+import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -241,12 +243,29 @@ watch(
           <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="40" />
           <div v-else class="ps-card__cover-placeholder" />
           <div class="ps-card__info">
-            <span class="ps-card__name">{{ row.mapName }}</span>
-            <span class="ps-card__diff">{{ row.difficulty }}</span>
+            <span class="ps-card__line">
+              <span class="ps-card__rank" :class="getRankClass(row.leaderboardRank as number)">#{{ row.leaderboardRank }}</span>
+              <span class="ps-card__name" :title="(row.mapName as string)">{{ row.mapName }}</span>
+            </span>
+            <span class="ps-card__line ps-card__meta">
+              <span class="ps-card__diff">{{ row.difficulty }}</span>
+              <span class="ps-card__dot"
+                :style="{ background: categoryStore.getAccent(row.categoryCode as string) }" />
+              <span class="ps-card__category">{{ row.category }}</span>
+              <span class="ps-card__sep">·</span>
+              <span class="ps-card__date">{{ formatRelativeDate(row.date as string) }}</span>
+              <template v-if="(row.streak115 as number | null) != null">
+                <span class="ps-card__sep">·</span>
+                <span>{{ row.streak115 }} 115s</span>
+              </template>
+            </span>
           </div>
           <div class="ps-card__stats">
             <span class="ps-card__acc">{{ ((row.accuracy as number) * 100).toFixed(2) }}%</span>
-            <span class="ps-card__ap">{{ (row.ap as number).toFixed(2) }} AP</span>
+            <span class="ps-card__ap-line">
+              <span class="ps-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
+              <span class="ps-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
+            </span>
           </div>
           <button class="ps-card__detail-btn" aria-label="View score details"
             @click.stop="openDetail(row.mapDifficultyId as string, $event)">
@@ -379,6 +398,24 @@ watch(
   gap: 2px;
 }
 
+.ps-card__line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.ps-card__rank {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.ps-card__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
+.ps-card__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
+.ps-card__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
+
 .ps-card__name {
   font-weight: 500;
   color: var(--text-primary);
@@ -386,11 +423,44 @@ watch(
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-body);
+  min-width: 0;
+}
+
+.ps-card__meta {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ps-card__diff {
-  font-size: var(--text-caption);
   color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.ps-card__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ps-card__category {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.ps-card__sep {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.ps-card__date {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ps-card__stats {
@@ -407,10 +477,21 @@ watch(
   color: var(--text-primary);
 }
 
-.ps-card__ap {
+.ps-card__ap-line {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.ps-card__ap {
   color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ps-card__weighted {
+  color: var(--text-tertiary);
 }
 
 .ps-card__detail-btn {

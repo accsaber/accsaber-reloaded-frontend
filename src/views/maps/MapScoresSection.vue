@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn } from '@/types/display'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
+import { formatRelativeDate } from '@/utils/formatters'
 import { toDifficultyScoreDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
@@ -261,12 +262,25 @@ watch(
           </span>
           <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
           <div class="ms-card__info">
-            <span class="ms-card__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
-            <CountryFlag :country="(row.country as string)" />
+            <span class="ms-card__line">
+              <span class="ms-card__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
+              <CountryFlag :country="(row.country as string)" />
+            </span>
+            <span class="ms-card__sub">
+              <span class="ms-card__date">{{ formatRelativeDate(row.date as string) }}</span>
+              <span v-if="(row.streak115 as number | null) != null && (row.streak115 as number) > 0"
+                class="ms-card__sub-meta">
+                <span class="ms-card__sep">·</span>
+                <span>{{ row.streak115 }} 115s</span>
+              </span>
+            </span>
           </div>
           <div class="ms-card__stats">
             <span class="ms-card__acc">{{ ((row.accuracy as number) * 100).toFixed(2) }}%</span>
-            <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
+            <span class="ms-card__ap-line">
+              <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
+              <span class="ms-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
+            </span>
           </div>
           <button class="ms-card__detail-btn" aria-label="View score details"
             @click.stop="openDetail(row._userId as string, $event)">
@@ -390,6 +404,13 @@ watch(
 .ms-card__info {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ms-card__line {
+  display: flex;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
@@ -401,6 +422,32 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.ms-card__sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ms-card__sub-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.ms-card__sep {
+  color: var(--text-tertiary);
+}
+
+.ms-card__date {
+  color: var(--text-tertiary);
 }
 
 .ms-card__stats {
@@ -417,10 +464,21 @@ watch(
   color: var(--text-primary);
 }
 
-.ms-card__ap {
+.ms-card__ap-line {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.ms-card__ap {
   color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ms-card__weighted {
+  color: var(--text-tertiary);
 }
 
 .ms-card__detail-btn {
