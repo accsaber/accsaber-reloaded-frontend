@@ -40,16 +40,19 @@ const SIZE_OPTIONS = [
   { value: 'all', label: 'All snipes' },
 ]
 
-const SNIPE_CATEGORIES = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid_acc', 'overall'] as const
+const snipeCategoryCodes = computed(() =>
+  categoryStore.categoryInfoList
+    .filter((c) => c.code !== 'xp')
+    .map((c) => c.code),
+)
 
-const categoryOptions = computed(() => {
-  const labelFor = (code: string) =>
-    categoryStore.getCategoryInfo(code)?.name ?? code
-  return [
-    { value: '', label: 'All categories' },
-    ...SNIPE_CATEGORIES.map((code) => ({ value: code, label: labelFor(code) })),
-  ]
-})
+const categoryOptions = computed(() => [
+  { value: '', label: 'All categories' },
+  ...snipeCategoryCodes.value.map((code) => ({
+    value: code,
+    label: categoryStore.getCategoryInfo(code)?.name ?? code,
+  })),
+])
 
 const targetId = computed(() => route.params.userId as string)
 const sniperId = computed(() => authStore.userId)
@@ -76,8 +79,8 @@ const sizeSelectValue = computed(() =>
 
 const currentCategory = computed<string>(() => {
   const c = route.query.category
-  if (typeof c !== 'string') return ''
-  return SNIPE_CATEGORIES.includes(c as (typeof SNIPE_CATEGORIES)[number]) ? c : ''
+  if (typeof c !== 'string' || !c) return ''
+  return snipeCategoryCodes.value.includes(c) ? c : ''
 })
 
 function setPage(page: number) {
