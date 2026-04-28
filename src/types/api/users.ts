@@ -3,6 +3,8 @@ import type { PaginationParams } from '../pagination'
 
 export interface UserResponse {
   id: string
+  blId?: string
+  ssId?: string
   name: string
   avatarUrl: string
   country: string
