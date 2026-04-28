@@ -172,3 +172,32 @@ export interface HistoricScoresParams {
   amount?: number
   unit?: 'h' | 'd' | 'w' | 'mo'
 }
+
+export interface SkillComponents {
+  rank: number
+  sustained: number
+  peak: number
+  combined: number
+  rawApForOneGain: number
+  topAp: number
+  categoryRank: number | null
+  activePlayers: number
+}
+
+export interface SkillCategory {
+  categoryCode: string
+  categoryName: string
+  skillLevel: number
+  components: SkillComponents
+}
+
+export interface SkillResponse {
+  userId: string
+  skills: SkillCategory[]
+}
+
+export interface ApToNextResponse {
+  userId: string
+  categoryCode: string
+  rawApForOneGain: number
+}

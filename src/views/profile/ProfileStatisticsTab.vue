@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import StatBlock from '@/components/common/StatBlock.vue'
-import SkillPrism from '@/components/domain/SkillPrism.vue'
+import SkillLevelPanel from '@/components/domain/SkillLevelPanel.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type {
   RankingHistoryResponse,
+  SkillResponse,
   UserAllStatisticsResponse,
   UserCategoryStatisticsResponse,
 } from '@/types/api/users'
@@ -23,6 +24,8 @@ const selectedRange = ref<TimeRange>('all')
 const chartData = ref<UserCategoryStatisticsResponse[]>([])
 const rankHistoryData = ref<RankingHistoryResponse[]>([])
 const allTimeData = ref<UserCategoryStatisticsResponse[]>([])
+const skill = ref<SkillResponse | null>(null)
+const skillLoading = ref(false)
 
 const timeRangeParams: Record<TimeRange, { amount: number; unit: 'h' | 'd' | 'mo' }> = {
   '24h': { amount: 24, unit: 'h' },
@@ -180,6 +183,18 @@ async function fetchAllTimeData() {
   }
 }
 
+async function fetchSkill() {
+  skillLoading.value = true
+  try {
+    const { getUserSkill } = await import('@/api/users')
+    skill.value = await getUserSkill(props.userId)
+  } catch {
+    skill.value = null
+  } finally {
+    skillLoading.value = false
+  }
+}
+
 watch(
   [() => props.userId, () => props.category, selectedRange],
   () => { fetchChartData() },
@@ -199,6 +214,12 @@ watch(
   () => { fetchAllTimeData() },
   { immediate: true },
 )
+
+watch(
+  () => props.userId,
+  () => { fetchSkill() },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -212,9 +233,9 @@ watch(
           @update:selected-metric="selectedMetric = $event" @update:selected-range="selectedRange = $event" />
       </section>
 
-      <section v-if="xpStats?.categories?.length" class="statistics-tab__prism">
-        <h3 class="statistics-tab__section-title">Skill Prism</h3>
-        <SkillPrism :category-stats="xpStats.categories" />
+      <section v-if="skill || skillLoading" class="statistics-tab__skill">
+        <h3 class="statistics-tab__section-title">Skill Level</h3>
+        <SkillLevelPanel :skill="skill" :loading="skillLoading" />
       </section>
     </div>
 
@@ -286,7 +307,7 @@ watch(
   align-self: stretch;
 }
 
-.statistics-tab__prism {
+.statistics-tab__skill {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -372,7 +393,7 @@ watch(
     grid-template-columns: 1fr;
   }
 
-  .statistics-tab__prism {
+  .statistics-tab__skill {
     justify-self: center;
   }
 

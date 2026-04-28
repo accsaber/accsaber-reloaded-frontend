@@ -1,11 +1,14 @@
 import type { CampaignProgressResponse } from '@/types/api/campaigns'
 import type { DifficultyListParams, PublicMapDifficultyResponse } from '@/types/api/maps'
 import type {
+  ApToNextResponse,
   HistoricScoresParams,
   HistoricStatisticsParams,
   LevelResponse,
   RankingHistoryResponse,
   ScoreResponse,
+  SkillCategory,
+  SkillResponse,
   StatsDiffResponse,
   UserAllStatisticsResponse,
   UserCategoryStatisticsResponse,
@@ -107,4 +110,22 @@ export function getUserScoresHistoric(
   params: HistoricScoresParams,
 ): Promise<ScoreResponse[]> {
   return get<ScoreResponse[]>(`/users/${userId}/scores/historic${buildQuery(params)}`)
+}
+
+export function getUserSkill(userId: string): Promise<SkillResponse> {
+  return get<SkillResponse>(`/users/${userId}/skill`)
+}
+
+export function getUserSkillCategory(
+  userId: string,
+  category: string,
+): Promise<SkillCategory> {
+  return get<SkillCategory>(`/users/${userId}/skill${buildQuery({ category })}`)
+}
+
+export function getUserApToNext(
+  userId: string,
+  category: string,
+): Promise<ApToNextResponse> {
+  return get<ApToNextResponse>(`/users/${userId}/categories/${category}/ap-to-next`)
 }
