@@ -34,7 +34,11 @@ const themeStore = useThemeStore()
 
 const SIZE_VALUES = [10, 20, 50, 100] as const
 const DEFAULT_SIZE = 20
-const SIZE_OPTIONS = SIZE_VALUES.map((n) => ({ value: String(n), label: `${n} maps` }))
+const ALL_SIZE_FOR_LIST = 100
+const SIZE_OPTIONS = [
+  ...SIZE_VALUES.map((n) => ({ value: String(n), label: `${n} maps` })),
+  { value: 'all', label: 'All snipes' },
+]
 
 const SNIPE_CATEGORIES = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid_acc', 'overall'] as const
 
@@ -55,10 +59,20 @@ const currentPage = computed<number>(() => {
   return p > 0 ? p : 1
 })
 
-const currentSize = computed<number>(() => {
-  const s = Number(route.query.size)
-  return (SIZE_VALUES as readonly number[]).includes(s) ? s : DEFAULT_SIZE
+const currentSize = computed<number | 'all'>(() => {
+  const raw = route.query.size
+  if (raw === 'all') return 'all'
+  const n = Number(raw)
+  return (SIZE_VALUES as readonly number[]).includes(n) ? n : DEFAULT_SIZE
 })
+
+const listSize = computed(() =>
+  currentSize.value === 'all' ? ALL_SIZE_FOR_LIST : currentSize.value,
+)
+
+const sizeSelectValue = computed(() =>
+  currentSize.value === 'all' ? 'all' : String(currentSize.value),
+)
 
 const currentCategory = computed<string>(() => {
   const c = route.query.category
@@ -76,7 +90,7 @@ function setPage(page: number) {
 function setSize(value: string) {
   const query = { ...route.query }
   delete query.page
-  if (Number(value) === DEFAULT_SIZE) delete query.size
+  if (value === String(DEFAULT_SIZE)) delete query.size
   else query.size = value
   router.replace({ query })
 }
@@ -130,15 +144,22 @@ const totalApAtStake = computed(() =>
 const playlistUrl = computed(() =>
   sniperId.value
     ? buildSnipePlaylistUrl(sniperId.value, targetId.value, {
+        size: currentSize.value === 'all' ? undefined : currentSize.value,
         category: currentCategory.value || undefined,
       })
     : '',
 )
 
 const downloadLabel = computed(() => {
-  if (!currentCategory.value) return 'Download all snipes'
-  const name = categoryStore.getCategoryInfo(currentCategory.value)?.name ?? currentCategory.value
-  return `Download all ${name} snipes`
+  const categoryName = currentCategory.value
+    ? categoryStore.getCategoryInfo(currentCategory.value)?.name ?? currentCategory.value
+    : null
+  if (currentSize.value === 'all') {
+    return categoryName ? `Download all ${categoryName} snipes` : 'Download all snipes'
+  }
+  return categoryName
+    ? `Download top ${currentSize.value} ${categoryName} snipes`
+    : `Download top ${currentSize.value} snipes`
 })
 
 const metaTitle = computed(() => {
@@ -170,7 +191,7 @@ async function fetchComparisons() {
     const { getClosestScores } = await import('@/api/snipe')
     data.value = await getClosestScores(sniperId.value, targetId.value, {
       page: currentPage.value - 1,
-      size: currentSize.value,
+      size: listSize.value,
       category: currentCategory.value || undefined,
     })
   } catch {
@@ -295,7 +316,7 @@ watch(
       <div class="snipe-page__filters">
         <BaseSelect :model-value="currentCategory" :options="categoryOptions" label="Category"
           @update:model-value="setCategory" />
-        <BaseSelect :model-value="String(currentSize)" :options="SIZE_OPTIONS" label="Page size"
+        <BaseSelect :model-value="sizeSelectValue" :options="SIZE_OPTIONS" label="Page size"
           @update:model-value="setSize" />
       </div>
       <BaseButton variant="primary" size="lg" :href="playlistUrl" :disabled="!playlistUrl || rows.length === 0"
