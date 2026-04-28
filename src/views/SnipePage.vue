@@ -495,6 +495,7 @@ watch(
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-align: center;
 }
 
 .snipe-page__summary-grid {

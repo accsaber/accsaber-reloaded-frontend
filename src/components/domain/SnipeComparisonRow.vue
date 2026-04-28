@@ -70,23 +70,20 @@ function navigateToMap(e: MouseEvent) {
 <template>
   <article class="snipe-row" :style="{ '--row-accent': categoryAccent }">
     <a class="snipe-row__quadrant snipe-row__map" :href="mapHref" @click="navigateToMap">
-      <GlowImage :src="map.coverUrl" :alt="map.songName" :size="56" />
+      <GlowImage :src="map.coverUrl" :alt="map.songName" :size="88" />
       <div class="snipe-row__map-info">
-        <div class="snipe-row__title-line">
-          <span class="snipe-row__category-dot" />
-          <span class="snipe-row__song" :title="map.songName">{{ map.songName }}</span>
+        <CategoryBadge v-if="categoryCode" :category="categoryCode" size="sm" class="snipe-row__category-eyebrow" />
+        <span class="snipe-row__song" :title="map.songName">{{ map.songName }}</span>
+        <div class="snipe-row__badges">
+          <DifficultyBadge :difficulty="map.difficulty" />
+          <ComplexityBadge v-if="map.complexity != null" :complexity="map.complexity" />
+          <span v-if="map.characteristic && map.characteristic !== 'Standard'"
+            class="snipe-row__characteristic">{{ map.characteristic }}</span>
         </div>
         <span class="snipe-row__artist">
           {{ map.songAuthor }}<template v-if="map.songSubName"> · {{ map.songSubName }}</template>
         </span>
         <span class="snipe-row__mapper">{{ map.mapAuthor }}</span>
-        <div class="snipe-row__badges">
-          <DifficultyBadge :difficulty="map.difficulty" />
-          <ComplexityBadge v-if="map.complexity != null" :complexity="map.complexity" />
-          <CategoryBadge v-if="categoryCode" :category="categoryCode" />
-          <span v-if="map.characteristic && map.characteristic !== 'Standard'"
-            class="snipe-row__characteristic">{{ map.characteristic }}</span>
-        </div>
       </div>
     </a>
 
@@ -163,30 +160,24 @@ function navigateToMap(e: MouseEvent) {
 
 .snipe-row__map {
   display: flex;
-  gap: var(--space-md);
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  text-align: center;
 }
 
 .snipe-row__map-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 2px;
   min-width: 0;
+  width: 100%;
 }
 
-.snipe-row__title-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
-.snipe-row__category-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--row-accent);
-  flex-shrink: 0;
+.snipe-row__category-eyebrow {
+  margin-bottom: -2px;
 }
 
 .snipe-row__song {
@@ -218,6 +209,7 @@ function navigateToMap(e: MouseEvent) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: var(--space-xs) var(--space-sm);
   margin-top: var(--space-xs);
 }
