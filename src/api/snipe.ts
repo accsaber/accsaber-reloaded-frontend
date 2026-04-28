@@ -20,10 +20,12 @@ export function getClosestScores(
 export function buildSnipePlaylistUrl(
   sniperId: string,
   targetId: string,
-  size: number,
-  category?: string,
+  options: { size?: number; category?: string } = {},
 ): string {
   const base = import.meta.env.VITE_API_BASE
-  const query = buildQuery({ size, category })
-  return `${base}/playlists/snipe/${sniperId}/${targetId}${query}`
+  const root = `${base}/playlists/snipe/${sniperId}/${targetId}`
+  const { size, category } = options
+  if (category) return `${root}/${size ?? 0}/${category}`
+  if (size != null) return `${root}/${size}`
+  return root
 }

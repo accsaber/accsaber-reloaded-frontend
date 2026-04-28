@@ -129,14 +129,17 @@ const totalApAtStake = computed(() =>
 
 const playlistUrl = computed(() =>
   sniperId.value
-    ? buildSnipePlaylistUrl(
-        sniperId.value,
-        targetId.value,
-        currentSize.value,
-        currentCategory.value || undefined,
-      )
+    ? buildSnipePlaylistUrl(sniperId.value, targetId.value, {
+        category: currentCategory.value || undefined,
+      })
     : '',
 )
+
+const downloadLabel = computed(() => {
+  if (!currentCategory.value) return 'Download all snipes'
+  const name = categoryStore.getCategoryInfo(currentCategory.value)?.name ?? currentCategory.value
+  return `Download all ${name} snipes`
+})
 
 const metaTitle = computed(() => {
   if (!target.value) return undefined
@@ -303,7 +306,7 @@ watch(
           <path d="m7 10 5 5 5-5" />
           <path d="M5 21h14" />
         </svg>
-        <span>Download playlist ({{ currentSize }} maps)</span>
+        <span>{{ downloadLabel }}</span>
       </BaseButton>
     </section>
 
