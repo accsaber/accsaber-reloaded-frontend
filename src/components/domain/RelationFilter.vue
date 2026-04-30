@@ -18,8 +18,8 @@ const visible = computed(() => authStore.isLoggedIn)
 
 const options = [
   { value: '', label: 'Everyone' },
-  { value: 'follower', label: 'Followers' },
-  { value: 'rival', label: 'Rivals' },
+  { value: 'follower', label: 'Following' },
+  { value: 'rival', label: 'Rivaling' },
 ]
 
 function handleChange(value: string) {

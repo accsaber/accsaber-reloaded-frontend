@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import RelationListModal from '@/components/domain/RelationListModal.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useRelationsStore } from '@/stores/relations'
 import type {
   RelationDirection,
   UserRelationCounts,
@@ -13,6 +15,9 @@ const props = defineProps<{
   counts: UserRelationCounts
 }>()
 
+const authStore = useAuthStore()
+const relationsStore = useRelationsStore()
+
 const localCounts = ref<UserRelationCounts>({ ...props.counts })
 
 watch(
@@ -21,6 +26,32 @@ watch(
     localCounts.value = { ...next }
   },
 )
+
+const viewerFollowsTarget = computed(
+  () =>
+    authStore.isLoggedIn
+    && authStore.userId !== props.userId
+    && relationsStore.hasRelation(props.userId, 'follower'),
+)
+
+const viewerRivalsTarget = computed(
+  () =>
+    authStore.isLoggedIn
+    && authStore.userId !== props.userId
+    && relationsStore.hasRelation(props.userId, 'rival'),
+)
+
+watch(viewerFollowsTarget, (now, was) => {
+  if (now === was) return
+  const delta = now ? 1 : -1
+  localCounts.value.followerCount = Math.max(0, localCounts.value.followerCount + delta)
+})
+
+watch(viewerRivalsTarget, (now, was) => {
+  if (now === was) return
+  const delta = now ? 1 : -1
+  localCounts.value.rivaledByCount = Math.max(0, localCounts.value.rivaledByCount + delta)
+})
 
 interface Tile {
   key: string

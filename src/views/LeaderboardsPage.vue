@@ -103,20 +103,48 @@ const apPageData = ref<Page<LeaderboardResponse> | null>(null)
 const xpPageData = ref<Page<XpLeaderboardResponse> | null>(null)
 const highlightedUserId = ref<string | null>(null)
 
+function resolveDisplayRank(
+  globalRank: number,
+  countryRank: number | undefined,
+  positionalRank: number,
+  filteringCountry: boolean,
+  filteringRelation: boolean,
+  inactiveHidden: boolean,
+): { rank: number; parenRank: number | null } {
+  if (filteringRelation) {
+    return { rank: positionalRank, parenRank: globalRank }
+  }
+  if (filteringCountry) {
+    return {
+      rank: inactiveHidden || !countryRank ? positionalRank : countryRank,
+      parenRank: globalRank,
+    }
+  }
+  if (inactiveHidden) {
+    return { rank: positionalRank, parenRank: globalRank }
+  }
+  return { rank: globalRank, parenRank: null }
+}
+
 const rows = computed(() => {
   const pageSize = paginationParams.value.size ?? 50
   const pageOffset = (currentPage.value - 1) * pageSize
-  const usePositional = !showInactive.value
+  const inactiveHidden = !showInactive.value
   const filteringCountry = !!countryFilter.value
+  const filteringRelation = !!relationFilter.value
 
   if (isXpMode.value) {
     if (!xpPageData.value) return []
     return xpPageData.value.content.map((entry, i) => {
       const p = toXpPlayerDisplay(entry)
       const positionalRank = pageOffset + i + 1
+      const { rank, parenRank } = resolveDisplayRank(
+        p.rank, p.countryRank, positionalRank,
+        filteringCountry, filteringRelation, inactiveHidden,
+      )
       return {
-        rank: usePositional ? positionalRank : p.rank,
-        countryRank: p.countryRank,
+        rank,
+        parenRank,
         rankChange: p.rankChange,
         userId: p.userId,
         name: p.name,
@@ -132,9 +160,13 @@ const rows = computed(() => {
   return apPageData.value.content.map((entry, i) => {
     const p = toPlayerDisplay(entry)
     const positionalRank = pageOffset + i + 1
+    const { rank, parenRank } = resolveDisplayRank(
+      p.rank, p.countryRank, positionalRank,
+      filteringCountry, filteringRelation, inactiveHidden,
+    )
     return {
-      rank: usePositional && !filteringCountry ? positionalRank : p.rank,
-      countryRank: usePositional && filteringCountry ? positionalRank : p.countryRank,
+      rank,
+      parenRank,
       rankChange: p.rankChange,
       userId: p.userId,
       name: p.name,
@@ -364,13 +396,9 @@ watch(() => categoryStore.loaded, (loaded) => {
         :row-class="rowClass" row-clickable :row-to="playerRowTo" row-key="userId" empty-message="No players found"
         @sort="setSort" @row-click="handleRowClick">
         <template #cell-rank="{ value, row }">
-          <span v-if="countryFilter && row.countryRank" class="rank-cell"
-            :class="getRankClass(row.countryRank as number)">
-            #{{ row.countryRank }}
-            <span class="rank-cell__global">(#{{ value }})</span>
-          </span>
-          <span v-else class="rank-cell" :class="getRankClass(value as number)">
+          <span class="rank-cell" :class="getRankClass(value as number)">
             #{{ value }}
+            <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
           </span>
         </template>
 
@@ -410,9 +438,9 @@ watch(() => categoryStore.loaded, (loaded) => {
             { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
             { 'lb-card--inactive': !!row.playerInactive },
           ]" :data-user-id="row.userId">
-            <span class="lb-card__rank rank-cell"
-              :class="getRankClass(countryFilter && row.countryRank ? row.countryRank as number : row.rank as number)">
-              #{{ countryFilter && row.countryRank ? row.countryRank : row.rank }}
+            <span class="lb-card__rank rank-cell" :class="getRankClass(row.rank as number)">
+              #{{ row.rank }}
+              <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
             </span>
             <div class="lb-card__player">
               <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28" />
