@@ -10,11 +10,43 @@ defineProps<{
 }>()
 
 const showTooltip = ref(false)
+const triggerRef = ref<HTMLElement | null>(null)
+const tooltipStyle = ref<Record<string, string>>({})
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
+
+const SCROLL_OPTS: AddEventListenerOptions = { capture: true, passive: true }
+
+function updatePosition() {
+  const el = triggerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  tooltipStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom + 8}px`,
+    left: `${rect.left}px`,
+  }
+}
+
+function onScrollOrResize() {
+  if (!showTooltip.value) return
+  updatePosition()
+}
+
+function attachListeners() {
+  window.addEventListener('scroll', onScrollOrResize, SCROLL_OPTS)
+  window.addEventListener('resize', onScrollOrResize, { passive: true })
+}
+
+function detachListeners() {
+  window.removeEventListener('scroll', onScrollOrResize, SCROLL_OPTS)
+  window.removeEventListener('resize', onScrollOrResize)
+}
 
 function onMouseEnter() {
   hoverTimer = setTimeout(() => {
+    updatePosition()
     showTooltip.value = true
+    attachListeners()
   }, 800)
 }
 
@@ -24,41 +56,39 @@ function onMouseLeave() {
     hoverTimer = null
   }
   showTooltip.value = false
+  detachListeners()
 }
 
 onUnmounted(() => {
   if (hoverTimer) clearTimeout(hoverTimer)
+  detachListeners()
 })
 </script>
 
 <template>
-  <span class="tooltip-trigger" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <span ref="triggerRef" class="tooltip-trigger" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <slot />
-    <Transition name="tooltip">
-      <div v-if="showTooltip" class="tooltip-trigger__popup">
-        <PlayerTooltipCard :user-id="userId" :user-name="userName" :avatar-url="avatarUrl" :country="country" />
-      </div>
-    </Transition>
+    <Teleport to="body">
+      <Transition name="tooltip">
+        <div v-if="showTooltip" class="tooltip-trigger__popup" :style="tooltipStyle">
+          <PlayerTooltipCard :user-id="userId" :user-name="userName" :avatar-url="avatarUrl"
+            :country="country" />
+        </div>
+      </Transition>
+    </Teleport>
   </span>
 </template>
 
 <style scoped>
 .tooltip-trigger {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  z-index: 2;
 }
+</style>
 
-.tooltip-trigger:hover {
-  z-index: 10000;
-}
-
+<style>
 .tooltip-trigger__popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
   z-index: 10000;
   pointer-events: auto;
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
