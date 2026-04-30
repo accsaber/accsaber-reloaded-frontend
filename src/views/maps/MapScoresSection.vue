@@ -4,11 +4,13 @@ import GlowImage from '@/components/common/GlowImage.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
+import RelationFilter from '@/components/domain/RelationFilter.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
+import type { UserRelationType } from '@/types/api/relations'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn } from '@/types/display'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -49,6 +51,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } 
 
 const searchQuery = ref('')
 const countryFilter = ref('')
+const relationFilter = ref<UserRelationType | ''>('')
 
 const scores = ref<DifficultyScoreDisplay[]>([])
 const totalPages = ref(0)
@@ -171,6 +174,7 @@ async function fetchScores() {
       ...paginationParams.value,
       search: searchQuery.value.trim() || undefined,
       country: countryFilter.value || undefined,
+      relation: relationFilter.value || undefined,
     }
     const res = await getDifficultyScores(props.difficultyId, params)
     scores.value = res.content.map((s) =>
@@ -183,7 +187,8 @@ async function fetchScores() {
       sortState.value.key === 'ap' &&
       sortState.value.direction === 'desc' &&
       !searchQuery.value.trim() &&
-      !countryFilter.value
+      !countryFilter.value &&
+      !relationFilter.value
     if (isCanonicalView) {
       emit('top-scores-loaded', scores.value)
     }
@@ -196,9 +201,10 @@ async function fetchScores() {
 
 watch(searchQuery, () => { resetPage() })
 watch(countryFilter, () => { resetPage() })
+watch(relationFilter, () => { resetPage() })
 
 watch(
-  [() => props.difficultyId, paginationParams, searchQuery, countryFilter],
+  [() => props.difficultyId, paginationParams, searchQuery, countryFilter, relationFilter],
   () => fetchScores(),
   { immediate: true, deep: true },
 )
@@ -209,6 +215,7 @@ watch(
     <div class="map-scores__controls">
       <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
         @update:model-value="countryFilter = $event" />
+      <RelationFilter v-model="relationFilter" />
       <SearchBox v-model="searchQuery" placeholder="Search players..." />
     </div>
 

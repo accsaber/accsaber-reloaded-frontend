@@ -7,10 +7,13 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import RelationActions from '@/components/domain/RelationActions.vue'
+import RelationCountsBar from '@/components/domain/RelationCountsBar.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
+import { useRelationsStore } from '@/stores/relations'
 import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
 import { getRankClass } from '@/utils/ranking'
@@ -24,11 +27,18 @@ const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const authStore = useAuthStore()
+const relationsStore = useRelationsStore()
 
 const userId = computed(() => route.params.userId as string)
 
+const isBlockedByMe = computed(() => relationsStore.hasRelation(userId.value, 'blocked'))
+
 const canSnipe = computed(
-  () => authStore.isLoggedIn && !!authStore.userId && authStore.userId !== userId.value,
+  () =>
+    authStore.isLoggedIn
+    && !!authStore.userId
+    && authStore.userId !== userId.value
+    && !isBlockedByMe.value,
 )
 
 const user = ref<UserResponse | null>(null)
@@ -137,7 +147,7 @@ async function fetchProfile() {
     const userRes = await getUser(userId.value)
     user.value = userRes
 
-    if (userRes.banned) {
+    if (userRes.banned || isBlockedByMe.value) {
       loading.value = false
       return
     }
@@ -167,6 +177,10 @@ async function fetchProfile() {
 }
 
 watch(userId, () => { fetchProfile() }, { immediate: true })
+watch(isBlockedByMe, (blocked, wasBlocked) => {
+  if (blocked === wasBlocked) return
+  fetchProfile()
+})
 watch(activeCategory, (newCategory) => {
   if (user.value) fetchStatsDiff()
 
@@ -288,6 +302,7 @@ watch(activeCategory, (newCategory) => {
               </svg>
               <span>Snipe</span>
             </BaseButton>
+            <RelationActions :target-user-id="userId" :target-name="user.name" />
           </div>
 
           <div v-if="user.banned" class="profile-hero__banned">
@@ -297,6 +312,15 @@ watch(activeCategory, (newCategory) => {
               <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
             </svg>
             <span>This account is banned.</span>
+          </div>
+
+          <div v-else-if="isBlockedByMe" class="profile-hero__banned">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            </svg>
+            <span>You have blocked this user. Their stats and scores are hidden.</span>
           </div>
 
           <template v-else>
@@ -329,11 +353,13 @@ watch(activeCategory, (newCategory) => {
               <StatBlock label="Ranked Plays" :value="activeStats?.rankedPlays ?? 0" :decimals="0"
                 :trend="statsDiff?.rankedPlaysDiff" />
             </div>
+
+            <RelationCountsBar v-if="user.relations" :user-id="userId" :counts="user.relations" />
           </template>
         </div>
       </div>
 
-      <template v-if="!user.banned">
+      <template v-if="!user.banned && !isBlockedByMe">
         <div class="profile-page__tabs-row">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
           <SearchBox v-if="activeTab === 'scores'" v-model="scoreSearch" placeholder="Search maps..." />

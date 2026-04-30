@@ -1,5 +1,6 @@
 import type { Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { UserRelationType } from './relations'
 
 export type CriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED'
 
@@ -175,5 +176,6 @@ export interface DifficultyListParams extends PaginationParams {
 
 export interface DifficultyScoreParams extends PaginationParams {
   country?: string
+  relation?: UserRelationType
 }
 

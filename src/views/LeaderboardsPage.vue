@@ -7,12 +7,14 @@ import RankChange from '@/components/common/RankChange.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import RelationFilter from '@/components/domain/RelationFilter.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import { useLevelStore } from '@/stores/levels'
+import type { UserRelationType } from '@/types/api/relations'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -74,6 +76,20 @@ const countryFilter = computed<string>({
       query.country = country
     } else {
       delete query.country
+    }
+    delete query.page
+    router.replace({ query })
+  },
+})
+
+const relationFilter = computed<UserRelationType | ''>({
+  get: () => (route.query.relation as UserRelationType | '') || '',
+  set: (relation) => {
+    const query = { ...route.query }
+    if (relation) {
+      query.relation = relation
+    } else {
+      delete query.relation
     }
     delete query.page
     router.replace({ query })
@@ -171,6 +187,7 @@ const countryOptions = computed(() => {
 
 function buildCacheKey(): Record<string, unknown> {
   const inactiveUsers = showInactive.value
+  const relation = relationFilter.value || undefined
   if (isXpMode.value) {
     return {
       _type: 'xp',
@@ -178,6 +195,7 @@ function buildCacheKey(): Record<string, unknown> {
       search: searchQuery.value.trim() || undefined,
       country: countryFilter.value || undefined,
       inactiveUsers,
+      relation,
     }
   }
   return {
@@ -187,6 +205,7 @@ function buildCacheKey(): Record<string, unknown> {
     search: searchQuery.value.trim() || undefined,
     country: countryFilter.value || undefined,
     inactiveUsers,
+    relation,
   }
 }
 
@@ -224,6 +243,7 @@ async function fetchData() {
 
 async function fetchFromApi(cacheKey: Record<string, unknown>) {
   const inactiveUsers = showInactive.value
+  const relation = relationFilter.value || undefined
   if (isXpMode.value) {
     const { getXpLeaderboard } = await import('@/api/leaderboards')
     const params = {
@@ -231,6 +251,7 @@ async function fetchFromApi(cacheKey: Record<string, unknown>) {
       search: searchQuery.value.trim() || undefined,
       country: countryFilter.value || undefined,
       inactiveUsers,
+      relation,
     }
     const res = await getXpLeaderboard(params)
     xpPageData.value = res
@@ -239,7 +260,12 @@ async function fetchFromApi(cacheKey: Record<string, unknown>) {
     const categoryId = categoryStore.getCategoryId(activeCategory.value)
     if (!categoryId) return
     const { getLeaderboard, getCountryLeaderboard } = await import('@/api/leaderboards')
-    const params = { ...paginationParams.value, search: searchQuery.value.trim() || undefined, inactiveUsers }
+    const params = {
+      ...paginationParams.value,
+      search: searchQuery.value.trim() || undefined,
+      inactiveUsers,
+      relation,
+    }
     let res: Page<LeaderboardResponse>
     if (countryFilter.value) {
       res = await getCountryLeaderboard(categoryId, countryFilter.value, params)
@@ -294,7 +320,7 @@ function handleCountryChange(country: string) {
 watch(searchQuery, () => { resetPage() })
 
 watch(
-  [activeCategory, paginationParams, countryFilter, searchQuery, showInactive],
+  [activeCategory, paginationParams, countryFilter, searchQuery, showInactive, relationFilter],
   () => { fetchData() },
   { immediate: true },
 )
@@ -329,6 +355,7 @@ watch(() => categoryStore.loaded, (loaded) => {
         <SearchBox v-model="searchQuery" placeholder="Search players..." />
         <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
           @update:model-value="handleCountryChange" />
+        <RelationFilter v-model="relationFilter" />
       </div>
     </div>
 

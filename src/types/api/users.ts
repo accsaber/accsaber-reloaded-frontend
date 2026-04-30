@@ -1,5 +1,6 @@
 import type { MilestoneTier, MilestoneType } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { UserRelationCounts } from './relations'
 
 export interface UserResponse {
   id: string
@@ -13,6 +14,7 @@ export interface UserResponse {
   playerInactive: boolean
   banned: boolean
   createdAt: string
+  relations: UserRelationCounts
 }
 
 export interface ScoreResponse {
