@@ -85,20 +85,24 @@ const columns = computed(() =>
 
 const rows = computed(() => {
   const pageOffset = (paginationParams.value.page ?? 0) * (paginationParams.value.size ?? 50)
-  return scores.value.map((s, i) => ({
-    _userId: s.userId,
-    rank: s.rank,
-    countryRank: countryFilter.value ? pageOffset + i + 1 : 0,
-    avatarUrl: s.avatarUrl,
-    userName: s.userName,
-    country: s.country,
-    accuracy: s.accuracy,
-    score: s.score,
-    ap: s.ap,
-    weighted: s.weightedAp,
-    streak115: s.streak115,
-    date: s.date,
-  }))
+  const filtering = !!countryFilter.value || !!relationFilter.value
+  return scores.value.map((s, i) => {
+    const positional = pageOffset + i + 1
+    return {
+      _userId: s.userId,
+      rank: filtering ? positional : s.rank,
+      parenRank: filtering ? s.rank : null,
+      avatarUrl: s.avatarUrl,
+      userName: s.userName,
+      country: s.country,
+      accuracy: s.accuracy,
+      score: s.score,
+      ap: s.ap,
+      weighted: s.weightedAp,
+      streak115: s.streak115,
+      date: s.date,
+    }
+  })
 })
 
 const countryOptions = computed(() => {
@@ -224,12 +228,9 @@ watch(
       row-key="_userId" :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort"
       @row-click="handleRowClick" @update:page="setPage">
       <template #cell-rank="{ value, row }">
-        <span v-if="countryFilter" class="map-scores__rank" :class="getRankClass(row.countryRank as number)">
-          #{{ row.countryRank }}
-          <span class="map-scores__rank-global">(#{{ value }})</span>
-        </span>
-        <span v-else class="map-scores__rank" :class="getRankClass(value as number)">
+        <span class="map-scores__rank" :class="getRankClass(value as number)">
           #{{ value }}
+          <span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
         </span>
       </template>
 
@@ -263,9 +264,9 @@ watch(
       <template #mobile-card="{ row }">
         <router-link :to="playerRowTo(row)" class="ms-card"
           :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }">
-          <span class="ms-card__rank map-scores__rank"
-            :class="getRankClass(countryFilter ? (row.countryRank as number) : (row.rank as number))">
-            #{{ countryFilter ? row.countryRank : row.rank }}
+          <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
+            #{{ row.rank }}
+            <span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
           </span>
           <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
           <div class="ms-card__info">
