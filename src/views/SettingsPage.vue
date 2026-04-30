@@ -7,10 +7,12 @@ import ProviderIcon from '@/components/domain/ProviderIcon.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 import { useThemeStore } from '@/stores/theme'
 import type { OAuthProvider } from '@/types/api/player-auth'
+import type { PrivacySettings, Visibility } from '@/types/api/settings'
 import { isRankingSubdomain } from '@/utils/subdomain'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 usePageMeta({
@@ -18,7 +20,7 @@ usePageMeta({
   description: 'Manage appearance, account, and linked accounts.',
 })
 
-type SectionKey = 'appearance' | 'account' | 'connections'
+type SectionKey = 'appearance' | 'privacy' | 'account' | 'connections'
 
 interface SectionDef {
   key: SectionKey
@@ -27,8 +29,34 @@ interface SectionDef {
 }
 
 const authStore = useAuthStore()
+const settingsStore = useSettingsStore()
 const themeStore = useThemeStore()
 const route = useRoute()
+
+const VISIBILITY_OPTIONS: { value: Visibility; label: string; description: string }[] = [
+  { value: 'public', label: 'Public', description: 'Anyone can see this list and count.' },
+  { value: 'followers_only', label: 'Followers only', description: 'Only people who follow you.' },
+  { value: 'private', label: 'Private', description: 'Only you.' },
+]
+
+interface PrivacyControl {
+  key: keyof PrivacySettings
+  title: string
+  hint: string
+}
+
+const PRIVACY_CONTROLS: PrivacyControl[] = [
+  {
+    key: 'privacy.followingVisibility',
+    title: 'Following list',
+    hint: 'Controls who can see the count and list of users you follow.',
+  },
+  {
+    key: 'privacy.rivalsVisibility',
+    title: 'Rivals list',
+    hint: 'Controls who can see the count and list of users you have rivaled.',
+  },
+]
 
 const me = computed(() => authStore.authMe)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
@@ -44,6 +72,7 @@ const loginModalOpen = ref(false)
 
 const sections = computed<SectionDef[]>(() => [
   { key: 'appearance', label: 'Appearance', requiresLogin: false },
+  { key: 'privacy', label: 'Privacy', requiresLogin: !isLoggedIn.value },
   { key: 'account', label: 'Account', requiresLogin: !canAccessAccount.value },
   { key: 'connections', label: 'Connections', requiresLogin: !canAccessConnections.value },
 ])
@@ -93,6 +122,17 @@ function selectSection(section: SectionDef) {
   }
   activeSection.value = section.key
 }
+
+async function setVisibility(key: keyof PrivacySettings, value: Visibility) {
+  if (settingsStore.privacy[key] === value || settingsStore.privacySaving) return
+  await settingsStore.updatePrivacy(key, value)
+}
+
+onMounted(() => {
+  if (isLoggedIn.value && !settingsStore.privacyLoaded) {
+    void settingsStore.fetchPrivacy()
+  }
+})
 </script>
 
 <template>
@@ -169,6 +209,41 @@ function selectSection(section: SectionDef) {
               </p>
             </header>
             <BaseButton variant="primary" @click="loginModalOpen = true">Sign in</BaseButton>
+          </section>
+        </template>
+
+        <template v-else-if="activeSection === 'privacy' && isLoggedIn">
+          <section class="settings-card">
+            <header class="settings-card__header">
+              <h2 class="settings-card__title">Privacy</h2>
+              <p class="settings-card__desc">
+                Control who can see your following and rivals lists. Your followers and people who
+                rival you are always visible.
+              </p>
+            </header>
+
+            <div v-for="control in PRIVACY_CONTROLS" :key="control.key" class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">{{ control.title }}</span>
+                <span class="settings-row__hint">{{ control.hint }}</span>
+              </div>
+              <div class="visibility-picker" role="radiogroup" :aria-label="control.title">
+                <button v-for="opt in VISIBILITY_OPTIONS" :key="opt.value" type="button"
+                  class="visibility-picker__btn"
+                  :class="{ 'visibility-picker__btn--active': settingsStore.privacy[control.key] === opt.value }"
+                  role="radio"
+                  :aria-checked="settingsStore.privacy[control.key] === opt.value"
+                  :title="opt.description"
+                  :disabled="settingsStore.privacySaving"
+                  @click="setVisibility(control.key, opt.value)">
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <p v-if="settingsStore.privacyError" class="settings-card__error">
+              {{ settingsStore.privacyError }}
+            </p>
           </section>
         </template>
 
@@ -443,6 +518,42 @@ function selectSection(section: SectionDef) {
 .theme-picker__btn--active {
   color: var(--page-accent);
   background: color-mix(in srgb, var(--page-accent) 10%, var(--bg-surface));
+}
+
+.visibility-picker {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  gap: 2px;
+}
+
+.visibility-picker__btn {
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.visibility-picker__btn:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.visibility-picker__btn--active {
+  color: var(--page-accent);
+  background: color-mix(in srgb, var(--page-accent) 10%, var(--bg-surface));
+}
+
+.visibility-picker__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .settings-profile {

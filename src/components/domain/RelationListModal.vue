@@ -5,6 +5,7 @@ import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRelationsStore } from '@/stores/relations'
 import type {
@@ -37,7 +38,7 @@ const page = ref(1)
 const totalPages = ref(0)
 const loading = ref(false)
 const removingId = ref<string | null>(null)
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 const isSelf = computed(() => authStore.userId === props.userId)
 
@@ -119,7 +120,7 @@ watch(page, () => {
   <BaseModal :open="open" :title="title" max-width="480px" @close="emit('close')">
     <div class="relation-list">
       <template v-if="loading">
-        <SkeletonLoader v-for="i in 6" :key="i" variant="text" height="48px" />
+        <SkeletonLoader v-for="i in PAGE_SIZE" :key="i" variant="text" height="48px" />
       </template>
 
       <template v-else-if="items.length === 0">
@@ -143,8 +144,16 @@ watch(page, () => {
             :size="36"
           />
           <span v-else class="relation-list__avatar-fallback" />
-          <span class="relation-list__name">{{ item.targetName }}</span>
-          <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
+          <PlayerTooltipTrigger
+            :user-id="item.targetUserId"
+            :user-name="item.targetName"
+            :avatar-url="item.targetAvatarUrl ?? ''"
+            :country="item.targetCountry ?? ''"
+            class="relation-list__trigger"
+          >
+            <span class="relation-list__name">{{ item.targetName }}</span>
+            <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
+          </PlayerTooltipTrigger>
           <button
             v-if="canRemove"
             class="relation-list__remove"
@@ -207,6 +216,14 @@ watch(page, () => {
   border-radius: var(--radius-avatar);
   background: var(--bg-overlay);
   flex-shrink: 0;
+}
+
+.relation-list__trigger {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
 }
 
 .relation-list__name {

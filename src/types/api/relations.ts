@@ -20,9 +20,9 @@ export interface UserRelationResponse {
 }
 
 export interface UserRelationCounts {
-  followingCount: number
+  followingCount?: number
   followerCount: number
-  rivalCount: number
+  rivalCount?: number
   rivaledByCount: number
   blockedCount?: number
 }

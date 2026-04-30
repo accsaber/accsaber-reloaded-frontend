@@ -32,45 +32,49 @@ interface Tile {
 }
 
 const tiles = computed<Tile[]>(() => {
-  const result: Tile[] = [
-    {
+  const c = localCounts.value
+  const result: Tile[] = []
+  if (c.followingCount !== undefined) {
+    result.push({
       key: 'following',
       label: 'Following',
-      count: localCounts.value.followingCount,
+      count: c.followingCount,
       type: 'follower',
       direction: 'outgoing',
       modalTitle: 'Following',
-    },
-    {
-      key: 'followers',
-      label: 'Followers',
-      count: localCounts.value.followerCount,
-      type: 'follower',
-      direction: 'incoming',
-      modalTitle: 'Followers',
-    },
-    {
+    })
+  }
+  result.push({
+    key: 'followers',
+    label: 'Followers',
+    count: c.followerCount,
+    type: 'follower',
+    direction: 'incoming',
+    modalTitle: 'Followers',
+  })
+  if (c.rivalCount !== undefined) {
+    result.push({
       key: 'rivaling',
       label: 'Rivaling',
-      count: localCounts.value.rivalCount,
+      count: c.rivalCount,
       type: 'rival',
       direction: 'outgoing',
       modalTitle: 'Rivaling',
-    },
-    {
-      key: 'rivaledBy',
-      label: 'Rivaled by',
-      count: localCounts.value.rivaledByCount,
-      type: 'rival',
-      direction: 'incoming',
-      modalTitle: 'Rivaled by',
-    },
-  ]
-  if (localCounts.value.blockedCount !== undefined) {
+    })
+  }
+  result.push({
+    key: 'rivaledBy',
+    label: 'Rivaled by',
+    count: c.rivaledByCount,
+    type: 'rival',
+    direction: 'incoming',
+    modalTitle: 'Rivaled by',
+  })
+  if (c.blockedCount !== undefined) {
     result.push({
       key: 'blocked',
       label: 'Blocked',
-      count: localCounts.value.blockedCount,
+      count: c.blockedCount,
       type: 'blocked',
       direction: 'outgoing',
       modalTitle: 'Blocked',
@@ -80,12 +84,13 @@ const tiles = computed<Tile[]>(() => {
 })
 
 function handleRemoved(item: UserRelationResponse) {
-  if (item.type === 'follower') {
-    localCounts.value.followingCount = Math.max(0, localCounts.value.followingCount - 1)
-  } else if (item.type === 'rival') {
-    localCounts.value.rivalCount = Math.max(0, localCounts.value.rivalCount - 1)
-  } else if (item.type === 'blocked' && localCounts.value.blockedCount !== undefined) {
-    localCounts.value.blockedCount = Math.max(0, localCounts.value.blockedCount - 1)
+  const c = localCounts.value
+  if (item.type === 'follower' && c.followingCount !== undefined) {
+    c.followingCount = Math.max(0, c.followingCount - 1)
+  } else if (item.type === 'rival' && c.rivalCount !== undefined) {
+    c.rivalCount = Math.max(0, c.rivalCount - 1)
+  } else if (item.type === 'blocked' && c.blockedCount !== undefined) {
+    c.blockedCount = Math.max(0, c.blockedCount - 1)
   }
 }
 

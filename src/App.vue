@@ -3,10 +3,12 @@ import BaseBanner from '@/components/common/BaseBanner.vue'
 import AppNavbar from '@/components/layout/AppNavbar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRelationsStore } from '@/stores/relations'
+import { useSettingsStore } from '@/stores/settings'
 import { computed, watch } from 'vue'
 
 const authStore = useAuthStore()
 const relationsStore = useRelationsStore()
+const settingsStore = useSettingsStore()
 
 const showLegacyBanner = computed(() => authStore.legacyUserIdDetected !== null)
 
@@ -17,8 +19,13 @@ function dismissLegacyBanner() {
 watch(
   () => authStore.isLoggedIn,
   (loggedIn) => {
-    if (loggedIn) void relationsStore.fetchAll()
-    else relationsStore.reset()
+    if (loggedIn) {
+      void relationsStore.fetchAll()
+      void settingsStore.fetchPrivacy()
+    } else {
+      relationsStore.reset()
+      settingsStore.reset()
+    }
   },
   { immediate: true },
 )
