@@ -486,8 +486,10 @@ watch(() => categoryStore.loaded, (loaded) => {
 .leaderboards__controls {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: center;
   gap: var(--space-md);
+  flex-wrap: wrap;
+  row-gap: var(--space-md);
 }
 
 .leaderboards__inactive-toggle {
@@ -543,8 +545,10 @@ watch(() => categoryStore.loaded, (loaded) => {
 .leaderboards__filter {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .leaderboards__table {

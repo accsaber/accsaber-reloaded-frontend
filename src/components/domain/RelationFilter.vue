@@ -20,7 +20,6 @@ const options = [
   { value: '', label: 'Everyone' },
   { value: 'follower', label: 'Followers' },
   { value: 'rival', label: 'Rivals' },
-  { value: 'blocked', label: 'Blocked' },
 ]
 
 function handleChange(value: string) {
