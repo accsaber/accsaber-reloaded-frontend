@@ -30,5 +30,13 @@ export function usePlaylistDownload() {
     a.click()
   }
 
-  return { playlistCategories, downloadPlaylist, downloadUnrankedPlaylist }
+  function downloadBatchPlaylist(batchId: string, batchName: string) {
+    const baseUrl = import.meta.env.VITE_API_BASE as string
+    const a = document.createElement('a')
+    a.href = `${baseUrl}/playlists/batch/${batchId}`
+    a.download = `accsaber-reloaded-${batchName.toLowerCase().replace(/[\s_]+/g, '-')}.bplist`
+    a.click()
+  }
+
+  return { playlistCategories, downloadPlaylist, downloadUnrankedPlaylist, downloadBatchPlaylist }
 }

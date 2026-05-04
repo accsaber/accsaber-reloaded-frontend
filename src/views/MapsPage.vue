@@ -78,7 +78,7 @@ const unplayedOnly = computed<boolean>({
   },
 })
 const playlistDropdownOpen = ref(false)
-const { playlistCategories, downloadPlaylist: dlPlaylist } = usePlaylistDownload()
+const { playlistCategories, downloadPlaylist: dlPlaylist, downloadBatchPlaylist } = usePlaylistDownload()
 
 function downloadPlaylist(categoryCode: string) {
   dlPlaylist(categoryCode)
@@ -508,11 +508,26 @@ watch(
           <div class="maps-page__batches">
             <div v-for="batch in batches" :key="batch.id" class="maps-page__batch">
               <div class="maps-page__batch-header">
-                <h2 class="maps-page__batch-name">{{ batch.name }}</h2>
-                <div class="maps-page__batch-meta">
-                  <span class="maps-page__batch-count">{{ batch.difficulties.length }} difficulties</span>
-                  <span v-if="batch.releasedAt" class="maps-page__batch-date">{{ formatRelativeDate(batch.releasedAt)
-                  }}</span>
+                <div class="maps-page__batch-header-top">
+                  <div class="maps-page__batch-heading">
+                    <h2 class="maps-page__batch-name">{{ batch.name }}</h2>
+                    <div class="maps-page__batch-meta">
+                      <span class="maps-page__batch-count">{{ batch.difficulties.length }} difficulties</span>
+                      <span v-if="batch.releasedAt" class="maps-page__batch-date">{{ formatRelativeDate(batch.releasedAt)
+                      }}</span>
+                    </div>
+                  </div>
+                  <BaseButton size="sm" class="maps-page__batch-download"
+                    :aria-label="`Download ${batch.name} playlist`"
+                    @click="downloadBatchPlaylist(batch.id, batch.name)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Playlist</span>
+                  </BaseButton>
                 </div>
                 <p v-if="batch.description" class="maps-page__batch-desc">{{ batch.description }}</p>
               </div>
@@ -696,15 +711,28 @@ watch(
   border-radius: var(--radius-card);
 }
 
+.maps-page__batch-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.maps-page__batch-heading {
+  min-width: 0;
+}
+
 .maps-page__batch-name {
   font-size: var(--text-section);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .maps-page__batch-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-md);
   margin-top: var(--space-xs);
 }
@@ -719,6 +747,10 @@ watch(
   font-size: var(--text-caption);
   color: var(--text-tertiary);
   margin: var(--space-sm) 0 0;
+}
+
+.maps-page__batch-download {
+  flex-shrink: 0;
 }
 
 .maps-page__batch-category {
@@ -893,6 +925,15 @@ watch(
     min-width: 0;
     flex: 1 1 100%;
     width: 100%;
+  }
+
+  .maps-page__batch-header-top {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .maps-page__batch-download {
+    align-self: flex-start;
   }
 }
 </style>
