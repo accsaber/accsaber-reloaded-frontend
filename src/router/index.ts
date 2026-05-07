@@ -216,28 +216,45 @@ function getLoginRoute(requiredRole?: StaffRole): string {
 }
 
 router.beforeEach(async (to) => {
-  if (to.meta.requiresStaff) {
-    const auth = useAuthStore()
-    const loginRoute = getLoginRoute(to.meta.requiredRole)
+  if (!to.meta.requiresStaff) return
 
-    if (!auth.isStaffAuthorized) {
-      return { name: loginRoute, query: { redirect: to.fullPath } }
+  const auth = useAuthStore()
+
+  if (isAdminSubdomain) {
+    if (auth.staffToken && !auth.isAdmin) auth.clearStaffAuth()
+    if (!auth.isAdmin) {
+      return { name: 'staff-login', query: { redirect: to.fullPath } }
     }
-
-    if (auth.staffToken && auth.isTokenExpiringSoon) {
+    if (auth.isTokenExpiringSoon) {
       try {
         await auth.refreshStaffToken()
       } catch {
         auth.clearStaffAuth()
-        if (!auth.isStaffAuthorized) {
-          return { name: loginRoute, query: { redirect: to.fullPath } }
-        }
+        return { name: 'staff-login', query: { redirect: to.fullPath } }
       }
     }
+    return
+  }
 
-    if (to.meta.requiredRole && !auth.hasRole(to.meta.requiredRole)) {
-      return { name: rankingDashboardRoute }
+  const loginRoute = getLoginRoute(to.meta.requiredRole)
+
+  if (!auth.isStaffAuthorized) {
+    return { name: loginRoute, query: { redirect: to.fullPath } }
+  }
+
+  if (auth.staffToken && auth.isTokenExpiringSoon) {
+    try {
+      await auth.refreshStaffToken()
+    } catch {
+      auth.clearStaffAuth()
+      if (!auth.isStaffAuthorized) {
+        return { name: loginRoute, query: { redirect: to.fullPath } }
+      }
     }
+  }
+
+  if (to.meta.requiredRole && !auth.hasRole(to.meta.requiredRole)) {
+    return { name: rankingDashboardRoute }
   }
 })
 
