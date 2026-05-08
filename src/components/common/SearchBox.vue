@@ -32,6 +32,14 @@ function onInput(e: Event) {
   }, props.debounce)
 }
 
+function onEnter() {
+  if (timeout) {
+    clearTimeout(timeout)
+    timeout = null
+  }
+  emit('update:modelValue', localValue.value)
+}
+
 onUnmounted(() => {
   if (timeout) clearTimeout(timeout)
 })
@@ -50,6 +58,7 @@ onUnmounted(() => {
       :value="localValue"
       :placeholder="placeholder"
       @input="onInput"
+      @keydown.enter="onEnter"
     />
     <button
       v-if="localValue"

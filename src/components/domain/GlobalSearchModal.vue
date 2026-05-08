@@ -50,8 +50,11 @@ watch(() => props.open, async (open) => {
   }
 })
 
+const enterOverride = ref(false)
+
 watch(searchValue, (val) => {
   const trimmed = val.trim()
+  enterOverride.value = false
   if (trimmed.length < MIN_CHARS) {
     requestId++
     players.value = []
@@ -69,6 +72,15 @@ watch(debouncedSearch, (val) => {
   if (trimmed.length < MIN_CHARS) return
   runSearch(trimmed)
 })
+
+function onEnter() {
+  const trimmed = searchValue.value.trim()
+  if (!trimmed) return
+  if (trimmed.length < MIN_CHARS) enterOverride.value = true
+  loadingPlayers.value = true
+  loadingMaps.value = true
+  runSearch(trimmed)
+}
 
 async function runSearch(query: string) {
   const id = ++requestId
@@ -161,15 +173,15 @@ const mapResults = computed<MapResult[]>(() =>
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input ref="inputRef" v-model="searchValue" type="text" class="search-modal__input"
-          placeholder="Type to search players and maps..." />
+          placeholder="Type to search players and maps..." @keydown.enter="onEnter" />
       </div>
 
       <div v-if="!searchValue.trim()" class="search-modal__hint">
         Start typing to search across players and maps.
       </div>
 
-      <div v-else-if="searchValue.trim().length < MIN_CHARS" class="search-modal__hint">
-        Type at least {{ MIN_CHARS }} characters to search.
+      <div v-else-if="searchValue.trim().length < MIN_CHARS && !enterOverride" class="search-modal__hint">
+        Type at least {{ MIN_CHARS }} characters to search, or press Enter to search anyway.
       </div>
 
       <template v-else>
