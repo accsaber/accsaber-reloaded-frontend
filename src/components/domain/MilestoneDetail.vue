@@ -98,7 +98,7 @@ function toggleExpand() {
         <h4 class="milestone-detail__title">
           {{ milestone.title }}
           <span v-if="compact && milestone.description" class="milestone-detail__inline-desc">
-            · {{ milestone.description }}
+            <span class="milestone-detail__inline-desc-sep">· </span>{{ milestone.description }}
           </span>
         </h4>
       </div>
@@ -562,6 +562,14 @@ function toggleExpand() {
   }
 
   .milestone-detail__inline-desc {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: var(--text-caption);
+    line-height: 1.4;
+  }
+
+  .milestone-detail__inline-desc-sep {
     display: none;
   }
 
