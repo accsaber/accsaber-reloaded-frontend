@@ -562,11 +562,13 @@ function toggleExpand() {
   }
 
   .milestone-detail__inline-desc {
+    display: block;
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
     font-size: var(--text-caption);
     line-height: 1.4;
+    margin-top: 2px;
   }
 
   .milestone-detail__inline-desc-sep {
