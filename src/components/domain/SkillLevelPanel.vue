@@ -484,7 +484,6 @@ const tooltipStyle = computed(() => {
   padding-top: var(--space-lg);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid var(--card-accent);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   display: flex;

@@ -165,6 +165,7 @@ export interface CreateMilestoneRequest {
   comparison: string
   blExclusive?: boolean
   mapDifficultyIds?: string[]
+  awardsItemId?: string
 }
 
 export interface LinkMilestoneMapRequest {
@@ -174,12 +175,21 @@ export interface LinkMilestoneMapRequest {
 export interface UpdateMilestoneRequest {
   title?: string
   description?: string
+  awardsItemId?: string
 }
 
 export interface CreateMilestoneSetRequest {
   title: string
   description: string
   setBonusXp: number
+  awardsItemId?: string
+}
+
+export interface UpdateMilestoneSetRequest {
+  title?: string
+  description?: string
+  setBonusXp?: number
+  awardsItemId?: string
 }
 
 export interface CreatePrerequisiteRequest {

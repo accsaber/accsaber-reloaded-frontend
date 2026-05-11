@@ -139,8 +139,15 @@ const linkAttrs = computed(() =>
 @media (prefers-reduced-motion: reduce) {
   .base-button__spinner {
     animation: none;
-    border-top-color: var(--text-tertiary);
-    border-right-color: var(--text-primary);
+    width: 22px;
+    height: 4px;
+    border: none;
+    border-radius: 0;
+    color: var(--text-primary);
+    background:
+      radial-gradient(circle at 3px 50%, currentColor 2px, transparent 2.5px),
+      radial-gradient(circle at 11px 50%, currentColor 2px, transparent 2.5px),
+      radial-gradient(circle at 19px 50%, currentColor 2px, transparent 2.5px);
   }
 }
 </style>

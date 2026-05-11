@@ -5,9 +5,9 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 
 const route = useRoute()
 
-type AdminTab = 'users' | 'duplicates' | 'staff' | 'maps' | 'batches' | 'milestones' | 'campaigns' | 'curves' | 'news' | 'operations'
+type AdminTab = 'users' | 'duplicates' | 'staff' | 'maps' | 'batches' | 'milestones' | 'campaigns' | 'curves' | 'news' | 'operations' | 'items'
 
-const VALID_TABS: AdminTab[] = ['users', 'duplicates', 'staff', 'maps', 'batches', 'milestones', 'campaigns', 'curves', 'news', 'operations']
+const VALID_TABS: AdminTab[] = ['users', 'duplicates', 'staff', 'maps', 'batches', 'milestones', 'campaigns', 'curves', 'news', 'operations', 'items']
 
 const activeTab = computed<AdminTab>(() => {
   const t = route.query.tab as string
@@ -25,6 +25,7 @@ const tabComponents: Record<AdminTab, ReturnType<typeof defineAsyncComponent>> =
   curves: defineAsyncComponent(() => import('./admin/AdminCurvesTab.vue')),
   news: defineAsyncComponent(() => import('./admin/AdminNewsTab.vue')),
   operations: defineAsyncComponent(() => import('./admin/AdminOperationsTab.vue')),
+  items: defineAsyncComponent(() => import('./admin/AdminItemsTab.vue')),
 }
 
 const activeComponent = computed(() => tabComponents[activeTab.value])

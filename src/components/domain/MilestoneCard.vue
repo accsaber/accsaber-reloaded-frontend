@@ -71,7 +71,7 @@ const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0
       <span class="milestone-card__completion">{{ completionText }}</span>
     </div>
     <div v-if="progressPercent != null" class="milestone-card__progress">
-      <div class="milestone-card__progress-bar" :style="{ width: `${progressBarWidth}%` }" />
+      <div class="milestone-card__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
       <span class="milestone-card__progress-text">{{ formatPercent(progressPercent) }}%</span>
     </div>
   </div>
@@ -214,10 +214,13 @@ const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0
 }
 
 .milestone-card__progress-bar {
+  width: 100%;
   height: 100%;
   background: var(--tier-color);
   border-radius: 2px;
-  transition: width 300ms ease;
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+  transition: transform 300ms ease-out;
 }
 
 .milestone-card--completed .milestone-card__progress-bar {

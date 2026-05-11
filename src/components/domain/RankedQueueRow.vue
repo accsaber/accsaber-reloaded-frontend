@@ -138,7 +138,6 @@ const dateLabel = computed(() => {
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid var(--row-accent);
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 88px;
@@ -147,7 +146,6 @@ const dateLabel = computed(() => {
 
 .queue-row:hover {
   border-color: var(--text-tertiary);
-  border-left-color: var(--row-accent);
   transform: scale(1.005);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

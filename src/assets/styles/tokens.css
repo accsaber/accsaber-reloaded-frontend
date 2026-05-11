@@ -67,6 +67,10 @@
   --chart-grid: rgba(255, 255, 255, 0.06);
   --chart-text: #8888a0;
 
+  /* --- Skeleton --- */
+  --skeleton-base: var(--bg-overlay);
+  --skeleton-highlight: color-mix(in srgb, var(--text-tertiary) 25%, var(--bg-overlay));
+
   /* --- Default Accent (Overall) --- */
   --accent: var(--accent-overall);
 
@@ -123,6 +127,9 @@
   --chart-grid: rgba(0, 0, 0, 0.08);
   --chart-text: #6a6a82;
 
+  --skeleton-base: var(--bg-elevated);
+  --skeleton-highlight: color-mix(in srgb, var(--text-tertiary) 35%, var(--bg-elevated));
+
   /* Category Tints (Light) */
   --tint-true-acc: #d4f5e0;
   --tint-standard-acc: #d4e4fd;
@@ -131,10 +138,11 @@
   --tint-overall: #ead4fd;
 }
 
-/* --- Theme transition --- */
-*,
-*::before,
-*::after {
+/* Scoped to a class the theme store toggles for ~220ms; otherwise this would run on every hover. */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
   transition:
     background-color 200ms ease,
     color 200ms ease,

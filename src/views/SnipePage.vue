@@ -264,7 +264,7 @@ watch(
       <div class="snipe-hero__player snipe-hero__player--sniper">
         <LevelBadge v-if="sniper" :level="sniperLevel?.level ?? 0"
           :current-xp="sniperLevel?.xpForCurrentLevel ?? 0" :required-xp="sniperLevel?.xpForNextLevel ?? 1"
-          :avatar-url="sniper.avatarUrl" :title="sniperLevel?.title" hide-progress />
+          :avatar-url="sniper.avatarUrl" :fallback-title="sniperLevel?.title" hide-progress />
         <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
         <div class="snipe-hero__player-info">
           <span class="snipe-hero__role">You</span>
@@ -291,7 +291,7 @@ watch(
       <div class="snipe-hero__player snipe-hero__player--target">
         <LevelBadge v-if="target" :level="targetLevel?.level ?? 0"
           :current-xp="targetLevel?.xpForCurrentLevel ?? 0" :required-xp="targetLevel?.xpForNextLevel ?? 1"
-          :avatar-url="target.avatarUrl" :title="targetLevel?.title" hide-progress />
+          :avatar-url="target.avatarUrl" :fallback-title="targetLevel?.title" hide-progress />
         <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
         <div class="snipe-hero__player-info">
           <span class="snipe-hero__role snipe-hero__role--target">Target</span>

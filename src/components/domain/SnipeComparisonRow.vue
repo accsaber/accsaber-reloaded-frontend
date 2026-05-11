@@ -113,7 +113,7 @@ function navigateToMap(e: MouseEvent) {
           <span>+{{ apDelta.toFixed(2) }} AP</span>
         </span>
         <div class="snipe-row__tug" :aria-label="`You are at ${tugFillPercent.toFixed(1)}% of target accuracy`">
-          <div class="snipe-row__tug-fill" :style="{ width: `${tugFillPercent}%` }" />
+          <div class="snipe-row__tug-fill" :style="{ '--progress': tugFillPercent / 100 }" />
           <div class="snipe-row__tug-target" />
         </div>
       </div>
@@ -361,6 +361,7 @@ function navigateToMap(e: MouseEvent) {
 }
 
 .snipe-row__tug-fill {
+  width: 100%;
   height: 100%;
   background: linear-gradient(
     90deg,
@@ -368,7 +369,9 @@ function navigateToMap(e: MouseEvent) {
     var(--row-accent)
   );
   border-radius: 3px;
-  transition: width 240ms ease-out;
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+  transition: transform 240ms ease-out;
 }
 
 .snipe-row__tug-target {

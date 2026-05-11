@@ -49,9 +49,8 @@ defineEmits<{
   max-width: 960px;
   margin: 0 auto var(--space-lg);
   padding: var(--space-sm) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-left: 3px solid var(--banner-accent, var(--accent, var(--info)));
+  background: color-mix(in srgb, var(--banner-accent, var(--accent, var(--info))) 8%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--banner-accent, var(--accent, var(--info))) 30%, var(--bg-overlay));
   border-radius: var(--radius-card);
   color: var(--text-secondary);
   font-size: var(--text-body);

@@ -125,7 +125,7 @@ function toggleExpand() {
 
     <div v-if="compact && progressPercent != null && !isCompleted"
       class="milestone-detail__progress milestone-detail__progress--compact">
-      <div class="milestone-detail__progress-bar" :style="{ width: `${progressBarWidth}%` }" />
+      <div class="milestone-detail__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
     </div>
 
     <div v-if="compact && hasScoreInfo" class="milestone-detail__dropdown"
@@ -161,7 +161,7 @@ function toggleExpand() {
       </div>
 
       <div v-if="progressPercent != null && !isCompleted" class="milestone-detail__progress">
-        <div class="milestone-detail__progress-bar" :style="{ width: `${progressBarWidth}%` }" />
+        <div class="milestone-detail__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
         <span class="milestone-detail__progress-text">{{ formatPercent(progressPercent) }}%</span>
       </div>
 
@@ -526,10 +526,13 @@ function toggleExpand() {
 }
 
 .milestone-detail__progress-bar {
+  width: 100%;
   height: 100%;
   background: var(--tier-color);
   border-radius: 2px;
-  transition: width 300ms ease;
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+  transition: transform 300ms ease-out;
 }
 
 .milestone-detail__progress-text {

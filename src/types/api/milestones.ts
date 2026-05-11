@@ -19,6 +19,7 @@ export interface MilestoneResponse {
   blExclusive: boolean
   completions: number
   totalPlayers: number
+  awardsItemId: string | null
   createdAt: string
 }
 
@@ -27,6 +28,7 @@ export interface MilestoneSetResponse {
   title: string
   description: string
   setBonusXp: number
+  awardsItemId: string | null
   createdAt: string
   userCompletionPercentage?: number
 }
@@ -46,6 +48,7 @@ export interface MilestoneCompletionResponse {
   completions: number
   totalPlayers: number
   completionPercentage: number
+  awardsItemId?: string | null
   userProgress?: number
   userNormalizedProgress?: number | null
   userCompleted?: boolean

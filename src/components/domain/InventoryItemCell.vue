@@ -1,0 +1,246 @@
+<script setup lang="ts">
+import ItemPreview from '@/components/domain/ItemPreview.vue'
+import ModifierCompositions from '@/components/domain/ModifierCompositions.vue'
+import { useModifierColor } from '@/composables/useModifierColor'
+import { useItemModifierStore } from '@/stores/itemModifiers'
+import type { ItemModifierRef, UserItemResponse } from '@/types/api/items'
+import {
+  displayItemName,
+  rarityClass,
+  sortModifiersByKey,
+  userItemTokenContext,
+} from '@/utils/items'
+import { computed, onMounted } from 'vue'
+
+const props = defineProps<{
+  userItem: UserItemResponse
+  selected?: boolean
+  equipped?: boolean
+}>()
+
+defineEmits<{
+  select: [linkId: string]
+}>()
+
+const modifierStore = useItemModifierStore()
+
+const item = computed(() => props.userItem.item)
+const modifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(props.userItem.modifiers ?? []))
+const tokenCtx = computed(() => userItemTokenContext(props.userItem))
+const quantity = computed(() => props.userItem.quantity ?? 1)
+
+const { accent } = useModifierColor(modifiers)
+
+const cellAccentStyle = computed(() => (accent.value ? { '--cell-accent': accent.value } : undefined))
+const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))
+const fullItemName = computed(() => displayItemName(modifiers.value, item.value.name))
+
+onMounted(() => {
+  modifierStore.fetchModifiers()
+})
+</script>
+
+<template>
+  <div class="inventory-cell-wrap">
+    <button
+      type="button"
+      class="inventory-cell"
+      :class="[
+        rarityClass(item.rarity),
+        { 'inventory-cell--selected': selected, 'inventory-cell--equipped': equipped, 'inventory-cell--deprecated': item.deprecated },
+      ]"
+      :style="cellAccentStyle"
+      :aria-label="item.name"
+      :aria-pressed="selected"
+      @click="$emit('select', userItem.linkId)"
+    >
+      <span class="inventory-cell__art">
+        <ItemPreview :item="item" :selected="selected" />
+      </span>
+
+      <ModifierCompositions
+        v-for="m in modifiers"
+        :key="m.id"
+        :modifier="m"
+        :context="tokenCtx"
+      />
+
+      <span v-if="equipped" class="inventory-cell__equipped" aria-hidden="true">EQUIPPED</span>
+      <span v-if="quantity > 1" class="inventory-cell__qty">x{{ quantity }}</span>
+      <span v-if="userItem.serialNumber != null" class="inventory-cell__serial">#{{ userItem.serialNumber }}</span>
+    </button>
+
+    <div class="inventory-cell-tooltip" role="tooltip" :style="cellAccentStyle">
+      <span class="inventory-cell-tooltip__name" :style="itemNameStyle">{{ fullItemName }}</span>
+      <p v-if="item.description" class="inventory-cell-tooltip__desc">{{ item.description }}</p>
+      <span class="inventory-cell-tooltip__meta">
+        <span class="inventory-cell-tooltip__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
+      </span>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.inventory-cell-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.inventory-cell-wrap:hover .inventory-cell-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.inventory-cell-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, 4px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 180px;
+  max-width: 260px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--cell-accent, var(--bg-overlay));
+  border-radius: var(--radius-card);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 30;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.inventory-cell-tooltip__name {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inventory-cell-tooltip__desc {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.inventory-cell-tooltip__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.inventory-cell-tooltip__rarity {
+  color: var(--rarity-color);
+}
+
+.inventory-cell-tooltip__rarity.rarity--common { --rarity-color: var(--text-tertiary); }
+.inventory-cell-tooltip__rarity.rarity--uncommon { --rarity-color: var(--success); }
+.inventory-cell-tooltip__rarity.rarity--rare { --rarity-color: var(--info); }
+.inventory-cell-tooltip__rarity.rarity--epic { --rarity-color: var(--accent-overall); }
+.inventory-cell-tooltip__rarity.rarity--legendary { --rarity-color: var(--tier-gold); }
+.inventory-cell-tooltip__rarity.rarity--mythic { --rarity-color: var(--error); }
+
+.inventory-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--cell-accent, var(--rarity-color));
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 120ms ease, transform 120ms ease;
+  --rarity-color: var(--text-tertiary);
+  --cell-accent: var(--rarity-color);
+}
+
+.inventory-cell.rarity--common { --rarity-color: var(--text-tertiary); }
+.inventory-cell.rarity--uncommon { --rarity-color: var(--success); }
+.inventory-cell.rarity--rare { --rarity-color: var(--info); }
+.inventory-cell.rarity--epic { --rarity-color: var(--accent-overall); }
+.inventory-cell.rarity--legendary { --rarity-color: var(--tier-gold); }
+.inventory-cell.rarity--mythic { --rarity-color: var(--error); }
+
+.inventory-cell:hover {
+  border-color: var(--cell-accent);
+  transform: scale(1.02);
+}
+
+.inventory-cell--selected {
+  border-color: var(--cell-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cell-accent) 35%, transparent);
+}
+
+.inventory-cell--equipped::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.inventory-cell--deprecated {
+  opacity: 0.55;
+}
+
+.inventory-cell__art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.inventory-cell__equipped {
+  position: absolute;
+  top: var(--space-xs);
+  left: var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg-base) 75%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+}
+
+.inventory-cell__serial {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  color: var(--text-tertiary);
+}
+
+.inventory-cell__qty {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  border: 1px solid var(--cell-accent, var(--bg-overlay));
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+</style>

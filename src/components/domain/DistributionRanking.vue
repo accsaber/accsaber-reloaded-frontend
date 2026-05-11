@@ -26,7 +26,7 @@ import { computed } from 'vue';
     <div class="distribution-ranking__list">
       <div v-for="(entry, index) in visibleEntries" :key="entry.label" class="distribution-ranking__row">
         <div class="distribution-ranking__bar" :style="{
-          width: `${(entry.count / maxCount) * 100}%`,
+          '--progress': entry.count / maxCount,
           backgroundColor: accentColor,
         }" />
         <span class="distribution-ranking__rank">{{ index + 1 }}</span>
@@ -86,7 +86,9 @@ import { computed } from 'vue';
   opacity: 0.12;
   border-radius: 4px;
   pointer-events: none;
-  transition: width 300ms ease-out;
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+  transition: transform 300ms ease-out;
 }
 
 .distribution-ranking__rank {

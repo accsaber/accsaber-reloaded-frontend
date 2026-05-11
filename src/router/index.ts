@@ -68,6 +68,16 @@ const router = createRouter({
       component: () => import('@/views/SnipePage.vue'),
     },
     {
+      path: '/trade-offers',
+      name: 'trade-offers',
+      component: () => import('@/views/TradeOffersPage.vue'),
+    },
+    {
+      path: '/trade-offers/new',
+      name: 'trade-new',
+      component: () => import('@/views/TradeBuilderPage.vue'),
+    },
+    {
       path: '/ranked-queue',
       name: 'ranked-queue',
       component: () => import('@/views/RankedQueuePage.vue'),

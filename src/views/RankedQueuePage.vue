@@ -223,7 +223,6 @@ const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'
   padding: var(--space-md);
   background: color-mix(in srgb, var(--warning) 8%, var(--bg-surface));
   border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-  border-left: 2px solid var(--warning);
   border-radius: var(--radius-card);
 }
 

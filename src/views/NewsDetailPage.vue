@@ -277,8 +277,8 @@ function formatDate(date: string | null): string {
 .news-detail__body.markdown blockquote {
   margin: var(--space-md) 0;
   padding: var(--space-sm) var(--space-md);
-  border-left: 3px solid var(--detail-accent);
-  background: color-mix(in srgb, var(--detail-accent) 6%, transparent);
+  border-left: 1px solid var(--detail-accent);
+  background: color-mix(in srgb, var(--detail-accent) 8%, transparent);
   color: var(--text-secondary);
   border-radius: 0 var(--radius-input) var(--radius-input) 0;
 }

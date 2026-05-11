@@ -13,7 +13,6 @@ import { groupBatchByCategory } from '@/utils/batches'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 
 type Resource =
   | { kind: 'batch'; data: PublicBatchResponse }
@@ -25,7 +24,6 @@ const props = defineProps<{
   news: PublicNewsResponse
 }>()
 
-const router = useRouter()
 const categoryStore = useCategoryStore()
 
 const resource = ref<Resource | null>(null)
@@ -115,8 +113,8 @@ watch(
   { immediate: true },
 )
 
-function navigateToMap(mapId: string, difficultyId?: string) {
-  router.push({ name: 'map-detail', params: { mapId }, query: difficultyId ? { difficultyId } : undefined })
+function mapRouteTo(mapId: string, difficultyId?: string) {
+  return { name: 'map-detail', params: { mapId }, query: difficultyId ? { difficultyId } : undefined }
 }
 
 const sectionTitle = computed(() => {
@@ -163,7 +161,7 @@ const sectionTitle = computed(() => {
             v-for="m in group.diffs"
             :key="m.difficultyId"
             :map="m"
-            @click="navigateToMap(m.id, m.difficultyId)"
+            :to="mapRouteTo(m.id, m.difficultyId)"
           />
         </div>
       </div>

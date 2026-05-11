@@ -201,6 +201,20 @@ const categoryValue = ref<string>('')
 const categoryLoading = ref(false)
 const categoryError = ref('')
 
+const showRefreshModal = ref(false)
+const refreshChecking = ref(false)
+const refreshLoading = ref(false)
+const refreshError = ref('')
+const driftInfo = ref<{
+  newHash: string
+  oldHash: string
+  oldBlLeaderboardId: string | null
+  newBlLeaderboardId: string | null
+  oldSsLeaderboardId: string | null
+  newSsLeaderboardId: string | null
+} | null>(null)
+const driftChecked = ref(false)
+
 const categoryOptions = computed(() =>
   categoryStore.categories
     .filter((c) => c.code !== 'overall')
@@ -211,6 +225,14 @@ const canEditCategory = computed(() => isHeadRanking.value)
 
 const canEditComplexity = computed(
   () => isHeadRanking.value && difficulty.value?.status !== 'RANKED'
+)
+
+const canRefreshFromBeatSaver = computed(
+  () =>
+    isHeadRanking.value &&
+    !!difficulty.value &&
+    difficulty.value.status !== 'RANKED' &&
+    !!difficulty.value.beatsaverCode,
 )
 
 const batchOptions = ref<{ value: string; label: string }[]>([])
@@ -229,7 +251,7 @@ async function fetchDifficulty() {
 }
 
 async function fetchSongHash() {
-  if (!difficulty.value || difficulty.value.status !== 'RANKED') {
+  if (!difficulty.value) {
     songHash.value = null
     return
   }
@@ -242,7 +264,10 @@ async function fetchSongHash() {
   }
 }
 
-watch(() => difficulty.value?.id, () => fetchSongHash())
+watch(() => difficulty.value?.id, () => {
+  fetchSongHash()
+  checkDrift()
+})
 
 async function fetchVotes() {
   voteLoading.value = true
@@ -398,6 +423,89 @@ async function handleDeactivate() {
     await deactivateMapDifficulty(difficultyId.value)
     router.push({ name: rankingDashboardRoute })
   } catch {
+  }
+}
+
+async function checkDrift() {
+  driftChecked.value = false
+  driftInfo.value = null
+  if (!canRefreshFromBeatSaver.value) return
+  if (!difficulty.value?.beatsaverCode) return
+  if (!songHash.value) {
+    return
+  }
+  refreshChecking.value = true
+  try {
+    const { detectDifficultyDrift } = await import('@/utils/beatsaver')
+    const result = await detectDifficultyDrift({
+      beatsaverCode: difficulty.value.beatsaverCode,
+      currentHash: songHash.value,
+      difficulty: difficulty.value.difficulty,
+      characteristic: difficulty.value.characteristic,
+    })
+    if (result.drift && result.newHash) {
+      driftInfo.value = {
+        oldHash: result.oldHash,
+        newHash: result.newHash,
+        oldBlLeaderboardId: difficulty.value.blLeaderboardId,
+        newBlLeaderboardId: result.newBlLeaderboardId,
+        oldSsLeaderboardId: difficulty.value.ssLeaderboardId,
+        newSsLeaderboardId: result.newSsLeaderboardId,
+      }
+    }
+    driftChecked.value = true
+  } catch {
+    driftChecked.value = false
+  } finally {
+    refreshChecking.value = false
+  }
+}
+
+watch(songHash, () => checkDrift())
+
+async function handleRefreshFromBeatSaver() {
+  if (!driftInfo.value) return
+  if (!driftInfo.value.newBlLeaderboardId || !driftInfo.value.newSsLeaderboardId) {
+    refreshError.value = 'New BeatLeader or ScoreSaber leaderboard not yet available. Try again in a minute.'
+    return
+  }
+  refreshLoading.value = true
+  refreshError.value = ''
+  try {
+    const { refreshDifficulty } = await import('@/api/ranking/maps')
+    const { ApiError } = await import('@/api/client')
+    try {
+      await refreshDifficulty(difficultyId.value, {
+        blLeaderboardId: driftInfo.value.newBlLeaderboardId,
+        ssLeaderboardId: driftInfo.value.newSsLeaderboardId,
+      })
+      showRefreshModal.value = false
+      driftInfo.value = null
+      await fetchDifficulty()
+      await fetchSongHash()
+      await checkDrift()
+    } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.status === 409) {
+          refreshError.value = 'That leaderboard is already attached to another difficulty.'
+        } else if (e.status >= 500) {
+          refreshError.value = 'Refresh failed. Please try again.'
+        } else {
+          try {
+            const parsed = JSON.parse(e.message)
+            refreshError.value = typeof parsed?.message === 'string'
+              ? parsed.message
+              : `Refresh failed (${e.status}).`
+          } catch {
+            refreshError.value = `Refresh failed (${e.status}).`
+          }
+        }
+      } else {
+        refreshError.value = e instanceof Error ? e.message : 'Refresh failed.'
+      }
+    }
+  } finally {
+    refreshLoading.value = false
   }
 }
 
@@ -668,6 +776,12 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
             </BaseButton>
             <BaseSelect v-if="batchOptions.length" :options="[{ value: '', label: 'Add to Batch...' }, ...batchOptions]"
               model-value="" @update:model-value="(v: string) => v && addToBatch(v)" />
+            <BaseButton v-if="canRefreshFromBeatSaver" size="sm" :disabled="!driftInfo || refreshChecking"
+              :loading="refreshChecking"
+              :title="refreshChecking ? 'Checking BeatSaver for updates...' : driftInfo ? 'A newer version of this map is available on BeatSaver' : 'Already on the latest version'"
+              @click="refreshError = ''; showRefreshModal = true">
+              Refresh from BeatSaver
+            </BaseButton>
             <BaseButton variant="destructive" size="sm" @click="handleDeactivate">Deactivate</BaseButton>
           </div>
         </div>
@@ -878,6 +992,54 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
         </div>
       </template>
     </BaseModal>
+
+    <BaseModal :open="showRefreshModal" title="Refresh from BeatSaver" max-width="520px"
+      @close="showRefreshModal = false">
+      <p class="rank-detail__refresh-intro">
+        This will refresh metadata, hash, and leaderboard IDs to the latest BeatSaver version.
+      </p>
+      <div v-if="driftInfo" class="rank-detail__refresh-diff">
+        <div class="rank-detail__refresh-row">
+          <span class="rank-detail__refresh-label">Hash</span>
+          <span class="rank-detail__refresh-old">{{ driftInfo.oldHash }}</span>
+          <span class="rank-detail__refresh-arrow">to</span>
+          <span class="rank-detail__refresh-new">{{ driftInfo.newHash }}</span>
+        </div>
+        <div class="rank-detail__refresh-row">
+          <span class="rank-detail__refresh-label">BeatLeader</span>
+          <span class="rank-detail__refresh-old">{{ driftInfo.oldBlLeaderboardId ?? '-' }}</span>
+          <span class="rank-detail__refresh-arrow">to</span>
+          <span class="rank-detail__refresh-new"
+            :class="{ 'rank-detail__refresh-new--missing': !driftInfo.newBlLeaderboardId }">
+            {{ driftInfo.newBlLeaderboardId ?? 'Not yet on BeatLeader' }}
+          </span>
+        </div>
+        <div class="rank-detail__refresh-row">
+          <span class="rank-detail__refresh-label">ScoreSaber</span>
+          <span class="rank-detail__refresh-old">{{ driftInfo.oldSsLeaderboardId ?? '-' }}</span>
+          <span class="rank-detail__refresh-arrow">to</span>
+          <span class="rank-detail__refresh-new"
+            :class="{ 'rank-detail__refresh-new--missing': !driftInfo.newSsLeaderboardId }">
+            {{ driftInfo.newSsLeaderboardId ?? 'Not yet on ScoreSaber' }}
+          </span>
+        </div>
+        <p v-if="!driftInfo.newBlLeaderboardId || !driftInfo.newSsLeaderboardId"
+          class="rank-detail__refresh-hint">
+          BeatLeader and ScoreSaber edge caches can lag a minute or two after a re-upload.
+        </p>
+      </div>
+      <p v-if="refreshError" class="rank-detail__refresh-error">{{ refreshError }}</p>
+      <template #footer>
+        <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
+          <BaseButton @click="showRefreshModal = false">Cancel</BaseButton>
+          <BaseButton variant="primary" :loading="refreshLoading"
+            :disabled="!driftInfo?.newBlLeaderboardId || !driftInfo?.newSsLeaderboardId"
+            @click="handleRefreshFromBeatSaver">
+            Refresh
+          </BaseButton>
+        </div>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -1074,6 +1236,78 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
 .rank-detail__category-error {
   margin: var(--space-sm) 0 0;
+  font-size: var(--text-caption);
+  color: var(--error);
+}
+
+.rank-detail__refresh-intro {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+}
+
+.rank-detail__refresh-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+  background: var(--bg-base);
+}
+
+.rank-detail__refresh-row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+.rank-detail__refresh-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rank-detail__refresh-old {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-detail__refresh-arrow {
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+}
+
+.rank-detail__refresh-new {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-detail__refresh-new--missing {
+  color: var(--warning);
+  font-family: var(--font-sans);
+  font-style: italic;
+}
+
+.rank-detail__refresh-hint {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.rank-detail__refresh-error {
+  margin: var(--space-md) 0 0;
   font-size: var(--text-caption);
   color: var(--error);
 }

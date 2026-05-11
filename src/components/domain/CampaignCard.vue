@@ -38,7 +38,7 @@ const progressText = computed(() => {
     <p class="campaign-card__desc">{{ campaign.description }}</p>
     <div v-if="progressPercent != null" class="campaign-card__progress">
       <div class="campaign-card__bar">
-        <div class="campaign-card__fill" :style="{ width: progressPercent + '%' }" />
+        <div class="campaign-card__fill" :style="{ '--progress': progressPercent / 100 }" />
       </div>
       <span class="campaign-card__progress-text">{{ progressText }}</span>
     </div>
@@ -120,10 +120,13 @@ const progressText = computed(() => {
 }
 
 .campaign-card__fill {
+  width: 100%;
   height: 100%;
   background: var(--accent);
   border-radius: 2px;
-  transition: width 300ms ease-out;
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+  transition: transform 300ms ease-out;
 }
 
 .campaign-card__progress-text {

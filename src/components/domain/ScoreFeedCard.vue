@@ -178,7 +178,6 @@ function goToPlayer() {
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  border-left: 2px solid var(--card-accent, var(--accent));
 }
 
 .feed-card__rank {

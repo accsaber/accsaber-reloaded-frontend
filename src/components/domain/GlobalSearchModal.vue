@@ -117,20 +117,28 @@ async function runSearch(query: string) {
   }
 }
 
-function goToPlayer(userId: string) {
-  if (isStaffSubdomain) {
-    window.location.assign(playerProfileHref(userId))
-    return
-  }
+function playerHref(userId: string): string {
+  if (isStaffSubdomain) return playerProfileHref(userId)
+  return router.resolve({ name: 'player-profile', params: { userId } }).href
+}
+
+function mapHref(mapId: string): string {
+  if (isStaffSubdomain) return mainSiteUrl(`/maps/${mapId}`)
+  return router.resolve({ name: 'map-detail', params: { mapId } }).href
+}
+
+function goToPlayer(userId: string, event: MouseEvent) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+  if (isStaffSubdomain) return
+  event.preventDefault()
   router.push({ name: 'player-profile', params: { userId } })
   emit('close')
 }
 
-function goToMap(mapId: string) {
-  if (isStaffSubdomain) {
-    window.location.assign(mainSiteUrl(`/maps/${mapId}`))
-    return
-  }
+function goToMap(mapId: string, event: MouseEvent) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+  if (isStaffSubdomain) return
+  event.preventDefault()
   router.push({ name: 'map-detail', params: { mapId } })
   emit('close')
 }
@@ -200,7 +208,8 @@ const mapResults = computed<MapResult[]>(() =>
           <div v-if="!playersCollapsed" class="search-modal__section-body">
             <div v-if="loadingPlayers" class="search-modal__loading">Searching...</div>
             <div v-else-if="!players.length" class="search-modal__empty">No players found.</div>
-            <button v-for="p in players" :key="p.userId" class="search-modal__row" @click="goToPlayer(p.userId)">
+            <a v-for="p in players" :key="p.userId" :href="playerHref(p.userId)" class="search-modal__row"
+              @click="goToPlayer(p.userId, $event)">
               <span class="search-modal__rank" :class="getRankClass(p.ranking)">#{{ p.ranking }}</span>
               <img :src="p.avatarUrl" :alt="p.userName" class="search-modal__avatar" />
               <span class="search-modal__row-main">
@@ -213,7 +222,7 @@ const mapResults = computed<MapResult[]>(() =>
                 <span class="search-modal__stat">{{ formatAp(p.ap) }}</span>
                 <span class="search-modal__stat-label">AP</span>
               </span>
-            </button>
+            </a>
           </div>
         </section>
 
@@ -232,7 +241,8 @@ const mapResults = computed<MapResult[]>(() =>
           <div v-if="!mapsCollapsed" class="search-modal__section-body">
             <div v-if="loadingMaps" class="search-modal__loading">Searching...</div>
             <div v-else-if="!mapResults.length" class="search-modal__empty">No maps found.</div>
-            <button v-for="r in mapResults" :key="r.map.id" class="search-modal__row" @click="goToMap(r.map.id)">
+            <a v-for="r in mapResults" :key="r.map.id" :href="mapHref(r.map.id)" class="search-modal__row"
+              @click="goToMap(r.map.id, $event)">
               <img :src="r.map.coverUrl" :alt="r.map.songName" class="search-modal__cover" />
               <span class="search-modal__row-main">
                 <span class="search-modal__row-title">{{ r.map.songName }}</span>
@@ -248,7 +258,7 @@ const mapResults = computed<MapResult[]>(() =>
                   <ComplexityBadge :complexity="r.primary.complexity ?? 0" />
                 </template>
               </span>
-            </button>
+            </a>
           </div>
         </section>
       </template>
@@ -386,6 +396,7 @@ const mapResults = computed<MapResult[]>(() =>
   border-radius: var(--radius-btn);
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
   font-family: var(--font-sans);
   color: var(--text-primary);
   transition: background 120ms ease;

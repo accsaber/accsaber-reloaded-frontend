@@ -7,18 +7,30 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import ProfileBadgesRow from '@/components/domain/ProfileBadgesRow.vue'
 import RelationActions from '@/components/domain/RelationActions.vue'
 import RelationCountsBar from '@/components/domain/RelationCountsBar.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
+import { useInventoryStore } from '@/stores/inventory'
 import { useRelationsStore } from '@/stores/relations'
+import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
 import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
+import {
+  pickAssetUrl,
+  pickVideoOrAssetUrl,
+  readBackgroundValue,
+  readBorderColorValue,
+  readBorderShapeValue,
+  readTitleValue,
+} from '@/utils/items'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ProfileInventoryTab from './profile/ProfileInventoryTab.vue'
 import ProfileMilestonesTab from './profile/ProfileMilestonesTab.vue'
 import ProfileScoresTab from './profile/ProfileScoresTab.vue'
 import ProfileStatisticsTab from './profile/ProfileStatisticsTab.vue'
@@ -28,6 +40,7 @@ const router = useRouter()
 const categoryStore = useCategoryStore()
 const authStore = useAuthStore()
 const relationsStore = useRelationsStore()
+const inventoryStore = useInventoryStore()
 
 const userId = computed(() => route.params.userId as string)
 
@@ -46,8 +59,40 @@ const level = ref<LevelResponse | null>(null)
 const stats = ref<UserCategoryStatisticsResponse[]>([])
 const xpStats = ref<UserAllStatisticsResponse | null>(null)
 const statsDiff = ref<StatsDiffResponse | null>(null)
+const localEquipped = ref<EquippedItemsResponse>({})
+const ownedBadges = ref<UserItemResponse[]>([])
 const loading = ref(true)
 const error = ref(false)
+
+const isSelfProfile = computed(
+  () => authStore.isLoggedIn && authStore.userId !== null && authStore.userId === userId.value,
+)
+
+const equipped = computed<EquippedItemsResponse>(() => {
+  if (isSelfProfile.value && inventoryStore.equippedUserId === userId.value) {
+    return inventoryStore.equipped
+  }
+  return localEquipped.value
+})
+
+const equippedTitleValue = computed(() => readTitleValue(equipped.value.title?.item.value))
+const equippedBorderColorValue = computed(() => readBorderColorValue(equipped.value.profile_border_color?.item.value))
+const equippedBorderShapeValue = computed(() => readBorderShapeValue(equipped.value.profile_border_shape?.item.value))
+const equippedBackgroundValue = computed(() => readBackgroundValue(equipped.value.profile_background?.item.value))
+const equippedBackgroundUrl = computed(() => pickVideoOrAssetUrl(equippedBackgroundValue.value?.asset))
+const equippedBackgroundIsVideo = computed(() => !!equippedBackgroundValue.value?.asset.video)
+const equippedBackgroundImageUrl = computed(() => pickAssetUrl(equippedBackgroundValue.value?.asset))
+const equippedBackgroundStyle = computed(() => {
+  const bg = equippedBackgroundValue.value
+  if (!bg) return undefined
+  const style: Record<string, string> = {}
+  if (bg.opacity != null) style.opacity = String(bg.opacity)
+  if (bg.blendMode) style.mixBlendMode = bg.blendMode
+  return style
+})
+const equippedBackgroundFitClass = computed(() =>
+  equippedBackgroundValue.value?.fit ? `profile-page__bg-equipped--${equippedBackgroundValue.value.fit}` : '',
+)
 
 const activeTab = ref('scores')
 const initialCategory = (route.query.category as CategoryCode) || 'overall'
@@ -67,6 +112,7 @@ const profileTabs = [
   { key: 'scores', label: 'Scores' },
   { key: 'statistics', label: 'Statistics' },
   { key: 'milestones', label: 'Milestones' },
+  { key: 'inventory', label: 'Inventory' },
 ]
 
 const activeStats = computed(() => {
@@ -140,6 +186,8 @@ async function fetchProfile() {
   level.value = null
   stats.value = []
   xpStats.value = null
+  localEquipped.value = {}
+  ownedBadges.value = []
 
   try {
     const { getUser, getUserLevel, getUserAllStatistics } = await import('@/api/users')
@@ -152,9 +200,15 @@ async function fetchProfile() {
       return
     }
 
-    const [levelRes, allStatsRes] = await Promise.allSettled([
+    const itemsApi = await import('@/api/items')
+    const equippedPromise = isSelfProfile.value
+      ? inventoryStore.fetchEquipped(userId.value, true)
+      : itemsApi.getUserEquippedItems(userId.value)
+    const [levelRes, allStatsRes, equippedRes, badgesRes] = await Promise.allSettled([
       getUserLevel(userId.value),
       getUserAllStatistics(userId.value),
+      equippedPromise,
+      itemsApi.getUserItems(userId.value, { typeKey: 'badge' }),
     ])
 
     if (levelRes.status === 'fulfilled') {
@@ -164,6 +218,12 @@ async function fetchProfile() {
       xpStats.value = allStatsRes.value
       stats.value = allStatsRes.value.categories
     }
+    if (equippedRes.status === 'fulfilled' && !isSelfProfile.value) {
+      localEquipped.value = (equippedRes.value as EquippedItemsResponse) ?? {}
+    }
+    if (badgesRes.status === 'fulfilled') {
+      ownedBadges.value = badgesRes.value
+    }
 
     fetchStatsDiff()
   } catch {
@@ -172,11 +232,28 @@ async function fetchProfile() {
     level.value = null
     stats.value = []
     xpStats.value = null
+    localEquipped.value = {}
+    ownedBadges.value = []
   }
   loading.value = false
 }
 
 watch(userId, () => { fetchProfile() }, { immediate: true })
+
+watch(
+  () => isSelfProfile.value && inventoryStore.equippedUserId === userId.value
+    ? inventoryStore.equipped
+    : null,
+  async () => {
+    if (!isSelfProfile.value || !user.value) return
+    try {
+      const { getUserItems } = await import('@/api/items')
+      ownedBadges.value = await getUserItems(userId.value, { typeKey: 'badge' })
+    } catch {
+    }
+  },
+  { deep: true },
+)
 watch(isBlockedByMe, (blocked, wasBlocked) => {
   if (blocked === wasBlocked) return
   fetchProfile()
@@ -228,14 +305,35 @@ watch(activeCategory, (newCategory) => {
       </nav>
 
       <div class="profile-page__bg">
-        <div class="profile-page__bg-image" :style="{ backgroundImage: `url(${user.avatarUrl})` }" />
+        <video
+          v-if="equippedBackgroundIsVideo && equippedBackgroundUrl"
+          class="profile-page__bg-equipped"
+          :class="equippedBackgroundFitClass"
+          :src="equippedBackgroundUrl"
+          :style="equippedBackgroundStyle"
+          autoplay
+          loop
+          muted
+          playsinline
+        />
+        <div
+          v-else-if="equippedBackgroundImageUrl"
+          class="profile-page__bg-equipped"
+          :class="equippedBackgroundFitClass"
+          :style="{ ...equippedBackgroundStyle, backgroundImage: `url(${equippedBackgroundImageUrl})` }"
+        />
+        <div v-else class="profile-page__bg-image" :style="{ backgroundImage: `url(${user.avatarUrl})` }" />
         <div class="profile-page__bg-fade" />
       </div>
 
       <div class="profile-hero">
         <div class="profile-hero__level-col">
           <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
-            :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="user.avatarUrl" :title="level?.title" />
+            :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="user.avatarUrl"
+            :fallback-title="level?.title"
+            :equipped-title="equippedTitleValue"
+            :equipped-border-shape="equippedBorderShapeValue"
+            :equipped-border-color="equippedBorderColorValue" />
           <span v-if="!user.banned && totalXpDiff" class="profile-hero__xp-trend"
             :class="totalXpDiff > 0 ? 'profile-hero__xp-trend--up' : 'profile-hero__xp-trend--down'">
             {{ totalXpDiff > 0 ? '\u25B2' : '\u25BC' }}
@@ -271,38 +369,45 @@ watch(activeCategory, (newCategory) => {
         </div>
 
         <div class="profile-hero__details">
-          <div class="profile-hero__name-row">
-            <h1 class="profile-hero__name">{{ user.name }}</h1>
-            <CountryFlag :country="user.country" />
-            <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
-          </div>
+          <div class="profile-hero__top-row">
+            <div class="profile-hero__name-col">
+              <div class="profile-hero__name-row">
+                <h1 class="profile-hero__name">{{ user.name }}</h1>
+                <CountryFlag :country="user.country" />
+                <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
+              </div>
+              <ProfileBadgesRow v-if="ownedBadges.length" :badges="ownedBadges" class="profile-hero__badges" />
+            </div>
 
-          <div class="profile-hero__links">
-            <BaseButton size="sm" :href="`https://www.beatleader.com/u/${user.blId ?? user.id}`"
-              aria-label="View on BeatLeader">
-              <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                style="border-radius: 3px;" />
-            </BaseButton>
-            <BaseButton size="sm" :href="`https://scoresaber.com/u/${user.ssId ?? user.id}`"
-              aria-label="View on ScoreSaber">
-              <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                style="border-radius: 3px;" />
-            </BaseButton>
-            <BaseButton v-if="canSnipe" size="sm" variant="primary"
-              aria-label="Snipe this player" title="Snipe this player"
-              @click="router.push({ name: 'player-snipe', params: { userId: userId } })">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <circle cx="12" cy="12" r="3" />
-                <line x1="12" y1="2" x2="12" y2="6" />
-                <line x1="12" y1="18" x2="12" y2="22" />
-                <line x1="2" y1="12" x2="6" y2="12" />
-                <line x1="18" y1="12" x2="22" y2="12" />
-              </svg>
-              <span>Snipe</span>
-            </BaseButton>
-            <RelationActions :target-user-id="userId" :target-name="user.name" />
+            <div class="profile-hero__top-right">
+              <div class="profile-hero__links">
+                <BaseButton size="sm" :href="`https://www.beatleader.com/u/${user.blId ?? user.id}`"
+                  aria-label="View on BeatLeader">
+                  <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
+                    style="border-radius: 3px;" />
+                </BaseButton>
+                <BaseButton size="sm" :href="`https://scoresaber.com/u/${user.ssId ?? user.id}`"
+                  aria-label="View on ScoreSaber">
+                  <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
+                    style="border-radius: 3px;" />
+                </BaseButton>
+                <BaseButton v-if="canSnipe" size="sm" variant="primary"
+                  aria-label="Snipe this player" title="Snipe this player"
+                  @click="router.push({ name: 'player-snipe', params: { userId: userId } })">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <circle cx="12" cy="12" r="3" />
+                    <line x1="12" y1="2" x2="12" y2="6" />
+                    <line x1="12" y1="18" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="6" y2="12" />
+                    <line x1="18" y1="12" x2="22" y2="12" />
+                  </svg>
+                  <span>Snipe</span>
+                </BaseButton>
+                <RelationActions :target-user-id="userId" :target-name="user.name" />
+              </div>
+            </div>
           </div>
 
           <div v-if="user.banned" class="profile-hero__banned">
@@ -324,8 +429,10 @@ watch(activeCategory, (newCategory) => {
           </div>
 
           <template v-else>
-            <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
-              @update:model-value="activeCategory = $event" />
+            <div class="profile-hero__category-tabs">
+              <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
+                @update:model-value="activeCategory = $event" />
+            </div>
 
             <div class="profile-hero__stats">
               <StatBlock label="Total AP" :value="activeStats?.ap ?? 0" :trend="statsDiff?.apDiff" />
@@ -371,6 +478,7 @@ watch(activeCategory, (newCategory) => {
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
             :xp-stats="xpStats" />
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
+          <ProfileInventoryTab v-if="activeTab === 'inventory'" :user-id="userId" />
         </div>
       </template>
     </template>
@@ -411,8 +519,42 @@ watch(activeCategory, (newCategory) => {
   background-size: cover;
   background-position: center 20%;
   background-repeat: no-repeat;
-  filter: blur(40px);
-  opacity: 0.3;
+  filter: blur(40px) brightness(0.55) saturate(1.5);
+  opacity: 0.7;
+  -webkit-mask-image: radial-gradient(ellipse 65% 70% at 50% 35%, transparent 0%, rgba(0, 0, 0, 0.4) 55%, black 90%);
+  mask-image: radial-gradient(ellipse 65% 70% at 50% 35%, transparent 0%, rgba(0, 0, 0, 0.4) 55%, black 90%);
+}
+
+.profile-page__bg-equipped {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  object-fit: cover;
+}
+
+.profile-page__bg-equipped--cover {
+  background-size: cover;
+  object-fit: cover;
+}
+
+.profile-page__bg-equipped--contain {
+  background-size: contain;
+  object-fit: contain;
+}
+
+.profile-page__bg-equipped--tile {
+  background-size: auto;
+  background-repeat: repeat;
+}
+
+.profile-page__bg-equipped--center {
+  background-size: auto;
+  background-position: center;
+  object-fit: none;
 }
 
 .profile-page__bg-fade {
@@ -432,21 +574,52 @@ watch(activeCategory, (newCategory) => {
 }
 
 .profile-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: stretch;
+  gap: var(--space-xl);
+  padding: var(--space-xl) 0 var(--space-lg);
+}
+
+.profile-hero__top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.profile-hero__top-right {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-xl) var(--space-lg);
-  text-align: center;
-  background: color-mix(in srgb, var(--bg-base) 55%, transparent);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-card);
+  align-items: flex-end;
+  gap: var(--space-xs);
+}
+
+.profile-hero__name-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.profile-hero__badges {
+  justify-content: flex-start !important;
+  max-width: none !important;
+}
+
+.profile-hero__category-tabs {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--space-xs);
 }
 
 .profile-hero__level-col {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
 .profile-hero__xp-trend {
@@ -543,31 +716,33 @@ watch(activeCategory, (newCategory) => {
 .profile-hero__details {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: var(--space-md);
   width: 100%;
   min-width: 0;
+  min-height: 100%;
 }
 
 .profile-hero__name-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-sm);
 }
 
 .profile-hero__links {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-xs);
 }
 
 .profile-hero__name {
-  font-size: var(--text-page-title);
+  font-size: calc(var(--text-page-title) * 1.15);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .profile-hero__banned {
@@ -595,10 +770,52 @@ watch(activeCategory, (newCategory) => {
 }
 
 .profile-hero__stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-sm);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-top: auto;
+  border-top: 1px solid var(--bg-overlay);
+  border-bottom: 1px solid var(--bg-overlay);
+}
+
+.profile-hero__stats > * + * {
+  border-inline-start: 1px solid var(--bg-overlay);
+}
+
+.profile-hero__stats :deep(.stat-block) {
+  padding: var(--space-md) var(--space-lg);
+  gap: var(--space-xs);
+}
+
+.profile-hero__stats :deep(.stat-block__value) {
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.profile-hero__stats :deep(.stat-block__label) {
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 599px) {
+  .profile-hero__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-hero__stats > * + * {
+    border-inline-start: none;
+  }
+
+  .profile-hero__stats > *:nth-child(n + 3) {
+    border-block-start: 1px solid var(--bg-overlay);
+  }
+
+  .profile-hero__stats :deep(.stat-block__value) {
+    font-size: 1.625rem;
+  }
 }
 
 .profile-hero__rank-block {
@@ -607,8 +824,7 @@ watch(activeCategory, (newCategory) => {
 
 .profile-hero__rank-block--clickable {
   cursor: pointer;
-  border-radius: var(--radius-card);
-  transition: filter 120ms ease;
+  transition: background-color 120ms ease;
 }
 
 .profile-hero__rank-link {
@@ -619,12 +835,12 @@ watch(activeCategory, (newCategory) => {
 }
 
 .profile-hero__rank-block--clickable:hover {
-  filter: brightness(1.15);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 .profile-hero__rank-block--clickable:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .profile-hero__rank-badge {
@@ -677,10 +893,7 @@ watch(activeCategory, (newCategory) => {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  background: color-mix(in srgb, var(--bg-base) 70%, transparent);
-  backdrop-filter: blur(8px);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-pill);
+  padding: 0;
 }
 
 .profile-page__crumb {
@@ -714,10 +927,7 @@ watch(activeCategory, (newCategory) => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-xl) var(--space-lg);
-  background: color-mix(in srgb, var(--bg-base) 55%, transparent);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-card);
+  padding: var(--space-xl) 0;
 }
 
 .profile-page__skeleton-stats {
@@ -729,16 +939,34 @@ watch(activeCategory, (newCategory) => {
 
 @media (max-width: 767px) {
   .profile-hero {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
+    justify-items: center;
     text-align: center;
+    gap: var(--space-md);
+    padding: var(--space-lg) 0 var(--space-md);
+  }
+
+  .profile-hero__category-tabs {
+    justify-content: center;
+  }
+
+  .profile-hero__details {
+    align-items: center;
   }
 
   .profile-hero__name-row {
     justify-content: center;
   }
 
-  .profile-hero__stats {
+  .profile-hero__name-col {
+    align-items: center;
+  }
+
+  .profile-hero__badges {
+    justify-content: center !important;
+  }
+
+  .profile-hero__links {
     justify-content: center;
   }
 
@@ -746,6 +974,5 @@ watch(activeCategory, (newCategory) => {
     flex-direction: column;
     align-items: stretch;
   }
-
 }
 </style>

@@ -27,7 +27,7 @@ import { groupBatchByCategory } from '@/utils/batches'
 import { formatRelativeDate } from '@/utils/formatters'
 import { toMapDisplay } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
 
 const route = useRoute()
@@ -291,16 +291,16 @@ async function fetchBatches() {
   batchLoading.value = false
 }
 
-function navigateToMap(mapId: string, difficultyId?: string) {
-  router.push({
+function mapRouteTo(mapId: string, difficultyId?: string): RouteLocationRaw {
+  return {
     name: 'map-detail',
     params: { mapId },
     query: difficultyId ? { difficultyId } : undefined,
-  })
+  }
 }
 
-function handleListRowClick(row: Record<string, unknown>) {
-  navigateToMap(row.id as string, row.difficultyId as string)
+function listRowTo(row: Record<string, unknown>): RouteLocationRaw {
+  return mapRouteTo(row.id as string, row.difficultyId as string)
 }
 
 function batchDifficultiesByCategory(batch: PublicBatchResponse) {
@@ -440,15 +440,15 @@ watch(
         <template v-else>
           <div class="maps-page__grid">
             <MapCard v-for="m in mapDisplays" :key="m.difficultyId" :map="m"
-              @click="navigateToMap(m.id, m.difficultyId)" />
+              :to="mapRouteTo(m.id, m.difficultyId)" />
           </div>
         </template>
       </template>
 
       <template v-else-if="viewMode === 'list'">
         <DataTable :columns="listColumns" :rows="listRows" :sort-state="listSortState" :loading="loading"
-          :loading-rows="10" row-clickable empty-message="No maps found matching your filters." @sort="handleListSort"
-          @row-click="handleListRowClick">
+          :loading-rows="10" :row-to="listRowTo" row-key="difficultyId"
+          empty-message="No maps found matching your filters." @sort="handleListSort">
           <template #cell-cover="{ row }">
             <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="44" />
           </template>
@@ -478,7 +478,7 @@ watch(
           </template>
 
           <template #mobile-card="{ row }">
-            <div class="maps-page__list-card" @click="handleListRowClick(row)">
+            <router-link :to="listRowTo(row)" class="maps-page__list-card">
               <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="48"
                 class="maps-page__list-card-cover" />
               <div v-else class="maps-page__list-card-cover-placeholder" />
@@ -490,7 +490,7 @@ watch(
                 <DifficultyBadge :difficulty="(row.difficulty as string)" />
                 <ComplexityBadge :complexity="row.complexity as number" />
               </div>
-            </div>
+            </router-link>
           </template>
         </DataTable>
       </template>
@@ -539,7 +539,7 @@ watch(
                 </div>
                 <div class="maps-page__batch-cards">
                   <MapCardCompact v-for="m in group.diffs" :key="m.difficultyId" :map="m"
-                    @click="navigateToMap(m.id, m.difficultyId)" />
+                    :to="mapRouteTo(m.id, m.difficultyId)" />
                 </div>
               </div>
             </div>
@@ -803,6 +803,8 @@ watch(
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
+  text-decoration: none;
+  color: inherit;
   transition: border-color 120ms ease;
 }
 

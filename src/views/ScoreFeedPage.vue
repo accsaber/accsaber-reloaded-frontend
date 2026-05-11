@@ -106,6 +106,7 @@ onUnmounted(() => clearInterval(tickInterval))
       </TransitionGroup>
 
       <div v-if="filteredScores.length === 0" class="score-feed-page__empty">
+        <span class="score-feed-page__empty-dot" aria-hidden="true" />
         <span class="score-feed-page__empty-text">Waiting for scores...</span>
       </div>
     </div>
@@ -179,24 +180,24 @@ onUnmounted(() => clearInterval(tickInterval))
 
 .score-feed-page__empty {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: var(--space-sm);
   padding: var(--space-3xl) 0;
+}
+
+.score-feed-page__empty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  animation: pulse-dot 1.6s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .score-feed-page__empty-text {
   font-size: var(--text-body);
   color: var(--text-tertiary);
-  background: linear-gradient(
-    90deg,
-    var(--text-tertiary) 0%,
-    var(--text-secondary) 50%,
-    var(--text-tertiary) 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer-text 2s ease-in-out infinite;
 }
 
 .feed-enter-active {
@@ -226,11 +227,6 @@ onUnmounted(() => clearInterval(tickInterval))
   50% { opacity: 0.5; }
 }
 
-@keyframes shimmer-text {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .feed-enter-active,
   .feed-leave-active,
@@ -238,14 +234,9 @@ onUnmounted(() => clearInterval(tickInterval))
     transition: none;
   }
 
-  .score-feed-page__status-dot {
+  .score-feed-page__status-dot,
+  .score-feed-page__empty-dot {
     animation: none;
-  }
-
-  .score-feed-page__empty-text {
-    animation: none;
-    background: none;
-    -webkit-text-fill-color: var(--text-tertiary);
   }
 }
 

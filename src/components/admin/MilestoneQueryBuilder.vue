@@ -235,10 +235,9 @@ const filterColumnType = (i: number) => {
 
 .qb--nested {
   padding: var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-left: 2px solid var(--accent);
-  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-base));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--bg-overlay));
+  border-radius: var(--radius-card);
 }
 
 .qb__depth-label {

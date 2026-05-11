@@ -122,8 +122,20 @@ const DIFFICULTY_TO_ENUM: Record<string, string> = {
   ExpertPlus: 'EXPERT_PLUS',
 }
 
+const ENUM_TO_DIFFICULTY: Record<string, string> = {
+  EASY: 'Easy',
+  NORMAL: 'Normal',
+  HARD: 'Hard',
+  EXPERT: 'Expert',
+  EXPERT_PLUS: 'ExpertPlus',
+}
+
 export function difficultyToEnum(bsDifficulty: string): string {
   return DIFFICULTY_TO_ENUM[bsDifficulty] ?? bsDifficulty.toUpperCase()
+}
+
+export function enumToBsDifficulty(enumValue: string): string {
+  return ENUM_TO_DIFFICULTY[enumValue] ?? enumValue
 }
 
 export function formatBsDifficulty(bsDifficulty: string): string {
@@ -250,4 +262,46 @@ export async function fetchScoreSaberLeaderboards(hash: string): Promise<Map<str
   } catch {
   }
   return map
+}
+
+export interface DifficultyDriftResult {
+  drift: boolean
+  oldHash: string
+  newHash: string | null
+  newBlLeaderboardId: string | null
+  newSsLeaderboardId: string | null
+}
+
+export async function detectDifficultyDrift(args: {
+  beatsaverCode: string
+  currentHash: string
+  difficulty: string
+  characteristic: string
+}): Promise<DifficultyDriftResult> {
+  const empty: DifficultyDriftResult = {
+    drift: false,
+    oldHash: args.currentHash,
+    newHash: null,
+    newBlLeaderboardId: null,
+    newSsLeaderboardId: null,
+  }
+  const map = await fetchBeatSaverMap(args.beatsaverCode)
+  const latestHash = map.versions[0]?.hash ?? null
+  if (!latestHash) return empty
+  if (latestHash.toLowerCase() === args.currentHash.toLowerCase()) {
+    return { ...empty, newHash: latestHash }
+  }
+  const bsDiffName = enumToBsDifficulty(args.difficulty)
+  const key = `${bsDiffName}-${args.characteristic}`
+  const [blMap, ssMap] = await Promise.all([
+    fetchBeatLeaderLeaderboards(latestHash),
+    fetchScoreSaberLeaderboards(latestHash),
+  ])
+  return {
+    drift: true,
+    oldHash: args.currentHash,
+    newHash: latestHash,
+    newBlLeaderboardId: blMap.get(key) ?? null,
+    newSsLeaderboardId: ssMap.get(key) != null ? String(ssMap.get(key)) : null,
+  }
 }

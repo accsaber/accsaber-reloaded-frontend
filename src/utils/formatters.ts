@@ -25,3 +25,10 @@ export function isRecentDate(dateString: string, withinDays = 7): boolean {
 export function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max) + '...' : str
 }
+
+export function parseNullableNumber(value: string): number | null {
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) ? n : null
+}

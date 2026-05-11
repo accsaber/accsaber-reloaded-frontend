@@ -56,9 +56,9 @@ defineProps<{
 .skeleton__card-image,
 .skeleton__cell {
   background: linear-gradient(90deg,
-      var(--bg-overlay) 25%,
-      var(--bg-elevated) 50%,
-      var(--bg-overlay) 75%);
+      var(--skeleton-base) 25%,
+      var(--skeleton-highlight) 50%,
+      var(--skeleton-base) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
   border-radius: var(--radius-btn);
@@ -139,7 +139,7 @@ defineProps<{
   .skeleton__card-image,
   .skeleton__cell {
     animation: none;
-    background: var(--bg-overlay);
+    background: var(--skeleton-base);
   }
 }
 </style>

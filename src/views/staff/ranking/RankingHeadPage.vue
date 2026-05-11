@@ -120,8 +120,8 @@ function openBuilder(batchId?: string) {
   router.push({ name: 'ranking-batch-builder', params: batchId ? { batchId } : {} })
 }
 
-function navigateToMap(map: MapDisplay) {
-  router.push({ name: 'ranking-map-detail', params: { difficultyId: map.difficultyId } })
+function mapRouteTo(map: MapDisplay) {
+  return { name: 'ranking-map-detail', params: { difficultyId: map.difficultyId } }
 }
 
 const expandedBatch = ref<string | null>(null)
@@ -214,7 +214,7 @@ function batchStatusClass(status: string): string {
                 v-for="map in group.maps"
                 :key="map.difficultyId"
                 :map="map"
-                @click="navigateToMap(map)"
+                :to="mapRouteTo(map)"
               />
             </div>
           </div>

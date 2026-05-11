@@ -47,6 +47,7 @@ const adminNavItems: NavItem[] = [
   { to: '/?tab=batches', label: 'Batches' },
   { to: '/?tab=milestones', label: 'Milestones' },
   { to: '/?tab=campaigns', label: 'Campaigns' },
+  { to: '/?tab=items', label: 'Items' },
   { to: '/?tab=curves', label: 'Curves' },
   { to: '/?tab=news', label: 'News' },
   { to: '/?tab=operations', label: 'Operations' },

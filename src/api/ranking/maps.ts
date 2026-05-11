@@ -13,6 +13,7 @@ import type {
   MapDifficultyResponse,
   MapListParams,
   MapResponse,
+  RefreshDifficultyRequest,
 } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import type { Difficulty } from '@/types/enums'
@@ -85,6 +86,13 @@ export function updateMapComplexity(
   req: UpdateMapComplexityRequest,
 ): Promise<MapDifficultyResponse> {
   return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/complexity`, req)
+}
+
+export function refreshDifficulty(
+  difficultyId: string,
+  req: RefreshDifficultyRequest,
+): Promise<MapDifficultyResponse> {
+  return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/refresh`, req)
 }
 
 export function runAutoCriteriaCheck(

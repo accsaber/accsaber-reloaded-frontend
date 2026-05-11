@@ -179,3 +179,8 @@ export interface DifficultyScoreParams extends PaginationParams {
   relation?: UserRelationType
 }
 
+export interface RefreshDifficultyRequest {
+  blLeaderboardId: string
+  ssLeaderboardId: string
+}
+

@@ -1,26 +1,32 @@
 <script setup lang="ts">
 import { useTiltEffect } from '@/composables/useTiltEffect'
 import type { MapDisplay } from '@/types/display'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter, type RouteLocationRaw } from 'vue-router'
 import CategoryBadge from './CategoryBadge.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
 import DifficultyBadge from './DifficultyBadge.vue'
 
-defineProps<{
+const props = defineProps<{
   map: MapDisplay
+  to: RouteLocationRaw
 }>()
 
-defineEmits<{
-  click: []
-}>()
-
+const router = useRouter()
 const cardRef = ref<HTMLElement | null>(null)
 const { style: tiltStyle } = useTiltEffect(cardRef)
+
+const href = computed(() => router.resolve(props.to).href)
+
+function handleClick(event: MouseEvent) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  router.push(props.to)
+}
 </script>
 
 <template>
-  <div ref="cardRef" class="map-card" :style="tiltStyle" tabindex="0" role="button" @click="$emit('click')"
-    @keydown.enter="$emit('click')">
+  <a ref="cardRef" class="map-card" :href="href" :style="tiltStyle" @click="handleClick">
     <div class="map-card__image-wrap">
       <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" />
     </div>
@@ -36,16 +42,19 @@ const { style: tiltStyle } = useTiltEffect(cardRef)
         <span class="map-card__mapper">{{ map.mapperName }}</span>
       </div>
     </div>
-  </div>
+  </a>
 </template>
 
 <style scoped>
 .map-card {
+  display: block;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   overflow: hidden;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
   will-change: transform;
 }

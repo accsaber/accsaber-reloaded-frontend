@@ -167,34 +167,46 @@ function close() {
 .relation-counts {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-sm);
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: var(--space-md) var(--space-lg);
+  padding-top: var(--space-sm);
 }
 
 .relation-counts__tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: var(--space-xs) var(--space-md);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  padding: 0;
+  background: none;
+  border: none;
   cursor: pointer;
   font: inherit;
-  color: inherit;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  color: var(--text-secondary);
+  transition: color 120ms ease;
 }
 
 .relation-counts__tile:hover:not(:disabled) {
-  background: var(--bg-elevated);
-  border-color: var(--text-tertiary);
+  color: var(--text-primary);
+}
+
+.relation-counts__tile:hover:not(:disabled) .relation-counts__label {
+  color: var(--accent);
+}
+
+.relation-counts__tile:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 4px;
 }
 
 .relation-counts__tile--empty,
 .relation-counts__tile:disabled {
   cursor: default;
-  opacity: 0.6;
+}
+
+.relation-counts__tile--empty .relation-counts__value,
+.relation-counts__tile:disabled .relation-counts__value {
+  color: var(--text-tertiary);
 }
 
 .relation-counts__value {
@@ -202,11 +214,15 @@ function close() {
   font-size: var(--text-body);
   font-weight: 600;
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  transition: color 120ms ease;
 }
 
 .relation-counts__label {
   font-size: var(--text-caption);
-  color: var(--text-secondary);
-  letter-spacing: 0.02em;
+  color: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 120ms ease;
 }
 </style>
