@@ -67,6 +67,8 @@ const activeDifficulty = computed(() =>
   map.value?.difficulties.find((d) => d.id === activeDifficultyId.value) ?? null
 )
 
+const isActiveDifficultyRanked = computed(() => activeDifficulty.value?.status === 'RANKED')
+
 const categoryCode = computed(() => {
   if (!activeDifficulty.value) return 'overall'
   return categoryStore.getCategoryCode(activeDifficulty.value.categoryId) ?? 'overall'
@@ -392,7 +394,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
               <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
                 style="border-radius: 3px;" />
             </BaseButton>
-            <BaseButton v-if="scoreCurveId && activeDifficulty" size="sm" aria-label="AP Tweaker"
+            <BaseButton v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" size="sm" aria-label="AP Tweaker"
               @click="toggleMapTweaker($event)">
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                 <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"
@@ -402,7 +404,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
                   stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </BaseButton>
-            <ApTweaker v-if="scoreCurveId && activeDifficulty" :open="tweakerOpen" :curve-id="scoreCurveId"
+            <ApTweaker v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" :open="tweakerOpen" :curve-id="scoreCurveId"
               :anchor-el="tweakerAnchor" :complexity="activeDifficulty.complexity ?? undefined" :show-weighted="false"
               @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
           </div>
@@ -413,7 +415,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
           <div v-if="activeDifficulty" class="map-detail__stats-strip">
             <div class="map-detail__diff-meta">
               <DifficultyBadge :difficulty="activeDifficulty.difficulty" />
-              <ComplexityBadge :complexity="activeDifficulty.complexity ?? 0" />
+              <ComplexityBadge v-if="isActiveDifficultyRanked" :complexity="activeDifficulty.complexity ?? 0" />
               <span class="map-detail__category-name" :style="{ color: categoryAccent }">{{ categoryName }}</span>
             </div>
             <div class="map-detail__stats">
@@ -426,9 +428,9 @@ watch(selectedStatsRange, () => fetchHistoricStats())
         </div>
       </div>
 
-      <BaseTabs :tabs="contentTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
+      <BaseTabs v-if="isActiveDifficultyRanked" :tabs="contentTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
 
-      <div class="map-detail__content">
+      <div v-if="isActiveDifficultyRanked" class="map-detail__content">
         <div v-show="activeTab === 'leaderboard'">
           <MapScoresSection v-if="activeDifficultyId" :difficulty-id="activeDifficultyId" :map-id="map?.id"
             :map-name="map?.songName" :artist-name="map?.songAuthor" :map-author="map?.mapAuthor"
