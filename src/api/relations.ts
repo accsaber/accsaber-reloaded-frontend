@@ -1,9 +1,11 @@
 import type {
   MyRelationsParams,
+  RelationScoresParams,
   UserRelationRequest,
   UserRelationResponse,
   UserRelationsParams,
 } from '@/types/api/relations'
+import type { ScoreResponse } from '@/types/api/users'
 import type { Page } from '@/types/pagination'
 import { del, get, post } from './client'
 import { buildQuery } from './utils'
@@ -19,6 +21,12 @@ export function getUserRelations(
   params?: UserRelationsParams,
 ): Promise<Page<UserRelationResponse>> {
   return get<Page<UserRelationResponse>>(`/users/${userId}/relations${buildQuery(params)}`)
+}
+
+export function getRelationScores(
+  params?: RelationScoresParams,
+): Promise<Page<ScoreResponse>> {
+  return get<Page<ScoreResponse>>(`/users/me/relations/scores${buildQuery(params)}`)
 }
 
 export function createRelation(

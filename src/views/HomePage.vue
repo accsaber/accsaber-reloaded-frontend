@@ -4,6 +4,7 @@ import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import FollowedActivity from '@/components/domain/FollowedActivity.vue'
 import NewsHighlightBanner from '@/components/domain/NewsHighlightBanner.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { tierKey, useLevelStore } from '@/stores/levels'
@@ -111,6 +112,8 @@ onUnmounted(() => {
         </svg>
       </div>
     </section>
+
+    <FollowedActivity />
 
     <section class="section">
       <h2 class="section__title">Explore</h2>

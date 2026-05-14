@@ -57,6 +57,17 @@ export interface ScoreResponse {
   modifierIds: string[]
   active: boolean
   createdAt: string
+  myScore?: MyScoreSummary
+}
+
+export interface MyScoreSummary {
+  id: string
+  score: number
+  accuracy: number
+  ap: number
+  weightedAp: number
+  rank: number
+  timeSet: string
 }
 
 export interface LeaderboardResponse {
