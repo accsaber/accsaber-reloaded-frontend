@@ -78,10 +78,20 @@ const unplayedOnly = computed<boolean>({
   },
 })
 const playlistDropdownOpen = ref(false)
-const { playlistCategories, downloadPlaylist: dlPlaylist, downloadBatchPlaylist } = usePlaylistDownload()
+const playlistUnplayedOnly = ref(false)
+const {
+  playlistCategories,
+  downloadPlaylist: dlPlaylist,
+  downloadMissingPlaylist: dlMissingPlaylist,
+  downloadBatchPlaylist,
+} = usePlaylistDownload()
 
 function downloadPlaylist(categoryCode: string) {
-  dlPlaylist(categoryCode)
+  if (playlistUnplayedOnly.value && authStore.userId) {
+    dlMissingPlaylist(authStore.userId, categoryCode)
+  } else {
+    dlPlaylist(categoryCode)
+  }
   playlistDropdownOpen.value = false
 }
 
@@ -367,6 +377,10 @@ watch(
           </template>
           <div class="maps-page__playlist-menu">
             <span class="maps-page__playlist-title">Download playlists...</span>
+            <label v-if="authStore.isLoggedIn" class="maps-page__playlist-toggle">
+              <input v-model="playlistUnplayedOnly" type="checkbox" class="maps-page__playlist-checkbox" />
+              <span>Only your unplayed maps</span>
+            </label>
             <BaseButton v-for="cat in playlistCategories" :key="cat.code" size="sm" @click="downloadPlaylist(cat.code)">
               <span class="maps-page__playlist-cat-dot" :style="{ background: cat.accent }" />
               {{ cat.name }}
@@ -908,6 +922,21 @@ watch(
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.maps-page__playlist-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-caption);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.maps-page__playlist-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 @media (max-width: 767px) {
