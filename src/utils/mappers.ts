@@ -51,6 +51,7 @@ export function toScoreDisplay(
   categoryCode?: CategoryCode,
 ): ScoreDisplay {
   return {
+    scoreId: score.id,
     mapId: score.mapId,
     mapDifficultyId: score.mapDifficultyId,
     mapName: score.songName ?? 'Unknown Map',

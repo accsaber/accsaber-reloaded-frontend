@@ -39,6 +39,7 @@ const modalUserId = ref('')
 
 function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
   return {
+    scoreId: entry.key,
     mapId: entry.mapId,
     mapDifficultyId: entry.mapDifficultyId,
     mapName: entry.mapName,

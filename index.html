@@ -17,11 +17,25 @@
 
     <script>
       ;(function () {
+        var root = document.documentElement
         var t = localStorage.getItem('theme')
         if (!t) {
           t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
         }
-        document.documentElement.setAttribute('data-theme', t)
+        root.setAttribute('data-theme', t)
+        var raw = localStorage.getItem('theme:tokens')
+        if (raw) {
+          try {
+            var tokens = JSON.parse(raw)
+            if (tokens && typeof tokens === 'object') {
+              for (var k in tokens) {
+                if (Object.prototype.hasOwnProperty.call(tokens, k) && typeof tokens[k] === 'string') {
+                  root.style.setProperty('--' + k.replace(/\./g, '-'), tokens[k])
+                }
+              }
+            }
+          } catch (_) { /* ignore malformed token cache */ }
+        }
       })()
     </script>
 

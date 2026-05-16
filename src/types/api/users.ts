@@ -9,12 +9,39 @@ export interface UserResponse {
   name: string
   avatarUrl: string
   country: string
+  bio: string
   xpRanking: number
   xpCountryRanking: number
   playerInactive: boolean
   banned: boolean
   createdAt: string
   relations: UserRelationCounts
+}
+
+export interface PinnedScoreInput {
+  scoreId: string
+  displayOrder: number
+  comment?: string | null
+}
+
+export interface ProfileUpdateRequest {
+  name?: string
+  bio?: string
+  pinnedScores?: PinnedScoreInput[]
+}
+
+export interface PinnedScoreResponse {
+  score: ScoreResponse
+  comment: string | null
+}
+
+export interface NameHistoryEntry {
+  name: string
+  changedAt: string
+}
+
+export interface SyncSettings {
+  'sync.name': boolean
 }
 
 export interface ScoreResponse {

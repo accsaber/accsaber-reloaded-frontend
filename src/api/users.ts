@@ -5,11 +5,15 @@ import type {
   HistoricScoresParams,
   HistoricStatisticsParams,
   LevelResponse,
+  NameHistoryEntry,
+  PinnedScoreResponse,
+  ProfileUpdateRequest,
   RankingHistoryResponse,
   ScoreResponse,
   SkillCategory,
   SkillResponse,
   StatsDiffResponse,
+  SyncSettings,
   UserAllStatisticsResponse,
   UserCategoryStatisticsResponse,
   UserMilestoneProgressResponse,
@@ -17,7 +21,7 @@ import type {
   UserScoresParams,
 } from '@/types/api/users'
 import type { Page, PaginationParams } from '@/types/pagination'
-import { get } from './client'
+import { get, patch, put } from './client'
 import { buildQuery } from './utils'
 
 export function getUser(userId: string): Promise<UserResponse> {
@@ -112,6 +116,10 @@ export function getUserScoresHistoric(
   return get<ScoreResponse[]>(`/users/${userId}/scores/historic${buildQuery(params)}`)
 }
 
+export function getUserPinnedScores(userId: string): Promise<PinnedScoreResponse[]> {
+  return get<PinnedScoreResponse[]>(`/users/${userId}/pinned-scores`)
+}
+
 export function getUserSkill(userId: string): Promise<SkillResponse> {
   return get<SkillResponse>(`/users/${userId}/skill`)
 }
@@ -128,4 +136,20 @@ export function getUserApToNext(
   category: string,
 ): Promise<ApToNextResponse> {
   return get<ApToNextResponse>(`/users/${userId}/categories/${category}/ap-to-next`)
+}
+
+export function updateMyProfile(body: ProfileUpdateRequest): Promise<void> {
+  return patch<void>('/users/me/profile', body)
+}
+
+export function getUserNameHistory(userId: string): Promise<NameHistoryEntry[]> {
+  return get<NameHistoryEntry[]>(`/users/${userId}/name-history`)
+}
+
+export function getMySyncSettings(): Promise<SyncSettings> {
+  return get<SyncSettings>('/users/me/settings/sync')
+}
+
+export function putMySyncSettings(body: SyncSettings): Promise<void> {
+  return put<void>('/users/me/settings/sync', body)
 }

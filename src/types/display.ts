@@ -78,6 +78,7 @@ export interface MapDisplay {
 }
 
 export interface ScoreDisplay {
+  scoreId: string
   mapId?: string
   mapDifficultyId: string
   mapName: string

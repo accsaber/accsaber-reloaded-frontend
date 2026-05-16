@@ -371,7 +371,7 @@ watch(
 
 .snipe-page > *:not(.snipe-page__bg) {
   width: 100%;
-  max-width: 1070px;
+  max-width: 1080px;
   position: relative;
   z-index: 1;
 }

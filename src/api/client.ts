@@ -10,6 +10,16 @@ export class ApiError extends Error {
   }
 }
 
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (!(err instanceof ApiError)) return fallback
+  try {
+    const parsed = JSON.parse(err.message) as { message?: unknown }
+    return typeof parsed.message === 'string' ? parsed.message : fallback
+  } catch {
+    return fallback
+  }
+}
+
 const NO_AUTO_AUTH_PATHS = [
   '/auth/refresh',
   '/auth/logout',

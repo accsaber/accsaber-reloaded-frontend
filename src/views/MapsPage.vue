@@ -870,7 +870,7 @@ watch(
   justify-content: space-between;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
-  background: var(--tint-overall);
+  background: color-mix(in srgb, var(--accent-overall) 12%, transparent);
   border: 1px solid var(--accent-overall);
   border-radius: var(--radius-input);
   color: var(--accent-overall);
@@ -883,11 +883,7 @@ watch(
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.maps-page__playlist-btn:hover {
-  background: color-mix(in srgb, var(--accent-overall) 22%, var(--bg-base));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-overall) 30%, transparent);
-}
-
+.maps-page__playlist-btn:hover,
 .maps-page__playlist-btn--active {
   background: color-mix(in srgb, var(--accent-overall) 22%, var(--bg-base));
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent-overall) 30%, transparent);

@@ -6,6 +6,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import ProviderIcon from '@/components/domain/ProviderIcon.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
+import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
@@ -206,6 +207,22 @@ const connectionError = ref('')
 const logoutConfirm = ref(false)
 const loginModalOpen = ref(false)
 
+const {
+  enabled: syncEnabled,
+  saving: syncSaving,
+  resyncQueued: syncResyncQueued,
+  fetch: fetchSyncRaw,
+  set: setSyncName,
+} = useNameSyncSetting()
+
+async function fetchSyncSetting() {
+  if (!isLoggedIn.value) {
+    syncEnabled.value = null
+    return
+  }
+  await fetchSyncRaw()
+}
+
 const sections = computed<SectionDef[]>(() => [
   { key: 'appearance', label: 'Appearance', requiresLogin: false },
   { key: 'privacy', label: 'Privacy', requiresLogin: !isLoggedIn.value },
@@ -269,9 +286,17 @@ onMounted(() => {
     void settingsStore.fetchPrivacy()
   }
   void loadThemes()
+  void fetchSyncSetting()
 })
 
-watch(() => authStore.userId, () => { void loadThemes() })
+watch(() => authStore.userId, () => {
+  void loadThemes()
+  void fetchSyncSetting()
+})
+
+watch(activeSection, (section) => {
+  if (section === 'account') void fetchSyncSetting()
+})
 </script>
 
 <template>
@@ -407,6 +432,30 @@ watch(() => authStore.userId, () => { void loadThemes() })
               </div>
             </div>
 
+            <div v-if="isLoggedIn" class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">Sync display name from BeatLeader / ScoreSaber</span>
+                <span class="settings-row__hint">
+                  When off, your custom name stays put. When on, your platform name overwrites it once a day (4 AM).
+                </span>
+                <span v-if="syncResyncQueued" class="settings-row__notice">
+                  Will resync on the next refresh.
+                </span>
+              </div>
+              <div class="visibility-picker" role="radiogroup" aria-label="Name sync">
+                <button type="button" class="visibility-picker__btn"
+                  :class="{ 'visibility-picker__btn--active': syncEnabled === true }"
+                  :disabled="syncSaving || syncEnabled === null"
+                  role="radio" :aria-checked="syncEnabled === true"
+                  @click="setSyncName(true)">On</button>
+                <button type="button" class="visibility-picker__btn"
+                  :class="{ 'visibility-picker__btn--active': syncEnabled === false }"
+                  :disabled="syncSaving || syncEnabled === null"
+                  role="radio" :aria-checked="syncEnabled === false"
+                  @click="setSyncName(false)">Off</button>
+              </div>
+            </div>
+
             <div class="settings-row settings-row--danger">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sign out</span>
@@ -491,7 +540,7 @@ watch(() => authStore.userId, () => { void loadThemes() })
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  max-width: 1070px;
+  max-width: 1080px;
   margin: 0 auto;
   width: 100%;
 }
@@ -628,6 +677,12 @@ watch(() => authStore.userId, () => { void loadThemes() })
 
 .settings-row__hint {
   color: var(--text-secondary);
+  font-size: var(--text-caption);
+}
+
+.settings-row__notice {
+  margin-top: 4px;
+  color: var(--page-accent);
   font-size: var(--text-caption);
 }
 
