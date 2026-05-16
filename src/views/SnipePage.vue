@@ -446,7 +446,6 @@ watch(
         <StatBlock label="Closest Gap" :value="`+${closestGapPct.toFixed(2)}%`" :accent-color="heroAccent" />
         <StatBlock label="Points to Gain" :value="totalPointsToGain" :decimals="0" />
         <StatBlock label="AP at Stake" :value="totalApAtStake" :decimals="2" />
-        <StatBlock label="Snipeable Maps" :value="totalElements" :decimals="0" />
       </div>
     </section>
 
@@ -457,8 +456,8 @@ watch(
         <BaseSelect :model-value="sizeSelectValue" :options="SIZE_OPTIONS" label="Page size"
           @update:model-value="setSize" />
       </div>
-      <BaseButton variant="primary" size="lg" :href="playlistUrl" :disabled="!playlistUrl || rows.length === 0"
-        aria-label="Download Beat Saber playlist">
+      <BaseButton class="snipe-page__download" variant="primary" size="lg" :href="playlistUrl"
+        :disabled="!playlistUrl || rows.length === 0" aria-label="Download Beat Saber playlist">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12" />
@@ -662,7 +661,7 @@ watch(
 
 .snipe-page__summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-md);
 }
 
@@ -678,6 +677,10 @@ watch(
   display: flex;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+.snipe-page__download {
+  --accent: var(--accent-overall);
 }
 
 .snipe-page__list {
