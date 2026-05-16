@@ -182,6 +182,34 @@ const formatGroups: FormatButton[][] = [
           :aria-label="btn.title" @click="btn.action">{{ btn.label }}</button>
       </template>
       <span class="bio-editor__tb-divider" />
+      <button type="button" class="bio-editor__tb-btn" title="Align left" aria-label="Align left"
+        @click="runCommand('justifyLeft')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="21" y1="6" x2="3" y2="6" />
+          <line x1="15" y1="12" x2="3" y2="12" />
+          <line x1="17" y1="18" x2="3" y2="18" />
+        </svg>
+      </button>
+      <button type="button" class="bio-editor__tb-btn" title="Align center" aria-label="Align center"
+        @click="runCommand('justifyCenter')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="21" y1="6" x2="3" y2="6" />
+          <line x1="17" y1="12" x2="7" y2="12" />
+          <line x1="19" y1="18" x2="5" y2="18" />
+        </svg>
+      </button>
+      <button type="button" class="bio-editor__tb-btn" title="Align right" aria-label="Align right"
+        @click="runCommand('justifyRight')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="21" y1="6" x2="3" y2="6" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+          <line x1="21" y1="18" x2="7" y2="18" />
+        </svg>
+      </button>
+      <span class="bio-editor__tb-divider" />
       <button type="button" class="bio-editor__tb-btn" title="Link selected text" aria-label="Link"
         @click="openLinkComposer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
