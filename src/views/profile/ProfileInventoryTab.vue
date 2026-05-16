@@ -94,6 +94,7 @@ const selectedItem = computed<UserItemResponse | null>(() => {
 })
 
 const isSelectedEquipped = computed(() => {
+  if (!isOwnProfile.value) return false
   const it = selectedItem.value?.item
   if (!it) return false
   const slot = inventoryStore.equipped[it.typeKey]
@@ -101,6 +102,7 @@ const isSelectedEquipped = computed(() => {
 })
 
 function isEquipped(userItem: UserItemResponse): boolean {
+  if (!isOwnProfile.value) return false
   const slot = inventoryStore.equipped[userItem.item.typeKey]
   return !!slot && slot.item.id === userItem.item.id
 }
@@ -173,7 +175,7 @@ watch(
 )
 
 watch(() => props.userId, (id) => {
-  if (id) inventoryStore.fetchEquipped(id)
+  if (id && isOwnProfile.value) inventoryStore.fetchEquipped(id)
 }, { immediate: true })
 
 onMounted(() => {
