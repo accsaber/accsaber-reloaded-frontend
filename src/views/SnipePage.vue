@@ -8,6 +8,7 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
+import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
@@ -17,7 +18,12 @@ import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import { useThemeStore } from '@/stores/theme'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
-import type { LevelResponse, ScoreResponse, UserResponse } from '@/types/api/users'
+import type {
+  LevelResponse,
+  ScoreResponse,
+  UserAllStatisticsResponse,
+  UserResponse,
+} from '@/types/api/users'
 import type { ScoreDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { brightenRgb } from '@/utils/color'
@@ -113,6 +119,12 @@ const sniperLevel = ref<LevelResponse | null>(null)
 const data = ref<Page<SnipeComparisonResponse> | null>(null)
 const loading = ref(false)
 
+const sniperAllStats = ref<UserAllStatisticsResponse | null>(null)
+const targetAllStats = ref<UserAllStatisticsResponse | null>(null)
+const rankedTotals = ref<Map<string, number>>(new Map())
+const reverseSnipeCount = ref<number | null>(null)
+const tugLoading = ref(false)
+
 const detailOpen = ref(false)
 const detailScore = ref<ScoreDisplay | null>(null)
 const detailUserId = ref<string>('')
@@ -172,6 +184,55 @@ const metaTitle = computed(() => {
 
 usePageMeta({ title: metaTitle })
 
+const filterCategoryId = computed(() => {
+  if (!currentCategory.value) return null
+  return categoryStore.getCategoryId(currentCategory.value) ?? null
+})
+
+const totalsKey = computed(() => filterCategoryId.value ?? 'all')
+
+const snipeableCategoryIds = computed(() => {
+  return snipeCategoryCodes.value
+    .map((code) => categoryStore.getCategoryId(code))
+    .filter((id): id is string => !!id)
+})
+
+function sumPlaysForScope(stats: UserAllStatisticsResponse | null): number {
+  if (!stats) return 0
+  if (filterCategoryId.value) {
+    return stats.categories.find((c) => c.categoryId === filterCategoryId.value)?.rankedPlays ?? 0
+  }
+  const allowed = new Set(snipeableCategoryIds.value)
+  return stats.categories
+    .filter((c) => allowed.has(c.categoryId))
+    .reduce((sum, c) => sum + c.rankedPlays, 0)
+}
+
+const sniperPlaysInScope = computed(() => sumPlaysForScope(sniperAllStats.value))
+const targetPlaysInScope = computed(() => sumPlaysForScope(targetAllStats.value))
+
+const totalMapsInScope = computed(() => rankedTotals.value.get(totalsKey.value) ?? 0)
+
+const snipeable = computed(() => totalElements.value)
+
+const sniperWinsCount = computed(() =>
+  Math.max(0, sniperPlaysInScope.value - snipeable.value),
+)
+const targetWinsCount = computed(() =>
+  Math.max(0, targetPlaysInScope.value - (reverseSnipeCount.value ?? 0)),
+)
+const unplayedCount = computed(() =>
+  Math.max(0, totalMapsInScope.value - sniperWinsCount.value - targetWinsCount.value),
+)
+
+const tugReady = computed(
+  () =>
+    !!sniperAllStats.value &&
+    !!targetAllStats.value &&
+    reverseSnipeCount.value != null &&
+    totalMapsInScope.value > 0,
+)
+
 async function fetchUsers() {
   if (!sniperId.value) return
   const { getUser, getUserLevel } = await import('@/api/users')
@@ -203,6 +264,57 @@ async function fetchComparisons() {
   loading.value = false
 }
 
+async function fetchAllStats() {
+  if (!sniperId.value) return
+  const { getUserAllStatistics } = await import('@/api/users')
+  const [s, t] = await Promise.allSettled([
+    getUserAllStatistics(sniperId.value),
+    getUserAllStatistics(targetId.value),
+  ])
+  if (s.status === 'fulfilled') sniperAllStats.value = s.value
+  if (t.status === 'fulfilled') targetAllStats.value = t.value
+}
+
+async function fetchTotalForCurrentScope() {
+  const key = totalsKey.value
+  if (rankedTotals.value.has(key)) return
+  const { getDifficulties } = await import('@/api/maps')
+  try {
+    const page = await getDifficulties({
+      status: 'RANKED',
+      size: 1,
+      categoryId: filterCategoryId.value ?? undefined,
+    })
+    const next = new Map(rankedTotals.value)
+    next.set(key, page.totalElements ?? 0)
+    rankedTotals.value = next
+  } catch {
+    /* swallow */
+  }
+}
+
+async function fetchReverseSnipeCount() {
+  if (!sniperId.value) return
+  reverseSnipeCount.value = null
+  try {
+    const { getClosestScores } = await import('@/api/snipe')
+    const res = await getClosestScores(targetId.value, sniperId.value, {
+      page: 0,
+      size: 1,
+      category: currentCategory.value || undefined,
+    })
+    reverseSnipeCount.value = res.totalElements ?? 0
+  } catch {
+    reverseSnipeCount.value = 0
+  }
+}
+
+async function refreshTugData() {
+  tugLoading.value = true
+  await Promise.allSettled([fetchTotalForCurrentScope(), fetchReverseSnipeCount()])
+  tugLoading.value = false
+}
+
 function openDetail(score: ScoreResponse) {
   const categoryCode = categoryStore.getCategoryCode(score.categoryId)
   detailScore.value = toScoreDisplay(
@@ -226,6 +338,9 @@ watch(
       return
     }
     fetchUsers()
+    sniperAllStats.value = null
+    targetAllStats.value = null
+    fetchAllStats()
   },
   { immediate: true },
 )
@@ -234,6 +349,14 @@ watch(
   () => [sniperId.value, targetId.value, currentPage.value, currentSize.value, currentCategory.value] as const,
   () => {
     if (isValidPair.value) fetchComparisons()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [sniperId.value, targetId.value, currentCategory.value] as const,
+  () => {
+    if (isValidPair.value) refreshTugData()
   },
   { immediate: true },
 )
@@ -302,6 +425,18 @@ watch(
         </div>
       </div>
     </header>
+
+    <SnipeTugOfWar
+      v-if="tugReady || tugLoading"
+      :sniper-name="sniper?.name ?? 'You'"
+      :sniper-country="sniper?.country"
+      :sniper-wins="sniperWinsCount"
+      :target-name="target?.name ?? 'Target'"
+      :target-country="target?.country"
+      :target-wins="targetWinsCount"
+      :unplayed="unplayedCount"
+      :loading="!tugReady && tugLoading"
+    />
 
     <section class="snipe-page__summary">
       <header class="snipe-page__summary-caption">
