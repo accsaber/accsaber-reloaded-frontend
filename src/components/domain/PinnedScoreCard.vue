@@ -130,6 +130,17 @@ function onUnpinClick(e: MouseEvent) {
   e.stopPropagation()
   emit('unpin', props.score.id)
 }
+
+function onReplayClick(e: MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  if (props.score.blScoreId == null) return
+  window.open(
+    `https://replay.beatleader.com/?scoreId=${props.score.blScoreId}`,
+    '_blank',
+    'noopener,noreferrer',
+  )
+}
 </script>
 
 <template>
@@ -203,6 +214,11 @@ function onUnpinClick(e: MouseEvent) {
             stroke-width="1.5" stroke-linejoin="round">
             <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
           </svg>
+        </button>
+        <button v-if="score.blScoreId" class="pin-card__foot-btn" type="button"
+          aria-label="Watch replay" title="Watch replay" @click="onReplayClick">
+          <img src="https://beatleader.com/assets/bs-pepe.gif" alt="" width="16" height="16"
+            style="border-radius: 2px; display: block;" />
         </button>
         <button class="pin-card__foot-btn" type="button" aria-label="View score details" @click="onDetailClick">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
