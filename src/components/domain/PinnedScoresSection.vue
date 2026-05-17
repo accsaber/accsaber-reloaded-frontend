@@ -7,9 +7,9 @@ import { useModifierStore } from '@/stores/modifiers'
 import type { PinnedScoreResponse, ScoreResponse } from '@/types/api/users'
 import type { ScoreDisplay } from '@/types/display'
 import { toScoreDisplay } from '@/utils/mappers'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   userId: string
   pinned: PinnedScoreResponse[]
   loading: boolean
@@ -27,6 +27,23 @@ const modifierStore = useModifierStore()
 const detailOpen = ref(false)
 const detailScore = ref<ScoreDisplay | null>(null)
 const detailUserId = ref('')
+
+const complexities = ref<Map<string, number | null>>(new Map())
+
+watch(() => props.pinned, async (next) => {
+  const missing = next
+    .map((p) => p.score.mapDifficultyId)
+    .filter((id) => !complexities.value.has(id))
+  if (missing.length === 0) return
+  const { getDifficulty } = await import('@/api/maps')
+  const results = await Promise.allSettled(missing.map((id) => getDifficulty(id)))
+  const updated = new Map(complexities.value)
+  results.forEach((res, i) => {
+    const id = missing[i]
+    updated.set(id, res.status === 'fulfilled' ? res.value.complexity : null)
+  })
+  complexities.value = updated
+}, { immediate: true, deep: true })
 
 function onOpenDetail(score: ScoreResponse) {
   detailScore.value = toScoreDisplay(
@@ -62,6 +79,7 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
     <div v-else class="pinned__grid">
       <PinnedScoreCard v-for="pin in pinned" :key="pin.score.id" :score="pin.score" :comment="pin.comment"
         :editable="isSelfProfile" :can-unpin="isSelfProfile"
+        :complexity="complexities.get(pin.score.mapDifficultyId) ?? null"
         @unpin="onUnpin" @open-detail="onOpenDetail" @save-comment="onCommentSave" />
     </div>
 
