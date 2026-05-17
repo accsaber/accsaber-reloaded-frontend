@@ -663,6 +663,7 @@ watch(
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-md);
+  justify-items: center;
 }
 
 .snipe-page__controls {
