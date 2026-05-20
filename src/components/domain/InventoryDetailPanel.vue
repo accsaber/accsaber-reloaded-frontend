@@ -21,6 +21,7 @@ const props = defineProps<{
   isOwnProfile: boolean
   equipped: boolean
   busy?: boolean
+  locked?: boolean
 }>()
 
 defineEmits<{
@@ -64,7 +65,11 @@ const typeName = computed(() => {
 })
 
 const equippable = computed(() => !!item.value && isEquippableTypeKey(item.value.typeKey))
-const showEquipActions = computed(() => props.isOwnProfile && equippable.value && item.value?.active && !item.value.deprecated)
+const showEquipActions = computed(() => !props.locked && props.isOwnProfile && equippable.value && item.value?.active && !item.value.deprecated)
+const hasMetaRows = computed(() => {
+  if (!props.locked) return true
+  return item.value?.unlockLevel != null || !!item.value?.requirement
+})
 
 const sourceLabel = computed(() => {
   if (!props.userItem) return ''
@@ -98,14 +103,23 @@ onMounted(() => {
 
     <div class="inv-detail__head">
       <span class="inv-detail__type">{{ typeName }}</span>
-      <h3 class="inv-detail__name" :style="itemNameStyle">{{ fullItemName }}</h3>
+      <h3 class="inv-detail__name" :style="itemNameStyle">
+        <span v-if="locked" class="inv-detail__name-lock" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </span>
+        {{ fullItemName }}
+      </h3>
       <span class="inv-detail__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
     </div>
 
     <p v-if="item.description" class="inv-detail__description">{{ item.description }}</p>
 
-    <dl class="inv-detail__meta">
-      <div class="inv-detail__row">
+    <dl v-if="hasMetaRows" class="inv-detail__meta">
+      <div v-if="!locked" class="inv-detail__row">
         <dt>{{ modifiers.length > 1 ? 'Modifiers' : 'Modifier' }}</dt>
         <dd>
           <div v-if="modifiers.length" class="inv-detail__chips">
@@ -119,29 +133,46 @@ onMounted(() => {
           <span v-else>-</span>
         </dd>
       </div>
-      <div v-if="quantity > 1" class="inv-detail__row">
+      <div v-if="!locked && quantity > 1" class="inv-detail__row">
         <dt>Quantity</dt>
         <dd class="inv-detail__mono">x{{ quantity }}</dd>
       </div>
-      <div v-if="userItem.serialNumber != null" class="inv-detail__row">
+      <div v-if="!locked && userItem.serialNumber != null" class="inv-detail__row">
         <dt>Serial</dt>
         <dd class="inv-detail__mono">#{{ userItem.serialNumber }}</dd>
       </div>
-      <div class="inv-detail__row">
+      <div v-if="!locked" class="inv-detail__row">
         <dt>Source</dt>
         <dd>{{ sourceLabel }}</dd>
       </div>
-      <div class="inv-detail__row">
+      <div v-if="!locked" class="inv-detail__row">
         <dt>Awarded</dt>
         <dd>{{ formatRelativeDate(userItem.awardedAt) }}</dd>
       </div>
-      <div v-if="userItem.reason" class="inv-detail__row">
+      <div v-if="!locked && userItem.reason" class="inv-detail__row">
         <dt>Reason</dt>
         <dd>{{ userItem.reason }}</dd>
       </div>
+      <div v-if="locked && item.unlockLevel != null" class="inv-detail__row">
+        <dt>Unlock</dt>
+        <dd class="inv-detail__mono">Level {{ item.unlockLevel }}</dd>
+      </div>
+      <div v-if="locked && item.requirement" class="inv-detail__row">
+        <dt>Requirement</dt>
+        <dd>{{ item.requirement }}</dd>
+      </div>
     </dl>
 
-    <div v-if="item.deprecated" class="inv-detail__notice">This item has been deprecated.</div>
+    <div v-if="locked" class="inv-detail__locked">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </svg>
+      Not in your inventory
+    </div>
+
+    <div v-if="!locked && item.deprecated" class="inv-detail__notice">This item has been deprecated.</div>
 
     <div v-if="showEquipActions || !item.tradeable" class="inv-detail__actions">
       <BaseButton
@@ -333,6 +364,29 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
+}
+
+.inv-detail__name-lock {
+  display: inline-flex;
+  align-items: center;
+  margin-right: var(--space-xs);
+  color: var(--text-tertiary);
+  vertical-align: -2px;
+}
+
+.inv-detail__locked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  align-self: flex-start;
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
 }
 
 .inv-detail__no-trade {

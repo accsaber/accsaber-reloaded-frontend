@@ -16,6 +16,7 @@ const props = defineProps<{
   userItem: UserItemResponse
   selected?: boolean
   equipped?: boolean
+  locked?: boolean
 }>()
 
 defineEmits<{
@@ -47,7 +48,12 @@ onMounted(() => {
       class="inventory-cell"
       :class="[
         rarityClass(item.rarity),
-        { 'inventory-cell--selected': selected, 'inventory-cell--equipped': equipped, 'inventory-cell--deprecated': item.deprecated },
+        {
+          'inventory-cell--selected': selected,
+          'inventory-cell--equipped': equipped,
+          'inventory-cell--deprecated': item.deprecated,
+          'inventory-cell--locked': locked,
+        },
       ]"
       :style="cellAccentStyle"
       :aria-label="item.name"
@@ -65,9 +71,17 @@ onMounted(() => {
         :context="tokenCtx"
       />
 
-      <span v-if="equipped" class="inventory-cell__equipped" aria-hidden="true">EQUIPPED</span>
-      <span v-if="quantity > 1" class="inventory-cell__qty">x{{ quantity }}</span>
-      <span v-if="userItem.serialNumber != null" class="inventory-cell__serial">#{{ userItem.serialNumber }}</span>
+      <span v-if="equipped && !locked" class="inventory-cell__equipped" aria-hidden="true">EQUIPPED</span>
+      <span v-if="!locked && quantity > 1" class="inventory-cell__qty">x{{ quantity }}</span>
+      <span v-if="!locked && userItem.serialNumber != null" class="inventory-cell__serial">#{{ userItem.serialNumber }}</span>
+
+      <span v-if="locked" class="inventory-cell__lock" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      </span>
     </button>
 
     <div class="inventory-cell-tooltip" role="tooltip" :style="cellAccentStyle">
@@ -196,6 +210,29 @@ onMounted(() => {
 
 .inventory-cell--deprecated {
   opacity: 0.55;
+}
+
+.inventory-cell--locked {
+  opacity: 0.5;
+}
+
+.inventory-cell--locked .inventory-cell__art {
+  filter: grayscale(0.6);
+}
+
+.inventory-cell__lock {
+  position: absolute;
+  bottom: var(--space-xs);
+  left: var(--space-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--bg-base) 75%, transparent);
+  border-radius: var(--radius-pill);
+  pointer-events: none;
 }
 
 .inventory-cell__art {
