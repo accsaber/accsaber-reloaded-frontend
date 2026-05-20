@@ -37,7 +37,18 @@ usePageMeta({
 const selectedSetId = computed({
   get: (): string | null => (route.query.set as string) || null,
   set: (val: string | null) => {
-    router.replace({ query: val ? { set: val } : {} })
+    const current = (route.query.set as string) || null
+    if (current === val) return
+
+    const query = { ...route.query }
+    if (val) {
+      query.set = val
+      router.push({ query })
+      return
+    }
+
+    delete query.set
+    router.replace({ query })
   },
 })
 
