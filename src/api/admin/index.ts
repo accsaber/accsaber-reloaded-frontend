@@ -1,6 +1,7 @@
 export * as adminBadges from './badges'
 export * as adminCampaignMilestones from './campaign-milestones'
 export * as adminCampaigns from './campaigns'
+export * as adminCrates from './crates'
 export * as adminCurves from './curves'
 export * as adminItems from './items'
 export * as adminLevelThresholds from './level-thresholds'

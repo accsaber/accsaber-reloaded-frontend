@@ -207,6 +207,18 @@ const router = createRouter({
       meta: { requiresStaff: true, requiredRole: 'ADMIN' },
     },
     {
+      path: '/admin/items/crates',
+      name: 'admin-crates-list',
+      redirect: { name: 'admin', query: { tab: 'items', itab: 'crates' } },
+      meta: { requiresStaff: true, requiredRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/items/crates/:crateItemId',
+      name: 'admin-crate-editor',
+      component: () => import('@/views/staff/admin/items/CrateEditorPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'ADMIN' },
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundPage.vue'),
