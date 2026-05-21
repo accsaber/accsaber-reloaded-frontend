@@ -41,4 +41,5 @@ export interface RelationScoresParams extends PaginationParams {
   type?: ScoreRelationType
   categoryId?: string
   search?: string
+  includePrincipal?: boolean
 }

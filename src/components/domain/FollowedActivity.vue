@@ -142,6 +142,7 @@ async function fetchScores() {
   try {
     scorePageData.value = await getRelationScores({
       type: 'follower',
+      includePrincipal: true,
       page: scorePage.value - 1,
       size: FOLLOWED_SCORE_SIZE,
       sort: 'timeSet,desc',
