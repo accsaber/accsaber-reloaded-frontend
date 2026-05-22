@@ -18,6 +18,7 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import CrateOpenAnimation from '@/components/domain/CrateOpenAnimation.vue'
 import type {
   ItemRarity,
   ItemResponse,
@@ -273,17 +274,18 @@ function rollOnce(pool: CrateContentResponse[]): ItemResponse | null {
 }
 
 const lastRoll = ref<ItemResponse | null>(null)
-const rollReveal = ref(false)
+const rollToken = ref(0)
+
+const rollPool = computed(() =>
+  contents.value.map((c) => ({ item: c.rewardItem, weight: c.dropWeight })),
+)
 
 function doOpenOnce() {
   if (contents.value.length === 0) return
-  rollReveal.value = false
   const item = rollOnce(contents.value)
   if (!item) return
   lastRoll.value = item
-  requestAnimationFrame(() => {
-    rollReveal.value = true
-  })
+  rollToken.value++
 }
 
 interface SimRow {
@@ -531,7 +533,7 @@ watch(crateId, refresh)
       <section class="crate-editor__panel">
         <h2 class="crate-editor__panel-title">Test</h2>
         <p class="crate-editor__hint">
-          Simulate rolls against the current pool. Uses the same weighted draw as the server.
+          Playground for testing the contents and animation.
         </p>
         <div class="crate-editor__test-actions">
           <BaseButton size="sm" :disabled="contents.length === 0" @click="doOpenOnce">
@@ -546,27 +548,16 @@ watch(crateId, refresh)
           </BaseButton>
         </div>
 
-        <Transition name="reveal">
-          <div v-if="lastRoll" :key="lastRoll.id" class="crate-editor__reveal"
-            :class="{ 'crate-editor__reveal--in': rollReveal }">
-            <div class="crate-editor__reveal-icon">
-              <img v-if="lastRoll.iconUrl" :src="lastRoll.iconUrl" alt="" />
-              <span v-else class="crate-editor__picker-icon-placeholder" />
-            </div>
-            <div class="crate-editor__reveal-meta">
-              <div class="crate-editor__reveal-label">You rolled</div>
-              <div class="crate-editor__reveal-name">{{ lastRoll.name }}</div>
-              <div class="crate-editor__reveal-sub">
-                <span class="crate-editor__rarity" :class="`rarity--${lastRoll.rarity}`">
-                  {{ lastRoll.rarity }}
-                </span>
-                <span class="crate-editor__reveal-chance mono">
-                  {{ formatPct(dropChanceFor(lastRoll.id)) }} chance
-                </span>
-              </div>
-            </div>
-          </div>
-        </Transition>
+        <CrateOpenAnimation
+          v-if="rollToken > 0 && lastRoll"
+          :pool="rollPool"
+          :result="lastRoll"
+          :play-token="rollToken"
+        />
+        <div v-if="lastRoll && rollToken > 0" class="crate-editor__roll-chance">
+          Drop chance:
+          <span class="mono">{{ formatPct(dropChanceFor(lastRoll.id)) }}</span>
+        </div>
 
         <table v-if="simRows && simRows.length" class="crate-editor__sim-table">
           <thead>
@@ -842,8 +833,7 @@ watch(crateId, refresh)
 }
 
 .crate-editor__picker-icon,
-.crate-editor__pool-icon img,
-.crate-editor__reveal-icon img {
+.crate-editor__pool-icon img {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-avatar);
@@ -1060,49 +1050,7 @@ watch(crateId, refresh)
   flex-wrap: wrap;
 }
 
-.crate-editor__reveal {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  opacity: 0;
-  transform: scale(0.96);
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-
-.crate-editor__reveal--in {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.crate-editor__reveal-icon img,
-.crate-editor__reveal-icon .crate-editor__picker-icon-placeholder {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-}
-
-.crate-editor__reveal-label {
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-}
-
-.crate-editor__reveal-name {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.crate-editor__reveal-sub {
-  display: flex;
-  gap: var(--space-md);
-  align-items: center;
+.crate-editor__roll-chance {
   font-size: var(--text-caption);
   color: var(--text-secondary);
 }
@@ -1139,11 +1087,5 @@ watch(crateId, refresh)
 
 .crate-editor__sim-out {
   color: var(--error);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .crate-editor__reveal {
-    transition: none;
-  }
 }
 </style>
