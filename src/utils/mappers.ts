@@ -80,6 +80,9 @@ export function toScoreDisplay(
     rankWhenSet: score.rankWhenSet ?? undefined,
     blScoreId: score.blScoreId ?? undefined,
     mapAuthor: score.mapAuthor,
+    active: score.active,
+    partial: score.partial,
+    supersedesReason: score.supersedesReason,
   }
 }
 

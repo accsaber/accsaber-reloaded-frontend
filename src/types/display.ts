@@ -1,4 +1,4 @@
-import type { MilestoneType } from './enums'
+import type { MilestoneType, SupersedesReason } from './enums'
 
 export interface Tab {
   key: string
@@ -108,6 +108,9 @@ export interface ScoreDisplay {
   blScoreId?: number
   userName?: string
   mapAuthor?: string
+  active?: boolean
+  partial?: boolean
+  supersedesReason?: SupersedesReason | null
 }
 
 export interface DifficultyScoreDisplay {

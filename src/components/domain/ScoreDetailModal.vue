@@ -61,8 +61,29 @@ const totalBonusXp = computed(() => {
   return historicData.value.reduce((sum, s) => sum + (s.bonusXp ?? 0), 0)
 })
 
+function scoreTypeLabel(s: ScoreResponse): string {
+  if (s.active) return 'Current PB'
+  switch (s.supersedesReason) {
+    case 'Score improved':
+      return 'Previous PB'
+    case 'Worse score':
+      return 'Worse attempt'
+    case 'Partial attempt':
+      return 'Quit early'
+    case 'Complexity reweight':
+      return 'Reweighted'
+    case 'XP curve update':
+      return 'XP recomputed'
+    case 'User merge':
+      return 'Merged account'
+    default:
+      return s.partial ? 'Quit early' : 'Historical'
+  }
+}
+
 function buildTooltipLines(s: ScoreResponse, prev: ScoreResponse | null): string[] {
   const lines: string[] = []
+  lines.push(scoreTypeLabel(s))
   lines.push(`Accuracy: ${(s.accuracy * 100).toFixed(2)}%`)
   lines.push(`AP: ${s.ap.toFixed(2)}`)
   lines.push(`XP: ${(s.xpGained ?? 0).toFixed(1)} (${(s.baseXp ?? 0).toFixed(0)} base + ${(s.bonusXp ?? 0).toFixed(1)} bonus)`)

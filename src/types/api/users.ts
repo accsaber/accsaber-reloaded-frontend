@@ -1,4 +1,4 @@
-import type { MilestoneTier, MilestoneType } from '../enums'
+import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
 import type { PaginationParams } from '../pagination'
 import type { UserRelationCounts } from './relations'
 
@@ -83,6 +83,8 @@ export interface ScoreResponse {
   bonusXp: number
   modifierIds: string[]
   active: boolean
+  partial: boolean
+  supersedesReason: SupersedesReason | null
   createdAt: string
 }
 
