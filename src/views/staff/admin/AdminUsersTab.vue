@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import type { LeaderboardResponse } from '@/types/api/users'
 import AdminTable from '@/components/admin/AdminTable.vue'
+import AdminUserMissionsModal from '@/components/admin/AdminUserMissionsModal.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
@@ -82,6 +83,18 @@ async function unbanUser(user: LeaderboardResponse) {
   } finally {
     delete actionLoading.value[user.userId]
   }
+}
+
+const missionsModalOpen = ref(false)
+const missionsTarget = ref<LeaderboardResponse | null>(null)
+
+function openMissions(user: LeaderboardResponse) {
+  missionsTarget.value = user
+  missionsModalOpen.value = true
+}
+
+function closeMissions() {
+  missionsModalOpen.value = false
 }
 
 const countryModalOpen = ref(false)
@@ -195,6 +208,7 @@ async function clearCountry() {
             >
               Unban
             </BaseButton>
+            <BaseButton size="sm" @click="openMissions(item)">Missions</BaseButton>
             <BaseButton size="sm" :href="playerProfileHref(item.userId)">Profile</BaseButton>
           </div>
         </td>
@@ -203,6 +217,13 @@ async function clearCountry() {
 
     <PaginationControls :page="page" :total-pages="totalPages" @update:page="(p: number) => { page = p }" />
   </div>
+
+  <AdminUserMissionsModal
+    :open="missionsModalOpen"
+    :user-id="missionsTarget?.userId ?? null"
+    :user-name="missionsTarget?.userName ?? null"
+    @close="closeMissions"
+  />
 
   <BaseModal :open="countryModalOpen" :title="`Country Override - ${countryTarget?.userName ?? ''}`" @close="countryModalOpen = false">
     <div class="country-modal">
