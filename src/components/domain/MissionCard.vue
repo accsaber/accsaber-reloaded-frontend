@@ -82,10 +82,12 @@ const binaryHint = computed(() => {
       return m.targetAp !== null ? `Score ${m.targetAp.toLocaleString()} AP` : ''
     case 'PB_SPECIFIC_MAP':
       return 'Set a new PB'
-    case 'SNIPE_PLAYER_ON_MAP':
-      if (m.targetScore !== null) return `Beat ${m.targetScore.toLocaleString()} score`
-      if (m.targetAp !== null) return `Beat ${m.targetAp.toLocaleString()} AP`
-      return 'Beat their score'
+    case 'SNIPE_PLAYER_ON_MAP': {
+      const parts: string[] = []
+      if (m.targetAcc !== null) parts.push(`${m.targetAcc.toFixed(2)}% acc`)
+      if (m.targetAp !== null) parts.push(`${m.targetAp.toLocaleString()} AP`)
+      return parts.length > 0 ? `Beat ${parts.join(' · ')}` : 'Beat their score'
+    }
     default:
       return ''
   }
