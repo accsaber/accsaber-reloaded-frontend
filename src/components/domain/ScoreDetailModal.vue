@@ -23,7 +23,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
-type ScoreMetric = 'accuracy' | 'ap' | 'streak115' | 'xpCumulative' | 'xpPerAttempt'
+type ScoreMetric = 'accuracy' | 'ap' | 'xpCumulative' | 'xpPerAttempt'
 
 const router = useRouter()
 const themeStore = useThemeStore()
@@ -87,6 +87,7 @@ function buildTooltipLines(s: ScoreResponse, prev: ScoreResponse | null): string
   lines.push(`Accuracy: ${(s.accuracy * 100).toFixed(2)}%`)
   lines.push(`AP: ${s.ap.toFixed(2)}`)
   lines.push(`XP: ${(s.xpGained ?? 0).toFixed(1)} (${(s.baseXp ?? 0).toFixed(0)} base + ${(s.bonusXp ?? 0).toFixed(1)} bonus)`)
+  if (s.streak115 != null) lines.push(`115 Streak: ${s.streak115}`)
   if (s.misses > 0) lines.push(`Misses: ${s.misses}`)
   if (s.rankWhenSet != null) lines.push(`Rank: #${s.rankWhenSet}`)
   if (prev) {
@@ -125,16 +126,6 @@ const chartPoints = computed<TimeSeriesPoint[]>(() => {
     }))
   }
 
-  if (selectedMetric.value === 'streak115') {
-    return sorted
-      .filter((s) => s.streak115 != null)
-      .map((s, i, arr) => ({
-        timestamp: new Date(s.timeSet).getTime(),
-        value: s.streak115,
-        tooltipLines: buildTooltipLines(s, i > 0 ? arr[i - 1] : null),
-      }))
-  }
-
   return sorted.map((s, i) => ({
     timestamp: new Date(s.timeSet).getTime(),
     value: selectedMetric.value === 'accuracy' ? s.accuracy * 100 : s.ap,
@@ -145,7 +136,6 @@ const chartPoints = computed<TimeSeriesPoint[]>(() => {
 const chartFormatValue = computed(() => {
   if (selectedMetric.value === 'accuracy') return (v: number) => `${v.toFixed(2)}%`
   if (selectedMetric.value === 'xpCumulative' || selectedMetric.value === 'xpPerAttempt') return (v: number) => `${v.toFixed(1)} XP`
-  if (selectedMetric.value === 'streak115') return (v: number) => `${Math.round(v).toLocaleString()}`
   return undefined
 })
 

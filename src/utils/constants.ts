@@ -68,7 +68,6 @@ export const ROLE_LABELS: Record<string, string> = {
 export const SCORE_DETAIL_METRICS: { key: MetricType; label: string }[] = [
   { key: 'accuracy' as MetricType, label: 'Accuracy' },
   { key: 'ap' as MetricType, label: 'AP' },
-  { key: 'streak115', label: '115 Streak' },
   { key: 'xpCumulative', label: 'XP (Cumulative)' },
   { key: 'xpPerAttempt', label: 'XP (Per Attempt)' },
 ]
