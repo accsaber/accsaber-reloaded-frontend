@@ -23,7 +23,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
-type ScoreMetric = 'accuracy' | 'ap' | 'xpCumulative' | 'xpPerAttempt'
+type ScoreMetric = 'accuracy' | 'ap' | 'streak115' | 'xpCumulative' | 'xpPerAttempt'
 
 const router = useRouter()
 const themeStore = useThemeStore()
@@ -125,6 +125,16 @@ const chartPoints = computed<TimeSeriesPoint[]>(() => {
     }))
   }
 
+  if (selectedMetric.value === 'streak115') {
+    return sorted
+      .filter((s) => s.streak115 != null)
+      .map((s, i, arr) => ({
+        timestamp: new Date(s.timeSet).getTime(),
+        value: s.streak115,
+        tooltipLines: buildTooltipLines(s, i > 0 ? arr[i - 1] : null),
+      }))
+  }
+
   return sorted.map((s, i) => ({
     timestamp: new Date(s.timeSet).getTime(),
     value: selectedMetric.value === 'accuracy' ? s.accuracy * 100 : s.ap,
@@ -135,6 +145,7 @@ const chartPoints = computed<TimeSeriesPoint[]>(() => {
 const chartFormatValue = computed(() => {
   if (selectedMetric.value === 'accuracy') return (v: number) => `${v.toFixed(2)}%`
   if (selectedMetric.value === 'xpCumulative' || selectedMetric.value === 'xpPerAttempt') return (v: number) => `${v.toFixed(1)} XP`
+  if (selectedMetric.value === 'streak115') return (v: number) => `${Math.round(v).toLocaleString()}`
   return undefined
 })
 
@@ -356,7 +367,7 @@ watch(
       </div>
 
       <div class="score-detail__section">
-        <h3 class="score-detail__heading">History</h3>
+        <h3 class="score-detail__heading score-detail__heading--center">History</h3>
         <TimeSeriesChart :data="chartPoints" :metric-label="selectedMetric" :accent-color="resolvedAccent"
           :available-metrics="SCORE_DETAIL_METRICS" :selected-metric="selectedMetric as MetricType"
           :selected-range="selectedRange" :format-value="chartFormatValue"
@@ -461,6 +472,10 @@ watch(
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0;
+}
+
+.score-detail__heading--center {
+  text-align: center;
 }
 
 .score-detail__row-grid {
