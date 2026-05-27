@@ -9,12 +9,18 @@ import type { ScoreDisplay } from '@/types/display'
 import { toScoreDisplay } from '@/utils/mappers'
 import { ref, watch } from 'vue'
 
-const props = defineProps<{
-  userId: string
-  pinned: PinnedScoreResponse[]
-  loading: boolean
-  isSelfProfile: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    userId: string
+    pinned: PinnedScoreResponse[]
+    loading: boolean
+    isSelfProfile: boolean
+    maxSlots?: number
+  }>(),
+  { maxSlots: 3 },
+)
+
+const STANDARD_SLOTS = 3
 
 const emit = defineEmits<{
   unpin: [scoreId: string]
@@ -69,12 +75,17 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
     <header class="pinned__header">
       <h2 class="pinned__label">Pinned</h2>
       <span v-if="!loading && pinned.length > 0" class="pinned__count">
-        {{ pinned.length }} of 3
+        {{ pinned.length }} of {{ maxSlots }}
+        <span
+          v-if="maxSlots > STANDARD_SLOTS && isSelfProfile"
+          class="pinned__perk"
+          title="Supporters get extra pinned slots"
+        >Supporter perk</span>
       </span>
     </header>
 
     <div v-if="loading" class="pinned__grid">
-      <SkeletonLoader v-for="i in 3" :key="i" variant="card" />
+      <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="card" />
     </div>
     <div v-else class="pinned__grid">
       <PinnedScoreCard v-for="pin in pinned" :key="pin.score.id" :score="pin.score" :comment="pin.comment"
@@ -111,9 +122,21 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
 }
 
 .pinned__count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-sm);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
+}
+
+.pinned__perk {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
 .pinned__grid {

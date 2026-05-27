@@ -6,6 +6,7 @@ import type {
   BorderShapePathValue,
   BorderShapeStateValue,
   BorderShapeValue,
+  Gradient,
 } from '@/types/api/items'
 import {
   fillToCss,
@@ -18,11 +19,14 @@ import {
   sampleShapeStates,
 } from '@/utils/items'
 import { computed } from 'vue'
+import PixelBorderRenderer from './PixelBorderRenderer.vue'
 
 const props = defineProps<{
   shape: BorderShapeValue | null
   color: BorderColorValue | null
 }>()
+
+const isPixelShape = computed(() => props.shape?.renderMode === 'pixel')
 
 const colorIsConic = computed(() => props.color?.states?.[0]?.fill?.type === 'conic')
 
@@ -45,13 +49,27 @@ const colorState = computed<BorderColorStateValue | null>(() => {
   )
 })
 
-const colorIsGradient = computed(
-  () => colorState.value?.fill.type !== 'solid' && colorState.value?.fill != null,
-)
+const effectiveGradient = computed<Gradient | null>(() => {
+  const fill = colorState.value?.fill
+  if (!fill) return null
+  if (fill.type === 'linear' || fill.type === 'radial' || fill.type === 'conic') return fill
+  if (fill.type === 'pixel_metal') {
+    return {
+      type: 'linear',
+      angleDeg: 135,
+      stops: [
+        { atPct: 0, hex: fill.highlight },
+        { atPct: 50, hex: fill.base },
+        { atPct: 100, hex: fill.shadow },
+      ],
+    }
+  }
+  return null
+})
 
 const colorIsSvgGradient = computed(() => {
-  const t = colorState.value?.fill.type
-  return t === 'linear' || t === 'radial'
+  const eg = effectiveGradient.value
+  return eg?.type === 'linear' || eg?.type === 'radial'
 })
 
 const solidColor = computed<string | null>(() => {
@@ -129,11 +147,11 @@ function currentShapeBracket(): ShapeBracket | null {
 const lerpedPaths = computed<string[] | null>(() => {
   const states = sortedShapeStates.value
   if (states.length === 0) return null
-  if (states.length === 1) return states[0].paths.map((p) => p.d)
+  if (states.length === 1) return (states[0].paths ?? []).map((p) => p.d)
   const samples = sampledStates.value
-  if (!samples) return states[0].paths.map((p) => p.d)
+  if (!samples) return (states[0].paths ?? []).map((p) => p.d)
   const bracket = currentShapeBracket()
-  if (!bracket) return states[0].paths.map((p) => p.d)
+  if (!bracket) return (states[0].paths ?? []).map((p) => p.d)
   if (bracket.idxA === bracket.idxB) {
     return samples[bracket.idxA].map(pointsToPathD)
   }
@@ -171,8 +189,6 @@ function pathFillRef(p: BorderShapePathValue): string | undefined {
   }
   return fill
 }
-
-void colorIsGradient
 
 const conicMaskStyle = computed<Record<string, string> | undefined>(() => {
   if (!colorIsConic.value) return undefined
@@ -214,8 +230,13 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
 </script>
 
 <template>
+  <PixelBorderRenderer
+    v-if="isPixelShape && shape"
+    :shape="shape"
+    :color="color"
+  />
   <div
-    v-if="basePaths.length && colorIsConic"
+    v-else-if="basePaths.length && colorIsConic"
     class="profile-border__conic"
     :style="conicMaskStyle"
     aria-hidden="true"
@@ -228,30 +249,30 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
     :style="{ color: svgColor }"
     aria-hidden="true"
   >
-    <defs v-if="colorIsSvgGradient && colorState">
+    <defs v-if="colorIsSvgGradient && effectiveGradient">
       <linearGradient
-        v-if="colorState.fill.type === 'linear'"
+        v-if="effectiveGradient.type === 'linear'"
         :id="gradientId"
         gradientUnits="objectBoundingBox"
-        :gradientTransform="`rotate(${colorState.fill.angleDeg} 0.5 0.5)`"
+        :gradientTransform="`rotate(${effectiveGradient.angleDeg} 0.5 0.5)`"
       >
         <stop
-          v-for="(s, i) in colorState.fill.stops"
+          v-for="(s, i) in effectiveGradient.stops"
           :key="i"
           :offset="`${s.atPct}%`"
           :stop-color="s.hex"
         />
       </linearGradient>
       <radialGradient
-        v-else-if="colorState.fill.type === 'radial'"
+        v-else-if="effectiveGradient.type === 'radial'"
         :id="gradientId"
         gradientUnits="objectBoundingBox"
-        :cx="(colorState.fill.centerXPct ?? 50) / 100"
-        :cy="(colorState.fill.centerYPct ?? 50) / 100"
-        :r="(colorState.fill.radiusPct ?? 50) / 100"
+        :cx="(effectiveGradient.centerXPct ?? 50) / 100"
+        :cy="(effectiveGradient.centerYPct ?? 50) / 100"
+        :r="(effectiveGradient.radiusPct ?? 50) / 100"
       >
         <stop
-          v-for="(s, i) in colorState.fill.stops"
+          v-for="(s, i) in effectiveGradient.stops"
           :key="i"
           :offset="`${s.atPct}%`"
           :stop-color="s.hex"

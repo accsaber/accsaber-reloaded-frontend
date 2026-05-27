@@ -14,6 +14,8 @@ import ProfileBadgesRow from '@/components/domain/ProfileBadgesRow.vue'
 import ProfileBioEditor from '@/components/domain/ProfileBioEditor.vue'
 import RelationActions from '@/components/domain/RelationActions.vue'
 import RelationCountsBar from '@/components/domain/RelationCountsBar.vue'
+import SupporterProfileSection from '@/components/domain/SupporterProfileSection.vue'
+import { useSupporter } from '@/composables/useSupporter'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -72,6 +74,12 @@ const error = ref(false)
 const isSelfProfile = computed(
   () => authStore.isLoggedIn && authStore.userId !== null && authStore.userId === userId.value,
 )
+
+const { state: supporterState } = useSupporter(() => userId.value)
+
+const isProfileOwnerSupporter = computed(() => supporterState.value?.currentTier != null)
+const pinnedSlotLimit = computed(() => (isProfileOwnerSupporter.value ? 6 : 3))
+const bioCharLimit = computed(() => (isProfileOwnerSupporter.value ? 8000 : 4000))
 
 const equipped = computed<EquippedItemsResponse>(() => {
   if (isSelfProfile.value && inventoryStore.equippedUserId === userId.value) {
@@ -188,7 +196,7 @@ const pinnedLoading = ref(false)
 const pinPending = ref<Set<string>>(new Set())
 
 const pinnedScoreIds = computed(() => new Set(pinnedScores.value.map((p) => p.score.id)))
-const canPinMore = computed(() => pinnedScores.value.length < 3)
+const canPinMore = computed(() => pinnedScores.value.length < pinnedSlotLimit.value)
 
 async function fetchPinnedScores() {
   pinnedLoading.value = true
@@ -557,6 +565,12 @@ watch(activeCategory, (newCategory) => {
                 </p>
               </div>
               <ProfileBadgesRow v-if="ownedBadges.length" :badges="ownedBadges" class="profile-hero__badges" />
+              <SupporterProfileSection
+                v-if="supporterState"
+                :state="supporterState"
+                :is-self-profile="isSelfProfile"
+                class="profile-hero__supporter"
+              />
             </div>
 
             <div class="profile-hero__top-right">
@@ -665,7 +679,7 @@ watch(activeCategory, (newCategory) => {
       <template v-if="!user.banned && !isBlockedByMe">
         <section v-if="editMode && isSelfProfile" class="profile-page__bio" aria-label="Edit bio">
           <h2 class="profile-page__bio-label">About</h2>
-          <ProfileBioEditor :initial-bio="user.bio ?? ''" @saved="onBioSaved" @cancel="exitEditMode" />
+          <ProfileBioEditor :initial-bio="user.bio ?? ''" :max-chars="bioCharLimit" @saved="onBioSaved" @cancel="exitEditMode" />
         </section>
         <section v-else-if="user.bio" class="profile-page__bio" aria-label="About this player">
           <h2 class="profile-page__bio-label">About</h2>
@@ -673,7 +687,8 @@ watch(activeCategory, (newCategory) => {
         </section>
 
         <PinnedScoresSection :user-id="userId" :pinned="pinnedScores" :loading="pinnedLoading"
-          :is-self-profile="isSelfProfile" @unpin="onUnpinFromCard" @update-comment="onUpdateComment" />
+          :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
+          @unpin="onUnpinFromCard" @update-comment="onUpdateComment" />
 
         <div class="profile-page__tabs-row">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
@@ -815,6 +830,11 @@ watch(activeCategory, (newCategory) => {
 .profile-hero__badges {
   justify-content: flex-start !important;
   max-width: none !important;
+}
+
+.profile-hero__supporter {
+  margin-top: var(--space-sm);
+  align-self: flex-start;
 }
 
 .profile-hero__category-tabs {

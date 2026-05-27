@@ -122,12 +122,24 @@ export function readTitleValue(value: unknown): TitleValue | null {
 export function readBorderShapeValue(value: unknown): BorderShapeValue | null {
   if (!isObj(value)) return null
   if (!Array.isArray(value.states) || value.states.length === 0) return null
+  const renderMode = value.renderMode
+  if (renderMode === 'pixel') {
+    const validStates = value.states.filter((s) => isObj(s) && isNumber(s.atMs))
+    if (validStates.length === 0) return null
+    return value as unknown as BorderShapeValue
+  }
   const validStates = value.states.filter(
     (s) => isObj(s) && isNumber(s.atMs) && Array.isArray(s.paths)
       && (s.paths as unknown[]).every((p) => isObj(p) && isString(p.d)),
   )
   if (validStates.length === 0) return null
   return value as unknown as BorderShapeValue
+}
+
+function isPixelMetalFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'pixel_metal') return false
+  return isString(v.base) && isString(v.highlight) && isString(v.shadow)
 }
 
 export function readBorderColorValue(value: unknown): BorderColorValue | null {
@@ -138,6 +150,7 @@ export function readBorderColorValue(value: unknown): BorderColorValue | null {
     const fill = s.fill
     if (!isObj(fill)) return false
     if (fill.type === 'solid') return isString(fill.hex)
+    if (fill.type === 'pixel_metal') return isPixelMetalFill(fill)
     return isGradient(fill)
   })
   if (validStates.length === 0) return null
@@ -305,9 +318,12 @@ export function gradientToCss(g: Gradient): string {
 }
 
 export function fillToCss(
-  fill: { type: 'solid'; hex: string } | Gradient,
+  fill: { type: 'solid'; hex: string } | Gradient | { type: 'pixel_metal'; base: string; highlight: string; shadow: string },
 ): string {
   if (fill.type === 'solid') return fill.hex
+  if (fill.type === 'pixel_metal') {
+    return `linear-gradient(135deg, ${fill.highlight} 0%, ${fill.base} 50%, ${fill.shadow} 100%)`
+  }
   return gradientToCss(fill)
 }
 
@@ -390,13 +406,24 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
   return t < 0.5 ? a : b
 }
 
-type Fill = { type: 'solid'; hex: string } | Gradient
+type Fill =
+  | { type: 'solid'; hex: string }
+  | Gradient
+  | { type: 'pixel_metal'; base: string; highlight: string; shadow: string }
 
 export function interpolateFill(a: Fill, b: Fill, t: number): Fill {
   if (a.type === 'solid' && b.type === 'solid') {
     return { type: 'solid', hex: lerpColor(a.hex, b.hex, t) }
   }
-  if (a.type !== 'solid' && b.type !== 'solid') {
+  if (a.type === 'pixel_metal' && b.type === 'pixel_metal') {
+    return {
+      type: 'pixel_metal',
+      base: lerpColor(a.base, b.base, t),
+      highlight: lerpColor(a.highlight, b.highlight, t),
+      shadow: lerpColor(a.shadow, b.shadow, t),
+    }
+  }
+  if (a.type !== 'solid' && a.type !== 'pixel_metal' && b.type !== 'solid' && b.type !== 'pixel_metal') {
     return interpolateGradient(a, b, t)
   }
   return t < 0.5 ? a : b
@@ -623,7 +650,7 @@ export function sampleShapeStates(
   let result: Array<Array<[number, number][]>>
   try {
     result = states.map((state) =>
-      state.paths.map((p) => {
+      (state.paths ?? []).map((p) => {
         const path = document.createElementNS(SVG_NS, 'path')
         path.setAttribute('d', p.d)
         svg.appendChild(path)

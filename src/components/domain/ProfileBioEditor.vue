@@ -2,13 +2,20 @@
 import { getApiErrorMessage } from '@/api/client'
 import { updateMyProfile } from '@/api/users'
 import BaseButton from '@/components/common/BaseButton.vue'
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
-const BIO_MAX = 4000
+const BIO_MAX_STANDARD = 4000
 
-const props = defineProps<{
-  initialBio: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    initialBio: string
+    maxChars?: number
+  }>(),
+  { maxChars: BIO_MAX_STANDARD },
+)
+
+const BIO_MAX = computed(() => props.maxChars)
+const isPerkBoosted = computed(() => props.maxChars > BIO_MAX_STANDARD)
 
 const emit = defineEmits<{
   saved: [bio: string]
@@ -45,7 +52,7 @@ function onInput() {
   if (!el) return
   bioHtml.value = el.innerHTML
   charCount.value = el.innerHTML.length
-  overLimit.value = charCount.value > BIO_MAX
+  overLimit.value = charCount.value > BIO_MAX.value
 }
 
 function focusEditor() {
@@ -249,7 +256,7 @@ const formatGroups: FormatButton[][] = [
 
     <div class="bio-editor__footer">
       <div class="bio-editor__footer-info">
-        <span v-if="overLimit" class="bio-editor__error">Bio is over the {{ BIO_MAX }} character limit.</span>
+        <span v-if="overLimit" class="bio-editor__error">Bio is over the {{ BIO_MAX.toLocaleString() }} character limit.</span>
         <span v-else-if="errorMessage" class="bio-editor__error">{{ errorMessage }}</span>
         <span v-else-if="savedAt" class="bio-editor__saved">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
@@ -259,8 +266,13 @@ const formatGroups: FormatButton[][] = [
           Saved
         </span>
         <span v-else class="bio-editor__hint">Server strips disallowed tags on save.</span>
-        <span class="bio-editor__counter" :class="{ 'bio-editor__counter--over': overLimit }">
-          {{ charCount.toLocaleString() }} / {{ BIO_MAX.toLocaleString() }}
+        <span class="bio-editor__counter-row">
+          <span class="bio-editor__counter" :class="{ 'bio-editor__counter--over': overLimit }">
+            {{ charCount.toLocaleString() }} / {{ BIO_MAX.toLocaleString() }}
+          </span>
+          <span v-if="isPerkBoosted" class="bio-editor__perk" title="Supporters get a higher character limit">
+            Supporter perk
+          </span>
         </span>
       </div>
       <div class="bio-editor__footer-actions">
@@ -452,6 +464,12 @@ const formatGroups: FormatButton[][] = [
   color: var(--text-tertiary);
 }
 
+.bio-editor__counter-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
 .bio-editor__counter {
   font-family: var(--font-mono);
   color: var(--text-tertiary);
@@ -459,6 +477,15 @@ const formatGroups: FormatButton[][] = [
 
 .bio-editor__counter--over {
   color: var(--error);
+}
+
+.bio-editor__perk {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
 .bio-editor__error {

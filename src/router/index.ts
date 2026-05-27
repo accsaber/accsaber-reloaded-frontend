@@ -125,6 +125,11 @@ const router = createRouter({
       component: () => import('@/views/SettingsPage.vue'),
     },
     {
+      path: '/credits',
+      name: 'credits',
+      component: () => import('@/views/CreditsPage.vue'),
+    },
+    {
       path: '/auth/callback',
       name: 'auth-callback',
       component: () => import('@/views/auth/AuthCallbackPage.vue'),
