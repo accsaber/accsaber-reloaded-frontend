@@ -1,6 +1,7 @@
 import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
 import type { PaginationParams } from '../pagination'
 import type { UserRelationCounts } from './relations'
+import type { SupporterTier } from './supporters'
 
 export interface UserResponse {
   id: string
@@ -16,6 +17,7 @@ export interface UserResponse {
   banned: boolean
   createdAt: string
   relations: UserRelationCounts
+  supporterTier?: SupporterTier | null
 }
 
 export interface PinnedScoreInput {
@@ -86,6 +88,7 @@ export interface ScoreResponse {
   partial: boolean
   supersedesReason: SupersedesReason | null
   createdAt: string
+  supporterTier?: SupporterTier | null
 }
 
 export interface LeaderboardResponse {
@@ -102,6 +105,7 @@ export interface LeaderboardResponse {
   rankedPlays: number
   topPlayId: string
   playerInactive: boolean
+  supporterTier?: SupporterTier | null
 }
 
 export interface XpLeaderboardResponse {
@@ -115,6 +119,7 @@ export interface XpLeaderboardResponse {
   totalXp: number
   level: number
   playerInactive: boolean
+  supporterTier?: SupporterTier | null
 }
 
 export interface UserAllStatisticsResponse {

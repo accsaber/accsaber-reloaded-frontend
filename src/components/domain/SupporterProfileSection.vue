@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SupporterPill from '@/components/domain/SupporterPill.vue'
+import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import type { SupporterStateResponse } from '@/types/api/supporters'
 import { computed } from 'vue'
 
@@ -37,7 +38,10 @@ const hasMeta = computed(() => !!props.state.currentTier)
 
 <template>
   <div v-if="hasMeta" class="supporter-meta">
-    <SupporterPill :state="state" size="sm" />
+    <span class="supporter-meta__lead">
+      <SupporterTierIcon :tier="state.currentTier" :size="18" />
+      <SupporterPill :state="state" />
+    </span>
     <span v-if="sinceLabel" class="supporter-meta__item">
       Since <span class="supporter-meta__value">{{ sinceLabel }}</span>
     </span>
@@ -63,6 +67,12 @@ const hasMeta = computed(() => !!props.state.currentTier)
   align-items: baseline;
   gap: 0.35em;
   line-height: 1.4;
+}
+
+.supporter-meta__lead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .supporter-meta__value {

@@ -77,7 +77,13 @@ const isSelfProfile = computed(
 
 const { state: supporterState } = useSupporter(() => userId.value)
 
-const isProfileOwnerSupporter = computed(() => supporterState.value?.currentTier != null)
+// Source-of-truth for active-supporter status: the inline `supporterTier` field that the
+// backend ships on UserResponse. The separate /supporter fetch fills in extras (lifetime,
+// balance, since-date) but isn't needed just to know "is this user a supporter."
+const profileOwnerTier = computed(
+  () => user.value?.supporterTier ?? supporterState.value?.currentTier ?? null,
+)
+const isProfileOwnerSupporter = computed(() => profileOwnerTier.value != null)
 const pinnedSlotLimit = computed(() => (isProfileOwnerSupporter.value ? 6 : 3))
 const bioCharLimit = computed(() => (isProfileOwnerSupporter.value ? 8000 : 4000))
 
@@ -232,7 +238,7 @@ async function onPinToggle(scoreId: string) {
   const nextIds = isCurrentlyPinned
     ? currentIds.filter((id) => id !== scoreId)
     : [...currentIds, scoreId]
-  if (nextIds.length > 3) return
+  if (nextIds.length > pinnedSlotLimit.value) return
 
   pinPending.value = new Set([...pinPending.value, scoreId])
   try {

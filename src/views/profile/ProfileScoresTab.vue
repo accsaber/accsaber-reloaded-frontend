@@ -121,7 +121,7 @@ function pinDisabled(scoreId: string): boolean {
 
 function pinTitle(scoreId: string): string {
   if (isPinned(scoreId)) return 'Unpin score'
-  if (pinDisabled(scoreId)) return 'Unpin one of your 3 pinned scores first'
+  if (pinDisabled(scoreId)) return 'Unpin a score to free a slot first'
   return 'Pin score'
 }
 

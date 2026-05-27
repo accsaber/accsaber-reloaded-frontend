@@ -27,6 +27,7 @@ export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
     avgAccuracy: entry.averageAcc,
     rankedPlays: entry.rankedPlays,
     playerInactive: entry.playerInactive,
+    supporterTier: entry.supporterTier ?? null,
   }
 }
 
@@ -42,6 +43,7 @@ export function toXpPlayerDisplay(entry: XpLeaderboardResponse): XpPlayerDisplay
     totalXp: entry.totalXp,
     level: entry.level,
     playerInactive: entry.playerInactive,
+    supporterTier: entry.supporterTier ?? null,
   }
 }
 
@@ -83,6 +85,7 @@ export function toScoreDisplay(
     active: score.active,
     partial: score.partial,
     supersedesReason: score.supersedesReason,
+    supporterTier: score.supporterTier ?? null,
   }
 }
 
@@ -138,6 +141,7 @@ export function toDifficultyScoreDisplay(
     hmd: score.hmd,
     xpGained: score.xpGained,
     rankWhenSet: score.rankWhenSet,
+    supporterTier: score.supporterTier ?? null,
   }
 }
 

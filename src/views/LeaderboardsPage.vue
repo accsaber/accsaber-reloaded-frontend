@@ -8,6 +8,7 @@ import SearchBox from '@/components/common/SearchBox.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
+import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
@@ -15,6 +16,7 @@ import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import { useLevelStore } from '@/stores/levels'
 import type { UserRelationType } from '@/types/api/relations'
+import type { SupporterTier } from '@/types/api/supporters'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -153,6 +155,7 @@ const rows = computed(() => {
         totalXp: p.totalXp,
         level: p.level,
         playerInactive: p.playerInactive,
+        supporterTier: p.supporterTier,
       }
     })
   }
@@ -176,6 +179,7 @@ const rows = computed(() => {
       avgAccuracy: p.avgAccuracy,
       rankedPlays: p.rankedPlays,
       playerInactive: p.playerInactive,
+      supporterTier: p.supporterTier,
     }
   })
 })
@@ -413,6 +417,7 @@ watch(() => categoryStore.loaded, (loaded) => {
             <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="32" />
             <span class="player-cell__name">{{ row.name }}</span>
             <CountryFlag :country="(row.country as string)" />
+            <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
           </div>
         </template>
 
@@ -448,6 +453,7 @@ watch(() => categoryStore.loaded, (loaded) => {
               <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28" />
               <span class="lb-card__name">{{ row.name }}</span>
               <CountryFlag :country="(row.country as string)" />
+              <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
             </div>
             <RankChange :value="(row.rankChange as number) ?? 0" class="lb-card__change" />
             <template v-if="isXpMode">

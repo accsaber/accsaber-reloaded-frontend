@@ -1,3 +1,4 @@
+import type { SupporterTier } from './api/supporters'
 import type { MilestoneType, SupersedesReason } from './enums'
 
 export interface Tab {
@@ -45,6 +46,7 @@ export interface PlayerDisplay {
   avgAccuracy?: number
   rankedPlays?: number
   playerInactive?: boolean
+  supporterTier?: SupporterTier | null
 }
 
 export interface XpPlayerDisplay {
@@ -58,6 +60,7 @@ export interface XpPlayerDisplay {
   totalXp: number
   level: number
   playerInactive?: boolean
+  supporterTier?: SupporterTier | null
 }
 
 export interface MapDisplay {
@@ -111,6 +114,7 @@ export interface ScoreDisplay {
   active?: boolean
   partial?: boolean
   supersedesReason?: SupersedesReason | null
+  supporterTier?: SupporterTier | null
 }
 
 export interface DifficultyScoreDisplay {
@@ -140,6 +144,7 @@ export interface DifficultyScoreDisplay {
   hmd: string
   xpGained: number
   rankWhenSet: number
+  supporterTier?: SupporterTier | null
 }
 
 export type MilestoneTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'APEX'

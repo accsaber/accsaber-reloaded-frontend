@@ -2,6 +2,7 @@
 import type { PlayerDisplay } from '@/types/display'
 import { getRankClass } from '@/utils/ranking'
 import CountryFlag from './CountryFlag.vue'
+import SupporterTierIcon from './SupporterTierIcon.vue'
 
 defineProps<{
   player: PlayerDisplay
@@ -19,6 +20,7 @@ defineProps<{
     <span class="player-row__name">
       {{ player.name }}
       <CountryFlag :country="player.country" />
+      <SupporterTierIcon v-if="player.supporterTier" :tier="player.supporterTier" />
     </span>
     <span class="player-row__ap">{{ player.ap.toFixed(2) }} AP</span>
     <span v-if="showAccuracy && player.avgAccuracy != null" class="player-row__stat">

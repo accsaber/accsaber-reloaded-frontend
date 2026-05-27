@@ -45,11 +45,11 @@ const title = computed(() =>
 .supporter-pill {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.35em;
+  gap: 0.4em;
   font-family: var(--font-sans);
-  font-weight: 700;
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  font-size: 0.9375rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
@@ -58,15 +58,22 @@ const title = computed(() =>
 .supporter-pill--sm {
   font-size: 0.5625rem;
   letter-spacing: 0.12em;
+  font-weight: 700;
 }
 
 .supporter-pill__suffix {
+  font-size: 0.6875rem;
   font-weight: 500;
   color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+}
+
+.supporter-pill--sm .supporter-pill__suffix {
+  font-size: inherit;
   letter-spacing: 0.06em;
 }
 
 .supporter-pill--past {
-  font-weight: 600;
+  font-weight: 700;
 }
 </style>

@@ -7,10 +7,12 @@ import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
+import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
 import type { UserRelationType } from '@/types/api/relations'
+import type { SupporterTier } from '@/types/api/supporters'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn } from '@/types/display'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -95,6 +97,7 @@ const rows = computed(() => {
       avatarUrl: s.avatarUrl,
       userName: s.userName,
       country: s.country,
+      supporterTier: s.supporterTier,
       accuracy: s.accuracy,
       score: s.score,
       ap: s.ap,
@@ -241,6 +244,7 @@ watch(
             :avatar-url="(row.avatarUrl as string)" :country="(row.country as string)">
             <span class="map-scores__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
             <CountryFlag :country="(row.country as string)" />
+            <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
           </PlayerTooltipTrigger>
         </div>
       </template>
@@ -273,6 +277,7 @@ watch(
             <span class="ms-card__line">
               <span class="ms-card__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
               <CountryFlag :country="(row.country as string)" />
+              <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
             </span>
             <span class="ms-card__sub">
               <span class="ms-card__date">{{ formatRelativeDate(row.date as string) }}</span>
