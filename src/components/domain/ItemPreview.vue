@@ -8,6 +8,7 @@ import type {
   TitleStateValue,
   TitleValue,
 } from '@/types/api/items'
+import { SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import {
   fillToCss,
   gradientToCss,
@@ -62,6 +63,25 @@ const borderColorBackground = computed<string | null>(() => {
 const borderShapeValue = computed<BorderShapeValue | null>(() =>
   typeKey.value === 'profile_border_shape' ? readBorderShapeValue(props.item.value) : null,
 )
+
+// Pixel-mode shapes need a paired color to render. When previewed standalone (no equipped
+// color), synthesize a representative palette so the preview still shows the frame.
+const shapePreviewColor = computed<BorderColorValue | null>(() => {
+  const shape = borderShapeValue.value
+  if (!shape || shape.renderMode !== 'pixel') return null
+  const tier = SUPPORTER_TIER_PALETTE.bronze
+  return {
+    states: [{
+      atMs: 0,
+      fill: {
+        type: 'pixel_metal',
+        shadow: tier.shadow,
+        base: tier.base,
+        highlight: tier.highlight,
+      },
+    }],
+  }
+})
 
 const badgeValue = computed(() =>
   typeKey.value === 'badge' ? readBadgeValue(props.item.value) : null,
@@ -134,7 +154,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       class="item-preview__shape-wrap"
       aria-hidden="true"
     >
-      <ProfileBorderRenderer :shape="borderShapeValue" :color="null" />
+      <ProfileBorderRenderer :shape="borderShapeValue" :color="shapePreviewColor" />
     </span>
 
     <span
