@@ -4,6 +4,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
+import { useSettingsStore } from '@/stores/settings'
 import { useThemeStore } from '@/stores/theme'
 import type { ScoreResponse } from '@/types/api/users'
 import type { MetricType, ScoreDisplay, TimeRange, TimeSeriesPoint } from '@/types/display'
@@ -27,6 +28,10 @@ type ScoreMetric = 'accuracy' | 'ap' | 'xpCumulative' | 'xpPerAttempt'
 
 const router = useRouter()
 const themeStore = useThemeStore()
+const settingsStore = useSettingsStore()
+const beatLeaderFirst = computed(
+  () => settingsStore.appearance['appearance.primaryReplayService'] !== 'arcviewer',
+)
 const coverUrl = computed(() => props.score?.coverUrl ?? '')
 const { dominantColor } = useColorExtract(coverUrl)
 
@@ -332,18 +337,26 @@ watch(
             </svg>
             Map Leaderboard
           </BaseButton>
-          <BaseButton v-if="score.blScoreId" size="sm"
-            :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`">
-            <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20"
-              style="border-radius: 3px;" />
-            Replay
-          </BaseButton>
-          <BaseButton v-if="score.blScoreId" size="sm"
-            :href="`https://allpoland.github.io/ArcViewer/?scoreID=${score.blScoreId}`">
-            <img src="https://beatleader.com/assets/ArcViewerIcon.webp" alt="ArcViewer" width="20" height="20"
-              style="border-radius: 3px;" />
-            ArcViewer
-          </BaseButton>
+          <template v-if="score.blScoreId">
+            <BaseButton v-if="beatLeaderFirst" size="sm"
+              :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`">
+              <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20"
+                style="border-radius: 3px;" />
+              Replay
+            </BaseButton>
+            <BaseButton size="sm"
+              :href="`https://allpoland.github.io/ArcViewer/?scoreID=${score.blScoreId}`">
+              <img src="https://beatleader.com/assets/ArcViewerIcon.webp" alt="ArcViewer" width="20" height="20"
+                style="border-radius: 3px;" />
+              ArcViewer
+            </BaseButton>
+            <BaseButton v-if="!beatLeaderFirst" size="sm"
+              :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`">
+              <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20"
+                style="border-radius: 3px;" />
+              Replay
+            </BaseButton>
+          </template>
           <BaseButton v-if="score.blScoreId" size="sm" :href="`https://beatleader.com/score/${score.blScoreId}`">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">

@@ -22,6 +22,7 @@ watch(
     if (loggedIn) {
       void relationsStore.fetchAll()
       void settingsStore.fetchPrivacy()
+      void settingsStore.fetchAppearance()
     } else {
       relationsStore.reset()
       settingsStore.reset()

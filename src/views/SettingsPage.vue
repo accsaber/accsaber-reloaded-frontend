@@ -15,7 +15,7 @@ import { useThemeStore } from '@/stores/theme'
 import type { ItemResponse, UserItemResponse } from '@/types/api/items'
 import { filterThemableTokens, readThemeValue } from '@/utils/items'
 import type { OAuthProvider } from '@/types/api/player-auth'
-import type { PrivacySettings, Visibility } from '@/types/api/settings'
+import type { PrivacySettings, ReplayService, Visibility } from '@/types/api/settings'
 import { isRankingSubdomain } from '@/utils/subdomain'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -281,9 +281,30 @@ async function setVisibility(key: keyof PrivacySettings, value: Visibility) {
   await settingsStore.updatePrivacy(key, value)
 }
 
+const REPLAY_SERVICE_OPTIONS: { value: ReplayService; label: string; description: string }[] = [
+  { value: 'beatleader', label: 'BeatLeader', description: 'Open replays in BeatLeader.' },
+  { value: 'arcviewer', label: 'ArcViewer', description: 'Open replays in ArcViewer.' },
+]
+
+const primaryReplayService = computed(
+  () => settingsStore.appearance['appearance.primaryReplayService'],
+)
+
+async function setReplayService(value: ReplayService) {
+  if (!isLoggedIn.value) {
+    loginModalOpen.value = true
+    return
+  }
+  if (primaryReplayService.value === value || settingsStore.appearanceSaving) return
+  await settingsStore.setPrimaryReplayService(value)
+}
+
 onMounted(() => {
   if (isLoggedIn.value && !settingsStore.privacyLoaded) {
     void settingsStore.fetchPrivacy()
+  }
+  if (isLoggedIn.value && !settingsStore.appearanceLoaded) {
+    void settingsStore.fetchAppearance()
   }
   void loadThemes()
   void fetchSyncSetting()
@@ -292,6 +313,9 @@ onMounted(() => {
 watch(() => authStore.userId, () => {
   void loadThemes()
   void fetchSyncSetting()
+  if (isLoggedIn.value && !settingsStore.appearanceLoaded) {
+    void settingsStore.fetchAppearance()
+  }
 })
 
 watch(activeSection, (section) => {
@@ -369,6 +393,41 @@ watch(activeSection, (section) => {
                 </span>
               </button>
             </div>
+          </section>
+
+          <section class="settings-card">
+            <header class="settings-card__header">
+              <h2 class="settings-card__title">Replay service</h2>
+              <p class="settings-card__desc">
+                Pick which replay viewer opens when you click a replay on a score.
+              </p>
+            </header>
+
+            <div class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">Primary replay service</span>
+                <span class="settings-row__hint">
+                  Used when only one replay button fits. In the score detail modal the chosen
+                  service is shown first.
+                </span>
+              </div>
+              <div class="visibility-picker" role="radiogroup" aria-label="Primary replay service">
+                <button v-for="opt in REPLAY_SERVICE_OPTIONS" :key="opt.value" type="button"
+                  class="visibility-picker__btn"
+                  :class="{ 'visibility-picker__btn--active': primaryReplayService === opt.value }"
+                  role="radio"
+                  :aria-checked="primaryReplayService === opt.value"
+                  :title="opt.description"
+                  :disabled="settingsStore.appearanceSaving"
+                  @click="setReplayService(opt.value)">
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <p v-if="settingsStore.appearanceError" class="settings-card__error">
+              {{ settingsStore.appearanceError }}
+            </p>
           </section>
 
           <section v-if="!canAccessAccount" class="settings-card settings-card--gated">

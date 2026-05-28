@@ -5,6 +5,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
+import { useSettingsStore } from '@/stores/settings'
 import type { ScoreResponse } from '@/types/api/users'
 import { formatRelativeDate } from '@/utils/formatters'
 import { getRankClass } from '@/utils/ranking'
@@ -90,6 +91,23 @@ function onTextareaKeydown(e: KeyboardEvent) {
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
+const settingsStore = useSettingsStore()
+
+const replayService = computed(() => settingsStore.appearance['appearance.primaryReplayService'])
+const replayUrl = computed(() => {
+  if (props.score.blScoreId == null) return null
+  return replayService.value === 'arcviewer'
+    ? `https://allpoland.github.io/ArcViewer/?scoreID=${props.score.blScoreId}`
+    : `https://replay.beatleader.com/?scoreId=${props.score.blScoreId}`
+})
+const replayLabel = computed(() =>
+  replayService.value === 'arcviewer' ? 'Watch in ArcViewer' : 'Watch replay',
+)
+const replayIcon = computed(() =>
+  replayService.value === 'arcviewer'
+    ? 'https://beatleader.com/assets/ArcViewerIcon.webp'
+    : 'https://beatleader.com/assets/bs-pepe.gif',
+)
 
 const categoryCode = computed(() => categoryStore.getCategoryCode(props.score.categoryId))
 const categoryAccent = computed(() => categoryCode.value
@@ -134,12 +152,8 @@ function onUnpinClick(e: MouseEvent) {
 function onReplayClick(e: MouseEvent) {
   e.preventDefault()
   e.stopPropagation()
-  if (props.score.blScoreId == null) return
-  window.open(
-    `https://replay.beatleader.com/?scoreId=${props.score.blScoreId}`,
-    '_blank',
-    'noopener,noreferrer',
-  )
+  if (!replayUrl.value) return
+  window.open(replayUrl.value, '_blank', 'noopener,noreferrer')
 }
 </script>
 
@@ -216,8 +230,8 @@ function onReplayClick(e: MouseEvent) {
           </svg>
         </button>
         <button v-if="score.blScoreId" class="pin-card__foot-btn" type="button"
-          aria-label="Watch replay" title="Watch replay" @click="onReplayClick">
-          <img src="https://beatleader.com/assets/bs-pepe.gif" alt="" width="16" height="16"
+          :aria-label="replayLabel" :title="replayLabel" @click="onReplayClick">
+          <img :src="replayIcon" alt="" width="16" height="16"
             style="border-radius: 2px; display: block;" />
         </button>
         <button class="pin-card__foot-btn" type="button" aria-label="View score details" @click="onDetailClick">

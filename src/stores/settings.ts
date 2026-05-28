@@ -3,7 +3,9 @@ import {
   patchMySettingsGroup as apiPatchGroup,
 } from '@/api/settings'
 import type {
+  AppearanceSettings,
   PrivacySettings,
+  ReplayService,
   SettingGroup,
   SettingsBag,
   Visibility,
@@ -16,11 +18,22 @@ const PRIVACY_DEFAULTS: PrivacySettings = {
   'privacy.rivalsVisibility': 'public',
 }
 
+const APPEARANCE_DEFAULTS: AppearanceSettings = {
+  'appearance.theme': '',
+  'appearance.colorScheme': '',
+  'appearance.primaryReplayService': 'beatleader',
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   const privacy = ref<PrivacySettings>({ ...PRIVACY_DEFAULTS })
   const privacyLoaded = ref(false)
   const privacySaving = ref(false)
   const privacyError = ref<string | null>(null)
+
+  const appearance = ref<AppearanceSettings>({ ...APPEARANCE_DEFAULTS })
+  const appearanceLoaded = ref(false)
+  const appearanceSaving = ref(false)
+  const appearanceError = ref<string | null>(null)
 
   async function fetchPrivacy(): Promise<void> {
     try {
@@ -53,10 +66,43 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  async function fetchAppearance(): Promise<void> {
+    try {
+      const res = await apiGetGroup<AppearanceSettings>('appearance')
+      appearance.value = { ...APPEARANCE_DEFAULTS, ...res }
+      appearanceLoaded.value = true
+    } catch {
+      appearanceLoaded.value = false
+    }
+  }
+
+  async function setPrimaryReplayService(value: ReplayService): Promise<boolean> {
+    const key = 'appearance.primaryReplayService' as const
+    const previous = appearance.value[key]
+    if (previous === value || appearanceSaving.value) return false
+    appearance.value = { ...appearance.value, [key]: value }
+    appearanceSaving.value = true
+    appearanceError.value = null
+    try {
+      const fresh = await apiPatchGroup<AppearanceSettings>('appearance', { [key]: value })
+      appearance.value = { ...APPEARANCE_DEFAULTS, ...fresh }
+      return true
+    } catch {
+      appearance.value = { ...appearance.value, [key]: previous }
+      appearanceError.value = "Couldn't save appearance setting."
+      return false
+    } finally {
+      appearanceSaving.value = false
+    }
+  }
+
   function reset() {
     privacy.value = { ...PRIVACY_DEFAULTS }
     privacyLoaded.value = false
     privacyError.value = null
+    appearance.value = { ...APPEARANCE_DEFAULTS }
+    appearanceLoaded.value = false
+    appearanceError.value = null
   }
 
   async function fetchGroup<T extends SettingsBag>(group: SettingGroup): Promise<T | null> {
@@ -74,6 +120,12 @@ export const useSettingsStore = defineStore('settings', () => {
     privacyError,
     fetchPrivacy,
     updatePrivacy,
+    appearance,
+    appearanceLoaded,
+    appearanceSaving,
+    appearanceError,
+    fetchAppearance,
+    setPrimaryReplayService,
     fetchGroup,
     reset,
   }
