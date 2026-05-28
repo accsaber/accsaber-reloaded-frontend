@@ -98,6 +98,9 @@ onMounted(() => {
 .inventory-cell-wrap {
   position: relative;
   width: 100%;
+  aspect-ratio: 1 / 1;
+  container-type: inline-size;
+  container-name: inv-cell;
 }
 
 .inventory-cell-wrap:hover .inventory-cell-tooltip {
@@ -165,13 +168,16 @@ onMounted(() => {
 .inventory-cell-tooltip__rarity.rarity--mythic { --rarity-color: var(--error); }
 
 .inventory-cell {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
+  min-height: 0;
   padding: 0;
+  box-sizing: border-box;
   background: var(--bg-surface);
   border: 1px solid var(--cell-accent, var(--rarity-color));
   border-radius: var(--radius-card);

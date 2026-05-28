@@ -39,12 +39,12 @@ const rarity = ref<string>('')
 const modifierKey = ref<string>('')
 const search = ref('')
 const showUnowned = ref(false)
-const CATALOG_PAGE_SIZE = 50
+const CATALOG_PAGE_SIZE = 20
 
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
   defaultSort: 'date',
   defaultOrder: 'desc',
-  defaultSize: 50,
+  defaultSize: 20,
   sortFieldMap: {
     date: 'awardedAt',
     name: 'item.name',
@@ -522,8 +522,20 @@ onMounted(() => {
 
 .inv-tab__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: var(--space-sm);
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-md);
+}
+
+@media (max-width: 1023px) {
+  .inv-tab__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .inv-tab__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .inv-tab__detail {
