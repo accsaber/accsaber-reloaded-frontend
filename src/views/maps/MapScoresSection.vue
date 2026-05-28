@@ -11,6 +11,7 @@ import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
+import { useSettingsStore } from '@/stores/settings'
 import type { UserRelationType } from '@/types/api/relations'
 import type { SupporterTier } from '@/types/api/supporters'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn } from '@/types/display'
@@ -40,6 +41,23 @@ const emit = defineEmits<{
 const router = useRouter()
 const authStore = useAuthStore()
 const modifierStore = useModifierStore()
+const settingsStore = useSettingsStore()
+
+const replayService = computed(() => settingsStore.appearance['appearance.primaryReplayService'])
+const replayLabel = computed(() =>
+  replayService.value === 'arcviewer' ? 'Watch in ArcViewer' : 'Watch replay',
+)
+const replayIcon = computed(() =>
+  replayService.value === 'arcviewer'
+    ? 'https://beatleader.com/assets/ArcViewerIcon.webp'
+    : 'https://beatleader.com/assets/bs-pepe.gif',
+)
+function getReplayUrl(blScoreId: number | null | undefined): string | null {
+  if (blScoreId == null) return null
+  return replayService.value === 'arcviewer'
+    ? `https://allpoland.github.io/ArcViewer/?scoreID=${blScoreId}`
+    : `https://replay.beatleader.com/?scoreId=${blScoreId}`
+}
 
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
   defaultSort: 'ap',
@@ -76,7 +94,7 @@ const allColumns: TableColumn[] = [
   { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '80px' },
   { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
   { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
-  { key: 'detail', label: '', align: 'center', width: '40px', noLink: true },
+  { key: 'detail', label: '', align: 'center', width: '76px', noLink: true },
 ]
 
 const columns = computed(() =>
@@ -104,6 +122,7 @@ const rows = computed(() => {
       weighted: s.weightedAp,
       streak115: s.streak115,
       date: s.date,
+      blScoreId: s.blScoreId,
     }
   })
 })
@@ -255,14 +274,21 @@ watch(
       </template>
 
       <template #cell-detail="{ row }">
-        <button class="map-scores__detail-btn" aria-label="View score details"
-          @click="openDetail(row._userId as string, $event)">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-              stroke-linejoin="round" />
-            <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-          </svg>
-        </button>
+        <div class="map-scores__actions">
+          <a v-if="getReplayUrl(row.blScoreId as number | null)" class="map-scores__detail-btn"
+            :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
+            :aria-label="replayLabel" :title="replayLabel" @click.stop>
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+          </a>
+          <button class="map-scores__detail-btn" aria-label="View score details"
+            @click="openDetail(row._userId as string, $event)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
       </template>
 
       <template #mobile-card="{ row }">
@@ -295,6 +321,11 @@ watch(
               <span class="ms-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
             </span>
           </div>
+          <a v-if="getReplayUrl(row.blScoreId as number | null)" class="ms-card__detail-btn"
+            :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
+            :aria-label="replayLabel" :title="replayLabel" @click.stop>
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+          </a>
           <button class="ms-card__detail-btn" aria-label="View score details"
             @click.stop="openDetail(row._userId as string, $event)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -362,6 +393,15 @@ watch(
   color: var(--text-tertiary);
 }
 
+.map-scores__actions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
 .map-scores__detail-btn {
   position: relative;
   z-index: 1;
@@ -375,6 +415,7 @@ watch(
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
+  text-decoration: none;
   transition: color 120ms ease, border-color 120ms ease;
 }
 
@@ -506,6 +547,7 @@ watch(
   color: var(--text-tertiary);
   cursor: pointer;
   flex-shrink: 0;
+  text-decoration: none;
   transition: color 120ms ease, border-color 120ms ease;
 }
 

@@ -502,7 +502,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 
 .map-detail>*:not(.map-detail__bg) {
   width: 100%;
-  max-width: 1030px;
+  max-width: 1100px;
   position: relative;
   z-index: 1;
 }

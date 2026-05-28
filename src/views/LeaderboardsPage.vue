@@ -479,7 +479,7 @@ watch(() => categoryStore.loaded, (loaded) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  max-width: 1030px;
+  max-width: 1080px;
   margin: 0 auto;
   width: 100%;
 }

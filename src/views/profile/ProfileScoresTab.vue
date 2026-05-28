@@ -6,6 +6,7 @@ import ScoreTable from '@/components/domain/ScoreTable.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
+import { useSettingsStore } from '@/stores/settings'
 import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -36,6 +37,23 @@ const emit = defineEmits<{
 const router = useRouter()
 const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
+const settingsStore = useSettingsStore()
+
+const replayService = computed(() => settingsStore.appearance['appearance.primaryReplayService'])
+const replayLabel = computed(() =>
+  replayService.value === 'arcviewer' ? 'Watch in ArcViewer' : 'Watch replay',
+)
+const replayIcon = computed(() =>
+  replayService.value === 'arcviewer'
+    ? 'https://beatleader.com/assets/ArcViewerIcon.webp'
+    : 'https://beatleader.com/assets/bs-pepe.gif',
+)
+function getReplayUrl(blScoreId: number | null | undefined): string | null {
+  if (blScoreId == null) return null
+  return replayService.value === 'arcviewer'
+    ? `https://allpoland.github.io/ArcViewer/?scoreID=${blScoreId}`
+    : `https://replay.beatleader.com/?scoreId=${blScoreId}`
+}
 
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
   defaultSort: 'weighted',
@@ -104,6 +122,7 @@ const rows = computed(() =>
     streak115: s.streak115,
     date: s.date,
     leaderboardRank: s.leaderboardRank,
+    blScoreId: s.blScoreId,
   })),
 )
 
@@ -151,7 +170,7 @@ const allColumns: TableColumn[] = [
   { key: 'category', label: 'Category', align: 'center', width: '100px' },
   { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
   { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
-  { key: 'actions', label: '', align: 'center', width: '72px', noLink: true },
+  { key: 'actions', label: '', align: 'center', width: '108px', noLink: true },
 ]
 
 const columns = computed(() =>
@@ -283,6 +302,11 @@ watch(
               <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
             </svg>
           </button>
+          <a v-if="getReplayUrl(row.blScoreId as number | null)" class="scores-tab__icon-btn"
+            :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
+            :aria-label="replayLabel" :title="replayLabel" @click.stop>
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+          </a>
           <button class="scores-tab__icon-btn" aria-label="View score details"
             @click="openDetail(row.mapDifficultyId as string, $event)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -342,6 +366,11 @@ watch(
                 <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
               </svg>
             </button>
+            <a v-if="getReplayUrl(row.blScoreId as number | null)" class="ps-card__action-btn"
+              :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
+              :aria-label="replayLabel" :title="replayLabel" @click.stop>
+              <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+            </a>
             <button class="ps-card__action-btn" aria-label="View score details"
               @click.stop="openDetail(row.mapDifficultyId as string, $event)">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -438,6 +467,7 @@ watch(
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
+  text-decoration: none;
   transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
@@ -614,6 +644,7 @@ watch(
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
+  text-decoration: none;
   transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
