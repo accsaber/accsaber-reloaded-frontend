@@ -9,6 +9,7 @@ import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
+import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
@@ -17,6 +18,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import { useThemeStore } from '@/stores/theme'
+import type { EquippedItemsResponse } from '@/types/api/items'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
 import type {
   LevelResponse,
@@ -27,6 +29,11 @@ import type {
 import type { ScoreDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { brightenRgb } from '@/utils/color'
+import {
+  readBorderColorValue,
+  readBorderShapeValue,
+  readTitleValue,
+} from '@/utils/items'
 import { toScoreDisplay } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -116,6 +123,15 @@ const target = ref<UserResponse | null>(null)
 const sniper = ref<UserResponse | null>(null)
 const targetLevel = ref<LevelResponse | null>(null)
 const sniperLevel = ref<LevelResponse | null>(null)
+const sniperEquipped = ref<EquippedItemsResponse>({})
+const targetEquipped = ref<EquippedItemsResponse>({})
+
+const sniperTitle = computed(() => readTitleValue(sniperEquipped.value.title?.item.value))
+const sniperBorderShape = computed(() => readBorderShapeValue(sniperEquipped.value.profile_border_shape?.item.value))
+const sniperBorderColor = computed(() => readBorderColorValue(sniperEquipped.value.profile_border_color?.item.value))
+const targetTitle = computed(() => readTitleValue(targetEquipped.value.title?.item.value))
+const targetBorderShape = computed(() => readBorderShapeValue(targetEquipped.value.profile_border_shape?.item.value))
+const targetBorderColor = computed(() => readBorderColorValue(targetEquipped.value.profile_border_color?.item.value))
 const data = ref<Page<SnipeComparisonResponse> | null>(null)
 const loading = ref(false)
 
@@ -235,17 +251,24 @@ const tugReady = computed(
 
 async function fetchUsers() {
   if (!sniperId.value) return
-  const { getUser, getUserLevel } = await import('@/api/users')
-  const [t, s, tl, sl] = await Promise.allSettled([
+  const [{ getUser, getUserLevel }, { getUserEquippedItems }] = await Promise.all([
+    import('@/api/users'),
+    import('@/api/items'),
+  ])
+  const [t, s, tl, sl, te, se] = await Promise.allSettled([
     getUser(targetId.value),
     getUser(sniperId.value),
     getUserLevel(targetId.value),
     getUserLevel(sniperId.value),
+    getUserEquippedItems(targetId.value),
+    getUserEquippedItems(sniperId.value),
   ])
   if (t.status === 'fulfilled') target.value = t.value
   if (s.status === 'fulfilled') sniper.value = s.value
   if (tl.status === 'fulfilled') targetLevel.value = tl.value
   if (sl.status === 'fulfilled') sniperLevel.value = sl.value
+  targetEquipped.value = te.status === 'fulfilled' ? te.value : {}
+  sniperEquipped.value = se.status === 'fulfilled' ? se.value : {}
 }
 
 async function fetchComparisons() {
@@ -387,13 +410,17 @@ watch(
       <div class="snipe-hero__player snipe-hero__player--sniper">
         <LevelBadge v-if="sniper" :level="sniperLevel?.level ?? 0"
           :current-xp="sniperLevel?.xpForCurrentLevel ?? 0" :required-xp="sniperLevel?.xpForNextLevel ?? 1"
-          :avatar-url="sniper.avatarUrl" :fallback-title="sniperLevel?.title" hide-progress />
+          :avatar-url="sniper.avatarUrl" :fallback-title="sniperLevel?.title" hide-progress
+          :equipped-title="sniperTitle"
+          :equipped-border-shape="sniperBorderShape"
+          :equipped-border-color="sniperBorderColor" />
         <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
         <div class="snipe-hero__player-info">
           <span class="snipe-hero__role">You</span>
           <span class="snipe-hero__player-name">
             <CountryFlag v-if="sniper" :country="sniper.country" />
             {{ sniper?.name ?? '...' }}
+            <SupporterTierIcon v-if="sniper?.supporterTier" :tier="sniper.supporterTier" :size="16" />
           </span>
         </div>
       </div>
@@ -414,13 +441,17 @@ watch(
       <div class="snipe-hero__player snipe-hero__player--target">
         <LevelBadge v-if="target" :level="targetLevel?.level ?? 0"
           :current-xp="targetLevel?.xpForCurrentLevel ?? 0" :required-xp="targetLevel?.xpForNextLevel ?? 1"
-          :avatar-url="target.avatarUrl" :fallback-title="targetLevel?.title" hide-progress />
+          :avatar-url="target.avatarUrl" :fallback-title="targetLevel?.title" hide-progress
+          :equipped-title="targetTitle"
+          :equipped-border-shape="targetBorderShape"
+          :equipped-border-color="targetBorderColor" />
         <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
         <div class="snipe-hero__player-info">
           <span class="snipe-hero__role snipe-hero__role--target">Target</span>
           <span class="snipe-hero__player-name">
             {{ target?.name ?? '...' }}
             <CountryFlag v-if="target" :country="target.country" />
+            <SupporterTierIcon v-if="target?.supporterTier" :tier="target.supporterTier" :size="16" />
           </span>
         </div>
       </div>
