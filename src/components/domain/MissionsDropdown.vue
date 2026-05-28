@@ -3,7 +3,7 @@ import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import type { UserMissionResponse } from '@/types/api/missions'
 import { defineAsyncComponent, ref } from 'vue'
 
-const MISSIONS_COMING_SOON = true
+const MISSIONS_COMING_SOON = false
 
 const MissionsPanel = defineAsyncComponent(() => import('@/components/domain/MissionsPanel.vue'))
 
