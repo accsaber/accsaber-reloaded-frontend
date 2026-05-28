@@ -177,6 +177,7 @@ export interface StatsDiffResponse {
   scoreXpDiff: number
   milestoneXpDiff: number
   milestoneSetBonusXpDiff: number
+  missionXpDiff: number
   averageAccDiff: number
   averageApDiff: number
   rankingDiff: number

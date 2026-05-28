@@ -71,18 +71,35 @@ onUnmounted(() => {
       <div class="hero__content">
         <img :src="logoUrl" alt="AccSaber" class="hero__logo" />
         <p class="hero__tagline">New and improved stack for AccSaber.</p>
-        <RouterLink to="/getting-started" class="hero__get-started">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="5 3 19 12 5 21 5 3" />
-          </svg>
-          Get Started
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
-        </RouterLink>
+        <div class="hero__actions">
+          <RouterLink to="/getting-started" class="hero__get-started">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Get Started
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </RouterLink>
+          <a
+            href="https://github.com/not-dexter/accsaber-reloaded-plugin/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hero__plugin"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Download Plugin
+            <span class="hero__plugin-tag">PC</span>
+          </a>
+        </div>
         <div class="hero__community">
           <a href="https://discord.gg/DmzKSgcJWe" target="_blank" rel="noopener noreferrer" class="hero__discord">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -288,6 +305,14 @@ onUnmounted(() => {
   margin: 0;
 }
 
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-md);
+}
+
 .hero__get-started {
   display: inline-flex;
   align-items: center;
@@ -302,6 +327,50 @@ onUnmounted(() => {
   font-size: var(--text-body);
   letter-spacing: 0.01em;
   transition: all 200ms ease;
+}
+
+.hero__plugin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent-true-acc) 50%, transparent);
+  background: color-mix(in srgb, var(--accent-true-acc) 8%, var(--bg-surface));
+  color: var(--accent-true-acc);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--text-body);
+  letter-spacing: 0.01em;
+  transition: all 200ms ease;
+}
+
+.hero__plugin svg {
+  opacity: 0.8;
+  flex-shrink: 0;
+  transition: opacity 150ms ease;
+}
+
+.hero__plugin:hover {
+  border-color: var(--accent-true-acc);
+  background: color-mix(in srgb, var(--accent-true-acc) 15%, var(--bg-surface));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent-true-acc) 35%, transparent);
+}
+
+.hero__plugin:hover svg {
+  opacity: 1;
+}
+
+.hero__plugin-tag {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: var(--radius-btn);
+  background: color-mix(in srgb, var(--accent-true-acc) 20%, transparent);
+  color: var(--accent-true-acc);
+  opacity: 0.9;
 }
 
 .hero__get-started svg {

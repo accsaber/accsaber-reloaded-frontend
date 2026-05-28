@@ -288,7 +288,7 @@ const accent = computed(() => categoryStore.getAccent(activeCategory.value))
 
 const totalXpDiff = computed(() => {
   if (!statsDiff.value) return 0
-  return (statsDiff.value.scoreXpDiff ?? 0) + (statsDiff.value.milestoneXpDiff ?? 0) + (statsDiff.value.milestoneSetBonusXpDiff ?? 0)
+  return (statsDiff.value.scoreXpDiff ?? 0) + (statsDiff.value.milestoneXpDiff ?? 0) + (statsDiff.value.milestoneSetBonusXpDiff ?? 0) + (statsDiff.value.missionXpDiff ?? 0)
 })
 
 async function fetchStatsDiff() {
@@ -529,6 +529,12 @@ watch(activeCategory, (newCategory) => {
                   <span class="profile-hero__xp-tooltip-value profile-hero__xp-tooltip-value--set-bonus">{{
                     (statsDiff?.milestoneSetBonusXpDiff ?? 0) >= 0 ? '+' : '' }}{{
                       Math.round(statsDiff?.milestoneSetBonusXpDiff ?? 0) }}</span>
+                </span>
+                <span class="profile-hero__xp-tooltip-row">
+                  <span class="profile-hero__xp-tooltip-label">Mission XP</span>
+                  <span class="profile-hero__xp-tooltip-value profile-hero__xp-tooltip-value--mission">{{
+                    (statsDiff?.missionXpDiff ?? 0) >= 0 ? '+' : '' }}{{ Math.round(statsDiff?.missionXpDiff ?? 0)
+                    }}</span>
                 </span>
               </span>
             </span>
@@ -946,6 +952,10 @@ watch(activeCategory, (newCategory) => {
 
 .profile-hero__xp-tooltip-value--set-bonus {
   color: var(--tier-platinum);
+}
+
+.profile-hero__xp-tooltip-value--mission {
+  color: var(--tier-diamond);
 }
 
 .profile-hero__details {

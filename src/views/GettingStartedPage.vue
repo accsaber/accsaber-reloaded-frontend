@@ -63,6 +63,23 @@ usePageMeta({
           ScoreSaber</a>
         for your platform - PC or Quest.
       </p>
+      <a
+        href="https://github.com/not-dexter/accsaber-reloaded-plugin/releases"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="gs__plugin-btn"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        <span>
+          <span class="gs__plugin-btn-label">On PC? Download our new plugin</span>
+          <span class="gs__plugin-btn-sub">accsaber-reloaded-plugin</span>
+        </span>
+      </a>
     </section>
 
     <div class="gs__connector" aria-hidden="true" />
@@ -306,6 +323,57 @@ usePageMeta({
   border-color: var(--accent-overall);
   background: color-mix(in srgb, var(--accent-overall) 15%, var(--bg-surface));
   box-shadow: 0 0 14px color-mix(in srgb, var(--accent-overall) 35%, transparent);
+}
+
+.gs__plugin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  margin-top: var(--space-sm);
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent-true-acc) 50%, transparent);
+  background: color-mix(in srgb, var(--accent-true-acc) 8%, var(--bg-surface));
+  color: var(--accent-true-acc);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 200ms ease;
+}
+
+.gs__plugin-btn svg {
+  opacity: 0.85;
+  flex-shrink: 0;
+  transition: opacity 150ms ease;
+}
+
+.gs__plugin-btn:hover {
+  border-color: var(--accent-true-acc);
+  background: color-mix(in srgb, var(--accent-true-acc) 15%, var(--bg-surface));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-true-acc) 35%, transparent);
+}
+
+.gs__plugin-btn:hover svg {
+  opacity: 1;
+}
+
+.gs__plugin-btn span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.gs__plugin-btn-label {
+  font-size: var(--text-body);
+}
+
+.gs__plugin-btn-sub {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  opacity: 0.7;
+  margin-top: 2px;
 }
 
 .gs__rec {
