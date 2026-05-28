@@ -6,6 +6,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { useSettingsStore } from '@/stores/settings'
@@ -86,6 +87,9 @@ const equippedBorderColor = computed<BorderColorValue | null>(() =>
 const playerName = computed(() => player.value?.name ?? props.score?.userName ?? '')
 const playerCountry = computed(() => player.value?.country ?? '')
 const playerAvatar = computed(() => player.value?.avatarUrl ?? '')
+const playerSupporterTier = computed(
+  () => player.value?.supporterTier ?? props.score?.supporterTier ?? null,
+)
 
 const complexity = computed(() => mapDifficulty.value?.complexity ?? null)
 const difficultyRaw = computed(() => mapDifficulty.value?.difficulty ?? null)
@@ -328,6 +332,11 @@ watch(
         <div class="score-detail__player-info">
           <div class="score-detail__player-name-row">
             <h2 class="score-detail__player-name">{{ playerName || '\u00A0' }}</h2>
+            <SupporterTierIcon
+              v-if="playerSupporterTier"
+              :tier="playerSupporterTier"
+              :size="16"
+            />
             <CountryFlag v-if="playerCountry" :country="playerCountry" />
           </div>
         </div>
@@ -405,10 +414,33 @@ watch(
           <span v-if="(score.wallHits ?? 0) > 0" class="score-detail__meta-bad">{{ score.wallHits }} {{ score.wallHits === 1 ? 'wall' : 'walls' }}</span>
           <span v-if="(score.bombHits ?? 0) > 0" class="score-detail__meta-bad">{{ score.bombHits }} {{ score.bombHits === 1 ? 'bomb' : 'bombs' }}</span>
         </template>
-        <span v-if="totalMapXp > 0" class="score-detail__xp">
+        <span v-if="totalMapXp > 0" class="score-detail__xp" tabindex="0" aria-label="XP breakdown">
           <span class="score-detail__xp-label">XP</span>
           <span class="score-detail__xp-value">{{ totalMapXp.toFixed(1) }}</span>
           <span class="score-detail__xp-breakdown">{{ totalBaseXp.toFixed(0) }}+<span class="score-detail__xp-bonus">{{ totalBonusXp.toFixed(1) }}</span></span>
+          <svg class="score-detail__xp-help" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span class="score-detail__xp-tooltip" role="tooltip">
+            <span class="score-detail__xp-tooltip-row">
+              <span class="score-detail__xp-tooltip-key">Base</span>
+              <span class="score-detail__xp-tooltip-val">{{ totalBaseXp.toFixed(1) }}</span>
+            </span>
+            <span class="score-detail__xp-tooltip-desc">Earned every attempt, scaled by accuracy.</span>
+            <span class="score-detail__xp-tooltip-row">
+              <span class="score-detail__xp-tooltip-key">Bonus</span>
+              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--bonus">{{ totalBonusXp.toFixed(1) }}</span>
+            </span>
+            <span class="score-detail__xp-tooltip-desc">Awarded once when you set a new PB.</span>
+            <span class="score-detail__xp-tooltip-divider" />
+            <span class="score-detail__xp-tooltip-row">
+              <span class="score-detail__xp-tooltip-key score-detail__xp-tooltip-key--total">Total</span>
+              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--total">{{ totalMapXp.toFixed(1) }}</span>
+            </span>
+          </span>
         </span>
       </div>
 
@@ -851,6 +883,7 @@ watch(
 }
 
 .score-detail__xp {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
@@ -859,6 +892,110 @@ watch(
   background: color-mix(in srgb, var(--detail-accent) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--detail-accent) 30%, var(--bg-overlay));
   border-radius: var(--radius-button);
+  cursor: help;
+  outline: none;
+}
+
+.score-detail__xp:hover,
+.score-detail__xp:focus-visible {
+  border-color: color-mix(in srgb, var(--detail-accent) 55%, var(--bg-overlay));
+}
+
+.score-detail__xp-help {
+  color: var(--text-tertiary);
+  align-self: center;
+  margin-left: 2px;
+  transition: color 120ms ease;
+}
+
+.score-detail__xp:hover .score-detail__xp-help,
+.score-detail__xp:focus-visible .score-detail__xp-help {
+  color: var(--text-secondary);
+}
+
+.score-detail__xp-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-overlay);
+  border-radius: 6px;
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  transform: translateY(4px);
+  z-index: 10;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  text-align: left;
+}
+
+.score-detail__xp-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  border: 5px solid transparent;
+  border-top-color: var(--bg-elevated);
+}
+
+.score-detail__xp:hover .score-detail__xp-tooltip,
+.score-detail__xp:focus-visible .score-detail__xp-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.score-detail__xp-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+}
+
+.score-detail__xp-tooltip-key {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.score-detail__xp-tooltip-key--total {
+  color: var(--text-primary);
+}
+
+.score-detail__xp-tooltip-val {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-detail__xp-tooltip-val--bonus {
+  color: var(--detail-accent);
+}
+
+.score-detail__xp-tooltip-val--total {
+  font-weight: 700;
+}
+
+.score-detail__xp-tooltip-desc {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.score-detail__xp-tooltip-divider {
+  height: 1px;
+  background: var(--bg-overlay);
+  margin: 2px 0;
 }
 
 .score-detail__xp-label {
