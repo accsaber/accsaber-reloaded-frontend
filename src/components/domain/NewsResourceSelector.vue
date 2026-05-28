@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import type { NewsType } from '@/types/enums'
-import { NEWS_TYPE_ACCENT, NEWS_TYPE_LABELS, NEWS_TYPE_ORDER } from '@/utils/constants'
+import {
+  NEWS_TYPE_ACCENT,
+  NEWS_TYPE_LABELS,
+  NEWS_TYPE_ORDER,
+  STANDALONE_NEWS_TYPES,
+} from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
 
-export type ResourceKind = Exclude<NewsType, 'GENERAL'>
+export type ResourceKind = Exclude<NewsType, 'GENERAL' | 'ITEMS' | 'PLUGIN'>
 
 interface ResourceOption {
   value: string
@@ -13,6 +18,7 @@ interface ResourceOption {
 
 const props = defineProps<{
   allowed: ResourceKind[]
+  allowedStandalone?: NewsType[]
   resourceType: NewsType
   resourceId: string | null
 }>()
@@ -23,11 +29,14 @@ const emit = defineEmits<{
 }>()
 
 const choices = computed<{ key: NewsType; label: string }[]>(() => {
-  const allowedSet = new Set<NewsType>(['GENERAL', ...props.allowed])
+  const standalone = props.allowedStandalone ?? ['GENERAL']
+  const allowedSet = new Set<NewsType>([...standalone, ...props.allowed])
   return NEWS_TYPE_ORDER
     .filter((t) => allowedSet.has(t))
     .map((t) => ({ key: t, label: NEWS_TYPE_LABELS[t] }))
 })
+
+const isStandalone = computed(() => STANDALONE_NEWS_TYPES.includes(props.resourceType))
 
 const options = ref<ResourceOption[]>([])
 const loading = ref(false)
@@ -36,7 +45,7 @@ const error = ref('')
 async function loadOptions(kind: NewsType) {
   options.value = []
   error.value = ''
-  if (kind === 'GENERAL') return
+  if (STANDALONE_NEWS_TYPES.includes(kind)) return
   loading.value = true
   try {
     if (kind === 'BATCH') {
@@ -84,7 +93,7 @@ function selectId(id: string) {
 
 <template>
   <div class="resource-selector">
-    <label class="resource-selector__label">Linked resource</label>
+    <label class="resource-selector__label">Type</label>
     <div class="resource-selector__chips" role="radiogroup">
       <button
         v-for="choice in choices"
@@ -101,7 +110,7 @@ function selectId(id: string) {
       </button>
     </div>
 
-    <div v-if="resourceType !== 'GENERAL'" class="resource-selector__picker">
+    <div v-if="!isStandalone" class="resource-selector__picker">
       <BaseSelect
         v-if="!loading && options.length"
         :model-value="resourceId ?? ''"

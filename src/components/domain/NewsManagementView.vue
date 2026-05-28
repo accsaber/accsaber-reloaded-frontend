@@ -21,6 +21,7 @@ const props = defineProps<{
   title: string
   meta?: string
   allowed: ResourceKind[]
+  allowedStandalone?: NewsType[]
   fetchPage: (params: StaffNewsListParams) => Promise<Page<NewsResponse>>
   onCreate: (req: CreateNewsRequest) => Promise<NewsResponse>
   onUpdate: (id: string, req: UpdateNewsRequest) => Promise<NewsResponse>
@@ -45,7 +46,8 @@ const STATUS_OPTIONS = [
 ]
 
 const typeOptions = computed(() => {
-  const allowedSet = new Set<NewsType>(['GENERAL', ...props.allowed])
+  const standalone = props.allowedStandalone ?? ['GENERAL']
+  const allowedSet = new Set<NewsType>([...standalone, ...props.allowed])
   return [
     { value: '', label: 'All types' },
     ...NEWS_TYPE_ORDER
@@ -232,6 +234,7 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
       :open="showModal"
       :editing="editing"
       :allowed="allowed"
+      :allowed-standalone="allowedStandalone"
       :loading="submitting"
       @close="showModal = false"
       @submit="handleSubmit"
