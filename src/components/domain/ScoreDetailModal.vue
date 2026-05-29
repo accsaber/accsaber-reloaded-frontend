@@ -32,6 +32,7 @@ import {
   readBorderShapeValue,
   readTitleValue,
 } from '@/utils/items'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -226,7 +227,13 @@ function goToProfile() {
 
 function goToMap() {
   if (!props.score?.mapId) return
-  navigateAway({ path: `/maps/${props.score.mapId}`, query: { difficultyId: props.score.mapDifficultyId } })
+  navigateAway(buildMapRoute({
+    beatsaverCode: props.score.beatsaverCode,
+    mapId: props.score.mapId,
+    difficulty: props.score.rawDifficulty,
+    difficultyId: props.score.mapDifficultyId,
+    characteristic: props.score.characteristic,
+  }))
 }
 
 async function fetchHistoric() {

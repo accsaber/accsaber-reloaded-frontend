@@ -24,6 +24,7 @@ import { TIME_RANGE_PARAMS } from '@/utils/constants'
 import { countryName } from '@/utils/countries'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty, toScoreDisplay } from '@/utils/mappers'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -193,9 +194,19 @@ const hasSupersededRows = computed(() => isScoreTab.value && rows.value.some((r)
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalElements = computed(() => pageData.value?.totalElements ?? 0)
 
+function mapRowRoute(row: Record<string, unknown>) {
+  return buildMapRoute({
+    beatsaverCode: typeof row.beatsaverCode === 'string' ? row.beatsaverCode : null,
+    mapId: row.mapId as string,
+    difficulty: typeof row.difficulty === 'string' ? row.difficulty : null,
+    difficultyId: typeof row.mapDifficultyId === 'string' ? row.mapDifficultyId : null,
+    characteristic: typeof row.characteristic === 'string' ? row.characteristic : null,
+  })
+}
+
 function rowTo(row: Record<string, unknown>) {
   if (activeTab.value === 'avg-ap' || activeTab.value === 'most-retried') {
-    return { name: 'map-detail', params: { mapId: row.mapId as string }, query: row.mapDifficultyId ? { difficultyId: row.mapDifficultyId as string } : undefined }
+    return mapRowRoute(row)
   }
   if (row.userId) return { name: 'player-profile', params: { userId: row.userId as string } }
   return undefined
@@ -439,7 +450,7 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
 
           <template #cell-map="{ row }">
             <router-link
-              :to="{ name: 'map-detail', params: { mapId: row.mapId as string }, query: row.mapDifficultyId ? { difficultyId: row.mapDifficultyId as string } : undefined }"
+              :to="mapRowRoute(row)"
               class="map-cell map-cell--link" @click.stop>
               <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="32" />
               <div class="map-cell__info">
@@ -490,7 +501,7 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
                 <CountryFlag v-if="row.country" :country="(row.country as string)" />
               </div>
               <router-link v-if="row.songName" class="stats-card__map"
-                :to="{ name: 'map-detail', params: { mapId: row.mapId as string }, query: row.mapDifficultyId ? { difficultyId: row.mapDifficultyId as string } : undefined }"
+                :to="mapRowRoute(row)"
                 @click.stop>
                 <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28" />
                 <div class="stats-card__map-info">

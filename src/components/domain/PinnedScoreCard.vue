@@ -8,6 +8,7 @@ import { useModifierStore } from '@/stores/modifiers'
 import { useSettingsStore } from '@/stores/settings'
 import type { ScoreResponse } from '@/types/api/users'
 import { formatRelativeDate } from '@/utils/formatters'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -120,9 +121,12 @@ const weightedFormatted = computed(() => props.score.weightedAp.toFixed(2))
 
 const modifierLabels = computed(() => modifierStore.resolveModifierCodes(props.score.modifierIds))
 
-const mapTarget = computed(() => ({
-  path: `/maps/${props.score.mapId}`,
-  query: { difficultyId: props.score.mapDifficultyId },
+const mapTarget = computed(() => buildMapRoute({
+  beatsaverCode: props.score.beatsaverCode,
+  mapId: props.score.mapId,
+  difficulty: props.score.difficulty,
+  difficultyId: props.score.mapDifficultyId,
+  characteristic: props.score.characteristic,
 }))
 const mapHref = computed(() => router.resolve(mapTarget.value).href)
 

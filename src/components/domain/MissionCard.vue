@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCategoryStore } from '@/stores/categories'
 import type { UserMissionResponse } from '@/types/api/missions'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { BAND_LABEL, normalizeDifficulties } from '@/utils/missions'
 import { computed } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
@@ -130,7 +131,7 @@ const segments = computed<Segment[]>(() => {
   )
   const mapTo: RouteLocationRaw | null =
     m.targetMapDifficultyId && props.mapId
-      ? { path: `/maps/${props.mapId}`, query: { difficultyId: m.targetMapDifficultyId } }
+      ? buildMapRoute({ mapId: props.mapId, difficultyId: m.targetMapDifficultyId })
       : null
   out = inlineLink(out, m.targetMapSongName, mapTo)
   return out

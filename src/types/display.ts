@@ -74,6 +74,7 @@ export interface MapDisplay {
   categoryCode: CategoryCode
   difficulty: string
   difficultyLabel: string
+  characteristic?: string
   totalScores?: number
   rankedAt?: string
   batchName?: string
@@ -84,6 +85,9 @@ export interface ScoreDisplay {
   scoreId: string
   mapId?: string
   mapDifficultyId: string
+  beatsaverCode?: string | null
+  characteristic?: string
+  rawDifficulty?: string
   mapName: string
   artistName?: string
   difficulty: string
@@ -199,6 +203,9 @@ export interface ScoreFeedEntry {
   country: string
   mapId: string
   mapDifficultyId: string
+  beatsaverCode?: string | null
+  characteristic?: string
+  rawDifficulty?: string
   mapName: string
   artistName: string
   mapAuthor: string

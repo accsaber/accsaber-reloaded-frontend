@@ -12,6 +12,7 @@ import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatRelativeDate } from '@/utils/formatters'
 import { toScoreDisplay } from '@/utils/mappers'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -203,8 +204,13 @@ async function fetchScores() {
 
 function scoreRowTo(row: Record<string, unknown>) {
   if (typeof row.mapId !== 'string') return undefined
-  const query = typeof row.mapDifficultyId === 'string' ? { difficultyId: row.mapDifficultyId } : undefined
-  return { path: `/maps/${row.mapId}`, query }
+  return buildMapRoute({
+    beatsaverCode: typeof row.beatsaverCode === 'string' ? row.beatsaverCode : null,
+    mapId: row.mapId,
+    difficulty: typeof row.rawDifficulty === 'string' ? row.rawDifficulty : null,
+    difficultyId: typeof row.mapDifficultyId === 'string' ? row.mapDifficultyId : null,
+    characteristic: typeof row.characteristic === 'string' ? row.characteristic : null,
+  })
 }
 
 function handleRowClick(row: Record<string, unknown>) {

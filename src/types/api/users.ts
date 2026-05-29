@@ -54,6 +54,8 @@ export interface ScoreResponse {
   country: string
   mapDifficultyId: string
   mapId: string
+  beatsaverCode: string | null
+  characteristic: string
   songName: string
   songAuthor: string
   mapAuthor: string

@@ -14,6 +14,7 @@ import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import { MAP_STATUS_ACCENT } from '@/utils/constants'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
@@ -146,11 +147,13 @@ watch(
 )
 
 function navigateToMap(entry: PublicMapDifficultyResponse) {
-  router.push({
-    name: 'map-detail',
-    params: { mapId: entry.mapId },
-    query: { difficultyId: entry.id },
-  })
+  router.push(buildMapRoute({
+    beatsaverCode: entry.beatsaverCode,
+    mapId: entry.mapId,
+    difficulty: entry.difficulty,
+    difficultyId: entry.id,
+    characteristic: entry.characteristic,
+  }))
 }
 
 const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'

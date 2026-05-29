@@ -6,6 +6,7 @@ import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
 import type { LeaderboardResponse } from '@/types/api/users'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { isStaffSubdomain, playerProfileHref, mainSiteUrl } from '@/utils/subdomain'
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
@@ -122,9 +123,16 @@ function playerHref(userId: string): string {
   return router.resolve({ name: 'player-profile', params: { userId } }).href
 }
 
-function mapHref(mapId: string): string {
-  if (isStaffSubdomain) return mainSiteUrl(`/maps/${mapId}`)
-  return router.resolve({ name: 'map-detail', params: { mapId } }).href
+function mapHref(map: PublicMapResponse): string {
+  const target = buildMapRoute({ beatsaverCode: map.beatsaverCode, mapId: map.id }) as {
+    path: string
+    query: Record<string, string>
+  }
+  if (isStaffSubdomain) {
+    const qs = new URLSearchParams(target.query).toString()
+    return mainSiteUrl(qs ? `${target.path}?${qs}` : target.path)
+  }
+  return router.resolve(target).href
 }
 
 function goToPlayer(userId: string, event: MouseEvent) {
@@ -135,11 +143,11 @@ function goToPlayer(userId: string, event: MouseEvent) {
   emit('close')
 }
 
-function goToMap(mapId: string, event: MouseEvent) {
+function goToMap(map: PublicMapResponse, event: MouseEvent) {
   if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
   if (isStaffSubdomain) return
   event.preventDefault()
-  router.push({ name: 'map-detail', params: { mapId } })
+  router.push(buildMapRoute({ beatsaverCode: map.beatsaverCode, mapId: map.id }))
   emit('close')
 }
 
@@ -241,8 +249,8 @@ const mapResults = computed<MapResult[]>(() =>
           <div v-if="!mapsCollapsed" class="search-modal__section-body">
             <div v-if="loadingMaps" class="search-modal__loading">Searching...</div>
             <div v-else-if="!mapResults.length" class="search-modal__empty">No maps found.</div>
-            <a v-for="r in mapResults" :key="r.map.id" :href="mapHref(r.map.id)" class="search-modal__row"
-              @click="goToMap(r.map.id, $event)">
+            <a v-for="r in mapResults" :key="r.map.id" :href="mapHref(r.map)" class="search-modal__row"
+              @click="goToMap(r.map, $event)">
               <img :src="r.map.coverUrl" :alt="r.map.songName" class="search-modal__cover" />
               <span class="search-modal__row-main">
                 <span class="search-modal__row-title">{{ r.map.songName }}</span>

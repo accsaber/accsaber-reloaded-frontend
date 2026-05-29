@@ -26,6 +26,7 @@ import type { Page } from '@/types/pagination'
 import { groupBatchByCategory } from '@/utils/batches'
 import { formatRelativeDate } from '@/utils/formatters'
 import { toMapDisplay } from '@/utils/mappers'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
@@ -220,6 +221,8 @@ const listRows = computed(() =>
     complexity: m.complexity,
     totalScores: m.totalScores ?? 0,
     rankedAt: m.rankedAt ?? '',
+    beatsaverCode: m.beatsaverCode,
+    characteristic: m.characteristic,
   }))
 )
 
@@ -301,16 +304,24 @@ async function fetchBatches() {
   batchLoading.value = false
 }
 
-function mapRouteTo(mapId: string, difficultyId?: string): RouteLocationRaw {
-  return {
-    name: 'map-detail',
-    params: { mapId },
-    query: difficultyId ? { difficultyId } : undefined,
-  }
+function mapRouteTo(m: Pick<MapDisplay, 'id' | 'difficultyId' | 'difficulty' | 'characteristic' | 'beatsaverCode'>): RouteLocationRaw {
+  return buildMapRoute({
+    beatsaverCode: m.beatsaverCode ?? null,
+    mapId: m.id,
+    difficulty: m.difficulty,
+    difficultyId: m.difficultyId,
+    characteristic: m.characteristic ?? null,
+  })
 }
 
 function listRowTo(row: Record<string, unknown>): RouteLocationRaw {
-  return mapRouteTo(row.id as string, row.difficultyId as string)
+  return mapRouteTo({
+    id: row.id as string,
+    difficultyId: row.difficultyId as string,
+    difficulty: row.difficulty as string,
+    characteristic: row.characteristic as string | undefined,
+    beatsaverCode: row.beatsaverCode as string | undefined,
+  })
 }
 
 function batchDifficultiesByCategory(batch: PublicBatchResponse) {
@@ -454,7 +465,7 @@ watch(
         <template v-else>
           <div class="maps-page__grid">
             <MapCard v-for="m in mapDisplays" :key="m.difficultyId" :map="m"
-              :to="mapRouteTo(m.id, m.difficultyId)" />
+              :to="mapRouteTo(m)" />
           </div>
         </template>
       </template>
@@ -553,7 +564,7 @@ watch(
                 </div>
                 <div class="maps-page__batch-cards">
                   <MapCardCompact v-for="m in group.diffs" :key="m.difficultyId" :map="m"
-                    :to="mapRouteTo(m.id, m.difficultyId)" />
+                    :to="mapRouteTo(m)" />
                 </div>
               </div>
             </div>

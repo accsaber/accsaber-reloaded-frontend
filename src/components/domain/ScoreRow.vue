@@ -2,6 +2,7 @@
 import GlowImage from '@/components/common/GlowImage.vue';
 import type { ScoreDisplay } from '@/types/display';
 import { formatRelativeDate, isRecentDate } from '@/utils/formatters';
+import { buildMapRoute } from '@/utils/mapRoute';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -22,23 +23,27 @@ const modifiersText = computed(() =>
   props.score.modifiers.length > 0 ? props.score.modifiers.join(', ') : '-',
 )
 
-const mapHref = computed(() =>
+const mapTarget = computed(() =>
   props.score.mapId
-    ? router.resolve({
-      path: `/maps/${props.score.mapId}`,
-      query: { difficultyId: props.score.mapDifficultyId },
-    }).href
-    : undefined,
+    ? buildMapRoute({
+      beatsaverCode: props.score.beatsaverCode,
+      mapId: props.score.mapId,
+      difficulty: props.score.rawDifficulty,
+      difficultyId: props.score.mapDifficultyId,
+      characteristic: props.score.characteristic,
+    })
+    : null,
+)
+
+const mapHref = computed(() =>
+  mapTarget.value ? router.resolve(mapTarget.value).href : undefined,
 )
 
 function handleClick(e: MouseEvent) {
-  if (!mapHref.value) return
+  if (!mapTarget.value) return
   if (e.ctrlKey || e.metaKey || e.button === 1) return
   e.preventDefault()
-  router.push({
-    path: `/maps/${props.score.mapId}`,
-    query: { difficultyId: props.score.mapDifficultyId },
-  })
+  router.push(mapTarget.value)
 }
 </script>
 

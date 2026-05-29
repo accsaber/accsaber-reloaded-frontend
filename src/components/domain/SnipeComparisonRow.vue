@@ -4,6 +4,7 @@ import { useCategoryStore } from '@/stores/categories'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
 import type { ScoreResponse } from '@/types/api/users'
 import { formatRelativeDate } from '@/utils/formatters'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import CategoryBadge from './CategoryBadge.vue'
@@ -53,9 +54,12 @@ const sides = computed<SnipeSide[]>(() => [
   { kind: 'target', score: target.value, name: props.targetName, roleLabel: 'Target' },
 ])
 
-const mapTarget = computed(() => ({
-  path: `/maps/${map.value.mapId}`,
-  query: { difficultyId: map.value.id },
+const mapTarget = computed(() => buildMapRoute({
+  beatsaverCode: map.value.beatsaverCode,
+  mapId: map.value.mapId,
+  difficulty: map.value.difficulty,
+  difficultyId: map.value.id,
+  characteristic: map.value.characteristic,
 }))
 
 const mapHref = computed(() => router.resolve(mapTarget.value).href)
