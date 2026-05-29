@@ -10,9 +10,16 @@ type Segment =
   | { kind: 'text'; text: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw }
 
+interface MissionMapLink {
+  mapId: string
+  beatsaverCode: string | null
+  difficulty: string
+  characteristic: string
+}
+
 const props = defineProps<{
   mission: UserMissionResponse
-  mapId?: string | null
+  mapLink?: MissionMapLink | null
 }>()
 
 const emit = defineEmits<{
@@ -130,8 +137,14 @@ const segments = computed<Segment[]>(() => {
     m.targetPlayerId ? { name: 'player-profile', params: { userId: m.targetPlayerId } } : null,
   )
   const mapTo: RouteLocationRaw | null =
-    m.targetMapDifficultyId && props.mapId
-      ? buildMapRoute({ mapId: props.mapId, difficultyId: m.targetMapDifficultyId })
+    m.targetMapDifficultyId && props.mapLink
+      ? buildMapRoute({
+        beatsaverCode: props.mapLink.beatsaverCode,
+        mapId: props.mapLink.mapId,
+        difficulty: props.mapLink.difficulty,
+        difficultyId: m.targetMapDifficultyId,
+        characteristic: props.mapLink.characteristic,
+      })
       : null
   out = inlineLink(out, m.targetMapSongName, mapTo)
   return out

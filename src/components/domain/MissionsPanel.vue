@@ -40,7 +40,14 @@ const loadingHistory = ref(false)
 const activeError = ref<string | null>(null)
 const historyError = ref<string | null>(null)
 
-const mapIdByDifficulty = ref(new Map<string, string>())
+interface MissionMapLink {
+  mapId: string
+  beatsaverCode: string | null
+  difficulty: string
+  characteristic: string
+}
+
+const mapLinkByDifficulty = ref(new Map<string, MissionMapLink>())
 
 const now = ref(Date.now())
 let nowTimer: number | null = null
@@ -107,17 +114,24 @@ async function resolveMapIds(missions: UserMissionResponse[]) {
   const pending = new Set<string>()
   for (const m of missions) {
     const diffId = m.targetMapDifficultyId
-    if (diffId && !mapIdByDifficulty.value.has(diffId)) pending.add(diffId)
+    if (diffId && !mapLinkByDifficulty.value.has(diffId)) pending.add(diffId)
   }
   if (pending.size === 0) return
   const results = await Promise.allSettled(
-    Array.from(pending).map((id) => getDifficulty(id).then((d) => [id, d.mapId] as const)),
+    Array.from(pending).map((id) =>
+      getDifficulty(id).then((d) => [id, {
+        mapId: d.mapId,
+        beatsaverCode: d.beatsaverCode,
+        difficulty: d.difficulty,
+        characteristic: d.characteristic,
+      }] as const),
+    ),
   )
-  const next = new Map(mapIdByDifficulty.value)
+  const next = new Map(mapLinkByDifficulty.value)
   for (const r of results) {
     if (r.status === 'fulfilled') next.set(r.value[0], r.value[1])
   }
-  mapIdByDifficulty.value = next
+  mapLinkByDifficulty.value = next
 }
 
 async function runLoadActive() {
@@ -256,7 +270,7 @@ onUnmounted(() => {
             </header>
             <div class="missions-panel__stack">
               <MissionCard v-for="mission in group.missions" :key="mission.id" :mission="mission"
-                :map-id="mission.targetMapDifficultyId ? mapIdByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
+                :map-link="mission.targetMapDifficultyId ? mapLinkByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
                 @navigate="handleNavigate" />
             </div>
           </section>
@@ -273,7 +287,7 @@ onUnmounted(() => {
           message="Completed missions will show up here." />
         <div v-else class="missions-panel__stack">
           <MissionCard v-for="mission in sortedHistory" :key="mission.id" :mission="mission"
-            :map-id="mission.targetMapDifficultyId ? mapIdByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
+            :map-link="mission.targetMapDifficultyId ? mapLinkByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
             @navigate="handleNavigate" />
         </div>
       </section>
