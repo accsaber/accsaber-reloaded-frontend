@@ -239,33 +239,35 @@ watch(
       </section>
     </div>
 
-    <section v-if="peakStats" class="statistics-tab__peaks">
-      <h3 class="statistics-tab__section-title">Peak Stats</h3>
-      <div class="statistics-tab__peaks-grid">
-        <StatBlock v-if="peakStats.peakRank != null" label="Peak Global Rank" :value="peakStats.peakRank"
-          :decimals="0" />
-        <StatBlock v-if="peakStats.peakCountryRank != null" label="Peak Country Rank" :value="peakStats.peakCountryRank"
-          :decimals="0" />
-        <StatBlock v-if="peakStats.peakAp != null" label="Peak AP" :value="peakStats.peakAp" />
-      </div>
-    </section>
+    <div v-if="peakStats || xpStats" class="statistics-tab__split">
+      <section v-if="peakStats" class="statistics-tab__peaks">
+        <h3 class="statistics-tab__section-title">Peak Stats</h3>
+        <div class="statistics-tab__peaks-grid">
+          <StatBlock v-if="peakStats.peakRank != null" label="Peak Global Rank" :value="peakStats.peakRank"
+            :decimals="0" />
+          <StatBlock v-if="peakStats.peakCountryRank != null" label="Peak Country Rank" :value="peakStats.peakCountryRank"
+            :decimals="0" />
+          <StatBlock v-if="peakStats.peakAp != null" label="Peak AP" :value="peakStats.peakAp" />
+        </div>
+      </section>
 
-    <section v-if="xpStats" class="xp-breakdown">
-      <h3 class="statistics-tab__section-title">XP Breakdown</h3>
-      <StatBlock label="Total XP" :value="xpStats.totalXp" :decimals="0" :accent-color="xpAccent" />
-      <div class="xp-breakdown__tree">
-        <div class="xp-breakdown__drop" />
-        <div class="xp-breakdown__drop" />
-        <div class="xp-breakdown__drop" />
-        <div class="xp-breakdown__drop" />
-      </div>
-      <div class="xp-breakdown__sources">
-        <StatBlock label="Score XP" :value="xpStats.totalScoreXp" :decimals="0" />
-        <StatBlock label="Milestone XP" :value="xpStats.totalMilestoneXp" :decimals="0" />
-        <StatBlock label="Set Bonus XP" :value="xpStats.totalMilestoneSetBonusXp" :decimals="0" />
-        <StatBlock label="Mission XP" :value="xpStats.totalMissionXp" :decimals="0" />
-      </div>
-    </section>
+      <section v-if="xpStats" class="xp-breakdown">
+        <h3 class="statistics-tab__section-title">XP Breakdown</h3>
+        <StatBlock label="Total XP" :value="xpStats.totalXp" :decimals="0" :accent-color="xpAccent" />
+        <div class="xp-breakdown__tree">
+          <div class="xp-breakdown__drop" />
+          <div class="xp-breakdown__drop" />
+          <div class="xp-breakdown__drop" />
+          <div class="xp-breakdown__drop" />
+        </div>
+        <div class="xp-breakdown__sources">
+          <StatBlock label="Score XP" :value="xpStats.totalScoreXp" :decimals="0" />
+          <StatBlock label="Milestone XP" :value="xpStats.totalMilestoneXp" :decimals="0" />
+          <StatBlock label="Set Bonus XP" :value="xpStats.totalMilestoneSetBonusXp" :decimals="0" />
+          <StatBlock label="Mission XP" :value="xpStats.totalMissionXp" :decimals="0" />
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -283,6 +285,14 @@ watch(
   color: var(--text-primary);
   margin: 0 0 var(--space-md) 0;
   text-align: center;
+}
+
+.statistics-tab__split {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2xl);
+  width: 100%;
 }
 
 .statistics-tab__peaks {
@@ -389,6 +399,20 @@ watch(
   flex-direction: column;
   gap: var(--space-md);
   min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .statistics-tab__split {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .statistics-tab__split .statistics-tab__peaks,
+  .statistics-tab__split .xp-breakdown {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 767px) {

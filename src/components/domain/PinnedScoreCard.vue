@@ -159,7 +159,7 @@ function onReplayClick(e: MouseEvent) {
 
 <template>
   <a :href="mapHref" class="pin-card" :style="{ '--card-accent': categoryAccent }" @click="navigateToMap">
-    <div v-if="editing" class="pin-card__comment-edit" @click.stop @mousedown.stop>
+    <div v-if="editing" class="pin-card__comment-edit" @click.stop.prevent @mousedown.stop>
       <textarea ref="textareaRef" v-model="draft" class="pin-card__comment-input"
         :maxlength="COMMENT_MAX + 50" :placeholder="`Say something about this score (max ${COMMENT_MAX} chars)`"
         rows="2" @keydown="onTextareaKeydown" />
