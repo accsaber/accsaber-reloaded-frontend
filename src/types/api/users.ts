@@ -127,6 +127,7 @@ export interface UserAllStatisticsResponse {
   totalScoreXp: number
   totalMilestoneXp: number
   totalMilestoneSetBonusXp: number
+  totalMissionXp: number
   categories: UserCategoryStatisticsResponse[]
 }
 

@@ -257,11 +257,13 @@ watch(
         <div class="xp-breakdown__drop" />
         <div class="xp-breakdown__drop" />
         <div class="xp-breakdown__drop" />
+        <div class="xp-breakdown__drop" />
       </div>
       <div class="xp-breakdown__sources">
         <StatBlock label="Score XP" :value="xpStats.totalScoreXp" :decimals="0" />
         <StatBlock label="Milestone XP" :value="xpStats.totalMilestoneXp" :decimals="0" />
         <StatBlock label="Set Bonus XP" :value="xpStats.totalMilestoneSetBonusXp" :decimals="0" />
+        <StatBlock label="Mission XP" :value="xpStats.totalMissionXp" :decimals="0" />
       </div>
     </section>
   </div>
@@ -323,7 +325,7 @@ watch(
 
 .xp-breakdown__tree {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   width: 100%;
   height: 28px;
 }
@@ -361,7 +363,8 @@ watch(
   right: 50%;
 }
 
-.xp-breakdown__drop:nth-child(2)::before {
+.xp-breakdown__drop:nth-child(2)::before,
+.xp-breakdown__drop:nth-child(3)::before {
   content: '';
   position: absolute;
   top: 0;
@@ -373,7 +376,7 @@ watch(
 
 .xp-breakdown__sources {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   width: 100%;
 }
 
