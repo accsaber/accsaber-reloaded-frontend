@@ -165,6 +165,7 @@ export interface VoteListResponse {
 export interface MapListParams extends PaginationParams {
   categoryId?: string
   status?: MapDifficultyStatus
+  search?: string
 }
 
 export interface DifficultyListParams extends PaginationParams {
@@ -172,6 +173,7 @@ export interface DifficultyListParams extends PaginationParams {
   status?: MapDifficultyStatus
   complexityMin?: number
   complexityMax?: number
+  search?: string
 }
 
 export interface DifficultyScoreParams extends PaginationParams {

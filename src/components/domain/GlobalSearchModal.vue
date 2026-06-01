@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
+import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
-import type { PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
+import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { LeaderboardResponse } from '@/types/api/users'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { isStaffSubdomain, playerProfileHref, mainSiteUrl } from '@/utils/subdomain'
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps<{
@@ -30,7 +32,7 @@ const MIN_CHARS = 3
 const searchValue = ref('')
 const debouncedSearch = useDebouncedRef(searchValue, DEBOUNCE_MS)
 const players = ref<LeaderboardResponse[]>([])
-const maps = ref<PublicMapResponse[]>([])
+const difficulties = ref<PublicMapDifficultyResponse[]>([])
 const loadingPlayers = ref(false)
 const loadingMaps = ref(false)
 const playersCollapsed = ref(false)
@@ -43,7 +45,7 @@ watch(() => props.open, async (open) => {
   if (open) {
     searchValue.value = ''
     players.value = []
-    maps.value = []
+    difficulties.value = []
     playersCollapsed.value = false
     mapsCollapsed.value = false
     await nextTick()
@@ -59,7 +61,7 @@ watch(searchValue, (val) => {
   if (trimmed.length < MIN_CHARS) {
     requestId++
     players.value = []
-    maps.value = []
+    difficulties.value = []
     loadingPlayers.value = false
     loadingMaps.value = false
     return
@@ -93,22 +95,22 @@ async function runSearch(query: string) {
     )
     : Promise.resolve(null)
 
-  const mapPromise = import('@/api/maps').then(({ getMaps }) =>
-    getMaps({ search: query, size: RESULTS_PER_SECTION, page: 0, status: 'RANKED' }),
+  const diffPromise = import('@/api/maps').then(({ getDifficulties }) =>
+    getDifficulties({ search: query, size: RESULTS_PER_SECTION, page: 0, status: 'RANKED' }),
   )
 
   try {
-    const [playerPage, mapPage] = await Promise.allSettled([playerPromise, mapPromise])
+    const [playerPage, diffPage] = await Promise.allSettled([playerPromise, diffPromise])
     if (id !== requestId) return
     if (playerPage.status === 'fulfilled' && playerPage.value) {
       players.value = playerPage.value.content
     } else {
       players.value = []
     }
-    if (mapPage.status === 'fulfilled') {
-      maps.value = mapPage.value.content
+    if (diffPage.status === 'fulfilled') {
+      difficulties.value = diffPage.value.content
     } else {
-      maps.value = []
+      difficulties.value = []
     }
   } finally {
     if (id === requestId) {
@@ -123,8 +125,18 @@ function playerHref(userId: string): string {
   return router.resolve({ name: 'player-profile', params: { userId } }).href
 }
 
-function mapHref(map: PublicMapResponse): string {
-  const target = buildMapRoute({ beatsaverCode: map.beatsaverCode, mapId: map.id }) as {
+function difficultyRoute(diff: PublicMapDifficultyResponse) {
+  return buildMapRoute({
+    beatsaverCode: diff.beatsaverCode,
+    mapId: diff.mapId,
+    difficulty: diff.difficulty,
+    difficultyId: diff.id,
+    characteristic: diff.characteristic,
+  })
+}
+
+function diffHref(diff: PublicMapDifficultyResponse): string {
+  const target = difficultyRoute(diff) as {
     path: string
     query: Record<string, string>
   }
@@ -143,11 +155,11 @@ function goToPlayer(userId: string, event: MouseEvent) {
   emit('close')
 }
 
-function goToMap(map: PublicMapResponse, event: MouseEvent) {
+function goToDifficulty(diff: PublicMapDifficultyResponse, event: MouseEvent) {
   if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
   if (isStaffSubdomain) return
   event.preventDefault()
-  router.push(buildMapRoute({ beatsaverCode: map.beatsaverCode, mapId: map.id }))
+  router.push(difficultyRoute(diff))
   emit('close')
 }
 
@@ -155,28 +167,9 @@ function formatAp(ap: number): string {
   return ap.toLocaleString(undefined, { maximumFractionDigits: 2 })
 }
 
-function primaryDifficulty(map: PublicMapResponse): PublicMapDifficultyResponse | null {
-  if (!map.difficulties?.length) return null
-  return map.difficulties.reduce((a, b) => ((b.complexity ?? 0) > (a.complexity ?? 0) ? b : a))
+function categoryCode(diff: PublicMapDifficultyResponse): string {
+  return categoryStore.getCategoryCode(diff.categoryId) ?? 'overall'
 }
-
-interface MapResult {
-  map: PublicMapResponse
-  primary: PublicMapDifficultyResponse | null
-  accent: string
-}
-
-const mapResults = computed<MapResult[]>(() =>
-  maps.value.map((map) => {
-    const primary = primaryDifficulty(map)
-    const code = primary ? categoryStore.getCategoryCode(primary.categoryId) : undefined
-    return {
-      map,
-      primary,
-      accent: code ? categoryStore.getAccent(code) : 'var(--accent)',
-    }
-  }),
-)
 </script>
 
 <template>
@@ -244,27 +237,28 @@ const mapResults = computed<MapResult[]>(() =>
               <polyline points="6 9 12 15 18 9" />
             </svg>
             <span class="search-modal__section-title">Maps</span>
-            <span class="search-modal__section-count">{{ maps.length }}</span>
+            <span class="search-modal__section-count">{{ difficulties.length }}</span>
           </button>
           <div v-if="!mapsCollapsed" class="search-modal__section-body">
             <div v-if="loadingMaps" class="search-modal__loading">Searching...</div>
-            <div v-else-if="!mapResults.length" class="search-modal__empty">No maps found.</div>
-            <a v-for="r in mapResults" :key="r.map.id" :href="mapHref(r.map)" class="search-modal__row"
-              @click="goToMap(r.map, $event)">
-              <img :src="r.map.coverUrl" :alt="r.map.songName" class="search-modal__cover" />
+            <div v-else-if="!difficulties.length" class="search-modal__empty">No maps found.</div>
+            <a v-for="diff in difficulties" :key="diff.id" :href="diffHref(diff)" class="search-modal__row"
+              @click="goToDifficulty(diff, $event)">
+              <img :src="diff.coverUrl" :alt="diff.songName" class="search-modal__cover" />
               <span class="search-modal__row-main">
-                <span class="search-modal__row-title">{{ r.map.songName }}</span>
+                <CategoryBadge :category="categoryCode(diff)" size="sm" />
+                <span class="search-modal__row-title">{{ diff.songName }}</span>
                 <span class="search-modal__row-sub">
-                  <span>{{ r.map.songAuthor }}</span>
+                  <span>{{ diff.songAuthor }}</span>
                   <span class="search-modal__row-sub-divider">&middot;</span>
-                  <span>mapped by {{ r.map.mapAuthor }}</span>
+                  <span>mapped by {{ diff.mapAuthor }}</span>
                 </span>
               </span>
               <span class="search-modal__row-meta">
-                <template v-if="r.primary">
-                  <span class="search-modal__category-dot" :style="{ background: r.accent }" />
-                  <ComplexityBadge :complexity="r.primary.complexity ?? 0" />
-                </template>
+                <DifficultyBadge :difficulty="diff.difficulty" />
+                <span v-if="diff.characteristic && diff.characteristic !== 'Standard'"
+                  class="search-modal__char">{{ diff.characteristic }}</span>
+                <ComplexityBadge :complexity="diff.complexity ?? 0" />
               </span>
             </a>
           </div>
@@ -506,11 +500,13 @@ const mapResults = computed<MapResult[]>(() =>
   letter-spacing: 0.04em;
 }
 
-.search-modal__category-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.search-modal__char {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
 }
 
 @media (max-width: 767px) {
