@@ -260,9 +260,17 @@ async function fetchMap() {
 
   try {
     const { getMap, getMapByCode } = await import('@/api/maps')
-    map.value = isUuid(routeParam.value)
-      ? await getMap(routeParam.value)
-      : await getMapByCode(routeParam.value)
+    if (isUuid(routeParam.value)) {
+      map.value = await getMap(routeParam.value)
+    } else {
+      const qDifficulty = route.query.difficulty as string | undefined
+      const byCodeParams: { difficulty?: string; characteristic?: string } = {}
+      if (qDifficulty) {
+        byCodeParams.difficulty = slugToDifficulty(qDifficulty)
+        byCodeParams.characteristic = (route.query.characteristic as string | undefined) ?? 'Standard'
+      }
+      map.value = await getMapByCode(routeParam.value, byCodeParams)
+    }
 
     const all = map.value.difficulties
     const ranked = all
@@ -285,9 +293,13 @@ async function fetchMap() {
 watch(() => [route.query.difficultyId, route.query.difficulty, route.query.characteristic], () => {
   if (!map.value) return
   const matched = resolveQueryDifficulty(map.value.difficulties)
-  if (matched && matched.id !== activeDifficultyId.value) {
-    activeDifficultyId.value = matched.id
+  if (matched) {
+    if (matched.id !== activeDifficultyId.value) {
+      activeDifficultyId.value = matched.id
+    }
+    return
   }
+  if (!isUuid(routeParam.value)) fetchMap()
 })
 
 async function fetchDifficultyStats() {
