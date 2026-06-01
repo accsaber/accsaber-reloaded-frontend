@@ -2,6 +2,7 @@
 import { ApiError, getApiErrorMessage } from '@/api/client'
 import { getDifficulty } from '@/api/maps'
 import EmptyState from '@/components/common/EmptyState.vue'
+import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MissionCard from '@/components/domain/MissionCard.vue'
 import type { MissionPool, UserMissionResponse } from '@/types/api/missions'
@@ -80,6 +81,22 @@ const grouped = computed(() => {
 })
 
 const sortedHistory = computed(() => sortByBand(historyList.value))
+
+const HISTORY_PAGE_SIZE = 10
+const historyPage = ref(1)
+
+const historyTotalPages = computed(() =>
+  Math.max(1, Math.ceil(sortedHistory.value.length / HISTORY_PAGE_SIZE)),
+)
+
+const pagedHistory = computed(() => {
+  const start = (historyPage.value - 1) * HISTORY_PAGE_SIZE
+  return sortedHistory.value.slice(start, start + HISTORY_PAGE_SIZE)
+})
+
+watch(historyTotalPages, (total) => {
+  if (historyPage.value > total) historyPage.value = total
+})
 
 function isWithinWindow(mission: UserMissionResponse, nowMs: number): boolean {
   const expiresAt = new Date(mission.expiresAt).getTime()
@@ -285,11 +302,17 @@ onUnmounted(() => {
         </div>
         <EmptyState v-else-if="!loadingActive && !loadingHistory && !hasHistory && !errorMessage" icon="🏁"
           message="Completed missions will show up here." />
-        <div v-else class="missions-panel__stack">
-          <MissionCard v-for="mission in sortedHistory" :key="mission.id" :mission="mission"
-            :map-link="mission.targetMapDifficultyId ? mapLinkByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
-            @navigate="handleNavigate" />
-        </div>
+        <template v-else>
+          <div class="missions-panel__stack">
+            <MissionCard v-for="mission in pagedHistory" :key="mission.id" :mission="mission"
+              :map-link="mission.targetMapDifficultyId ? mapLinkByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
+              @navigate="handleNavigate" />
+          </div>
+          <div v-if="historyTotalPages > 1" class="missions-panel__pagination">
+            <PaginationControls :page="historyPage" :total-pages="historyTotalPages"
+              @update:page="historyPage = $event" />
+          </div>
+        </template>
       </section>
     </div>
   </div>
@@ -424,5 +447,10 @@ onUnmounted(() => {
 .missions-panel__stack {
   display: flex;
   flex-direction: column;
+}
+
+.missions-panel__pagination {
+  padding: var(--space-md);
+  border-top: 1px solid var(--bg-overlay);
 }
 </style>
