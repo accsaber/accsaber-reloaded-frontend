@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import type { UserMissionResponse } from '@/types/api/missions'
-import { defineAsyncComponent, ref } from 'vue'
+import { defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const MISSIONS_COMING_SOON = false
 
@@ -18,51 +17,127 @@ async function loadHistory(): Promise<UserMissionResponse[]> {
 }
 
 const open = ref(false)
+const triggerRef = ref<HTMLButtonElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
+const panelStyle = ref<Record<string, string>>({})
+
+function updatePosition() {
+  const trigger = triggerRef.value
+  if (!trigger) return
+  const rect = trigger.getBoundingClientRect()
+  const isNarrow = window.matchMedia('(max-width: 600px)').matches
+  if (isNarrow) {
+    panelStyle.value = {
+      top: `${rect.bottom + 4}px`,
+      left: '16px',
+      right: '16px',
+      width: 'auto',
+      maxWidth: 'none',
+    }
+  } else {
+    panelStyle.value = {
+      top: `${rect.bottom + 4}px`,
+      right: `${Math.max(window.innerWidth - rect.right, 8)}px`,
+      width: 'min(440px, calc(100vw - 32px))',
+    }
+  }
+}
+
+function onClickOutside(e: MouseEvent) {
+  if (!open.value) return
+  const target = e.target as Node | null
+  if (!target) return
+  if (triggerRef.value?.contains(target)) return
+  if (panelRef.value?.contains(target)) return
+  open.value = false
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') open.value = false
+}
+
+function onViewportChange() {
+  if (open.value) updatePosition()
+}
+
+watch(open, async (value) => {
+  if (value) {
+    await nextTick()
+    updatePosition()
+  }
+})
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  document.addEventListener('keydown', onKeydown)
+  window.addEventListener('resize', onViewportChange)
+  window.addEventListener('scroll', onViewportChange, true)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside)
+  document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', onViewportChange)
+  window.removeEventListener('scroll', onViewportChange, true)
+})
 
 function handleNavigate() {
   open.value = false
 }
+
+function toggle() {
+  open.value = !open.value
+}
 </script>
 
 <template>
-  <BaseDropdown v-model:open="open" position="bottom-right">
-    <template #trigger>
-      <button
-        type="button"
-        class="navbar__icon-btn missions-trigger"
-        :class="{ 'missions-trigger--active': open }"
-        aria-label="Missions"
+  <button
+    ref="triggerRef"
+    type="button"
+    class="navbar__icon-btn missions-trigger"
+    :class="{ 'missions-trigger--active': open }"
+    aria-label="Missions"
+    @click="toggle"
+  >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  </button>
+
+  <Teleport to="body">
+    <Transition name="missions-dropdown">
+      <div
+        v-if="open"
+        ref="panelRef"
+        class="missions-dropdown-panel"
+        :style="panelStyle"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <circle cx="12" cy="12" r="6" />
-          <circle cx="12" cy="12" r="2" />
-        </svg>
-      </button>
-    </template>
+        <div v-if="MISSIONS_COMING_SOON" class="missions-coming-soon">
+          <header class="missions-coming-soon__head">
+            <h2 class="missions-coming-soon__title">Missions</h2>
+          </header>
+          <div class="missions-coming-soon__body">
+            <span class="missions-coming-soon__badge">Coming soon</span>
+            <p class="missions-coming-soon__message">
+              Daily and weekly missions are on the way. Check back soon.
+            </p>
+          </div>
+        </div>
 
-    <div v-if="MISSIONS_COMING_SOON" class="missions-coming-soon">
-      <header class="missions-coming-soon__head">
-        <h2 class="missions-coming-soon__title">Missions</h2>
-      </header>
-      <div class="missions-coming-soon__body">
-        <span class="missions-coming-soon__badge">Coming soon</span>
-        <p class="missions-coming-soon__message">
-          Daily and weekly missions are on the way. Check back soon.
-        </p>
+        <div v-else class="missions-dropdown-panel__inner">
+          <MissionsPanel
+            :active="open"
+            :load-active="loadActive"
+            :load-history="loadHistory"
+            @navigate="handleNavigate"
+          />
+        </div>
       </div>
-    </div>
-
-    <div v-else class="missions-dropdown-panel">
-      <MissionsPanel
-        :active="open"
-        :load-active="loadActive"
-        :load-history="loadHistory"
-        @navigate="handleNavigate"
-      />
-    </div>
-  </BaseDropdown>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -71,20 +146,24 @@ function handleNavigate() {
   background: var(--bg-elevated);
 }
 
-:deep(.base-dropdown__panel) {
-  width: min(440px, calc(100vw - 32px));
-  min-width: unset;
-  padding: 0;
-  background: color-mix(in srgb, var(--bg-elevated) 96%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-}
-
 .missions-dropdown-panel {
+  position: fixed;
+  z-index: 200;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - var(--navbar-height) - 24px);
+  overflow: hidden;
+}
+
+.missions-dropdown-panel__inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
 .missions-coming-soon {
@@ -136,19 +215,21 @@ function handleNavigate() {
   line-height: 1.5;
 }
 
-@media (max-width: 600px) {
-  :deep(.base-dropdown__panel) {
-    position: fixed;
-    top: calc(var(--navbar-height) + var(--space-xs));
-    left: var(--space-md);
-    right: var(--space-md);
-    width: auto;
-    max-width: none;
-    margin: 0;
-  }
+.missions-dropdown-enter-active,
+.missions-dropdown-leave-active {
+  transition: opacity 100ms ease, transform 100ms ease;
+}
 
-  .missions-dropdown-panel {
-    max-height: calc(100vh - var(--navbar-height) - var(--space-md) - var(--space-xs));
+.missions-dropdown-enter-from,
+.missions-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .missions-dropdown-enter-active,
+  .missions-dropdown-leave-active {
+    transition: none;
   }
 }
 </style>
