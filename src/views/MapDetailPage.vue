@@ -92,6 +92,29 @@ function toggleMapTweaker(event: Event) {
   tweakerAnchor.value = tweakerOpen.value ? (event.currentTarget as HTMLElement) : null
 }
 
+const bsrCopied = ref(false)
+let bsrCopiedTimer: ReturnType<typeof setTimeout> | null = null
+
+async function copyBsr() {
+  if (!map.value?.beatsaverCode) return
+  const text = `!bsr ${map.value.beatsaverCode}`
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+  }
+  bsrCopied.value = true
+  if (bsrCopiedTimer) clearTimeout(bsrCopiedTimer)
+  bsrCopiedTimer = setTimeout(() => { bsrCopied.value = false }, 1400)
+}
+
 const difficultyTabs = computed(() =>
   rankedDifficulties.value.map((d) => ({
     key: d.id,
@@ -426,6 +449,15 @@ watch(selectedStatsRange, () => fetchHistoricStats())
               <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
                 style="border-radius: 3px;" />
             </BaseButton>
+            <BaseButton v-if="map.beatsaverCode" size="sm" aria-label="Copy BSR" title="Copy BSR"
+              class="map-detail__bsr-btn" @click="copyBsr">
+              <span v-if="bsrCopied" class="map-detail__bsr-label">Copied!</span>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="14" />
+                <line x1="12" y1="18" x2="12" y2="19" />
+              </svg>
+            </BaseButton>
             <BaseButton v-if="activeDifficulty?.blLeaderboardId" size="sm"
               :href="`https://www.beatleader.com/leaderboard/global/${activeDifficulty.blLeaderboardId}`"
               aria-label="View on BeatLeader">
@@ -696,6 +728,12 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 .map-detail__links {
   display: flex;
   gap: var(--space-sm);
+}
+
+.map-detail__bsr-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: 0.02em;
 }
 
 .map-detail__stats-strip {
