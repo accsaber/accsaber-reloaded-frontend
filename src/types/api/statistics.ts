@@ -6,6 +6,8 @@ export interface MapAvgApResponse {
   mapAuthor: string
   coverUrl: string
   difficulty: string
+  characteristic?: string
+  beatsaverCode?: string | null
   categoryId: string
   categoryName: string
   averageWeightedAp: number
@@ -22,6 +24,8 @@ export interface MapRetryResponse {
   mapAuthor: string
   coverUrl: string
   difficulty: string
+  characteristic?: string
+  beatsaverCode?: string | null
   categoryId: string
   categoryName: string
   supersededCount: number
