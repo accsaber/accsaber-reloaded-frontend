@@ -331,30 +331,28 @@ watch(
         <div class="ps-card" @click="handleRowClick(row)">
           <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="40" />
           <div v-else class="ps-card__cover-placeholder" />
-          <div class="ps-card__info">
-            <span class="ps-card__line">
+          <div class="ps-card__grid">
+            <span class="ps-card__name-cell">
               <span class="ps-card__rank" :class="getRankClass(row.leaderboardRank as number)">#{{ row.leaderboardRank }}</span>
               <span class="ps-card__name" :title="(row.mapName as string)">{{ row.mapName }}</span>
-            </span>
-            <span class="ps-card__line ps-card__meta">
               <span class="ps-card__diff">{{ row.difficulty }}</span>
+            </span>
+            <span class="ps-card__acc">{{ ((row.accuracy as number) * 100).toFixed(2) }}%</span>
+
+            <span class="ps-card__meta-cell">
               <span class="ps-card__dot"
                 :style="{ background: categoryStore.getAccent(row.categoryCode as string) }" />
               <span class="ps-card__category">{{ row.category }}</span>
               <span class="ps-card__sep">·</span>
               <span class="ps-card__date">{{ formatRelativeDate(row.date as string) }}</span>
-              <template v-if="(row.streak115 as number | null) != null">
-                <span class="ps-card__sep">·</span>
-                <span>{{ row.streak115 }} 115s</span>
-              </template>
             </span>
-          </div>
-          <div class="ps-card__stats">
-            <span class="ps-card__acc">{{ ((row.accuracy as number) * 100).toFixed(2) }}%</span>
-            <span class="ps-card__ap-line">
-              <span class="ps-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
-              <span class="ps-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
+            <span class="ps-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
+
+            <span class="ps-card__streak-cell">
+              <template v-if="(row.streak115 as number | null) != null">{{ row.streak115 }} 115s</template>
+              <span v-else class="ps-card__sep">&ndash;</span>
             </span>
+            <span class="ps-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
           </div>
           <div class="ps-card__actions">
             <button v-if="isSelfProfile" class="ps-card__action-btn"
@@ -531,19 +529,26 @@ watch(
   background: var(--bg-overlay);
 }
 
-.ps-card__info {
+.ps-card__grid {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-sm);
+  row-gap: 2px;
+  align-items: center;
 }
 
-.ps-card__line {
+.ps-card__name-cell,
+.ps-card__meta-cell,
+.ps-card__streak-cell {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ps-card__rank {
@@ -567,17 +572,16 @@ watch(
   min-width: 0;
 }
 
-.ps-card__meta {
+.ps-card__diff {
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.ps-card__diff {
+.ps-card__meta-cell,
+.ps-card__streak-cell {
+  font-size: var(--text-caption);
   color: var(--text-secondary);
-  flex-shrink: 0;
 }
 
 .ps-card__dot {
@@ -604,35 +608,29 @@ watch(
   text-overflow: ellipsis;
 }
 
-.ps-card__stats {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  gap: 2px;
-}
-
 .ps-card__acc {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-primary);
-}
-
-.ps-card__ap-line {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  display: inline-flex;
-  gap: 4px;
-  align-items: baseline;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ps-card__ap {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   font-weight: 500;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ps-card__weighted {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ps-card__actions {

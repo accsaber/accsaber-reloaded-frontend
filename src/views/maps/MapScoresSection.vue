@@ -294,32 +294,26 @@ watch(
       <template #mobile-card="{ row }">
         <router-link :to="playerRowTo(row)" class="ms-card"
           :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }">
-          <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
-            #{{ row.rank }}
-            <span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
-          </span>
           <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
-          <div class="ms-card__info">
-            <span class="ms-card__line">
+          <div class="ms-card__grid">
+            <span class="ms-card__name-cell">
+              <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
+                #{{ row.rank }}<span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
+              </span>
               <span class="ms-card__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
               <CountryFlag :country="(row.country as string)" />
               <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
             </span>
-            <span class="ms-card__sub">
-              <span class="ms-card__date">{{ formatRelativeDate(row.date as string) }}</span>
-              <span v-if="(row.streak115 as number | null) != null && (row.streak115 as number) > 0"
-                class="ms-card__sub-meta">
-                <span class="ms-card__sep">·</span>
-                <span>{{ row.streak115 }} 115s</span>
-              </span>
-            </span>
-          </div>
-          <div class="ms-card__stats">
             <span class="ms-card__acc">{{ ((row.accuracy as number) * 100).toFixed(2) }}%</span>
-            <span class="ms-card__ap-line">
-              <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
-              <span class="ms-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
+
+            <span class="ms-card__date">{{ formatRelativeDate(row.date as string) }}</span>
+            <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
+
+            <span class="ms-card__streak-cell">
+              <template v-if="(row.streak115 as number | null) != null && (row.streak115 as number) > 0">{{ row.streak115 }} 115s</template>
+              <span v-else class="ms-card__sep">&ndash;</span>
             </span>
+            <span class="ms-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
           </div>
           <a v-if="getReplayUrl(row.blScoreId as number | null)" class="ms-card__detail-btn"
             :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
@@ -450,24 +444,28 @@ watch(
 }
 
 .ms-card__rank {
-  width: 36px;
-  text-align: right;
   flex-shrink: 0;
 }
 
-.ms-card__info {
+.ms-card__grid {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-sm);
+  row-gap: 2px;
+  align-items: center;
 }
 
-.ms-card__line {
+.ms-card__name-cell,
+.ms-card__streak-cell {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ms-card__name {
@@ -479,21 +477,9 @@ watch(
   min-width: 0;
 }
 
-.ms-card__sub {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+.ms-card__streak-cell {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ms-card__sub-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
+  color: var(--text-secondary);
 }
 
 .ms-card__sep {
@@ -501,38 +487,36 @@ watch(
 }
 
 .ms-card__date {
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
-}
-
-.ms-card__stats {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  gap: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ms-card__acc {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-primary);
-}
-
-.ms-card__ap-line {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  display: inline-flex;
-  gap: 4px;
-  align-items: baseline;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ms-card__ap {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   font-weight: 500;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ms-card__weighted {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ms-card__detail-btn {
