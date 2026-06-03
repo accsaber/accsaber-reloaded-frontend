@@ -10,6 +10,19 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { DIFF_COLOR } from '@/utils/constants'
+import { buildMapRoute } from '@/utils/mapRoute'
+
+function viewMapHref(item: MapDifficultyResponse): string {
+  const route = buildMapRoute({
+    beatsaverCode: item.beatsaverCode,
+    mapId: item.mapId,
+    difficulty: item.difficulty,
+    difficultyId: item.id,
+    characteristic: item.characteristic,
+  }) as { path: string; query: Record<string, string> }
+  const qs = new URLSearchParams(route.query).toString()
+  return qs ? `${route.path}?${qs}` : route.path
+}
 
 const searchInput = ref('')
 const search = useDebouncedRef(searchInput, 300)
@@ -177,7 +190,7 @@ const NEXT_STATUS: Partial<Record<MapDifficultyStatus, MapDifficultyStatus>> = {
             >
               → {{ NEXT_STATUS[item.status] }}
             </BaseButton>
-            <BaseButton size="sm" :href="`/maps/${item.mapId}?difficultyId=${item.id}`">View</BaseButton>
+            <BaseButton size="sm" :href="viewMapHref(item)">View</BaseButton>
           </div>
         </td>
       </template>

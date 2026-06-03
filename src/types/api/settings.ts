@@ -2,11 +2,14 @@ export type Visibility = 'public' | 'followers_only' | 'private'
 
 export type SettingGroup = 'privacy' | 'appearance'
 
+export type ReplayService = 'beatleader' | 'arcviewer'
+
 export type SettingKey =
   | 'privacy.followingVisibility'
   | 'privacy.rivalsVisibility'
   | 'appearance.theme'
   | 'appearance.colorScheme'
+  | 'appearance.primaryReplayService'
 
 export type SettingsBag = Record<string, unknown>
 
@@ -18,4 +21,5 @@ export interface PrivacySettings extends SettingsBag {
 export interface AppearanceSettings extends SettingsBag {
   'appearance.theme': string
   'appearance.colorScheme': string
+  'appearance.primaryReplayService': ReplayService
 }

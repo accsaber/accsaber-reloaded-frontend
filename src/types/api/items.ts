@@ -91,6 +91,14 @@ export interface ItemTypeResponse {
   createdAt: string
 }
 
+export interface TitleGlistenSpec {
+  enabled: boolean
+  highlight?: string
+  intervalMs?: number
+  durationMs?: number
+  bandPctOfDiagonal?: number
+}
+
 export interface TitleStateValue {
   atMs: number
   color?: string
@@ -99,10 +107,14 @@ export interface TitleStateValue {
   fontStyle?: 'normal' | 'italic'
   letterSpacingPx?: number
   effects?: VisualEffect[]
+  glisten?: TitleGlistenSpec
 }
+
+export type TitleFont = 'pixel_8bit' | (string & {})
 
 export interface TitleValue {
   text: string
+  font?: TitleFont
   states: TitleStateValue[]
   durationMs?: number
   loop?: Loop
@@ -124,22 +136,114 @@ export interface BorderShapePathValue {
 
 export interface BorderShapeStateValue {
   atMs: number
-  paths: BorderShapePathValue[]
+  paths?: BorderShapePathValue[]
   filters?: VisualEffect[]
+}
+
+export type BorderShapeRenderMode = 'path' | 'pixel'
+
+export type BorderShapeMotif = 'heart_climb' | (string & {})
+
+export interface ShapeSparkleSpec {
+  enabled: boolean
+  perSecond?: number
+  sizePx?: number
+  fadeMs?: number
+}
+
+export interface ShapeGlistenSpec {
+  enabled: boolean
+  intervalMs?: number
+  durationMs?: number
+  bandPctOfDiagonal?: number
+}
+
+export type PaletteStopName =
+  | 'outline'
+  | 'deepShadow'
+  | 'shadow'
+  | 'midShadow'
+  | 'base'
+  | 'midHighlight'
+  | 'highlight'
+  | 'apexHighlight'
+
+export type PaletteDerivationOp =
+  | { fn: 'darken'; of: PaletteStopName; amount: number }
+  | { fn: 'lighten'; of: PaletteStopName; amount: number }
+  | { fn: 'lerp'; from: PaletteStopName; to: PaletteStopName; at: number }
+
+export interface PaletteDerivation {
+  outline?: PaletteDerivationOp
+  deepShadow?: PaletteDerivationOp
+  midShadow?: PaletteDerivationOp
+  midHighlight?: PaletteDerivationOp
+  apexHighlight?: PaletteDerivationOp
+}
+
+export interface FrameRampBand {
+  upToPct: number
+  stop: PaletteStopName
+}
+
+export interface FrameRampSpec {
+  angleDeg: number
+  bands: FrameRampBand[]
+}
+
+export interface FrameStreaksPatternStep {
+  stop: PaletteStopName | null
+  lengthPx: number
+}
+
+export interface FrameStreaksSpec {
+  angleDeg: number
+  blendMode?: string
+  pattern: FrameStreaksPatternStep[]
+}
+
+export interface FrameSpec {
+  thicknessProportional?: number
+  thicknessMinPx?: number
+  thicknessMaxPx?: number
+  cornerRadiusProportional?: number
+  cornerRadiusMinPx?: number
+  outlineWidthPx?: number
+  ramp?: FrameRampSpec
+  streaks?: FrameStreaksSpec
 }
 
 export interface BorderShapeValue {
   viewBox?: string
   avatarMask?: string
+  renderMode?: BorderShapeRenderMode
+  pixelSize?: number
+  motif?: BorderShapeMotif
+  frame?: FrameSpec
+  paletteDerivation?: PaletteDerivation
+  sparkles?: ShapeSparkleSpec
+  glisten?: ShapeGlistenSpec
   states: BorderShapeStateValue[]
   durationMs?: number
   loop?: Loop
   easing?: Easing
 }
 
+export interface PixelMetalFill {
+  type: 'pixel_metal'
+  base: string
+  highlight: string
+  shadow: string
+}
+
+export type BorderColorFill =
+  | { type: 'solid'; hex: string }
+  | Gradient
+  | PixelMetalFill
+
 export interface BorderColorStateValue {
   atMs: number
-  fill: { type: 'solid'; hex: string } | Gradient
+  fill: BorderColorFill
   filters?: VisualEffect[]
 }
 

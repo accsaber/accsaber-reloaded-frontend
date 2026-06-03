@@ -26,4 +26,20 @@ export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'EXPERT' | 'EXPERT_PLUS'
 
 export type NewsStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 
-export type NewsType = 'BATCH' | 'CAMPAIGN' | 'MILESTONE_SET' | 'CURVE' | 'GENERAL'
+export type NewsType =
+  | 'BATCH'
+  | 'CAMPAIGN'
+  | 'MILESTONE_SET'
+  | 'CURVE'
+  | 'GENERAL'
+  | 'ITEMS'
+  | 'PLUGIN'
+
+export type SupersedesReason =
+  | 'Score improved'
+  | 'Worse score'
+  | 'Partial attempt'
+  | 'Complexity reweight'
+  | 'XP curve update'
+  | 'Statistics recalculated'
+  | 'User merge'

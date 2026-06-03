@@ -58,14 +58,7 @@ async function loadChart() {
     const gridColor = styles.getPropertyValue('--chart-grid').trim() || 'rgba(255,255,255,0.06)'
     const textColor = styles.getPropertyValue('--chart-text').trim() || '#8888a0'
     const resolvedAccent = props.accentColor ?? '#a855f7'
-
-    let fillColor: string
-    const rgbMatch = resolvedAccent.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
-    if (rgbMatch) {
-      fillColor = `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, 0.1)`
-    } else {
-      fillColor = resolvedAccent + '1a'
-    }
+    const fillColor = `color-mix(in srgb, ${resolvedAccent} 10%, transparent)`
 
     const formatDate = (ts: number): string => {
       const d = new Date(ts)

@@ -17,6 +17,7 @@ import { brightenRgb } from '@/utils/color'
 import { DIFFICULTY_ORDER, MAP_STATS_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
+import { buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MapScoresSection from './maps/MapScoresSection.vue'
@@ -26,14 +27,15 @@ const router = useRouter()
 const themeStore = useThemeStore()
 const categoryStore = useCategoryStore()
 
-const mapId = computed(() => route.params.mapId as string)
-
 const map = ref<PublicMapResponse | null>(null)
 const activeDifficultyId = ref<string>('')
 const diffStats = ref<MapDifficultyStatisticsResponse | null>(null)
 const complexityHistory = ref<MapComplexityHistoryResponse[]>([])
 const historicStats = ref<MapDifficultyStatisticsResponse[]>([])
 const topScoresFirstPage = ref<DifficultyScoreDisplay[]>([])
+
+const routeParam = computed(() => route.params.mapId as string)
+const mapId = computed(() => map.value?.id ?? (isUuid(routeParam.value) ? routeParam.value : ''))
 
 function onTopScoresLoaded(scores: DifficultyScoreDisplay[]) {
   topScoresFirstPage.value = scores
@@ -88,6 +90,29 @@ const tweakerAnchor = ref<HTMLElement | null>(null)
 function toggleMapTweaker(event: Event) {
   tweakerOpen.value = !tweakerOpen.value
   tweakerAnchor.value = tweakerOpen.value ? (event.currentTarget as HTMLElement) : null
+}
+
+const bsrCopied = ref(false)
+let bsrCopiedTimer: ReturnType<typeof setTimeout> | null = null
+
+async function copyBsr() {
+  if (!map.value?.beatsaverCode) return
+  const text = `!bsr ${map.value.beatsaverCode}`
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+  }
+  bsrCopied.value = true
+  if (bsrCopiedTimer) clearTimeout(bsrCopiedTimer)
+  bsrCopiedTimer = setTimeout(() => { bsrCopied.value = false }, 1400)
 }
 
 const difficultyTabs = computed(() =>
@@ -233,22 +258,44 @@ function formatDate(dateString: string): string {
   })
 }
 
+function resolveQueryDifficulty(
+  difficulties: PublicMapDifficultyResponse[],
+): PublicMapDifficultyResponse | null {
+  const queryDiffId = route.query.difficultyId as string | undefined
+  if (queryDiffId) {
+    return difficulties.find((d) => d.id === queryDiffId) ?? null
+  }
+  const queryDifficulty = route.query.difficulty as string | undefined
+  if (!queryDifficulty) return null
+  const targetEnum = slugToDifficulty(queryDifficulty)
+  const targetChar = ((route.query.characteristic as string | undefined) ?? 'Standard').toLowerCase()
+  return (
+    difficulties.find(
+      (d) => d.difficulty === targetEnum && d.characteristic.toLowerCase() === targetChar,
+    ) ?? null
+  )
+}
+
 async function fetchMap() {
   loading.value = true
   error.value = false
   map.value = null
 
   try {
-    const { getMap } = await import('@/api/maps')
-    map.value = await getMap(mapId.value)
+    const { getMap, getMapByCode } = await import('@/api/maps')
+    if (isUuid(routeParam.value)) {
+      map.value = await getMap(routeParam.value)
+    } else {
+      map.value = await getMapByCode(routeParam.value)
+    }
 
     const all = map.value.difficulties
     const ranked = all
       .filter((d) => d.status === 'RANKED')
       .sort((a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty))
-    const queryDiffId = route.query.difficultyId as string
-    if (queryDiffId && all.some(d => d.id === queryDiffId)) {
-      activeDifficultyId.value = queryDiffId
+    const matched = resolveQueryDifficulty(all)
+    if (matched) {
+      activeDifficultyId.value = matched.id
     } else if (ranked.length > 0) {
       activeDifficultyId.value = ranked[0].id
     } else if (all.length > 0) {
@@ -260,12 +307,16 @@ async function fetchMap() {
   loading.value = false
 }
 
-watch(() => route.query.difficultyId, (newId) => {
-  if (newId && typeof newId === 'string' && activeDifficultyId.value !== newId) {
-    if (map.value?.difficulties.some(d => d.id === newId)) {
-      activeDifficultyId.value = newId
+watch(() => [route.query.difficultyId, route.query.difficulty, route.query.characteristic], () => {
+  if (!map.value) return
+  const matched = resolveQueryDifficulty(map.value.difficulties)
+  if (matched) {
+    if (matched.id !== activeDifficultyId.value) {
+      activeDifficultyId.value = matched.id
     }
+    return
   }
+  if (!isUuid(routeParam.value)) fetchMap()
 })
 
 async function fetchDifficultyStats() {
@@ -299,19 +350,35 @@ async function fetchHistoricStats() {
   }
 }
 
-watch(mapId, () => fetchMap(), { immediate: true })
+watch(routeParam, () => fetchMap(), { immediate: true })
 
 watch(activeDifficultyId, (newId) => {
-  if (newId) {
-    topScoresFirstPage.value = []
-    fetchDifficultyStats()
-    fetchHistoricStats()
+  if (!newId || !map.value) return
+  topScoresFirstPage.value = []
+  fetchDifficultyStats()
+  fetchHistoricStats()
 
-    if (route.query.difficultyId !== newId) {
-      router.replace({ query: { ...route.query, difficultyId: newId } })
-    }
+  const diff = map.value.difficulties.find((d) => d.id === newId)
+  if (!diff) return
+
+  const target = buildMapRoute({
+    beatsaverCode: map.value.beatsaverCode,
+    mapId: map.value.id,
+    difficulty: diff.difficulty,
+    difficultyId: diff.id,
+    characteristic: diff.characteristic,
+  }) as { path: string; query: Record<string, string> }
+
+  if (target.path !== route.path || !sameQuery(target.query, route.query)) {
+    router.replace(target)
   }
 })
+
+function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boolean {
+  const aKeys = Object.keys(a)
+  if (aKeys.length !== Object.keys(b).length) return false
+  return aKeys.every((k) => a[k] === b[k])
+}
 
 watch(() => map.value?.id, () => {
   if (map.value) fetchComplexityHistory()
@@ -381,6 +448,15 @@ watch(selectedStatsRange, () => fetchHistoricStats())
               aria-label="View on BeatSaver">
               <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
                 style="border-radius: 3px;" />
+            </BaseButton>
+            <BaseButton v-if="map.beatsaverCode" size="sm" aria-label="Copy BSR" title="Copy BSR"
+              class="map-detail__bsr-btn" @click="copyBsr">
+              <span v-if="bsrCopied" class="map-detail__bsr-label">Copied!</span>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="14" />
+                <line x1="12" y1="18" x2="12" y2="19" />
+              </svg>
             </BaseButton>
             <BaseButton v-if="activeDifficulty?.blLeaderboardId" size="sm"
               :href="`https://www.beatleader.com/leaderboard/global/${activeDifficulty.blLeaderboardId}`"
@@ -502,7 +578,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 
 .map-detail>*:not(.map-detail__bg) {
   width: 100%;
-  max-width: 1030px;
+  max-width: 1100px;
   position: relative;
   z-index: 1;
 }
@@ -652,6 +728,12 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 .map-detail__links {
   display: flex;
   gap: var(--space-sm);
+}
+
+.map-detail__bsr-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  letter-spacing: 0.02em;
 }
 
 .map-detail__stats-strip {

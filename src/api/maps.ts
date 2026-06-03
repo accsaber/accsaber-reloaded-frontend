@@ -20,6 +20,13 @@ export function getMap(mapId: string): Promise<PublicMapResponse> {
   return get<PublicMapResponse>(`/maps/${mapId}`)
 }
 
+export function getMapByCode(
+  code: string,
+  params?: { difficulty?: string; characteristic?: string },
+): Promise<PublicMapResponse> {
+  return get<PublicMapResponse>(`/maps/by-code/${code}${buildQuery(params)}`)
+}
+
 export function getMapDifficulties(mapId: string): Promise<PublicMapDifficultyResponse[]> {
   return get<PublicMapDifficultyResponse[]>(`/maps/${mapId}/difficulties`)
 }

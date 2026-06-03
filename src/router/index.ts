@@ -125,6 +125,11 @@ const router = createRouter({
       component: () => import('@/views/SettingsPage.vue'),
     },
     {
+      path: '/credits',
+      name: 'credits',
+      component: () => import('@/views/CreditsPage.vue'),
+    },
+    {
       path: '/auth/callback',
       name: 'auth-callback',
       component: () => import('@/views/auth/AuthCallbackPage.vue'),
@@ -204,6 +209,18 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('@/views/staff/AdminPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/items/crates',
+      name: 'admin-crates-list',
+      redirect: { name: 'admin', query: { tab: 'items', itab: 'crates' } },
+      meta: { requiresStaff: true, requiredRole: 'ADMIN' },
+    },
+    {
+      path: '/admin/items/crates/:crateItemId',
+      name: 'admin-crate-editor',
+      component: () => import('@/views/staff/admin/items/CrateEditorPage.vue'),
       meta: { requiresStaff: true, requiredRole: 'ADMIN' },
     },
     {

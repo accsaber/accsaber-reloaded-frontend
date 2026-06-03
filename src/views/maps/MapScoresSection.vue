@@ -7,10 +7,13 @@ import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
+import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
+import { useSettingsStore } from '@/stores/settings'
 import type { UserRelationType } from '@/types/api/relations'
+import type { SupporterTier } from '@/types/api/supporters'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn } from '@/types/display'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -38,6 +41,23 @@ const emit = defineEmits<{
 const router = useRouter()
 const authStore = useAuthStore()
 const modifierStore = useModifierStore()
+const settingsStore = useSettingsStore()
+
+const replayService = computed(() => settingsStore.appearance['appearance.primaryReplayService'])
+const replayLabel = computed(() =>
+  replayService.value === 'arcviewer' ? 'Watch in ArcViewer' : 'Watch replay',
+)
+const replayIcon = computed(() =>
+  replayService.value === 'arcviewer'
+    ? 'https://beatleader.com/assets/ArcViewerIcon.webp'
+    : 'https://beatleader.com/assets/bs-pepe.gif',
+)
+function getReplayUrl(blScoreId: number | null | undefined): string | null {
+  if (blScoreId == null) return null
+  return replayService.value === 'arcviewer'
+    ? `https://allpoland.github.io/ArcViewer/?scoreID=${blScoreId}`
+    : `https://replay.beatleader.com/?scoreId=${blScoreId}`
+}
 
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
   defaultSort: 'ap',
@@ -74,7 +94,7 @@ const allColumns: TableColumn[] = [
   { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '80px' },
   { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
   { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
-  { key: 'detail', label: '', align: 'center', width: '40px', noLink: true },
+  { key: 'detail', label: '', align: 'center', width: '76px', noLink: true },
 ]
 
 const columns = computed(() =>
@@ -95,12 +115,14 @@ const rows = computed(() => {
       avatarUrl: s.avatarUrl,
       userName: s.userName,
       country: s.country,
+      supporterTier: s.supporterTier,
       accuracy: s.accuracy,
       score: s.score,
       ap: s.ap,
       weighted: s.weightedAp,
       streak115: s.streak115,
       date: s.date,
+      blScoreId: s.blScoreId,
     }
   })
 })
@@ -241,6 +263,7 @@ watch(
             :avatar-url="(row.avatarUrl as string)" :country="(row.country as string)">
             <span class="map-scores__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
             <CountryFlag :country="(row.country as string)" />
+            <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
           </PlayerTooltipTrigger>
         </div>
       </template>
@@ -251,45 +274,52 @@ watch(
       </template>
 
       <template #cell-detail="{ row }">
-        <button class="map-scores__detail-btn" aria-label="View score details"
-          @click="openDetail(row._userId as string, $event)">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-              stroke-linejoin="round" />
-            <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-          </svg>
-        </button>
+        <div class="map-scores__actions">
+          <a v-if="getReplayUrl(row.blScoreId as number | null)" class="map-scores__detail-btn"
+            :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
+            :aria-label="replayLabel" :title="replayLabel" @click.stop>
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+          </a>
+          <button class="map-scores__detail-btn" aria-label="View score details"
+            @click="openDetail(row._userId as string, $event)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
       </template>
 
       <template #mobile-card="{ row }">
         <router-link :to="playerRowTo(row)" class="ms-card"
           :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }">
-          <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
-            #{{ row.rank }}
-            <span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
-          </span>
           <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
-          <div class="ms-card__info">
-            <span class="ms-card__line">
+          <div class="ms-card__grid">
+            <span class="ms-card__name-cell">
+              <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
+                #{{ row.rank }}<span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
+              </span>
               <span class="ms-card__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
               <CountryFlag :country="(row.country as string)" />
+              <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
             </span>
-            <span class="ms-card__sub">
-              <span class="ms-card__date">{{ formatRelativeDate(row.date as string) }}</span>
-              <span v-if="(row.streak115 as number | null) != null && (row.streak115 as number) > 0"
-                class="ms-card__sub-meta">
-                <span class="ms-card__sep">·</span>
-                <span>{{ row.streak115 }} 115s</span>
-              </span>
-            </span>
-          </div>
-          <div class="ms-card__stats">
             <span class="ms-card__acc">{{ ((row.accuracy as number) * 100).toFixed(2) }}%</span>
-            <span class="ms-card__ap-line">
-              <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
-              <span class="ms-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
+
+            <span class="ms-card__date">{{ formatRelativeDate(row.date as string) }}</span>
+            <span class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
+
+            <span class="ms-card__streak-cell">
+              <template v-if="(row.streak115 as number | null) != null && (row.streak115 as number) > 0">{{ row.streak115 }} 115s</template>
+              <span v-else class="ms-card__sep">&ndash;</span>
             </span>
+            <span class="ms-card__weighted">/ {{ (row.weighted as number).toFixed(2) }}</span>
           </div>
+          <a v-if="getReplayUrl(row.blScoreId as number | null)" class="ms-card__detail-btn"
+            :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
+            :aria-label="replayLabel" :title="replayLabel" @click.stop>
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+          </a>
           <button class="ms-card__detail-btn" aria-label="View score details"
             @click.stop="openDetail(row._userId as string, $event)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -357,6 +387,15 @@ watch(
   color: var(--text-tertiary);
 }
 
+.map-scores__actions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
 .map-scores__detail-btn {
   position: relative;
   z-index: 1;
@@ -370,6 +409,7 @@ watch(
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
+  text-decoration: none;
   transition: color 120ms ease, border-color 120ms ease;
 }
 
@@ -404,24 +444,28 @@ watch(
 }
 
 .ms-card__rank {
-  width: 36px;
-  text-align: right;
   flex-shrink: 0;
 }
 
-.ms-card__info {
+.ms-card__grid {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-sm);
+  row-gap: 2px;
+  align-items: center;
 }
 
-.ms-card__line {
+.ms-card__name-cell,
+.ms-card__streak-cell {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ms-card__name {
@@ -433,21 +477,9 @@ watch(
   min-width: 0;
 }
 
-.ms-card__sub {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+.ms-card__streak-cell {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ms-card__sub-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
+  color: var(--text-secondary);
 }
 
 .ms-card__sep {
@@ -455,38 +487,36 @@ watch(
 }
 
 .ms-card__date {
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
-}
-
-.ms-card__stats {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  gap: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ms-card__acc {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-primary);
-}
-
-.ms-card__ap-line {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  display: inline-flex;
-  gap: 4px;
-  align-items: baseline;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ms-card__ap {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   font-weight: 500;
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ms-card__weighted {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .ms-card__detail-btn {
@@ -501,6 +531,7 @@ watch(
   color: var(--text-tertiary);
   cursor: pointer;
   flex-shrink: 0;
+  text-decoration: none;
   transition: color 120ms ease, border-color 120ms ease;
 }
 

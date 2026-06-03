@@ -41,7 +41,7 @@ export function usePageableRoute(options: PageableRouteOptions) {
     } else {
       query.page = String(page)
     }
-    router.replace({ query })
+    router.push({ query })
   }
 
   function setSort(key: string) {

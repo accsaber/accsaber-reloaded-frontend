@@ -3,6 +3,7 @@ import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
+import MissionsDropdown from '@/components/domain/MissionsDropdown.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminSubdomain, isRankingSubdomain, isStaffSubdomain, playerProfileHref } from '@/utils/subdomain'
@@ -84,6 +85,10 @@ const isRankingContext = computed(() =>
 
 const showNewsAction = computed(() =>
   !isAdminSubdomain && !(isRankingContext.value && authStore.isStaffAuthorized),
+)
+
+const showMissionsAction = computed(() =>
+  authStore.isLoggedIn && !isAdminSubdomain && !isRankingSubdomain,
 )
 
 const navItems = computed(() => {
@@ -195,6 +200,8 @@ onUnmounted(() => {
             <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
           </svg>
         </router-link>
+
+        <MissionsDropdown v-if="showMissionsAction" />
 
         <button type="button" class="navbar__search" @click="openSearch">
           <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"

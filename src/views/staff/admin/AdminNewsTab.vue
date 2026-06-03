@@ -6,8 +6,10 @@ import type {
   StaffNewsListParams,
   UpdateNewsRequest,
 } from '@/types/api/news'
+import type { NewsType } from '@/types/enums'
 
 const ALLOWED: ResourceKind[] = ['BATCH', 'CAMPAIGN', 'MILESTONE_SET', 'CURVE']
+const ALLOWED_STANDALONE: NewsType[] = ['GENERAL', 'ITEMS', 'PLUGIN']
 
 async function fetchPage(params: StaffNewsListParams) {
   const { listAllNews } = await import('@/api/admin/news')
@@ -34,6 +36,7 @@ async function onDelete(id: string, hard: boolean) {
   <NewsManagementView
     title="News"
     :allowed="ALLOWED"
+    :allowed-standalone="ALLOWED_STANDALONE"
     :fetch-page="fetchPage"
     :on-create="onCreate"
     :on-update="onUpdate"

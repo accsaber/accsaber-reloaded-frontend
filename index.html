@@ -17,18 +17,32 @@
 
     <script>
       ;(function () {
+        var root = document.documentElement
         var t = localStorage.getItem('theme')
         if (!t) {
           t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
         }
-        document.documentElement.setAttribute('data-theme', t)
+        root.setAttribute('data-theme', t)
+        var raw = localStorage.getItem('theme:tokens')
+        if (raw) {
+          try {
+            var tokens = JSON.parse(raw)
+            if (tokens && typeof tokens === 'object') {
+              for (var k in tokens) {
+                if (Object.prototype.hasOwnProperty.call(tokens, k) && typeof tokens[k] === 'string') {
+                  root.style.setProperty('--' + k.replace(/\./g, '-'), tokens[k])
+                }
+              }
+            }
+          } catch (_) { /* ignore malformed token cache */ }
+        }
       })()
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap"
       rel="stylesheet"
     />
   </head>

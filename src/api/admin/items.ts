@@ -43,6 +43,10 @@ export function getAdminItems(params?: AdminItemListParams): Promise<ItemRespons
   return get<ItemResponse[]>(`/admin/items${buildQuery(params)}`)
 }
 
+export function getAdminItem(id: string): Promise<ItemResponse> {
+  return get<ItemResponse>(`/admin/items/${id}`)
+}
+
 export function createItem(req: CreateItemRequest): Promise<ItemResponse> {
   return post<ItemResponse>('/admin/items', req)
 }

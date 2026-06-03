@@ -16,6 +16,7 @@ export function useTimeline(options: UseTimelineOptions): { tMs: Ref<number> } {
 
   let rafId: number | null = null
   let baseTime = 0
+  const docVisible = ref(typeof document === 'undefined' || !document.hidden)
 
   function tick(now: number) {
     tMs.value = now - baseTime
@@ -34,16 +35,29 @@ export function useTimeline(options: UseTimelineOptions): { tMs: Ref<number> } {
     rafId = null
   }
 
+  const onVisibilityChange = () => {
+    docVisible.value = !document.hidden
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange)
+  }
+
   watchEffect(() => {
     if (reducedMotion) {
       stop()
       return
     }
-    if (options.active()) start()
+    if (docVisible.value && options.active()) start()
     else stop()
   })
 
-  onUnmounted(stop)
+  onUnmounted(() => {
+    stop()
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  })
 
   return { tMs }
 }

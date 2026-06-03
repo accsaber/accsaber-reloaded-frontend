@@ -430,7 +430,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  max-width: 1030px;
+  max-width: 1070px;
   margin: 0 auto;
   width: 100%;
 }

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import ProfileBorderRenderer from '@/components/domain/ProfileBorderRenderer.vue'
+import TitleRenderer from '@/components/domain/TitleRenderer.vue'
 import type {
   BorderColorValue,
   BorderShapeValue,
   ItemResponse,
   ThemeValue,
-  TitleStateValue,
   TitleValue,
 } from '@/types/api/items'
+import { SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import {
   fillToCss,
-  gradientToCss,
   pickAssetUrl,
   readBackgroundValue,
   readBadgeValue,
@@ -32,24 +32,6 @@ const typeKey = computed(() => props.item.typeKey)
 const titleValue = computed<TitleValue | null>(() =>
   typeKey.value === 'title' ? readTitleValue(props.item.value) : null,
 )
-const titleState = computed<TitleStateValue | null>(() => titleValue.value?.states?.[0] ?? null)
-const titleStyle = computed<Record<string, string> | undefined>(() => {
-  if (!props.selected) return undefined
-  const state = titleState.value
-  if (!state) return undefined
-  const out: Record<string, string> = {}
-  if (state.gradient) {
-    out.background = gradientToCss(state.gradient)
-    out.webkitBackgroundClip = 'text'
-    out.backgroundClip = 'text'
-    out.color = 'transparent'
-  } else if (state.color) {
-    out.color = state.color
-  }
-  if (state.fontWeight) out.fontWeight = String(state.fontWeight)
-  if (state.fontStyle) out.fontStyle = state.fontStyle
-  return out
-})
 
 const borderColorValue = computed<BorderColorValue | null>(() =>
   typeKey.value === 'profile_border_color' ? readBorderColorValue(props.item.value) : null,
@@ -62,6 +44,25 @@ const borderColorBackground = computed<string | null>(() => {
 const borderShapeValue = computed<BorderShapeValue | null>(() =>
   typeKey.value === 'profile_border_shape' ? readBorderShapeValue(props.item.value) : null,
 )
+
+// Pixel-mode shapes need a paired color to render. When previewed standalone (no equipped
+// color), synthesize a representative palette so the preview still shows the frame.
+const shapePreviewColor = computed<BorderColorValue | null>(() => {
+  const shape = borderShapeValue.value
+  if (!shape || shape.renderMode !== 'pixel') return null
+  const tier = SUPPORTER_TIER_PALETTE.bronze
+  return {
+    states: [{
+      atMs: 0,
+      fill: {
+        type: 'pixel_metal',
+        shadow: tier.shadow,
+        base: tier.base,
+        highlight: tier.highlight,
+      },
+    }],
+  }
+})
 
 const badgeValue = computed(() =>
   typeKey.value === 'badge' ? readBadgeValue(props.item.value) : null,
@@ -120,8 +121,9 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     <span
       v-else-if="typeKey === 'title' && titleValue"
       class="item-preview__title"
-      :style="titleStyle"
-    >{{ titleValue.text }}</span>
+    >
+      <TitleRenderer :value="titleValue" />
+    </span>
 
     <span
       v-else-if="typeKey === 'profile_border_color' && borderColorBackground"
@@ -134,7 +136,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       class="item-preview__shape-wrap"
       aria-hidden="true"
     >
-      <ProfileBorderRenderer :shape="borderShapeValue" :color="null" />
+      <ProfileBorderRenderer :shape="borderShapeValue" :color="shapePreviewColor" />
     </span>
 
     <span
@@ -253,23 +255,30 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 }
 
 .item-preview__title {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 var(--space-sm);
   color: var(--text-primary);
   text-align: center;
-  padding: 0 var(--space-xs);
-  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Container-relative sizing: when the inventory cell scales, the title scales with it.
+   At a 100px cell the title text is ~10px; at 160px it's ~14.4px; clamped at the ends so
+   tiny cells stay legible and huge cells don't blow the text up beyond the tile. */
+.item-preview__title :deep(.title-renderer) {
+  font-size: clamp(0.7rem, 9cqi, 1.05rem);
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .item-preview__color-swatch {
   display: block;
-  width: 70%;
+  width: 65%;
   aspect-ratio: 1 / 1;
   border-radius: var(--radius-avatar);
   border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
@@ -278,7 +287,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 .item-preview__shape-wrap {
   position: relative;
   display: block;
-  width: 70%;
+  width: 65%;
   aspect-ratio: 1 / 1;
   color: var(--cell-accent, var(--text-primary));
 }

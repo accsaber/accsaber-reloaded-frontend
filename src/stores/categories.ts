@@ -1,4 +1,5 @@
 import { getCategories } from '@/api/categories'
+import { useThemeStore } from '@/stores/theme'
 import type { CategoryResponse } from '@/types/api/categories'
 import type { CategoryCode, CategoryInfo } from '@/types/display'
 import { defineStore } from 'pinia'
@@ -15,15 +16,16 @@ const CATEGORY_COLORS: Record<string, { accent: string; tint: string; tintLight:
 
 const DEFAULT_COLOR = { accent: '#a855f7', tint: '#2d1650', tintLight: '#ead4fd' }
 
-const XP_INFO: CategoryInfo = {
-  code: 'xp',
-  name: 'XP',
-  accent: CATEGORY_COLORS.xp.accent,
-  tint: CATEGORY_COLORS.xp.tint,
-  tintLight: CATEGORY_COLORS.xp.tintLight,
+function readCssAccent(code: string): string {
+  const fallback = CATEGORY_COLORS[code]?.accent ?? DEFAULT_COLOR.accent
+  if (typeof document === 'undefined') return fallback
+  const cssVar = '--accent-' + code.replace(/_/g, '-')
+  const val = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()
+  return val || fallback
 }
 
 export const useCategoryStore = defineStore('categories', () => {
+  const themeStore = useThemeStore()
   const categories = ref<CategoryResponse[]>([])
   const loaded = ref(false)
 
@@ -44,17 +46,29 @@ export const useCategoryStore = defineStore('categories', () => {
   })
 
   const categoryInfoList = computed<CategoryInfo[]>(() => {
+    void themeStore.theme
+    void themeStore.activeTokens
     const list = categories.value.map((cat) => {
-      const colors = CATEGORY_COLORS[cat.code] ?? DEFAULT_COLOR
+      const fallback = CATEGORY_COLORS[cat.code] ?? DEFAULT_COLOR
       return {
         code: cat.code,
         name: cat.name,
-        accent: colors.accent,
-        tint: colors.tint,
-        tintLight: colors.tintLight,
+        accent: readCssAccent(cat.code),
+        tint: fallback.tint,
+        tintLight: fallback.tintLight,
       }
     })
-    return [...list, XP_INFO]
+    const xpFallback = CATEGORY_COLORS.xp
+    return [
+      ...list,
+      {
+        code: 'xp',
+        name: 'XP',
+        accent: readCssAccent('xp'),
+        tint: xpFallback.tint,
+        tintLight: xpFallback.tintLight,
+      },
+    ]
   })
 
   const categoryInfoByCode = computed(() => {
@@ -78,7 +92,7 @@ export const useCategoryStore = defineStore('categories', () => {
   }
 
   function getAccent(code: string): string {
-    return CATEGORY_COLORS[code]?.accent ?? DEFAULT_COLOR.accent
+    return readCssAccent(code)
   }
 
   async function fetchCategories(): Promise<void> {

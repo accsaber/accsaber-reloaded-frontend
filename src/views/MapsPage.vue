@@ -26,6 +26,7 @@ import type { Page } from '@/types/pagination'
 import { groupBatchByCategory } from '@/utils/batches'
 import { formatRelativeDate } from '@/utils/formatters'
 import { toMapDisplay } from '@/utils/mappers'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
@@ -78,10 +79,20 @@ const unplayedOnly = computed<boolean>({
   },
 })
 const playlistDropdownOpen = ref(false)
-const { playlistCategories, downloadPlaylist: dlPlaylist, downloadBatchPlaylist } = usePlaylistDownload()
+const playlistUnplayedOnly = ref(false)
+const {
+  playlistCategories,
+  downloadPlaylist: dlPlaylist,
+  downloadMissingPlaylist: dlMissingPlaylist,
+  downloadBatchPlaylist,
+} = usePlaylistDownload()
 
 function downloadPlaylist(categoryCode: string) {
-  dlPlaylist(categoryCode)
+  if (playlistUnplayedOnly.value && authStore.userId) {
+    dlMissingPlaylist(authStore.userId, categoryCode)
+  } else {
+    dlPlaylist(categoryCode)
+  }
   playlistDropdownOpen.value = false
 }
 
@@ -210,6 +221,8 @@ const listRows = computed(() =>
     complexity: m.complexity,
     totalScores: m.totalScores ?? 0,
     rankedAt: m.rankedAt ?? '',
+    beatsaverCode: m.beatsaverCode,
+    characteristic: m.characteristic,
   }))
 )
 
@@ -291,16 +304,24 @@ async function fetchBatches() {
   batchLoading.value = false
 }
 
-function mapRouteTo(mapId: string, difficultyId?: string): RouteLocationRaw {
-  return {
-    name: 'map-detail',
-    params: { mapId },
-    query: difficultyId ? { difficultyId } : undefined,
-  }
+function mapRouteTo(m: Pick<MapDisplay, 'id' | 'difficultyId' | 'difficulty' | 'characteristic' | 'beatsaverCode'>): RouteLocationRaw {
+  return buildMapRoute({
+    beatsaverCode: m.beatsaverCode ?? null,
+    mapId: m.id,
+    difficulty: m.difficulty,
+    difficultyId: m.difficultyId,
+    characteristic: m.characteristic ?? null,
+  })
 }
 
 function listRowTo(row: Record<string, unknown>): RouteLocationRaw {
-  return mapRouteTo(row.id as string, row.difficultyId as string)
+  return mapRouteTo({
+    id: row.id as string,
+    difficultyId: row.difficultyId as string,
+    difficulty: row.difficulty as string,
+    characteristic: row.characteristic as string | undefined,
+    beatsaverCode: row.beatsaverCode as string | undefined,
+  })
 }
 
 function batchDifficultiesByCategory(batch: PublicBatchResponse) {
@@ -367,6 +388,10 @@ watch(
           </template>
           <div class="maps-page__playlist-menu">
             <span class="maps-page__playlist-title">Download playlists...</span>
+            <label v-if="authStore.isLoggedIn" class="maps-page__playlist-toggle">
+              <input v-model="playlistUnplayedOnly" type="checkbox" class="maps-page__playlist-checkbox" />
+              <span>Only your unplayed maps</span>
+            </label>
             <BaseButton v-for="cat in playlistCategories" :key="cat.code" size="sm" @click="downloadPlaylist(cat.code)">
               <span class="maps-page__playlist-cat-dot" :style="{ background: cat.accent }" />
               {{ cat.name }}
@@ -440,7 +465,7 @@ watch(
         <template v-else>
           <div class="maps-page__grid">
             <MapCard v-for="m in mapDisplays" :key="m.difficultyId" :map="m"
-              :to="mapRouteTo(m.id, m.difficultyId)" />
+              :to="mapRouteTo(m)" />
           </div>
         </template>
       </template>
@@ -539,7 +564,7 @@ watch(
                 </div>
                 <div class="maps-page__batch-cards">
                   <MapCardCompact v-for="m in group.diffs" :key="m.difficultyId" :map="m"
-                    :to="mapRouteTo(m.id, m.difficultyId)" />
+                    :to="mapRouteTo(m)" />
                 </div>
               </div>
             </div>
@@ -856,7 +881,7 @@ watch(
   justify-content: space-between;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
-  background: var(--tint-overall);
+  background: color-mix(in srgb, var(--accent-overall) 12%, transparent);
   border: 1px solid var(--accent-overall);
   border-radius: var(--radius-input);
   color: var(--accent-overall);
@@ -869,11 +894,7 @@ watch(
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.maps-page__playlist-btn:hover {
-  background: color-mix(in srgb, var(--accent-overall) 22%, var(--bg-base));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-overall) 30%, transparent);
-}
-
+.maps-page__playlist-btn:hover,
 .maps-page__playlist-btn--active {
   background: color-mix(in srgb, var(--accent-overall) 22%, var(--bg-base));
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent-overall) 30%, transparent);
@@ -908,6 +929,21 @@ watch(
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.maps-page__playlist-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-caption);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.maps-page__playlist-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 @media (max-width: 767px) {

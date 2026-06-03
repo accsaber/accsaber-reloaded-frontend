@@ -5,7 +5,7 @@ import { NEWS_TYPE_ACCENT } from '@/utils/constants'
 import { computed, onMounted, ref } from 'vue'
 
 const DISMISS_KEY = 'accsaber:news-banner-dismissed'
-const WINDOW_MS = 24 * 60 * 60 * 1000
+const WINDOW_MS = 7 * 24 * 60 * 60 * 1000
 
 const news = ref<PublicNewsResponse | null>(null)
 const dismissed = ref(false)

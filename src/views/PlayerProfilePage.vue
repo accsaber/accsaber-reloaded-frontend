@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
@@ -7,17 +8,23 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import NameHistoryPopover from '@/components/domain/NameHistoryPopover.vue'
+import PinnedScoresSection from '@/components/domain/PinnedScoresSection.vue'
 import ProfileBadgesRow from '@/components/domain/ProfileBadgesRow.vue'
+import ProfileBioEditor from '@/components/domain/ProfileBioEditor.vue'
 import RelationActions from '@/components/domain/RelationActions.vue'
 import RelationCountsBar from '@/components/domain/RelationCountsBar.vue'
+import SupporterProfileSection from '@/components/domain/SupporterProfileSection.vue'
+import { useSupporter } from '@/composables/useSupporter'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useInventoryStore } from '@/stores/inventory'
 import { useRelationsStore } from '@/stores/relations'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
-import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
+import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
 import {
   pickAssetUrl,
@@ -68,6 +75,18 @@ const isSelfProfile = computed(
   () => authStore.isLoggedIn && authStore.userId !== null && authStore.userId === userId.value,
 )
 
+const { state: supporterState } = useSupporter(() => userId.value)
+
+// Source-of-truth for active-supporter status: the inline `supporterTier` field that the
+// backend ships on UserResponse. The separate /supporter fetch fills in extras (lifetime,
+// balance, since-date) but isn't needed just to know "is this user a supporter."
+const profileOwnerTier = computed(
+  () => user.value?.supporterTier ?? supporterState.value?.currentTier ?? null,
+)
+const isProfileOwnerSupporter = computed(() => profileOwnerTier.value != null)
+const pinnedSlotLimit = computed(() => (isProfileOwnerSupporter.value ? 6 : 3))
+const bioCharLimit = computed(() => (isProfileOwnerSupporter.value ? 8000 : 4000))
+
 const equipped = computed<EquippedItemsResponse>(() => {
   if (isSelfProfile.value && inventoryStore.equippedUserId === userId.value) {
     return inventoryStore.equipped
@@ -107,6 +126,150 @@ watch(() => route.query.category, (newQueryCategory) => {
 })
 
 const scoreSearch = ref('')
+const editMode = ref(false)
+const nameDraft = ref('')
+const nameSaving = ref(false)
+const nameError = ref<string | null>(null)
+const nameInputRef = ref<HTMLInputElement | null>(null)
+
+const {
+  enabled: syncEnabled,
+  saving: syncSaving,
+  resyncQueued: syncResyncQueued,
+  fetch: fetchSyncSetting,
+  set: setSyncName,
+  reset: resetSyncNotice,
+} = useNameSyncSetting()
+
+function enterEditMode() {
+  if (!user.value) return
+  nameDraft.value = user.value.name
+  nameError.value = null
+  editMode.value = true
+  fetchSyncSetting()
+}
+
+function exitEditMode() {
+  editMode.value = false
+  nameError.value = null
+  resetSyncNotice()
+}
+
+async function saveName() {
+  if (!user.value) return
+  const trimmed = nameDraft.value.trim()
+  if (!trimmed) {
+    nameError.value = 'Name cannot be empty.'
+    return
+  }
+  if (trimmed.length > 64) {
+    nameError.value = 'Name must be 64 characters or fewer.'
+    return
+  }
+  if (trimmed === user.value.name) {
+    nameInputRef.value?.blur()
+    return
+  }
+  nameSaving.value = true
+  nameError.value = null
+  try {
+    const { updateMyProfile } = await import('@/api/users')
+    await updateMyProfile({ name: trimmed })
+    user.value = { ...user.value, name: trimmed }
+    nameInputRef.value?.blur()
+    fetchSyncSetting()
+  } catch (err) {
+    nameError.value = getApiErrorMessage(err, 'Could not save your name.')
+  } finally {
+    nameSaving.value = false
+  }
+}
+
+function cancelNameEdit() {
+  if (!user.value) return
+  nameDraft.value = user.value.name
+  nameError.value = null
+  nameInputRef.value?.blur()
+}
+
+function onBioSaved(bio: string) {
+  if (!user.value) return
+  user.value = { ...user.value, bio }
+}
+
+const pinnedScores = ref<PinnedScoreResponse[]>([])
+const pinnedLoading = ref(false)
+const pinPending = ref<Set<string>>(new Set())
+
+const pinnedScoreIds = computed(() => new Set(pinnedScores.value.map((p) => p.score.id)))
+const canPinMore = computed(() => pinnedScores.value.length < pinnedSlotLimit.value)
+
+async function fetchPinnedScores() {
+  pinnedLoading.value = true
+  try {
+    const { getUserPinnedScores } = await import('@/api/users')
+    pinnedScores.value = await getUserPinnedScores(userId.value)
+  } catch {
+    pinnedScores.value = []
+  }
+  pinnedLoading.value = false
+}
+
+function buildPinnedPayload(
+  ids: string[],
+  commentOverride?: { scoreId: string, comment: string | null },
+) {
+  const existingCommentByScoreId = new Map(
+    pinnedScores.value.map((p) => [p.score.id, p.comment]),
+  )
+  return ids.map((id, displayOrder) => {
+    const comment = commentOverride?.scoreId === id
+      ? commentOverride.comment
+      : existingCommentByScoreId.get(id) ?? null
+    return { scoreId: id, displayOrder, comment }
+  })
+}
+
+async function onPinToggle(scoreId: string) {
+  if (!isSelfProfile.value) return
+  if (pinPending.value.has(scoreId)) return
+  const currentIds = pinnedScores.value.map((p) => p.score.id)
+  const isCurrentlyPinned = currentIds.includes(scoreId)
+  const nextIds = isCurrentlyPinned
+    ? currentIds.filter((id) => id !== scoreId)
+    : [...currentIds, scoreId]
+  if (nextIds.length > pinnedSlotLimit.value) return
+
+  pinPending.value = new Set([...pinPending.value, scoreId])
+  try {
+    const { updateMyProfile } = await import('@/api/users')
+    await updateMyProfile({ pinnedScores: buildPinnedPayload(nextIds) })
+    await fetchPinnedScores()
+  } catch {
+  } finally {
+    const next = new Set(pinPending.value)
+    next.delete(scoreId)
+    pinPending.value = next
+  }
+}
+
+async function onUnpinFromCard(scoreId: string) {
+  await onPinToggle(scoreId)
+}
+
+async function onUpdateComment(payload: { scoreId: string, comment: string | null }) {
+  if (!isSelfProfile.value) return
+  const currentIds = pinnedScores.value.map((p) => p.score.id)
+  if (!currentIds.includes(payload.scoreId)) return
+  try {
+    const { updateMyProfile } = await import('@/api/users')
+    await updateMyProfile({
+      pinnedScores: buildPinnedPayload(currentIds, payload),
+    })
+    await fetchPinnedScores()
+  } catch {
+  }
+}
 
 const profileTabs = [
   { key: 'scores', label: 'Scores' },
@@ -125,7 +288,7 @@ const accent = computed(() => categoryStore.getAccent(activeCategory.value))
 
 const totalXpDiff = computed(() => {
   if (!statsDiff.value) return 0
-  return (statsDiff.value.scoreXpDiff ?? 0) + (statsDiff.value.milestoneXpDiff ?? 0) + (statsDiff.value.milestoneSetBonusXpDiff ?? 0)
+  return (statsDiff.value.scoreXpDiff ?? 0) + (statsDiff.value.milestoneXpDiff ?? 0) + (statsDiff.value.milestoneSetBonusXpDiff ?? 0) + (statsDiff.value.missionXpDiff ?? 0)
 })
 
 async function fetchStatsDiff() {
@@ -188,6 +351,8 @@ async function fetchProfile() {
   xpStats.value = null
   localEquipped.value = {}
   ownedBadges.value = []
+  pinnedScores.value = []
+  pinPending.value = new Set()
 
   try {
     const { getUser, getUserLevel, getUserAllStatistics } = await import('@/api/users')
@@ -226,6 +391,7 @@ async function fetchProfile() {
     }
 
     fetchStatsDiff()
+    fetchPinnedScores()
   } catch {
     error.value = true
     user.value = null
@@ -234,6 +400,7 @@ async function fetchProfile() {
     xpStats.value = null
     localEquipped.value = {}
     ownedBadges.value = []
+    pinnedScores.value = []
   }
   loading.value = false
 }
@@ -363,6 +530,12 @@ watch(activeCategory, (newCategory) => {
                     (statsDiff?.milestoneSetBonusXpDiff ?? 0) >= 0 ? '+' : '' }}{{
                       Math.round(statsDiff?.milestoneSetBonusXpDiff ?? 0) }}</span>
                 </span>
+                <span class="profile-hero__xp-tooltip-row">
+                  <span class="profile-hero__xp-tooltip-label">Mission XP</span>
+                  <span class="profile-hero__xp-tooltip-value profile-hero__xp-tooltip-value--mission">{{
+                    (statsDiff?.missionXpDiff ?? 0) >= 0 ? '+' : '' }}{{ Math.round(statsDiff?.missionXpDiff ?? 0)
+                    }}</span>
+                </span>
               </span>
             </span>
           </span>
@@ -372,15 +545,64 @@ watch(activeCategory, (newCategory) => {
           <div class="profile-hero__top-row">
             <div class="profile-hero__name-col">
               <div class="profile-hero__name-row">
-                <h1 class="profile-hero__name">{{ user.name }}</h1>
+                <template v-if="editMode && isSelfProfile">
+                  <input ref="nameInputRef" v-model="nameDraft" type="text" maxlength="64"
+                    class="profile-hero__name profile-hero__name-input"
+                    :class="{ 'profile-hero__name-input--error': !!nameError }"
+                    :disabled="nameSaving" aria-label="Edit display name"
+                    @keydown.enter.prevent="saveName" @keydown.escape.prevent="cancelNameEdit" />
+                </template>
+                <template v-else>
+                  <h1 class="profile-hero__name">{{ user.name }}</h1>
+                  <NameHistoryPopover :user-id="userId" :current-name="user.name" />
+                </template>
                 <CountryFlag :country="user.country" />
                 <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
               </div>
+              <p v-if="editMode && nameError" class="profile-hero__name-error">{{ nameError }}</p>
+              <p v-else-if="editMode && isSelfProfile" class="profile-hero__name-hint">Press Enter to save your name.</p>
+
+              <div v-if="editMode && isSelfProfile && syncEnabled !== null" class="profile-hero__sync">
+                <label class="profile-hero__sync-row">
+                  <input type="checkbox" class="profile-hero__sync-check"
+                    :checked="syncEnabled" :disabled="syncSaving"
+                    @change="setSyncName(($event.target as HTMLInputElement).checked)" />
+                  <span class="profile-hero__sync-label">Sync display name from BeatLeader / ScoreSaber</span>
+                </label>
+                <p class="profile-hero__sync-help">
+                  When off, your custom name stays put. When on, your platform name overwrites it once a day.
+                </p>
+                <p v-if="syncResyncQueued" class="profile-hero__sync-notice">
+                  Will resync on next refresh (4 AM daily).
+                </p>
+              </div>
               <ProfileBadgesRow v-if="ownedBadges.length" :badges="ownedBadges" class="profile-hero__badges" />
+              <SupporterProfileSection
+                v-if="supporterState"
+                :state="supporterState"
+                :is-self-profile="isSelfProfile"
+                class="profile-hero__supporter"
+              />
             </div>
 
             <div class="profile-hero__top-right">
               <div class="profile-hero__links">
+                <BaseButton v-if="isSelfProfile" size="sm"
+                  :aria-label="editMode ? 'Exit edit mode' : 'Edit profile'"
+                  :title="editMode ? 'Exit edit mode' : 'Edit profile'"
+                  :variant="editMode ? 'primary' : 'default'"
+                  @click="editMode ? exitEditMode() : enterEditMode()">
+                  <svg v-if="editMode" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                  <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
+                  </svg>
+                </BaseButton>
                 <BaseButton size="sm" :href="`https://www.beatleader.com/u/${user.blId ?? user.id}`"
                   aria-label="View on BeatLeader">
                   <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
@@ -467,6 +689,19 @@ watch(activeCategory, (newCategory) => {
       </div>
 
       <template v-if="!user.banned && !isBlockedByMe">
+        <section v-if="editMode && isSelfProfile" class="profile-page__bio" aria-label="Edit bio">
+          <h2 class="profile-page__bio-label">About</h2>
+          <ProfileBioEditor :initial-bio="user.bio ?? ''" :max-chars="bioCharLimit" @saved="onBioSaved" @cancel="exitEditMode" />
+        </section>
+        <section v-else-if="user.bio" class="profile-page__bio" aria-label="About this player">
+          <h2 class="profile-page__bio-label">About</h2>
+          <div class="profile-page__bio-body" v-html="user.bio" />
+        </section>
+
+        <PinnedScoresSection :user-id="userId" :pinned="pinnedScores" :loading="pinnedLoading"
+          :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
+          @unpin="onUnpinFromCard" @update-comment="onUpdateComment" />
+
         <div class="profile-page__tabs-row">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
           <SearchBox v-if="activeTab === 'scores'" v-model="scoreSearch" placeholder="Search maps..." />
@@ -474,7 +709,8 @@ watch(activeCategory, (newCategory) => {
 
         <div class="profile-page__content">
           <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
-            :search="scoreSearch" />
+            :search="scoreSearch" :is-self-profile="isSelfProfile" :pinned-score-ids="pinnedScoreIds"
+            :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle" />
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
             :xp-stats="xpStats" />
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
@@ -497,7 +733,7 @@ watch(activeCategory, (newCategory) => {
 
 .profile-page>*:not(.profile-page__bg) {
   width: 100%;
-  max-width: 1070px;
+  max-width: 1140px;
   position: relative;
   z-index: 1;
 }
@@ -608,6 +844,11 @@ watch(activeCategory, (newCategory) => {
   max-width: none !important;
 }
 
+.profile-hero__supporter {
+  margin-top: var(--space-sm);
+  align-self: flex-start;
+}
+
 .profile-hero__category-tabs {
   display: flex;
   justify-content: flex-start;
@@ -713,6 +954,10 @@ watch(activeCategory, (newCategory) => {
   color: var(--tier-platinum);
 }
 
+.profile-hero__xp-tooltip-value--mission {
+  color: var(--tier-diamond);
+}
+
 .profile-hero__details {
   display: flex;
   flex-direction: column;
@@ -743,6 +988,84 @@ watch(activeCategory, (newCategory) => {
   color: var(--text-primary);
   margin: 0;
   letter-spacing: -0.01em;
+}
+
+.profile-hero__name-input {
+  display: inline-block;
+  min-width: 200px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px dashed var(--bg-overlay);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.profile-hero__name-input:focus,
+.profile-hero__name-input:hover {
+  border-bottom-color: var(--accent);
+}
+
+.profile-hero__name-input--error,
+.profile-hero__name-input--error:focus {
+  border-bottom-color: var(--error);
+}
+
+.profile-hero__name-hint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.profile-hero__name-error {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--error);
+}
+
+.profile-hero__sync {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--space-xs);
+  max-width: 480px;
+}
+
+.profile-hero__sync-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  font-size: var(--text-caption);
+  color: var(--text-primary);
+}
+
+.profile-hero__sync-check {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.profile-hero__sync-check:disabled {
+  cursor: progress;
+}
+
+.profile-hero__sync-label {
+  font-weight: 500;
+}
+
+.profile-hero__sync-help {
+  margin: 0;
+  padding-left: 22px;
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.profile-hero__sync-notice {
+  margin: 0;
+  padding-left: 22px;
+  font-size: var(--text-caption);
+  color: var(--accent);
 }
 
 .profile-hero__banned {
@@ -871,6 +1194,121 @@ watch(activeCategory, (newCategory) => {
   background: color-mix(in srgb, var(--tier-bronze) 20%, transparent);
   color: var(--tier-bronze);
   box-shadow: 0 0 8px color-mix(in srgb, var(--tier-bronze) 30%, transparent);
+}
+
+.profile-page__bio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm) var(--space-md);
+}
+
+.profile-page__bio-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.profile-page__bio-body {
+  color: var(--text-primary);
+  font-size: var(--text-body);
+  line-height: 1.65;
+}
+
+.profile-page__bio-body :deep(*:first-child) {
+  margin-top: 0;
+}
+
+.profile-page__bio-body :deep(*:last-child) {
+  margin-bottom: 0;
+}
+
+.profile-page__bio-body :deep(h3) {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.4em 0 0.4em;
+}
+
+.profile-page__bio-body :deep(h4),
+.profile-page__bio-body :deep(h5),
+.profile-page__bio-body :deep(h6) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.2em 0 0.4em;
+}
+
+.profile-page__bio-body :deep(p) {
+  margin: 0 0 0.8em;
+}
+
+.profile-page__bio-body :deep(ul),
+.profile-page__bio-body :deep(ol) {
+  padding-left: 1.4em;
+  margin: 0 0 0.8em;
+}
+
+.profile-page__bio-body :deep(li) {
+  margin-bottom: 0.2em;
+}
+
+.profile-page__bio-body :deep(blockquote) {
+  margin: 0.6em 0 1em;
+  padding-left: var(--space-md);
+  color: var(--text-secondary);
+  font-style: italic;
+  border-left: 1px solid var(--bg-overlay);
+}
+
+.profile-page__bio-body :deep(code),
+.profile-page__bio-body :deep(tt) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  color: var(--accent);
+}
+
+.profile-page__bio-body :deep(pre) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-card);
+  background: var(--bg-elevated);
+  overflow-x: auto;
+  margin: 0 0 0.8em;
+}
+
+.profile-page__bio-body :deep(pre code) {
+  padding: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.profile-page__bio-body :deep(a) {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  transition: opacity 120ms ease;
+}
+
+.profile-page__bio-body :deep(a:hover) {
+  opacity: 0.8;
+}
+
+.profile-page__bio-body :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--bg-overlay);
+  margin: 1.2em 0;
+}
+
+.profile-page__bio-body :deep(small) {
+  font-size: 0.85em;
+  color: var(--text-secondary);
 }
 
 .profile-page__tabs-row {

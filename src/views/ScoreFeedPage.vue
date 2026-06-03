@@ -39,8 +39,12 @@ const modalUserId = ref('')
 
 function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
   return {
+    scoreId: entry.key,
     mapId: entry.mapId,
     mapDifficultyId: entry.mapDifficultyId,
+    beatsaverCode: entry.beatsaverCode,
+    characteristic: entry.characteristic,
+    rawDifficulty: entry.rawDifficulty,
     mapName: entry.mapName,
     artistName: entry.artistName,
     difficulty: entry.difficulty,

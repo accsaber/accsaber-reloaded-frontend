@@ -27,6 +27,7 @@ export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
     avgAccuracy: entry.averageAcc,
     rankedPlays: entry.rankedPlays,
     playerInactive: entry.playerInactive,
+    supporterTier: entry.supporterTier ?? null,
   }
 }
 
@@ -42,6 +43,7 @@ export function toXpPlayerDisplay(entry: XpLeaderboardResponse): XpPlayerDisplay
     totalXp: entry.totalXp,
     level: entry.level,
     playerInactive: entry.playerInactive,
+    supporterTier: entry.supporterTier ?? null,
   }
 }
 
@@ -51,8 +53,12 @@ export function toScoreDisplay(
   categoryCode?: CategoryCode,
 ): ScoreDisplay {
   return {
+    scoreId: score.id,
     mapId: score.mapId,
     mapDifficultyId: score.mapDifficultyId,
+    beatsaverCode: score.beatsaverCode ?? null,
+    characteristic: score.characteristic,
+    rawDifficulty: score.difficulty,
     mapName: score.songName ?? 'Unknown Map',
     artistName: score.songAuthor,
     difficulty: formatDifficulty(score.difficulty),
@@ -79,6 +85,10 @@ export function toScoreDisplay(
     rankWhenSet: score.rankWhenSet ?? undefined,
     blScoreId: score.blScoreId ?? undefined,
     mapAuthor: score.mapAuthor,
+    active: score.active,
+    partial: score.partial,
+    supersedesReason: score.supersedesReason,
+    supporterTier: score.supporterTier ?? null,
   }
 }
 
@@ -97,6 +107,7 @@ export function toMapDisplay(
     categoryCode: getCategoryCode(diff.categoryId) ?? 'overall',
     difficulty: diff.difficulty,
     difficultyLabel: formatDifficulty(diff.difficulty),
+    characteristic: diff.characteristic,
     totalScores: diff.statistics?.totalScores,
     rankedAt: diff.rankedAt ?? undefined,
     beatsaverCode: diff.beatsaverCode ?? undefined,
@@ -134,6 +145,7 @@ export function toDifficultyScoreDisplay(
     hmd: score.hmd,
     xpGained: score.xpGained,
     rankWhenSet: score.rankWhenSet,
+    supporterTier: score.supporterTier ?? null,
   }
 }
 

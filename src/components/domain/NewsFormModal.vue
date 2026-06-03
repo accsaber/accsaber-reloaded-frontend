@@ -5,12 +5,14 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import NewsResourceSelector, { type ResourceKind } from '@/components/domain/NewsResourceSelector.vue'
 import type { CreateNewsRequest, NewsResponse } from '@/types/api/news'
 import type { NewsStatus, NewsType } from '@/types/enums'
+import { STANDALONE_NEWS_TYPES } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
   open: boolean
   editing: NewsResponse | null
   allowed: ResourceKind[]
+  allowedStandalone?: NewsType[]
   loading?: boolean
 }>()
 
@@ -38,11 +40,8 @@ const submitLabel = computed(() => (isEdit.value ? 'Save' : 'Create'))
 
 function deriveResourceFromNews(n: NewsResponse | null): { type: NewsType; id: string | null } {
   if (!n) return { type: 'GENERAL', id: null }
-  if (n.batchId) return { type: 'BATCH', id: n.batchId }
-  if (n.campaignId) return { type: 'CAMPAIGN', id: n.campaignId }
-  if (n.milestoneSetId) return { type: 'MILESTONE_SET', id: n.milestoneSetId }
-  if (n.curveId) return { type: 'CURVE', id: n.curveId }
-  return { type: 'GENERAL', id: null }
+  const id = n.batchId ?? n.campaignId ?? n.milestoneSetId ?? n.curveId ?? null
+  return { type: n.type, id }
 }
 
 function reset() {
@@ -77,8 +76,9 @@ function buildPayload(): CreateNewsRequest | null {
     formError.value = 'Content is required.'
     return null
   }
-  if (resourceType.value !== 'GENERAL' && !resourceId.value) {
-    formError.value = 'Pick a specific resource or set type to General.'
+  const standalone = STANDALONE_NEWS_TYPES.includes(resourceType.value)
+  if (!standalone && !resourceId.value) {
+    formError.value = 'Pick a specific resource or choose a standalone type.'
     return null
   }
 
@@ -90,6 +90,7 @@ function buildPayload(): CreateNewsRequest | null {
     imageUrl: imageUrl.value.trim() || undefined,
     status: status.value,
     pinned: pinned.value,
+    type: resourceType.value,
     batchId: resourceType.value === 'BATCH' ? resourceId.value : null,
     campaignId: resourceType.value === 'CAMPAIGN' ? resourceId.value : null,
     milestoneSetId: resourceType.value === 'MILESTONE_SET' ? resourceId.value : null,
@@ -136,6 +137,7 @@ function submit() {
 
       <NewsResourceSelector
         :allowed="allowed"
+        :allowed-standalone="allowedStandalone"
         :resource-type="resourceType"
         :resource-id="resourceId"
         @update:resource-type="resourceType = $event"

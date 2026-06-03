@@ -48,6 +48,7 @@ export interface CreateNewsRequest {
   imageUrl?: string
   status?: NewsStatus
   pinned?: boolean
+  type?: NewsType
   batchId?: string | null
   campaignId?: string | null
   milestoneSetId?: string | null

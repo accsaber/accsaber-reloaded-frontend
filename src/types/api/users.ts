@@ -1,6 +1,7 @@
-import type { MilestoneTier, MilestoneType } from '../enums'
+import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
 import type { PaginationParams } from '../pagination'
 import type { UserRelationCounts } from './relations'
+import type { SupporterTier } from './supporters'
 
 export interface UserResponse {
   id: string
@@ -9,12 +10,40 @@ export interface UserResponse {
   name: string
   avatarUrl: string
   country: string
+  bio: string
   xpRanking: number
   xpCountryRanking: number
   playerInactive: boolean
   banned: boolean
   createdAt: string
   relations: UserRelationCounts
+  supporterTier?: SupporterTier | null
+}
+
+export interface PinnedScoreInput {
+  scoreId: string
+  displayOrder: number
+  comment?: string | null
+}
+
+export interface ProfileUpdateRequest {
+  name?: string
+  bio?: string
+  pinnedScores?: PinnedScoreInput[]
+}
+
+export interface PinnedScoreResponse {
+  score: ScoreResponse
+  comment: string | null
+}
+
+export interface NameHistoryEntry {
+  name: string
+  changedAt: string
+}
+
+export interface SyncSettings {
+  'sync.name': boolean
 }
 
 export interface ScoreResponse {
@@ -25,6 +54,8 @@ export interface ScoreResponse {
   country: string
   mapDifficultyId: string
   mapId: string
+  beatsaverCode: string | null
+  characteristic: string
   songName: string
   songAuthor: string
   mapAuthor: string
@@ -56,7 +87,10 @@ export interface ScoreResponse {
   bonusXp: number
   modifierIds: string[]
   active: boolean
+  partial: boolean
+  supersedesReason: SupersedesReason | null
   createdAt: string
+  supporterTier?: SupporterTier | null
   myScore?: MyScoreSummary
 }
 
@@ -84,6 +118,7 @@ export interface LeaderboardResponse {
   rankedPlays: number
   topPlayId: string
   playerInactive: boolean
+  supporterTier?: SupporterTier | null
 }
 
 export interface XpLeaderboardResponse {
@@ -97,6 +132,7 @@ export interface XpLeaderboardResponse {
   totalXp: number
   level: number
   playerInactive: boolean
+  supporterTier?: SupporterTier | null
 }
 
 export interface UserAllStatisticsResponse {
@@ -104,6 +140,7 @@ export interface UserAllStatisticsResponse {
   totalScoreXp: number
   totalMilestoneXp: number
   totalMilestoneSetBonusXp: number
+  totalMissionXp: number
   categories: UserCategoryStatisticsResponse[]
 }
 
@@ -154,6 +191,7 @@ export interface StatsDiffResponse {
   scoreXpDiff: number
   milestoneXpDiff: number
   milestoneSetBonusXpDiff: number
+  missionXpDiff: number
   averageAccDiff: number
   averageApDiff: number
   rankingDiff: number

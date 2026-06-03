@@ -12,6 +12,7 @@ import type { MilestoneDisplay } from '@/types/display'
 import { groupBatchByCategory } from '@/utils/batches'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 
 type Resource =
@@ -113,8 +114,14 @@ watch(
   { immediate: true },
 )
 
-function mapRouteTo(mapId: string, difficultyId?: string) {
-  return { name: 'map-detail', params: { mapId }, query: difficultyId ? { difficultyId } : undefined }
+function mapRouteTo(m: { id: string; difficultyId?: string; difficulty?: string; characteristic?: string; beatsaverCode?: string }) {
+  return buildMapRoute({
+    beatsaverCode: m.beatsaverCode ?? null,
+    mapId: m.id,
+    difficulty: m.difficulty,
+    difficultyId: m.difficultyId,
+    characteristic: m.characteristic,
+  })
 }
 
 const sectionTitle = computed(() => {
@@ -161,7 +168,7 @@ const sectionTitle = computed(() => {
             v-for="m in group.diffs"
             :key="m.difficultyId"
             :map="m"
-            :to="mapRouteTo(m.id, m.difficultyId)"
+            :to="mapRouteTo(m)"
           />
         </div>
       </div>
