@@ -35,18 +35,18 @@ const scorePage = ref(1)
 const accent = computed(() => categoryStore.getAccent('overall'))
 
 const rankingColumns: TableColumn[] = [
-  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '70px' },
+  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '60px' },
   { key: 'player', label: 'Player', align: 'left' },
-  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '100px' },
-  { key: 'avgAccuracy', label: 'Avg Acc', align: 'right', mono: true, width: '100px' },
+  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '92px' },
+  { key: 'avgAccuracy', label: 'Avg Acc', align: 'right', mono: true, width: '84px' },
 ]
 
 const scoreColumns: TableColumn[] = [
-  { key: 'player', label: 'Player', align: 'left', width: '150px' },
-  { key: 'date', label: 'Date', align: 'right', width: '100px' },
+  { key: 'player', label: 'Player', align: 'left', width: '120px' },
+  { key: 'date', label: 'Date', align: 'right', width: '72px' },
   { key: 'map', label: 'Map', align: 'left' },
-  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '90px' },
-  { key: 'accuracy', label: 'Acc', align: 'right', mono: true, width: '90px' },
+  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '76px' },
+  { key: 'accuracy', label: 'Acc', align: 'right', mono: true, width: '72px' },
 ]
 
 const rankingRows = computed<Record<string, unknown>[]>(() => {
@@ -207,7 +207,7 @@ watch(scorePage, () => {
   <section v-if="authStore.isLoggedIn" class="followed-activity" :style="{ '--accent': accent }">
     <div class="followed-activity__panel">
       <div class="followed-activity__header">
-        <h2 class="followed-activity__title">Ranking of Followed</h2>
+        <h2 class="followed-activity__title">Followed Ranking</h2>
       </div>
 
       <DataTable
@@ -255,7 +255,7 @@ watch(scorePage, () => {
 
     <div class="followed-activity__panel followed-activity__panel--scores">
       <div class="followed-activity__header">
-        <h2 class="followed-activity__title">Scores of Followed</h2>
+        <h2 class="followed-activity__title">Activity Feed</h2>
       </div>
 
       <DataTable
@@ -351,6 +351,21 @@ watch(scorePage, () => {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: var(--space-lg);
   width: 100%;
+}
+
+.followed-activity :deep(.data-table) {
+  table-layout: fixed;
+}
+
+.followed-activity :deep(.data-table__th),
+.followed-activity :deep(.data-table__td) {
+  padding-left: var(--space-sm);
+  padding-right: var(--space-sm);
+}
+
+.followed-activity :deep(.data-table__cell-link) {
+  padding-left: var(--space-sm);
+  padding-right: var(--space-sm);
 }
 
 .followed-activity__panel {
