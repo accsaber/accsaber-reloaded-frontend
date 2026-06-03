@@ -286,7 +286,13 @@ async function fetchMap() {
     if (isUuid(routeParam.value)) {
       map.value = await getMap(routeParam.value)
     } else {
-      map.value = await getMapByCode(routeParam.value)
+      const qDifficulty = route.query.difficulty as string | undefined
+      const byCodeParams: { difficulty?: string; characteristic?: string } = {}
+      if (qDifficulty) {
+        byCodeParams.difficulty = slugToDifficulty(qDifficulty)
+        byCodeParams.characteristic = (route.query.characteristic as string | undefined) ?? 'Standard'
+      }
+      map.value = await getMapByCode(routeParam.value, byCodeParams)
     }
 
     const all = map.value.difficulties
