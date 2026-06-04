@@ -287,6 +287,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: var(--space-xl);
   padding: calc(var(--navbar-height) + var(--space-md)) var(--space-md) var(--space-3xl);
+  overflow: hidden;
 }
 
 .hero__banner-slot {
@@ -473,6 +474,7 @@ onUnmounted(() => {
 
 .hero--compact .hero__cta-buttons {
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: var(--space-md);
 }
@@ -906,6 +908,18 @@ onUnmounted(() => {
 
   .hero__stats {
     gap: var(--space-md);
+  }
+
+  .hero__scroll-hint {
+    display: none;
+  }
+
+  .hero__get-started,
+  .hero__plugin,
+  .hero__discord,
+  .hero__kofi {
+    padding: var(--space-sm) var(--space-lg);
+    max-width: 100%;
   }
 
   .explore-buttons :deep(.base-button) {
