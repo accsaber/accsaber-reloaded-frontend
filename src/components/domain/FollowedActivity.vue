@@ -4,6 +4,7 @@ import { getRelationScores } from '@/api/relations'
 import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
@@ -11,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { LeaderboardResponse, ScoreResponse } from '@/types/api/users'
+import type { ScoreRelationType } from '@/types/api/relations'
 import type { ScoreDisplay, ScoreFeedEntry, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatDifficulty, toPlayerDisplay } from '@/utils/mappers'
@@ -35,6 +37,12 @@ const tick = ref(0)
 let tickInterval: ReturnType<typeof setInterval>
 onMounted(() => { tickInterval = setInterval(() => tick.value++, 60_000) })
 onUnmounted(() => clearInterval(tickInterval))
+
+const scoreMode = ref<ScoreRelationType>('follower')
+const scoreTabs = [
+  { key: 'follower', label: 'Following' },
+  { key: 'rival', label: 'Rivals' },
+]
 
 const modalOpen = ref(false)
 const modalScore = ref<ScoreDisplay | null>(null)
@@ -189,8 +197,8 @@ async function fetchScores() {
   scoresLoading.value = true
   try {
     scorePageData.value = await getRelationScores({
-      type: 'follower',
-      includePrincipal: true,
+      type: scoreMode.value,
+      includePrincipal: scoreMode.value === 'follower',
       page: scorePage.value - 1,
       size: FOLLOWED_SCORE_SIZE,
       sort: 'timeSet,desc',
@@ -236,6 +244,11 @@ watch(
 
 watch(scorePage, () => {
   if (authStore.isLoggedIn) void fetchScores()
+})
+
+watch(scoreMode, () => {
+  scorePage.value = 1
+  void fetchScores()
 })
 </script>
 
@@ -292,6 +305,7 @@ watch(scorePage, () => {
     <div class="followed-activity__panel followed-activity__panel--scores">
       <div class="followed-activity__header">
         <h2 class="followed-activity__title">Activity Feed</h2>
+        <BaseTabs :tabs="scoreTabs" :model-value="scoreMode" class="followed-activity__feed-tabs" @update:model-value="scoreMode = $event as ScoreRelationType" />
       </div>
 
       <div v-if="scoresLoading" class="followed-activity__feed-loading">
@@ -363,9 +377,18 @@ watch(scorePage, () => {
 
 .followed-activity__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
+}
+
+.followed-activity__feed-tabs {
+  border-bottom: none;
+}
+
+.followed-activity__feed-tabs :deep(.base-tabs__tab) {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-caption);
 }
 
 .followed-activity__title {
