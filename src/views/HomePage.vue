@@ -501,6 +501,7 @@ onUnmounted(() => {
 .hero__get-started {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
@@ -517,6 +518,7 @@ onUnmounted(() => {
 .hero__plugin {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
@@ -583,6 +585,7 @@ onUnmounted(() => {
 .hero__discord {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
@@ -614,6 +617,7 @@ onUnmounted(() => {
 .hero__kofi {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-pill);
