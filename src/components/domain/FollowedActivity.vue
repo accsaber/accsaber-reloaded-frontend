@@ -209,7 +209,7 @@ async function fetchRanking() {
       page: 0,
       size: FOLLOWED_RANKING_SIZE,
       sort: 'ranking,asc',
-      relation: 'follower',
+      relation: scoreMode.value,
       inactiveUsers: true,
     })
   } catch {
@@ -229,7 +229,7 @@ async function fetchScores() {
   try {
     scorePageData.value = await getRelationScores({
       type: scoreMode.value,
-      includePrincipal: scoreMode.value === 'follower',
+      includePrincipal: true,
       categoryId: filterCategoryId.value,
       page: scorePage.value - 1,
       size: FOLLOWED_SCORE_SIZE,
@@ -280,6 +280,7 @@ watch(scorePage, () => {
 
 watch(scoreMode, () => {
   scorePage.value = 1
+  void fetchRanking()
   void fetchScores()
 })
 
@@ -293,18 +294,20 @@ watch([sortField, sortDir, filterCategoryId], () => {
   <section v-if="authStore.isLoggedIn" class="followed-activity" :style="{ '--accent': accent }">
     <div class="followed-activity__panel">
       <div class="followed-activity__header">
-        <h2 class="followed-activity__title">Followed Ranking</h2>
+        <h2 class="followed-activity__title">{{ scoreMode === 'follower' ? 'Followed Ranking' : 'Rival Ranking' }}</h2>
+        <BaseTabs :tabs="scoreTabs" :model-value="scoreMode" class="followed-activity__feed-tabs" @update:model-value="scoreMode = $event as ScoreRelationType" />
       </div>
 
+      <div :class="{ 'followed-activity__ranking--loading': rankingLoading && rankingPageData }">
       <DataTable
         :columns="rankingColumns"
         :rows="rankingRows"
-        :loading="rankingLoading"
+        :loading="rankingLoading && !rankingPageData"
         :loading-rows="FOLLOWED_RANKING_SIZE"
         row-key="userId"
         row-clickable
         :row-to="buildRankingPlayerRoute"
-        empty-message="No followed players ranked"
+        :empty-message="scoreMode === 'follower' ? 'No followed players ranked' : 'No rivals ranked'"
       >
         <template #cell-rank="{ value }">
           <span class="followed-activity__rank" :class="getRankClass(value as number)">#{{ value }}</span>
@@ -337,13 +340,13 @@ watch([sortField, sortDir, filterCategoryId], () => {
           </RouterLink>
         </template>
       </DataTable>
+      </div>
     </div>
 
     <div class="followed-activity__panel followed-activity__panel--scores">
       <div class="followed-activity__header">
         <h2 class="followed-activity__title">Activity Feed</h2>
         <div class="followed-activity__feed-controls">
-          <BaseTabs :tabs="scoreTabs" :model-value="scoreMode" class="followed-activity__feed-tabs" @update:model-value="scoreMode = $event as ScoreRelationType" />
           <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
             <template #trigger>
               <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
@@ -466,7 +469,6 @@ watch([sortField, sortDir, filterCategoryId], () => {
 .followed-activity__feed-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
 }
 
 .followed-activity__feed-tabs {
@@ -606,6 +608,12 @@ watch([sortField, sortDir, filterCategoryId], () => {
 }
 
 .followed-activity__feed--loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.followed-activity__ranking--loading {
   opacity: 0.5;
   pointer-events: none;
   transition: opacity 120ms ease;
