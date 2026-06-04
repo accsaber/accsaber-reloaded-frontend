@@ -91,6 +91,17 @@ export interface ScoreResponse {
   supersedesReason: SupersedesReason | null
   createdAt: string
   supporterTier?: SupporterTier | null
+  myScore?: MyScoreSummary
+}
+
+export interface MyScoreSummary {
+  id: string
+  score: number
+  accuracy: number
+  ap: number
+  weightedAp: number
+  rank: number
+  timeSet: string
 }
 
 export interface LeaderboardResponse {

@@ -2,6 +2,7 @@ import type { PaginationParams } from '../pagination'
 
 export type UserRelationType = 'follower' | 'rival' | 'blocked'
 export type RelationDirection = 'outgoing' | 'incoming'
+export type ScoreRelationType = Exclude<UserRelationType, 'blocked'>
 
 export interface UserRelationRequest {
   targetUserId: string
@@ -34,4 +35,11 @@ export interface MyRelationsParams extends PaginationParams {
 export interface UserRelationsParams extends PaginationParams {
   type?: UserRelationType
   direction?: RelationDirection
+}
+
+export interface RelationScoresParams extends PaginationParams {
+  type?: ScoreRelationType
+  categoryId?: string
+  search?: string
+  includePrincipal?: boolean
 }

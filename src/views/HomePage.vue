@@ -4,8 +4,10 @@ import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import FollowedActivity from '@/components/domain/FollowedActivity.vue'
 import NewsHighlightBanner from '@/components/domain/NewsHighlightBanner.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useAuthStore } from '@/stores/auth'
 import { tierKey, useLevelStore } from '@/stores/levels'
 import { useThemeStore } from '@/stores/theme'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -14,6 +16,10 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const themeStore = useThemeStore()
 const levelStore = useLevelStore()
+const authStore = useAuthStore()
+
+const isLoggedIn = computed(() => authStore.isLoggedIn)
+const displayName = computed(() => authStore.userProfile?.name ?? '')
 
 usePageMeta({
   title: 'AccSaber Reloaded',
@@ -61,83 +67,114 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="home">
-    <section class="hero">
+  <div class="home" :class="{ 'home--dashboard': isLoggedIn }">
+    <section class="hero" :class="{ 'hero--compact': isLoggedIn }">
       <div class="hero__banner-slot">
         <NewsHighlightBanner />
       </div>
       <div class="hero__glow" />
-      <ParticleCanvas class="hero__particles" :dark-mode="themeStore.theme === 'dark'" />
+      <ParticleCanvas class="hero__particles" :dark-mode="themeStore.theme === 'dark'" :interactive="!isLoggedIn" />
+
       <div class="hero__content">
-        <img :src="logoUrl" alt="AccSaber" class="hero__logo" />
-        <p class="hero__tagline">New and improved stack for AccSaber.</p>
-        <div class="hero__actions">
-          <RouterLink to="/getting-started" class="hero__get-started">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            Get Started
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </RouterLink>
-          <a
-            href="https://github.com/not-dexter/accsaber-reloaded-plugin/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="hero__plugin"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            Download Plugin
-            <span class="hero__plugin-tag">PC</span>
-          </a>
+        <div class="hero__identity">
+          <div class="hero__logo-block">
+            <div class="hero__logo-wrap">
+              <div class="hero__logo-glow" aria-hidden="true" />
+              <img :src="logoUrl" alt="AccSaber" class="hero__logo" />
+            </div>
+          </div>
+          <div class="hero__intro">
+            <p class="hero__tagline">
+              <template v-if="isLoggedIn">
+                Welcome back, <span class="hero__name">{{ displayName }}</span>
+              </template>
+              <template v-else>New and improved stack for AccSaber.</template>
+            </p>
+          </div>
         </div>
-        <div class="hero__community">
-          <a href="https://discord.gg/DmzKSgcJWe" target="_blank" rel="noopener noreferrer" class="hero__discord">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path
-                d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-            </svg>
-            Join Discord
-          </a>
-          <a href="https://ko-fi.com/accsaberreloaded" target="_blank" rel="noopener noreferrer" class="hero__kofi">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M17 8h1a4 4 0 0 1 0 8h-1" />
-              <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z" />
-              <line x1="6" y1="2" x2="6" y2="4" />
-              <line x1="10" y1="2" x2="10" y2="4" />
-              <line x1="14" y1="2" x2="14" y2="4" />
-            </svg>
-            Support on Ko-fi
-          </a>
+
+        <div class="hero__cta">
+          <div v-if="isLoggedIn" class="hero__mini-stats">
+            <span class="hero__mini-stat"><strong>124K+</strong> Players</span>
+            <span class="hero__mini-sep" aria-hidden="true">·</span>
+            <span class="hero__mini-stat"><strong>450+</strong> Ranked Maps</span>
+          </div>
+          <div class="hero__cta-buttons">
+            <div class="hero__actions">
+            <RouterLink to="/getting-started" class="hero__get-started">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Get Started
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </RouterLink>
+            <a
+              href="https://github.com/not-dexter/accsaber-reloaded-plugin/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hero__plugin"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download Plugin
+              <span class="hero__plugin-tag">PC</span>
+            </a>
+          </div>
+          <div class="hero__community">
+            <a href="https://discord.gg/DmzKSgcJWe" target="_blank" rel="noopener noreferrer" class="hero__discord">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+              </svg>
+              Join Discord
+            </a>
+            <a href="https://ko-fi.com/accsaberreloaded" target="_blank" rel="noopener noreferrer" class="hero__kofi">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 8h1a4 4 0 0 1 0 8h-1" />
+                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z" />
+                <line x1="6" y1="2" x2="6" y2="4" />
+                <line x1="10" y1="2" x2="10" y2="4" />
+                <line x1="14" y1="2" x2="14" y2="4" />
+              </svg>
+              Support on Ko-fi
+            </a>
+          </div>
+          </div>
         </div>
       </div>
 
-      <div class="hero__stats">
-        <div class="hero__stat">
-          <span class="hero__stat-value">124K+</span>
-          <span class="hero__stat-label">Total Players</span>
+      <template v-if="!isLoggedIn">
+        <div class="hero__stats">
+          <div class="hero__stat">
+            <span class="hero__stat-value">124K+</span>
+            <span class="hero__stat-label">Total Players</span>
+          </div>
+          <div class="hero__stat">
+            <span class="hero__stat-value">450+</span>
+            <span class="hero__stat-label">Ranked Maps</span>
+          </div>
         </div>
-        <div class="hero__stat">
-          <span class="hero__stat-value">450+</span>
-          <span class="hero__stat-label">Ranked Maps</span>
-        </div>
-      </div>
 
-      <div class="hero__scroll-hint" aria-hidden="true">
-        <svg class="hero__scroll-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="7 13 12 18 17 13" />
-          <polyline points="7 6 12 11 17 6" />
-        </svg>
+        <div class="hero__scroll-hint" aria-hidden="true">
+          <svg class="hero__scroll-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 13 12 18 17 13" />
+            <polyline points="7 6 12 11 17 6" />
+          </svg>
+        </div>
+      </template>
+
+      <div v-if="isLoggedIn" class="hero__activity">
+        <FollowedActivity />
       </div>
     </section>
 
@@ -286,23 +323,166 @@ onUnmounted(() => {
 .hero__content {
   position: relative;
   z-index: 2;
+  margin-top: var(--space-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
   text-align: center;
+  width: 100%;
+}
+
+.hero__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.hero__logo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.hero__logo-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.hero__logo-glow {
+  display: none;
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .hero__logo {
+  position: relative;
+  z-index: 1;
   width: 120px;
   height: 120px;
   object-fit: contain;
+}
+
+.hero__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .hero__tagline {
   font-size: var(--text-section-heading);
   color: var(--text-secondary);
   margin: 0;
+}
+
+.hero__name {
+  color: var(--accent-overall);
+  font-weight: 700;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent-overall) 45%, transparent);
+}
+
+.hero__mini-stats {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.hero__mini-stat strong {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hero__mini-sep {
+  opacity: 0.5;
+}
+
+.hero__cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.hero__cta-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* ---- Compact dashboard hero (logged in) ---- */
+.hero--compact {
+  min-height: auto;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: var(--space-xl);
+  padding-top: calc(var(--navbar-height) + var(--space-2xl) + var(--space-xl));
+  padding-bottom: var(--space-xl);
+}
+
+
+.hero--compact .hero__content {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-top: 0;
+  text-align: left;
+}
+
+.hero--compact .hero__identity {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.hero--compact .hero__logo {
+  width: 156px;
+  height: 156px;
+}
+
+.hero--compact .hero__intro {
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.hero--compact .hero__tagline {
+  font-size: var(--text-page-title);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.hero--compact .hero__cta {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.hero--compact .hero__cta-buttons {
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--space-md);
+}
+
+.hero--compact .hero__actions,
+.hero--compact .hero__community {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm);
 }
 
 .hero__actions {
@@ -316,6 +496,7 @@ onUnmounted(() => {
 .hero__get-started {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
@@ -332,6 +513,7 @@ onUnmounted(() => {
 .hero__plugin {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
@@ -398,6 +580,7 @@ onUnmounted(() => {
 .hero__discord {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xl);
   border-radius: var(--radius-pill);
@@ -429,6 +612,7 @@ onUnmounted(() => {
 .hero__kofi {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-pill);
