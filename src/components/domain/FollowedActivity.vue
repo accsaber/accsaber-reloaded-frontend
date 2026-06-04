@@ -26,6 +26,7 @@ type ScoreSortField = 'timeSet' | 'ap' | 'accuracy'
 
 const FOLLOWED_RANKING_SIZE = 8
 const FOLLOWED_SCORE_SIZE = 5
+const FEED_CARD_FOOTPRINT = 107
 const LOW_MID_CATEGORY_ID = 'b0000000-0000-0000-0000-000000000004'
 
 const authStore = useAuthStore()
@@ -63,6 +64,8 @@ const sortOptions: { key: ScoreSortField; label: string }[] = [
 const hasActiveFilters = computed(() =>
   sortField.value !== 'timeSet' || sortDir.value !== 'desc' || filterCategoryId.value !== undefined,
 )
+
+const feedMinHeight = computed(() => `${FOLLOWED_SCORE_SIZE * FEED_CARD_FOOTPRINT}px`)
 
 const filterCategories = computed(() =>
   categoryStore.categoryInfoList.filter((c) => {
@@ -384,22 +387,24 @@ watch([sortField, sortDir, filterCategoryId], () => {
         </div>
       </div>
 
-      <div v-if="scoresLoading" class="followed-activity__feed-loading">
-        <div v-for="i in FOLLOWED_SCORE_SIZE" :key="i" class="followed-activity__feed-skeleton" />
-      </div>
+      <div class="followed-activity__feed-body">
+        <div v-if="scoresLoading && !scorePageData" class="followed-activity__feed-loading">
+          <div v-for="i in FOLLOWED_SCORE_SIZE" :key="i" class="followed-activity__feed-skeleton" />
+        </div>
 
-      <div v-else-if="scoreFeedEntries.length === 0" class="followed-activity__feed-empty">
-        No followed scores found
-      </div>
+        <div v-else-if="scoreFeedEntries.length === 0" class="followed-activity__feed-empty">
+          No followed scores found
+        </div>
 
-      <div v-else class="followed-activity__feed">
-        <ScoreFeedCard
-          v-for="entry in scoreFeedEntries"
-          :key="entry.key"
-          :entry="entry"
-          :tick="tick"
-          @select="onSelectScore"
-        />
+        <div v-else class="followed-activity__feed" :class="{ 'followed-activity__feed--loading': scoresLoading }">
+          <ScoreFeedCard
+            v-for="entry in scoreFeedEntries"
+            :key="entry.key"
+            :entry="entry"
+            :tick="tick"
+            @select="onSelectScore"
+          />
+        </div>
       </div>
 
       <PaginationControls
@@ -589,10 +594,21 @@ watch([sortField, sortDir, filterCategoryId], () => {
   border-left-color: var(--accent);
 }
 
+.followed-activity__feed-body {
+  display: flex;
+  flex-direction: column;
+}
+
 .followed-activity__feed {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.followed-activity__feed--loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 120ms ease;
 }
 
 .followed-activity__feed :deep(.feed-card) {
@@ -625,12 +641,13 @@ watch([sortField, sortDir, filterCategoryId], () => {
 .followed-activity__feed-loading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-  padding-top: var(--space-lg);
+  gap: 31px;
+  padding-top: 29px;
+  min-height: v-bind(feedMinHeight);
 }
 
 .followed-activity__feed-skeleton {
-  height: 52px;
+  height: 64px;
   border-radius: var(--radius-card);
   background: var(--bg-surface);
   animation: shimmer 1.4s ease-in-out infinite;
@@ -642,6 +659,10 @@ watch([sortField, sortDir, filterCategoryId], () => {
 }
 
 .followed-activity__feed-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: v-bind(feedMinHeight);
   padding: var(--space-3xl) var(--space-md);
   text-align: center;
   color: var(--text-secondary);
