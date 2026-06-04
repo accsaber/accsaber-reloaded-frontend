@@ -395,13 +395,13 @@ onUnmounted(() => {
   justify-content: center;
   gap: var(--space-sm);
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .hero__mini-stat strong {
   font-family: var(--font-mono);
-  font-weight: 550;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .hero__mini-sep {
