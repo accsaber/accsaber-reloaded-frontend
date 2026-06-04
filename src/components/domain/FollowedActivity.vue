@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { getLeaderboard } from '@/api/leaderboards'
 import { getRelationScores } from '@/api/relations'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import DataTable from '@/components/common/DataTable.vue'
+import FilterButton from '@/components/common/FilterButton.vue'
+import FilterPopover from '@/components/common/FilterPopover.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import BaseTabs from '@/components/common/BaseTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
-import type { LeaderboardResponse, ScoreResponse } from '@/types/api/users'
 import type { ScoreRelationType } from '@/types/api/relations'
+import type { LeaderboardResponse, ScoreResponse } from '@/types/api/users'
 import type { ScoreDisplay, ScoreFeedEntry, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatDifficulty, toPlayerDisplay } from '@/utils/mappers'
@@ -43,6 +45,31 @@ const scoreTabs = [
   { key: 'follower', label: 'Following' },
   { key: 'rival', label: 'Rivals' },
 ]
+
+const filtersOpen = ref(false)
+const sortField = ref<'timeSet' | 'ap' | 'accuracy'>('timeSet')
+const sortDir = ref<'asc' | 'desc'>('desc')
+const filterCategoryId = ref<string | undefined>(undefined)
+
+const sortOptions: { key: 'timeSet' | 'ap' | 'accuracy'; label: string }[] = [
+  { key: 'timeSet', label: 'Date' },
+  { key: 'ap', label: 'AP' },
+  { key: 'accuracy', label: 'Accuracy' },
+]
+
+const hasActiveFilters = computed(() =>
+  sortField.value !== 'timeSet' || sortDir.value !== 'desc' || filterCategoryId.value !== undefined,
+)
+
+const LOW_MID_CATEGORY_ID = 'b0000000-0000-0000-0000-000000000004'
+
+const filterCategories = computed(() =>
+  categoryStore.categoryInfoList.filter((c) => {
+    if (c.code === 'overall' || c.code === 'xp') return false
+    if (categoryStore.getCategoryId(c.code) === LOW_MID_CATEGORY_ID) return false
+    return true
+  }),
+)
 
 const modalOpen = ref(false)
 const modalScore = ref<ScoreDisplay | null>(null)
@@ -199,9 +226,10 @@ async function fetchScores() {
     scorePageData.value = await getRelationScores({
       type: scoreMode.value,
       includePrincipal: scoreMode.value === 'follower',
+      categoryId: filterCategoryId.value,
       page: scorePage.value - 1,
       size: FOLLOWED_SCORE_SIZE,
-      sort: 'timeSet,desc',
+      sort: `${sortField.value},${sortDir.value}`,
     })
   } catch {
     scorePageData.value = null
@@ -247,6 +275,11 @@ watch(scorePage, () => {
 })
 
 watch(scoreMode, () => {
+  scorePage.value = 1
+  void fetchScores()
+})
+
+watch([sortField, sortDir, filterCategoryId], () => {
   scorePage.value = 1
   void fetchScores()
 })
@@ -305,7 +338,49 @@ watch(scoreMode, () => {
     <div class="followed-activity__panel followed-activity__panel--scores">
       <div class="followed-activity__header">
         <h2 class="followed-activity__title">Activity Feed</h2>
-        <BaseTabs :tabs="scoreTabs" :model-value="scoreMode" class="followed-activity__feed-tabs" @update:model-value="scoreMode = $event as ScoreRelationType" />
+        <div class="followed-activity__feed-controls">
+          <BaseTabs :tabs="scoreTabs" :model-value="scoreMode" class="followed-activity__feed-tabs" @update:model-value="scoreMode = $event as ScoreRelationType" />
+          <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
+            <template #trigger>
+              <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
+            </template>
+            <div class="feed-filters">
+              <div class="feed-filters__group">
+                <span class="feed-filters__label">Sort by</span>
+                <div class="feed-filters__chips">
+                  <button
+                    v-for="opt in sortOptions"
+                    :key="opt.key"
+                    class="feed-filters__chip"
+                    :class="{ 'feed-filters__chip--active': sortField === opt.key }"
+                    @click="sortField = opt.key"
+                  >{{ opt.label }}</button>
+                </div>
+              </div>
+              <div class="feed-filters__group">
+                <span class="feed-filters__label">Direction</span>
+                <div class="feed-filters__chips">
+                  <button class="feed-filters__chip" :class="{ 'feed-filters__chip--active': sortDir === 'desc' }" @click="sortDir = 'desc'">Descending</button>
+                  <button class="feed-filters__chip" :class="{ 'feed-filters__chip--active': sortDir === 'asc' }" @click="sortDir = 'asc'">Ascending</button>
+                </div>
+              </div>
+              <div class="feed-filters__group">
+                <span class="feed-filters__label">Category</span>
+                <div class="feed-filters__chips">
+                  <button class="feed-filters__chip" :class="{ 'feed-filters__chip--active': filterCategoryId === undefined }" @click="filterCategoryId = undefined">All</button>
+                  <button
+                    v-for="cat in filterCategories"
+                    :key="cat.code"
+                    class="feed-filters__chip"
+                    :class="{ 'feed-filters__chip--active': filterCategoryId === categoryStore.getCategoryId(cat.code) }"
+                    :style="filterCategoryId === categoryStore.getCategoryId(cat.code) ? { '--chip-accent': cat.accent } : undefined"
+                    @click="filterCategoryId = categoryStore.getCategoryId(cat.code)"
+                  >{{ cat.name }}</button>
+                </div>
+              </div>
+            </div>
+          </FilterPopover>
+        </div>
       </div>
 
       <div v-if="scoresLoading" class="followed-activity__feed-loading">
@@ -382,6 +457,12 @@ watch(scoreMode, () => {
   gap: var(--space-md);
 }
 
+.followed-activity__feed-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .followed-activity__feed-tabs {
   border-bottom: none;
 }
@@ -389,6 +470,54 @@ watch(scoreMode, () => {
 .followed-activity__feed-tabs :deep(.base-tabs__tab) {
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--text-caption);
+}
+
+.feed-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.feed-filters__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.feed-filters__label {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.feed-filters__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.feed-filters__chip {
+  padding: 3px var(--space-sm);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.feed-filters__chip:hover {
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+.feed-filters__chip--active {
+  border-color: var(--chip-accent, var(--accent));
+  color: var(--chip-accent, var(--accent));
+  background: color-mix(in srgb, var(--chip-accent, var(--accent)) 10%, transparent);
 }
 
 .followed-activity__title {
