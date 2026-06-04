@@ -15,15 +15,18 @@ import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRelationType } from '@/types/api/relations'
 import type { LeaderboardResponse, ScoreResponse } from '@/types/api/users'
-import type { ScoreDisplay, ScoreFeedEntry, TableColumn } from '@/types/display'
+import type { ScoreDisplay, ScoreFeedEntry, SortDirection, Tab, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatDifficulty, toPlayerDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
+type ScoreSortField = 'timeSet' | 'ap' | 'accuracy'
+
 const FOLLOWED_RANKING_SIZE = 8
 const FOLLOWED_SCORE_SIZE = 5
+const LOW_MID_CATEGORY_ID = 'b0000000-0000-0000-0000-000000000004'
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
@@ -41,17 +44,17 @@ onMounted(() => { tickInterval = setInterval(() => tick.value++, 60_000) })
 onUnmounted(() => clearInterval(tickInterval))
 
 const scoreMode = ref<ScoreRelationType>('follower')
-const scoreTabs = [
+const scoreTabs: Tab[] = [
   { key: 'follower', label: 'Following' },
   { key: 'rival', label: 'Rivals' },
 ]
 
 const filtersOpen = ref(false)
-const sortField = ref<'timeSet' | 'ap' | 'accuracy'>('timeSet')
-const sortDir = ref<'asc' | 'desc'>('desc')
+const sortField = ref<ScoreSortField>('timeSet')
+const sortDir = ref<SortDirection>('desc')
 const filterCategoryId = ref<string | undefined>(undefined)
 
-const sortOptions: { key: 'timeSet' | 'ap' | 'accuracy'; label: string }[] = [
+const sortOptions: { key: ScoreSortField; label: string }[] = [
   { key: 'timeSet', label: 'Date' },
   { key: 'ap', label: 'AP' },
   { key: 'accuracy', label: 'Accuracy' },
@@ -60,8 +63,6 @@ const sortOptions: { key: 'timeSet' | 'ap' | 'accuracy'; label: string }[] = [
 const hasActiveFilters = computed(() =>
   sortField.value !== 'timeSet' || sortDir.value !== 'desc' || filterCategoryId.value !== undefined,
 )
-
-const LOW_MID_CATEGORY_ID = 'b0000000-0000-0000-0000-000000000004'
 
 const filterCategories = computed(() =>
   categoryStore.categoryInfoList.filter((c) => {
