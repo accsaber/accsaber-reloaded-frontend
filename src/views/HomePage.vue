@@ -163,18 +163,18 @@ onUnmounted(() => {
             <span class="hero__stat-label">Ranked Maps</span>
           </div>
         </div>
-
-        <div class="hero__scroll-hint" aria-hidden="true">
-          <svg class="hero__scroll-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="7 13 12 18 17 13" />
-            <polyline points="7 6 12 11 17 6" />
-          </svg>
-        </div>
       </template>
 
       <div v-if="isLoggedIn" class="hero__activity">
         <FollowedActivity />
+      </div>
+
+      <div class="hero__scroll-hint" aria-hidden="true">
+        <svg class="hero__scroll-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="7 13 12 18 17 13" />
+          <polyline points="7 6 12 11 17 6" />
+        </svg>
       </div>
     </section>
 
@@ -279,7 +279,7 @@ onUnmounted(() => {
 
 .hero {
   position: relative;
-  min-height: 100svh;
+  min-height: calc(100svh + var(--space-xl));
   margin-top: calc((var(--navbar-height) + var(--space-xl)) * -1);
   display: flex;
   flex-direction: column;
@@ -424,7 +424,6 @@ onUnmounted(() => {
 
 /* ---- Compact dashboard hero (logged in) ---- */
 .hero--compact {
-  min-height: auto;
   justify-content: flex-start;
   align-items: stretch;
   gap: var(--space-xl);
