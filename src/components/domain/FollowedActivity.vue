@@ -452,9 +452,13 @@ watch(scorePage, () => {
 
 .followed-activity__feed :deep(.feed-card__body) {
   padding: var(--space-xs) var(--space-sm);
-  column-gap: var(--space-xl);
+  column-gap: var(--space-sm);
   row-gap: 0;
   grid-template-columns: 40px 36px 1fr auto;
+}
+
+.followed-activity__feed :deep(.feed-card__info) {
+  margin-left: var(--space-lg);
 }
 
 .followed-activity__feed :deep(.feed-card__stats-mid) {
