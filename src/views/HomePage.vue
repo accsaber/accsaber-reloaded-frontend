@@ -922,6 +922,49 @@ onUnmounted(() => {
     max-width: 100%;
   }
 
+  .hero--compact .hero__content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-lg);
+  }
+
+  .hero--compact .hero__identity {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .hero--compact .hero__intro {
+    align-items: center;
+  }
+
+  .hero--compact .hero__logo {
+    width: 96px;
+    height: 96px;
+  }
+
+  .hero--compact .hero__tagline {
+    font-size: var(--text-section-heading);
+  }
+
+  .hero--compact .hero__cta {
+    align-items: center;
+  }
+
+  .hero--compact .hero__cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero--compact .hero__actions,
+  .hero--compact .hero__community {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
   .explore-buttons :deep(.base-button) {
     padding: var(--space-sm) var(--space-xl);
     font-size: 1rem;
