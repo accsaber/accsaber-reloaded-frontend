@@ -485,11 +485,6 @@ onUnmounted(() => {
   gap: var(--space-sm);
 }
 
-.hero--compact .hero__activity {
-  width: 100%;
-  margin-top: var(--space-sm);
-}
-
 .hero__actions {
   display: flex;
   flex-wrap: wrap;

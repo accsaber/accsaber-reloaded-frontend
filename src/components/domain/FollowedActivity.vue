@@ -5,32 +5,40 @@ import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
+import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { LeaderboardResponse, ScoreResponse } from '@/types/api/users'
-import type { TableColumn } from '@/types/display'
+import type { ScoreDisplay, ScoreFeedEntry, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatRelativeDate, isRecentDate } from '@/utils/formatters'
 import { formatDifficulty, toPlayerDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
-import { useRouter } from 'vue-router'
 
 const FOLLOWED_RANKING_SIZE = 8
-const FOLLOWED_SCORE_SIZE = 8
+const FOLLOWED_SCORE_SIZE = 5
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
-const router = useRouter()
 
 const rankingLoading = ref(false)
 const scoresLoading = ref(false)
 const rankingPageData = ref<Page<LeaderboardResponse> | null>(null)
 const scorePageData = ref<Page<ScoreResponse> | null>(null)
 const scorePage = ref(1)
+
+const tick = ref(0)
+let tickInterval: ReturnType<typeof setInterval>
+onMounted(() => { tickInterval = setInterval(() => tick.value++, 60_000) })
+onUnmounted(() => clearInterval(tickInterval))
+
+const modalOpen = ref(false)
+const modalScore = ref<ScoreDisplay | null>(null)
+const modalUserId = ref('')
 
 const accent = computed(() => categoryStore.getAccent('overall'))
 
@@ -39,14 +47,6 @@ const rankingColumns: TableColumn[] = [
   { key: 'player', label: 'Player', align: 'left' },
   { key: 'ap', label: 'AP', align: 'right', mono: true, width: '92px' },
   { key: 'avgAccuracy', label: 'Avg Acc', align: 'right', mono: true, width: '84px' },
-]
-
-const scoreColumns: TableColumn[] = [
-  { key: 'player', label: 'Player', align: 'left', width: '120px' },
-  { key: 'date', label: 'Date', align: 'right', width: '72px' },
-  { key: 'map', label: 'Map', align: 'left' },
-  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '76px' },
-  { key: 'accuracy', label: 'Acc', align: 'right', mono: true, width: '72px' },
 ]
 
 const rankingRows = computed<Record<string, unknown>[]>(() => {
@@ -67,32 +67,80 @@ const rankingRows = computed<Record<string, unknown>[]>(() => {
   })
 })
 
-const scoreRows = computed<Record<string, unknown>[]>(() => {
+const scoreFeedEntries = computed<ScoreFeedEntry[]>(() => {
   const page = scorePageData.value
   if (!page) return []
   return page.content.map((score) => ({
-    id: score.id,
+    key: score.id,
     userId: score.userId,
     userName: score.userName,
-    avatarUrl: score.avatarUrl,
-    country: score.country,
+    avatarUrl: score.avatarUrl ?? '',
+    country: score.country ?? '',
     mapId: score.mapId,
     mapDifficultyId: score.mapDifficultyId,
+    beatsaverCode: score.beatsaverCode,
+    characteristic: score.characteristic,
+    rawDifficulty: score.difficulty,
     mapName: score.songName ?? 'Unknown Map',
-    songAuthor: score.songAuthor,
-    mapAuthor: score.mapAuthor,
-    coverUrl: score.coverUrl,
+    artistName: score.songAuthor ?? '',
+    mapAuthor: score.mapAuthor ?? '',
+    coverUrl: score.coverUrl ?? '',
     difficulty: formatDifficulty(score.difficulty),
     categoryCode: categoryStore.getCategoryCode(score.categoryId) ?? 'overall',
-    modifiers: modifierStore.resolveModifierCodes(score.modifierIds),
-    ap: score.ap,
-    accuracy: score.accuracy,
+    rank: score.rank,
     score: score.score,
-    date: score.timeSet,
+    accuracy: score.accuracy,
+    ap: score.ap,
+    weightedAp: score.weightedAp,
+    modifiers: modifierStore.resolveModifierCodes(score.modifierIds),
+    misses: score.misses,
+    badCuts: score.badCuts,
+    wallHits: score.wallHits,
+    bombHits: score.bombHits,
+    streak115: score.streak115,
+    timeSet: score.timeSet,
+    blScoreId: score.blScoreId ?? undefined,
   }))
 })
 
 const scoreTotalPages = computed(() => scorePageData.value?.totalPages ?? 0)
+
+function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
+  return {
+    scoreId: entry.key,
+    mapId: entry.mapId,
+    mapDifficultyId: entry.mapDifficultyId,
+    beatsaverCode: entry.beatsaverCode,
+    characteristic: entry.characteristic,
+    rawDifficulty: entry.rawDifficulty,
+    mapName: entry.mapName,
+    artistName: entry.artistName,
+    difficulty: entry.difficulty,
+    categoryCode: entry.categoryCode,
+    coverUrl: entry.coverUrl,
+    leaderboardRank: entry.rank,
+    score: entry.score,
+    accuracy: entry.accuracy,
+    ap: entry.ap,
+    weightedAp: entry.weightedAp,
+    modifiers: entry.modifiers,
+    date: entry.timeSet,
+    misses: entry.misses,
+    badCuts: entry.badCuts,
+    wallHits: entry.wallHits,
+    bombHits: entry.bombHits,
+    streak115: entry.streak115,
+    blScoreId: entry.blScoreId,
+    userName: entry.userName,
+    mapAuthor: entry.mapAuthor,
+  }
+}
+
+function onSelectScore(entry: ScoreFeedEntry) {
+  modalScore.value = toScoreDisplay(entry)
+  modalUserId.value = entry.userId
+  modalOpen.value = true
+}
 
 function resetData() {
   rankingPageData.value = null
@@ -168,18 +216,6 @@ function buildPlayerProfileRoute(userId: string): RouteLocationRaw {
 
 function buildRankingPlayerRoute(row: Record<string, unknown>): RouteLocationRaw {
   return buildPlayerProfileRoute(row.userId as string)
-}
-
-function buildScoreMapRoute(row: Record<string, unknown>): RouteLocationRaw {
-  return {
-    name: 'map-detail',
-    params: { mapId: row.mapId as string },
-    query: { difficultyId: row.mapDifficultyId as string },
-  }
-}
-
-function openScore(row: Record<string, unknown>) {
-  router.push(buildScoreMapRoute(row))
 }
 
 watch(
@@ -258,90 +294,39 @@ watch(scorePage, () => {
         <h2 class="followed-activity__title">Activity Feed</h2>
       </div>
 
-      <DataTable
-        :columns="scoreColumns"
-        :rows="scoreRows"
-        :loading="scoresLoading"
-        :loading-rows="FOLLOWED_SCORE_SIZE"
-        row-key="id"
-        row-clickable
-        empty-message="No followed scores found"
-        @row-click="openScore"
-      >
-        <template #cell-player="{ row }">
-          <RouterLink
-            class="followed-activity__player followed-activity__player--link"
-            :to="buildPlayerProfileRoute(row.userId as string)"
-            @click.stop
-          >
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="24" />
-            <span class="followed-activity__player-name">{{ row.userName }}</span>
-          </RouterLink>
-        </template>
+      <div v-if="scoresLoading" class="followed-activity__feed-loading">
+        <div v-for="i in FOLLOWED_SCORE_SIZE" :key="i" class="followed-activity__feed-skeleton" />
+      </div>
 
-        <template #cell-map="{ row }">
-          <div class="followed-activity__map">
-            <GlowImage :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="32" />
-            <div class="followed-activity__map-text">
-              <span class="followed-activity__map-name">{{ row.mapName }}</span>
-              <span class="followed-activity__map-meta">
-                {{ row.difficulty }} - {{ row.songAuthor }}
-              </span>
-            </div>
-          </div>
-        </template>
+      <div v-else-if="scoreFeedEntries.length === 0" class="followed-activity__feed-empty">
+        No followed scores found
+      </div>
 
-        <template #cell-ap="{ value }">
-          <span class="followed-activity__ap">{{ (value as number).toFixed(2) }}</span>
-        </template>
-
-        <template #cell-accuracy="{ value }">
-          {{ ((value as number) * 100).toFixed(2) }}%
-        </template>
-
-        <template #cell-date="{ value }">
-          <span
-            class="followed-activity__date"
-            :class="{ 'followed-activity__date--recent': isRecentDate(value as string) }"
-          >
-            {{ formatRelativeDate(value as string) }}
-          </span>
-        </template>
-
-        <template #mobile-card="{ row }">
-          <button class="followed-activity__score-card" type="button" @click="openScore(row)">
-            <div class="followed-activity__score-card-top">
-              <RouterLink
-                class="followed-activity__player followed-activity__player--link"
-                :to="buildPlayerProfileRoute(row.userId as string)"
-                @click.stop
-              >
-                <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="22" />
-                <span class="followed-activity__player-name">{{ row.userName }}</span>
-              </RouterLink>
-              <span class="followed-activity__date">{{ formatRelativeDate(row.date as string) }}</span>
-            </div>
-            <div class="followed-activity__map">
-              <GlowImage :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="36" />
-              <div class="followed-activity__map-text">
-                <span class="followed-activity__map-name">{{ row.mapName }}</span>
-                <span class="followed-activity__map-meta">
-                  {{ ((row.accuracy as number) * 100).toFixed(2) }}% -
-                  {{ (row.ap as number).toFixed(2) }} AP
-                </span>
-              </div>
-            </div>
-          </button>
-        </template>
-      </DataTable>
+      <div v-else class="followed-activity__feed">
+        <ScoreFeedCard
+          v-for="entry in scoreFeedEntries"
+          :key="entry.key"
+          :entry="entry"
+          :tick="tick"
+          @select="onSelectScore"
+        />
+      </div>
 
       <PaginationControls
         v-if="scoreTotalPages > 1"
         :page="scorePage"
         :total-pages="scoreTotalPages"
+        :sibling-count="2"
         @update:page="scorePage = $event"
       />
     </div>
+
+    <ScoreDetailModal
+      :open="modalOpen"
+      :score="modalScore"
+      :user-id="modalUserId"
+      @close="modalOpen = false"
+    />
   </section>
 </template>
 
@@ -350,6 +335,7 @@ watch(scorePage, () => {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: var(--space-lg);
+  align-items: start;
   width: 100%;
 }
 
@@ -408,44 +394,18 @@ watch(scorePage, () => {
   color: var(--tier-bronze);
 }
 
-.followed-activity__player,
-.followed-activity__map {
+.followed-activity__player {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   min-width: 0;
 }
 
-.followed-activity__player--link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.followed-activity__player--link:hover .followed-activity__player-name {
-  color: var(--accent);
-}
-
-.followed-activity__player-name,
-.followed-activity__map-name {
+.followed-activity__player-name {
   min-width: 0;
   overflow: hidden;
   color: var(--text-primary);
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.followed-activity__map-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.followed-activity__map-meta {
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -455,18 +415,7 @@ watch(scorePage, () => {
   font-weight: 600;
 }
 
-.followed-activity__date {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  white-space: nowrap;
-}
-
-.followed-activity__date--recent {
-  color: var(--text-primary);
-}
-
-.followed-activity__player-card,
-.followed-activity__score-card {
+.followed-activity__player-card {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -483,23 +432,62 @@ watch(scorePage, () => {
   transition: border-color 120ms ease;
 }
 
-.followed-activity__player-card:hover,
-.followed-activity__score-card:hover {
+.followed-activity__player-card:hover {
   border-left-color: var(--accent);
 }
 
-.followed-activity__score-card {
+.followed-activity__feed {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
-  cursor: pointer;
-  font: inherit;
+  gap: 0;
 }
 
-.followed-activity__score-card-top {
+.followed-activity__feed :deep(.feed-card) {
+  margin-top: 31px;
+}
+
+.followed-activity__feed :deep(.feed-card:first-child) {
+  margin-top: 29px;
+}
+
+.followed-activity__feed :deep(.feed-card__body) {
+  padding: var(--space-xs) var(--space-sm);
+  column-gap: var(--space-xl);
+  row-gap: 0;
+  grid-template-columns: 40px 36px 1fr auto;
+}
+
+.followed-activity__feed :deep(.feed-card__stats-mid) {
+  display: none;
+}
+
+.followed-activity__feed :deep(.feed-card__stats-bottom) {
+  gap: var(--space-xs);
+}
+
+.followed-activity__feed-loading {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-top: var(--space-lg);
+}
+
+.followed-activity__feed-skeleton {
+  height: 52px;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.followed-activity__feed-empty {
+  padding: var(--space-3xl) var(--space-md);
+  text-align: center;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 960px) {
