@@ -37,6 +37,7 @@ const rankingLoading = ref(false)
 const scoresLoading = ref(false)
 const rankingPageData = ref<Page<LeaderboardResponse> | null>(null)
 const scorePageData = ref<Page<ScoreResponse> | null>(null)
+const rankingPage = ref(1)
 const scorePage = ref(1)
 
 const tick = ref(0)
@@ -143,6 +144,7 @@ const scoreFeedEntries = computed<ScoreFeedEntry[]>(() => {
 })
 
 const scoreTotalPages = computed(() => scorePageData.value?.totalPages ?? 0)
+const rankingTotalPages = computed(() => rankingPageData.value?.totalPages ?? 0)
 
 function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
   return {
@@ -206,7 +208,7 @@ async function fetchRanking() {
   rankingLoading.value = true
   try {
     rankingPageData.value = await getLeaderboard(categoryId, {
-      page: 0,
+      page: rankingPage.value - 1,
       size: FOLLOWED_RANKING_SIZE,
       sort: 'ranking,asc',
       relation: scoreMode.value,
@@ -261,6 +263,7 @@ function buildRankingPlayerRoute(row: Record<string, unknown>): RouteLocationRaw
 watch(
   () => authStore.isLoggedIn,
   () => {
+    rankingPage.value = 1
     scorePage.value = 1
     void fetchActivity()
   },
@@ -278,7 +281,12 @@ watch(scorePage, () => {
   if (authStore.isLoggedIn) void fetchScores()
 })
 
+watch(rankingPage, () => {
+  if (authStore.isLoggedIn) void fetchRanking()
+})
+
 watch(scoreMode, () => {
+  rankingPage.value = 1
   scorePage.value = 1
   void fetchRanking()
   void fetchScores()
@@ -341,6 +349,14 @@ watch([sortField, sortDir, filterCategoryId], () => {
         </template>
       </DataTable>
       </div>
+
+      <PaginationControls
+        v-if="rankingTotalPages > 1"
+        :page="rankingPage"
+        :total-pages="rankingTotalPages"
+        :sibling-count="1"
+        @update:page="rankingPage = $event"
+      />
     </div>
 
     <div class="followed-activity__panel followed-activity__panel--scores">
