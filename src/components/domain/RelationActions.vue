@@ -5,12 +5,16 @@ import { useAuthStore } from '@/stores/auth'
 import { RelationBlockedError, useRelationsStore } from '@/stores/relations'
 import type { UserRelationType } from '@/types/api/relations'
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   targetUserId: string
   targetName?: string
+  showSnipe?: boolean
+  dense?: boolean
 }>()
 
+const router = useRouter()
 const authStore = useAuthStore()
 const relationsStore = useRelationsStore()
 
@@ -26,6 +30,10 @@ const isFollower = computed(() =>
 )
 const isRival = computed(() => relationsStore.hasRelation(props.targetUserId, 'rival'))
 const isBlocked = computed(() => relationsStore.hasRelation(props.targetUserId, 'blocked'))
+
+function goToSnipe() {
+  router.push({ name: 'player-snipe', params: { userId: props.targetUserId } })
+}
 
 const pending = ref<UserRelationType | null>(null)
 const errorMessage = ref<string | null>(null)
@@ -80,7 +88,26 @@ const targetLabel = computed(() => props.targetName || 'this user')
 </script>
 
 <template>
-  <div v-if="visible" class="relation-actions">
+  <div v-if="visible" class="relation-actions" :class="{ 'relation-actions--dense': dense }">
+    <BaseButton
+      v-if="showSnipe && !isBlocked"
+      size="sm"
+      variant="primary"
+      aria-label="Snipe this player"
+      title="Snipe this player"
+      @click="goToSnipe"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="12" y1="2" x2="12" y2="6" />
+        <line x1="12" y1="18" x2="12" y2="22" />
+        <line x1="2" y1="12" x2="6" y2="12" />
+        <line x1="18" y1="12" x2="22" y2="12" />
+      </svg>
+    </BaseButton>
+
     <BaseButton
       v-if="!isBlocked"
       size="sm"
@@ -175,6 +202,12 @@ const targetLabel = computed(() => props.targetName || 'this user')
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+}
+
+.relation-actions--dense :deep(.base-button) {
+  padding: 0;
+  width: 30px;
+  height: 30px;
 }
 
 .relation-actions__btn--active {

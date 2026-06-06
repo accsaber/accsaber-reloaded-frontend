@@ -258,9 +258,9 @@ watch(
 
       <template #cell-player="{ row }">
         <div class="map-scores__player">
-          <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" />
           <PlayerTooltipTrigger :user-id="(row._userId as string)" :user-name="(row.userName as string)"
             :avatar-url="(row.avatarUrl as string)" :country="(row.country as string)">
+            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" />
             <span class="map-scores__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
             <CountryFlag :country="(row.country as string)" />
             <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />

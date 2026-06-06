@@ -6,6 +6,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
+import RelationActions from '@/components/domain/RelationActions.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRelationsStore } from '@/stores/relations'
 import type {
@@ -152,7 +153,6 @@ watch(page, () => {
             class="relation-list__trigger"
           >
             <span class="relation-list__name">{{ item.targetName }}</span>
-            <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
           </PlayerTooltipTrigger>
           <button
             v-if="canRemove"
@@ -167,9 +167,18 @@ watch(page, () => {
                 stroke-linecap="round" />
             </svg>
           </button>
+          <RelationActions
+            v-else
+            :target-user-id="item.targetUserId"
+            :target-name="item.targetName"
+            dense
+            class="relation-list__actions"
+            @click.stop
+          />
+          <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
         </div>
 
-        <PaginationControls
+        <PaginationControls class="relation-list__pagination"
           v-if="totalPages > 1"
           :page="page"
           :total-pages="totalPages"
@@ -185,8 +194,10 @@ watch(page, () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  max-height: 60vh;
-  overflow-y: auto;
+}
+
+.relation-list__pagination {
+  margin-top: var(--space-md);
 }
 
 .relation-list__row {
@@ -233,6 +244,10 @@ watch(page, () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.relation-list__actions {
+  flex-shrink: 0;
 }
 
 .relation-list__remove {

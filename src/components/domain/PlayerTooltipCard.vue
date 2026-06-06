@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getUserLevel, getUserOverallStatistics } from '@/api/users';
 import CountryFlag from '@/components/domain/CountryFlag.vue';
+import RelationActions from '@/components/domain/RelationActions.vue';
 import type { LevelResponse, UserCategoryStatisticsResponse } from '@/types/api/users';
 import { computed, onMounted, ref } from 'vue';
 
@@ -70,6 +71,15 @@ onMounted(async () => {
           <span class="player-tooltip__stat-value">#{{ stats.countryRanking }}</span>
         </div>
       </div>
+
+      <RelationActions
+        :target-user-id="userId"
+        :target-name="userName"
+        show-snipe
+        dense
+        class="player-tooltip__actions"
+        @click.stop
+      />
     </div>
   </div>
 </template>
@@ -190,5 +200,11 @@ onMounted(async () => {
   font-size: var(--text-caption);
   font-weight: 500;
   color: var(--text-primary);
+}
+
+.player-tooltip__actions {
+  justify-content: center;
+  width: 100%;
+  margin-top: 2px;
 }
 </style>
