@@ -430,6 +430,27 @@ onUnmounted(() => {
   gap: var(--space-xl);
   padding-top: calc(var(--navbar-height) + var(--space-2xl) + var(--space-xl));
   padding-bottom: var(--space-xl);
+  overflow: visible;
+}
+
+.hero--compact .hero__glow {
+  position: fixed;
+  inset: -32px 0 0 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 0%,
+      color-mix(in srgb, var(--tier-gold) 12%, transparent),
+      transparent 70%);
+}
+
+.hero--compact .hero__scroll-hint {
+  position: fixed;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  transition: opacity 300ms ease;
 }
 
 
