@@ -8,6 +8,7 @@ import FilterPopover from '@/components/common/FilterPopover.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -322,11 +323,17 @@ watch([sortField, sortDir, filterCategoryId], () => {
         </template>
 
         <template #cell-player="{ row }">
-          <div class="followed-activity__player">
+          <PlayerTooltipTrigger
+            :user-id="(row.userId as string)"
+            :user-name="(row.name as string)"
+            :avatar-url="(row.avatarUrl as string)"
+            :country="(row.country as string)"
+            class="followed-activity__player"
+          >
             <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28" />
             <span class="followed-activity__player-name">{{ row.name }}</span>
             <CountryFlag :country="(row.country as string)" />
-          </div>
+          </PlayerTooltipTrigger>
         </template>
 
         <template #cell-ap="{ value }">

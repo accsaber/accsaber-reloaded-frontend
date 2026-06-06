@@ -13,8 +13,23 @@ const showTooltip = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
 const tooltipStyle = ref<Record<string, string>>({})
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
+let hideTimer: ReturnType<typeof setTimeout> | null = null
 
 const SCROLL_OPTS: AddEventListenerOptions = { capture: true, passive: true }
+
+function clearHoverTimer() {
+  if (hoverTimer) {
+    clearTimeout(hoverTimer)
+    hoverTimer = null
+  }
+}
+
+function clearHideTimer() {
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
+}
 
 function updatePosition() {
   const el = triggerRef.value
@@ -42,7 +57,19 @@ function detachListeners() {
   window.removeEventListener('resize', onScrollOrResize)
 }
 
+function hide() {
+  showTooltip.value = false
+  detachListeners()
+}
+
+function scheduleHide() {
+  clearHideTimer()
+  hideTimer = setTimeout(hide, 200)
+}
+
 function onMouseEnter() {
+  clearHideTimer()
+  if (showTooltip.value) return
   hoverTimer = setTimeout(() => {
     updatePosition()
     showTooltip.value = true
@@ -51,16 +78,22 @@ function onMouseEnter() {
 }
 
 function onMouseLeave() {
-  if (hoverTimer) {
-    clearTimeout(hoverTimer)
-    hoverTimer = null
-  }
-  showTooltip.value = false
-  detachListeners()
+  clearHoverTimer()
+  scheduleHide()
+}
+
+function onPopupEnter() {
+  clearHoverTimer()
+  clearHideTimer()
+}
+
+function onPopupLeave() {
+  scheduleHide()
 }
 
 onUnmounted(() => {
-  if (hoverTimer) clearTimeout(hoverTimer)
+  clearHoverTimer()
+  clearHideTimer()
   detachListeners()
 })
 </script>
@@ -70,7 +103,8 @@ onUnmounted(() => {
     <slot />
     <Teleport to="body">
       <Transition name="tooltip">
-        <div v-if="showTooltip" class="tooltip-trigger__popup" :style="tooltipStyle">
+        <div v-if="showTooltip" class="tooltip-trigger__popup" :style="tooltipStyle"
+          @mouseenter="onPopupEnter" @mouseleave="onPopupLeave">
           <PlayerTooltipCard :user-id="userId" :user-name="userName" :avatar-url="avatarUrl"
             :country="country" />
         </div>
