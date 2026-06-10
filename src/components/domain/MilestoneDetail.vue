@@ -133,7 +133,7 @@ function toggleExpand() {
       <div class="milestone-detail__dropdown-inner">
         <div class="milestone-detail__score">
           <img v-if="milestone.coverUrl" :src="milestone.coverUrl" :alt="milestone.songName ?? 'Cover'"
-            class="milestone-detail__cover" loading="lazy" />
+            class="milestone-detail__cover" loading="lazy" decoding="async" />
           <div class="milestone-detail__score-info">
             <span class="milestone-detail__score-text">
               <strong>{{ accuracy }}%</strong> on
@@ -167,7 +167,7 @@ function toggleExpand() {
 
       <div v-if="hasScoreInfo" class="milestone-detail__score">
         <img v-if="milestone.coverUrl" :src="milestone.coverUrl" :alt="milestone.songName ?? 'Cover'"
-          class="milestone-detail__cover" loading="lazy" />
+          class="milestone-detail__cover" loading="lazy" decoding="async" />
         <div class="milestone-detail__score-info">
           <span class="milestone-detail__score-text">
             Completed with <strong>{{ accuracy }}%</strong> on

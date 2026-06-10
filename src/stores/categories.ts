@@ -24,10 +24,25 @@ function readCssAccent(code: string): string {
   return val || fallback
 }
 
+const STORAGE_KEY = 'cache:categories'
+
+function loadCachedCategories(): CategoryResponse[] {
+  if (typeof sessionStorage === 'undefined') return []
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed as CategoryResponse[] : []
+  } catch {
+    return []
+  }
+}
+
 export const useCategoryStore = defineStore('categories', () => {
   const themeStore = useThemeStore()
-  const categories = ref<CategoryResponse[]>([])
-  const loaded = ref(false)
+  const cached = loadCachedCategories()
+  const categories = ref<CategoryResponse[]>(cached)
+  const loaded = ref(cached.length > 0)
 
   const byId = computed(() => {
     const map = new Map<string, CategoryResponse>()
@@ -95,10 +110,16 @@ export const useCategoryStore = defineStore('categories', () => {
     return readCssAccent(code)
   }
 
-  async function fetchCategories(): Promise<void> {
+  async function fetchCategories(force = false): Promise<void> {
+    if (loaded.value && !force) return
     try {
-      categories.value = await getCategories()
+      const result = await getCategories()
+      categories.value = result
       loaded.value = true
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(result))
+      } catch {
+      }
     } catch {
     }
   }

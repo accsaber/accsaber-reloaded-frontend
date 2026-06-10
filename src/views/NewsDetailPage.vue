@@ -90,7 +90,7 @@ function formatDate(date: string | null): string {
 
     <article v-else class="news-detail__article">
       <div v-if="news.imageUrl" class="news-detail__hero">
-        <img :src="news.imageUrl" :alt="news.title" />
+        <img :src="news.imageUrl" :alt="news.title" fetchpriority="high" decoding="async" />
         <div class="news-detail__hero-bleed" />
       </div>
 

@@ -606,12 +606,12 @@ watch(activeCategory, (newCategory) => {
                 <BaseButton size="sm" :href="`https://www.beatleader.com/u/${user.blId ?? user.id}`"
                   aria-label="View on BeatLeader">
                   <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                    style="border-radius: 3px;" />
+                    style="border-radius: 3px;" decoding="async" />
                 </BaseButton>
                 <BaseButton size="sm" :href="`https://scoresaber.com/u/${user.ssId ?? user.id}`"
                   aria-label="View on ScoreSaber">
                   <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                    style="border-radius: 3px;" />
+                    style="border-radius: 3px;" decoding="async" />
                 </BaseButton>
                 <BaseButton v-if="canSnipe" size="sm" variant="primary"
                   aria-label="Snipe this player" title="Snipe this player"

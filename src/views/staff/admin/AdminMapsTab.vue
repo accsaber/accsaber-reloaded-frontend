@@ -137,7 +137,7 @@ const NEXT_STATUS: Partial<Record<MapDifficultyStatus, MapDifficultyStatus>> = {
       <template #default="{ item }">
         <td>
           <div class="map-cell">
-            <img :src="item.coverUrl" class="cover" :alt="item.songName" loading="lazy" />
+            <img :src="item.coverUrl" class="cover" :alt="item.songName" loading="lazy" decoding="async" />
             <div class="map-info">
               <span class="map-name">{{ item.songName }}</span>
               <span class="map-author">{{ item.songAuthor }}</span>

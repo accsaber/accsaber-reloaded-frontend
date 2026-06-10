@@ -6,7 +6,9 @@ COPY . .
 ARG VITE_ADMIN_URL
 ARG VITE_RANKING_URL
 ARG VITE_MAIN_SITE_URL
-RUN VITE_API_BASE=/v1 npm run build-only
+ARG VITE_API_BASE=https://api.accsaberreloaded.com/v1
+ARG VITE_WS_BASE=wss://api.accsaberreloaded.com/ws/scores
+RUN VITE_API_BASE=$VITE_API_BASE VITE_WS_BASE=$VITE_WS_BASE npm run build-only
 
 FROM nginx:alpine
 COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template

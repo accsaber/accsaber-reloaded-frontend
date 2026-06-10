@@ -212,7 +212,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
             <a v-for="p in players" :key="p.userId" :href="playerHref(p.userId)" class="search-modal__row"
               @click="goToPlayer(p.userId, $event)">
               <span class="search-modal__rank" :class="getRankClass(p.ranking)">#{{ p.ranking }}</span>
-              <img :src="p.avatarUrl" :alt="p.userName" class="search-modal__avatar" />
+              <img :src="p.avatarUrl" :alt="p.userName" class="search-modal__avatar" loading="lazy" decoding="async" />
               <span class="search-modal__row-main">
                 <span class="search-modal__row-title">{{ p.userName }}</span>
                 <span class="search-modal__row-sub">
@@ -244,7 +244,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
             <div v-else-if="!difficulties.length" class="search-modal__empty">No maps found.</div>
             <a v-for="diff in difficulties" :key="diff.id" :href="diffHref(diff)" class="search-modal__row"
               @click="goToDifficulty(diff, $event)">
-              <img :src="diff.coverUrl" :alt="diff.songName" class="search-modal__cover" />
+              <img :src="diff.coverUrl" :alt="diff.songName" class="search-modal__cover" loading="lazy" decoding="async" />
               <span class="search-modal__row-main">
                 <CategoryBadge :category="categoryCode(diff)" size="sm" />
                 <span class="search-modal__row-title">{{ diff.songName }}</span>

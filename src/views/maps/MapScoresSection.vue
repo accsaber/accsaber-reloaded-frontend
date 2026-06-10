@@ -278,7 +278,7 @@ watch(
           <a v-if="getReplayUrl(row.blScoreId as number | null)" class="map-scores__detail-btn"
             :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
             :aria-label="replayLabel" :title="replayLabel" @click.stop>
-            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" loading="lazy" decoding="async" />
           </a>
           <button class="map-scores__detail-btn" aria-label="View score details"
             @click="openDetail(row._userId as string, $event)">
@@ -318,7 +318,7 @@ watch(
           <a v-if="getReplayUrl(row.blScoreId as number | null)" class="ms-card__detail-btn"
             :href="getReplayUrl(row.blScoreId as number | null)!" target="_blank" rel="noopener noreferrer"
             :aria-label="replayLabel" :title="replayLabel" @click.stop>
-            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" />
+            <img :src="replayIcon" alt="" width="14" height="14" style="border-radius: 2px;" loading="lazy" decoding="async" />
           </a>
           <button class="ms-card__detail-btn" aria-label="View score details"
             @click.stop="openDetail(row._userId as string, $event)">

@@ -165,7 +165,7 @@ onUnmounted(() => {
 <template>
   <div ref="containerRef" class="user-picker">
     <div v-if="selected" class="user-picker__selected">
-      <img v-if="selected.avatarUrl" class="user-picker__avatar" :src="selected.avatarUrl" :alt="selected.userName" />
+      <img v-if="selected.avatarUrl" class="user-picker__avatar" :src="selected.avatarUrl" :alt="selected.userName" loading="lazy" decoding="async" />
       <CountryFlag v-if="selected.country" :country="selected.country" />
       <span class="user-picker__name">{{ selected.userName }}</span>
       <button type="button" class="user-picker__clear" :disabled="disabled" aria-label="Clear selection" @click="clear">
@@ -202,7 +202,7 @@ onUnmounted(() => {
           @mouseenter="focusedIndex = i"
           @click="pick(user)"
         >
-          <img v-if="user.avatarUrl" class="user-picker__avatar" :src="user.avatarUrl" :alt="user.userName" />
+          <img v-if="user.avatarUrl" class="user-picker__avatar" :src="user.avatarUrl" :alt="user.userName" loading="lazy" decoding="async" />
           <CountryFlag v-if="user.country" :country="user.country" />
           <span class="user-picker__option-name">{{ user.userName }}</span>
           <span class="user-picker__option-rank">#{{ user.ranking }}</span>

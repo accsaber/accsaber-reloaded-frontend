@@ -28,7 +28,7 @@ function handleClick(event: MouseEvent) {
 <template>
   <a ref="cardRef" class="map-card" :href="href" :style="tiltStyle" @click="handleClick">
     <div class="map-card__image-wrap">
-      <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" />
+      <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" decoding="async" />
     </div>
     <div class="map-card__body">
       <CategoryBadge :category="map.categoryCode" size="sm" class="map-card__category" />

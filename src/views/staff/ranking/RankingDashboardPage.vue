@@ -384,6 +384,8 @@ function criteriaClassName(row: Record<string, unknown>): string {
             :src="row.createdByAvatarUrl as string"
             alt=""
             class="ranking-dashboard__submitted-avatar"
+            loading="lazy"
+            decoding="async"
           />
           {{ row.createdByUsername }}
         </span>

@@ -196,7 +196,7 @@ function goToDetail(difficultyId: string) {
 
     <div v-if="bsMap" class="map-import__preview" :style="pageAccent ? { '--page-accent': pageAccent } : {}">
       <div v-if="coverUrl" class="map-import__bg">
-        <img :src="coverUrl" alt="" class="map-import__bg-image" />
+        <img :src="coverUrl" alt="" class="map-import__bg-image" decoding="async" />
         <div class="map-import__bg-fade" />
       </div>
 

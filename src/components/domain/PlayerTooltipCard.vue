@@ -44,7 +44,7 @@ onMounted(async () => {
     </div>
 
     <div class="player-tooltip__content">
-      <img :src="avatarUrl" :alt="userName" class="player-tooltip__avatar" />
+      <img :src="avatarUrl" :alt="userName" class="player-tooltip__avatar" loading="lazy" decoding="async" />
       <div class="player-tooltip__info">
         <span class="player-tooltip__name">{{ userName }}</span>
         <span class="player-tooltip__country">

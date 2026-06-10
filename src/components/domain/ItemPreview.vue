@@ -116,6 +116,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       :src="badgeUrl"
       :alt="badgeAlt"
       loading="lazy"
+      decoding="async"
     />
 
     <span
@@ -207,6 +208,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       :src="backgroundUrl"
       :alt="item.name"
       loading="lazy"
+      decoding="async"
     />
 
     <img
@@ -215,6 +217,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       :src="item.iconUrl"
       :alt="item.name"
       loading="lazy"
+      decoding="async"
     />
 
     <span v-else class="item-preview__initial">{{ fallbackInitial }}</span>

@@ -50,7 +50,7 @@ function goToPlayer() {
       <PlayerTooltipTrigger :user-id="entry.userId" :user-name="entry.userName" :avatar-url="entry.avatarUrl"
         :country="entry.country">
         <img v-if="entry.avatarUrl" :src="entry.avatarUrl" :alt="entry.userName" class="feed-card__avatar"
-          loading="lazy" />
+          loading="lazy" decoding="async" />
         <span class="feed-card__player-name">{{ entry.userName }}</span>
         <CountryFlag :country="entry.country" />
       </PlayerTooltipTrigger>

@@ -80,7 +80,7 @@ onUnmounted(() => {
           <div class="hero__logo-block">
             <div class="hero__logo-wrap">
               <div class="hero__logo-glow" aria-hidden="true" />
-              <img :src="logoUrl" alt="AccSaber" class="hero__logo" />
+              <img :src="logoUrl" alt="AccSaber" class="hero__logo" fetchpriority="high" decoding="async" />
             </div>
           </div>
           <div class="hero__intro">

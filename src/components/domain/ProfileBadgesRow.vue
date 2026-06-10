@@ -44,7 +44,7 @@ const rendered = computed<Rendered[]>(() =>
       :aria-label="b.description ? `${b.name}: ${b.description}` : b.name"
       :style="b.tint ? { color: b.tint } : undefined"
     >
-      <img v-if="b.imageUrl" :src="b.imageUrl" :alt="b.altText" loading="lazy" />
+      <img v-if="b.imageUrl" :src="b.imageUrl" :alt="b.altText" loading="lazy" decoding="async" />
       <span v-else class="badges-row__placeholder">{{ b.name.charAt(0).toUpperCase() }}</span>
 
       <span class="badges-row__tooltip" role="tooltip">

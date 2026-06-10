@@ -22,7 +22,7 @@ const target = computed(() => `/news/${props.news.slug}`)
     :style="{ '--card-accent': accent }"
   >
     <div v-if="news.imageUrl" class="news-card__image">
-      <img :src="news.imageUrl" :alt="news.title" loading="lazy" />
+      <img :src="news.imageUrl" :alt="news.title" loading="lazy" decoding="async" />
     </div>
 
     <div class="news-card__body">

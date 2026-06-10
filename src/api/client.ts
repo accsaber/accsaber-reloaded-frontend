@@ -139,8 +139,23 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return parsed as T
 }
 
+const inflightGets = new Map<string, Promise<unknown>>()
+
+function dedupKey(path: string): string {
+  const auth = useAuthStore()
+  const token = auth.accessToken ?? auth.staffToken ?? ''
+  return `${token ? token.slice(-12) : 'anon'}:${path}`
+}
+
 export function get<T>(path: string): Promise<T> {
-  return request<T>('GET', path)
+  const key = dedupKey(path)
+  const existing = inflightGets.get(key) as Promise<T> | undefined
+  if (existing) return existing
+  const promise = request<T>('GET', path).finally(() => {
+    inflightGets.delete(key)
+  })
+  inflightGets.set(key, promise)
+  return promise
 }
 
 export function post<T>(path: string, body?: unknown): Promise<T> {

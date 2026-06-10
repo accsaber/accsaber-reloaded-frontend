@@ -11,7 +11,7 @@ withDefaults(defineProps<{
 
 <template>
   <div class="glow-image" :style="{ width: `${size}px`, height: `${size}px` }">
-    <img class="glow-image__img" :src="src" :alt="alt" loading="lazy" />
+    <img class="glow-image__img" :src="src" :alt="alt" loading="lazy" decoding="async" />
     <div class="glow-image__glow" :style="{ backgroundImage: `url(${src})` }" />
   </div>
 </template>

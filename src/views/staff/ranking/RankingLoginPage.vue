@@ -135,7 +135,7 @@ const providerMeta: Record<OAuthProvider, string> = {
     <div class="ranking-login__card">
       <header class="ranking-login__header">
         <div class="ranking-login__logo">
-          <img :src="logoUrl" alt="AccSaber" class="ranking-login__logo-img" />
+          <img :src="logoUrl" alt="AccSaber" class="ranking-login__logo-img" fetchpriority="high" decoding="async" />
         </div>
         <div>
           <h1 class="ranking-login__title">AccSaber Ranking</h1>
@@ -163,7 +163,7 @@ const providerMeta: Record<OAuthProvider, string> = {
           <button class="provider" data-provider="beatleader" @click="startProvider('beatleader')">
             <span class="provider__icon" aria-hidden="true">
               <img src="https://beatleader.com/assets/favicon-32x32.png" alt="" width="18" height="18"
-                class="provider__brand-img" />
+                class="provider__brand-img" decoding="async" />
             </span>
             <span>BeatLeader</span>
           </button>

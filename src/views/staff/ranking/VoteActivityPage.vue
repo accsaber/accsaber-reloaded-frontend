@@ -90,6 +90,8 @@ function criteriaLabel(vote: string): string {
             :src="vote.staffAvatarUrl"
             alt=""
             class="activity-card__avatar"
+            loading="lazy"
+            decoding="async"
           />
           <div v-else class="activity-card__avatar activity-card__avatar--placeholder">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

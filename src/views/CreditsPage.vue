@@ -110,7 +110,7 @@ function tierLabel(tier: SupporterTier): string {
         <ul class="credits__rows">
           <li v-for="row in group.rows" :key="row.userId" class="credits__row">
             <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <img v-if="row.avatarUrl" :src="row.avatarUrl" :alt="row.name" class="credits__avatar" loading="lazy" />
+              <img v-if="row.avatarUrl" :src="row.avatarUrl" :alt="row.name" class="credits__avatar" loading="lazy" decoding="async" />
               <span v-else class="credits__avatar credits__avatar--blank" aria-hidden="true"></span>
               <span class="credits__name">{{ row.name }}</span>
               <CountryFlag v-if="row.country" :country="row.country" class="credits__flag" />
@@ -127,7 +127,7 @@ function tierLabel(tier: SupporterTier): string {
         <ul class="credits__rows credits__rows--past">
           <li v-for="row in pastSupporters" :key="row.userId" class="credits__row">
             <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <img v-if="row.avatarUrl" :src="row.avatarUrl" :alt="row.name" class="credits__avatar" loading="lazy" />
+              <img v-if="row.avatarUrl" :src="row.avatarUrl" :alt="row.name" class="credits__avatar" loading="lazy" decoding="async" />
               <span v-else class="credits__avatar credits__avatar--blank" aria-hidden="true"></span>
               <span class="credits__name">{{ row.name }}</span>
               <CountryFlag v-if="row.country" :country="row.country" class="credits__flag" />

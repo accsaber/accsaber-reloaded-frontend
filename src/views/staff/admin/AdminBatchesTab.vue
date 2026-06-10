@@ -122,7 +122,7 @@ function formatDate(iso: string | null) {
           :key="diff.id"
           class="diff-card"
         >
-          <img :src="diff.coverUrl" class="diff-card__cover" :alt="diff.songName" loading="lazy" />
+          <img :src="diff.coverUrl" class="diff-card__cover" :alt="diff.songName" loading="lazy" decoding="async" />
           <div class="diff-card__info">
             <span class="diff-card__name">{{ diff.songName }}</span>
             <span class="diff-card__author">{{ diff.songAuthor }}</span>

@@ -52,7 +52,7 @@ function goToSettings() {
     <div class="auth-modal">
       <template v-if="isLoggedIn && me">
         <div class="auth-modal__profile">
-          <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="auth-modal__avatar" />
+          <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="auth-modal__avatar" decoding="async" />
           <div class="auth-modal__profile-text">
             <span class="auth-modal__name">{{ me.name }}</span>
             <span v-if="me.country" class="auth-modal__country">{{ me.country }}</span>

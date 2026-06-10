@@ -3,6 +3,7 @@ import { createApp } from 'vue'
 
 import App from './App.vue'
 import router from './router'
+import { installRoutePrefetch } from './router/prefetch'
 
 import '@/assets/styles/global.css'
 
@@ -30,4 +31,5 @@ void Promise.all([
 await authStore.bootstrap()
 
 app.use(router)
+installRoutePrefetch(router)
 app.mount('#app')

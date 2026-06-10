@@ -236,7 +236,7 @@ function onReplayClick(e: MouseEvent) {
         <button v-if="score.blScoreId" class="pin-card__foot-btn" type="button"
           :aria-label="replayLabel" :title="replayLabel" @click="onReplayClick">
           <img :src="replayIcon" alt="" width="16" height="16"
-            style="border-radius: 2px; display: block;" />
+            style="border-radius: 2px; display: block;" loading="lazy" decoding="async" />
         </button>
         <button class="pin-card__foot-btn" type="button" aria-label="View score details" @click="onDetailClick">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">

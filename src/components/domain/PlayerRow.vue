@@ -16,7 +16,7 @@ defineProps<{
     <span class="player-row__rank" :class="getRankClass(player.rank)">
       #{{ player.rank }}
     </span>
-    <img class="player-row__avatar" :src="player.avatarUrl" :alt="player.name" loading="lazy" />
+    <img class="player-row__avatar" :src="player.avatarUrl" :alt="player.name" loading="lazy" decoding="async" />
     <span class="player-row__name">
       {{ player.name }}
       <CountryFlag :country="player.country" />

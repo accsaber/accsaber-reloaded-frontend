@@ -193,7 +193,7 @@ const sectionTitle = computed(() => {
           :to="`/campaigns/${resource.data.id}`"
           class="campaign-row"
         >
-          <img :src="m.coverUrl" class="campaign-row__cover" :alt="m.songName" loading="lazy" />
+          <img :src="m.coverUrl" class="campaign-row__cover" :alt="m.songName" loading="lazy" decoding="async" />
           <div class="campaign-row__info">
             <span class="campaign-row__song">{{ m.songName }}</span>
             <span class="campaign-row__sub">{{ m.songAuthor }} · {{ m.mapAuthor }}</span>

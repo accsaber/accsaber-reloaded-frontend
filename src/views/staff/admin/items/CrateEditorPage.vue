@@ -443,7 +443,7 @@ watch(crateId, refresh)
                   :class="{ 'crate-editor__picker-item--added': rewardIds.has(item.id) }"
                   :disabled="rewardIds.has(item.id) || rowBusy[item.id]" @click="addReward(item)">
                   <div class="crate-editor__picker-icon">
-                    <img v-if="item.iconUrl" :src="item.iconUrl" alt="" loading="lazy" />
+                    <img v-if="item.iconUrl" :src="item.iconUrl" alt="" loading="lazy" decoding="async" />
                     <span v-else class="crate-editor__picker-icon-placeholder" />
                   </div>
                   <div class="crate-editor__picker-meta">
@@ -484,7 +484,7 @@ watch(crateId, refresh)
               <tbody>
                 <tr v-for="c in contents" :key="c.rewardItem.id">
                   <td class="crate-editor__pool-icon">
-                    <img v-if="c.rewardItem.iconUrl" :src="c.rewardItem.iconUrl" alt="" loading="lazy" />
+                    <img v-if="c.rewardItem.iconUrl" :src="c.rewardItem.iconUrl" alt="" loading="lazy" decoding="async" />
                     <span v-else class="crate-editor__picker-icon-placeholder" />
                   </td>
                   <td>

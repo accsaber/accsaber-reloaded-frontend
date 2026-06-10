@@ -321,7 +321,7 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
         <template #cell-player="{ row }">
           <div class="lb-preview__player">
             <img :src="(row.player as NormalizedScore['player']).avatar" alt="" class="lb-preview__avatar"
-              loading="lazy" />
+              loading="lazy" decoding="async" />
             <span class="lb-preview__player-name">{{ (row.player as NormalizedScore['player']).name }}</span>
             <CountryFlag :country="(row.player as NormalizedScore['player']).country" />
           </div>

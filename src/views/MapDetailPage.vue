@@ -429,7 +429,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
 
       <div class="map-detail__hero">
         <div class="map-detail__cover-wrap">
-          <img class="map-detail__cover" :src="map.coverUrl" :alt="map.songName" />
+          <img class="map-detail__cover" :src="map.coverUrl" :alt="map.songName" fetchpriority="high" decoding="async" />
           <div class="map-detail__cover-glow" :style="{ backgroundImage: `url(${map.coverUrl})` }" />
         </div>
 
@@ -453,7 +453,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
             <BaseButton v-if="map.beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${map.beatsaverCode}`"
               aria-label="View on BeatSaver">
               <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
-                style="border-radius: 3px;" />
+                style="border-radius: 3px;" decoding="async" />
             </BaseButton>
             <BaseButton v-if="map.beatsaverCode" size="sm" aria-label="Copy BSR" title="Copy BSR"
               class="map-detail__bsr-btn" @click="copyBsr">
@@ -468,13 +468,13 @@ watch(selectedStatsRange, () => fetchHistoricStats())
               :href="`https://www.beatleader.com/leaderboard/global/${activeDifficulty.blLeaderboardId}`"
               aria-label="View on BeatLeader">
               <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                style="border-radius: 3px;" />
+                style="border-radius: 3px;" decoding="async" />
             </BaseButton>
             <BaseButton v-if="activeDifficulty?.ssLeaderboardId" size="sm"
               :href="`https://scoresaber.com/leaderboard/${activeDifficulty.ssLeaderboardId}`"
               aria-label="View on ScoreSaber">
               <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                style="border-radius: 3px;" />
+                style="border-radius: 3px;" decoding="async" />
             </BaseButton>
             <BaseButton v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" size="sm" aria-label="AP Tweaker"
               @click="toggleMapTweaker($event)">
@@ -529,7 +529,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
                 :class="{ 'map-detail__top-history-row--current': i === 0 }" tabindex="0" role="button"
                 @click="goToPlayer(entry.userId)"
                 @keydown.enter="goToPlayer(entry.userId)">
-                <img class="map-detail__top-avatar" :src="entry.avatarUrl" :alt="entry.userName" />
+                <img class="map-detail__top-avatar" :src="entry.avatarUrl" :alt="entry.userName" loading="lazy" decoding="async" />
                 <span class="map-detail__top-name">{{ entry.userName }}</span>
                 <span class="map-detail__top-acc">{{ (entry.accuracy * 100).toFixed(2) }}%</span>
                 <span class="map-detail__top-ap">{{ entry.ap.toFixed(2) }} AP</span>

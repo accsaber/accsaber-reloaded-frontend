@@ -175,7 +175,7 @@ async function clearCountry() {
         <td class="mono muted right">{{ item.ranking }}</td>
         <td>
           <div class="player-cell">
-            <img :src="item.avatarUrl" class="avatar" :alt="item.userName" loading="lazy" />
+            <img :src="item.avatarUrl" class="avatar" :alt="item.userName" loading="lazy" decoding="async" />
             <span>{{ item.userName }}</span>
             <span v-if="bannedSet.has(item.userId)" class="banned-badge">banned</span>
           </div>

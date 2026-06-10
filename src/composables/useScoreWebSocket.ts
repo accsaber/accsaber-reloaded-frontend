@@ -8,6 +8,7 @@ import { onUnmounted, ref, type Ref } from 'vue'
 const MAX_ENTRIES = 50
 const INITIAL_RETRY_MS = 1000
 const MAX_RETRY_MS = 30000
+const HEARTBEAT_MS = 30000
 
 function buildWsUrl(): string {
   const wsBase: string = import.meta.env.VITE_WS_BASE ?? ''
@@ -41,8 +42,29 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
   let ws: WebSocket | null = null
   let retryMs = INITIAL_RETRY_MS
   let retryTimeout: ReturnType<typeof setTimeout> | null = null
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null
   let entryCounter = 0
   let disposed = false
+
+  function stopHeartbeat() {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval)
+      heartbeatInterval = null
+    }
+  }
+
+  function startHeartbeat() {
+    stopHeartbeat()
+    heartbeatInterval = setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        try {
+          ws.send('ping')
+        } catch {
+          ws.close()
+        }
+      }
+    }, HEARTBEAT_MS)
+  }
 
   function toFeedEntry(raw: ScoreResponse): ScoreFeedEntry {
     const categoryCode = categoryStore.getCategoryCode(raw.categoryId) ?? 'overall'
@@ -82,6 +104,7 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
   }
 
   function onMessage(event: MessageEvent) {
+    if (event.data === 'pong') return
     try {
       const data = JSON.parse(event.data) as ScoreResponse
       const entry = toFeedEntry(data)
@@ -110,12 +133,14 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
         if (disposed) { ws?.close(); return }
         status.value = 'connected'
         retryMs = INITIAL_RETRY_MS
+        startHeartbeat()
       })
 
       ws.addEventListener('message', onMessage)
 
       ws.addEventListener('close', () => {
         ws = null
+        stopHeartbeat()
         if (!disposed) scheduleReconnect()
       })
 
@@ -134,6 +159,7 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
       clearTimeout(retryTimeout)
       retryTimeout = null
     }
+    stopHeartbeat()
     if (ws) {
       ws.close()
       ws = null

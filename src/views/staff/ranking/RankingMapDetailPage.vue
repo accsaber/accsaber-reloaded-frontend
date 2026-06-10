@@ -593,7 +593,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
         <div class="rank-detail__hero">
           <div class="rank-detail__cover-wrap">
-            <img class="rank-detail__cover" :src="difficulty.coverUrl" :alt="difficulty.songName" />
+            <img class="rank-detail__cover" :src="difficulty.coverUrl" :alt="difficulty.songName" fetchpriority="high" decoding="async" />
             <div class="rank-detail__cover-glow" :style="{ backgroundImage: `url(${difficulty.coverUrl})` }" />
           </div>
 
@@ -720,15 +720,15 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
               <BaseButton v-if="beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${beatsaverCode}`"
                 aria-label="View on BeatSaver">
                 <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
-                  style="border-radius: 3px;" />
+                  style="border-radius: 3px;" decoding="async" />
               </BaseButton>
               <BaseButton v-if="beatleaderUrl" size="sm" :href="beatleaderUrl" aria-label="View on BeatLeader">
                 <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                  style="border-radius: 3px;" />
+                  style="border-radius: 3px;" decoding="async" />
               </BaseButton>
               <BaseButton v-if="scoresaberUrl" size="sm" :href="scoresaberUrl" aria-label="View on ScoreSaber">
                 <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                  style="border-radius: 3px;" />
+                  style="border-radius: 3px;" decoding="async" />
               </BaseButton>
               <BaseButton v-if="scoreCurveId && difficulty.complexity != null" size="sm" aria-label="AP Tweaker"
                 @click="toggleTweaker($event)">
@@ -879,7 +879,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
           <div v-else-if="voteData && voteData.votes.length" class="rank-detail__vote-list">
             <div v-for="vote in voteData.votes" :key="vote.id" class="rank-detail__vote-card">
               <div class="rank-detail__vote-header">
-                <img v-if="vote.staffAvatarUrl" :src="vote.staffAvatarUrl" alt="" class="rank-detail__vote-avatar" />
+                <img v-if="vote.staffAvatarUrl" :src="vote.staffAvatarUrl" alt="" class="rank-detail__vote-avatar" loading="lazy" decoding="async" />
                 <div v-else class="rank-detail__vote-avatar rank-detail__vote-avatar--placeholder">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">

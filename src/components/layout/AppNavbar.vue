@@ -154,7 +154,7 @@ onUnmounted(() => {
   <header class="navbar" :class="{ 'navbar--scrolled': scrolled }">
     <div class="navbar__inner">
       <router-link to="/" class="navbar__logo" aria-label="Home">
-        <img :src="logoUrl" alt="AccSaber" class="navbar__logo-img" />
+        <img :src="logoUrl" alt="AccSaber" class="navbar__logo-img" fetchpriority="high" decoding="async" />
       </router-link>
 
       <div class="navbar__mobile-quick">
@@ -217,7 +217,7 @@ onUnmounted(() => {
           <img
             v-if="authStore.isLoggedIn && authStore.userProfile?.avatarUrl && !avatarFailed"
             :src="authStore.userProfile.avatarUrl" :alt="authStore.userProfile.name" class="navbar__avatar"
-            @error="avatarFailed = true" />
+            decoding="async" @error="avatarFailed = true" />
           <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />

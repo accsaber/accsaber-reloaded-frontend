@@ -42,7 +42,7 @@ function cancel() {
         <button class="provider" data-provider="beatleader" @click="finishWith('beatleader')">
           <span class="provider__icon" aria-hidden="true">
             <img src="https://beatleader.com/assets/favicon-32x32.png" alt="" width="22" height="22"
-              class="provider__brand-img" />
+              class="provider__brand-img" decoding="async" />
           </span>
           <span class="provider__body">
             <span class="provider__label">Continue with BeatLeader</span>

@@ -484,7 +484,7 @@ watch(activeSection, (section) => {
             </header>
 
             <div v-if="me" class="settings-profile">
-              <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="settings-profile__avatar" />
+              <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="settings-profile__avatar" decoding="async" />
               <div class="settings-profile__text">
                 <span class="settings-profile__name">{{ me.name }}</span>
                 <span v-if="me.country" class="settings-profile__country">{{ me.country }}</span>

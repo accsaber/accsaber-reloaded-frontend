@@ -116,7 +116,7 @@ function formatRelative(dateStr: string): string {
             <div v-else class="holder-popup__list">
               <router-link v-for="h in holders" :key="h.userId"
                 :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
-                <img :src="h.avatarUrl" :alt="h.name" class="holder-popup__avatar" loading="lazy" />
+                <img :src="h.avatarUrl" :alt="h.name" class="holder-popup__avatar" loading="lazy" decoding="async" />
                 <span class="holder-popup__name">{{ h.name }}</span>
                 <CountryFlag :country="h.country" />
                 <span class="holder-popup__time">{{ formatRelative(h.completedAt) }}</span>

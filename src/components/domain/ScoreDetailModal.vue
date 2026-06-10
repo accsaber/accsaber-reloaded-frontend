@@ -353,7 +353,7 @@ watch(
 
       <div class="score-detail__main">
         <div v-if="score.coverUrl" class="score-detail__cover-wrap">
-          <img :src="score.coverUrl" :alt="score.mapName" class="score-detail__cover" />
+          <img :src="score.coverUrl" :alt="score.mapName" class="score-detail__cover" decoding="async" />
           <div class="score-detail__cover-glow" :style="{ backgroundImage: `url(${score.coverUrl})` }" />
         </div>
         <div class="score-detail__map-info">
@@ -473,19 +473,19 @@ watch(
           <BaseButton v-if="beatLeaderFirst" size="sm"
             :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`">
             <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20"
-              style="border-radius: 3px;" />
+              style="border-radius: 3px;" loading="lazy" decoding="async" />
             Replay
           </BaseButton>
           <BaseButton size="sm"
             :href="`https://allpoland.github.io/ArcViewer/?scoreID=${score.blScoreId}`">
             <img src="https://beatleader.com/assets/ArcViewerIcon.webp" alt="ArcViewer" width="20" height="20"
-              style="border-radius: 3px;" />
+              style="border-radius: 3px;" loading="lazy" decoding="async" />
             ArcViewer
           </BaseButton>
           <BaseButton v-if="!beatLeaderFirst" size="sm"
             :href="`https://replay.beatleader.com/?scoreId=${score.blScoreId}`">
             <img src="https://beatleader.com/assets/bs-pepe.gif" alt="Replay" width="20" height="20"
-              style="border-radius: 3px;" />
+              style="border-radius: 3px;" loading="lazy" decoding="async" />
             Replay
           </BaseButton>
           <BaseButton size="sm" :href="`https://beatleader.com/score/${score.blScoreId}`">
