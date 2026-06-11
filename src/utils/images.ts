@@ -1,20 +1,18 @@
-const IMAGE_URL_KEYS = new Set([
-  'avatarUrl',
-  'coverUrl',
-  'backgroundUrl',
-  'iconUrl',
-  'imageUrl',
-])
+const RASTER_PATTERN = /\.(png|gif)(\?|#|$)/i
 
-const PNG_PATTERN = /\.png(\?|#|$)/i
+export function toAvif(url: string): string {
+  return url.replace(RASTER_PATTERN, '.avif$2')
+}
 
-export function pngToAvif(url: string): string {
-  return url.replace(PNG_PATTERN, '.avif$1')
+function isImageUrlKey(key: string): boolean {
+  if (!key) return false
+  const lower = key.toLowerCase()
+  return lower.endsWith('url') || lower.endsWith('avatar') || lower.endsWith('cover')
 }
 
 export function imageUrlReviver(key: string, value: unknown): unknown {
-  if (typeof value === 'string' && IMAGE_URL_KEYS.has(key)) {
-    return pngToAvif(value)
+  if (typeof value === 'string' && isImageUrlKey(key) && RASTER_PATTERN.test(value)) {
+    return toAvif(value)
   }
   return value
 }
