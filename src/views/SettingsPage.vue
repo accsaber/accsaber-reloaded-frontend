@@ -3,6 +3,7 @@ import { buildOAuthStartUrl, getDefaultCallbackUrl } from '@/api/auth'
 import { equipItem, getItems, getUserItems } from '@/api/items'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import ImageUploader from '@/components/common/ImageUploader.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import ProviderIcon from '@/components/domain/ProviderIcon.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
@@ -215,12 +216,65 @@ const {
   set: setSyncName,
 } = useNameSyncSetting()
 
+const avatarSyncEnabled = ref<boolean | null>(null)
+const avatarSyncSaving = ref(false)
+const avatarResyncQueued = ref(false)
+let avatarResyncTimer: ReturnType<typeof setTimeout> | null = null
+
+async function fetchAvatarSyncSetting() {
+  if (!isLoggedIn.value) {
+    avatarSyncEnabled.value = null
+    return
+  }
+  try {
+    const { getMySyncSettings } = await import('@/api/users')
+    const res = await getMySyncSettings()
+    avatarSyncEnabled.value = res['sync.avatar'] ?? true
+  } catch {
+    avatarSyncEnabled.value = null
+  }
+}
+
+async function setSyncAvatar(next: boolean) {
+  if (
+    avatarSyncSaving.value
+    || avatarSyncEnabled.value === null
+    || avatarSyncEnabled.value === next
+  ) return
+  avatarSyncSaving.value = true
+  const wasOff = avatarSyncEnabled.value === false
+  try {
+    const { putMySyncSettings } = await import('@/api/users')
+    await putMySyncSettings({
+      'sync.name': syncEnabled.value ?? true,
+      'sync.avatar': next,
+    })
+    avatarSyncEnabled.value = next
+    if (wasOff && next) {
+      avatarResyncQueued.value = true
+      if (avatarResyncTimer) clearTimeout(avatarResyncTimer)
+      avatarResyncTimer = setTimeout(() => { avatarResyncQueued.value = false }, 6000)
+    }
+  } catch {
+    /* swallow */
+  } finally {
+    avatarSyncSaving.value = false
+  }
+}
+
+async function uploadAvatar(file: File) {
+  const { uploadMyAvatar } = await import('@/api/cdn')
+  await uploadMyAvatar(file)
+  await Promise.all([authStore.fetchAuthMe(), fetchAvatarSyncSetting()])
+}
+
 async function fetchSyncSetting() {
   if (!isLoggedIn.value) {
     syncEnabled.value = null
+    avatarSyncEnabled.value = null
     return
   }
-  await fetchSyncRaw()
+  await Promise.all([fetchSyncRaw(), fetchAvatarSyncSetting()])
 }
 
 const sections = computed<SectionDef[]>(() => [
@@ -483,8 +537,13 @@ watch(activeSection, (section) => {
               <p class="settings-card__desc">Your public profile across AccSaber.</p>
             </header>
 
-            <div v-if="me" class="settings-profile">
-              <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="settings-profile__avatar" decoding="async" />
+            <div v-if="me" class="settings-profile settings-profile--with-uploader">
+              <div class="settings-profile__avatar-block">
+                <ImageUploader v-if="isLoggedIn" label="Avatar" aspect-ratio="1 / 1"
+                  :image-url="me.avatarUrl ?? null" :upload-handler="uploadAvatar" />
+                <img v-else-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name"
+                  class="settings-profile__avatar" decoding="async" />
+              </div>
               <div class="settings-profile__text">
                 <span class="settings-profile__name">{{ me.name }}</span>
                 <span v-if="me.country" class="settings-profile__country">{{ me.country }}</span>
@@ -513,6 +572,23 @@ watch(activeSection, (section) => {
                   role="radio" :aria-checked="syncEnabled === false"
                   @click="setSyncName(false)">Off</button>
               </div>
+            </div>
+
+            <div v-if="isLoggedIn" class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">Sync avatar from BeatLeader / ScoreSaber</span>
+                <span class="settings-row__hint">
+                  Uploading a custom avatar turns this off automatically. Turn it back on to let the daily refresh
+                  pull your platform avatar again.
+                </span>
+                <span v-if="avatarResyncQueued" class="settings-row__notice">
+                  Will resync on the next refresh.
+                </span>
+              </div>
+              <SettingsPicker :model-value="avatarSyncEnabled" :options="NAME_SYNC_OPTIONS"
+                aria-label="Avatar sync"
+                :disabled="avatarSyncSaving || avatarSyncEnabled === null"
+                @update:model-value="setSyncAvatar" />
             </div>
 
             <div class="settings-row settings-row--danger">
@@ -888,6 +964,26 @@ watch(activeSection, (section) => {
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+}
+
+.settings-profile--with-uploader {
+  align-items: flex-start;
+}
+
+.settings-profile__avatar-block {
+  width: 128px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .settings-profile--with-uploader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-profile__avatar-block {
+    width: 100%;
+  }
 }
 
 .settings-profile__avatar {
