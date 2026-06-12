@@ -39,8 +39,21 @@ const voteData = ref<VoteListResponse | null>(null)
 const loading = ref(true)
 const voteLoading = ref(true)
 
-const coverUrl = computed(() => difficulty.value?.coverUrl ?? '')
+const coverUrl = computed(() => difficulty.value?.cdnCoverUrl ?? difficulty.value?.coverUrl ?? '')
+const coverFallbackUrl = computed(() => {
+  const d = difficulty.value
+  if (!d) return null
+  return d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null
+})
 const { dominantColor } = useColorExtract(coverUrl)
+const handleRankCoverError = (e: Event) => {
+  const img = e.currentTarget as HTMLImageElement
+  const fb = coverFallbackUrl.value
+  if (fb && img.src !== fb && img.dataset.fellBack !== '1') {
+    img.dataset.fellBack = '1'
+    img.src = fb
+  }
+}
 
 const categoryCode = computed(() => {
   if (!difficulty.value) return 'overall'
@@ -575,7 +588,7 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
     <template v-else-if="difficulty">
       <div class="rank-detail__bg">
-        <div class="rank-detail__bg-image" :style="{ backgroundImage: `url(${difficulty.coverUrl})` }" />
+        <div class="rank-detail__bg-image" :style="{ backgroundImage: `url(${coverUrl})` }" />
         <div class="rank-detail__bg-fade" />
       </div>
 
@@ -593,8 +606,9 @@ const statusTransitions = computed<{ value: string; label: string }[]>(() => {
 
         <div class="rank-detail__hero">
           <div class="rank-detail__cover-wrap">
-            <img class="rank-detail__cover" :src="difficulty.coverUrl" :alt="difficulty.songName" fetchpriority="high" decoding="async" />
-            <div class="rank-detail__cover-glow" :style="{ backgroundImage: `url(${difficulty.coverUrl})` }" />
+            <img class="rank-detail__cover" :src="coverUrl" :alt="difficulty.songName" fetchpriority="high"
+              decoding="async" @error="handleRankCoverError" />
+            <div class="rank-detail__cover-glow" :style="{ backgroundImage: `url(${coverUrl})` }" />
           </div>
 
           <div class="rank-detail__hero-info">

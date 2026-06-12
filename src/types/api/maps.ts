@@ -19,6 +19,7 @@ export interface MapResponse {
   mapAuthor: string
   beatsaverCode: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulties: MapDifficultyResponse[]
   createdAt: string
 }
@@ -31,6 +32,7 @@ export interface PublicMapResponse {
   mapAuthor: string
   beatsaverCode: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulties: PublicMapDifficultyResponse[]
   createdAt: string
 }
@@ -44,6 +46,7 @@ export interface MapDifficultyResponse {
   beatsaverCode: string | null
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   categoryId: string
   previousVersionId: string | null
   difficulty: Difficulty
@@ -61,6 +64,7 @@ export interface MapDifficultyResponse {
   createdBy: string | null
   createdByUsername: string | null
   createdByAvatarUrl: string | null
+  createdByCdnAvatarUrl?: string | null
   lastUpdatedBy: string | null
   lastUpdatedByUsername: string | null
   rankUpvotes: number
@@ -84,6 +88,7 @@ export interface PublicMapDifficultyResponse {
   beatsaverCode: string | null
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   categoryId: string
   difficulty: Difficulty
   characteristic: string
@@ -106,6 +111,7 @@ export interface TopScoreSnapshot {
   userId: string
   userName: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   score: number
   accuracy: number
   ap: number
@@ -135,6 +141,7 @@ export interface VoteResponse {
   staffId: string
   staffUsername: string | null
   staffAvatarUrl: string | null
+  staffCdnAvatarUrl?: string | null
   vote: VoteType
   type: MapVoteAction
   suggestedComplexity: number | null
@@ -148,6 +155,7 @@ export interface VoteResponse {
   songAuthor: string | null
   mapAuthor: string | null
   coverUrl: string | null
+  cdnCoverUrl?: string | null
   difficulty: Difficulty | null
   categoryId: string | null
 }

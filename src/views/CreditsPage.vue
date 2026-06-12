@@ -73,6 +73,13 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
+function handleCreditAvatarError(row: SupporterCreditEntry, event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  if (row.cdnAvatarUrl && row.avatarUrl && img.src !== row.avatarUrl) {
+    img.src = row.avatarUrl
+  }
+}
+
 function tierColor(tier: SupporterTier): string {
   return SUPPORTER_TIER_PALETTE[tier].base
 }
@@ -110,7 +117,9 @@ function tierLabel(tier: SupporterTier): string {
         <ul class="credits__rows">
           <li v-for="row in group.rows" :key="row.userId" class="credits__row">
             <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <img v-if="row.avatarUrl" :src="row.avatarUrl" :alt="row.name" class="credits__avatar" loading="lazy" decoding="async" />
+              <img v-if="row.cdnAvatarUrl || row.avatarUrl" :src="row.cdnAvatarUrl ?? row.avatarUrl"
+                :alt="row.name" class="credits__avatar" loading="lazy" decoding="async"
+                @error="handleCreditAvatarError(row, $event)" />
               <span v-else class="credits__avatar credits__avatar--blank" aria-hidden="true"></span>
               <span class="credits__name">{{ row.name }}</span>
               <CountryFlag v-if="row.country" :country="row.country" class="credits__flag" />
@@ -127,7 +136,9 @@ function tierLabel(tier: SupporterTier): string {
         <ul class="credits__rows credits__rows--past">
           <li v-for="row in pastSupporters" :key="row.userId" class="credits__row">
             <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <img v-if="row.avatarUrl" :src="row.avatarUrl" :alt="row.name" class="credits__avatar" loading="lazy" decoding="async" />
+              <img v-if="row.cdnAvatarUrl || row.avatarUrl" :src="row.cdnAvatarUrl ?? row.avatarUrl"
+                :alt="row.name" class="credits__avatar" loading="lazy" decoding="async"
+                @error="handleCreditAvatarError(row, $event)" />
               <span v-else class="credits__avatar credits__avatar--blank" aria-hidden="true"></span>
               <span class="credits__name">{{ row.name }}</span>
               <CountryFlag v-if="row.country" :country="row.country" class="credits__flag" />

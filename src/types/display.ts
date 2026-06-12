@@ -39,6 +39,7 @@ export interface PlayerDisplay {
   name: string
   country: string
   avatarUrl: string
+  avatarFallbackUrl?: string | null
   rank: number
   countryRank?: number
   rankChange?: number | null
@@ -54,6 +55,7 @@ export interface XpPlayerDisplay {
   name: string
   country: string
   avatarUrl: string
+  avatarFallbackUrl?: string | null
   rank: number
   countryRank?: number
   rankChange?: number | null
@@ -70,6 +72,7 @@ export interface MapDisplay {
   artistName: string
   mapperName: string
   coverUrl: string
+  coverFallbackUrl?: string | null
   complexity: number
   categoryCode: CategoryCode
   difficulty: string
@@ -93,6 +96,7 @@ export interface ScoreDisplay {
   difficulty: string
   categoryCode: CategoryCode
   coverUrl?: string
+  coverFallbackUrl?: string | null
   leaderboardRank: number
   score: number
   scoreNoMods?: number
@@ -128,6 +132,7 @@ export interface DifficultyScoreDisplay {
   userId: string
   userName: string
   avatarUrl: string
+  avatarFallbackUrl?: string | null
   country: string
   accuracy: number
   score: number
@@ -200,6 +205,7 @@ export interface ScoreFeedEntry {
   userId: string
   userName: string
   avatarUrl: string
+  avatarFallbackUrl?: string | null
   country: string
   mapId: string
   mapDifficultyId: string
@@ -210,6 +216,7 @@ export interface ScoreFeedEntry {
   artistName: string
   mapAuthor: string
   coverUrl: string
+  coverFallbackUrl?: string | null
   difficulty: string
   categoryCode: CategoryCode
   rank: number

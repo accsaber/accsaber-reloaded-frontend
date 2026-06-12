@@ -12,6 +12,13 @@ import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { DIFF_COLOR } from '@/utils/constants'
 import { buildMapRoute } from '@/utils/mapRoute'
 
+function handleAdminMapCoverError(item: MapDifficultyResponse, event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  if (item.cdnCoverUrl && item.coverUrl && img.src !== item.coverUrl) {
+    img.src = item.coverUrl
+  }
+}
+
 function viewMapHref(item: MapDifficultyResponse): string {
   const route = buildMapRoute({
     beatsaverCode: item.beatsaverCode,
@@ -137,7 +144,8 @@ const NEXT_STATUS: Partial<Record<MapDifficultyStatus, MapDifficultyStatus>> = {
       <template #default="{ item }">
         <td>
           <div class="map-cell">
-            <img :src="item.coverUrl" class="cover" :alt="item.songName" loading="lazy" decoding="async" />
+            <img :src="item.cdnCoverUrl ?? item.coverUrl" class="cover" :alt="item.songName"
+              loading="lazy" decoding="async" @error="handleAdminMapCoverError(item, $event)" />
             <div class="map-info">
               <span class="map-name">{{ item.songName }}</span>
               <span class="map-author">{{ item.songAuthor }}</span>

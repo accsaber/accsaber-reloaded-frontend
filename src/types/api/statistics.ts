@@ -5,6 +5,7 @@ export interface MapAvgApResponse {
   songAuthor: string
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulty: string
   characteristic?: string
   beatsaverCode?: string | null
@@ -23,6 +24,7 @@ export interface MapRetryResponse {
   songAuthor: string
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulty: string
   characteristic?: string
   beatsaverCode?: string | null
@@ -37,6 +39,7 @@ export interface UserImprovementsResponse {
   userId: string
   userName: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   improvementCount: number
   latestScoreId: string
@@ -47,6 +50,7 @@ export interface UserMapImprovementsResponse {
   userId: string
   userName: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   mapDifficultyId: string
   mapId: string
@@ -54,6 +58,7 @@ export interface UserMapImprovementsResponse {
   songAuthor: string
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulty: string
   categoryId: string
   categoryName: string
@@ -66,6 +71,7 @@ export interface MilestoneCollectorResponse {
   userId: string
   userName: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   milestoneCount: number
 }

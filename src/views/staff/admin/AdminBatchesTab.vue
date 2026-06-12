@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { BatchResponse } from '@/types/api/batches'
+import type { MapDifficultyResponse } from '@/types/api/maps'
 import type { BatchStatus } from '@/types/enums'
 import AdminTable from '@/components/admin/AdminTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -57,6 +58,13 @@ watch(statusFilter, () => {
 watch(page, () => {
   fetchBatches()
 })
+
+function handleBatchDiffCoverError(diff: MapDifficultyResponse, event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  if (diff.cdnCoverUrl && diff.coverUrl && img.src !== diff.coverUrl) {
+    img.src = diff.coverUrl
+  }
+}
 
 function toggleExpand(id: string) {
   expandedId.value = expandedId.value === id ? null : id
@@ -122,7 +130,8 @@ function formatDate(iso: string | null) {
           :key="diff.id"
           class="diff-card"
         >
-          <img :src="diff.coverUrl" class="diff-card__cover" :alt="diff.songName" loading="lazy" decoding="async" />
+          <img :src="diff.cdnCoverUrl ?? diff.coverUrl" class="diff-card__cover" :alt="diff.songName"
+            loading="lazy" decoding="async" @error="handleBatchDiffCoverError(diff, $event)" />
           <div class="diff-card__info">
             <span class="diff-card__name">{{ diff.songName }}</span>
             <span class="diff-card__author">{{ diff.songAuthor }}</span>

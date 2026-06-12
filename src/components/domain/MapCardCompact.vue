@@ -25,7 +25,8 @@ function handleClick(event: MouseEvent) {
 
 <template>
   <a class="map-card-compact" :href="href" @click="handleClick">
-    <GlowImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover" />
+    <GlowImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover"
+      :fallback-src="map.coverFallbackUrl ?? null" />
     <div class="map-card-compact__info">
       <span class="map-card-compact__song">{{ map.songName }}</span>
       <div class="map-card-compact__primary">

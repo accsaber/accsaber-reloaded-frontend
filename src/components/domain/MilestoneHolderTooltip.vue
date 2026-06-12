@@ -67,6 +67,13 @@ onUnmounted(() => {
   if (leaveTimer) clearTimeout(leaveTimer)
 })
 
+function handleHolderAvatarError(h: MilestoneHolderResponse, event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  if (h.cdnAvatarUrl && h.avatarUrl && img.src !== h.avatarUrl) {
+    img.src = h.avatarUrl
+  }
+}
+
 function formatRelative(dateStr: string): string {
   const now = Date.now()
   const then = new Date(dateStr).getTime()
@@ -116,7 +123,9 @@ function formatRelative(dateStr: string): string {
             <div v-else class="holder-popup__list">
               <router-link v-for="h in holders" :key="h.userId"
                 :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
-                <img :src="h.avatarUrl" :alt="h.name" class="holder-popup__avatar" loading="lazy" decoding="async" />
+                <img :src="h.cdnAvatarUrl ?? h.avatarUrl" :alt="h.name" class="holder-popup__avatar"
+                  loading="lazy" decoding="async"
+                  @error="handleHolderAvatarError(h, $event)" />
                 <span class="holder-popup__name">{{ h.name }}</span>
                 <CountryFlag :country="h.country" />
                 <span class="holder-popup__time">{{ formatRelative(h.completedAt) }}</span>

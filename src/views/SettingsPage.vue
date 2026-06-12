@@ -18,6 +18,7 @@ import { filterThemableTokens, readThemeValue } from '@/utils/items'
 import type { OAuthProvider } from '@/types/api/player-auth'
 import type { PrivacySettings, ReplayService, Visibility } from '@/types/api/settings'
 import { isRankingSubdomain } from '@/utils/subdomain'
+import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -197,6 +198,9 @@ const PRIVACY_CONTROLS: PrivacyControl[] = [
 ]
 
 const me = computed(() => authStore.authMe)
+const meAvatarUrl = computed(() => pickAvatarUrl(me.value))
+const meAvatarFallback = computed(() => pickAvatarFallback(me.value))
+const handleMeAvatarError = (e: Event) => onAvatarError(meAvatarFallback.value)(e)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const canAccessAccount = computed(
   () => isLoggedIn.value || (isRankingSubdomain && authStore.isStaffAuthorized),
@@ -540,9 +544,9 @@ watch(activeSection, (section) => {
             <div v-if="me" class="settings-profile settings-profile--with-uploader">
               <div class="settings-profile__avatar-block">
                 <ImageUploader v-if="isLoggedIn" label="Avatar" aspect-ratio="1 / 1"
-                  :image-url="me.avatarUrl ?? null" :upload-handler="uploadAvatar" />
-                <img v-else-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name"
-                  class="settings-profile__avatar" decoding="async" />
+                  :image-url="meAvatarUrl || null" :upload-handler="uploadAvatar" />
+                <img v-else-if="meAvatarUrl" :src="meAvatarUrl" :alt="me.name"
+                  class="settings-profile__avatar" decoding="async" @error="handleMeAvatarError" />
               </div>
               <div class="settings-profile__text">
                 <span class="settings-profile__name">{{ me.name }}</span>

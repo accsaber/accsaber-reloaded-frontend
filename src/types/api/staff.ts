@@ -4,6 +4,7 @@ export interface PublicStaffUserResponse {
   role: string
   userId: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   active: boolean
 }
 

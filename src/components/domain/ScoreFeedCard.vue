@@ -2,6 +2,7 @@
 import GlowImage from '@/components/common/GlowImage.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
+import { onAvatarError } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreFeedEntry } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -42,15 +43,17 @@ function handleClick() {
 function goToPlayer() {
   router.push(`/players/${props.entry.userId}`)
 }
+
+const handleAvatarError = (e: Event) => onAvatarError(props.entry.avatarFallbackUrl ?? null)(e)
 </script>
 
 <template>
   <div class="feed-card" :style="{ '--card-accent': accent }" @click="handleClick">
     <div class="feed-card__player-tab" @click.stop="goToPlayer">
       <PlayerTooltipTrigger :user-id="entry.userId" :user-name="entry.userName" :avatar-url="entry.avatarUrl"
-        :country="entry.country">
+        :avatar-fallback-url="entry.avatarFallbackUrl" :country="entry.country">
         <img v-if="entry.avatarUrl" :src="entry.avatarUrl" :alt="entry.userName" class="feed-card__avatar"
-          loading="lazy" decoding="async" />
+          loading="lazy" decoding="async" @error="handleAvatarError" />
         <span class="feed-card__player-name">{{ entry.userName }}</span>
         <CountryFlag :country="entry.country" />
       </PlayerTooltipTrigger>
@@ -60,7 +63,8 @@ function goToPlayer() {
       <span class="feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
 
       <div class="feed-card__cover">
-        <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48" />
+        <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48"
+          :fallback-src="entry.coverFallbackUrl ?? null" />
       </div>
 
       <div class="feed-card__info">

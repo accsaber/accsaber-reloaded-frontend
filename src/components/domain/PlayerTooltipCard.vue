@@ -2,6 +2,7 @@
 import { getUserLevel, getUserOverallStatistics } from '@/api/users';
 import CountryFlag from '@/components/domain/CountryFlag.vue';
 import RelationActions from '@/components/domain/RelationActions.vue';
+import { onAvatarError } from '@/composables/useAvatarFallback';
 import type { LevelResponse, UserCategoryStatisticsResponse } from '@/types/api/users';
 import { computed, onMounted, ref } from 'vue';
 
@@ -9,8 +10,11 @@ const props = defineProps<{
   userId: string
   userName: string
   avatarUrl: string
+  avatarFallbackUrl?: string | null
   country: string
 }>()
+
+const handleAvatarError = (e: Event) => onAvatarError(props.avatarFallbackUrl)(e)
 
 const stats = ref<UserCategoryStatisticsResponse | null>(null)
 const level = ref<LevelResponse | null>(null)
@@ -44,7 +48,8 @@ onMounted(async () => {
     </div>
 
     <div class="player-tooltip__content">
-      <img :src="avatarUrl" :alt="userName" class="player-tooltip__avatar" loading="lazy" decoding="async" />
+      <img :src="avatarUrl" :alt="userName" class="player-tooltip__avatar" loading="lazy" decoding="async"
+        @error="handleAvatarError" />
       <div class="player-tooltip__info">
         <span class="player-tooltip__name">{{ userName }}</span>
         <span class="player-tooltip__country">

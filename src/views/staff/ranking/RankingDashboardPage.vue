@@ -155,7 +155,8 @@ const rows = computed(() =>
     return {
       id: d.id,
       mapId: d.mapId,
-      coverUrl: d.coverUrl,
+      coverUrl: d.cdnCoverUrl ?? d.coverUrl,
+      coverFallbackUrl: d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null,
       songName: truncate(d.songName, 25),
       songSubName: d.songSubName,
       songAuthor: truncate(d.songAuthor, 25),
@@ -333,7 +334,8 @@ function criteriaClassName(row: Record<string, unknown>): string {
       @row-click="navigateToDetail"
     >
       <template #cell-cover="{ row }">
-        <GlowImage :src="row.coverUrl as string" alt="" :size="40" />
+        <GlowImage :src="row.coverUrl as string" alt="" :size="40"
+          :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
       </template>
 
       <template #cell-song="{ row }">
@@ -394,7 +396,8 @@ function criteriaClassName(row: Record<string, unknown>): string {
 
       <template #mobile-card="{ row }">
         <div class="ranking-dashboard__mobile-card" @click="navigateToDetail(row)">
-          <GlowImage :src="row.coverUrl as string" alt="" :size="48" />
+          <GlowImage :src="row.coverUrl as string" alt="" :size="48"
+            :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div class="ranking-dashboard__mobile-info">
             <span class="ranking-dashboard__song-name">{{ row.songName }}</span>
             <span class="ranking-dashboard__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>

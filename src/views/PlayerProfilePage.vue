@@ -35,6 +35,7 @@ import {
   readTitleValue,
 } from '@/utils/items'
 import { getRankClass } from '@/utils/ranking'
+import { pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProfileInventoryTab from './profile/ProfileInventoryTab.vue'
@@ -62,6 +63,7 @@ const canSnipe = computed(
 )
 
 const user = ref<UserResponse | null>(null)
+const userAvatarUrl = computed(() => pickAvatarUrl(user.value))
 const level = ref<LevelResponse | null>(null)
 const stats = ref<UserCategoryStatisticsResponse[]>([])
 const xpStats = ref<UserAllStatisticsResponse | null>(null)
@@ -489,14 +491,14 @@ watch(activeCategory, (newCategory) => {
           :class="equippedBackgroundFitClass"
           :style="{ ...equippedBackgroundStyle, backgroundImage: `url(${equippedBackgroundImageUrl})` }"
         />
-        <div v-else class="profile-page__bg-image" :style="{ backgroundImage: `url(${user.avatarUrl})` }" />
+        <div v-else class="profile-page__bg-image" :style="{ backgroundImage: `url(${userAvatarUrl})` }" />
         <div class="profile-page__bg-fade" />
       </div>
 
       <div class="profile-hero">
         <div class="profile-hero__level-col">
           <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
-            :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="user.avatarUrl"
+            :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="userAvatarUrl"
             :fallback-title="level?.title"
             :equipped-title="equippedTitleValue"
             :equipped-border-shape="equippedBorderShapeValue"

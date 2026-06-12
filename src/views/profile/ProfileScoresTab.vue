@@ -116,6 +116,7 @@ const rows = computed(() =>
     rawDifficulty: s.rawDifficulty,
     characteristic: s.characteristic,
     coverUrl: s.coverUrl,
+    coverFallbackUrl: s.coverFallbackUrl,
     mapName: s.mapName,
     difficulty: s.difficulty,
     category: (categoryStore.getCategoryInfo(s.categoryCode)?.name ?? s.categoryCode).replace(/ Acc$/, ''),
@@ -245,7 +246,8 @@ watch(
       :empty-message="props.search ? `No maps matching &quot;${props.search}&quot;` : 'No scores found'" @sort="setSort"
       @row-click="handleRowClick" @update:page="setPage">
       <template #cell-cover="{ row }">
-        <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" />
+        <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)"
+          :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
       </template>
 
       <template #cell-mapName="{ value }">
@@ -329,7 +331,8 @@ watch(
 
       <template #mobile-card="{ row }">
         <div class="ps-card" @click="handleRowClick(row)">
-          <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="40" />
+          <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="40"
+            :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div v-else class="ps-card__cover-placeholder" />
           <div class="ps-card__grid">
             <span class="ps-card__name-cell">

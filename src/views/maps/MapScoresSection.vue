@@ -28,6 +28,7 @@ const props = defineProps<{
   mapName?: string
   artistName?: string
   coverUrl?: string
+  coverFallbackUrl?: string | null
   categoryCode?: CategoryCode
   difficulty?: string
   accentColor?: string
@@ -113,6 +114,7 @@ const rows = computed(() => {
       rank: filtering ? positional : s.rank,
       parenRank: filtering ? s.rank : null,
       avatarUrl: s.avatarUrl,
+      avatarFallbackUrl: s.avatarFallbackUrl,
       userName: s.userName,
       country: s.country,
       supporterTier: s.supporterTier,
@@ -166,6 +168,7 @@ function openDetail(userId: string, event: Event) {
     difficulty: props.difficulty ?? '',
     categoryCode: props.categoryCode ?? 'overall',
     coverUrl: props.coverUrl,
+    coverFallbackUrl: props.coverFallbackUrl,
     leaderboardRank: s.rank,
     score: s.score,
     scoreNoMods: s.scoreNoMods,
@@ -259,8 +262,11 @@ watch(
       <template #cell-player="{ row }">
         <div class="map-scores__player">
           <PlayerTooltipTrigger :user-id="(row._userId as string)" :user-name="(row.userName as string)"
-            :avatar-url="(row.avatarUrl as string)" :country="(row.country as string)">
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" />
+            :avatar-url="(row.avatarUrl as string)"
+            :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
+            :country="(row.country as string)">
+            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)"
+              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
             <span class="map-scores__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
             <CountryFlag :country="(row.country as string)" />
             <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
@@ -294,7 +300,8 @@ watch(
       <template #mobile-card="{ row }">
         <router-link :to="playerRowTo(row)" class="ms-card"
           :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }">
-          <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
+          <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28"
+            :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
           <div class="ms-card__grid">
             <span class="ms-card__name-cell">
               <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">

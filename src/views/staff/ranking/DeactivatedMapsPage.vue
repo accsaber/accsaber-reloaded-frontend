@@ -109,7 +109,8 @@ const rows = computed(() =>
     const catInfo = catCode ? categoryStore.getCategoryInfo(catCode) : undefined
     return {
       id: d.id,
-      coverUrl: d.coverUrl,
+      coverUrl: d.cdnCoverUrl ?? d.coverUrl,
+      coverFallbackUrl: d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null,
       songName: truncate(d.songName, 30),
       songAuthor: truncate(d.songAuthor, 25),
       mapper: d.mapAuthor,
@@ -198,7 +199,8 @@ watch(
         @sort="setSort"
       >
         <template #cell-cover="{ row }">
-          <GlowImage :src="row.coverUrl as string" alt="" :size="40" />
+          <GlowImage :src="row.coverUrl as string" alt="" :size="40"
+            :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
         </template>
 
         <template #cell-song="{ row }">
@@ -241,7 +243,8 @@ watch(
 
         <template #mobile-card="{ row }">
           <div class="deactivated-page__mobile-card">
-            <GlowImage :src="row.coverUrl as string" alt="" :size="48" />
+            <GlowImage :src="row.coverUrl as string" alt="" :size="48"
+              :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
             <div class="deactivated-page__mobile-info">
               <span class="deactivated-page__song-name">{{ row.songName }}</span>
               <span class="deactivated-page__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>

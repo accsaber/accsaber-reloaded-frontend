@@ -49,8 +49,21 @@ const contentTabs = [
   { key: 'statistics', label: 'Statistics' },
 ]
 
-const coverUrl = computed(() => map.value?.coverUrl ?? '')
+const coverUrl = computed(() => map.value?.cdnCoverUrl ?? map.value?.coverUrl ?? '')
+const coverFallbackUrl = computed(() => {
+  const m = map.value
+  if (!m) return null
+  return m.cdnCoverUrl && m.coverUrl && m.cdnCoverUrl !== m.coverUrl ? m.coverUrl : null
+})
 const { dominantColor } = useColorExtract(coverUrl)
+const handleMapCoverError = (e: Event) => {
+  const img = e.currentTarget as HTMLImageElement
+  const fb = coverFallbackUrl.value
+  if (fb && img.src !== fb && img.dataset.fellBack !== '1') {
+    img.dataset.fellBack = '1'
+    img.src = fb
+  }
+}
 
 const resolvedAccent = computed(() => {
   const raw = dominantColor.value
@@ -158,12 +171,20 @@ function findScoreByExactAp(maxAp: number): DifficultyScoreDisplay | null {
   return topScoresFirstPage.value.find((s) => Math.abs(s.ap - maxAp) < 0.005) ?? null
 }
 
+function handleTopAvatarError(entry: TopScoreSnapshot, event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  if (entry.cdnAvatarUrl && entry.avatarUrl && img.src !== entry.avatarUrl) {
+    img.src = entry.avatarUrl
+  }
+}
+
 function snapshotFromScore(score: DifficultyScoreDisplay): TopScoreSnapshot {
   return {
     scoreId: score.id,
     userId: score.userId,
     userName: score.userName,
-    avatarUrl: score.avatarUrl,
+    avatarUrl: score.avatarFallbackUrl ?? score.avatarUrl,
+    cdnAvatarUrl: score.avatarFallbackUrl ? score.avatarUrl : null,
     score: score.score,
     accuracy: score.accuracy,
     ap: score.ap,
@@ -423,14 +444,15 @@ watch(selectedStatsRange, () => fetchHistoricStats())
       </nav>
 
       <div class="map-detail__bg">
-        <div class="map-detail__bg-image" :style="{ backgroundImage: `url(${map.coverUrl})` }" />
+        <div class="map-detail__bg-image" :style="{ backgroundImage: `url(${coverUrl})` }" />
         <div class="map-detail__bg-fade" />
       </div>
 
       <div class="map-detail__hero">
         <div class="map-detail__cover-wrap">
-          <img class="map-detail__cover" :src="map.coverUrl" :alt="map.songName" fetchpriority="high" decoding="async" />
-          <div class="map-detail__cover-glow" :style="{ backgroundImage: `url(${map.coverUrl})` }" />
+          <img class="map-detail__cover" :src="coverUrl" :alt="map.songName" fetchpriority="high" decoding="async"
+            @error="handleMapCoverError" />
+          <div class="map-detail__cover-glow" :style="{ backgroundImage: `url(${coverUrl})` }" />
         </div>
 
         <div class="map-detail__details">
@@ -516,7 +538,7 @@ watch(selectedStatsRange, () => fetchHistoricStats())
         <div v-show="activeTab === 'leaderboard'">
           <MapScoresSection v-if="activeDifficultyId" :difficulty-id="activeDifficultyId" :map-id="map?.id"
             :map-name="map?.songName" :artist-name="map?.songAuthor" :map-author="map?.mapAuthor"
-            :cover-url="map?.coverUrl" :category-code="categoryCode"
+            :cover-url="coverUrl" :cover-fallback-url="coverFallbackUrl" :category-code="categoryCode"
             :difficulty="activeDifficulty ? formatDifficulty(activeDifficulty.difficulty) : undefined"
             :accent-color="resolvedAccent" @top-scores-loaded="onTopScoresLoaded" />
         </div>
@@ -529,7 +551,9 @@ watch(selectedStatsRange, () => fetchHistoricStats())
                 :class="{ 'map-detail__top-history-row--current': i === 0 }" tabindex="0" role="button"
                 @click="goToPlayer(entry.userId)"
                 @keydown.enter="goToPlayer(entry.userId)">
-                <img class="map-detail__top-avatar" :src="entry.avatarUrl" :alt="entry.userName" loading="lazy" decoding="async" />
+                <img class="map-detail__top-avatar" :src="entry.cdnAvatarUrl ?? entry.avatarUrl" :alt="entry.userName"
+                  loading="lazy" decoding="async"
+                  @error="handleTopAvatarError(entry, $event)" />
                 <span class="map-detail__top-name">{{ entry.userName }}</span>
                 <span class="map-detail__top-acc">{{ (entry.accuracy * 100).toFixed(2) }}%</span>
                 <span class="map-detail__top-ap">{{ entry.ap.toFixed(2) }} AP</span>

@@ -17,6 +17,7 @@ export interface AuthMeResponse {
   userId: number
   name: string
   avatarUrl: string | null
+  cdnAvatarUrl?: string | null
   country: string | null
   banned: boolean
   connections: AuthConnection[]

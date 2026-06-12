@@ -87,7 +87,28 @@ const equippedBorderColor = computed<BorderColorValue | null>(() =>
 
 const playerName = computed(() => player.value?.name ?? props.score?.userName ?? '')
 const playerCountry = computed(() => player.value?.country ?? '')
-const playerAvatar = computed(() => player.value?.avatarUrl ?? '')
+const playerAvatar = computed(() => player.value?.cdnAvatarUrl ?? player.value?.avatarUrl ?? '')
+const playerAvatarFallback = computed(() => {
+  const p = player.value
+  if (!p) return null
+  return p.cdnAvatarUrl && p.avatarUrl && p.cdnAvatarUrl !== p.avatarUrl ? p.avatarUrl : null
+})
+const handlePlayerAvatarError = (e: Event) => {
+  const img = e.currentTarget as HTMLImageElement
+  const fb = playerAvatarFallback.value
+  if (fb && img.src !== fb && img.dataset.fellBack !== '1') {
+    img.dataset.fellBack = '1'
+    img.src = fb
+  }
+}
+const handleScoreCoverError = (e: Event) => {
+  const img = e.currentTarget as HTMLImageElement
+  const fb = props.score?.coverFallbackUrl
+  if (fb && img.src !== fb && img.dataset.fellBack !== '1') {
+    img.dataset.fellBack = '1'
+    img.src = fb
+  }
+}
 const playerSupporterTier = computed(
   () => player.value?.supporterTier ?? props.score?.supporterTier ?? null,
 )
@@ -353,7 +374,8 @@ watch(
 
       <div class="score-detail__main">
         <div v-if="score.coverUrl" class="score-detail__cover-wrap">
-          <img :src="score.coverUrl" :alt="score.mapName" class="score-detail__cover" decoding="async" />
+          <img :src="score.coverUrl" :alt="score.mapName" class="score-detail__cover" decoding="async"
+            @error="handleScoreCoverError" />
           <div class="score-detail__cover-glow" :style="{ backgroundImage: `url(${score.coverUrl})` }" />
         </div>
         <div class="score-detail__map-info">

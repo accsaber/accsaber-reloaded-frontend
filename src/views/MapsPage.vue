@@ -211,6 +211,7 @@ const listRows = computed(() =>
     id: m.id,
     difficultyId: m.difficultyId,
     cover: m.coverUrl,
+    coverFallback: m.coverFallbackUrl,
     songName: m.songName,
     difficultyLabel: m.difficultyLabel,
     difficulty: m.difficulty,
@@ -475,7 +476,8 @@ watch(
           :loading-rows="10" :row-to="listRowTo" row-key="difficultyId"
           empty-message="No maps found matching your filters." @sort="handleListSort">
           <template #cell-cover="{ row }">
-            <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="44" />
+            <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="44"
+              :fallback-src="(row.coverFallback as string | null | undefined) ?? null" />
           </template>
           <template #cell-songName="{ row }">
             <div class="maps-page__name-cell">
@@ -505,7 +507,8 @@ watch(
           <template #mobile-card="{ row }">
             <router-link :to="listRowTo(row)" class="maps-page__list-card">
               <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="48"
-                class="maps-page__list-card-cover" />
+                class="maps-page__list-card-cover"
+                :fallback-src="(row.coverFallback as string | null | undefined) ?? null" />
               <div v-else class="maps-page__list-card-cover-placeholder" />
               <div class="maps-page__list-card-info">
                 <span class="maps-page__name">{{ row.songName }}</span>

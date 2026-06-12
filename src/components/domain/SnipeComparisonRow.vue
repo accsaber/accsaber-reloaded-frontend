@@ -74,7 +74,8 @@ function navigateToMap(e: MouseEvent) {
 <template>
   <article class="snipe-row" :style="{ '--row-accent': categoryAccent }">
     <a class="snipe-row__quadrant snipe-row__map" :href="mapHref" @click="navigateToMap">
-      <GlowImage :src="map.coverUrl" :alt="map.songName" :size="88" />
+      <GlowImage :src="map.cdnCoverUrl ?? map.coverUrl" :alt="map.songName" :size="88"
+        :fallback-src="map.cdnCoverUrl && map.coverUrl && map.cdnCoverUrl !== map.coverUrl ? map.coverUrl : null" />
       <div class="snipe-row__map-info">
         <CategoryBadge v-if="categoryCode" :category="categoryCode" size="sm" class="snipe-row__category-eyebrow" />
         <span class="snipe-row__song" :title="map.songName">{{ map.songName }}</span>

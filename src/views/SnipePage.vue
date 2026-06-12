@@ -145,7 +145,8 @@ const detailOpen = ref(false)
 const detailScore = ref<ScoreDisplay | null>(null)
 const detailUserId = ref<string>('')
 
-const targetAvatar = computed(() => target.value?.avatarUrl ?? '')
+const targetAvatar = computed(() => target.value?.cdnAvatarUrl ?? target.value?.avatarUrl ?? '')
+const sniperAvatar = computed(() => sniper.value?.cdnAvatarUrl ?? sniper.value?.avatarUrl ?? '')
 const { dominantColor } = useColorExtract(targetAvatar)
 
 const heroAccent = computed(() => {
@@ -410,7 +411,7 @@ watch(
       <div class="snipe-hero__player snipe-hero__player--sniper">
         <LevelBadge v-if="sniper" :level="sniperLevel?.level ?? 0"
           :current-xp="sniperLevel?.xpForCurrentLevel ?? 0" :required-xp="sniperLevel?.xpForNextLevel ?? 1"
-          :avatar-url="sniper.avatarUrl" :fallback-title="sniperLevel?.title" hide-progress
+          :avatar-url="sniperAvatar" :fallback-title="sniperLevel?.title" hide-progress
           :equipped-title="sniperTitle"
           :equipped-border-shape="sniperBorderShape"
           :equipped-border-color="sniperBorderColor" />
@@ -441,7 +442,7 @@ watch(
       <div class="snipe-hero__player snipe-hero__player--target">
         <LevelBadge v-if="target" :level="targetLevel?.level ?? 0"
           :current-xp="targetLevel?.xpForCurrentLevel ?? 0" :required-xp="targetLevel?.xpForNextLevel ?? 1"
-          :avatar-url="target.avatarUrl" :fallback-title="targetLevel?.title" hide-progress
+          :avatar-url="targetAvatar" :fallback-title="targetLevel?.title" hide-progress
           :equipped-title="targetTitle"
           :equipped-border-shape="targetBorderShape"
           :equipped-border-color="targetBorderColor" />

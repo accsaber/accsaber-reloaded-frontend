@@ -54,6 +54,15 @@ function toggleExpand() {
     expanded.value = !expanded.value
   }
 }
+
+function handleMilestoneCoverError(event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  const cdn = props.milestone.cdnCoverUrl
+  const upstream = props.milestone.coverUrl
+  if (cdn && upstream && img.src !== upstream) {
+    img.src = upstream
+  }
+}
 </script>
 
 <template>
@@ -132,8 +141,10 @@ function toggleExpand() {
       :class="{ 'milestone-detail__dropdown--open': expanded }">
       <div class="milestone-detail__dropdown-inner">
         <div class="milestone-detail__score">
-          <img v-if="milestone.coverUrl" :src="milestone.coverUrl" :alt="milestone.songName ?? 'Cover'"
-            class="milestone-detail__cover" loading="lazy" decoding="async" />
+          <img v-if="milestone.cdnCoverUrl || milestone.coverUrl"
+            :src="milestone.cdnCoverUrl ?? milestone.coverUrl" :alt="milestone.songName ?? 'Cover'"
+            class="milestone-detail__cover" loading="lazy" decoding="async"
+            @error="handleMilestoneCoverError($event)" />
           <div class="milestone-detail__score-info">
             <span class="milestone-detail__score-text">
               <strong>{{ accuracy }}%</strong> on

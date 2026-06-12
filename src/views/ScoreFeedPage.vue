@@ -50,6 +50,7 @@ function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
     difficulty: entry.difficulty,
     categoryCode: entry.categoryCode,
     coverUrl: entry.coverUrl,
+    coverFallbackUrl: entry.coverFallbackUrl,
     leaderboardRank: entry.rank,
     score: entry.score,
     accuracy: entry.accuracy,

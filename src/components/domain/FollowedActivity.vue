@@ -101,6 +101,7 @@ const rankingRows = computed<Record<string, unknown>[]>(() => {
       name: player.name,
       country: player.country,
       avatarUrl: player.avatarUrl,
+      avatarFallbackUrl: player.avatarFallbackUrl,
       ap: player.ap,
       avgAccuracy: player.avgAccuracy,
       playerInactive: player.playerInactive,
@@ -115,7 +116,8 @@ const scoreFeedEntries = computed<ScoreFeedEntry[]>(() => {
     key: score.id,
     userId: score.userId,
     userName: score.userName,
-    avatarUrl: score.avatarUrl ?? '',
+    avatarUrl: score.cdnAvatarUrl ?? score.avatarUrl ?? '',
+    avatarFallbackUrl: score.cdnAvatarUrl && score.avatarUrl && score.cdnAvatarUrl !== score.avatarUrl ? score.avatarUrl : null,
     country: score.country ?? '',
     mapId: score.mapId,
     mapDifficultyId: score.mapDifficultyId,
@@ -125,7 +127,8 @@ const scoreFeedEntries = computed<ScoreFeedEntry[]>(() => {
     mapName: score.songName ?? 'Unknown Map',
     artistName: score.songAuthor ?? '',
     mapAuthor: score.mapAuthor ?? '',
-    coverUrl: score.coverUrl ?? '',
+    coverUrl: score.cdnCoverUrl ?? score.coverUrl ?? '',
+    coverFallbackUrl: score.cdnCoverUrl && score.coverUrl && score.cdnCoverUrl !== score.coverUrl ? score.coverUrl : null,
     difficulty: formatDifficulty(score.difficulty),
     categoryCode: categoryStore.getCategoryCode(score.categoryId) ?? 'overall',
     rank: score.rank,
@@ -327,10 +330,12 @@ watch([sortField, sortDir, filterCategoryId], () => {
             :user-id="(row.userId as string)"
             :user-name="(row.name as string)"
             :avatar-url="(row.avatarUrl as string)"
+            :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
             :country="(row.country as string)"
             class="followed-activity__player"
           >
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28" />
+            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28"
+              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
             <span class="followed-activity__player-name">{{ row.name }}</span>
             <CountryFlag :country="(row.country as string)" />
           </PlayerTooltipTrigger>
@@ -348,7 +353,8 @@ watch([sortField, sortDir, filterCategoryId], () => {
         <template #mobile-card="{ row }">
           <RouterLink :to="buildRankingPlayerRoute(row)" class="followed-activity__player-card">
             <span class="followed-activity__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28" />
+            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28"
+              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
             <span class="followed-activity__player-name">{{ row.name }}</span>
             <CountryFlag :country="(row.country as string)" />
             <span class="followed-activity__ap">{{ (row.ap as number).toFixed(2) }}</span>

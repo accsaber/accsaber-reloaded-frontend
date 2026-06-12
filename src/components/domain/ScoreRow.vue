@@ -57,7 +57,8 @@ function handleClick(e: MouseEvent) {
     @click="handleClick"
   >
     <span class="score-row__rank">#{{ score.leaderboardRank }}</span>
-    <GlowImage v-if="score.coverUrl" :src="score.coverUrl" :alt="score.mapName" />
+    <GlowImage v-if="score.coverUrl" :src="score.coverUrl" :alt="score.mapName"
+      :fallback-src="score.coverFallbackUrl ?? null" />
     <span class="score-row__map">{{ score.mapName }}</span>
     <span class="score-row__difficulty">{{ score.difficulty }}</span>
     <span class="score-row__ap">{{ score.ap.toFixed(2) }}</span>

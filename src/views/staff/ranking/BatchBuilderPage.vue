@@ -376,7 +376,9 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
               <svg v-else-if="diff.criteriaDownvotes > diff.criteriaUpvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </span>
-            <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
+            <GlowImage :src="diff.cdnCoverUrl ?? diff.coverUrl" alt="" :size="36"
+              class="batch-builder__card-cover" @click="goToDetail(diff.id)"
+              :fallback-src="diff.cdnCoverUrl && diff.coverUrl && diff.cdnCoverUrl !== diff.coverUrl ? diff.coverUrl : null" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
               <span class="batch-builder__card-meta">
@@ -439,7 +441,9 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
               <svg v-else-if="diff.criteriaDownvotes > diff.criteriaUpvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </span>
-            <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
+            <GlowImage :src="diff.cdnCoverUrl ?? diff.coverUrl" alt="" :size="36"
+              class="batch-builder__card-cover" @click="goToDetail(diff.id)"
+              :fallback-src="diff.cdnCoverUrl && diff.coverUrl && diff.cdnCoverUrl !== diff.coverUrl ? diff.coverUrl : null" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
               <span class="batch-builder__card-meta">
@@ -475,7 +479,9 @@ function criteriaIndicatorClass(diff: MapDifficultyResponse): string {
               <svg v-else-if="diff.criteriaDownvotes > diff.criteriaUpvotes" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </span>
-            <GlowImage :src="diff.coverUrl" alt="" :size="36" class="batch-builder__card-cover" @click="goToDetail(diff.id)" />
+            <GlowImage :src="diff.cdnCoverUrl ?? diff.coverUrl" alt="" :size="36"
+              class="batch-builder__card-cover" @click="goToDetail(diff.id)"
+              :fallback-src="diff.cdnCoverUrl && diff.coverUrl && diff.cdnCoverUrl !== diff.coverUrl ? diff.coverUrl : null" />
             <div class="batch-builder__card-info" @click="goToDetail(diff.id)">
               <span class="batch-builder__card-title">{{ truncate(diff.songName, 22) }}</span>
               <span class="batch-builder__card-meta">

@@ -81,7 +81,9 @@ const dateLabel = computed(() => {
     @keydown.enter="$emit('click')"
   >
     <div class="queue-row__cover">
-      <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.songName" :size="80" />
+      <GlowImage v-if="entry.cdnCoverUrl || entry.coverUrl"
+        :src="entry.cdnCoverUrl ?? entry.coverUrl" :alt="entry.songName" :size="80"
+        :fallback-src="entry.cdnCoverUrl && entry.coverUrl && entry.cdnCoverUrl !== entry.coverUrl ? entry.coverUrl : null" />
     </div>
 
     <div class="queue-row__info">

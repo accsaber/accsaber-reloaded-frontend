@@ -16,6 +16,7 @@ export interface SupporterCreditEntry {
   userId: number
   name: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   currentTier: SupporterTier | null
   currentTierDisplayName: string | null

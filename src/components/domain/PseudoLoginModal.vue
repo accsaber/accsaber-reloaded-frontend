@@ -3,6 +3,7 @@ import { buildOAuthStartUrl, getDefaultCallbackUrl } from '@/api/auth'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ProviderIcon from '@/components/domain/ProviderIcon.vue'
+import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { useAuthStore } from '@/stores/auth'
 import type { OAuthProvider } from '@/types/api/player-auth'
 import { computed } from 'vue'
@@ -22,6 +23,9 @@ const router = useRouter()
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const me = computed(() => authStore.authMe)
+const meAvatarUrl = computed(() => pickAvatarUrl(me.value))
+const meAvatarFallback = computed(() => pickAvatarFallback(me.value))
+const handleMeAvatarError = (e: Event) => onAvatarError(meAvatarFallback.value)(e)
 
 const providerLabels: Record<OAuthProvider, string> = {
   discord: 'Discord',
@@ -52,7 +56,8 @@ function goToSettings() {
     <div class="auth-modal">
       <template v-if="isLoggedIn && me">
         <div class="auth-modal__profile">
-          <img v-if="me.avatarUrl" :src="me.avatarUrl" :alt="me.name" class="auth-modal__avatar" decoding="async" />
+          <img v-if="meAvatarUrl" :src="meAvatarUrl" :alt="me.name" class="auth-modal__avatar"
+            decoding="async" @error="handleMeAvatarError" />
           <div class="auth-modal__profile-text">
             <span class="auth-modal__name">{{ me.name }}</span>
             <span v-if="me.country" class="auth-modal__country">{{ me.country }}</span>

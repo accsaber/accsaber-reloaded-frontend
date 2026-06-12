@@ -111,7 +111,9 @@ function criteriaLabel(vote: string): string {
           class="activity-card__map"
           @click="goToMap(vote.mapDifficultyId)"
         >
-          <GlowImage v-if="vote.coverUrl" :src="vote.coverUrl" alt="" :size="48" />
+          <GlowImage v-if="vote.cdnCoverUrl || vote.coverUrl"
+            :src="vote.cdnCoverUrl ?? vote.coverUrl ?? ''" alt="" :size="48"
+            :fallback-src="vote.cdnCoverUrl && vote.coverUrl && vote.cdnCoverUrl !== vote.coverUrl ? vote.coverUrl : null" />
           <div class="activity-card__map-info">
             <div class="activity-card__map-title-row">
               <span

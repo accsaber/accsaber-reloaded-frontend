@@ -4,7 +4,7 @@ import MapCardCompact from '@/components/domain/MapCardCompact.vue'
 import MilestoneCard from '@/components/domain/MilestoneCard.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
-import type { CampaignDetailResponse } from '@/types/api/campaigns'
+import type { CampaignDetailResponse, CampaignMapResponse } from '@/types/api/campaigns'
 import type { CurveResponse } from '@/types/api/categories'
 import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { PublicNewsResponse } from '@/types/api/news'
@@ -114,6 +114,13 @@ watch(
   { immediate: true },
 )
 
+function handleCampaignMapCoverError(m: CampaignMapResponse, event: Event) {
+  const img = event.currentTarget as HTMLImageElement
+  if (m.cdnCoverUrl && m.coverUrl && img.src !== m.coverUrl) {
+    img.src = m.coverUrl
+  }
+}
+
 function mapRouteTo(m: { id: string; difficultyId?: string; difficulty?: string; characteristic?: string; beatsaverCode?: string }) {
   return buildMapRoute({
     beatsaverCode: m.beatsaverCode ?? null,
@@ -193,7 +200,8 @@ const sectionTitle = computed(() => {
           :to="`/campaigns/${resource.data.id}`"
           class="campaign-row"
         >
-          <img :src="m.coverUrl" class="campaign-row__cover" :alt="m.songName" loading="lazy" decoding="async" />
+          <img :src="m.cdnCoverUrl ?? m.coverUrl" class="campaign-row__cover" :alt="m.songName"
+            loading="lazy" decoding="async" @error="handleCampaignMapCoverError(m, $event)" />
           <div class="campaign-row__info">
             <span class="campaign-row__song">{{ m.songName }}</span>
             <span class="campaign-row__sub">{{ m.songAuthor }} · {{ m.mapAuthor }}</span>

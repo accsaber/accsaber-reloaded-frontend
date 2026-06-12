@@ -57,6 +57,7 @@ export interface MilestoneCompletionResponse {
   score?: number
   maxScore?: number
   coverUrl?: string
+  cdnCoverUrl?: string | null
   difficulty?: string
   songName?: string
   songAuthor?: string
@@ -89,6 +90,7 @@ export interface MilestoneHolderResponse {
   userId: string
   name: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   completedAt: string
 }

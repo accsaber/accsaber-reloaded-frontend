@@ -15,6 +15,7 @@ export interface UserRelationResponse {
   targetUserId: string
   targetName: string
   targetAvatarUrl: string | null
+  targetCdnAvatarUrl?: string | null
   targetCountry: string | null
   type: UserRelationType
   createdAt: string

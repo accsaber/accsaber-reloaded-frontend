@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { getUser } from '@/api/users'
 import { useCategoryStore } from '@/stores/categories'
 import type { LeaderboardResponse } from '@/types/api/users'
@@ -29,7 +30,7 @@ const results = ref<LeaderboardResponse[]>([])
 const loading = ref(false)
 const open = ref(false)
 const focusedIndex = ref(-1)
-const selected = ref<{ userId: string; userName: string; country: string; avatarUrl: string } | null>(null)
+const selected = ref<{ userId: string; userName: string; country: string; avatarUrl: string; avatarFallbackUrl: string | null } | null>(null)
 
 const containerRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -80,7 +81,8 @@ function pick(user: LeaderboardResponse) {
     userId: user.userId,
     userName: user.userName,
     country: user.country,
-    avatarUrl: user.avatarUrl,
+    avatarUrl: pickAvatarUrl(user),
+    avatarFallbackUrl: pickAvatarFallback(user),
   }
   emit('update:modelValue', user.userId)
   open.value = false
@@ -139,7 +141,13 @@ watch(() => props.modelValue, async (val) => {
   if (selected.value?.userId === val) return
   try {
     const u = await getUser(val)
-    selected.value = { userId: u.id, userName: u.name, country: u.country, avatarUrl: u.avatarUrl }
+    selected.value = {
+      userId: u.id,
+      userName: u.name,
+      country: u.country,
+      avatarUrl: pickAvatarUrl(u),
+      avatarFallbackUrl: pickAvatarFallback(u),
+    }
   } catch {
     selected.value = null
   }
@@ -165,7 +173,8 @@ onUnmounted(() => {
 <template>
   <div ref="containerRef" class="user-picker">
     <div v-if="selected" class="user-picker__selected">
-      <img v-if="selected.avatarUrl" class="user-picker__avatar" :src="selected.avatarUrl" :alt="selected.userName" loading="lazy" decoding="async" />
+      <img v-if="selected.avatarUrl" class="user-picker__avatar" :src="selected.avatarUrl" :alt="selected.userName"
+        loading="lazy" decoding="async" @error="onAvatarError(selected.avatarFallbackUrl)($event)" />
       <CountryFlag v-if="selected.country" :country="selected.country" />
       <span class="user-picker__name">{{ selected.userName }}</span>
       <button type="button" class="user-picker__clear" :disabled="disabled" aria-label="Clear selection" @click="clear">
@@ -202,7 +211,9 @@ onUnmounted(() => {
           @mouseenter="focusedIndex = i"
           @click="pick(user)"
         >
-          <img v-if="user.avatarUrl" class="user-picker__avatar" :src="user.avatarUrl" :alt="user.userName" loading="lazy" decoding="async" />
+          <img v-if="user.cdnAvatarUrl || user.avatarUrl" class="user-picker__avatar"
+            :src="user.cdnAvatarUrl ?? user.avatarUrl" :alt="user.userName" loading="lazy" decoding="async"
+            @error="onAvatarError(user.cdnAvatarUrl && user.avatarUrl && user.cdnAvatarUrl !== user.avatarUrl ? user.avatarUrl : null)($event)" />
           <CountryFlag v-if="user.country" :country="user.country" />
           <span class="user-picker__option-name">{{ user.userName }}</span>
           <span class="user-picker__option-rank">#{{ user.ranking }}</span>

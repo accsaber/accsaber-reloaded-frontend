@@ -152,6 +152,7 @@ const rows = computed(() => {
         name: p.name,
         country: p.country,
         avatarUrl: p.avatarUrl,
+        avatarFallbackUrl: p.avatarFallbackUrl,
         totalXp: p.totalXp,
         level: p.level,
         playerInactive: p.playerInactive,
@@ -175,6 +176,7 @@ const rows = computed(() => {
       name: p.name,
       country: p.country,
       avatarUrl: p.avatarUrl,
+      avatarFallbackUrl: p.avatarFallbackUrl,
       ap: p.ap,
       avgAccuracy: p.avgAccuracy,
       rankedPlays: p.rankedPlays,
@@ -414,7 +416,8 @@ watch(() => categoryStore.loaded, (loaded) => {
 
         <template #cell-player="{ row }">
           <div class="player-cell" :data-user-id="row.userId">
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="32" />
+            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="32"
+              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
             <span class="player-cell__name">{{ row.name }}</span>
             <CountryFlag :country="(row.country as string)" />
             <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
@@ -450,7 +453,8 @@ watch(() => categoryStore.loaded, (loaded) => {
               <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
             </span>
             <div class="lb-card__player">
-              <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28" />
+              <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28"
+                :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
               <span class="lb-card__name">{{ row.name }}</span>
               <CountryFlag :country="(row.country as string)" />
               <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />

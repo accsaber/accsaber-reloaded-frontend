@@ -32,6 +32,7 @@ migrateLegacyPlayerSession()
 interface UserProfileShape {
   name: string
   avatarUrl: string
+  avatarFallbackUrl: string | null
   country: string
 }
 
@@ -63,9 +64,14 @@ export const useAuthStore = defineStore('auth', () => {
   const userProfile = computed<UserProfileShape | null>(() => {
     const me = authMe.value
     if (!me) return null
+    const resolved = me.cdnAvatarUrl ?? me.avatarUrl ?? ''
+    const fallback = me.cdnAvatarUrl && me.avatarUrl && me.cdnAvatarUrl !== me.avatarUrl
+      ? me.avatarUrl
+      : null
     return {
       name: me.name,
-      avatarUrl: me.avatarUrl ?? '',
+      avatarUrl: resolved,
+      avatarFallbackUrl: fallback,
       country: me.country ?? '',
     }
   })

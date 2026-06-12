@@ -1,17 +1,24 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
+import { onAvatarError } from '@/composables/useAvatarFallback'
+
+const props = withDefaults(defineProps<{
   src: string
   alt?: string
   size?: number
+  fallbackSrc?: string | null
 }>(), {
   alt: '',
   size: 36,
+  fallbackSrc: null,
 })
+
+const handleError = (e: Event) => onAvatarError(props.fallbackSrc)(e)
 </script>
 
 <template>
   <div class="glow-image" :style="{ width: `${size}px`, height: `${size}px` }">
-    <img class="glow-image__img" :src="src" :alt="alt" loading="lazy" decoding="async" />
+    <img class="glow-image__img" :src="src" :alt="alt" loading="lazy" decoding="async"
+      @error="handleError" />
     <div class="glow-image__glow" :style="{ backgroundImage: `url(${src})` }" />
   </div>
 </template>

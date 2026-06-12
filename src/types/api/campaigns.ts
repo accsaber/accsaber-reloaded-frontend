@@ -24,6 +24,7 @@ export interface CampaignMapResponse {
   songAuthor: string
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulty: Difficulty
   characteristic: string
   accuracyRequirement: number

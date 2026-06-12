@@ -177,7 +177,22 @@ function openScoreDetail(scoreId: string) {
 }
 
 function addRank(item: Record<string, unknown>, index: number) {
-  return { ...item, rank: pageData.value!.number * pageData.value!.size + index + 1 }
+  const cdnAvatar = item.cdnAvatarUrl as string | null | undefined
+  const upstreamAvatar = item.avatarUrl as string | null | undefined
+  const resolvedAvatar = cdnAvatar ?? upstreamAvatar ?? ''
+  const fallbackAvatar = cdnAvatar && upstreamAvatar && cdnAvatar !== upstreamAvatar ? upstreamAvatar : null
+  const cdnCover = item.cdnCoverUrl as string | null | undefined
+  const upstreamCover = item.coverUrl as string | null | undefined
+  const resolvedCover = cdnCover ?? upstreamCover ?? ''
+  const fallbackCover = cdnCover && upstreamCover && cdnCover !== upstreamCover ? upstreamCover : null
+  return {
+    ...item,
+    avatarUrl: resolvedAvatar,
+    avatarFallbackUrl: fallbackAvatar,
+    coverUrl: resolvedCover,
+    coverFallbackUrl: fallbackCover,
+    rank: pageData.value!.number * pageData.value!.size + index + 1,
+  }
 }
 
 const rows = computed(() => {
@@ -439,9 +454,12 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
 
           <template #cell-player="{ row }">
             <PlayerTooltipTrigger :user-id="(row.userId as string)" :user-name="(row.userName as string)"
-              :avatar-url="(row.avatarUrl as string)" :country="(row.country as string)">
+              :avatar-url="(row.avatarUrl as string)"
+              :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
+              :country="(row.country as string)">
               <div class="player-cell">
-                <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="32" />
+                <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="32"
+                  :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
                 <span class="player-cell__name">{{ row.userName }}</span>
                 <CountryFlag :country="(row.country as string)" />
               </div>
@@ -452,7 +470,8 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
             <router-link
               :to="mapRowRoute(row)"
               class="map-cell map-cell--link" @click.stop>
-              <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="32" />
+              <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="32"
+                :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
               <div class="map-cell__info">
                 <div class="map-cell__title-row">
                   <span class="map-cell__dot" :style="{ background: categoryDotColor(row.categoryId as string) }" />
@@ -496,14 +515,16 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
             <div class="stats-card" :class="{ 'stats-card--superseded': isScoreTab && row.active === false }" @click="rowTo(row) && $router.push(rowTo(row)!)">
               <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
               <div v-if="row.userName" class="stats-card__player">
-                <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28" />
+                <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28"
+                  :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
                 <span class="stats-card__name">{{ row.userName }}</span>
                 <CountryFlag v-if="row.country" :country="(row.country as string)" />
               </div>
               <router-link v-if="row.songName" class="stats-card__map"
                 :to="mapRowRoute(row)"
                 @click.stop>
-                <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28" />
+                <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28"
+                  :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
                 <div class="stats-card__map-info">
                   <span class="stats-card__map-name">{{ row.songName }}</span>
                   <span class="stats-card__map-meta"><span class="map-cell__dot"

@@ -1,6 +1,7 @@
 import type { ScoreResponse } from '@/types/api/users'
 import type { ConnectionStatus, ScoreFeedEntry } from '@/types/display'
 import { formatDifficulty } from '@/utils/mappers'
+import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import { onUnmounted, ref, type Ref } from 'vue'
@@ -74,7 +75,8 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
       key: `${raw.id}-${entryCounter++}`,
       userId: raw.userId,
       userName: raw.userName,
-      avatarUrl: raw.avatarUrl,
+      avatarUrl: pickAvatarUrl(raw),
+      avatarFallbackUrl: pickAvatarFallback(raw),
       country: raw.country,
       mapId: raw.mapId,
       mapDifficultyId: raw.mapDifficultyId,
@@ -84,7 +86,8 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
       mapName: raw.songName ?? 'Unknown',
       artistName: raw.songAuthor ?? '',
       mapAuthor: raw.mapAuthor ?? '',
-      coverUrl: raw.coverUrl ?? '',
+      coverUrl: pickCoverUrl(raw),
+      coverFallbackUrl: pickCoverFallback(raw),
       difficulty: formatDifficulty(raw.difficulty as 'EASY' | 'NORMAL' | 'HARD' | 'EXPERT' | 'EXPERT_PLUS'),
       categoryCode,
       rank: raw.rank,

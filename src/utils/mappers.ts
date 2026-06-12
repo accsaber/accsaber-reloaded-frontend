@@ -2,6 +2,7 @@ import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MilestoneCompletionResponse } from '@/types/api/milestones'
 import type { LeaderboardResponse, ScoreResponse, UserMilestoneProgressResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, XpPlayerDisplay } from '@/types/display'
+import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 
 export function formatDifficulty(diff: string): string {
   switch (diff) {
@@ -19,7 +20,8 @@ export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
     userId: entry.userId,
     name: entry.userName,
     country: entry.country,
-    avatarUrl: entry.avatarUrl,
+    avatarUrl: pickAvatarUrl(entry),
+    avatarFallbackUrl: pickAvatarFallback(entry),
     rank: entry.ranking,
     countryRank: entry.countryRanking,
     rankChange: entry.rankingLastWeek != null ? entry.rankingLastWeek - entry.ranking : null,
@@ -36,7 +38,8 @@ export function toXpPlayerDisplay(entry: XpLeaderboardResponse): XpPlayerDisplay
     userId: entry.userId,
     name: entry.userName,
     country: entry.country,
-    avatarUrl: entry.avatarUrl,
+    avatarUrl: pickAvatarUrl(entry),
+    avatarFallbackUrl: pickAvatarFallback(entry),
     rank: entry.ranking,
     countryRank: entry.countryRanking,
     rankChange: entry.rankingLastWeek != null ? entry.rankingLastWeek - entry.ranking : null,
@@ -63,7 +66,8 @@ export function toScoreDisplay(
     artistName: score.songAuthor,
     difficulty: formatDifficulty(score.difficulty),
     categoryCode: categoryCode ?? 'overall',
-    coverUrl: score.coverUrl,
+    coverUrl: pickCoverUrl(score),
+    coverFallbackUrl: pickCoverFallback(score),
     leaderboardRank: score.rank,
     score: score.score,
     scoreNoMods: score.scoreNoMods,
@@ -102,7 +106,8 @@ export function toMapDisplay(
     songName: diff.songName,
     artistName: diff.songAuthor,
     mapperName: diff.mapAuthor,
-    coverUrl: diff.coverUrl,
+    coverUrl: pickCoverUrl(diff),
+    coverFallbackUrl: pickCoverFallback(diff),
     complexity: diff.complexity ?? 0,
     categoryCode: getCategoryCode(diff.categoryId) ?? 'overall',
     difficulty: diff.difficulty,
@@ -124,7 +129,8 @@ export function toDifficultyScoreDisplay(
     countryRank: score.countryRank,
     userId: score.userId,
     userName: score.userName,
-    avatarUrl: score.avatarUrl,
+    avatarUrl: pickAvatarUrl(score),
+    avatarFallbackUrl: pickAvatarFallback(score),
     country: score.country,
     accuracy: score.accuracy,
     score: score.score,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTiltEffect } from '@/composables/useTiltEffect'
+import { onImageError } from '@/composables/useAvatarFallback'
 import type { MapDisplay } from '@/types/display'
 import { computed, ref } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
@@ -17,6 +18,7 @@ const cardRef = ref<HTMLElement | null>(null)
 const { style: tiltStyle } = useTiltEffect(cardRef)
 
 const href = computed(() => router.resolve(props.to).href)
+const handleCoverError = (e: Event) => onImageError(props.map.coverFallbackUrl)(e)
 
 function handleClick(event: MouseEvent) {
   if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
@@ -28,7 +30,8 @@ function handleClick(event: MouseEvent) {
 <template>
   <a ref="cardRef" class="map-card" :href="href" :style="tiltStyle" @click="handleClick">
     <div class="map-card__image-wrap">
-      <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" decoding="async" />
+      <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" decoding="async"
+        @error="handleCoverError" />
     </div>
     <div class="map-card__body">
       <CategoryBadge :category="map.categoryCode" size="sm" class="map-card__category" />

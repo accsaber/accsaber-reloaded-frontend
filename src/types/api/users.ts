@@ -9,6 +9,7 @@ export interface UserResponse {
   ssId?: string
   name: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   bio: string
   xpRanking: number
@@ -52,6 +53,7 @@ export interface ScoreResponse {
   userId: string
   userName: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   country: string
   mapDifficultyId: string
   mapId: string
@@ -61,6 +63,7 @@ export interface ScoreResponse {
   songAuthor: string
   mapAuthor: string
   coverUrl: string
+  cdnCoverUrl?: string | null
   difficulty: string
   categoryId: string
   score: number
@@ -113,6 +116,7 @@ export interface LeaderboardResponse {
   userName: string
   country: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   ap: number
   averageAcc: number
   averageAp: number
@@ -130,6 +134,7 @@ export interface XpLeaderboardResponse {
   userName: string
   country: string
   avatarUrl: string
+  cdnAvatarUrl?: string | null
   totalXp: number
   level: number
   playerInactive: boolean

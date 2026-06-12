@@ -192,7 +192,9 @@ function onReplayClick(e: MouseEvent) {
     </button>
 
     <div class="pin-card__body">
-      <GlowImage :src="score.coverUrl" :alt="score.songName" :size="88" class="pin-card__cover" />
+      <GlowImage :src="score.cdnCoverUrl ?? score.coverUrl" :alt="score.songName" :size="88"
+        class="pin-card__cover"
+        :fallback-src="score.cdnCoverUrl && score.coverUrl && score.cdnCoverUrl !== score.coverUrl ? score.coverUrl : null" />
       <div class="pin-card__map">
         <CategoryBadge v-if="categoryCode" :category="categoryCode" size="sm" class="pin-card__eyebrow" />
         <h3 class="pin-card__song" :title="score.songName">{{ score.songName }}</h3>

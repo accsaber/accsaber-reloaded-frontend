@@ -6,6 +6,7 @@ import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
 import MissionsDropdown from '@/components/domain/MissionsDropdown.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
+import { onAvatarError } from '@/composables/useAvatarFallback'
 import { isAdminSubdomain, isRankingSubdomain, isStaffSubdomain, playerProfileHref } from '@/utils/subdomain'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -24,6 +25,16 @@ const avatarFailed = ref(false)
 watch(() => authStore.userProfile?.avatarUrl, () => {
   avatarFailed.value = false
 })
+
+const navAvatarError = (event: Event) => {
+  const fallback = authStore.userProfile?.avatarFallbackUrl ?? null
+  const img = event.currentTarget as HTMLImageElement
+  if (fallback && img.dataset.fellBack !== '1') {
+    onAvatarError(fallback)(event)
+    return
+  }
+  avatarFailed.value = true
+}
 
 type MobileIcon = 'leaderboard' | 'map' | 'milestone'
 interface NavItem {
@@ -217,7 +228,7 @@ onUnmounted(() => {
           <img
             v-if="authStore.isLoggedIn && authStore.userProfile?.avatarUrl && !avatarFailed"
             :src="authStore.userProfile.avatarUrl" :alt="authStore.userProfile.name" class="navbar__avatar"
-            decoding="async" @error="avatarFailed = true" />
+            decoding="async" @error="navAvatarError" />
           <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />

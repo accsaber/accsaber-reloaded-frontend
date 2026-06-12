@@ -6,6 +6,7 @@ defineProps<{
   userId: string
   userName: string
   avatarUrl: string
+  avatarFallbackUrl?: string | null
   country: string
 }>()
 
@@ -106,7 +107,7 @@ onUnmounted(() => {
         <div v-if="showTooltip" class="tooltip-trigger__popup" :style="tooltipStyle"
           @mouseenter="onPopupEnter" @mouseleave="onPopupLeave">
           <PlayerTooltipCard :user-id="userId" :user-name="userName" :avatar-url="avatarUrl"
-            :country="country" />
+            :avatar-fallback-url="avatarFallbackUrl" :country="country" />
         </div>
       </Transition>
     </Teleport>
