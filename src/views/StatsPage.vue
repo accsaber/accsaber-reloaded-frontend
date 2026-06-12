@@ -28,7 +28,7 @@ import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty, toScoreDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -72,12 +72,40 @@ const activeSection = computed<SectionKey>({
   },
 })
 
+const TAB_COUNTRY_STORAGE_KEY = 'accsaber:stats:tab-countries'
+
+function loadTabCountries(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(TAB_COUNTRY_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+const tabCountries = ref<Record<string, string>>(loadTabCountries())
+
+function persistTabCountry(tab: string, country: string) {
+  if (country) {
+    tabCountries.value[tab] = country
+  } else {
+    delete tabCountries.value[tab]
+  }
+  try {
+    localStorage.setItem(TAB_COUNTRY_STORAGE_KEY, JSON.stringify(tabCountries.value))
+  } catch {
+
+  }
+}
+
 const activeTab = computed<LeaderboardTab>({
   get: () => (route.query.tab as LeaderboardTab) || 'streaks',
   set: (tab) => {
     const query: Record<string, string> = { tab }
     if (route.query.section) query.section = route.query.section as string
     if (route.query.category) query.category = route.query.category as string
+    const persisted = tabCountries.value[tab]
+    if (persisted) query.country = persisted
     router.push({ query })
   },
 })
@@ -101,8 +129,18 @@ const countryFilter = computed<string>({
       delete query.country
     }
     delete query.page
+    persistTabCountry(activeTab.value, country)
     router.replace({ query })
   },
+})
+
+onMounted(() => {
+  if (!route.query.country) {
+    const persisted = tabCountries.value[activeTab.value]
+    if (persisted) {
+      router.replace({ query: { ...route.query, country: persisted } })
+    }
+  }
 })
 
 const countryOptions = computed(() => {
