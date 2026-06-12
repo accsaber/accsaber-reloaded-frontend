@@ -72,30 +72,24 @@ const activeSection = computed<SectionKey>({
   },
 })
 
-const TAB_COUNTRY_STORAGE_KEY = 'accsaber:stats:tab-countries'
+const COUNTRY_STORAGE_KEY = 'accsaber:stats:country'
 
-function loadTabCountries(): Record<string, string> {
+function loadStoredCountry(): string {
   try {
-    const raw = localStorage.getItem(TAB_COUNTRY_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
+    return localStorage.getItem(COUNTRY_STORAGE_KEY) ?? ''
   } catch {
-    return {}
+    return ''
   }
 }
 
-const tabCountries = ref<Record<string, string>>(loadTabCountries())
-
-function persistTabCountry(tab: string, country: string) {
-  if (country) {
-    tabCountries.value[tab] = country
-  } else {
-    delete tabCountries.value[tab]
-  }
+function storeCountry(country: string) {
   try {
-    localStorage.setItem(TAB_COUNTRY_STORAGE_KEY, JSON.stringify(tabCountries.value))
-  } catch {
-
-  }
+    if (country) {
+      localStorage.setItem(COUNTRY_STORAGE_KEY, country)
+    } else {
+      localStorage.removeItem(COUNTRY_STORAGE_KEY)
+    }
+  } catch { /* quota exceeded */ }
 }
 
 const activeTab = computed<LeaderboardTab>({
@@ -104,8 +98,7 @@ const activeTab = computed<LeaderboardTab>({
     const query: Record<string, string> = { tab }
     if (route.query.section) query.section = route.query.section as string
     if (route.query.category) query.category = route.query.category as string
-    const persisted = tabCountries.value[tab]
-    if (persisted) query.country = persisted
+    if (route.query.country) query.country = route.query.country as string
     router.push({ query })
   },
 })
@@ -129,14 +122,14 @@ const countryFilter = computed<string>({
       delete query.country
     }
     delete query.page
-    persistTabCountry(activeTab.value, country)
+    storeCountry(country)
     router.replace({ query })
   },
 })
 
 onMounted(() => {
   if (!route.query.country) {
-    const persisted = tabCountries.value[activeTab.value]
+    const persisted = loadStoredCountry()
     if (persisted) {
       router.replace({ query: { ...route.query, country: persisted } })
     }
