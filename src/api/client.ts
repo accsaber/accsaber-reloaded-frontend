@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/stores/auth'
-import { imageUrlReviver } from '@/utils/images'
 
 export class ApiError extends Error {
   constructor(
@@ -110,7 +109,7 @@ async function executeFetch<T>(
 
   const text = await res.text()
   const sanitizedJsonText = text.replace(/:\s*(\d{16,})/g, ': "$1"')
-  return { res, parsed: JSON.parse(sanitizedJsonText, imageUrlReviver) as T }
+  return { res, parsed: JSON.parse(sanitizedJsonText) as T }
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -189,5 +188,5 @@ export async function postMultipart<T>(path: string, formData: FormData): Promis
   if (res.status === 204 || res.status === 202) return undefined as T
   const text = await res.text()
   const sanitized = text.replace(/:\s*(\d{16,})/g, ': "$1"')
-  return JSON.parse(sanitized, imageUrlReviver) as T
+  return JSON.parse(sanitized) as T
 }

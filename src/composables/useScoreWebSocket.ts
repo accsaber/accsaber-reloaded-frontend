@@ -1,7 +1,6 @@
 import type { ScoreResponse } from '@/types/api/users'
 import type { ConnectionStatus, ScoreFeedEntry } from '@/types/display'
 import { formatDifficulty } from '@/utils/mappers'
-import { imageUrlReviver } from '@/utils/images'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import { onUnmounted, ref, type Ref } from 'vue'
@@ -107,7 +106,7 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
   function onMessage(event: MessageEvent) {
     if (event.data === 'pong') return
     try {
-      const data = JSON.parse(event.data, imageUrlReviver) as ScoreResponse
+      const data = JSON.parse(event.data) as ScoreResponse
       const entry = toFeedEntry(data)
       scores.value = [entry, ...scores.value].slice(0, MAX_ENTRIES)
     } catch {
