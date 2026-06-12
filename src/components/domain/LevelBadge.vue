@@ -164,14 +164,19 @@ const fallbackTitleStyle = computed(() => {
         </defs>
         <g :clip-path="`url(#${avatarClipId})`">
           <rect x="0" y="0" width="100" height="100" class="level-badge__avatar-bg" />
-          <image
-            :href="avatarUrl"
+          <foreignObject
             :x="avatarImageBox.x"
             :y="avatarImageBox.y"
             :width="avatarImageBox.size"
             :height="avatarImageBox.size"
-            preserveAspectRatio="xMidYMid slice"
-          />
+          >
+            <img
+              :src="avatarUrl"
+              alt=""
+              class="level-badge__avatar-img"
+              decoding="async"
+            />
+          </foreignObject>
         </g>
       </svg>
     </div>
@@ -229,6 +234,13 @@ const fallbackTitleStyle = computed(() => {
 
 .level-badge__avatar-bg {
   fill: var(--bg-base);
+}
+
+.level-badge__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .level-badge__below {

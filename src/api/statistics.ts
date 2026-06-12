@@ -12,32 +12,32 @@ import type { Page, PaginationParams } from '@/types/pagination'
 import { get } from './client'
 import { buildQuery } from './utils'
 
-export function getStreakLeaderboard(params?: PaginationParams, categoryId?: string): Promise<Page<ScoreResponse>> {
-  return get<Page<ScoreResponse>>(`/statistics/leaderboards/streaks${buildQuery({ ...params, categoryId })}`)
+export function getStreakLeaderboard(params?: PaginationParams, categoryId?: string, country?: string): Promise<Page<ScoreResponse>> {
+  return get<Page<ScoreResponse>>(`/statistics/leaderboards/streaks${buildQuery({ ...params, categoryId, country })}`)
 }
 
-export function getMaxApLeaderboard(params?: PaginationParams, categoryId?: string): Promise<Page<ScoreResponse>> {
-  return get<Page<ScoreResponse>>(`/statistics/leaderboards/max-ap${buildQuery({ ...params, categoryId })}`)
+export function getMaxApLeaderboard(params?: PaginationParams, categoryId?: string, country?: string): Promise<Page<ScoreResponse>> {
+  return get<Page<ScoreResponse>>(`/statistics/leaderboards/max-ap${buildQuery({ ...params, categoryId, country })}`)
 }
 
-export function getHighestAvgApMaps(params?: PaginationParams, categoryId?: string, minScores?: number): Promise<Page<MapAvgApResponse>> {
-  return get<Page<MapAvgApResponse>>(`/statistics/leaderboards/highest-avg-ap${buildQuery({ ...params, categoryId, minScores })}`)
+export function getHighestAvgApMaps(params?: PaginationParams, categoryId?: string, minScores?: number, country?: string): Promise<Page<MapAvgApResponse>> {
+  return get<Page<MapAvgApResponse>>(`/statistics/leaderboards/highest-avg-ap${buildQuery({ ...params, categoryId, minScores, country })}`)
 }
 
-export function getMostRetriedMaps(params?: PaginationParams, categoryId?: string): Promise<Page<MapRetryResponse>> {
-  return get<Page<MapRetryResponse>>(`/statistics/leaderboards/most-retried${buildQuery({ ...params, categoryId })}`)
+export function getMostRetriedMaps(params?: PaginationParams, categoryId?: string, country?: string): Promise<Page<MapRetryResponse>> {
+  return get<Page<MapRetryResponse>>(`/statistics/leaderboards/most-retried${buildQuery({ ...params, categoryId, country })}`)
 }
 
-export function getMostImprovements(params?: PaginationParams, categoryId?: string): Promise<Page<UserImprovementsResponse>> {
-  return get<Page<UserImprovementsResponse>>(`/statistics/leaderboards/most-improvements${buildQuery({ ...params, categoryId })}`)
+export function getMostImprovements(params?: PaginationParams, categoryId?: string, country?: string): Promise<Page<UserImprovementsResponse>> {
+  return get<Page<UserImprovementsResponse>>(`/statistics/leaderboards/most-improvements${buildQuery({ ...params, categoryId, country })}`)
 }
 
-export function getMostMapImprovements(params?: PaginationParams, categoryId?: string): Promise<Page<UserMapImprovementsResponse>> {
-  return get<Page<UserMapImprovementsResponse>>(`/statistics/leaderboards/most-map-improvements${buildQuery({ ...params, categoryId })}`)
+export function getMostMapImprovements(params?: PaginationParams, categoryId?: string, country?: string): Promise<Page<UserMapImprovementsResponse>> {
+  return get<Page<UserMapImprovementsResponse>>(`/statistics/leaderboards/most-map-improvements${buildQuery({ ...params, categoryId, country })}`)
 }
 
-export function getMilestoneCollectors(params?: PaginationParams): Promise<Page<MilestoneCollectorResponse>> {
-  return get<Page<MilestoneCollectorResponse>>(`/statistics/leaderboards/milestone-collectors${buildQuery(params)}`)
+export function getMilestoneCollectors(params?: PaginationParams, country?: string): Promise<Page<MilestoneCollectorResponse>> {
+  return get<Page<MilestoneCollectorResponse>>(`/statistics/leaderboards/milestone-collectors${buildQuery({ ...params, country })}`)
 }
 
 export function getNewPlayersPerDay(params?: { amount?: number; unit?: string }): Promise<TimeSeriesPointResponse[]> {

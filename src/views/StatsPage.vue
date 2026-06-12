@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -11,6 +12,7 @@ import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type {
@@ -21,7 +23,7 @@ import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, MetricType, ScoreDisplay, TableColumn, TimeRange, TimeSeriesPoint } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { TIME_RANGE_PARAMS } from '@/utils/constants'
-import { countryName } from '@/utils/countries'
+import { COUNTRY_OPTIONS, countryName } from '@/utils/countries'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty, toScoreDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
@@ -31,6 +33,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
 
@@ -86,6 +89,32 @@ const activeCategory = computed<CategoryCode>({
     delete query.page
     router.push({ query: query as Record<string, string> })
   },
+})
+
+const countryFilter = computed<string>({
+  get: () => (route.query.country as string) || '',
+  set: (country) => {
+    const query = { ...route.query }
+    if (country) {
+      query.country = country
+    } else {
+      delete query.country
+    }
+    delete query.page
+    router.replace({ query })
+  },
+})
+
+const countryOptions = computed(() => {
+  const userCountry = authStore.userProfile?.country
+  if (!userCountry) return COUNTRY_OPTIONS
+  const userOption = COUNTRY_OPTIONS.find((o) => o.value === userCountry)
+  if (!userOption) return COUNTRY_OPTIONS
+  return [
+    { value: '', label: 'All Countries' },
+    userOption,
+    ...COUNTRY_OPTIONS.filter((o) => o.value !== '' && o.value !== userCountry),
+  ]
 })
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
@@ -235,18 +264,19 @@ async function fetchLeaderboardData() {
   try {
     const categoryId = TABS_WITH_CATEGORY.has(activeTab.value) && activeCategory.value !== 'overall'
       ? categoryStore.getCategoryId(activeCategory.value) : undefined
+    const country = countryFilter.value || undefined
     const params = paginationParams.value
     const api = await import('@/api/statistics')
     let result: Page<unknown>
 
     switch (activeTab.value) {
-      case 'streaks': result = await api.getStreakLeaderboard(params, categoryId); break
-      case 'max-ap': result = await api.getMaxApLeaderboard(params, categoryId); break
-      case 'avg-ap': result = await api.getHighestAvgApMaps(params, categoryId); break
-      case 'most-retried': result = await api.getMostRetriedMaps(params, categoryId); break
-      case 'grinders': result = await api.getMostImprovements(params, categoryId); break
-      case 'dedication': result = await api.getMostMapImprovements(params, categoryId); break
-      case 'collectors': result = await api.getMilestoneCollectors(params); break
+      case 'streaks': result = await api.getStreakLeaderboard(params, categoryId, country); break
+      case 'max-ap': result = await api.getMaxApLeaderboard(params, categoryId, country); break
+      case 'avg-ap': result = await api.getHighestAvgApMaps(params, categoryId, undefined, country); break
+      case 'most-retried': result = await api.getMostRetriedMaps(params, categoryId, country); break
+      case 'grinders': result = await api.getMostImprovements(params, categoryId, country); break
+      case 'dedication': result = await api.getMostMapImprovements(params, categoryId, country); break
+      case 'collectors': result = await api.getMilestoneCollectors(params, country); break
       default: result = { content: [], totalElements: 0, totalPages: 0, size: 0, number: 0, first: true, last: true, empty: true }
     }
 
@@ -337,7 +367,7 @@ function onMetricChange(m: MetricType) { growthMetric.value = m; fetchChart(m, g
 function onRangeChange(r: TimeRange) { growthRange.value = r; fetchChart(growthMetric.value, r) }
 
 watch(
-  [activeTab, activeCategory, paginationParams],
+  [activeTab, activeCategory, countryFilter, paginationParams],
   () => { if (activeSection.value === 'leaderboards') fetchLeaderboardData() },
   { immediate: true },
 )
@@ -386,6 +416,8 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
     <template v-if="activeSection === 'leaderboards'">
       <div class="stats__category-filter">
         <CategoryTabs :model-value="activeCategory" :exclude="['xp']" @update:model-value="activeCategory = $event" />
+        <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
+          @update:model-value="countryFilter = $event" />
       </div>
 
       <div class="lb-picker">
@@ -674,6 +706,9 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
 .stats__category-filter {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
 }
 
 .stats__table {
