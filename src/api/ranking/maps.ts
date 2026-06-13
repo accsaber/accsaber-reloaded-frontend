@@ -17,7 +17,7 @@ import type {
 } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import type { Difficulty } from '@/types/enums'
-import { del, get, patch, post } from '../client'
+import { get, patch, post } from '../client'
 import { buildQuery } from '../utils'
 
 export interface AiComplexityResponse {
@@ -111,7 +111,7 @@ export function updateMapCategory(
 }
 
 export function deactivateMapDifficulty(difficultyId: string): Promise<void> {
-  return del<void>(`/ranking/maps/difficulties/${difficultyId}`)
+  return patch<void>(`/ranking/maps/difficulties/${difficultyId}/deactivate`)
 }
 
 export function approveReweight(
