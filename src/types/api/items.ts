@@ -140,7 +140,7 @@ export interface TitleFlashSpec {
   durationMs?: number
 }
 
-export type TitleSparkleShape = 'star' | 'paw'
+export type TitleSparkleShape = 'star' | 'paw' | 'firefly'
 
 export interface TitleSparkleSpec {
   enabled: boolean
@@ -180,6 +180,8 @@ export interface TitleHazeAuraSpec {
   glow?: string
   lightColor?: string
   lightGlow?: string
+  orbs?: boolean
+  motes?: boolean
 }
 
 export interface TitleSmokeAuraSpec {
@@ -191,7 +193,22 @@ export interface TitleSmokeAuraSpec {
   lightEmber?: string
 }
 
-export type TitleAuraSpec = TitleFlameAuraSpec | TitleHazeAuraSpec | TitleSmokeAuraSpec
+export interface TitleAscensionAuraSpec {
+  type: 'ascension'
+  enabled: boolean
+  ray?: string
+  shine?: string
+  lightRay?: string
+  lightShine?: string
+  lift?: boolean
+  intervalS?: number
+}
+
+export type TitleAuraSpec =
+  | TitleFlameAuraSpec
+  | TitleHazeAuraSpec
+  | TitleSmokeAuraSpec
+  | TitleAscensionAuraSpec
 
 export type TitleAuraType = TitleAuraSpec['type']
 
@@ -207,6 +224,60 @@ export interface TitleChromaticSplitSpec {
   durationMs?: number
 }
 
+export interface TitleForgeSpec {
+  enabled: boolean
+  raw?: string
+  hot?: string
+  heat?: string
+  lightRaw?: string
+  lightHot?: string
+  lightHeat?: string
+  intervalMs?: number
+  staggerMs?: number
+  stampMs?: number
+  coolMs?: number
+}
+
+export interface TitleBlazeSpec {
+  enabled: boolean
+  ember?: string
+  flame?: string
+  hot?: string
+  lightEmber?: string
+  lightFlame?: string
+  lightHot?: string
+  intervalMs?: number
+  spreadMs?: number
+  burnMs?: number
+  dieMs?: number
+}
+
+export interface TitleCrustSpec {
+  enabled: boolean
+  crust?: string
+  crack?: string
+  molten?: string
+  moltenHot?: string
+  lightCrust?: string
+  lightCrack?: string
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  eruptMs?: number
+}
+
+export interface TitleSpectrumSplitSpec {
+  enabled: boolean
+  colors?: string[]
+  lightColors?: string[]
+  fused?: string
+  lightFused?: string
+  offsetPx?: number
+  intervalMs?: number
+  splitMs?: number
+  microIntervalMs?: number
+  microMs?: number
+}
+
 export interface TitleValue {
   text: string
   font?: TitleFont
@@ -216,6 +287,10 @@ export interface TitleValue {
   sparkles?: TitleSparkleSpec
   aura?: TitleAuraSpec
   chromaticSplit?: TitleChromaticSplitSpec
+  forge?: TitleForgeSpec
+  blaze?: TitleBlazeSpec
+  crust?: TitleCrustSpec
+  spectrumSplit?: TitleSpectrumSplitSpec
   variants?: ItemVariant[]
   durationMs?: number
   loop?: Loop
@@ -473,6 +548,59 @@ export interface PrismFill {
   slices?: number
 }
 
+export interface GroveFill {
+  type: 'grove'
+  deep: string
+  moss: string
+  vine: string
+  fruits: string[]
+  firefly: string
+  fireflyAlt?: string
+  mushroomA?: string
+  mushroomB?: string
+  spore?: string
+  intervalS?: number
+}
+
+export interface RegaliaFill {
+  type: 'regalia'
+  steel: string
+  sheen: string
+  shadow: string
+  body: string
+  silver: string
+  core?: string
+  intervalS?: number
+}
+
+export interface ColossusFill {
+  type: 'colossus'
+  stoneA: string
+  stoneB: string
+  block: string
+  seam: string
+  flash?: string
+  intervalS?: number
+}
+
+export interface StolenFlameFill {
+  type: 'stolenflame'
+  night: string
+  flame: string
+  flameDeep: string
+  ember: string
+  intervalS?: number
+}
+
+export interface DominionFill {
+  type: 'dominion'
+  colors: string[]
+  body?: string
+  space?: string
+  intervalS?: number
+  microS?: number
+}
+
 export type BorderColorFill =
   | { type: 'solid'; hex: string }
   | Gradient
@@ -480,6 +608,11 @@ export type BorderColorFill =
   | CosmicFill
   | ToonFill
   | PrismFill
+  | GroveFill
+  | RegaliaFill
+  | ColossusFill
+  | StolenFlameFill
+  | DominionFill
 
 export interface BorderColorStateValue {
   atMs: number
@@ -538,7 +671,69 @@ export interface FacetVaultScene {
   sheenOpacity?: number
 }
 
-export type ThumbnailScene = FacetVaultScene
+export interface GroveScene {
+  type: 'grove'
+  base?: 'light' | 'dark'
+  skyTop: string
+  skyBottom: string
+  trunk: string
+  vine: string
+  fruits: string[]
+  firefly: string
+  fireflyAlt?: string
+  mushroomA?: string
+  mushroomB?: string
+  wisp?: string
+  mist?: string
+}
+
+export interface SanctumScene {
+  type: 'sanctum'
+  base?: 'light' | 'dark'
+  wallTop: string
+  wallBottom: string
+  shaft: string
+  throne: string
+  rim: string
+  mote?: string
+}
+
+export interface MonumentScene {
+  type: 'monument'
+  base?: 'light' | 'dark'
+  skyTop: string
+  skyBottom: string
+  stone: string
+  seam: string
+  edge?: string
+  cloud?: string
+}
+
+export interface TorchlitScene {
+  type: 'torchlit'
+  base?: 'light' | 'dark'
+  sky: string
+  ground: string
+  flame: string
+  flameDeep: string
+  ember: string
+}
+
+export interface FusionScene {
+  type: 'fusion'
+  base?: 'light' | 'dark'
+  bg: string
+  beam: string
+  colors: string[]
+}
+
+export type ThumbnailScene =
+  | FacetVaultScene
+  | GroveScene
+  | SanctumScene
+  | MonumentScene
+  | TorchlitScene
+  | FusionScene
 
 export interface ProfileThumbnailBackgroundValue {
   asset?: AssetSet

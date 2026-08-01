@@ -5,7 +5,7 @@ import RelationActions from '@/components/domain/RelationActions.vue';
 import ThumbnailSceneRenderer from '@/components/domain/ThumbnailSceneRenderer.vue';
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
-import { fillToCss, pickAssetUrl } from '@/utils/items';
+import { fillToCss, pickAssetUrl, thumbnailSceneInk } from '@/utils/items';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -28,7 +28,7 @@ const {
   titleEffects: equippedTitleEffects,
   borderEffects: equippedBorderEffects,
   thumbnailValue: equippedThumbnail,
-} = useEquippedRenderProps(() => profile.value?.equipped)
+} = useEquippedRenderProps(() => profile.value?.equipped, { previewable: true })
 
 const thumbScene = computed(() => equippedThumbnail.value?.scene ?? null)
 const thumbImageUrl = computed(() => pickAssetUrl(equippedThumbnail.value?.asset))
@@ -37,7 +37,7 @@ const thumbLayerStyle = computed<Record<string, string> | undefined>(() => {
   const opacity = equippedThumbnail.value?.opacity
   return opacity != null ? { opacity: String(opacity) } : undefined
 })
-const thumbInk = computed(() => thumbScene.value?.ink ?? null)
+const thumbInk = computed(() => (thumbScene.value ? thumbnailSceneInk(thumbScene.value) : null))
 const thumbBase = computed<'light' | 'dark'>(() => thumbScene.value?.base ?? 'dark')
 
 const tierKey = computed(() => {

@@ -83,6 +83,11 @@
   --tier-transcendent: #22d3ee;
   --tier-mythic: #ef4444;
   --tier-ascendant: #f472b6;
+  --tier-fabled: #62d98a;
+  --tier-exalted: #e9e7f4;
+  --tier-titanic: #8da3c0;
+  --tier-promethean: #ff5c33;
+  --tier-supreme: #ffffff;
 
   /* --- Role Colors --- */
   --role-admin: #ef4444;
@@ -183,6 +188,11 @@
   --xp-down: #c02222;
 
   --campaign-loved: #ab1c78;
+
+  /* Level tiers 140+ (light) - near-white/white tiers need dark counterparts */
+  --tier-exalted: #77719a;
+  --tier-titanic: #5d7391;
+  --tier-supreme: #0a0a0f;
 
   /* Category Tints (Light) */
   --tint-true-acc: #d4f5e0;

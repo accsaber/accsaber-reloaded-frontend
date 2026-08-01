@@ -145,7 +145,7 @@ const ramp = computed<MetalRamp | null>(() => {
   if (fill.type === 'toon') {
     return rampFromTriple(darken(fill.ink, 0.3), fill.ink, fill.line, derivation)
   }
-  if (Array.isArray(fill.stops) && fill.stops.length > 0) {
+  if ('stops' in fill && Array.isArray(fill.stops) && fill.stops.length > 0) {
     const sorted = [...fill.stops].sort((a, b) => luminance(a.hex) - luminance(b.hex))
     const n = sorted.length
     if (n === 1) {

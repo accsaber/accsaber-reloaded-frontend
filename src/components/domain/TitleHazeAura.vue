@@ -133,6 +133,9 @@ useElementCanvas(canvasRef, {
     ctx.fillStyle = core
     ctx.fillRect(0, 0, w, h)
 
+    const orbsOn = props.aura.orbs !== false
+    const motesOn = props.aura.motes !== false
+
     ctx.lineJoin = 'round'
     const K = 72
     for (const b of BANDS) {
@@ -159,7 +162,7 @@ useElementCanvas(canvasRef, {
       ctx.stroke()
     }
 
-    for (const m of motes) {
+    for (const m of motesOn ? motes : []) {
       const theta = m.theta + t * m.speed
       const [px, py] = ellipsePoint(theta, fs * (0.3 + m.pad * 0.7), fs * (0.25 + m.pad * 0.5), t)
       const a = 0.35 + 0.35 * Math.sin(t * 2.2 + m.tw)
@@ -169,7 +172,7 @@ useElementCanvas(canvasRef, {
       ctx.fill()
     }
 
-    for (const o of orbs) {
+    for (const o of orbsOn ? orbs : []) {
       let p = (now - o.born) / o.dur
       if (reduced) p = 0.55
       if (p >= 1) {

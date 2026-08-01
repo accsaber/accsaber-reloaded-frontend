@@ -23,6 +23,7 @@ import type {
   ProfileThumbnailBackgroundValue,
   StatisticValue,
   ThemeValue,
+  ThumbnailScene,
   TitleStateValue,
   TitleValue,
   UnusualEffectRef,
@@ -292,6 +293,38 @@ function isPrismFill(v: unknown): boolean {
   return isString(v.rose) && isString(v.edge)
 }
 
+function isGroveFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'grove') return false
+  return isString(v.deep) && isString(v.moss) && isString(v.vine)
+    && Array.isArray(v.fruits) && v.fruits.every(isString) && isString(v.firefly)
+}
+
+function isRegaliaFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'regalia') return false
+  return isString(v.steel) && isString(v.sheen) && isString(v.shadow)
+    && isString(v.body) && isString(v.silver)
+}
+
+function isColossusFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'colossus') return false
+  return isString(v.stoneA) && isString(v.stoneB) && isString(v.block) && isString(v.seam)
+}
+
+function isStolenFlameFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'stolenflame') return false
+  return isString(v.night) && isString(v.flame) && isString(v.flameDeep) && isString(v.ember)
+}
+
+function isDominionFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'dominion') return false
+  return Array.isArray(v.colors) && v.colors.length > 0 && v.colors.every(isString)
+}
+
 export function readBorderColorValue(value: unknown): BorderColorValue | null {
   if (!isObj(value)) return null
   if (!Array.isArray(value.states) || value.states.length === 0) return null
@@ -304,6 +337,11 @@ export function readBorderColorValue(value: unknown): BorderColorValue | null {
     if (fill.type === 'cosmic') return isCosmicFill(fill)
     if (fill.type === 'toon') return isToonFill(fill)
     if (fill.type === 'prism') return isPrismFill(fill)
+    if (fill.type === 'grove') return isGroveFill(fill)
+    if (fill.type === 'regalia') return isRegaliaFill(fill)
+    if (fill.type === 'colossus') return isColossusFill(fill)
+    if (fill.type === 'stolenflame') return isStolenFlameFill(fill)
+    if (fill.type === 'dominion') return isDominionFill(fill)
     return isGradient(fill)
   })
   if (validStates.length === 0) return null
@@ -325,14 +363,38 @@ export function readBackgroundValue(value: unknown): ProfileBackgroundValue | nu
 
 function isThumbnailScene(v: unknown): boolean {
   if (!isObj(v)) return false
-  if (v.type !== 'facet_vault') return false
-  return isString(v.ink) && Array.isArray(v.facets) && v.facets.every(isString)
+  if (v.type === 'facet_vault') {
+    return isString(v.ink) && Array.isArray(v.facets) && v.facets.every(isString)
+  }
+  if (v.type === 'grove') {
+    return isString(v.skyTop) && isString(v.skyBottom)
+      && Array.isArray(v.fruits) && v.fruits.every(isString)
+  }
+  if (v.type === 'sanctum') return isString(v.wallTop) && isString(v.throne) && isString(v.rim)
+  if (v.type === 'monument') return isString(v.skyTop) && isString(v.stone) && isString(v.seam)
+  if (v.type === 'torchlit') return isString(v.sky) && isString(v.ground) && isString(v.flame)
+  if (v.type === 'fusion') {
+    return isString(v.bg) && isString(v.beam)
+      && Array.isArray(v.colors) && v.colors.every(isString)
+  }
+  return false
 }
 
 export function readThumbnailBackgroundValue(value: unknown): ProfileThumbnailBackgroundValue | null {
   if (!isObj(value)) return null
   if (!isObj(value.asset) && !isThumbnailScene(value.scene)) return null
   return value as unknown as ProfileThumbnailBackgroundValue
+}
+
+export function thumbnailSceneInk(scene: ThumbnailScene): string {
+  switch (scene.type) {
+    case 'facet_vault': return scene.ink
+    case 'grove': return scene.skyBottom
+    case 'sanctum': return scene.wallTop
+    case 'monument': return scene.skyTop
+    case 'torchlit': return scene.sky
+    case 'fusion': return scene.bg
+  }
 }
 
 export function readThemeValue(value: unknown): ThemeValue | null {
@@ -548,6 +610,23 @@ export function fillToCss(fill: BorderColorFill): string {
     const hi = fill.hi ?? fill.edge
     return `linear-gradient(135deg, ${lo} 0%, ${hi} 50%, ${lo} 100%)`
   }
+  if (fill.type === 'grove') {
+    return `linear-gradient(135deg, ${fill.deep} 0%, ${fill.moss} 60%, ${fill.vine} 100%)`
+  }
+  if (fill.type === 'regalia') {
+    return `linear-gradient(115deg, ${fill.shadow} 0%, ${fill.silver} 45%, ${fill.core ?? '#ffffff'} 55%, ${fill.body} 100%)`
+  }
+  if (fill.type === 'colossus') {
+    return `linear-gradient(160deg, ${fill.stoneA} 0%, ${fill.stoneB} 55%, ${fill.seam} 100%)`
+  }
+  if (fill.type === 'stolenflame') {
+    return `linear-gradient(135deg, ${fill.night} 0%, ${fill.flameDeep} 55%, ${fill.flame} 78%, ${fill.night} 100%)`
+  }
+  if (fill.type === 'dominion') {
+    const body = fill.body ?? '#ffffff'
+    const stops = fill.colors.map((c, i) => `${c} ${Math.round((i / fill.colors.length) * 100)}%`)
+    return `linear-gradient(100deg, ${body} 0%, ${stops.join(', ')}, ${body} 100%)`
+  }
   return gradientToCss(fill)
 }
 
@@ -630,12 +709,21 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
   return t < 0.5 ? a : b
 }
 
+const CANVAS_FILL_TYPES = new Set([
+  'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion',
+])
+
+type CanvasFill = Extract<
+  BorderColorFill,
+  { type: 'cosmic' | 'toon' | 'prism' | 'grove' | 'regalia' | 'colossus' | 'stolenflame' | 'dominion' }
+>
+
+function isCanvasFill(fill: BorderColorFill): fill is CanvasFill {
+  return CANVAS_FILL_TYPES.has(fill.type)
+}
+
 export function interpolateFill(a: BorderColorFill, b: BorderColorFill, t: number): BorderColorFill {
-  if (
-    a.type === 'cosmic' || b.type === 'cosmic'
-    || a.type === 'toon' || b.type === 'toon'
-    || a.type === 'prism' || b.type === 'prism'
-  ) {
+  if (isCanvasFill(a) || isCanvasFill(b)) {
     return t < 0.5 ? a : b
   }
   if (a.type === 'solid' && b.type === 'solid') {
@@ -882,6 +970,7 @@ export const THEMABLE_TOKENS = new Set<string>([
   'tier-newcomer', 'tier-apprentice', 'tier-adept', 'tier-skilled',
   'tier-expert', 'tier-master', 'tier-grandmaster', 'tier-legend',
   'tier-transcendent', 'tier-mythic', 'tier-ascendant',
+  'tier-fabled', 'tier-exalted', 'tier-titanic', 'tier-promethean', 'tier-supreme',
   'role-admin', 'role-developer', 'role-moderator',
   'role-head-ranking', 'role-ranking',
   'chart-grid', 'chart-text',

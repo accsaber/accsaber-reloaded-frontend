@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useTimeline } from '@/composables/useTimeline'
+import ColossusBorderFill from '@/components/domain/ColossusBorderFill.vue'
 import CosmicBorderFill from '@/components/domain/CosmicBorderFill.vue'
+import DominionBorderFill from '@/components/domain/DominionBorderFill.vue'
+import GroveBorderFill from '@/components/domain/GroveBorderFill.vue'
+import StolenFlameBorderFill from '@/components/domain/StolenFlameBorderFill.vue'
 import PrismBorderFill from '@/components/domain/PrismBorderFill.vue'
+import RegaliaBorderFill from '@/components/domain/RegaliaBorderFill.vue'
 import ToonBorderFill from '@/components/domain/ToonBorderFill.vue'
 import type {
   BorderColorStateValue,
@@ -10,9 +15,14 @@ import type {
   BorderShapePathValue,
   BorderShapeStateValue,
   BorderShapeValue,
+  ColossusFill,
   CosmicFill,
+  DominionFill,
+  GroveFill,
+  StolenFlameFill,
   PrismFill,
   Gradient,
+  RegaliaFill,
   ToonFill,
 } from '@/types/api/items'
 import {
@@ -55,12 +65,46 @@ const prismFill = computed<PrismFill | null>(() => {
   return fill?.type === 'prism' ? fill : null
 })
 
-const canvasFillActive = computed(() => !!cosmicFill.value || !!toonFill.value || !!prismFill.value)
+const groveFill = computed<GroveFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'grove' ? fill : null
+})
+
+const regaliaFill = computed<RegaliaFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'regalia' ? fill : null
+})
+
+const colossusFill = computed<ColossusFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'colossus' ? fill : null
+})
+
+const stolenFlameFill = computed<StolenFlameFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'stolenflame' ? fill : null
+})
+
+const dominionFill = computed<DominionFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'dominion' ? fill : null
+})
+
+const canvasFillActive = computed(() =>
+  !!cosmicFill.value || !!toonFill.value || !!prismFill.value
+  || !!groveFill.value || !!regaliaFill.value || !!colossusFill.value
+  || !!stolenFlameFill.value || !!dominionFill.value,
+)
 
 const rimStyle = computed<{ stroke: string; width: number; opacity: number } | null>(() => {
   if (cosmicFill.value) return { stroke: cosmicFill.value.star, width: 0.8, opacity: 0.45 }
   if (toonFill.value) return { stroke: toonFill.value.line, width: 1.4, opacity: 1 }
   if (prismFill.value) return { stroke: prismFill.value.edge, width: 0.9, opacity: 0.5 }
+  if (groveFill.value) return { stroke: groveFill.value.firefly, width: 0.8, opacity: 0.45 }
+  if (regaliaFill.value) return { stroke: regaliaFill.value.core ?? '#ffffff', width: 0.9, opacity: 0.55 }
+  if (colossusFill.value) return { stroke: colossusFill.value.seam, width: 0.9, opacity: 0.5 }
+  if (stolenFlameFill.value) return { stroke: stolenFlameFill.value.flame, width: 0.9, opacity: 0.5 }
+  if (dominionFill.value) return { stroke: dominionFill.value.body ?? '#ffffff', width: 0.9, opacity: 0.65 }
   return null
 })
 
@@ -83,7 +127,8 @@ const needsTimeline = computed(
     isAnimated(props.color)
     || (colorIsConic.value && isAnimated(props.shape))
     || isAnimated(props.shape)
-    || shapeFxActive.value,
+    || shapeFxActive.value
+    || (!!dominionFill.value && !reducedMotion.value),
 )
 
 const { tMs } = useTimeline({ active: () => needsTimeline.value })
@@ -474,6 +519,70 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
     background: fillToCss(fill),
   }
 })
+
+function echoWin(c: number, a: number, b: number): number {
+  return c >= a && c < b ? (c - a) / (b - a) : -1
+}
+
+function echoDir(i: number, n: number): [number, number] {
+  const ang = (i / Math.max(1, n)) * Math.PI * 2 - Math.PI / 2
+  return [Math.cos(ang), Math.sin(ang)]
+}
+
+const echoPaths = computed<{ d: string; transform?: string }[]>(() => {
+  if (rimPaths.value.length) {
+    return rimPaths.value.map((e) => ({ d: e.d, transform: e.path.transform }))
+  }
+  return [{ d: DEFAULT_RING_D }]
+})
+
+const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string; opacity: number }[] } | null>(() => {
+  const fill = dominionFill.value
+  if (!fill || reducedMotion.value) return null
+  const interval = (fill.intervalS ?? 5) * 1000
+  const micro = (fill.microS ?? 1.9) * 1000
+  const t = tMs.value
+  const c = (t % interval) / interval
+  const split = echoWin(c, 0.6, 0.72)
+  const hold = echoWin(c, 0.72, 0.82)
+  const fuse = echoWin(c, 0.82, 0.92)
+  const flash = echoWin(c, 0.92, 1)
+  let amt = 0
+  if (split >= 0) amt = 1 - Math.pow(1 - split, 3)
+  else if (hold >= 0) amt = 1
+  else if (fuse >= 0) amt = 1 - Math.pow(fuse, 2)
+  const colors = fill.colors
+  const { w, h } = vbBounds.value
+  const unit = Math.max(w, h) / 100
+  const ghosts: { dx: number; dy: number; color: string; opacity: number }[] = []
+  if (amt > 0.02) {
+    for (let i = 0; i < colors.length; i++) {
+      const d = echoDir(i, colors.length)
+      const wob = Math.sin((t / 1000) * 3.1 + i * 2.2) * 1.6 * amt
+      ghosts.push({
+        dx: (d[0] * 7 * amt + wob * d[1]) * unit,
+        dy: (d[1] * 7 * amt + wob * d[0]) * unit,
+        color: colors[i],
+        opacity: 0.7,
+      })
+    }
+  } else if (flash < 0 && colors.length > 1) {
+    const mc = (t % micro) / micro
+    const tb = echoWin(mc, 0.72, 0.94)
+    if (tb >= 0) {
+      const ta = Math.sin(tb * Math.PI)
+      ghosts.push(
+        { dx: 2.6 * ta * unit, dy: -1.4 * ta * unit, color: colors[0], opacity: 0.6 * ta },
+        { dx: -2.6 * ta * unit, dy: 1.4 * ta * unit, color: colors[colors.length - 1], opacity: 0.6 * ta },
+      )
+    }
+  }
+  const flashAlpha = flash >= 0 ? Math.sin(flash * Math.PI) : 0
+  if (flashAlpha > 0.02) {
+    ghosts.push({ dx: 0, dy: 0, color: fill.body ?? '#ffffff', opacity: flashAlpha })
+  }
+  return ghosts.length > 0 ? { ghosts } : null
+})
 </script>
 
 <template>
@@ -482,8 +591,8 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
     :shape="shape"
     :color="color"
   />
+  <template v-else-if="canvasFillActive && cosmicMaskStyle">
   <div
-    v-else-if="canvasFillActive && cosmicMaskStyle"
     class="profile-border__cosmic"
     :style="cosmicMaskStyle"
     aria-hidden="true"
@@ -522,6 +631,11 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
     <CosmicBorderFill v-if="cosmicFill" :fill="cosmicFill" :sink="cosmicSink" />
     <ToonBorderFill v-else-if="toonFill" :fill="toonFill" />
     <PrismBorderFill v-else-if="prismFill" :fill="prismFill" />
+    <GroveBorderFill v-else-if="groveFill" :fill="groveFill" />
+    <RegaliaBorderFill v-else-if="regaliaFill" :fill="regaliaFill" />
+    <ColossusBorderFill v-else-if="colossusFill" :fill="colossusFill" />
+    <StolenFlameBorderFill v-else-if="stolenFlameFill" :fill="stolenFlameFill" />
+    <DominionBorderFill v-else-if="dominionFill" :fill="dominionFill" />
     <svg
       v-if="rimPaths.length || decorationPaths.length"
       class="profile-border__cosmic-decor"
@@ -558,6 +672,32 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
       />
     </svg>
   </div>
+  <svg
+    v-if="dominionEcho"
+    class="profile-border__echo"
+    :viewBox="cosmicViewBox"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+  >
+    <g
+      v-for="(gh, gi) in dominionEcho.ghosts"
+      :key="gi"
+      :transform="`translate(${gh.dx} ${gh.dy})`"
+      :opacity="gh.opacity"
+    >
+      <path
+        v-for="(entry, i) in echoPaths"
+        :key="i"
+        :d="entry.d"
+        fill="none"
+        :stroke="gh.color"
+        stroke-width="1.6"
+        stroke-linejoin="round"
+        :transform="entry.transform"
+      />
+    </g>
+  </svg>
+  </template>
   <div
     v-else-if="basePaths.length && colorIsConic"
     class="profile-border__conic"
@@ -724,6 +864,17 @@ const ringStyle = computed<Record<string, string> | undefined>(() => {
   height: 100%;
   max-width: none;
   max-height: none;
+  pointer-events: none;
+}
+
+.profile-border__echo {
+  position: absolute;
+  inset: -25%;
+  width: 150%;
+  height: 150%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
   pointer-events: none;
 }
 

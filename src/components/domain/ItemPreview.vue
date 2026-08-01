@@ -271,6 +271,12 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       decoding="async"
     />
 
+    <span
+      v-else-if="typeKey === 'profile_thumbnail_background'"
+      class="item-preview__thumb-none"
+      aria-hidden="true"
+    />
+
     <svg
       v-else-if="typeKey === 'crate'"
       class="item-preview__crate"
@@ -374,6 +380,15 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 .item-preview__thumb-scene {
   position: absolute;
   inset: 0;
+}
+
+.item-preview__thumb-none {
+  display: block;
+  width: 78%;
+  height: 62%;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
 }
 
 .item-preview__initial {

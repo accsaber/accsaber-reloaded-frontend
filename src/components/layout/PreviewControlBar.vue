@@ -3,13 +3,14 @@ import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PreviewModifierPicker from '@/components/domain/PreviewModifierPicker.vue'
 import PreviewPicker from '@/components/domain/PreviewPicker.vue'
 import PreviewVariantRow from '@/components/domain/PreviewVariantRow.vue'
+import ThumbnailSceneRenderer from '@/components/domain/ThumbnailSceneRenderer.vue'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { usePreviewTheme } from '@/composables/usePreviewTheme'
 import { useAuthStore } from '@/stores/auth'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { usePreviewStore } from '@/stores/preview'
 import type { ItemResponse, UnusualEffectResponse } from '@/types/api/items'
-import { itemVariantPreviews, readItemVariants } from '@/utils/items'
+import { itemVariantPreviews, pickAssetUrl, readItemVariants } from '@/utils/items'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { computed, ref, watch } from 'vue'
 
@@ -60,6 +61,7 @@ function itemsOfType(typeKey: string): ItemResponse[] {
 const borderShapes = computed(() => itemsOfType('profile_border_shape'))
 const borderColors = computed(() => itemsOfType('profile_border_color'))
 const titles = computed(() => itemsOfType('title'))
+const thumbnails = computed(() => itemsOfType('profile_thumbnail_background'))
 const themes = computed(() => itemsOfType('theme'))
 
 function findItem(id: string): ItemResponse | null {
@@ -93,6 +95,10 @@ const titleEffectId = computed({
   get: () => preview.titleEffect?.id ?? '',
   set: (id: string) => { preview.titleEffect = findEffect(id) },
 })
+const thumbnailId = computed({
+  get: () => preview.thumbnail?.id ?? '',
+  set: (id: string) => { preview.thumbnail = findItem(id); preview.thumbnailVariant = null },
+})
 const themeId = computed({
   get: () => preview.theme?.id ?? '',
   set: (id: string) => { preview.theme = findItem(id); preview.themeVariant = null },
@@ -113,13 +119,23 @@ function variantsOf(item: ItemResponse | null) {
 const borderShapeVariants = computed(() => variantsOf(preview.borderShape))
 const borderColorVariants = computed(() => variantsOf(preview.borderColor))
 const titleVariants = computed(() => variantsOf(preview.title))
+const thumbnailVariants = computed(() => variantsOf(preview.thumbnail))
 
 const availableModifiers = computed(() =>
   modifierStore.modifiers.filter((m) => m.key !== 'unusual'),
 )
 
-const { titleValue, borderShapeValue, borderColorValue, titleEffects, borderEffects } =
+const { titleValue, borderShapeValue, borderColorValue, titleEffects, borderEffects, thumbnailValue } =
   useEquippedRenderProps(() => preview.overrides)
+
+const thumbScene = computed(() => thumbnailValue.value?.scene ?? null)
+const thumbImageUrl = computed(() => pickAssetUrl(thumbnailValue.value?.asset))
+const hasThumb = computed(() => !!thumbScene.value || !!thumbImageUrl.value)
+const thumbLayerStyle = computed<Record<string, string> | undefined>(() => {
+  const opacity = thumbnailValue.value?.opacity
+  return opacity != null ? { opacity: String(opacity) } : undefined
+})
+const thumbBase = computed<'light' | 'dark'>(() => thumbScene.value?.base ?? 'dark')
 
 const sampleAvatar = computed(() => authStore.userProfile?.avatarUrl || undefined)
 
@@ -128,6 +144,7 @@ const chips = computed(() => {
   if (preview.borderShape) list.push(preview.borderShape.name || 'Border shape')
   if (preview.borderColor) list.push(preview.borderColor.name || 'Border color')
   if (preview.title) list.push(preview.title.name || 'Title')
+  if (preview.thumbnail) list.push(preview.thumbnail.name || 'Thumbnail')
   if (preview.theme) list.push(preview.theme.name || 'Theme')
   for (const e of [preview.borderShapeEffect, preview.borderColorEffect, preview.titleEffect, preview.themeEffect]) {
     if (e) list.push(e.name || e.key)
@@ -163,7 +180,14 @@ const chips = computed(() => {
     <div class="preview-dock__reveal" :class="{ 'preview-dock__reveal--open': expanded }">
       <div class="preview-dock__reveal-clip">
         <div class="preview-dock__panel">
-          <div class="preview-dock__stage">
+          <div
+            class="preview-dock__stage"
+            :class="hasThumb ? ['preview-dock__stage--themed', `preview-dock__stage--themed-${thumbBase}`] : undefined"
+          >
+        <div v-if="hasThumb" class="preview-dock__thumb-bg" :style="thumbLayerStyle" aria-hidden="true">
+          <ThumbnailSceneRenderer v-if="thumbScene" :scene="thumbScene" />
+          <img v-else-if="thumbImageUrl" class="preview-dock__thumb-img" :src="thumbImageUrl" alt="" />
+        </div>
         <LevelBadge
           :level="30"
           :current-xp="600"
@@ -202,6 +226,12 @@ const chips = computed(() => {
           <PreviewVariantRow :variants="titleVariants" v-model="preview.titleVariant" />
           <PreviewPicker v-model="titleEffectId" :effects="effects" placeholder="No effect" />
           <PreviewModifierPicker v-model="preview.titleModifiers" :modifiers="availableModifiers" />
+        </div>
+
+        <div class="preview-dock__group">
+          <span class="preview-dock__group-title">Thumbnail</span>
+          <PreviewPicker v-model="thumbnailId" :items="thumbnails" placeholder="None" />
+          <PreviewVariantRow :variants="thumbnailVariants" v-model="preview.thumbnailVariant" />
         </div>
 
         <div class="preview-dock__group">
@@ -298,11 +328,47 @@ const chips = computed(() => {
 }
 
 .preview-dock__stage {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 96px;
   flex-shrink: 0;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.preview-dock__stage--themed {
+  padding: var(--space-md);
+  border: 1px solid var(--bg-overlay);
+}
+
+.preview-dock__stage--themed-dark {
+  --text-primary: #f2f0f7;
+  --text-secondary: #b9b4c9;
+  --text-tertiary: #8d879e;
+}
+
+.preview-dock__stage--themed-light {
+  --text-primary: #241826;
+  --text-secondary: #5d4a5c;
+  --text-tertiary: #8a7389;
+}
+
+.preview-dock__stage :deep(.level-badge) {
+  position: relative;
+}
+
+.preview-dock__thumb-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.preview-dock__thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .preview-dock__controls {

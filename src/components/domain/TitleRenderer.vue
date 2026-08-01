@@ -8,6 +8,7 @@ import {
   gradientToCss,
   interpolateTitleState,
   isAnimated,
+  lerpColor,
   pickInterpolatedState,
 } from '@/utils/items'
 import { randBetween as rand } from '@/utils/random'
@@ -47,6 +48,11 @@ const fxEnabled = computed(() =>
     !!props.value.flashes?.enabled
     || !!props.value.sparkles?.enabled
     || !!props.value.chromaticSplit?.enabled
+    || !!props.value.forge?.enabled
+    || !!props.value.blaze?.enabled
+    || !!props.value.crust?.enabled
+    || !!props.value.spectrumSplit?.enabled
+    || (props.value.aura?.type === 'ascension' && props.value.aura.enabled && !!props.value.aura.lift)
   ),
 )
 
@@ -148,6 +154,7 @@ interface SparkleInstance {
 const SPARKLE_PATHS = {
   star: 'M5 0 Q5.9 4.1 10 5 Q5.9 5.9 5 10 Q4.1 5.9 0 5 Q4.1 4.1 5 0 Z',
   paw: 'M5,4.8 C6.7,4.8 7.9,5.9 7.9,7.3 C7.9,8.7 6.5,9.4 5,9.4 C3.5,9.4 2.1,8.7 2.1,7.3 C2.1,5.9 3.3,4.8 5,4.8 Z M0.5,3.3 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0 Z M2.8,1.8 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0 Z M5.2,1.8 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0 Z M7.5,3.3 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0 Z',
+  firefly: 'M2.6 5 a2.4 2.4 0 1 0 4.8 0 a2.4 2.4 0 1 0 -4.8 0 Z M4.6 0.4 h0.8 v1.6 h-0.8 Z M4.6 8 h0.8 v1.6 h-0.8 Z M0.4 4.6 h1.6 v0.8 h-1.6 Z M8 4.6 h1.6 v0.8 h-1.6 Z',
 } as const
 
 const sparkleShape = computed(() => {
@@ -214,6 +221,277 @@ const splitShadowStyle = computed<Record<string, string> | undefined>(() => {
   const colorA = (isLightBase.value ? spec.lightColorA : undefined) ?? spec.colorA ?? 'rgba(255,50,170,0.85)'
   const colorB = (isLightBase.value ? spec.lightColorB : undefined) ?? spec.colorB ?? 'rgba(50,190,255,0.85)'
   return { textShadow: `-${offset}px 0 ${colorA}, ${offset}px 0 ${colorB}` }
+})
+
+function hashN(i: number): number {
+  const x = Math.sin(i * 127.1 + 311.7) * 43758.545
+  return x - Math.floor(x)
+}
+
+function phaseWin(c: number, a: number, b: number): number {
+  return c >= a && c < b ? (c - a) / (b - a) : -1
+}
+
+const forgeActive = computed(() => !!props.value.forge?.enabled && !reducedMotion.value)
+
+const blazeSpec = computed(() =>
+  props.value.blaze?.enabled && !reducedMotion.value ? props.value.blaze : null,
+)
+
+function blazeCharStyle(i: number): Record<string, string> {
+  const spec = blazeSpec.value
+  if (!spec) return {}
+  const n = props.value.text.length
+  const interval = spec.intervalMs ?? 8000
+  const spread = spec.spreadMs ?? 120
+  const burn = spec.burnMs ?? 900
+  const die = spec.dieMs ?? 700
+  const t = tMs.value
+  const cycle = Math.floor(t / interval)
+  const local = t % interval
+  const ember = (isLightBase.value ? spec.lightEmber : undefined) ?? spec.ember ?? '#ff8a5c'
+  const flame = (isLightBase.value ? spec.lightFlame : undefined) ?? spec.flame ?? '#ffb35c'
+  const hot = (isLightBase.value ? spec.lightHot : undefined) ?? spec.hot ?? '#ffd9a0'
+  const origin = Math.floor(hashN(cycle + 7) * n)
+  const start = interval * 0.55 + Math.abs(i - origin) * spread
+  const extend = hashN(cycle * 13 + i) * 500
+  let burnAmt = 0
+  if (local >= start && local < start + burn + extend) {
+    burnAmt = Math.min(1, (local - start) / 140)
+  } else if (local >= start + burn + extend) {
+    burnAmt = Math.max(0, 1 - (local - start - burn - extend) / die)
+  }
+  if (burnAmt > 0.02) {
+    const flick = 0.75 + 0.25 * Math.sin(t * 0.021 + i * 5.3)
+    const c = Math.min(1, burnAmt * flick)
+    return {
+      color: lerpColor(ember, c > 0.7 ? hot : flame, c),
+      transform: `translateY(${(-3.2 * burnAmt * flick).toFixed(2)}%)`,
+      textShadow: `0 0 ${(0.45 * c).toFixed(2)}em ${flame}, 0 -0.08em ${(0.28 * c).toFixed(2)}em ${hot}`,
+    }
+  }
+  const breathe = 0.5 + 0.5 * Math.sin(t * 0.0012 * (1 + hashN(i * 3) * 0.7) + i * 2.1)
+  return {
+    textShadow: `0 0 ${(0.1 + 0.16 * breathe).toFixed(2)}em ${flame}`,
+  }
+}
+
+const liftSpec = computed(() => {
+  const a = props.value.aura
+  return a?.type === 'ascension' && a.enabled && a.lift && !reducedMotion.value ? a : null
+})
+
+const glyphChars = computed<string[] | null>(() =>
+  forgeActive.value || blazeSpec.value || liftSpec.value
+    ? props.value.text.split('').map((ch) => (ch === ' ' ? ' ' : ch))
+    : null,
+)
+
+function liftCharStyle(i: number): Record<string, string> {
+  const spec = liftSpec.value
+  if (!spec) return {}
+  const interval = (spec.intervalS ?? 7) * 1000
+  const c = (tMs.value % interval) / interval
+  const surge = phaseWin(c, 0.74, 0.95)
+  if (surge < 0) return {}
+  const p = Math.max(0, Math.min(1, surge * 1.35 - i * 0.055))
+  const pulse = Math.sin(Math.PI * p)
+  if (pulse <= 0.02) return {}
+  const shine = (isLightBase.value ? spec.lightShine : undefined) ?? spec.shine ?? '#ffffff'
+  const out: Record<string, string> = {
+    transform: `translateY(${(-0.3 * pulse).toFixed(3)}em)`,
+    textShadow: `0 0 ${(0.35 * pulse).toFixed(2)}em ${shine}`,
+  }
+  if (pulse > 0.55) out.color = shine
+  return out
+}
+
+function glyphStyle(i: number): Record<string, string> {
+  if (forgeActive.value) return forgeCharStyle(i)
+  if (blazeSpec.value) return blazeCharStyle(i)
+  return liftCharStyle(i)
+}
+
+function forgeCharStyle(i: number): Record<string, string> {
+  const spec = props.value.forge
+  if (!spec) return {}
+  const interval = spec.intervalMs ?? 8000
+  const stagger = spec.staggerMs ?? 180
+  const stamp = spec.stampMs ?? 130
+  const cool = spec.coolMs ?? 1100
+  const rawMs = 150
+  const raw = (isLightBase.value ? spec.lightRaw : undefined) ?? spec.raw ?? '#46566c'
+  const hot = (isLightBase.value ? spec.lightHot : undefined) ?? spec.hot ?? '#ffffff'
+  const heat = (isLightBase.value ? spec.lightHeat : undefined) ?? spec.heat ?? '#ff8a5c'
+  const base = state.value.color
+  const start = interval * 0.72 + i * stagger
+  const local = (tMs.value % interval) - start
+  if (local >= -rawMs && local < 0) {
+    return { color: raw, textShadow: 'none' }
+  }
+  if (local >= 0 && local < stamp) {
+    return {
+      color: hot,
+      transform: 'translateY(6%)',
+      textShadow: `0 0 0.35em ${hot}`,
+    }
+  }
+  if (local >= stamp && local < stamp + cool) {
+    const p = (local - stamp) / cool
+    const color = base ? lerpColor(heat, base, p) : heat
+    return {
+      color,
+      textShadow: p < 0.85 ? `0 0 ${(0.3 * (1 - p)).toFixed(3)}em ${heat}` : 'none',
+    }
+  }
+  return {}
+}
+
+const forgeHeadStyle = computed<Record<string, string> | undefined>(() => {
+  const spec = props.value.forge
+  if (!spec?.enabled || !forgeActive.value) return undefined
+  const interval = spec.intervalMs ?? 8000
+  const stagger = spec.staggerMs ?? 180
+  const stamp = spec.stampMs ?? 130
+  const chars = props.value.text.length
+  const startMs = interval * 0.72 - 150
+  const endMs = interval * 0.72 + stagger * Math.max(0, chars - 1) + stamp
+  const local = (tMs.value % interval) - startMs
+  const span = endMs - startMs
+  if (local < 0 || local > span) return undefined
+  const hot = (isLightBase.value ? spec.lightHot : undefined) ?? spec.hot ?? '#ffffff'
+  return {
+    left: `${(local / span) * 100}%`,
+    '--fx-c': hot,
+  }
+})
+
+const crustSpec = computed(() =>
+  props.value.crust?.enabled && !reducedMotion.value ? props.value.crust : null,
+)
+
+const crustCycle = computed(() => {
+  const spec = crustSpec.value
+  if (!spec) return null
+  const interval = ((spec.minIntervalMs ?? 7000) + (spec.maxIntervalMs ?? 9000)) / 2
+  return { interval, c: (tMs.value % interval) / interval }
+})
+
+const crustBaseStyle = computed<Record<string, string> | undefined>(() => {
+  const spec = crustSpec.value
+  const cycle = crustCycle.value
+  if (!spec || !cycle) return undefined
+  const crust = (isLightBase.value ? spec.lightCrust : undefined) ?? spec.crust ?? '#4a1a0e'
+  const crack = (isLightBase.value ? spec.lightCrack : undefined) ?? spec.crack ?? '#ff7a45'
+  const pos = (cycle.c * 34) % 100
+  return {
+    background: `repeating-linear-gradient(68deg, ${crust} 0 5px, ${crack} 5px 7px, ${crust} 7px 12px)`,
+    backgroundSize: '200% 100%',
+    backgroundPosition: `${pos.toFixed(2)}% 0`,
+    webkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+    filter: `drop-shadow(0 0 0.3em ${crack}59)`,
+  }
+})
+
+const crustEruption = computed(() => {
+  const spec = crustSpec.value
+  const cycle = crustCycle.value
+  if (!spec || !cycle) return 0
+  const eruptMs = spec.eruptMs ?? 600
+  const frac = eruptMs / cycle.interval
+  const p = phaseWin(cycle.c, 0.76, 0.76 + frac)
+  return p >= 0 ? Math.sin(p * Math.PI) : 0
+})
+
+const crustMoltenStyle = computed<Record<string, string> | undefined>(() => {
+  const spec = crustSpec.value
+  if (!spec || crustEruption.value <= 0.01) return undefined
+  const molten = spec.molten ?? '#ff8a3d'
+  const hot = spec.moltenHot ?? '#ffd9a0'
+  return {
+    background: `linear-gradient(${hot}, ${molten})`,
+    webkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent',
+    opacity: crustEruption.value.toFixed(3),
+    filter: `drop-shadow(0 0 0.4em ${molten})`,
+  }
+})
+
+const crustEmbers = computed<{ id: number; style: Record<string, string> }[]>(() => {
+  const spec = crustSpec.value
+  const cycle = crustCycle.value
+  if (!spec || !cycle) return []
+  const p = phaseWin(cycle.c, 0.76, 0.9)
+  if (p < 0) return []
+  const seed = Math.floor(tMs.value / cycle.interval)
+  const out = []
+  for (let i = 0; i < 3; i++) {
+    const delay = i * 0.12
+    const q = Math.max(0, Math.min(1, (p - delay) / (1 - delay)))
+    if (q <= 0 || q >= 1) continue
+    out.push({
+      id: i,
+      style: {
+        left: `${(12 + hashN(seed * 7 + i) * 70).toFixed(1)}%`,
+        top: `${(25 + hashN(seed * 13 + i) * 30).toFixed(1)}%`,
+        background: spec.moltenHot ?? '#ffd9a0',
+        transform: `translateY(${(-q * 1.6).toFixed(2)}em)`,
+        opacity: String(Math.sin(q * Math.PI)),
+      },
+    })
+  }
+  return out
+})
+
+const spectrumStyle = computed<Record<string, string> | undefined>(() => {
+  const spec = props.value.spectrumSplit
+  if (!spec?.enabled || reducedMotion.value) return undefined
+  const interval = spec.intervalMs ?? 5000
+  const colors = (isLightBase.value ? spec.lightColors : undefined) ?? spec.colors
+    ?? ['#f472b6', '#62d98a', '#e9e7f4', '#8da3c0', '#ff5c33']
+  const fused = (isLightBase.value ? spec.lightFused : undefined) ?? spec.fused ?? '#ffffff'
+  const offset = spec.offsetPx ?? 14
+  const c = (tMs.value % interval) / interval
+  const split = phaseWin(c, 0.6, 0.72)
+  const hold = phaseWin(c, 0.72, 0.82)
+  const fuse = phaseWin(c, 0.82, 0.92)
+  const flash = phaseWin(c, 0.92, 1)
+  let amt = 0
+  if (split >= 0) amt = 1 - Math.pow(1 - split, 3)
+  else if (hold >= 0) amt = 1
+  else if (fuse >= 0) amt = 1 - Math.pow(fuse, 2)
+  if (amt > 0.02) {
+    const n = colors.length
+    const wob = hold >= 0 ? Math.sin(tMs.value / 90) : 0
+    const shadows = colors.map((col, i) => {
+      const dx = ((i - (n - 1) / 2) * offset * amt / ((n - 1) / 2)).toFixed(1)
+      const dy = (wob * (i % 2 ? 1 : -1)).toFixed(1)
+      return `${dx}px ${dy}px 0 ${col}`
+    })
+    return { color: 'rgba(10,10,18,0.9)', textShadow: shadows.join(', ') }
+  }
+  if (flash >= 0) {
+    const fl = Math.sin(flash * Math.PI)
+    return { color: fused, textShadow: `0 0 ${(fl * 0.6).toFixed(2)}em ${fused}` }
+  }
+  const microInterval = spec.microIntervalMs ?? 1900
+  const microMs = spec.microMs ?? 420
+  const mc = tMs.value % microInterval
+  const mp = mc / microMs
+  if (mp < 1 && (tMs.value % interval) / interval < 0.55) {
+    const ta = Math.sin(mp * Math.PI)
+    const first = colors[0]
+    const last = colors[colors.length - 1]
+    const d = (3 * ta).toFixed(1)
+    return {
+      color: fused,
+      textShadow: `-${d}px 0 ${first}, ${d}px 0 ${last}`,
+    }
+  }
+  return { color: fused, textShadow: 'none' }
 })
 
 function spawnFlash(now: number) {
@@ -346,7 +624,38 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
     >
       <path :d="ornament.d" :fill="ornament.color" />
     </svg>
-    <span class="title-renderer__text" :style="[legacyGradientStyle ?? {}, splitShadowStyle ?? {}]">{{ value.text }}</span>
+    <span v-if="glyphChars" class="title-renderer__text">
+      <span
+        v-for="(ch, i) in glyphChars"
+        :key="i"
+        class="title-renderer__forge-char"
+        :style="glyphStyle(i)"
+      >{{ ch }}</span>
+      <span
+        v-if="forgeHeadStyle"
+        class="title-renderer__forge-head"
+        :style="forgeHeadStyle"
+        aria-hidden="true"
+      />
+    </span>
+    <span
+      v-else
+      class="title-renderer__text"
+      :style="[legacyGradientStyle ?? {}, splitShadowStyle ?? {}, crustBaseStyle ?? {}, spectrumStyle ?? {}]"
+    >{{ value.text }}</span>
+    <span
+      v-if="crustMoltenStyle"
+      class="title-renderer__crust-molten"
+      :style="crustMoltenStyle"
+      aria-hidden="true"
+    >{{ value.text }}</span>
+    <span
+      v-for="em in crustEmbers"
+      :key="`ce${em.id}`"
+      class="title-renderer__ember"
+      :style="em.style"
+      aria-hidden="true"
+    />
     <span
       v-if="glistenClipStyle"
       class="title-renderer__glint"
@@ -430,6 +739,40 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 
 .title-renderer__sparkle {
   position: absolute;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.title-renderer__forge-char {
+  display: inline-block;
+}
+
+.title-renderer__forge-head {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--fx-c), transparent);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.title-renderer__crust-molten {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  white-space: inherit;
+}
+
+.title-renderer__ember {
+  position: absolute;
+  width: 0.16em;
+  height: 0.16em;
+  border-radius: 50%;
   pointer-events: none;
   z-index: 3;
 }

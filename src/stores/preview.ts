@@ -24,6 +24,8 @@ interface PreviewSnapshot {
   titleVariant: string | null
   titleEffect: UnusualEffectRef | null
   titleModifiers: ItemModifierRef[]
+  thumbnail: ItemResponse | null
+  thumbnailVariant: string | null
   theme: ItemResponse | null
   themeVariant: string | null
   themeEffect: UnusualEffectRef | null
@@ -108,6 +110,9 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
   const titleEffect = ref<UnusualEffectRef | null>(saved.titleEffect ?? null)
   const titleModifiers = ref<ItemModifierRef[]>(saved.titleModifiers ?? [])
 
+  const thumbnail = ref<ItemResponse | null>(saved.thumbnail ?? null)
+  const thumbnailVariant = ref<string | null>(saved.thumbnailVariant ?? null)
+
   const theme = ref<ItemResponse | null>(saved.theme ?? null)
   const themeVariant = ref<string | null>(saved.themeVariant ?? null)
   const themeEffect = ref<UnusualEffectRef | null>(saved.themeEffect ?? null)
@@ -143,6 +148,11 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
         modifiers: titleModifiers.value,
       })
     }
+    if (thumbnail.value) {
+      result.profile_thumbnail_background = syntheticEntry(thumbnail.value, {
+        variantKey: thumbnailVariant.value,
+      })
+    }
     return result
   })
 
@@ -162,6 +172,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
         titleVariant,
         titleEffect,
         titleModifiers,
+        thumbnail,
+        thumbnailVariant,
         theme,
         themeVariant,
         themeEffect,
@@ -185,6 +197,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
               titleVariant: titleVariant.value,
               titleEffect: titleEffect.value,
               titleModifiers: titleModifiers.value,
+              thumbnail: thumbnail.value,
+              thumbnailVariant: thumbnailVariant.value,
               theme: theme.value,
               themeVariant: themeVariant.value,
               themeEffect: themeEffect.value,
@@ -211,6 +225,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
     titleVariant,
     titleEffect,
     titleModifiers,
+    thumbnail,
+    thumbnailVariant,
     theme,
     themeVariant,
     themeEffect,

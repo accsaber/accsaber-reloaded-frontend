@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TitleAscensionAura from '@/components/domain/TitleAscensionAura.vue'
 import TitleFlameAura from '@/components/domain/TitleFlameAura.vue'
 import TitleHazeAura from '@/components/domain/TitleHazeAura.vue'
 import TitleSmokeAura from '@/components/domain/TitleSmokeAura.vue'
@@ -10,6 +11,7 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   flame: TitleFlameAura,
   haze: TitleHazeAura,
   smoke: TitleSmokeAura,
+  ascension: TitleAscensionAura,
 }
 
 const props = defineProps<{
