@@ -26,6 +26,8 @@ interface PreviewSnapshot {
   titleModifiers: ItemModifierRef[]
   thumbnail: ItemResponse | null
   thumbnailVariant: string | null
+  thumbnailEffect: UnusualEffectRef | null
+  thumbnailModifiers: ItemModifierRef[]
   theme: ItemResponse | null
   themeVariant: string | null
   themeEffect: UnusualEffectRef | null
@@ -112,6 +114,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
 
   const thumbnail = ref<ItemResponse | null>(saved.thumbnail ?? null)
   const thumbnailVariant = ref<string | null>(saved.thumbnailVariant ?? null)
+  const thumbnailEffect = ref<UnusualEffectRef | null>(saved.thumbnailEffect ?? null)
+  const thumbnailModifiers = ref<ItemModifierRef[]>(saved.thumbnailModifiers ?? [])
 
   const theme = ref<ItemResponse | null>(saved.theme ?? null)
   const themeVariant = ref<string | null>(saved.themeVariant ?? null)
@@ -148,10 +152,15 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
         modifiers: titleModifiers.value,
       })
     }
-    if (thumbnail.value) {
-      result.profile_thumbnail_background = syntheticEntry(thumbnail.value, {
-        variantKey: thumbnailVariant.value,
-      })
+    if (thumbnail.value || thumbnailEffect.value || thumbnailModifiers.value.length) {
+      result.profile_thumbnail_background = syntheticEntry(
+        thumbnail.value ?? placeholderItem('profile_thumbnail_background'),
+        {
+          variantKey: thumbnailVariant.value,
+          unusualEffect: thumbnailEffect.value,
+          modifiers: thumbnailModifiers.value,
+        },
+      )
     }
     return result
   })
@@ -174,6 +183,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
         titleModifiers,
         thumbnail,
         thumbnailVariant,
+        thumbnailEffect,
+        thumbnailModifiers,
         theme,
         themeVariant,
         themeEffect,
@@ -199,6 +210,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
               titleModifiers: titleModifiers.value,
               thumbnail: thumbnail.value,
               thumbnailVariant: thumbnailVariant.value,
+              thumbnailEffect: thumbnailEffect.value,
+              thumbnailModifiers: thumbnailModifiers.value,
               theme: theme.value,
               themeVariant: themeVariant.value,
               themeEffect: themeEffect.value,
@@ -227,6 +240,8 @@ export const usePreviewStore = defineStore('creativesPreview', () => {
     titleModifiers,
     thumbnail,
     thumbnailVariant,
+    thumbnailEffect,
+    thumbnailModifiers,
     theme,
     themeVariant,
     themeEffect,

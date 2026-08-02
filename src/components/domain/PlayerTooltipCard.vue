@@ -5,7 +5,8 @@ import RelationActions from '@/components/domain/RelationActions.vue';
 import ThumbnailSceneRenderer from '@/components/domain/ThumbnailSceneRenderer.vue';
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
-import { fillToCss, pickAssetUrl, thumbnailSceneInk } from '@/utils/items';
+import ModifierCompositions from '@/components/domain/ModifierCompositions.vue';
+import { fillToCss, pickAssetUrl, themeCompositionLayers, thumbnailSceneInk } from '@/utils/items';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -28,7 +29,10 @@ const {
   titleEffects: equippedTitleEffects,
   borderEffects: equippedBorderEffects,
   thumbnailValue: equippedThumbnail,
+  thumbnailEffects: equippedThumbnailEffects,
 } = useEquippedRenderProps(() => profile.value?.equipped, { previewable: true })
+
+const thumbEffectLayers = computed(() => themeCompositionLayers(equippedThumbnailEffects.value))
 
 const thumbScene = computed(() => equippedThumbnail.value?.scene ?? null)
 const thumbImageUrl = computed(() => pickAssetUrl(equippedThumbnail.value?.asset))
@@ -72,6 +76,14 @@ const cardBorder = computed(() => {
     <div v-if="hasThumb" class="player-tooltip__thumb-bg" :style="thumbLayerStyle" aria-hidden="true">
       <ThumbnailSceneRenderer v-if="thumbScene" :scene="thumbScene" />
       <img v-else-if="thumbImageUrl" class="player-tooltip__thumb-img" :src="thumbImageUrl" alt="" />
+      <div v-if="thumbEffectLayers.length" class="player-tooltip__thumb-effects">
+        <ModifierCompositions
+          v-for="layer in thumbEffectLayers"
+          :key="layer.key"
+          :spec="layer.spec"
+          :stack-index="layer.stackIndex"
+        />
+      </div>
     </div>
     <div class="player-tooltip__content">
       <div v-if="loading" class="player-tooltip__badge-skeleton" aria-hidden="true">
@@ -149,6 +161,13 @@ const cardBorder = computed(() => {
 .player-tooltip__thumb-bg {
   position: absolute;
   inset: 0;
+}
+
+.player-tooltip__thumb-effects {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .player-tooltip__thumb-img {

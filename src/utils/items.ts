@@ -157,6 +157,18 @@ export interface StackedEffectLayer extends EffectLayer {
   stackIndex: number
 }
 
+export function themeCompositionLayers(
+  layers: EffectLayer[] | null | undefined,
+): StackedEffectLayer[] {
+  return annotateEffectLayerStacks(
+    (layers ?? []).flatMap((layer) => {
+      const compositions = layer.spec.themeCompositions
+      if (!compositions?.length) return []
+      return [{ key: layer.key, spec: { contractVersion: 1 as const, compositions } }]
+    }),
+  )
+}
+
 export function annotateEffectLayerStacks(
   layers: EffectLayer[] | null | undefined,
 ): StackedEffectLayer[] {

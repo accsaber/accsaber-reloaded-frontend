@@ -54,6 +54,12 @@ export function useEquippedRenderProps(
   const thumbnailValue = computed(() =>
     resolveEquippedVariant(equipped.value.profile_thumbnail_background, readThumbnailBackgroundValue),
   )
+  const thumbnailEffects = computed(() =>
+    buildEffectLayers(
+      equipped.value.profile_thumbnail_background?.modifiers,
+      equipped.value.profile_thumbnail_background?.unusualEffect,
+    ),
+  )
 
   const backgroundValue = computed(() =>
     readBackgroundValue(equipped.value.profile_background?.item.value),
@@ -78,6 +84,7 @@ export function useEquippedRenderProps(
     titleEffects,
     borderEffects,
     thumbnailValue,
+    thumbnailEffects,
     backgroundValue,
     backgroundUrl,
     backgroundIsVideo,

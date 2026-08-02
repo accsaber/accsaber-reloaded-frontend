@@ -10,7 +10,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { usePreviewStore } from '@/stores/preview'
 import type { ItemResponse, UnusualEffectResponse } from '@/types/api/items'
-import { itemVariantPreviews, pickAssetUrl, readItemVariants } from '@/utils/items'
+import ModifierCompositions from '@/components/domain/ModifierCompositions.vue'
+import { itemVariantPreviews, pickAssetUrl, readItemVariants, themeCompositionLayers } from '@/utils/items'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { computed, ref, watch } from 'vue'
 
@@ -99,6 +100,10 @@ const thumbnailId = computed({
   get: () => preview.thumbnail?.id ?? '',
   set: (id: string) => { preview.thumbnail = findItem(id); preview.thumbnailVariant = null },
 })
+const thumbnailEffectId = computed({
+  get: () => preview.thumbnailEffect?.id ?? '',
+  set: (id: string) => { preview.thumbnailEffect = findEffect(id) },
+})
 const themeId = computed({
   get: () => preview.theme?.id ?? '',
   set: (id: string) => { preview.theme = findItem(id); preview.themeVariant = null },
@@ -125,8 +130,17 @@ const availableModifiers = computed(() =>
   modifierStore.modifiers.filter((m) => m.key !== 'unusual'),
 )
 
-const { titleValue, borderShapeValue, borderColorValue, titleEffects, borderEffects, thumbnailValue } =
-  useEquippedRenderProps(() => preview.overrides)
+const {
+  titleValue,
+  borderShapeValue,
+  borderColorValue,
+  titleEffects,
+  borderEffects,
+  thumbnailValue,
+  thumbnailEffects,
+} = useEquippedRenderProps(() => preview.overrides)
+
+const thumbEffectLayers = computed(() => themeCompositionLayers(thumbnailEffects.value))
 
 const thumbScene = computed(() => thumbnailValue.value?.scene ?? null)
 const thumbImageUrl = computed(() => pickAssetUrl(thumbnailValue.value?.asset))
@@ -146,13 +160,14 @@ const chips = computed(() => {
   if (preview.title) list.push(preview.title.name || 'Title')
   if (preview.thumbnail) list.push(preview.thumbnail.name || 'Thumbnail')
   if (preview.theme) list.push(preview.theme.name || 'Theme')
-  for (const e of [preview.borderShapeEffect, preview.borderColorEffect, preview.titleEffect, preview.themeEffect]) {
+  for (const e of [preview.borderShapeEffect, preview.borderColorEffect, preview.titleEffect, preview.thumbnailEffect, preview.themeEffect]) {
     if (e) list.push(e.name || e.key)
   }
   for (const m of [
     ...preview.borderShapeModifiers,
     ...preview.borderColorModifiers,
     ...preview.titleModifiers,
+    ...preview.thumbnailModifiers,
     ...preview.themeModifiers,
   ]) {
     list.push(m.name)
@@ -187,6 +202,14 @@ const chips = computed(() => {
         <div v-if="hasThumb" class="preview-dock__thumb-bg" :style="thumbLayerStyle" aria-hidden="true">
           <ThumbnailSceneRenderer v-if="thumbScene" :scene="thumbScene" />
           <img v-else-if="thumbImageUrl" class="preview-dock__thumb-img" :src="thumbImageUrl" alt="" />
+          <div v-if="thumbEffectLayers.length" class="preview-dock__thumb-effects">
+            <ModifierCompositions
+              v-for="layer in thumbEffectLayers"
+              :key="layer.key"
+              :spec="layer.spec"
+              :stack-index="layer.stackIndex"
+            />
+          </div>
         </div>
         <LevelBadge
           :level="30"
@@ -232,6 +255,8 @@ const chips = computed(() => {
           <span class="preview-dock__group-title">Thumbnail</span>
           <PreviewPicker v-model="thumbnailId" :items="thumbnails" placeholder="None" />
           <PreviewVariantRow :variants="thumbnailVariants" v-model="preview.thumbnailVariant" />
+          <PreviewPicker v-model="thumbnailEffectId" :effects="effects" placeholder="No effect" />
+          <PreviewModifierPicker v-model="preview.thumbnailModifiers" :modifiers="availableModifiers" />
         </div>
 
         <div class="preview-dock__group">
@@ -362,6 +387,13 @@ const chips = computed(() => {
 .preview-dock__thumb-bg {
   position: absolute;
   inset: 0;
+}
+
+.preview-dock__thumb-effects {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .preview-dock__thumb-img {
