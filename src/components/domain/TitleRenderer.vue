@@ -325,7 +325,8 @@ function forgeCharStyle(i: number): Record<string, string> {
   const heat = (isLightBase.value ? spec.lightHeat : undefined) ?? spec.heat ?? '#ff8a5c'
   const base = state.value.color
   const start = interval * 0.72 + i * stagger
-  const local = (tMs.value % interval) - start
+  let local = (tMs.value % interval) - start
+  if (local < -rawMs) local += interval
   if (local >= -rawMs && local < 0) {
     return { color: raw, textShadow: 'none' }
   }
