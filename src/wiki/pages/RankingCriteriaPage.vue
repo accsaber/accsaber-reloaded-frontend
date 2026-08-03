@@ -94,9 +94,10 @@ const PATTERN_ROWS: WikiCompareRow[] = [
     <p>
       The criteria check is its own vote inside
       <RouterLink to="/wiki/how-maps-get-ranked#the-vote">the ranking vote</RouterLink>,
-      decided by simple majority with the ranking heads holding an override. The standards
-      themselves evolve with the game, so when in doubt about an edge case, ask in the Discord
-      before suggesting.
+      decided by simple majority with the ranking heads holding an override. And backing the
+      team up is the AccSaber Criteria Script, which automatically checks a map against
+      everything listed on this page and flags what it finds. The standards themselves evolve
+      with the game, so when in doubt about an edge case, ask in the Discord before suggesting.
     </p>
   </WikiProse>
 </template>
