@@ -9,6 +9,20 @@ import type {
 import type { CrateTick } from '@/composables/useCrateSounds'
 import { createCrateRoller, type CrateRoll } from '@/utils/crateRoll'
 import { RARITY_ORDER } from '@/utils/items'
+import {
+  createSliceBodies,
+  cssVarColor,
+  HALVES_LIFE_MS,
+  IDLE_HALF_MOTION,
+  sliceOpacity,
+  spawnBurstSparks,
+  spawnCutSparks,
+  stepAndDrawSparks,
+  stepSliceBodies,
+  type SliceBodies,
+  type SliceHalfMotion,
+  type Spark,
+} from '@/utils/sliceSim'
 import { nextTick, onUnmounted, ref, type Ref } from 'vue'
 
 export type CratePhase =
@@ -20,31 +34,7 @@ export type CratePhase =
   | 'revealing'
   | 'revealed'
 
-export interface CrateHalfMotion {
-  x: number
-  y: number
-  angle: number
-  opacity: number
-}
-
-interface HalfBody {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  angle: number
-  va: number
-}
-
-interface Spark {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  age: number
-  ttl: number
-  size: number
-}
+export type CrateHalfMotion = SliceHalfMotion
 
 interface UseCrateAnimationOptions {
   result: Ref<ItemResponse | null>
@@ -73,7 +63,7 @@ interface UseCrateAnimationOptions {
 const TIMING = {
   landedHold: 430,
   bladeLead: 80,
-  halvesLife: 720,
+  halvesLife: HALVES_LIFE_MS,
   revealDelay: 400,
   revealIn: 340,
   shake: 240,
@@ -81,9 +71,7 @@ const TIMING = {
 
 export const CRATE_PHASE_DURATIONS = TIMING
 
-const GRAVITY = 1750
-const SPARK_GRAVITY = 900
-const IDLE_HALF: CrateHalfMotion = { x: 0, y: 0, angle: 0, opacity: 0 }
+const IDLE_HALF = IDLE_HALF_MOTION
 
 const RARITY_TOKEN: Record<string, string> = {
   common: '--text-tertiary',
@@ -123,10 +111,7 @@ function decodeImages(urls: string[]): Promise<unknown> {
 }
 
 function rarityCssColor(rarity: string): string {
-  const token = RARITY_TOKEN[rarity] ?? '--text-tertiary'
-  return (
-    getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#ffffff'
-  )
+  return cssVarColor(RARITY_TOKEN[rarity] ?? '--text-tertiary')
 }
 
 export function useCrateAnimation(opts: UseCrateAnimationOptions) {
@@ -155,8 +140,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
   let stageH = 260
   let cutReleased = false
   let revealBurstFired = false
-  let leftBody: HalfBody | null = null
-  let rightBody: HalfBody | null = null
+  let bodies: SliceBodies | null = null
   let sparks: Spark[] = []
   let sparkColor = '#ffffff'
   let sparkCtx: CanvasRenderingContext2D | null = null
@@ -188,8 +172,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     shakeY.value = 0
     halfLeft.value = IDLE_HALF
     halfRight.value = IDLE_HALF
-    leftBody = null
-    rightBody = null
+    bodies = null
     sparks = []
     cutReleased = false
     revealBurstFired = false
@@ -286,87 +269,34 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
 
   function releaseHalves() {
     const power = score01()
-    const leftFrac = cutPct.value
-    const smallLeft = leftFrac <= 0.5
-    const asym = (0.5 - Math.min(leftFrac, 1 - leftFrac)) * 2
-    const push = 70 + 130 * power
-    const boost = 1 + asym * 0.9
-    const vy = 90 + 150 * power
-    leftBody = {
-      x: 0,
-      y: 0,
-      vx: -push * (smallLeft ? boost : 1) * (0.8 + Math.random() * 0.4),
-      vy: vy * (0.8 + Math.random() * 0.4),
-      angle: 0,
-      va: -(55 + Math.random() * 110) * (smallLeft ? boost : 1),
-    }
-    rightBody = {
-      x: 0,
-      y: 0,
-      vx: push * (smallLeft ? 1 : boost) * (0.8 + Math.random() * 0.4),
-      vy: vy * (0.8 + Math.random() * 0.4),
-      angle: 0,
-      va: (55 + Math.random() * 110) * (smallLeft ? 1 : boost),
-    }
+    bodies = createSliceBodies(power, cutPct.value)
     halvesActive.value = true
     scoreVisible.value = true
-    spawnCutSparks()
+    spawnCutSparks(sparks, {
+      x: stageW / 2,
+      y: stageH / 2,
+      spreadY: opts.cardHeight.value * 0.9,
+      shiftPx: (cutShiftPct.value / 100) * opts.cardWidth.value,
+      power,
+    })
     opts.onSlice?.(power)
   }
 
-  function spawnCutSparks() {
-    const power = score01()
-    const cardH = opts.cardHeight.value
-    const cardW = opts.cardWidth.value
-    const cutShiftPx = (cutShiftPct.value / 100) * cardW
-    const count = 18 + Math.round(14 * power)
-    for (let i = 0; i < count; i++) {
-      const yr = Math.random() - 0.5
-      const dir = Math.random() < 0.5 ? -1 : 1
-      sparks.push({
-        x: stageW / 2 + yr * 2 * cutShiftPx,
-        y: stageH / 2 + yr * cardH * 0.9,
-        vx: dir * (40 + Math.random() * 260) * (0.6 + power * 0.7),
-        vy: -60 + Math.random() * 220,
-        age: 0,
-        ttl: 260 + Math.random() * 300,
-        size: 1 + Math.random() * 1.6,
-      })
-    }
-  }
-
-  function spawnRevealBurst() {
-    for (let i = 0; i < 26; i++) {
-      const angle = Math.random() * Math.PI * 2
-      const speed = 60 + Math.random() * 260
-      sparks.push({
-        x: stageW / 2,
-        y: stageH / 2,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 40,
-        age: 0,
-        ttl: 400 + Math.random() * 300,
-        size: 1 + Math.random() * 1.4,
-      })
-    }
-  }
-
   function updateHalves(dt: number, t: number, cutAt: number) {
-    if (!leftBody || !rightBody) return
+    if (!bodies) return
     const life = clamp((t - cutAt) / TIMING.halvesLife, 0, 1)
-    for (const body of [leftBody, rightBody]) {
-      body.vy += GRAVITY * dt
-      body.x += body.vx * dt
-      body.y += body.vy * dt
-      body.angle += body.va * dt
+    stepSliceBodies(bodies, dt)
+    const opacity = sliceOpacity(life)
+    halfLeft.value = { x: bodies.left.x, y: bodies.left.y, angle: bodies.left.angle, opacity }
+    halfRight.value = {
+      x: bodies.right.x,
+      y: bodies.right.y,
+      angle: bodies.right.angle,
+      opacity,
     }
-    const opacity = life < 0.55 ? 1 : 1 - (life - 0.55) / 0.45
-    halfLeft.value = { x: leftBody.x, y: leftBody.y, angle: leftBody.angle, opacity }
-    halfRight.value = { x: rightBody.x, y: rightBody.y, angle: rightBody.angle, opacity }
     if (life >= 1) {
       halvesActive.value = false
-      leftBody = null
-      rightBody = null
+      bodies = null
     }
   }
 
@@ -384,31 +314,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
 
   function updateSparks(dt: number) {
     if (!sparkCtx) return
-    sparkCtx.clearRect(0, 0, stageW, stageH)
-    if (sparks.length === 0) return
-    const next: Spark[] = []
-    for (const s of sparks) {
-      s.age += dt * 1000
-      if (s.age >= s.ttl) continue
-      s.vy += SPARK_GRAVITY * dt
-      s.x += s.vx * dt
-      s.y += s.vy * dt
-      next.push(s)
-      const life = 1 - s.age / s.ttl
-      sparkCtx.globalAlpha = life
-      sparkCtx.strokeStyle = sparkColor
-      sparkCtx.lineWidth = s.size
-      sparkCtx.beginPath()
-      sparkCtx.moveTo(s.x, s.y)
-      sparkCtx.lineTo(s.x - s.vx * 0.02, s.y - s.vy * 0.02)
-      sparkCtx.stroke()
-      sparkCtx.globalAlpha = life * 0.5
-      sparkCtx.strokeStyle = '#ffffff'
-      sparkCtx.lineWidth = Math.max(0.5, s.size - 1)
-      sparkCtx.stroke()
-    }
-    sparkCtx.globalAlpha = 1
-    sparks = next
+    sparks = stepAndDrawSparks(sparkCtx, sparks, dt, sparkColor, stageW, stageH)
   }
 
   function frame(now: number) {
@@ -442,7 +348,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
         const rarity = opts.result.value?.rarity
         if (!revealBurstFired && rarity && RARITY_ORDER.indexOf(rarity) >= 4) {
           revealBurstFired = true
-          spawnRevealBurst()
+          spawnBurstSparks(sparks, stageW / 2, stageH / 2)
         }
       }
     }

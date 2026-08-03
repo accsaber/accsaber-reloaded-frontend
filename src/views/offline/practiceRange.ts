@@ -1,4 +1,14 @@
 import type { BackdropScene } from '@/composables/useBackdropCanvas'
+import {
+  applyGravity,
+  drawSparks,
+  HALVES_LIFE_MS,
+  sliceOpacity,
+  spawnBurstSparks,
+  spawnDirectionalCutSparks,
+  stepSparks,
+  type Spark,
+} from '@/utils/sliceSim'
 
 export type RangeMode = 'zen' | 'game'
 export type GameState = 'idle' | 'playing' | 'over'
@@ -59,17 +69,6 @@ interface Half {
   born: number
 }
 
-interface Spark {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  age: number
-  ttl: number
-  size: number
-  color: string
-}
-
 interface Pop {
   x: number
   y: number
@@ -85,9 +84,7 @@ interface TrailPoint {
   t: number
 }
 
-const GRAVITY = 1750
-const SPARK_GRAVITY = 900
-const HALF_TTL_MS = 700
+const HALF_TTL_MS = HALVES_LIFE_MS
 const POP_TTL_MS = 650
 const TRAIL_TTL_MS = 140
 const SHAKE_TTL_MS = 260
@@ -312,23 +309,6 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
     pops.push({ x, y, text, color, big, born: now })
   }
 
-  function burstSparks(x: number, y: number, count: number, color: string) {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2
-      const speed = 60 + Math.random() * 240
-      sparks.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 40,
-        age: 0,
-        ttl: 300 + Math.random() * 300,
-        size: 1 + Math.random() * 1.5,
-        color,
-      })
-    }
-  }
-
   function loseLife(x: number, y: number, now: number) {
     lives -= 1
     shakeStart = now
@@ -399,22 +379,19 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
       })
     }
 
-    const sparkColor = good ? b.color : mutedColor
-    const count = good ? 14 + Math.round(12 * power) : 8
-    for (let i = 0; i < count; i++) {
-      const u = (Math.random() - 0.5) * b.size
-      const side = Math.random() < 0.5 ? -1 : 1
-      sparks.push({
-        x: b.x + ux * u + nx * cutOff,
-        y: b.y + uy * u + ny * cutOff,
-        vx: nx * side * (60 + Math.random() * 240) * (0.6 + power * 0.7),
-        vy: -60 + Math.random() * 200,
-        age: 0,
-        ttl: 260 + Math.random() * 300,
-        size: 1 + Math.random() * 1.5,
-        color: sparkColor,
-      })
-    }
+    spawnDirectionalCutSparks(sparks, {
+      x: b.x,
+      y: b.y,
+      dirX: ux,
+      dirY: uy,
+      spread: b.size,
+      normalX: nx,
+      normalY: ny,
+      offset: cutOff,
+      power,
+      count: good ? 14 + Math.round(12 * power) : 8,
+      color: good ? b.color : mutedColor,
+    })
 
     if (good) {
       addPop(
@@ -435,12 +412,12 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
   function sliceTarget(t: Target, from: TrailPoint, tx: number, ty: number, ux: number, uy: number, now: number) {
     if (t.kind === 'bomb') {
       bombHits += 1
-      burstSparks(t.x, t.y, 26, errorColor)
+      spawnBurstSparks(sparks, t.x, t.y, { count: 26, color: errorColor })
       loseLife(t.x, t.y - t.size * 0.5, now)
       return
     }
     if (t.kind === 'heart') {
-      burstSparks(t.x, t.y, 18, successColor)
+      spawnBurstSparks(sparks, t.x, t.y, { count: 18, color: successColor })
       gainLife(t.x, t.y - t.size * 0.5, now)
       return
     }
@@ -467,20 +444,12 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
     if (spawning && now >= nextSpawnAt && targets.length < maxAlive()) spawnTarget(now)
 
     for (const h of halves) {
-      h.vy += GRAVITY * dt
-      h.x += h.vx * dt
-      h.y += h.vy * dt
+      applyGravity(h, dt)
       h.angle += h.spin * dt
     }
     halves = halves.filter((h) => now - h.born < HALF_TTL_MS)
 
-    for (const s of sparks) {
-      s.age += dt * 1000
-      s.vy += SPARK_GRAVITY * dt
-      s.x += s.vx * dt
-      s.y += s.vy * dt
-    }
-    sparks = sparks.filter((s) => s.age < s.ttl)
+    sparks = stepSparks(sparks, dt)
 
     pops = pops.filter((p) => now - p.born < POP_TTL_MS)
     trail = trail.filter((p) => now - p.t < TRAIL_TTL_MS)
@@ -583,7 +552,7 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
   function drawHalf(ctx: CanvasRenderingContext2D, h: Half, now: number) {
     const life = (now - h.born) / HALF_TTL_MS
     ctx.save()
-    ctx.globalAlpha = life < 0.55 ? 1 : 1 - (life - 0.55) / 0.45
+    ctx.globalAlpha = sliceOpacity(life)
     ctx.translate(h.x, h.y)
     ctx.rotate(h.angle)
     ctx.rotate(h.cutAngle)
@@ -595,24 +564,6 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
     ctx.rotate(-h.cutAngle)
     drawBloqBody(ctx, s, h.color, h.dir)
     ctx.restore()
-  }
-
-  function drawSparks(ctx: CanvasRenderingContext2D) {
-    for (const s of sparks) {
-      const life = 1 - s.age / s.ttl
-      ctx.globalAlpha = life
-      ctx.strokeStyle = s.color
-      ctx.lineWidth = s.size
-      ctx.beginPath()
-      ctx.moveTo(s.x, s.y)
-      ctx.lineTo(s.x - s.vx * 0.02, s.y - s.vy * 0.02)
-      ctx.stroke()
-      ctx.globalAlpha = life * 0.5
-      ctx.strokeStyle = faceColor
-      ctx.lineWidth = Math.max(0.5, s.size - 1)
-      ctx.stroke()
-    }
-    ctx.globalAlpha = 1
   }
 
   function drawTrail(ctx: CanvasRenderingContext2D, now: number) {
@@ -679,7 +630,7 @@ export function createPracticeRange(onEvent: (ev: RangeEvent) => void): Practice
       if (shake.x !== 0 || shake.y !== 0) ctx.translate(shake.x, shake.y)
       for (const t of targets) drawTarget(ctx, t)
       for (const half of halves) drawHalf(ctx, half, now)
-      drawSparks(ctx)
+      drawSparks(ctx, sparks, faceColor, faceColor)
       drawTrail(ctx, now)
       drawPops(ctx, now)
       ctx.restore()

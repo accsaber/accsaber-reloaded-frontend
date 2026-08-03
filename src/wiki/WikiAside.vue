@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { prefetchWikiEntry } from '@/wiki/registry'
+import WikiDocCard from '@/wiki/components/WikiDocCard.vue'
 import type { WikiEntry, WikiTocItem } from '@/wiki/types'
 
 defineProps<{
@@ -29,16 +29,7 @@ defineProps<{
 
     <nav v-if="related.length" class="wiki-aside__related" aria-label="Related documents">
       <span class="wiki-aside__label">Related</span>
-      <RouterLink
-        v-for="entry in related"
-        :key="entry.slug"
-        :to="`/wiki/${entry.slug}`"
-        class="wiki-aside__doc"
-        @mouseenter="prefetchWikiEntry(entry.slug)"
-      >
-        <span class="wiki-aside__doc-title">{{ entry.title }}</span>
-        <span class="wiki-aside__doc-summary">{{ entry.summary }}</span>
-      </RouterLink>
+      <WikiDocCard v-for="entry in related" :key="entry.slug" :entry="entry" class="wiki-aside__doc" />
     </nav>
   </aside>
 </template>
@@ -90,33 +81,6 @@ defineProps<{
 }
 
 .wiki-aside__doc {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-sm);
   margin-bottom: var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  text-decoration: none;
-  transition: border-color 120ms ease;
-}
-
-.wiki-aside__doc:hover {
-  border-color: var(--text-tertiary);
-}
-
-.wiki-aside__doc-title {
-  color: var(--text-primary);
-  font-size: var(--text-body);
-  font-weight: 600;
-}
-
-.wiki-aside__doc-summary {
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 </style>

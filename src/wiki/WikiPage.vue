@@ -8,7 +8,6 @@ import {
   filterWikiSections,
   findWikiEntry,
   resolveRelated,
-  WIKI_ENTRIES,
   WIKI_NAVIGATE_KEY,
   WIKI_SECTIONS,
 } from '@/wiki/registry'
@@ -17,6 +16,7 @@ import WikiAside from '@/wiki/WikiAside.vue'
 import WikiRail from '@/wiki/WikiRail.vue'
 import {
   computed,
+  defineAsyncComponent,
   markRaw,
   nextTick,
   onUnmounted,
@@ -36,11 +36,14 @@ const mobileView = ref<'rail' | 'detail'>('rail')
 const search = ref('')
 const sections = computed(() => filterWikiSections(WIKI_SECTIONS, search.value.trim().toLowerCase()))
 
+const WikiHome = defineAsyncComponent(() => import('@/wiki/WikiHome.vue'))
+
 const requestedSlug = computed(() => (route.params.slug as string | undefined) ?? null)
 const activeEntry = computed<WikiEntry | null>(() =>
-  requestedSlug.value ? findWikiEntry(requestedSlug.value) : (WIKI_ENTRIES[0] ?? null),
+  requestedSlug.value ? findWikiEntry(requestedSlug.value) : null,
 )
 const notFound = computed(() => !!requestedSlug.value && !activeEntry.value)
+const isHome = computed(() => !requestedSlug.value)
 const related = computed(() => (activeEntry.value ? resolveRelated(activeEntry.value) : []))
 
 const article = shallowRef<Component | null>(null)
@@ -54,7 +57,7 @@ usePageMeta({
     activeEntry.value ? `${activeEntry.value.title} | AccSaber Wiki` : 'Wiki | AccSaber',
   ),
   description: computed(
-    () => activeEntry.value?.summary ?? 'Documentation for everything AccSaber.',
+    () => activeEntry.value?.summary ?? 'Everything about AccSaber, explained like a human would.',
   ),
 })
 
@@ -145,7 +148,11 @@ onUnmounted(() => observer?.disconnect())
       @update:search="search = $event"
     />
 
-    <main v-show="!isMobile || mobileView === 'detail'" class="wiki__main">
+    <main
+      v-show="!isMobile || mobileView === 'detail'"
+      class="wiki__main"
+      :class="{ 'wiki__main--wide': !activeEntry }"
+    >
       <button v-if="isMobile" type="button" class="wiki__back" @click="mobileView = 'rail'">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -161,6 +168,8 @@ onUnmounted(() => observer?.disconnect())
         action-label="Open the wiki"
         @action="router.push('/wiki')"
       />
+
+      <WikiHome v-else-if="isHome" />
 
       <article v-else-if="activeEntry" class="wiki__article">
         <header class="wiki__header">
@@ -181,8 +190,6 @@ onUnmounted(() => observer?.disconnect())
           <component :is="article" v-if="article" />
         </div>
       </article>
-
-      <EmptyState v-else message="The wiki has no documents yet." />
     </main>
 
     <WikiAside
@@ -221,6 +228,10 @@ onUnmounted(() => observer?.disconnect())
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.wiki__main--wide {
+  grid-column: 2 / -1;
 }
 
 .wiki__aside {
@@ -319,6 +330,10 @@ onUnmounted(() => observer?.disconnect())
   .wiki {
     grid-template-columns: 1fr;
     gap: var(--space-lg);
+  }
+
+  .wiki__main--wide {
+    grid-column: auto;
   }
 
   .wiki__rail {

@@ -45,13 +45,13 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
       <div class="sandbox__totals">
         <span class="sandbox__label">Your total</span>
         <span class="sandbox__total">
-          {{ formatAp(totalBefore) }}
+          <span class="sandbox__num">{{ formatAp(totalBefore) }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="5" y1="12" x2="19" y2="12" />
             <polyline points="12 5 19 12 12 19" />
           </svg>
-          {{ formatAp(totalAfter) }}
+          <span class="sandbox__num">{{ formatAp(totalAfter) }}</span>
           <span class="sandbox__delta">+{{ formatAp(delta) }}</span>
         </span>
       </div>
@@ -147,8 +147,15 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
   color: var(--text-tertiary);
 }
 
+.sandbox__num {
+  display: inline-block;
+  min-width: 6ch;
+}
+
 .sandbox__delta {
   color: var(--accent);
+  display: inline-block;
+  min-width: 7ch;
 }
 
 .sandbox__table {
