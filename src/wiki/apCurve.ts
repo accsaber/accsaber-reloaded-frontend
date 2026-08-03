@@ -61,17 +61,23 @@ const CURVE_POINTS: readonly (readonly [number, number])[] = [
   [1.0, 1.0],
 ]
 
-export function normalizedAp(accuracy: number): number {
-  if (accuracy <= 0) return 0
-  if (accuracy >= 1) return 1
-  for (let i = 1; i < CURVE_POINTS.length; i++) {
-    const [x1, y1] = CURVE_POINTS[i]
-    if (accuracy <= x1) {
-      const [x0, y0] = CURVE_POINTS[i - 1]
-      return y0 + ((accuracy - x0) * (y1 - y0)) / (x1 - x0)
+function interpolatePoints(
+  points: readonly (readonly [number, number])[],
+  x: number,
+): number {
+  if (x <= points[0][0]) return points[0][1]
+  for (let i = 1; i < points.length; i++) {
+    const [x1, y1] = points[i]
+    if (x <= x1) {
+      const [x0, y0] = points[i - 1]
+      return y0 + ((x - x0) * (y1 - y0)) / (x1 - x0)
     }
   }
-  return 1
+  return points[points.length - 1][1]
+}
+
+export function normalizedAp(accuracy: number): number {
+  return interpolatePoints(CURVE_POINTS, accuracy)
 }
 
 export function rawAp(accuracy: number, complexity: number): number {
@@ -95,4 +101,65 @@ export function positionWeight(position: number): number {
 
 export function weightedTotal(sortedRawApsDesc: number[]): number {
   return sortedRawApsDesc.reduce((sum, ap, index) => sum + ap * positionWeight(index), 0)
+}
+
+const XP_CURVE_POINTS: readonly (readonly [number, number])[] = [
+  [0.0, 0.0],
+  [0.1, 0.001],
+  [0.2, 0.003],
+  [0.3, 0.006],
+  [0.4, 0.01],
+  [0.5, 0.018],
+  [0.55, 0.025],
+  [0.6, 0.032],
+  [0.65, 0.042],
+  [0.7, 0.055],
+  [0.75, 0.072],
+  [0.78, 0.088],
+  [0.8, 0.1],
+  [0.82, 0.115],
+  [0.84, 0.133],
+  [0.86, 0.155],
+  [0.88, 0.18],
+  [0.9, 0.18],
+  [0.91, 0.21],
+  [0.92, 0.245],
+  [0.93, 0.285],
+  [0.94, 0.33],
+  [0.95, 0.38],
+  [0.96, 0.44],
+  [0.965, 0.48],
+  [0.97, 0.52],
+  [0.975, 0.57],
+  [0.98, 0.62],
+  [0.985, 0.68],
+  [0.99, 0.75],
+  [0.993, 0.81],
+  [0.995, 0.86],
+  [0.997, 0.92],
+  [0.999, 0.97],
+  [1.0, 1.0],
+]
+
+export const XP_BASE_PER_SCORE = 25
+const XP_MAX_BONUS = 900
+const XP_REFERENCE_COMPLEXITY = 10
+export const XP_MIN_COMPLEXITY = 4.5
+
+export function scoreXp(accuracy: number, complexity: number): number {
+  const clamped = Math.max(complexity, XP_MIN_COMPLEXITY)
+  const bonus =
+    interpolatePoints(XP_CURVE_POINTS, accuracy) *
+    XP_MAX_BONUS *
+    Math.cbrt(clamped / XP_REFERENCE_COMPLEXITY)
+  return XP_BASE_PER_SCORE + bonus
+}
+
+const LEVEL_CURVE_BASE = 52
+const LEVEL_CURVE_EXPONENT = 1.2
+
+export function xpForLevel(level: number): number {
+  if (level <= 0) return 0
+  const effective = Math.min(level, 100)
+  return Math.floor(LEVEL_CURVE_BASE * Math.pow(effective, LEVEL_CURVE_EXPONENT))
 }

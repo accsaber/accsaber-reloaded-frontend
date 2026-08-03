@@ -38,7 +38,12 @@ const hoverTitle = computed(() => {
     :aria-label="isCrate ? `Preview crate: ${item.name}` : `Preview ${item.name}`"
     @click="open = true"
   >
-    <VariantSplitPreview v-if="variants" :item="item" :variants="variants" />
+    <template v-if="variants">
+      <span v-if="isTitle" class="reward-tile__sizer" aria-hidden="true">
+        <ItemPreview :item="item" />
+      </span>
+      <VariantSplitPreview :item="item" :variants="variants" />
+    </template>
     <ItemPreview v-else :item="item" />
 
     <span v-if="variants" class="reward-tile__variant-count" aria-hidden="true">{{ variants.length }}</span>
@@ -92,6 +97,15 @@ const hoverTitle = computed(() => {
 .reward-tile--wide :deep(.item-preview) {
   container-type: normal;
   width: max-content;
+}
+
+.reward-tile__sizer {
+  visibility: hidden;
+}
+
+.reward-tile__sizer + .variant-split {
+  position: absolute;
+  inset: 0;
 }
 
 .reward-tile--wide :deep(.item-preview__title .title-renderer) {

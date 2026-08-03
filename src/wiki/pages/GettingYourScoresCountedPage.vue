@@ -94,7 +94,8 @@ const PLUGIN_ROWS: WikiCompareRow[] = [
           <td>You used a banned modifier</td>
           <td>
             No Obstacles, No Bombs, Slower Song and Small Notes make a play unrankable. Replay
-            it without them and it will count.
+            it without them and it will count. The full list lives on the
+            <RouterLink to="/wiki/modifiers">Modifiers</RouterLink> page.
           </td>
         </tr>
         <tr>

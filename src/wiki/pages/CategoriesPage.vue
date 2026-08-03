@@ -33,9 +33,32 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
       separately per category too.
     </p>
 
+    <WikiHeading id="at-a-glance">At a glance</WikiHeading>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>The maps</th>
+          <th>The skill</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="category in COMPARISON" :key="category.code">
+          <td><CategoryBadge :category="category.code" /></td>
+          <td>{{ category.maps }}</td>
+          <td>{{ category.skill }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      None of the three is the "right" place to start. Browse the
+      <RouterLink to="/maps">ranked pool</RouterLink>, play what looks fun, and your lane will
+      find you.
+    </p>
+
     <WikiHeading id="true-acc"><span class="cat cat--true">True Acc</span></WikiHeading>
     <p>
-      The purest test on the platform. True Acc maps are slow and spacious, with wide-open
+      The rawest form of accuracy on the platform. True Acc maps are slow and spacious, with wide-open
       swings and all the time in the world to read every note. That generosity is the trap:
       with nothing rushing you, there is also nothing to blame. Every point you drop was
       yours to keep, so the leaderboards come down to raw execution and the nerve to stay
@@ -89,29 +112,6 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
       horizontals which deviate completely from the vertical flow. For maps that sit right on
       the line, the ranking team makes the call when the map gets ranked, judging which of the
       two skills the map truly tests.
-    </p>
-
-    <WikiHeading id="at-a-glance">At a glance</WikiHeading>
-    <table>
-      <thead>
-        <tr>
-          <th>Category</th>
-          <th>The maps</th>
-          <th>The skill</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="category in COMPARISON" :key="category.code">
-          <td><CategoryBadge :category="category.code" /></td>
-          <td>{{ category.maps }}</td>
-          <td>{{ category.skill }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>
-      None of the three is the "right" place to start. Browse the
-      <RouterLink to="/maps">ranked pool</RouterLink>, play what looks fun, and your lane will
-      find you.
     </p>
 
     <WikiHeading id="overall">Overall</WikiHeading>
