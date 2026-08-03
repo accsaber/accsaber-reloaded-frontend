@@ -86,8 +86,8 @@ const PATTERN_ROWS: WikiCompareRow[] = [
     </p>
     <p>
       Towers in Standard Acc are allowed only when their lead-in sits on
-      the same row as the tower's top note and carries proper emphasis, so the player reads the
-      full swing before committing. An arc is heavily suggested.
+      the same row as the tower's top note and carries proper emphasis. An arc 
+      connecting the previous note and the tower's top note is mandatory.
     </p>
 
     <WikiHeading id="enforcement">Who enforces this</WikiHeading>
