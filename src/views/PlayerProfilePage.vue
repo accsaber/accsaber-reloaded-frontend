@@ -33,7 +33,7 @@ import type { CategoryCode } from '@/types/display'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { getRankClass } from '@/utils/ranking'
 import { pickAvatarUrl } from '@/composables/useAvatarFallback'
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProfileInventoryTab from './profile/ProfileInventoryTab.vue'
 import ProfileMilestonesTab from './profile/ProfileMilestonesTab.vue'
@@ -273,6 +273,44 @@ const profileTabs = [
   { key: 'milestones', label: 'Milestones' },
   { key: 'inventory', label: 'Inventory' },
 ]
+
+const categoryAwareTabs = new Set(['scores', 'statistics'])
+
+const heroCategoryTabsRef = ref<HTMLElement | null>(null)
+const heroCategoryTabsHidden = ref(false)
+const showCategoryDock = computed(
+  () => heroCategoryTabsHidden.value && categoryAwareTabs.has(activeTab.value),
+)
+
+let dockObserver: IntersectionObserver | null = null
+const navbarQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)') : null
+
+function observeHeroCategoryTabs() {
+  dockObserver?.disconnect()
+  dockObserver = null
+  const el = heroCategoryTabsRef.value
+  if (!el) {
+    heroCategoryTabsHidden.value = false
+    return
+  }
+  const navbarHeight
+    = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 64
+  dockObserver = new IntersectionObserver(
+    ([entry]) => {
+      heroCategoryTabsHidden.value = entry.boundingClientRect.bottom <= navbarHeight
+    },
+    { rootMargin: `-${navbarHeight}px 0px 0px 0px` },
+  )
+  dockObserver.observe(el)
+}
+
+watch(heroCategoryTabsRef, observeHeroCategoryTabs)
+navbarQuery?.addEventListener('change', observeHeroCategoryTabs)
+
+onUnmounted(() => {
+  dockObserver?.disconnect()
+  navbarQuery?.removeEventListener('change', observeHeroCategoryTabs)
+})
 
 const activeStats = computed(() => {
   if (!Array.isArray(stats.value) || stats.value.length === 0) return null
@@ -630,7 +668,7 @@ watch(activeCategory, (newCategory) => {
           </div>
 
           <template v-else>
-            <div class="profile-hero__category-tabs">
+            <div ref="heroCategoryTabsRef" class="profile-hero__category-tabs">
               <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
                 @update:model-value="activeCategory = $event" />
             </div>
@@ -706,6 +744,15 @@ watch(activeCategory, (newCategory) => {
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
           <ProfileInventoryTab v-if="activeTab === 'inventory'" :user-id="userId" :avatar-url="userAvatarUrl" />
         </div>
+
+        <Transition name="cat-dock">
+          <div v-if="showCategoryDock" class="profile-page__cat-dock">
+            <div class="profile-page__cat-dock-inner">
+              <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
+                @update:model-value="activeCategory = $event" />
+            </div>
+          </div>
+        </Transition>
       </template>
     </template>
   </div>
@@ -721,11 +768,63 @@ watch(activeCategory, (newCategory) => {
   --accent: var(--page-accent, var(--accent-overall));
 }
 
-.profile-page>*:not(.profile-page__bg) {
+.profile-page>*:not(.profile-page__bg):not(.profile-page__cat-dock) {
   width: 100%;
   max-width: 1280px;
   position: relative;
   z-index: 1;
+}
+
+.profile-page__cat-dock {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--bg-overlay);
+}
+
+.profile-page__cat-dock-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-xl);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.profile-page__cat-dock-inner::-webkit-scrollbar {
+  display: none;
+}
+
+.profile-page__cat-dock-inner :deep(.base-tabs) {
+  border-bottom: none;
+  flex-wrap: nowrap;
+}
+
+.cat-dock-enter-active,
+.cat-dock-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.cat-dock-enter-from,
+.cat-dock-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .cat-dock-enter-active,
+  .cat-dock-leave-active {
+    transition: none;
+  }
+
+  .cat-dock-enter-from,
+  .cat-dock-leave-to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .profile-page__bg {
@@ -1310,6 +1409,10 @@ watch(activeCategory, (newCategory) => {
   .profile-page__tabs-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .profile-page__cat-dock-inner {
+    padding: 0 var(--space-md);
   }
 }
 </style>
