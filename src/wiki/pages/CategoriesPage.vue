@@ -12,8 +12,8 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
   },
   {
     code: 'standard_acc',
-    maps: 'mid-tempo mapping with real flow',
-    skill: 'keeping form while moving',
+    maps: 'straight-forward mapping with vertical flow',
+    skill: 'keeping form while map progresses',
   },
   {
     code: 'tech_acc',
@@ -26,7 +26,7 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
 <template>
   <WikiProse>
     <p>
-      There is more than one way to be accurate, and the categories exist so that each way gets
+      There is more than one way to gain AP, and the categories exist so that each way gets
       its own fair fight. Every ranked map belongs to exactly one category, every category has
       its own leaderboard, and your plays only ever compete against your other plays in the same
       category. Your <RouterLink to="/wiki/weighted-ap">weighted totals</RouterLink> are kept
