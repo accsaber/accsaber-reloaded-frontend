@@ -1,7 +1,8 @@
 <script setup lang="ts">
 defineProps<{ curated: boolean }>()
 
-const NOTICE = 'Rewards are only handed out once the campaign is curated.'
+const NOTICE =
+  'Rewards are only handed out once the campaign is curated. Curation means rewards-eligible (well laid out rewards, clear paths), not that the campaign is objectively good.'
 </script>
 
 <template>

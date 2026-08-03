@@ -490,7 +490,8 @@ watch(
         </button>
 
         <button v-if="pane === 'all'" type="button" class="campaigns-page__chip campaigns-page__chip--toggle"
-          :class="{ 'campaigns-page__chip--active': curatedOnly }" @click="toggleQueryFlag('curated')">
+          :class="{ 'campaigns-page__chip--active': curatedOnly }" @click="toggleQueryFlag('curated')"
+          title="Curated means rewards-eligible: well laid out rewards and clear paths. It is not a quality verdict.">
           Curated only
         </button>
 
@@ -635,6 +636,15 @@ watch(
           By creating a campaign, you agree to these rules. Breaking them results in an automatic,
           indefinite suspension from every AccSaber feature.
         </p>
+
+        <div class="campaigns-page__rules-aside">
+          <h3 class="campaigns-page__rules-aside-title">What curation means</h3>
+          <p>
+            Unlike BeatSaver, curation here does not mean a campaign is objectively good. It means
+            rewards-eligible: the rewards are well laid out and the paths through the campaign are
+            clear rather than confusing. Only curated campaigns pay out XP and items.
+          </p>
+        </div>
       </div>
     </BaseModal>
   </div>
@@ -1113,6 +1123,26 @@ watch(
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
   border-radius: 4px;
+}
+
+.campaigns-page__rules-aside {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--bg-overlay);
+}
+
+.campaigns-page__rules-aside p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.campaigns-page__rules-aside-title {
+  margin: 0 0 var(--space-xs);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 @media (max-width: 560px) {

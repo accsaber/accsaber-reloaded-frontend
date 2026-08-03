@@ -32,7 +32,8 @@ const BADGE_RULES: CampaignBadgeRule[] = [
   {
     kind: 'curated',
     label: 'Curated',
-    title: 'Curated by the campaign team. Clearing it pays out XP and items.',
+    title:
+      'Rewards-eligible, not a quality verdict: the campaign team checked that the rewards are well laid out and the paths are clear. Clearing it pays out XP and items.',
     applies: (c) => c.status === 'CURATED',
     at: (c) => c.curatedAt,
     by: (c) => c.curatedBy,
