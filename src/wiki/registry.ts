@@ -7,6 +7,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
   {
     key: 'basics',
     title: 'The Basics',
+    accent: 'var(--accent-overall)',
     entries: [
       {
         slug: 'what-is-accsaber',
@@ -70,6 +71,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
   {
     key: 'scoring',
     title: 'Scoring & Ranking',
+    accent: 'var(--accent-standard-acc)',
     entries: [
       {
         slug: 'accuracy-and-ap',
@@ -195,6 +197,20 @@ export function countWikiEntries(section: WikiSection): number {
 export function sectionContainsSlug(section: WikiSection, slug: string): boolean {
   if (section.entries.some((entry) => entry.slug === slug)) return true
   return section.subsections?.some((sub) => sectionContainsSlug(sub, slug)) ?? false
+}
+
+export interface WikiSectionBadge {
+  title: string
+  accent: string | null
+}
+
+export function wikiSectionBadgeFor(slug: string): WikiSectionBadge | null {
+  for (const section of WIKI_SECTIONS) {
+    if (sectionContainsSlug(section, slug)) {
+      return { title: section.title, accent: section.accent ?? null }
+    }
+  }
+  return null
 }
 
 const prefetched = new Set<string>()

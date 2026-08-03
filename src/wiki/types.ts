@@ -13,6 +13,7 @@ export interface WikiEntry {
 export interface WikiSection {
   key: string
   title: string
+  accent?: string
   entries: WikiEntry[]
   subsections?: WikiSection[]
 }

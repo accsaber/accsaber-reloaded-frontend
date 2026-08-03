@@ -10,6 +10,7 @@ import {
   resolveRelated,
   WIKI_NAVIGATE_KEY,
   WIKI_SECTIONS,
+  wikiSectionBadgeFor,
 } from '@/wiki/registry'
 import type { WikiEntry, WikiTocItem } from '@/wiki/types'
 import WikiAside from '@/wiki/WikiAside.vue'
@@ -44,6 +45,16 @@ const activeEntry = computed<WikiEntry | null>(() =>
 )
 const notFound = computed(() => !!requestedSlug.value && !activeEntry.value)
 const isHome = computed(() => !requestedSlug.value)
+
+const sectionAccent = computed(() =>
+  activeEntry.value ? (wikiSectionBadgeFor(activeEntry.value.slug)?.accent ?? null) : null,
+)
+
+const accentVars = computed(() =>
+  sectionAccent.value
+    ? { '--page-accent': sectionAccent.value, '--accent': sectionAccent.value }
+    : undefined,
+)
 const related = computed(() => (activeEntry.value ? resolveRelated(activeEntry.value) : []))
 
 const article = shallowRef<Component | null>(null)
@@ -138,7 +149,7 @@ onUnmounted(() => observer?.disconnect())
 </script>
 
 <template>
-  <div class="wiki">
+  <div class="wiki" :style="accentVars">
     <WikiRail
       v-show="!isMobile || mobileView === 'rail'"
       class="wiki__rail"

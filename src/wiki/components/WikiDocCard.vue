@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { prefetchWikiEntry } from '@/wiki/registry'
+import { prefetchWikiEntry, wikiSectionBadgeFor } from '@/wiki/registry'
 import type { WikiEntry } from '@/wiki/types'
+import { computed } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   entry: WikiEntry
 }>()
+
+const badge = computed(() => wikiSectionBadgeFor(props.entry.slug))
 </script>
 
 <template>
@@ -13,6 +16,13 @@ defineProps<{
     class="doc-card"
     @mouseenter="prefetchWikiEntry(entry.slug)"
   >
+    <span
+      v-if="badge"
+      class="doc-card__kicker"
+      :style="badge.accent ? { color: badge.accent } : undefined"
+    >
+      {{ badge.title }}
+    </span>
     <span class="doc-card__title">{{ entry.title }}</span>
     <span class="doc-card__summary">{{ entry.summary }}</span>
   </RouterLink>
@@ -32,6 +42,14 @@ defineProps<{
 
 .doc-card:hover {
   border-color: var(--text-tertiary);
+}
+
+.doc-card__kicker {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
 }
 
 .doc-card__title {

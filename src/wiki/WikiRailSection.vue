@@ -13,7 +13,10 @@ const props = defineProps<{
   activeSlug: string | null
   searching: boolean
   depth: number
+  inheritedAccent?: string
 }>()
+
+const accent = computed(() => props.section.accent ?? props.inheritedAccent)
 
 const navigate = inject(WIKI_NAVIGATE_KEY, () => {})
 
@@ -32,7 +35,7 @@ const count = computed(() => countWikiEntries(props.section))
 </script>
 
 <template>
-  <section class="rs" :style="{ '--rail-depth': depth }">
+  <section class="rs" :style="{ '--rail-depth': depth, '--section-accent': accent }">
     <button
       type="button"
       class="rs__header"
@@ -78,6 +81,7 @@ const count = computed(() => countWikiEntries(props.section))
         :active-slug="activeSlug"
         :searching="searching"
         :depth="depth + 1"
+        :inherited-accent="accent"
       />
     </div>
   </section>
@@ -119,6 +123,7 @@ const count = computed(() => countWikiEntries(props.section))
 .rs__title {
   flex: 1;
   min-width: 0;
+  color: var(--section-accent, var(--text-primary));
 }
 
 .rs__count {
@@ -150,7 +155,7 @@ const count = computed(() => countWikiEntries(props.section))
 .rs__entry--active {
   color: var(--text-primary);
   font-weight: 600;
-  border-left-color: var(--accent);
+  border-left-color: var(--section-accent, var(--accent));
   background: var(--bg-surface);
 }
 </style>
