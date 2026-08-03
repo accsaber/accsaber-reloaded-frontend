@@ -16,6 +16,14 @@ export function formatRelativeDate(dateString: string, now = Date.now()): string
   return 'just now'
 }
 
+export function formatFullDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
 export function isRecentDate(dateString: string, withinDays = 7): boolean {
   const days = (Date.now() - new Date(dateString).getTime()) / 86400000
   return days < withinDays

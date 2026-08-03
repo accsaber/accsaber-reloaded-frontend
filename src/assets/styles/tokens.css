@@ -134,6 +134,7 @@
   /* --- Typography --- */
   --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'Poppins', system-ui, sans-serif;
+  --font-code: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 
   /* --- Font Sizes --- */
   --text-page-title: 1.75rem;

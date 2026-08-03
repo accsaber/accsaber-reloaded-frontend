@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/common/EmptyState.vue'
 import NewsArticle from '@/components/domain/NewsArticle.vue'
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import type { EventResponse, EventState } from '@/types/api/events'
@@ -8,7 +9,7 @@ import type { NewsListParams, PublicNewsResponse } from '@/types/api/news'
 import type { NewsType } from '@/types/enums'
 import EventDetailPane from '@/views/news/EventDetailPane.vue'
 import NewsEventsRail from '@/views/news/NewsEventsRail.vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -32,7 +33,7 @@ const search = ref('')
 const newsPage = ref(1)
 const totalNewsPages = ref(0)
 
-const isMobile = ref(false)
+const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY)
 const mobileView = ref<'rail' | 'detail'>('rail')
 
 function setQuery(key: 'event' | 'post', value: string | null, clearKey: 'event' | 'post') {
@@ -132,13 +133,7 @@ function onNewsPage(value: number) {
   loadNews()
 }
 
-function onResize() {
-  isMobile.value = window.innerWidth < 960
-}
-
 onMounted(async () => {
-  onResize()
-  window.addEventListener('resize', onResize, { passive: true })
   try {
     const { getCurrentEvent } = await import('@/api/events')
     currentEvent.value = await getCurrentEvent()
@@ -147,10 +142,6 @@ onMounted(async () => {
   }
   eventFilter.value = currentEvent.value ? 'live' : null
   await Promise.all([loadEvents(), loadNews()])
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', onResize)
 })
 </script>
 

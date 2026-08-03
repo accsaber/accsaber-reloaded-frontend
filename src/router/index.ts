@@ -150,6 +150,11 @@ const router = createRouter({
       },
     ] : []),
     {
+      path: '/wiki/:slug?',
+      name: 'wiki',
+      component: () => import('@/wiki/WikiPage.vue'),
+    },
+    {
       path: '/notifications',
       name: 'notifications',
       component: () => import('@/views/NotificationsPage.vue'),

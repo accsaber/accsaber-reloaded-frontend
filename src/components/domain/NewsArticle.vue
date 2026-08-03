@@ -5,6 +5,7 @@ import { useColorExtract } from '@/composables/useColorExtract'
 import { useThemeStore } from '@/stores/theme'
 import type { PublicNewsResponse } from '@/types/api/news'
 import { NEWS_TYPE_ACCENT } from '@/utils/constants'
+import { formatFullDate } from '@/utils/formatters'
 import { renderMarkdown } from '@/utils/markdown'
 import { computed } from 'vue'
 
@@ -35,10 +36,6 @@ const detailAccent = computed(() => {
   return color
 })
 
-function formatDate(date: string | null): string {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
-}
 </script>
 
 <template>
@@ -56,7 +53,7 @@ function formatDate(date: string | null): string {
           </svg>
           Pinned
         </span>
-        <span v-if="news.publishedAt" class="news-article__date">{{ formatDate(news.publishedAt) }}</span>
+        <span v-if="news.publishedAt" class="news-article__date">{{ formatFullDate(news.publishedAt) }}</span>
       </div>
 
       <h1 class="news-article__title">{{ news.title }}</h1>

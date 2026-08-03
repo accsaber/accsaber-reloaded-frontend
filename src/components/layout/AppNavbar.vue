@@ -60,6 +60,7 @@ const morePublicNavItems: NavItem[] = [
   { to: '/milestones', label: 'Milestones' },
   { to: '/stats', label: 'Stats' },
   { to: '/ranked-queue', label: 'Ranking Queue' },
+  { to: '/wiki', label: 'Wiki' },
 ]
 
 const adminNavItems: NavItem[] = ADMIN_TABS.map((tab) => ({
