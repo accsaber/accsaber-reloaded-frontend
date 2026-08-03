@@ -37,8 +37,8 @@ const PIPELINE: WikiFlowStep[] = [
       while another is filler. Each ranking team member votes up, down or neutral, and two
       bars have to clear before a difficulty qualifies: it needs three more upvotes than
       downvotes, and it needs to pass the criteria check, a separate vote on whether the map
-      meets the ranking standards, decided by simple majority with the ranking heads holding an
-      override.
+      meets the <RouterLink to="/wiki/ranking-criteria">ranking criteria</RouterLink>, decided
+      by simple majority with the ranking heads holding an override.
     </p>
     <p>
       Qualification is automatic the moment both bars clear, and it works in reverse too: if
