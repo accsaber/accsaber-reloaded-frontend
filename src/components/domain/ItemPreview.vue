@@ -256,25 +256,29 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       <line x1="2" y1="22" x2="22" y2="22" />
     </svg>
 
-    <ThumbnailSceneRenderer
-      v-else-if="thumbScene"
-      class="item-preview__thumb-scene"
-      :scene="thumbScene"
-    />
+    <span v-else-if="typeKey === 'profile_thumbnail_background'" class="item-preview__thumb">
+      <ThumbnailSceneRenderer
+        v-if="thumbScene"
+        class="item-preview__thumb-layer"
+        :scene="thumbScene"
+      />
+      <img
+        v-else-if="backgroundUrl"
+        class="item-preview__thumb-layer item-preview__thumb-img"
+        :src="backgroundUrl"
+        :alt="item.name"
+        loading="lazy"
+        decoding="async"
+      />
+    </span>
 
     <img
-      v-else-if="(typeKey === 'profile_background' || typeKey === 'profile_thumbnail_background') && backgroundUrl"
+      v-else-if="typeKey === 'profile_background' && backgroundUrl"
       class="item-preview__img item-preview__img--cover"
       :src="backgroundUrl"
       :alt="item.name"
       loading="lazy"
       decoding="async"
-    />
-
-    <span
-      v-else-if="typeKey === 'profile_thumbnail_background'"
-      class="item-preview__thumb-none"
-      aria-hidden="true"
     />
 
     <svg
@@ -377,18 +381,28 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   object-fit: cover;
 }
 
-.item-preview__thumb-scene {
-  position: absolute;
-  inset: 0;
-}
-
-.item-preview__thumb-none {
+.item-preview__thumb {
+  position: relative;
   display: block;
   width: 78%;
   height: 62%;
   border-radius: var(--radius-card);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
+  overflow: hidden;
+}
+
+.item-preview__thumb-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.item-preview__thumb-layer.item-preview__thumb-img {
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
 }
 
 .item-preview__initial {
