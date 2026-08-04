@@ -3,6 +3,7 @@ import type { MissionResponse } from '@/types/api/missions'
 import type { ScoreResponse } from '@/types/api/users'
 import {
   accuracyForNormalized,
+  ANCHOR_FRACTION,
   bandFromRoll,
   bandFromWeightedRatio,
   bandLiftedFloorAp,
@@ -28,6 +29,7 @@ import {
   PB_ABOVE_PERCENTILE,
   PB_ABOVE_SHIFT,
   realisticCeilingFraction,
+  skillAnchor,
   SKILL_FLOOR_FRACTION,
   SNIPE_BAND_FRACTION,
   SNIPE_FLOOR_FRACTION,
@@ -37,6 +39,7 @@ import {
   streakTargetFor,
   targetAccuracy,
   TEMPLATES,
+  topApCeiling,
   TOP_AP_CAP_FACTOR,
   weightedPick,
   type CategorySkill,
@@ -66,7 +69,7 @@ export type ForgeStageData =
   | { kind: 'template'; templates: (MissionTemplate & { chosen: boolean })[]; total: number; chosenOdds: number; pool: 'daily' | 'weekly' }
   | { kind: 'category'; options: { code: string; name: string; plays: number; chosen: boolean }[] }
   | { kind: 'band'; band: MissionBand; forced: string | null; weights: typeof BAND_WEIGHTS; roll: number }
-  | { kind: 'anchor'; base: number; lifted: number; fromCategory: string | null; skillGap: number; fraction: number; multiplier: number; anchored: number }
+  | { kind: 'anchor'; base: number; lifted: number; fromCategory: string | null; skillGap: number; fraction: number; ceiling: number | null; anchored: number }
   | { kind: 'window'; min: number; max: number; target: number; empty: boolean; poolMin: number; poolMax: number; qualified: number; total: number }
   | { kind: 'pool'; total: number; sample: PublicMapDifficultyResponse[]; picked: PublicMapDifficultyResponse | null; complexity: number; wr: number; rejected: number }
   | { kind: 'existing'; score: ScoreResponse | null; assigned: MissionBand; derived: MissionBand | null; blended: MissionBand; caption: string }
@@ -233,16 +236,25 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
   function anchorStage(
     skill: CategorySkill,
     lift: ReturnType<typeof liftedThreshold>,
-    multiplier: number,
+    band: MissionBand,
+    anchored: number,
+    snipe: boolean,
   ): ForgeStage {
-    const anchored = lift.threshold * multiplier
+    const ceiling = topApCeiling(band, skill.topAp, skill.skillLevel)
+    const opening = `Everything starts from the AP you would need to raise your total AP in this category by one, which for ${skill.categoryName} is ${fmtAp(skill.rawApForOneGain)}.`
+    const liftNote = lift.lifted
+      ? ` You are noticeably stronger in ${lift.fromCategory}, so that number gets pulled up to ${fmtAp(lift.threshold)} to stop an under-played category from handing you free missions.`
+      : ''
+    const shape = snipe
+      ? ` Snipes settle a little under it rather than over, ${Math.round(SNIPE_BAND_FRACTION[band] * 100)}% of it on ${band}, because the mission ends up pointing you at a real score somebody actually set instead of a number chosen in the abstract.`
+      : ceiling === null
+        ? ` You have no ranked play on record here yet, so it stands as the starting point on its own.`
+        : ` A ${band} mission is never allowed to ask for more than ${fmtAp(ceiling)}, which is measured off your ${fmtAp(skill.topAp)} best play, so the starting point steps ${Math.round(ANCHOR_FRACTION[band] * 100)}% of the way into the room between the two. It can never open above where the mission is allowed to end.`
     return {
       key: 'anchor',
       title: 'Find your starting point',
       receipt: fmtAp(anchored),
-      note: lift.lifted
-        ? `Everything starts from the AP you would need for one point of total AP in this category, which is ${fmtAp(skill.rawApForOneGain)}. You are noticeably stronger in ${lift.fromCategory}, so that number gets pulled up to ${fmtAp(lift.threshold)} to stop an under-played category from handing you free missions. The band multiplier of ${multiplier.toFixed(2)}x then sets the starting point at ${fmtAp(anchored)}.`
-        : `Everything starts from the AP you would need to raise your total AP in this category by one, which for ${skill.categoryName} is ${fmtAp(skill.rawApForOneGain)}. The band multiplier of ${multiplier.toFixed(2)}x turns that into a starting point of ${fmtAp(anchored)}. This is what the system wants from you before it has looked at any map.`,
+      note: `${opening}${liftNote}${shape}`,
       data: {
         kind: 'anchor',
         base: skill.rawApForOneGain,
@@ -250,7 +262,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         fromCategory: lift.fromCategory,
         skillGap: lift.skillGap,
         fraction: lift.fraction,
-        multiplier,
+        ceiling,
         anchored,
       },
     }
@@ -399,7 +411,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
 
   async function buildMapTarget(
     profile: ForgeProfile,
-    template: MissionTemplate,
+    type: ForgeMissionType,
     skill: CategorySkill & { categoryId: string },
     band: MissionBand,
     rng: () => number,
@@ -407,11 +419,15 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
   ) {
     const others = profile.categories.filter((c) => c.categoryCode !== skill.categoryCode)
     const lift = liftedThreshold(skill, others)
-    const multiplier = bandMultiplier(template, band)
-    out.push(anchorStage(skill, lift, multiplier))
+    const snipe = type === 'SNIPE_PLAYER_ON_MAP'
+    const anchored = snipe
+      ? lift.threshold * SNIPE_BAND_FRACTION[band]
+      : skillAnchor(lift.threshold, band, skill.topAp, skill.skillLevel)
+    if (type !== 'STREAK_ON_MAP') {
+      out.push(anchorStage(skill, lift, band, anchored, snipe))
+    }
 
-    const anchored = lift.threshold * multiplier
-    const range = complexityRange(lift.threshold, multiplier) ?? { min: 0, max: 0 }
+    const range = complexityRange(anchored) ?? { min: 0, max: 0 }
     const pool = await fetchPool(skill.categoryId)
     const spread = complexitySpread(pool)
     const inRange = pool.filter((d) => {
@@ -479,7 +495,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       : null
     const existingAp = mine?.ap ?? null
 
-    return { lift, multiplier, anchored, complexity, wr, picked, leaderboard, existingAp, mine }
+    return { lift, anchored, complexity, wr, picked, leaderboard, existingAp, mine }
   }
 
   function targetChain(
@@ -842,7 +858,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       return out
     }
 
-    const built = await buildMapTarget(profile, template, chosenCategory, band, rng, out)
+    const built = await buildMapTarget(profile, type, chosenCategory, band, rng, out)
     if (!built) return out
     const { anchored, complexity, wr, picked, leaderboard, existingAp } = built
 
@@ -884,7 +900,9 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       })
     }
 
-    const effectiveAnchor = effectiveBand === band ? anchored : built.lift.threshold * bandMultiplier(template, effectiveBand)
+    const effectiveAnchor = effectiveBand === band
+      ? anchored
+      : skillAnchor(built.lift.threshold, effectiveBand, chosenCategory.topAp, chosenCategory.skillLevel)
     const { steps, final } = targetChain(
       effectiveAnchor,
       effectiveBand,
@@ -896,7 +914,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     )
 
     if (type === 'SNIPE_PLAYER_ON_MAP') {
-      const skillAnchored = built.lift.threshold * SNIPE_BAND_FRACTION[band]
+      const skillAnchored = anchored
       const skillFloor = skillAnchored * SKILL_FLOOR_FRACTION[band]
       let target: number
       if (existingAp && existingAp > 0) {

@@ -403,9 +403,9 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
                 <span class="figures__label">Lifted from {{ stage.data.fromCategory }}</span>
                 <span class="figures__value">{{ Math.round(stage.data.lifted).toLocaleString() }}</span>
               </span>
-              <span class="figures__item">
-                <span class="figures__label">Band multiplier</span>
-                <span class="figures__value">{{ stage.data.multiplier.toFixed(2) }}x</span>
+              <span v-if="stage.data.ceiling !== null" class="figures__item">
+                <span class="figures__label">Ceiling for this band</span>
+                <span class="figures__value">{{ Math.round(stage.data.ceiling).toLocaleString() }}</span>
               </span>
               <span class="figures__item figures__item--strong">
                 <span class="figures__label">Starting point</span>

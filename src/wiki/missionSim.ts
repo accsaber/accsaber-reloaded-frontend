@@ -116,8 +116,7 @@ export interface ComplexityRange {
   max: number
 }
 
-export function complexityRange(threshold: number, multiplier: number): ComplexityRange | null {
-  const target = threshold * multiplier
+export function complexityRange(target: number): ComplexityRange | null {
   if (target <= 0) return null
   return {
     min: target / (NORM_AP_MAX * CURVE_SCALE) + CURVE_SHIFT,
@@ -172,11 +171,30 @@ export function applySkillAwareTopApNerf(baseCap: number, skillLevel: number): n
   return baseCap * (1 - smoothstep * 0.07)
 }
 
-export function capAtTopAp(target: number, band: MissionBand, topAp: number, skillLevel: number): number {
-  if (topAp <= 0) return target
+export function topApCeiling(band: MissionBand, topAp: number, skillLevel: number): number | null {
+  if (topAp <= 0) return null
   const baseCap = topAp * TOP_AP_CAP_FACTOR[band]
-  const cap = band === 'extreme' ? baseCap : applySkillAwareTopApNerf(baseCap, skillLevel)
-  return Math.min(target, cap)
+  return band === 'extreme' ? baseCap : applySkillAwareTopApNerf(baseCap, skillLevel)
+}
+
+export function capAtTopAp(target: number, band: MissionBand, topAp: number, skillLevel: number): number {
+  const ceiling = topApCeiling(band, topAp, skillLevel)
+  return ceiling === null ? target : Math.min(target, ceiling)
+}
+
+export const ANCHOR_FRACTION: Record<MissionBand, number> = {
+  easy: 0.10, medium: 0.30, hard: 0.55, extreme: 0.85,
+}
+
+export function skillAnchor(
+  threshold: number,
+  band: MissionBand,
+  topAp: number,
+  skillLevel: number,
+): number {
+  const ceiling = topApCeiling(band, topAp, skillLevel)
+  if (ceiling === null) return threshold
+  return Math.min(ceiling, threshold + Math.max(0, ceiling - threshold) * ANCHOR_FRACTION[band])
 }
 
 export function realisticCeilingFraction(band: MissionBand, skillLevel: number): number {
