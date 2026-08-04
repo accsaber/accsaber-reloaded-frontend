@@ -108,11 +108,12 @@ function nodeAccentFor(id: string): string {
 
 const backgroundFill = computed(() => props.backgroundColor?.trim() || 'var(--accent-overall)')
 
+const backgroundIsPinned = computed(() => !!props.backgroundUrl && !!props.backgroundPlacement)
+const showAmbience = computed(() => props.showStarfield || backgroundIsPinned.value)
+
 const themeBackdropActive = computed(() => readBackdropConfig(themeStore.activeTokens) !== null)
-const showOwnStarfield = computed(() => props.showStarfield && !themeBackdropActive.value)
-const transparentToThemeBackdrop = computed(
-  () => props.showStarfield && themeBackdropActive.value && !props.backgroundUrl,
-)
+const showOwnStarfield = computed(() => showAmbience.value && !themeBackdropActive.value)
+const transparentToThemeBackdrop = computed(() => showAmbience.value && themeBackdropActive.value)
 
 const emit = defineEmits<{
   select: [id: string]
@@ -1601,6 +1602,17 @@ const arrowDecorations = computed(() =>
     @pointercancel="onPointerUp"
     @pointerleave="onPointerLeave"
   >
+    <template v-if="showOwnStarfield">
+      <div
+        class="campaign-roadmap__glow"
+        :style="{ '--starfield-accent': backgroundFill }"
+        aria-hidden="true"
+      />
+      <ParticleCanvas
+        class="campaign-roadmap__particles"
+        :dark-mode="themeStore.resolvedBase === 'dark'"
+      />
+    </template>
     <template v-if="backgroundUrl">
       <div
         v-if="pinnedBackgroundStyle"
@@ -1625,17 +1637,6 @@ const arrowDecorations = computed(() =>
         class="campaign-roadmap__bg"
         :style="backgroundPlacementStyle(backgroundUrl, null)"
         aria-hidden="true"
-      />
-    </template>
-    <template v-else-if="showOwnStarfield">
-      <div
-        class="campaign-roadmap__glow"
-        :style="{ '--starfield-accent': backgroundFill }"
-        aria-hidden="true"
-      />
-      <ParticleCanvas
-        class="campaign-roadmap__particles"
-        :dark-mode="themeStore.resolvedBase === 'dark'"
       />
     </template>
     <svg class="campaign-roadmap__svg" :width="stageWidth" :height="stageHeight">
