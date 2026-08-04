@@ -15,7 +15,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore()
 const route = useRoute()
-const { goToOwnProfile } = useOwnProfileLink()
+const { goToOwnProfile, openOwnProfileInNewTab, ownProfileHref } = useOwnProfileLink()
 
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
@@ -56,6 +56,12 @@ function goProfile() {
   open.value = false
   goToOwnProfile()
 }
+
+function onTriggerAuxClick() {
+  if (!authStore.isLoggedIn) return
+  open.value = false
+  openOwnProfileInNewTab()
+}
 </script>
 
 <template>
@@ -63,7 +69,8 @@ function goProfile() {
     <button type="button" class="navbar__icon-btn navbar-user__trigger"
       :class="{ 'navbar-user__trigger--open': open }"
       :aria-label="hasMenu ? 'Account menu' : 'Log in'" :aria-haspopup="hasMenu ? 'menu' : undefined"
-      :aria-expanded="hasMenu ? open : undefined" @click="onTriggerClick">
+      :aria-expanded="hasMenu ? open : undefined" @click="onTriggerClick"
+      @mousedown.middle.prevent @auxclick.middle="onTriggerAuxClick">
       <img v-if="authStore.isLoggedIn && authStore.userProfile?.avatarUrl && !avatarFailed"
         :src="authStore.userProfile.avatarUrl" :alt="authStore.userProfile.name"
         class="navbar-user__avatar" decoding="async" @error="onAvatarImgError" />
@@ -80,10 +87,10 @@ function goProfile() {
           {{ authStore.userProfile.name }}
         </span>
 
-        <button v-if="authStore.isLoggedIn" type="button" class="navbar-menu__item" role="menuitem"
-          @click="goProfile">
+        <a v-if="authStore.isLoggedIn && ownProfileHref" :href="ownProfileHref"
+          class="navbar-menu__item" role="menuitem" @click.exact.prevent="goProfile">
           Profile
-        </button>
+        </a>
         <router-link v-if="showTradeOffers" to="/trade-offers" class="navbar-menu__item"
           role="menuitem" @click="open = false">
           Trade Offers
