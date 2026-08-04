@@ -301,6 +301,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'comeback',
           'personal best',
           'first time on a map',
+          'starting point',
+          'anchor',
           'reroll',
           'event missions',
         ],
