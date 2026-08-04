@@ -70,6 +70,12 @@ usePageMeta({
   description: computed(
     () => activeEntry.value?.summary ?? 'Everything about AccSaber, explained like a human would.',
   ),
+  url: computed(() =>
+    activeEntry.value
+      ? `${window.location.origin}/wiki/${activeEntry.value.slug}`
+      : `${window.location.origin}/wiki`,
+  ),
+  type: computed(() => (activeEntry.value ? 'article' : 'website')),
 })
 
 provide(WIKI_NAVIGATE_KEY, () => {

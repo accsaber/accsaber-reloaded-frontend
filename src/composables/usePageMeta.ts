@@ -5,7 +5,7 @@ interface PageMeta {
   description?: Ref<string | undefined> | string
   image?: Ref<string | undefined> | string
   url?: Ref<string | undefined> | string
-  type?: string
+  type?: Ref<string | undefined> | string
 }
 
 function toRef(val: Ref<string | undefined> | string | undefined): Ref<string | undefined> {
@@ -60,11 +60,11 @@ let activeOwner: symbol | null = null
 
 export function usePageMeta(meta: PageMeta) {
   const owner = Symbol('page-meta')
-  const type = meta.type ?? 'website'
   const titleRef = toRef(meta.title)
   const descriptionRef = toRef(meta.description)
   const imageRef = toRef(meta.image)
   const urlRef = toRef(meta.url)
+  const typeRef = toRef(meta.type)
 
   function update() {
     activeOwner = owner
@@ -73,11 +73,11 @@ export function usePageMeta(meta: PageMeta) {
       description: descriptionRef.value ?? DEFAULT_DESCRIPTION,
       image: imageRef.value ?? DEFAULT_IMAGE,
       url: urlRef.value ?? window.location.href,
-      type,
+      type: typeRef.value ?? 'website',
     })
   }
 
-  const refs = [titleRef, descriptionRef, imageRef, urlRef]
+  const refs = [titleRef, descriptionRef, imageRef, urlRef, typeRef]
   watch(refs, update, { immediate: true })
 
   onUnmounted(() => {

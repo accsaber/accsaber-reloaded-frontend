@@ -85,6 +85,7 @@ export interface ScoreResponse {
   pauses: number
   streak115: number
   playCount: number
+  skillLevel?: number
   hmd: string
   timeSet: string
   reweightDerivative: boolean
