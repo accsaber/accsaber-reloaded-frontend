@@ -188,6 +188,19 @@ watch(choice, () => {
   if (props.profile && stages.value.length) void forge()
 })
 
+watch(() => props.profile?.userId, (next, prev) => {
+  if (next === prev || !stages.value.length) return
+  clearTimer()
+  playing.value = false
+  stages.value = []
+  error.value = null
+  failure.value = null
+  index.value = 0
+  furthest.value = 0
+  discarded.value = []
+  attemptCount.value = 0
+})
+
 const stage = computed(() => stages.value[index.value] ?? null)
 const atStart = computed(() => index.value === 0)
 const atEnd = computed(() => index.value >= stages.value.length - 1)

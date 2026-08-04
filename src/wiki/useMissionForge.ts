@@ -49,7 +49,6 @@ import { ref, shallowRef } from 'vue'
 
 export interface ForgeProfile {
   name: string
-  avatarUrl?: string | null
   real: boolean
   userId: string | null
   totalXp: number

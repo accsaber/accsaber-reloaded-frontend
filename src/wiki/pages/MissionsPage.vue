@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UserPicker from '@/components/domain/UserPicker.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { CategoryCode } from '@/types/display'
@@ -13,6 +14,10 @@ const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 
 const profile = ref<ForgeProfile | null>(null)
+const defaultProfile = ref<ForgeProfile | null>(null)
+const pickedUserId = ref<string | null>(null)
+const pickFailedName = ref<string | null>(null)
+let pickSeq = 0
 
 const BAND_ROWS = [
   { label: 'How often a daily slot rolls it', values: ['30%', '40%', '25%', '5%'] },
@@ -21,7 +26,7 @@ const BAND_ROWS = [
   { label: 'Streak asked for, against your usual', values: ['half', '70%', '90%', 'all of it'] },
 ]
 
-async function buildProfile(userId: string, name: string, avatarUrl: string | null, real: boolean) {
+async function buildProfile(userId: string, name: string, real: boolean) {
   const { getUserSkill, getUserAllStatistics } = await import('@/api/users')
   const [skill, stats] = await Promise.all([
     getUserSkill(userId),
@@ -46,7 +51,6 @@ async function buildProfile(userId: string, name: string, avatarUrl: string | nu
   if (!categories.length) return null
   return {
     name,
-    avatarUrl,
     real,
     userId,
     totalXp: stats.totalXp,
@@ -58,18 +62,14 @@ async function resolveProfile() {
   await categoryStore.fetchCategories()
   if (authStore.isLoggedIn && authStore.userId) {
     try {
-      const mine = await buildProfile(
-        authStore.userId,
-        authStore.userProfile?.name ?? 'you',
-        authStore.userProfile?.avatarUrl ?? null,
-        true,
-      )
+      const mine = await buildProfile(authStore.userId, authStore.userProfile?.name ?? 'you', true)
       if (mine) {
-        profile.value = mine
+        defaultProfile.value = mine
+        if (!pickedUserId.value) profile.value = mine
         return
       }
     } catch {
-      profile.value = null
+      defaultProfile.value = null
     }
   }
   try {
@@ -79,10 +79,36 @@ async function resolveProfile() {
     const page = await getLeaderboard(overallId, { page: 24, size: 1 })
     const example = page.content[0]
     if (!example) return
-    profile.value = await buildProfile(example.userId, example.userName, example.avatarUrl, false)
+    defaultProfile.value = await buildProfile(example.userId, example.userName, false)
+    if (!pickedUserId.value) profile.value = defaultProfile.value
   } catch {
-    profile.value = null
+    defaultProfile.value = null
   }
+}
+
+async function onPick(user: { userId: string; userName: string } | null) {
+  const seq = ++pickSeq
+  pickFailedName.value = null
+  if (!user) {
+    profile.value = defaultProfile.value
+    return
+  }
+  if (user.userId === profile.value?.userId) return
+  profile.value = null
+  let built: ForgeProfile | null = null
+  try {
+    built = await buildProfile(user.userId, user.userName, false)
+  } catch {
+    built = null
+  }
+  if (seq !== pickSeq) return
+  if (built) {
+    profile.value = built
+    return
+  }
+  pickFailedName.value = user.userName
+  pickedUserId.value = null
+  profile.value = defaultProfile.value
 }
 
 onMounted(resolveProfile)
@@ -124,8 +150,16 @@ onMounted(resolveProfile)
       Rather than describe the machinery, you get to run it. Hit forge and it builds a mission the
       way the game would, one stage at a time. Step through it at your own pace, jump back to any
       stage you want to reread, and pick a specific mission type if you would rather see how that
-      one works.
+      one works. It builds against your own profile by default, but you can point it at anyone
+      and see what the game would hand them instead.
     </p>
+    <div class="forge-target">
+      <UserPicker v-model="pickedUserId" placeholder="Forge for someone else..." @select="onPick" />
+      <p v-if="pickFailedName" class="forge-target__hint">
+        {{ pickFailedName }} has no ranked plays to build from, so the forge went back to the
+        default profile.
+      </p>
+    </div>
     <WikiMissionForge :profile="profile" />
 
     <WikiHeading id="bands">Bands</WikiHeading>
@@ -230,3 +264,19 @@ onMounted(resolveProfile)
     </p>
   </WikiProse>
 </template>
+
+<style scoped>
+.forge-target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-width: 340px;
+  margin-bottom: var(--space-md);
+}
+
+.forge-target__hint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+</style>
