@@ -2,6 +2,7 @@
 import type { LeaderboardEntry } from '@/wiki/missionSim'
 
 export interface ForgeBoardEntry extends LeaderboardEntry {
+  rank: number
   viable: boolean
   picked: boolean
   reason: string | null
@@ -21,7 +22,7 @@ defineProps<{
   <div class="board">
     <div class="board__legend">
       <span class="board__legend-item">
-        Window <strong>{{ Math.round(floor).toLocaleString() }}</strong> to
+        Range <strong>{{ Math.round(floor).toLocaleString() }}</strong> to
         <strong>{{ Math.round(cap).toLocaleString() }}</strong> AP
       </span>
       <span class="board__legend-item">
@@ -43,6 +44,7 @@ defineProps<{
           'board__row--picked': entry.picked,
         }"
       >
+        <span class="board__rank">#{{ entry.rank }}</span>
         <span class="board__name">{{ entry.name }}</span>
         <span class="board__ap">{{ Math.round(entry.ap).toLocaleString() }}</span>
         <span class="board__skill">
@@ -90,7 +92,7 @@ defineProps<{
 
 .board__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto minmax(0, 1.1fr);
+  grid-template-columns: 34px minmax(0, 1fr) auto auto minmax(0, 1.1fr);
   align-items: center;
   gap: var(--space-md);
   padding: 6px var(--space-md);
@@ -124,7 +126,8 @@ defineProps<{
 }
 
 .board__ap,
-.board__skill {
+.board__skill,
+.board__rank {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   white-space: nowrap;
@@ -147,7 +150,7 @@ defineProps<{
 
 @media (max-width: 640px) {
   .board__row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
     row-gap: 2px;
   }
 

@@ -67,11 +67,11 @@ export type ForgeStageData =
   | { kind: 'category'; options: { code: string; name: string; plays: number; chosen: boolean }[] }
   | { kind: 'band'; band: MissionBand; forced: string | null; weights: typeof BAND_WEIGHTS; roll: number }
   | { kind: 'anchor'; base: number; lifted: number; fromCategory: string | null; skillGap: number; fraction: number; multiplier: number; anchored: number }
-  | { kind: 'window'; min: number; max: number; target: number; empty: boolean }
+  | { kind: 'window'; min: number; max: number; target: number; empty: boolean; poolMin: number; poolMax: number; qualified: number; total: number }
   | { kind: 'pool'; total: number; sample: PublicMapDifficultyResponse[]; picked: PublicMapDifficultyResponse | null; complexity: number; wr: number; rejected: number }
-  | { kind: 'existing'; score: ScoreResponse | null; assigned: MissionBand; derived: MissionBand | null; blended: MissionBand }
+  | { kind: 'existing'; score: ScoreResponse | null; assigned: MissionBand; derived: MissionBand | null; blended: MissionBand; caption: string }
   | { kind: 'chain'; steps: ChainStep[]; final: number; accuracy: number | null }
-  | { kind: 'board'; entries: (LeaderboardEntry & { viable: boolean; picked: boolean; reason: string | null })[]; target: number; floor: number; cap: number; maxSkillDistance: number; userSkill: number }
+  | { kind: 'board'; entries: (LeaderboardEntry & { rank: number; viable: boolean; picked: boolean; reason: string | null })[]; target: number; floor: number; cap: number; maxSkillDistance: number; userSkill: number }
   | { kind: 'streak'; sample: number[]; reference: number; ability: number; target: number; fromBand: boolean; complexityBand: [number, number] | null; pickIndex: number }
   | { kind: 'percentile'; scores: number[]; index: number; anchor: number; shift: number; threshold: number; qualifying: number }
   | { kind: 'count'; min: number; max: number; center: number; jitter: number; count: number }
@@ -95,14 +95,8 @@ const MAP_TYPES: ForgeMissionType[] = [
   'STREAK_ON_MAP',
 ]
 
-const POOL_SAMPLE_SIZE = 60
+const POOL_FETCH_SIZE = 200
 const LEADERBOARD_SIZE = 100
-const COMPLEXITY_SCALE_MAX = 14
-
-function round(value: number, places = 0): number {
-  const factor = 10 ** places
-  return Math.round(value * factor) / factor
-}
 
 function fmtAp(value: number): string {
   return `${Math.round(value).toLocaleString()} AP`
@@ -118,26 +112,28 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
   const error = ref<string | null>(null)
   const failure = ref<string | null>(null)
 
-  const poolCache = new Map<string, { total: number; sample: PublicMapDifficultyResponse[] }>()
+  const poolCache = new Map<string, PublicMapDifficultyResponse[]>()
   const scoreCache = new Map<string, ScoreResponse[]>()
   const leaderboardCache = new Map<string, LeaderboardEntry[]>()
 
-  async function fetchPool(categoryId: string, min: number, max: number) {
-    const key = `${categoryId}:${round(min, 1)}:${round(max, 1)}`
-    const cached = poolCache.get(key)
+  async function fetchPool(categoryId: string): Promise<PublicMapDifficultyResponse[]> {
+    const cached = poolCache.get(categoryId)
     if (cached) return cached
     const { getDifficulties } = await import('@/api/maps')
     const page = await getDifficulties({
       categoryId,
       status: 'RANKED',
-      complexityMin: Math.max(0, min),
-      complexityMax: max,
       page: 0,
-      size: POOL_SAMPLE_SIZE,
+      size: POOL_FETCH_SIZE,
     })
-    const result = { total: page.totalElements, sample: page.content }
-    poolCache.set(key, result)
-    return result
+    poolCache.set(categoryId, page.content)
+    return page.content
+  }
+
+  function complexitySpread(pool: PublicMapDifficultyResponse[]): { min: number; max: number } {
+    const values = pool.map((d) => d.complexity ?? 0).filter((c) => c > 0)
+    if (!values.length) return { min: 0, max: 0 }
+    return { min: Math.min(...values), max: Math.max(...values) }
   }
 
   async function fetchLeaderboard(difficultyId: string): Promise<LeaderboardEntry[]> {
@@ -242,11 +238,11 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     const anchored = lift.threshold * multiplier
     return {
       key: 'anchor',
-      title: 'Find your anchor',
+      title: 'Find your starting point',
       receipt: fmtAp(anchored),
       note: lift.lifted
-        ? `Everything starts from the AP you would need for one point of total AP in this category, which is ${fmtAp(skill.rawApForOneGain)}. You are noticeably stronger in ${lift.fromCategory}, so that number gets pulled up to ${fmtAp(lift.threshold)} to stop an under-played category from handing you free missions. The band multiplier of ${multiplier.toFixed(2)}x then sets the anchor at ${fmtAp(anchored)}.`
-        : `Everything starts from the AP you would need to raise your total AP in this category by one, which for ${skill.categoryName} is ${fmtAp(skill.rawApForOneGain)}. The band multiplier of ${multiplier.toFixed(2)}x turns that into an anchor of ${fmtAp(anchored)}. This is what the system wants from you before it has looked at any map.`,
+        ? `Everything starts from the AP you would need for one point of total AP in this category, which is ${fmtAp(skill.rawApForOneGain)}. You are noticeably stronger in ${lift.fromCategory}, so that number gets pulled up to ${fmtAp(lift.threshold)} to stop an under-played category from handing you free missions. The band multiplier of ${multiplier.toFixed(2)}x then sets the starting point at ${fmtAp(anchored)}.`
+        : `Everything starts from the AP you would need to raise your total AP in this category by one, which for ${skill.categoryName} is ${fmtAp(skill.rawApForOneGain)}. The band multiplier of ${multiplier.toFixed(2)}x turns that into a starting point of ${fmtAp(anchored)}. This is what the system wants from you before it has looked at any map.`,
       data: {
         kind: 'anchor',
         base: skill.rawApForOneGain,
@@ -260,44 +256,63 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     }
   }
 
-  function windowStage(range: { min: number; max: number }, target: number, empty: boolean): ForgeStage {
-    const coversAll = !empty && range.min <= 0 && range.max >= COMPLEXITY_SCALE_MAX
+  function windowStage(input: {
+    range: { min: number; max: number }
+    target: number
+    categoryName: string
+    spread: { min: number; max: number }
+    qualified: number
+    total: number
+  }): ForgeStage {
+    const { range, target, categoryName, spread, qualified, total } = input
     const accLo = `${(accuracyForNormalized(NORM_AP_MIN) * 100).toFixed(1)}%`
     const accHi = `${(accuracyForNormalized(NORM_AP_MAX) * 100).toFixed(1)}%`
+    const empty = qualified === 0
+    const priced = `A map only qualifies if hitting the starting point on it would cost between roughly ${accLo} and ${accHi} accuracy, anywhere from a proper run up to the edge of what is humanly possible.`
     return {
       key: 'window',
-      title: 'Open a complexity window',
-      receipt: empty
-        ? 'No maps qualify'
-        : coversAll
-          ? 'Every map qualifies'
-          : `${fmtComplexity(Math.max(0, range.min))} to ${fmtComplexity(Math.min(range.max, COMPLEXITY_SCALE_MAX))}`,
+      title: 'Mark the complexity range',
+      receipt: empty ? 'No maps qualify' : `${qualified} of ${total} maps`,
       note: empty
-        ? `A map only qualifies if hitting the anchor on it would cost between roughly ${accLo} and ${accHi} accuracy, anywhere from a proper run up to the edge of what is humanly possible. Your anchor of ${fmtAp(target)} is small enough that every ranked map in the game would pay it below ${accLo}, which the system treats as free, so no map qualifies and this mission cannot be built. This is the single most common reason a newer player sees fewer missions than expected.`
-        : coversAll
-          ? `A map only qualifies if hitting the anchor on it would cost between roughly ${accLo} and ${accHi} accuracy, anywhere from a proper run up to the edge of what is humanly possible. At an anchor of ${fmtAp(target)}, every ranked map prices it inside that range, so this filter removes nothing for you. It exists for the other end of the ladder: on a young account the anchor can come free on every map in the game, and this stage is where those days die.`
-          : `A map only qualifies if hitting the anchor on it would cost between roughly ${accLo} and ${accHi} accuracy. Below complexity ${fmtComplexity(Math.max(0, range.min))} the anchor would demand more than ${accHi}, out of reach; above ${fmtComplexity(Math.min(range.max, COMPLEXITY_SCALE_MAX))} it would come cheaper than ${accLo}, free. That is the window.`,
-      data: { kind: 'window', min: range.min, max: range.max, target, empty },
+        ? range.max < spread.min
+          ? `${priced} Every ranked map in ${categoryName} would hand you your starting point of ${fmtAp(target)} below ${accLo}, which counts as free, so nothing qualifies and this mission cannot be built. On a young account that is the usual reason a map mission quietly sits the day out, and it opens up on its own as you set scores.`
+          : `${priced} Your starting point of ${fmtAp(target)} would need more than ${accHi} on every ranked map in ${categoryName}, which is past what anyone holds, so nothing qualifies and this mission cannot be built.`
+        : `${priced} ${qualified} of the ${total} ranked maps in ${categoryName} price ${fmtAp(target)} inside that window, running from complexity ${fmtComplexity(Math.max(spread.min, range.min))} to ${fmtComplexity(Math.min(spread.max, range.max))}. On the rest it would either be out of reach or come close to free.`,
+      data: {
+        kind: 'window',
+        min: range.min,
+        max: range.max,
+        target,
+        empty,
+        poolMin: spread.min,
+        poolMax: spread.max,
+        qualified,
+        total,
+      },
     }
   }
 
   function poolStage(
-    total: number,
+    qualified: number,
+    coversAll: boolean,
     sample: PublicMapDifficultyResponse[],
     picked: PublicMapDifficultyResponse | null,
     wr: number,
     rejected: number,
   ): ForgeStage {
+    const opening = coversAll
+      ? `Every one of the ${qualified} ranked maps in this category prices your starting point sensibly, so all of them are in play.`
+      : `These are the ${qualified} ranked maps sitting inside that range.`
     return {
       key: 'pool',
       title: 'Sample a map',
       receipt: picked ? `${picked.songName} (${picked.difficulty})` : 'No map found',
       note: picked
-        ? `These are the real ranked maps sitting inside that window right now, pulled live. ${total} of them qualify. One gets picked at random, and any map whose world record sits too far below your own best play gets thrown back, because a map nobody has scored well on cannot produce a meaningful target.${rejected > 0 ? ` ${rejected} were rejected that way before this one stuck.` : ''}`
-        : 'Nothing in the ranked pool fits this window, so the slot moves on and tries a different template.',
+        ? `${opening} They are pulled live. One gets picked at random, and any map whose world record sits too far below your own best play gets thrown back, because a map nobody has scored well on cannot produce a meaningful target.${rejected > 0 ? ` ${rejected} were rejected that way before this one stuck.` : ''}`
+        : 'Nothing in the ranked pool fits this range, so the slot moves on and tries a different template.',
       data: {
         kind: 'pool',
-        total,
+        total: qualified,
         sample,
         picked,
         complexity: picked?.complexity ?? 0,
@@ -396,25 +411,45 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     out.push(anchorStage(skill, lift, multiplier))
 
     const anchored = lift.threshold * multiplier
-    const range = complexityRange(lift.threshold, multiplier)
-    if (!range || range.max <= 0) {
-      out.push(windowStage(range ?? { min: 0, max: 0 }, anchored, true))
+    const range = complexityRange(lift.threshold, multiplier) ?? { min: 0, max: 0 }
+    const pool = await fetchPool(skill.categoryId)
+    const spread = complexitySpread(pool)
+    const inRange = pool.filter((d) => {
+      const complexity = d.complexity ?? 0
+      return complexity >= range.min && complexity <= range.max
+    })
+    if (!inRange.length) {
+      out.push(
+        windowStage({
+          range,
+          target: anchored,
+          categoryName: skill.categoryName,
+          spread,
+          qualified: 0,
+          total: pool.length,
+        }),
+      )
       fail('no-eligible-map')
       return null
     }
-    out.push(windowStage(range, anchored, false))
-
-    const { total, sample } = await fetchPool(skill.categoryId, range.min, range.max)
-    if (!sample.length) {
-      out.push(poolStage(total, [], null, 0, 0))
-      fail('no-eligible-map')
-      return null
+    const coversAll = inRange.length === pool.length
+    if (!coversAll) {
+      out.push(
+        windowStage({
+          range,
+          target: anchored,
+          categoryName: skill.categoryName,
+          spread,
+          qualified: inRange.length,
+          total: pool.length,
+        }),
+      )
     }
 
     const wrFloor = skill.topAp * MAP_WR_FLOOR[band]
     let picked: PublicMapDifficultyResponse | null = null
     let rejected = 0
-    const shuffled = [...sample]
+    const shuffled = [...inRange]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
@@ -429,14 +464,14 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       break
     }
     if (!picked) {
-      out.push(poolStage(total, sample, null, 0, rejected))
+      out.push(poolStage(inRange.length, coversAll, inRange, null, 0, rejected))
       fail('map-wr-below-user-tier')
       return null
     }
 
     const complexity = picked.complexity ?? 0
     const wr = picked.statistics?.maxAp ?? 0
-    out.push(poolStage(total, sample, picked, wr, rejected))
+    out.push(poolStage(inRange.length, coversAll, inRange, picked, wr, rejected))
 
     const leaderboard = await fetchLeaderboard(picked.id)
     const mine = profile.userId
@@ -458,14 +493,14 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
   ): { steps: ChainStep[]; final: number } {
     const steps: ChainStep[] = []
     let value = anchored
-    steps.push({ label: 'Skill anchor', detail: 'what the band wants before the map exists', value, changed: false })
+    steps.push({ label: 'Starting point', detail: 'what the band wants before the map exists', value, changed: false })
 
     const map = mapAwareTarget(leaderboard, skill.skillLevel, existingAp, band)
     if (map) {
       const blended = blendSkillAndMap(anchored, map.target)
       steps.push({
         label: 'Blend with the map',
-        detail: `the leaderboard says players at your level sit around rank ${map.naturalIdx + 1}; this band aims at rank ${map.targetIdx + 1} (${fmtAp(map.target)}), weighted 70% map to 30% anchor`,
+        detail: `the leaderboard says players at your level sit around rank ${map.naturalIdx + 1}; this band aims at rank ${map.targetIdx + 1} (${fmtAp(map.target)}), weighted 70% map to 30% starting point`,
         value: blended,
         changed: Math.abs(blended - value) > 0.5,
       })
@@ -474,7 +509,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
 
     const floor = anchored * SKILL_FLOOR_FRACTION[band]
     if (floor > value) {
-      steps.push({ label: 'Anchor floor', detail: `never drop below ${(SKILL_FLOOR_FRACTION[band] * 100).toFixed(1)}% of the anchor`, value: floor, changed: true })
+      steps.push({ label: 'Floor', detail: `never drop below ${(SKILL_FLOOR_FRACTION[band] * 100).toFixed(1)}% of the starting point`, value: floor, changed: true })
       value = floor
     }
 
@@ -737,28 +772,51 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       const chosen = old[Math.floor(rng() * old.length)]
       const maxWeighted = Math.max(...scores.map((s) => s.weightedAp ?? 0))
       const derived = bandFromWeightedRatio(chosen.weightedAp ?? 0, maxWeighted)
-      const multiplier = bandMultiplier(template, derived)
       const complexity = chosen.complexity ?? 0
-      let value = Math.max(chosen.ap * multiplier, chosen.ap + 1)
+      const wr = (await fetchLeaderboard(chosen.mapDifficultyId))[0]?.ap ?? 0
+      let value = bandLiftedFloorAp(chosen.ap, complexity, derived)
       const steps: ChainStep[] = [
         { label: 'Your old play', detail: `set ${new Date(chosen.timeSet).toLocaleDateString()} on ${chosen.songName}`, value: chosen.ap, changed: false },
-        { label: `Lift it by ${multiplier.toFixed(2)}x`, detail: `the band comes from how much this play still carries your total, not from a dice roll`, value, changed: true },
+        { label: 'Ask for a step up', detail: 'the step is measured on the accuracy curve, so it shrinks as the old play gets closer to perfect', value, changed: true },
       ]
       const topCapped = capAtTopAp(value, derived, chosenCategory.topAp, chosenCategory.skillLevel)
       if (topCapped < value) {
         steps.push({ label: 'Cap against your best', detail: `held under ${(TOP_AP_CAP_FACTOR[derived] * 100).toFixed(1)}% of your ${fmtAp(chosenCategory.topAp)} top play`, value: topCapped, changed: true })
         value = topCapped
       }
-      const mapCapped = capAtMapCeiling(value, complexity, derived, chosenCategory.skillLevel, 0)
+      const mapCapped = capAtMapCeiling(value, complexity, derived, chosenCategory.skillLevel, wr)
       if (mapCapped < value) {
-        steps.push({ label: 'Cap against the map', detail: 'kept inside what the map realistically allows', value: mapCapped, changed: true })
+        steps.push({
+          label: 'Cap against the map',
+          detail: wr > 0
+            ? `held under ${Math.round(realisticCeilingFraction(derived, chosenCategory.skillLevel) * 100)}% of the ${fmtAp(wr)} world record`
+            : 'kept inside what the map realistically allows',
+          value: mapCapped,
+          changed: true,
+        })
         value = mapCapped
+      }
+      const dampened = densityDampener(value, derived, wr, chosen.ap)
+      if (dampened < value) {
+        steps.push({ label: 'Ease off a crowded top', detail: 'the top of this leaderboard is tight, so the ask backs off a little', value: dampened, changed: true })
+        value = dampened
+      }
+      if (value <= chosen.ap) {
+        out.push({
+          key: 'chain',
+          title: 'Dust off an old score',
+          receipt: 'Target lands below your old play',
+          note: `The ceilings brought the ask under the very play it is supposed to beat, which happens when that old score already sits near the top of what the map gives. Showing you a number you passed years ago would be worse than showing nothing, so this old score gets dropped and another one gets tried.`,
+          data: { kind: 'chain', steps, final: value, accuracy: null },
+        })
+        fail('target-below-existing-after-caps')
+        return out
       }
       out.push({
         key: 'chain',
         title: 'Dust off an old score',
         receipt: fmtAp(value),
-        note: `Comeback missions skip the map pool entirely. One of your scores older than a year gets picked, and the band is derived from how much that play still contributes to your total rather than rolled, so a comeback on a play that barely matters anymore never gets classified as extreme.`,
+        note: `Comeback missions skip the map pool entirely. One of your scores older than a year gets picked, and the band comes from how much that play still carries your total rather than from a dice roll, so a comeback on a play that barely matters anymore never gets classified as extreme. The step it asks for is measured on the accuracy curve, which is why an old 99.5% play is asked for far less than an old 96% one. The number is what the card displays, though the mission itself completes the moment you beat that old play at all.`,
         data: { kind: 'chain', steps, final: value, accuracy: null },
       })
       const base = computeXpReward(template, chosenCategory.skillLevel, derived, null) / (template.xpMultiplier * bandMultiplier(template, derived))
@@ -797,7 +855,32 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         title: 'Check your own score',
         receipt: effectiveBand === band ? `still ${band}` : `${band} to ${effectiveBand}`,
         note: `You already have ${fmtAp(existingAp)} on this map, and the mission has to beat it. That earns the band a second opinion: the rolled band and the one your existing score implies get blended 60 / 40. Topping one of your best plays is never easy work no matter what was rolled, and a modest step up never deserves the extreme tag.`,
-        data: { kind: 'existing', score: null, assigned: band, derived, blended: effectiveBand },
+        data: {
+          kind: 'existing',
+          score: null,
+          assigned: band,
+          derived,
+          blended: effectiveBand,
+          caption: `assigned ${band}, your play implies ${derived}`,
+        },
+      })
+    }
+
+    if (type === 'PB_SPECIFIC_MAP' && !existingAp && band !== 'easy') {
+      effectiveBand = 'easy'
+      out.push({
+        key: 'existing',
+        title: 'First time on this map',
+        receipt: `${band} to easy`,
+        note: `Personal best missions on a map you have never played only ever ask you to put a score on the board, because there is nothing of yours to beat yet. Leaving the ${band} tag on that would pay ${band} XP for a first attempt, so the band drops to easy and the target, the ceilings and the reward all get rebuilt from there.`,
+        data: {
+          kind: 'existing',
+          score: null,
+          assigned: band,
+          derived: null,
+          blended: 'easy',
+          caption: `rolled ${band}, no score of yours on this map`,
+        },
       })
     }
 
@@ -833,26 +916,36 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       const floor = existingAp && existingAp > 0 ? existingAp : target * SNIPE_FLOOR_FRACTION[band]
       const maxDistance = SNIPE_MAX_SKILL_DISTANCE[band]
       const annotated = leaderboard
-        .filter((e) => e.userId !== profile.userId)
-        .map((entry) => {
+        .map((entry, i) => ({ entry, rank: i + 1 }))
+        .filter(({ entry }) => entry.userId !== profile.userId)
+        .map(({ entry, rank }) => {
           let reason: string | null = null
           if (entry.ap > cap) reason = 'too far above the target'
           else if (entry.ap < floor) reason = 'not enough of a climb'
           else if (entry.skillLevel !== null && Math.abs(entry.skillLevel - chosenCategory.skillLevel) > maxDistance) {
             reason = 'too far outside your tier'
           }
-          return { ...entry, viable: reason === null, picked: false, reason }
+          return { ...entry, rank, viable: reason === null, picked: false, reason }
         })
       const viable = annotated
         .filter((e) => e.viable)
         .sort((a, b) => Math.abs(a.ap - target) - Math.abs(b.ap - target))
+      const boardSlice = <T extends { ap: number }>(entries: T[], centerIndex: number): T[] => {
+        const size = 14
+        const start = Math.max(0, Math.min(centerIndex - Math.floor(size / 2), entries.length - size))
+        return entries.slice(start, start + size)
+      }
       if (!viable.length) {
+        const nearestIdx = annotated.reduce(
+          (best, e, i) => (Math.abs(e.ap - target) < Math.abs(annotated[best].ap - target) ? i : best),
+          0,
+        )
         out.push({
           key: 'board',
           title: 'Find someone to beat',
           receipt: 'No candidate fits',
-          note: `The window on this map is empty. Every score is either too far above the target, not enough of a climb to be worth setting, or held by someone too far outside your tier. The slot gives up on this map and tries another one.`,
-          data: { kind: 'board', entries: annotated.slice(0, 14), target, floor, cap, maxSkillDistance: maxDistance, userSkill: chosenCategory.skillLevel },
+          note: `The range on this map is empty. Every score is either too far above the target, not enough of a climb to be worth setting, or held by someone too far outside your tier. The slot gives up on this map and tries another one.`,
+          data: { kind: 'board', entries: boardSlice(annotated, nearestIdx), target, floor, cap, maxSkillDistance: maxDistance, userSkill: chosenCategory.skillLevel },
         })
         fail('no-snipe-candidate-within-band')
         return out
@@ -864,8 +957,8 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'board',
         title: 'Find someone to beat',
         receipt: `${chosen.name} at ${fmtAp(chosen.ap)}`,
-        note: `Now it needs a real person. The target AP opens a window: a floor at ${(SNIPE_FLOOR_FRACTION[band] * 100).toFixed(0)}% of it so the snipe is a genuine climb rather than two AP, and a ceiling so it stays reachable. On top of that, anyone more than ${maxDistance} skill points away from you is filtered out, which is what stops you being told to snipe someone two tiers up. Whatever survives gets ranked by closeness to the target, and one of the top three is taken.`,
-        data: { kind: 'board', entries: marked.slice(0, 14), target, floor, cap, maxSkillDistance: maxDistance, userSkill: chosenCategory.skillLevel },
+        note: `Now it needs a real person. The target AP opens a range: a floor at ${(SNIPE_FLOOR_FRACTION[band] * 100).toFixed(0)}% of it so the snipe is a genuine climb rather than two AP, and a ceiling so it stays reachable. On top of that, anyone more than ${maxDistance} skill points away from you is filtered out, which is what stops you being told to snipe someone two tiers up. Whatever survives gets ranked by closeness to the target, and one of the top three is taken.`,
+        data: { kind: 'board', entries: boardSlice(marked, marked.findIndex((e) => e.picked)), target, floor, cap, maxSkillDistance: maxDistance, userSkill: chosenCategory.skillLevel },
       })
       const snipeDistance = existingAp && existingAp > 0
         ? Math.max(0, chosen.ap - existingAp)
@@ -1003,7 +1096,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       key: 'chain',
       title: 'Settle on a number',
       receipt: accuracy !== null ? `${(accuracy * 100).toFixed(2)}%` : fmtAp(final),
-      note: 'Here is the part nobody gets to see. The anchor is only the starting point. It gets blended with what the leaderboard says players at your level actually score on this map, then pushed up by floors and pulled down by ceilings until it lands somewhere that is a real climb without being a fantasy.',
+      note: 'Here is the part nobody gets to see. The starting point is only an opening bid. It gets blended with what the leaderboard says players at your level actually score on this map, then pushed up by floors and pulled down by ceilings until it lands somewhere that is a real climb without being a fantasy.',
       data: { kind: 'chain', steps, final, accuracy },
     }
   }

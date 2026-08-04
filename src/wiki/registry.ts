@@ -299,6 +299,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'mission xp',
           'streak mission',
           'comeback',
+          'personal best',
+          'first time on a map',
           'reroll',
           'event missions',
         ],

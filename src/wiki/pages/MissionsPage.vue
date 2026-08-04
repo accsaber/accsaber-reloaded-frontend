@@ -152,8 +152,8 @@ onMounted(resolveProfile)
 
     <WikiHeading id="forge">Watch one get built</WikiHeading>
     <p>
-      Rather than describe the machinery, you get to run it. Hit forge and it builds a mission the
-      way the game would, one stage at a time. Step through it at your own pace, jump back to any
+      Hit forge and it builds a mission the way the game would, one stage at a time. 
+      Step through it at your own pace, jump back to any
       stage you want to reread, and pick a specific mission type if you would rather see how that
       one works. It builds against your own profile by default, but you can point it at anyone
       and see what the game would hand them instead.
@@ -197,6 +197,11 @@ onMounted(resolveProfile)
       toward extreme no matter what was rolled, and an extreme roll on a map you barely touched
       slides back down, because the tag should describe the climb in front of you, not the dice.
     </p>
+    <p>
+      Personal best missions get the opposite correction. If the map that comes up is one you have
+      never played, the band drops to easy whatever was rolled. A first score on a map is a first
+      score however the dice landed, and it should not be tagged or paid like an extreme.
+    </p>
 
     <WikiHeading id="snipes">Snipes</WikiHeading>
     <p>
@@ -205,7 +210,7 @@ onMounted(resolveProfile)
     </p>
     <p>
       A target AP gets worked out first, the same way it would for any other map mission. That
-      number then opens a window rather than naming a score. There is a floor, so the snipe is a
+      number then opens a range rather than naming a score. There is a floor, so the snipe is a
       real climb rather than beating someone by two AP, and a ceiling, so it stays inside what you
       could plausibly hit today. Anyone whose skill sits too far from yours is thrown out on top of
       that: five points on easy, widening to eighteen on extreme. That filter is what stops the game

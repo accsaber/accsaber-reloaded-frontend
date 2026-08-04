@@ -49,15 +49,15 @@ const TYPE_OPTIONS: TypeOption[] = [
   { type: 'XP_IN_WINDOW', pool: 'daily', label: 'Earn XP', description: 'sized off your pace', needsHistory: false },
 ]
 
-const GHOST_STATIONS = ['Template', 'Category', 'Band', 'Anchor', 'Window', 'Map', 'Target', 'Reward', 'Mission']
+const GHOST_STATIONS = ['Template', 'Category', 'Band', 'Starting point', 'Range', 'Map', 'Target', 'Reward', 'Mission']
 const GHOST_BARS = [62, 40, 78, 55, 34, 70, 48, 88, 44, 58]
 
 const STATION_LABELS: Record<string, string> = {
   template: 'Template',
   category: 'Category',
   band: 'Band',
-  anchor: 'Anchor',
-  window: 'Window',
+  anchor: 'Starting point',
+  window: 'Range',
   pool: 'Map',
   existing: 'Your play',
   chain: 'Target',
@@ -84,7 +84,7 @@ const MAX_ATTEMPTS = 6
 const NON_RETRYABLE = new Set(['needs-real-profile', 'no-category', 'unsupported-type'])
 
 const FAILURE_LABELS: Record<string, string> = {
-  'no-eligible-map': 'no map fit the complexity window',
+  'no-eligible-map': 'no map fit the complexity range',
   'map-wr-below-user-tier': 'every sampled map had a world record below your tier',
   'no-snipe-candidate-within-band': 'no snipe target survived the filters',
   'target-below-existing-after-caps': 'the target landed under a score already on the board',
@@ -408,17 +408,17 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
                 <span class="figures__value">{{ stage.data.multiplier.toFixed(2) }}x</span>
               </span>
               <span class="figures__item figures__item--strong">
-                <span class="figures__label">Anchor</span>
+                <span class="figures__label">Starting point</span>
                 <span class="figures__value">{{ Math.round(stage.data.anchored).toLocaleString() }} AP</span>
               </span>
             </div>
 
             <ForgeWindow
               v-else-if="stage.data.kind === 'window'"
-              :min="0"
-              :max="16"
-              :window-min="Math.max(0, stage.data.min)"
-              :window-max="Math.min(16, stage.data.max)"
+              :min="stage.data.poolMin - 0.5"
+              :max="stage.data.poolMax + 0.5"
+              :window-min="stage.data.min"
+              :window-max="stage.data.max"
               :empty="stage.data.empty"
               axis-label="Map complexity"
             />
@@ -433,7 +433,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
             <ForgeRoll
               v-else-if="stage.data.kind === 'existing'"
               :segments="bandSegmentsFor(stage.data.blended)"
-              :caption="`assigned ${stage.data.assigned}, your play implies ${stage.data.derived}`"
+              :caption="stage.data.caption"
             />
 
             <ForgeChain
