@@ -11,10 +11,20 @@ const props = defineProps<{
 
 const FULL_LABELS_MAX = 16
 const BAR_MAX_PCT = 78
+const BAR_MIN_PCT = 12
 
-const peak = computed(() => Math.max(1, ...props.values, props.markerValue ?? 0))
+const range = computed(() => {
+  const pool = props.markerValue ? [...props.values, props.markerValue] : props.values
+  const lo = Math.min(...pool)
+  const hi = Math.max(...pool)
+  return { lo, span: Math.max(hi - lo, 0) }
+})
 
-const heightPct = (value: number) => Math.max(5, (value / peak.value) * BAR_MAX_PCT)
+const heightPct = (value: number) => {
+  const { lo, span } = range.value
+  if (span === 0) return (BAR_MIN_PCT + BAR_MAX_PCT) / 2
+  return BAR_MIN_PCT + ((value - lo) / span) * (BAR_MAX_PCT - BAR_MIN_PCT)
+}
 
 const showLabel = (index: number) =>
   props.values.length <= FULL_LABELS_MAX ||
@@ -44,7 +54,7 @@ const showLabel = (index: number) =>
       <span
         v-if="markerValue"
         class="bars__marker"
-        :style="{ bottom: `${(markerValue / peak) * BAR_MAX_PCT}%` }"
+        :style="{ bottom: `${heightPct(markerValue)}%` }"
       >
         <span class="bars__marker-label">{{ markerLabel }}</span>
       </span>
@@ -95,11 +105,14 @@ const showLabel = (index: number) =>
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 2px;
+  padding: 0 2px;
   font-family: var(--font-mono);
   font-size: 0.625rem;
   line-height: 1;
   color: var(--text-tertiary);
   white-space: nowrap;
+  background: var(--bg-base);
+  z-index: 1;
 }
 
 .bars__value--highlight {
@@ -119,9 +132,11 @@ const showLabel = (index: number) =>
   position: absolute;
   right: var(--space-sm);
   bottom: 2px;
+  padding: 0 3px;
   font-family: var(--font-mono);
   font-size: 0.625rem;
   color: var(--text-secondary);
+  background: var(--bg-base);
 }
 
 .bars__caption {
