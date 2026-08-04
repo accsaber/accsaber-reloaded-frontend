@@ -312,6 +312,12 @@ export function minMeaningfulTarget(band: MissionBand, topAp: number, skillAncho
   return skillAnchored * 0.8
 }
 
+export function comebackBand(rawApForOneGain: number): MissionBand {
+  if (rawApForOneGain >= 950) return 'hard'
+  if (rawApForOneGain >= 600) return 'medium'
+  return 'easy'
+}
+
 export function bandFromWeightedRatio(weighted: number, maxWeighted: number): MissionBand {
   if (maxWeighted <= 0) return 'medium'
   const ratio = weighted / maxWeighted

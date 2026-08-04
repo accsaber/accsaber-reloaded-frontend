@@ -13,6 +13,7 @@ import {
   blendSkillAndMap,
   capAtMapCeiling,
   capAtTopAp,
+  comebackBand,
   complexityRange,
   computeXpReward,
   countCenter,
@@ -786,54 +787,20 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         return out
       }
       const chosen = old[Math.floor(rng() * old.length)]
-      const maxWeighted = Math.max(...scores.map((s) => s.weightedAp ?? 0))
-      const derived = bandFromWeightedRatio(chosen.weightedAp ?? 0, maxWeighted)
-      const complexity = chosen.complexity ?? 0
-      const wr = (await fetchLeaderboard(chosen.mapDifficultyId))[0]?.ap ?? 0
-      let value = bandLiftedFloorAp(chosen.ap, complexity, derived)
-      const steps: ChainStep[] = [
-        { label: 'Your old play', detail: `set ${new Date(chosen.timeSet).toLocaleDateString()} on ${chosen.songName}`, value: chosen.ap, changed: false },
-        { label: 'Ask for a step up', detail: 'the step is measured on the accuracy curve, so it shrinks as the old play gets closer to perfect', value, changed: true },
-      ]
-      const topCapped = capAtTopAp(value, derived, chosenCategory.topAp, chosenCategory.skillLevel)
-      if (topCapped < value) {
-        steps.push({ label: 'Cap against your best', detail: `held under ${(TOP_AP_CAP_FACTOR[derived] * 100).toFixed(1)}% of your ${fmtAp(chosenCategory.topAp)} top play`, value: topCapped, changed: true })
-        value = topCapped
-      }
-      const mapCapped = capAtMapCeiling(value, complexity, derived, chosenCategory.skillLevel, wr)
-      if (mapCapped < value) {
-        steps.push({
-          label: 'Cap against the map',
-          detail: wr > 0
-            ? `held under ${Math.round(realisticCeilingFraction(derived, chosenCategory.skillLevel) * 100)}% of the ${fmtAp(wr)} world record`
-            : 'kept inside what the map realistically allows',
-          value: mapCapped,
-          changed: true,
-        })
-        value = mapCapped
-      }
-      const dampened = densityDampener(value, derived, wr, chosen.ap)
-      if (dampened < value) {
-        steps.push({ label: 'Ease off a crowded top', detail: 'the top of this leaderboard is tight, so the ask backs off a little', value: dampened, changed: true })
-        value = dampened
-      }
-      if (value <= chosen.ap) {
-        out.push({
-          key: 'chain',
-          title: 'Dust off an old score',
-          receipt: 'Target lands below your old play',
-          note: `The ceilings brought the ask under the very play it is supposed to beat, which happens when that old score already sits near the top of what the map gives. Showing you a number you passed years ago would be worse than showing nothing, so this old score gets dropped and another one gets tried.`,
-          data: { kind: 'chain', steps, final: value, accuracy: null },
-        })
-        fail('target-below-existing-after-caps')
-        return out
-      }
+      const derived = comebackBand(chosenCategory.rawApForOneGain)
       out.push({
-        key: 'chain',
+        key: 'existing',
         title: 'Dust off an old score',
-        receipt: fmtAp(value),
-        note: `Comeback missions skip the map pool entirely. One of your scores older than a year gets picked, and the band comes from how much that play still carries your total rather than from a dice roll, so a comeback on a play that barely matters anymore never gets classified as extreme. The step it asks for is measured on the accuracy curve, which is why an old 99.5% play is asked for far less than an old 96% one. The number is what the card displays, though the mission itself completes the moment you beat that old play at all.`,
-        data: { kind: 'chain', steps, final: value, accuracy: null },
+        receipt: `${chosen.songName} (${fmtAp(chosen.ap)})`,
+        note: `Comeback missions skip the map pool and the target math entirely. One of your scores older than a year gets picked, and beating it at all finishes the mission, so there is no number to hit beyond the one you already set on ${new Date(chosen.timeSet).toLocaleDateString()}. The band only decides what it pays, and it comes off the AP you would need for one gain in ${chosenCategory.categoryName}, because clawing back an old play is more work the higher you already sit.`,
+        data: {
+          kind: 'existing',
+          score: null,
+          assigned: band,
+          derived: null,
+          blended: derived,
+          caption: `your one gain sits at ${fmtAp(chosenCategory.rawApForOneGain)}`,
+        },
       })
       const base = computeXpReward(template, chosenCategory.skillLevel, derived, null) / (template.xpMultiplier * bandMultiplier(template, derived))
       const xp = computeXpReward(template, chosenCategory.skillLevel, derived, null)
@@ -847,7 +814,6 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
           xp,
           categoryCode: chosenCategory.categoryCode,
           targetMapSongName: chosen.songName,
-          targetAp: value,
         }),
       )
       return out
