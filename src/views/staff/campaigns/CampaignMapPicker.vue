@@ -57,7 +57,7 @@ const fetching = ref(false)
 const err = ref<string | null>(null)
 
 const filtersOpen = ref(false)
-const selectedCategories = ref<string[]>([])
+const selectedCategory = ref<string | null>(null)
 const complexityRange = ref<[number, number]>([0, 20])
 
 const multi = ref(false)
@@ -69,12 +69,12 @@ const usedIds = computed(() => new Set(props.usedDifficultyIds))
 
 const hasActiveFilters = computed(
   () =>
-    selectedCategories.value.length > 0 ||
+    selectedCategory.value !== null ||
     complexityRange.value[0] > 0 ||
     complexityRange.value[1] < 20,
 )
 
-watch([debounced, selectedCategories, complexityRange, statusFilter], () => {
+watch([debounced, selectedCategory, complexityRange, statusFilter], () => {
   page.value = 1
 })
 
@@ -89,8 +89,8 @@ async function search() {
       search: debounced.value || undefined,
       sort: statusFilter.value === 'RANKED' ? 'rankedAt,desc' : 'createdAt,desc',
     }
-    if (selectedCategories.value.length === 1) {
-      params.categoryId = selectedCategories.value[0]
+    if (selectedCategory.value) {
+      params.categoryId = selectedCategory.value
     }
     if (complexityRange.value[0] > 0) {
       params.complexityMin = complexityRange.value[0]
@@ -113,7 +113,7 @@ async function search() {
 
 onMounted(search)
 
-watch([debounced, page, selectedCategories, complexityRange, statusFilter], () => {
+watch([debounced, page, selectedCategory, complexityRange, statusFilter], () => {
   if (source.value === 'system') void search()
 })
 
@@ -236,9 +236,9 @@ function commit() {
 
       <div v-if="filtersOpen" class="map-picker__filters">
         <MapFilterSidebar
-          :selected-categories="selectedCategories"
+          :selected-category="selectedCategory"
           :complexity-range="complexityRange"
-          @update:selected-categories="selectedCategories = $event"
+          @update:selected-category="selectedCategory = $event"
           @update:complexity-range="complexityRange = $event"
         />
       </div>

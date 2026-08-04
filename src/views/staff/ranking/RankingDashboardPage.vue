@@ -113,20 +113,18 @@ const focusingLatestBatch = computed(
   () => activeStatus.value === 'RANKED' && reweightScope.value === 'latest' && latestBatch.value != null,
 )
 
-const selectedCategories = computed<string[]>({
+const selectedCategory = computed<string | null>({
   get() {
     const c = route.query.category
-    if (!c) return []
-    return Array.isArray(c) ? c as string[] : [c as string]
+    const first = Array.isArray(c) ? c[0] : c
+    return typeof first === 'string' && first ? first : null
   },
   set(val) {
     const query = { ...route.query }
-    if (val.length === 0) {
-      delete query.category
-    } else if (val.length === 1) {
-      query.category = val[0]
-    } else {
+    if (val) {
       query.category = val
+    } else {
+      delete query.category
     }
     delete query.page
     router.replace({ query })
@@ -152,7 +150,7 @@ const filtersOpen = ref(false)
 const searchQuery = ref('')
 
 const hasActiveFilters = computed(() =>
-  selectedCategories.value.length > 0 || complexityRange.value[0] > 0 || complexityRange.value[1] < 20
+  selectedCategory.value !== null || complexityRange.value[0] > 0 || complexityRange.value[1] < 20
 )
 
 const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
@@ -234,8 +232,8 @@ function buildFetchParams(): Record<string, unknown> {
   if (focusingLatestBatch.value) {
     params.batchId = latestBatch.value!.id
   }
-  if (selectedCategories.value.length === 1) {
-    params.categoryId = selectedCategories.value[0]
+  if (selectedCategory.value) {
+    params.categoryId = selectedCategory.value
   }
   if (complexityRange.value[0] > 0) params.complexityMin = complexityRange.value[0]
   if (complexityRange.value[1] < 20) params.complexityMax = complexityRange.value[1]
@@ -294,7 +292,7 @@ watch(
 )
 
 watch(
-  [() => activeStatus.value, () => reweightScope.value, selectedCategories, complexityRange, paginationParams, () => searchQuery.value],
+  [() => activeStatus.value, () => reweightScope.value, selectedCategory, complexityRange, paginationParams, () => searchQuery.value],
   fetchDifficulties,
   { immediate: true },
 )
@@ -374,9 +372,9 @@ function criteriaClassName(row: Record<string, unknown>): string {
             <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
           <MapFilterSidebar
-            :selected-categories="selectedCategories"
+            :selected-category="selectedCategory"
             :complexity-range="complexityRange"
-            @update:selected-categories="selectedCategories = $event"
+            @update:selected-category="selectedCategory = $event"
             @update:complexity-range="complexityRange = $event"
           />
         </FilterPopover>

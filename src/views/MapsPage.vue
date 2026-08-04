@@ -73,20 +73,18 @@ const unplayedOnly = computed<boolean>({
   },
 })
 
-const selectedCategories = computed<string[]>({
+const selectedCategory = computed<string | null>({
   get() {
     const c = route.query.category
-    if (!c) return []
-    return Array.isArray(c) ? c as string[] : [c as string]
+    const first = Array.isArray(c) ? c[0] : c
+    return typeof first === 'string' && first ? first : null
   },
   set(val) {
     const query = { ...route.query }
-    if (val.length === 0) {
-      delete query.category
-    } else if (val.length === 1) {
-      query.category = val[0]
-    } else {
+    if (val) {
       query.category = val
+    } else {
+      delete query.category
     }
     delete query.page
     router.replace({ query })
@@ -117,7 +115,7 @@ const complexityRange = computed<[number, number]>({
 })
 
 const hasActiveFilters = computed(() =>
-  selectedCategories.value.length > 0 || complexityRange.value[0] > 0 || complexityRange.value[1] < 20 || unplayedOnly.value
+  selectedCategory.value !== null || complexityRange.value[0] > 0 || complexityRange.value[1] < 20 || unplayedOnly.value
 )
 
 const sortOptions = [
@@ -218,8 +216,8 @@ async function fetchDifficulties() {
   loading.value = true
   try {
     const params: Record<string, unknown> = { ...paginationParams.value, status: 'RANKED' }
-    if (selectedCategories.value.length === 1) {
-      params.categoryId = selectedCategories.value[0]
+    if (selectedCategory.value) {
+      params.categoryId = selectedCategory.value
     }
     if (complexityRange.value[0] > 0) {
       params.complexityMin = complexityRange.value[0]
@@ -297,7 +295,7 @@ watch(searchQuery, () => {
 })
 
 watch(
-  [paginationParams, selectedCategories, complexityRange, searchQuery, unplayedOnly],
+  [paginationParams, selectedCategory, complexityRange, searchQuery, unplayedOnly],
   () => { if (!isBatchView.value) fetchDifficulties() },
   { immediate: true, deep: true },
 )
@@ -338,9 +336,9 @@ watch(
           <template #trigger>
             <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
-          <MapFilterSidebar :selected-categories="selectedCategories" :complexity-range="complexityRange"
+          <MapFilterSidebar :selected-category="selectedCategory" :complexity-range="complexityRange"
             :unplayed-only="unplayedOnly" :show-unplayed="authStore.isLoggedIn"
-            @update:selected-categories="selectedCategories = $event"
+            @update:selected-category="selectedCategory = $event"
             @update:complexity-range="complexityRange = $event" @update:unplayed-only="unplayedOnly = $event" />
         </FilterPopover>
       </div>

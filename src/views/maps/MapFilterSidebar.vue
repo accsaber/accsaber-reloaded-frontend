@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import RangeSlider from '@/components/common/RangeSlider.vue'
 import { useCategoryStore } from '@/stores/categories'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
-  selectedCategories: string[]
+  selectedCategory: string | null
   complexityRange: [number, number]
   unplayedOnly?: boolean
   showUnplayed?: boolean
@@ -14,12 +14,14 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  'update:selectedCategories': [categories: string[]]
+  'update:selectedCategory': [categoryId: string | null]
   'update:complexityRange': [range: [number, number]]
   'update:unplayedOnly': [value: boolean]
 }>()
 
 const categoryStore = useCategoryStore()
+
+const categoryGroup = useId()
 
 const filterableCategories = computed(() =>
   categoryStore.categoryInfoList.filter((c) => c.code !== 'overall' && c.code !== 'xp')
@@ -40,15 +42,12 @@ function onRangeChange(val: [number, number]) {
   }, 400)
 }
 
-function toggleCategory(categoryId: string, selected: string[]) {
-  const idx = selected.indexOf(categoryId)
-  if (idx >= 0) {
-    const next = [...selected]
-    next.splice(idx, 1)
-    emit('update:selectedCategories', next)
-  } else {
-    emit('update:selectedCategories', [...selected, categoryId])
-  }
+function selectCategory(code: string) {
+  emit('update:selectedCategory', categoryStore.getCategoryId(code) ?? null)
+}
+
+function isSelected(code: string) {
+  return props.selectedCategory !== null && props.selectedCategory === categoryStore.getCategoryId(code)
 }
 </script>
 
@@ -59,16 +58,28 @@ function toggleCategory(categoryId: string, selected: string[]) {
     <div class="map-filters__section">
       <h4 class="map-filters__heading">Category</h4>
       <div class="map-filters__categories">
+        <label class="map-filters__cat-label">
+          <input
+            type="radio"
+            class="map-filters__control"
+            :name="categoryGroup"
+            :checked="selectedCategory === null"
+            @change="emit('update:selectedCategory', null)"
+          />
+          <span class="map-filters__cat-dot map-filters__cat-dot--all" />
+          <span>All</span>
+        </label>
         <label
           v-for="info in filterableCategories"
           :key="info.code"
           class="map-filters__cat-label"
         >
           <input
-            type="checkbox"
-            class="map-filters__checkbox"
-            :checked="selectedCategories.includes(categoryStore.getCategoryId(info.code) ?? '')"
-            @change="toggleCategory(categoryStore.getCategoryId(info.code) ?? '', selectedCategories)"
+            type="radio"
+            class="map-filters__control"
+            :name="categoryGroup"
+            :checked="isSelected(info.code)"
+            @change="selectCategory(info.code)"
           />
           <span class="map-filters__cat-dot" :style="{ background: info.accent }" />
           <span>{{ info.name }}</span>
@@ -92,7 +103,7 @@ function toggleCategory(categoryId: string, selected: string[]) {
       <label class="map-filters__cat-label">
         <input
           type="checkbox"
-          class="map-filters__checkbox"
+          class="map-filters__control"
           :checked="unplayedOnly"
           @change="emit('update:unplayedOnly', !unplayedOnly)"
         />
@@ -147,7 +158,7 @@ function toggleCategory(categoryId: string, selected: string[]) {
   cursor: pointer;
 }
 
-.map-filters__checkbox {
+.map-filters__control {
   accent-color: var(--accent);
   cursor: pointer;
 }
@@ -157,6 +168,10 @@ function toggleCategory(categoryId: string, selected: string[]) {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.map-filters__cat-dot--all {
+  border: 1px solid var(--text-tertiary);
 }
 
 .map-filters__cat-dot--unplayed {

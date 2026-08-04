@@ -46,20 +46,18 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   secondarySort: null,
 })
 
-const selectedCategories = computed<string[]>({
+const selectedCategory = computed<string | null>({
   get() {
     const c = route.query.category
-    if (!c) return []
-    return Array.isArray(c) ? (c as string[]) : [c as string]
+    const first = Array.isArray(c) ? c[0] : c
+    return typeof first === 'string' && first ? first : null
   },
   set(val) {
     const query = { ...route.query }
-    if (val.length === 0) {
-      delete query.category
-    } else if (val.length === 1) {
-      query.category = val[0]
-    } else {
+    if (val) {
       query.category = val
+    } else {
+      delete query.category
     }
     delete query.page
     router.replace({ query })
@@ -69,7 +67,7 @@ const selectedCategories = computed<string[]>({
 const filtersOpen = ref(false)
 const searchQuery = ref('')
 
-const hasActiveFilters = computed(() => selectedCategories.value.length > 0)
+const hasActiveFilters = computed(() => selectedCategory.value !== null)
 
 const difficulties = ref<PublicMapDifficultyResponse[]>([])
 const totalPages = ref(0)
@@ -88,7 +86,7 @@ function buildCacheKey(): Record<string, unknown> {
     _type: 'ranked-queue',
     ...paginationParams.value,
     status: QUEUE_STATUSES.join(','),
-    categoryId: selectedCategories.value.length === 1 ? selectedCategories.value[0] : undefined,
+    categoryId: selectedCategory.value ?? undefined,
     search: searchQuery.value.trim() || undefined,
   }
 }
@@ -104,8 +102,8 @@ async function fetchFromApi(cacheKey: Record<string, unknown>) {
     ...paginationParams.value,
     status: QUEUE_STATUSES,
   }
-  if (selectedCategories.value.length === 1) {
-    params.categoryId = selectedCategories.value[0]
+  if (selectedCategory.value) {
+    params.categoryId = selectedCategory.value
   }
   if (searchQuery.value.trim()) {
     params.search = searchQuery.value.trim()
@@ -147,7 +145,7 @@ watch(searchQuery, () => {
 })
 
 watch(
-  [selectedCategories, paginationParams, searchQuery],
+  [selectedCategory, paginationParams, searchQuery],
   fetchDifficulties,
   { immediate: true, deep: true },
 )
@@ -179,8 +177,8 @@ const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'
           <template #trigger>
             <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
-          <MapFilterSidebar :selected-categories="selectedCategories" :complexity-range="[0, 20]"
-            :show-complexity="false" @update:selected-categories="selectedCategories = $event" />
+          <MapFilterSidebar :selected-category="selectedCategory" :complexity-range="[0, 20]"
+            :show-complexity="false" @update:selected-category="selectedCategory = $event" />
         </FilterPopover>
       </div>
     </div>
