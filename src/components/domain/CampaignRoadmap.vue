@@ -2435,6 +2435,8 @@ const arrowDecorations = computed(() =>
   inset: auto;
   background-size: 100% 100%;
   background-repeat: no-repeat;
+  opacity: 1;
+  mask-image: none;
 }
 
 .campaign-roadmap__bg-probe {
