@@ -631,22 +631,32 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   color: var(--text-tertiary);
 }
 
-.chainrail__station::before {
+.chainrail__station::before,
+.chainrail__station::after {
   content: '';
   position: absolute;
   top: 11px;
-  left: calc(-50% + 14px);
-  width: calc(100% - 28px);
+  width: 50%;
   height: 1px;
   background: var(--bg-overlay);
 }
 
-.chainrail__station:first-child::before {
+.chainrail__station::before {
+  left: 0;
+}
+
+.chainrail__station::after {
+  left: 50%;
+}
+
+.chainrail__station:first-child::before,
+.chainrail__station:last-child::after {
   display: none;
 }
 
 .chainrail__station--done::before,
-.chainrail__station--current::before {
+.chainrail__station--current::before,
+.chainrail__station--done::after {
   background: var(--accent);
 }
 
