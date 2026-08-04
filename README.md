@@ -89,7 +89,7 @@ src/
 | `API_PROXY_TARGET` | Docker | Yes | Backend URL that `/v1/` is proxied to |
 | `VITE_ADMIN_URL` | Both | Yes | Admin panel URL |
 | `VITE_RANKING_URL` | Both | Yes | Ranking staff panel URL |
-| `VITE_WS_BASE` | Vite | No | WebSocket URL (`.env.development` only) |
+| `VITE_WS_BASE` | Vite | No | WebSocket **origin** (`wss://host`, no path). Falls back to `VITE_API_BASE`'s host |
 
 ### Important Note on AI Usage
 > *AccSaber's infrastructure, flow and core features are human-made. Tedious tasks were automated with the help of AI (tests, DTOs, some methods). The codebase is manually reviewed and edited, and all creative input is human-generated. I firmly believe that human creativity and intuition are irreplaceable in software development.*

@@ -7,7 +7,7 @@ ARG VITE_ADMIN_URL
 ARG VITE_RANKING_URL
 ARG VITE_MAIN_SITE_URL
 ARG VITE_API_BASE=https://api.accsaber.com/v1
-ARG VITE_WS_BASE=wss://api.accsaber.com/ws/scores
+ARG VITE_WS_BASE=wss://api.accsaber.com
 RUN VITE_API_BASE=$VITE_API_BASE VITE_WS_BASE=$VITE_WS_BASE npm run build-only
 
 FROM nginx:alpine

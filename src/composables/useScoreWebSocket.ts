@@ -4,6 +4,7 @@ import { formatDifficulty } from '@/utils/mappers'
 import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
+import { wsOrigin } from '@/utils/ws'
 import { onUnmounted, ref, type Ref } from 'vue'
 
 const MAX_ENTRIES = 50
@@ -12,18 +13,7 @@ const MAX_RETRY_MS = 30000
 const HEARTBEAT_MS = 30000
 
 function buildWsUrl(): string {
-  const wsBase: string = import.meta.env.VITE_WS_BASE ?? ''
-  if (wsBase) return wsBase
-
-  const apiBase: string = import.meta.env.VITE_API_BASE ?? ''
-  try {
-    const parsed = new URL(apiBase)
-    const wsProtocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${wsProtocol}//${parsed.host}/ws/scores`
-  } catch {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${wsProtocol}//${window.location.host}/ws/scores`
-  }
+  return `${wsOrigin()}/ws/scores`
 }
 
 interface UseScoreWebSocketReturn {
