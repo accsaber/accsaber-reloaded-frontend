@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import UserPicker from '@/components/domain/UserPicker.vue'
 import MissionCard from '@/components/domain/MissionCard.vue'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { BAND_WEIGHTS, TEMPLATES, type ForgeMissionType } from '@/wiki/missionSim'
@@ -15,6 +16,13 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   profile: ForgeProfile | null
+  target: string | null
+  targetNotice?: string | null
+}>()
+
+const emit = defineEmits<{
+  'update:target': [value: string | null]
+  pick: [user: { userId: string; userName: string } | null]
 }>()
 
 const AUTO_MS = 7000
@@ -213,6 +221,11 @@ const historyBlocked = computed(
   () => activeOption.value.needsHistory && props.profile !== null && !props.profile.userId,
 )
 
+const targetPlaceholder = computed(() => {
+  if (!props.profile) return 'Loading...'
+  return props.profile.real ? 'your profile' : props.profile.name
+})
+
 const failureLabel = computed(() =>
   failure.value ? (FAILURE_LABELS[failure.value] ?? failure.value) : null,
 )
@@ -260,11 +273,17 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
         {{ loading ? 'Forging' : stages.length ? 'Forge another' : 'Forge a mission' }}
       </BaseButton>
       <BaseSelect v-model="choice" :options="selectOptions" placeholder="Mission type" />
-      <span v-if="profile" class="forge__against">
-        against {{ profile.real ? 'your profile' : `${profile.name}, a real player` }}
-      </span>
+      <span class="forge__against">against</span>
+      <UserPicker
+        class="forge__picker"
+        :model-value="target"
+        :placeholder="targetPlaceholder"
+        @update:model-value="emit('update:target', $event)"
+        @select="emit('pick', $event)"
+      />
     </header>
 
+    <p v-if="targetNotice" class="forge__notice">{{ targetNotice }}</p>
     <p v-if="!profile" class="forge__notice">Loading a profile to build against.</p>
     <p v-else-if="error" class="forge__notice forge__notice--bad">{{ error }}</p>
     <p v-else-if="historyBlocked" class="forge__notice">
@@ -604,6 +623,16 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 .forge__against {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
+}
+
+.forge__head :deep(.forge__picker) {
+  width: 240px;
+}
+
+.forge__head :deep(.forge__picker .user-picker__input),
+.forge__head :deep(.forge__picker .user-picker__selected) {
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 .forge__notice {

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import UserPicker from '@/components/domain/UserPicker.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { CategoryCode } from '@/types/display'
@@ -8,7 +7,7 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiMissionForge from '@/wiki/components/WikiMissionForge.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 import type { ForgeProfile } from '@/wiki/useMissionForge'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
@@ -18,6 +17,12 @@ const defaultProfile = ref<ForgeProfile | null>(null)
 const pickedUserId = ref<string | null>(null)
 const pickFailedName = ref<string | null>(null)
 let pickSeq = 0
+
+const pickNotice = computed(() =>
+  pickFailedName.value
+    ? `${pickFailedName.value} has no ranked plays to build from, so the forge went back to the default profile.`
+    : null,
+)
 
 const BAND_ROWS = [
   { label: 'How often a daily slot rolls it', values: ['30%', '40%', '25%', '5%'] },
@@ -153,14 +158,12 @@ onMounted(resolveProfile)
       one works. It builds against your own profile by default, but you can point it at anyone
       and see what the game would hand them instead.
     </p>
-    <div class="forge-target">
-      <UserPicker v-model="pickedUserId" placeholder="Forge for someone else..." @select="onPick" />
-      <p v-if="pickFailedName" class="forge-target__hint">
-        {{ pickFailedName }} has no ranked plays to build from, so the forge went back to the
-        default profile.
-      </p>
-    </div>
-    <WikiMissionForge :profile="profile" />
+    <WikiMissionForge
+      v-model:target="pickedUserId"
+      :profile="profile"
+      :target-notice="pickNotice"
+      @pick="onPick"
+    />
 
     <WikiHeading id="bands">Bands</WikiHeading>
     <p>
@@ -264,19 +267,3 @@ onMounted(resolveProfile)
     </p>
   </WikiProse>
 </template>
-
-<style scoped>
-.forge-target {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  max-width: 340px;
-  margin-bottom: var(--space-md);
-}
-
-.forge-target__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-</style>
