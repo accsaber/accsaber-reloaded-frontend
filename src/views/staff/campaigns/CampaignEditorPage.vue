@@ -21,7 +21,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useThemeStore } from '@/stores/theme'
 import { readBackdropConfig } from '@/utils/themeBackdrop'
-import { computed, onMounted, provide, ref } from 'vue'
+import { computed, onMounted, provide, ref, watchEffect } from 'vue'
 import CampaignChatPanel from './CampaignChatPanel.vue'
 import CampaignPluginWarning from './CampaignPluginWarning.vue'
 import CampaignCollaboratorPicker from './CampaignCollaboratorPicker.vue'
@@ -122,10 +122,14 @@ const {
   reloadFromRemote,
   setChangeBroadcaster,
   setViewCenterProvider,
+  canvasAspect,
 } = editor
 
 const roadmapRef = ref<InstanceType<typeof CampaignRoadmap> | null>(null)
 setViewCenterProvider(() => roadmapRef.value?.getViewCenterCell() ?? null)
+watchEffect(() => {
+  canvasAspect.value = roadmapRef.value?.contentAspect ?? null
+})
 
 const themeStore = useThemeStore()
 const themeBackdropActive = computed(() => readBackdropConfig(themeStore.activeTokens) !== null)
@@ -144,11 +148,17 @@ const chat = useCampaignChat(campaignIdRef)
 
 const canChat = computed(() => (isCreator.value || isCollaborator.value) && !isUnsavedDraft.value)
 
-const { peers: presencePeers, sendCursor, sendCursorOff, sendChange, sendTyping, sendTypingStop } =
-  useCampaignPresence(campaignIdRef, editable, {
-    onRemoteChange: () => void reloadFromRemote(),
-    onChat: (message) => chat.ingest(message),
-  })
+const {
+  peers: presencePeers,
+  sendCursor,
+  sendCursorOff,
+  sendChange,
+  sendTyping,
+  sendTypingStop,
+} = useCampaignPresence(campaignIdRef, editable, {
+  onRemoteChange: () => void reloadFromRemote(),
+  onChat: (message) => chat.ingest(message),
+})
 setChangeBroadcaster(sendChange)
 
 const selfAction = ref<PresenceAction>('move')
@@ -578,8 +588,10 @@ function peerActivity(p: PresencePeer): string {
               <p class="campaign-editor__node-diff">
                 {{ formatDifficulty(selectedDifficulty.difficulty) }}
                 <span v-if="selectedDifficulty.complexity != null">·</span>
-                <ComplexityBadge v-if="selectedDifficulty.complexity != null"
-                  :complexity="selectedDifficulty.complexity" />
+                <ComplexityBadge
+                  v-if="selectedDifficulty.complexity != null"
+                  :complexity="selectedDifficulty.complexity"
+                />
                 <span class="campaign-editor__node-grid">
                   · grid
                   <code>{{ selectedDifficulty.positionX }},{{ selectedDifficulty.positionY }}</code>
@@ -598,10 +610,7 @@ function peerActivity(p: PresencePeer): string {
             </BaseButton>
           </div>
 
-          <div
-            v-if="activeTrayIsBarrier && selectedBarrier"
-            class="campaign-editor__barrier-head"
-          >
+          <div v-if="activeTrayIsBarrier && selectedBarrier" class="campaign-editor__barrier-head">
             <span class="campaign-editor__barrier-head-icon" aria-hidden="true">
               <svg
                 width="18"
@@ -755,13 +764,16 @@ function peerActivity(p: PresencePeer): string {
       <BaseModal
         v-if="publishConfirm"
         :open="true"
-        :title="publishConfirm === 'publish' ? 'Publish this campaign?' : 'Unpublish this campaign?'"
+        :title="
+          publishConfirm === 'publish' ? 'Publish this campaign?' : 'Unpublish this campaign?'
+        "
         @close="publishConfirm = null"
       >
         <div class="campaign-editor__warn">
           <template v-if="publishConfirm === 'publish'">
             <p>
-              Publishing makes your campaign public. Any player will be able to find it and start it.
+              Publishing makes your campaign public. Any player will be able to find it and start
+              it.
             </p>
             <p>
               Make sure everything is final before you go live: maps, goals, rewards, artwork, and
@@ -770,10 +782,10 @@ function peerActivity(p: PresencePeer): string {
             <div v-if="unrankedNodes.length" class="campaign-editor__warn-unranked">
               <p>
                 Heads up: {{ unrankedNodes.length }}
-                {{ unrankedNodes.length === 1 ? 'map is' : 'maps are' }} not ranked
-                (imported campaign maps, or still in the ranking queue). You can publish, but this
-                campaign will be <strong>uncuratable</strong> (it can't become an official curated
-                campaign) while {{ unrankedNodes.length === 1 ? 'it stays' : 'they stay' }} unranked:
+                {{ unrankedNodes.length === 1 ? 'map is' : 'maps are' }} not ranked (imported
+                campaign maps, or still in the ranking queue). You can publish, but this campaign
+                will be <strong>uncuratable</strong> (it can't become an official curated campaign)
+                while {{ unrankedNodes.length === 1 ? 'it stays' : 'they stay' }} unranked:
               </p>
               <ul>
                 <li v-for="n in unrankedNodes" :key="n.id">{{ n.songName }}</li>
@@ -782,7 +794,9 @@ function peerActivity(p: PresencePeer): string {
             </div>
           </template>
           <template v-else>
-            <p>Unpublishing takes your campaign offline and resets every player's progress on it.</p>
+            <p>
+              Unpublishing takes your campaign offline and resets every player's progress on it.
+            </p>
             <p>Anyone who started or completed it will have to begin again when it returns.</p>
           </template>
         </div>
@@ -796,7 +810,12 @@ function peerActivity(p: PresencePeer): string {
           >
             Publish
           </BaseButton>
-          <BaseButton v-else variant="destructive" :loading="actionPending" @click="performUnpublish">
+          <BaseButton
+            v-else
+            variant="destructive"
+            :loading="actionPending"
+            @click="performUnpublish"
+          >
             Unpublish
           </BaseButton>
         </template>

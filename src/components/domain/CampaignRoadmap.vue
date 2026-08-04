@@ -15,11 +15,7 @@ import type {
 } from '@/types/api/campaigns'
 import { sanitizeRichHtml } from '@/utils/richText'
 import CampaignPresenceCursor from '@/components/domain/CampaignPresenceCursor.vue'
-import type {
-  PresenceAction,
-  PresenceKind,
-  PresencePeer,
-} from '@/composables/useCampaignPresence'
+import type { PresenceAction, PresenceKind, PresencePeer } from '@/composables/useCampaignPresence'
 import {
   barrierConditionLabel,
   barrierPairValue,
@@ -31,6 +27,7 @@ import {
   findOverlaps,
   gridToContent,
   layoutNodes,
+  pinnedBackgroundRect,
   prereqIds,
   resolveConnectionColor,
   resolveSize,
@@ -399,7 +396,13 @@ interface CheckpointLabel {
 const checkpointLabels = computed<CheckpointLabel[]>(() => {
   const groups = new Map<
     string,
-    { nodes: NodeLayout[]; color: string | null; size: number | null; label: string; position: string }
+    {
+      nodes: NodeLayout[]
+      color: string | null
+      size: number | null
+      label: string
+      position: string
+    }
   >()
   for (const d of props.difficulties) {
     if (!d.checkpointLabel) continue
@@ -411,7 +414,8 @@ const checkpointLabels = computed<CheckpointLabel[]>(() => {
       existing.nodes.push(node)
       if (!existing.color && d.checkpointColor) existing.color = d.checkpointColor
       if (!existing.size && d.checkpointSize) existing.size = d.checkpointSize
-      if (!existing.position && d.checkpointLabelPosition) existing.position = d.checkpointLabelPosition
+      if (!existing.position && d.checkpointLabelPosition)
+        existing.position = d.checkpointLabelPosition
     } else {
       groups.set(key, {
         nodes: [node],
@@ -431,8 +435,7 @@ const checkpointLabels = computed<CheckpointLabel[]>(() => {
     const maxX = Math.max(...xs)
     const midX = (minX + maxX) / 2
     const midY = (Math.min(...ys) + Math.max(...ys)) / 2
-    const sizeOf = (n: NodeLayout) =>
-      resolveSize(difficultyById.value.get(n.id)?.size, props.unit)
+    const sizeOf = (n: NodeLayout) => resolveSize(difficultyById.value.get(n.id)?.size, props.unit)
     const topNode = g.nodes.reduce((a, b) => (b.cy < a.cy ? b : a))
     const bottomNode = g.nodes.reduce((a, b) => (b.cy > a.cy ? b : a))
     const leftNode = g.nodes.reduce((a, b) => (b.cx < a.cx ? b : a))
@@ -1018,8 +1021,9 @@ watch(
     () => props.activeTray,
   ],
   () => {
-  if (lastPresence.has) emitPresence(lastPresence.x, lastPresence.y)
-})
+    if (lastPresence.has) emitPresence(lastPresence.x, lastPresence.y)
+  },
+)
 
 const cursorDisplay = ref(new Map<string, { x: number; y: number }>())
 let cursorRaf: number | null = null
@@ -1123,7 +1127,14 @@ const remoteConnects = computed(() => {
     const from = vertexById.value.get(peer.targetId)
     const to = disp.get(peer.userId)
     if (from && to) {
-      out.push({ key: peer.userId, x1: from.cx, y1: from.cy, x2: to.x, y2: to.y, color: peer.color })
+      out.push({
+        key: peer.userId,
+        x1: from.cx,
+        y1: from.cy,
+        x2: to.x,
+        y2: to.y,
+        color: peer.color,
+      })
     }
   }
   return out
@@ -1134,7 +1145,8 @@ const remoteRings = computed(() => {
   for (const peer of props.presencePeers) {
     if (!peer.targetId || peer.action === 'move') continue
     const v = vertexById.value.get(peer.targetId)
-    if (v) out.push({ key: `${peer.userId}:${peer.targetId}`, cx: v.cx, cy: v.cy, color: peer.color })
+    if (v)
+      out.push({ key: `${peer.userId}:${peer.targetId}`, cx: v.cx, cy: v.cy, color: peer.color })
   }
   return out
 })
@@ -1255,11 +1267,7 @@ function onPointerUp(e: PointerEvent) {
     dragStart = null
     if (moved) suppressClick = true
     if (moved && rect) {
-      const inside = [
-        ...renderedNodes.value,
-        ...renderedBarriers.value,
-        ...renderedTexts.value,
-      ]
+      const inside = [...renderedNodes.value, ...renderedBarriers.value, ...renderedTexts.value]
         .filter((n) => n.cx >= rect.x0 && n.cx <= rect.x1 && n.cy >= rect.y0 && n.cy <= rect.y1)
         .map((n) => n.id)
       const ids = additive ? Array.from(new Set([...props.selectedIds, ...inside])) : inside
@@ -1457,15 +1465,47 @@ function getViewCenterCell(): { x: number; y: number } {
   return { x: positionX, y: positionY }
 }
 
-defineExpose({ fitToContent, focusNode, getViewCenterCell })
+const contentAspect = computed(() => {
+  const b = contentBounds.value
+  return b.height > 0 ? b.width / b.height : 16 / 9
+})
+
+defineExpose({ fitToContent, focusNode, getViewCenterCell, contentAspect })
 
 const transformStyle = computed(
   () => `translate(${translateX.value} ${translateY.value}) scale(${scale.value})`,
 )
 
-const showGrid = computed(
-  () => props.editable || (!props.backgroundUrl && !props.showStarfield),
-)
+const backgroundAspect = ref(16 / 9)
+
+function onBackgroundLoad(event: Event) {
+  const img = event.target as HTMLImageElement
+  if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+    backgroundAspect.value = img.naturalWidth / img.naturalHeight
+  }
+}
+
+const pinnedBackgroundStyle = computed(() => {
+  if (!props.backgroundUrl || !props.backgroundPlacement) return null
+  const rect = pinnedBackgroundRect(
+    contentBounds.value,
+    props.backgroundPlacement,
+    backgroundAspect.value,
+  )
+  return {
+    backgroundImage: `url(${props.backgroundUrl})`,
+    left: `${rect.x}px`,
+    top: `${rect.y}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+  }
+})
+
+const backgroundLayerStyle = computed(() => ({
+  transform: `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`,
+}))
+
+const showGrid = computed(() => props.editable || (!props.backgroundUrl && !props.showStarfield))
 
 const gridOpacity = computed(() => {
   if (!props.editable) return 0.4
@@ -1561,12 +1601,32 @@ const arrowDecorations = computed(() =>
     @pointercancel="onPointerUp"
     @pointerleave="onPointerLeave"
   >
-    <div
-      v-if="backgroundUrl"
-      class="campaign-roadmap__bg"
-      :style="backgroundPlacementStyle(backgroundUrl, backgroundPlacement)"
-      aria-hidden="true"
-    />
+    <template v-if="backgroundUrl">
+      <div
+        v-if="pinnedBackgroundStyle"
+        class="campaign-roadmap__bg-layer"
+        :style="backgroundLayerStyle"
+        aria-hidden="true"
+      >
+        <img
+          class="campaign-roadmap__bg-probe"
+          :src="backgroundUrl"
+          alt=""
+          aria-hidden="true"
+          @load="onBackgroundLoad"
+        />
+        <div
+          class="campaign-roadmap__bg campaign-roadmap__bg--pinned"
+          :style="pinnedBackgroundStyle"
+        />
+      </div>
+      <div
+        v-else
+        class="campaign-roadmap__bg"
+        :style="backgroundPlacementStyle(backgroundUrl, null)"
+        aria-hidden="true"
+      />
+    </template>
     <template v-else-if="showOwnStarfield">
       <div
         class="campaign-roadmap__glow"
@@ -2147,13 +2207,17 @@ const arrowDecorations = computed(() =>
   cursor: pointer;
 }
 
-.campaign-roadmap__edges--interactive .campaign-roadmap__edge-group:hover .campaign-roadmap__edge-line {
+.campaign-roadmap__edges--interactive
+  .campaign-roadmap__edge-group:hover
+  .campaign-roadmap__edge-line {
   stroke: var(--edge-hl, #ffffff);
   stroke-width: 2.5;
   opacity: 1;
 }
 
-.campaign-roadmap__edges--interactive .campaign-roadmap__edge-group:hover .campaign-roadmap__edge-arrow {
+.campaign-roadmap__edges--interactive
+  .campaign-roadmap__edge-group:hover
+  .campaign-roadmap__edge-arrow {
   fill: var(--edge-hl, #ffffff);
   stroke: var(--edge-hl, #ffffff);
   opacity: 1;
@@ -2356,6 +2420,27 @@ const arrowDecorations = computed(() =>
   opacity: 0.28;
   filter: saturate(1.05);
   mask-image: radial-gradient(ellipse at center, #000 55%, transparent 100%);
+  pointer-events: none;
+}
+
+.campaign-roadmap__bg-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.campaign-roadmap__bg--pinned {
+  inset: auto;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.campaign-roadmap__bg-probe {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
   pointer-events: none;
 }
 

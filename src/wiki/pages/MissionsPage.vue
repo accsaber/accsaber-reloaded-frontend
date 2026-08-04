@@ -38,6 +38,7 @@ async function buildProfile(userId: string, name: string, real: boolean) {
     getUserAllStatistics(userId),
   ])
   const playsByCategoryId = new Map(stats.categories.map((c) => [c.categoryId, c.rankedPlays]))
+  const overallSkillLevel = skill.skills.find((s) => s.categoryCode === 'overall')?.skillLevel ?? 0
   const categories = skill.skills
     .filter((s) => s.categoryCode !== 'overall')
     .map((s) => {
@@ -59,6 +60,7 @@ async function buildProfile(userId: string, name: string, real: boolean) {
     real,
     userId,
     totalXp: stats.totalXp,
+    overallSkillLevel,
     categories,
   } satisfies ForgeProfile
 }

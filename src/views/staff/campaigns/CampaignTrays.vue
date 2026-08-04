@@ -55,6 +55,7 @@ const {
   onCompletionModeChange,
   uploadBackground,
   removeBackground,
+  canvasAspect,
   uploadIcon,
   removeIcon,
   commitBackgroundPlacement,
@@ -233,8 +234,7 @@ function onTargetDrop() {
 const barrierConditionHint = computed(() => {
   const meta = barrierMeta.value
   if (meta.noValue) {
-    const verb =
-      formBarrier.value.conditionType === 'PASS' ? 'passed (no No-Fail)' : 'full-comboed'
+    const verb = formBarrier.value.conditionType === 'PASS' ? 'passed (no No-Fail)' : 'full-comboed'
     return `Opens once every affected node has been ${verb}.`
   }
   if (meta.metric === 'count') {
@@ -384,12 +384,7 @@ const connectionSwatch = computed(() => {
           >
             {{ campaign.loved ? 'Remove loved' : 'Mark loved' }}
           </BaseButton>
-          <BaseButton
-            v-if="isAdmin"
-            size="sm"
-            :loading="actionPending"
-            @click="doToggleOfficial"
-          >
+          <BaseButton v-if="isAdmin" size="sm" :loading="actionPending" @click="doToggleOfficial">
             {{ campaign.official ? 'Remove official' : 'Make official' }}
           </BaseButton>
           <BaseButton
@@ -567,7 +562,10 @@ const connectionSwatch = computed(() => {
         @update:model-value="onCompletionModeChange"
       />
     </div>
-    <label class="campaign-editor__check" :class="{ 'campaign-editor__check--disabled': hasBarriers }">
+    <label
+      class="campaign-editor__check"
+      :class="{ 'campaign-editor__check--disabled': hasBarriers }"
+    >
       <input
         type="checkbox"
         v-model="formMeta.progressionAgnostic"
@@ -652,6 +650,7 @@ const connectionSwatch = computed(() => {
       <CampaignBackgroundPlacer
         :image-url="campaign.backgroundUrl"
         :placement="campaign.background"
+        :box-aspect="canvasAspect"
         :disabled="!editable"
         @commit="commitBackgroundPlacement"
       />
@@ -776,7 +775,13 @@ const connectionSwatch = computed(() => {
             :src="c.userCdnAvatarUrl ?? c.userAvatarUrl ?? ''"
             :alt="c.userName"
             loading="lazy"
-            @error="onAvatarError(c.userCdnAvatarUrl && c.userAvatarUrl && c.userCdnAvatarUrl !== c.userAvatarUrl ? c.userAvatarUrl : null)($event)"
+            @error="
+              onAvatarError(
+                c.userCdnAvatarUrl && c.userAvatarUrl && c.userCdnAvatarUrl !== c.userAvatarUrl
+                  ? c.userAvatarUrl
+                  : null,
+              )($event)
+            "
           />
         </span>
         <span class="campaign-editor__collab-meta">
@@ -896,7 +901,11 @@ const connectionSwatch = computed(() => {
           text="All of: every objective must be met by one score. Any of: meeting a single objective clears the node."
         />
       </span>
-      <div class="campaign-editor__prereq-mode-toggle" role="radiogroup" aria-label="Objective mode">
+      <div
+        class="campaign-editor__prereq-mode-toggle"
+        role="radiogroup"
+        aria-label="Objective mode"
+      >
         <button
           v-for="mode in TARGET_MODES"
           :key="mode.value"
@@ -964,11 +973,13 @@ const connectionSwatch = computed(() => {
     </button>
 
     <p v-if="selectedNodeApRankBlocked" class="campaign-editor__hint">
-      This map isn't ranked (imported campaign map, or still in the ranking queue). AP and leaderboard-rank requirements are unavailable.
+      This map isn't ranked (imported campaign map, or still in the ranking queue). AP and
+      leaderboard-rank requirements are unavailable.
     </p>
     <p v-if="isMultiTarget" class="campaign-editor__hint">{{ PLUGIN_FIRST_TARGET_NOTE }}</p>
     <CampaignEditorNote v-if="targetsBombHits">
-      Bomb counts come from BeatLeader only. A ScoreSaber-sourced score carries no bomb data and can never clear that objective.
+      Bomb counts come from BeatLeader only. A ScoreSaber-sourced score carries no bomb data and can
+      never clear that objective.
     </CampaignEditorNote>
     <CampaignPluginWarning :show="targetsUnreadable" />
 
@@ -1402,13 +1413,16 @@ const connectionSwatch = computed(() => {
     <CampaignPluginWarning :show="barrierUnreadable" />
     <p v-if="barrierZeroBound" class="campaign-editor__hint">{{ PLUGIN_ZERO_BOUND_NOTE }}</p>
     <p v-if="barrierAffectsApRankBlocked" class="campaign-editor__hint">
-      This gate affects a map that isn't ranked (campaign import or ranking queue), so AP
-      and rank based conditions are unavailable.
+      This gate affects a map that isn't ranked (campaign import or ranking queue), so AP and rank
+      based conditions are unavailable.
     </p>
     <div
       v-if="!barrierMeta.noValue"
       class="campaign-editor__field"
-      :class="{ 'campaign-editor__field--disabled': barrierMeta.metric === 'count' && barrierValueBounds.max <= 1 }"
+      :class="{
+        'campaign-editor__field--disabled':
+          barrierMeta.metric === 'count' && barrierValueBounds.max <= 1,
+      }"
     >
       <CampaignBoundsField
         :lower="barrierLowerDisplay"
@@ -1510,8 +1524,7 @@ const connectionSwatch = computed(() => {
           :aria-checked="selectedBarrier.prerequisiteMode !== 'AND'"
           class="campaign-editor__prereq-mode-btn"
           :class="{
-            'campaign-editor__prereq-mode-btn--active':
-              selectedBarrier.prerequisiteMode !== 'AND',
+            'campaign-editor__prereq-mode-btn--active': selectedBarrier.prerequisiteMode !== 'AND',
           }"
           @click="setBarrierPrereqMode('OR')"
         >
@@ -1523,8 +1536,7 @@ const connectionSwatch = computed(() => {
           :aria-checked="selectedBarrier.prerequisiteMode === 'AND'"
           class="campaign-editor__prereq-mode-btn"
           :class="{
-            'campaign-editor__prereq-mode-btn--active':
-              selectedBarrier.prerequisiteMode === 'AND',
+            'campaign-editor__prereq-mode-btn--active': selectedBarrier.prerequisiteMode === 'AND',
           }"
           @click="setBarrierPrereqMode('AND')"
         >
@@ -1644,7 +1656,9 @@ const connectionSwatch = computed(() => {
         </CampaignRewardItem>
       </li>
     </ul>
-    <p v-else class="campaign-editor__hint">Clearing this gate only grants the XP. Add items too.</p>
+    <p v-else class="campaign-editor__hint">
+      Clearing this gate only grants the XP. Add items too.
+    </p>
     <button
       v-if="editable && canAddBarrierReward"
       type="button"

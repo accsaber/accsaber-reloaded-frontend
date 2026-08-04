@@ -7,6 +7,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 const props = defineProps<{
   imageUrl: string
   placement: CampaignBackgroundPlacement | null
+  boxAspect?: number | null
   disabled?: boolean
 }>()
 
@@ -29,13 +30,19 @@ const previewStyle = computed(() =>
   backgroundPlacementStyle(props.imageUrl, isStatic.value ? draft.value : null),
 )
 
-const previewAspect = ref(16 / 9)
+const viewportAspect = ref(16 / 9)
 const imageAspect = ref(16 / 9)
+
+const previewAspect = computed(() => {
+  const aspect = props.boxAspect
+  if (!aspect || aspect <= 0) return viewportAspect.value
+  return Math.min(4, Math.max(0.6, aspect))
+})
 
 onMounted(() => {
   const height = window.innerHeight - 64
   if (window.innerWidth > 0 && height > 0) {
-    previewAspect.value = Math.min(3, Math.max(1, window.innerWidth / height))
+    viewportAspect.value = Math.min(3, Math.max(1, window.innerWidth / height))
   }
 })
 
@@ -183,6 +190,9 @@ function unpin() {
         </label>
       </div>
 
+      <p class="placer__hint">
+        Pinned to the map, so it stays put while you pan. 100% spans the whole campaign.
+      </p>
       <button type="button" class="placer__action" :disabled="disabled" @click="unpin">
         Unpin, fill the canvas again
       </button>
@@ -190,8 +200,7 @@ function unpin() {
 
     <template v-else>
       <p class="placer__hint">
-        The background fills the canvas and crops to fit. Pin it to set an exact scale and position
-        instead.
+        Fills the canvas and follows the view as you pan. Pin it to lock it to the map instead.
       </p>
       <button type="button" class="placer__action" :disabled="disabled" @click="commit">
         Pin placement

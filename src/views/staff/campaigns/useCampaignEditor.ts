@@ -30,11 +30,7 @@ import { getCurve } from '@/api/curves'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { calculateAp, reverseApToAccuracyByComplexity } from '@/utils/curveEval'
-import {
-  enumToBsDifficulty,
-  fetchBeatSaverMap,
-  fetchMapLeaderboardIndex,
-} from '@/utils/beatsaver'
+import { enumToBsDifficulty, fetchBeatSaverMap, fetchMapLeaderboardIndex } from '@/utils/beatsaver'
 import { isCurationSurface } from '@/utils/subdomain'
 import type {
   AddCampaignBarrierRequest,
@@ -399,6 +395,8 @@ export function useCampaignEditor() {
     changeBroadcaster = fn
   }
 
+  const canvasAspect = ref<number | null>(null)
+
   let viewCenterProvider: (() => { x: number; y: number } | null) | null = null
 
   function setViewCenterProvider(fn: (() => { x: number; y: number } | null) | null) {
@@ -518,9 +516,7 @@ export function useCampaignEditor() {
     return isCurator.value && CURATOR_EDITABLE_STATUSES.has(campaign.value.status)
   })
 
-  const editingLiveCampaign = computed(
-    () => editable.value && campaign.value?.status === 'CURATED',
-  )
+  const editingLiveCampaign = computed(() => editable.value && campaign.value?.status === 'CURATED')
 
   const accent = computed(() => {
     const cats = campaign.value?.tags.filter((t) => t.kind === 'CATEGORY') ?? []
@@ -599,9 +595,7 @@ export function useCampaignEditor() {
     const edge = selectedEdge.value
     if (!edge) return null
     const prereqs = vertexPrereqs(edge.toId)
-    return (
-      prereqs?.find((p) => p.comesFromCampaignDifficultyId === edge.fromId) ?? null
-    )
+    return prereqs?.find((p) => p.comesFromCampaignDifficultyId === edge.fromId) ?? null
   })
 
   const selectedEdgeEndpoints = computed<{ from: string; to: string } | null>(() => {
@@ -687,7 +681,6 @@ export function useCampaignEditor() {
   })
 
   const campaignTagIds = computed(() => new Set(campaign.value?.tags.map((t) => t.id) ?? []))
-
 
   const statusLabel: Record<string, string> = {
     DRAFT: 'Draft',
@@ -954,9 +947,10 @@ export function useCampaignEditor() {
       if (campaign.value) {
         const merged = { ...campaign.value, ...updated }
         if (patch.background !== undefined) {
-          merged.background = Object.keys(patch.background).length > 0
-            ? (patch.background as CampaignBackgroundPlacement)
-            : null
+          merged.background =
+            Object.keys(patch.background).length > 0
+              ? (patch.background as CampaignBackgroundPlacement)
+              : null
         }
         campaign.value = merged
       }
@@ -1459,9 +1453,7 @@ export function useCampaignEditor() {
     await addNodesForDifficultyIds(picked.map((d) => d.id))
   }
 
-  async function submitGlobalAdd(
-    ids: ImportCampaignMapRequest,
-  ): Promise<{ attached: boolean }> {
+  async function submitGlobalAdd(ids: ImportCampaignMapRequest): Promise<{ attached: boolean }> {
     const result = await importCampaignMap(ids)
     await addNodesForDifficultyIds([result.id], { keepOpen: true })
     return { attached: result.status !== 'CAMPAIGN' }
@@ -1481,9 +1473,7 @@ export function useCampaignEditor() {
     repointNodeId.value = null
   }
 
-  async function submitRepoint(
-    ids: ImportCampaignMapRequest,
-  ): Promise<{ attached: boolean }> {
+  async function submitRepoint(ids: ImportCampaignMapRequest): Promise<{ attached: boolean }> {
     const nodeId = repointNodeId.value
     if (!nodeId) throw new Error('No node selected to repoint')
     actionPending.value = true
@@ -1653,12 +1643,7 @@ export function useCampaignEditor() {
   }
 
   function handleSelect(id: string) {
-    if (
-      affectedPickMode.value &&
-      selectedBarrier.value &&
-      !isBarrierId(id) &&
-      !isTextId(id)
-    ) {
+    if (affectedPickMode.value && selectedBarrier.value && !isBarrierId(id) && !isTextId(id)) {
       toggleAffected(id)
       return
     }
@@ -2041,9 +2026,7 @@ export function useCampaignEditor() {
     })
   }
 
-  const canAddTarget = computed(
-    () => editable.value && formTargets.value.length < MAX_TARGETS,
-  )
+  const canAddTarget = computed(() => editable.value && formTargets.value.length < MAX_TARGETS)
 
   function addTarget() {
     if (!canAddTarget.value) return
@@ -2894,6 +2877,7 @@ export function useCampaignEditor() {
     auth,
     setChangeBroadcaster,
     setViewCenterProvider,
+    canvasAspect,
     reloadFromRemote: () => guardedLoad(true),
     rewardItemsById,
     campaign,

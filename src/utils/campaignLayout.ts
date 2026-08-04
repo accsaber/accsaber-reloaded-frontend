@@ -65,6 +65,28 @@ export function backgroundPlacementStyle(
   return style
 }
 
+export interface ContentRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export function pinnedBackgroundRect(
+  bounds: ContentRect,
+  placement: CampaignBackgroundPlacement,
+  aspect: number,
+): ContentRect {
+  const width = (bounds.width * placement.size) / 100
+  const height = width / (aspect > 0 ? aspect : 1)
+  return {
+    x: bounds.x + ((bounds.width - width) * placement.x) / 100,
+    y: bounds.y + ((bounds.height - height) * placement.y) / 100,
+    width,
+    height,
+  }
+}
+
 export function hexCorners(cx: number, cy: number, size: number): string {
   const pts: string[] = []
   for (let i = 0; i < 6; i++) {
@@ -378,10 +400,7 @@ export function requirementLabel(type: CampaignRequirementType): string {
   return REQUIREMENT_DISPLAY[type].label
 }
 
-export function formatUserValue(
-  type: CampaignRequirementType,
-  value: number | null,
-): string {
+export function formatUserValue(type: CampaignRequirementType, value: number | null): string {
   if (value == null) return '-'
   if (type === 'FC') return value > 0 ? 'Cleared' : 'Not yet'
   if (type === 'PASS') return value > 0 ? 'Passed' : 'Not yet'
@@ -462,15 +481,51 @@ interface BarrierConditionMeta {
 }
 
 const BARRIER_CONDITION_META: Record<BarrierConditionType, BarrierConditionMeta> = {
-  AVERAGE_ACC: { agg: 'avg', metric: 'acc', lowerBetter: false, noValue: false, label: 'Average accuracy' },
-  ACC_MAX: { agg: 'best', metric: 'acc', lowerBetter: false, noValue: false, label: 'Best accuracy' },
+  AVERAGE_ACC: {
+    agg: 'avg',
+    metric: 'acc',
+    lowerBetter: false,
+    noValue: false,
+    label: 'Average accuracy',
+  },
+  ACC_MAX: {
+    agg: 'best',
+    metric: 'acc',
+    lowerBetter: false,
+    noValue: false,
+    label: 'Best accuracy',
+  },
   AVERAGE_AP: { agg: 'avg', metric: 'ap', lowerBetter: false, noValue: false, label: 'Average AP' },
   AP_MAX: { agg: 'best', metric: 'ap', lowerBetter: false, noValue: false, label: 'Best AP' },
-  STREAK_115_AVERAGE: { agg: 'avg', metric: 'streak', lowerBetter: false, noValue: false, label: 'Average 115 streak' },
-  STREAK_115_MAX: { agg: 'best', metric: 'streak', lowerBetter: false, noValue: false, label: 'Best 115 streak' },
-  AVERAGE_RANK: { agg: 'avg', metric: 'rank', lowerBetter: true, noValue: false, label: 'Average rank' },
+  STREAK_115_AVERAGE: {
+    agg: 'avg',
+    metric: 'streak',
+    lowerBetter: false,
+    noValue: false,
+    label: 'Average 115 streak',
+  },
+  STREAK_115_MAX: {
+    agg: 'best',
+    metric: 'streak',
+    lowerBetter: false,
+    noValue: false,
+    label: 'Best 115 streak',
+  },
+  AVERAGE_RANK: {
+    agg: 'avg',
+    metric: 'rank',
+    lowerBetter: true,
+    noValue: false,
+    label: 'Average rank',
+  },
   MAX_RANK: { agg: 'best', metric: 'rank', lowerBetter: true, noValue: false, label: 'Best rank' },
-  AVERAGE_COMBO: { agg: 'avg', metric: 'combo', lowerBetter: false, noValue: false, label: 'Average combo' },
+  AVERAGE_COMBO: {
+    agg: 'avg',
+    metric: 'combo',
+    lowerBetter: false,
+    noValue: false,
+    label: 'Average combo',
+  },
   AVERAGE_BOMB_HITS: {
     agg: 'avg',
     metric: 'bombs',

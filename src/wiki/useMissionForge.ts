@@ -56,6 +56,7 @@ export interface ForgeProfile {
   real: boolean
   userId: string | null
   totalXp: number
+  overallSkillLevel: number
   categories: (CategorySkill & { categoryId: string })[]
 }
 
@@ -593,7 +594,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       ),
     )
 
-    const skillLevel = chosenCategory?.skillLevel ?? profile.categories[0]?.skillLevel ?? 50
+    const skillLevel = chosenCategory?.skillLevel ?? profile.overallSkillLevel
 
     if (type === 'XP_IN_WINDOW') {
       const rolling = profile.totalXp / 365
