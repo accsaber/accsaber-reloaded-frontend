@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import StatBlock from '@/components/common/StatBlock.vue'
 import SkillLevelPanel from '@/components/domain/SkillLevelPanel.vue'
+import ProfileApCurveChart from '@/views/profile/ProfileApCurveChart.vue'
 import ProfileStatsChart from '@/views/profile/ProfileStatsChart.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type {
@@ -128,6 +129,11 @@ watch(
         </div>
       </section>
     </div>
+
+    <section class="statistics-tab__ap-curve">
+      <h3 class="statistics-tab__section-title">AP Curve</h3>
+      <ProfileApCurveChart :user-id="userId" />
+    </section>
   </div>
 </template>
 
@@ -259,6 +265,11 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
+}
+
+.statistics-tab__ap-curve {
+  width: 100%;
   min-width: 0;
 }
 

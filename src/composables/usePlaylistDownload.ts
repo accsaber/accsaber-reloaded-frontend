@@ -1,5 +1,15 @@
+import { buildQuery } from '@/api/utils'
 import { useCategoryStore } from '@/stores/categories'
+import type { UserScoresParams } from '@/types/api/users'
 import { computed } from 'vue'
+
+function triggerDownload(path: string, filename: string) {
+  const baseUrl = import.meta.env.VITE_API_BASE as string
+  const a = document.createElement('a')
+  a.href = `${baseUrl}${path}`
+  a.download = filename
+  a.click()
+}
 
 export function usePlaylistDownload() {
   const categoryStore = useCategoryStore()
@@ -15,35 +25,38 @@ export function usePlaylistDownload() {
   )
 
   function downloadPlaylist(categoryCode: string) {
-    const baseUrl = import.meta.env.VITE_API_BASE as string
-    const a = document.createElement('a')
-    a.href = `${baseUrl}/playlists/${categoryCode}`
-    a.download = `accsaber-${categoryCode.replace('_', '-')}.json`
-    a.click()
+    triggerDownload(
+      `/playlists/${categoryCode}`,
+      `accsaber-${categoryCode.replace('_', '-')}.json`,
+    )
   }
 
   function downloadUnrankedPlaylist(categoryCode: string) {
-    const baseUrl = import.meta.env.VITE_API_BASE as string
-    const a = document.createElement('a')
-    a.href = `${baseUrl}/playlists/unranked/${categoryCode}`
-    a.download = `accsaber-queued-${categoryCode.replace('_', '-')}.json`
-    a.click()
+    triggerDownload(
+      `/playlists/unranked/${categoryCode}`,
+      `accsaber-queued-${categoryCode.replace('_', '-')}.json`,
+    )
   }
 
   function downloadMissingPlaylist(userId: string, categoryCode: string) {
-    const baseUrl = import.meta.env.VITE_API_BASE as string
-    const a = document.createElement('a')
-    a.href = `${baseUrl}/playlists/missing/${userId}/${categoryCode}`
-    a.download = `accsaber-missing-${userId}-${categoryCode.replace('_', '-')}.bplist`
-    a.click()
+    triggerDownload(
+      `/playlists/missing/${userId}/${categoryCode}`,
+      `accsaber-missing-${userId}-${categoryCode.replace('_', '-')}.bplist`,
+    )
   }
 
   function downloadBatchPlaylist(batchId: string, batchName: string) {
-    const baseUrl = import.meta.env.VITE_API_BASE as string
-    const a = document.createElement('a')
-    a.href = `${baseUrl}/playlists/batch/${batchId}`
-    a.download = `accsaber-${batchName.toLowerCase().replace(/[\s_]+/g, '-')}.bplist`
-    a.click()
+    triggerDownload(
+      `/playlists/batch/${batchId}`,
+      `accsaber-${batchName.toLowerCase().replace(/[\s_]+/g, '-')}.bplist`,
+    )
+  }
+
+  function downloadScoresPlaylist(userId: string, params: UserScoresParams) {
+    triggerDownload(
+      `/playlists/scores/${userId}${buildQuery(params)}`,
+      `accsaber-scores-${userId}.bplist`,
+    )
   }
 
   return {
@@ -52,5 +65,6 @@ export function usePlaylistDownload() {
     downloadUnrankedPlaylist,
     downloadMissingPlaylist,
     downloadBatchPlaylist,
+    downloadScoresPlaylist,
   }
 }

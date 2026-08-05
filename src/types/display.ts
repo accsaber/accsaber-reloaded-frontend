@@ -197,6 +197,12 @@ export interface ChartSeries {
   formatValue?: (v: number) => string
 }
 
+export interface ChartToggle {
+  key: string
+  label: string
+  color?: string
+}
+
 export type TimeRange = '24h' | '7d' | '14d' | '30d' | '90d' | '1y' | 'all'
 
 export type MetricType = 'ap' | 'avgAccuracy' | 'avgAp' | 'rankedPlays' | 'rank' | 'xpCumulative' | 'xpPerAttempt' | 'newPlayers' | 'totalPlayers' | 'dailyScores' | 'totalScores'

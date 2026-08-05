@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useStatsChartConfig } from '@/composables/useStatsChartConfig'
 import { useCategoryStore } from '@/stores/categories'
@@ -7,7 +8,7 @@ import type {
   RankingHistoryResponse,
   UserCategoryStatisticsResponse,
 } from '@/types/api/users'
-import type { CategoryCode, ChartSeries, MetricType, TimeSeriesPoint } from '@/types/display'
+import type { CategoryCode, ChartSeries, ChartToggle, MetricType, TimeSeriesPoint } from '@/types/display'
 import { rangeWindowStart } from '@/utils/constants'
 import { dedupeRequest } from '@/utils/dedupe'
 import { computed, ref, watch } from 'vue'
@@ -45,6 +46,14 @@ function metricColor(metric: MetricType): string {
     : ''
   return resolved || chartAccent.value
 }
+
+const metricToggles = computed<ChartToggle[]>(() =>
+  availableMetrics.map((metric) => ({
+    key: metric.key,
+    label: metric.label,
+    color: metricColor(metric.key),
+  })),
+)
 
 function getMetricValue(metric: MetricType, stat: UserCategoryStatisticsResponse): number {
   switch (metric) {
@@ -152,15 +161,8 @@ watch(
 
 <template>
   <div class="stats-chart">
-    <div class="metric-toggles" role="group" aria-label="Chart metrics">
-      <button v-for="metric in availableMetrics" :key="metric.key" type="button" class="metric-toggles__box"
-        :class="{ 'metric-toggles__box--active': selectedMetrics.includes(metric.key) }"
-        :aria-pressed="selectedMetrics.includes(metric.key)"
-        :style="{ '--metric-color': metricColor(metric.key) }" @click="toggleMetric(metric.key)">
-        <span class="metric-toggles__swatch" />
-        {{ metric.label }}
-      </button>
-    </div>
+    <ChartToggleGroup :toggles="metricToggles" :active="selectedMetrics" label="Chart metrics"
+      @select="toggleMetric($event as MetricType)" />
     <TimeSeriesChart :series="chartSeries" :selected-range="selectedRange"
       @update:selected-range="selectedRange = $event" />
   </div>
@@ -174,47 +176,4 @@ watch(
   min-width: 0;
 }
 
-.metric-toggles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.metric-toggles__box {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.metric-toggles__box:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.metric-toggles__box--active {
-  border-color: var(--metric-color);
-  color: var(--text-primary);
-}
-
-.metric-toggles__swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  border: 1px solid var(--metric-color);
-  background: transparent;
-  transition: background-color 120ms ease;
-}
-
-.metric-toggles__box--active .metric-toggles__swatch {
-  background: var(--metric-color);
-}
 </style>

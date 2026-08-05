@@ -1540,12 +1540,14 @@ export function useCampaignEditor() {
       const bl = index.bl.get(key) ?? null
       const ssRaw = index.ss.get(key)
       const ss = ssRaw != null ? String(ssRaw) : null
-      if (!bl || !ss) {
-        actionError.value =
-          'The latest version has no BeatLeader or ScoreSaber leaderboard for this difficulty.'
+      if (!bl) {
+        actionError.value = 'The latest version has no BeatLeader leaderboard for this difficulty.'
         return
       }
-      const ids: ImportCampaignMapRequest = { blLeaderboardId: bl, ssLeaderboardId: ss }
+      const ids: ImportCampaignMapRequest = {
+        blLeaderboardId: bl,
+        ssLeaderboardId: ss ?? undefined,
+      }
       await updateCampaignDifficultyMap(d.id, ids)
       await load(true)
     } catch (err) {

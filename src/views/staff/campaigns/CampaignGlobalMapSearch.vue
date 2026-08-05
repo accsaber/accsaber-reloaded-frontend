@@ -343,19 +343,17 @@ function diffRowsFor(map: BeatSaverMapResponse): DiffRow[] {
       nps: d.nps,
       blLeaderboardId,
       ssLeaderboardId,
-      importable: !!blLeaderboardId && !!ssLeaderboardId,
+      importable: !!blLeaderboardId,
     }
   })
 }
 
 function missingReason(row: DiffRow): string {
-  if (!row.blLeaderboardId && !row.ssLeaderboardId) return 'Not on BeatLeader or ScoreSaber'
-  if (!row.blLeaderboardId) return 'Not on BeatLeader'
-  return 'Not on ScoreSaber'
+  return row.ssLeaderboardId ? 'Not on BeatLeader' : 'Not on BeatLeader or ScoreSaber'
 }
 
 async function importDiff(map: BeatSaverMapResponse, row: DiffRow) {
-  if (!row.importable || !row.blLeaderboardId || !row.ssLeaderboardId) return
+  if (!row.importable || !row.blLeaderboardId) return
   const key = importKey(map.id, row.key)
   const existing = importStates.value.get(key)
   if (existing?.status === 'importing') return
@@ -363,7 +361,7 @@ async function importDiff(map: BeatSaverMapResponse, row: DiffRow) {
   try {
     const { attached } = await props.submit({
       blLeaderboardId: row.blLeaderboardId,
-      ssLeaderboardId: row.ssLeaderboardId,
+      ssLeaderboardId: row.ssLeaderboardId ?? undefined,
     })
     const count = (existing?.count ?? 0) + 1
     setImportState(key, {
@@ -617,6 +615,9 @@ function resetFilters() {
                   :class="{ 'gms__diff-note--error': importStateFor(map, row)?.status === 'error' }"
                 >
                   {{ importStateFor(map, row)?.message }}
+                </span>
+                <span v-else-if="!row.ssLeaderboardId" class="gms__diff-note gms__diff-note--muted">
+                  BeatLeader only
                 </span>
                 <BaseButton
                   size="sm"
@@ -1053,6 +1054,10 @@ function resetFilters() {
 
 .gms__diff-note--error {
   color: var(--error);
+}
+
+.gms__diff-note--muted {
+  color: var(--text-tertiary);
 }
 
 .gms__pager {

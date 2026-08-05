@@ -9,7 +9,7 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRowField } from '@/types/api/settings'
-import type { ScoreResponse } from '@/types/api/users'
+import type { ScoreResponse, UserScoresParams } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatPlayCount, formatRelativeDate } from '@/utils/formatters'
@@ -37,6 +37,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'pin-toggle': [scoreId: string]
+  'params-change': [params: UserScoresParams | null]
 }>()
 
 const router = useRouter()
@@ -203,22 +204,19 @@ const columns = computed(() =>
   }),
 )
 
+const scoreParams = computed<UserScoresParams>(() => ({
+  ...paginationParams.value,
+  categoryId: props.category !== 'overall'
+    ? categoryStore.getCategoryId(props.category)
+    : undefined,
+  search: props.search.trim() || undefined,
+}))
+
 async function fetchScores() {
   loading.value = true
   try {
     const { getUserScores } = await import('@/api/users')
-    const categoryId = props.category !== 'overall'
-      ? categoryStore.getCategoryId(props.category)
-      : undefined
-
-    const search = props.search.trim() || undefined
-    const params = {
-      ...paginationParams.value,
-      categoryId,
-      search,
-    }
-
-    scoreData.value = await getUserScores(props.userId, params)
+    scoreData.value = await getUserScores(props.userId, scoreParams.value)
   } catch {
     scoreData.value = null
   }
@@ -248,10 +246,16 @@ function openDetail(diffId: string, event: Event) {
   detailOpen.value = true
 }
 
+watch(
+  () => (scores.value.length ? scoreParams.value : null),
+  (params) => { emit('params-change', params) },
+  { immediate: true },
+)
+
 watch(() => props.search, () => { resetPage() })
 
 watch(
-  [() => props.userId, () => props.category, paginationParams, () => props.search],
+  [() => props.userId, scoreParams],
   () => { fetchScores() },
   { immediate: true },
 )

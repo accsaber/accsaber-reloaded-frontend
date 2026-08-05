@@ -28,7 +28,7 @@ import { useCategoryStore } from '@/stores/categories'
 import { useInventoryStore } from '@/stores/inventory'
 import { useRelationsStore } from '@/stores/relations'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
-import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse } from '@/types/api/users'
+import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse, UserScoresParams } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { getRankClass } from '@/utils/ranking'
@@ -40,6 +40,7 @@ import ProfileMilestonesTab from './profile/ProfileMilestonesTab.vue'
 import ProfileScoresTab from './profile/ProfileScoresTab.vue'
 import ProfileStatisticsTab from './profile/ProfileStatisticsTab.vue'
 import ProfileStatsChart from './profile/ProfileStatsChart.vue'
+import ScoresPlaylistButton from './profile/ScoresPlaylistButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -122,6 +123,7 @@ watch(() => route.query.category, (newQueryCategory) => {
 })
 
 const scoreSearch = ref('')
+const scorePlaylistParams = ref<UserScoresParams | null>(null)
 const editMode = ref(false)
 const nameDraft = ref('')
 const nameSaving = ref(false)
@@ -732,13 +734,17 @@ watch(activeCategory, (newCategory) => {
 
         <div class="profile-page__tabs-row">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
-          <SearchBox v-if="activeTab === 'scores'" v-model="scoreSearch" placeholder="Search maps..." />
+          <div v-if="activeTab === 'scores'" class="profile-page__scores-tools">
+            <ScoresPlaylistButton v-if="scorePlaylistParams" :user-id="userId" :params="scorePlaylistParams" />
+            <SearchBox v-model="scoreSearch" placeholder="Search maps..." />
+          </div>
         </div>
 
         <div class="profile-page__content">
           <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
             :search="scoreSearch" :is-self-profile="isSelfProfile" :pinned-score-ids="pinnedScoreIds"
-            :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle" />
+            :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle"
+            @params-change="scorePlaylistParams = $event" />
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
             :xp-stats="xpStats" />
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
@@ -773,6 +779,10 @@ watch(activeCategory, (newCategory) => {
   max-width: 1280px;
   position: relative;
   z-index: 1;
+}
+
+.profile-page>.profile-page__tabs-row:not(.profile-page__bg):not(.profile-page__cat-dock) {
+  z-index: 2;
 }
 
 .profile-page__cat-dock {
@@ -1316,6 +1326,12 @@ watch(activeCategory, (newCategory) => {
   gap: var(--space-md);
 }
 
+.profile-page__scores-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 
 .profile-page__content {
   min-height: 400px;
@@ -1409,6 +1425,10 @@ watch(activeCategory, (newCategory) => {
   .profile-page__tabs-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .profile-page__scores-tools :deep(.search-box) {
+    flex: 1;
   }
 
   .profile-page__cat-dock-inner {
