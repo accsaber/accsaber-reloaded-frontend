@@ -144,15 +144,32 @@ const XP_CURVE_POINTS: readonly (readonly [number, number])[] = [
 export const XP_BASE_PER_SCORE = 25
 const XP_MAX_BONUS = 900
 const XP_REFERENCE_COMPLEXITY = 10
+const XP_IMPROVEMENT_MULTIPLIER = 1.5
 export const XP_MIN_COMPLEXITY = 4.5
 
-export function scoreXp(accuracy: number, complexity: number): number {
+export function scoreXpBonus(accuracy: number, complexity: number): number {
   const clamped = Math.max(complexity, XP_MIN_COMPLEXITY)
-  const bonus =
+  return (
     interpolatePoints(XP_CURVE_POINTS, accuracy) *
     XP_MAX_BONUS *
     Math.cbrt(clamped / XP_REFERENCE_COMPLEXITY)
-  return XP_BASE_PER_SCORE + bonus
+  )
+}
+
+export function scoreXp(accuracy: number, complexity: number): number {
+  return XP_BASE_PER_SCORE + scoreXpBonus(accuracy, complexity)
+}
+
+export function improvementXp(
+  newAccuracy: number,
+  oldAccuracy: number,
+  complexity: number,
+): number {
+  const gained = Math.max(
+    scoreXpBonus(newAccuracy, complexity) - scoreXpBonus(oldAccuracy, complexity),
+    0,
+  )
+  return XP_BASE_PER_SCORE + gained * XP_IMPROVEMENT_MULTIPLIER
 }
 
 const LEVEL_CURVE_BASE = 52
