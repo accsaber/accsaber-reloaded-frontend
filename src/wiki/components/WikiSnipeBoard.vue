@@ -6,6 +6,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
@@ -29,6 +30,7 @@ const ScoreDetailModal = defineAsyncComponent(
   () => import('@/components/domain/ScoreDetailModal.vue'),
 )
 
+const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
 
@@ -108,6 +110,22 @@ const playlistUrl = computed(() =>
   buildSnipePlaylistUrl(props.sniperId, activeTargetId.value, { size: props.rows }),
 )
 
+const viewerIsSniper = computed(
+  () => authStore.isLoggedIn && authStore.userId === props.sniperId,
+)
+
+const liveRoute = computed(() =>
+  viewerIsSniper.value
+    ? `/players/${activeTargetId.value}/snipe`
+    : `/players/${activeTargetId.value}`,
+)
+
+const liveLabel = computed(() =>
+  viewerIsSniper.value
+    ? `Open the full page against ${activeTargetName.value}`
+    : `Find this on ${activeTargetName.value}'s profile`,
+)
+
 watch([() => props.sniperId, activeTargetId], load, { immediate: true })
 </script>
 
@@ -165,15 +183,18 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
         />
       </div>
 
-      <BaseButton variant="primary" :href="playlistUrl" aria-label="Download Beat Saber playlist">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3v12" />
-          <path d="m7 10 5 5 5-5" />
-          <path d="M5 21h14" />
-        </svg>
-        <span>Download these {{ comparisons.length }} as a playlist</span>
-      </BaseButton>
+      <div class="board__actions">
+        <BaseButton variant="primary" :href="playlistUrl" aria-label="Download Beat Saber playlist">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M5 21h14" />
+          </svg>
+          <span>Download these {{ comparisons.length }} as a playlist</span>
+        </BaseButton>
+        <RouterLink class="board__live" :to="liveRoute">{{ liveLabel }}</RouterLink>
+      </div>
     </template>
 
     <ScoreDetailModal
@@ -246,6 +267,25 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.board__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.board__live {
+  color: var(--accent);
+  font-size: var(--text-caption);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.board__live:hover {
+  filter: brightness(1.15);
 }
 
 @media (max-width: 560px) {
