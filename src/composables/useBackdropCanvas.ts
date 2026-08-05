@@ -1,9 +1,16 @@
 import { onMounted, onUnmounted, type Ref } from 'vue'
 import { useReducedMotion } from '@/composables/useReducedMotion'
+import { useRenderLoop } from '@/composables/useRenderLoop'
 
 export interface BackdropScene {
-  init: (w: number, h: number, nowMs: number) => void
-  draw: (ctx: CanvasRenderingContext2D, w: number, h: number, nowMs: number, reduced: boolean) => void
+  init: (w: number, h: number, nowMs: number, scale: number) => void
+  draw: (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    nowMs: number,
+    reduced: boolean,
+  ) => void
 }
 
 interface SceneSizing {
@@ -30,8 +37,6 @@ function useSceneCanvas(
   sizing: SceneSizing,
 ): void {
   const reduced = useReducedMotion()
-  let rafId: number | null = null
-  let isVisible = true
   let stopObserving: (() => void) | null = null
   let logicalW = 0
   let logicalH = 0
@@ -47,11 +52,7 @@ function useSceneCanvas(
     scene.draw(ctx, logicalW, logicalH, now, isStatic())
   }
 
-  function loop(now: number) {
-    if (!isVisible) return
-    render(now)
-    rafId = requestAnimationFrame(loop)
-  }
+  const loop = useRenderLoop(render, () => !isStatic())
 
   function resize() {
     if (!canvasRef.value) return
@@ -63,36 +64,22 @@ function useSceneCanvas(
     if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0)
     logicalW = w
     logicalH = h
-    scene.init(w, h, performance.now())
+    scene.init(w, h, performance.now(), scale)
     if (isStatic()) render(performance.now())
-  }
-
-  function onVisibility() {
-    isVisible = !document.hidden
-    if (isVisible && rafId === null && !isStatic()) {
-      rafId = requestAnimationFrame(loop)
-    } else if (!isVisible && rafId !== null) {
-      cancelAnimationFrame(rafId)
-      rafId = null
-    }
   }
 
   onMounted(() => {
     resize()
     window.addEventListener('resize', resize)
-    document.addEventListener('visibilitychange', onVisibility)
     if (canvasRef.value && sizing.observe) {
       stopObserving = sizing.observe(canvasRef.value, resize)
     }
-    if (!isStatic()) {
-      rafId = requestAnimationFrame(loop)
-    }
+    loop.start()
   })
 
   onUnmounted(() => {
-    if (rafId !== null) cancelAnimationFrame(rafId)
+    loop.stop()
     window.removeEventListener('resize', resize)
-    document.removeEventListener('visibilitychange', onVisibility)
     stopObserving?.()
     stopObserving = null
   })

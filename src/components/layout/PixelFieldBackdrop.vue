@@ -3,6 +3,7 @@ import { useBackdropCanvas } from '@/composables/useBackdropCanvas'
 import { darken, lighten } from '@/utils/color'
 import { cell, drawDitheredBands } from '@/utils/pixelScene'
 import { randBetween as rand } from '@/utils/random'
+import { blitSceneLayer, createSceneLayer } from '@/utils/sceneLayer'
 import type { PixelFieldBackdropConfig } from '@/utils/themeBackdrop'
 import { useTemplateRef } from 'vue'
 
@@ -39,6 +40,13 @@ interface Bird {
 }
 
 const TIP_DEPTH = 3
+const SUN_RADIUS = 9
+const RAYS = [
+  { dy: 0, len: 24, density: 10 },
+  { dy: -2, len: 16, density: 8 },
+  { dy: -5, len: 10, density: 6 },
+  { dy: -8, len: 6, density: 5 },
+]
 
 let stalkLayers: Stalk[][] = []
 let leaves: Leaf[] = []
@@ -46,19 +54,25 @@ let birds: Bird[] = []
 let nextLeafAt = 0
 let nextFlockAt = 0
 let startTime = 0
+let cols = 0
+let rows = 0
 let horizonRow = 0
+let sunCol = 0
 let sunCore = ''
 let sunMid = ''
 let sunGlow = ''
+let bg: HTMLCanvasElement | null = null
 
 function initField(w: number, h: number) {
   const ps = props.config.pixelSize
-  const cols = Math.ceil(w / ps)
-  const rows = Math.ceil(h / ps)
+  cols = Math.ceil(w / ps)
+  rows = Math.ceil(h / ps)
   horizonRow = Math.floor(rows * (1 - props.config.fieldHeightPct / 100))
+  sunCol = Math.floor(cols * 0.72)
   sunCore = lighten(props.config.sunColor, 0.55)
   sunMid = lighten(props.config.sunColor, 0.28)
   sunGlow = lighten(props.config.sunColor, 0.18)
+  bg = null
 
   stalkLayers = []
   const wheat = props.config.wheatColors
@@ -117,99 +131,125 @@ function spawnFlock(now: number, w: number, h: number) {
   }
 }
 
-function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, elapsed: number, reduced: boolean) {
-  const ps = props.config.pixelSize
-  const cols = Math.ceil(w / ps)
-  const rows = Math.ceil(h / ps)
-
-  drawDitheredBands(ctx, cols, ps, props.config.skyColors, 0, horizonRow)
-
-  const sunCol = Math.floor(cols * 0.72)
-  const sunRadius = 9
-  const shimmer = reduced ? 0 : Math.floor(elapsed * 1.25) % 2
-
-  for (let dy = -17; dy <= 0; dy++) {
-    for (let dx = -17; dx <= 17; dx++) {
+function drawSunDisc(ctx: CanvasRenderingContext2D, ps: number) {
+  for (let dy = -SUN_RADIUS; dy <= 4; dy++) {
+    for (let dx = -SUN_RADIUS; dx <= SUN_RADIUS; dx++) {
       const d2 = dx * dx + dy * dy
-      if (d2 <= sunRadius * sunRadius) continue
-      const row = horizonRow + dy
-      if (row < 0 || row >= horizonRow) continue
-      const density = d2 <= 144 ? 8 : d2 <= 289 ? 4 : 0
-      const hash = (((dx * dx * 3 + dy * dy * 7 + dx * dy * 5 + shimmer * 3) % 19) + 19) % 19
-      if (density && hash < density) cell(ctx, sunCol + dx, row, ps, sunGlow)
-    }
-  }
-
-  const rays = [
-    { dy: 0, len: 24, density: 10 },
-    { dy: -2, len: 16, density: 8 },
-    { dy: -5, len: 10, density: 6 },
-    { dy: -8, len: 6, density: 5 },
-  ]
-  for (const ray of rays) {
-    const row = horizonRow + ray.dy
-    if (row < 0) continue
-    for (let dx = sunRadius + 1; dx <= sunRadius + ray.len; dx++) {
-      const fadeD = ray.density - Math.floor(((dx - sunRadius) / ray.len) * 3)
-      if ((dx * 7 + ray.dy * 13 + shimmer * 5 + 100) % 17 < fadeD) cell(ctx, sunCol + dx, row, ps, sunGlow)
-      if ((dx * 11 + ray.dy * 5 + shimmer * 7 + 100) % 17 < fadeD) cell(ctx, sunCol - dx, row, ps, sunGlow)
-    }
-  }
-
-  for (let dy = -sunRadius; dy <= 4; dy++) {
-    for (let dx = -sunRadius; dx <= sunRadius; dx++) {
-      const d2 = dx * dx + dy * dy
-      if (d2 > sunRadius * sunRadius) continue
+      if (d2 > SUN_RADIUS * SUN_RADIUS) continue
       const row = horizonRow + dy
       if (row < 0 || row >= horizonRow + 5) continue
-      cell(ctx, sunCol + dx, row, ps, d2 <= 16 ? sunCore : d2 <= 42 ? sunMid : props.config.sunColor)
+      cell(
+        ctx,
+        sunCol + dx,
+        row,
+        ps,
+        d2 <= 16 ? sunCore : d2 <= 42 ? sunMid : props.config.sunColor,
+      )
+    }
+  }
+}
+
+function drawSunHaze(ctx: CanvasRenderingContext2D, ps: number, shimmer: number) {
+  ctx.fillStyle = sunGlow
+  for (let dy = -17; dy <= 0; dy++) {
+    const row = horizonRow + dy
+    if (row < 0 || row >= horizonRow) continue
+    for (let dx = -17; dx <= 17; dx++) {
+      const d2 = dx * dx + dy * dy
+      if (d2 <= SUN_RADIUS * SUN_RADIUS) continue
+      const density = d2 <= 144 ? 8 : d2 <= 289 ? 4 : 0
+      if (!density) continue
+      const hash = (((dx * dx * 3 + dy * dy * 7 + dx * dy * 5 + shimmer * 3) % 19) + 19) % 19
+      if (hash < density) ctx.fillRect((sunCol + dx) * ps, row * ps, ps, ps)
     }
   }
 
-  const windT = reduced ? 0 : elapsed * 1.6 * props.config.windSpeed
-  for (const layerStalks of stalkLayers) {
-    for (const s of layerStalks) {
-      const solidTop = s.tipRow + TIP_DEPTH
-      for (let row = s.tipRow + 1; row < solidTop && row < rows; row++) {
-        cell(ctx, s.col, row, ps, s.underColor)
+  for (const ray of RAYS) {
+    const row = horizonRow + ray.dy
+    if (row < 0) continue
+    for (let dx = SUN_RADIUS + 1; dx <= SUN_RADIUS + ray.len; dx++) {
+      const fadeD = ray.density - Math.floor(((dx - SUN_RADIUS) / ray.len) * 3)
+      if ((dx * 7 + ray.dy * 13 + shimmer * 5 + 100) % 17 < fadeD) {
+        ctx.fillRect((sunCol + dx) * ps, row * ps, ps, ps)
       }
-      for (let row = solidTop; row < rows; row++) {
-        cell(ctx, s.col, row, ps, s.color)
-      }
-    }
-    for (const s of layerStalks) {
-      const solidTop = s.tipRow + TIP_DEPTH
-      const bend = Math.round(Math.sin(windT + s.phase) * s.amp)
-      for (let row = s.tipRow; row < solidTop && row < rows; row++) {
-        cell(ctx, s.col + bend, row, ps, row === s.tipRow ? s.headColor : s.color)
-      }
-    }
-  }
-
-  for (let dy = 1; dy <= 4; dy++) {
-    for (let dx = -14; dx <= 14; dx++) {
-      const row = horizonRow + dy
-      if (row >= rows) continue
-      const density = (5 - dy) * 2 - Math.floor(Math.abs(dx) / 5)
-      if (density > 0 && (dx * 7 + dy * 13 + shimmer * 5 + 200) % 19 < density) {
-        cell(ctx, sunCol + dx, row, ps, sunMid)
+      if ((dx * 11 + ray.dy * 5 + shimmer * 7 + 100) % 17 < fadeD) {
+        ctx.fillRect((sunCol - dx) * ps, row * ps, ps, ps)
       }
     }
   }
 }
 
+function drawSunReflection(ctx: CanvasRenderingContext2D, ps: number, shimmer: number) {
+  ctx.fillStyle = sunMid
+  for (let dy = 1; dy <= 4; dy++) {
+    const row = horizonRow + dy
+    if (row >= rows) continue
+    for (let dx = -14; dx <= 14; dx++) {
+      const density = (5 - dy) * 2 - Math.floor(Math.abs(dx) / 5)
+      if (density > 0 && (dx * 7 + dy * 13 + shimmer * 5 + 200) % 19 < density) {
+        ctx.fillRect((sunCol + dx) * ps, row * ps, ps, ps)
+      }
+    }
+  }
+}
+
+function drawStalkBodies(ctx: CanvasRenderingContext2D, ps: number) {
+  for (const layerStalks of stalkLayers) {
+    for (const s of layerStalks) {
+      const solidTop = s.tipRow + TIP_DEPTH
+      ctx.fillStyle = s.underColor
+      for (let row = s.tipRow + 1; row < solidTop && row < rows; row++) {
+        ctx.fillRect(s.col * ps, row * ps, ps, ps)
+      }
+      ctx.fillStyle = s.color
+      for (let row = solidTop; row < rows; row++) {
+        ctx.fillRect(s.col * ps, row * ps, ps, ps)
+      }
+    }
+  }
+}
+
+function drawStalkTips(ctx: CanvasRenderingContext2D, ps: number, windT: number) {
+  for (const layerStalks of stalkLayers) {
+    for (const s of layerStalks) {
+      const solidTop = s.tipRow + TIP_DEPTH
+      const bend = Math.round(Math.sin(windT + s.phase) * s.amp)
+      if (s.tipRow >= rows) continue
+      const x = (s.col + bend) * ps
+      ctx.fillStyle = s.headColor
+      ctx.fillRect(x, s.tipRow * ps, ps, ps)
+      ctx.fillStyle = s.color
+      for (let row = s.tipRow + 1; row < solidTop && row < rows; row++) {
+        ctx.fillRect(x, row * ps, ps, ps)
+      }
+    }
+  }
+}
+
+function buildBackground(ctx: CanvasRenderingContext2D): HTMLCanvasElement {
+  const ps = props.config.pixelSize
+  const layer = createSceneLayer(ctx)
+  const lctx = layer.getContext('2d')
+  if (!lctx) return layer
+  drawDitheredBands(lctx, cols, ps, props.config.skyColors, 0, horizonRow)
+  drawSunDisc(lctx, ps)
+  drawStalkBodies(lctx, ps)
+  return layer
+}
+
 function drawLeaves(ctx: CanvasRenderingContext2D, w: number, now: number, elapsed: number) {
   const ps = props.config.pixelSize
-  leaves = leaves.filter((l) => l.x + (now - l.bornAt) / 1000 * l.speed < w + 40)
+  leaves = leaves.filter((l) => l.x + ((now - l.bornAt) / 1000) * l.speed < w + 40)
   for (const l of leaves) {
     const t = (now - l.bornAt) / 1000
     const x = l.x + t * l.speed
     const y = l.y0 + Math.sin(elapsed * 2 + l.bobPhase) * 9 + t * 6
     const col = Math.round(x / ps)
     const row = Math.round(y / ps)
-    cell(ctx, col, row, ps, l.color)
-    cell(ctx, col + 1, row, ps, l.color)
-    cell(ctx, col + 1, row - 1, ps, l.color)
+    ctx.fillStyle = l.color
+    ctx.fillRect(col * ps, row * ps, ps, ps)
+    ctx.fillRect((col + 1) * ps, row * ps, ps, ps)
+    ctx.fillRect((col + 1) * ps, (row - 1) * ps, ps, ps)
   }
 }
 
@@ -248,9 +288,16 @@ useBackdropCanvas(canvasRef, {
     initField(w, h)
   },
   draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
+    const ps = props.config.pixelSize
+    if (!bg) bg = buildBackground(ctx)
+    blitSceneLayer(ctx, bg)
+
     const elapsed = (now - startTime) / 1000
-    drawScene(ctx, w, h, elapsed, reduced)
+    const shimmer = reduced ? 0 : Math.floor(elapsed * 1.25) % 2
+    drawSunHaze(ctx, ps, shimmer)
+    drawStalkTips(ctx, ps, reduced ? 0 : elapsed * 1.6 * props.config.windSpeed)
+    drawSunReflection(ctx, ps, shimmer)
+
     if (reduced) return
     if (props.config.leaves) {
       if (now >= nextLeafAt) {

@@ -3,6 +3,7 @@ import { useBackdropCanvas } from '@/composables/useBackdropCanvas'
 import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
 import { cell, drawDitheredBands } from '@/utils/pixelScene'
 import { hash01, randBetween as rand } from '@/utils/random'
+import { blitSceneLayer, createRadialSprite, createSceneLayer } from '@/utils/sceneLayer'
 import type { ForestBackdropConfig } from '@/utils/themeBackdrop'
 import { useTemplateRef } from 'vue'
 
@@ -83,6 +84,9 @@ interface Spore {
 }
 
 const TRAIL_ALPHA = [0, 0.45, 0.26, 0.12]
+const BLOOM_SPRITE_PX = 128
+
+const bloomSprites = new Map<string, HTMLCanvasElement | null>()
 
 let cols = 0
 let rows = 0
@@ -337,6 +341,21 @@ function drawMushroomBody(ctx: CanvasRenderingContext2D, m: Mushroom, ps: number
   }
 }
 
+function bloomSprite(hex: string): HTMLCanvasElement | null {
+  const cached = bloomSprites.get(hex)
+  if (cached !== undefined) return cached
+  const rgb = parseHex(hex)
+  const sprite = rgb
+    ? createRadialSprite(BLOOM_SPRITE_PX, rgb, [
+        [0, 1],
+        [0.55, 0.35],
+        [1, 0],
+      ])
+    : null
+  bloomSprites.set(hex, sprite)
+  return sprite
+}
+
 function bloom(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -345,15 +364,12 @@ function bloom(
   hex: string,
   alpha: number,
 ) {
-  const rgb = parseHex(hex)
-  if (!rgb) return
-  const [r, g, b] = rgb
-  const grad = ctx.createRadialGradient(x, y, 0, x, y, radius)
-  grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`)
-  grad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, ${alpha * 0.35})`)
-  grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
-  ctx.fillStyle = grad
-  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2)
+  const sprite = bloomSprite(hex)
+  if (!sprite) return
+  const prev = ctx.globalAlpha
+  ctx.globalAlpha = prev * alpha
+  ctx.drawImage(sprite, x - radius, y - radius, radius * 2, radius * 2)
+  ctx.globalAlpha = prev
 }
 
 function drawGlow(
@@ -368,13 +384,14 @@ function drawGlow(
   skip?: (dx: number, dy: number) => boolean,
 ) {
   const r2 = radius * radius
+  ctx.fillStyle = color
   for (let dy = -radius; dy <= radius; dy++) {
     for (let dx = -radius; dx <= radius; dx++) {
       const d2 = dx * dx + dy * dy
       if (d2 > r2 || (skip && skip(dx, dy))) continue
       const density = intensity * Math.max(0, 1 - d2 / r2) * 9
       if (hash01(seed + dx * 31 + dy * 61) * 10 < density) {
-        cell(ctx, colC + dx, rowC + dy, ps, color)
+        ctx.fillRect((colC + dx) * ps, (rowC + dy) * ps, ps, ps)
       }
     }
   }
@@ -538,13 +555,9 @@ function drawPath(ctx: CanvasRenderingContext2D, ps: number) {
 
 function buildBackground(ctx: CanvasRenderingContext2D): HTMLCanvasElement {
   const ps = props.config.pixelSize
-  const off = document.createElement('canvas')
-  off.width = ctx.canvas.width
-  off.height = ctx.canvas.height
+  const off = createSceneLayer(ctx)
   const octx = off.getContext('2d')
   if (!octx) return off
-  const tr = ctx.getTransform()
-  octx.setTransform(tr.a, tr.b, tr.c, tr.d, 0, 0)
 
   const fog = fogColor()
   drawDitheredBands(octx, cols, ps, props.config.canopyColors, 0, vpRow)
@@ -604,11 +617,7 @@ useBackdropCanvas(canvasRef, {
   draw(ctx, w, h, now, reduced) {
     const ps = props.config.pixelSize
     if (!bg) bg = buildBackground(ctx)
-    ctx.save()
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-    ctx.drawImage(bg, 0, 0)
-    ctx.restore()
+    blitSceneLayer(ctx, bg)
     const elapsed = (now - startTime) / 1000
     drawMushroomGlows(ctx, ps, elapsed, reduced)
     if (props.config.wisps) drawWisps(ctx, w, h, ps, now, reduced)

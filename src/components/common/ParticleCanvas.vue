@@ -1,19 +1,25 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { useMediaQuery } from '@/composables/useMediaQuery'
+import { useReducedMotion } from '@/composables/useReducedMotion'
+import { useRenderLoop } from '@/composables/useRenderLoop'
+import { onMounted, onUnmounted, ref, watchEffect } from 'vue'
 
 const props = defineProps<{
   particleCount?: number
   proximityRadius?: number
   darkMode?: boolean
+  interactive?: boolean
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-let rafId: number | null = null
+const reduced = useReducedMotion()
+const mobile = useMediaQuery('(max-width: 767px)')
 let particles: Star[] = []
 let mouseX = -1000
 let mouseY = -1000
-let isVisible = true
 let startTime = 0
+let logicalW = 0
+let logicalH = 0
 
 interface Star {
   x: number
@@ -30,12 +36,8 @@ interface Star {
 const count = props.particleCount ?? 170
 const radius = props.proximityRadius ?? 120
 
-function isReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
-function isMobile(): boolean {
-  return window.innerWidth < 768
+function tracksCursor(): boolean {
+  return props.interactive !== false && !mobile.value && !reduced.value
 }
 
 function initParticles(w: number, h: number) {
@@ -116,13 +118,14 @@ function drawCrossSpike(
 function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
   ctx.clearRect(0, 0, w, h)
 
-  const mobile = isMobile()
-  const reduced = isReducedMotion()
+  const still = reduced.value
+  const cursor = tracksCursor()
+  const dark = props.darkMode !== false
   const elapsed = (time - startTime) / 1000
 
   for (const p of particles) {
     let twinkle = 1
-    if (!reduced) {
+    if (!still) {
       const wave = Math.sin(elapsed * p.twinkleSpeed + p.twinklePhase)
       twinkle = 1 - p.twinkleDepth * 0.5 * (1 - wave)
     }
@@ -131,7 +134,7 @@ function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number)
     let size = p.size
 
     let proximityFactor = 0
-    if (!mobile && !reduced) {
+    if (cursor) {
       const dx = p.x - mouseX
       const dy = p.y - mouseY
       const dist = Math.sqrt(dx * dx + dy * dy)
@@ -143,7 +146,6 @@ function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number)
       }
     }
 
-    const dark = props.darkMode !== false
     const baseR = dark ? (p.warm ? 255 : 232) : (p.warm ? 80 : 40)
     const baseG = dark ? (p.warm ? 220 : 232) : (p.warm ? 60 : 40)
     const baseB = dark ? (p.warm ? 150 : 240) : (p.warm ? 20 : 60)
@@ -185,15 +187,13 @@ function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number)
   }
 }
 
-function loop(time: number) {
-  if (!isVisible || !canvasRef.value) return
-  const ctx = canvasRef.value.getContext('2d')
-  if (!ctx) return
-  const dpr = Math.min(window.devicePixelRatio, 2)
-
-  draw(ctx, canvasRef.value.width / dpr, canvasRef.value.height / dpr, time)
-  rafId = requestAnimationFrame(loop)
+function render(time: number) {
+  const ctx = canvasRef.value?.getContext('2d')
+  if (!ctx || logicalW <= 0 || logicalH <= 0) return
+  draw(ctx, logicalW, logicalH, time)
 }
+
+const loop = useRenderLoop(render, () => !reduced.value)
 
 function onMouseMove(e: MouseEvent) {
   if (!canvasRef.value) return
@@ -209,13 +209,6 @@ function onMouseMove(e: MouseEvent) {
   }
 }
 
-function onVisibility() {
-  isVisible = !document.hidden
-  if (isVisible && !rafId) {
-    rafId = requestAnimationFrame(loop)
-  }
-}
-
 function resize() {
   if (!canvasRef.value) return
   const parent = canvasRef.value.parentElement
@@ -228,34 +221,33 @@ function resize() {
   canvasRef.value.style.width = w + 'px'
   canvasRef.value.style.height = h + 'px'
   const ctx = canvasRef.value.getContext('2d')
-  if (ctx) ctx.scale(dpr, dpr)
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  logicalW = w
+  logicalH = h
   initParticles(w, h)
+  if (reduced.value) render(startTime || performance.now())
 }
 
-onMounted(() => {
-  resize()
-  startTime = performance.now()
-
-  if (isReducedMotion()) {
-    const ctx = canvasRef.value?.getContext('2d')
-    if (ctx && canvasRef.value) {
-      const dpr = Math.min(window.devicePixelRatio, 2)
-      draw(ctx, canvasRef.value.width / dpr, canvasRef.value.height / dpr, startTime)
-    }
-    return
+watchEffect(() => {
+  if (tracksCursor()) {
+    window.addEventListener('mousemove', onMouseMove)
+  } else {
+    window.removeEventListener('mousemove', onMouseMove)
+    mouseX = -1000
+    mouseY = -1000
   }
+})
 
-  rafId = requestAnimationFrame(loop)
-
+onMounted(() => {
+  startTime = performance.now()
+  resize()
   window.addEventListener('resize', resize)
-  document.addEventListener('visibilitychange', onVisibility)
-  window.addEventListener('mousemove', onMouseMove)
+  loop.start()
 })
 
 onUnmounted(() => {
-  if (rafId !== null) cancelAnimationFrame(rafId)
+  loop.stop()
   window.removeEventListener('resize', resize)
-  document.removeEventListener('visibilitychange', onVisibility)
   window.removeEventListener('mousemove', onMouseMove)
 })
 </script>
