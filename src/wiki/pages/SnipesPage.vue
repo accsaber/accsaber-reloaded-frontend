@@ -63,7 +63,7 @@ onMounted(async () => {
       Everything above it is the site working out which maps have earned a place on that list.
     </p>
     <p>
-      Here is the real thing, running on live scores. If you are logged in it is your own
+      Here is a preview of the real thing, running on live scores. If you are logged in it is your own
       profile against the top player, and you can point it at anybody else instead.
     </p>
 

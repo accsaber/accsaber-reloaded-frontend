@@ -687,6 +687,11 @@ onUnmounted(() => {
     flex-direction: column;
     gap: var(--space-xs);
     padding: var(--space-md);
+    max-height: calc(100vh - var(--navbar-height) - var(--space-md));
+    max-height: calc(100dvh - var(--navbar-height) - var(--space-md));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     background: color-mix(in srgb, var(--bg-elevated) 96%, transparent);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -711,6 +716,7 @@ onUnmounted(() => {
     align-items: center;
     width: 100%;
     height: 44px;
+    flex-shrink: 0;
     padding: 0 var(--space-md) 0 calc(var(--space-md) + 24px);
     background: var(--bg-base);
     border: 1px solid var(--bg-overlay);
@@ -732,6 +738,7 @@ onUnmounted(() => {
     align-items: center;
     width: 100%;
     height: 44px;
+    flex-shrink: 0;
     padding: 0 var(--space-md);
     font-family: var(--font-sans);
     font-size: var(--text-body);
@@ -769,6 +776,7 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
+    flex-shrink: 0;
   }
 
   .navbar__drawer-section+.navbar__drawer-section {
