@@ -45,10 +45,18 @@ const SHORT_LABEL_MAP: Record<string, string> = {
   'COMP': 'Complexity',
 }
 
+const SORT_PRIORITY: Record<string, number> = { weighted: 0, date: 1 }
+
+function sortRank(key: string) {
+  return SORT_PRIORITY[key] ?? SORT_PRIORITY.date + 1
+}
+
 const sortOptions = computed(() =>
   props.columns
     .filter((c) => c.sortable)
-    .map((c) => ({ value: c.key, label: SHORT_LABEL_MAP[c.label] ?? c.label })),
+    .map((c, index) => ({ value: c.key, label: SHORT_LABEL_MAP[c.label] ?? c.label, index }))
+    .sort((a, b) => sortRank(a.value) - sortRank(b.value) || a.index - b.index)
+    .map(({ value, label }) => ({ value, label })),
 )
 
 function onSortKeySelect(key: string) {
