@@ -14,6 +14,7 @@ export type ScoreRowField =
   | 'complexity'
   | 'category'
   | 'streak_115'
+  | 'max_streak_115'
   | 'pauses'
   | 'play_count'
   | 'date'

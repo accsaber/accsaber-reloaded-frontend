@@ -58,6 +58,19 @@ function rowReplay(row: Record<string, unknown>): ResolvedReplay | null {
   return (row.replay as ResolvedReplay | null) ?? null
 }
 
+function streakSummary(row: Record<string, unknown>): string | null {
+  const parts: string[] = []
+  if (isScoreFieldVisible('streak_115')) {
+    const streak = row.streak115 as number | null
+    parts.push(streak ? `${streak} 115s` : '–')
+  }
+  if (isScoreFieldVisible('max_streak_115')) {
+    const max = row.maxStreak115 as number | null
+    parts.push(max ? `max ${max}` : '–')
+  }
+  return parts.length ? parts.join(' · ') : null
+}
+
 const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
   defaultSort: 'ap',
   defaultOrder: 'desc',
@@ -99,6 +112,7 @@ const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
   ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '80px' },
   weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '80px' },
   streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
+  max_streak_115: { key: 'maxStreak115', label: 'Max 115s', sortable: true, align: 'right', mono: true, width: '76px' },
   pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '70px' },
   play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '70px' },
   date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
@@ -134,6 +148,7 @@ const rows = computed(() => {
       ap: s.ap,
       weighted: s.weightedAp,
       streak115: s.streak115,
+      maxStreak115: s.maxStreak115,
       pauses: s.pauses,
       playCount: s.playCount,
       date: s.date,
@@ -299,6 +314,11 @@ watch(
         <span v-else class="map-scores__muted">&ndash;</span>
       </template>
 
+      <template #cell-maxStreak115="{ value }">
+        <span v-if="value != null && value !== 0">{{ value }}</span>
+        <span v-else class="map-scores__muted">&ndash;</span>
+      </template>
+
       <template #cell-pauses="{ value }">
         <span v-if="value != null">{{ value }}</span>
       </template>
@@ -348,10 +368,7 @@ watch(
             </span>
             <span v-if="isScoreFieldVisible('ap')" class="ms-card__ap">{{ (row.ap as number).toFixed(2) }}</span>
 
-            <span v-if="isScoreFieldVisible('streak_115')" class="ms-card__streak-cell">
-              <template v-if="(row.streak115 as number | null) != null && (row.streak115 as number) > 0">{{ row.streak115 }} 115s</template>
-              <span v-else class="ms-card__sep">&ndash;</span>
-            </span>
+            <span v-if="streakSummary(row)" class="ms-card__streak-cell">{{ streakSummary(row) }}</span>
             <span v-if="isScoreFieldVisible('weighted_ap')" class="ms-card__weighted">
               / {{ (row.weighted as number).toFixed(2) }}
             </span>

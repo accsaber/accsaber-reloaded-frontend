@@ -9,6 +9,7 @@ export const SCORE_ROW_FIELD_LABELS: Record<ScoreRowField, string> = {
   complexity: 'Complexity',
   category: 'Category',
   streak_115: '115 streak',
+  max_streak_115: 'Max 115 streak',
   pauses: 'Pauses',
   play_count: 'Play count',
   date: 'Date',
@@ -37,6 +38,17 @@ export function sanitizeScoreRowFields(raw: unknown): ScoreRowField[] {
     if (typeof entry !== 'string' || !FIELD_SET.has(entry) || seen.has(entry)) continue
     seen.add(entry)
     out.push(entry as ScoreRowField)
+  }
+  return out
+}
+
+export function orderWithHiddenFields(visible: ScoreRowField[]): ScoreRowField[] {
+  const out = [...visible]
+  for (const field of ALL_SCORE_ROW_FIELDS) {
+    if (out.includes(field)) continue
+    const rank = ALL_SCORE_ROW_FIELDS.indexOf(field)
+    const before = out.findIndex((f) => ALL_SCORE_ROW_FIELDS.indexOf(f) > rank)
+    out.splice(before === -1 ? out.length : before, 0, field)
   }
   return out
 }

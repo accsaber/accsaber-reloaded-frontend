@@ -113,6 +113,7 @@ export interface ScoreDisplay {
   bombHits?: number
   pauses?: number
   streak115?: number
+  maxStreak115?: number | null
   playCount?: number
   hmd?: string
   xpGained?: number
@@ -152,6 +153,7 @@ export interface DifficultyScoreDisplay {
   bombHits: number
   pauses: number
   streak115: number
+  maxStreak115: number | null
   playCount: number
   hmd: string
   xpGained: number

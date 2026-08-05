@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ScoreRowField } from '@/types/api/settings'
-import { ALL_SCORE_ROW_FIELDS, SCORE_ROW_FIELD_LABELS } from '@/utils/scoreRowFields'
+import { orderWithHiddenFields, SCORE_ROW_FIELD_LABELS } from '@/utils/scoreRowFields'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -19,7 +19,7 @@ const visible = computed(() => new Set(props.modelValue))
 watch(
   () => props.modelValue,
   (fields) => {
-    order.value = [...fields, ...ALL_SCORE_ROW_FIELDS.filter((f) => !fields.includes(f))]
+    order.value = orderWithHiddenFields(fields)
   },
   { immediate: true, deep: true },
 )

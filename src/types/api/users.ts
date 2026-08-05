@@ -84,6 +84,7 @@ export interface ScoreResponse {
   bombHits: number
   pauses: number
   streak115: number
+  maxStreak115: number | null
   playCount: number
   skillLevel?: number
   hmd: string
