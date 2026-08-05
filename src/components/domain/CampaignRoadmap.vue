@@ -34,6 +34,8 @@ import {
   resolveShape,
   shapeCorners,
   SQRT3,
+  unionRect,
+  type BackgroundFrame,
   type NodeLayout,
 } from '@/utils/campaignLayout'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -1466,12 +1468,27 @@ function getViewCenterCell(): { x: number; y: number } {
   return { x: positionX, y: positionY }
 }
 
-const contentAspect = computed(() => {
-  const b = contentBounds.value
-  return b.height > 0 ? b.width / b.height : 16 / 9
-})
+function getBackgroundFrame(): BackgroundFrame {
+  const content = contentBounds.value
+  const covered = props.backgroundPlacement
+    ? unionRect(
+        content,
+        pinnedBackgroundRect(props.backgroundPlacement, backgroundAspect.value, props.unit),
+      )
+    : content
+  const halfWidth = Math.max(Math.abs(covered.x), Math.abs(covered.x + covered.width))
+  const halfHeight = Math.max(Math.abs(covered.y), Math.abs(covered.y + covered.height))
+  const pad = Math.max(halfWidth, halfHeight) * 0.12
+  const width = (halfWidth + pad) * 2
+  const height = (halfHeight + pad) * 2
+  return {
+    view: { x: -width / 2, y: -height / 2, width, height },
+    content,
+    unit: props.unit,
+  }
+}
 
-defineExpose({ fitToContent, focusNode, getViewCenterCell, contentAspect })
+defineExpose({ fitToContent, focusNode, getViewCenterCell, getBackgroundFrame })
 
 const transformStyle = computed(
   () => `translate(${translateX.value} ${translateY.value}) scale(${scale.value})`,
@@ -1488,11 +1505,7 @@ function onBackgroundLoad(event: Event) {
 
 const pinnedBackgroundStyle = computed(() => {
   if (!props.backgroundUrl || !props.backgroundPlacement) return null
-  const rect = pinnedBackgroundRect(
-    contentBounds.value,
-    props.backgroundPlacement,
-    backgroundAspect.value,
-  )
+  const rect = pinnedBackgroundRect(props.backgroundPlacement, backgroundAspect.value, props.unit)
   return {
     backgroundImage: `url(${props.backgroundUrl})`,
     left: `${rect.x}px`,

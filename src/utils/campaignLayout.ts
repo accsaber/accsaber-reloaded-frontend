@@ -72,18 +72,67 @@ export interface ContentRect {
   height: number
 }
 
+export interface BackgroundFrame {
+  view: ContentRect
+  content: ContentRect
+  unit: number
+}
+
+export const MAX_BACKGROUND_PERCENT = 1000
+
+export const BACKGROUND_REFERENCE_COLUMNS = 20
+
+export function backgroundReferenceSpan(unit: number): number {
+  return unit * 1.5 * BACKGROUND_REFERENCE_COLUMNS
+}
+
+export function clampBackgroundSize(value: number): number {
+  return Math.round(Math.min(MAX_BACKGROUND_PERCENT, Math.max(1, value)))
+}
+
+export function clampBackgroundOffset(value: number): number {
+  return Math.round(Math.min(MAX_BACKGROUND_PERCENT, Math.max(-MAX_BACKGROUND_PERCENT, value)))
+}
+
 export function pinnedBackgroundRect(
-  bounds: ContentRect,
   placement: CampaignBackgroundPlacement,
   aspect: number,
+  unit: number,
 ): ContentRect {
-  const width = (bounds.width * placement.size) / 100
+  const span = backgroundReferenceSpan(unit)
+  const width = (span * placement.size) / 100
   const height = width / (aspect > 0 ? aspect : 1)
   return {
-    x: bounds.x + ((bounds.width - width) * placement.x) / 100,
-    y: bounds.y + ((bounds.height - height) * placement.y) / 100,
+    x: (span * placement.x) / 100 - width / 2,
+    y: (span * placement.y) / 100 - height / 2,
     width,
     height,
+  }
+}
+
+export function suggestBackgroundPlacement(
+  content: ContentRect,
+  aspect: number,
+  unit: number,
+): CampaignBackgroundPlacement {
+  const span = backgroundReferenceSpan(unit)
+  const safeAspect = aspect > 0 ? aspect : 1
+  const width = Math.max(content.width, content.height * safeAspect)
+  return {
+    size: clampBackgroundSize((width / span) * 100),
+    x: clampBackgroundOffset(((content.x + content.width / 2) / span) * 100),
+    y: clampBackgroundOffset(((content.y + content.height / 2) / span) * 100),
+  }
+}
+
+export function unionRect(a: ContentRect, b: ContentRect): ContentRect {
+  const x = Math.min(a.x, b.x)
+  const y = Math.min(a.y, b.y)
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y,
   }
 }
 

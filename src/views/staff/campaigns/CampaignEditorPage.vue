@@ -21,7 +21,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useThemeStore } from '@/stores/theme'
 import { readBackdropConfig } from '@/utils/themeBackdrop'
-import { computed, onMounted, provide, ref, watchEffect } from 'vue'
+import { computed, onMounted, provide, ref, watch } from 'vue'
 import CampaignChatPanel from './CampaignChatPanel.vue'
 import CampaignPluginWarning from './CampaignPluginWarning.vue'
 import CampaignCollaboratorPicker from './CampaignCollaboratorPicker.vue'
@@ -122,13 +122,25 @@ const {
   reloadFromRemote,
   setChangeBroadcaster,
   setViewCenterProvider,
-  canvasAspect,
+  canvasFrame,
 } = editor
 
 const roadmapRef = ref<InstanceType<typeof CampaignRoadmap> | null>(null)
 setViewCenterProvider(() => roadmapRef.value?.getViewCenterCell() ?? null)
-watchEffect(() => {
-  canvasAspect.value = roadmapRef.value?.contentAspect ?? null
+
+function snapshotCanvasFrame() {
+  canvasFrame.value = roadmapRef.value?.getBackgroundFrame() ?? null
+}
+
+watch(
+  () => activeTray.value === 'images',
+  (open) => {
+    if (open) snapshotCanvasFrame()
+  },
+  { flush: 'post' },
+)
+onMounted(() => {
+  if (activeTray.value === 'images') snapshotCanvasFrame()
 })
 
 const themeStore = useThemeStore()

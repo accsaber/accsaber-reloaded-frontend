@@ -55,7 +55,7 @@ const {
   onCompletionModeChange,
   uploadBackground,
   removeBackground,
-  canvasAspect,
+  canvasFrame,
   uploadIcon,
   removeIcon,
   commitBackgroundPlacement,
@@ -650,7 +650,7 @@ const connectionSwatch = computed(() => {
       <CampaignBackgroundPlacer
         :image-url="campaign.backgroundUrl"
         :placement="campaign.background"
-        :box-aspect="canvasAspect"
+        :frame="canvasFrame"
         :disabled="!editable"
         @commit="commitBackgroundPlacement"
       />

@@ -73,6 +73,7 @@ import {
   MAX_PREREQUISITES_PER_NODE,
   prereqIds,
   toPrerequisiteInputs,
+  type BackgroundFrame,
 } from '@/utils/campaignLayout'
 import { auditCampaign } from '@/utils/campaignAudit'
 import {
@@ -395,7 +396,7 @@ export function useCampaignEditor() {
     changeBroadcaster = fn
   }
 
-  const canvasAspect = ref<number | null>(null)
+  const canvasFrame = ref<BackgroundFrame | null>(null)
 
   let viewCenterProvider: (() => { x: number; y: number } | null) | null = null
 
@@ -2879,7 +2880,7 @@ export function useCampaignEditor() {
     auth,
     setChangeBroadcaster,
     setViewCenterProvider,
-    canvasAspect,
+    canvasFrame,
     reloadFromRemote: () => guardedLoad(true),
     rewardItemsById,
     campaign,

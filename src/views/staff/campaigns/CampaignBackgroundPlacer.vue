@@ -1,19 +1,38 @@
 <script setup lang="ts">
 import type { CampaignBackgroundPlacementInput } from '@/types/api/admin'
 import type { CampaignBackgroundPlacement } from '@/types/api/campaigns'
-import { backgroundPlacementStyle } from '@/utils/campaignLayout'
-import { computed, onMounted, ref, watch } from 'vue'
+import {
+  backgroundReferenceSpan,
+  clampBackgroundOffset,
+  clampBackgroundSize,
+  pinnedBackgroundRect,
+  suggestBackgroundPlacement,
+  type BackgroundFrame,
+  type ContentRect,
+} from '@/utils/campaignLayout'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   imageUrl: string
   placement: CampaignBackgroundPlacement | null
-  boxAspect?: number | null
+  frame?: BackgroundFrame | null
   disabled?: boolean
 }>()
 
 const emit = defineEmits<{ commit: [placement: CampaignBackgroundPlacementInput] }>()
 
-const NEUTRAL: CampaignBackgroundPlacement = { size: 100, x: 50, y: 50 }
+const FALLBACK_UNIT = 48
+
+const fallbackFrame = computed<BackgroundFrame>(() => {
+  const span = backgroundReferenceSpan(FALLBACK_UNIT) * 1.3
+  const height = (span * 9) / 16
+  const rect = { x: -span / 2, y: -height / 2, width: span, height }
+  return { view: rect, content: rect, unit: FALLBACK_UNIT }
+})
+
+const frame = computed<BackgroundFrame>(() => props.frame ?? fallbackFrame.value)
+
+const NEUTRAL: CampaignBackgroundPlacement = { size: 100, x: 0, y: 0 }
 
 const draft = ref<CampaignBackgroundPlacement>({ ...(props.placement ?? NEUTRAL) })
 
@@ -26,25 +45,48 @@ watch(
 
 const isStatic = computed(() => props.placement != null)
 
-const previewStyle = computed(() =>
-  backgroundPlacementStyle(props.imageUrl, isStatic.value ? draft.value : null),
-)
-
-const viewportAspect = ref(16 / 9)
 const imageAspect = ref(16 / 9)
 
-const previewAspect = computed(() => {
-  const aspect = props.boxAspect
-  if (!aspect || aspect <= 0) return viewportAspect.value
-  return Math.min(4, Math.max(0.6, aspect))
-})
+const preview = ref<HTMLElement | null>(null)
+const boxAspect = ref(16 / 9)
+let boxObserver: ResizeObserver | null = null
 
 onMounted(() => {
-  const height = window.innerHeight - 64
-  if (window.innerWidth > 0 && height > 0) {
-    viewportAspect.value = Math.min(3, Math.max(1, window.innerWidth / height))
+  const el = preview.value
+  if (!el || typeof ResizeObserver === 'undefined') return
+  boxObserver = new ResizeObserver(() => {
+    if (el.clientWidth > 0 && el.clientHeight > 0) {
+      boxAspect.value = el.clientWidth / el.clientHeight
+    }
+  })
+  boxObserver.observe(el)
+})
+
+onUnmounted(() => {
+  boxObserver?.disconnect()
+  boxObserver = null
+})
+
+const view = computed<ContentRect>(() => {
+  const base = frame.value.view
+  const width = Math.max(base.width, base.height * boxAspect.value)
+  const height = width / boxAspect.value
+  return { x: -width / 2, y: -height / 2, width, height }
+})
+
+const imageStyle = computed(() => {
+  const box = view.value
+  const rect = pinnedBackgroundRect(draft.value, imageAspect.value, frame.value.unit)
+  return {
+    backgroundImage: `url(${props.imageUrl})`,
+    left: `${((rect.x - box.x) / box.width) * 100}%`,
+    top: `${((rect.y - box.y) / box.height) * 100}%`,
+    width: `${(rect.width / box.width) * 100}%`,
+    height: `${(rect.height / box.height) * 100}%`,
   }
 })
+
+const coverStyle = computed(() => ({ backgroundImage: `url(${props.imageUrl})` }))
 
 function onProbeLoad(event: Event) {
   const img = event.target as HTMLImageElement
@@ -53,20 +95,12 @@ function onProbeLoad(event: Event) {
   }
 }
 
-function clampOffset(value: number): number {
-  return Math.round(Math.min(1000, Math.max(-1000, value)))
-}
-
-function clampScale(value: number): number {
-  return Math.round(Math.min(1000, Math.max(1, value)))
-}
-
 function setField(field: keyof CampaignBackgroundPlacement, raw: string) {
   const parsed = Number(raw)
   if (!Number.isFinite(parsed)) return
   draft.value = {
     ...draft.value,
-    [field]: field === 'size' ? clampScale(parsed) : clampOffset(parsed),
+    [field]: field === 'size' ? clampBackgroundSize(parsed) : clampBackgroundOffset(parsed),
   }
 }
 
@@ -106,21 +140,15 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onPointerMove(event: PointerEvent) {
-  if (!drag) return
-  const imageWidth = drag.width * (draft.value.size / 100)
-  const imageHeight = imageWidth / imageAspect.value
-  const spanX = drag.width - imageWidth
-  const spanY = drag.height - imageHeight
+  if (!drag || drag.width <= 0 || drag.height <= 0) return
+  const box = view.value
+  const span = backgroundReferenceSpan(frame.value.unit)
+  const dx = ((event.clientX - drag.pointerX) / drag.width) * box.width
+  const dy = ((event.clientY - drag.pointerY) / drag.height) * box.height
   draft.value = {
     ...draft.value,
-    x:
-      Math.abs(spanX) < 1
-        ? drag.originX
-        : clampOffset(drag.originX + ((event.clientX - drag.pointerX) * 100) / spanX),
-    y:
-      Math.abs(spanY) < 1
-        ? drag.originY
-        : clampOffset(drag.originY + ((event.clientY - drag.pointerY) * 100) / spanY),
+    x: clampBackgroundOffset(drag.originX + (dx / span) * 100),
+    y: clampBackgroundOffset(drag.originY + (dy / span) * 100),
   }
 }
 
@@ -137,6 +165,16 @@ const fields = computed(() => [
   { key: 'y' as const, label: 'Y', value: draft.value.y },
 ])
 
+function pin() {
+  const suggested = suggestBackgroundPlacement(
+    frame.value.content,
+    imageAspect.value,
+    frame.value.unit,
+  )
+  draft.value = { ...suggested }
+  emit('commit', suggested)
+}
+
 function unpin() {
   emit('commit', {})
 }
@@ -147,14 +185,17 @@ function unpin() {
     <img class="placer__probe" :src="imageUrl" alt="" aria-hidden="true" @load="onProbeLoad" />
 
     <div
+      ref="preview"
       class="placer__preview"
       :class="{ 'placer__preview--draggable': isStatic && !disabled }"
-      :style="{ ...previewStyle, aspectRatio: String(previewAspect) }"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
     >
+      <div v-if="isStatic" class="placer__image" :style="imageStyle" />
+      <div v-else class="placer__image placer__image--cover" :style="coverStyle" />
+      <span v-if="isStatic" class="placer__origin" aria-hidden="true" />
       <span v-if="isStatic && !disabled" class="placer__grab-hint" aria-hidden="true">
         drag to reposition
       </span>
@@ -166,9 +207,9 @@ function unpin() {
         <input
           type="range"
           min="10"
-          max="400"
+          max="600"
           step="1"
-          :value="Math.min(400, draft.size)"
+          :value="Math.min(600, draft.size)"
           :disabled="disabled"
           @input="setField('size', ($event.target as HTMLInputElement).value)"
           @change="commit"
@@ -191,7 +232,8 @@ function unpin() {
       </div>
 
       <p class="placer__hint">
-        Pinned to the map, so it stays put while you pan. 100% spans the whole campaign.
+        Pinned to the map, so it stays put while you pan and while nodes move. 100% spans 20 grid
+        columns.
       </p>
       <button type="button" class="placer__action" :disabled="disabled" @click="unpin">
         Unpin, fill the canvas again
@@ -202,7 +244,7 @@ function unpin() {
       <p class="placer__hint">
         Fills the canvas and follows the view as you pan. Pin it to lock it to the map instead.
       </p>
-      <button type="button" class="placer__action" :disabled="disabled" @click="commit">
+      <button type="button" class="placer__action" :disabled="disabled" @click="pin">
         Pin placement
       </button>
     </template>
@@ -227,13 +269,40 @@ function unpin() {
 .placer__preview {
   position: relative;
   width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 240px;
   background-color: var(--bg-base);
-  background-size: cover;
-  background-position: center;
   border: 1px solid var(--bg-overlay);
   border-radius: 3px;
   overflow: hidden;
   touch-action: none;
+}
+
+.placer__origin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(var(--text-tertiary), var(--text-tertiary)) center / 1px 100% no-repeat,
+    linear-gradient(var(--text-tertiary), var(--text-tertiary)) center / 100% 1px no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.placer__image {
+  position: absolute;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.placer__image--cover {
+  inset: 0;
+  background-size: cover;
+  background-position: center;
 }
 
 .placer__preview--draggable {

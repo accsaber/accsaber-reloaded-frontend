@@ -65,6 +65,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       None of those touch your rank or your AP. They are there because the numbers are
       interesting on their own, and a few of them are far easier to top than the AP boards.
     </p>
+    <p>
+      Boards tell you where you stand against everyone. If you want to go after one specific
+      player instead, that is what <RouterLink to="/wiki/snipes">snipes</RouterLink> are for.
+    </p>
 
     <WikiHeading id="inactive">Inactive players</WikiHeading>
     <p>

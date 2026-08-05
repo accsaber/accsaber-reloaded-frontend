@@ -16,13 +16,13 @@
   max-width: 72ch;
 }
 
-.wiki-prose :deep(a) {
+.wiki-prose :deep(a:not([data-wiki-raw] a)) {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.wiki-prose :deep(a:hover) {
+.wiki-prose :deep(a:not([data-wiki-raw] a):hover) {
   filter: brightness(1.15);
 }
 
