@@ -1406,6 +1406,22 @@ watch(activeCategory, (newCategory) => {
     align-items: center;
   }
 
+  .profile-hero__top-row {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+
+  .profile-hero__top-right {
+    align-items: center;
+    width: 100%;
+  }
+
+  .profile-hero__name-col {
+    width: 100%;
+  }
+
   .profile-hero__name-row {
     justify-content: center;
   }
