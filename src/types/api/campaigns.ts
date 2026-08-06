@@ -141,6 +141,7 @@ export interface CampaignDifficultyResponse extends MapChartStatsSource {
   positionX: number
   positionY: number
   xp: number
+  terminal: boolean
   prerequisites: CampaignPrerequisiteResponse[]
   prerequisiteMode: CampaignPrerequisiteMode
   items: CampaignItemAwardResponse[]

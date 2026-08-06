@@ -75,7 +75,7 @@ import {
   toPrerequisiteInputs,
   type BackgroundFrame,
 } from '@/utils/campaignLayout'
-import { auditCampaign } from '@/utils/campaignAudit'
+import { auditCampaign, campaignPublishBlockers, terminalNodes } from '@/utils/campaignAudit'
 import {
   countFractionalVertices,
   isUnreadableCondition,
@@ -94,6 +94,7 @@ export type TrayId =
   | 'collaborators'
   | 'tags'
   | 'requirement'
+  | 'ending'
   | 'milestone'
   | 'shape'
   | 'unlock'
@@ -1123,9 +1124,12 @@ export function useCampaignEditor() {
     void applyCampaignPatch({ tagIds: Array.from(current) })
   }
 
+  const publishBlockers = computed(() => campaignPublishBlockers(campaign.value))
+
   const {
     showRepublishWarning,
     publishConfirm,
+    publishBlocked,
     doPlayerPublish,
     performPublish,
     doPlayerUnpublish,
@@ -1145,6 +1149,7 @@ export function useCampaignEditor() {
     load,
     editedLiveCampaign,
     requirementDirtyIds,
+    publishBlockers,
   })
 
   const { uploadBackground, removeBackground, uploadIcon, removeIcon } = useCampaignAssets({
@@ -1690,7 +1695,7 @@ export function useCampaignEditor() {
   ]
 
   const completionModeOptions: Array<{ value: 'TERMINAL' | 'ALL'; label: string }> = [
-    { value: 'TERMINAL', label: 'Reach the end (single sink)' },
+    { value: 'TERMINAL', label: 'Clear a flagged ending' },
     { value: 'ALL', label: 'Clear every node' },
   ]
 
@@ -1939,6 +1944,35 @@ export function useCampaignEditor() {
     commitNodeField('checkpointLabel')
   }
 
+  const terminalMode = computed(() => campaign.value?.completionMode === 'TERMINAL')
+
+  const isLiveCampaign = computed(
+    () => !!campaign.value && !isUnsavedDraft.value && campaign.value.status !== 'DRAFT',
+  )
+
+  const terminalNodeIds = computed(() => new Set(terminalNodes(campaign.value).map((d) => d.id)))
+
+  const isTerminalNode = computed(() => !!selectedDifficulty.value?.terminal)
+
+  const lockedLastTerminal = computed(
+    () =>
+      isLiveCampaign.value
+      && isTerminalNode.value
+      && terminalNodeIds.value.size === 1
+      && terminalNodeIds.value.has(selectedDifficulty.value?.id ?? ''),
+  )
+
+  function setNodeTerminal(value: boolean) {
+    const d = selectedDifficulty.value
+    if (!editable.value || !d || d.terminal === value) return
+    if (!value && lockedLastTerminal.value) {
+      actionError.value =
+        'This is the only ending. Flag another node first, or the campaign becomes impossible to finish.'
+      return
+    }
+    void applyNodePatch(d.id, { terminal: value })
+  }
+
   const FALLBACK_NODE_COLOR = '#f5b800'
 
   const defaultColorHex = computed(() => {
@@ -1961,8 +1995,17 @@ export function useCampaignEditor() {
     { value: 80, label: 'Huge', glyph: 11.5 },
   ] as const
 
+  const completionModeBlocked = ref(false)
+
   function onCompletionModeChange(value: string) {
-    formMeta.value.completionMode = value as 'TERMINAL' | 'ALL'
+    const mode = value as 'TERMINAL' | 'ALL'
+    if (mode === 'TERMINAL' && isLiveCampaign.value && terminalNodeIds.value.size === 0) {
+      completionModeBlocked.value = true
+      formMeta.value.completionMode = campaign.value?.completionMode ?? 'ALL'
+      return
+    }
+    completionModeBlocked.value = false
+    formMeta.value.completionMode = mode
     commitMetaField('completionMode')
   }
 
@@ -2722,7 +2765,14 @@ export function useCampaignEditor() {
     return [{ label: 'Campaigns', to: '/campaigns' }, { label: title }]
   })
 
-  const NODE_TRAY_IDS: TrayId[] = ['requirement', 'milestone', 'shape', 'unlock', 'rewards']
+  const NODE_TRAY_IDS: TrayId[] = [
+    'requirement',
+    'ending',
+    'milestone',
+    'shape',
+    'unlock',
+    'rewards',
+  ]
   const BARRIER_TRAY_IDS: TrayId[] = [
     'barrierCondition',
     'barrierAffected',
@@ -2734,7 +2784,13 @@ export function useCampaignEditor() {
 
   const campaignTrays = computed<TrayDef[]>(() => {
     const trays: TrayDef[] = [
-      { id: 'status', label: 'Status', icon: 'flag', tone: campaign.value?.status.toLowerCase() },
+      {
+        id: 'status',
+        label: 'Status',
+        icon: 'flag',
+        tone: campaign.value?.status.toLowerCase(),
+        count: publishBlockers.value.length,
+      },
       { id: 'identity', label: 'Identity', icon: 'identity' },
       { id: 'settings', label: 'Settings', icon: 'sliders' },
       { id: 'images', label: 'Images', icon: 'image' },
@@ -2790,11 +2846,14 @@ export function useCampaignEditor() {
     }
     const d = selectedDifficulty.value
     if (!d) return []
-    const trays: TrayDef[] = [
-      { id: 'requirement', label: 'Goal', icon: 'target' },
+    const trays: TrayDef[] = [{ id: 'requirement', label: 'Goal', icon: 'target' }]
+    if (terminalMode.value) {
+      trays.push({ id: 'ending', label: 'Ending', icon: 'flag' })
+    }
+    trays.push(
       { id: 'milestone', label: 'Milestone', icon: 'award' },
       { id: 'shape', label: 'Shape', icon: 'hexagon' },
-    ]
+    )
     if ((d.prerequisites ?? []).length >= 2) {
       trays.push({ id: 'unlock', label: 'Unlock', icon: 'link' })
     }
@@ -2811,6 +2870,7 @@ export function useCampaignEditor() {
     collaborators: 'Collaborators',
     tags: 'Tags',
     requirement: 'Requirement',
+    ending: 'Ending',
     milestone: 'Milestone',
     shape: 'Shape',
     unlock: 'Unlock when',
@@ -2870,10 +2930,12 @@ export function useCampaignEditor() {
     }
   })
 
+  const CONDITIONAL_NODE_TRAY_IDS: TrayId[] = ['unlock', 'ending']
+
   watch(nodeTrays, (list) => {
-    if (activeTray.value === 'unlock' && !list.some((t) => t.id === 'unlock')) {
-      activeTray.value = null
-    }
+    const tray = activeTray.value
+    if (!tray || !CONDITIONAL_NODE_TRAY_IDS.includes(tray)) return
+    if (!list.some((t) => t.id === tray)) activeTray.value = null
   })
 
   return {
@@ -3018,6 +3080,14 @@ export function useCampaignEditor() {
     barrierZeroBound,
     fractionalVertexCount,
     campaignAudit,
+    publishBlockers,
+    publishBlocked,
+    terminalMode,
+    terminalNodeIds,
+    isTerminalNode,
+    lockedLastTerminal,
+    setNodeTerminal,
+    completionModeBlocked,
     isMilestone,
     setMilestone,
     commitMilestoneLabel,

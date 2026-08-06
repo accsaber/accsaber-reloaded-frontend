@@ -11,8 +11,9 @@ import {
   unpublishPlayerCampaign,
 } from '@/api/campaigns'
 import { getApiErrorMessage } from '@/api/client'
+import type { CampaignAuditIssue } from '@/utils/campaignAudit'
 import type { CampaignDetailResponse } from '@/types/api/campaigns'
-import { ref, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 
 interface LifecycleContext {
   campaign: Ref<CampaignDetailResponse | null>
@@ -21,6 +22,7 @@ interface LifecycleContext {
   load: () => Promise<void>
   editedLiveCampaign: Ref<boolean>
   requirementDirtyIds: Ref<Set<string>>
+  publishBlockers: Ref<CampaignAuditIssue[]>
 }
 
 export function useCampaignLifecycle(ctx: LifecycleContext) {
@@ -29,8 +31,16 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
   const showRepublishWarning = ref(false)
   const publishConfirm = ref<'publish' | 'unpublish' | null>(null)
 
+  const publishBlocked = computed(() => ctx.publishBlockers.value.length > 0)
+
+  function reportPublishBlocked(): boolean {
+    if (!publishBlocked.value) return false
+    actionError.value = ctx.publishBlockers.value[0].message
+    return true
+  }
+
   function doPlayerPublish() {
-    if (!campaign.value) return
+    if (!campaign.value || reportPublishBlocked()) return
     if (ctx.editedLiveCampaign.value && ctx.requirementDirtyIds.value.size > 0) {
       showRepublishWarning.value = true
       return
@@ -91,7 +101,7 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
   }
 
   async function doPublish() {
-    if (!campaign.value) return
+    if (!campaign.value || reportPublishBlocked()) return
     actionPending.value = true
     actionError.value = null
     try {
@@ -119,7 +129,7 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
   }
 
   async function doCurate() {
-    if (!campaign.value) return
+    if (!campaign.value || reportPublishBlocked()) return
     actionPending.value = true
     actionError.value = null
     try {
@@ -195,6 +205,7 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
   return {
     showRepublishWarning,
     publishConfirm,
+    publishBlocked,
     doPlayerPublish,
     performPublish,
     doPlayerUnpublish,

@@ -66,6 +66,7 @@ const props = withDefaults(
     presencePeers?: PresencePeer[]
     editable?: boolean
     gridLock?: boolean
+    showTerminal?: boolean
     flagMissingRewards?: boolean
     mode?: 'drag' | 'connect' | 'select'
     unit?: number
@@ -95,6 +96,7 @@ const props = withDefaults(
     presencePeers: () => [],
     editable: false,
     gridLock: true,
+    showTerminal: false,
     flagMissingRewards: false,
     mode: 'drag',
     unit: 48,
@@ -1832,6 +1834,7 @@ const arrowDecorations = computed(() =>
             :accent-color="nodeAccentFor(n.id)"
             :selected="selectedSet.has(n.id)"
             :is-next="nextIds.has(n.id)"
+            :show-terminal="showTerminal"
             :label-placement="labelLayout.get(n.id) ?? null"
             @select="emit('select', $event)"
           />

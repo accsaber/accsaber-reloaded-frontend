@@ -248,6 +248,7 @@ function toNode(meta: PublicMapDifficultyResponse): CampaignDifficultyResponse {
     positionX: nodes.value.length * 2,
     positionY: 0,
     xp: 0,
+    terminal: false,
     prerequisites: [],
     prerequisiteMode: 'AND',
     items: [],

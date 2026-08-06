@@ -298,6 +298,7 @@ export interface AddCampaignDifficultyRequest {
   positionX: number
   positionY: number
   xp?: number
+  terminal?: boolean
   prerequisites?: CampaignPrerequisiteInput[]
   prerequisiteMode?: CampaignPrerequisiteMode
 }
@@ -321,6 +322,7 @@ export interface UpdateCampaignDifficultyRequest {
   positionX?: number
   positionY?: number
   xp?: number
+  terminal?: boolean
   prerequisites?: CampaignPrerequisiteInput[]
   prerequisiteMode?: CampaignPrerequisiteMode
 }

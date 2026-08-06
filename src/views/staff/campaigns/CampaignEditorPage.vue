@@ -109,6 +109,7 @@ const {
   activeTrayIsBarrier,
   closeTray,
   hasConnections,
+  terminalMode,
   canAddBarrier,
   barrierPlacementMode,
   toggleBarrierPlacement,
@@ -315,6 +316,7 @@ function peerActivity(p: PresencePeer): string {
           :presence-peers="presencePeers"
           :editable="editable"
           :grid-lock="gridLock"
+          :show-terminal="terminalMode"
           :flag-missing-rewards="true"
           :mode="canvasMode"
           @cursormove="onCursorMove"

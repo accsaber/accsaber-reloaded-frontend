@@ -63,6 +63,52 @@ function nodeRef(node: CampaignDifficultyResponse): CampaignAuditRef {
   return { id: node.id, label: node.songName || 'Untitled node' }
 }
 
+export const MIN_PUBLISHABLE_NODES = 2
+
+export function terminalNodes(
+  campaign: CampaignDetailResponse | null,
+): CampaignDifficultyResponse[] {
+  return campaign?.difficulties.filter((d) => d.terminal) ?? []
+}
+
+export function campaignPublishBlockers(
+  campaign: CampaignDetailResponse | null,
+): CampaignAuditIssue[] {
+  if (!campaign) return []
+  const blockers: CampaignAuditIssue[] = []
+
+  if (campaign.difficulties.length < MIN_PUBLISHABLE_NODES) {
+    blockers.push({
+      key: 'too-few-nodes',
+      message: `A campaign needs at least ${MIN_PUBLISHABLE_NODES} nodes. Add another map.`,
+      refs: [],
+    })
+  }
+
+  const connected = [...campaign.difficulties, ...campaign.barriers].some(
+    (v) => (v.prerequisites?.length ?? 0) > 0,
+  )
+  if (!connected && campaign.difficulties.length > 0) {
+    blockers.push({
+      key: 'no-connections',
+      message:
+        'Nothing is connected. Draw at least one arrow between two nodes, or the campaign will not load in-game.',
+      refs: [],
+    })
+  }
+
+  if (campaign.completionMode === 'TERMINAL' && terminalNodes(campaign).length === 0) {
+    blockers.push({
+      key: 'no-terminal',
+      message:
+        'No ending flagged. Pick the node that finishes the campaign and turn on "Finishes the campaign" in its Ending tray.',
+      refs: [],
+    })
+  }
+
+  return blockers
+}
+
 function plural(count: number, noun: string): string {
   return `${count} ${count === 1 ? noun : `${noun}s`}`
 }

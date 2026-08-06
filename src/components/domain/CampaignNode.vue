@@ -23,6 +23,7 @@ const props = defineProps<{
   accentColor: string
   selected?: boolean
   isNext?: boolean
+  showTerminal?: boolean
   labelPlacement?: LabelPlacement | null
 }>()
 
@@ -129,6 +130,14 @@ const gateCx = computed(() => props.cx + effectiveSize.value * 0.62)
 const gateCy = computed(() => props.cy - effectiveSize.value * 0.72)
 
 const gateR = computed(() => effectiveSize.value * 0.3)
+
+const isTerminal = computed(() => !!props.showTerminal && props.difficulty.terminal)
+
+const terminalCx = computed(() => props.cx - effectiveSize.value * 0.62)
+
+const terminalCy = computed(() => props.cy - effectiveSize.value * 0.72)
+
+const terminalR = computed(() => effectiveSize.value * 0.32)
 </script>
 
 <template>
@@ -194,6 +203,27 @@ const gateR = computed(() => effectiveSize.value * 0.3)
       />
     </g>
 
+    <g
+      v-if="isTerminal"
+      class="campaign-node__terminal"
+      :transform="`translate(${terminalCx}, ${terminalCy})`"
+      role="img"
+      aria-label="Clearing this node finishes the campaign"
+    >
+      <title>Clearing this node finishes the campaign</title>
+      <circle
+        :r="terminalR"
+        :fill="effectiveAccent"
+        stroke="var(--bg-base)"
+        :stroke-width="terminalR * 0.18"
+      />
+      <g :transform="`scale(${terminalR * 0.07})`" stroke="var(--bg-base)" stroke-width="1.9"
+        stroke-linecap="round" stroke-linejoin="round">
+        <line x1="-3.4" y1="-6" x2="-3.4" y2="6" />
+        <path d="M-3.4 -5.2L4.6 -2.6L-3.4 0z" fill="var(--bg-base)" />
+      </g>
+    </g>
+
     <rect
       v-if="labelPlate"
       class="campaign-node__label-plate"
@@ -253,6 +283,14 @@ const gateR = computed(() => effectiveSize.value * 0.3)
 
 .campaign-node__tick {
   pointer-events: none;
+}
+
+.campaign-node__terminal {
+  cursor: help;
+}
+
+.campaign-node__terminal title {
+  pointer-events: auto;
 }
 
 .campaign-node__label {

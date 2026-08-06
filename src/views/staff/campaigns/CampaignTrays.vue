@@ -106,6 +106,13 @@ const {
   barrierZeroBound,
   fractionalVertexCount,
   campaignAudit,
+  publishBlockers,
+  publishBlocked,
+  terminalNodeIds,
+  isTerminalNode,
+  lockedLastTerminal,
+  setNodeTerminal,
+  completionModeBlocked,
   handleSelect,
   modifierOptions,
   nodeModifierById,
@@ -203,6 +210,12 @@ const modifierChips = computed(() =>
     }
   }),
 )
+
+const otherEndings = computed(() => {
+  const ids = terminalNodeIds.value
+  const selfId = selectedDifficulty.value?.id
+  return selfId && ids.has(selfId) ? ids.size - 1 : ids.size
+})
 
 const MARKDOWN_HINT = 'Markdown is supported here.'
 
@@ -311,12 +324,31 @@ const connectionSwatch = computed(() => {
         {{ statusMeaning[campaign.status] }}
       </p>
 
+      <section v-if="publishBlocked" class="campaign-editor__blockers">
+        <h3 class="campaign-editor__blockers-title">Before publishing</h3>
+        <CampaignEditorNote v-for="blocker in publishBlockers" :key="blocker.key" tone="error">
+          {{ blocker.message }}
+          <span v-if="blocker.refs.length > 0" class="campaign-editor__audit-refs">
+            <button
+              v-for="vertex in blocker.refs"
+              :key="vertex.id"
+              type="button"
+              class="campaign-editor__audit-ref"
+              @click="handleSelect(vertex.id)"
+            >
+              {{ vertex.label }}
+            </button>
+          </span>
+        </CampaignEditorNote>
+      </section>
+
       <div class="campaign-editor__status-actions">
         <template v-if="!isCurationRoute && isCreator">
           <template v-if="isDraftStatus">
             <BaseButton
               size="sm"
               variant="primary"
+              :disabled="publishBlocked"
               :loading="actionPending"
               @click="doPlayerPublish"
             >
@@ -346,6 +378,7 @@ const connectionSwatch = computed(() => {
           <BaseButton
             v-if="isCurator && (isDraftStatus || campaign.status === 'EDITING')"
             size="sm"
+            :disabled="publishBlocked"
             :loading="actionPending"
             @click="doPublish"
           >
@@ -363,6 +396,7 @@ const connectionSwatch = computed(() => {
             v-if="isCurator && curatable"
             size="sm"
             variant="primary"
+            :disabled="publishBlocked"
             :loading="actionPending"
             @click="doCurate"
           >
@@ -555,13 +589,22 @@ const connectionSwatch = computed(() => {
     :disabled="!editable"
   >
     <div class="campaign-editor__field">
-      <span>Completion mode</span>
+      <span>
+        Completion mode
+        <CampaignFieldHint
+          text="Clear a flagged ending: the campaign is done once the player clears any node flagged as an ending. Clear every node: all of them, and the flags stop mattering."
+        />
+      </span>
       <BaseSelect
         :model-value="formMeta.completionMode"
         :options="completionModeOptions.map((o) => ({ value: o.value, label: o.label }))"
         @update:model-value="onCompletionModeChange"
       />
     </div>
+    <CampaignEditorNote v-if="completionModeBlocked" tone="error">
+      Nothing is flagged as an ending, so this campaign would become impossible to finish. Flag a
+      node in its Ending tray first, then switch.
+    </CampaignEditorNote>
     <label
       class="campaign-editor__check"
       :class="{ 'campaign-editor__check--disabled': hasBarriers }"
@@ -1035,6 +1078,57 @@ const connectionSwatch = computed(() => {
         </BaseButton>
       </div>
     </div>
+  </fieldset>
+
+  <fieldset
+    v-else-if="activeTray === 'ending' && selectedDifficulty"
+    class="campaign-editor__section"
+    :disabled="!editable"
+  >
+    <button
+      type="button"
+      role="switch"
+      class="campaign-editor__ending"
+      :class="{ 'campaign-editor__ending--on': isTerminalNode }"
+      :aria-checked="isTerminalNode"
+      @click="setNodeTerminal(!isTerminalNode)"
+    >
+      <svg
+        class="campaign-editor__ending-glyph"
+        width="26"
+        height="26"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 15V4h13l-2 4 2 4H4" />
+        <line x1="4" y1="22" x2="4" y2="15" />
+      </svg>
+      <span class="campaign-editor__ending-copy">
+        <span class="campaign-editor__ending-title">Finishes the campaign</span>
+        <span class="campaign-editor__ending-state">
+          {{ isTerminalNode ? 'Clearing this node ends the run' : 'Just another stop on the path' }}
+        </span>
+      </span>
+      <span class="campaign-editor__ending-switch" aria-hidden="true">
+        <span class="campaign-editor__ending-knob" />
+      </span>
+    </button>
+
+    <p class="campaign-editor__hint">
+      A player only finishes here after clearing a full path of connections into this node.
+    </p>
+    <p v-if="otherEndings > 0" class="campaign-editor__hint">
+      {{ otherEndings === 1 ? 'One other node' : `${otherEndings} other nodes` }} also
+      {{ otherEndings === 1 ? 'ends' : 'end' }} the campaign. Clearing any one of them is enough.
+    </p>
+    <CampaignEditorNote v-if="lockedLastTerminal">
+      This is the only ending on a live campaign. Flag another node before turning this one off.
+    </CampaignEditorNote>
   </fieldset>
 
   <fieldset
@@ -2118,6 +2212,120 @@ const connectionSwatch = computed(() => {
 
 .campaign-editor__status-actions > * {
   flex: 1 1 auto;
+}
+
+.campaign-editor__blockers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campaign-editor__blockers-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.campaign-editor__ending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) 12px;
+  text-align: left;
+  color: var(--text-secondary);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.campaign-editor__ending:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.campaign-editor__ending--on,
+.campaign-editor__ending--on:hover {
+  color: var(--page-accent);
+  background: color-mix(in srgb, var(--page-accent) 10%, transparent);
+  border-color: var(--page-accent);
+}
+
+.campaign-editor__ending-glyph {
+  flex-shrink: 0;
+}
+
+.campaign-editor__ending-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.campaign-editor__ending-title {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.campaign-editor__ending--on .campaign-editor__ending-title {
+  color: var(--page-accent);
+}
+
+.campaign-editor__ending-state {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.campaign-editor__ending-switch {
+  flex-shrink: 0;
+  width: 34px;
+  height: 18px;
+  padding: 2px;
+  background: var(--bg-overlay);
+  border-radius: 3px;
+  transition: background 120ms ease;
+}
+
+.campaign-editor__ending--on .campaign-editor__ending-switch {
+  background: color-mix(in srgb, var(--page-accent) 35%, transparent);
+}
+
+.campaign-editor__ending-knob {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: var(--text-tertiary);
+  border-radius: 2px;
+  transition:
+    transform 150ms ease,
+    background 120ms ease;
+}
+
+.campaign-editor__ending--on .campaign-editor__ending-knob {
+  background: var(--page-accent);
+  transform: translateX(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campaign-editor__ending,
+  .campaign-editor__ending-switch,
+  .campaign-editor__ending-knob {
+    transition: none;
+  }
 }
 
 .campaign-editor__audit {

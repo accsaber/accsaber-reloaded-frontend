@@ -45,6 +45,7 @@ import type {
   CampaignLeaderboardPlayer,
   CampaignProgressResponse,
 } from '@/types/api/campaigns'
+import { terminalNodes } from '@/utils/campaignAudit'
 import { campaignBadges } from '@/utils/campaignBadges'
 import {
   campaignDifficultyColor,
@@ -285,7 +286,13 @@ const hasBadges = computed(() => !!campaign.value && campaignBadges(campaign.val
 const modeSentence = computed(() => {
   const c = campaign.value
   if (!c) return ''
-  const goal = c.completionMode === 'ALL' ? 'Clear every node' : 'Reach the end'
+  const endings = terminalNodes(c).length
+  const goal =
+    c.completionMode === 'ALL'
+      ? 'Clear every node'
+      : endings > 1
+        ? 'Clear any one of the flagged endings'
+        : 'Reach the end'
   const order = c.progressionAgnostic ? ' in any order' : ''
   const retro = c.legacy ? ' Existing PBs count toward progress.' : ''
   return `${goal}${order}.${retro}`
@@ -774,6 +781,7 @@ function unpinTooltip() {
           :background-placement="campaign.background"
           :show-starfield="!campaign.backgroundUrl" :focus-id="focusNodeId" :default-scale="1.35"
           :selected-id="selectedId" :highlight-barrier-id="selectedId"
+          :show-terminal="campaign.completionMode === 'TERMINAL'"
           :mark-next="isInProgress && !campaign.progressionAgnostic"
           @select="handleSelect" @hover="handleHover"
           @deselect="handleDeselect" />
