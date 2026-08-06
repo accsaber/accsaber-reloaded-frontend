@@ -6,6 +6,7 @@ import type {
 } from '@/types/api/campaigns'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import {
+  edgePointOnShape,
   isMilestoneNode,
   resolveSize,
   resolveShape,
@@ -114,9 +115,18 @@ const labelPlate = computed(() => {
   }
 })
 
-const tickCx = computed(() => props.cx + effectiveSize.value * 0.62)
+function badgeAnchor(dx: number, dy: number): { x: number; y: number } {
+  return edgePointOnShape(
+    effectiveShape.value,
+    effectiveSize.value,
+    props.cx,
+    props.cy,
+    props.cx + dx,
+    props.cy + dy,
+  )
+}
 
-const tickCy = computed(() => props.cy + effectiveSize.value * 0.72)
+const tickAnchor = computed(() => badgeAnchor(1, 1))
 
 const tickR = computed(() => effectiveSize.value * 0.32)
 
@@ -125,17 +135,13 @@ const requiresAll = computed(() =>
   && (props.difficulty.prerequisites?.length ?? 0) >= 2,
 )
 
-const gateCx = computed(() => props.cx + effectiveSize.value * 0.62)
-
-const gateCy = computed(() => props.cy - effectiveSize.value * 0.72)
+const gateAnchor = computed(() => badgeAnchor(1, -1))
 
 const gateR = computed(() => effectiveSize.value * 0.3)
 
 const isTerminal = computed(() => !!props.showTerminal && props.difficulty.terminal)
 
-const terminalCx = computed(() => props.cx - effectiveSize.value * 0.62)
-
-const terminalCy = computed(() => props.cy - effectiveSize.value * 0.72)
+const terminalAnchor = computed(() => badgeAnchor(-1, -1))
 
 const terminalR = computed(() => effectiveSize.value * 0.32)
 </script>
@@ -190,7 +196,11 @@ const terminalR = computed(() => effectiveSize.value * 0.32)
 
     <use v-if="borderArt && !borderArt.below" class="campaign-node__border" :href="`#${borderId}`" />
 
-    <g v-if="state === 'cleared'" class="campaign-node__tick" :transform="`translate(${tickCx}, ${tickCy})`">
+    <g
+      v-if="state === 'cleared'"
+      class="campaign-node__tick"
+      :transform="`translate(${tickAnchor.x}, ${tickAnchor.y})`"
+    >
       <circle :r="tickR" fill="var(--success)" stroke="var(--bg-base)" :stroke-width="tickR * 0.18" />
       <path
         :transform="`scale(${tickR * 0.055})`"
@@ -206,7 +216,7 @@ const terminalR = computed(() => effectiveSize.value * 0.32)
     <g
       v-if="isTerminal"
       class="campaign-node__terminal"
-      :transform="`translate(${terminalCx}, ${terminalCy})`"
+      :transform="`translate(${terminalAnchor.x}, ${terminalAnchor.y})`"
       role="img"
       aria-label="Clearing this node finishes the campaign"
     >
@@ -217,8 +227,13 @@ const terminalR = computed(() => effectiveSize.value * 0.32)
         stroke="var(--bg-base)"
         :stroke-width="terminalR * 0.18"
       />
-      <g :transform="`scale(${terminalR * 0.07})`" stroke="var(--bg-base)" stroke-width="1.9"
-        stroke-linecap="round" stroke-linejoin="round">
+      <g
+        :transform="`scale(${terminalR * 0.07})`"
+        stroke="var(--bg-base)"
+        stroke-width="1.9"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <line x1="-3.4" y1="-6" x2="-3.4" y2="6" />
         <path d="M-3.4 -5.2L4.6 -2.6L-3.4 0z" fill="var(--bg-base)" />
       </g>
@@ -249,7 +264,7 @@ const terminalR = computed(() => effectiveSize.value * 0.32)
     <g
       v-if="requiresAll"
       class="campaign-node__gate"
-      :transform="`translate(${gateCx}, ${gateCy})`"
+      :transform="`translate(${gateAnchor.x}, ${gateAnchor.y})`"
       role="img"
       aria-label="Requires every prerequisite to unlock"
     >
@@ -336,5 +351,4 @@ const terminalR = computed(() => effectiveSize.value * 0.32)
 .campaign-node--locked .campaign-node__gate {
   opacity: 0.55;
 }
-
 </style>

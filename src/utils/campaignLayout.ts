@@ -181,9 +181,13 @@ export interface NodeLayout {
   cy: number
 }
 
+function mod(value: number, modulus: number): number {
+  return ((value % modulus) + modulus) % modulus
+}
+
 function hexRowOffset(positionX: number, unit: number): number {
-  const phase = ((positionX % 2) + 2) % 2
-  return ((unit * SQRT3) / 2) * (1 - Math.abs(1 - phase))
+  const stagger = 1 - Math.abs(1 - mod(positionX, 2))
+  return ((unit * SQRT3) / 2) * stagger
 }
 
 export function gridToContent(
