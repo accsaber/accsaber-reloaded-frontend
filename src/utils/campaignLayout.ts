@@ -80,6 +80,8 @@ export interface BackgroundFrame {
 
 export const MAX_BACKGROUND_PERCENT = 1000
 
+export const MAX_BACKGROUND_CELLS = 1000
+
 export const BACKGROUND_REFERENCE_COLUMNS = 20
 
 export function backgroundReferenceSpan(unit: number): number {
@@ -87,11 +89,11 @@ export function backgroundReferenceSpan(unit: number): number {
 }
 
 export function clampBackgroundSize(value: number): number {
-  return Math.round(Math.min(MAX_BACKGROUND_PERCENT, Math.max(1, value)))
+  return roundToPrecision(Math.min(MAX_BACKGROUND_PERCENT, Math.max(1, value)))
 }
 
 export function clampBackgroundOffset(value: number): number {
-  return Math.round(Math.min(MAX_BACKGROUND_PERCENT, Math.max(-MAX_BACKGROUND_PERCENT, value)))
+  return roundToPrecision(Math.min(MAX_BACKGROUND_CELLS, Math.max(-MAX_BACKGROUND_CELLS, value)))
 }
 
 export function pinnedBackgroundRect(
@@ -99,12 +101,12 @@ export function pinnedBackgroundRect(
   aspect: number,
   unit: number,
 ): ContentRect {
-  const span = backgroundReferenceSpan(unit)
-  const width = (span * placement.size) / 100
+  const { cx, cy } = gridToContent(placement.x, placement.y, unit)
+  const width = (backgroundReferenceSpan(unit) * placement.size) / 100
   const height = width / (aspect > 0 ? aspect : 1)
   return {
-    x: (span * placement.x) / 100 - width / 2,
-    y: (span * placement.y) / 100 - height / 2,
+    x: cx - width / 2,
+    y: cy - height / 2,
     width,
     height,
   }
@@ -118,10 +120,16 @@ export function suggestBackgroundPlacement(
   const span = backgroundReferenceSpan(unit)
   const safeAspect = aspect > 0 ? aspect : 1
   const width = Math.max(content.width, content.height * safeAspect)
+  const { positionX, positionY } = contentToGrid(
+    content.x + content.width / 2,
+    content.y + content.height / 2,
+    unit,
+    false,
+  )
   return {
     size: clampBackgroundSize((width / span) * 100),
-    x: clampBackgroundOffset(((content.x + content.width / 2) / span) * 100),
-    y: clampBackgroundOffset(((content.y + content.height / 2) / span) * 100),
+    x: clampBackgroundOffset(positionX),
+    y: clampBackgroundOffset(positionY),
   }
 }
 

@@ -5,6 +5,8 @@ import {
   backgroundReferenceSpan,
   clampBackgroundOffset,
   clampBackgroundSize,
+  contentToGrid,
+  gridToContent,
   pinnedBackgroundRect,
   suggestBackgroundPlacement,
   type BackgroundFrame,
@@ -16,6 +18,7 @@ const props = defineProps<{
   imageUrl: string
   placement: CampaignBackgroundPlacement | null
   frame?: BackgroundFrame | null
+  gridLock?: boolean
   disabled?: boolean
 }>()
 
@@ -116,8 +119,8 @@ function onFieldChange(field: keyof CampaignBackgroundPlacement, event: Event) {
 interface DragState {
   pointerX: number
   pointerY: number
-  originX: number
-  originY: number
+  originCx: number
+  originCy: number
   width: number
   height: number
 }
@@ -128,12 +131,13 @@ function onPointerDown(event: PointerEvent) {
   if (!isStatic.value || props.disabled || event.button !== 0) return
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
+  const origin = gridToContent(draft.value.x, draft.value.y, frame.value.unit)
   target.setPointerCapture(event.pointerId)
   drag = {
     pointerX: event.clientX,
     pointerY: event.clientY,
-    originX: draft.value.x,
-    originY: draft.value.y,
+    originCx: origin.cx,
+    originCy: origin.cy,
     width: rect.width,
     height: rect.height,
   }
@@ -142,13 +146,18 @@ function onPointerDown(event: PointerEvent) {
 function onPointerMove(event: PointerEvent) {
   if (!drag || drag.width <= 0 || drag.height <= 0) return
   const box = view.value
-  const span = backgroundReferenceSpan(frame.value.unit)
   const dx = ((event.clientX - drag.pointerX) / drag.width) * box.width
   const dy = ((event.clientY - drag.pointerY) / drag.height) * box.height
+  const { positionX, positionY } = contentToGrid(
+    drag.originCx + dx,
+    drag.originCy + dy,
+    frame.value.unit,
+    props.gridLock !== event.altKey,
+  )
   draft.value = {
     ...draft.value,
-    x: clampBackgroundOffset(drag.originX + (dx / span) * 100),
-    y: clampBackgroundOffset(drag.originY + (dy / span) * 100),
+    x: clampBackgroundOffset(positionX),
+    y: clampBackgroundOffset(positionY),
   }
 }
 
@@ -161,8 +170,8 @@ function onPointerUp(event: PointerEvent) {
 
 const fields = computed(() => [
   { key: 'size' as const, label: 'Scale', value: draft.value.size },
-  { key: 'x' as const, label: 'X', value: draft.value.x },
-  { key: 'y' as const, label: 'Y', value: draft.value.y },
+  { key: 'x' as const, label: 'Col', value: draft.value.x },
+  { key: 'y' as const, label: 'Row', value: draft.value.y },
 ])
 
 function pin() {
@@ -223,7 +232,7 @@ function unpin() {
             type="number"
             :min="f.key === 'size' ? 1 : -1000"
             max="1000"
-            step="1"
+            step="any"
             :value="f.value"
             :disabled="disabled"
             @change="onFieldChange(f.key, $event)"
@@ -232,8 +241,8 @@ function unpin() {
       </div>
 
       <p class="placer__hint">
-        Pinned to the map, so it stays put while you pan and while nodes move. 100% spans 20 grid
-        columns.
+        Pinned to the map, so it stays put while you pan and while nodes move. Col and row are the
+        same grid cells nodes sit on, decimals included. 100% scale spans 20 columns.
       </p>
       <button type="button" class="placer__action" :disabled="disabled" @click="unpin">
         Unpin, fill the canvas again

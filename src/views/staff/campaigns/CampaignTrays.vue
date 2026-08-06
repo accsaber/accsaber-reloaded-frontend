@@ -63,6 +63,7 @@ const {
   uploadIcon,
   removeIcon,
   commitBackgroundPlacement,
+  gridLock,
   rewardItemsById,
   removeCompletionItem,
   openCampaignItemPicker,
@@ -665,6 +666,7 @@ const connectionSwatch = computed(() => {
         :image-url="campaign.backgroundUrl"
         :placement="campaign.background"
         :frame="canvasFrame"
+        :grid-lock="gridLock"
         :disabled="!editable"
         @commit="commitBackgroundPlacement"
       />
