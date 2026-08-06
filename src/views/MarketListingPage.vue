@@ -82,6 +82,7 @@ const itemName = computed(() =>
   listing.value ? displayItemName(modifiers.value, listing.value.item.item.name) : '',
 )
 const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))
+const pbCount = computed(() => listing.value?.item.counters?.play_count ?? null)
 const typeLabel = computed(() => {
   const typeKey = listing.value?.item.item.typeKey
   if (!typeKey) return ''
@@ -359,6 +360,10 @@ onUnmounted(() => {
               <template v-if="listing.item.serialNumber != null">
                 <dt>Serial</dt>
                 <dd>#{{ listing.item.serialNumber }}</dd>
+              </template>
+              <template v-if="pbCount != null">
+                <dt>PB Counter</dt>
+                <dd>{{ pbCount }}</dd>
               </template>
               <dt>Quantity</dt>
               <dd>{{ listing.quantity }}</dd>

@@ -144,6 +144,7 @@ const effectLayers = computed(() =>
 const fragmentSpec = computed(() => readFragmentSpec(props.userItem?.unusualEffect))
 const tokenCtx = computed(() => props.userItem ? userItemTokenContext(props.userItem) : {})
 const quantity = computed(() => props.userItem?.quantity ?? 1)
+const pbCount = computed(() => props.userItem?.counters?.play_count ?? null)
 
 const { accent } = useModifierColor(modifiers)
 
@@ -347,6 +348,10 @@ onUnmounted(() => {
           </div>
           <span v-else>-</span>
         </dd>
+      </div>
+      <div v-if="!locked && pbCount != null" class="inv-detail__row">
+        <dt>PB Counter</dt>
+        <dd class="inv-detail__mono">{{ pbCount }}</dd>
       </div>
       <div v-if="!locked && unusualEffect" class="inv-detail__row">
         <dt>Effect</dt>
