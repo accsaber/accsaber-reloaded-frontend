@@ -583,8 +583,10 @@ export function substituteTokens(text: string, ctx: TokenContext): string | null
   return missing ? null : out
 }
 
-export function userItemTokenContext(userItem: Pick<UserItemResponse, 'serialNumber'>): TokenContext {
-  return { serial: userItem.serialNumber }
+export function userItemTokenContext(
+  userItem: Pick<UserItemResponse, 'serialNumber' | 'counters'>,
+): TokenContext {
+  return { serial: userItem.serialNumber, stats: userItem.counters ?? undefined }
 }
 
 export function gradientToCss(g: Gradient): string {

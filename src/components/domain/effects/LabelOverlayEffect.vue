@@ -31,7 +31,7 @@ const label = computed<string | null>(() => {
 })
 
 const positionClass = computed(() => {
-  const p = asString(props.composition.position)
+  const p = asString(props.composition.position)?.replace(/_/g, '-')
   return `comp-label--${p ?? 'top-right'}`
 })
 

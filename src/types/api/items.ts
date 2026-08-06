@@ -863,6 +863,7 @@ export interface UserItemResponse {
   unusualEffect: UnusualEffectRef | null
   serialNumber: number | null
   quantity: number
+  counters?: Record<string, number> | null
   source: ItemSource
   sourceId: string | null
   awardedByStaffId: string | null
