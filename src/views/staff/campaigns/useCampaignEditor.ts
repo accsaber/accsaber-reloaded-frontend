@@ -1041,6 +1041,13 @@ export function useCampaignEditor() {
     void applyCampaignPatch({ [field]: send } as UpdateCampaignRequest)
   }
 
+  type MetaFlagField = 'progressionAgnostic' | 'playlistExportEnabled'
+
+  function setMetaFlag(field: MetaFlagField, value: boolean) {
+    formMeta.value[field] = value
+    commitMetaField(field)
+  }
+
   function commitBackgroundColor() {
     formMeta.value.backgroundColor = formMeta.value.backgroundColor.trim()
     commitMetaField('backgroundColor')
@@ -2984,6 +2991,7 @@ export function useCampaignEditor() {
     formNode,
     fieldErrors,
     commitMetaField,
+    setMetaFlag,
     commitBackgroundColor,
     resetBackgroundColor,
     commitNodeField,

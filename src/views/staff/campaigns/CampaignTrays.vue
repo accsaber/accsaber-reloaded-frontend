@@ -10,7 +10,10 @@ import CampaignBackgroundPlacer from './CampaignBackgroundPlacer.vue'
 import CampaignBoundsField from './CampaignBoundsField.vue'
 import CampaignEditorNote from './CampaignEditorNote.vue'
 import CampaignEditorTile from './CampaignEditorTile.vue'
+import CampaignEditorToggle from './CampaignEditorToggle.vue'
 import CampaignFieldHint from './CampaignFieldHint.vue'
+import CampaignIssueNotes from './CampaignIssueNotes.vue'
+import CampaignTrayIcon from './CampaignTrayIcon.vue'
 import CampaignPluginWarning from './CampaignPluginWarning.vue'
 import CampaignTargetRow from './CampaignTargetRow.vue'
 import CampaignShapeGlyph from './CampaignShapeGlyph.vue'
@@ -49,6 +52,7 @@ const {
   formMeta,
   fieldErrors,
   commitMetaField,
+  setMetaFlag,
   commitBackgroundColor,
   resetBackgroundColor,
   completionModeOptions,
@@ -326,20 +330,7 @@ const connectionSwatch = computed(() => {
 
       <section v-if="publishBlocked" class="campaign-editor__blockers">
         <h3 class="campaign-editor__blockers-title">Before publishing</h3>
-        <CampaignEditorNote v-for="blocker in publishBlockers" :key="blocker.key" tone="error">
-          {{ blocker.message }}
-          <span v-if="blocker.refs.length > 0" class="campaign-editor__audit-refs">
-            <button
-              v-for="vertex in blocker.refs"
-              :key="vertex.id"
-              type="button"
-              class="campaign-editor__audit-ref"
-              @click="handleSelect(vertex.id)"
-            >
-              {{ vertex.label }}
-            </button>
-          </span>
-        </CampaignEditorNote>
+        <CampaignIssueNotes :issues="publishBlockers" tone="error" @select="handleSelect" />
       </section>
 
       <div class="campaign-editor__status-actions">
@@ -520,20 +511,7 @@ const connectionSwatch = computed(() => {
           </li>
         </ul>
 
-        <CampaignEditorNote v-for="issue in campaignAudit.issues" :key="issue.key">
-          {{ issue.message }}
-          <span v-if="issue.refs.length > 0" class="campaign-editor__audit-refs">
-            <button
-              v-for="vertex in issue.refs"
-              :key="vertex.id"
-              type="button"
-              class="campaign-editor__audit-ref"
-              @click="handleSelect(vertex.id)"
-            >
-              {{ vertex.label }}
-            </button>
-          </span>
-        </CampaignEditorNote>
+        <CampaignIssueNotes :issues="campaignAudit.issues" @select="handleSelect" />
       </section>
     </header>
 
@@ -605,29 +583,24 @@ const connectionSwatch = computed(() => {
       Nothing is flagged as an ending, so this campaign would become impossible to finish. Flag a
       node in its Ending tray first, then switch.
     </CampaignEditorNote>
-    <label
-      class="campaign-editor__check"
-      :class="{ 'campaign-editor__check--disabled': hasBarriers }"
-    >
-      <input
-        type="checkbox"
-        v-model="formMeta.progressionAgnostic"
-        :disabled="hasBarriers"
-        @change="commitMetaField('progressionAgnostic')"
-      />
-      <span>Progression agnostic (any order)</span>
-    </label>
+    <CampaignEditorToggle
+      :model-value="formMeta.progressionAgnostic"
+      label="Progression agnostic"
+      on-text="Nodes can be cleared in any order"
+      off-text="Connections decide what unlocks next"
+      :disabled="hasBarriers"
+      @update:model-value="setMetaFlag('progressionAgnostic', $event)"
+    />
     <p v-if="hasBarriers" class="campaign-editor__hint">
       Remove the campaign's barriers first. Gates only work in an ordered campaign.
     </p>
-    <label class="campaign-editor__check">
-      <input
-        type="checkbox"
-        v-model="formMeta.playlistExportEnabled"
-        @change="commitMetaField('playlistExportEnabled')"
-      />
-      <span>Playlist export enabled</span>
-    </label>
+    <CampaignEditorToggle
+      :model-value="formMeta.playlistExportEnabled"
+      label="Playlist export"
+      on-text="Players can download the campaign as a playlist"
+      off-text="No playlist download"
+      @update:model-value="setMetaFlag('playlistExportEnabled', $event)"
+    />
     <label class="campaign-editor__field">
       <span>
         Background color
@@ -1085,39 +1058,17 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <button
-      type="button"
-      role="switch"
-      class="campaign-editor__ending"
-      :class="{ 'campaign-editor__ending--on': isTerminalNode }"
-      :aria-checked="isTerminalNode"
-      @click="setNodeTerminal(!isTerminalNode)"
+    <CampaignEditorToggle
+      :model-value="isTerminalNode"
+      label="Finishes the campaign"
+      on-text="Clearing this node ends the run"
+      off-text="Just another stop on the path"
+      @update:model-value="setNodeTerminal"
     >
-      <svg
-        class="campaign-editor__ending-glyph"
-        width="26"
-        height="26"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 15V4h13l-2 4 2 4H4" />
-        <line x1="4" y1="22" x2="4" y2="15" />
-      </svg>
-      <span class="campaign-editor__ending-copy">
-        <span class="campaign-editor__ending-title">Finishes the campaign</span>
-        <span class="campaign-editor__ending-state">
-          {{ isTerminalNode ? 'Clearing this node ends the run' : 'Just another stop on the path' }}
-        </span>
-      </span>
-      <span class="campaign-editor__ending-switch" aria-hidden="true">
-        <span class="campaign-editor__ending-knob" />
-      </span>
-    </button>
+      <template #glyph>
+        <CampaignTrayIcon name="flag" :size="26" />
+      </template>
+    </CampaignEditorToggle>
 
     <p class="campaign-editor__hint">
       A player only finishes here after clearing a full path of connections into this node.
@@ -1136,15 +1087,18 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <label class="campaign-editor__check">
-      <input
-        type="checkbox"
-        :checked="isMilestone"
-        @change="setMilestone(($event.target as HTMLInputElement).checked)"
-      />
-      <span>Treat this node as a milestone</span>
-      <CampaignFieldHint text="Rewards pay only when a cleared prerequisite path exists." />
-    </label>
+    <CampaignEditorToggle
+      :model-value="isMilestone"
+      label="Milestone"
+      on-text="Shows as a landmark on the map"
+      off-text="Plain node"
+      hint="Rewards pay only when a cleared prerequisite path exists."
+      @update:model-value="setMilestone"
+    >
+      <template #glyph>
+        <CampaignTrayIcon name="award" :size="26" />
+      </template>
+    </CampaignEditorToggle>
     <template v-if="isMilestone">
       <label class="campaign-editor__field">
         <span>Label</span>
@@ -2064,21 +2018,6 @@ const connectionSwatch = computed(() => {
   border-color: var(--text-tertiary);
 }
 
-.campaign-editor__check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.campaign-editor__check--disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
 .campaign-editor__hint {
   margin: 0;
   font-family: var(--font-sans);
@@ -2230,104 +2169,6 @@ const connectionSwatch = computed(() => {
   color: var(--text-tertiary);
 }
 
-.campaign-editor__ending {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  width: 100%;
-  padding: var(--space-sm) 12px;
-  text-align: left;
-  color: var(--text-secondary);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease,
-    border-color 120ms ease;
-}
-
-.campaign-editor__ending:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
-.campaign-editor__ending--on,
-.campaign-editor__ending--on:hover {
-  color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 10%, transparent);
-  border-color: var(--page-accent);
-}
-
-.campaign-editor__ending-glyph {
-  flex-shrink: 0;
-}
-
-.campaign-editor__ending-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.campaign-editor__ending-title {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.campaign-editor__ending--on .campaign-editor__ending-title {
-  color: var(--page-accent);
-}
-
-.campaign-editor__ending-state {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
-  line-height: 1.3;
-}
-
-.campaign-editor__ending-switch {
-  flex-shrink: 0;
-  width: 34px;
-  height: 18px;
-  padding: 2px;
-  background: var(--bg-overlay);
-  border-radius: 3px;
-  transition: background 120ms ease;
-}
-
-.campaign-editor__ending--on .campaign-editor__ending-switch {
-  background: color-mix(in srgb, var(--page-accent) 35%, transparent);
-}
-
-.campaign-editor__ending-knob {
-  display: block;
-  width: 14px;
-  height: 14px;
-  background: var(--text-tertiary);
-  border-radius: 2px;
-  transition:
-    transform 150ms ease,
-    background 120ms ease;
-}
-
-.campaign-editor__ending--on .campaign-editor__ending-knob {
-  background: var(--page-accent);
-  transform: translateX(16px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .campaign-editor__ending,
-  .campaign-editor__ending-switch,
-  .campaign-editor__ending-knob {
-    transition: none;
-  }
-}
-
 .campaign-editor__audit {
   display: flex;
   flex-direction: column;
@@ -2374,34 +2215,6 @@ const connectionSwatch = computed(() => {
 .campaign-editor__audit-over,
 .campaign-editor__audit-over small {
   color: var(--warning);
-}
-
-.campaign-editor__audit-refs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.campaign-editor__audit-ref {
-  max-width: 100%;
-  padding: 2px 6px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: inherit;
-  background: transparent;
-  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
-  border-radius: 2px;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background 120ms ease;
-}
-
-.campaign-editor__audit-ref:hover {
-  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
 .campaign-editor__avatar-upload {
