@@ -307,10 +307,7 @@ const connectionSwatch = computed(() => {
 <template>
   <template v-if="activeTray === 'status'">
     <header v-if="!isUnsavedDraft && campaign" class="campaign-editor__status">
-      <div
-        v-if="!isDraftStatus || (!isCurationRoute && isCreator)"
-        class="campaign-editor__status-row"
-      >
+      <div class="campaign-editor__status-row">
         <span
           class="campaign-editor__status-pill"
           :class="`campaign-editor__status-pill--${campaign.status.toLowerCase()}`"
@@ -318,14 +315,10 @@ const connectionSwatch = computed(() => {
           {{ statusLabel[campaign.status] }}
         </span>
       </div>
-      <p
-        v-if="!isCurationRoute && isCreator && creatorStatusMeaning"
-        class="campaign-editor__status-meaning"
-      >
-        {{ creatorStatusMeaning }}
-      </p>
-      <p v-else-if="!isDraftStatus" class="campaign-editor__status-meaning">
-        {{ statusMeaning[campaign.status] }}
+      <p class="campaign-editor__status-meaning">
+        {{
+          (!isCurationRoute && isCreator && creatorStatusMeaning) || statusMeaning[campaign.status]
+        }}
       </p>
 
       <section v-if="publishBlocked" class="campaign-editor__blockers">
@@ -434,82 +427,87 @@ const connectionSwatch = computed(() => {
         :detail="`${fractionalVertexCount} element${fractionalVertexCount === 1 ? '' : 's'} sit on fractional grid coordinates. Turn the grid lock on and re-drag them onto whole units to make this campaign loadable again.`"
       />
 
-      <section v-if="campaignAudit.paysOut" class="campaign-editor__audit">
-        <h3 class="campaign-editor__audit-title">Payout</h3>
+      <section
+        v-if="campaignAudit.paysOut || campaignAudit.issues.length > 0"
+        class="campaign-editor__audit"
+      >
+        <template v-if="campaignAudit.paysOut">
+          <h3 class="campaign-editor__audit-title">Payout</h3>
 
-        <dl class="campaign-editor__audit-stats">
-          <div>
-            <dt>Nodes</dt>
-            <dd>{{ campaignAudit.nodeCount }}</dd>
-          </div>
-          <div>
-            <dt>Milestones</dt>
-            <dd>{{ campaignAudit.milestoneCount }}</dd>
-          </div>
-          <div>
-            <dt>Barriers</dt>
-            <dd>{{ campaignAudit.barrierCount }}</dd>
-          </div>
-          <div>
-            <dt>Avg XP / node</dt>
-            <dd>{{ campaignAudit.avgXpPerNode.toLocaleString() }}</dd>
-          </div>
-          <div>
-            <dt>Node XP range</dt>
-            <dd>
-              {{ campaignAudit.minNodeXp.toLocaleString() }} -
-              {{ campaignAudit.maxNodeXp.toLocaleString() }}
-            </dd>
-          </div>
-          <div>
-            <dt>Total XP</dt>
-            <dd
-              :class="{
-                'campaign-editor__audit-over': campaignAudit.totalXp > campaignAudit.xpBudget,
-              }"
-              :title="`Recommended at most ${campaignAudit.xpBudget.toLocaleString()} XP for ${campaignAudit.nodeCount} nodes`"
-            >
-              {{ campaignAudit.totalXp.toLocaleString() }}
-              <small>/ {{ campaignAudit.xpBudget.toLocaleString() }}</small>
-            </dd>
-          </div>
-          <div>
-            <dt>Item awards</dt>
-            <dd
-              :class="{
-                'campaign-editor__audit-over':
-                  campaignAudit.rewardCount > campaignAudit.rewardBudget,
-              }"
-              :title="`Recommended at most ${campaignAudit.rewardBudget} item awards for ${campaignAudit.nodeCount} nodes`"
-            >
-              {{ campaignAudit.rewardCount }}
-              <small>/ {{ campaignAudit.rewardBudget }}</small>
-            </dd>
-          </div>
-        </dl>
+          <dl class="campaign-editor__audit-stats">
+            <div>
+              <dt>Nodes</dt>
+              <dd>{{ campaignAudit.nodeCount }}</dd>
+            </div>
+            <div>
+              <dt>Milestones</dt>
+              <dd>{{ campaignAudit.milestoneCount }}</dd>
+            </div>
+            <div>
+              <dt>Barriers</dt>
+              <dd>{{ campaignAudit.barrierCount }}</dd>
+            </div>
+            <div>
+              <dt>Avg XP / node</dt>
+              <dd>{{ campaignAudit.avgXpPerNode.toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>Node XP range</dt>
+              <dd>
+                {{ campaignAudit.minNodeXp.toLocaleString() }} -
+                {{ campaignAudit.maxNodeXp.toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt>Total XP</dt>
+              <dd
+                :class="{
+                  'campaign-editor__audit-over': campaignAudit.totalXp > campaignAudit.xpBudget,
+                }"
+                :title="`Recommended at most ${campaignAudit.xpBudget.toLocaleString()} XP for ${campaignAudit.nodeCount} nodes`"
+              >
+                {{ campaignAudit.totalXp.toLocaleString() }}
+                <small>/ {{ campaignAudit.xpBudget.toLocaleString() }}</small>
+              </dd>
+            </div>
+            <div>
+              <dt>Item awards</dt>
+              <dd
+                :class="{
+                  'campaign-editor__audit-over':
+                    campaignAudit.rewardCount > campaignAudit.rewardBudget,
+                }"
+                :title="`Recommended at most ${campaignAudit.rewardBudget} item awards for ${campaignAudit.nodeCount} nodes`"
+              >
+                {{ campaignAudit.rewardCount }}
+                <small>/ {{ campaignAudit.rewardBudget }}</small>
+              </dd>
+            </div>
+          </dl>
 
-        <p
-          v-if="campaignAudit.barrierXp || campaignAudit.completionXp"
-          class="campaign-editor__hint"
-        >
-          Nodes {{ campaignAudit.nodeXp.toLocaleString() }} · Barriers
-          {{ campaignAudit.barrierXp.toLocaleString() }} · Completion
-          {{ campaignAudit.completionXp.toLocaleString() }}
-        </p>
-
-        <ul v-if="campaignAudit.rewards.length > 0" class="campaign-editor__reward-list">
-          <li
-            v-for="reward in campaignAudit.rewards"
-            :key="reward.itemId"
-            class="campaign-editor__reward"
+          <p
+            v-if="campaignAudit.barrierXp || campaignAudit.completionXp"
+            class="campaign-editor__hint"
           >
-            <CampaignRewardItem
-              :name="reward.itemName"
-              :quantity="reward.quantity"
-              :item="rewardItemsById.get(reward.itemId) ?? null"
-            />
-          </li>
-        </ul>
+            Nodes {{ campaignAudit.nodeXp.toLocaleString() }} · Barriers
+            {{ campaignAudit.barrierXp.toLocaleString() }} · Completion
+            {{ campaignAudit.completionXp.toLocaleString() }}
+          </p>
+
+          <ul v-if="campaignAudit.rewards.length > 0" class="campaign-editor__reward-list">
+            <li
+              v-for="reward in campaignAudit.rewards"
+              :key="reward.itemId"
+              class="campaign-editor__reward"
+            >
+              <CampaignRewardItem
+                :name="reward.itemName"
+                :quantity="reward.quantity"
+                :item="rewardItemsById.get(reward.itemId) ?? null"
+              />
+            </li>
+          </ul>
+        </template>
 
         <CampaignIssueNotes :issues="campaignAudit.issues" @select="handleSelect" />
       </section>
