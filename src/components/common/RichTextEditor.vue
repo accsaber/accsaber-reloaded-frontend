@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import { normalizeRichHtml } from '@/utils/richText'
 import { nextTick, onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(
@@ -60,7 +61,7 @@ function onEditorBlur() {
 
 function emitChange() {
   const el = editorRef.value
-  if (el) emit('update:modelValue', el.innerHTML)
+  if (el) emit('update:modelValue', normalizeRichHtml(el.innerHTML))
 }
 
 function focusEditor() {
@@ -140,12 +141,18 @@ function wrapSelectionSpan(style: Record<string, string>, className?: string) {
   const sel = window.getSelection()
   if (!sel || sel.rangeCount === 0) return
   const range = sel.getRangeAt(0)
-  if (range.collapsed) return
+  if (range.collapsed || range.toString().trim().length === 0) return
   const span = document.createElement('span')
   if (className) span.className = className
   for (const [k, v] of Object.entries(style)) span.style.setProperty(k, v)
   try {
     span.appendChild(range.extractContents())
+    for (const inner of span.querySelectorAll<HTMLElement>('[style]')) {
+      for (const k of Object.keys(style)) inner.style.removeProperty(k)
+    }
+    if (className) {
+      for (const inner of span.querySelectorAll(`.${className}`)) inner.classList.remove(className)
+    }
     range.insertNode(span)
     sel.removeAllRanges()
     const next = document.createRange()
