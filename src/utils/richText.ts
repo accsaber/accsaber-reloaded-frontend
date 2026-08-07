@@ -55,6 +55,8 @@ const TRACKED_PROPS = [
 
 const EFFECT_CLASSES = new Set(['glow', 'outline', 'shadow'])
 
+const PLUGIN_PROPS = ['color', 'font-size']
+
 function isBlank(text: string): boolean {
   return !/[^\t\n\r ]/.test(text)
 }
@@ -67,6 +69,15 @@ function hasContent(el: Element): boolean {
 
 function isRelativeLength(value: string): boolean {
   return /[\d.](?:em|ex|ch|%)/.test(value)
+}
+
+function paragraphsToDivs(root: ParentNode) {
+  for (const el of Array.from(root.querySelectorAll('p'))) {
+    const div = document.createElement('div')
+    for (const attr of Array.from(el.attributes)) div.setAttribute(attr.name, attr.value)
+    div.append(...Array.from(el.childNodes))
+    el.replaceWith(div)
+  }
 }
 
 function pruneEmpty(root: ParentNode) {
@@ -128,17 +139,29 @@ function unwrapBare(root: ParentNode) {
   }
 }
 
-function mergeSpanChains(root: ParentNode) {
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>('span'))) {
-    const child = el.firstElementChild as HTMLElement | null
-    if (!child || child.tagName !== 'SPAN' || el.childNodes.length !== 1) continue
-    for (const prop of Array.from(el.style)) {
-      if (!child.style.getPropertyValue(prop)) {
-        child.style.setProperty(prop, el.style.getPropertyValue(prop))
-      }
+function propOrder(prop: string): number {
+  const i = PLUGIN_PROPS.indexOf(prop)
+  return i === -1 ? PLUGIN_PROPS.length : i
+}
+
+function splitStyleSpans(root: ParentNode) {
+  for (const el of Array.from(root.querySelectorAll<HTMLElement>('span[style]'))) {
+    const decls = Array.from(el.style)
+      .map((prop) => [prop, el.style.getPropertyValue(prop)] as const)
+      .sort((a, b) => propOrder(a[0]) - propOrder(b[0]))
+    if (decls.length === 0) {
+      el.removeAttribute('style')
+      continue
     }
-    for (const token of Array.from(el.classList)) child.classList.add(token)
-    el.replaceWith(child)
+    el.setAttribute('style', `${decls[0][0]}:${decls[0][1]}`)
+    let host: HTMLElement = el
+    for (const [prop, value] of decls.slice(1)) {
+      const inner = document.createElement('span')
+      inner.setAttribute('style', `${prop}:${value}`)
+      inner.append(...Array.from(host.childNodes))
+      host.appendChild(inner)
+      host = inner
+    }
   }
 }
 
@@ -148,11 +171,12 @@ export function normalizeRichHtml(html: string | null | undefined): string {
   template.innerHTML = html
   const root = template.content
 
+  paragraphsToDivs(root)
   pruneEmpty(root)
   for (const child of Array.from(root.children)) dropInherited(child, new Map(), new Set())
   dropDeadProps(root)
   unwrapBare(root)
-  mergeSpanChains(root)
+  splitStyleSpans(root)
 
   if (isBlank(root.textContent ?? '') && !root.querySelector('img, hr')) return ''
   return template.innerHTML

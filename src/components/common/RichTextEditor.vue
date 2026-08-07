@@ -208,7 +208,7 @@ const formatGroups: FormatButton[][] = [
   [
     { key: 'h3', label: 'H3', title: 'Heading 3', action: () => toggleBlock('h3') },
     { key: 'h4', label: 'H4', title: 'Heading 4', action: () => toggleBlock('h4') },
-    { key: 'p', label: 'P', title: 'Paragraph', action: () => toggleBlock('p') },
+    { key: 'p', label: 'P', title: 'Paragraph', action: () => toggleBlock('div') },
   ],
   [
     { key: 'ul', label: '• List', title: 'Bullet list', action: () => runCommand('insertUnorderedList') },
