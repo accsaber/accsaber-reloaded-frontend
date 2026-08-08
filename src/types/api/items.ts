@@ -878,7 +878,7 @@ export interface DisintegrationResponse {
   linkId: string
   itemId: string
   quantityDisintegrated: number
-  remainingQuantity: number | null
+  remainingQuantity?: number | null
   essenceGained: number
   balance: number
 }

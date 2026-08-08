@@ -165,8 +165,11 @@ const equippable = computed(() => !!item.value && isEquippableTypeKey(item.value
 const showEquipActions = computed(() => !props.locked && props.isOwnProfile && equippable.value && item.value?.active && !item.value.deprecated)
 const showDownload = computed(() => !props.locked && props.isOwnProfile && !!item.value?.downloadable && item.value.active && !item.value.deprecated)
 
+const untradeable = computed(() => !item.value?.tradeable)
 const essenceWorth = computed(() => item.value?.worth ?? 0)
-const showDisintegrate = computed(() => !props.locked && props.isOwnProfile && essenceWorth.value > 0)
+const showDisintegrate = computed(
+  () => !props.locked && props.isOwnProfile && !untradeable.value && essenceWorth.value > 0,
+)
 const disintegrateEssence = computed(() => essenceWorth.value * quantity.value)
 const showOpenCrate = computed(
   () => isCrate.value && props.isOwnProfile && !props.locked && !!item.value?.active && !item.value.deprecated,
@@ -183,7 +186,7 @@ const CRATE_UNLOCK_MS = Date.UTC(2026, 6, 17, 15, 0, 0)
 const CRATE_UNLOCK_MESSAGE = 'Crate opening unlocks Friday, July 17 at 3:00 PM UTC.'
 const crateLocked = ref(Date.now() < CRATE_UNLOCK_MS)
 let crateUnlockTimer: ReturnType<typeof setTimeout> | undefined
-const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || !item.value?.tradeable)
+const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || untradeable.value)
 const hasMetaRows = computed(() => {
   if (!props.locked) return true
   return item.value?.unlockLevel != null || !!item.value?.requirement
@@ -365,7 +368,7 @@ onUnmounted(() => {
         <dt>Serial</dt>
         <dd class="inv-detail__mono">#{{ userItem.serialNumber }}</dd>
       </div>
-      <div v-if="!locked && !item?.tradeable" class="inv-detail__row">
+      <div v-if="!locked && untradeable" class="inv-detail__row">
         <dt>Source</dt>
         <dd>{{ sourceLabel }}</dd>
       </div>
@@ -444,7 +447,7 @@ onUnmounted(() => {
           <span class="inv-detail__essence-yield">· +{{ formatEssence(disintegrateEssence) }}</span>
         </BaseButton>
 
-        <span v-if="!item.tradeable" class="inv-detail__no-trade" aria-label="Untradeable">
+        <span v-if="untradeable" class="inv-detail__no-trade" aria-label="Untradeable">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />

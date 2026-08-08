@@ -364,6 +364,11 @@ function selectItem(linkId: string) {
   }
 }
 
+function findLink(linkId: string): UserItemResponse | null {
+  if (selectedItem.value?.linkId === linkId) return selectedItem.value
+  return items.value.find((u) => u.linkId === linkId) ?? null
+}
+
 function reportActionError(err: unknown, fallback: string) {
   const parsed = parseApiError(err, fallback)
   showFeedback('error', parsed.fieldErrors[0]?.message ?? parsed.message)
@@ -371,7 +376,7 @@ function reportActionError(err: unknown, fallback: string) {
 
 async function handleEquip(linkId: string) {
   if (isLockedLink(linkId)) return
-  const target = items.value.find((u) => u.linkId === linkId)
+  const target = findLink(linkId)
   if (!target) return
   actionBusy.value = true
   try {
@@ -394,7 +399,7 @@ async function handleEquip(linkId: string) {
 }
 
 async function handleSelectVariant(linkId: string, variantKey: string) {
-  const target = items.value.find((u) => u.linkId === linkId)
+  const target = findLink(linkId)
   if (!target) return
   actionBusy.value = true
   try {
@@ -419,7 +424,7 @@ async function handleUnequip(typeKeyArg: string) {
 
 async function handleApplyThemeMode(linkId: string, alt: boolean) {
   if (isLockedLink(linkId)) return
-  const target = items.value.find((u) => u.linkId === linkId)
+  const target = findLink(linkId)
   if (!target) return
   const theme = readThemeValue(target.item.value)
   const tokens = alt ? theme?.altTokens : theme?.tokens
@@ -445,7 +450,7 @@ const { downloadingLinkId, download } = useItemDownload()
 
 async function handleDownload(linkId: string) {
   if (isLockedLink(linkId) || downloadingLinkId.value) return
-  const target = items.value.find((u) => u.linkId === linkId)
+  const target = findLink(linkId)
   if (!target) return
   try {
     const filename = await download(target)
@@ -489,10 +494,7 @@ function mutateLink(linkId: string, nextQuantity: number | null) {
 
 function handleDisintegrateRequest(linkId: string) {
   if (isLockedLink(linkId)) return
-  const target =
-    selectedItem.value?.linkId === linkId
-      ? selectedItem.value
-      : items.value.find((u) => u.linkId === linkId) ?? null
+  const target = findLink(linkId)
   if (target) disintegrateTarget.value = target
 }
 
@@ -501,10 +503,12 @@ function handleDisintegrateCancel() {
   disintegrateTarget.value = null
 }
 
-function applyDisintegration(res: DisintegrationResponse) {
+function applyDisintegration(res: DisintegrationResponse): boolean {
+  const remaining = res.remainingQuantity ?? null
   essenceStore.setBalance(res.balance)
-  mutateLink(res.linkId, res.remainingQuantity)
+  mutateLink(res.linkId, remaining)
   showFeedback('success', `+${formatEssence(res.essenceGained)} essence`)
+  return remaining === null
 }
 
 function findOwnedCrateLink(itemId: string): UserItemResponse | null {
@@ -539,10 +543,7 @@ async function requestCrateOpen(target: UserItemResponse) {
 
 function handleOpenCrate(linkId: string) {
   if (isLockedLink(linkId)) return
-  const target =
-    selectedItem.value?.linkId === linkId
-      ? selectedItem.value
-      : (items.value.find((u) => u.linkId === linkId) ?? null)
+  const target = findLink(linkId)
   if (!target || target.item.typeKey !== 'crate') return
   mobileDetailOpen.value = false
   crateRefreshed.value = false
@@ -625,9 +626,7 @@ async function handleDisintegrateConfirm(quantity: number) {
   actionBusy.value = true
   let removed = false
   try {
-    const res = await disintegrateItem(linkId, quantity)
-    removed = res.remainingQuantity === null
-    applyDisintegration(res)
+    removed = applyDisintegration(await disintegrateItem(linkId, quantity))
   } catch (err) {
     const parsed = parseApiError(err, 'Could not disintegrate item.')
     if (parsed.status === 404) {
