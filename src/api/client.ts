@@ -285,12 +285,12 @@ export interface DownloadedFile {
   filename: string | null
 }
 
-export async function getFile(path: string): Promise<DownloadedFile> {
+async function requestFile(method: string, path: string): Promise<DownloadedFile> {
   const baseUrl = import.meta.env.VITE_API_BASE
   const url = `${baseUrl}${path}`
 
   const authHeader = await resolveAuthHeader(path)
-  let res = await trackedFetch(url, { method: 'GET', headers: buildAuthHeaders(authHeader) })
+  let res = await trackedFetch(url, { method, headers: buildAuthHeaders(authHeader) })
 
   if (res.status === 401 && !shouldSkipAuth(path)) {
     const auth = useAuthStore()
@@ -298,7 +298,7 @@ export async function getFile(path: string): Promise<DownloadedFile> {
       const refreshed = await auth.refreshPlayerSession()
       if (refreshed && auth.accessToken) {
         res = await trackedFetch(url, {
-          method: 'GET',
+          method,
           headers: buildAuthHeaders(auth.accessToken),
         })
       }
@@ -307,6 +307,7 @@ export async function getFile(path: string): Promise<DownloadedFile> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
+    detectBannedWrite(method, res.status, text)
     throw new ApiError(res.status, text)
   }
 
@@ -314,6 +315,14 @@ export async function getFile(path: string): Promise<DownloadedFile> {
     blob: await res.blob(),
     filename: parseAttachmentFilename(res.headers.get('Content-Disposition')),
   }
+}
+
+export function getFile(path: string): Promise<DownloadedFile> {
+  return requestFile('GET', path)
+}
+
+export function postFile(path: string): Promise<DownloadedFile> {
+  return requestFile('POST', path)
 }
 
 export async function postMultipart<T>(path: string, formData: FormData): Promise<T> {

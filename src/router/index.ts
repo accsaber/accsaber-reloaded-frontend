@@ -48,6 +48,11 @@ const router = createRouter({
       component: () => import('@/views/GettingStartedPage.vue'),
     },
     {
+      path: '/quest',
+      name: 'quest',
+      component: () => import('@/views/QuestPage.vue'),
+    },
+    {
       path: '/leaderboards',
       name: 'leaderboards',
       component: () => import('@/views/LeaderboardsPage.vue'),

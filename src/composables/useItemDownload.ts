@@ -1,6 +1,7 @@
 import { downloadUserItemFile } from '@/api/items'
 import { parseApiError } from '@/api/client'
 import type { UserItemResponse } from '@/types/api/items'
+import { saveBlob } from '@/utils/download'
 import { ref } from 'vue'
 
 const STATUS_MESSAGES: Record<number, string> = {
@@ -15,15 +16,6 @@ function fallbackFilename(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
   return `${slug || 'item'}.saber`
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
 }
 
 export function useItemDownload() {
