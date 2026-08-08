@@ -66,6 +66,7 @@ function placeholderItem(typeKey: string): ItemResponse {
     unlockLevel: null,
     worth: null,
     requirement: null,
+    obtainableUntil: null,
     createdAt: '',
   }
 }

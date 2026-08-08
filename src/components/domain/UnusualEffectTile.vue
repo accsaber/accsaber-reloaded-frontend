@@ -42,6 +42,7 @@ const SAMPLE_ITEM: ItemResponse = {
   unlockLevel: null,
   worth: null,
   requirement: null,
+  obtainableUntil: null,
   createdAt: '',
 }
 </script>

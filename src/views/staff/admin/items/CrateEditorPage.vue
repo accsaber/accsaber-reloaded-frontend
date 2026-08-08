@@ -41,7 +41,7 @@ import type {
   UpdateItemRequest,
 } from '@/types/api/items'
 import { createCrateRoller, type CrateRoll } from '@/utils/crateRoll'
-import { RARITY_ORDER } from '@/utils/items'
+import { isItemObtainable, RARITY_ORDER } from '@/utils/items'
 import { decimalToPercent, percentToDecimal } from '@/utils/modifiers'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -104,6 +104,7 @@ const filteredItems = computed(() => {
   const q = search.value.trim().toLowerCase()
   return allItems.value.filter((i) => {
     if (i.deprecated) return false
+    if (!isItemObtainable(i)) return false
     if (!allowNestedCrates.value && i.typeKey === 'crate') return false
     if (i.id === crateId.value) return false
     if (!q) return true

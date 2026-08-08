@@ -46,6 +46,14 @@ export function isEquippableTypeKey(typeKey: ItemTypeKey): boolean {
   return EQUIPPABLE_TYPE_KEYS.has(typeKey)
 }
 
+export function isItemObtainable(
+  item: Pick<ItemResponse, 'obtainableUntil'>,
+  now: number = Date.now(),
+): boolean {
+  if (!item.obtainableUntil) return true
+  return new Date(item.obtainableUntil).getTime() > now
+}
+
 export const RARITY_ORDER: ItemRarity[] = [
   'common',
   'uncommon',

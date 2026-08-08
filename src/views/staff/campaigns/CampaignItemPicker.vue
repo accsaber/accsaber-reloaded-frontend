@@ -9,7 +9,7 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse, UserItemResponse } from '@/types/api/items'
-import { rarityClass } from '@/utils/items'
+import { isItemObtainable, rarityClass } from '@/utils/items'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{ loading?: boolean; unrestricted?: boolean }>()
@@ -45,7 +45,11 @@ const rarityRank: Record<string, number> = {
 
 const pickableItems = computed(() =>
   items.value.filter(
-    (i) => i.active && !i.deprecated && (props.unrestricted || i.typeKey === 'crate'),
+    (i) =>
+      i.active &&
+      !i.deprecated &&
+      isItemObtainable(i) &&
+      (props.unrestricted || i.typeKey === 'crate'),
   ),
 )
 

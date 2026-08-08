@@ -74,6 +74,7 @@ function syntheticItem(row: Record<string, unknown>): ItemResponse {
     unlockLevel: null,
     worth: null,
     requirement: null,
+    obtainableUntil: null,
     createdAt: '',
   }
 }

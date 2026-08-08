@@ -803,6 +803,7 @@ export interface ItemResponse {
   unlockLevel: number | null
   worth: number | null
   requirement: string | null
+  obtainableUntil: string | null
   createdAt: string
 }
 
