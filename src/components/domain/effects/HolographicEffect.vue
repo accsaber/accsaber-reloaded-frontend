@@ -50,7 +50,6 @@ const rootStyle = computed<Record<string, string>>(() => ({
   '--holo-angle': `${angleDeg.value}deg`,
   '--holo-sweep': `${sweepMs.value}ms`,
   '--holo-op': String(0.5 + intensity.value * 0.4),
-  '--holo-base': String(0.42 + intensity.value * 0.44),
   ...contentBoxStyle.value,
 }))
 
@@ -90,6 +89,7 @@ const titleStyle = computed<Record<string, string>>(() => {
   if (b) {
     out.left = `${b.x}%`
     out.top = `${b.y}%`
+    out.width = `calc(${b.w}% + 2px)`
   }
   return out
 })
@@ -168,6 +168,7 @@ onMounted(() => {
   textEl = host?.querySelector<HTMLElement>('.title-renderer__text') ?? null
   if (textEl) {
     titleText.value = textEl.textContent ?? ''
+    if (overlay) overlay.style.zIndex = '2'
     const cs = getComputedStyle(textEl)
     titleFont.value = {
       fontFamily: cs.fontFamily,
@@ -198,6 +199,7 @@ onBeforeUnmount(() => {
   if (fieldIdleTimer) clearTimeout(fieldIdleTimer)
   if (settleTimer) clearTimeout(settleTimer)
   ro?.disconnect()
+  if (overlay && isTitle.value) overlay.style.zIndex = ''
   window.removeEventListener('pointermove', onFieldMove)
   if (host) {
     host.removeEventListener('pointerenter', onEnter)
@@ -213,7 +215,10 @@ onBeforeUnmount(() => {
       <div class="comp-holo__fieldshine"></div>
       <div v-if="fieldHoverEnabled" ref="glossEl" class="comp-holo__gloss"></div>
     </template>
-    <span v-else-if="isTitle" class="comp-holo__text" :style="titleStyle">{{ titleText }}</span>
+    <template v-else-if="isTitle">
+      <span class="comp-holo__text" :style="titleStyle">{{ titleText }}</span>
+      <span class="comp-holo__text comp-holo__text--lift" :style="titleStyle">{{ titleText }}</span>
+    </template>
     <template v-else>
       <div class="comp-holo__shine"></div>
       <div class="comp-holo__shine comp-holo__shine--lift"></div>
@@ -223,6 +228,19 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .comp-holo {
+  --holo-chroma: 0.42;
+  --holo-core: 0.85;
+  --holo-spread: 1;
+  --holo-foil: linear-gradient(
+    var(--holo-angle, 115deg),
+    rgba(255, 95, 130, 0) calc(50% - 15% * var(--holo-spread)),
+    rgba(255, 95, 130, var(--holo-chroma)) calc(50% - 11% * var(--holo-spread)),
+    rgba(255, 235, 140, var(--holo-chroma)) calc(50% - 5.5% * var(--holo-spread)),
+    rgba(255, 255, 255, var(--holo-core)) 50%,
+    rgba(130, 240, 185, var(--holo-chroma)) calc(50% + 5.5% * var(--holo-spread)),
+    rgba(120, 195, 255, var(--holo-chroma)) calc(50% + 11% * var(--holo-spread)),
+    rgba(120, 195, 255, 0) calc(50% + 15% * var(--holo-spread))
+  );
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -233,16 +251,7 @@ onBeforeUnmount(() => {
 .comp-holo__shine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    var(--holo-angle, 115deg),
-    transparent 38%,
-    rgba(255, 95, 130, 0.42) 44%,
-    rgba(255, 235, 140, 0.42) 47%,
-    rgba(255, 255, 255, 0.85) 50%,
-    rgba(130, 240, 185, 0.42) 53%,
-    rgba(120, 195, 255, 0.42) 56%,
-    transparent 62%
-  );
+  background-image: var(--holo-foil);
   background-size: 220% 220%;
   background-repeat: no-repeat;
   mix-blend-mode: overlay;
@@ -252,37 +261,28 @@ onBeforeUnmount(() => {
 }
 
 .comp-holo__text {
+  --holo-chroma: 1;
+  --holo-core: 1;
+  --holo-spread: 1.15;
   position: absolute;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background:
-    linear-gradient(
-      var(--holo-angle, 115deg),
-      transparent 38%,
-      rgba(255, 105, 145, 0.75) 45%,
-      rgba(255, 240, 175, 0.9) 48%,
-      rgba(255, 255, 255, 1) 50%,
-      rgba(150, 250, 205, 0.9) 52%,
-      rgba(135, 205, 255, 0.75) 55%,
-      transparent 62%
-    ),
-    linear-gradient(
-      var(--holo-angle, 115deg),
-      rgba(255, 120, 200, var(--holo-base, 0.6)),
-      rgba(255, 225, 150, var(--holo-base, 0.6)) 22%,
-      rgba(150, 245, 205, var(--holo-base, 0.6)) 46%,
-      rgba(140, 205, 255, var(--holo-base, 0.6)) 70%,
-      rgba(210, 160, 255, var(--holo-base, 0.6)) 100%
-    );
-  background-size: 300% 100%, 100% 100%;
-  background-repeat: no-repeat, no-repeat;
+  background-image: var(--holo-foil);
+  background-size: 420% 100%;
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
-  mix-blend-mode: screen;
-  opacity: calc(0.85 + var(--holo-active, 0) * 0.15);
-  animation: comp-holo-textsweep calc(var(--holo-sweep, 6500ms) * 0.5) linear infinite;
+  opacity: calc(0.7 + var(--holo-op, 0.7) * 0.3);
+  animation: comp-holo-textsweep var(--holo-sweep, 6500ms) ease-in-out infinite;
   transition: opacity 180ms ease;
+}
+
+.comp-holo__text--lift {
+  mix-blend-mode: screen;
+  opacity: calc(var(--holo-op, 0.7) * (0.7 + var(--holo-active, 0) * 0.3));
 }
 
 .comp-holo__shine--lift {
@@ -293,16 +293,7 @@ onBeforeUnmount(() => {
 .comp-holo__fieldshine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    var(--holo-angle, 115deg),
-    transparent 38%,
-    rgba(255, 95, 130, 0.42) 44%,
-    rgba(255, 235, 140, 0.42) 47%,
-    rgba(255, 255, 255, 0.85) 50%,
-    rgba(130, 240, 185, 0.42) 53%,
-    rgba(120, 195, 255, 0.42) 56%,
-    transparent 62%
-  );
+  background-image: var(--holo-foil);
   background-size: 220% 220%;
   background-repeat: no-repeat;
   mix-blend-mode: screen;
@@ -318,16 +309,7 @@ onBeforeUnmount(() => {
   width: 320px;
   height: 320px;
   pointer-events: none;
-  background: linear-gradient(
-    var(--holo-angle, 115deg),
-    transparent 30%,
-    rgba(255, 95, 130, 0.35) 40%,
-    rgba(255, 235, 140, 0.35) 45%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(130, 240, 185, 0.35) 55%,
-    rgba(120, 195, 255, 0.35) 60%,
-    transparent 70%
-  );
+  background-image: var(--holo-foil);
   background-size: 250% 250%;
   background-repeat: no-repeat;
   background-position: calc(var(--holo-mx, 0.5) * 100%) calc(var(--holo-my, 0.5) * 100%);
@@ -350,7 +332,7 @@ onBeforeUnmount(() => {
 
 .comp-holo.is-hover .comp-holo__text {
   animation: none;
-  background-position: calc(var(--holo-mx, 0.5) * 100%) 0, 0% 0;
+  background-position: calc(var(--holo-mx, 0.5) * 100%) 0;
 }
 
 @keyframes comp-holo-sweep {
@@ -366,11 +348,14 @@ onBeforeUnmount(() => {
 }
 
 @keyframes comp-holo-textsweep {
-  from {
-    background-position: 0% 0, 0% 0;
+  0% {
+    background-position: 0% 0;
   }
-  to {
-    background-position: 100% 0, 0% 0;
+  35% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 100% 0;
   }
 }
 
@@ -390,7 +375,7 @@ onBeforeUnmount(() => {
   }
 
   .comp-holo__text {
-    background-position: 50% 0, 0% 0;
+    background-position: 50% 0;
   }
 }
 </style>
