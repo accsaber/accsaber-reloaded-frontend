@@ -42,6 +42,7 @@ function stateOf(index: number): string {
 .stepper {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
   list-style: none;
   margin: 0 0 var(--space-xl);
@@ -52,7 +53,6 @@ function stateOf(index: number): string {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  flex: 1;
   min-width: 0;
 }
 
@@ -104,9 +104,9 @@ function stateOf(index: number): string {
 }
 
 .stepper__line {
-  flex: 1;
+  width: 48px;
   height: 1px;
-  min-width: var(--space-sm);
+  flex-shrink: 0;
   background: var(--bg-overlay);
 }
 
@@ -137,6 +137,10 @@ function stateOf(index: number): string {
 @media (max-width: 767px) {
   .stepper {
     gap: var(--space-xs);
+  }
+
+  .stepper__line {
+    width: 24px;
   }
 
   .stepper__label {

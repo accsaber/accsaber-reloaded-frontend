@@ -7,9 +7,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
   <div class="quest-install">
     <ol class="quest-install__list">
       <li>
-        On a desktop or laptop, open
-        <a href="https://mbf.bsquest.xyz" target="_blank" rel="noopener noreferrer">ModsBeforeFriday</a>
-        in Chrome or Edge.
+        On a desktop or laptop, open ModsBeforeFriday in Chrome or Edge.
       </li>
       <li>
         Plug the headset into the computer with a USB cable, put the headset on, and accept the
@@ -62,16 +60,6 @@ import BaseButton from '@/components/common/BaseButton.vue'
   color: var(--page-accent, var(--accent));
   font-family: var(--font-mono);
   font-weight: 600;
-}
-
-.quest-install a {
-  color: var(--page-accent, var(--accent));
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--page-accent, var(--accent)) 40%, transparent);
-}
-
-.quest-install a:hover {
-  border-bottom-color: var(--page-accent, var(--accent));
 }
 
 code {
