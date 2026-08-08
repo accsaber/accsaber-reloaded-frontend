@@ -77,10 +77,12 @@ function formatUnlock(value: string): string {
   <div class="mission" :class="[`mission--${state}`]">
     <div class="mission__head">
       <span class="mission__status" :class="`mission__status--${state}`" aria-hidden="true">
-        <svg v-if="state === 'completed'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <template v-if="state === 'completed'">
+          <svg v-for="n in doneTicks" :key="n" width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </template>
         <svg v-else-if="state === 'locked'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -112,15 +114,7 @@ function formatUnlock(value: string): string {
     </div>
 
     <div v-else-if="mission.tracked" class="mission__progress">
-      <span v-if="state === 'completed'" class="mission__flag mission__flag--done">
-        <span class="mission__ticks">
-          <svg v-for="n in doneTicks" :key="n" width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-        Completed
-      </span>
+      <span v-if="state === 'completed'" class="mission__flag mission__flag--done">Completed</span>
       <template v-if="showBar">
         <div class="mission__track">
           <div class="mission__fill" :style="{ width: `${progressPct}%` }" />
@@ -167,7 +161,13 @@ function formatUnlock(value: string): string {
 }
 
 .mission__status--completed {
+  width: auto;
+  min-width: 20px;
   color: var(--success);
+}
+
+.mission__status--completed svg + svg {
+  margin-left: -5px;
 }
 
 .mission__status--locked {
@@ -245,23 +245,8 @@ function formatUnlock(value: string): string {
 }
 
 .mission__flag--done {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  white-space: nowrap;
   color: var(--success);
   font-weight: 600;
-}
-
-.mission__ticks {
-  display: inline-flex;
-  align-items: center;
-  margin-right: -2px;
-}
-
-.mission__ticks svg + svg {
-  margin-left: -4px;
 }
 
 .mission__flag--lock {
