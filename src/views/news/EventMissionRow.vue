@@ -38,6 +38,19 @@ const lockHint = computed(() => {
   }
 })
 
+const atMaxCompletions = computed(() => {
+  const m = props.mission
+  return m.maxCompletions !== null && m.completions !== null && m.completions >= m.maxCompletions
+})
+
+const showBar = computed(() => {
+  if (!hasBar.value || state.value === 'locked') return false
+  if (state.value !== 'completed') return true
+  return props.mission.repeatable && props.mission.open && !atMaxCompletions.value
+})
+
+const doneTicks = computed(() => Math.max(1, props.mission.completions ?? 1))
+
 const completionsLabel = computed(() => {
   const m = props.mission
   if (!m.repeatable || m.completions === null) return null
@@ -99,14 +112,22 @@ function formatUnlock(value: string): string {
     </div>
 
     <div v-else-if="mission.tracked" class="mission__progress">
-      <span v-if="state === 'completed'" class="mission__flag mission__flag--done">Completed</span>
-      <template v-else-if="hasBar">
+      <span v-if="state === 'completed'" class="mission__flag mission__flag--done">
+        <span class="mission__ticks">
+          <svg v-for="n in doneTicks" :key="n" width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </span>
+        Completed
+      </span>
+      <template v-if="showBar">
         <div class="mission__track">
           <div class="mission__fill" :style="{ width: `${progressPct}%` }" />
         </div>
         <span class="mission__count">{{ mission.progressCurrent ?? 0 }} / {{ mission.progressTarget }}</span>
       </template>
-      <span v-else class="mission__flag">In progress</span>
+      <span v-else-if="state !== 'completed'" class="mission__flag">In progress</span>
       <span v-if="completionsLabel" class="mission__completions">{{ completionsLabel }}</span>
     </div>
   </div>
@@ -224,8 +245,23 @@ function formatUnlock(value: string): string {
 }
 
 .mission__flag--done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
   color: var(--success);
   font-weight: 600;
+}
+
+.mission__ticks {
+  display: inline-flex;
+  align-items: center;
+  margin-right: -2px;
+}
+
+.mission__ticks svg + svg {
+  margin-left: -4px;
 }
 
 .mission__flag--lock {
