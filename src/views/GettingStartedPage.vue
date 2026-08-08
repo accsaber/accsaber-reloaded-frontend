@@ -62,12 +62,7 @@ usePageMeta({
           ScoreSaber</a>
         for your platform - PC or Quest.
       </p>
-      <a
-        href="https://github.com/not-dexter/accsaber-reloaded-plugin/releases"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="gs__plugin-btn"
-      >
+      <RouterLink to="/download" class="gs__plugin-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -75,10 +70,10 @@ usePageMeta({
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
         <span>
-          <span class="gs__plugin-btn-label">On PC? Download our new plugin</span>
-          <span class="gs__plugin-btn-sub">accsaber-reloaded-plugin</span>
+          <span class="gs__plugin-btn-label">Download our new AccSaber mod</span>
+          <span class="gs__plugin-btn-sub">PC and Quest</span>
         </span>
-      </a>
+      </RouterLink>
     </section>
 
     <div class="gs__connector" aria-hidden="true" />

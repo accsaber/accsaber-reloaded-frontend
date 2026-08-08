@@ -253,12 +253,7 @@ onUnmounted(() => {
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
               </RouterLink>
-              <a
-                href="https://github.com/not-dexter/accsaber-reloaded-plugin/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="hero__plugin"
-              >
+              <RouterLink to="/download" class="hero__plugin">
                 <svg
                   width="16"
                   height="16"
@@ -275,8 +270,7 @@ onUnmounted(() => {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
                 Download Plugin
-                <span class="hero__plugin-tag">PC</span>
-              </a>
+              </RouterLink>
             </div>
             <div class="hero__community">
               <a
@@ -725,18 +719,6 @@ onUnmounted(() => {
 
 .hero__plugin:hover svg {
   opacity: 1;
-}
-
-.hero__plugin-tag {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 2px 6px;
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--accent-true-acc) 20%, transparent);
-  color: var(--accent-true-acc);
-  opacity: 0.9;
 }
 
 .hero__get-started svg {
