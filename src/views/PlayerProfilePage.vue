@@ -35,6 +35,7 @@ import { getRankClass } from '@/utils/ranking'
 import { pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
 import ProfileInventoryTab from './profile/ProfileInventoryTab.vue'
 import ProfileMilestonesTab from './profile/ProfileMilestonesTab.vue'
 import ProfileScoresTab from './profile/ProfileScoresTab.vue'
@@ -274,6 +275,7 @@ const profileTabs = [
   { key: 'statistics', label: 'Statistics' },
   { key: 'milestones', label: 'Milestones' },
   { key: 'inventory', label: 'Inventory' },
+  { key: 'campaigns', label: 'Campaigns' },
 ]
 
 const categoryAwareTabs = new Set(['scores', 'statistics'])
@@ -749,6 +751,7 @@ watch(activeCategory, (newCategory) => {
             :xp-stats="xpStats" />
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
           <ProfileInventoryTab v-if="activeTab === 'inventory'" :user-id="userId" :avatar-url="userAvatarUrl" />
+          <UserCampaignsPanel v-if="activeTab === 'campaigns'" :user-id="userId" />
         </div>
 
         <Transition name="cat-dock">

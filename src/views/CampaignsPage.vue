@@ -7,30 +7,32 @@ import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import CampaignFilterBar from '@/components/domain/CampaignFilterBar.vue'
 import CampaignRow from '@/components/domain/CampaignRow.vue'
+import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
+import { useCampaignTags } from '@/composables/useCampaignTags'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
-import { useCategoryStore } from '@/stores/categories'
 import type {
   CampaignCollaboratorResponse,
   CampaignDetailResponse,
   CampaignProgressSummary,
   CampaignResponse,
-  CampaignTagResponse,
 } from '@/types/api/campaigns'
 import type { Page } from '@/types/pagination'
 import type { CampaignStatus } from '@/types/enums'
+import type { CampaignFilterState } from '@/utils/campaignFilters'
+import { BROWSE_SORT_OPTIONS } from '@/utils/campaignFilters'
 import { isCurationSubdomain, isCurationSurface } from '@/utils/subdomain'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type LocationQuery } from 'vue-router'
 
-type Pane = 'all' | 'mine' | 'started' | 'review' | 'drafts' | 'invites'
+type Pane = 'all' | 'mine' | 'runs' | 'review' | 'drafts' | 'invites'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const categoryStore = useCategoryStore()
 
 usePageMeta({
   title: 'Campaigns | AccSaber',
@@ -47,7 +49,8 @@ const defaultPane = computed<Pane>(() =>
 
 const pane = computed<Pane>(() => {
   const v = route.query.pane as string | undefined
-  if (v === 'mine' || v === 'started') return v
+  if (v === 'runs' || v === 'started') return 'runs'
+  if (v === 'mine') return v
   if (v === 'invites' && auth.isLoggedIn) return 'invites'
   if (v === 'review' && canReview.value) return v
   if (v === 'drafts' && canSeeDrafts.value) return v
@@ -79,8 +82,7 @@ const selectedTagIds = computed<string[]>(() => {
   return String(raw).split(',').filter(Boolean)
 })
 
-const tags = ref<CampaignTagResponse[]>([])
-const tagsOpen = ref(false)
+const { tags, load: loadTags } = useCampaignTags()
 const rulesOpen = ref(false)
 
 const CAMPAIGN_RULES = [
@@ -132,24 +134,36 @@ const { currentPage, paginationParams, setPage, sortState } = usePageableRoute({
   secondarySort: null,
 })
 
-const SORT_OPTIONS = [
-  { key: 'publishedAt', order: 'desc', label: 'Newest' },
-  { key: 'voteScore', order: 'desc', label: 'Top rated' },
-  { key: 'lovedAt', order: 'desc', label: 'Recently loved' },
-  { key: 'totalXp', order: 'desc', label: 'Most XP' },
-  { key: 'totalRewardCount', order: 'desc', label: 'Most loot' },
-  { key: 'name', order: 'asc', label: 'A-Z' },
-] as const
+const browseFilters = computed<CampaignFilterState>(() => ({
+  search: searchTerm.value,
+  sort: sortState.value.key,
+  order: sortState.value.direction,
+  official: officialOnly.value,
+  curated: curatedOnly.value,
+  loved: lovedOnly.value,
+  tagIds: selectedTagIds.value,
+  progressStatus: [],
+}))
 
-function setSortOption(option: (typeof SORT_OPTIONS)[number]) {
+function setQueryFlag(query: LocationQuery, key: string, on: boolean) {
+  if (on) query[key] = '1'
+  else delete query[key]
+}
+
+function applyBrowseFilters(next: CampaignFilterState) {
   const query = { ...route.query }
-  if (option.key === 'publishedAt') {
+  if (next.sort === 'publishedAt') {
     delete query.sort
     delete query.order
   } else {
-    query.sort = option.key
-    query.order = option.order
+    query.sort = next.sort
+    query.order = next.order
   }
+  setQueryFlag(query, 'official', next.official)
+  setQueryFlag(query, 'curated', next.curated)
+  setQueryFlag(query, 'loved', next.loved)
+  if (next.tagIds.length > 0) query.tags = next.tagIds.join(',')
+  else delete query.tags
   delete query.page
   router.replace({ query })
 }
@@ -158,15 +172,6 @@ const statusFilter = computed<CampaignStatus[]>(() => {
   if (pane.value === 'review') return ['PUBLISHED']
   return curatedOnly.value ? ['CURATED'] : ['PUBLISHED', 'CURATED']
 })
-
-async function loadTags() {
-  if (tags.value.length > 0) return
-  try {
-    const { getCampaignTags } = await import('@/api/campaigns')
-    tags.value = await getCampaignTags()
-  } catch {
-  }
-}
 
 async function loadInvites() {
   if (!auth.isLoggedIn) {
@@ -220,6 +225,7 @@ async function loadMineCollabs() {
 }
 
 async function loadCampaigns() {
+  if (pane.value === 'runs') return
   if (pane.value === 'invites') {
     void loadInvites()
     return
@@ -228,24 +234,7 @@ async function loadCampaigns() {
   error.value = null
   mineCollabs.value = []
   try {
-    if (pane.value === 'started') {
-      if (!auth.isLoggedIn) {
-        items.value = []
-        totalPages.value = 1
-        return
-      }
-      const { getMyCampaigns } = await import('@/api/campaigns')
-      const page = await getMyCampaigns({
-        page: paginationParams.value.page,
-        size: paginationParams.value.size,
-        sort: 'createdAt,desc',
-      })
-      totalPages.value = page.totalPages || 1
-      items.value = page.content.map((c) => c.campaign)
-      const nextMap = new Map(progressMap.value)
-      for (const c of page.content) nextMap.set(c.campaign.id, c)
-      progressMap.value = nextMap
-    } else if (pane.value === 'mine') {
+    if (pane.value === 'mine') {
       if (!auth.isLoggedIn || !auth.userId) {
         items.value = []
         totalPages.value = 1
@@ -334,54 +323,6 @@ function setSearch(value: string) {
   router.replace({ query })
 }
 
-function toggleQueryFlag(key: 'curated' | 'official' | 'loved') {
-  const query = { ...route.query }
-  if (query[key] === '1') {
-    delete query[key]
-  } else {
-    query[key] = '1'
-  }
-  delete query.page
-  router.replace({ query })
-}
-
-function toggleTag(id: string) {
-  const current = new Set(selectedTagIds.value)
-  if (current.has(id)) current.delete(id)
-  else current.add(id)
-  const query = { ...route.query }
-  const next = Array.from(current)
-  if (next.length === 0) {
-    delete query.tags
-  } else {
-    query.tags = next.join(',')
-  }
-  delete query.page
-  router.replace({ query })
-}
-
-function clearTags() {
-  const query = { ...route.query }
-  delete query.tags
-  delete query.page
-  router.replace({ query })
-}
-
-const themeTags = computed(() => tags.value.filter((t) => t.kind === 'THEME'))
-
-const genreTags = computed(() => tags.value.filter((t) => t.kind === 'GENRE'))
-
-const categoryTags = computed(() => tags.value.filter((t) => t.kind === 'CATEGORY'))
-
-const difficultyTags = computed(() => tags.value.filter((t) => t.kind === 'DIFFICULTY'))
-
-function tagAccent(tag: CampaignTagResponse): string | null {
-  if (tag.kind !== 'CATEGORY' || !tag.categoryId) return null
-  const code = categoryStore.getCategoryCode(tag.categoryId)
-  if (!code) return null
-  return categoryStore.getCategoryInfo(code)?.accent ?? null
-}
-
 onMounted(() => {
   void loadTags()
   void loadCampaigns()
@@ -426,8 +367,8 @@ watch(
           Browse
         </button>
         <button v-if="auth.isLoggedIn" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === 'started' }" @click="setPane('started')">
-          Started
+          :class="{ 'campaigns-page__pane--active': pane === 'runs' }" @click="setPane('runs')">
+          My Runs
         </button>
         <button v-if="auth.isLoggedIn" class="campaigns-page__pane"
           :class="{ 'campaigns-page__pane--active': pane === 'mine' }" @click="setPane('mine')">
@@ -473,83 +414,9 @@ watch(
       </div>
     </div>
 
-    <div v-if="filterablePane" class="campaigns-page__toolbar">
-      <div class="campaigns-page__sort" role="radiogroup" aria-label="Sort campaigns">
-        <button v-for="option in SORT_OPTIONS" :key="option.key" type="button" role="radio"
-          class="campaigns-page__sort-btn"
-          :class="{ 'campaigns-page__sort-btn--active': sortState.key === option.key }"
-          :aria-checked="sortState.key === option.key" @click="setSortOption(option)">
-          {{ option.label }}
-        </button>
-      </div>
-
-      <div class="campaigns-page__toolbar-right">
-        <button type="button" class="campaigns-page__chip campaigns-page__chip--toggle"
-          :class="{ 'campaigns-page__chip--active': officialOnly }" @click="toggleQueryFlag('official')">
-          Official only
-        </button>
-
-        <button v-if="pane === 'all'" type="button" class="campaigns-page__chip campaigns-page__chip--toggle"
-          :class="{ 'campaigns-page__chip--active': curatedOnly }" @click="toggleQueryFlag('curated')"
-          title="Curated means rewards-eligible: well laid out rewards and clear paths. It is not a quality verdict.">
-          Curated only
-        </button>
-
-        <button type="button" class="campaigns-page__chip campaigns-page__chip--toggle"
-          :class="{ 'campaigns-page__chip--active': lovedOnly }" @click="toggleQueryFlag('loved')">
-          Loved only
-        </button>
-
-        <details class="campaigns-page__tags-disclosure"
-            :open="tagsOpen" @toggle="tagsOpen = ($event.target as HTMLDetailsElement).open">
-            <summary>
-              <span>Tags</span>
-              <span v-if="selectedTagIds.length > 0" class="campaigns-page__tags-count">
-                {{ selectedTagIds.length }}
-              </span>
-            </summary>
-            <div class="campaigns-page__tags-panel">
-              <div v-if="categoryTags.length > 0" class="campaigns-page__chip-group">
-                <span class="campaigns-page__chip-label">Category</span>
-                <button v-for="tag in categoryTags" :key="tag.id" type="button"
-                  class="campaigns-page__chip campaigns-page__chip--category"
-                  :class="{ 'campaigns-page__chip--active': selectedTagIds.includes(tag.id) }"
-                  :style="{ '--chip-accent': tagAccent(tag) ?? 'var(--accent)' }" @click="toggleTag(tag.id)">
-                  {{ tag.name }}
-                </button>
-              </div>
-              <div v-if="difficultyTags.length > 0" class="campaigns-page__chip-group">
-                <span class="campaigns-page__chip-label">Tier</span>
-                <button v-for="tag in difficultyTags" :key="tag.id" type="button" class="campaigns-page__chip"
-                  :class="{ 'campaigns-page__chip--active': selectedTagIds.includes(tag.id) }"
-                  @click="toggleTag(tag.id)">
-                  {{ tag.name }}
-                </button>
-              </div>
-              <div v-if="themeTags.length > 0" class="campaigns-page__chip-group">
-                <span class="campaigns-page__chip-label">Theme</span>
-                <button v-for="tag in themeTags" :key="tag.id" type="button" class="campaigns-page__chip"
-                  :class="{ 'campaigns-page__chip--active': selectedTagIds.includes(tag.id) }"
-                  @click="toggleTag(tag.id)">
-                  {{ tag.name }}
-                </button>
-              </div>
-              <div v-if="genreTags.length > 0" class="campaigns-page__chip-group">
-                <span class="campaigns-page__chip-label">Genre</span>
-                <button v-for="tag in genreTags" :key="tag.id" type="button" class="campaigns-page__chip"
-                  :class="{ 'campaigns-page__chip--active': selectedTagIds.includes(tag.id) }"
-                  @click="toggleTag(tag.id)">
-                  {{ tag.name }}
-                </button>
-              </div>
-              <button v-if="selectedTagIds.length > 0" type="button" class="campaigns-page__clear"
-                @click="clearTags">
-                Clear tags
-              </button>
-            </div>
-          </details>
-      </div>
-    </div>
+    <CampaignFilterBar v-if="filterablePane" class="campaigns-page__toolbar"
+      :model-value="browseFilters" :tags="tags" :sort-options="BROWSE_SORT_OPTIONS"
+      :show-curated="pane === 'all'" @update:model-value="applyBrowseFilters" />
 
     <div v-if="error" class="campaigns-page__error" role="alert">{{ error }}</div>
 
@@ -580,16 +447,16 @@ watch(
       </ul>
     </template>
 
+    <template v-else-if="pane === 'runs'">
+      <EmptyState v-if="!auth.isLoggedIn" message="Sign in to track campaigns you've started." />
+      <UserCampaignsPanel v-else
+        empty-message="You haven't started any campaigns yet. Browse the catalogue to begin one." />
+    </template>
+
     <template v-else>
       <div v-if="loading" class="campaigns-page__list">
         <SkeletonLoader v-for="i in 4" :key="i" variant="card" />
       </div>
-
-      <EmptyState v-else-if="pane === 'started' && !auth.isLoggedIn"
-        message="Sign in to track campaigns you've started." />
-
-      <EmptyState v-else-if="pane === 'started' && items.length === 0"
-        message="You haven't started any campaigns yet. Browse the catalogue to begin one." />
 
       <EmptyState v-else-if="pane === 'mine' && !auth.isLoggedIn"
         message="Sign in to see your created campaigns." />
@@ -760,186 +627,8 @@ watch(
   max-width: 100%;
 }
 
-.campaigns-page__chip--toggle {
-  padding: 6px 12px;
-  font-size: 0.6875rem;
-}
-
 .campaigns-page__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
   margin-top: calc(-1 * var(--space-sm));
-}
-
-.campaigns-page__toolbar-right {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.campaigns-page__sort {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-}
-
-.campaigns-page__sort-btn {
-  padding: 4px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 2px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.campaigns-page__sort-btn:hover {
-  color: var(--text-primary);
-}
-
-.campaigns-page__sort-btn--active {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
-.campaigns-page__tags-disclosure {
-  position: relative;
-}
-
-.campaigns-page__tags-disclosure > summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-  cursor: pointer;
-  list-style: none;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.campaigns-page__tags-disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.campaigns-page__tags-disclosure > summary:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.campaigns-page__tags-disclosure[open] > summary {
-  color: var(--page-accent);
-  border-color: var(--page-accent);
-}
-
-.campaigns-page__tags-count {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--page-accent);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.campaigns-page__tags-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 10;
-  min-width: 320px;
-  max-width: 480px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-
-.campaigns-page__chip-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.campaigns-page__chip-label {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin-right: 4px;
-}
-
-.campaigns-page__chip {
-  padding: 3px 8px;
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-  white-space: nowrap;
-}
-
-.campaigns-page__chip:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.campaigns-page__chip--active {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
-  background: var(--bg-elevated);
-}
-
-.campaigns-page__chip--category.campaigns-page__chip--active {
-  color: var(--chip-accent, var(--accent));
-  border-color: var(--chip-accent, var(--accent));
-  background: color-mix(in srgb, var(--chip-accent, var(--accent)) 12%, transparent);
-}
-
-.campaigns-page__clear {
-  margin-left: auto;
-  padding: 4px var(--space-sm);
-  background: none;
-  border: none;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease;
-}
-
-.campaigns-page__clear:hover {
-  color: var(--text-primary);
 }
 
 .campaigns-page__list {

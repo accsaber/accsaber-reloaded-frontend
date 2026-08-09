@@ -30,6 +30,7 @@ import type {
   ImportCampaignMapRequest,
   InviteCampaignCollaboratorRequest,
   SendCampaignChatRequest,
+  UserCampaignListParams,
   UserCampaignResponse,
 } from '@/types/api/campaigns'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
@@ -68,8 +69,19 @@ export function getCampaignTags(params?: CampaignTagListParams): Promise<Campaig
   return get<CampaignTagResponse[]>(`/campaigns/tags${buildQuery(params)}`)
 }
 
-export function getMyCampaigns(params?: PaginationParams): Promise<Page<UserCampaignResponse>> {
+export function getMyCampaigns(
+  params?: UserCampaignListParams,
+): Promise<Page<UserCampaignResponse>> {
   return get<Page<UserCampaignResponse>>(`/campaigns/me${buildQuery(params)}`)
+}
+
+export function getUserCampaigns(
+  userId: string,
+  params?: UserCampaignListParams,
+): Promise<Page<UserCampaignResponse>> {
+  return get<Page<UserCampaignResponse>>(
+    `/users/${encodeURIComponent(userId)}/campaigns${buildQuery(params)}`,
+  )
 }
 
 export function getMyCampaignProgress(campaignId: string): Promise<CampaignProgressResponse> {

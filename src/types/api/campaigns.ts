@@ -297,6 +297,12 @@ export interface CampaignListParams extends PaginationParams {
   loved?: boolean
 }
 
+export type CampaignProgressFilter = Exclude<UserCampaignStatus, 'ABANDONED'>
+
+export interface UserCampaignListParams extends CampaignListParams {
+  progressStatus?: CampaignProgressFilter[]
+}
+
 export interface CampaignTagListParams {
   kind?: CampaignTagKind
 }
