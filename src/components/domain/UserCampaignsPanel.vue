@@ -8,6 +8,7 @@ import CampaignRow from '@/components/domain/CampaignRow.vue'
 import { useCampaignTags } from '@/composables/useCampaignTags'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useUserCampaigns } from '@/composables/useUserCampaigns'
+import { useAuthStore } from '@/stores/auth'
 import {
   USER_CAMPAIGN_SORT_OPTIONS,
   type CampaignFilterState,
@@ -21,6 +22,12 @@ const props = withDefaults(
     emptyMessage?: string
   }>(),
   { userId: null, emptyMessage: 'No campaigns match these filters.' },
+)
+
+const auth = useAuthStore()
+
+const viewingUserId = computed(() =>
+  props.userId && props.userId !== auth.userId ? props.userId : null,
 )
 
 const controls = ref<CampaignFilterState>(createCampaignFilterState())
@@ -66,7 +73,8 @@ onMounted(() => {
     <EmptyState v-else-if="!error && runs.length === 0" :message="emptyMessage" />
 
     <div v-else class="user-campaigns__grid">
-      <CampaignRow v-for="run in runs" :key="run.id" :campaign="run.campaign" :progress="run" />
+      <CampaignRow v-for="run in runs" :key="run.id" :campaign="run.campaign" :progress="run"
+        :viewing-user-id="viewingUserId" />
     </div>
 
     <div v-if="totalPages > 1 && !loading" class="user-campaigns__pagination">

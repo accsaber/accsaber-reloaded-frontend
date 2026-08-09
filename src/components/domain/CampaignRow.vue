@@ -19,13 +19,18 @@ const props = defineProps<{
   progress?: CampaignProgressSummary | null
   editorLink?: boolean
   collab?: boolean
+  viewingUserId?: string | null
 }>()
 
-const cardTo = computed<RouteLocationRaw>(() =>
-  props.editorLink
-    ? { name: 'campaign-editor', params: { campaignId: props.campaign.slug || props.campaign.id } }
-    : { name: 'campaign-detail', params: { campaignId: props.campaign.slug || props.campaign.id } },
-)
+const cardTo = computed<RouteLocationRaw>(() => {
+  const params = { campaignId: props.campaign.slug || props.campaign.id }
+  if (props.editorLink) return { name: 'campaign-editor', params }
+  return {
+    name: 'campaign-detail',
+    params,
+    query: props.viewingUserId ? { viewing: props.viewingUserId } : undefined,
+  }
+})
 
 const categoryStore = useCategoryStore()
 
