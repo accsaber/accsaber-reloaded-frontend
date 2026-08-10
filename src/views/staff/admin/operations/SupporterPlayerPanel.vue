@@ -38,9 +38,7 @@ const stats = computed(() => {
 })
 
 function claimPicked() {
-  if (!pickedEvent.value) return
-  emit('claim', pickedEvent.value)
-  pickedEvent.value = null
+  if (pickedEvent.value) emit('claim', pickedEvent.value)
 }
 </script>
 
