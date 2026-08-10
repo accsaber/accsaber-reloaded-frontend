@@ -20,25 +20,14 @@ const userSource = RESOURCE_SOURCES.USER!
 const difficultySource = RESOURCE_SOURCES.MAP_DIFFICULTY!
 
 const {
-  tiers: supporterTiers,
-  queue: kofiQueue,
-  queueLoading: kofiQueueLoading,
-  queueError: kofiQueueError,
-  panelUserId: supporterUserId,
-  account: supporterAccount,
-  history: supporterHistory,
-  panelLoading: supporterPanelLoading,
-  panelError: supporterPanelError,
-  claiming: kofiClaiming,
-  claimError: kofiClaimError,
-  grantOp,
-  loadQueue: loadKofiQueue,
-  claim: claimKofiEvent,
-  grant: grantSupporter,
+  tiers, queue, queueLoading, queueError,
+  panelUserId, account, history, panelLoading, panelError,
+  claiming, claimError, grantOp,
+  loadQueue, claim, grant,
 } = useSupporterAdmin()
 
 function claimForPanel(kofiTransactionId: string) {
-  if (supporterUserId.value) claimKofiEvent(kofiTransactionId, supporterUserId.value)
+  if (panelUserId.value) claim(kofiTransactionId, panelUserId.value)
 }
 
 const jobTypes = ref<JobTypeResponse[]>([])
@@ -310,11 +299,11 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
     <section class="op-section">
       <div class="op-section__header">
         <h3 class="op-section__title">Ko-fi Supporters</h3>
-        <BaseButton size="sm" :loading="kofiQueueLoading" @click="loadKofiQueue">Refresh Queue</BaseButton>
+        <BaseButton size="sm" :loading="queueLoading" @click="loadQueue">Refresh Queue</BaseButton>
       </div>
 
-      <p v-if="kofiQueueError" class="result result--err">{{ kofiQueueError }}</p>
-      <p v-if="kofiClaimError" class="result result--err">{{ kofiClaimError }}</p>
+      <p v-if="queueError" class="result result--err">{{ queueError }}</p>
+      <p v-if="claimError" class="result result--err">{{ claimError }}</p>
 
       <div class="op-card">
         <div class="op-card__head">
@@ -324,8 +313,8 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
         <p class="op-card__desc">
           Ko-fi payments no email or Discord role could attach to a player. Pick who they belong to.
         </p>
-        <SupporterQueue :events="kofiQueue" :loading="kofiQueueLoading" :claiming="kofiClaiming"
-          :user-source="userSource" @claim="claimKofiEvent" />
+        <SupporterQueue :events="queue" :loading="queueLoading" :claiming="claiming"
+          :user-source="userSource" @claim="claim" />
       </div>
 
       <div class="op-card">
@@ -334,17 +323,16 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="scope scope--targeted">targeted</span>
         </div>
         <p class="op-card__desc">Supporter state, Ko-fi history and manual grants for one player.</p>
-        <ResourcePicker v-model="supporterUserId" :search="userSource.search" :resolve="userSource.resolve"
+        <ResourcePicker v-model="panelUserId" :search="userSource.search" :resolve="userSource.resolve"
           :placeholder="userSource.placeholder" />
 
-        <p v-if="supporterPanelError" class="result result--err">{{ supporterPanelError }}</p>
+        <p v-if="panelError" class="result result--err">{{ panelError }}</p>
 
-        <template v-if="supporterUserId">
-          <SupporterPlayerPanel :account="supporterAccount" :events="supporterHistory"
-            :loading="supporterPanelLoading" :claiming="kofiClaiming" :event-source="KOFI_EVENT_SOURCE"
-            @claim="claimForPanel" />
+        <template v-if="panelUserId">
+          <SupporterPlayerPanel :account="account" :events="history" :loading="panelLoading"
+            :claiming="claiming" :event-source="KOFI_EVENT_SOURCE" @claim="claimForPanel" />
 
-          <SupporterGrantForm :tiers="supporterTiers" :submitting="grantOp.loading" @submit="grantSupporter" />
+          <SupporterGrantForm :tiers="tiers" :submitting="grantOp.loading" @submit="grant" />
 
           <span v-if="grantOp.result" class="result" :class="grantOp.ok ? 'result--ok' : 'result--err'">
             {{ grantOp.result }}
