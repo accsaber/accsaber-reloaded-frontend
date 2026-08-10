@@ -781,11 +781,6 @@ watch(activeCategory, (newCategory) => {
   width: 100%;
   max-width: 1280px;
   position: relative;
-  z-index: 1;
-}
-
-.profile-page>.profile-page__tabs-row:not(.profile-page__bg):not(.profile-page__cat-dock) {
-  z-index: 2;
 }
 
 .profile-page__cat-dock {
