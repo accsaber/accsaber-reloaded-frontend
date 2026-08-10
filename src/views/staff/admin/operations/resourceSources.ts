@@ -1,8 +1,10 @@
 import type { PickerOption } from '@/components/domain/ResourcePicker.vue'
 import type { JobFieldKind, LeaderboardPlatform } from '@/types/api/jobs'
 import type { MilestoneResponse } from '@/types/api/milestones'
+import type { KofiEventResponse } from '@/types/api/supporters'
 import { pickAvatarUrl, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
+import { formatCents, formatRelativeDate } from '@/utils/formatters'
 
 export interface ResourceSource {
   search: (query: string) => Promise<PickerOption[]>
@@ -133,3 +135,35 @@ export const RESOURCE_SOURCES: Partial<Record<JobFieldKind, ResourceSource>> = {
 }
 
 export const LEADERBOARD_PLATFORMS: LeaderboardPlatform[] = ['BEATLEADER', 'SCORESABER']
+
+function toKofiEventOption(event: KofiEventResponse): PickerOption {
+  return {
+    id: event.kofiTransactionId,
+    label: event.fromName || event.email || event.kofiTransactionId,
+    hint: `${formatCents(event.amountCents, event.currency)} · ${formatRelativeDate(event.receivedAt)}`,
+  }
+}
+
+async function searchKofiEvents(query: string): Promise<PickerOption[]> {
+  const { getKofiEvents } = await import('@/api/admin/supporters')
+  const page = await getKofiEvents({
+    page: 0,
+    size: SEARCH_SIZE,
+    status: 'unclaimed',
+    search: query || undefined,
+  })
+  return page.content.map(toKofiEventOption)
+}
+
+async function resolveKofiEvent(id: string): Promise<PickerOption | null> {
+  const { getKofiEvents } = await import('@/api/admin/supporters')
+  const page = await getKofiEvents({ page: 0, size: SEARCH_SIZE, status: 'unclaimed' })
+  const match = page.content.find((event) => event.kofiTransactionId === id)
+  return match ? toKofiEventOption(match) : null
+}
+
+export const KOFI_EVENT_SOURCE: ResourceSource = {
+  search: searchKofiEvents,
+  resolve: resolveKofiEvent,
+  placeholder: 'Search unclaimed Ko-fi events by name or email...',
+}

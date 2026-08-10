@@ -3,42 +3,42 @@ import { computed, onUnmounted, ref } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import ResourcePicker from '@/components/domain/ResourcePicker.vue'
-import { parseApiError } from '@/api/client'
+import { useSupporterAdmin } from '@/composables/useSupporterAdmin'
 import type { JobResponse, JobTypeResponse, RunJobRequest } from '@/types/api/jobs'
 import { useCategoryStore } from '@/stores/categories'
 import JobRunner from './operations/JobRunner.vue'
 import JobsList from './operations/JobsList.vue'
-import { RESOURCE_SOURCES } from './operations/resourceSources'
+import SupporterGrantForm from './operations/SupporterGrantForm.vue'
+import SupporterPlayerPanel from './operations/SupporterPlayerPanel.vue'
+import SupporterQueue from './operations/SupporterQueue.vue'
+import { describeFailure, makeOp, run } from './operations/operationState'
+import { KOFI_EVENT_SOURCE, RESOURCE_SOURCES } from './operations/resourceSources'
 
 const categoryStore = useCategoryStore()
 
 const userSource = RESOURCE_SOURCES.USER!
 const difficultySource = RESOURCE_SOURCES.MAP_DIFFICULTY!
 
-interface OpState { loading: boolean; result: string | null; ok: boolean }
-function makeOp(): OpState { return { loading: false, result: null, ok: false } }
+const {
+  tiers: supporterTiers,
+  queue: kofiQueue,
+  queueLoading: kofiQueueLoading,
+  queueError: kofiQueueError,
+  panelUserId: supporterUserId,
+  account: supporterAccount,
+  history: supporterHistory,
+  panelLoading: supporterPanelLoading,
+  panelError: supporterPanelError,
+  claiming: kofiClaiming,
+  claimError: kofiClaimError,
+  grantOp,
+  loadQueue: loadKofiQueue,
+  claim: claimKofiEvent,
+  grant: grantSupporter,
+} = useSupporterAdmin()
 
-function describeFailure(err: unknown): string {
-  const parsed = parseApiError(err, 'Failed. Check server logs.')
-  if (parsed.fieldErrors.length > 0) {
-    return parsed.fieldErrors.map((f) => `${f.field}: ${f.message}`).join(' ')
-  }
-  return parsed.message
-}
-
-async function run(op: OpState, fn: () => Promise<void>, msg: string) {
-  op.loading = true
-  op.result = null
-  try {
-    await fn()
-    op.ok = true
-    op.result = msg
-  } catch (err) {
-    op.ok = false
-    op.result = describeFailure(err)
-  } finally {
-    op.loading = false
-  }
+function claimForPanel(kofiTransactionId: string) {
+  if (supporterUserId.value) claimKofiEvent(kofiTransactionId, supporterUserId.value)
 }
 
 const jobTypes = ref<JobTypeResponse[]>([])
@@ -288,9 +288,9 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
       </div>
     </div>
 
-    <section class="ws-section">
-      <div class="ws-section__header">
-        <h3 class="ws-section__title">WebSocket Connections</h3>
+    <section class="op-section">
+      <div class="op-section__header">
+        <h3 class="op-section__title">WebSocket Connections</h3>
         <BaseButton size="sm" :loading="wsLoading" @click="fetchWsStatus">Refresh Status</BaseButton>
       </div>
       <div class="ws-row">
@@ -304,6 +304,52 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span v-if="wsStatus" class="ws-card__status">{{ JSON.stringify(wsStatus['scoresaber'] ?? 'unknown') }}</span>
           <BaseButton size="sm" :loading="wsReconnecting['scoresaber']" @click="reconnect('scoresaber')">Reconnect</BaseButton>
         </div>
+      </div>
+    </section>
+
+    <section class="op-section">
+      <div class="op-section__header">
+        <h3 class="op-section__title">Ko-fi Supporters</h3>
+        <BaseButton size="sm" :loading="kofiQueueLoading" @click="loadKofiQueue">Refresh Queue</BaseButton>
+      </div>
+
+      <p v-if="kofiQueueError" class="result result--err">{{ kofiQueueError }}</p>
+      <p v-if="kofiClaimError" class="result result--err">{{ kofiClaimError }}</p>
+
+      <div class="op-card">
+        <div class="op-card__head">
+          <span class="op-card__title">Unclaimed Queue</span>
+          <span class="scope scope--targeted">unmatched</span>
+        </div>
+        <p class="op-card__desc">
+          Ko-fi payments no email or Discord role could attach to a player. Pick who they belong to.
+        </p>
+        <SupporterQueue :events="kofiQueue" :loading="kofiQueueLoading" :claiming="kofiClaiming"
+          :user-source="userSource" @claim="claimKofiEvent" />
+      </div>
+
+      <div class="op-card">
+        <div class="op-card__head">
+          <span class="op-card__title">Player</span>
+          <span class="scope scope--targeted">targeted</span>
+        </div>
+        <p class="op-card__desc">Supporter state, Ko-fi history and manual grants for one player.</p>
+        <ResourcePicker v-model="supporterUserId" :search="userSource.search" :resolve="userSource.resolve"
+          :placeholder="userSource.placeholder" />
+
+        <p v-if="supporterPanelError" class="result result--err">{{ supporterPanelError }}</p>
+
+        <template v-if="supporterUserId">
+          <SupporterPlayerPanel :account="supporterAccount" :events="supporterHistory"
+            :loading="supporterPanelLoading" :claiming="kofiClaiming" :event-source="KOFI_EVENT_SOURCE"
+            @claim="claimForPanel" />
+
+          <SupporterGrantForm :tiers="supporterTiers" :submitting="grantOp.loading" @submit="grantSupporter" />
+
+          <span v-if="grantOp.result" class="result" :class="grantOp.ok ? 'result--ok' : 'result--err'">
+            {{ grantOp.result }}
+          </span>
+        </template>
       </div>
     </section>
   </div>
@@ -364,9 +410,9 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
 .result--ok { color: var(--success); }
 .result--err { color: var(--error); }
 
-.ws-section { display: flex; flex-direction: column; gap: var(--space-md); }
-.ws-section__header { display: flex; align-items: center; justify-content: space-between; }
-.ws-section__title { font-size: var(--text-body); font-weight: 600; color: var(--text-primary); margin: 0; }
+.op-section { display: flex; flex-direction: column; gap: var(--space-md); }
+.op-section__header { display: flex; align-items: center; justify-content: space-between; }
+.op-section__title { font-size: var(--text-body); font-weight: 600; color: var(--text-primary); margin: 0; }
 
 .ws-row { display: flex; gap: var(--space-md); flex-wrap: wrap; }
 .ws-card {

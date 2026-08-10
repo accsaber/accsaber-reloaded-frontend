@@ -16,7 +16,7 @@ const color = computed(() => {
 })
 
 const stroke = computed(() => {
-  if (!props.tier) return null
+  if (!props.tier) return undefined
   return SUPPORTER_TIER_PALETTE[props.tier].shadow
 })
 

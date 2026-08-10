@@ -2,6 +2,7 @@ import type {
   SupporterCreditEntry,
   SupporterCreditsParams,
   SupporterStateResponse,
+  SupporterTierResponse,
 } from '@/types/api/supporters'
 import type { Page } from '@/types/pagination'
 import { get } from './client'
@@ -15,4 +16,8 @@ export function getSupporterCredits(
   params?: SupporterCreditsParams,
 ): Promise<Page<SupporterCreditEntry>> {
   return get<Page<SupporterCreditEntry>>(`/supporters/credits${buildQuery(params)}`)
+}
+
+export function getSupporterTiers(): Promise<SupporterTierResponse[]> {
+  return get<SupporterTierResponse[]>('/supporters/tiers')
 }

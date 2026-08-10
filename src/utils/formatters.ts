@@ -42,6 +42,11 @@ export function formatPlayCount(value: unknown): number {
   return plays > 0 ? plays : 1
 }
 
+export function formatCents(cents: number, currency?: string | null): string {
+  const amount = (cents / 100).toFixed(2)
+  return currency && currency.toUpperCase() !== 'USD' ? `${amount} ${currency}` : `$${amount}`
+}
+
 export function parseNullableNumber(value: string): number | null {
   const trimmed = value.trim()
   if (trimmed === '') return null

@@ -2,16 +2,13 @@
 import SupporterPill from '@/components/domain/SupporterPill.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import type { SupporterStateResponse } from '@/types/api/supporters'
+import { formatCents } from '@/utils/formatters'
 import { computed } from 'vue'
 
 const props = defineProps<{
   state: SupporterStateResponse
   isSelfProfile: boolean
 }>()
-
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null

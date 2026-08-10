@@ -8,6 +8,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import type { SupporterCreditEntry, SupporterTier } from '@/types/api/supporters'
 import { SUPPORTER_TIER_DISPLAY, SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import { KOFI_URL } from '@/utils/constants'
+import { formatCents } from '@/utils/formatters'
 import { computed, onMounted, ref } from 'vue'
 
 usePageMeta({
@@ -67,10 +68,6 @@ const pastSupporters = computed(() =>
 const activeTotal = computed(() => activeByTier.value.reduce((n, g) => n + g.rows.length, 0))
 
 const showAnything = computed(() => activeTotal.value > 0 || pastSupporters.value.length > 0)
-
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
-}
 
 function handleCreditAvatarError(row: SupporterCreditEntry, event: Event) {
   const img = event.currentTarget as HTMLImageElement
