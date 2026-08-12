@@ -460,6 +460,7 @@ onUnmounted(() => {
 }
 
 .crate-preview__empty {
+  display: flow-root;
   margin: 0;
   padding: var(--space-md);
   text-align: center;
