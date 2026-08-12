@@ -8,6 +8,7 @@ import type {
   BorderShapeValue,
   Composition,
   CrateContentResponse,
+  CrateIconValue,
   Gradient,
   GradientStop,
   ItemModifierRef,
@@ -420,6 +421,20 @@ export function thumbnailSceneInk(scene: ThumbnailScene): string {
 export function readThemeValue(value: unknown): ThemeValue | null {
   if (!isObj(value) || !isObj(value.tokens)) return null
   return value as unknown as ThemeValue
+}
+
+export function readCrateValue(value: unknown): CrateIconValue | null {
+  if (!isObj(value) || !isObj(value.icon)) return null
+  const icon = { ...value.icon } as Record<string, unknown>
+  if (Array.isArray(icon.paths)) {
+    icon.paths = icon.paths.filter((p) => isObj(p) && isString(p.d))
+  } else {
+    delete icon.paths
+  }
+  if (!isObj(icon.glow) || !Array.isArray((icon.glow as { stops?: unknown }).stops)) {
+    delete icon.glow
+  }
+  return icon as unknown as CrateIconValue
 }
 
 export function readItemVariants(value: unknown): ItemVariant[] | null {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BorderDecals from '@/components/domain/BorderDecals.vue'
 import BorderOverlay from '@/components/domain/BorderOverlay.vue'
+import CrateIcon from '@/components/domain/CrateIcon.vue'
 import ProfileBorderRenderer from '@/components/domain/ProfileBorderRenderer.vue'
 import TitleRenderer from '@/components/domain/TitleRenderer.vue'
 import ThemeBackdropPreview from '@/components/layout/ThemeBackdropPreview.vue'
@@ -21,6 +22,7 @@ import {
   readBadgeValue,
   readBorderColorValue,
   readBorderShapeValue,
+  readCrateValue,
   readThemeValue,
   readThumbnailBackgroundValue,
   readTitleValue,
@@ -100,6 +102,10 @@ const thumbScene = computed(() =>
 
 const themeValue = computed<ThemeValue | null>(() =>
   typeKey.value === 'theme' ? readThemeValue(props.item.value) : null,
+)
+
+const crateValue = computed(() =>
+  typeKey.value === 'crate' ? readCrateValue(props.item.value) : null,
 )
 const themeStyleVars = computed<Record<string, string> | undefined>(() => {
   const tokens = themeValue.value?.tokens
@@ -281,21 +287,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       decoding="async"
     />
 
-    <svg
-      v-else-if="typeKey === 'crate'"
-      class="item-preview__crate"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <rect class="item-preview__crate-body" x="3" y="4.5" width="18" height="15" rx="1.6" />
-      <path class="item-preview__crate-lid" d="M3,9 L3,6.1 Q3,4.5 4.6,4.5 L19.4,4.5 Q21,4.5 21,6.1 L21,9 Z" />
-      <line class="item-preview__crate-seam" x1="3.4" y1="9" x2="20.6" y2="9" />
-      <rect class="item-preview__crate-strap" x="6.05" y="5.4" width="1.9" height="13.2" rx="0.3" />
-      <rect class="item-preview__crate-strap" x="16.05" y="5.4" width="1.9" height="13.2" rx="0.3" />
-      <rect class="item-preview__crate-latch" x="5.5" y="8.35" width="3" height="1.3" rx="0.25" />
-      <rect class="item-preview__crate-latch" x="15.5" y="8.35" width="3" height="1.3" rx="0.25" />
-      <rect class="item-preview__crate-frame" x="3" y="4.5" width="18" height="15" rx="1.6" />
-    </svg>
+    <CrateIcon v-else-if="typeKey === 'crate'" class="item-preview__crate" :value="crateValue" />
 
     <svg
       v-else-if="typeKey === 'saber' && !item.iconUrl"
@@ -539,36 +531,6 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 .item-preview__crate {
   width: 66%;
   aspect-ratio: 1 / 1;
-  overflow: visible;
-}
-
-.item-preview__crate-body {
-  fill: var(--bg-elevated);
-}
-
-.item-preview__crate-lid {
-  fill: var(--bg-overlay);
-}
-
-.item-preview__crate-seam {
-  stroke: var(--bg-base);
-  stroke-width: 0.9;
-  stroke-linecap: round;
-}
-
-.item-preview__crate-strap {
-  fill: color-mix(in srgb, var(--tier-gold) 65%, var(--tier-bronze));
-}
-
-.item-preview__crate-latch {
-  fill: var(--tier-gold);
-}
-
-.item-preview__crate-frame {
-  fill: none;
-  stroke: var(--text-secondary);
-  stroke-width: 1;
-  stroke-linejoin: round;
 }
 
 .item-preview__saber,
