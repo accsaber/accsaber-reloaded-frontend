@@ -400,6 +400,26 @@ export const PB_ABOVE_SHIFT: Record<MissionBand, number> = {
   easy: 0.98, medium: 1.0, hard: 1.015, extreme: 1.02,
 }
 
+export const PB_ANCHOR_POOL_CAP = 100
+
+export function pbAnchorIndex(scoreCount: number, percentile: number): number {
+  const sampled = Math.min(scoreCount, PB_ANCHOR_POOL_CAP)
+  return Math.min(scoreCount - 1, Math.max(0, Math.round(sampled * percentile)))
+}
+
+const PB_AVAILABILITY_MIN_SCORES = 50
+
+export function pbAvailabilityCap(
+  sortedAps: number[],
+  band: MissionBand,
+  threshold: number,
+): number {
+  if (band === 'easy' || band === 'medium' || sortedAps.length < PB_AVAILABILITY_MIN_SCORES) {
+    return threshold
+  }
+  return Math.min(Math.round(sortedAps[band === 'hard' ? 14 : 9]), threshold)
+}
+
 export const STREAK_TARGET_FRACTION: Record<MissionBand, number> = {
   easy: 0.5, medium: 0.7, hard: 0.9, extreme: 1.0,
 }
@@ -417,7 +437,7 @@ export const STREAK_COMPLEXITY_MIN = 1
 export const STREAK_COMPLEXITY_MAX = 15
 export const STREAK_COMPLEXITY_BAND_SIZE = 3
 
-export function streakComplexityBand(complexity: number): [number, number] {
+export function complexityBand(complexity: number): [number, number] {
   const clamped = Math.max(STREAK_COMPLEXITY_MIN, Math.min(STREAK_COMPLEXITY_MAX, complexity))
   const count = Math.ceil((STREAK_COMPLEXITY_MAX - STREAK_COMPLEXITY_MIN) / STREAK_COMPLEXITY_BAND_SIZE)
   const index = Math.max(
@@ -426,6 +446,62 @@ export function streakComplexityBand(complexity: number): [number, number] {
   )
   const lo = STREAK_COMPLEXITY_MIN + STREAK_COMPLEXITY_BAND_SIZE * index
   return [lo, lo + STREAK_COMPLEXITY_BAND_SIZE]
+}
+
+const REFERENCE_DEPTH = 0.3
+const MIN_DEPTH_INDEX = 4
+
+export function referenceIndex(size: number): number {
+  return Math.min(
+    size - 1,
+    Math.max(Math.round((size - 1) * REFERENCE_DEPTH), Math.min(MIN_DEPTH_INDEX, size - 1)),
+  )
+}
+
+export const COMPLEXITY_CAP_MULTIPLIER: Record<MissionBand, number> = {
+  easy: 1.03, medium: 1.06, hard: 1.1, extreme: 1.15,
+}
+
+const COMPLEXITY_SAMPLE_SIZE = 20
+const COMPLEXITY_MIN_SAMPLE = 5
+
+export interface ComplexityScore {
+  ap: number
+  complexity: number | null
+}
+
+function normalizedSample(
+  scores: ComplexityScore[],
+  inBand: (complexity: number) => boolean,
+): number | null {
+  const top = scores
+    .filter((s) => s.ap > 0 && s.complexity !== null && s.complexity > CURVE_SHIFT && inBand(s.complexity))
+    .map((s) => normalizedFor(s.ap, s.complexity as number))
+    .sort((a, b) => b - a)
+    .slice(0, COMPLEXITY_SAMPLE_SIZE)
+  return top.length < COMPLEXITY_MIN_SAMPLE ? null : top[referenceIndex(top.length)]
+}
+
+export function representativeNormalizedAp(
+  scores: ComplexityScore[],
+  complexity: number,
+): { value: number; fromBand: boolean } | null {
+  const [lo, hi] = complexityBand(complexity)
+  const banded = normalizedSample(scores, (c) => c >= lo && c < hi)
+  if (banded !== null) return { value: banded, fromBand: true }
+  const anywhere = normalizedSample(scores, () => true)
+  return anywhere === null ? null : { value: anywhere, fromBand: false }
+}
+
+export function capAtComplexityCeiling(
+  target: number,
+  complexity: number,
+  band: MissionBand,
+  representative: number | null,
+): number {
+  if (representative === null || representative <= 0) return target
+  const ceiling = representative * (complexity - CURVE_SHIFT) * CURVE_SCALE * COMPLEXITY_CAP_MULTIPLIER[band]
+  return Math.min(target, ceiling)
 }
 
 export function mapStreakReference(topStreaks: number[], fallback: number): number {

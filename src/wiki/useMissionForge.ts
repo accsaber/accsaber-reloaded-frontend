@@ -11,9 +11,12 @@ import {
   BAND_WEIGHTS,
   blendBands,
   blendSkillAndMap,
+  capAtComplexityCeiling,
   capAtMapCeiling,
   capAtTopAp,
   comebackBand,
+  complexityBand,
+  COMPLEXITY_CAP_MULTIPLIER,
   complexityRange,
   computeXpReward,
   countCenter,
@@ -27,16 +30,20 @@ import {
   mulberry32,
   NORM_AP_MAX,
   NORM_AP_MIN,
+  pbAnchorIndex,
+  pbAvailabilityCap,
   PB_ABOVE_PERCENTILE,
   PB_ABOVE_SHIFT,
+  PB_ANCHOR_POOL_CAP,
   realisticCeilingFraction,
+  referenceIndex,
+  representativeNormalizedAp,
   skillAnchor,
   SKILL_FLOOR_FRACTION,
   SNIPE_BAND_FRACTION,
   SNIPE_FLOOR_FRACTION,
   SNIPE_MAX_SKILL_DISTANCE,
   SNIPE_SLACK,
-  streakComplexityBand,
   streakTargetFor,
   targetAccuracy,
   TEMPLATES,
@@ -508,6 +515,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     skill: CategorySkill,
     leaderboard: LeaderboardEntry[],
     existingAp: number | null,
+    myScores: ScoreResponse[],
   ): { steps: ChainStep[]; final: number } {
     const steps: ChainStep[] = []
     let value = anchored
@@ -555,6 +563,21 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     if (dampened < value) {
       steps.push({ label: 'Ease off a crowded top', detail: 'the top of this leaderboard is packed tight, so the climb gets shortened', value: dampened, changed: true })
       value = dampened
+    }
+
+    const representative = representativeNormalizedAp(myScores, complexity)
+    const complexityCapped = capAtComplexityCeiling(value, complexity, band, representative?.value ?? null)
+    if (complexityCapped < value) {
+      const [lo, hi] = complexityBand(complexity)
+      steps.push({
+        label: 'Cap against how you play maps this hard',
+        detail: representative?.fromBand
+          ? `on maps between ${fmtComplexity(lo)} and ${fmtComplexity(hi)} complexity you usually land around ${(accuracyForNormalized(representative.value) * 100).toFixed(2)}%, and ${band} allows ${((COMPLEXITY_CAP_MULTIPLIER[band] - 1) * 100).toFixed(0)}% past that`
+          : `you have no history at this complexity, so the ask is sized off how you score across the category instead`,
+        value: complexityCapped,
+        changed: true,
+      })
+      value = complexityCapped
     }
 
     return { steps, final: value }
@@ -674,19 +697,24 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         return out
       }
       const percentile = PB_ABOVE_PERCENTILE[band]
-      const idx = Math.min(aps.length - 1, Math.max(0, Math.round(aps.length * percentile)))
+      const idx = pbAnchorIndex(aps.length, percentile)
       const anchor = aps[idx]
       const shift = PB_ABOVE_SHIFT[band]
-      const capped = Math.min(
-        Math.round(anchor * shift),
-        Math.round(capAtTopAp(aps[0] * 0.97, band, aps[0], chosenCategory.skillLevel)),
+      const capped = pbAvailabilityCap(
+        aps,
+        band,
+        Math.min(
+          Math.round(anchor * shift),
+          Math.round(capAtTopAp(aps[0] * 0.97, band, aps[0], chosenCategory.skillLevel)),
+        ),
       )
       const qualifying = aps.filter((v) => v >= capped).length
+      const pool = Math.min(aps.length, PB_ANCHOR_POOL_CAP)
       out.push({
         key: 'percentile',
         title: 'Read your own history',
         receipt: fmtAp(capped),
-        note: `No map gets picked here. Your ${aps.length} scores in ${chosenCategory.categoryName} get sorted, and ${band} reaches ${Math.round(percentile * 100)}% of the way down the list to find a threshold you have already cleared ${qualifying} times. Nudged by ${shift.toFixed(3)}x and capped below your top play, that lands on ${fmtAp(capped)}. The mission is then to beat any one of those.`,
+        note: `No map gets picked here. Your ${aps.length} scores in ${chosenCategory.categoryName} get sorted, and ${band} reaches ${Math.round(percentile * 100)}% of the way down your best ${pool} of them to find a threshold you have already cleared ${qualifying} times. Nudged by ${shift.toFixed(3)}x and capped below your top play, that lands on ${fmtAp(capped)}. The mission is then to beat any one of those.`,
         data: { kind: 'percentile', scores: aps.slice(0, 40), index: idx, anchor, shift, threshold: capped, qualifying },
       })
       const min = template.targetCountMin ?? 1
@@ -870,6 +898,9 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     const effectiveAnchor = effectiveBand === band
       ? anchored
       : skillAnchor(built.lift.threshold, effectiveBand, chosenCategory.topAp, chosenCategory.skillLevel)
+    const myScores = profile.userId
+      ? await fetchScores(profile.userId, chosenCategory.categoryId)
+      : []
     const { steps, final } = targetChain(
       effectiveAnchor,
       effectiveBand,
@@ -878,6 +909,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       chosenCategory,
       leaderboard,
       existingAp,
+      myScores,
     )
 
     if (type === 'SNIPE_PLAYER_ON_MAP') {
@@ -980,7 +1012,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     }
 
     if (type === 'STREAK_ON_MAP') {
-      const [lo, hi] = streakComplexityBand(complexity)
+      const [lo, hi] = complexityBand(complexity)
       const mapStreaks = leaderboard
         .map((e) => e.streak115)
         .filter((v) => v > 0)
@@ -1110,10 +1142,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         max,
       }
     }
-    const idx = Math.min(
-      Math.max(Math.round((top.length - 1) * 0.3), Math.min(4, top.length - 1)),
-      top.length - 1,
-    )
+    const idx = referenceIndex(top.length)
     return { value: top[idx], index: idx, outlierGuarded: false, median, max }
   }
 

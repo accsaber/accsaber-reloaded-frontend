@@ -189,10 +189,12 @@ onMounted(resolveProfile)
       in twenty, plus one guaranteed weekly slot.
     </p>
     <p>
-      Two corrections run underneath the table. If you are still climbing, sitting under about 70
+      Three corrections run underneath the table. If you are still climbing, sitting under about 70
       skill in a category, the easy, medium and hard ceilings get shaded down so you are not handed
       a hard mission demanding 98% of the best play you have ever set; extreme is deliberately left
-      out of that softening. And on accuracy and AP missions, if the map that gets picked is one
+      out of that softening. There is also a ceiling that comes from the map rather than from your
+      best play, because the game reads how you tend to score on maps around that complexity and
+      will not ask for much more than that. On AP and accuracymissions, if the map that gets picked is one
       you already have a score on, the band gets a second opinion. The game reads how big that
       score is next to your best in the category and blends what it finds into the rolled band,
       weighted toward the roll. A mission that has to beat one of your best plays gets pulled up
