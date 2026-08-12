@@ -184,7 +184,11 @@ function openPreview() {
 
 const CRATE_UNLOCK_MS = Date.UTC(2026, 6, 17, 15, 0, 0)
 const CRATE_UNLOCK_MESSAGE = 'Crate opening unlocks Friday, July 17 at 3:00 PM UTC.'
+const CRATE_EMPTY_MESSAGE = 'Its contents are a mystery for now.'
 const crateLocked = ref(Date.now() < CRATE_UNLOCK_MS)
+const crateEmpty = computed(
+  () => isCrate.value && !props.crateContentsLoading && !(props.crateContents ?? []).length,
+)
 let crateUnlockTimer: ReturnType<typeof setTimeout> | undefined
 const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || untradeable.value)
 const hasMetaRows = computed(() => {
@@ -265,13 +269,13 @@ onUnmounted(() => {
       <span
         v-if="showOpenCrate"
         class="inv-detail__crate-open"
-        :title="crateLocked ? CRATE_UNLOCK_MESSAGE : undefined"
+        :title="crateLocked ? CRATE_UNLOCK_MESSAGE : crateEmpty ? CRATE_EMPTY_MESSAGE : undefined"
       >
         <BaseButton
           variant="primary"
           size="md"
           :loading="busy"
-          :disabled="crateLocked"
+          :disabled="crateLocked || crateEmpty"
           @click="$emit('openCrate', userItem.linkId)"
         >
           Open crate
