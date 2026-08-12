@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import { PLUGIN_ZERO_BOUND_NOTE } from '@/utils/campaignPlugin'
 import CampaignBoundsField from './CampaignBoundsField.vue'
 import CampaignFieldHint from './CampaignFieldHint.vue'
 import type { CampaignTargetRow } from './useCampaignEditor'
@@ -34,7 +33,7 @@ function onDragStart(event: DragEvent) {
 <template>
   <li
     class="target-row"
-    :class="{ 'target-row--flagged': row.unreadable || row.invalid }"
+    :class="{ 'target-row--flagged': row.invalid }"
     @dragover.prevent
     @dragenter.prevent="emit('enter')"
     @drop.prevent="emit('drop')"
@@ -124,7 +123,6 @@ function onDragStart(event: DragEvent) {
       This objective needs at least one bound, and the lower bound cannot exceed the upper one. It
       will not save until you fix it.
     </p>
-    <p v-else-if="row.zeroBound" class="target-row__soft">{{ PLUGIN_ZERO_BOUND_NOTE }}</p>
   </li>
 </template>
 
@@ -227,14 +225,6 @@ function onDragStart(event: DragEvent) {
 .target-row__equiv-approx,
 .target-row__equiv-sep {
   color: var(--text-tertiary);
-}
-
-.target-row__soft {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.4;
 }
 
 .target-row__invalid {

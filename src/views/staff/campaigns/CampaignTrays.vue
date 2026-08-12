@@ -14,14 +14,12 @@ import CampaignEditorToggle from './CampaignEditorToggle.vue'
 import CampaignFieldHint from './CampaignFieldHint.vue'
 import CampaignIssueNotes from './CampaignIssueNotes.vue'
 import CampaignTrayIcon from './CampaignTrayIcon.vue'
-import CampaignPluginWarning from './CampaignPluginWarning.vue'
 import CampaignTargetRow from './CampaignTargetRow.vue'
 import CampaignShapeGlyph from './CampaignShapeGlyph.vue'
 import CampaignLabelPositionPicker from './CampaignLabelPositionPicker.vue'
 import { useCampaignEditorContext } from './campaignEditorContext'
 import { onAvatarError } from '@/composables/useAvatarFallback'
 import { resolveSize } from '@/utils/campaignLayout'
-import { PLUGIN_FIRST_TARGET_NOTE, PLUGIN_ZERO_BOUND_NOTE } from '@/utils/campaignPlugin'
 import type { CampaignTargetMode } from '@/types/enums'
 import { computed, ref } from 'vue'
 
@@ -96,7 +94,6 @@ const {
   formNode,
   requirementTypeOptions,
   targetRows,
-  targetsUnreadable,
   formTargetMode,
   canAddTarget,
   addTarget,
@@ -107,9 +104,6 @@ const {
   setTargetBound,
   reorderTargets,
   commitTargets,
-  barrierUnreadable,
-  barrierZeroBound,
-  fractionalVertexCount,
   campaignAudit,
   publishBlockers,
   publishBlocked,
@@ -422,11 +416,6 @@ const connectionSwatch = computed(() => {
         This campaign is live and paying out. Edits apply immediately, and changing a requirement
         re-settles player completions on that node and everything after it.
       </CampaignEditorNote>
-
-      <CampaignPluginWarning
-        :show="fractionalVertexCount > 0"
-        :detail="`${fractionalVertexCount} element${fractionalVertexCount === 1 ? '' : 's'} sit on fractional grid coordinates. Turn the grid lock on and re-drag them onto whole units to make this campaign loadable again.`"
-      />
 
       <section
         v-if="campaignAudit.paysOut || campaignAudit.issues.length > 0"
@@ -992,12 +981,10 @@ const connectionSwatch = computed(() => {
       This map isn't ranked (imported campaign map, or still in the ranking queue). AP and
       leaderboard-rank requirements are unavailable.
     </p>
-    <p v-if="isMultiTarget" class="campaign-editor__hint">{{ PLUGIN_FIRST_TARGET_NOTE }}</p>
     <CampaignEditorNote v-if="targetsBombHits">
       Bomb counts come from BeatLeader only. A ScoreSaber-sourced score carries no bomb data and can
       never clear that objective.
     </CampaignEditorNote>
-    <CampaignPluginWarning :show="targetsUnreadable" />
 
     <div class="campaign-editor__field">
       <span>
@@ -1458,8 +1445,6 @@ const connectionSwatch = computed(() => {
         @update:model-value="onBarrierConditionTypeChange"
       />
     </div>
-    <CampaignPluginWarning :show="barrierUnreadable" />
-    <p v-if="barrierZeroBound" class="campaign-editor__hint">{{ PLUGIN_ZERO_BOUND_NOTE }}</p>
     <p v-if="barrierAffectsApRankBlocked" class="campaign-editor__hint">
       This gate affects a map that isn't ranked (campaign import or ranking queue), so AP and rank
       based conditions are unavailable.

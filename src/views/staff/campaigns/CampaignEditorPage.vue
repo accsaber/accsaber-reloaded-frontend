@@ -23,7 +23,6 @@ import { useThemeStore } from '@/stores/theme'
 import { readBackdropConfig } from '@/utils/themeBackdrop'
 import { computed, onMounted, provide, ref, watch } from 'vue'
 import CampaignChatPanel from './CampaignChatPanel.vue'
-import CampaignPluginWarning from './CampaignPluginWarning.vue'
 import CampaignCollaboratorPicker from './CampaignCollaboratorPicker.vue'
 import CampaignItemPicker from './CampaignItemPicker.vue'
 import CampaignMapPicker from './CampaignMapPicker.vue'
@@ -543,12 +542,6 @@ function peerActivity(p: PresencePeer): string {
             {{ gridLock ? 'Grid' : 'Free' }}
           </button>
         </div>
-
-        <CampaignPluginWarning
-          class="campaign-editor__toolbar-warning"
-          detail="Free placement puts elements on fractional coordinates."
-          :show="editable && !gridLock"
-        />
 
         <CampaignChatPanel
           v-if="canChat"
@@ -1155,17 +1148,6 @@ function peerActivity(p: PresencePeer): string {
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: 4px;
-}
-
-.campaign-editor__toolbar-warning {
-  position: absolute;
-  top: calc(var(--space-md) + 44px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
-  max-width: 420px;
-  background: color-mix(in srgb, var(--error) 12%, var(--bg-surface));
-  pointer-events: none;
 }
 
 .campaign-editor__grid-lock {

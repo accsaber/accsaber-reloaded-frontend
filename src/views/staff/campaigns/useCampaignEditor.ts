@@ -76,12 +76,6 @@ import {
   type BackgroundFrame,
 } from '@/utils/campaignLayout'
 import { auditCampaign, campaignPublishBlockers, terminalNodes } from '@/utils/campaignAudit'
-import {
-  countFractionalVertices,
-  isUnreadableCondition,
-  isUnreadableRequirement,
-  isZeroBound,
-} from '@/utils/campaignPlugin'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -123,8 +117,6 @@ export interface CampaignTargetRow {
   hasBounds: boolean
   hint: string
   equivalents: Array<{ key: string; text: string }>
-  unreadable: boolean
-  zeroBound: boolean
   invalid: boolean
 }
 
@@ -2164,14 +2156,10 @@ export function useCampaignEditor() {
         hasBounds: metric !== 'flag',
         hint: requirementTypeHint(t.requirementType),
         equivalents: requirementEquivalentsFor(t),
-        unreadable: isUnreadableRequirement(t.requirementType),
-        zeroBound: isZeroBound(t.requirementValue, t.requirementValueMax),
         invalid: !targetHasValidBounds(t),
       }
     }),
   )
-
-  const targetsUnreadable = computed(() => targetRows.value.some((r) => r.unreadable))
 
   function resetNodeColor(field: 'checkpointColor' | 'borderColor') {
     formNode.value[field] = ''
@@ -2404,14 +2392,6 @@ export function useCampaignEditor() {
   ]
 
   const barrierMeta = computed(() => barrierConditionMeta(formBarrier.value.conditionType))
-
-  const barrierUnreadable = computed(() => isUnreadableCondition(formBarrier.value.conditionType))
-
-  const barrierZeroBound = computed(() =>
-    isZeroBound(formBarrier.value.conditionValue, formBarrier.value.conditionValueMax),
-  )
-
-  const fractionalVertexCount = computed(() => countFractionalVertices(campaign.value))
 
   const campaignAudit = computed(() => auditCampaign(campaign.value))
 
@@ -3073,7 +3053,6 @@ export function useCampaignEditor() {
     requirementTypeOptions,
     completionModeOptions,
     targetRows,
-    targetsUnreadable,
     formTargetMode,
     canAddTarget,
     addTarget,
@@ -3084,9 +3063,6 @@ export function useCampaignEditor() {
     setTargetBound,
     reorderTargets,
     commitTargets,
-    barrierUnreadable,
-    barrierZeroBound,
-    fractionalVertexCount,
     campaignAudit,
     publishBlockers,
     publishBlocked,
