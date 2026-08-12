@@ -154,7 +154,7 @@ const tooltipStyle = computed(() => {
   const top = (active.value.y / SIZE) * 100
   const placeAbove = active.value.y > CENTER
   return {
-    left: `${left}%`,
+    left: `clamp(calc(var(--tip-w) / 2), ${left}%, calc(100% - var(--tip-w) / 2))`,
     top: `${top}%`,
     transform: placeAbove
       ? 'translate(-50%, calc(-100% - 12px))'
@@ -466,9 +466,10 @@ const tooltipStyle = computed(() => {
 
 .skill-panel__tooltip {
   --card-accent: var(--text-tertiary);
+  --tip-w: min(280px, 100%);
   position: absolute;
   z-index: 10;
-  width: 280px;
+  width: var(--tip-w);
   padding: var(--space-md);
   padding-top: var(--space-lg);
   background: var(--bg-elevated);
