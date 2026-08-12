@@ -498,7 +498,7 @@ watch(
         <span class="score-detail__history-label">History</span>
         <TimeSeriesChart :data="chartPoints" :metric-label="selectedMetric" :accent-color="resolvedAccent"
           :available-metrics="SCORE_DETAIL_METRICS" :selected-metric="selectedMetric as MetricType"
-          :selected-range="selectedRange" :format-value="chartFormatValue"
+          :selected-range="selectedRange" :format-value="chartFormatValue" fit-to-data
           @update:selected-metric="selectedMetric = $event as ScoreMetric"
           @update:selected-range="selectedRange = $event" />
       </div>

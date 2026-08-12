@@ -21,6 +21,7 @@ const props = defineProps<{
   formatValue?: (v: number) => string
   yMax?: number
   yMin?: number
+  fitToData?: boolean
 }>()
 
 interface ResolvedSeries {
@@ -89,18 +90,29 @@ function clampToWindow(points: TimeSeriesPoint[], min: number): TimeSeriesPoint[
   return carried ? [{ ...carried, timestamp: min }, ...inside] : inside
 }
 
-function timeDomain(series: ResolvedSeries[], range: TimeRange, now: number) {
-  let dataMin = now
-  let dataMax = now
+function dataExtent(series: { points: TimeSeriesPoint[] }[]) {
+  let min = Number.POSITIVE_INFINITY
+  let max = Number.NEGATIVE_INFINITY
   for (const s of series) {
     for (const p of s.points) {
-      if (p.timestamp < dataMin) dataMin = p.timestamp
-      if (p.timestamp > dataMax) dataMax = p.timestamp
+      if (p.timestamp < min) min = p.timestamp
+      if (p.timestamp > max) max = p.timestamp
     }
   }
-  const min = rangeWindowStart(range, dataMin, now)
-  const max = Math.max(now, dataMax)
-  return max - min < HOUR_MS ? { min: max - HOUR_MS, max } : { min, max }
+  return Number.isFinite(min) ? { min, max } : null
+}
+
+function timeDomain(series: { points: TimeSeriesPoint[] }[], windowMin: number, now: number) {
+  const extent = dataExtent(series)
+
+  if (props.fitToData && extent) {
+    const span = extent.max - extent.min
+    const pad = span > 0 ? span * 0.05 : HOUR_MS / 2
+    return { min: extent.min - pad, max: extent.max + pad }
+  }
+
+  const max = Math.max(now, extent?.max ?? now)
+  return max - windowMin < HOUR_MS ? { min: max - HOUR_MS, max } : { min: windowMin, max }
 }
 
 function buildChart(): ChartConfiguration<'line'> {
@@ -108,13 +120,33 @@ function buildChart(): ChartConfiguration<'line'> {
 
   const series = resolvedSeries.value
   const isMulti = series.length > 1
-  const domain = timeDomain(series, activeRange.value, Date.now())
+  const now = Date.now()
+  const windowMin = rangeWindowStart(activeRange.value, dataExtent(series)?.min ?? now, now)
+
+  const prepared = series.map((s, idx) => {
+    const points = clampToWindow(s.points, windowMin)
+    const pointMap = new Map<number, TimeSeriesPoint>()
+    for (const p of points) pointMap.set(p.timestamp, p)
+    return {
+      ...s,
+      idx,
+      points,
+      pointMap,
+      color: s.color || theme.accent,
+      axisId: isMulti ? `y${idx}` : 'y',
+    }
+  })
+
+  const domain = timeDomain(prepared, windowMin, now)
   const spanMs = domain.max - domain.min
 
   const formatTick = (ts: number): string => {
     const d = new Date(ts)
     if (spanMs <= 36 * HOUR_MS) {
       return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    }
+    if (spanMs <= 5 * DAY_MS) {
+      return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric' })
     }
     if (spanMs <= 14 * DAY_MS) {
       return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -128,20 +160,6 @@ function buildChart(): ChartConfiguration<'line'> {
     if (spanMs > 14 * DAY_MS) return date
     return `${date}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
   }
-
-  const prepared = series.map((s, idx) => {
-    const points = clampToWindow(s.points, domain.min)
-    const pointMap = new Map<number, TimeSeriesPoint>()
-    for (const p of points) pointMap.set(p.timestamp, p)
-    return {
-      ...s,
-      idx,
-      points,
-      pointMap,
-      color: s.color || theme.accent,
-      axisId: isMulti ? `y${idx}` : 'y',
-    }
-  })
 
   const yScales = Object.fromEntries(prepared.map((s) => [s.axisId, {
     reverse: s.invertY,
