@@ -23,6 +23,7 @@ import {
   rarityClass,
   readBorderColorValue,
   readBorderShapeValue,
+  obtainableUntilSentence,
   readFragmentSpec,
   readItemVariants,
   readThemeValue,
@@ -191,9 +192,14 @@ const crateEmpty = computed(
 )
 let crateUnlockTimer: ReturnType<typeof setTimeout> | undefined
 const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || untradeable.value)
+const obtainableSentence = computed(() =>
+  item.value ? obtainableUntilSentence(item.value) : null,
+)
 const hasMetaRows = computed(() => {
   if (!props.locked) return true
-  return item.value?.unlockLevel != null || !!item.value?.requirement
+  return (
+    item.value?.unlockLevel != null || !!item.value?.requirement || !!obtainableSentence.value
+  )
 })
 
 const sourceLabel = computed(() => {
@@ -391,6 +397,10 @@ onUnmounted(() => {
       <div v-if="locked && item.requirement" class="inv-detail__row">
         <dt>Requirement</dt>
         <dd>{{ item.requirement }}</dd>
+      </div>
+      <div v-if="obtainableSentence" class="inv-detail__row">
+        <dt>Availability</dt>
+        <dd>{{ obtainableSentence }}</dd>
       </div>
     </dl>
 

@@ -30,6 +30,7 @@ import type {
   UnusualEffectRef,
   UserItemResponse,
 } from '@/types/api/items'
+import { formatFullDate } from '@/utils/formatters'
 
 const EQUIPPABLE_TYPE_KEYS = new Set<ItemTypeKey>([
   'badge',
@@ -53,6 +54,14 @@ export function isItemObtainable(
 ): boolean {
   if (!item.obtainableUntil) return true
   return new Date(item.obtainableUntil).getTime() > now
+}
+
+export function obtainableUntilSentence(
+  item: Pick<ItemResponse, 'obtainableUntil'>,
+): string | null {
+  if (!item.obtainableUntil) return null
+  const verb = isItemObtainable(item) ? 'Is' : 'Was'
+  return `${verb} available to add to campaign rewards until ${formatFullDate(item.obtainableUntil)}.`
 }
 
 export const RARITY_ORDER: ItemRarity[] = [

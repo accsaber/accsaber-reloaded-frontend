@@ -18,6 +18,7 @@ import type {
 import {
   groupCrateContentsByRarity,
   itemVariantPreviews,
+  obtainableUntilSentence,
   rarityClass,
   type ItemVariantPreview,
 } from '@/utils/items'
@@ -44,6 +45,10 @@ defineEmits<{
 
 const canPreviewOpen = computed(
   () => !!props.allowOpen && !props.contentsLoading && props.contents.length > 0,
+)
+
+const obtainableSentence = computed(() =>
+  props.crate ? obtainableUntilSentence(props.crate) : null,
 )
 
 const modifierStore = useItemModifierStore()
@@ -185,6 +190,7 @@ onUnmounted(() => {
           {{ crate.rarity }}
         </span>
         <p v-if="crate.description" class="crate-preview__description">{{ crate.description }}</p>
+        <p v-if="obtainableSentence" class="crate-preview__obtainable">{{ obtainableSentence }}</p>
       </aside>
 
       <aside ref="modifiersRef" class="crate-preview__modifiers" aria-label="Possible modifiers">
@@ -374,6 +380,13 @@ onUnmounted(() => {
   font-size: var(--text-caption);
   line-height: 1.5;
   color: var(--text-secondary);
+}
+
+.crate-preview__obtainable {
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--text-tertiary);
 }
 
 .crate-preview__items {
