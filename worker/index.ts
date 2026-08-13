@@ -7,8 +7,15 @@ const OG_PATH_PATTERN = /^\/(players|maps|campaigns)\/([^/]+)$/
 
 const OG_CACHE_SECONDS = 300
 
+const GATE_HEADER = 'X-Staging-Key'
+
 function apiBase(): URL {
   return new URL('v1/', env.API_PROXY_TARGET || 'https://api.accsaber.com')
+}
+
+function applyGate(headers: Headers, gated: boolean) {
+  headers.delete(GATE_HEADER)
+  if (gated && env.STAGING_GATE_KEY) headers.set(GATE_HEADER, env.STAGING_GATE_KEY)
 }
 
 async function renderOpenGraph(url: URL, request: Request): Promise<Response | null> {
@@ -20,7 +27,11 @@ async function renderOpenGraph(url: URL, request: Request): Promise<Response | n
   const upstream = new URL(`og/${resource}/${id}`, apiBase())
   if (resource === 'maps') upstream.search = url.search
 
+  const headers = new Headers()
+  applyGate(headers, true)
+
   const response = await fetch(upstream, {
+    headers,
     cf: { cacheTtl: OG_CACHE_SECONDS, cacheEverything: true },
   })
   if (!response.ok) return null
@@ -34,15 +45,17 @@ export default {
   async fetch(request) {
     const url = new URL(request.url)
 
-    function createProxy(prefix: string, upstream: string | URL) {
+    function createProxy(prefix: string, upstream: string | URL, gated = false) {
       if (!url.pathname.startsWith(prefix)) return null
       const upstreamURL = new URL(url.pathname.slice(prefix.length), upstream)
       upstreamURL.search = url.search
-      return fetch(upstreamURL, request)
+      const proxied = new Request(upstreamURL, request)
+      applyGate(proxied.headers, gated)
+      return fetch(proxied)
     }
 
     return (
-      createProxy('/v1/', apiBase()) ||
+      createProxy('/v1/', apiBase(), true) ||
       createProxy('/proxy/beatsaver/', 'https://api.beatsaver.com') ||
       createProxy('/proxy/beatleader/', 'https://api.beatleader.com') ||
       createProxy('/proxy/scoresaber/', 'https://scoresaber.com') ||

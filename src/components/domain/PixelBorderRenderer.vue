@@ -160,7 +160,6 @@ const ramp = computed<MetalRamp | null>(() => {
   return null
 })
 
-const pixelSizeLogical = computed(() => props.shape.pixelSize ?? 4)
 const motif = computed(() => props.shape.motif ?? 'heart_climb')
 const sparkleSpec = computed(() => props.shape.sparkles)
 const glistenSpec = computed(() => props.shape.glisten)

@@ -9,9 +9,24 @@ export default [
   },
   {
     name: 'app/files-to-ignore',
-    ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**'],
+    ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**', '**/.wrangler/**'],
   },
   ...pluginVue.configs['flat/essential'],
   ...vueTsEslintConfig(),
   skipFormatting,
+  {
+    name: 'app/rules',
+    rules: {
+      'vue/multi-word-component-names': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          ignoreRestSiblings: true,
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
 ]

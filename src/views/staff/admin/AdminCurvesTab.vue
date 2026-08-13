@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { CurveResponse } from '@/types/api/categories'
-import type { CreateCurveRequest } from '@/types/api/admin'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'

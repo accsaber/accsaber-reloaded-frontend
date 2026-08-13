@@ -10,6 +10,7 @@ import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useAuthStore } from '@/stores/auth'
 import { tierKey, useLevelStore } from '@/stores/levels'
 import { useThemeStore } from '@/stores/theme'
+import { getHealth } from '@/api/health'
 import { DISCORD_URL, KOFI_URL } from '@/utils/constants'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
@@ -33,6 +34,28 @@ const levelsLoading = computed(() => !levelStore.loaded)
 const reducedMotion = useReducedMotion()
 const marqueeRef = ref<HTMLElement | null>(null)
 const carouselAnimating = ref(false)
+
+const backendBuild = ref<{ version: string; channel: string } | null>(null)
+
+function buildLabel(version: string, channel: string): string {
+  return channel ? `${channel} v${version}` : `v${version}`
+}
+
+const frontendLabel = buildLabel(__APP_VERSION__, __APP_CHANNEL__)
+const backendLabel = computed(() =>
+  backendBuild.value ? buildLabel(backendBuild.value.version, backendBuild.value.channel) : null,
+)
+
+async function loadBackendVersion(): Promise<void> {
+  try {
+    const health = await getHealth()
+    if (mounted && health.version) {
+      backendBuild.value = { version: health.version, channel: health.channel ?? '' }
+    }
+  } catch {
+    // the footer just omits the backend version if the API is unreachable
+  }
+}
 let rafId = 0
 let carouselObserver: IntersectionObserver | null = null
 let carouselResizeObserver: ResizeObserver | null = null
@@ -164,6 +187,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
   if (!levelStore.loaded) void levelStore.fetchThresholds()
   scheduleCarousel()
+  void loadBackendVersion()
 })
 
 onUnmounted(() => {
@@ -419,18 +443,34 @@ onUnmounted(() => {
       <p class="home-footer__text">Logo by Brylanbbab and Interz.</p>
       <nav class="home-footer__links" aria-label="Footer links">
         <a
-          href="https://github.com/tikugato/accsaber-reloaded-frontend"
+          href="https://github.com/accsaber/accsaber-reloaded-frontend"
           target="_blank"
           rel="noopener noreferrer"
           class="home-footer__link"
         >
-          GitHub
+          GitHub (Site)
+        </a>
+        <span class="home-footer__sep" aria-hidden="true">·</span>
+        <a
+          href="https://github.com/accsaber/accsaber-reloaded-backend"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="home-footer__link"
+        >
+          GitHub (API)
         </a>
         <span class="home-footer__sep" aria-hidden="true">·</span>
         <RouterLink to="/score-feed" class="home-footer__link">Score Feed</RouterLink>
         <span class="home-footer__sep" aria-hidden="true">·</span>
         <RouterLink to="/credits" class="home-footer__link">Credits</RouterLink>
       </nav>
+      <p class="home-footer__versions">
+        <span>Frontend {{ frontendLabel }}</span>
+        <template v-if="backendLabel">
+          <span class="home-footer__sep" aria-hidden="true">·</span>
+          <span>Backend {{ backendLabel }}</span>
+        </template>
+      </p>
     </footer>
   </div>
 </template>
@@ -1043,6 +1083,19 @@ onUnmounted(() => {
 .home-footer__sep {
   color: var(--text-tertiary);
   opacity: 0.55;
+}
+
+.home-footer__versions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 0;
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {

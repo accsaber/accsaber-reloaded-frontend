@@ -23,7 +23,9 @@ const props = defineProps<{
   concepts: WikiConcept[]
 }>()
 
-const SLOT_COUNT = 14
+const NARROW_WIDTH = 560
+const MID_WIDTH = 860
+const CHIP_MARGIN_PX = 60
 const SLICE_INTERVAL_MS = 2600
 const FIRST_SLICE_DELAY_MS = 1600
 const POP_MS = 260
@@ -68,6 +70,7 @@ const slots: OrbitSlot[] = []
 const queue: WikiConcept[] = shuffle(props.concepts)
 
 let nextId = 0
+let slotCount = 0
 let rafId = 0
 let lastFrameAt = 0
 let nextSliceAt = 0
@@ -87,9 +90,14 @@ function shuffle(source: readonly WikiConcept[]): WikiConcept[] {
   return list
 }
 
+function slotCountFor(width: number): number {
+  const target = width < NARROW_WIDTH ? 5 : width < MID_WIDTH ? 9 : 14
+  return Math.min(target, props.concepts.length)
+}
+
 function orbitPos(slot: OrbitSlot): { x: number; y: number } {
-  const rx = Math.max(120, fieldW / 2 - 100) * slot.rxF
-  const ry = Math.max(70, fieldH / 2 - 26) * slot.ryF
+  const rx = Math.max(60, fieldW / 2 - CHIP_MARGIN_PX) * slot.rxF
+  const ry = Math.max(40, fieldH / 2 - 26) * slot.ryF
   return {
     x: fieldW / 2 + Math.cos(slot.angle) * rx,
     y: fieldH / 2 + Math.sin(slot.angle) * ry,
@@ -273,6 +281,27 @@ function placeAll() {
   for (const chip of chips.value) placeChip(chip)
 }
 
+function buildField(now: number) {
+  for (const chip of chips.value) queue.push({ label: chip.label, accentToken: chip.accentToken })
+  chips.value = []
+  chipEls.clear()
+  halfEls.clear()
+  slots.length = 0
+  slotCount = slotCountFor(fieldW)
+  const singleRing = fieldW < NARROW_WIDTH
+  for (let i = 0; i < slotCount; i++) {
+    const outer = singleRing || i % 2 === 0
+    slots.push({
+      angle: (i / slotCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.2,
+      angVel: ORBIT_BASE_RAD_PER_S,
+      rxF: outer ? 0.92 + Math.random() * 0.08 : 0.7 + Math.random() * 0.08,
+      ryF: outer ? 0.9 + Math.random() * 0.1 : 0.68 + Math.random() * 0.1,
+    })
+    chips.value.push(makeChip(i, 'idle', now))
+  }
+  nextSliceAt = now + FIRST_SLICE_DELAY_MS
+}
+
 function onVisibilityChange() {
   if (document.hidden) stop()
   else start()
@@ -280,21 +309,10 @@ function onVisibilityChange() {
 
 onMounted(() => {
   measureField()
-  const now = performance.now()
-  const count = Math.min(SLOT_COUNT, props.concepts.length)
-  for (let i = 0; i < count; i++) {
-    const outer = i % 2 === 0
-    slots.push({
-      angle: (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.2,
-      angVel: ORBIT_BASE_RAD_PER_S,
-      rxF: outer ? 0.92 + Math.random() * 0.08 : 0.7 + Math.random() * 0.08,
-      ryF: outer ? 0.9 + Math.random() * 0.1 : 0.68 + Math.random() * 0.1,
-    })
-    chips.value.push(makeChip(i, 'idle', now))
-  }
-  placeAll()
+  buildField(performance.now())
   resizeObserver = new ResizeObserver(() => {
     measureField()
+    if (slotCountFor(fieldW) !== slotCount) buildField(performance.now())
     if (!rafId) placeAll()
   })
   if (fieldEl.value) resizeObserver.observe(fieldEl.value)
@@ -349,6 +367,14 @@ onUnmounted(() => {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+}
+
+@media (max-width: 639px) {
+  .field {
+    position: relative;
+    inset: auto;
+    height: 150px;
+  }
 }
 
 .field__sparks {

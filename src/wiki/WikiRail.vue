@@ -2,8 +2,9 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import WikiRailSection from '@/wiki/WikiRailSection.vue'
+import { WIKI_NAVIGATE_KEY } from '@/wiki/registry'
 import type { WikiSection } from '@/wiki/types'
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 
 const props = defineProps<{
   sections: WikiSection[]
@@ -14,6 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:search': [value: string]
 }>()
+
+const navigate = inject(WIKI_NAVIGATE_KEY, () => {})
 
 const emptyMessage = computed(() =>
   props.search.trim() ? 'No documents match your search.' : 'The wiki has no documents yet.',
@@ -32,6 +35,7 @@ const emptyMessage = computed(() =>
       to="/wiki"
       class="wiki-rail__home"
       :class="{ 'wiki-rail__home--active': activeSlug === null }"
+      @click="navigate()"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

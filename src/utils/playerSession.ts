@@ -1,9 +1,10 @@
-import { isAdminSubdomain } from './subdomain'
+import { isAdminSubdomain, isStagingHost } from './subdomain'
 
-const COOKIE_ACCESS = 'playerAccessToken'
-const COOKIE_REFRESH = 'playerRefreshToken'
-const COOKIE_EXPIRES = 'playerTokenExpiresAt'
-const COOKIE_USER_ID = 'playerUserId'
+const COOKIE_PREFIX = isStagingHost ? 'staging_' : ''
+const COOKIE_ACCESS = `${COOKIE_PREFIX}playerAccessToken`
+const COOKIE_REFRESH = `${COOKIE_PREFIX}playerRefreshToken`
+const COOKIE_EXPIRES = `${COOKIE_PREFIX}playerTokenExpiresAt`
+const COOKIE_USER_ID = `${COOKIE_PREFIX}playerUserId`
 
 const COOKIE_KEYS = [COOKIE_ACCESS, COOKIE_REFRESH, COOKIE_EXPIRES, COOKIE_USER_ID] as const
 

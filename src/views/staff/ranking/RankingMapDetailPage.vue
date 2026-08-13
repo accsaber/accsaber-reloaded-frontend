@@ -69,11 +69,6 @@ const resolvedAccent = computed(() => {
   return themeStore.resolvedBase === 'dark' ? brightenRgb(raw, 60) : raw
 })
 
-const categoryName = computed(() => {
-  const info = categoryStore.getCategoryInfo(categoryCode.value)
-  return info?.name ?? categoryCode.value
-})
-
 const metaTitle = computed(() => {
   if (!difficulty.value) return 'Map Detail | Ranking'
   return `${difficulty.value.songAuthor} - ${difficulty.value.songName} | Ranking`

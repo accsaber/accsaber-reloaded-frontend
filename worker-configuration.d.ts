@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	ASSETS: Fetcher;
 	API_PROXY_TARGET: string;
+	STAGING_GATE_KEY: string;
 	VITE_ADMIN_URL: string;
 	VITE_RANKING_URL: string;
 	VITE_API_BASE: string;

@@ -158,7 +158,13 @@ const mostAsked = MOST_ASKED
 
 @media (max-width: 639px) {
   .home__hero {
-    min-height: 260px;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .home__hero-inner {
+    padding: var(--space-lg) 0 0;
   }
 }
 </style>

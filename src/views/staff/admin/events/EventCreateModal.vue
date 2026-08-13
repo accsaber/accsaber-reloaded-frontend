@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getApiErrorMessage, parseApiError } from '@/api/client'
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'

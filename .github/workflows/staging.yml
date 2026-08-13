@@ -1,0 +1,37 @@
+# Cloudflare Workers Builds deploys this repo directly on push, so there is no
+# deploy step here on purpose - a wrangler deploy would double-deploy.
+name: Staging
+
+on:
+  push:
+    branches: [develop]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - '.vscode/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: lint
+
+  build:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: build
+
+  types:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: types
+      advisory: true

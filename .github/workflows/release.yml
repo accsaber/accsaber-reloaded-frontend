@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - '.vscode/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: lint
+
+  build:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: build
+
+  release:
+    needs: [lint, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: version
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          bump=patch
+          [ "${{ github.event_name }}" != "push" ] && bump=none
+          case "$COMMIT_MSG" in
+            *"[SKIP]"*)  bump=none ;;
+            *"[MAJOR]"*) bump=major ;;
+            *"[MINOR]"*) bump=minor ;;
+          esac
+          latest=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n 1)
+          [ -z "$latest" ] && latest="v0.0.0"
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          case "$bump" in
+            major) next="v$((major + 1)).0.0" ;;
+            minor) next="v${major}.$((minor + 1)).0" ;;
+            patch) next="v${major}.${minor}.$((patch + 1))" ;;
+            none)  next="$latest" ;;
+          esac
+          echo "BUMP=${bump}" >> "$GITHUB_OUTPUT"
+          echo "TAG=${next}" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${next#v}" >> "$GITHUB_OUTPUT"
+          echo "Bump: ${bump}, ${latest} -> ${next}"
+
+      - uses: actions/setup-node@v4
+        if: steps.version.outputs.BUMP != 'none'
+        with:
+          node-version: 22
+
+      - name: Stamp version and tag
+        if: steps.version.outputs.BUMP != 'none'
+        env:
+          TAG: ${{ steps.version.outputs.TAG }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          npm version "$VERSION" --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore: release ${TAG} [SKIP]"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin HEAD:main
+          git push origin "$TAG"
+
+      - name: Create release
+        if: steps.version.outputs.BUMP != 'none'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: ${{ steps.version.outputs.TAG }}
+          draft: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

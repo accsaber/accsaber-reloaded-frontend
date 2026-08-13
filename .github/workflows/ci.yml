@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: lint
+
+  build:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: build
+
+  # Advisory until the 11 pre-existing vue-tsc errors are cleared.
+  # Set advisory to false to make it blocking.
+  types:
+    uses: ./.github/workflows/checks.yml
+    with:
+      suite: types
+      advisory: true

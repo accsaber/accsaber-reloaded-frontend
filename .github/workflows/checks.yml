@@ -1,0 +1,73 @@
+name: Checks
+
+on:
+  workflow_call:
+    inputs:
+      suite:
+        description: 'lint, build or types'
+        type: string
+        required: true
+      advisory:
+        description: 'report failures without failing the run'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ inputs.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: ${{ inputs.advisory }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Compiled config guard
+        if: inputs.suite == 'lint'
+        run: |
+          tracked=$(git ls-files vite.config.js eslint.config.js)
+          if [ -n "$tracked" ]; then
+            echo "::error::Compiled config committed: $tracked"
+            echo "Vite resolves .js before .ts, so these silently shadow the authored config."
+            exit 1
+          fi
+
+      - name: Env example guard
+        if: inputs.suite == 'lint'
+        run: |
+          missing=0
+          for key in $(grep -rhoE 'import\.meta\.env\.VITE_[A-Z0-9_]+' src worker \
+            | grep -oE 'VITE_[A-Z0-9_]+' | sort -u); do
+            grep -qE "^${key}=" .env.example || {
+              echo "::error::${key} is read in the code but missing from .env.example"
+              missing=1
+            }
+          done
+          exit $missing
+
+      - name: Lint
+        if: inputs.suite == 'lint'
+        run: npx eslint .
+
+      - name: Type check
+        if: inputs.suite == 'types'
+        run: npm run type-check
+
+      - name: Build
+        if: inputs.suite == 'build'
+        run: npm run build-only
+
+      - name: Validate deploy config
+        if: inputs.suite == 'build'
+        run: npx wrangler deploy --dry-run

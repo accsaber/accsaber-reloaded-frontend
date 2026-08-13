@@ -267,7 +267,6 @@ const starPositions = computed<StarLayout[]>(() => {
     const h = hashString(id)
     const r1 = seededRandom(h)
     const r2 = seededRandom(h + 7)
-    const r3 = seededRandom(h + 13)
 
     const xBase = parentX + stepSize
     const xNudge = (r1 - 0.5) * 2
