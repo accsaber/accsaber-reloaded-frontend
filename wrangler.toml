@@ -19,11 +19,8 @@ run_worker_first = [
 enabled = true
 invocation_logs = true
 
-# Staging runs as its own Worker so it gets its own build. VITE_WS_BASE is baked
-# into the bundle at build time, so pointing staging at the staging API needs a
-# separate build, not just a separate hostname.
 [env.staging]
-name = "accsaber-reloaded-frontend-staging"
+name = "accsaber-staging-reloaded-frontend"
 
 [env.staging.vars]
 API_PROXY_TARGET = "https://staging-api.accsaber.com"
