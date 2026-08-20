@@ -40,7 +40,24 @@ function setNameMeta(name: string, content: string) {
   el.setAttribute('content', content)
 }
 
-function applyMeta(meta: { title: string; description: string; image: string; url: string; type: string }) {
+function setCanonical(href: string) {
+  let el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null
+  if (!el) {
+    el = document.createElement('link')
+    el.setAttribute('rel', 'canonical')
+    document.head.appendChild(el)
+  }
+  el.setAttribute('href', href)
+}
+
+function applyMeta(meta: {
+  title: string
+  description: string
+  image: string
+  url: string
+  canonical: string
+  type: string
+}) {
   document.title = meta.title
 
   setMeta('og:title', meta.title)
@@ -54,6 +71,12 @@ function applyMeta(meta: { title: string; description: string; image: string; ur
   setNameMeta('twitter:title', meta.title)
   setNameMeta('twitter:description', meta.description)
   setNameMeta('twitter:image', meta.image)
+
+  setCanonical(meta.canonical)
+}
+
+function defaultCanonical(): string {
+  return `${window.location.origin}${window.location.pathname}`
 }
 
 let activeOwner: symbol | null = null
@@ -73,6 +96,7 @@ export function usePageMeta(meta: PageMeta) {
       description: descriptionRef.value ?? DEFAULT_DESCRIPTION,
       image: imageRef.value ?? DEFAULT_IMAGE,
       url: urlRef.value ?? window.location.href,
+      canonical: urlRef.value ?? defaultCanonical(),
       type: typeRef.value ?? 'website',
     })
   }
@@ -88,6 +112,7 @@ export function usePageMeta(meta: PageMeta) {
       description: DEFAULT_DESCRIPTION,
       image: DEFAULT_IMAGE,
       url: SITE_URL,
+      canonical: SITE_URL,
       type: 'website',
     })
   })

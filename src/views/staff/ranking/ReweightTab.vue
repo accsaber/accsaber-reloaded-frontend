@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
+import type { CategoryCode } from '@/types/display'
 import { CATEGORY_ORDER } from '@/utils/constants'
 import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref } from 'vue'
@@ -182,7 +183,10 @@ function resetEntry(entry: ReweightEntry) {
 }
 
 function entriesByCategory(loaded: LoadedBatch) {
-  const groups = new Map<string, { code: string; name: string; accent: string; entries: ReweightEntry[] }>()
+  const groups = new Map<
+    CategoryCode,
+    { code: CategoryCode; name: string; accent: string; entries: ReweightEntry[] }
+  >()
 
   for (const entry of loaded.entries.values()) {
     const code = categoryStore.getCategoryCode(entry.difficulty.categoryId) ?? 'overall'
@@ -199,7 +203,9 @@ function entriesByCategory(loaded: LoadedBatch) {
   }
 
   return [...groups.values()].sort(
-    (a, b) => CATEGORY_ORDER.indexOf(a.code) - CATEGORY_ORDER.indexOf(b.code)
+    (a, b) =>
+      (CATEGORY_ORDER as readonly string[]).indexOf(a.code) -
+      (CATEGORY_ORDER as readonly string[]).indexOf(b.code),
   )
 }
 

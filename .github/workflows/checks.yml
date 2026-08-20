@@ -7,11 +7,6 @@ on:
         description: 'lint, build or types'
         type: string
         required: true
-      advisory:
-        description: 'report failures without failing the run'
-        type: boolean
-        required: false
-        default: false
 
 permissions:
   contents: read
@@ -21,7 +16,6 @@ jobs:
     name: ${{ inputs.suite }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: ${{ inputs.advisory }}
     steps:
       - uses: actions/checkout@v7
 

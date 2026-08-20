@@ -23,10 +23,7 @@ jobs:
     with:
       suite: build
 
-  # Advisory until the 11 pre-existing vue-tsc errors are cleared.
-  # Set advisory to false to make it blocking.
   types:
     uses: ./.github/workflows/checks.yml
     with:
       suite: types
-      advisory: true

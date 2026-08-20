@@ -12,7 +12,6 @@ import type {
   CampaignRequirementType,
   CampaignStatus,
   CampaignTagKind,
-  Difficulty,
   MapDifficultyStatus,
   UserCampaignStatus,
 } from '../enums'
@@ -339,17 +338,3 @@ export interface CampaignLeaderboardParams extends PaginationParams {
   board?: CampaignLeaderboardBoard
 }
 
-export interface CampaignMapResponse {
-  id: string
-  mapDifficultyId: string
-  songName: string
-  songAuthor: string
-  mapAuthor: string
-  coverUrl: string
-  cdnCoverUrl?: string | null
-  difficulty: Difficulty
-  characteristic: string
-  accuracyRequirement: number
-  xp: number
-  prerequisiteMapIds: string[]
-}

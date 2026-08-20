@@ -10,7 +10,7 @@ import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
-import type { MapDisplay } from '@/types/display'
+import type { CategoryCode, MapDisplay } from '@/types/display'
 import { CATEGORY_ORDER } from '@/utils/constants'
 import { formatRelativeDate } from '@/utils/formatters'
 import { toMapDisplay } from '@/utils/mappers'
@@ -76,7 +76,10 @@ watch([statusFilter, page], fetchBatches, { immediate: true })
 
 
 function batchDiffsByCategory(batch: BatchResponse) {
-  const groups = new Map<string, { code: string; name: string; accent: string; maps: MapDisplay[] }>()
+  const groups = new Map<
+    CategoryCode,
+    { code: CategoryCode; name: string; accent: string; maps: MapDisplay[] }
+  >()
 
   for (const diff of batch.difficulties) {
     const code = categoryStore.getCategoryCode(diff.categoryId) ?? 'overall'
@@ -93,7 +96,9 @@ function batchDiffsByCategory(batch: BatchResponse) {
   }
 
   return [...groups.values()].sort(
-    (a, b) => CATEGORY_ORDER.indexOf(a.code) - CATEGORY_ORDER.indexOf(b.code)
+    (a, b) =>
+      (CATEGORY_ORDER as readonly string[]).indexOf(a.code) -
+      (CATEGORY_ORDER as readonly string[]).indexOf(b.code),
   )
 }
 

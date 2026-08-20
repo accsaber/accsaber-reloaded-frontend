@@ -34,4 +34,3 @@ jobs:
     uses: ./.github/workflows/checks.yml
     with:
       suite: types
-      advisory: true

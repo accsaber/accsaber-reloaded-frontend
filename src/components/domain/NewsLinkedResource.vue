@@ -2,14 +2,18 @@
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MapCardCompact from '@/components/domain/MapCardCompact.vue'
 import MilestoneCard from '@/components/domain/MilestoneCard.vue'
+import { onAvatarError, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
-import type { CampaignDetailResponse, CampaignMapResponse } from '@/types/api/campaigns'
+import type { CampaignDetailResponse } from '@/types/api/campaigns'
 import type { CurveResponse } from '@/types/api/categories'
 import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { PublicNewsResponse } from '@/types/api/news'
 import type { MilestoneDisplay } from '@/types/display'
 import { groupBatchByCategory } from '@/utils/batches'
+import { campaignBadges } from '@/utils/campaignBadges'
+import { campaignDifficultyLabel } from '@/utils/campaignDifficulty'
+import { requirementGoalText } from '@/utils/campaignLayout'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
@@ -114,12 +118,33 @@ watch(
   { immediate: true },
 )
 
-function handleCampaignMapCoverError(m: CampaignMapResponse, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (m.cdnCoverUrl && m.coverUrl && img.src !== m.coverUrl) {
-    img.src = m.coverUrl
+const campaignMeta = computed(() => {
+  if (resource.value?.kind !== 'campaign') return null
+  const c = resource.value.data
+  return {
+    to: `/campaigns/${c.slug || c.id}`,
+    difficultyCount: c.difficultyCount,
+    difficultyLabel: campaignDifficultyLabel(c.tags),
+    badges: campaignBadges(c),
   }
-}
+})
+
+const campaignNodes = computed(() => {
+  if (resource.value?.kind !== 'campaign') return []
+  return resource.value.data.difficulties.map((d) => ({
+    id: d.id,
+    songName: d.songName,
+    songAuthor: d.songAuthor,
+    mapAuthor: d.mapAuthor,
+    coverUrl: pickCoverUrl(d),
+    coverFallbackUrl: pickCoverFallback(d),
+    difficultyLabel: formatDifficulty(d.difficulty),
+    goal: d.targets
+      .map((t) => requirementGoalText(t.requirementType, t.requirementValue, t.requirementValueMax))
+      .join(d.targetMode === 'OR' ? ' / ' : ' + '),
+    xp: d.xp,
+  }))
+})
 
 function mapRouteTo(m: { id: string; difficultyId?: string; difficulty?: string; characteristic?: string; beatsaverCode?: string }) {
   return buildMapRoute({
@@ -187,28 +212,31 @@ const sectionTitle = computed(() => {
           <h3 class="linked-resource__name">{{ resource.data.name }}</h3>
           <p v-if="resource.data.description" class="linked-resource__desc">{{ resource.data.description }}</p>
         </div>
-        <div class="linked-resource__meta">
-          <span>{{ resource.data.mapCount }} maps · {{ resource.data.difficulty }}</span>
-          <span v-if="resource.data.verified"> · Verified</span>
+        <div v-if="campaignMeta" class="linked-resource__meta">
+          <span>{{ campaignMeta.difficultyCount }} maps</span>
+          <span v-if="campaignMeta.difficultyLabel"> · {{ campaignMeta.difficultyLabel }}</span>
+          <span v-for="badge in campaignMeta.badges" :key="badge.kind" :title="badge.title">
+            · {{ badge.label }}
+          </span>
         </div>
       </header>
 
       <div class="campaign-rows">
         <router-link
-          v-for="m in resource.data.maps"
-          :key="m.id"
-          :to="`/campaigns/${resource.data.id}`"
+          v-for="node in campaignNodes"
+          :key="node.id"
+          :to="campaignMeta!.to"
           class="campaign-row"
         >
-          <img :src="m.cdnCoverUrl ?? m.coverUrl" class="campaign-row__cover" :alt="m.songName"
-            loading="lazy" decoding="async" @error="handleCampaignMapCoverError(m, $event)" />
+          <img :src="node.coverUrl" class="campaign-row__cover" :alt="node.songName"
+            loading="lazy" decoding="async" @error="onAvatarError(node.coverFallbackUrl)($event)" />
           <div class="campaign-row__info">
-            <span class="campaign-row__song">{{ m.songName }}</span>
-            <span class="campaign-row__sub">{{ m.songAuthor }} · {{ m.mapAuthor }}</span>
+            <span class="campaign-row__song">{{ node.songName }}</span>
+            <span class="campaign-row__sub">{{ node.songAuthor }} · {{ node.mapAuthor }}</span>
           </div>
-          <span class="campaign-row__diff">{{ formatDifficulty(m.difficulty) }}</span>
-          <span class="campaign-row__req">{{ (m.accuracyRequirement * 100).toFixed(1) }}%</span>
-          <span class="campaign-row__xp">+{{ m.xp }} XP</span>
+          <span class="campaign-row__diff">{{ node.difficultyLabel }}</span>
+          <span v-if="node.goal" class="campaign-row__req">{{ node.goal }}</span>
+          <span class="campaign-row__xp">+{{ node.xp }} XP</span>
         </router-link>
       </div>
     </template>

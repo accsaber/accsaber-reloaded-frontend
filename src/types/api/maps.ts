@@ -67,7 +67,7 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   characteristic: string
   active: boolean
   status: MapDifficultyStatus
-  criteriaStatus: string
+  criteriaStatus: CriteriaStatus
   autoCriteriaStatus: AutoCriteriaStatus
   ssLeaderboardId: string | null
   blLeaderboardId: string | null

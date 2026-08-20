@@ -9,6 +9,27 @@ const OG_CACHE_SECONDS = 300
 
 const GATE_HEADER = 'X-Staging-Key'
 
+const INDEXABLE_HOSTS = new Set(['accsaber.com', 'www.accsaber.com'])
+
+const ROBOTS_ALLOW = `User-agent: *
+Allow: /
+
+Sitemap: https://accsaber.com/sitemap.xml
+`
+
+const ROBOTS_DENY = `User-agent: *
+Disallow: /
+`
+
+function renderRobots(url: URL): Response {
+  return new Response(INDEXABLE_HOSTS.has(url.hostname) ? ROBOTS_ALLOW : ROBOTS_DENY, {
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'public, max-age=3600',
+    },
+  })
+}
+
 function apiBase(): URL {
   return new URL('v1/', env.API_PROXY_TARGET || 'https://api.accsaber.com')
 }
@@ -44,6 +65,8 @@ async function renderOpenGraph(url: URL, request: Request): Promise<Response | n
 export default {
   async fetch(request) {
     const url = new URL(request.url)
+
+    if (url.pathname === '/robots.txt') return renderRobots(url)
 
     function createProxy(prefix: string, upstream: string | URL, gated = false) {
       if (!url.pathname.startsWith(prefix)) return null

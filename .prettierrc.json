@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "semi": false,
+  "endOfLine": "auto",
   "tabWidth": 2,
   "singleQuote": true,
   "printWidth": 100,

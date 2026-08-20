@@ -29,7 +29,9 @@ const modalOpen = ref(false)
 const submitting = ref(false)
 const schemaText = ref('')
 const schemaError = ref<string | null>(null)
-const form = ref<CreateItemTypeRequest>({
+type ItemTypeForm = Omit<CreateItemTypeRequest, 'description'> & { description: string }
+
+const form = ref<ItemTypeForm>({
   parentTypeId: undefined,
   key: '',
   name: '',

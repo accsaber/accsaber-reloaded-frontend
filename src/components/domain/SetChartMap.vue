@@ -161,7 +161,8 @@ onUnmounted(() => {
       @select="emit('select-set', $event)" @hover="onSetHover" @leave="hoveredSet = null" />
 
     <SetNode v-for="ls in lockedPositions" :key="`locked-${ls.id}`"
-      :set="{ id: ls.id, title: ls.title, description: '', setBonusXp: 0, createdAt: '' }" :position="ls.position"
+      :set="{ id: ls.id, title: ls.title, description: '', setBonusXp: 0, awardsItemId: null, createdAt: '' }"
+      :position="ls.position"
       :milestone-count="0" :completion-percentage="0" :locked="true"
       :class="{ 'set-chart-map__node--hidden': selectedSetId !== null }" />
 
