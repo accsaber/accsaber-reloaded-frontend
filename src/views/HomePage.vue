@@ -38,7 +38,8 @@ const carouselAnimating = ref(false)
 const backendBuild = ref<{ version: string; channel: string } | null>(null)
 
 function buildLabel(version: string, channel: string): string {
-  return channel ? `${channel} v${version}` : `v${version}`
+  const build = /^\d+\.\d+\.\d+/.test(version) ? `v${version}` : version
+  return channel ? `${channel} ${build}` : build
 }
 
 const frontendLabel = buildLabel(__APP_VERSION__, __APP_CHANNEL__)

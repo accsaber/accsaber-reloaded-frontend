@@ -20,8 +20,8 @@ const GENERAL_RULES = [
 const NUMBER_ROWS = [
   { label: 'Minimum length (first to last note)', values: ['2:00', '1:45', '1:45'] },
   { label: 'NJS limit (note jump speed)', values: ['12', '16', '16'] },
-  { label: 'Max peak SPS (swings per second)', values: ['1.75 *', '6.25', '6.25'] },
-  { label: 'Max average SPS', values: ['1.5 *', '4', '4'] },
+  { label: 'Max peak SPS (swings per second)', values: ['1.5 *', '6.25', '6.25'] },
+  { label: 'Max average SPS', values: ['1.25 *', '4', '4'] },
   { label: 'Gap after notes before a bomb **', values: ['500ms', '250ms', '250ms'] },
 ]
 

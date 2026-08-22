@@ -6,11 +6,13 @@ import vue from '@vitejs/plugin-vue'
 import { cloudflare } from '@cloudflare/vite-plugin'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
+const commitSha = process.env.WORKERS_CI_COMMIT_SHA
+const appVersion = process.env.VITE_APP_VERSION ?? commitSha?.slice(0, 7) ?? pkg.version
 
 export default defineConfig(() => {
   return {
     define: {
-      __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION ?? pkg.version),
+      __APP_VERSION__: JSON.stringify(appVersion),
       __APP_CHANNEL__: JSON.stringify(process.env.VITE_APP_CHANNEL ?? 'BETA'),
     },
     plugins: [vue(), cloudflare()],

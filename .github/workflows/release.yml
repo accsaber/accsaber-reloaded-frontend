@@ -63,26 +63,6 @@ jobs:
           echo "VERSION=${next#v}" >> "$GITHUB_OUTPUT"
           echo "Bump: ${bump}, ${latest} -> ${next}"
 
-      - uses: actions/setup-node@v4
-        if: steps.version.outputs.BUMP != 'none'
-        with:
-          node-version: 22
-
-      - name: Stamp version and tag
-        if: steps.version.outputs.BUMP != 'none'
-        env:
-          TAG: ${{ steps.version.outputs.TAG }}
-          VERSION: ${{ steps.version.outputs.VERSION }}
-        run: |
-          npm version "$VERSION" --no-git-tag-version
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git commit -m "chore: release ${TAG} [SKIP]"
-          git tag -a "$TAG" -m "$TAG"
-          git push origin HEAD:main
-          git push origin "$TAG"
-
       - name: Create release
         if: steps.version.outputs.BUMP != 'none'
         uses: softprops/action-gh-release@v3
