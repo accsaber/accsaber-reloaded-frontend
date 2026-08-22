@@ -1688,6 +1688,7 @@ export function useCampaignEditor() {
     { value: 'COMBO', label: 'Max combo' },
     { value: 'BOMB_HITS', label: 'Bombs hit' },
     { value: 'MISTAKES', label: 'Mistakes' },
+    { value: 'PAUSES', label: 'Pauses' },
     { value: 'FC', label: 'Full Combo' },
     { value: 'PASS', label: 'Pass (no No-Fail)' },
     { value: 'RANK', label: 'Leaderboard rank' },
@@ -1718,6 +1719,7 @@ export function useCampaignEditor() {
     | 'combo'
     | 'bombs'
     | 'mistakes'
+    | 'pauses'
 
   const REQUIREMENT_METRIC: Record<CampaignRequirementType, RequirementMetric> = {
     ACC: 'acc',
@@ -1730,6 +1732,7 @@ export function useCampaignEditor() {
     COMBO: 'combo',
     BOMB_HITS: 'bombs',
     MISTAKES: 'mistakes',
+    PAUSES: 'pauses',
   }
 
   function requirementBoundsFor(metric: RequirementMetric) {
@@ -1748,6 +1751,8 @@ export function useCampaignEditor() {
         return { min: 0, max: 20, step: 1, unit: 'bombs' }
       case 'mistakes':
         return { min: 0, max: 20, step: 1, unit: '' }
+      case 'pauses':
+        return { min: 0, max: 10, step: 1, unit: '' }
       case 'flag':
         return { min: 1, max: 1, step: 1, unit: '' }
       default:
@@ -1761,7 +1766,9 @@ export function useCampaignEditor() {
   ) {
     if (metric === 'ap') return { min: 0, max: Number.MAX_SAFE_INTEGER }
     if (metric === 'rank') return { min: 1, max: Number.MAX_SAFE_INTEGER }
-    if (metric === 'bombs' || metric === 'mistakes') return { min: 0, max: Number.MAX_SAFE_INTEGER }
+    if (metric === 'bombs' || metric === 'mistakes' || metric === 'pauses') {
+      return { min: 0, max: Number.MAX_SAFE_INTEGER }
+    }
     return { min: bounds.min, max: bounds.max }
   }
 
@@ -1779,6 +1786,7 @@ export function useCampaignEditor() {
         return Math.round(comboCap.value * 0.8)
       case 'bombs':
       case 'mistakes':
+      case 'pauses':
         return 0
       case 'flag':
         return 1
@@ -2039,6 +2047,7 @@ export function useCampaignEditor() {
   const DEFAULT_REQUIREMENT_MAX: Partial<Record<RequirementMetric, number>> = {
     bombs: 3,
     mistakes: 5,
+    pauses: 2,
   }
 
   function newTargetDraft(type: CampaignRequirementType): TargetDraft {
@@ -2136,6 +2145,8 @@ export function useCampaignEditor() {
         return `An absolute note count, not a percentage. This map tops out at ${comboCap.value}.`
       case 'MISTAKES':
         return 'Bad cuts + misses, summed. For "at most N mistakes", set the upper bound instead of the lower one.'
+      case 'PAUSES':
+        return 'Pauses taken during the run. For "at most N pauses", set the upper bound instead of the lower one.'
       default:
         return ''
     }
@@ -2384,6 +2395,7 @@ export function useCampaignEditor() {
     { value: 'AVERAGE_COMBO', label: 'Average combo' },
     { value: 'AVERAGE_BOMB_HITS', label: 'Average bombs hit' },
     { value: 'AVERAGE_MISTAKES', label: 'Average mistakes' },
+    { value: 'AVERAGE_PAUSES', label: 'Average pauses' },
     { value: 'AVERAGE_RANK', label: 'Average rank' },
     { value: 'MAX_RANK', label: 'Best rank' },
     { value: 'FC', label: 'Full combo (all)' },
@@ -2431,6 +2443,8 @@ export function useCampaignEditor() {
         return { min: 0, max: 20, step: 1, unit: 'bombs' }
       case 'mistakes':
         return { min: 0, max: 20, step: 1, unit: '' }
+      case 'pauses':
+        return { min: 0, max: 10, step: 1, unit: '' }
       default:
         return { min: 0, max: 1, step: 1, unit: '' }
     }
@@ -2455,7 +2469,7 @@ export function useCampaignEditor() {
     }
   }
 
-  const DEFAULT_BARRIER_MAX: Record<string, number> = { bombs: 3, mistakes: 5 }
+  const DEFAULT_BARRIER_MAX: Record<string, number> = { bombs: 3, mistakes: 5, pauses: 2 }
 
   function onBarrierConditionTypeChange(value: string) {
     const next = value as BarrierConditionType

@@ -455,6 +455,7 @@ const REQUIREMENT_DISPLAY: Record<CampaignRequirementType, RequirementDisplay> =
   COMBO: { label: 'Combo', format: (v) => `${Math.round(v)}` },
   BOMB_HITS: { label: 'Bombs', format: (v) => `${Math.round(v)}` },
   MISTAKES: { label: 'Mistakes', format: (v) => `${Math.round(v)}` },
+  PAUSES: { label: 'Pauses', format: (v) => `${Math.round(v)}` },
 }
 
 export function requirementLabel(type: CampaignRequirementType): string {
@@ -532,6 +533,7 @@ type BarrierMetric =
   | 'combo'
   | 'bombs'
   | 'mistakes'
+  | 'pauses'
 
 interface BarrierConditionMeta {
   agg: string
@@ -601,6 +603,13 @@ const BARRIER_CONDITION_META: Record<BarrierConditionType, BarrierConditionMeta>
     noValue: false,
     label: 'Average mistakes',
   },
+  AVERAGE_PAUSES: {
+    agg: 'avg',
+    metric: 'pauses',
+    lowerBetter: false,
+    noValue: false,
+    label: 'Average pauses',
+  },
   FC: { agg: '', metric: 'fc', lowerBetter: false, noValue: true, label: 'Full combo' },
   PASS: { agg: '', metric: 'fc', lowerBetter: false, noValue: true, label: 'Pass (no No-Fail)' },
   COMPLETION_COUNT: {
@@ -628,6 +637,7 @@ const BARRIER_READOUT_LABEL: Record<BarrierConditionType, string> = {
   AVERAGE_COMBO: 'Avg Combo',
   AVERAGE_BOMB_HITS: 'Avg Bombs',
   AVERAGE_MISTAKES: 'Avg Mistakes',
+  AVERAGE_PAUSES: 'Avg Pauses',
   FC: 'Full Combo',
   PASS: 'Pass',
   COMPLETION_COUNT: 'Maps Completed',

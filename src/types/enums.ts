@@ -59,6 +59,7 @@ export type CampaignRequirementType =
   | 'COMBO'
   | 'BOMB_HITS'
   | 'MISTAKES'
+  | 'PAUSES'
 
 export type CampaignModifierRequirement = 'REQUIRED' | 'FORBIDDEN'
 
@@ -86,6 +87,7 @@ export type BarrierConditionType =
   | 'AVERAGE_COMBO'
   | 'AVERAGE_BOMB_HITS'
   | 'AVERAGE_MISTAKES'
+  | 'AVERAGE_PAUSES'
   | 'COMPLETION_COUNT'
 
 export type CampaignVoteDirection = 'UP' | 'DOWN'

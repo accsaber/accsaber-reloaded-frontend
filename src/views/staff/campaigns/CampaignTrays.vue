@@ -225,9 +225,14 @@ const TARGET_MODES: Array<{ value: CampaignTargetMode; label: string }> = [
 
 const isMultiTarget = computed(() => targetRows.value.length > 1)
 
-const targetsBombHits = computed(() =>
-  targetRows.value.some((r) => r.requirementType === 'BOMB_HITS'),
-)
+const beatLeaderOnlyNote = computed(() => {
+  const types = new Set(targetRows.value.map((r) => r.requirementType))
+  const subjects: string[] = []
+  if (types.has('BOMB_HITS')) subjects.push('Bomb')
+  if (types.has('PAUSES')) subjects.push('Pause')
+  if (!subjects.length) return ''
+  return `${subjects.join(' and ')} counts come from BeatLeader only. A ScoreSaber-sourced score carries none and can never clear that objective.`
+})
 
 const dragTargetIndex = ref<number | null>(null)
 
@@ -257,6 +262,9 @@ const barrierConditionHint = computed(() => {
   }
   if (meta.metric === 'mistakes') {
     return 'Bad cuts + misses, averaged over each affected node\'s fewest-mistakes run. For "at most N mistakes", set the upper bound instead of the lower one.'
+  }
+  if (meta.metric === 'pauses') {
+    return 'Averaged over the fewest-pauses run on each affected node, and BeatLeader-sourced only. For "at most N pauses", set the upper bound instead of the lower one.'
   }
   if (meta.lowerBetter) {
     return `Lower is better. Opens when the ${meta.agg} leaderboard rank across the affected nodes reaches this position or better.`
@@ -981,9 +989,8 @@ const connectionSwatch = computed(() => {
       This map isn't ranked (imported campaign map, or still in the ranking queue). AP and
       leaderboard-rank requirements are unavailable.
     </p>
-    <CampaignEditorNote v-if="targetsBombHits">
-      Bomb counts come from BeatLeader only. A ScoreSaber-sourced score carries no bomb data and can
-      never clear that objective.
+    <CampaignEditorNote v-if="beatLeaderOnlyNote">
+      {{ beatLeaderOnlyNote }}
     </CampaignEditorNote>
 
     <div class="campaign-editor__field">
