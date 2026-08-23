@@ -24,8 +24,8 @@ const categoryName = computed(() =>
 )
 
 const upvotes = computed(() => props.entry.rankUpvotes ?? 0)
-const downvotes = computed(() => props.entry.rankDownvotes ?? 0)
 const neutrals = computed(() => props.entry.rankNeutrals ?? 0)
+const downvotes = computed(() => props.entry.rankDownvotes ?? 0)
 const rating = computed(() => upvotes.value - downvotes.value)
 const ratingClass = computed(() => {
   if (rating.value > 0) return 'queue-row__rating--positive'
@@ -130,19 +130,19 @@ const dateLabel = computed(() => {
           </svg>
           {{ upvotes }}
         </span>
-        <span class="queue-row__vote queue-row__vote--down">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-          {{ downvotes }}
-        </span>
         <span v-if="entry.rankNeutrals != null" class="queue-row__vote queue-row__vote--neutral">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="6 12 18 12" />
           </svg>
           {{ neutrals }}
+        </span>
+        <span class="queue-row__vote queue-row__vote--down">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          {{ downvotes }}
         </span>
       </div>
       <span class="queue-row__date">{{ dateLabel }}</span>
@@ -345,12 +345,12 @@ const dateLabel = computed(() => {
   color: var(--success);
 }
 
-.queue-row__vote--down {
-  color: var(--error);
-}
-
 .queue-row__vote--neutral {
   color: var(--text-tertiary);
+}
+
+.queue-row__vote--down {
+  color: var(--error);
 }
 
 .queue-row__date {
