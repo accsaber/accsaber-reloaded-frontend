@@ -17,6 +17,7 @@ const props = defineProps<{
   loadingRows?: number
   emptyMessage?: string
   rowClass?: (row: Record<string, unknown>, index: number) => string | Record<string, boolean> | undefined
+  dense?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -27,7 +28,7 @@ const emit = defineEmits<{
 const router = useRouter()
 const slots = useSlots()
 const skeletonCount = computed(() => props.loadingRows ?? 5)
-const dense = computed(() => props.columns.length >= 13)
+const dense = computed(() => props.dense || props.columns.length >= 13)
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
   if (!props.rowKey) return index
@@ -206,7 +207,8 @@ function sortIcon(col: TableColumn): string {
 }
 
 .data-table__th-icon {
-  vertical-align: -2px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .data-table__sort-icon {

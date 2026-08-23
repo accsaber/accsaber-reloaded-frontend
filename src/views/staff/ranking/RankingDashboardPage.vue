@@ -167,7 +167,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 const baseColumns: TableColumn[] = [
   { key: 'cover', label: '', width: '48px' },
   { key: 'song', label: 'Song', align: 'left' },
-  { key: 'mapper', label: 'Mapper', align: 'left', width: '120px' },
+  { key: 'mapper', label: 'Mapper', align: 'left', width: '104px' },
   { key: 'category', label: 'Category', align: 'center', width: '110px' },
   { key: 'status', label: 'Status', align: 'center', width: '96px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '100px' },
@@ -179,7 +179,7 @@ const baseColumns: TableColumn[] = [
     icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z',
   },
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'right', width: '100px' },
-  { key: 'submittedBy', label: 'By', align: 'left', width: '120px' },
+  { key: 'submittedBy', label: 'By', align: 'left', width: '104px' },
 ]
 
 const columns = computed(() =>
@@ -394,6 +394,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
       :sort-state="sortState"
       :loading="loading"
       :loading-rows="8"
+      dense
       row-clickable
       :row-key="(row: Record<string, unknown>) => row.id as string"
       empty-message="No maps found"
