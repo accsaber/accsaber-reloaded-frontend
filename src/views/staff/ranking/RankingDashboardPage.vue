@@ -159,6 +159,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   defaultSize: 20,
   sortFieldMap: {
     submitted: 'createdAt',
+    comments: 'commentCount',
   },
   secondarySort: null,
 })
@@ -173,6 +174,7 @@ const baseColumns: TableColumn[] = [
   { key: 'avgComplexity', label: 'Vote Avg', align: 'center', width: '90px' },
   { key: 'criteria', label: 'Criteria', align: 'center', width: '90px' },
   { key: 'rating', label: 'Rating', sortable: true, align: 'center', mono: true, width: '70px' },
+  { key: 'comments', label: 'Comments', sortable: true, align: 'center', mono: true, width: '90px' },
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'right', width: '100px' },
   { key: 'submittedBy', label: 'By', align: 'left', width: '120px' },
 ]
@@ -215,6 +217,7 @@ const rows = computed(() =>
       rating: activeStatus.value === 'RANKED'
         ? d.reweightUpvotes - d.reweightDownvotes
         : d.rankUpvotes - d.rankDownvotes,
+      commentCount: d.commentCount,
       createdAt: d.createdAt,
       createdByUsername: d.createdByUsername,
       createdByAvatarUrl: d.createdByAvatarUrl,
@@ -447,6 +450,12 @@ function criteriaClassName(row: Record<string, unknown>): string {
         </span>
       </template>
 
+      <template #cell-comments="{ row }">
+        <span class="ranking-dashboard__comments" :class="{ 'ranking-dashboard__comments--none': row.commentCount === 0 }">
+          {{ row.commentCount }}
+        </span>
+      </template>
+
       <template #cell-submitted="{ row }">
         <span class="ranking-dashboard__date">{{ formatRelativeDate(row.createdAt as string) }}</span>
       </template>
@@ -489,6 +498,9 @@ function criteriaClassName(row: Record<string, unknown>): string {
               <span v-else class="ranking-dashboard__criteria" :class="criteriaClassName(row)">{{ criteriaLabel(row) }}</span>
               <span class="ranking-dashboard__rating" :class="ratingClass(row.rating as number)">
                 {{ (row.rating as number) > 0 ? '+' : '' }}{{ row.rating }}
+              </span>
+              <span v-if="row.commentCount" class="ranking-dashboard__comments">
+                {{ row.commentCount }} {{ row.commentCount === 1 ? 'comment' : 'comments' }}
               </span>
             </div>
           </div>
@@ -637,6 +649,14 @@ function criteriaClassName(row: Record<string, unknown>): string {
   height: 20px;
   border-radius: 4px;
   object-fit: cover;
+}
+
+.ranking-dashboard__comments {
+  color: var(--text-secondary);
+}
+
+.ranking-dashboard__comments--none {
+  color: var(--text-tertiary);
 }
 
 .ranking-dashboard__mobile-card {

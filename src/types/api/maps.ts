@@ -74,6 +74,7 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   maxScore: number
   complexity: number
   averageVoteComplexity: number | null
+  commentCount: number
   rankedAt: string | null
   createdAt: string
   createdBy: string | null
@@ -84,6 +85,7 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   lastUpdatedByUsername: string | null
   rankUpvotes: number
   rankDownvotes: number
+  rankNeutrals: number
   reweightUpvotes: number
   reweightDownvotes: number
   unrankUpvotes: number
@@ -118,6 +120,7 @@ export interface PublicMapDifficultyResponse extends MapChartStatsSource {
   createdAt: string
   rankUpvotes: number | null
   rankDownvotes: number | null
+  rankNeutrals: number | null
   statistics: MapDifficultyStatisticsResponse | null
 }
 
