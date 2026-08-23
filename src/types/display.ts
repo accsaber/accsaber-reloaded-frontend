@@ -25,6 +25,7 @@ export interface TableColumn {
   width?: string
   mono?: boolean
   noLink?: boolean
+  icon?: string
 }
 
 export type SortDirection = 'asc' | 'desc'

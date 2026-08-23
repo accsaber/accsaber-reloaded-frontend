@@ -75,7 +75,13 @@ function sortIcon(col: TableColumn): string {
               'data-table__th--mono': col.mono,
               [`data-table__th--${col.align ?? 'left'}`]: true,
             }" :style="col.width ? { width: col.width } : undefined" @click="handleSort(col)">
-              {{ col.label }}
+              <svg v-if="col.icon" class="data-table__th-icon" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" role="img" :aria-label="col.label">
+                <title>{{ col.label }}</title>
+                <path :d="col.icon" />
+              </svg>
+              <template v-else>{{ col.label }}</template>
               <span v-if="col.sortable" class="data-table__sort-icon">{{ sortIcon(col) }}</span>
             </th>
           </tr>
@@ -197,6 +203,10 @@ function sortIcon(col: TableColumn): string {
 
 .data-table__th--mono {
   font-family: var(--font-mono);
+}
+
+.data-table__th-icon {
+  vertical-align: -2px;
 }
 
 .data-table__sort-icon {

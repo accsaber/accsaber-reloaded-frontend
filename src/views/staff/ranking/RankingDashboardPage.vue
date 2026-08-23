@@ -174,7 +174,10 @@ const baseColumns: TableColumn[] = [
   { key: 'avgComplexity', label: 'Vote Avg', align: 'center', width: '90px' },
   { key: 'criteria', label: 'Criteria', align: 'center', width: '90px' },
   { key: 'rating', label: 'Rating', sortable: true, align: 'center', mono: true, width: '70px' },
-  { key: 'comments', label: 'Comments', sortable: true, align: 'center', mono: true, width: '90px' },
+  {
+    key: 'comments', label: 'Comments', sortable: true, align: 'center', mono: true, width: '48px',
+    icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z',
+  },
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'right', width: '100px' },
   { key: 'submittedBy', label: 'By', align: 'left', width: '120px' },
 ]
