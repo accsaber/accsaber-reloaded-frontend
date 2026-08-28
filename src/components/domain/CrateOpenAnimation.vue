@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import FragmentedItem from '@/components/domain/FragmentedItem.vue'
+import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
-import ModifierCompositions from '@/components/domain/ModifierCompositions.vue'
+import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import CrateBloqFace from '@/components/domain/internal/CrateBloqFace.vue'
 import { useCrateAnimation, type CrateHalfMotion } from '@/composables/useCrateAnimation'
 import { useCrateSounds } from '@/composables/useCrateSounds'

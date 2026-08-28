@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import FragmentedItem from '@/components/domain/FragmentedItem.vue'
+import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
-import ModifierCompositions from '@/components/domain/ModifierCompositions.vue'
+import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import type { ItemResponse, ModifierEffectSpec } from '@/types/api/items'
 import { readFragmentSpec } from '@/utils/items'
 import { computed } from 'vue'

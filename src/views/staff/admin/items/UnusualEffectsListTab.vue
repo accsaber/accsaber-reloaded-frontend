@@ -10,7 +10,7 @@ import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import ModifierCompositions from '@/components/domain/ModifierCompositions.vue'
+import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import type { ModifierEffectSpec, UnusualEffectResponse } from '@/types/api/items'
 import { computed, onMounted, ref } from 'vue'
 

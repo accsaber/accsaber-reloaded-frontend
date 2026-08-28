@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import BorderDecals from '@/components/domain/BorderDecals.vue'
-import BorderOverlay from '@/components/domain/BorderOverlay.vue'
-import FragmentedContent from '@/components/domain/FragmentedContent.vue'
+import BorderDecals from '@/components/cosmetics/borders/BorderDecals.vue'
+import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
+import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
 import LevelBadgeAvatar from '@/components/domain/LevelBadgeAvatar.vue'
-import ModifierCompositions from '@/components/domain/ModifierCompositions.vue'
-import ProfileBorderRenderer from '@/components/domain/ProfileBorderRenderer.vue'
-import TitleRenderer from '@/components/domain/TitleRenderer.vue'
+import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
+import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
+import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
 import type {
   BorderColorValue,
   BorderShapeValue,
@@ -14,7 +14,6 @@ import type {
 import {
   annotateEffectLayerStacks,
   fillToCss,
-  readFragmentFromLayers,
   type EffectLayer,
 } from '@/utils/items'
 import { DEFAULT_AVATAR_MASK, resolveAvatarImageBox } from '@/utils/avatarBox'
@@ -59,13 +58,6 @@ const borderColor = computed(() =>
 )
 const title = computed(() => (props.plain ? null : props.equippedTitle ?? null))
 
-const borderFragment = computed(() =>
-  props.plain ? null : readFragmentFromLayers(props.borderEffects),
-)
-const titleFragment = computed(() =>
-  props.plain ? null : readFragmentFromLayers(props.titleEffects),
-)
-
 const borderFxLayers = computed(() =>
   props.plain ? [] : annotateEffectLayerStacks(props.borderEffects),
 )
@@ -106,12 +98,7 @@ const fallbackTitleStyle = computed(() => {
 <template>
   <div class="level-badge">
     <div class="level-badge__stack" :class="{ 'level-badge__stack--shaped': hasShapeOverride }">
-      <FragmentedContent
-        v-if="borderFragment"
-        :spec="borderFragment.spec"
-        :stack="borderFragment.count"
-        :seed="borderFragment.seed"
-      >
+      <ContentEffects :layers="plain ? null : borderEffects" seed="border">
         <ProfileBorderRenderer :shape="borderShape" :color="borderColor" />
         <LevelBadgeAvatar
           v-if="avatarUrl"
@@ -121,18 +108,7 @@ const fallbackTitleStyle = computed(() => {
           :mask-path="avatarMaskPath"
           :image-box="avatarImageBox"
         />
-      </FragmentedContent>
-      <template v-else>
-        <ProfileBorderRenderer :shape="borderShape" :color="borderColor" />
-        <LevelBadgeAvatar
-          v-if="avatarUrl"
-          :avatar-url="avatarUrl"
-          :fallback-url="avatarFallbackUrl"
-          :clip-id="avatarClipId"
-          :mask-path="avatarMaskPath"
-          :image-box="avatarImageBox"
-        />
-      </template>
+      </ContentEffects>
       <BorderDecals v-if="decals.length" class="level-badge__decals" :decals="decals" />
       <BorderOverlay
         v-if="overlay"
@@ -167,17 +143,9 @@ const fallbackTitleStyle = computed(() => {
             hide-stat-counters
           />
           <span class="level-badge__title-fx-text">
-            <FragmentedContent
-              v-if="titleFragment"
-              :fill="false"
-              subtle
-              :spec="titleFragment.spec"
-              :stack="titleFragment.count"
-              :seed="titleFragment.seed"
-            >
+            <ContentEffects :layers="plain ? null : titleEffects" :fill="false" subtle seed="title">
               <TitleRenderer :value="title" />
-            </FragmentedContent>
-            <TitleRenderer v-else :value="title" />
+            </ContentEffects>
           </span>
         </span>
         <span

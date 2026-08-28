@@ -35,7 +35,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
-import { readBackdropConfig } from '@/utils/themeBackdrop'
+import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import type {
   BarrierProgressResponse,
   CampaignBarrierResponse,

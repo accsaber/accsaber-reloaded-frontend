@@ -3,7 +3,7 @@ import type { LevelThreshold } from '@/api/levels'
 import logoUrl from '@/assets/logo.png'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
-import ThumbnailSceneRenderer from '@/components/domain/ThumbnailSceneRenderer.vue'
+import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
 import { tierKey } from '@/stores/levels'
 import type { ItemResponse } from '@/types/api/items'
 import {

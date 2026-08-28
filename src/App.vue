@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import AppNavbar from '@/components/layout/AppNavbar.vue'
-import ThemeBackdrop from '@/components/layout/ThemeBackdrop.vue'
+import ThemeBackdrop from '@/components/cosmetics/backdrops/ThemeBackdrop.vue'
 import { useBrandFavicon } from '@/composables/useBrandLogo'
 import { useNotificationSocket } from '@/composables/useNotificationSocket'
 import { useAuthStore } from '@/stores/auth'

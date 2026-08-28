@@ -27,10 +27,10 @@ import { useInventoryStore } from '@/stores/inventory'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
-import type { CrateOpenResponse, DisintegrationResponse, ItemRarity, ItemResponse, ItemTypeKey, UserItemResponse } from '@/types/api/items'
+import type { CrateOpenResponse, DisintegrationResponse, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
 import type { Page } from '@/types/pagination'
 import { ESSENCE_GLYPH, formatEssence, formatEssenceAmount } from '@/utils/essence'
-import { buildEffectLayers, RARITY_ORDER, readThemeValue } from '@/utils/items'
+import { RARITY_ORDER, buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
@@ -404,6 +404,16 @@ async function handleSelectVariant(linkId: string, variantKey: string) {
   actionBusy.value = true
   try {
     await inventoryStore.equip(target.linkId, props.userId, variantKey)
+    if (target.item.typeKey === 'theme') {
+      const theme = readThemeValue(resolveItemVariant(target.item.value as { variants?: ItemVariant[] }, variantKey))
+      if (theme) {
+        themeStore.setThemeFromTokens(
+          `item:${target.item.id}`,
+          theme.tokens,
+          buildEffectLayers(target.modifiers, target.unusualEffect),
+        )
+      }
+    }
   } catch (err) {
     reportActionError(err, 'Could not switch variant.')
   } finally {

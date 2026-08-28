@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import BorderDecals from '@/components/domain/BorderDecals.vue'
-import BorderOverlay from '@/components/domain/BorderOverlay.vue'
+import BorderDecals from '@/components/cosmetics/borders/BorderDecals.vue'
+import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
 import LevelBadgeAvatar from '@/components/domain/LevelBadgeAvatar.vue'
-import ProfileBorderRenderer from '@/components/domain/ProfileBorderRenderer.vue'
+import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
 import type { BorderColorValue, BorderShapeValue } from '@/types/api/items'
 import { DEFAULT_AVATAR_MASK, resolveAvatarImageBox } from '@/utils/avatarBox'
 import { computed, ref, watch } from 'vue'

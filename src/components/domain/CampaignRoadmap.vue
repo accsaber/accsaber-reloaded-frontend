@@ -3,7 +3,7 @@ import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import CampaignBarrierGate from '@/components/domain/CampaignBarrierGate.vue'
 import CampaignNode from '@/components/domain/CampaignNode.vue'
 import { useThemeStore } from '@/stores/theme'
-import { readBackdropConfig } from '@/utils/themeBackdrop'
+import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import type {
   BarrierProgressResponse,
   CampaignBackgroundPlacement,

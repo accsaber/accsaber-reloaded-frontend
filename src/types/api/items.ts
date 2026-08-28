@@ -140,7 +140,7 @@ export interface TitleFlashSpec {
   durationMs?: number
 }
 
-export type TitleSparkleShape = 'star' | 'paw' | 'firefly'
+export type TitleSparkleShape = 'star' | 'paw' | 'firefly' | 'snowflake'
 
 export interface TitleSparkleSpec {
   enabled: boolean
@@ -184,6 +184,28 @@ export interface TitleHazeAuraSpec {
   motes?: boolean
 }
 
+export interface TitleLanternAuraSpec {
+  type: 'lantern'
+  enabled: boolean
+  glow?: string
+  core?: string
+  lightGlow?: string
+  lightCore?: string
+  embers?: number
+  gutterEveryS?: number
+  gutterS?: number
+}
+
+export interface TitleGhostsAuraSpec {
+  type: 'ghosts'
+  enabled: boolean
+  color?: string
+  glow?: string
+  lightColor?: string
+  lightGlow?: string
+  count?: number
+}
+
 export interface TitleSmokeAuraSpec {
   type: 'smoke'
   enabled: boolean
@@ -204,11 +226,153 @@ export interface TitleAscensionAuraSpec {
   intervalS?: number
 }
 
+export interface TitleRunesAuraSpec {
+  type: 'runes'
+  enabled: boolean
+  color?: string
+  glow?: string
+  lightColor?: string
+  lightGlow?: string
+  count?: number
+}
+
+export interface TitleStormAuraSpec {
+  type: 'storm'
+  enabled: boolean
+  arc?: string
+  glow?: string
+  lightArc?: string
+  lightGlow?: string
+  intervalMs?: number
+}
+
+export interface TitleSigilAuraSpec {
+  type: 'sigil'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  periodS?: number
+}
+
+export interface TitleEarthAuraSpec {
+  type: 'earth'
+  enabled: boolean
+  stone?: string
+  lightStone?: string
+  dust?: string
+  lightDust?: string
+  count?: number
+}
+
+export interface TitleWindAuraSpec {
+  type: 'wind'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  leaf?: string
+  lightLeaf?: string
+  gustMs?: number
+}
+
+export interface TitleWaterAuraSpec {
+  type: 'water'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  foam?: string
+  lightFoam?: string
+}
+
+export interface TitleFairyAuraSpec {
+  type: 'fairy'
+  enabled: boolean
+  colors?: string[]
+  lightColors?: string[]
+  count?: number
+}
+
+export interface TitleBloodAuraSpec {
+  type: 'blood'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  glow?: string
+  lightGlow?: string
+  bat?: string
+  lightBat?: string
+  bats?: number
+  bpm?: number
+}
+
+export interface TitleCosmicAuraSpec {
+  type: 'cosmic'
+  enabled: boolean
+  star?: string
+  lightStar?: string
+  nebula?: string
+  lightNebula?: string
+  planet?: string
+  lightPlanet?: string
+}
+
+export interface TitleLightAuraSpec {
+  type: 'light'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+}
+
+export interface TitleVoidAuraSpec {
+  type: 'void'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  rim?: string
+  lightRim?: string
+}
+
+export interface TitleInfernoAuraSpec {
+  type: 'inferno'
+  enabled: boolean
+  core?: string
+  flame?: string
+  ember?: string
+  lightCore?: string
+  lightFlame?: string
+  lightEmber?: string
+  tongues?: number
+}
+
+export interface TitleIceAuraSpec {
+  type: 'ice'
+  enabled: boolean
+  frost?: string
+  ice?: string
+  lightFrost?: string
+  lightIce?: string
+  intervalMs?: number
+}
+
 export type TitleAuraSpec =
+  | TitleRunesAuraSpec
+  | TitleInfernoAuraSpec
+  | TitleIceAuraSpec
+  | TitleBloodAuraSpec
+  | TitleCosmicAuraSpec
+  | TitleLightAuraSpec
+  | TitleVoidAuraSpec
+  | TitleEarthAuraSpec
+  | TitleWindAuraSpec
+  | TitleWaterAuraSpec
+  | TitleFairyAuraSpec
+  | TitleStormAuraSpec
+  | TitleSigilAuraSpec
   | TitleFlameAuraSpec
   | TitleHazeAuraSpec
   | TitleSmokeAuraSpec
   | TitleAscensionAuraSpec
+  | TitleGhostsAuraSpec
+  | TitleLanternAuraSpec
 
 export type TitleAuraType = TitleAuraSpec['type']
 
@@ -278,6 +442,181 @@ export interface TitleSpectrumSplitSpec {
   microMs?: number
 }
 
+export type TitleHauntMode = 'poltergeist' | 'phantom' | 'possessed' | 'wraith' | 'banshee'
+
+export interface TitleHauntSpec {
+  enabled: boolean
+  mode?: TitleHauntMode
+  ghost?: string
+  lightGhost?: string
+  bleed?: string
+  lightBleed?: string
+  intervalMs?: number
+}
+
+export interface TitleFrostSpec {
+  enabled: boolean
+  frost?: string
+  glint?: string
+  lightFrost?: string
+  lightGlint?: string
+  intervalMs?: number
+  creepMs?: number
+  holdMs?: number
+  thawMs?: number
+}
+
+export interface TitleTransmuteSpec {
+  enabled: boolean
+  lead?: string
+  gold?: string
+  glint?: string
+  lightLead?: string
+  lightGold?: string
+  lightGlint?: string
+  intervalMs?: number
+  stepMs?: number
+  failChance?: number
+}
+
+export interface TitleRuneSpec {
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  intervalMs?: number
+  holdMs?: number
+}
+
+export interface TitleLanternSpec {
+  enabled: boolean
+  dim?: string
+  lit?: string
+  glow?: string
+  lightDim?: string
+  lightLit?: string
+  lightGlow?: string
+  gutterEveryS?: number
+  gutterS?: number
+}
+
+export type BrewIngredientKind = 'eye' | 'mushroom' | 'newt' | 'spider'
+
+export interface TitleBrewIngredient {
+  kind: BrewIngredientKind
+  color: string
+  lightColor?: string
+}
+
+export interface TitleBrewSpec {
+  enabled: boolean
+  ingredients: TitleBrewIngredient[]
+  bone?: string
+  bubbles?: number
+  dropMinS?: number
+  dropMaxS?: number
+  surface?: number
+  bobEm?: number
+}
+
+export interface TitleQuakeSpec {
+  enabled: boolean
+  stone?: string
+  lightStone?: string
+  crack?: string
+  lightCrack?: string
+  intervalMs?: number
+}
+
+export interface TitleGustSpec {
+  enabled: boolean
+  intervalMs?: number
+  leanDeg?: number
+  throwEm?: number
+}
+
+export interface TitleRippleSpec {
+  enabled: boolean
+  deep?: string
+  shallow?: string
+  lightDeep?: string
+  lightShallow?: string
+  ampEm?: number
+  periodMs?: number
+  intervalMs?: number
+}
+
+export interface TitlePixieSpec {
+  enabled: boolean
+  colors?: string[]
+  lightColors?: string[]
+  intervalMs?: number
+}
+
+export interface TitleBleedSpec {
+  enabled: boolean
+  blood?: string
+  lightBlood?: string
+  bpm?: number
+  intervalMs?: number
+}
+
+export interface TitleGalaxySpec {
+  enabled: boolean
+  colors?: string[]
+  lightColors?: string[]
+  intervalMs?: number
+}
+
+export interface TitleFlareSpec {
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  intervalMs?: number
+}
+
+export interface TitleDevourSpec {
+  enabled: boolean
+  intervalMs?: number
+}
+
+export interface TitleSearSpec {
+  enabled: boolean
+  hot?: string
+  ember?: string
+  lightHot?: string
+  lightEmber?: string
+  intervalMs?: number
+}
+
+export interface TitleShockSpec {
+  enabled: boolean
+  arc?: string
+  lightArc?: string
+  intervalMs?: number
+}
+
+export interface TitleFloatSpec {
+  enabled: boolean
+  ampEm?: number
+  periodMs?: number
+  tiltDeg?: number
+}
+
+export interface TitleJoltSpec {
+  enabled: boolean
+  scale?: number
+  windupMs?: number
+  holdMs?: number
+  recoilMs?: number
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  flash?: string
+  lightFlash?: string
+  screamColor?: string
+  lightScreamColor?: string
+  rings?: boolean
+}
+
 export interface TitleValue {
   text: string
   font?: TitleFont
@@ -291,6 +630,24 @@ export interface TitleValue {
   blaze?: TitleBlazeSpec
   crust?: TitleCrustSpec
   spectrumSplit?: TitleSpectrumSplitSpec
+  haunt?: TitleHauntSpec
+  jolt?: TitleJoltSpec
+  float?: TitleFloatSpec
+  lantern?: TitleLanternSpec
+  brew?: TitleBrewSpec
+  quake?: TitleQuakeSpec
+  gust?: TitleGustSpec
+  ripple?: TitleRippleSpec
+  pixie?: TitlePixieSpec
+  bleed?: TitleBleedSpec
+  galaxy?: TitleGalaxySpec
+  flare?: TitleFlareSpec
+  devour?: TitleDevourSpec
+  shock?: TitleShockSpec
+  sear?: TitleSearSpec
+  frost?: TitleFrostSpec
+  transmute?: TitleTransmuteSpec
+  rune?: TitleRuneSpec
   variants?: ItemVariant[]
   durationMs?: number
   loop?: Loop
@@ -401,6 +758,7 @@ export interface BorderDecal {
   rotateDeg?: number
   opacity?: number
   pulse?: { periodMs?: number; scaleAmp?: number }
+  swing?: { periodMs?: number; deg?: number }
 }
 
 export interface BorderRainOverlaySpec {
@@ -473,8 +831,62 @@ export interface BorderBlueprintOverlaySpec {
   dim?: { x1: number; y1: number; x2: number; y2: number }
 }
 
+export type CoffinMaterial = 'oak' | 'iron' | 'stone' | 'glass'
+
+export interface BorderCoffinOverlaySpec {
+  type: 'coffin'
+  enabled: boolean
+  material?: CoffinMaterial
+  lid?: string
+  trim?: string
+  seam?: string
+  soil?: string
+  root?: string
+  bone?: string
+  intervalMs?: number
+  holdMs?: number
+  hover?: boolean
+}
+
+export type DryBonesPathKind = 'bone' | 'shade' | 'dark' | 'crack' | 'socket'
+
+export interface DryBonesPart {
+  x: number
+  y: number
+  flat?: number
+  role?: 'skull' | 'jaw'
+  paths: { d: string; kind: DryBonesPathKind; opacity?: number }[]
+}
+
+export interface BorderDryBonesOverlaySpec {
+  type: 'drybones'
+  enabled: boolean
+  bone: string
+  shade: string
+  dark: string
+  crack: string
+  rim: string
+  parts: DryBonesPart[]
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  hover?: boolean
+}
+
+export interface BorderDripOverlaySpec {
+  type: 'drip'
+  enabled: boolean
+  color?: string
+  sources: { x: number; y: number }[]
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  gravity?: number
+}
+
 export type BorderOverlaySpec =
   | BorderRainOverlaySpec
+  | BorderDripOverlaySpec
+  | BorderDryBonesOverlaySpec
+  | BorderCoffinOverlaySpec
   | BorderBlackHoleOverlaySpec
   | BorderArcadeOverlaySpec
   | BorderThermalOverlaySpec
@@ -601,8 +1013,61 @@ export interface DominionFill {
   microS?: number
 }
 
+export interface BrewFill {
+  type: 'brew'
+  colors: string[]
+  bone: string
+  bubbles?: number
+  dropMinS?: number
+  dropMaxS?: number
+}
+
+export interface WoodFill {
+  type: 'wood'
+  base: string
+  dark: string
+  light: string
+  plank?: number
+}
+
+export interface CandleFill {
+  type: 'candle'
+  dark: string
+  flame: string
+  glow: string
+  count?: number
+}
+
+export type EclipseCreatureKind =
+  | 'reaper' | 'brute' | 'swampthing' | 'deepone' | 'vampire' | 'wolf' | 'butcher' | 'psycho' | 'nailhead' | 'manfly' | 'zombie'
+  | 'eye' | 'wisp' | 'skull' | 'sphere'
+  | 'moth' | 'mothron' | 'bigbat' | 'raven' | 'fly' | 'dragonfly'
+  | 'bat'
+
+export interface EclipseRoster {
+  walkers?: EclipseCreatureKind[]
+  drifters?: EclipseCreatureKind[]
+  flyers?: EclipseCreatureKind[]
+  swarm?: EclipseCreatureKind
+}
+
+export interface EclipseFill {
+  type: 'eclipse'
+  sky: string
+  dusk: string
+  corona: string
+  shadow?: string
+  creatures?: boolean
+  roster?: EclipseRoster
+  intervalS?: number
+}
+
 export type BorderColorFill =
   | { type: 'solid'; hex: string }
+  | EclipseFill
+  | CandleFill
+  | WoodFill
+  | BrewFill
   | Gradient
   | PixelMetalFill
   | CosmicFill
@@ -623,6 +1088,7 @@ export interface BorderColorStateValue {
 export interface ItemVariant {
   key: string
   label: string
+  recolor?: Record<string, string>
   [override: string]: unknown
 }
 
@@ -727,7 +1193,59 @@ export interface FusionScene {
   colors: string[]
 }
 
+export interface HallwayScene {
+  type: 'hallway'
+  base?: 'light' | 'dark'
+  wall: string
+  floor: string
+  beam: string
+  figure: string
+  face: string
+  scareMinS?: number
+  scareMaxS?: number
+}
+
+export interface GraveyardScene {
+  type: 'graveyard'
+  base?: 'light' | 'dark'
+  skyTop: string
+  skyBottom: string
+  ground: string
+  stone: string
+  moon: string
+  fog: string
+  wisp?: string
+}
+
+export interface PumpkinPatchScene {
+  type: 'pumpkin_patch'
+  base?: 'light' | 'dark'
+  skyTop: string
+  skyBottom: string
+  ground: string
+  pumpkin: string
+  pumpkinLit: string
+  vine: string
+  moon: string
+  candle: string
+}
+
+export interface FullMoonScene {
+  type: 'full_moon'
+  base?: 'light' | 'dark'
+  skyTop: string
+  skyBottom: string
+  moon: string
+  crater: string
+  cloud: string
+  bat: string
+}
+
 export type ThumbnailScene =
+  | HallwayScene
+  | GraveyardScene
+  | PumpkinPatchScene
+  | FullMoonScene
   | FacetVaultScene
   | GroveScene
   | SanctumScene

@@ -1,3 +1,5 @@
+import { asNumber, asString } from '@/utils/cosmetics/effects'
+import type { HauntSpec, WearSpec } from '@/utils/cosmetics/wear'
 import type {
   AssetSet,
   BadgeValue,
@@ -206,19 +208,55 @@ export interface FragmentSpec {
 }
 
 function parseFragment(c: Composition): FragmentSpec {
-  const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d)
-  const stx = (v: unknown, d: string) => (typeof v === 'string' ? v : d)
   return {
-    radiusPct: Math.max(20, Math.min(100, num(c.radiusPct, 40))),
-    cols: Math.max(3, Math.min(9, Math.round(num(c.cols, 6)))),
-    black: stx(c.black, '#0c0a0a'),
-    red: stx(c.red, '#d8241c'),
+    radiusPct: Math.max(20, Math.min(100, asNumber(c.radiusPct) ?? 40)),
+    cols: Math.max(3, Math.min(9, Math.round(asNumber(c.cols) ?? 6))),
+    black: asString(c.black) ?? '#0c0a0a',
+    red: asString(c.red) ?? '#d8241c',
   }
 }
 
 export function readFragmentSpec(unusualEffect?: UnusualEffectRef | null): FragmentSpec | null {
   const c = unusualEffect?.effectSpec?.compositions?.find((comp) => comp.type === 'fragment')
   return c ? parseFragment(c) : null
+}
+
+export function readWearSpec(c: Composition): WearSpec {
+  return {
+    chips: Math.max(1, Math.min(10, Math.round(asNumber(c.chips) ?? 5))),
+    cracks: Math.max(0, Math.min(12, Math.round(asNumber(c.cracks) ?? 3))),
+    dark: asString(c.dark) ?? '#2a1a0e',
+    flakes: c.flakes !== false,
+  }
+}
+
+export function readHauntSpec(c: Composition): HauntSpec {
+  return {
+    color: asString(c.color) ?? '#38f3ab',
+    opacity: Math.max(0.2, Math.min(1, asNumber(c.opacity) ?? 0.7)),
+    cycleS: Math.max(4, asNumber(c.cycleS) ?? 8),
+    eyes: c.eyes !== false,
+  }
+}
+
+function findLayerComposition<T>(
+  layers: EffectLayer[] | null | undefined,
+  type: string,
+  parse: (c: Composition) => T,
+): { spec: T; seed: string } | null {
+  for (const layer of layers ?? []) {
+    const c = layer.spec.compositions.find((comp) => comp.type === type)
+    if (c) return { spec: parse(c), seed: layer.key }
+  }
+  return null
+}
+
+export function readWearFromLayers(layers: EffectLayer[] | null | undefined): { spec: WearSpec; seed: string } | null {
+  return findLayerComposition(layers, 'wear', readWearSpec)
+}
+
+export function readHauntFromLayers(layers: EffectLayer[] | null | undefined): { spec: HauntSpec; seed: string } | null {
+  return findLayerComposition(layers, 'haunt', readHauntSpec)
 }
 
 export function readFragmentFromLayers(
@@ -311,6 +349,24 @@ function isCosmicFill(v: unknown): boolean {
     && Array.isArray(v.nebulas) && v.nebulas.every(isString)
 }
 
+function isBrewFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'brew') return false
+  return Array.isArray(v.colors) && v.colors.every(isString) && isString(v.bone)
+}
+
+function isWoodFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'wood') return false
+  return isString(v.base) && isString(v.dark) && isString(v.light)
+}
+
+function isCandleFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'candle') return false
+  return isString(v.dark) && isString(v.flame) && isString(v.glow)
+}
+
 function isToonFill(v: unknown): boolean {
   if (!isObj(v)) return false
   if (v.type !== 'toon') return false
@@ -349,6 +405,12 @@ function isStolenFlameFill(v: unknown): boolean {
   return isString(v.night) && isString(v.flame) && isString(v.flameDeep) && isString(v.ember)
 }
 
+function isEclipseFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'eclipse') return false
+  return isString(v.sky) && isString(v.dusk) && isString(v.corona)
+}
+
 function isDominionFill(v: unknown): boolean {
   if (!isObj(v)) return false
   if (v.type !== 'dominion') return false
@@ -372,6 +434,10 @@ export function readBorderColorValue(value: unknown): BorderColorValue | null {
     if (fill.type === 'colossus') return isColossusFill(fill)
     if (fill.type === 'stolenflame') return isStolenFlameFill(fill)
     if (fill.type === 'dominion') return isDominionFill(fill)
+    if (fill.type === 'eclipse') return isEclipseFill(fill)
+    if (fill.type === 'candle') return isCandleFill(fill)
+    if (fill.type === 'wood') return isWoodFill(fill)
+    if (fill.type === 'brew') return isBrewFill(fill)
     return isGradient(fill)
   })
   if (validStates.length === 0) return null
@@ -407,6 +473,10 @@ function isThumbnailScene(v: unknown): boolean {
     return isString(v.bg) && isString(v.beam)
       && Array.isArray(v.colors) && v.colors.every(isString)
   }
+  if (v.type === 'hallway') return isString(v.wall) && isString(v.floor) && isString(v.beam) && isString(v.figure) && isString(v.face)
+  if (v.type === 'graveyard') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.ground) && isString(v.stone) && isString(v.moon) && isString(v.fog)
+  if (v.type === 'pumpkin_patch') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.ground) && isString(v.pumpkin) && isString(v.pumpkinLit) && isString(v.vine) && isString(v.moon) && isString(v.candle)
+  if (v.type === 'full_moon') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.moon) && isString(v.crater) && isString(v.cloud) && isString(v.bat)
   return false
 }
 
@@ -424,6 +494,10 @@ export function thumbnailSceneInk(scene: ThumbnailScene): string {
     case 'monument': return scene.skyTop
     case 'torchlit': return scene.sky
     case 'fusion': return scene.bg
+    case 'hallway': return scene.wall
+    case 'graveyard': return scene.skyTop
+    case 'pumpkin_patch': return scene.skyTop
+    case 'full_moon': return scene.skyTop
   }
 }
 
@@ -462,9 +536,23 @@ export function resolveItemVariant<T extends { variants?: ItemVariant[] }>(
   const variant = value.variants.find((v) => v.key === variantKey)
   if (!variant) return value
   const overrides = Object.fromEntries(
-    Object.entries(variant).filter(([k]) => k !== 'key' && k !== 'label'),
+    Object.entries(variant).filter(([k]) => k !== 'key' && k !== 'label' && k !== 'recolor'),
   )
-  return { ...value, ...overrides }
+  const merged = { ...value, ...overrides }
+  return variant.recolor ? recolorValue(merged, variant.recolor) : merged
+}
+
+function recolorValue<T>(value: T, map: Record<string, string>): T {
+  const lookup = new Map(Object.entries(map).map(([from, to]) => [from.toLowerCase(), to]))
+  const walk = (node: unknown): unknown => {
+    if (typeof node === 'string') return lookup.get(node.toLowerCase()) ?? node
+    if (Array.isArray(node)) return node.map(walk)
+    if (isObj(node)) {
+      return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, k === 'variants' ? v : walk(v)]))
+    }
+    return node
+  }
+  return walk(value) as T
 }
 
 export function resolveEquippedVariant<T extends { variants?: ItemVariant[] }>(
@@ -651,6 +739,16 @@ export function fillToCss(fill: BorderColorFill): string {
   if (fill.type === 'toon') {
     return `repeating-linear-gradient(135deg, ${fill.ink} 0px, ${fill.ink} 7px, ${fill.line} 7px, ${fill.line} 9px)`
   }
+  if (fill.type === 'brew') {
+    const cs = fill.colors.length ? fill.colors : ['#4e7a2a']
+    return `linear-gradient(135deg, ${cs.map((c, i) => `${c} ${Math.round((i / Math.max(1, cs.length - 1)) * 100)}%`).join(', ')})`
+  }
+  if (fill.type === 'wood') {
+    return `repeating-linear-gradient(180deg, ${fill.base} 0px, ${fill.light} 5px, ${fill.base} 9px, ${fill.dark} 11px, ${fill.dark} 12px)`
+  }
+  if (fill.type === 'candle') {
+    return `radial-gradient(circle at 30% 35%, ${fill.glow} 0%, ${fill.dark} 45%), radial-gradient(circle at 75% 70%, ${fill.glow} 0%, ${fill.dark} 40%)`
+  }
   if (fill.type === 'prism') {
     const lo = fill.lo ?? fill.rose
     const hi = fill.hi ?? fill.edge
@@ -667,6 +765,9 @@ export function fillToCss(fill: BorderColorFill): string {
   }
   if (fill.type === 'stolenflame') {
     return `linear-gradient(135deg, ${fill.night} 0%, ${fill.flameDeep} 55%, ${fill.flame} 78%, ${fill.night} 100%)`
+  }
+  if (fill.type === 'eclipse') {
+    return `radial-gradient(circle at 50% 8%, ${fill.corona} 0%, ${fill.dusk} 22%, ${fill.sky} 100%)`
   }
   if (fill.type === 'dominion') {
     const body = fill.body ?? '#ffffff'
@@ -756,12 +857,12 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
 }
 
 const CANVAS_FILL_TYPES = new Set([
-  'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion',
+  'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion', 'eclipse', 'candle', 'wood', 'brew',
 ])
 
 type CanvasFill = Extract<
   BorderColorFill,
-  { type: 'cosmic' | 'toon' | 'prism' | 'grove' | 'regalia' | 'colossus' | 'stolenflame' | 'dominion' }
+  { type: 'cosmic' | 'toon' | 'prism' | 'grove' | 'regalia' | 'colossus' | 'stolenflame' | 'dominion' | 'eclipse' | 'candle' | 'wood' | 'brew' }
 >
 
 function isCanvasFill(fill: BorderColorFill): fill is CanvasFill {

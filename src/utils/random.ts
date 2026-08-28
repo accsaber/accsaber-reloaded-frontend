@@ -9,6 +9,11 @@ export function hash01(n: number): number {
   return (h % 100000) / 100000
 }
 
+export function sinHash01(n: number): number {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.545
+  return x - Math.floor(x)
+}
+
 export function hashSeed(s: string): number {
   let h = 2166136261
   for (let i = 0; i < s.length; i++) {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
-import { useElementCanvas } from '@/composables/useBackdropCanvas'
+import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { PracticeScoreSubmission } from '@/types/api/practiceScores'
 import { addLocalScore, loadLastName, loadLocalScores, saveLastName } from '@/utils/practiceScores'
 import { computed, ref } from 'vue'

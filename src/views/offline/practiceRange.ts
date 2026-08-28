@@ -1,4 +1,4 @@
-import type { BackdropScene } from '@/composables/useBackdropCanvas'
+import type { CanvasScene } from '@/composables/useCanvasScene'
 import {
   applyGravity,
   drawSparks,
@@ -27,7 +27,7 @@ export type RangeEvent =
   | { type: 'game'; snapshot: GameSnapshot }
   | { type: 'over'; snapshot: GameSnapshot }
 
-export interface PracticeRangeScene extends BackdropScene {
+export interface PracticeRangeScene extends CanvasScene {
   pointerMove(x: number, y: number, now: number): void
   pointerEnd(): void
   setMode(mode: RangeMode): void

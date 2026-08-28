@@ -1,5 +1,5 @@
 import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue'
-import type { ContentBox, OverlayBox } from '@/components/domain/effects/shared'
+import type { ContentBox, OverlayBox } from '@/utils/cosmetics/effects'
 
 export function useOverlayMeasure(
   overlayEl: Ref<HTMLElement | null>,

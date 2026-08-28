@@ -33,13 +33,13 @@ const shapeValue = computed(() =>
 )
 
 const avatarHoleMask = computed<string | null>(() => {
-  if (!shapeValue.value) return null
+  if (!isBorder.value) return null
   const span = BORDER_WRAP_PCT * AVATAR_OF_WRAP
   const inset = (100 - span) / 2
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">`
     + `<g transform="translate(${inset},${inset}) scale(${span / 100})">`
-    + `<path d="${shapeValue.value.avatarMask ?? DEFAULT_AVATAR_MASK}" fill="#ffffff"/></g></svg>`
+    + `<path d="${shapeValue.value?.avatarMask ?? DEFAULT_AVATAR_MASK}" fill="#ffffff"/></g></svg>`
   return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`
 })
 
@@ -114,8 +114,7 @@ const hostStyle = computed(() => {
   -webkit-text-fill-color: var(--flat-text) !important;
 }
 
-.icon-capture--border :deep(.item-preview__shape-wrap),
-.icon-capture--border :deep(.item-preview__color-swatch) {
+.icon-capture--border :deep(.item-preview__shape-wrap) {
   width: v-bind('`${BORDER_WRAP_PCT}%`');
 }
 

@@ -2,10 +2,10 @@
 import CountryFlag from '@/components/domain/CountryFlag.vue';
 import LevelBadge from '@/components/domain/LevelBadge.vue';
 import RelationActions from '@/components/domain/RelationActions.vue';
-import ThumbnailSceneRenderer from '@/components/domain/ThumbnailSceneRenderer.vue';
+import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue';
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
-import ModifierCompositions from '@/components/domain/ModifierCompositions.vue';
+import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue';
 import { fillToCss, pickAssetUrl, themeCompositionLayers, thumbnailSceneInk } from '@/utils/items';
 import { computed } from 'vue';
 

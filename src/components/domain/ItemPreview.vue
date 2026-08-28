@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import BorderDecals from '@/components/domain/BorderDecals.vue'
-import BorderOverlay from '@/components/domain/BorderOverlay.vue'
-import CrateIcon from '@/components/domain/CrateIcon.vue'
-import ProfileBorderRenderer from '@/components/domain/ProfileBorderRenderer.vue'
-import TitleRenderer from '@/components/domain/TitleRenderer.vue'
-import ThemeBackdropPreview from '@/components/layout/ThemeBackdropPreview.vue'
-import ThumbnailSceneRenderer from '@/components/domain/ThumbnailSceneRenderer.vue'
+import BorderDecals from '@/components/cosmetics/borders/BorderDecals.vue'
+import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
+import CrateIcon from '@/components/cosmetics/CrateIcon.vue'
+import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
+import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
+import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
+import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
 import type {
   BorderColorValue,
   BorderShapeValue,
@@ -15,7 +15,6 @@ import type {
 } from '@/types/api/items'
 import { SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import {
-  fillToCss,
   pickAssetUrl,
   rarityClass,
   readBackgroundValue,
@@ -29,7 +28,8 @@ import {
   tokenize,
 } from '@/utils/items'
 import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
-import { computed } from 'vue'
+import { useFitScale } from '@/composables/useFitScale'
+import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   item: ItemResponse
@@ -45,14 +45,6 @@ const titleValue = computed<TitleValue | null>(() =>
 const borderColorValue = computed<BorderColorValue | null>(() =>
   typeKey.value === 'profile_border_color' ? readBorderColorValue(props.item.value) : null,
 )
-const borderColorBackground = computed<string | null>(() => {
-  const fill = borderColorValue.value?.states?.[0]?.fill
-  return fill ? fillToCss(fill) : null
-})
-const borderColorIsCosmic = computed(() => {
-  const type = borderColorValue.value?.states?.[0]?.fill?.type
-  return type === 'cosmic' || type === 'toon'
-})
 
 const borderShapeValue = computed<BorderShapeValue | null>(() =>
   typeKey.value === 'profile_border_shape' ? readBorderShapeValue(props.item.value) : null,
@@ -75,7 +67,23 @@ const shapePreviewColor = computed<BorderColorValue | null>(() => {
   }
 })
 
-const shapeAvatarMask = computed(() => borderShapeValue.value?.avatarMask ?? DEFAULT_AVATAR_MASK)
+const borderPreview = computed<{
+  shape: BorderShapeValue | null
+  color: BorderColorValue | null
+  avatarMask: string
+} | null>(() => {
+  if (borderShapeValue.value) {
+    return {
+      shape: borderShapeValue.value,
+      color: shapePreviewColor.value,
+      avatarMask: borderShapeValue.value.avatarMask ?? DEFAULT_AVATAR_MASK,
+    }
+  }
+  if (borderColorValue.value) {
+    return { shape: null, color: borderColorValue.value, avatarMask: DEFAULT_AVATAR_MASK }
+  }
+  return null
+})
 
 const shapeAvatarClipId = `ip-avatar-clip-${Math.random().toString(36).slice(2, 9)}`
 
@@ -117,6 +125,11 @@ const themeStyleVars = computed<Record<string, string> | undefined>(() => {
   return out
 })
 
+const titleHost = useTemplateRef<HTMLElement>('titleHost')
+const titleFit = useTemplateRef<HTMLElement>('titleFit')
+const titleScale = useFitScale(titleHost, titleFit)
+const titleFitStyle = computed(() => (titleScale.value < 1 ? { transform: `scale(${titleScale.value.toFixed(3)})` } : undefined))
+
 const PERK_RE = /^([+-]\d+)/
 const perkAmount = computed<string | null>(() => {
   if (typeKey.value !== 'perk') return null
@@ -148,30 +161,20 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 
     <span
       v-else-if="typeKey === 'title' && titleValue"
+      ref="titleHost"
       class="item-preview__title"
     >
-      <TitleRenderer :value="titleValue" />
+      <span ref="titleFit" class="item-preview__title-fit" :style="titleFitStyle">
+        <TitleRenderer :value="titleValue" />
+      </span>
     </span>
 
     <span
-      v-else-if="typeKey === 'profile_border_color' && borderColorIsCosmic"
-      class="item-preview__shape-wrap"
-    >
-      <ProfileBorderRenderer :shape="null" :color="borderColorValue" />
-    </span>
-
-    <span
-      v-else-if="typeKey === 'profile_border_color' && borderColorBackground"
-      class="item-preview__color-swatch"
-      :style="{ background: borderColorBackground }"
-    />
-
-    <span
-      v-else-if="typeKey === 'profile_border_shape' && borderShapeValue"
+      v-else-if="borderPreview"
       class="item-preview__shape-wrap"
       aria-hidden="true"
     >
-      <ProfileBorderRenderer :shape="borderShapeValue" :color="shapePreviewColor" />
+      <ProfileBorderRenderer :shape="borderPreview.shape" :color="borderPreview.color" />
       <svg
         class="item-preview__shape-avatar"
         viewBox="0 0 100 100"
@@ -180,7 +183,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       >
         <defs>
           <clipPath :id="shapeAvatarClipId">
-            <path :d="shapeAvatarMask" />
+            <path :d="borderPreview.avatarMask" />
           </clipPath>
         </defs>
         <rect
@@ -192,11 +195,14 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
           class="item-preview__shape-avatar-fill"
         />
       </svg>
-      <BorderDecals v-if="borderShapeValue.decals?.length" :decals="borderShapeValue.decals" />
+      <BorderDecals
+        v-if="borderPreview.shape?.decals?.length"
+        :decals="borderPreview.shape.decals"
+      />
       <BorderOverlay
-        v-if="borderShapeValue.overlay?.enabled"
-        :overlay="borderShapeValue.overlay"
-        :color="shapePreviewColor"
+        v-if="borderPreview.shape?.overlay?.enabled"
+        :overlay="borderPreview.shape.overlay"
+        :color="borderPreview.color"
       />
     </span>
 
@@ -418,23 +424,12 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 
 .item-preview__title :deep(.title-renderer) {
   font-size: clamp(0.7rem, 9cqi, 1.05rem);
-  max-width: 100%;
 }
 
-.item-preview__title :deep(.title-renderer__text) {
+.item-preview__title-fit {
   display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: bottom;
-}
-
-.item-preview__color-swatch {
-  display: block;
-  width: 65%;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--radius-avatar);
-  border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
+  white-space: nowrap;
+  transform-origin: 50% 50%;
 }
 
 .item-preview__shape-wrap {

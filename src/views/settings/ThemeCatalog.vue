@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { equipItem, getItems, getUserItems } from '@/api/items'
-import ThemeBackdropPreview from '@/components/layout/ThemeBackdropPreview.vue'
+import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
 import type { ItemResponse, UserItemResponse } from '@/types/api/items'
-import { buildEffectLayers, filterThemableTokens, readThemeValue } from '@/utils/items'
+import { buildEffectLayers, filterThemableTokens, readItemVariants, readThemeValue, resolveItemVariant } from '@/utils/items'
 import { computed, onMounted, ref, watch } from 'vue'
 
 interface ThemeCard {
@@ -19,6 +19,8 @@ interface ThemeCard {
   itemId: string | null
   tokens: Record<string, string> | null
   altTokens: Record<string, string> | null
+  variantKey: string | null
+  variantLabel: string | null
 }
 
 const authStore = useAuthStore()
@@ -26,8 +28,8 @@ const themeStore = useThemeStore()
 const itemTypeStore = useItemTypeStore()
 
 const BUILTIN_THEMES: ThemeCard[] = [
-  { id: 'builtin-dark', themeKey: 'dark', name: 'Dark', description: 'Default dark mode.', requirement: null, builtin: true, owned: true, itemId: null, tokens: null, altTokens: null },
-  { id: 'builtin-light', themeKey: 'light', name: 'Light', description: 'Default light mode.', requirement: null, builtin: true, owned: true, itemId: null, tokens: null, altTokens: null },
+  { id: 'builtin-dark', themeKey: 'dark', name: 'Dark', description: 'Default dark mode.', requirement: null, builtin: true, owned: true, itemId: null, tokens: null, altTokens: null, variantKey: null, variantLabel: null },
+  { id: 'builtin-light', themeKey: 'light', name: 'Light', description: 'Default light mode.', requirement: null, builtin: true, owned: true, itemId: null, tokens: null, altTokens: null, variantKey: null, variantLabel: null },
 ]
 
 const BUILTIN_PREVIEW_TOKENS: Record<string, Record<string, string>> = {
@@ -48,24 +50,32 @@ const ownedThemeByItemId = computed(() => {
   return map
 })
 
+function itemCards(i: ItemResponse): ThemeCard[] {
+  const base = {
+    id: i.id,
+    themeKey: `item:${i.id}`,
+    name: i.name,
+    description: i.description,
+    requirement: i.requirement,
+    builtin: false,
+    owned: ownedThemeItemIds.value.has(i.id),
+    itemId: i.id,
+  }
+  const variants = readItemVariants(i.value)
+  if (!variants) {
+    const themeValue = readThemeValue(i.value)
+    return [{ ...base, tokens: themeValue?.tokens ?? null, altTokens: themeValue?.altTokens ?? null, variantKey: null, variantLabel: null }]
+  }
+  return variants.map((v) => {
+    const themeValue = readThemeValue(resolveItemVariant(i.value as { variants?: typeof variants }, v.key))
+    return { ...base, id: `${i.id}:${v.key}`, tokens: themeValue?.tokens ?? null, altTokens: null, variantKey: v.key, variantLabel: v.label }
+  })
+}
+
 const inventoryThemeCards = computed<ThemeCard[]>(() =>
   themeCatalog.value
     .filter((i) => i.active && !i.deprecated)
-    .map((i) => {
-      const themeValue = readThemeValue(i.value)
-      return {
-        id: i.id,
-        themeKey: `item:${i.id}`,
-        name: i.name,
-        description: i.description,
-        requirement: i.requirement,
-        builtin: false,
-        owned: ownedThemeItemIds.value.has(i.id),
-        itemId: i.id,
-        tokens: themeValue?.tokens ?? null,
-        altTokens: themeValue?.altTokens ?? null,
-      }
-    })
+    .flatMap(itemCards)
     .filter((c) => c.tokens != null),
 )
 
@@ -110,6 +120,12 @@ function isVariantActive(card: ThemeCard, alt: boolean): boolean {
   return JSON.stringify(themeStore.activeTokens) === JSON.stringify(variant)
 }
 
+function isCardActive(card: ThemeCard): boolean {
+  if (themeStore.theme !== card.themeKey) return false
+  if (!card.variantKey || !card.tokens || !themeStore.activeTokens) return true
+  return JSON.stringify(themeStore.activeTokens) === JSON.stringify(card.tokens)
+}
+
 function lockedHint(card: ThemeCard): string {
   return card.requirement ?? card.description ?? 'Locked theme.'
 }
@@ -145,7 +161,7 @@ async function pickTheme(card: ThemeCard, alt = false) {
     const owned = card.itemId ? ownedThemeByItemId.value.get(card.itemId) : undefined
     if (!card.builtin && card.itemId) {
       if (!owned) return
-      await equipItem({ linkId: owned.linkId })
+      await equipItem(card.variantKey ? { linkId: owned.linkId, variantKey: card.variantKey } : { linkId: owned.linkId })
     }
     const tokens = alt ? card.altTokens : card.tokens
     if (card.builtin) {
@@ -200,10 +216,10 @@ watch(() => authStore.userId, loadThemes)
       </button>
     </div>
     <button v-else type="button" class="theme-card" :class="{
-      'theme-card--active': themeStore.theme === card.themeKey,
+      'theme-card--active': isCardActive(card),
       'theme-card--locked': !card.owned,
       'theme-card--builtin': card.builtin,
-    }" role="radio" :aria-checked="themeStore.theme === card.themeKey"
+    }" role="radio" :aria-checked="isCardActive(card)"
       :disabled="!card.owned || themeBusy === card.id" :title="!card.owned ? lockedHint(card) : undefined"
       @click="pickTheme(card)">
       <div class="theme-card__preview" :style="previewVars(card)">
@@ -216,11 +232,12 @@ watch(() => authStore.userId, loadThemes)
         <span class="theme-card__name">{{ card.name }}</span>
         <span class="theme-card__hint">
           <template v-if="card.builtin">Default theme</template>
+          <template v-else-if="card.variantLabel">{{ card.variantLabel }}</template>
           <template v-else-if="card.owned">{{ card.description ?? 'Owned' }}</template>
           <template v-else>{{ lockedHint(card) }}</template>
         </span>
       </div>
-      <span v-if="themeStore.theme === card.themeKey" class="theme-card__active-tag">Active</span>
+      <span v-if="isCardActive(card)" class="theme-card__active-tag">Active</span>
       <span v-else-if="!card.owned" class="theme-card__lock-tag" aria-label="Locked">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
