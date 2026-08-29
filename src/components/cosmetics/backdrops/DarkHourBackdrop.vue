@@ -29,12 +29,22 @@ interface Puddle {
   seed: number
 }
 
+interface Ripple {
+  p: Puddle
+  born: number
+  u: number
+  v: number
+}
+
 const STATIC_T = 5
 const CLOUDS = 10
 const PUFFS = 80
 const HORIZON = 0.8
 const MOON_X = 0.62
 const MOON_Y = 0.22
+const SQUASH = 0.35
+const GRAIN = 2600
+const RIPPLE_S = 1.6
 const LAYERS = [
   { haze: 0.55, minH: 40, maxH: 110, minW: 14, maxW: 34, lift: 2 },
   { haze: 0.3, minH: 22, maxH: 74, minW: 10, maxW: 30, lift: 1 },
@@ -43,10 +53,15 @@ const LAYERS = [
 
 let startTime = 0
 let unit = 1
+let dpr = 1
 let seed = 0
 let clouds: Cloud[] = []
 let puddles: Puddle[] = []
+let ripples: Ripple[] = []
+let nextRipple = 0
 let skyline: HTMLCanvasElement | null = null
+let mirrored: HTMLCanvasElement | null = null
+let mirror = false
 let street: HTMLCanvasElement | null = null
 let litLayer: HTMLCanvasElement | null = null
 
@@ -136,8 +151,8 @@ function drawWindows(ctx: Ctx, x: number, top: number, bw: number, bh: number, k
     for (let c = 0; c < cols; c++) {
       const v = h01(k * 131 + r * 17 + c * 7)
       if (v > litP) continue
-      const a = (0.22 + (v / litP) * 0.35) * (1 - haze * 0.7)
-      ctx.fillStyle = withAlpha(props.config.windowColor, a)
+      const a = (0.22 + (v / litP) * 0.35) * (1 - haze * 0.7) * (mirror ? 2.2 : 1)
+      ctx.fillStyle = withAlpha(props.config.windowColor, Math.min(1, a))
       ctx.fillRect(x + unit * 0.8 + c * cell, top + unit * 1.4 + r * cell, unit * 1.1, unit * 1.3)
     }
   }
@@ -159,7 +174,9 @@ function drawRoof(ctx: Ctx, x: number, top: number, bw: number, k: number, color
 }
 
 function drawBuilding(ctx: Ctx, x: number, bw: number, bh: number, base: number, k: number, haze: number, w: number): void {
-  const color = lerpHex(props.config.cityColor, props.config.skyColors[1] ?? props.config.cityColor, haze)
+  const body = mirror ? lerpHex(props.config.cityColor, props.config.waterColor, 0.5) : props.config.cityColor
+  const far = mirror ? lerpHex(body, props.config.waterColor, 0.6) : (props.config.skyColors[1] ?? props.config.cityColor)
+  const color = lerpHex(body, far, haze)
   const top = base - bh
   drawRoof(ctx, x, top, bw, k, color)
   ctx.fillStyle = color
@@ -204,32 +221,70 @@ function buildSkyline(w: number, h: number, scale: number): HTMLCanvasElement {
   return c
 }
 
-function puddlePath(ctx: Ctx, p: Puddle): void {
+function puddlePoint(p: Puddle, k: number, n: number, dy: number): [number, number] {
+  const a = (k / n) * Math.PI * 2
+  const rr = 0.72 + 0.16 * Math.sin(a * 2 + p.seed * 9) + 0.08 * Math.sin(a * 5 + p.seed * 17) + 0.04 * Math.sin(a * 9 + p.seed * 3)
+  return [p.x + Math.cos(a) * p.rx * rr, p.y + dy + Math.sin(a) * p.ry * rr]
+}
+
+function puddlePath(ctx: Ctx, p: Puddle, dy = 0): void {
+  const n = 28
+  const [lx, ly] = puddlePoint(p, n - 1, n, dy)
+  let [qx, qy] = puddlePoint(p, 0, n, dy)
   ctx.beginPath()
-  for (let k = 0; k <= 24; k++) {
-    const a = (k / 24) * Math.PI * 2
-    const rr = 0.75 + 0.25 * (0.5 + 0.5 * Math.sin(a * 3 + p.seed * 9))
-    const x = p.x + Math.cos(a) * p.rx * rr
-    const y = p.y + Math.sin(a) * p.ry * rr
-    if (k === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
+  ctx.moveTo((lx + qx) / 2, (ly + qy) / 2)
+  for (let k = 1; k <= n; k++) {
+    const [nx, ny] = puddlePoint(p, k % n, n, dy)
+    ctx.quadraticCurveTo(qx, qy, (qx + nx) / 2, (qy + ny) / 2)
+    qx = nx
+    qy = ny
   }
   ctx.closePath()
 }
 
-function buildPuddles(w: number, h: number): Puddle[] {
-  const out: Puddle[] = []
-  const y0 = h * HORIZON
-  for (let i = 0; i < 14; i++) {
-    const u = Math.pow(h01(i * 91), 0.8)
-    out.push({
-      x: h01(i * 93) * w,
-      y: y0 + unit * 2 + u * (h - y0 - unit * 4),
-      rx: unit * (4 + u * 16) * (0.6 + h01(i * 95) * 0.8),
-      ry: unit * (0.9 + u * 3.6),
-      seed: h01(i * 97),
-    })
+function dropOf(p: Puddle, i: number, d: number): Puddle {
+  const side = h01(i * 101 + d) < 0.5 ? -1 : 1
+  const rx = p.rx * (0.12 + h01(i * 109 + d) * 0.2)
+  return {
+    x: p.x + side * (p.rx + rx + p.rx * (0.15 + h01(i * 103 + d) * 0.4)),
+    y: p.y + (h01(i * 107 + d) - 0.5) * p.ry * 1.5,
+    rx,
+    ry: p.ry * (0.25 + h01(i * 113 + d) * 0.3),
+    seed: h01(i * 127 + d),
   }
+}
+
+function clear(p: Puddle, others: Puddle[]): boolean {
+  return others.every((o) => Math.abs(o.x - p.x) > (o.rx + p.rx) * 1.8 || Math.abs(o.y - p.y) > (o.ry + p.ry) * 1.6)
+}
+
+function mainPuddle(i: number, k: number, w: number, h: number): Puddle {
+  const y0 = h * HORIZON
+  const u = Math.pow(h01(i * 91 + k * 7), 0.8)
+  return {
+    x: h01(i * 93 + k * 11) * w,
+    y: y0 + unit * 2 + u * (h - y0 - unit * 4),
+    rx: unit * (4 + u * 16) * (0.6 + h01(i * 95) * 0.8),
+    ry: unit * (0.9 + u * 3.6),
+    seed: h01(i * 97),
+  }
+}
+
+function buildPuddles(w: number, h: number): Puddle[] {
+  const mains: Puddle[] = []
+  for (let i = 0; i < 12; i++) {
+    for (let k = 0; k < 10; k++) {
+      const p = mainPuddle(i, k, w, h)
+      if (!clear(p, mains)) continue
+      mains.push(p)
+      break
+    }
+  }
+  const out = [...mains]
+  mains.forEach((p, i) => {
+    const drops = Math.floor(h01(i * 99) * 3)
+    for (let d = 0; d < drops; d++) out.push(dropOf(p, i, d))
+  })
   return out
 }
 
@@ -241,16 +296,68 @@ function drawLamp(ctx: Ctx, x: number, base: number, color: string): void {
   ctx.fillRect(x - unit * 1.2, base - unit * 1, unit * 2.4, unit * 1)
 }
 
+function drawGrain(ctx: Ctx, w: number, h: number): void {
+  const y0 = h * HORIZON
+  for (let i = 0; i < GRAIN; i++) {
+    const y = y0 + Math.pow(h01(i * 11 + 3), 0.7) * (h - y0)
+    const depth = (y - y0) / (h - y0)
+    const s = unit * (0.15 + depth * 0.4)
+    const dark = h01(i * 7 + 5) < 0.55
+    ctx.fillStyle = dark ? 'rgba(0,0,0,0.2)' : withAlpha(props.config.moonColor, 0.04 + depth * 0.05)
+    ctx.fillRect(h01(i * 13 + 1) * w, y, s * (1 + h01(i * 17) * 2), s)
+  }
+}
+
+function drawCrack(ctx: Ctx, i: number, w: number, h: number): void {
+  const y0 = h * HORIZON
+  let x = h01(i * 131) * w
+  let y = y0 + unit * 3 + h01(i * 137) * (h - y0 - unit * 6)
+  const depth = (y - y0) / (h - y0)
+  let dir = (h01(i * 149) - 0.5) * 1.2
+  ctx.lineWidth = unit * (0.1 + depth * 0.25)
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  const steps = 6 + Math.floor(h01(i * 139) * 6)
+  for (let k = 0; k < steps; k++) {
+    dir += (h01(i * 151 + k) - 0.5) * 1.1
+    x += Math.cos(dir) * unit * (2 + depth * 3)
+    y += Math.sin(dir) * unit * (0.5 + depth * 1.1)
+    ctx.lineTo(x, y)
+  }
+  ctx.stroke()
+}
+
+function drawSheen(ctx: Ctx, w: number, h: number): void {
+  const y0 = h * HORIZON
+  const mx = w * MOON_X
+  for (let y = Math.floor(y0); y < h; y++) {
+    const depth = (y - y0) / (h - y0)
+    const half = unit * (5 + depth * 34)
+    const g = ctx.createLinearGradient(mx - half, 0, mx + half, 0)
+    g.addColorStop(0, withAlpha(props.config.moonColor, 0))
+    g.addColorStop(0.5, withAlpha(props.config.moonColor, 0.12 * (1 - depth * 0.7)))
+    g.addColorStop(1, withAlpha(props.config.moonColor, 0))
+    ctx.fillStyle = g
+    ctx.fillRect(mx - half, y, half * 2, 1)
+  }
+}
+
 function buildStreet(w: number, h: number, scale: number): HTMLCanvasElement {
   const [c, ctx] = offscreen(w, h, scale)
   if (!ctx) return c
   const y0 = h * HORIZON
-  const asphalt = lerpHex(props.config.cityColor, props.config.waterColor, 0.3)
+  const asphalt = lerpHex(props.config.cityColor, props.config.waterColor, 0.22)
   const g = ctx.createLinearGradient(0, y0, 0, h)
   g.addColorStop(0, asphalt)
-  g.addColorStop(1, lerpHex(asphalt, props.config.waterColor, 0.55))
+  g.addColorStop(1, lerpHex(asphalt, props.config.waterColor, 0.3))
   ctx.fillStyle = g
   ctx.fillRect(0, y0, w, h - y0)
+  drawSheen(ctx, w, h)
+  drawGrain(ctx, w, h)
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)'
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  for (let i = 0; i < 7; i++) drawCrack(ctx, i, w, h)
   ctx.fillStyle = lerpHex(props.config.cityColor, props.config.moonColor, 0.14)
   ctx.fillRect(0, y0, w, unit * 1.6)
   ctx.fillStyle = withAlpha(props.config.moonColor, 0.08)
@@ -328,24 +435,90 @@ function drawClouds(ctx: Ctx, w: number, h: number, t: number): void {
   ctx.drawImage(litLayer, ox, oy, size, size)
 }
 
-function drawPuddles(ctx: Ctx, w: number, t: number): void {
+function drawPuddleRim(ctx: Ctx, p: Puddle): void {
+  puddlePath(ctx, p, -unit * 0.25)
+  ctx.fillStyle = withAlpha(props.config.moonColor, 0.1)
+  ctx.fill()
+  puddlePath(ctx, p, unit * 0.22)
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'
+  ctx.fill()
+}
+
+function drawPuddleBed(ctx: Ctx, p: Puddle): void {
+  puddlePath(ctx, p)
+  const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.rx)
+  g.addColorStop(0, lerpHex(props.config.waterColor, props.config.cityColor, 0.15))
+  g.addColorStop(1, lerpHex(props.config.waterColor, props.config.moonColor, 0.1))
+  ctx.fillStyle = g
+  ctx.fill()
+}
+
+function drawReflection(ctx: Ctx, p: Puddle, h: number, t: number): void {
+  if (!mirrored || p.rx < unit * 2) return
+  const y0 = h * HORIZON
+  const step = Math.max(1, unit * 0.75)
+  const x0 = p.x - p.rx
+  const sw = p.rx * 2
+  ctx.globalAlpha = 0.7
+  for (let y = p.y - p.ry; y < p.y + p.ry; y += step) {
+    const srcY = y0 - (y - y0) / SQUASH
+    const wob = Math.sin((y / unit) * 0.8 + t * 1.8 + p.seed * 12) * unit * 0.6
+    ctx.drawImage(mirrored, x0 * dpr, (srcY - step / SQUASH) * dpr, sw * dpr, (step / SQUASH) * dpr, x0 + wob, y, sw, step)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawMoonTrail(ctx: Ctx, p: Puddle, w: number, t: number): void {
   const mx = w * MOON_X
-  for (const p of puddles) {
-    puddlePath(ctx, p)
-    ctx.fillStyle = lerpHex(props.config.waterColor, props.config.moonColor, 0.06)
-    ctx.fill()
-    const near = 1 - Math.min(1, Math.abs(p.x - mx) / (p.rx * 1.6))
-    if (near <= 0) continue
+  const near = 1 - Math.min(1, Math.abs(p.x - mx) / (p.rx * 1.6))
+  if (near <= 0) return
+  for (let y = p.y - p.ry; y < p.y + p.ry; y += Math.max(1, unit * 0.35)) {
+    const wob = Math.sin((y * 0.6) / unit + t * 2.2 + p.seed * 9) * unit * 1.2
+    const half = unit * (1.5 + near * 4) * (0.6 + 0.4 * Math.sin((y * 1.1) / unit - t * 2.8))
+    ctx.fillStyle = withAlpha(props.config.moonColor, 0.35 * near)
+    ctx.fillRect(mx + wob - half, y, half * 2, Math.max(1, unit * 0.2))
+  }
+}
+
+function stepRipples(t: number, reduced: boolean): void {
+  ripples = ripples.filter((r) => t - r.born < RIPPLE_S)
+  if (reduced || t < nextRipple) return
+  const p = puddles[Math.floor(rand(0, puddles.length))]
+  if (p && p.rx >= unit * 3) ripples.push({ p, born: t, u: rand(-0.5, 0.5), v: rand(-0.4, 0.4) })
+  nextRipple = t + rand(0.7, 2.2)
+}
+
+function drawRipples(ctx: Ctx, t: number): void {
+  for (const r of ripples) {
+    const u = (t - r.born) / RIPPLE_S
     ctx.save()
+    puddlePath(ctx, r.p)
     ctx.clip()
-    for (let y = p.y - p.ry; y < p.y + p.ry; y += Math.max(1, unit * 0.35)) {
-      const wob = Math.sin(y * 0.6 / unit + t * 2.2 + p.seed * 9) * unit * 1.2
-      const half = unit * (1.5 + near * 4) * (0.6 + 0.4 * Math.sin(y * 1.1 / unit - t * 2.8))
-      ctx.fillStyle = withAlpha(props.config.moonColor, 0.35 * near)
-      ctx.fillRect(mx + wob - half, y, half * 2, Math.max(1, unit * 0.2))
+    ctx.strokeStyle = withAlpha(props.config.moonColor, 0.3 * (1 - u))
+    ctx.lineWidth = Math.max(0.6, unit * 0.12)
+    for (const lag of [0, 0.35]) {
+      const uu = u - lag
+      if (uu <= 0) continue
+      ctx.beginPath()
+      ctx.ellipse(r.p.x + r.u * r.p.rx, r.p.y + r.v * r.p.ry, r.p.rx * uu * 0.9, r.p.ry * uu * 0.9, 0, 0, Math.PI * 2)
+      ctx.stroke()
     }
     ctx.restore()
   }
+}
+
+function drawPuddles(ctx: Ctx, w: number, h: number, t: number): void {
+  for (const p of puddles) drawPuddleRim(ctx, p)
+  for (const p of puddles) {
+    drawPuddleBed(ctx, p)
+    ctx.save()
+    puddlePath(ctx, p)
+    ctx.clip()
+    drawReflection(ctx, p, h, t)
+    drawMoonTrail(ctx, p, w, t)
+    ctx.restore()
+  }
+  drawRipples(ctx, t)
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
@@ -355,8 +528,14 @@ useBackdropCanvas(canvasRef, {
     startTime = now
     seed = Math.floor(rand(0, 100000))
     unit = sceneUnit(w, h)
+    dpr = scale
+    ripples = []
+    nextRipple = 1
     clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
     skyline = buildSkyline(w, h, scale)
+    mirror = true
+    mirrored = buildSkyline(w, h, scale)
+    mirror = false
     street = buildStreet(w, h, scale)
     puddles = buildPuddles(w, h)
     const size = unit * 22 * 7
@@ -369,7 +548,8 @@ useBackdropCanvas(canvasRef, {
     drawClouds(ctx, w, h, t)
     if (skyline) ctx.drawImage(skyline, 0, 0, w, h)
     if (street) ctx.drawImage(street, 0, 0, w, h)
-    drawPuddles(ctx, w, t)
+    stepRipples(t, reduced)
+    drawPuddles(ctx, w, h, t)
   },
 })
 </script>
