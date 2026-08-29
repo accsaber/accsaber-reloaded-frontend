@@ -28,6 +28,7 @@ import {
   tokenize,
 } from '@/utils/items'
 import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
+import { TITLE_AURA_PAD } from '@/utils/cosmetics/titleAura'
 import { useFitScale } from '@/composables/useFitScale'
 import { computed, useTemplateRef } from 'vue'
 
@@ -129,6 +130,9 @@ const titleHost = useTemplateRef<HTMLElement>('titleHost')
 const titleFit = useTemplateRef<HTMLElement>('titleFit')
 const titleScale = useFitScale(titleHost, titleFit)
 const titleFitStyle = computed(() => (titleScale.value < 1 ? { transform: `scale(${titleScale.value.toFixed(3)})` } : undefined))
+const titleAuraStyle = computed(() => ({
+  '--title-aura-x': titleValue.value?.aura?.enabled ? `${TITLE_AURA_PAD.x}em` : '0em',
+}))
 
 const PERK_RE = /^([+-]\d+)/
 const perkAmount = computed<string | null>(() => {
@@ -163,6 +167,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       v-else-if="typeKey === 'title' && titleValue"
       ref="titleHost"
       class="item-preview__title"
+      :style="titleAuraStyle"
     >
       <span ref="titleFit" class="item-preview__title-fit" :style="titleFitStyle">
         <TitleRenderer :value="titleValue" />
@@ -424,6 +429,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 
 .item-preview__title :deep(.title-renderer) {
   font-size: clamp(0.7rem, 9cqi, 1.05rem);
+  margin: 0 var(--title-aura-x, 0em);
 }
 
 .item-preview__title-fit {
