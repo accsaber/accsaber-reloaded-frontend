@@ -185,11 +185,17 @@ function openPreview() {
 
 const CRATE_UNLOCK_MS = Date.UTC(2026, 6, 17, 15, 0, 0)
 const CRATE_UNLOCK_MESSAGE = 'Crate opening unlocks Friday, July 17 at 3:00 PM UTC.'
-const CRATE_EMPTY_MESSAGE = 'Its contents are a mystery for now.'
+const CRATE_EMPTY_MESSAGE = 'Crates without revealed content cannot be opened.'
 const crateLocked = ref(Date.now() < CRATE_UNLOCK_MS)
 const crateEmpty = computed(
   () => isCrate.value && !props.crateContentsLoading && !(props.crateContents ?? []).length,
 )
+const crateOpenNote = computed(() => {
+  if (!showOpenCrate.value) return null
+  if (crateLocked.value) return CRATE_UNLOCK_MESSAGE
+  if (crateEmpty.value) return CRATE_EMPTY_MESSAGE
+  return null
+})
 let crateUnlockTimer: ReturnType<typeof setTimeout> | undefined
 const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || untradeable.value)
 const obtainableSentence = computed(() =>
@@ -272,24 +278,21 @@ onUnmounted(() => {
     <p v-if="item.description" class="inv-detail__description">{{ item.description }}</p>
 
     <div v-if="isCrate" class="inv-detail__crate-open-row">
-      <span
+      <BaseButton
         v-if="showOpenCrate"
-        class="inv-detail__crate-open"
-        :title="crateLocked ? CRATE_UNLOCK_MESSAGE : crateEmpty ? CRATE_EMPTY_MESSAGE : undefined"
+        variant="primary"
+        size="md"
+        :loading="busy"
+        :disabled="crateLocked || crateEmpty"
+        @click="$emit('openCrate', userItem.linkId)"
       >
-        <BaseButton
-          variant="primary"
-          size="md"
-          :loading="busy"
-          :disabled="crateLocked || crateEmpty"
-          @click="$emit('openCrate', userItem.linkId)"
-        >
-          Open crate
-        </BaseButton>
-      </span>
+        Open crate
+      </BaseButton>
 
       <BaseButton size="md" @click="openPreview">Preview</BaseButton>
     </div>
+
+    <p v-if="crateOpenNote" class="inv-detail__crate-open-note">{{ crateOpenNote }}</p>
 
     <CrateContentsList
       v-if="isCrate"
@@ -672,8 +675,10 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.inv-detail__crate-open {
-  display: inline-flex;
+.inv-detail__crate-open-note {
+  margin-top: var(--space-xs);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
 .inv-detail__essence-yield {
