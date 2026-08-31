@@ -30,6 +30,7 @@ const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffe
       :key="layer.key"
       :spec="layer.spec"
       :stack-index="layer.stackIndex"
+      type-key="theme"
     />
   </div>
 </template>

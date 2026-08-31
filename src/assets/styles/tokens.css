@@ -213,3 +213,24 @@ html.theme-transitioning *::after {
     color 200ms ease,
     border-color 200ms ease;
 }
+
+/* --- Milestone node/badge surfaces --- */
+.ms-surface {
+  --ms-rim-idle: color-mix(in srgb, var(--ms-tier) 8%, var(--bg-overlay));
+  --ms-ink-idle: color-mix(in srgb, var(--ms-tier) 6%, var(--text-tertiary));
+  --ms-rim-progress: color-mix(in srgb, var(--ms-tier) 42%, var(--bg-overlay));
+  --ms-ink-progress: color-mix(in srgb, var(--ms-tier) 28%, var(--text-secondary));
+  --ms-rim-done: var(--ms-tier);
+  --ms-ink-done: var(--ms-tier);
+  --ms-plate-done: color-mix(in srgb, var(--ms-tier) 16%, var(--bg-surface));
+}
+
+[data-theme='light'] .ms-surface {
+  --ms-rim-idle: color-mix(in srgb, var(--ms-tier) 12%, var(--bg-overlay));
+  --ms-ink-idle: color-mix(in srgb, var(--ms-tier) 9%, var(--text-tertiary));
+  --ms-rim-progress: color-mix(in srgb, var(--ms-tier) 45%, var(--text-tertiary));
+  --ms-ink-progress: color-mix(in srgb, var(--ms-tier) 32%, var(--text-secondary));
+  --ms-rim-done: color-mix(in srgb, var(--ms-tier) 78%, var(--text-secondary));
+  --ms-ink-done: color-mix(in srgb, var(--ms-tier) 60%, var(--text-primary));
+  --ms-plate-done: color-mix(in srgb, var(--ms-tier) 26%, var(--bg-surface));
+}

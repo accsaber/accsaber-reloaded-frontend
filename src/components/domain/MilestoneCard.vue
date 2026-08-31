@@ -2,6 +2,7 @@
 import { useCategoryStore } from '@/stores/categories';
 import type { MilestoneDisplay } from '@/types/display';
 import { tierColor as getTierColor, formatPercent } from '@/utils/constants';
+import MilestoneBadge from '@/components/domain/MilestoneBadge.vue';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -35,28 +36,8 @@ const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0
     'milestone-card--apex': isApex,
   }" :style="accentColor ? { '--ms-accent': accentColor, '--tier-color': tierColor } : { '--tier-color': tierColor }">
     <div class="milestone-card__header">
-      <span class="milestone-card__icon" :class="{
-        'milestone-card__icon--completed': milestone.isCompleted,
-        'milestone-card__icon--gray': loggedIn && !milestone.isCompleted,
-      }">
-        <svg v-if="isApex" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M10 2l3 5 5 1-4 4 1 5-5-3-5 3 1-5-4-4 5-1z" />
-        </svg>
-        <svg v-else-if="milestone.type?.toUpperCase() === 'MILESTONE'" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="4" y1="3" x2="4" y2="17" />
-          <path d="M4 3h10l-3 4 3 4H4" />
-        </svg>
-        <svg v-else viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round" aria-hidden="true">
-          <path d="M6 2h8v6a4 4 0 0 1-8 0V2z" />
-          <path d="M6 4H3a1 1 0 0 0-1 1v1a3 3 0 0 0 3 3h1" />
-          <path d="M14 4h3a1 1 0 0 1 1 1v1a3 3 0 0 1-3 3h-1" />
-          <line x1="10" y1="12" x2="10" y2="15" />
-          <path d="M6 15h8a1 1 0 0 1 1 1v1H5v-1a1 1 0 0 1 1-1z" />
-        </svg>
-      </span>
+      <MilestoneBadge class="milestone-card__badge" :glyph="milestone.glyph" :tier="milestone.tier"
+      :size="44" :completed="milestone.isCompleted" :dim="loggedIn && !milestone.isCompleted" />
       <div class="milestone-card__header-text">
         <span class="milestone-card__tier">{{ milestone.tier }}</span>
         <span v-if="milestone.isCompleted === true" class="milestone-card__check" aria-label="Completed">
@@ -99,20 +80,8 @@ const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0
   gap: var(--space-md);
 }
 
-.milestone-card__icon {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  color: var(--tier-color);
-}
 
-.milestone-card__icon--completed {
-  color: var(--tier-color);
-}
 
-.milestone-card__icon--gray {
-  color: var(--text-secondary);
-}
 
 .milestone-card--dim {
   opacity: 0.5;
@@ -127,24 +96,13 @@ const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0
   );
 }
 
-.milestone-card--apex .milestone-card__icon {
-  width: 44px;
-  height: 44px;
-}
 
-.milestone-card--apex .milestone-card__icon--completed {
-  color: var(--tier-color);
-}
 
 .milestone-card--apex .milestone-card__title {
   font-size: var(--text-section-heading);
   color: var(--tier-color);
 }
 
-.milestone-card__icon svg {
-  width: 100%;
-  height: 100%;
-}
 
 .milestone-card__header-text {
   display: flex;

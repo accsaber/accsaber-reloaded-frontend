@@ -417,6 +417,42 @@ function isDominionFill(v: unknown): boolean {
   return Array.isArray(v.colors) && v.colors.length > 0 && v.colors.every(isString)
 }
 
+function isConfettiFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'confetti') return false
+  return isString(v.dark) && Array.isArray(v.colors) && v.colors.length > 0 && v.colors.every(isString)
+}
+
+function isJewelFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'jewel') return false
+  return isString(v.velvet) && Array.isArray(v.gems) && v.gems.length > 0 && v.gems.every(isString)
+}
+
+function isLaserFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'laser') return false
+  return isString(v.dark) && isString(v.core) && isString(v.glow)
+}
+
+function isChartFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'chart') return false
+  return isString(v.paper) && isString(v.ink) && isString(v.route)
+}
+
+function isHazardFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'hazard') return false
+  return isString(v.a) && isString(v.b)
+}
+
+function isWarpFill(v: unknown): boolean {
+  if (!isObj(v)) return false
+  if (v.type !== 'warp') return false
+  return isString(v.space) && isString(v.streak) && isString(v.core)
+}
+
 export function readBorderColorValue(value: unknown): BorderColorValue | null {
   if (!isObj(value)) return null
   if (!Array.isArray(value.states) || value.states.length === 0) return null
@@ -438,6 +474,12 @@ export function readBorderColorValue(value: unknown): BorderColorValue | null {
     if (fill.type === 'candle') return isCandleFill(fill)
     if (fill.type === 'wood') return isWoodFill(fill)
     if (fill.type === 'brew') return isBrewFill(fill)
+    if (fill.type === 'confetti') return isConfettiFill(fill)
+    if (fill.type === 'jewel') return isJewelFill(fill)
+    if (fill.type === 'laser') return isLaserFill(fill)
+    if (fill.type === 'chart') return isChartFill(fill)
+    if (fill.type === 'hazard') return isHazardFill(fill)
+    if (fill.type === 'warp') return isWarpFill(fill)
     return isGradient(fill)
   })
   if (validStates.length === 0) return null
@@ -774,6 +816,26 @@ export function fillToCss(fill: BorderColorFill): string {
     const stops = fill.colors.map((c, i) => `${c} ${Math.round((i / fill.colors.length) * 100)}%`)
     return `linear-gradient(100deg, ${body} 0%, ${stops.join(', ')}, ${body} 100%)`
   }
+  if (fill.type === 'confetti') {
+    const cs = fill.colors
+    const slivers = cs.map((c, i) => `${c} ${8 + i * 10}% ${10 + i * 10}%`).join(', ')
+    return `linear-gradient(135deg, ${fill.dark} 0%, ${slivers}, ${fill.dark} 100%)`
+  }
+  if (fill.type === 'jewel') {
+    return `radial-gradient(circle at 30% 30%, ${fill.gems[0]} 0%, ${fill.velvet} 55%)`
+  }
+  if (fill.type === 'laser') {
+    return `linear-gradient(90deg, ${fill.dark} 0%, ${fill.glow} 42%, ${fill.core} 50%, ${fill.glow} 58%, ${fill.dark} 100%)`
+  }
+  if (fill.type === 'chart') {
+    return `linear-gradient(120deg, ${fill.paper} 0%, ${fill.paper} 52%, ${fill.route} 53%, ${fill.paper} 54%, ${fill.paper} 100%)`
+  }
+  if (fill.type === 'hazard') {
+    return `repeating-linear-gradient(45deg, ${fill.a} 0px, ${fill.a} 10px, ${fill.b} 10px, ${fill.b} 20px)`
+  }
+  if (fill.type === 'warp') {
+    return `radial-gradient(circle at 50% 50%, ${fill.core} 0%, ${fill.space} 55%)`
+  }
   return gradientToCss(fill)
 }
 
@@ -858,11 +920,13 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
 
 const CANVAS_FILL_TYPES = new Set([
   'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion', 'eclipse', 'candle', 'wood', 'brew',
+  'confetti', 'jewel', 'laser', 'chart', 'hazard', 'warp',
 ])
 
 type CanvasFill = Extract<
   BorderColorFill,
-  { type: 'cosmic' | 'toon' | 'prism' | 'grove' | 'regalia' | 'colossus' | 'stolenflame' | 'dominion' | 'eclipse' | 'candle' | 'wood' | 'brew' }
+  { type: 'cosmic' | 'toon' | 'prism' | 'grove' | 'regalia' | 'colossus' | 'stolenflame' | 'dominion' | 'eclipse' | 'candle' | 'wood' | 'brew'
+    | 'confetti' | 'jewel' | 'laser' | 'chart' | 'hazard' | 'warp' }
 >
 
 function isCanvasFill(fill: BorderColorFill): fill is CanvasFill {

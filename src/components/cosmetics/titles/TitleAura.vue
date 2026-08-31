@@ -19,6 +19,15 @@ import TitleStormAura from '@/components/cosmetics/titles/TitleStormAura.vue'
 import TitleVoidAura from '@/components/cosmetics/titles/TitleVoidAura.vue'
 import TitleWaterAura from '@/components/cosmetics/titles/TitleWaterAura.vue'
 import TitleWindAura from '@/components/cosmetics/titles/TitleWindAura.vue'
+import TitleBloqsAura from '@/components/cosmetics/titles/TitleBloqsAura.vue'
+import TitleSpotlightAura from '@/components/cosmetics/titles/TitleSpotlightAura.vue'
+import TitleStampsAura from '@/components/cosmetics/titles/TitleStampsAura.vue'
+import TitleMeadowAura from '@/components/cosmetics/titles/TitleMeadowAura.vue'
+import TitleHoardAura from '@/components/cosmetics/titles/TitleHoardAura.vue'
+import TitleSeasonsAura from '@/components/cosmetics/titles/TitleSeasonsAura.vue'
+import TitleCurioAura from '@/components/cosmetics/titles/TitleCurioAura.vue'
+import TitleRadarAura from '@/components/cosmetics/titles/TitleRadarAura.vue'
+import TitleWaypointsAura from '@/components/cosmetics/titles/TitleWaypointsAura.vue'
 import type { TitleAuraSpec, TitleAuraType } from '@/types/api/items'
 import { computed, type Component } from 'vue'
 
@@ -42,6 +51,15 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   void: TitleVoidAura,
   inferno: TitleInfernoAura,
   ice: TitleIceAura,
+  bloqs: TitleBloqsAura,
+  spotlight: TitleSpotlightAura,
+  stamps: TitleStampsAura,
+  meadow: TitleMeadowAura,
+  hoard: TitleHoardAura,
+  seasons: TitleSeasonsAura,
+  curio: TitleCurioAura,
+  radar: TitleRadarAura,
+  waypoints: TitleWaypointsAura,
 }
 
 const props = defineProps<{

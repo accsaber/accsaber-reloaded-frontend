@@ -7,6 +7,7 @@ import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { Tab } from '@/types/display'
 import type { ResolvedSetGroup } from '@/types/milestones'
+import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import { computed, ref, watch } from 'vue'
 
 const DISCLAIMER_SET_IDS = new Set([
@@ -22,11 +23,25 @@ const props = defineProps<{
   groups?: ResolvedSetGroup[]
   standaloneSets?: MilestoneSetResponse[]
   defaultExpanded?: boolean
+  glyphs?: Map<string, MilestoneGlyphKey>
+  pinnable?: boolean
+  pinnedIds?: Set<string>
+  canPinMore?: boolean
+  pinPending?: Set<string>
 }>()
 
 const emit = defineEmits<{
   'update:sort': [sort: MilestoneSort]
+  'pin-toggle': [milestoneId: string]
 }>()
+
+function isPinned(id: string): boolean {
+  return props.pinnedIds?.has(id) ?? false
+}
+
+function pinDisabled(id: string): boolean {
+  return !isPinned(id) && props.canPinMore === false
+}
 
 const expandedSets = ref<Set<string>>(new Set())
 const viewMode = ref('all')
@@ -211,7 +226,9 @@ if (props.defaultExpanded) {
     <template v-else-if="isFlatSort">
       <div class="milestone-set__rows milestone-set__rows--flat">
         <MilestoneDetail v-for="m in activeMilestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-          compact />
+          :glyph="glyphs?.get(m.milestoneId)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+          :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
+          compact @pin-toggle="emit('pin-toggle', $event)" />
       </div>
     </template>
 
@@ -256,7 +273,9 @@ if (props.defaultExpanded) {
               <p>Progress will only display on this set once you have submitted a score on every map.</p>
             </div>
             <MilestoneDetail v-for="m in ms.milestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-              compact />
+              :glyph="glyphs?.get(m.milestoneId)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+          :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
+          compact @pin-toggle="emit('pin-toggle', $event)" />
           </div>
         </div>
       </div>

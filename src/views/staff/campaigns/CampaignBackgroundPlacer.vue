@@ -5,13 +5,11 @@ import {
   backgroundReferenceSpan,
   clampBackgroundOffset,
   clampBackgroundSize,
-  contentToGrid,
-  gridToContent,
   pinnedBackgroundRect,
   suggestBackgroundPlacement,
   type BackgroundFrame,
-  type ContentRect,
 } from '@/utils/campaignLayout'
+import { hexProjection, type ContentRect } from '@/utils/stageLayout'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -131,7 +129,7 @@ function onPointerDown(event: PointerEvent) {
   if (!isStatic.value || props.disabled || event.button !== 0) return
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
-  const origin = gridToContent(draft.value.x, draft.value.y, frame.value.unit)
+  const origin = hexProjection.toContent(draft.value.x, draft.value.y, frame.value.unit)
   target.setPointerCapture(event.pointerId)
   drag = {
     pointerX: event.clientX,
@@ -148,7 +146,7 @@ function onPointerMove(event: PointerEvent) {
   const box = view.value
   const dx = ((event.clientX - drag.pointerX) / drag.width) * box.width
   const dy = ((event.clientY - drag.pointerY) / drag.height) * box.height
-  const { positionX, positionY } = contentToGrid(
+  const { positionX, positionY } = hexProjection.toGrid(
     drag.originCx + dx,
     drag.originCy + dy,
     frame.value.unit,

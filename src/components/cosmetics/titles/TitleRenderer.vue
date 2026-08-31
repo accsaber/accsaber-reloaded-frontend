@@ -16,6 +16,7 @@ import { randBetween as rand } from '@/utils/random'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle } from '@/utils/cosmetics/titleSchools'
+import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
 import { lerpHex } from '@/utils/color'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
@@ -75,6 +76,18 @@ const fxEnabled = computed(() =>
     || !!props.value.frost?.enabled
     || !!props.value.transmute?.enabled
     || !!props.value.rune?.enabled
+    || !!props.value.sprout?.enabled
+    || !!props.value.ascent?.enabled
+    || !!props.value.slice?.enabled
+    || !!props.value.tick?.enabled
+    || !!props.value.metronome?.enabled
+    || !!props.value.scrawl?.enabled
+    || !!props.value.reel?.enabled
+    || !!props.value.restart?.enabled
+    || !!props.value.punch?.enabled
+    || !!props.value.hammer?.enabled
+    || !!props.value.excavate?.enabled
+    || !!props.value.quest?.enabled
     || (props.value.aura?.type === 'ascension' && props.value.aura.enabled && !!props.value.aura.lift)
   ),
 )
@@ -610,6 +623,40 @@ const flareSpec = computed(() => (props.value.flare?.enabled && !reducedMotion.v
 const devourSpec = computed(() => (props.value.devour?.enabled && !reducedMotion.value ? props.value.devour : null))
 const shockSpec = computed(() => (props.value.shock?.enabled && !reducedMotion.value ? props.value.shock : null))
 const searSpec = computed(() => (props.value.sear?.enabled && !reducedMotion.value ? props.value.sear : null))
+const sproutSpec = computed(() => (props.value.sprout?.enabled && !reducedMotion.value ? props.value.sprout : null))
+const ascentSpec = computed(() => (props.value.ascent?.enabled && !reducedMotion.value ? props.value.ascent : null))
+const sliceSpec = computed(() => (props.value.slice?.enabled && !reducedMotion.value ? props.value.slice : null))
+const tickSpec = computed(() => (props.value.tick?.enabled && !reducedMotion.value ? props.value.tick : null))
+const metronomeSpec = computed(() => (props.value.metronome?.enabled && !reducedMotion.value ? props.value.metronome : null))
+const scrawlSpec = computed(() => (props.value.scrawl?.enabled && !reducedMotion.value ? props.value.scrawl : null))
+const reelSpec = computed(() => (props.value.reel?.enabled && !reducedMotion.value ? props.value.reel : null))
+const restartSpec = computed(() => (props.value.restart?.enabled && !reducedMotion.value ? props.value.restart : null))
+const punchSpec = computed(() => (props.value.punch?.enabled && !reducedMotion.value ? props.value.punch : null))
+const hammerSpec = computed(() => (props.value.hammer?.enabled && !reducedMotion.value ? props.value.hammer : null))
+const excavateSpec = computed(() => (props.value.excavate?.enabled && !reducedMotion.value ? props.value.excavate : null))
+const questSpec = computed(() => (props.value.quest?.enabled && !reducedMotion.value ? props.value.quest : null))
+
+function milestoneCharStyle(i: number): Record<string, string> | null {
+  const n = props.value.text.length
+  const base = state.value.color ?? '#e9e3d0'
+  if (sproutSpec.value) return sproutCharStyle(tMs.value, i, n, sproutSpec.value, isLightBase.value)
+  if (ascentSpec.value) return ascentCharStyle(tMs.value, i, n, ascentSpec.value, isLightBase.value, base)
+  if (sliceSpec.value) return sliceCharStyle(tMs.value, i, n, sliceSpec.value, isLightBase.value)
+  if (tickSpec.value) return tickCharStyle(tMs.value, i, n, tickSpec.value, isLightBase.value, base)
+  if (metronomeSpec.value) return metronomeCharStyle(tMs.value, i, n, metronomeSpec.value, isLightBase.value, base)
+  if (scrawlSpec.value) return scrawlCharStyle(tMs.value, i, n, scrawlSpec.value, isLightBase.value)
+  if (reelSpec.value) return reelCharStyle(tMs.value, i, n, reelSpec.value, isLightBase.value, base)
+  if (restartSpec.value) return restartCharStyle(tMs.value, i, n, restartSpec.value)
+  if (punchSpec.value) return punchCharStyle(tMs.value, i, n, punchSpec.value, isLightBase.value, base)
+  if (hammerSpec.value) return hammerCharStyle(tMs.value, i, n, hammerSpec.value, isLightBase.value, base)
+  if (excavateSpec.value) return excavateCharStyle(tMs.value, i, n, excavateSpec.value, isLightBase.value)
+  if (questSpec.value) return questCharStyle(tMs.value, i, n, questSpec.value, isLightBase.value, base)
+  return null
+}
+
+const activeQuestMarkers = computed(() =>
+  questSpec.value ? questMarkers(tMs.value, props.value.text.length, questSpec.value, isLightBase.value) : [],
+)
 
 function schoolCharStyle(i: number): Record<string, string> | null {
   const n = props.value.text.length
@@ -711,6 +758,7 @@ function runeCharStyle(i: number): Record<string, string> {
 }
 
 function glyphText(ch: string, i: number): string {
+  if (reelSpec.value) return reelCharAt(tMs.value, i, ch, reelSpec.value)
   if (!runeActive(i)) return ch
   const cycle = Math.floor(tMs.value / (runeSpec.value?.intervalMs ?? 2600))
   return RUNE_GLYPHS[Math.floor(hashN(cycle * 29 + i) * RUNE_GLYPHS.length)]
@@ -726,6 +774,9 @@ const glyphChars = computed<string[] | null>(() =>
   || frostSpec.value || transmuteSpec.value || runeSpec.value || lanternSpec.value || brewSpec.value
   || quakeSpec.value || gustSpec.value || rippleSpec.value || pixieSpec.value
   || bleedSpec.value || galaxySpec.value || flareSpec.value || devourSpec.value || shockSpec.value || searSpec.value
+  || sproutSpec.value || ascentSpec.value || sliceSpec.value || tickSpec.value || metronomeSpec.value
+  || scrawlSpec.value || reelSpec.value || restartSpec.value || punchSpec.value || hammerSpec.value
+  || excavateSpec.value || questSpec.value
     ? props.value.text.split('').map((ch) => (ch === ' ' ? ' ' : ch))
     : null,
 )
@@ -751,6 +802,8 @@ function liftCharStyle(i: number): Record<string, string> {
 
 function glyphStyle(i: number): Record<string, string> {
   if (brewSpec.value) return brewCharStyle(i)
+  const milestone = milestoneCharStyle(i)
+  if (milestone) return milestone
   const school = schoolCharStyle(i)
   if (school) return school
   if (forgeActive.value) return forgeCharStyle(i)
@@ -1112,6 +1165,19 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
       :style="ring"
       aria-hidden="true"
     />
+    <span
+      v-for="qm in activeQuestMarkers"
+      :key="`qm${qm.key}`"
+      class="title-renderer__quest-mark"
+      :style="{
+        left: `${qm.leftPct}%`,
+        color: qm.color,
+        opacity: String(qm.opacity),
+        transform: `translate(-50%, ${qm.bobEm.toFixed(3)}em) scale(${qm.scale.toFixed(3)})`,
+        textShadow: `0 0 0.25em ${qm.color}`,
+      }"
+      aria-hidden="true"
+    >{{ qm.text }}</span>
     <span v-if="glyphChars" class="title-renderer__text" :style="[floatStyle ?? {}, joltStyle ?? {}]">
       <span
         v-for="(ch, i) in glyphChars"
@@ -1233,6 +1299,15 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 
 .title-renderer__forge-char {
   display: inline-block;
+}
+
+.title-renderer__quest-mark {
+  position: absolute;
+  top: -0.95em;
+  font-weight: 800;
+  font-size: 0.85em;
+  pointer-events: none;
+  z-index: 3;
 }
 
 .title-renderer__jolt-flash {

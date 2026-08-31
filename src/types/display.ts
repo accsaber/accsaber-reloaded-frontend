@@ -1,3 +1,5 @@
+import type { MilestoneRewardResponse } from './api/milestones'
+import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import type { SupporterTier } from './api/supporters'
 import type { MilestoneType, SupersedesReason } from './enums'
 
@@ -166,17 +168,23 @@ export type MilestoneTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND
 
 export interface MilestoneDisplay {
   id: string
+  setId: string
   title: string
   description: string
   type: MilestoneType
   tier: MilestoneTier
+  glyph: MilestoneGlyphKey
   xp: number
   targetValue: number
   userProgress?: number
   normalizedProgress?: number | null
   completionPercent: number
   isCompleted?: boolean
+  completedAt?: string | null
   categoryCode?: CategoryCode
+  positionX: number
+  positionY: number
+  rewards: MilestoneRewardResponse[]
 }
 
 export interface LevelDisplay {

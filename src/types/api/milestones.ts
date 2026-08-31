@@ -1,6 +1,37 @@
 import type { MilestoneTier } from '../display'
 import type { MilestoneComparison, MilestoneStatus, MilestoneType } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { ItemResponse } from './items'
+
+export const MILESTONE_ICON_GROUPS = [
+  'AP',
+  'ACCURACY',
+  'RANK',
+  'STREAK',
+  'SCORE',
+  'MAP',
+  'MISTAKE',
+  'XP',
+  'PLAYER',
+  'LEVEL',
+  'MODIFIER',
+  'CAMPAIGN',
+  'MISSION',
+  'MILESTONE',
+  'ITEM',
+  'CRATE',
+  'MARKET',
+  'TRADE',
+  'ESSENCE',
+  'GENERAL',
+] as const
+
+export type MilestoneIconGroup = (typeof MILESTONE_ICON_GROUPS)[number]
+
+export interface MilestoneRewardResponse {
+  item: ItemResponse
+  quantity: number
+}
 
 export interface MilestoneResponse {
   id: string
@@ -10,6 +41,7 @@ export interface MilestoneResponse {
   description: string
   type: MilestoneType
   tier: MilestoneTier
+  iconGroup?: MilestoneIconGroup | null
   xp: number
   querySpec: Record<string, unknown>
   targetValue: number
@@ -20,6 +52,12 @@ export interface MilestoneResponse {
   completions: number
   totalPlayers: number
   awardsItemId: string | null
+  rewards?: MilestoneRewardResponse[] | null
+  positionX?: number
+  positionY?: number
+  progressModel?: string | null
+  progressCurveId?: string | null
+  progressFloor?: number | null
   createdAt: string
 }
 
@@ -29,6 +67,7 @@ export interface MilestoneSetResponse {
   description: string
   setBonusXp: number
   awardsItemId: string | null
+  rewards?: MilestoneRewardResponse[] | null
   createdAt: string
   userCompletionPercentage?: number
 }
@@ -39,6 +78,7 @@ export interface MilestoneCompletionResponse {
   description: string
   type: MilestoneType
   tier: MilestoneTier
+  iconGroup?: MilestoneIconGroup | null
   xp: number
   targetValue: number
   comparison: MilestoneComparison
@@ -49,6 +89,9 @@ export interface MilestoneCompletionResponse {
   totalPlayers: number
   completionPercentage: number
   awardsItemId?: string | null
+  rewards?: MilestoneRewardResponse[] | null
+  positionX?: number
+  positionY?: number
   userProgress?: number
   userNormalizedProgress?: number | null
   userCompleted?: boolean

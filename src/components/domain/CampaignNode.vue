@@ -11,8 +11,8 @@ import {
   resolveSize,
   resolveShape,
   shapeCorners,
-  type LabelPlacement,
 } from '@/utils/campaignLayout'
+import type { LabelPlacement } from '@/utils/stageLayout'
 import { computed } from 'vue'
 
 const props = defineProps<{

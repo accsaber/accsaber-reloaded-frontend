@@ -13,6 +13,12 @@ import ToonBorderFill from '@/components/cosmetics/borders/ToonBorderFill.vue'
 import CandleBorderFill from '@/components/cosmetics/borders/CandleBorderFill.vue'
 import WoodBorderFill from '@/components/cosmetics/borders/WoodBorderFill.vue'
 import BrewBorderFill from '@/components/cosmetics/borders/BrewBorderFill.vue'
+import ConfettiBorderFill from '@/components/cosmetics/borders/ConfettiBorderFill.vue'
+import JewelBorderFill from '@/components/cosmetics/borders/JewelBorderFill.vue'
+import LaserBorderFill from '@/components/cosmetics/borders/LaserBorderFill.vue'
+import ChartBorderFill from '@/components/cosmetics/borders/ChartBorderFill.vue'
+import HazardBorderFill from '@/components/cosmetics/borders/HazardBorderFill.vue'
+import WarpBorderFill from '@/components/cosmetics/borders/WarpBorderFill.vue'
 import type {
   BorderColorStateValue,
   BorderColorValue,
@@ -32,6 +38,12 @@ import type {
   CandleFill,
   WoodFill,
   BrewFill,
+  ConfettiFill,
+  JewelFill,
+  LaserFill,
+  ChartFill,
+  HazardFill,
+  WarpFill,
 } from '@/types/api/items'
 import {
   fillToCss,
@@ -118,10 +130,41 @@ const eclipseFill = computed<EclipseFill | null>(() => {
   return fill?.type === 'eclipse' ? fill : null
 })
 
+const confettiFill = computed<ConfettiFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'confetti' ? fill : null
+})
+
+const jewelFill = computed<JewelFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'jewel' ? fill : null
+})
+
+const laserFill = computed<LaserFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'laser' ? fill : null
+})
+
+const chartFill = computed<ChartFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'chart' ? fill : null
+})
+
+const hazardFill = computed<HazardFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'hazard' ? fill : null
+})
+
+const warpFill = computed<WarpFill | null>(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'warp' ? fill : null
+})
+
 const canvasFillActive = computed(() =>
   !!cosmicFill.value || !!toonFill.value || !!prismFill.value
   || !!groveFill.value || !!regaliaFill.value || !!colossusFill.value
-  || !!stolenFlameFill.value || !!dominionFill.value || !!eclipseFill.value || !!candleFill.value || !!woodFill.value || !!brewFill.value,
+  || !!stolenFlameFill.value || !!dominionFill.value || !!eclipseFill.value || !!candleFill.value || !!woodFill.value || !!brewFill.value
+  || !!confettiFill.value || !!jewelFill.value || !!laserFill.value || !!chartFill.value || !!hazardFill.value || !!warpFill.value,
 )
 
 const rimStyle = computed<{ stroke: string; width: number; opacity: number } | null>(() => {
@@ -137,6 +180,12 @@ const rimStyle = computed<{ stroke: string; width: number; opacity: number } | n
   if (candleFill.value) return { stroke: candleFill.value.glow, width: 0.8, opacity: 0.35 }
   if (woodFill.value) return { stroke: woodFill.value.dark, width: 1, opacity: 0.7 }
   if (brewFill.value) return { stroke: brewFill.value.bone, width: 0.8, opacity: 0.5 }
+  if (confettiFill.value) return { stroke: confettiFill.value.colors[0], width: 0.8, opacity: 0.45 }
+  if (jewelFill.value) return { stroke: jewelFill.value.glint ?? '#ffffff', width: 0.8, opacity: 0.5 }
+  if (laserFill.value) return { stroke: laserFill.value.core, width: 0.9, opacity: 0.55 }
+  if (chartFill.value) return { stroke: chartFill.value.ink, width: 1, opacity: 0.7 }
+  if (hazardFill.value) return { stroke: hazardFill.value.a, width: 0.9, opacity: 0.6 }
+  if (warpFill.value) return { stroke: warpFill.value.streak, width: 0.8, opacity: 0.45 }
   return null
 })
 
@@ -509,6 +558,14 @@ const cosmicViewBox = computed(() => {
   return `${minX - mx} ${minY - my} ${w + mx * 2} ${h + my * 2}`
 })
 
+const laserTrace = computed<{ ds: string[]; viewBox: string } | null>(() => {
+  if (!laserFill.value || !props.shape) return null
+  const ds = basePaths.value
+    .filter((p) => !p.transform && ((!!p.fill && isThemedRef(p.fill)) || (!!p.stroke && isThemedRef(p.stroke))))
+    .map((p) => p.d)
+  return ds.length ? { ds, viewBox: cosmicViewBox.value } : null
+})
+
 const cosmicMaskId = `pbr-cmask-${Math.random().toString(36).slice(2, 9)}`
 
 const cosmicMaskPaths = computed<MaskPathEntry[] | null>(() => {
@@ -672,6 +729,12 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
     <StolenFlameBorderFill v-else-if="stolenFlameFill" :fill="stolenFlameFill" />
     <DominionBorderFill v-else-if="dominionFill" :fill="dominionFill" />
     <EclipseBorderFill v-else-if="eclipseFill" :fill="eclipseFill" />
+    <ConfettiBorderFill v-else-if="confettiFill" :fill="confettiFill" />
+    <JewelBorderFill v-else-if="jewelFill" :fill="jewelFill" />
+    <LaserBorderFill v-else-if="laserFill" :fill="laserFill" :trace="laserTrace" />
+    <ChartBorderFill v-else-if="chartFill" :fill="chartFill" />
+    <HazardBorderFill v-else-if="hazardFill" :fill="hazardFill" />
+    <WarpBorderFill v-else-if="warpFill" :fill="warpFill" />
     <svg
       v-if="rimPaths.length || decorationPaths.length"
       class="profile-border__cosmic-decor"

@@ -8,8 +8,18 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
-import type { CreateMilestoneRequest, CreateMilestoneSetRequest } from '@/types/api/admin'
-import type { CategoryResponse } from '@/types/api/categories'
+import RewardItemTile from '@/components/domain/RewardItemTile.vue'
+import CampaignItemPicker from '@/views/staff/campaigns/CampaignItemPicker.vue'
+import type {
+  CreateMilestoneRequest,
+  CreateMilestoneSetRequest,
+  MilestoneProgressModel,
+  MilestoneRewardRequest,
+  UpdateMilestoneRequest,
+} from '@/types/api/admin'
+import type { CategoryResponse, CurveResponse } from '@/types/api/categories'
+import type { ItemResponse } from '@/types/api/items'
+import { MILESTONE_ICON_GROUPS } from '@/types/api/milestones'
 import type { MilestoneResponse, MilestoneSetResponse, PrerequisiteLinkResponse } from '@/types/api/milestones'
 import type { MilestoneStatus, MilestoneTier, MilestoneType } from '@/types/enums'
 import { TIER_COLORS, formatPercent } from '@/utils/constants'
@@ -51,6 +61,7 @@ async function fetchSets() {
   }
 }
 fetchSets()
+fetchCurves()
 
 function openCreateSet() {
   setForm.value = { title: '', description: '', setBonusXp: 0 }
@@ -81,23 +92,96 @@ const EMPTY_QUERY: QuerySpec = {
   filters: [],
 }
 
-const milestoneForm = ref<Omit<CreateMilestoneRequest, 'categoryId'> & { categoryId: string; _query: QuerySpec; _mapDifficultyIds: string }>({
+type MilestoneFormBase = Omit<
+  CreateMilestoneRequest,
+  'categoryId' | 'iconGroup' | 'positionX' | 'positionY' | 'progressModel' | 'progressCurveId' | 'progressFloor'
+>
+
+interface MilestoneCreateForm extends MilestoneFormBase {
+  categoryId: string
+  iconGroup: string
+  positionX: number
+  positionY: number
+  progressModel: MilestoneProgressModel
+  progressCurveId: string
+  progressFloor: number
+  _query: QuerySpec
+  _mapDifficultyIds: string
+}
+
+const milestoneForm = ref<MilestoneCreateForm>({
   setId: '',
   categoryId: '',
   title: '',
   description: '',
   type: 'MILESTONE',
   tier: 'BRONZE',
+  iconGroup: 'GENERAL',
   xp: 100,
   querySpec: {},
   targetValue: 1,
   comparison: 'GTE',
   blExclusive: false,
+  positionX: 0,
+  positionY: 0,
+  progressModel: 'LINEAR',
+  progressCurveId: '',
+  progressFloor: 0,
   _query: { ...EMPTY_QUERY },
   _mapDifficultyIds: '',
 })
 
-const TIERS: MilestoneTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
+const TIERS: MilestoneTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'APEX']
+const PROGRESS_MODELS: MilestoneProgressModel[] = ['LINEAR', 'CURVE', 'LOG']
+
+const curves = ref<CurveResponse[]>([])
+
+async function fetchCurves() {
+  try {
+    const { getCurves } = await import('@/api/admin/curves')
+    curves.value = await getCurves()
+  } catch {
+    curves.value = []
+  }
+}
+
+const itemsById = ref<Map<string, ItemResponse>>(new Map())
+
+async function ensureItems(ids: string[]) {
+  if (ids.every((id) => itemsById.value.has(id))) return
+  try {
+    const { getItems } = await import('@/api/items')
+    const all = await getItems()
+    const next = new Map(itemsById.value)
+    for (const item of all) next.set(item.id, item)
+    itemsById.value = next
+  } catch {
+  }
+}
+
+const iconGroupOptions = MILESTONE_ICON_GROUPS.map((g) => ({ value: g, label: g }))
+
+const progressModelOptions = PROGRESS_MODELS.map((m) => ({ value: m, label: m }))
+
+const curveOptions = computed(() => [
+  { value: '', label: 'None' },
+  ...curves.value.map((c) => ({ value: c.id, label: c.name })),
+])
+
+const rewardDraft = ref<MilestoneRewardRequest[]>([])
+const showRewardPicker = ref(false)
+
+function addReward(payload: { itemId: string; quantity: number }) {
+  const existing = rewardDraft.value.find((r) => r.itemId === payload.itemId)
+  if (existing) existing.quantity += payload.quantity
+  else rewardDraft.value.push({ ...payload })
+  showRewardPicker.value = false
+  void ensureItems([payload.itemId])
+}
+
+function removeReward(itemId: string) {
+  rewardDraft.value = rewardDraft.value.filter((r) => r.itemId !== itemId)
+}
 const TYPES: MilestoneType[] = ['MILESTONE', 'ACHIEVEMENT']
 const COMPARISONS = [{ value: 'GTE', label: '>= (at least)' }, { value: 'LTE', label: '<= (at most)' }]
 
@@ -118,6 +202,7 @@ async function fetchMilestones(setId: string) {
 
 function openCreateMilestone() {
   if (!selectedSetId.value) return
+  rewardDraft.value = []
   milestoneForm.value = {
     setId: selectedSetId.value,
     categoryId: '',
@@ -125,11 +210,17 @@ function openCreateMilestone() {
     description: '',
     type: 'MILESTONE',
     tier: 'BRONZE',
+    iconGroup: 'GENERAL',
     xp: 100,
     querySpec: {},
     targetValue: 1,
     comparison: 'GTE',
     blExclusive: false,
+    positionX: 0,
+    positionY: 0,
+    progressModel: 'LINEAR',
+    progressCurveId: '',
+    progressFloor: 0,
     _query: {
       select: { function: 'MAX', column: '' },
       from: Object.keys(schema.value.tables)[0] ?? 'scores',
@@ -148,6 +239,9 @@ async function saveMilestone() {
     categoryId: rest.categoryId || undefined,
     querySpec: _query as unknown as Record<string, unknown>,
     mapDifficultyIds: ids.length ? ids : undefined,
+    rewards: rewardDraft.value.length ? [...rewardDraft.value] : undefined,
+    progressCurveId:
+      rest.progressModel === 'CURVE' && rest.progressCurveId ? rest.progressCurveId : null,
   }
   try {
     const { createMilestone } = await import('@/api/admin/milestones')
@@ -186,12 +280,54 @@ async function removeMilestone(m: MilestoneResponse) {
 
 const showEditModal = ref(false)
 const editTarget = ref<MilestoneResponse | null>(null)
-const editForm = ref({ title: '', description: '' })
+interface MilestoneEditForm {
+  title: string
+  description: string
+  tier: string
+  iconGroup: string
+  xp: number
+  targetValue: number
+  positionX: number
+  positionY: number
+  progressModel: MilestoneProgressModel
+  progressCurveId: string
+  progressFloor: number
+}
+
+const EMPTY_EDIT: MilestoneEditForm = {
+  title: '',
+  description: '',
+  tier: 'BRONZE',
+  iconGroup: 'GENERAL',
+  xp: 0,
+  targetValue: 0,
+  positionX: 0,
+  positionY: 0,
+  progressModel: 'LINEAR',
+  progressCurveId: '',
+  progressFloor: 0,
+}
+
+const editForm = ref<MilestoneEditForm>({ ...EMPTY_EDIT })
 const editLoading = ref(false)
 
 function openEdit(m: MilestoneResponse) {
   editTarget.value = m
-  editForm.value = { title: m.title, description: m.description }
+  editForm.value = {
+    title: m.title,
+    description: m.description,
+    tier: m.tier.toUpperCase(),
+    iconGroup: m.iconGroup ?? 'GENERAL',
+    xp: m.xp,
+    targetValue: m.targetValue,
+    positionX: m.positionX ?? 0,
+    positionY: m.positionY ?? 0,
+    progressModel: (m.progressModel as MilestoneProgressModel | null) ?? 'LINEAR',
+    progressCurveId: m.progressCurveId ?? '',
+    progressFloor: m.progressFloor ?? 0,
+  }
+  rewardDraft.value = (m.rewards ?? []).map((r) => ({ itemId: r.item.id, quantity: r.quantity }))
+  void ensureItems(rewardDraft.value.map((r) => r.itemId))
   showEditModal.value = true
 }
 
@@ -200,7 +336,14 @@ async function saveEdit() {
   editLoading.value = true
   try {
     const { updateMilestone } = await import('@/api/admin/milestones')
-    const updated = await updateMilestone(editTarget.value.id, editForm.value)
+    const form = editForm.value
+    const payload: UpdateMilestoneRequest = {
+      ...form,
+      rewards: rewardDraft.value,
+      progressCurveId:
+        form.progressModel === 'CURVE' && form.progressCurveId ? form.progressCurveId : null,
+    }
+    const updated = await updateMilestone(editTarget.value.id, payload)
     const idx = milestones.value.findIndex((x) => x.id === updated.id)
     if (idx !== -1) milestones.value[idx] = updated
     showEditModal.value = false
@@ -530,6 +673,42 @@ const STATUS_OPTIONS = [
           <label class="form-label">Category (optional)</label>
           <BaseSelect v-model="milestoneForm.categoryId" :options="categoryOptions" />
         </div>
+        <div class="form-field" style="flex: 1">
+          <label class="form-label">Icon group</label>
+          <BaseSelect v-model="milestoneForm.iconGroup" :options="iconGroupOptions" />
+        </div>
+      </div>
+
+      <div class="milestone-form__row">
+        <BaseInput v-model.number="milestoneForm.positionX" label="Position X" type="number" />
+        <BaseInput v-model.number="milestoneForm.positionY" label="Position Y" type="number" />
+        <div class="form-field">
+          <label class="form-label">Progress model</label>
+          <BaseSelect v-model="milestoneForm.progressModel" :options="progressModelOptions" />
+        </div>
+        <BaseInput v-model.number="milestoneForm.progressFloor" label="Progress floor" type="number" />
+      </div>
+
+      <div v-if="milestoneForm.progressModel === 'CURVE'" class="milestone-form__row">
+        <div class="form-field" style="flex: 1">
+          <label class="form-label">Progress curve</label>
+          <BaseSelect v-model="milestoneForm.progressCurveId" :options="curveOptions" />
+        </div>
+      </div>
+
+      <div class="ms-admin__rewards">
+        <div class="ms-admin__rewards-head">
+          <span class="ms-admin__rewards-label">Item rewards</span>
+          <BaseButton size="sm" @click="showRewardPicker = true">Add item</BaseButton>
+        </div>
+        <p v-if="rewardDraft.length === 0" class="ms-admin__rewards-empty">No item rewards.</p>
+        <ul v-else class="ms-admin__rewards-list">
+          <li v-for="r in rewardDraft" :key="r.itemId" class="ms-admin__reward">
+            <RewardItemTile v-if="itemsById.get(r.itemId)" :item="itemsById.get(r.itemId)!" :size="44" />
+            <span class="ms-admin__reward-qty">x{{ r.quantity }}</span>
+            <BaseButton size="sm" variant="destructive" @click="removeReward(r.itemId)">Remove</BaseButton>
+          </li>
+        </ul>
       </div>
 
       <div class="form-field">
@@ -635,15 +814,106 @@ const STATUS_OPTIONS = [
     <div class="modal-form">
       <BaseInput v-model="editForm.title" label="Title" required />
       <BaseInput v-model="editForm.description" label="Description" />
+
+      <div class="ms-admin__grid">
+        <BaseSelect v-model="editForm.tier" label="Tier"
+          :options="TIERS.map((t) => ({ value: t, label: t }))" />
+        <BaseSelect v-model="editForm.iconGroup" label="Icon group" :options="iconGroupOptions" />
+        <BaseInput v-model.number="editForm.xp" label="XP" type="number" />
+        <BaseInput v-model.number="editForm.targetValue" label="Target value" type="number" />
+        <BaseInput v-model.number="editForm.positionX" label="Position X" type="number" />
+        <BaseInput v-model.number="editForm.positionY" label="Position Y" type="number" />
+        <BaseSelect v-model="editForm.progressModel" label="Progress model"
+          :options="progressModelOptions" />
+        <BaseSelect v-if="editForm.progressModel === 'CURVE'" v-model="editForm.progressCurveId"
+          label="Progress curve" :options="curveOptions" />
+        <BaseInput v-model.number="editForm.progressFloor" label="Progress floor" type="number" />
+      </div>
+
+      <div class="ms-admin__rewards">
+        <div class="ms-admin__rewards-head">
+          <span class="ms-admin__rewards-label">Item rewards</span>
+          <BaseButton size="sm" @click="showRewardPicker = true">Add item</BaseButton>
+        </div>
+        <p v-if="rewardDraft.length === 0" class="ms-admin__rewards-empty">No item rewards.</p>
+        <ul v-else class="ms-admin__rewards-list">
+          <li v-for="r in rewardDraft" :key="r.itemId" class="ms-admin__reward">
+            <RewardItemTile v-if="itemsById.get(r.itemId)" :item="itemsById.get(r.itemId)!" :size="44" />
+            <span class="ms-admin__reward-qty">x{{ r.quantity }}</span>
+            <BaseButton size="sm" variant="destructive" @click="removeReward(r.itemId)">Remove</BaseButton>
+          </li>
+        </ul>
+      </div>
     </div>
     <template #footer>
       <BaseButton @click="showEditModal = false">Cancel</BaseButton>
       <BaseButton variant="primary" :loading="editLoading" @click="saveEdit">Save</BaseButton>
     </template>
   </BaseModal>
+
+  <CampaignItemPicker v-if="showRewardPicker" unrestricted @close="showRewardPicker = false"
+    @pick="addReward" />
 </template>
 
 <style scoped>
+.ms-admin__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-md);
+}
+
+.ms-admin__rewards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.ms-admin__rewards-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.ms-admin__rewards-label {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.ms-admin__rewards-empty {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.ms-admin__rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ms-admin__reward {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.ms-admin__reward-qty {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
 .tab {
   display: flex;
   flex-direction: column;

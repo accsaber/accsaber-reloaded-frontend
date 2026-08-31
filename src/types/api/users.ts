@@ -1,4 +1,5 @@
 import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
+import type { MilestoneIconGroup, MilestoneRewardResponse } from './milestones'
 import type { PaginationParams } from '../pagination'
 import type { UserRelationCounts } from './relations'
 import type { SupporterTier } from './supporters'
@@ -27,10 +28,16 @@ export interface PinnedScoreInput {
   comment?: string | null
 }
 
+export interface PinnedMilestoneInput {
+  milestoneId: string
+  displayOrder: number
+}
+
 export interface ProfileUpdateRequest {
   name?: string
   bio?: string
   pinnedScores?: PinnedScoreInput[]
+  pinnedMilestones?: PinnedMilestoneInput[]
 }
 
 export interface PinnedScoreResponse {
@@ -185,6 +192,7 @@ export interface UserMilestoneProgressResponse {
   description: string
   type: MilestoneType
   tier: MilestoneTier
+  iconGroup?: MilestoneIconGroup | null
   xp: number
   targetValue: number
   progress: number
@@ -194,6 +202,9 @@ export interface UserMilestoneProgressResponse {
   completionPercentage: number
   setId: string
   categoryId: string | null
+  positionX?: number
+  positionY?: number
+  rewards?: MilestoneRewardResponse[] | null
 }
 
 export interface StatsDiffResponse {

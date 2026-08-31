@@ -2,17 +2,26 @@
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
 import type { MilestoneSort } from '@/api/milestones'
 import { useSetGroups } from '@/composables/useSetGroups'
+import { loadMilestoneGlyphs } from '@/composables/useMilestoneCatalog'
+import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import { ref, watch } from 'vue'
 
 const props = defineProps<{
   userId: string
+  isSelfProfile?: boolean
+  pinnedIds?: Set<string>
+  canPinMore?: boolean
+  pinPending?: Set<string>
 }>()
+
+const emit = defineEmits<{ 'pin-toggle': [milestoneId: string] }>()
 
 const loading = ref(false)
 const milestones = ref<MilestoneCompletionResponse[]>([])
 const sets = ref<MilestoneSetResponse[]>([])
 const sort = ref<MilestoneSort>('tier')
+const glyphs = ref<Map<string, MilestoneGlyphKey>>(new Map())
 
 const { resolvedGroups, standaloneSets, fetchGroups, resetGroups } = useSetGroups(sets)
 
@@ -20,12 +29,14 @@ async function fetchMilestones(sortBy?: MilestoneSort) {
   loading.value = true
   try {
     const { getMilestoneSets, getMilestoneCompletionStats } = await import('@/api/milestones')
-    const [completionRes, setRes] = await Promise.all([
+    const [completionRes, setRes, glyphRes] = await Promise.all([
       getMilestoneCompletionStats(props.userId, sortBy ?? sort.value),
       getMilestoneSets({ size: 100 }),
+      loadMilestoneGlyphs(),
     ])
     milestones.value = completionRes
     sets.value = setRes.content
+    glyphs.value = glyphRes
 
     await fetchGroups()
   } catch {
@@ -51,5 +62,7 @@ watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
 
 <template>
   <MilestoneListView :milestones="milestones" :sets="sets" :sort="sort" :loading="loading" logged-in
-    :groups="resolvedGroups" :standalone-sets="standaloneSets" @update:sort="handleSortChange" />
+    :groups="resolvedGroups" :standalone-sets="standaloneSets" :glyphs="glyphs"
+    :pinnable="isSelfProfile" :pinned-ids="pinnedIds" :can-pin-more="canPinMore" :pin-pending="pinPending"
+    @update:sort="handleSortChange" @pin-toggle="emit('pin-toggle', $event)" />
 </template>

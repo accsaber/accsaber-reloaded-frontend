@@ -1,5 +1,6 @@
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import type { MilestoneCompletionResponse } from '@/types/api/milestones'
+import type { MilestoneCompletionResponse, MilestoneResponse } from '@/types/api/milestones'
+import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import type { PublicStaffUserResponse } from '@/types/api/staff'
 import type { LeaderboardResponse, ScoreResponse, UserMilestoneProgressResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, UserRefDisplay, XpPlayerDisplay } from '@/types/display'
@@ -176,17 +177,50 @@ export function toMilestoneDisplay(
 ): MilestoneDisplay {
   return {
     id: m.milestoneId,
+    setId: m.setId,
     title: m.title,
     description: m.description,
     type: m.type,
     tier: m.tier,
+    glyph: resolveMilestoneGlyph(m.iconGroup),
     xp: m.xp,
     targetValue: m.targetValue,
     userProgress: m.progress,
     normalizedProgress: m.normalizedProgress,
     completionPercent: m.completionPercentage,
     isCompleted: m.completed,
+    completedAt: m.completedAt,
     categoryCode,
+    positionX: m.positionX ?? 0,
+    positionY: m.positionY ?? 0,
+    rewards: m.rewards ?? [],
+  }
+}
+
+export function toMilestoneDisplayFromCatalog(
+  m: MilestoneResponse,
+  categoryCode?: CategoryCode,
+  progress?: MilestoneCompletionResponse,
+): MilestoneDisplay {
+  return {
+    id: m.id,
+    setId: m.setId,
+    title: m.title,
+    description: m.description,
+    type: m.type,
+    tier: m.tier,
+    glyph: resolveMilestoneGlyph(m.iconGroup ?? progress?.iconGroup, m.querySpec),
+    xp: m.xp,
+    targetValue: m.targetValue,
+    userProgress: progress?.userProgress,
+    normalizedProgress: progress?.userNormalizedProgress ?? null,
+    completionPercent: progress?.completionPercentage ?? m.completionPercentage,
+    isCompleted: progress?.userCompleted,
+    completedAt: progress?.userCompletedAt ?? null,
+    categoryCode,
+    positionX: m.positionX ?? 0,
+    positionY: m.positionY ?? 0,
+    rewards: m.rewards ?? [],
   }
 }
 

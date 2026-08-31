@@ -2,6 +2,8 @@
 import MilestoneHolderTooltip from '@/components/domain/MilestoneHolderTooltip.vue';
 import type { MilestoneCompletionResponse } from '@/types/api/milestones';
 import { tierColor as getTierColor, formatPercent } from '@/utils/constants';
+import MilestoneBadge from '@/components/domain/MilestoneBadge.vue';
+import { resolveMilestoneGlyph, type MilestoneGlyphKey } from '@/utils/milestoneIcons';
 import { formatDifficulty } from '@/utils/mappers';
 import { computed, ref } from 'vue';
 
@@ -9,18 +11,41 @@ const props = defineProps<{
   milestone: MilestoneCompletionResponse
   compact?: boolean
   loggedIn?: boolean
+  glyph?: MilestoneGlyphKey
+  pinnable?: boolean
+  pinned?: boolean
+  pinDisabled?: boolean
+  pinPending?: boolean
 }>()
+
+const emit = defineEmits<{ 'pin-toggle': [milestoneId: string] }>()
 
 const tierColor = computed(() => getTierColor(props.milestone.tier))
 const isCompleted = computed(() => props.milestone.userCompleted === true)
 const isNotCompleted = computed(() => !!props.loggedIn && !isCompleted.value)
 const isMilestoneType = computed(() => props.milestone.type?.toUpperCase() === 'MILESTONE')
 const isApex = computed(() => props.milestone.tier?.toUpperCase() === 'APEX')
+const badgeGlyph = computed(() => props.glyph ?? resolveMilestoneGlyph(props.milestone.iconGroup))
 const hasScoreInfo = computed(() => isCompleted.value && !!props.milestone.achievedWithScoreId && !!accuracy.value)
 const typeLabel = computed(() => isMilestoneType.value ? 'milestone' : 'achievement')
 const blTooltip = computed(() => `This ${typeLabel.value} is exclusive to players with the BeatLeader mod.`)
 
 const expanded = ref(false)
+
+const showPin = computed(() => !!props.pinnable && isCompleted.value)
+
+const pinTitle = computed(() => {
+  if (props.pinned) return 'Unpin milestone'
+  if (props.pinDisabled) return 'Unpin a milestone to free a slot first'
+  return 'Pin milestone'
+})
+
+function onPinClick(event: Event) {
+  event.stopPropagation()
+  if (props.pinPending) return
+  if (!props.pinned && props.pinDisabled) return
+  emit('pin-toggle', props.milestone.milestoneId)
+}
 
 const completionText = computed(() => {
   return `${formatPercent(props.milestone.completionPercentage ?? 0)}% of players`
@@ -77,31 +102,12 @@ function handleMilestoneCoverError(event: Event) {
       :role="compact && hasScoreInfo ? 'button' : undefined"
       :aria-expanded="compact && hasScoreInfo ? expanded : undefined" @click="toggleExpand"
       @keydown.enter="toggleExpand" @keydown.space.prevent="toggleExpand">
-      <span class="milestone-detail__icon" :class="{
-        'milestone-detail__icon--completed': isCompleted,
-        'milestone-detail__icon--gray': isNotCompleted,
-      }">
-        <svg v-if="isApex" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M10 2l3 5 5 1-4 4 1 5-5-3-5 3 1-5-4-4 5-1z" />
-        </svg>
-        <svg v-else-if="isMilestoneType" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="4" y1="3" x2="4" y2="17" />
-          <path d="M4 3h10l-3 4 3 4H4" />
-        </svg>
-        <svg v-else viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round" aria-hidden="true">
-          <path d="M6 3h8v5a4 4 0 0 1-8 0V3z" />
-          <path d="M14 5h1a2 2 0 0 1 0 4h-1" />
-          <path d="M6 5H5a2 2 0 0 0 0 4h1" />
-          <line x1="10" y1="12" x2="10" y2="15" />
-          <line x1="7" y1="15" x2="13" y2="15" />
-        </svg>
-      </span>
+      <MilestoneBadge class="milestone-detail__badge" :glyph="badgeGlyph" :tier="milestone.tier"
+        :size="compact ? 44 : 52" :completed="isCompleted" />
       <div class="milestone-detail__title-group">
         <div class="milestone-detail__tier-row">
           <span class="milestone-detail__tier">{{ milestone.tier }}</span>
+          <span class="milestone-detail__kind">{{ typeLabel }}</span>
           <span v-if="milestone.blExclusive" class="milestone-detail__bl-badge" :title="blTooltip">BL</span>
         </div>
         <h4 class="milestone-detail__title">
@@ -125,6 +131,22 @@ function handleMilestoneCoverError(event: Event) {
           </svg>
           <span v-if="completedAtFormatted" class="milestone-detail__completed-date">{{ completedAtFormatted }}</span>
         </span>
+        <button v-if="showPin" class="milestone-detail__pin"
+          :class="{
+            'milestone-detail__pin--active': pinned,
+            'milestone-detail__pin--disabled': !pinned && pinDisabled,
+          }"
+          :aria-label="pinTitle" :title="pinTitle" :aria-pressed="!!pinned" :disabled="pinPending"
+          @click="onPinClick">
+          <svg v-if="pinned" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"
+            stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
+          </svg>
+        </button>
         <svg v-if="hasScoreInfo" class="milestone-detail__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="6 8 10 12 14 8" />
@@ -171,8 +193,10 @@ function handleMilestoneCoverError(event: Event) {
         </span>
       </div>
 
-      <div v-if="progressPercent != null && !isCompleted" class="milestone-detail__progress">
-        <div class="milestone-detail__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
+      <div v-if="progressPercent != null && !isCompleted" class="milestone-detail__progress-row">
+        <div class="milestone-detail__progress">
+          <div class="milestone-detail__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
+        </div>
         <span class="milestone-detail__progress-text">{{ formatPercent(progressPercent) }}%</span>
       </div>
 
@@ -219,19 +243,14 @@ function handleMilestoneCoverError(event: Event) {
   gap: var(--space-md);
 }
 
-.milestone-detail__icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  color: var(--tier-color);
+.milestone-detail:not(.milestone-detail--compact) .milestone-detail__badge {
+  animation: milestone-badge-in 240ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.milestone-detail__icon--completed {
-  color: var(--tier-color);
-}
-
-.milestone-detail__icon--gray {
-  color: var(--text-secondary);
+@keyframes milestone-badge-in {
+  from {
+    transform: scale(0.82);
+  }
 }
 
 .milestone-detail--dim {
@@ -247,27 +266,8 @@ function handleMilestoneCoverError(event: Event) {
   );
 }
 
-.milestone-detail--apex .milestone-detail__icon {
-  width: 36px;
-  height: 36px;
-}
-
-.milestone-detail--apex.milestone-detail--compact .milestone-detail__icon {
-  width: 24px;
-  height: 24px;
-}
-
-.milestone-detail--apex .milestone-detail__icon--completed {
-  color: var(--tier-color);
-}
-
 .milestone-detail--apex .milestone-detail__title {
   color: var(--tier-color);
-}
-
-.milestone-detail__icon svg {
-  width: 100%;
-  height: 100%;
 }
 
 .milestone-detail__title-group {
@@ -289,6 +289,15 @@ function handleMilestoneCoverError(event: Event) {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--tier-color);
+}
+
+.milestone-detail__kind {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
 }
 
 .milestone-detail__bl-badge {
@@ -416,11 +425,6 @@ function handleMilestoneCoverError(event: Event) {
   align-items: center;
 }
 
-.milestone-detail--compact .milestone-detail__icon {
-  width: 20px;
-  height: 20px;
-}
-
 .milestone-detail--compact .milestone-detail__title-group {
   flex-direction: row;
   align-items: baseline;
@@ -472,6 +476,44 @@ function handleMilestoneCoverError(event: Event) {
 
 .milestone-detail__compact-meta .milestone-detail__check-icon {
   color: var(--success);
+}
+
+.milestone-detail__pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.milestone-detail__pin:hover {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+  background: var(--bg-elevated);
+}
+
+.milestone-detail__pin--active {
+  color: var(--page-accent, var(--accent));
+  border-color: color-mix(in srgb, var(--page-accent, var(--accent)) 50%, var(--bg-overlay));
+}
+
+.milestone-detail__pin--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.milestone-detail__pin--disabled:hover {
+  color: var(--text-tertiary);
+  border-color: var(--bg-overlay);
+  background: transparent;
 }
 
 .milestone-detail__chevron {
@@ -546,13 +588,23 @@ function handleMilestoneCoverError(event: Event) {
   transition: transform 300ms ease-out;
 }
 
+.milestone-detail__progress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.milestone-detail__progress-row .milestone-detail__progress {
+  flex: 1;
+}
+
 .milestone-detail__progress-text {
-  position: absolute;
-  top: calc(100% + 2px);
-  right: 0;
+  flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 767px) {
@@ -620,6 +672,10 @@ function handleMilestoneCoverError(event: Event) {
   .milestone-detail__dropdown,
   .milestone-detail__progress-bar {
     transition: none;
+  }
+
+  .milestone-detail:not(.milestone-detail--compact) .milestone-detail__badge {
+    animation: none;
   }
 }
 </style>

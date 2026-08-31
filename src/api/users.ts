@@ -102,6 +102,12 @@ export function getUserCompletedMilestones(
   return get<UserMilestoneProgressResponse[]>(`/users/${userId}/milestones/completed`)
 }
 
+export function getUserPinnedMilestones(
+  userId: string,
+): Promise<UserMilestoneProgressResponse[]> {
+  return get<UserMilestoneProgressResponse[]>(`/users/${userId}/pinned-milestones`)
+}
+
 export function getUserMissingMaps(
   userId: string,
   params?: DifficultyListParams,

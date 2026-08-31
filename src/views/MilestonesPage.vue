@@ -1,31 +1,43 @@
 <script setup lang="ts">
 import type { MilestoneSort } from '@/api/milestones'
-import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import MilestoneCanvas from '@/components/domain/MilestoneCanvas.vue'
+import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
-import SetChartMap from '@/components/domain/SetChartMap.vue'
-import SetDetail from '@/components/domain/SetDetail.vue'
+import MilestoneRewards from '@/components/domain/MilestoneRewards.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useSetGroups } from '@/composables/useSetGroups'
+import { useSupporter } from '@/composables/useSupporter'
 import { useAuthStore } from '@/stores/auth'
-import { useThemeStore } from '@/stores/theme'
-import type { MilestoneCompletionResponse, MilestoneSetResponse, PrerequisiteLinkResponse } from '@/types/api/milestones'
-import type { CrossSetEdge, EnrichedPrerequisite } from '@/types/milestones'
-import { enrichPrerequisites, extractCrossSetEdges } from '@/utils/milestonePrereqs'
+import { useCategoryStore } from '@/stores/categories'
+import type {
+  MilestoneCompletionResponse,
+  MilestoneResponse,
+  MilestoneSetResponse,
+  PrerequisiteLinkResponse,
+} from '@/types/api/milestones'
+import type { UserMilestoneProgressResponse } from '@/types/api/users'
+import type { MilestoneDisplay } from '@/types/display'
+import { toMilestoneDisplayFromCatalog } from '@/utils/mappers'
+import type { MilestoneSetGroup } from '@/utils/milestoneLayout'
+import { glyphMapOf, loadMilestoneCatalog } from '@/composables/useMilestoneCatalog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
-const route = useRoute()
-const router = useRouter()
+const categoryStore = useCategoryStore()
 
 const loading = ref(true)
 const sets = ref<MilestoneSetResponse[]>([])
+const catalog = ref<MilestoneResponse[]>([])
 const milestones = ref<MilestoneCompletionResponse[]>([])
+const prerequisites = ref<PrerequisiteLinkResponse[]>([])
 const milestoneSort = ref<MilestoneSort>('tier')
 const isMobile = ref(false)
-const viewMode = ref<'chart' | 'list'>('chart')
+const viewMode = ref<'map' | 'list'>('map')
+const selectedId = ref<string | null>(null)
+const selectedSetId = ref<string | null>(null)
+const focusedSetId = ref<string | null>(null)
 
 const { resolvedGroups, standaloneSets, fetchGroups, resetGroups } = useSetGroups(sets)
 
@@ -34,98 +46,176 @@ usePageMeta({
   description: 'Track your milestone progress and earn XP across AccSaber achievement sets.',
 })
 
-const selectedSetId = computed({
-  get: (): string | null => (route.query.set as string) || null,
-  set: (val: string | null) => {
-    const current = (route.query.set as string) || null
-    if (current === val) return
-
-    const query = { ...route.query }
-    if (val) {
-      query.set = val
-      router.push({ query })
-      return
-    }
-
-    delete query.set
-    router.replace({ query })
-  },
+const mapGroups = computed<MilestoneSetGroup[]>(() => {
+  const bands: MilestoneSetGroup[] = resolvedGroups.value.map((g) => ({
+    id: g.group.id,
+    name: g.group.name,
+    setIds: g.sets.map((s) => s.id),
+  }))
+  if (standaloneSets.value.length > 0) {
+    bands.push({
+      id: 'standalone',
+      name: bands.length > 0 ? 'Other' : null,
+      setIds: standaloneSets.value.map((s) => s.id),
+    })
+  }
+  return bands
 })
 
-const milestonesBySet = computed(() => {
-  const map = new Map<string, MilestoneCompletionResponse[]>()
-  for (const m of milestones.value) {
-    if (!map.has(m.setId)) map.set(m.setId, [])
-    map.get(m.setId)!.push(m)
-  }
+const orderedSetIds = computed(() => mapGroups.value.flatMap((g) => g.setIds))
+
+watch(orderedSetIds, (ids) => {
+  if (focusedSetId.value && !ids.includes(focusedSetId.value)) focusedSetId.value = null
+})
+
+function focusSet(setId: string | null) {
+  focusedSetId.value = setId
+  selectedId.value = null
+  selectedSetId.value = setId
+}
+
+const completionById = computed(() => {
+  const map = new Map<string, MilestoneCompletionResponse>()
+  for (const m of milestones.value) map.set(m.milestoneId, m)
   return map
 })
 
+const nodes = computed<MilestoneDisplay[]>(() =>
+  catalog.value.map((m) =>
+    toMilestoneDisplayFromCatalog(
+      m,
+      m.categoryId ? categoryStore.getCategoryCode(m.categoryId) : undefined,
+      completionById.value.get(m.id),
+    ),
+  ),
+)
+
+const totalMilestones = computed(() => catalog.value.length)
+
+const totalCompleted = computed(
+  () => milestones.value.filter((m) => m.userCompleted).length,
+)
+
+const selectedMilestone = computed(() =>
+  selectedId.value ? (completionById.value.get(selectedId.value) ?? null) : null,
+)
+
+const selectedCatalogEntry = computed(() =>
+  selectedId.value ? (catalog.value.find((m) => m.id === selectedId.value) ?? null) : null,
+)
+
+const selectedRewards = computed(() => selectedCatalogEntry.value?.rewards ?? [])
+
+const glyphs = computed(() => glyphMapOf(catalog.value))
+
+const selectedGlyph = computed(() =>
+  selectedId.value ? glyphs.value.get(selectedId.value) : undefined,
+)
+
 const selectedSet = computed(() =>
-  sets.value.find((s) => s.id === selectedSetId.value) ?? null,
+  selectedSetId.value ? (sets.value.find((s) => s.id === selectedSetId.value) ?? null) : null,
 )
 
-const selectedMilestones = computed(() =>
-  selectedSetId.value ? (milestonesBySet.value.get(selectedSetId.value) ?? []) : [],
-)
-
-const prerequisitesBySet = ref<Map<string, PrerequisiteLinkResponse[]>>(new Map())
-
-const enrichedSelectedPrerequisites = computed<EnrichedPrerequisite[]>(() => {
-  if (!selectedSetId.value) return []
-  const raw = prerequisitesBySet.value.get(selectedSetId.value) ?? []
-  return enrichPrerequisites(raw, selectedSetId.value, milestones.value, sets.value)
+const selectedSetStats = computed(() => {
+  const set = selectedSet.value
+  if (!set) return null
+  const items = catalog.value.filter((m) => m.setId === set.id)
+  const done = items.filter((m) => completionById.value.get(m.id)?.userCompleted).length
+  return { total: items.length, completed: done }
 })
 
-const crossSetEdges = computed<CrossSetEdge[]>(() =>
-  extractCrossSetEdges(prerequisitesBySet.value, milestones.value),
+const { isSupporter } = useSupporter(() => authStore.userId)
+
+const pinSlotLimit = computed(() => (isSupporter.value ? 6 : 3))
+
+const pinned = ref<UserMilestoneProgressResponse[]>([])
+const pinSupported = ref(true)
+const pinPending = ref(false)
+
+const pinnedIds = computed(() => new Set(pinned.value.map((p) => p.milestoneId)))
+
+const selectedIsPinned = computed(
+  () => !!selectedId.value && pinnedIds.value.has(selectedId.value),
 )
 
-const totalMilestones = computed(() => milestones.value.length)
-const totalCompleted = computed(() => milestones.value.filter((m) => m.userCompleted).length)
+const canPin = computed(
+  () =>
+    pinSupported.value &&
+    authStore.isLoggedIn &&
+    !!selectedMilestone.value?.userCompleted &&
+    (selectedIsPinned.value || pinned.value.length < pinSlotLimit.value),
+)
 
-const lockedPlaceholders = computed(() => {
-  const count = Math.max(0, 5 - sets.value.length)
-  return Array.from({ length: count }, (_, i) => ({
-    id: `placeholder-${i}`,
-    title: 'Coming Soon',
-    index: sets.value.length + i,
-  }))
+const pinFullNotice = computed(() => {
+  if (!authStore.isLoggedIn || !pinSupported.value) return null
+  if (!selectedMilestone.value?.userCompleted) return null
+  if (selectedIsPinned.value || pinned.value.length < pinSlotLimit.value) return null
+  return pinSlotLimit.value === 6
+    ? 'All 6 pinned slots are full. Unpin one from your profile first.'
+    : 'All 3 pinned slots are full. Supporters get 6.'
 })
+
+async function fetchPinned() {
+  if (!authStore.userId || !pinSupported.value) return
+  try {
+    const { getUserPinnedMilestones } = await import('@/api/users')
+    pinned.value = await getUserPinnedMilestones(authStore.userId)
+  } catch {
+    pinned.value = []
+    pinSupported.value = false
+  }
+}
+
+async function togglePin() {
+  if (!selectedId.value || pinPending.value || !canPin.value) return
+  const id = selectedId.value
+  const nextIds = selectedIsPinned.value
+    ? pinned.value.map((p) => p.milestoneId).filter((p) => p !== id)
+    : [...pinned.value.map((p) => p.milestoneId), id]
+
+  pinPending.value = true
+  try {
+    const { updateMyProfile } = await import('@/api/users')
+    await updateMyProfile({
+      pinnedMilestones: nextIds.map((milestoneId, displayOrder) => ({ milestoneId, displayOrder })),
+    })
+    await fetchPinned()
+  } catch {
+  } finally {
+    pinPending.value = false
+  }
+}
 
 async function fetchData() {
   loading.value = true
   try {
     const { getMilestoneSets, getMilestoneCompletionStats } = await import('@/api/milestones')
-    const [setsRes, completionRes] = await Promise.all([
+    const [catalogRes, setsRes, completionRes] = await Promise.all([
+      loadMilestoneCatalog(),
       getMilestoneSets({ userId: authStore.userId ?? undefined, size: 100 }),
       getMilestoneCompletionStats(authStore.userId ?? undefined, milestoneSort.value),
     ])
+    catalog.value = catalogRes
     sets.value = setsRes.content
     milestones.value = completionRes
 
     await fetchGroups()
-    fetchAllPrerequisites(setsRes.content)
+    await fetchPrerequisites(setsRes.content)
+    await fetchPinned()
   } catch {
+    catalog.value = []
     sets.value = []
     milestones.value = []
+    prerequisites.value = []
     resetGroups()
   }
   loading.value = false
 }
 
-async function fetchAllPrerequisites(allSets: MilestoneSetResponse[]) {
+async function fetchPrerequisites(allSets: MilestoneSetResponse[]) {
   const { getSetPrerequisites } = await import('@/api/milestones')
-  const results = await Promise.allSettled(
-    allSets.map((s) => getSetPrerequisites(s.id)),
-  )
-
-  const map = new Map<string, PrerequisiteLinkResponse[]>()
-  for (let i = 0; i < allSets.length; i++) {
-    const result = results[i]
-    map.set(allSets[i].id, result.status === 'fulfilled' ? result.value : [])
-  }
-  prerequisitesBySet.value = map
+  const results = await Promise.allSettled(allSets.map((s) => getSetPrerequisites(s.id)))
+  prerequisites.value = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
 }
 
 async function handleSortChange(sort: MilestoneSort) {
@@ -138,7 +228,19 @@ async function handleSortChange(sort: MilestoneSort) {
   }
 }
 
-function handleResize() { isMobile.value = window.innerWidth < 768 }
+function selectMilestone(id: string | null) {
+  selectedId.value = id
+  if (id) selectedSetId.value = null
+}
+
+function selectSet(setId: string) {
+  selectedSetId.value = setId
+  selectedId.value = null
+}
+
+function handleResize() {
+  isMobile.value = window.innerWidth < 768
+}
 
 onMounted(() => {
   handleResize()
@@ -155,54 +257,32 @@ watch(() => authStore.userId, fetchData)
 
 <template>
   <div class="milestones-page">
-    <ParticleCanvas class="milestones-page__particles" :dark-mode="themeStore.resolvedBase === 'dark'"
-      :particle-count="isMobile ? 60 : 120" />
-
     <header class="milestones-page__header">
       <h1 class="milestones-page__title">Milestones</h1>
       <div class="milestones-page__controls">
-        <div v-if="!loading" class="milestones-page__stats">
-          <div class="milestones-page__stat">
-            <span class="milestones-page__stat-value">{{ sets.length }}</span>
-            <span class="milestones-page__stat-label">Sets</span>
-          </div>
-          <div class="milestones-page__stat">
-            <span class="milestones-page__stat-value">{{ totalMilestones }}</span>
-            <span class="milestones-page__stat-label">Milestones</span>
-          </div>
-          <div v-if="authStore.isLoggedIn" class="milestones-page__stat">
-            <span class="milestones-page__stat-value">{{ totalCompleted }}</span>
-            <span class="milestones-page__stat-label">Completed</span>
-          </div>
-        </div>
-        <div v-if="!selectedSetId" class="milestones-page__view-toggle">
-          <button :class="{ 'milestones-page__view-btn--active': viewMode === 'chart' }"
-            class="milestones-page__view-btn" @click="viewMode = 'chart'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="6" cy="6" r="1.5" />
-              <circle cx="18" cy="8" r="1.5" />
-              <circle cx="8" cy="18" r="1.5" />
-              <circle cx="18" cy="17" r="1.5" />
-              <line x1="7.5" y1="7" x2="10.5" y2="10.5" />
-              <line x1="13.5" y1="10.5" x2="16.5" y2="9" />
-              <line x1="10.5" y1="13.5" x2="9" y2="16.5" />
-              <line x1="13.5" y1="13.5" x2="17" y2="15.5" />
-            </svg>
-            Chart
+        <p v-if="!loading" class="milestones-page__summary">
+          <template v-if="authStore.isLoggedIn">
+            {{ totalCompleted }} of {{ totalMilestones }} complete across {{ sets.length }} sets.
+          </template>
+          <template v-else>
+            {{ totalMilestones }} milestones across {{ sets.length }} sets.
+          </template>
+        </p>
+        <div v-if="!isMobile" class="milestones-page__view-toggle">
+          <button
+            type="button"
+            class="milestones-page__view-btn"
+            :class="{ 'milestones-page__view-btn--active': viewMode === 'map' }"
+            @click="viewMode = 'map'"
+          >
+            Map
           </button>
-          <button :class="{ 'milestones-page__view-btn--active': viewMode === 'list' }"
-            class="milestones-page__view-btn" @click="viewMode = 'list'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="8" y1="6" x2="21" y2="6" />
-              <line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" />
-              <line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" />
-              <line x1="3" y1="18" x2="3.01" y2="18" />
-            </svg>
+          <button
+            type="button"
+            class="milestones-page__view-btn"
+            :class="{ 'milestones-page__view-btn--active': viewMode === 'list' }"
+            @click="viewMode = 'list'"
+          >
             List
           </button>
         </div>
@@ -210,96 +290,100 @@ watch(() => authStore.userId, fetchData)
     </header>
 
     <div v-if="loading" class="milestones-page__skeleton">
-      <SkeletonLoader v-for="i in 6" :key="i" variant="card" />
+      <SkeletonLoader variant="card" />
+      <SkeletonLoader variant="card" />
     </div>
 
-    <template v-else-if="viewMode === 'list' && !selectedSetId">
-      <MilestoneListView :milestones="milestones" :sets="sets" :sort="milestoneSort" :logged-in="authStore.isLoggedIn"
-        :groups="resolvedGroups" :standalone-sets="standaloneSets" @update:sort="handleSortChange" />
-    </template>
+    <div v-else-if="viewMode === 'map' && !isMobile" class="milestones-page__map">
+      <MilestoneCanvas
+        :milestones="nodes"
+        :sets="sets"
+        :groups="mapGroups"
+        :prerequisites="prerequisites"
+        :logged-in="authStore.isLoggedIn"
+        :selected-id="selectedId"
+        :focused-set-id="focusedSetId"
+        @select="selectMilestone"
+        @select-set="selectSet"
+        @focus-set="focusSet"
+      />
 
-    <Transition v-else name="zoom" mode="out-in">
-      <SetDetail v-if="selectedSet" :key="selectedSet.id" :set="selectedSet" :milestones="selectedMilestones"
-        :prerequisites="enrichedSelectedPrerequisites" :all-milestones="milestones" :sort="milestoneSort"
-        :logged-in="authStore.isLoggedIn" @back="selectedSetId = null" @navigate-to-set="selectedSetId = $event"
-        @update:sort="handleSortChange" />
+      <aside class="milestones-page__inspector" aria-label="Milestone details">
+        <Transition name="inspector" mode="out-in" :duration="{ enter: 300, leave: 100 }">
+          <div :key="selectedId ?? selectedSetId ?? 'hint'" class="milestones-page__inspector-content">
+            <template v-if="selectedMilestone">
+              <MilestoneDetail :milestone="selectedMilestone" :logged-in="authStore.isLoggedIn"
+                :glyph="selectedGlyph" />
+              <MilestoneRewards :rewards="selectedRewards" />
 
-      <SetChartMap v-else-if="!isMobile" key="set-chart-map" :sets="sets" :milestones-by-set="milestonesBySet"
-        :selected-set-id="selectedSetId" :locked-sets="lockedPlaceholders" :cross-set-edges="crossSetEdges"
-        :groups="resolvedGroups" :standalone-sets="standaloneSets" @select-set="selectedSetId = $event" />
+              <div v-if="authStore.isLoggedIn && selectedMilestone.userCompleted" class="milestones-page__pin">
+                <BaseButton size="sm" :disabled="!canPin || pinPending" @click="togglePin">
+                  {{ selectedIsPinned ? 'Unpin from profile' : 'Pin to profile' }}
+                </BaseButton>
+                <span class="milestones-page__pin-count">{{ pinned.length }} / {{ pinSlotLimit }} pinned</span>
+                <p v-if="pinFullNotice" class="milestones-page__pin-notice">{{ pinFullNotice }}</p>
+              </div>
+            </template>
 
-      <div v-else key="mobile-list" class="milestones-page__mobile-list">
-        <template v-for="rg in resolvedGroups" :key="rg.group.id">
-          <div class="milestones-page__mobile-group">
-            <h2 class="milestones-page__mobile-group-title">{{ rg.group.name }}</h2>
-            <p v-if="rg.group.description" class="milestones-page__mobile-group-desc">{{ rg.group.description }}</p>
+            <template v-else-if="selectedSet && selectedSetStats">
+              <div class="milestones-page__set">
+                <h2 class="milestones-page__set-title">{{ selectedSet.title }}</h2>
+                <p class="milestones-page__set-desc">{{ selectedSet.description }}</p>
+                <p class="milestones-page__set-meta">
+                  <template v-if="authStore.isLoggedIn">
+                    {{ selectedSetStats.completed }} / {{ selectedSetStats.total }} complete
+                  </template>
+                  <template v-else>{{ selectedSetStats.total }} milestones</template>
+                  <template v-if="selectedSet.setBonusXp > 0">
+                    · +{{ selectedSet.setBonusXp }} XP for finishing the set
+                  </template>
+                </p>
+              </div>
+              <MilestoneRewards
+                :rewards="selectedSet.rewards ?? []"
+                label="Set reward"
+                ceremonial
+              />
+            </template>
+
+            <p v-else class="milestones-page__hint">
+              Pick a milestone on the map to read its target, progress and reward. Click a set heading
+              for the set bonus.
+            </p>
           </div>
-          <button v-for="set in rg.sets" :key="set.id" class="milestones-page__mobile-card"
-            @click="selectedSetId = set.id">
-            <div class="milestones-page__mobile-card-header">
-              <h3 class="milestones-page__mobile-card-title">{{ set.title }}</h3>
-              <span class="milestones-page__mobile-card-count">
-                {{ (milestonesBySet.get(set.id) ?? []).length }} milestones
-              </span>
-            </div>
-          </button>
-        </template>
+        </Transition>
+      </aside>
+    </div>
 
-        <template v-if="standaloneSets.length > 0">
-          <div v-if="resolvedGroups.length > 0" class="milestones-page__mobile-group">
-            <h2 class="milestones-page__mobile-group-title">Other</h2>
-          </div>
-          <button v-for="set in standaloneSets" :key="set.id" class="milestones-page__mobile-card"
-            @click="selectedSetId = set.id">
-            <div class="milestones-page__mobile-card-header">
-              <h3 class="milestones-page__mobile-card-title">{{ set.title }}</h3>
-              <span class="milestones-page__mobile-card-count">
-                {{ (milestonesBySet.get(set.id) ?? []).length }} milestones
-              </span>
-            </div>
-          </button>
-        </template>
-
-        <div v-for="lg in lockedPlaceholders" :key="lg.id"
-          class="milestones-page__mobile-card milestones-page__mobile-card--locked">
-          <div class="milestones-page__mobile-card-header">
-            <h3 class="milestones-page__mobile-card-title">{{ lg.title }}</h3>
-            <svg class="milestones-page__mobile-lock" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="5" y="9" width="10" height="8" rx="1.5" />
-              <path d="M7 9V6a3 3 0 0 1 6 0v3" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <MilestoneListView
+      v-else
+      :milestones="milestones"
+      :sets="sets"
+      :sort="milestoneSort"
+      :logged-in="authStore.isLoggedIn"
+      :groups="resolvedGroups"
+      :standalone-sets="standaloneSets"
+      :glyphs="glyphs"
+      @update:sort="handleSortChange"
+    />
   </div>
 </template>
 
 <style scoped>
 .milestones-page {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
-  max-width: 1280px;
+  max-width: min(1720px, 96vw);
   margin: 0 auto;
   width: 100%;
   min-height: 80vh;
   padding: var(--space-lg);
 }
 
-.milestones-page__particles {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
 .milestones-page__header {
-  position: relative;
-  z-index: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-md);
@@ -318,30 +402,10 @@ watch(() => authStore.userId, fetchData)
   gap: var(--space-lg);
 }
 
-.milestones-page__stats {
-  display: flex;
-  gap: var(--space-xl);
-}
-
-.milestones-page__stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.milestones-page__stat-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.milestones-page__stat-label {
-  font-size: var(--text-caption);
+.milestones-page__summary {
+  margin: 0;
+  font-size: var(--text-body);
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .milestones-page__view-toggle {
@@ -352,17 +416,14 @@ watch(() => authStore.userId, fetchData)
 }
 
 .milestones-page__view-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
   background: none;
   border: none;
   color: var(--text-tertiary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: all 100ms ease;
+  transition: color 120ms ease, background-color 120ms ease;
 }
 
 .milestones-page__view-btn:hover {
@@ -371,135 +432,146 @@ watch(() => authStore.userId, fetchData)
 }
 
 .milestones-page__view-btn--active {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--page-accent, var(--accent));
+  background: color-mix(in srgb, var(--page-accent, var(--accent)) 10%, transparent);
 }
 
 .milestones-page__skeleton {
-  position: relative;
-  z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-lg);
-  padding: var(--space-2xl) 0;
 }
 
-.milestones-page__mobile-list {
-  position: relative;
-  z-index: 1;
+.milestones-page__map {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.milestones-page__inspector {
+  position: sticky;
+  top: calc(64px + var(--space-lg));
+}
+
+.milestones-page__inspector-content {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-.milestones-page__mobile-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  padding: var(--space-md);
-  text-align: left;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: border-color 120ms ease;
+.inspector-enter-active > * {
+  animation: inspector-in 200ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.inspector-enter-active > :nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.inspector-enter-active > :nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.inspector-leave-active {
+  transition: opacity 100ms ease-in;
+}
+
+.inspector-leave-to {
+  opacity: 0;
+}
+
+@keyframes inspector-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inspector-enter-active > * {
+    animation: none;
+  }
+
+  .inspector-leave-active {
+    transition: none;
+  }
+}
+
+.milestones-page__set {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
 }
 
-.milestones-page__mobile-card:hover {
-  border-color: var(--text-tertiary);
+.milestones-page__set-title {
+  margin: 0;
+  font-size: var(--text-section-heading);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.milestones-page__mobile-card-header {
+.milestones-page__set-desc {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.milestones-page__set-meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.milestones-page__pin {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
-.milestones-page__mobile-card-title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.milestones-page__mobile-card-count {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.milestones-page__pin-count {
   font-family: var(--font-mono);
-  flex-shrink: 0;
-}
-
-.milestones-page__mobile-card--locked {
-  cursor: default;
-  opacity: 0.5;
-  border-style: dashed;
-}
-
-.milestones-page__mobile-card--locked:hover {
-  border-color: var(--bg-overlay);
-}
-
-.milestones-page__mobile-lock {
-  width: 16px;
-  height: 16px;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
-  flex-shrink: 0;
 }
 
-.milestones-page__mobile-group {
-  padding: var(--space-sm) 0 var(--space-xs);
-}
-
-.milestones-page__mobile-group-title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
+.milestones-page__pin-notice {
+  flex-basis: 100%;
   margin: 0;
-}
-
-.milestones-page__mobile-group-desc {
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
 }
 
-.zoom-enter-active,
-.zoom-leave-active {
-  transition: opacity 250ms ease, transform 250ms ease;
+.milestones-page__hint {
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px dashed var(--bg-overlay);
+  border-radius: var(--radius-card);
+  font-size: var(--text-body);
+  color: var(--text-tertiary);
+  line-height: 1.5;
 }
 
-.zoom-enter-from {
-  opacity: 0;
-  transform: scale(1.15);
-}
+@media (max-width: 1023px) {
+  .milestones-page__map {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-.zoom-leave-to {
-  opacity: 0;
-  transform: scale(1.15);
+  .milestones-page__inspector {
+    position: static;
+  }
 }
 
 @media (max-width: 767px) {
   .milestones-page__header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .milestones-page__controls {
-    flex-wrap: wrap;
-  }
-
-  .milestones-page__stats {
-    gap: var(--space-lg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .zoom-enter-active,
-  .zoom-leave-active {
-    transition: none;
   }
 }
 </style>

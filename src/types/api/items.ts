@@ -353,7 +353,116 @@ export interface TitleIceAuraSpec {
   intervalMs?: number
 }
 
+export interface TitleSpotlightAuraSpec {
+  type: 'spotlight'
+  enabled: boolean
+  beam?: string
+  lightBeam?: string
+  beams?: number
+  periodS?: number
+}
+
+export interface TitleStampsAuraSpec {
+  type: 'stamps'
+  enabled: boolean
+  colors?: string[]
+  lightColors?: string[]
+  intervalMs?: number
+}
+
+export interface TitleMeadowAuraSpec {
+  type: 'meadow'
+  enabled: boolean
+  grass?: string
+  lightGrass?: string
+  seed?: string
+  lightSeed?: string
+  blades?: number
+}
+
+export interface TitleHoardAuraSpec {
+  type: 'hoard'
+  enabled: boolean
+  coin?: string
+  rim?: string
+  smoke?: string
+  lightCoin?: string
+  lightRim?: string
+  lightSmoke?: string
+  dropEveryS?: number
+}
+
+export type TitleSeasonKey = 'spring' | 'summer' | 'autumn' | 'winter'
+
+export interface TitleSeasonsAuraSpec {
+  type: 'seasons'
+  enabled: boolean
+  season?: TitleSeasonKey | 'cycle'
+  spring?: string
+  summer?: string
+  autumn?: string
+  winter?: string
+  lightSpring?: string
+  lightSummer?: string
+  lightAutumn?: string
+  lightWinter?: string
+  seasonS?: number
+}
+
+export interface TitleCurioAuraSpec {
+  type: 'curio'
+  enabled: boolean
+  color?: string
+  glint?: string
+  lightColor?: string
+  lightGlint?: string
+  count?: number
+}
+
+export interface TitleRadarAuraSpec {
+  type: 'radar'
+  enabled: boolean
+  sweep?: string
+  blip?: string
+  lightSweep?: string
+  lightBlip?: string
+  periodS?: number
+}
+
+export interface TitleWaypointsAuraSpec {
+  type: 'waypoints'
+  enabled: boolean
+  path?: string
+  flag?: string
+  lightPath?: string
+  lightFlag?: string
+  periodS?: number
+}
+
+export interface TitleBloqsAuraSpec {
+  type: 'bloqs'
+  enabled: boolean
+  left?: string
+  right?: string
+  streak?: string
+  score?: string
+  lightLeft?: string
+  lightRight?: string
+  lightStreak?: string
+  lightScore?: string
+  intervalMs?: number
+}
+
 export type TitleAuraSpec =
+  | TitleBloqsAuraSpec
+  | TitleSpotlightAuraSpec
+  | TitleStampsAuraSpec
+  | TitleMeadowAuraSpec
+  | TitleHoardAuraSpec
+  | TitleSeasonsAuraSpec
+  | TitleCurioAuraSpec
+  | TitleRadarAuraSpec
+  | TitleWaypointsAuraSpec
   | TitleRunesAuraSpec
   | TitleInfernoAuraSpec
   | TitleIceAuraSpec
@@ -617,6 +726,104 @@ export interface TitleJoltSpec {
   rings?: boolean
 }
 
+export interface TitleSproutSpec {
+  enabled: boolean
+  glint?: string
+  lightGlint?: string
+  intervalMs?: number
+  stepMs?: number
+}
+
+export interface TitleAscentSpec {
+  enabled: boolean
+  glow?: string
+  lightGlow?: string
+  riseEm?: number
+  periodMs?: number
+}
+
+export interface TitleSliceSpec {
+  enabled: boolean
+  flash?: string
+  lightFlash?: string
+  intervalMs?: number
+  gapEm?: number
+}
+
+export interface TitleTickSpec {
+  enabled: boolean
+  done?: string
+  lightDone?: string
+  intervalMs?: number
+  stepMs?: number
+}
+
+export interface TitleMetronomeSpec {
+  enabled: boolean
+  accent?: string
+  lightAccent?: string
+  beatMs?: number
+  tiltDeg?: number
+}
+
+export interface TitleScrawlSpec {
+  enabled: boolean
+  ink?: string
+  lightInk?: string
+  intervalMs?: number
+}
+
+export interface TitleReelSpec {
+  enabled: boolean
+  gold?: string
+  lightGold?: string
+  intervalMs?: number
+  spinMs?: number
+  stepMs?: number
+  jackpotChance?: number
+}
+
+export interface TitleRestartSpec {
+  enabled: boolean
+  intervalMs?: number
+}
+
+export interface TitlePunchSpec {
+  enabled: boolean
+  ink?: string
+  lightInk?: string
+  intervalMs?: number
+}
+
+export interface TitleHammerSpec {
+  enabled: boolean
+  hot?: string
+  spark?: string
+  lightHot?: string
+  lightSpark?: string
+  intervalMs?: number
+  stepMs?: number
+}
+
+export interface TitleExcavateSpec {
+  enabled: boolean
+  sand?: string
+  gold?: string
+  lightSand?: string
+  lightGold?: string
+  intervalMs?: number
+  stepMs?: number
+}
+
+export interface TitleQuestSpec {
+  enabled: boolean
+  mark?: string
+  done?: string
+  lightMark?: string
+  lightDone?: string
+  intervalMs?: number
+}
+
 export interface TitleValue {
   text: string
   font?: TitleFont
@@ -648,6 +855,18 @@ export interface TitleValue {
   frost?: TitleFrostSpec
   transmute?: TitleTransmuteSpec
   rune?: TitleRuneSpec
+  sprout?: TitleSproutSpec
+  ascent?: TitleAscentSpec
+  slice?: TitleSliceSpec
+  tick?: TitleTickSpec
+  metronome?: TitleMetronomeSpec
+  scrawl?: TitleScrawlSpec
+  reel?: TitleReelSpec
+  restart?: TitleRestartSpec
+  punch?: TitlePunchSpec
+  hammer?: TitleHammerSpec
+  excavate?: TitleExcavateSpec
+  quest?: TitleQuestSpec
   variants?: ItemVariant[]
   durationMs?: number
   loop?: Loop
@@ -1062,8 +1281,67 @@ export interface EclipseFill {
   intervalS?: number
 }
 
+export interface ConfettiFill {
+  type: 'confetti'
+  dark: string
+  colors: string[]
+  flash?: string
+  count?: number
+}
+
+export interface JewelFill {
+  type: 'jewel'
+  velvet: string
+  gems: string[]
+  glint?: string
+  seam?: string
+  count?: number
+  pace?: number
+}
+
+export interface LaserFill {
+  type: 'laser'
+  dark: string
+  core: string
+  glow: string
+  spark?: string
+  speed?: number
+}
+
+export interface ChartFill {
+  type: 'chart'
+  paper: string
+  ink: string
+  route: string
+  rose?: string
+}
+
+export interface HazardFill {
+  type: 'hazard'
+  a: string
+  b: string
+  alarm?: string
+  speed?: number
+}
+
+export interface WarpFill {
+  type: 'warp'
+  space: string
+  streak: string
+  core: string
+  flare?: string
+  tint?: string
+  speed?: number
+}
+
 export type BorderColorFill =
   | { type: 'solid'; hex: string }
+  | ConfettiFill
+  | JewelFill
+  | LaserFill
+  | ChartFill
+  | HazardFill
+  | WarpFill
   | EclipseFill
   | CandleFill
   | WoodFill

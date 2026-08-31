@@ -100,15 +100,22 @@ onMounted(async () => {
 
     <WikiHeading id="the-map">The map on the milestones page</WikiHeading>
     <p>
-      The milestones page draws the sets as a map with lines running between them. Families like
-      General and Completionist keep related sets together, and the lines trace the route the sets
-      were designed to be walked in, which is roughly easiest to hardest.
+      The milestones page opens on one set at a time. The rest sit beside it as cards showing how far
+      along you are, and clicking one swaps it into view. Families like General and Completionist stay
+      together in the order they were meant to be walked, which is roughly easiest to hardest.
     </p>
     <p>
-      Nothing on that map is locked. You can complete any milestone at any time, in whatever order
-      your play happens to deliver it, and a line between two of them does not mean the first one
-      gates the second. If that ever changes for a particular milestone, the page will tell you so on
-      the milestone itself.
+      Inside the open set, every milestone gets its own marker. The icon says what the milestone
+      actually measures, so a play count, a best accuracy and a rank all look different at a glance.
+      The frame around it carries the tier, and a small colored bar underneath means the milestone
+      only counts scores from one category.
+    </p>
+    <p>
+      Lines between markers show which milestones were designed to lead into each other. Nothing on
+      that map is locked. You can complete any milestone at any time, in whatever order your play
+      happens to deliver it, and a line between two of them does not mean the first one gates the
+      second. If that ever changes for a particular milestone, the page will tell you so on the
+      milestone itself.
     </p>
 
     <WikiHeading id="checking">When they get checked</WikiHeading>
@@ -145,6 +152,11 @@ onMounted(async () => {
       Everything on the board pays XP, and that XP feeds straight into your level the same way score
       XP and mission XP do. Set bonuses pay on top of it. Milestones can also carry an item reward
       attached to them, so certain ones will hand you something for your profile alongside the XP.
+    </p>
+    <p>
+      Anything you have finished can be pinned to your profile the way pinned scores work, with three
+      slots to fill and six for supporters. Only completed ones go up there, so a pin says you cleared
+      the thing rather than telling people what you are chasing.
     </p>
   </WikiProse>
 </template>

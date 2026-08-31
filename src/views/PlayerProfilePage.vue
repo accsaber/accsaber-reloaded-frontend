@@ -11,6 +11,7 @@ import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import NameHistoryPopover from '@/components/domain/NameHistoryPopover.vue'
+import PinnedMilestonesSection from '@/components/domain/PinnedMilestonesSection.vue'
 import PinnedScoresSection from '@/components/domain/PinnedScoresSection.vue'
 import ProfileBadgesRow from '@/components/domain/ProfileBadgesRow.vue'
 import ProfileBioEditor from '@/components/domain/ProfileBioEditor.vue'
@@ -28,8 +29,9 @@ import { useCategoryStore } from '@/stores/categories'
 import { useInventoryStore } from '@/stores/inventory'
 import { useRelationsStore } from '@/stores/relations'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
-import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse, UserScoresParams } from '@/types/api/users'
+import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserMilestoneProgressResponse, UserResponse, UserScoresParams } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
+import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { getRankClass } from '@/utils/ranking'
 import { pickAvatarUrl } from '@/composables/useAvatarFallback'
@@ -256,6 +258,60 @@ async function onUnpinFromCard(scoreId: string) {
   await onPinToggle(scoreId)
 }
 
+const pinnedMilestones = ref<UserMilestoneProgressResponse[]>([])
+const pinnedMilestonesLoading = ref(false)
+const pinnedMilestoneIds = ref<Set<string>>(new Set())
+
+const milestoneGlyphs = ref<Map<string, MilestoneGlyphKey>>(new Map())
+
+async function fetchPinnedMilestones() {
+  pinnedMilestonesLoading.value = true
+  try {
+    const { getUserPinnedMilestones } = await import('@/api/users')
+    pinnedMilestones.value = await getUserPinnedMilestones(userId.value)
+  } catch {
+    pinnedMilestones.value = []
+  }
+  pinnedMilestoneIds.value = new Set(pinnedMilestones.value.map((p) => p.milestoneId))
+  if (pinnedMilestones.value.length > 0 && milestoneGlyphs.value.size === 0) {
+    const { loadMilestoneGlyphs } = await import('@/composables/useMilestoneCatalog')
+    milestoneGlyphs.value = await loadMilestoneGlyphs()
+  }
+  pinnedMilestonesLoading.value = false
+}
+
+const canPinMoreMilestones = computed(
+  () => pinnedMilestoneIds.value.size < pinnedSlotLimit.value,
+)
+
+const milestonePinPending = ref<Set<string>>(new Set())
+
+async function onMilestonePinToggle(milestoneId: string) {
+  if (!isSelfProfile.value || milestonePinPending.value.has(milestoneId)) return
+  const currentIds = [...pinnedMilestoneIds.value]
+  const isPinned = currentIds.includes(milestoneId)
+  const nextIds = isPinned
+    ? currentIds.filter((id) => id !== milestoneId)
+    : [...currentIds, milestoneId]
+  if (nextIds.length > pinnedSlotLimit.value) return
+
+  pinnedMilestoneIds.value = new Set(nextIds)
+  milestonePinPending.value = new Set([...milestonePinPending.value, milestoneId])
+  try {
+    const { updateMyProfile } = await import('@/api/users')
+    await updateMyProfile({
+      pinnedMilestones: nextIds.map((id, displayOrder) => ({ milestoneId: id, displayOrder })),
+    })
+    await fetchPinnedMilestones()
+  } catch {
+    pinnedMilestoneIds.value = new Set(currentIds)
+  } finally {
+    const next = new Set(milestonePinPending.value)
+    next.delete(milestoneId)
+    milestonePinPending.value = next
+  }
+}
+
 async function onUpdateComment(payload: { scoreId: string, comment: string | null }) {
   if (!isSelfProfile.value) return
   const currentIds = pinnedScores.value.map((p) => p.score.id)
@@ -399,7 +455,10 @@ async function fetchProfile() {
   localEquipped.value = {}
   ownedBadges.value = []
   pinnedScores.value = []
+  pinnedMilestones.value = []
+  pinnedMilestoneIds.value = new Set()
   pinPending.value = new Set()
+  milestonePinPending.value = new Set()
 
   try {
     const { getUser, getUserLevel, getUserAllStatistics } = await import('@/api/users')
@@ -440,6 +499,7 @@ async function fetchProfile() {
 
     fetchStatsDiff()
     fetchPinnedScores()
+    fetchPinnedMilestones()
   } catch {
     error.value = true
     user.value = null
@@ -449,6 +509,7 @@ async function fetchProfile() {
     localEquipped.value = {}
     ownedBadges.value = []
     pinnedScores.value = []
+    pinnedMilestones.value = []
   }
   loading.value = false
 }
@@ -734,6 +795,10 @@ watch(activeCategory, (newCategory) => {
           :loading="pinnedLoading" :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
           @unpin="onUnpinFromCard" @update-comment="onUpdateComment" />
 
+        <PinnedMilestonesSection v-if="!hideReloadedProfileFeatures" :pinned="pinnedMilestones"
+          :loading="pinnedMilestonesLoading" :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
+          :glyphs="milestoneGlyphs" @unpin="onMilestonePinToggle" />
+
         <div class="profile-page__tabs-row">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
           <div v-if="activeTab === 'scores'" class="profile-page__scores-tools">
@@ -749,7 +814,10 @@ watch(activeCategory, (newCategory) => {
             @params-change="scorePlaylistParams = $event" />
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
             :xp-stats="xpStats" />
-          <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId" />
+          <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId"
+            :is-self-profile="isSelfProfile" :pinned-ids="pinnedMilestoneIds"
+            :can-pin-more="canPinMoreMilestones" :pin-pending="milestonePinPending"
+            @pin-toggle="onMilestonePinToggle" />
           <ProfileInventoryTab v-if="activeTab === 'inventory'" :user-id="userId" :avatar-url="userAvatarUrl" />
           <UserCampaignsPanel v-if="activeTab === 'campaigns'" :user-id="userId" />
         </div>

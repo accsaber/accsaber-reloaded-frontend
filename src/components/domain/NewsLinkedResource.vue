@@ -15,7 +15,7 @@ import { campaignBadges } from '@/utils/campaignBadges'
 import { campaignDifficultyLabel } from '@/utils/campaignDifficulty'
 import { requirementGoalText } from '@/utils/campaignLayout'
 import { formatRelativeDate } from '@/utils/formatters'
-import { formatDifficulty } from '@/utils/mappers'
+import { formatDifficulty, toMilestoneDisplayFromCatalog } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 
@@ -55,17 +55,12 @@ const batchGroups = computed(() => {
 
 const milestoneDisplays = computed<MilestoneDisplay[]>(() => {
   if (resource.value?.kind !== 'milestoneSet') return []
-  return resource.value.data.milestones.map((m) => ({
-    id: m.id,
-    title: m.title,
-    description: m.description,
-    type: m.type,
-    tier: m.tier,
-    xp: m.xp,
-    targetValue: m.targetValue,
-    completionPercent: m.completionPercentage,
-    categoryCode: m.categoryId ? categoryStore.getCategoryCode(m.categoryId) : undefined,
-  }))
+  return resource.value.data.milestones.map((m) =>
+    toMilestoneDisplayFromCatalog(
+      m,
+      m.categoryId ? categoryStore.getCategoryCode(m.categoryId) : undefined,
+    ),
+  )
 })
 
 async function loadBatch(id: string) {

@@ -21,23 +21,27 @@ import {
   barrierPairValue,
   barrierReadout,
   backgroundPlacementStyle,
-  computeLabelPlacements,
-  contentToGrid,
   edgePointOnShape,
-  findOverlaps,
-  gridToContent,
-  layoutNodes,
   pinnedBackgroundRect,
   prereqIds,
   resolveConnectionColor,
   resolveSize,
   resolveShape,
   shapeCorners,
+  type BackgroundFrame,
+} from '@/utils/campaignLayout'
+import {
+  boundsOf,
+  computeLabelPlacements,
+  findOverlaps,
+  hexProjection,
+  layoutNodes,
   SQRT3,
   unionRect,
-  type BackgroundFrame,
+  type ContentRect,
   type NodeLayout,
-} from '@/utils/campaignLayout'
+} from '@/utils/stageLayout'
+import { useStageInteraction, type StageGesture } from '@/composables/useStageInteraction'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = withDefaults(
@@ -164,14 +168,73 @@ function onNodeFocus(id: string, event: FocusEvent) {
 }
 
 const stage = ref<HTMLDivElement | null>(null)
-const stageWidth = ref(800)
-const stageHeight = ref(560)
 
 const layout = computed(() => layoutNodes(props.difficulties, props.unit))
 
-const dragOverlay = ref(new Map<string, { cx: number; cy: number }>())
+const stageVertices = computed<NodeLayout[]>(() => [
+  ...layout.value.nodes,
+  ...barrierLayout.value.nodes,
+  ...textLayout.value.nodes,
+])
 
-const draggingNodeId = ref<string | null>(null)
+const contentBounds = computed<ContentRect>(() => {
+  const margin = props.unit * 2
+  const pts = stageVertices.value
+  if (pts.length === 0) {
+    return { x: -margin, y: -margin, width: margin * 2, height: margin * 2 + props.unit }
+  }
+  const b = boundsOf(pts)
+  return {
+    x: b.minX - margin,
+    y: b.minY - margin,
+    width: b.width + margin * 2,
+    height: b.height + margin * 2 + props.unit,
+  }
+})
+
+const {
+  stageWidth,
+  stageHeight,
+  scale,
+  translateX,
+  translateY,
+  transformStyle,
+  marquee,
+  dragOverlay,
+  draggingNodeId,
+  altHeld,
+  measure,
+  fitToContent,
+  adjustZoom,
+  focusNode,
+  clientToContent,
+  viewCenterCell,
+  nodeIdAtPoint,
+  nodeIdFromEvent,
+  onWheel,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onClickCapture: onNodeClickCapture,
+} = useStageInteraction(stage, {
+  contentBounds,
+  vertices: stageVertices,
+  unit: computed(() => props.unit),
+  projection: hexProjection,
+  defaultScale: computed(() => props.defaultScale),
+  editable: computed(() => props.editable),
+  marqueeEnabled: computed(() => props.editable && props.mode === 'select'),
+  dragEnabled: computed(() => props.editable && (props.mode === 'drag' || props.mode === 'select')),
+  snap: computed(() => snapEnabled.value),
+  groupIds: computed(() => (props.mode === 'select' ? props.selectedIds : [])),
+  ignoreSelectors: ['.campaign-roadmap__bottom-stack', '.campaign-roadmap__edge-x'],
+  shouldIgnore: (e) =>
+    !!props.barrierPlacement &&
+    !!(e.target as Element | null)?.closest?.('.campaign-roadmap__edge-hit'),
+  interceptPointerDown: beginConnect,
+  onPointerMoveExtra: trackStagePointer,
+  onGesture: handleStageGesture,
+})
 
 const remoteDragById = ref(new Map<string, { cx: number; cy: number; color: string }>())
 
@@ -732,132 +795,6 @@ const overlapMarkers = computed(() => {
   )
 })
 
-const contentBounds = computed(() => {
-  const pts = [...layout.value.nodes, ...barrierLayout.value.nodes, ...textLayout.value.nodes]
-  const margin = props.unit * 2
-  if (pts.length === 0) {
-    return { x: -margin, y: -margin, width: margin * 2, height: margin * 2 + props.unit }
-  }
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const p of pts) {
-    if (p.cx < minX) minX = p.cx
-    if (p.cy < minY) minY = p.cy
-    if (p.cx > maxX) maxX = p.cx
-    if (p.cy > maxY) maxY = p.cy
-  }
-  return {
-    x: minX - margin,
-    y: minY - margin,
-    width: maxX - minX + margin * 2,
-    height: maxY - minY + margin * 2 + props.unit,
-  }
-})
-
-const scale = ref(1)
-const translateX = ref(0)
-const translateY = ref(0)
-const comfortableMinScale = 0.4
-const maxScale = 2.5
-
-const fitScale = computed(() => {
-  const b = contentBounds.value
-  if (b.width <= 0 || b.height <= 0 || stageWidth.value <= 0 || stageHeight.value <= 0) return 1
-  return Math.min(stageWidth.value / b.width, stageHeight.value / b.height)
-})
-
-const minScale = computed(() => Math.min(comfortableMinScale, fitScale.value))
-
-let resizeObserver: ResizeObserver | null = null
-
-function fitToContent() {
-  if (!stage.value) return
-  const w = stage.value.clientWidth
-  const h = stage.value.clientHeight
-  stageWidth.value = w
-  stageHeight.value = h
-  const b = contentBounds.value
-  if (b.width === 0 || b.height === 0) return
-  const s = Math.min(maxScale, fitScale.value)
-  scale.value = s
-  translateX.value = w / 2 - (b.x + b.width / 2) * s
-  translateY.value = h / 2 - (b.y + b.height / 2) * s
-}
-
-function clampPan() {
-  // Soft clamp: keep at least 80px of content on-screen
-  const b = contentBounds.value
-  const cw = b.width * scale.value
-  const ch = b.height * scale.value
-  const padX = 80
-  const padY = 80
-  const minTx = -(b.x + b.width) * scale.value + padX
-  const maxTx = stageWidth.value - b.x * scale.value - padX
-  const minTy = -(b.y + b.height) * scale.value + padY
-  const maxTy = stageHeight.value - b.y * scale.value - padY
-  if (cw < stageWidth.value) {
-    translateX.value = Math.min(Math.max(translateX.value, minTx), maxTx)
-  } else {
-    translateX.value = Math.min(Math.max(translateX.value, minTx), maxTx)
-  }
-  if (ch < stageHeight.value) {
-    translateY.value = Math.min(Math.max(translateY.value, minTy), maxTy)
-  } else {
-    translateY.value = Math.min(Math.max(translateY.value, minTy), maxTy)
-  }
-}
-
-function onWheel(e: WheelEvent) {
-  if (!stage.value) return
-  e.preventDefault()
-  const rect = stage.value.getBoundingClientRect()
-  const cx = e.clientX - rect.left
-  const cy = e.clientY - rect.top
-  const delta = -e.deltaY * 0.0015
-  const factor = Math.exp(delta)
-  const next = Math.max(minScale.value, Math.min(maxScale, scale.value * factor))
-  const ratio = next / scale.value
-  translateX.value = cx - (cx - translateX.value) * ratio
-  translateY.value = cy - (cy - translateY.value) * ratio
-  scale.value = next
-  clampPan()
-}
-
-interface DragState {
-  x: number
-  y: number
-  tx: number
-  ty: number
-  nodeId: string | null
-  startCx: number
-  startCy: number
-  moved: boolean
-}
-
-let dragStart: DragState | null = null
-let suppressClick = false
-let groupDragStart: Map<string, { cx: number; cy: number }> | null = null
-let marqueeStart: { x: number; y: number; additive: boolean } | null = null
-const marquee = ref<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
-
-const CLICK_THRESHOLD_PX = 4
-
-function nodeIdFromEvent(target: EventTarget | null): string | null {
-  if (!target) return null
-  const el = (target as Element).closest?.('[data-node]') as HTMLElement | null
-  return el?.dataset.id ?? null
-}
-
-function nodeIdAtPoint(clientX: number, clientY: number): string | null {
-  if (typeof document === 'undefined') return null
-  const hit = document.elementFromPoint(clientX, clientY)
-  if (!hit) return null
-  const node = hit.closest('[data-node]') as HTMLElement | null
-  return node?.dataset.id ?? null
-}
-
 function edgeAtPoint(clientX: number, clientY: number): { fromId: string; toId: string } | null {
   if (typeof document === 'undefined') return null
   const hit = document.elementFromPoint(clientX, clientY)
@@ -867,103 +804,7 @@ function edgeAtPoint(clientX: number, clientY: number): { fromId: string; toId: 
   return fromId && toId ? { fromId, toId } : null
 }
 
-function clientToContent(clientX: number, clientY: number) {
-  if (!stage.value) return { x: 0, y: 0 }
-  const rect = stage.value.getBoundingClientRect()
-  return {
-    x: (clientX - rect.left - translateX.value) / scale.value,
-    y: (clientY - rect.top - translateY.value) / scale.value,
-  }
-}
-
-const altHeld = ref(false)
-
 const snapEnabled = computed(() => props.gridLock !== altHeld.value)
-
-function trackAlt(e: PointerEvent) {
-  altHeld.value = e.altKey
-}
-
-function pointerToGrid(cx: number, cy: number) {
-  return contentToGrid(cx, cy, props.unit, snapEnabled.value)
-}
-
-function onPointerDown(e: PointerEvent) {
-  if (e.button !== 0 && e.button !== 1) return
-  trackAlt(e)
-  const target = e.target as Element | null
-  if (target?.closest?.('.campaign-roadmap__bottom-stack')) return
-  if (target?.closest?.('.campaign-roadmap__edge-x')) return
-  if (props.barrierPlacement && target?.closest?.('.campaign-roadmap__edge-hit')) return
-  const nodeId = nodeIdFromEvent(e.target)
-  const node = nodeId ? vertexById.value.get(nodeId) : null
-  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-  if (nodeId && props.editable && props.mode === 'connect') {
-    connectFromId.value = nodeId
-    connectPoint.value = clientToContent(e.clientX, e.clientY)
-    dragStart = {
-      x: e.clientX,
-      y: e.clientY,
-      tx: translateX.value,
-      ty: translateY.value,
-      nodeId,
-      startCx: node?.cx ?? 0,
-      startCy: node?.cy ?? 0,
-      moved: false,
-    }
-    return
-  }
-
-  if (props.editable && props.mode === 'select') {
-    if (nodeId) {
-      if (selectedSet.value.has(nodeId) && props.selectedIds.length > 1) {
-        groupDragStart = new Map()
-        for (const id of props.selectedIds) {
-          const gn = vertexById.value.get(id)
-          if (gn) groupDragStart.set(id, { cx: gn.cx, cy: gn.cy })
-        }
-      } else {
-        groupDragStart = null
-      }
-      dragStart = {
-        x: e.clientX,
-        y: e.clientY,
-        tx: translateX.value,
-        ty: translateY.value,
-        nodeId,
-        startCx: node?.cx ?? 0,
-        startCy: node?.cy ?? 0,
-        moved: false,
-      }
-      return
-    }
-    const p = clientToContent(e.clientX, e.clientY)
-    marqueeStart = { x: p.x, y: p.y, additive: e.shiftKey }
-    marquee.value = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }
-    dragStart = {
-      x: e.clientX,
-      y: e.clientY,
-      tx: translateX.value,
-      ty: translateY.value,
-      nodeId: null,
-      startCx: 0,
-      startCy: 0,
-      moved: false,
-    }
-    return
-  }
-
-  dragStart = {
-    x: e.clientX,
-    y: e.clientY,
-    tx: translateX.value,
-    ty: translateY.value,
-    nodeId,
-    startCx: node?.cx ?? 0,
-    startCy: node?.cy ?? 0,
-    moved: false,
-  }
-}
 
 function presenceKindOf(id: string): PresenceKind {
   if (barrierMetaById.value.has(id)) return 'barrier'
@@ -986,7 +827,7 @@ function emitPresence(x: number, y: number) {
   } else if (draggingNodeId.value) {
     action = 'drag'
     targetId = draggingNodeId.value
-  } else if (marqueeStart) {
+  } else if (marquee.value) {
     action = 'select'
   } else if (hoverNodeId.value) {
     action = 'select'
@@ -1156,242 +997,72 @@ const remoteRings = computed(() => {
   return out
 })
 
-function onPointerMove(e: PointerEvent) {
-  trackAlt(e)
+function pointerToGrid(cx: number, cy: number) {
+  return hexProjection.toGrid(cx, cy, props.unit, snapEnabled.value)
+}
+
+function beginConnect(e: PointerEvent, nodeId: string | null): boolean {
+  if (!nodeId || !props.editable || props.mode !== 'connect') return false
+  connectFromId.value = nodeId
+  connectPoint.value = clientToContent(e.clientX, e.clientY)
+  return true
+}
+
+function trackStagePointer(e: PointerEvent) {
   trackPresence(e)
-  if (!dragStart) return
-  const dx = e.clientX - dragStart.x
-  const dy = e.clientY - dragStart.y
-  if (!dragStart.moved && Math.hypot(dx, dy) > CLICK_THRESHOLD_PX) {
-    dragStart.moved = true
-  }
-  if (connectFromId.value) {
-    connectPoint.value = clientToContent(e.clientX, e.clientY)
-    const hover = nodeIdAtPoint(e.clientX, e.clientY)
-    connectHoverId.value = hover && hover !== connectFromId.value ? hover : null
-    return
-  }
-  if (marqueeStart) {
-    const p = clientToContent(e.clientX, e.clientY)
-    marquee.value = {
-      x0: Math.min(marqueeStart.x, p.x),
-      y0: Math.min(marqueeStart.y, p.y),
-      x1: Math.max(marqueeStart.x, p.x),
-      y1: Math.max(marqueeStart.y, p.y),
-    }
-    return
-  }
-  if (dragStart.nodeId && props.editable && groupDragStart) {
-    if (!dragStart.moved) return
-    const ratio = 1 / scale.value
-    const ddx = dx * ratio
-    const ddy = dy * ratio
-    for (const [id, start] of groupDragStart) {
-      dragOverlay.value.set(id, { cx: start.cx + ddx, cy: start.cy + ddy })
-    }
-    dragOverlay.value = new Map(dragOverlay.value)
-    draggingNodeId.value = dragStart.nodeId
-    return
-  }
-  if (dragStart.nodeId && props.editable && (props.mode === 'drag' || props.mode === 'select')) {
-    if (!dragStart.moved) return
-    const ratio = 1 / scale.value
-    dragOverlay.value.set(dragStart.nodeId, {
-      cx: dragStart.startCx + dx * ratio,
-      cy: dragStart.startCy + dy * ratio,
-    })
-    dragOverlay.value = new Map(dragOverlay.value)
-    draggingNodeId.value = dragStart.nodeId
-    return
-  }
-  if (dragStart.nodeId) return
-  translateX.value = dragStart.tx + dx
-  translateY.value = dragStart.ty + dy
+  if (!connectFromId.value) return
+  connectPoint.value = clientToContent(e.clientX, e.clientY)
+  const hover = nodeIdAtPoint(e.clientX, e.clientY)
+  connectHoverId.value = hover && hover !== connectFromId.value ? hover : null
 }
 
-function settleOverlay(
-  nodeId: string,
-  from: { cx: number; cy: number },
-  to: { cx: number; cy: number },
-) {
-  const reduced =
-    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  if (reduced) {
-    dragOverlay.value.delete(nodeId)
-    dragOverlay.value = new Map(dragOverlay.value)
-    draggingNodeId.value = null
-    return
-  }
-  const startTime = performance.now()
-  const duration = 180
-  const animate = (now: number) => {
-    const t = Math.min((now - startTime) / duration, 1)
-    const eased = 1 - Math.pow(1 - t, 3)
-    const x = from.cx + (to.cx - from.cx) * eased
-    const y = from.cy + (to.cy - from.cy) * eased
-    dragOverlay.value.set(nodeId, { cx: x, cy: y })
-    dragOverlay.value = new Map(dragOverlay.value)
-    if (t < 1) {
-      requestAnimationFrame(animate)
-    } else {
-      dragOverlay.value.delete(nodeId)
-      dragOverlay.value = new Map(dragOverlay.value)
-      draggingNodeId.value = null
-    }
-  }
-  requestAnimationFrame(animate)
+function finishConnect(g: Extract<StageGesture, { kind: 'customRelease' }>) {
+  const targetId = connectHoverId.value ?? nodeIdAtPoint(g.clientX, g.clientY) ?? nodeIdFromEvent(g.target)
+  connectFromId.value = null
+  connectPoint.value = null
+  connectHoverId.value = null
+  if (targetId && targetId !== g.fromId) emit('connect', { fromId: g.fromId, toId: targetId })
 }
 
-function onPointerUp(e: PointerEvent) {
-  if (!dragStart) return
-  trackAlt(e)
-  const { nodeId, moved } = dragStart
-  ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-  clampPan()
-
-  if (connectFromId.value) {
-    const fromId = connectFromId.value
-    const targetNodeId =
-      connectHoverId.value ?? nodeIdAtPoint(e.clientX, e.clientY) ?? nodeIdFromEvent(e.target)
-    connectFromId.value = null
-    connectPoint.value = null
-    connectHoverId.value = null
-    suppressClick = true
-    dragStart = null
-    if (targetNodeId && targetNodeId !== fromId) {
-      emit('connect', { fromId, toId: targetNodeId })
-    }
-    return
-  }
-
-  if (marqueeStart) {
-    const rect = marquee.value
-    const additive = marqueeStart.additive
-    marquee.value = null
-    marqueeStart = null
-    dragStart = null
-    if (moved) suppressClick = true
-    if (moved && rect) {
-      const inside = [...renderedNodes.value, ...renderedBarriers.value, ...renderedTexts.value]
-        .filter((n) => n.cx >= rect.x0 && n.cx <= rect.x1 && n.cy >= rect.y0 && n.cy <= rect.y1)
-        .map((n) => n.id)
-      const ids = additive ? Array.from(new Set([...props.selectedIds, ...inside])) : inside
-      emit('selectMany', ids)
-    } else if (!additive) {
-      const edge = edgeAtPoint(e.clientX, e.clientY)
+function handleStageGesture(g: StageGesture) {
+  switch (g.kind) {
+    case 'customRelease':
+      finishConnect(g)
+      return
+    case 'nodeDrag':
+      emit('move', g.payload)
+      return
+    case 'nodeDragMany':
+      emit('moveMany', g.payloads)
+      return
+    case 'marquee':
+      emit('selectMany', g.additive ? [...new Set([...props.selectedIds, ...g.ids])] : g.ids)
+      return
+    case 'marqueeEmpty': {
+      if (g.additive) return
+      const edge = edgeAtPoint(g.clientX, g.clientY)
       if (edge) emit('edgeSelect', edge)
       else emit('selectMany', [])
+      return
     }
-    return
-  }
-
-  if (nodeId && props.editable && groupDragStart && moved) {
-    const draggedFinal = dragOverlay.value.get(nodeId)
-    const start = groupDragStart.get(nodeId)
-    if (draggedFinal && start) {
-      const lead = pointerToGrid(draggedFinal.cx, draggedFinal.cy)
-      const leadPoint = gridToContent(lead.positionX, lead.positionY, props.unit)
-      const shiftX = leadPoint.cx - start.cx
-      const shiftY = leadPoint.cy - start.cy
-      const payloads: Array<{ id: string; positionX: number; positionY: number }> = []
-      for (const [id, st] of groupDragStart) {
-        const targetCx = st.cx + shiftX
-        const targetCy = st.cy + shiftY
-        const grid = pointerToGrid(targetCx, targetCy)
-        payloads.push({ id, positionX: grid.positionX, positionY: grid.positionY })
-        settleOverlay(
-          id,
-          dragOverlay.value.get(id) ?? { cx: targetCx, cy: targetCy },
-          gridToContent(grid.positionX, grid.positionY, props.unit),
-        )
+    case 'nodeClick':
+      if (props.mode === 'select' && g.shiftKey) emit('toggleSelect', g.id)
+      else emit('select', g.id)
+      return
+    case 'backgroundClick': {
+      if (!props.editable) {
+        emit('deselect')
+        return
       }
-      emit('moveMany', payloads)
-    } else {
-      draggingNodeId.value = null
+      const edge = props.barrierPlacement ? null : edgeAtPoint(g.clientX, g.clientY)
+      if (edge) emit('edgeSelect', edge)
+      else emit('emptyClick', g.content)
     }
-    groupDragStart = null
-    suppressClick = true
-    dragStart = null
-    return
-  }
-
-  if (nodeId && props.editable && (props.mode === 'drag' || props.mode === 'select') && moved) {
-    const final = dragOverlay.value.get(nodeId)
-    if (final) {
-      const { positionX, positionY } = pointerToGrid(final.cx, final.cy)
-      emit('move', { id: nodeId, positionX, positionY })
-      settleOverlay(nodeId, final, gridToContent(positionX, positionY, props.unit))
-    } else {
-      draggingNodeId.value = null
-    }
-    groupDragStart = null
-    suppressClick = true
-    dragStart = null
-    return
-  }
-
-  if (nodeId && !moved) {
-    if (props.mode === 'select' && e.shiftKey) {
-      emit('toggleSelect', nodeId)
-    } else {
-      emit('select', nodeId)
-    }
-    groupDragStart = null
-    suppressClick = true
-    dragStart = null
-    return
-  }
-
-  if (!nodeId && !moved) {
-    if (props.editable) {
-      const edge = props.barrierPlacement ? null : edgeAtPoint(e.clientX, e.clientY)
-      if (edge) {
-        emit('edgeSelect', edge)
-      } else {
-        const content = clientToContent(e.clientX, e.clientY)
-        emit('emptyClick', content)
-      }
-    } else {
-      emit('deselect')
-    }
-  }
-  groupDragStart = null
-  dragStart = null
-}
-
-function onNodeClickCapture(e: MouseEvent) {
-  if (suppressClick) {
-    e.stopPropagation()
-    e.preventDefault()
-    suppressClick = false
   }
 }
 
 function onEdgeClick(edge: { fromId: string; toId: string }) {
   if (props.barrierPlacement) emit('placeBarrier', { fromId: edge.fromId, toId: edge.toId })
-}
-
-function adjustZoom(factor: number) {
-  if (!stage.value) return
-  const cx = stageWidth.value / 2
-  const cy = stageHeight.value / 2
-  const next = Math.max(minScale.value, Math.min(maxScale, scale.value * factor))
-  const ratio = next / scale.value
-  translateX.value = cx - (cx - translateX.value) * ratio
-  translateY.value = cy - (cy - translateY.value) * ratio
-  scale.value = next
-  clampPan()
-}
-
-function focusNode(id: string, targetScale?: number) {
-  const n = vertexById.value.get(id)
-  if (!n || !stage.value) return
-  const s = targetScale ?? Math.max(scale.value, props.defaultScale)
-  const clamped = Math.max(minScale.value, Math.min(maxScale, s))
-  translateX.value = stageWidth.value / 2 - n.cx * clamped
-  translateY.value = stageHeight.value / 2 - n.cy * clamped
-  scale.value = clamped
-  clampPan()
 }
 
 const canRecenter = computed(() => !!props.focusId && vertexById.value.has(props.focusId))
@@ -1406,8 +1077,7 @@ function recenter() {
 
 function initialPosition() {
   if (!stage.value) return
-  stageWidth.value = stage.value.clientWidth
-  stageHeight.value = stage.value.clientHeight
+  measure()
   recenter()
 }
 
@@ -1419,17 +1089,6 @@ onMounted(() => {
     initialPosition()
     didInitialPosition = true
   })
-  resizeObserver = new ResizeObserver(() => {
-    if (!stage.value) return
-    stageWidth.value = stage.value.clientWidth
-    stageHeight.value = stage.value.clientHeight
-    clampPan()
-  })
-  resizeObserver.observe(stage.value)
-})
-
-onUnmounted(() => {
-  resizeObserver?.disconnect()
 })
 
 let knownVertexIds = new Set<string>()
@@ -1464,9 +1123,7 @@ watch(
 )
 
 function getViewCenterCell(): { x: number; y: number } {
-  const cx = (stageWidth.value / 2 - translateX.value) / scale.value
-  const cy = (stageHeight.value / 2 - translateY.value) / scale.value
-  const { positionX, positionY } = contentToGrid(cx, cy, props.unit, true)
+  const { positionX, positionY } = viewCenterCell()
   return { x: positionX, y: positionY }
 }
 
@@ -1491,10 +1148,6 @@ function getBackgroundFrame(): BackgroundFrame {
 }
 
 defineExpose({ fitToContent, focusNode, getViewCenterCell, getBackgroundFrame })
-
-const transformStyle = computed(
-  () => `translate(${translateX.value} ${translateY.value}) scale(${scale.value})`,
-)
 
 const backgroundAspect = ref(16 / 9)
 
@@ -1557,7 +1210,7 @@ const snapTarget = computed<{
   const isText = !diff && !isBarrier && textStaticById.value.has(id)
   if (!diff && !isBarrier && !isText) return null
   const { positionX, positionY } = pointerToGrid(overlay.cx, overlay.cy)
-  const { cx, cy } = gridToContent(positionX, positionY, props.unit)
+  const { cx, cy } = hexProjection.toContent(positionX, positionY, props.unit)
   if (isText) {
     return { cx, cy, shape: 'circle', size: textHitRadius.value }
   }

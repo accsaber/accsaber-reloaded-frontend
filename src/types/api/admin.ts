@@ -158,6 +158,13 @@ export interface CreateCurveRequest {
 
 export type UpdateCurveRequest = Partial<CreateCurveRequest>
 
+export type MilestoneProgressModel = 'LINEAR' | 'CURVE' | 'LOG'
+
+export interface MilestoneRewardRequest {
+  itemId: string
+  quantity: number
+}
+
 export interface CreateMilestoneRequest {
   setId: string
   categoryId?: string
@@ -165,6 +172,7 @@ export interface CreateMilestoneRequest {
   description: string
   type: string
   tier: string
+  iconGroup?: string
   xp: number
   querySpec: Record<string, unknown>
   targetValue: number
@@ -172,6 +180,12 @@ export interface CreateMilestoneRequest {
   blExclusive?: boolean
   mapDifficultyIds?: string[]
   awardsItemId?: string
+  rewards?: MilestoneRewardRequest[]
+  positionX?: number
+  positionY?: number
+  progressModel?: MilestoneProgressModel
+  progressCurveId?: string | null
+  progressFloor?: number | null
 }
 
 export interface LinkMilestoneMapRequest {
@@ -182,6 +196,18 @@ export interface UpdateMilestoneRequest {
   title?: string
   description?: string
   awardsItemId?: string
+  querySpec?: Record<string, unknown>
+  xp?: number
+  tier?: string
+  iconGroup?: string
+  targetValue?: number
+  comparison?: string
+  rewards?: MilestoneRewardRequest[]
+  positionX?: number
+  positionY?: number
+  progressModel?: MilestoneProgressModel
+  progressCurveId?: string | null
+  progressFloor?: number | null
 }
 
 export interface CreateMilestoneSetRequest {
