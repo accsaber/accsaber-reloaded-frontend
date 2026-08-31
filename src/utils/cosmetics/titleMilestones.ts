@@ -172,7 +172,9 @@ export function scrawlCharStyle(tMs: number, i: number, n: number, spec: TitleSc
   return out
 }
 
-const REEL_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+const REEL_CHARS = 'ABCDEFGHIJKLNOPQRSTUVXYZ0123456789'
+
+const REEL_CELL: Style = { display: 'inline-block', width: '1.1ch', textAlign: 'center' }
 
 function reelWindow(tMs: number, i: number, spec: TitleReelSpec): { spinning: boolean; landedAgo: number; cycle: number } {
   const interval = spec.intervalMs ?? 9000
@@ -198,6 +200,7 @@ export function reelCharStyle(tMs: number, i: number, n: number, spec: TitleReel
   const w = reelWindow(tMs, i, spec)
   if (w.spinning) {
     return {
+      ...REEL_CELL,
       color: lerpHex(base, '#888888', 0.45),
       transform: `translateY(${(Math.sin(tMs * 0.06 + i * 4) * 0.05).toFixed(3)}em)`,
       textShadow: `0 0.09em 0.06em ${base}55, 0 -0.09em 0.06em ${base}55`,
@@ -205,7 +208,7 @@ export function reelCharStyle(tMs: number, i: number, n: number, spec: TitleReel
   }
   if (w.landedAgo >= 0 && w.landedAgo < 240) {
     const k = Math.sin((w.landedAgo / 240) * Math.PI)
-    return { color: lerpHex(base, gold, k), transform: `scale(${(1 + 0.12 * k).toFixed(3)})`, textShadow: `0 0 ${(0.3 * k).toFixed(2)}em ${gold}` }
+    return { ...REEL_CELL, color: lerpHex(base, gold, k), transform: `scale(${(1 + 0.12 * k).toFixed(3)})`, textShadow: `0 0 ${(0.3 * k).toFixed(2)}em ${gold}` }
   }
   const step = spec.stepMs ?? 170
   const interval = spec.intervalMs ?? 9000
@@ -213,9 +216,9 @@ export function reelCharStyle(tMs: number, i: number, n: number, spec: TitleReel
   const local = tMs % interval
   if (hash01(w.cycle * 17 + 3) < (spec.jackpotChance ?? 0.1) && local >= allLanded && local < allLanded + 1100) {
     const k = Math.sin(((local - allLanded) / 1100) * Math.PI)
-    return { color: gold, textShadow: `0 0 ${(0.4 * k).toFixed(2)}em ${gold}` }
+    return { ...REEL_CELL, color: gold, textShadow: `0 0 ${(0.4 * k).toFixed(2)}em ${gold}` }
   }
-  return {}
+  return { ...REEL_CELL }
 }
 
 export function restartCharStyle(tMs: number, i: number, n: number, spec: TitleRestartSpec): Style {
