@@ -55,7 +55,7 @@ const PULSE_S = 'M8 12h1.6l1.2-1.8 1.6 3.6 1-1.8h2.6'
 const SLIDER_S = 'M8 12h1.8M13.2 12h2.8M9.8 12a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 1 0-3.4 0'
 const SWAP_ARM = 'M12 10.8V5.2M10.2 7 12 5.1l1.8 1.9'
 const SPARK_ARM = 'M12 11.2c.4-2.2.9-3.6 0-5.8-.9 2.2-.4 3.6 0 5.8Z'
-const REDO_ARM = 'M7.2 9.6A6.2 6.2 0 0 1 16.3 7.7M14 6.1l2.7 1.5-1.5 2.7'
+const STEP_UP_S = 'M8.8 13.9h3.2v-3.2h3.2'
 const TROPHY_S = 'M10.4 13.8V12a1.6 1.6 0 0 1 3.2 0v1.8M9.8 13.8h4.4'
 const CRATE_N = 'M5 5h14v14H5ZM5 9.6h14'
 const CUBE_N = 'M12 4.6 19 8.6v6.8L12 19.4 5 15.4V8.6Z'
@@ -70,6 +70,7 @@ const NODE_CORE = 'M14.4 12a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 1 1 4.8 0'
 const ROW = 5.8
 const STACK = 4.6
 const DECK = 1.9
+const STAIR = 5.6
 
 const SPECS: Record<MilestoneGlyphKey, GlyphSpec> = {
   AP: { mode: 'nest', unit: DIAMOND },
@@ -107,7 +108,7 @@ const SPECS: Record<MilestoneGlyphKey, GlyphSpec> = {
   rank_country: { mode: 'row', unit: PENNANT_S, step: ROW },
   unique_maps: { mode: 'deck', unit: SHEET_S, step: DECK },
   unique_diffs: { mode: 'stack', unit: LAYER_S, step: STACK },
-  resubmit: { mode: 'rotate', unit: REDO_ARM },
+  resubmit: { mode: 'deck', unit: STEP_UP_S, step: STAIR },
   old_score: { mode: 'row', unit: HOURGLASS_S, step: ROW },
   stamina: { mode: 'stack', unit: PULSE_S, step: STACK },
   rock_bottom: { mode: 'row', unit: ARROW_DOWN_S, step: ROW },

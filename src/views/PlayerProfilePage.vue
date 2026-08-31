@@ -20,6 +20,7 @@ import RelationActions from '@/components/domain/RelationActions.vue'
 import RelationCountsBar from '@/components/domain/RelationCountsBar.vue'
 import SupporterProfileSection from '@/components/domain/SupporterProfileSection.vue'
 import { useSupporter } from '@/composables/useSupporter'
+import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
@@ -86,7 +87,7 @@ const profileOwnerTier = computed(
   () => user.value?.supporterTier ?? supporterState.value?.currentTier ?? null,
 )
 const isProfileOwnerSupporter = computed(() => profileOwnerTier.value != null)
-const pinnedSlotLimit = computed(() => (isProfileOwnerSupporter.value ? 6 : 3))
+const pinnedSlotLimit = computed(() => (isProfileOwnerSupporter.value ? SUPPORTER_PIN_SLOTS : STANDARD_PIN_SLOTS))
 const bioCharLimit = computed(() => (isProfileOwnerSupporter.value ? 8000 : 4000))
 
 const equipped = computed<EquippedItemsResponse>(() => {

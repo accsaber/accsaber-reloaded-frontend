@@ -21,12 +21,12 @@ const accentColor = computed(() =>
 
 const completionText = computed(() => `${formatPercent(props.milestone.completionPercent)}% of players`)
 
-const progressPercent = computed(() => {
-  if (props.milestone.normalizedProgress == null) return null
-  return props.milestone.normalizedProgress * 100
-})
+const showProgress = computed(() => !!props.loggedIn)
 
-const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0))
+const progressBarWidth = computed(() => {
+  if (props.milestone.isCompleted) return 100
+  return Math.min(100, (props.milestone.normalizedProgress ?? 0) * 100)
+})
 </script>
 
 <template>
@@ -51,9 +51,9 @@ const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0
       <span class="milestone-card__xp">{{ milestone.xp }} XP</span>
       <span class="milestone-card__completion">{{ completionText }}</span>
     </div>
-    <div v-if="progressPercent != null" class="milestone-card__progress">
+    <div v-if="showProgress" class="milestone-card__progress">
       <div class="milestone-card__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
-      <span class="milestone-card__progress-text">{{ formatPercent(progressPercent) }}%</span>
+      <span class="milestone-card__progress-text">{{ formatPercent(progressBarWidth) }}%</span>
     </div>
   </div>
 </template>

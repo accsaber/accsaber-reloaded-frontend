@@ -20,6 +20,7 @@ import type {
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import type { MilestoneDisplay } from '@/types/display'
 import { toMilestoneDisplayFromCatalog } from '@/utils/mappers'
+import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import type { MilestoneSetGroup } from '@/utils/milestoneLayout'
 import { glyphMapOf, loadMilestoneCatalog } from '@/composables/useMilestoneCatalog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -126,7 +127,7 @@ const selectedSetStats = computed(() => {
 
 const { isSupporter } = useSupporter(() => authStore.userId)
 
-const pinSlotLimit = computed(() => (isSupporter.value ? 6 : 3))
+const pinSlotLimit = computed(() => (isSupporter.value ? SUPPORTER_PIN_SLOTS : STANDARD_PIN_SLOTS))
 
 const pinned = ref<UserMilestoneProgressResponse[]>([])
 const pinSupported = ref(true)
@@ -150,9 +151,9 @@ const pinFullNotice = computed(() => {
   if (!authStore.isLoggedIn || !pinSupported.value) return null
   if (!selectedMilestone.value?.userCompleted) return null
   if (selectedIsPinned.value || pinned.value.length < pinSlotLimit.value) return null
-  return pinSlotLimit.value === 6
-    ? 'All 6 pinned slots are full. Unpin one from your profile first.'
-    : 'All 3 pinned slots are full. Supporters get 6.'
+  return pinSlotLimit.value === SUPPORTER_PIN_SLOTS
+    ? `All ${SUPPORTER_PIN_SLOTS} pinned slots are full. Unpin one from your profile first.`
+    : `All ${STANDARD_PIN_SLOTS} pinned slots are full. Supporters get ${SUPPORTER_PIN_SLOTS}.`
 })
 
 async function fetchPinned() {

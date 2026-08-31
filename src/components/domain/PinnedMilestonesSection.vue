@@ -3,7 +3,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import { resolveMilestoneGlyph, type MilestoneGlyphKey } from '@/utils/milestoneIcons'
-import { formatPercent } from '@/utils/constants'
+import { formatPercent, STANDARD_PIN_SLOTS } from '@/utils/constants'
 import { computed } from 'vue'
 
 const props = withDefaults(
@@ -14,12 +14,12 @@ const props = withDefaults(
     maxSlots?: number
     glyphs?: Map<string, MilestoneGlyphKey>
   }>(),
-  { maxSlots: 3 },
+  { maxSlots: STANDARD_PIN_SLOTS },
 )
 
 const emit = defineEmits<{ unpin: [milestoneId: string] }>()
 
-const STANDARD_SLOTS = 3
+const STANDARD_SLOTS = STANDARD_PIN_SLOTS
 
 const cards = computed(() =>
   props.pinned.map((pin) => ({

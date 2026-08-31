@@ -58,12 +58,12 @@ const accuracy = computed(() => {
   return ((props.milestone.score / props.milestone.maxScore) * 100).toFixed(2)
 })
 
-const progressPercent = computed(() => {
-  if (props.milestone.userNormalizedProgress == null) return null
-  return props.milestone.userNormalizedProgress * 100
-})
+const showProgress = computed(() => !!props.loggedIn)
 
-const progressBarWidth = computed(() => Math.min(100, progressPercent.value ?? 0))
+const progressBarWidth = computed(() => {
+  if (isCompleted.value) return 100
+  return Math.min(100, (props.milestone.userNormalizedProgress ?? 0) * 100)
+})
 
 const completedAtFormatted = computed(() => {
   if (!props.milestone.userCompletedAt) return null
@@ -119,8 +119,8 @@ function handleMilestoneCoverError(event: Event) {
       </div>
       <div v-if="compact" class="milestone-detail__compact-meta">
         <span class="milestone-detail__xp">{{ milestone.xp }} XP</span>
-        <span v-if="progressPercent != null && !isCompleted" class="milestone-detail__progress-label">{{
-          formatPercent(progressPercent) }}%</span>
+        <span v-if="showProgress && !isCompleted" class="milestone-detail__progress-label">{{
+          formatPercent(progressBarWidth) }}%</span>
         <span class="milestone-detail__completion">{{ completionText }}</span>
         <MilestoneHolderTooltip v-if="showHolderTooltip" :milestone-id="milestone.milestoneId"
           :completions="milestone.completions ?? 0" />
@@ -154,7 +154,7 @@ function handleMilestoneCoverError(event: Event) {
       </div>
     </div>
 
-    <div v-if="compact && progressPercent != null && !isCompleted"
+    <div v-if="compact && showProgress"
       class="milestone-detail__progress milestone-detail__progress--compact">
       <div class="milestone-detail__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
     </div>
@@ -193,11 +193,11 @@ function handleMilestoneCoverError(event: Event) {
         </span>
       </div>
 
-      <div v-if="progressPercent != null && !isCompleted" class="milestone-detail__progress-row">
+      <div v-if="showProgress" class="milestone-detail__progress-row">
         <div class="milestone-detail__progress">
           <div class="milestone-detail__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
         </div>
-        <span class="milestone-detail__progress-text">{{ formatPercent(progressPercent) }}%</span>
+        <span class="milestone-detail__progress-text">{{ formatPercent(progressBarWidth) }}%</span>
       </div>
 
       <div v-if="hasScoreInfo" class="milestone-detail__score">

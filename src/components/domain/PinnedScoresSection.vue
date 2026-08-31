@@ -7,6 +7,7 @@ import { useModifierStore } from '@/stores/modifiers'
 import type { PinnedScoreResponse, ScoreResponse } from '@/types/api/users'
 import type { ScoreDisplay } from '@/types/display'
 import { toScoreDisplay } from '@/utils/mappers'
+import { STANDARD_PIN_SLOTS } from '@/utils/constants'
 import { ref, watch } from 'vue'
 
 const props = withDefaults(
@@ -17,10 +18,10 @@ const props = withDefaults(
     isSelfProfile: boolean
     maxSlots?: number
   }>(),
-  { maxSlots: 3 },
+  { maxSlots: STANDARD_PIN_SLOTS },
 )
 
-const STANDARD_SLOTS = 3
+const STANDARD_SLOTS = STANDARD_PIN_SLOTS
 
 const emit = defineEmits<{
   unpin: [scoreId: string]

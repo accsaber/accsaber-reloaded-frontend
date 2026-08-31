@@ -10,10 +10,6 @@ import type { ResolvedSetGroup } from '@/types/milestones'
 import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import { computed, ref, watch } from 'vue'
 
-const DISCLAIMER_SET_IDS = new Set([
-  'b0000004-0000-0000-0000-000000000001',
-])
-
 const props = defineProps<{
   milestones: MilestoneCompletionResponse[]
   sets: MilestoneSetResponse[]
@@ -263,15 +259,6 @@ if (props.defaultExpanded) {
           </button>
 
           <div v-if="expandedSets.has(ms.setId)" class="milestone-set__rows">
-            <div v-if="DISCLAIMER_SET_IDS.has(ms.setId)" class="milestone-set__disclaimer">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
-              <p>Progress will only display on this set once you have submitted a score on every map.</p>
-            </div>
             <MilestoneDetail v-for="m in ms.milestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
               :glyph="glyphs?.get(m.milestoneId)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
           :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
@@ -420,28 +407,6 @@ if (props.defaultExpanded) {
 .milestone-set__rows--flat {
   padding: 0;
   gap: var(--space-sm);
-}
-
-.milestone-set__disclaimer {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--info) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
-  border-radius: var(--radius-btn);
-  color: var(--info);
-  font-size: var(--text-caption);
-  line-height: 1.4;
-}
-
-.milestone-set__disclaimer svg {
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.milestone-set__disclaimer p {
-  margin: 0;
 }
 
 @media (max-width: 767px) {

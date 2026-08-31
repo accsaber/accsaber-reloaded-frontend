@@ -100,6 +100,9 @@ export const EVENT_STATE_ACCENT: Record<EventState, string> = {
 
 export const CATEGORY_ORDER = ['true_acc', 'standard_acc', 'tech_acc', 'low_mid', 'overall'] as const
 
+export const STANDARD_PIN_SLOTS = 4
+export const SUPPORTER_PIN_SLOTS = 8
+
 export const KOFI_URL = 'https://ko-fi.com/accsaberreloaded'
 
 export const DISCORD_URL = 'https://discord.gg/DmzKSgcJWe'
