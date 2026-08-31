@@ -1,5 +1,6 @@
 import type {
   TitleAscentSpec,
+  TitleScalesSpec,
   TitleExcavateSpec,
   TitleHammerSpec,
   TitleMetronomeSpec,
@@ -330,6 +331,30 @@ export function excavateCharStyle(tMs: number, i: number, n: number, spec: Title
   }
   const shimmer = 0.5 + 0.5 * Math.sin(tMs * 0.004 + i * 2.3)
   return { color: gold, textShadow: `0 0 ${(0.04 + 0.1 * shimmer).toFixed(3)}em ${gold}55` }
+}
+
+export function scalesCharStyle(tMs: number, i: number, n: number, spec: TitleScalesSpec, light: boolean): Style {
+  const deep = pick(light, spec.lightDeep, spec.deep, '#166534')
+  const ridge = pick(light, spec.lightRidge, spec.ridge, '#4ade80')
+  const glint = pick(light, spec.lightGlint, spec.glint, '#d9f99d')
+  const s = spec.sizeEm ?? 0.3
+  const shimmer = spec.shimmerMs ?? 5200
+  const p = (((tMs / shimmer) + i * 0.09) % 1) * 150 - 25
+  const base = lerpHex(deep, '#000000', 0.35)
+  const scaleLayer = `radial-gradient(circle at 50% 18%, ${deep} 0 48%, ${ridge} 49% 60%, transparent 61%)`
+  const breathe = Math.sin(tMs / 850 + i * 0.4) * 0.012
+  void n
+  return {
+    display: 'inline-block',
+    transform: `translateY(${breathe.toFixed(4)}em)`,
+    backgroundColor: base,
+    backgroundImage: `linear-gradient(105deg, transparent ${(p - 9).toFixed(1)}%, ${glint}b3 ${p.toFixed(1)}%, transparent ${(p + 9).toFixed(1)}%), ${scaleLayer}, ${scaleLayer}`,
+    backgroundSize: `100% 100%, ${s}em ${s}em, ${s}em ${s}em`,
+    backgroundPosition: `0 0, 0 0, ${(s / 2).toFixed(3)}em ${(s / 2).toFixed(3)}em`,
+    '-webkit-background-clip': 'text',
+    'background-clip': 'text',
+    color: 'transparent',
+  }
 }
 
 export interface QuestMarker {

@@ -386,10 +386,18 @@ export interface TitleHoardAuraSpec {
   coin?: string
   rim?: string
   smoke?: string
+  flame?: string
+  eye?: string
+  gems?: string[]
   lightCoin?: string
   lightRim?: string
   lightSmoke?: string
+  lightFlame?: string
+  lightEye?: string
+  lightGems?: string[]
   dropEveryS?: number
+  breatheEveryS?: number
+  eyesEveryS?: number
 }
 
 export type TitleSeasonKey = 'spring' | 'summer' | 'autumn' | 'winter'
@@ -824,6 +832,18 @@ export interface TitleQuestSpec {
   intervalMs?: number
 }
 
+export interface TitleScalesSpec {
+  enabled: boolean
+  deep?: string
+  ridge?: string
+  glint?: string
+  lightDeep?: string
+  lightRidge?: string
+  lightGlint?: string
+  shimmerMs?: number
+  sizeEm?: number
+}
+
 export interface TitleValue {
   text: string
   font?: TitleFont
@@ -867,6 +887,7 @@ export interface TitleValue {
   hammer?: TitleHammerSpec
   excavate?: TitleExcavateSpec
   quest?: TitleQuestSpec
+  scales?: TitleScalesSpec
   variants?: ItemVariant[]
   durationMs?: number
   loop?: Loop

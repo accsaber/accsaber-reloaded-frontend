@@ -16,7 +16,7 @@ import { randBetween as rand } from '@/utils/random'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle } from '@/utils/cosmetics/titleSchools'
-import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
+import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
 import { lerpHex } from '@/utils/color'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
@@ -88,6 +88,7 @@ const fxEnabled = computed(() =>
     || !!props.value.hammer?.enabled
     || !!props.value.excavate?.enabled
     || !!props.value.quest?.enabled
+    || !!props.value.scales?.enabled
     || (props.value.aura?.type === 'ascension' && props.value.aura.enabled && !!props.value.aura.lift)
   ),
 )
@@ -635,6 +636,7 @@ const punchSpec = computed(() => (props.value.punch?.enabled && !reducedMotion.v
 const hammerSpec = computed(() => (props.value.hammer?.enabled && !reducedMotion.value ? props.value.hammer : null))
 const excavateSpec = computed(() => (props.value.excavate?.enabled && !reducedMotion.value ? props.value.excavate : null))
 const questSpec = computed(() => (props.value.quest?.enabled && !reducedMotion.value ? props.value.quest : null))
+const scalesSpec = computed(() => (props.value.scales?.enabled ? props.value.scales : null))
 
 function milestoneCharStyle(i: number): Record<string, string> | null {
   const n = props.value.text.length
@@ -651,6 +653,7 @@ function milestoneCharStyle(i: number): Record<string, string> | null {
   if (hammerSpec.value) return hammerCharStyle(tMs.value, i, n, hammerSpec.value, isLightBase.value, base)
   if (excavateSpec.value) return excavateCharStyle(tMs.value, i, n, excavateSpec.value, isLightBase.value)
   if (questSpec.value) return questCharStyle(tMs.value, i, n, questSpec.value, isLightBase.value, base)
+  if (scalesSpec.value) return scalesCharStyle(reducedMotion.value ? 0 : tMs.value, i, n, scalesSpec.value, isLightBase.value)
   return null
 }
 
@@ -776,7 +779,7 @@ const glyphChars = computed<string[] | null>(() =>
   || bleedSpec.value || galaxySpec.value || flareSpec.value || devourSpec.value || shockSpec.value || searSpec.value
   || sproutSpec.value || ascentSpec.value || sliceSpec.value || tickSpec.value || metronomeSpec.value
   || scrawlSpec.value || reelSpec.value || restartSpec.value || punchSpec.value || hammerSpec.value
-  || excavateSpec.value || questSpec.value
+  || excavateSpec.value || questSpec.value || scalesSpec.value
     ? props.value.text.split('').map((ch) => (ch === ' ' ? ' ' : ch))
     : null,
 )
