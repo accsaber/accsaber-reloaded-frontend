@@ -1184,7 +1184,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
         :key="i"
         class="title-renderer__forge-char"
         :style="glyphStyle(i)"
-      >{{ glyphText(ch, i) }}</span>
+      ><template v-if="reelSpec && glyphText(ch, i) !== ch"><span class="title-renderer__reel-hold">{{ ch }}</span><span class="title-renderer__reel-face">{{ glyphText(ch, i) }}</span></template><template v-else>{{ glyphText(ch, i) }}</template></span>
       <span
         v-if="forgeHeadStyle"
         class="title-renderer__forge-head"
@@ -1298,7 +1298,19 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 }
 
 .title-renderer__forge-char {
+  position: relative;
   display: inline-block;
+}
+
+.title-renderer__reel-hold {
+  visibility: hidden;
+}
+
+.title-renderer__reel-face {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
 }
 
 .title-renderer__quest-mark {
