@@ -804,74 +804,79 @@ onUnmounted(() => {
     <div class="inv-tab__controls">
       <div class="inv-tab__filters">
         <SearchBox v-model="search" placeholder="Search items..." class="inv-tab__search" />
-        <BaseSelect
-          :model-value="sortState.key"
-          :options="sortOptions"
-          placeholder="Sort"
-          @update:model-value="setSort"
-        />
-        <button
-          type="button"
-          class="inv-tab__sort-dir"
-          :aria-label="sortState.direction === 'asc' ? 'Sort descending' : 'Sort ascending'"
-          @click="setSort(sortState.key)"
-        >
-          <svg
-            class="inv-tab__sort-icon"
-            :class="{ 'inv-tab__sort-icon--asc': sortState.direction === 'asc' }"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <polyline points="19 12 12 19 5 12" />
-          </svg>
-        </button>
-        <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
-          <template #trigger>
-            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
-          </template>
-          <ItemFilterPanel
-            :rarities="rarities"
-            :type-keys="typeKeys"
-            :type-groups="typeGroups"
-            :modifier-keys="modifierKeys"
-            :modifier-options="modifierOptions"
-            :collection-ids="collectionIds"
-            :collection-options="collectionOptions"
-            :has-active-filters="hasActiveFilters"
-            @update:rarities="rarities = $event"
-            @update:type-keys="typeKeys = $event"
-            @update:modifier-keys="modifierKeys = $event"
-            @update:collection-ids="collectionIds = $event"
-            @clear="clearFilters"
+
+        <div class="inv-tab__filters-right">
+          <BaseSelect
+            :model-value="sortState.key"
+            :options="sortOptions"
+            placeholder="Sort"
+            @update:model-value="setSort"
           />
-        </FilterPopover>
+          <button
+            type="button"
+            class="inv-tab__sort-dir"
+            :aria-label="sortState.direction === 'asc' ? 'Sort descending' : 'Sort ascending'"
+            @click="setSort(sortState.key)"
+          >
+            <svg
+              class="inv-tab__sort-icon"
+              :class="{ 'inv-tab__sort-icon--asc': sortState.direction === 'asc' }"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <polyline points="19 12 12 19 5 12" />
+            </svg>
+          </button>
+          <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
+            <template #trigger>
+              <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
+            </template>
+            <ItemFilterPanel
+              :rarities="rarities"
+              :type-keys="typeKeys"
+              :type-groups="typeGroups"
+              :modifier-keys="modifierKeys"
+              :modifier-options="modifierOptions"
+              :collection-ids="collectionIds"
+              :collection-options="collectionOptions"
+              :has-active-filters="hasActiveFilters"
+              @update:rarities="rarities = $event"
+              @update:type-keys="typeKeys = $event"
+              @update:modifier-keys="modifierKeys = $event"
+              @update:collection-ids="collectionIds = $event"
+              @clear="clearFilters"
+            />
+          </FilterPopover>
+        </div>
       </div>
 
       <div class="inv-tab__actions-bar">
-        <button
-          type="button"
-          class="inv-tab__unowned-toggle"
-          :class="{ 'inv-tab__unowned-toggle--active': showUnowned }"
-          :aria-pressed="showUnowned"
-          aria-label="Show unowned items"
-          @click="toggleShowUnowned"
-        >
-          <span class="inv-tab__unowned-track">
-            <span class="inv-tab__unowned-thumb" />
-          </span>
-          <span class="inv-tab__unowned-label">Unowned</span>
-        </button>
+        <div class="inv-tab__actions-left">
+          <button
+            type="button"
+            class="inv-tab__unowned-toggle"
+            :class="{ 'inv-tab__unowned-toggle--active': showUnowned }"
+            :aria-pressed="showUnowned"
+            aria-label="Show unowned items"
+            @click="toggleShowUnowned"
+          >
+            <span class="inv-tab__unowned-track">
+              <span class="inv-tab__unowned-thumb" />
+            </span>
+            <span class="inv-tab__unowned-label">Unowned</span>
+          </button>
 
-        <BaseButton v-if="isOwnProfile && !showUnowned" size="sm" @click="toggleSelectMode">
-          {{ selectMode ? 'Done' : 'Select' }}
-        </BaseButton>
+          <BaseButton v-if="isOwnProfile && !showUnowned" size="sm" @click="toggleSelectMode">
+            {{ selectMode ? 'Done' : 'Select' }}
+          </BaseButton>
+        </div>
 
         <div class="inv-tab__actions-right">
           <span
@@ -1068,8 +1073,16 @@ onUnmounted(() => {
 .inv-tab__filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.inv-tab__filters-right {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
 }
 
 .inv-tab__filters :deep(.base-select) {
@@ -1082,9 +1095,8 @@ onUnmounted(() => {
 }
 
 .inv-tab__search {
-  flex: 1 1 190px;
+  flex: 0 1 320px;
   min-width: 140px;
-  max-width: 320px;
 }
 
 .inv-tab__sort-dir {
@@ -1126,6 +1138,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
+}
+
+.inv-tab__actions-left {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-md);
 }
 
 .inv-tab__actions-right {
