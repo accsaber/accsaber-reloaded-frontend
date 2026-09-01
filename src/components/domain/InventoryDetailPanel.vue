@@ -62,6 +62,7 @@ const emit = defineEmits<{
   applyThemeMode: [linkId: string, alt: boolean]
   selectVariant: [linkId: string, variantKey: string]
   loadCrateEffects: []
+  previewCrate: [crate: ItemResponse]
 }>()
 
 const itemTypeStore = useItemTypeStore()
@@ -387,16 +388,23 @@ onUnmounted(() => {
       </div>
       <div v-if="!locked && userItem.crate" class="inv-detail__row">
         <dt>Collection</dt>
-        <dd class="inv-detail__collection">
-          <img
-            v-if="userItem.crate.iconUrl"
-            class="inv-detail__collection-icon"
-            :src="userItem.crate.iconUrl"
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
-          {{ userItem.crate.name }}
+        <dd>
+          <button
+            type="button"
+            class="inv-detail__collection"
+            :aria-label="`Preview ${userItem.crate.name}`"
+            @click="emit('previewCrate', userItem.crate)"
+          >
+            <img
+              v-if="userItem.crate.iconUrl"
+              class="inv-detail__collection-icon"
+              :src="userItem.crate.iconUrl"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+            {{ userItem.crate.name }}
+          </button>
         </dd>
       </div>
       <div v-if="!locked" class="inv-detail__row">
@@ -622,6 +630,18 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.inv-detail__collection:hover {
+  color: var(--page-accent, var(--accent));
 }
 
 .inv-detail__collection-icon {

@@ -13,6 +13,7 @@ import CrateOpeningOverlay from '@/components/domain/CrateOpeningOverlay.vue'
 import DisintegrateDialog from '@/components/domain/DisintegrateDialog.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
+import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
 import ItemFilterPanel, {
   type ItemFilterCollectionOption,
 } from '@/components/domain/ItemFilterPanel.vue'
@@ -126,6 +127,12 @@ const { typeGroups, modifierOptions } = useItemFilterOptions({
 
 const filtersOpen = ref(false)
 const collections = ref<ItemResponse[]>([])
+const previewCrate = ref<ItemResponse | null>(null)
+
+function openCratePreview(crate: ItemResponse) {
+  mobileDetailOpen.value = false
+  previewCrate.value = crate
+}
 
 const collectionOptions = computed<ItemFilterCollectionOption[]>(() =>
   collections.value.map((c) => ({ id: c.id, label: c.name, iconUrl: c.iconUrl })),
@@ -992,6 +999,7 @@ onUnmounted(() => {
           @disintegrate="handleDisintegrateRequest"
           @open-crate="handleOpenCrate"
           @download="handleDownload"
+          @preview-crate="openCratePreview"
         />
       </aside>
     </div>
@@ -1023,8 +1031,15 @@ onUnmounted(() => {
         @disintegrate="handleDisintegrateRequest"
         @open-crate="handleOpenCrate"
         @download="handleDownload"
+        @preview-crate="openCratePreview"
       />
     </BaseModal>
+
+    <PublicCratePreview
+      :open="previewCrate !== null"
+      :crate="previewCrate"
+      @close="previewCrate = null"
+    />
 
     <DisintegrateDialog
       :open="pendingDisintegration.length > 0"
