@@ -4,6 +4,8 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import FilterButton from '@/components/common/FilterButton.vue'
+import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -11,23 +13,32 @@ import CrateOpeningOverlay from '@/components/domain/CrateOpeningOverlay.vue'
 import DisintegrateDialog from '@/components/domain/DisintegrateDialog.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
+import ItemFilterPanel, {
+  type ItemFilterCollectionOption,
+} from '@/components/domain/ItemFilterPanel.vue'
 import { useCrateContents } from '@/composables/useCrateContents'
 import { useCrateModifiers } from '@/composables/useCrateModifiers'
 import { useCrateUnusualEffects } from '@/composables/useCrateUnusualEffects'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { useItemDownload } from '@/composables/useItemDownload'
+import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
 import { useOwnedItemIds } from '@/composables/useOwnedItemIds'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useReducedMotion } from '@/composables/useReducedMotion'
-import { disintegrateItem, getItems, getUserInventory, getUserItems } from '@/api/items'
+import {
+  disintegrateItems,
+  getItems,
+  getUserInventory,
+  getUserInventoryCrates,
+  getUserItems,
+} from '@/api/items'
 import { parseApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import { useInventoryStore } from '@/stores/inventory'
 import { useItemModifierStore } from '@/stores/itemModifiers'
-import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
-import type { CrateOpenResponse, DisintegrationResponse, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
+import type { CrateOpenResponse, DisintegrateEntryRequest, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
 import type { Page } from '@/types/pagination'
 import { ESSENCE_GLYPH, formatEssence, formatEssenceAmount } from '@/utils/essence'
 import { RARITY_ORDER, buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
@@ -42,7 +53,6 @@ const props = defineProps<{
 const authStore = useAuthStore()
 const essenceStore = useEssenceStore()
 const inventoryStore = useInventoryStore()
-const itemTypeStore = useItemTypeStore()
 const itemModifierStore = useItemModifierStore()
 const themeStore = useThemeStore()
 
@@ -53,11 +63,27 @@ const reducedMotion = useReducedMotion()
 const isOwnProfile = computed(() => authStore.isLoggedIn && authStore.userId === props.userId)
 const canOfferTrade = computed(() => authStore.isLoggedIn && !!authStore.userId && authStore.userId !== props.userId)
 
-const typeKey = ref<string>('')
-const rarity = ref<string>('')
-const modifierKey = ref<string>('')
+const typeKeys = ref<string[]>([])
+const rarities = ref<ItemRarity[]>([])
+const modifierKeys = ref<string[]>([])
+const collectionIds = ref<string[]>([])
 const search = ref('')
 const CATALOG_PAGE_SIZE = 20
+
+const hasActiveFilters = computed(
+  () =>
+    typeKeys.value.length > 0 ||
+    rarities.value.length > 0 ||
+    modifierKeys.value.length > 0 ||
+    collectionIds.value.length > 0,
+)
+
+function clearFilters() {
+  typeKeys.value = []
+  rarities.value = []
+  modifierKeys.value = []
+  collectionIds.value = []
+}
 
 const showUnowned = computed<boolean>({
   get: () => route.query.unowned === '1',
@@ -91,33 +117,27 @@ const sortOptions = [
   { value: 'type', label: 'Type' },
   { value: 'rarity', label: 'Rarity' },
   { value: 'quantity', label: 'Quantity' },
+  { value: 'crate', label: 'Collection' },
 ]
 
-const typeOptions = computed(() => {
-  const active = itemTypeStore.itemTypes.filter((t) => t.active)
-  const parentIds = new Set(active.map((t) => t.parentTypeId).filter(Boolean))
-  const leaves = active
-    .filter((t) => !parentIds.has(t.id))
-    .sort((a, b) => a.name.localeCompare(b.name))
-  return [
-    { value: '', label: 'All types' },
-    ...leaves.map((t) => ({ value: t.key, label: t.name })),
-  ]
+const { typeGroups, modifierOptions } = useItemFilterOptions({
+  hiddenModifierKeys: ['decorated'],
 })
 
-const rarityOptions = computed(() => [
-  { value: '', label: 'All rarities' },
-  ...RARITY_ORDER.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) })),
-])
+const filtersOpen = ref(false)
+const collections = ref<ItemResponse[]>([])
 
-const HIDDEN_MODIFIER_KEYS = new Set(['decorated'])
+const collectionOptions = computed<ItemFilterCollectionOption[]>(() =>
+  collections.value.map((c) => ({ id: c.id, label: c.name, iconUrl: c.iconUrl })),
+)
 
-const modifierOptions = computed(() => [
-  { value: '', label: 'All modifiers' },
-  ...itemModifierStore.modifiers
-    .filter((m) => m.active && !HIDDEN_MODIFIER_KEYS.has(m.key))
-    .map((m) => ({ value: m.key, label: m.name })),
-])
+async function fetchCollections() {
+  try {
+    collections.value = await getUserInventoryCrates(props.userId)
+  } catch {
+    collections.value = []
+  }
+}
 
 const data = ref<Page<UserItemResponse> | null>(null)
 const loading = ref(false)
@@ -129,7 +149,12 @@ const flashLinkId = ref<string | null>(null)
 let flashTimer: ReturnType<typeof setTimeout> | null = null
 const actionBusy = ref(false)
 const mobileDetailOpen = ref(false)
-const disintegrateTarget = ref<UserItemResponse | null>(null)
+const MAX_SELECTION = 200
+
+const selectMode = ref(false)
+const selection = ref<UserItemResponse[]>([])
+const pendingDisintegration = ref<UserItemResponse[]>([])
+const disintegrateError = ref<string | null>(null)
 const feedback = ref<{ variant: 'success' | 'error'; message: string } | null>(null)
 let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -167,6 +192,14 @@ function compareCatalog(a: UserItemResponse, b: UserItemResponse, key: string): 
       return RARITY_ORDER.indexOf(a.item.rarity) - RARITY_ORDER.indexOf(b.item.rarity)
     case 'quantity':
       return (a.quantity ?? 0) - (b.quantity ?? 0)
+    case 'crate': {
+      const an = a.crate?.name ?? ''
+      const bn = b.crate?.name ?? ''
+      if (!an && !bn) return 0
+      if (!an) return 1
+      if (!bn) return -1
+      return an.localeCompare(bn)
+    }
     case 'date':
     default: {
       if (!a.awardedAt && !b.awardedAt) return 0
@@ -192,13 +225,15 @@ const catalogMerged = computed<UserItemResponse[]>(() => {
 const catalogFiltered = computed<UserItemResponse[]>(() => {
   if (!showUnowned.value) return []
   const q = search.value.trim().toLowerCase()
-  const modKey = modifierKey.value
   return catalogMerged.value.filter((u) => {
-    if (typeKey.value && u.item.typeKey !== typeKey.value) return false
-    if (rarity.value && u.item.rarity !== rarity.value) return false
-    if (modKey) {
+    if (typeKeys.value.length > 0 && !typeKeys.value.includes(u.item.typeKey)) return false
+    if (rarities.value.length > 0 && !rarities.value.includes(u.item.rarity)) return false
+    if (modifierKeys.value.length > 0) {
       if (isLockedLink(u.linkId)) return false
-      if (!u.modifiers.some((m) => m.key === modKey)) return false
+      if (!u.modifiers.some((m) => modifierKeys.value.includes(m.key))) return false
+    }
+    if (collectionIds.value.length > 0) {
+      if (!u.crate || !collectionIds.value.includes(u.crate.id)) return false
     }
     if (q && !u.item.name.toLowerCase().includes(q)) return false
     return true
@@ -313,9 +348,10 @@ async function fetchInventory(silent = false) {
   try {
     const params = {
       ...paginationParams.value,
-      typeKey: (typeKey.value || undefined) as ItemTypeKey | undefined,
-      rarity: (rarity.value || undefined) as ItemRarity | undefined,
-      modifierKey: modifierKey.value || undefined,
+      typeKey: typeKeys.value.length > 0 ? (typeKeys.value as ItemTypeKey[]) : undefined,
+      rarity: rarities.value.length > 0 ? rarities.value : undefined,
+      modifierKey: modifierKeys.value.length > 0 ? modifierKeys.value : undefined,
+      crateItemId: collectionIds.value.length > 0 ? collectionIds.value : undefined,
       search: search.value.trim() || undefined,
     }
     data.value = await getUserInventory(props.userId, params)
@@ -362,6 +398,41 @@ function selectItem(linkId: string) {
   if (window.matchMedia('(max-width: 1023px)').matches) {
     mobileDetailOpen.value = true
   }
+}
+
+function isDisintegratable(userItem: UserItemResponse): boolean {
+  if (!isOwnProfile.value) return false
+  if (isLockedLink(userItem.linkId)) return false
+  if (!userItem.item.tradeable) return false
+  if ((userItem.item.worth ?? 0) <= 0) return false
+  return !isEquipped(userItem)
+}
+
+const selectedLinkIds = computed(() => new Set(selection.value.map((u) => u.linkId)))
+
+const selectionEssence = computed(() =>
+  selection.value.reduce((sum, u) => sum + (u.item.worth ?? 0) * (u.quantity ?? 1), 0),
+)
+
+function toggleSelection(linkId: string) {
+  if (selectedLinkIds.value.has(linkId)) {
+    selection.value = selection.value.filter((u) => u.linkId !== linkId)
+    return
+  }
+  if (selection.value.length >= MAX_SELECTION) return
+  const target = items.value.find((u) => u.linkId === linkId)
+  if (target && isDisintegratable(target)) selection.value = [...selection.value, target]
+}
+
+function selectPage() {
+  const known = selectedLinkIds.value
+  const additions = items.value.filter((u) => isDisintegratable(u) && !known.has(u.linkId))
+  selection.value = [...selection.value, ...additions].slice(0, MAX_SELECTION)
+}
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  selection.value = []
 }
 
 function findLink(linkId: string): UserItemResponse | null {
@@ -486,6 +557,7 @@ function mutateLink(linkId: string, nextQuantity: number | null) {
       : list.map((u) => (u.linkId === linkId ? { ...u, quantity: nextQuantity } : u))
 
   catalogOwnedItems.value = apply(catalogOwnedItems.value)
+  selection.value = apply(selection.value)
 
   if (data.value) {
     const inPage = data.value.content.some((u) => u.linkId === linkId)
@@ -502,23 +574,29 @@ function mutateLink(linkId: string, nextQuantity: number | null) {
   }
 }
 
+function openDisintegrateDialog(targets: UserItemResponse[]) {
+  if (targets.length === 0) return
+  disintegrateError.value = null
+  pendingDisintegration.value = targets
+}
+
 function handleDisintegrateRequest(linkId: string) {
   if (isLockedLink(linkId)) return
   const target = findLink(linkId)
-  if (target) disintegrateTarget.value = target
+  if (target) openDisintegrateDialog([target])
 }
 
 function handleDisintegrateCancel() {
   if (actionBusy.value) return
-  disintegrateTarget.value = null
+  pendingDisintegration.value = []
+  disintegrateError.value = null
 }
 
-function applyDisintegration(res: DisintegrationResponse): boolean {
-  const remaining = res.remainingQuantity ?? null
-  essenceStore.setBalance(res.balance)
-  mutateLink(res.linkId, remaining)
-  showFeedback('success', `+${formatEssence(res.essenceGained)} essence`)
-  return remaining === null
+function handleDisintegrateRemove(linkId: string) {
+  if (actionBusy.value) return
+  pendingDisintegration.value = pendingDisintegration.value.filter((u) => u.linkId !== linkId)
+  selection.value = selection.value.filter((u) => u.linkId !== linkId)
+  if (pendingDisintegration.value.length === 0) disintegrateError.value = null
 }
 
 function findOwnedCrateLink(itemId: string): UserItemResponse | null {
@@ -629,40 +707,39 @@ function handleCrateOverlayClose() {
   if (!refreshed) refreshInventory()
 }
 
-async function handleDisintegrateConfirm(quantity: number) {
-  const target = disintegrateTarget.value
-  if (!target) return
-  const linkId = target.linkId
+async function handleDisintegrateConfirm(entries: DisintegrateEntryRequest[]) {
+  if (entries.length === 0) return
   actionBusy.value = true
-  let removed = false
   try {
-    removed = applyDisintegration(await disintegrateItem(linkId, quantity))
+    const res = await disintegrateItems(entries)
+    essenceStore.setBalance(res.balance)
+    for (const entry of res.entries) mutateLink(entry.linkId, entry.remainingQuantity ?? null)
+    showFeedback('success', `+${formatEssence(res.essenceGained)} essence`)
+    pendingDisintegration.value = []
+    disintegrateError.value = null
+    selection.value = []
+    selectMode.value = false
+    mobileDetailOpen.value = false
+    refreshInventory(true)
   } catch (err) {
-    const parsed = parseApiError(err, 'Could not disintegrate item.')
-    if (parsed.status === 404) {
-      removed = true
-      mutateLink(linkId, null)
-    } else if (parsed.status === 409 && isOwnProfile.value && authStore.userId) {
+    const parsed = parseApiError(err, 'Could not disintegrate.')
+    disintegrateError.value = parsed.fieldErrors[0]?.message ?? parsed.message
+    if (parsed.status === 409 && isOwnProfile.value && authStore.userId) {
       await inventoryStore.fetchEquipped(authStore.userId, true)
     }
-    showFeedback('error', parsed.fieldErrors[0]?.message ?? parsed.message)
+    if (parsed.status === 404) refreshInventory(true)
   } finally {
-    disintegrateTarget.value = null
     actionBusy.value = false
-    if (removed) {
-      mobileDetailOpen.value = false
-      refreshInventory(true)
-    }
   }
 }
 
-watch([typeKey, rarity, modifierKey, search], () => {
+watch([typeKeys, rarities, modifierKeys, collectionIds, search], () => {
   resetPage()
   selectedLinkId.value = null
 })
 
 watch(
-  [() => props.userId, paginationParams, typeKey, rarity, modifierKey, search],
+  [() => props.userId, paginationParams, typeKeys, rarities, modifierKeys, collectionIds, search],
   () => {
     if (!showUnowned.value) fetchInventory()
   },
@@ -674,6 +751,8 @@ watch(() => props.userId, () => {
 })
 
 watch(showUnowned, (on) => {
+  selectMode.value = false
+  selection.value = []
   if (on) {
     if (catalogAllItems.value.length === 0) fetchCatalog()
   } else {
@@ -691,7 +770,9 @@ watch(
 )
 
 watch(() => props.userId, (id) => {
-  if (id && isOwnProfile.value) {
+  if (!id) return
+  fetchCollections()
+  if (isOwnProfile.value) {
     inventoryStore.fetchEquipped(id)
     essenceStore.fetchBalance(true)
   }
@@ -705,8 +786,6 @@ watch([totalPages, currentPage], () => {
 })
 
 onMounted(() => {
-  itemTypeStore.fetchItemTypes()
-  itemModifierStore.fetchModifiers()
   if (showUnowned.value && catalogAllItems.value.length === 0) fetchCatalog()
 })
 
@@ -725,15 +804,54 @@ onUnmounted(() => {
     <div class="inv-tab__controls">
       <div class="inv-tab__filters">
         <SearchBox v-model="search" placeholder="Search items..." class="inv-tab__search" />
-        <BaseSelect v-model="typeKey" :options="typeOptions" placeholder="All types" />
-        <BaseSelect v-model="rarity" :options="rarityOptions" placeholder="All rarities" />
-        <BaseSelect v-model="modifierKey" :options="modifierOptions" placeholder="All modifiers" />
         <BaseSelect
           :model-value="sortState.key"
           :options="sortOptions"
           placeholder="Sort"
           @update:model-value="setSort"
         />
+        <button
+          type="button"
+          class="inv-tab__sort-dir"
+          :aria-label="sortState.direction === 'asc' ? 'Sort descending' : 'Sort ascending'"
+          @click="setSort(sortState.key)"
+        >
+          <svg
+            class="inv-tab__sort-icon"
+            :class="{ 'inv-tab__sort-icon--asc': sortState.direction === 'asc' }"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <polyline points="19 12 12 19 5 12" />
+          </svg>
+        </button>
+        <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
+          <template #trigger>
+            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
+          </template>
+          <ItemFilterPanel
+            :rarities="rarities"
+            :type-keys="typeKeys"
+            :type-groups="typeGroups"
+            :modifier-keys="modifierKeys"
+            :modifier-options="modifierOptions"
+            :collection-ids="collectionIds"
+            :collection-options="collectionOptions"
+            :has-active-filters="hasActiveFilters"
+            @update:rarities="rarities = $event"
+            @update:type-keys="typeKeys = $event"
+            @update:modifier-keys="modifierKeys = $event"
+            @update:collection-ids="collectionIds = $event"
+            @clear="clearFilters"
+          />
+        </FilterPopover>
       </div>
 
       <div class="inv-tab__actions-bar">
@@ -750,6 +868,10 @@ onUnmounted(() => {
           </span>
           <span class="inv-tab__unowned-label">Unowned</span>
         </button>
+
+        <BaseButton v-if="isOwnProfile && !showUnowned" size="sm" @click="toggleSelectMode">
+          {{ selectMode ? 'Done' : 'Select' }}
+        </BaseButton>
 
         <div class="inv-tab__actions-right">
           <span
@@ -780,6 +902,30 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <div v-if="selectMode" class="inv-tab__selection">
+      <span class="inv-tab__selection-count">
+        {{ selection.length }} selected
+      </span>
+      <span class="inv-tab__selection-essence">
+        <span class="inv-tab__wallet-glyph" aria-hidden="true">{{ ESSENCE_GLYPH }}</span>
+        {{ formatEssenceAmount(selectionEssence) }}
+      </span>
+      <div class="inv-tab__selection-actions">
+        <BaseButton size="sm" @click="selectPage">Select page</BaseButton>
+        <BaseButton size="sm" :disabled="selection.length === 0" @click="selection = []">
+          Clear
+        </BaseButton>
+        <BaseButton
+          variant="destructive"
+          size="sm"
+          :disabled="selection.length === 0"
+          @click="openDisintegrateDialog([...selection])"
+        >
+          Disintegrate
+        </BaseButton>
+      </div>
+    </div>
+
     <div class="inv-tab__layout">
       <div class="inv-tab__main">
         <div v-if="loading || (showUnowned && catalogLoading)" class="inv-tab__grid">
@@ -798,7 +944,11 @@ onUnmounted(() => {
             :highlighted="userItem.linkId === flashLinkId"
             :equipped="isEquipped(userItem)"
             :locked="isLockedLink(userItem.linkId)"
+            :select-mode="selectMode"
+            :checked="selectedLinkIds.has(userItem.linkId)"
+            :selectable="isDisintegratable(userItem)"
             @select="selectItem"
+            @toggle="toggleSelection"
           />
         </div>
 
@@ -872,10 +1022,12 @@ onUnmounted(() => {
     </BaseModal>
 
     <DisintegrateDialog
-      :open="disintegrateTarget !== null"
-      :user-item="disintegrateTarget"
+      :open="pendingDisintegration.length > 0"
+      :items="pendingDisintegration"
       :busy="actionBusy"
+      :error="disintegrateError"
       @confirm="handleDisintegrateConfirm"
+      @remove="handleDisintegrateRemove"
       @cancel="handleDisintegrateCancel"
     />
 
@@ -921,25 +1073,51 @@ onUnmounted(() => {
 }
 
 .inv-tab__filters :deep(.base-select) {
-  flex: 1 1 0;
-  min-width: 120px;
+  flex: 0 0 auto;
 }
 
 .inv-tab__filters :deep(.base-select__trigger) {
-  width: 100%;
-  min-width: 0;
+  min-width: 150px;
   padding: var(--space-xs) var(--space-sm);
 }
 
-.inv-tab__filters :deep(.base-select__value) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.inv-tab__search {
+  flex: 1 1 190px;
+  min-width: 140px;
+  max-width: 320px;
 }
 
-.inv-tab__search {
-  flex: 0 1 190px;
-  min-width: 140px;
+.inv-tab__sort-dir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.inv-tab__sort-dir:hover {
+  background: var(--bg-elevated);
+  border-color: var(--text-tertiary);
+  color: var(--text-primary);
+}
+
+.inv-tab__sort-icon {
+  transition: transform 120ms ease;
+}
+
+.inv-tab__sort-icon--asc {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-tab__sort-icon {
+    transition: none;
+  }
 }
 
 .inv-tab__actions-bar {
@@ -1031,6 +1209,41 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+}
+
+.inv-tab__selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.inv-tab__selection-count {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inv-tab__selection-essence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-tab__selection-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
 }
 
 .inv-tab__layout {

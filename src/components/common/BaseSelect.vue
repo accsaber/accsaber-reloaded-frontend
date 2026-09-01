@@ -178,6 +178,8 @@ function select(value: string) {
 .base-select__options {
   max-height: 240px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 
 .base-select__option {

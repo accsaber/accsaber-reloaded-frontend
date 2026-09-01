@@ -7,15 +7,14 @@ import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import ItemFilterPanel from '@/components/domain/ItemFilterPanel.vue'
+import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import { useTradeStore } from '@/stores/trades'
-import { useItemModifierStore } from '@/stores/itemModifiers'
-import { useItemTypeStore } from '@/stores/itemTypes'
-import { modifierAccentHex } from '@/utils/items'
-import type { ItemRarity, UnusualEffectGroupsResponse } from '@/types/api/items'
+import type { ItemRarity } from '@/types/api/items'
 import type {
   MarketBrowseParams,
   MarketKind,
@@ -24,12 +23,6 @@ import type {
 } from '@/types/api/market'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { EffectCrateGroup, EffectOption } from './market/MarketEffectFilter.vue'
-import MarketFilterPanel, {
-  type MarketModifierOption,
-  type MarketTypeGroup,
-  type MarketTypeOption,
-} from './market/MarketFilterPanel.vue'
 import MarketListingCard from './market/MarketListingCard.vue'
 import MarketWallet from './market/MarketWallet.vue'
 
@@ -42,9 +35,11 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const essenceStore = useEssenceStore()
-const itemTypeStore = useItemTypeStore()
-const itemModifierStore = useItemModifierStore()
 const tradeStore = useTradeStore()
+
+const { typeGroups, modifierOptions, effectGroups, ungroupedEffects } = useItemFilterOptions({
+  effects: true,
+})
 
 const SORT_OPTIONS: { value: MarketSortOption; label: string }[] = [
   { value: 'ending_soon', label: 'Ending soon' },
@@ -173,66 +168,6 @@ function clearFilters() {
   })
 }
 
-function childTypeLabel(name: string, parentName: string): string {
-  const stripped = name.startsWith(parentName) ? name.slice(parentName.length).trim() : name
-  const deprefixed = stripped.startsWith('Profile ') ? stripped.slice('Profile '.length) : stripped
-  return deprefixed || name
-}
-
-const typeGroups = computed<MarketTypeGroup[]>(() => {
-  const types = itemTypeStore.itemTypes.filter((t) => t.active)
-  const standalone: MarketTypeOption[] = []
-  const groups: MarketTypeGroup[] = []
-  for (const root of types.filter((t) => t.parentTypeId == null)) {
-    const children = types.filter((t) => t.parentTypeId === root.id)
-    if (children.length === 0) {
-      standalone.push({ key: root.key, label: root.name })
-    } else {
-      groups.push({
-        label: root.name,
-        options: children.map((c) => ({ key: c.key, label: childTypeLabel(c.name, root.name) })),
-      })
-    }
-  }
-  return [{ label: null, options: standalone }, ...groups].filter((g) => g.options.length > 0)
-})
-
-const modifierOptions = computed<MarketModifierOption[]>(() =>
-  itemModifierStore.modifiers
-    .filter((m) => m.active)
-    .map((m) => ({ key: m.key, label: m.name, colorHex: modifierAccentHex(m) })),
-)
-
-const effectGroupsData = ref<UnusualEffectGroupsResponse | null>(null)
-
-const effectGroups = computed<EffectCrateGroup[]>(() =>
-  (effectGroupsData.value?.groups ?? [])
-    .map((g) => ({
-      crateId: g.crateId,
-      crateName: g.crateName,
-      crateIconUrl: g.crateIconUrl,
-      effects: g.effects
-        .filter((e) => e.active)
-        .map((e) => ({ id: e.id, key: e.key, label: e.name })),
-    }))
-    .filter((g) => g.effects.length > 0),
-)
-
-const ungroupedEffects = computed<EffectOption[]>(() =>
-  (effectGroupsData.value?.ungrouped ?? [])
-    .filter((e) => e.active)
-    .map((e) => ({ id: e.id, key: e.key, label: e.name })),
-)
-
-async function fetchUnusualEffects() {
-  try {
-    const { getUnusualEffectGroups } = await import('@/api/items')
-    effectGroupsData.value = await getUnusualEffectGroups()
-  } catch {
-    effectGroupsData.value = null
-  }
-}
-
 const filtersOpen = ref(false)
 const listings = ref<MarketListingResponse[]>([])
 const totalPages = ref(0)
@@ -287,9 +222,6 @@ watch(
   { immediate: true },
 )
 
-itemTypeStore.fetchItemTypes()
-itemModifierStore.fetchModifiers()
-fetchUnusualEffects()
 </script>
 
 <template>
@@ -349,7 +281,7 @@ fetchUnusualEffects()
           <template #trigger>
             <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
-          <MarketFilterPanel
+          <ItemFilterPanel
             :rarities="rarities"
             :type-keys="typeKeys"
             :type-groups="typeGroups"
@@ -358,6 +290,7 @@ fetchUnusualEffects()
             :effect-keys="effectKeys"
             :effect-groups="effectGroups"
             :ungrouped-effects="ungroupedEffects"
+            show-price
             :min-price="minPrice"
             :max-price="maxPrice"
             :has-active-filters="hasActiveFilters"

@@ -9,6 +9,7 @@ import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
+import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -19,14 +20,14 @@ import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import { useThemeStore } from '@/stores/theme'
 import type { EquippedItemsResponse } from '@/types/api/items'
-import type { SnipeComparisonResponse } from '@/types/api/snipe'
+import type { SnipeComparisonResponse, SnipeSort } from '@/types/api/snipe'
 import type {
   LevelResponse,
   ScoreResponse,
   UserAllStatisticsResponse,
   UserResponse,
 } from '@/types/api/users'
-import type { ScoreDisplay } from '@/types/display'
+import type { ScoreDisplay, SortDirection } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { brightenRgb } from '@/utils/color'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
@@ -48,6 +49,15 @@ const SIZE_OPTIONS = [
   ...SIZE_VALUES.map((n) => ({ value: String(n), label: `${n} maps` })),
   { value: 'all', label: 'All snipes' },
 ]
+
+const SORT_OPTIONS: { value: SnipeSort; label: string; defaultDirection: SortDirection }[] = [
+  { value: 'GAP', label: 'Closest gap', defaultDirection: 'asc' },
+  { value: 'AP_GAP', label: 'Most AP to gain', defaultDirection: 'desc' },
+  { value: 'TARGET_AP', label: 'Their AP', defaultDirection: 'desc' },
+  { value: 'YOUR_AP', label: 'Your AP', defaultDirection: 'desc' },
+  { value: 'RANK_GAP', label: 'Leaderboard gap', defaultDirection: 'desc' },
+]
+const DEFAULT_SORT: SnipeSort = 'GAP'
 
 const snipeCategoryCodes = computed(() =>
   categoryStore.categoryInfoList
@@ -92,6 +102,21 @@ const currentCategory = computed<string>(() => {
   return snipeCategoryCodes.value.includes(c) ? c : ''
 })
 
+const currentSort = computed<SnipeSort>(() => {
+  const raw = route.query.sort
+  if (typeof raw !== 'string') return DEFAULT_SORT
+  const match = SORT_OPTIONS.find((o) => o.value === raw.toUpperCase())
+  return match?.value ?? DEFAULT_SORT
+})
+
+const defaultDirection = computed<SortDirection>(
+  () => SORT_OPTIONS.find((o) => o.value === currentSort.value)?.defaultDirection ?? 'asc',
+)
+
+const currentDirection = computed<SortDirection>(() =>
+  route.query.dir === 'asc' || route.query.dir === 'desc' ? route.query.dir : defaultDirection.value,
+)
+
 function setPage(page: number) {
   const query = { ...route.query }
   if (page <= 1) delete query.page
@@ -112,6 +137,24 @@ function setCategory(value: string) {
   delete query.page
   if (!value) delete query.category
   else query.category = value
+  router.replace({ query })
+}
+
+function setSort(value: string) {
+  const query = { ...route.query }
+  delete query.page
+  delete query.dir
+  if (value === DEFAULT_SORT) delete query.sort
+  else query.sort = value.toLowerCase()
+  router.replace({ query })
+}
+
+function toggleDirection() {
+  const next: SortDirection = currentDirection.value === 'asc' ? 'desc' : 'asc'
+  const query = { ...route.query }
+  delete query.page
+  if (next === defaultDirection.value) delete query.dir
+  else query.dir = next
   router.replace({ query })
 }
 
@@ -166,8 +209,8 @@ const totalElements = computed(() => data.value?.totalElements ?? 0)
 
 const closestGapPct = computed(() => {
   if (rows.value.length === 0) return 0
-  const r = rows.value[0]
-  return (r.targetScore.accuracy - r.sniperScore.accuracy) * 100
+  const gaps = rows.value.map((r) => r.targetScore.accuracy - r.sniperScore.accuracy)
+  return Math.min(...gaps) * 100
 })
 
 const totalPointsToGain = computed(() =>
@@ -183,6 +226,8 @@ const playlistUrl = computed(() =>
     ? buildSnipePlaylistUrl(sniperId.value, targetId.value, {
         size: currentSize.value === 'all' ? undefined : currentSize.value,
         category: currentCategory.value || undefined,
+        sort: currentSort.value,
+        direction: currentDirection.value,
       })
     : '',
 )
@@ -286,6 +331,8 @@ async function fetchComparisons() {
       page: currentPage.value - 1,
       size: listSize.value,
       category: currentCategory.value || undefined,
+      sort: currentSort.value,
+      direction: currentDirection.value,
     })
   } catch {
     data.value = null
@@ -375,7 +422,16 @@ watch(
 )
 
 watch(
-  () => [sniperId.value, targetId.value, currentPage.value, currentSize.value, currentCategory.value] as const,
+  () =>
+    [
+      sniperId.value,
+      targetId.value,
+      currentPage.value,
+      currentSize.value,
+      currentCategory.value,
+      currentSort.value,
+      currentDirection.value,
+    ] as const,
   () => {
     if (isValidPair.value) fetchComparisons()
   },
@@ -491,6 +547,13 @@ watch(
           @update:model-value="setCategory" />
         <BaseSelect :model-value="sizeSelectValue" :options="SIZE_OPTIONS" label="Page size"
           @update:model-value="setSize" />
+        <div class="snipe-page__sort">
+          <span class="snipe-page__sort-label">Sort</span>
+          <div class="snipe-page__sort-row">
+            <BaseSelect :model-value="currentSort" :options="SORT_OPTIONS" @update:model-value="setSort" />
+            <SortDirectionToggle :direction="currentDirection" @toggle="toggleDirection" />
+          </div>
+        </div>
       </div>
       <BaseButton class="snipe-page__download" variant="primary" size="lg" :href="playlistUrl"
         :disabled="!playlistUrl || rows.length === 0" aria-label="Download Beat Saber playlist">
@@ -688,6 +751,30 @@ watch(
   display: flex;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+.snipe-page__sort {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.snipe-page__sort-label {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.snipe-page__sort-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-sm);
+}
+
+.snipe-page__sort-row :deep(.base-select__trigger) {
+  min-width: 170px;
 }
 
 .snipe-page__download {

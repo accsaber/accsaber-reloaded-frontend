@@ -104,8 +104,10 @@ function navigateToMap(e: MouseEvent) {
         <span class="snipe-row__points">{{ side.score.score.toLocaleString() }} pts</span>
         <span class="snipe-row__ap">{{ side.score.ap.toFixed(2) }} AP</span>
         <span class="snipe-row__meta">
-          <span>#{{ side.score.rank }}</span>
-          <span class="snipe-row__sep">·</span>
+          <template v-if="side.score.rank">
+            <span>#{{ side.score.rank }}</span>
+            <span class="snipe-row__sep">·</span>
+          </template>
           <span>{{ formatRelativeDate(side.score.timeSet) }}</span>
         </span>
       </button>

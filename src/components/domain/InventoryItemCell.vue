@@ -23,11 +23,23 @@ const props = defineProps<{
   equipped?: boolean
   locked?: boolean
   highlighted?: boolean
+  selectMode?: boolean
+  checked?: boolean
+  selectable?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   select: [linkId: string]
+  toggle: [linkId: string]
 }>()
+
+function onClick() {
+  if (props.selectMode) {
+    if (props.selectable) emit('toggle', props.userItem.linkId)
+    return
+  }
+  emit('select', props.userItem.linkId)
+}
 
 const modifierStore = useItemModifierStore()
 
@@ -70,12 +82,15 @@ onMounted(() => {
           'inventory-cell--deprecated': item.deprecated,
           'inventory-cell--locked': locked,
           'inventory-cell--title-fx': item.typeKey === 'title',
+          'inventory-cell--checked': selectMode && checked,
+          'inventory-cell--unselectable': selectMode && !selectable,
         },
       ]"
       :style="cellAccentStyle"
       :aria-label="item.name"
-      :aria-pressed="selected"
-      @click="$emit('select', userItem.linkId)"
+      :aria-pressed="selectMode ? !!checked : selected"
+      :disabled="selectMode && !selectable"
+      @click="onClick"
     >
       <span class="inventory-cell__art">
         <FragmentedItem v-if="fragmentSpec" :item="item" :spec="fragmentSpec" :selected="selected" />
@@ -92,6 +107,13 @@ onMounted(() => {
         :content-mask="shapeMask"
         hide-stat-counters
       />
+
+      <span v-if="selectMode && selectable" class="inventory-cell__check" aria-hidden="true">
+        <svg v-if="checked" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </span>
 
       <span v-if="equipped && !locked" class="inventory-cell__equipped" aria-hidden="true">EQUIPPED</span>
       <span v-if="!locked && quantity > 1" class="inventory-cell__qty">x{{ quantity }}</span>
@@ -222,9 +244,40 @@ onMounted(() => {
   transform: scale(1.02);
 }
 
-.inventory-cell--selected {
+.inventory-cell--selected,
+.inventory-cell--checked {
   border-color: var(--cell-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--cell-accent) 35%, transparent);
+}
+
+.inventory-cell--unselectable {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.inventory-cell--unselectable:hover {
+  transform: none;
+}
+
+.inventory-cell__check {
+  position: absolute;
+  bottom: var(--space-xs);
+  right: var(--space-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--bg-base);
+  background: var(--bg-base);
+  border: 1px solid var(--text-tertiary);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.inventory-cell--checked .inventory-cell__check {
+  background: var(--cell-accent);
+  border-color: var(--cell-accent);
 }
 
 .inventory-cell--highlighted {

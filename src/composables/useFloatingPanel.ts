@@ -1,6 +1,13 @@
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
-export function useFloatingPanel(opts?: { minWidth?: number; flipThreshold?: number }) {
+const VIEWPORT_EDGE = 8
+const DEFAULT_MAX_WIDTH = 480
+
+export function useFloatingPanel(opts?: {
+  minWidth?: number
+  maxWidth?: number
+  flipThreshold?: number
+}) {
   const isOpen = ref(false)
   const containerRef = ref<HTMLElement | null>(null)
   const triggerRef = ref<HTMLElement | null>(null)
@@ -16,12 +23,19 @@ export function useFloatingPanel(opts?: { minWidth?: number; flipThreshold?: num
     const spaceBelow = window.innerHeight - rect.bottom
     const spaceAbove = rect.top
     const openUp = spaceBelow < flipThreshold && spaceAbove > spaceBelow
-    const width = opts?.minWidth ? Math.max(rect.width, opts.minWidth) : rect.width
+    const floor = Math.max(rect.width, opts?.minWidth ?? 0)
+    const cap = Math.max(
+      floor,
+      Math.min(opts?.maxWidth ?? DEFAULT_MAX_WIDTH, window.innerWidth - VIEWPORT_EDGE * 2),
+    )
+    const panelWidth = panelRef.value?.getBoundingClientRect().width ?? floor
+    const left = Math.min(rect.left, window.innerWidth - VIEWPORT_EDGE - panelWidth)
     const style: Record<string, string> = {
       position: 'fixed',
-      left: `${rect.left}px`,
-      width: `${width}px`,
-      minWidth: `${rect.width}px`,
+      left: `${Math.max(VIEWPORT_EDGE, left)}px`,
+      width: 'max-content',
+      minWidth: `${floor}px`,
+      maxWidth: `${cap}px`,
     }
     if (openUp) style.bottom = `${window.innerHeight - rect.top}px`
     else style.top = `${rect.bottom}px`
@@ -31,6 +45,7 @@ export function useFloatingPanel(opts?: { minWidth?: number; flipThreshold?: num
   function open() {
     isOpen.value = true
     updatePosition()
+    nextTick(updatePosition)
   }
 
   function close() {

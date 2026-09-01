@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import WikiCompareTable, { type WikiCompareRow } from '@/wiki/components/WikiCompareTable.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import WikiHeading from '@/wiki/components/WikiHeading.vue'
@@ -11,6 +12,16 @@ interface Player {
   id: string
   name: string
 }
+
+const SORT_COLUMNS = ['What goes to the top']
+
+const SORT_ROWS: WikiCompareRow[] = [
+  { label: 'Closest gap', values: ['your nearest miss'] },
+  { label: 'Most AP to gain', values: ['the biggest AP difference'] },
+  { label: 'Their AP', values: ['their best scores'] },
+  { label: 'Your AP', values: ['your best scores'] },
+  { label: 'Leaderboard gap', values: ['the widest rank gap'] },
+]
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
@@ -90,10 +101,29 @@ onMounted(async () => {
 
     <WikiHeading id="order">How close counts as close</WikiHeading>
     <p>
-      The list runs closest first, and closeness is measured in accuracy rather than raw points.
-      That distinction does more work than it looks like it does. Two maps can both sit five
-      thousand points out of reach while being nowhere near as hard to catch up on, because five
-      thousand points is a rounding error on a long map and a serious wall on a short one.
+      By default the list runs closest first, and it measures closeness in accuracy. Raw points
+      do not decide it. Two maps can both sit five thousand points out of reach while being
+      nowhere near as hard to catch up on, because five thousand points is a rounding error on a
+      long map and a serious wall on a short one.
+    </p>
+
+    <WikiHeading id="sorting">Sorting the list</WikiHeading>
+    <p>
+      Closest first is the right order for taking a score off somebody. It is a poor one for
+      planning where your next AP comes from. The map you are two hundredths of a percent away
+      from can be worth almost nothing. The dropdown next to the page size holds five orders and
+      the arrow beside it flips any of them around.
+    </p>
+
+    <WikiCompareTable :columns="SORT_COLUMNS" :rows="SORT_ROWS" />
+
+    <p>
+      Most AP to gain is the one to reach for when you are chasing your own total, and the map it
+      hands you is often nowhere near the closest. Leaderboard gap answers a different question
+      and shows where they sit furthest ahead on the board itself. A handful of old scores have
+      no rank stored against them and those drop to the bottom whichever way you flip it. The
+      choice goes into the address bar. A sorted board survives a refresh, and the link hands
+      somebody else the exact view you were looking at.
     </p>
 
     <WikiHeading id="numbers">The three numbers on top</WikiHeading>
@@ -107,11 +137,12 @@ onMounted(async () => {
 
     <WikiHeading id="playlist">The playlist</WikiHeading>
     <p>
-      The download picks up whatever you have already set, so the category filter and the page
-      size both carry into it. Leaving it on All snipes gives you the entire list, which gets
-      unwieldy against somebody far ahead of you. Capping it at twenty or fifty gives you the
-      closest ones and is usually the version you actually want loaded in the game.
-      You can sync the playlist in-game.
+      The download picks up whatever you have already set. Category, page size and sort all
+      carry into the file, and a playlist you built on Most AP to gain arrives in the game in
+      that order and holds it when Beat Saber resyncs. Leaving it on All snipes gives you the
+      entire list, which gets unwieldy against somebody far ahead of you. Capping it at twenty
+      or fifty gives you the top of whatever order you picked, and that is usually the version
+      you actually want loaded in the game. You can sync the playlist in-game.
     </p>
   </WikiProse>
 </template>

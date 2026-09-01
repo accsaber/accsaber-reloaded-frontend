@@ -385,6 +385,20 @@ onUnmounted(() => {
         <dt>Source</dt>
         <dd>{{ sourceLabel }}</dd>
       </div>
+      <div v-if="!locked && userItem.crate" class="inv-detail__row">
+        <dt>Collection</dt>
+        <dd class="inv-detail__collection">
+          <img
+            v-if="userItem.crate.iconUrl"
+            class="inv-detail__collection-icon"
+            :src="userItem.crate.iconUrl"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+          {{ userItem.crate.name }}
+        </dd>
+      </div>
       <div v-if="!locked" class="inv-detail__row">
         <dt>Awarded</dt>
         <dd>{{ formatRelativeDate(userItem.awardedAt) }}</dd>
@@ -602,6 +616,20 @@ onUnmounted(() => {
   margin: 0;
   color: var(--text-primary);
   text-align: right;
+}
+
+.inv-detail__collection {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.inv-detail__collection-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-btn);
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .inv-detail__mono {

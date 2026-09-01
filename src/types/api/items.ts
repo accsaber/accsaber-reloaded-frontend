@@ -1712,6 +1712,7 @@ export interface UserItemResponse {
   counters?: Record<string, number> | null
   source: ItemSource
   sourceId: string | null
+  crate?: ItemResponse | null
   awardedByStaffId: string | null
   reason: string | null
   awardedAt: string
@@ -1720,11 +1721,25 @@ export interface UserItemResponse {
 
 export type EquippedItemsResponse = Partial<Record<ItemTypeKey, UserItemResponse | null>>
 
-export interface DisintegrationResponse {
+export interface DisintegrateEntryRequest {
+  linkId: string
+  quantity?: number
+}
+
+export interface DisintegrateRequest {
+  entries: DisintegrateEntryRequest[]
+}
+
+export interface DisintegrationEntry {
   linkId: string
   itemId: string
   quantityDisintegrated: number
   remainingQuantity?: number | null
+  essenceGained: number
+}
+
+export interface DisintegrationResponse {
+  entries: DisintegrationEntry[]
   essenceGained: number
   balance: number
 }
@@ -1752,9 +1767,10 @@ export interface UserItemListParams {
 }
 
 export interface InventoryListParams extends PaginationParams {
-  typeKey?: ItemTypeKey
-  rarity?: ItemRarity
+  typeKey?: ItemTypeKey | ItemTypeKey[]
+  rarity?: ItemRarity | ItemRarity[]
   modifierKey?: string | string[]
+  crateItemId?: string | string[]
   tradeable?: boolean
   search?: string
 }

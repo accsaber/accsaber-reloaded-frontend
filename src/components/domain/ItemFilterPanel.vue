@@ -3,46 +3,68 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import type { ItemRarity } from '@/types/api/items'
 import { RARITY_ORDER } from '@/utils/items'
 import { sanitizeEssenceInput } from '@/utils/market'
-import MarketEffectFilter, {
+import ItemEffectFilter, {
   type EffectCrateGroup,
   type EffectOption,
-} from './MarketEffectFilter.vue'
+} from './ItemEffectFilter.vue'
 
-export interface MarketTypeOption {
+export interface ItemFilterTypeOption {
   key: string
   label: string
 }
 
-export interface MarketTypeGroup {
+export interface ItemFilterTypeGroup {
   label: string | null
-  options: MarketTypeOption[]
+  options: ItemFilterTypeOption[]
 }
 
-export interface MarketModifierOption {
+export interface ItemFilterModifierOption {
   key: string
   label: string
   colorHex: string | null
 }
 
-const props = defineProps<{
-  rarities: ItemRarity[]
-  typeKeys: string[]
-  typeGroups: MarketTypeGroup[]
-  modifierKeys: string[]
-  modifierOptions: MarketModifierOption[]
-  effectKeys: string[]
-  effectGroups: EffectCrateGroup[]
-  ungroupedEffects: EffectOption[]
-  minPrice: number | null
-  maxPrice: number | null
-  hasActiveFilters: boolean
-}>()
+export interface ItemFilterCollectionOption {
+  id: string
+  label: string
+  iconUrl: string | null
+}
+
+const props = withDefaults(
+  defineProps<{
+    rarities: ItemRarity[]
+    typeKeys: string[]
+    typeGroups: ItemFilterTypeGroup[]
+    modifierKeys: string[]
+    modifierOptions: ItemFilterModifierOption[]
+    effectKeys?: string[]
+    effectGroups?: EffectCrateGroup[]
+    ungroupedEffects?: EffectOption[]
+    collectionIds?: string[]
+    collectionOptions?: ItemFilterCollectionOption[]
+    showPrice?: boolean
+    minPrice?: number | null
+    maxPrice?: number | null
+    hasActiveFilters: boolean
+  }>(),
+  {
+    effectKeys: () => [],
+    effectGroups: () => [],
+    ungroupedEffects: () => [],
+    collectionIds: () => [],
+    collectionOptions: () => [],
+    showPrice: false,
+    minPrice: null,
+    maxPrice: null,
+  },
+)
 
 const emit = defineEmits<{
   'update:rarities': [value: ItemRarity[]]
   'update:typeKeys': [value: string[]]
   'update:modifierKeys': [value: string[]]
   'update:effectKeys': [value: string[]]
+  'update:collectionIds': [value: string[]]
   'update:minPrice': [value: number | null]
   'update:maxPrice': [value: number | null]
   clear: []
@@ -68,6 +90,10 @@ function toggleEffect(key: string) {
   emit('update:effectKeys', toggled(props.effectKeys, key))
 }
 
+function toggleCollection(id: string) {
+  emit('update:collectionIds', toggled(props.collectionIds, id))
+}
+
 function commitPrice(edge: 'min' | 'max', event: Event) {
   const raw = (event.target as HTMLInputElement).value
   const value = raw.trim() === '' ? null : sanitizeEssenceInput(raw)
@@ -77,57 +103,53 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
 </script>
 
 <template>
-  <div class="market-filters">
-    <fieldset class="market-filters__group">
-      <legend class="market-filters__legend">Rarity</legend>
+  <div class="item-filters">
+    <fieldset class="item-filters__group">
+      <legend class="item-filters__legend">Rarity</legend>
       <label
         v-for="rarity in RARITY_ORDER"
         :key="rarity"
-        class="market-filters__option"
+        class="item-filters__option"
         :class="`rarity--${rarity}`"
       >
-        <input
-          type="checkbox"
-          :checked="rarities.includes(rarity)"
-          @change="toggleRarity(rarity)"
-        />
-        <span class="market-filters__option-label">{{ rarity }}</span>
+        <input type="checkbox" :checked="rarities.includes(rarity)" @change="toggleRarity(rarity)" />
+        <span class="item-filters__option-label">{{ rarity }}</span>
       </label>
     </fieldset>
 
-    <fieldset v-if="typeGroups.length > 0" class="market-filters__group">
-      <legend class="market-filters__legend">Item type</legend>
+    <fieldset v-if="typeGroups.length > 0" class="item-filters__group">
+      <legend class="item-filters__legend">Item type</legend>
       <template v-for="(group, index) in typeGroups" :key="group.label ?? `flat-${index}`">
-        <span v-if="group.label" class="market-filters__subhead">{{ group.label }}</span>
+        <span v-if="group.label" class="item-filters__subhead">{{ group.label }}</span>
         <label
           v-for="option in group.options"
           :key="option.key"
-          class="market-filters__option"
-          :class="{ 'market-filters__option--nested': group.label }"
+          class="item-filters__option"
+          :class="{ 'item-filters__option--nested': group.label }"
         >
           <input
             type="checkbox"
             :checked="typeKeys.includes(option.key)"
             @change="toggleType(option.key)"
           />
-          <span class="market-filters__option-label market-filters__option-label--plain">
+          <span class="item-filters__option-label item-filters__option-label--plain">
             {{ option.label }}
           </span>
         </label>
       </template>
     </fieldset>
 
-    <fieldset v-if="modifierOptions.length > 0" class="market-filters__group">
-      <legend class="market-filters__legend">Modifier</legend>
-      <div class="market-filters__columns">
-        <label v-for="option in modifierOptions" :key="option.key" class="market-filters__option">
+    <fieldset v-if="modifierOptions.length > 0" class="item-filters__group">
+      <legend class="item-filters__legend">Modifier</legend>
+      <div class="item-filters__columns">
+        <label v-for="option in modifierOptions" :key="option.key" class="item-filters__option">
           <input
             type="checkbox"
             :checked="modifierKeys.includes(option.key)"
             @change="toggleModifier(option.key)"
           />
           <span
-            class="market-filters__option-label market-filters__option-label--plain"
+            class="item-filters__option-label item-filters__option-label--plain"
             :style="option.colorHex ? { color: option.colorHex } : undefined"
           >
             {{ option.label }}
@@ -138,10 +160,10 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
 
     <fieldset
       v-if="effectGroups.length > 0 || ungroupedEffects.length > 0"
-      class="market-filters__group"
+      class="item-filters__group"
     >
-      <legend class="market-filters__legend">Unusual effect</legend>
-      <MarketEffectFilter
+      <legend class="item-filters__legend">Unusual effect</legend>
+      <ItemEffectFilter
         :groups="effectGroups"
         :ungrouped="ungroupedEffects"
         :selected="effectKeys"
@@ -149,11 +171,33 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
       />
     </fieldset>
 
-    <fieldset class="market-filters__group">
-      <legend class="market-filters__legend">Price</legend>
-      <div class="market-filters__price-row">
+    <fieldset v-if="collectionOptions.length > 0" class="item-filters__group">
+      <legend class="item-filters__legend">Collection</legend>
+      <label v-for="option in collectionOptions" :key="option.id" class="item-filters__option">
         <input
-          class="market-filters__price-input"
+          type="checkbox"
+          :checked="collectionIds.includes(option.id)"
+          @change="toggleCollection(option.id)"
+        />
+        <img
+          v-if="option.iconUrl"
+          class="item-filters__collection-icon"
+          :src="option.iconUrl"
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+        <span class="item-filters__option-label item-filters__option-label--plain">
+          {{ option.label }}
+        </span>
+      </label>
+    </fieldset>
+
+    <fieldset v-if="showPrice" class="item-filters__group">
+      <legend class="item-filters__legend">Price</legend>
+      <div class="item-filters__price-row">
+        <input
+          class="item-filters__price-input"
           type="text"
           inputmode="numeric"
           placeholder="Min"
@@ -161,9 +205,9 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
           :value="minPrice ?? ''"
           @change="commitPrice('min', $event)"
         />
-        <span class="market-filters__price-dash" aria-hidden="true">-</span>
+        <span class="item-filters__price-dash" aria-hidden="true">-</span>
         <input
-          class="market-filters__price-input"
+          class="item-filters__price-input"
           type="text"
           inputmode="numeric"
           placeholder="Max"
@@ -179,7 +223,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
 </template>
 
 <style scoped>
-.market-filters {
+.item-filters {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
@@ -189,13 +233,13 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   padding-right: var(--space-xs);
 }
 
-.market-filters__columns {
+.item-filters__columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-xs) var(--space-sm);
 }
 
-.market-filters__group {
+.item-filters__group {
   margin: 0;
   padding: 0;
   border: none;
@@ -204,7 +248,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   gap: var(--space-xs);
 }
 
-.market-filters__legend {
+.item-filters__legend {
   padding: 0;
   margin-bottom: var(--space-xs);
   font-size: var(--text-caption);
@@ -214,7 +258,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   color: var(--text-secondary);
 }
 
-.market-filters__option {
+.item-filters__option {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -222,20 +266,30 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   font-size: var(--text-body);
 }
 
-.market-filters__option input {
+.item-filters__option input {
   accent-color: var(--page-accent, var(--accent));
 }
 
-.market-filters__option-label {
+.item-filters__option-label {
   text-transform: capitalize;
   color: var(--rarity-color, var(--text-primary));
 }
 
-.market-filters__option-label--plain {
+.item-filters__option-label--plain {
   color: var(--text-primary);
+  text-transform: none;
 }
 
-.market-filters__subhead {
+.item-filters__collection-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: calc(var(--space-xs) - var(--space-sm));
+  border-radius: var(--radius-btn);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.item-filters__subhead {
   margin-top: var(--space-xs);
   font-size: 0.625rem;
   font-weight: 700;
@@ -244,24 +298,24 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   color: var(--text-tertiary);
 }
 
-.market-filters__option--nested {
+.item-filters__option--nested {
   margin-left: var(--space-md);
 }
 
-.market-filters__option.rarity--common { --rarity-color: var(--text-secondary); }
-.market-filters__option.rarity--uncommon { --rarity-color: var(--success); }
-.market-filters__option.rarity--rare { --rarity-color: var(--info); }
-.market-filters__option.rarity--epic { --rarity-color: var(--tier-apex); }
-.market-filters__option.rarity--legendary { --rarity-color: var(--tier-gold); }
-.market-filters__option.rarity--mythic { --rarity-color: var(--error); }
+.item-filters__option.rarity--common { --rarity-color: var(--text-secondary); }
+.item-filters__option.rarity--uncommon { --rarity-color: var(--success); }
+.item-filters__option.rarity--rare { --rarity-color: var(--info); }
+.item-filters__option.rarity--epic { --rarity-color: var(--tier-apex); }
+.item-filters__option.rarity--legendary { --rarity-color: var(--tier-gold); }
+.item-filters__option.rarity--mythic { --rarity-color: var(--error); }
 
-.market-filters__price-row {
+.item-filters__price-row {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
 }
 
-.market-filters__price-input {
+.item-filters__price-input {
   width: 0;
   flex: 1;
   padding: var(--space-xs) var(--space-sm);
@@ -273,12 +327,12 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   font-size: var(--text-body);
 }
 
-.market-filters__price-input:focus {
+.item-filters__price-input:focus {
   outline: none;
   border-color: var(--page-accent, var(--accent));
 }
 
-.market-filters__price-dash {
+.item-filters__price-dash {
   color: var(--text-tertiary);
 }
 </style>

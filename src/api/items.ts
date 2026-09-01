@@ -1,4 +1,5 @@
 import type {
+  DisintegrateEntryRequest,
   DisintegrationResponse,
   EquipItemRequest,
   EquippedItemsResponse,
@@ -68,6 +69,10 @@ export function getUserInventory(
   return get<Page<UserItemResponse>>(`/users/${userId}/inventory${buildQuery(params)}`)
 }
 
+export function getUserInventoryCrates(userId: string): Promise<ItemResponse[]> {
+  return get<ItemResponse[]>(`/users/${userId}/inventory/crates`)
+}
+
 export function equipItem(req: EquipItemRequest): Promise<void> {
   return post<void>('/users/me/items/equip', req)
 }
@@ -76,12 +81,10 @@ export function unequipItem(typeKey: string): Promise<void> {
   return del<void>(`/users/me/items/equip/${typeKey}`)
 }
 
-export function disintegrateItem(
-  linkId: string,
-  quantity?: number,
+export function disintegrateItems(
+  entries: DisintegrateEntryRequest[],
 ): Promise<DisintegrationResponse> {
-  const query = buildQuery(quantity != null ? { quantity } : undefined)
-  return post<DisintegrationResponse>(`/users/me/items/${linkId}/disintegrate${query}`)
+  return post<DisintegrationResponse>('/users/me/items/disintegrate', { entries })
 }
 
 export function downloadUserItemFile(linkId: string): Promise<DownloadedFile> {
