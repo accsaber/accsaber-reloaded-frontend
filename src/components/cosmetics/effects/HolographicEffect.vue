@@ -32,17 +32,18 @@ const CONTENT_RADIUS: Record<string, string> = {
 const contentBoxStyle = computed<Record<string, string>>(() => {
   const none: Record<string, string> = {}
   if (isField.value || isTitle.value) return none
-  const b = props.measure.box
+  const f = props.measure.frame
+  const b = f ?? props.measure.box
   const o = props.measure.overlayBox
   if (!b.w || !b.h || !o.w || !o.h) return none
-  if (b.w >= o.w - 1 && b.h >= o.h - 1) return none
+  if (!f && b.w >= o.w - 1 && b.h >= o.h - 1) return none
   return {
     inset: 'auto',
     left: `${b.x}px`,
     top: `${b.y}px`,
     width: `${b.w}px`,
     height: `${b.h}px`,
-    borderRadius: CONTENT_RADIUS[props.measure.typeKey ?? ''] ?? '4px',
+    borderRadius: f ? '0' : CONTENT_RADIUS[props.measure.typeKey ?? ''] ?? '4px',
   }
 })
 

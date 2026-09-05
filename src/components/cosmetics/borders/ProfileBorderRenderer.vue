@@ -56,6 +56,7 @@ import {
   sampleShapeStates,
 } from '@/utils/items'
 import { randBetween as rand } from '@/utils/random'
+import { shapeFrameBounds, type FrameBounds } from '@/utils/shapeSilhouette'
 import { computed, ref, watch } from 'vue'
 import PixelBorderRenderer from '@/components/cosmetics/borders/PixelBorderRenderer.vue'
 
@@ -193,7 +194,8 @@ const cosmicSink = computed<{ x: number; y: number; r: number } | null>(() => {
   const overlay = props.shape?.overlay
   if (!cosmicFill.value || overlay?.type !== 'blackhole' || !overlay.enabled) return null
   if (overlay.suction?.fillType !== 'cosmic') return null
-  return { x: 50, y: 100, r: 8.8 }
+  const f = frameBox.value
+  return { x: ((50 - f.x) / f.w) * 100, y: ((100 - f.y) / f.h) * 100, r: (8.8 * 100) / f.w }
 })
 
 const shapeFxActive = computed(
@@ -551,11 +553,33 @@ const rimPaths = computed(() => {
     )
 })
 
-const cosmicViewBox = computed(() => {
+const frameBox = computed<FrameBounds>(() => {
+  if (props.shape) return shapeFrameBounds(props.shape)
   const { minX, minY, w, h } = vbBounds.value
-  const mx = w * 0.25
-  const my = h * 0.25
-  return `${minX - mx} ${minY - my} ${w + mx * 2} ${h + my * 2}`
+  return { x: minX, y: minY, w, h }
+})
+
+const cosmicBox = computed<FrameBounds>(() => {
+  const f = frameBox.value
+  const mx = f.w * 0.25
+  const my = f.h * 0.25
+  return { x: f.x - mx, y: f.y - my, w: f.w + mx * 2, h: f.h + my * 2 }
+})
+
+const cosmicViewBox = computed(() => {
+  const { x, y, w, h } = cosmicBox.value
+  return `${x} ${y} ${w} ${h}`
+})
+
+const cosmicHostStyle = computed<Record<string, string>>(() => {
+  const vb = vbBounds.value
+  const c = cosmicBox.value
+  return {
+    left: `${((c.x - vb.minX) / vb.w) * 100}%`,
+    top: `${((c.y - vb.minY) / vb.h) * 100}%`,
+    width: `${(c.w / vb.w) * 100}%`,
+    height: `${(c.h / vb.h) * 100}%`,
+  }
 })
 
 const laserTrace = computed<{ ds: string[]; viewBox: string } | null>(() => {
@@ -584,17 +608,14 @@ const cosmicMaskPaths = computed<MaskPathEntry[] | null>(() => {
 })
 
 const cosmicMaskTransform = computed(() => {
-  const { minX, minY, w, h } = vbBounds.value
-  const mx = w * 0.25
-  const my = h * 0.25
-  const vbW = w + mx * 2
-  const vbH = h + my * 2
-  return `scale(${1 / vbW} ${1 / vbH}) translate(${-(minX - mx)} ${-(minY - my)})`
+  const { x, y, w, h } = cosmicBox.value
+  return `scale(${1 / w} ${1 / h}) translate(${-x} ${-y})`
 })
 
 const cosmicMaskStyle = computed<Record<string, string> | undefined>(() => {
   if (!canvasFillActive.value) return undefined
   return {
+    ...cosmicHostStyle.value,
     mask: `url(#${cosmicMaskId})`,
     WebkitMask: `url(#${cosmicMaskId})`,
   }
@@ -774,6 +795,7 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
   <svg
     v-if="dominionEcho"
     class="profile-border__echo"
+    :style="cosmicHostStyle"
     :viewBox="cosmicViewBox"
     preserveAspectRatio="none"
     aria-hidden="true"

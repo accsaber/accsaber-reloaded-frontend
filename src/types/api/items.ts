@@ -184,6 +184,20 @@ export interface TitleHazeAuraSpec {
   motes?: boolean
 }
 
+export interface TitleCoronaAuraSpec {
+  type: 'corona'
+  enabled: boolean
+  intervalS?: number
+  color?: string
+  lightColor?: string
+  prominence?: string
+  streamers?: number
+  streamerLen?: number
+  prominences?: number
+  plumes?: boolean
+  annular?: boolean
+}
+
 export interface TitleLanternAuraSpec {
   type: 'lantern'
   enabled: boolean
@@ -490,6 +504,7 @@ export type TitleAuraSpec =
   | TitleAscensionAuraSpec
   | TitleGhostsAuraSpec
   | TitleLanternAuraSpec
+  | TitleCoronaAuraSpec
 
 export type TitleAuraType = TitleAuraSpec['type']
 
@@ -602,6 +617,17 @@ export interface TitleRuneSpec {
   lightColor?: string
   intervalMs?: number
   holdMs?: number
+}
+
+export interface TitleEclipseSpec {
+  enabled: boolean
+  intervalS?: number
+  dark?: string
+  lightDark?: string
+  corona?: string
+  lightCorona?: string
+  bead?: string
+  annular?: boolean
 }
 
 export interface TitleLanternSpec {
@@ -861,6 +887,7 @@ export interface TitleValue {
   jolt?: TitleJoltSpec
   float?: TitleFloatSpec
   lantern?: TitleLanternSpec
+  eclipse?: TitleEclipseSpec
   brew?: TitleBrewSpec
   quake?: TitleQuakeSpec
   gust?: TitleGustSpec
@@ -1122,7 +1149,24 @@ export interface BorderDripOverlaySpec {
   gravity?: number
 }
 
+export interface BorderUmbraOverlaySpec {
+  type: 'umbra'
+  enabled: boolean
+  intervalS?: number
+  moon?: string
+  corona?: string
+  prominence?: string
+  streamers?: number
+  streamerLen?: number
+  prominences?: number
+  plumes?: boolean
+  flares?: boolean
+  annular?: boolean
+  radius?: number
+}
+
 export type BorderOverlaySpec =
+  | BorderUmbraOverlaySpec
   | BorderRainOverlaySpec
   | BorderDripOverlaySpec
   | BorderDryBonesOverlaySpec

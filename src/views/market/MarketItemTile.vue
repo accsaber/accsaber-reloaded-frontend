@@ -15,6 +15,7 @@ import {
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
+import { shapeRing } from '@/utils/shapeSilhouette'
 import { computed, onMounted } from 'vue'
 
 const props = defineProps<{
@@ -42,6 +43,10 @@ const shapeValue = computed(() =>
     ? readBorderShapeValue(item.value.value)
     : null,
 )
+
+const tileHost = computed(() => ({
+  ring: shapeRing(item.value.typeKey === 'profile_border_shape' ? readBorderShapeValue(item.value.value) : null),
+}))
 
 const colorValue = computed(() =>
   composedView.value && item.value.typeKey === 'profile_border_color'
@@ -89,6 +94,7 @@ onMounted(() => {
         :context="tokenCtx"
         :type-key="item.typeKey"
         measure-selector=".title-renderer, .item-preview > *"
+        :host="tileHost"
         hide-stat-counters
       />
     </template>

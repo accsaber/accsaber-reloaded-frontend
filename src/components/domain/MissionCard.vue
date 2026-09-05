@@ -3,7 +3,7 @@ import MissionRewards from '@/components/domain/MissionRewards.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { MissionResponse } from '@/types/api/missions'
 import { buildMapRoute } from '@/utils/mapRoute'
-import { BAND_LABEL, normalizeDifficulties } from '@/utils/missions'
+import { BAND_LABEL, missionProgressLabel, normalizeDifficulties } from '@/utils/missions'
 import { computed } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
@@ -38,51 +38,19 @@ const categoryInfo = computed(() =>
 const categoryName = computed(() => categoryInfo.value?.name ?? props.mission.categoryCode ?? '')
 const categoryColor = computed(() => categoryInfo.value?.accent ?? 'var(--accent)')
 
-const progress = computed(() => props.mission.progressCount ?? 0)
+const progress = computed(() => props.mission.progressValue ?? 0)
 
-const target = computed(() => {
-  switch (props.mission.type) {
-    case 'PLAY_N_MAPS':
-    case 'STREAK_N_IN_CATEGORY':
-      return props.mission.targetCount ?? 0
-    case 'XP_IN_WINDOW':
-      return props.mission.targetXp ?? 0
-    case 'PB_ABOVE_THRESHOLD':
-      return props.mission.targetCount ?? 1
-    default:
-      return 0
-  }
-})
+const target = computed(() => props.mission.targetValue ?? 0)
 
-const hasBar = computed(() =>
-  props.mission.type === 'PLAY_N_MAPS' ||
-  props.mission.type === 'XP_IN_WINDOW' ||
-  props.mission.type === 'PB_ABOVE_THRESHOLD' ||
-  props.mission.type === 'STREAK_N_IN_CATEGORY',
+const hasBar = computed(() => target.value > 0)
+
+const fillPercent = computed(() =>
+  hasBar.value ? Math.round(Math.min(1, progress.value / target.value) * 100) : 0,
 )
 
-const fillPercent = computed(() => {
-  if (!hasBar.value || target.value <= 0) return 0
-  const ratio = Math.min(1, progress.value / target.value)
-  return Math.round(ratio * 100)
-})
-
-const counterLabel = computed(() => {
-  const t = target.value
-  const p = progress.value
-  switch (props.mission.type) {
-    case 'PLAY_N_MAPS':
-      return `${p} / ${t} maps`
-    case 'XP_IN_WINDOW':
-      return `${p.toLocaleString()} / ${t.toLocaleString()} XP`
-    case 'PB_ABOVE_THRESHOLD':
-      return `${p} / ${t} PBs`
-    case 'STREAK_N_IN_CATEGORY':
-      return `${p} / ${t} plays`
-    default:
-      return ''
-  }
-})
+const counterLabel = computed(() =>
+  missionProgressLabel(props.mission.type, progress.value, target.value),
+)
 
 const binaryHint = computed(() => {
   const m = props.mission

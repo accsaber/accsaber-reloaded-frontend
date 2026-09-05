@@ -341,7 +341,6 @@ interface TextRender extends TextStatic {
   cy: number
 }
 
-// Depends only on the text data (not positions), so sanitize runs on edit, never per drag frame.
 const textStaticById = computed(() => {
   const map = new Map<string, TextStatic>()
   for (const t of props.texts) {

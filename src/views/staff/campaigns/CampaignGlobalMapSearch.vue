@@ -183,7 +183,6 @@ const debouncedKey = useDebouncedRef(searchKey, 350)
 const isBeatSaverUrl = (raw: string) => /beatsaver\.com\/maps\//i.test(raw)
 
 watch(debouncedKey, () => {
-  // Editing the query leaves any active "maps by mapper" view.
   mapperMode.value = null
   if (canSearch.value) {
     void runSearch(0)
@@ -204,7 +203,6 @@ async function refreshMapperSuggestion() {
     return
   }
   const found = await findBeatSaverMapper(raw)
-  // Guard against a stale response after the query changed again.
   if (query.value.trim() === raw) mapperSuggestion.value = found
 }
 
@@ -261,7 +259,6 @@ async function runSearch(targetPage: number) {
         loading.value = false
         return
       }
-      // Bare hex that isn't a real map id: fall through to a normal text search.
     }
   }
 

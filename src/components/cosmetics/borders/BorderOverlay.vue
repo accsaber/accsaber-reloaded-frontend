@@ -10,6 +10,7 @@ import type { Component } from 'vue'
 import BorderDryBonesOverlay from '@/components/cosmetics/borders/BorderDryBonesOverlay.vue'
 import BorderDripOverlay from './BorderDripOverlay.vue'
 import BorderCoffinOverlay from '@/components/cosmetics/borders/BorderCoffinOverlay.vue'
+import BorderUmbraOverlay from '@/components/cosmetics/borders/BorderUmbraOverlay.vue'
 
 const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {
   rain: BorderRainOverlay,
@@ -20,6 +21,7 @@ const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {
   coffin: BorderCoffinOverlay,
   drip: BorderDripOverlay,
   drybones: BorderDryBonesOverlay,
+  umbra: BorderUmbraOverlay,
 }
 
 defineProps<{

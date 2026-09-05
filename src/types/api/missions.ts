@@ -11,10 +11,16 @@ export type MissionType =
   | 'SNIPE_PLAYER_ON_MAP'
   | 'STREAK_ON_MAP'
   | 'STREAK_N_IN_CATEGORY'
+  | 'STREAK_SUM_N'
   | 'COMEBACK_PB'
   | 'SCORES_N'
+  | 'SNIPE_RIVAL_ANY_MAP'
+  | 'AP_GAIN_OVERALL'
+  | 'BATCH_PLAY_N'
+  | 'PB_RANKED_BEFORE_N'
+  | 'CAMPAIGN_COMPLETE_N'
 
-export type MissionPool = 'daily' | 'weekly' | 'event'
+export type MissionPool = 'daily' | 'weekly' | 'event' | 'community'
 
 export type MissionStatus = 'active' | 'completed' | 'expired' | 'voided'
 
@@ -50,6 +56,8 @@ export interface MissionResponse {
   status?: MissionStatus
   band?: MissionBand
   progressCount?: number
+  progressValue?: number
+  targetValue?: number
   assignedAt?: string
   expiresAt?: string
   completedAt?: string
@@ -62,8 +70,30 @@ export interface MissionResponse {
   open?: boolean
   repeatable?: boolean
   maxCompletions?: number
+
+  contributors?: number
+  yourContribution?: number
+  endsWithWeek?: boolean
 }
 
 export interface MissionListParams {
   pool?: MissionPool
+}
+
+export interface CommunityMissionListParams {
+  eventId?: string
+  active?: boolean
+}
+
+export interface CommunityContributorResponse {
+  rank: number
+  userId: string
+  userName: string
+  userCountry: string
+  userAvatarUrl?: string
+  userCdnAvatarUrl?: string
+  contribution: number
+  firstAt: string
+  lastAt: string
+  rewardedAt?: string
 }

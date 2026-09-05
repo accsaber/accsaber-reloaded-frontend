@@ -15,7 +15,7 @@ import { useThemeStore } from '@/stores/theme'
 import type { BorderColorValue, BorderShapeValue, CrateContentResponse, CrateModifierResponse, ItemModifierRef, ItemResponse, ItemVariant, UnusualEffectResponse, UserItemResponse } from '@/types/api/items'
 import { formatEssence } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
-import { shapeSilhouetteMask } from '@/utils/shapeSilhouette'
+import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
 import {
   buildEffectLayers,
   displayItemName,
@@ -131,10 +131,12 @@ const showComposition = computed(() =>
   props.isOwnProfile && (isBorderShapeItem.value || isBorderColorItem.value),
 )
 
-const effectMask = computed(() => {
-  if (showComposition.value) return shapeSilhouetteMask(compositionShape.value)
-  return isBorderShapeItem.value ? shapeSilhouetteMask(selectedShapeValue.value) : null
+const effectShape = computed<BorderShapeValue | null>(() => {
+  if (showComposition.value) return compositionShape.value
+  return isBorderShapeItem.value ? selectedShapeValue.value : null
 })
+const effectMask = computed(() => shapeSilhouetteMask(effectShape.value))
+const effectHost = computed(() => ({ ring: shapeRing(effectShape.value) }))
 
 const modifiers = computed<ItemModifierRef[]>(() =>
   sortModifiersByKey(props.userItem?.modifiers ?? []),
@@ -258,6 +260,7 @@ onUnmounted(() => {
         :type-key="item?.typeKey"
         measure-selector=".border-composition, .title-renderer, .item-preview > *"
         :content-mask="effectMask"
+        :host="effectHost"
       />
     </div>
 

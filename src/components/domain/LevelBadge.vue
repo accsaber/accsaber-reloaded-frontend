@@ -17,7 +17,8 @@ import {
   type EffectLayer,
 } from '@/utils/items'
 import { DEFAULT_AVATAR_MASK, resolveAvatarImageBox } from '@/utils/avatarBox'
-import { shapeSilhouetteMask } from '@/utils/shapeSilhouette'
+import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
+import type { EffectHostContext } from '@/utils/cosmetics/effects'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -65,6 +66,12 @@ const titleFxLayers = computed(() =>
   props.plain ? [] : annotateEffectLayerStacks(props.titleEffects),
 )
 const borderFxMask = computed(() => shapeSilhouetteMask(borderShape.value))
+const borderFxHost = computed<EffectHostContext>(() => ({
+  ring: shapeRing(borderShape.value),
+  fillType: borderColor.value?.states?.[0]?.fill?.type,
+  overlayType: borderShape.value?.overlay?.enabled ? borderShape.value.overlay.type : undefined,
+}))
+const titleFxHost = computed<EffectHostContext>(() => ({ auraType: title.value?.aura?.type }))
 
 const hasShapeOverride = computed(() => !!borderShape.value)
 
@@ -124,6 +131,7 @@ const fallbackTitleStyle = computed(() => {
         :spec="layer.spec"
         :stack-index="layer.stackIndex"
         :content-mask="borderFxMask"
+        :host="borderFxHost"
         hide-stat-counters
       />
     </div>
@@ -140,6 +148,7 @@ const fallbackTitleStyle = computed(() => {
             type-key="title"
             measure-selector=".title-renderer"
             :stack-index="layer.stackIndex"
+            :host="titleFxHost"
             hide-stat-counters
           />
           <span class="level-badge__title-fx-text">

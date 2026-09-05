@@ -43,6 +43,7 @@ const thumbLayerStyle = computed<Record<string, string> | undefined>(() => {
 })
 const thumbInk = computed(() => (thumbScene.value ? thumbnailSceneInk(thumbScene.value) : null))
 const thumbBase = computed<'light' | 'dark'>(() => thumbScene.value?.base ?? 'dark')
+const thumbFxHost = computed(() => ({ sceneType: thumbScene.value?.type, base: thumbBase.value }))
 
 const tierKey = computed(() => {
   if (level.value?.title) return level.value.title.toLowerCase().replace(/\s+/g, '-')
@@ -82,6 +83,8 @@ const cardBorder = computed(() => {
           :key="layer.key"
           :spec="layer.spec"
           :stack-index="layer.stackIndex"
+          type-key="profile_thumbnail_background"
+          :host="thumbFxHost"
         />
       </div>
     </div>

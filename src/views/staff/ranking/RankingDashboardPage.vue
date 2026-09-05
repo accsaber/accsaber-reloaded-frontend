@@ -79,7 +79,6 @@ const activeStatus = computed<MapDifficultyStatus>({
 const latestBatch = ref<BatchResponse | null>(null)
 const latestBatchLoading = ref(false)
 
-// Reweighting tab focuses the latest released batch by default; `scope=all` widens to every reweightable map.
 const reweightScope = computed<'latest' | 'all'>({
   get() {
     return route.query.scope === 'all' ? 'all' : 'latest'
@@ -249,8 +248,6 @@ function buildFetchParams(): Record<string, unknown> {
 
 async function fetchDifficulties() {
   if (activeStatus.value === 'RANKED') {
-    // In latest scope the batch id is needed before building params, so await it; in all scope
-    // resolve it in the background so the "show latest batch only" toggle can still appear.
     if (reweightScope.value === 'latest') {
       await ensureLatestBatch()
     } else {

@@ -15,6 +15,7 @@ import {
 import { randBetween as rand } from '@/utils/random'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
+import { eclipsePeriod, eclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle } from '@/utils/cosmetics/titleSchools'
 import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
 import { lerpHex } from '@/utils/color'
@@ -62,6 +63,7 @@ const fxEnabled = computed(() =>
     || !!props.value.jolt?.enabled
     || !!props.value.float?.enabled
     || !!props.value.lantern?.enabled
+    || !!props.value.eclipse?.enabled
     || !!props.value.brew?.enabled
     || !!props.value.quake?.enabled
     || !!props.value.gust?.enabled
@@ -571,6 +573,40 @@ function lanternCharStyle(i: number): Record<string, string> {
   }
 }
 
+const eclipseSpec = computed(() =>
+  props.value.eclipse?.enabled && !reducedMotion.value ? props.value.eclipse : null,
+)
+
+function eclipseCharStyle(i: number): Record<string, string> {
+  const spec = eclipseSpec.value
+  if (!spec) return {}
+  const t = tMs.value / 1000
+  const ph = eclipsePhase(t, spec.intervalS)
+  const cover = ph.cover
+  const dark = (isLightBase.value ? spec.lightDark : undefined) ?? spec.dark ?? '#0a0812'
+  const corona = (isLightBase.value ? spec.lightCorona : undefined) ?? spec.corona ?? '#f2b552'
+  const bead = spec.bead ?? '#ffffff'
+  const base = state.value.color ?? corona
+  const n = Math.max(1, props.value.text.length)
+  const cycle = Math.floor(t / eclipsePeriod(spec.intervalS))
+  const ringIdx = Math.floor(hashN(cycle * 17 + 3) * n)
+  const ring = ph.flash > 0.5 && i === ringIdx ? (ph.flash - 0.5) * 2 : 0
+  const beads = ph.flash > 0 && ph.flash <= 0.5 && i % 2 === 0 ? ph.flash * 2 : 0
+  const shadows: string[] = []
+  if (ph.tot > 0) shadows.push(`0 0 ${(spec.annular ? 0.08 + 0.1 * ph.tot : 0.12 + 0.3 * ph.tot).toFixed(2)}em ${rgbaOf(corona, 0.85 * ph.tot)}`)
+  if (ring > 0) shadows.push(`0 0 ${(0.6 * ring).toFixed(2)}em ${rgbaOf(bead, ring)}`, `0 0 0.15em ${rgbaOf(bead, ring)}`)
+  if (beads > 0) shadows.push(`0.06em -0.08em 0 ${rgbaOf(bead, beads)}`)
+  const out: Record<string, string> = {
+    color: ring > 0 ? lerpHex(dark, bead, ring) : lerpHex(base, dark, cover),
+    textShadow: shadows.length ? shadows.join(', ') : 'none',
+  }
+  if (spec.annular && ph.tot > 0) {
+    out.WebkitTextStroke = `${(0.07 * ph.tot).toFixed(3)}em ${rgbaOf(corona, ph.tot)}`
+    out.paintOrder = 'stroke fill'
+  }
+  return out
+}
+
 const brewSpec = computed(() => (props.value.brew?.enabled ? props.value.brew : null))
 const brewLiquid = ref('')
 const brewSplashes = ref<{ x: number; at: number }[]>([])
@@ -774,7 +810,7 @@ const liftSpec = computed(() => {
 
 const glyphChars = computed<string[] | null>(() =>
   forgeActive.value || blazeSpec.value || liftSpec.value || hauntSpec.value
-  || frostSpec.value || transmuteSpec.value || runeSpec.value || lanternSpec.value || brewSpec.value
+  || frostSpec.value || transmuteSpec.value || runeSpec.value || lanternSpec.value || eclipseSpec.value || brewSpec.value
   || quakeSpec.value || gustSpec.value || rippleSpec.value || pixieSpec.value
   || bleedSpec.value || galaxySpec.value || flareSpec.value || devourSpec.value || shockSpec.value || searSpec.value
   || sproutSpec.value || ascentSpec.value || sliceSpec.value || tickSpec.value || metronomeSpec.value
@@ -814,6 +850,7 @@ function glyphStyle(i: number): Record<string, string> {
   if (hauntSpec.value) return hauntCharStyle(i)
   if (frostSpec.value) return frostCharStyle(i)
   if (lanternSpec.value) return lanternCharStyle(i)
+  if (eclipseSpec.value) return eclipseCharStyle(i)
   if (transmuteSpec.value) return transmuteCharStyle(i)
   if (runeSpec.value) return runeCharStyle(i)
   return liftCharStyle(i)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import TitleAscensionAura from '@/components/cosmetics/titles/TitleAscensionAura.vue'
 import TitleBloodAura from '@/components/cosmetics/titles/TitleBloodAura.vue'
+import TitleCoronaAura from '@/components/cosmetics/titles/TitleCoronaAura.vue'
 import TitleCosmicAura from '@/components/cosmetics/titles/TitleCosmicAura.vue'
 import TitleEarthAura from '@/components/cosmetics/titles/TitleEarthAura.vue'
 import TitleFairyAura from '@/components/cosmetics/titles/TitleFairyAura.vue'
@@ -41,6 +42,7 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   sigil: TitleSigilAura,
   ghosts: TitleGhostsAura,
   lantern: TitleLanternAura,
+  corona: TitleCoronaAura,
   earth: TitleEarthAura,
   wind: TitleWindAura,
   water: TitleWaterAura,

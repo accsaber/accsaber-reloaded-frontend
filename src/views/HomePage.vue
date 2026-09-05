@@ -54,7 +54,6 @@ async function loadBackendVersion(): Promise<void> {
       backendBuild.value = { version: health.version, channel: health.channel ?? '' }
     }
   } catch {
-    // the footer just omits the backend version if the API is unreachable
   }
 }
 let rafId = 0

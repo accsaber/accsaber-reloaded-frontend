@@ -1,11 +1,12 @@
 import type { EventMissionProgressResponse, EventResponse } from '@/types/api/events'
 import type { ItemResponse } from '@/types/api/items'
-import type { MissionResponse } from '@/types/api/missions'
+import type { MissionResponse, MissionType } from '@/types/api/missions'
 
 export interface EventMissionView {
   id: string
   name: string
   description: string
+  type: MissionType
   week: number
   unlocked: boolean
   unlocksAt: string
@@ -27,6 +28,7 @@ export function missionViewFromDefinition(def: MissionResponse): EventMissionVie
     id: def.id,
     name: def.name,
     description: def.description,
+    type: def.type,
     week: def.week ?? 1,
     unlocked: def.unlocked ?? false,
     unlocksAt: def.unlocksAt ?? '',
@@ -36,7 +38,7 @@ export function missionViewFromDefinition(def: MissionResponse): EventMissionVie
     completions: null,
     maxCompletions: def.maxCompletions ?? null,
     progressCurrent: null,
-    progressTarget: def.targetCount ?? null,
+    progressTarget: def.targetValue ?? null,
     xpReward: def.xpReward ?? null,
     itemReward: def.itemReward ?? null,
     tracked: false,
@@ -50,6 +52,7 @@ export function missionViewFromProgress(entry: EventMissionProgressResponse): Ev
     id: def.id,
     name: def.name,
     description: def.description,
+    type: def.type,
     week: def.week ?? 1,
     unlocked: def.unlocked ?? false,
     unlocksAt: def.unlocksAt ?? '',
@@ -58,8 +61,8 @@ export function missionViewFromProgress(entry: EventMissionProgressResponse): Ev
     repeatable: def.repeatable ?? false,
     completions: entry.completions,
     maxCompletions: def.maxCompletions ?? null,
-    progressCurrent: entry.current?.progressCount ?? null,
-    progressTarget: entry.current?.targetCount ?? def.targetCount ?? null,
+    progressCurrent: entry.current?.progressValue ?? null,
+    progressTarget: entry.current?.targetValue ?? def.targetValue ?? null,
     xpReward: def.xpReward ?? null,
     itemReward: def.itemReward ?? null,
     tracked: true,

@@ -14,7 +14,7 @@ import {
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
-import { shapeSilhouetteMask } from '@/utils/shapeSilhouette'
+import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
 import { computed, onMounted } from 'vue'
 
 const props = defineProps<{
@@ -50,11 +50,11 @@ const effectLayers = computed(() =>
 )
 const fragmentSpec = computed(() => readFragmentSpec(props.userItem.unusualEffect))
 const tokenCtx = computed(() => userItemTokenContext(props.userItem))
-const shapeMask = computed(() =>
-  item.value.typeKey === 'profile_border_shape'
-    ? shapeSilhouetteMask(readBorderShapeValue(item.value.value))
-    : null,
+const cellShape = computed(() =>
+  item.value.typeKey === 'profile_border_shape' ? readBorderShapeValue(item.value.value) : null,
 )
+const shapeMask = computed(() => shapeSilhouetteMask(cellShape.value))
+const cellHost = computed(() => ({ ring: shapeRing(cellShape.value) }))
 const quantity = computed(() => props.userItem.quantity ?? 1)
 
 const { accent } = useModifierColor(modifiers)
@@ -105,6 +105,7 @@ onMounted(() => {
         :type-key="item.typeKey"
         measure-selector=".title-renderer, .item-preview > *"
         :content-mask="shapeMask"
+        :host="cellHost"
         hide-stat-counters
       />
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MissionRewards from '@/components/domain/MissionRewards.vue'
 import type { EventMissionView, MissionLock } from '@/utils/events'
+import { missionProgressLabel } from '@/utils/missions'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -24,6 +25,14 @@ const progressPct = computed(() => {
   const target = props.mission.progressTarget as number
   return Math.min(100, Math.max(0, (current / target) * 100))
 })
+
+const progressLabel = computed(() =>
+  missionProgressLabel(
+    props.mission.type,
+    props.mission.progressCurrent ?? 0,
+    props.mission.progressTarget ?? 0,
+  ),
+)
 
 const lockHint = computed(() => {
   switch (props.lock) {
@@ -119,7 +128,7 @@ function formatUnlock(value: string): string {
         <div class="mission__track">
           <div class="mission__fill" :style="{ width: `${progressPct}%` }" />
         </div>
-        <span class="mission__count">{{ mission.progressCurrent ?? 0 }} / {{ mission.progressTarget }}</span>
+        <span class="mission__count">{{ progressLabel }}</span>
       </template>
       <span v-else-if="state !== 'completed'" class="mission__flag">In progress</span>
       <span v-if="completionsLabel" class="mission__completions">{{ completionsLabel }}</span>

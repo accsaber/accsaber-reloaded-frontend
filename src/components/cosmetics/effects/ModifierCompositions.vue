@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { BLEED_TYPES, EFFECT_REGISTRY } from '@/components/cosmetics/effects/registry'
+import { ABOVE_CONTENT_TYPES, BLEED_TYPES, EFFECT_REGISTRY } from '@/components/cosmetics/effects/registry'
 import { useOverlayMeasure } from '@/composables/useOverlayMeasure'
 import type { Composition, ItemTypeKey, ModifierEffectSpec } from '@/types/api/items'
-import type { EffectMeasure } from '@/utils/cosmetics/effects'
+import type { ContentBox, EffectHostContext, EffectMeasure } from '@/utils/cosmetics/effects'
+import type { ShapeMask } from '@/utils/shapeSilhouette'
 import type { TokenContext } from '@/utils/items'
 import { computed, ref, watchEffect, type Component } from 'vue'
 
@@ -12,8 +13,9 @@ const props = defineProps<{
   typeKey?: ItemTypeKey
   stackIndex?: number
   measureSelector?: string
-  contentMask?: string | null
+  contentMask?: ShapeMask | null
   hideStatCounters?: boolean
+  host?: EffectHostContext
 }>()
 
 const compositions = computed<Composition[]>(() => props.spec?.compositions ?? [])
@@ -24,12 +26,31 @@ const { overlayBox, box } = useOverlayMeasure(overlayEl, () => props.measureSele
 
 const stack = computed(() => Math.max(0, Math.min(3, Math.round(props.stackIndex ?? 0))))
 const bleeds = computed(() => compositions.value.some((c) => BLEED_TYPES.has(c.type)))
+const above = computed(() => compositions.value.some((c) => ABOVE_CONTENT_TYPES.has(c.type)))
+
+const frame = computed<ContentBox | null>(() => {
+  const m = props.contentMask
+  const b = box.value
+  if (!m || !b.w || !b.h) return null
+  return { x: b.x + b.w * m.bounds.x, y: b.y + b.h * m.bounds.y, w: b.w * m.bounds.w, h: b.h * m.bounds.h }
+})
+
+const clipRect = computed<ContentBox>(() => {
+  const o = overlayBox.value
+  const f = frame.value
+  if (!f) return { x: 0, y: 0, w: o.w, h: o.h }
+  const x = Math.min(0, f.x)
+  const y = Math.min(0, f.y)
+  return { x, y, w: Math.max(o.w, f.x + f.w) - x, h: Math.max(o.h, f.y + f.h) - y }
+})
 
 const measure = computed<EffectMeasure>(() => ({
   overlayBox: overlayBox.value,
   box: box.value,
   stack: stack.value,
   typeKey: props.typeKey,
+  host: props.host,
+  frame: frame.value ?? undefined,
 }))
 
 interface EffectLayer {
@@ -57,19 +78,31 @@ const unmaskedLayers = computed(() =>
 )
 
 const maskStyle = computed<Record<string, string> | undefined>(() => {
-  if (!props.contentMask) return undefined
-  const b = box.value
-  if (!b.w || !b.h) return undefined
+  const m = props.contentMask
+  const f = frame.value
+  if (!m || !f) return undefined
+  const r = clipRect.value
   return {
-    maskImage: props.contentMask,
-    webkitMaskImage: props.contentMask,
-    maskSize: `${b.w}px ${b.h}px`,
-    webkitMaskSize: `${b.w}px ${b.h}px`,
-    maskPosition: `${b.x}px ${b.y}px`,
-    webkitMaskPosition: `${b.x}px ${b.y}px`,
+    left: `${r.x}px`,
+    top: `${r.y}px`,
+    width: `${r.w}px`,
+    height: `${r.h}px`,
+    maskImage: m.url,
+    webkitMaskImage: m.url,
+    maskSize: `${f.w}px ${f.h}px`,
+    webkitMaskSize: `${f.w}px ${f.h}px`,
+    maskPosition: `${f.x - r.x}px ${f.y - r.y}px`,
+    webkitMaskPosition: `${f.x - r.x}px ${f.y - r.y}px`,
     maskRepeat: 'no-repeat',
     webkitMaskRepeat: 'no-repeat',
   }
+})
+
+const originStyle = computed<Record<string, string> | undefined>(() => {
+  if (!frame.value) return undefined
+  const r = clipRect.value
+  const o = overlayBox.value
+  return { left: `${-r.x}px`, top: `${-r.y}px`, width: `${o.w}px`, height: `${o.h}px` }
 })
 
 if (import.meta.env.DEV) {
@@ -86,18 +119,20 @@ if (import.meta.env.DEV) {
     v-if="compositions.length"
     ref="overlayEl"
     class="modifier-overlay"
-    :class="{ 'modifier-overlay--bleed': bleeds }"
+    :class="{ 'modifier-overlay--bleed': bleeds, 'modifier-overlay--masked': !!contentMask, 'modifier-overlay--above': above }"
     aria-hidden="true"
   >
     <div v-if="maskedLayers.length" class="modifier-overlay__clip" :style="maskStyle">
-      <component
-        :is="layer.renderer"
-        v-for="layer in maskedLayers"
-        :key="layer.index"
-        :composition="layer.composition"
-        :ctx="ctx"
-        :measure="measure"
-      />
+      <div class="modifier-overlay__origin" :style="originStyle">
+        <component
+          :is="layer.renderer"
+          v-for="layer in maskedLayers"
+          :key="layer.index"
+          :composition="layer.composition"
+          :ctx="ctx"
+          :measure="measure"
+        />
+      </div>
     </div>
     <component
       :is="layer.renderer"
@@ -119,11 +154,17 @@ if (import.meta.env.DEV) {
   border-radius: inherit;
 }
 
-.modifier-overlay--bleed {
+.modifier-overlay--bleed,
+.modifier-overlay--masked {
   overflow: visible;
 }
 
-.modifier-overlay__clip {
+.modifier-overlay--above {
+  z-index: 2;
+}
+
+.modifier-overlay__clip,
+.modifier-overlay__origin {
   position: absolute;
   inset: 0;
   pointer-events: none;

@@ -403,7 +403,8 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       targetXp: input.targetXp,
       targetStreak: input.targetStreak,
       targetThresholdAp: input.targetThresholdAp,
-      progressCount: 0,
+      progressValue: 0,
+      targetValue: input.targetCount ?? input.targetXp,
     }
     return {
       key: 'result',

@@ -15,6 +15,7 @@ const configKey = computed(() =>
   config.value ? `${route.path}|${JSON.stringify(config.value)}` : '',
 )
 const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffects))
+const fxHost = computed(() => ({ backdropType: config.value?.type }))
 </script>
 
 <template>
@@ -31,6 +32,7 @@ const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffe
       :spec="layer.spec"
       :stack-index="layer.stackIndex"
       type-key="theme"
+      :host="fxHost"
     />
   </div>
 </template>
@@ -38,7 +40,10 @@ const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffe
 <style scoped>
 .backdrop-effects {
   position: fixed;
-  inset: 0;
+  top: var(--navbar-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;

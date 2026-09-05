@@ -4,10 +4,12 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useNow } from '@/composables/useNow'
+import EventCommunityPanel from '@/views/news/EventCommunityPanel.vue'
 import EventMissionsPanel from '@/views/news/EventMissionsPanel.vue'
 import EventProgressBar from '@/views/news/EventProgressBar.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
 import type { EventProfileResponse, EventProgressResponse, EventResponse } from '@/types/api/events'
+import type { MissionResponse } from '@/types/api/missions'
 import {
   EVENT_STATUS_COLOR,
   eventCountdown,
@@ -27,6 +29,8 @@ const now = useNow()
 
 const event = ref<EventResponse | null>(null)
 const missions = ref<EventMissionView[]>([])
+const communityMissions = ref<MissionResponse[]>([])
+const communityLoading = ref(false)
 const profile = ref<EventProfileResponse | null>(null)
 const begun = ref(false)
 const bonusAwarded = ref(false)
@@ -64,12 +68,35 @@ function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function isCommunity(mission: MissionResponse): boolean {
+  return mission.pool === 'community'
+}
+
+async function loadCommunity(eventUuid: string, present: boolean) {
+  if (!present) {
+    communityMissions.value = []
+    return
+  }
+  communityLoading.value = true
+  try {
+    const { getCommunityMissions } = await import('@/api/missions')
+    communityMissions.value = await getCommunityMissions({ eventId: eventUuid, active: false })
+  } catch {
+    communityMissions.value = []
+  } finally {
+    communityLoading.value = false
+  }
+}
+
 function applyProgress(res: EventProgressResponse) {
   event.value = res.event
-  missions.value = res.missions.map(missionViewFromProgress)
+  missions.value = res.missions
+    .filter((entry) => !isCommunity(entry.mission))
+    .map(missionViewFromProgress)
   profile.value = res.profile
   begun.value = res.begun
   bonusAwarded.value = res.bonusAwarded
+  void loadCommunity(res.event.id, res.missions.some((entry) => isCommunity(entry.mission)))
 }
 
 async function load(id: string, loggedIn: boolean, silent = false) {
@@ -82,15 +109,17 @@ async function load(id: string, loggedIn: boolean, silent = false) {
     } else {
       const res = await api.getEventDetail(id)
       event.value = res.event
-      missions.value = res.missions.map(missionViewFromDefinition)
+      missions.value = res.missions.filter((m) => !isCommunity(m)).map(missionViewFromDefinition)
       profile.value = null
       begun.value = false
       bonusAwarded.value = false
+      void loadCommunity(res.event.id, res.missions.some(isCommunity))
     }
   } catch {
     if (!silent) {
       event.value = null
       missions.value = []
+      communityMissions.value = []
       failed.value = true
     }
   } finally {
@@ -119,8 +148,8 @@ async function onBegin() {
 }
 
 function onVisibility() {
-  if (document.visibilityState === 'visible' && props.loggedIn && event.value) {
-    load(props.eventId, true, true)
+  if (document.visibilityState === 'visible' && event.value) {
+    load(props.eventId, props.loggedIn, true)
   }
 }
 
@@ -206,6 +235,13 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
               />
             </div>
           </div>
+
+          <EventCommunityPanel
+            v-if="communityLoading || communityMissions.length"
+            :missions="communityMissions"
+            :loading="communityLoading"
+            :join-prompt="showBegin"
+          />
         </div>
 
         <EventMissionsPanel

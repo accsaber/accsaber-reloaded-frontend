@@ -44,7 +44,9 @@ const particles = computed<FieldParticle[]>(() => {
   const motion = particleMotion(c)
   const sMin = asNumber(c.sizeMinPx) ?? 1.6
   const sMax = Math.max(sMin, asNumber(c.sizeMaxPx) ?? 3.6)
-  const travelBase = asNumber(c.travelPx) ?? (wide ? 110 : 82)
+  const box = props.measure.box
+  const reach = motion === 'gust' ? box.w : box.h
+  const travelBase = Math.min(asNumber(c.travelPx) ?? (wide ? 110 : 82), Math.max(24, reach * 0.9))
   const speed = asNumber(c.speedSecs) ?? 3.6
   const spreadLo = wide ? 3 : 12
   const spreadSpan = (wide ? 97 : 88) - spreadLo
