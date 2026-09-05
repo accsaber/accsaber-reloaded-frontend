@@ -91,29 +91,37 @@ function drawStreamers(ctx: Ctx, sp: OverlaySpace, t: number, level: number): vo
 
 function drawPlumes(ctx: Ctx, sp: OverlaySpace, t: number, level: number): void {
   if (!props.overlay.plumes || props.overlay.annular) return
-  const R = radius()
+  const R = radius() * sp.s
   const cx = sp.toX(CENTER)
   const cy = sp.toY(CENTER)
+  ctx.lineCap = 'round'
   for (const base of [-Math.PI / 2, Math.PI / 2]) {
-    const a = base + Math.sin(t * 0.5 + base) * 0.08
-    const len = R * sp.s * (0.85 + 0.12 * Math.sin(t * 0.8 + base))
-    const x0 = cx + Math.cos(a) * R * sp.s * 0.98
-    const y0 = cy + Math.sin(a) * R * sp.s * 0.98
-    const x1 = x0 + Math.cos(a) * len
-    const y1 = y0 + Math.sin(a) * len
-    const px = -Math.sin(a)
-    const py = Math.cos(a)
-    const g = ctx.createLinearGradient(x0, y0, x1, y1)
-    g.addColorStop(0, withAlpha(corona(), 0.55 * level))
-    g.addColorStop(1, withAlpha(corona(), 0))
-    ctx.fillStyle = g
-    const wdt = R * sp.s * 0.18
-    ctx.beginPath()
-    ctx.moveTo(x0 + px * wdt, y0 + py * wdt)
-    ctx.quadraticCurveTo(x0 + Math.cos(a) * len * 0.5 + px * wdt * 1.6, y0 + Math.sin(a) * len * 0.5 + py * wdt * 1.6, x1, y1)
-    ctx.quadraticCurveTo(x0 + Math.cos(a) * len * 0.5 - px * wdt * 1.6, y0 + Math.sin(a) * len * 0.5 - py * wdt * 1.6, x0 - px * wdt, y0 - py * wdt)
-    ctx.closePath()
-    ctx.fill()
+    const sway = Math.sin(t * 0.5 + base) * 0.05
+    for (let i = 0; i < 9; i++) {
+      const spread = (i / 8 - 0.5) * 0.7
+      const a = base + spread + sway
+      const bend = spread * 0.5
+      const len = R * (0.55 + hash01(i * 5 + (base > 0 ? 40 : 0)) * 0.5) * (0.85 + 0.15 * Math.sin(t * 1.4 + i * 1.3 + base))
+      const x0 = cx + Math.cos(a) * R * 0.99
+      const y0 = cy + Math.sin(a) * R * 0.99
+      const x1 = x0 + Math.cos(a + bend) * len
+      const y1 = y0 + Math.sin(a + bend) * len
+      const cxp = x0 + Math.cos(a + bend * 0.4) * len * 0.55
+      const cyp = y0 + Math.sin(a + bend * 0.4) * len * 0.55
+      const fade = 1 - Math.abs(spread) * 0.9
+      for (const [wMul, aMul] of [[3.2, 0.14], [1, 0.75]] as Array<[number, number]>) {
+        const g = ctx.createLinearGradient(x0, y0, x1, y1)
+        g.addColorStop(0, withAlpha(corona(), aMul * fade * level))
+        g.addColorStop(0.55, withAlpha(corona(), aMul * 0.5 * fade * level))
+        g.addColorStop(1, withAlpha(corona(), 0))
+        ctx.strokeStyle = g
+        ctx.lineWidth = Math.max(0.5, R * 0.018 * wMul)
+        ctx.beginPath()
+        ctx.moveTo(x0, y0)
+        ctx.quadraticCurveTo(cxp, cyp, x1, y1)
+        ctx.stroke()
+      }
+    }
   }
 }
 

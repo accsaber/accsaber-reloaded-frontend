@@ -1,22 +1,60 @@
 <script setup lang="ts">
 import EmptyState from '@/components/common/EmptyState.vue'
+import { useNow } from '@/composables/useNow'
+import type { MissionResponse } from '@/types/api/missions'
+import CommunityContributorsModal from '@/views/news/CommunityContributorsModal.vue'
+import CommunityMissionRow from '@/views/news/CommunityMissionRow.vue'
 import EventMissionRow from '@/views/news/EventMissionRow.vue'
 import { missionLockState, type EventMissionView } from '@/utils/events'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   missions: EventMissionView[]
+  communityMissions: MissionResponse[]
   currentWeek: number | null
   totalWeeks: number
   unlockedWeek: number | null
   begun: boolean | null
   live: boolean
+  joinPrompt: boolean
 }>()
 
-const activeWeek = ref(1)
+type Tab = number | 'all'
+
+const now = useNow()
+const activeTab = ref<Tab>(1)
+const openId = ref<string | null>(null)
 
 const weeks = computed(() => Math.max(1, props.totalWeeks))
-const showTabs = computed(() => weeks.value > 1)
+
+const globalCommunity = computed(() =>
+  sortCommunity(props.communityMissions.filter((m) => m.endsWithWeek !== true)),
+)
+
+const weeklyCommunity = computed(() =>
+  sortCommunity(props.communityMissions.filter((m) => m.endsWithWeek === true)),
+)
+
+const hasGlobalTab = computed(() => globalCommunity.value.length > 0)
+const showTabs = computed(() => weeks.value > 1 || hasGlobalTab.value)
+
+function deadline(mission: MissionResponse): number {
+  return mission.expiresAt ? new Date(mission.expiresAt).getTime() : Number.POSITIVE_INFINITY
+}
+
+function communityRank(mission: MissionResponse): number {
+  if (mission.status === 'active') return 0
+  if (mission.status == null) return 1
+  return mission.status === 'completed' ? 2 : 3
+}
+
+function sortCommunity(list: MissionResponse[]): MissionResponse[] {
+  return [...list].sort((a, b) => {
+    const rankA = communityRank(a)
+    if (rankA !== communityRank(b)) return rankA - communityRank(b)
+    return rankA >= 2 ? deadline(b) - deadline(a) : deadline(a) - deadline(b)
+  })
+}
 
 function weekLocked(w: number): boolean {
   if (props.currentWeek == null || w > props.currentWeek) return true
@@ -37,12 +75,14 @@ const weekList = computed(() =>
   }),
 )
 
-const activeWeekLocked = computed(() => weekLocked(activeWeek.value))
+const activeWeekLocked = computed(
+  () => activeTab.value !== 'all' && weekLocked(activeTab.value),
+)
 
 const visibleRows = computed(() => {
-  const filtered = showTabs.value
-    ? props.missions.filter((m) => m.week === activeWeek.value)
-    : props.missions
+  if (activeTab.value === 'all') return []
+  const week = activeTab.value
+  const filtered = showTabs.value ? props.missions.filter((m) => m.week === week) : props.missions
   return filtered.map((mission) => ({
     mission,
     lock: missionLockState(mission, {
@@ -52,6 +92,25 @@ const visibleRows = computed(() => {
     }),
   }))
 })
+
+const visibleCommunity = computed(() => {
+  if (activeTab.value === 'all') return globalCommunity.value
+  if (!showTabs.value) return weeklyCommunity.value
+  const week = activeTab.value
+  return weeklyCommunity.value.filter((m) => (m.week ?? 1) === week)
+})
+
+function communityLocked(mission: MissionResponse): boolean {
+  return activeTab.value !== 'all' && mission.unlocked === false
+}
+
+const showGroupLabels = computed(
+  () => visibleRows.value.length > 0 && visibleCommunity.value.length > 0,
+)
+
+const openMission = computed(
+  () => props.communityMissions.find((m) => m.id === openId.value) ?? null,
+)
 
 const listRef = ref<HTMLElement | null>(null)
 const scrollable = ref(false)
@@ -73,16 +132,20 @@ function measureScroll() {
 
 onMounted(measureScroll)
 
-watch(visibleRows, () => {
+watch([visibleRows, visibleCommunity], () => {
   if (listRef.value) listRef.value.scrollTop = 0
   nextTick(measureScroll)
+})
+
+watch(hasGlobalTab, (has) => {
+  if (!has && activeTab.value === 'all') activeTab.value = 1
 })
 
 watch(
   () => [props.totalWeeks, props.currentWeek] as const,
   () => {
     const target = props.currentWeek ?? 1
-    activeWeek.value = Math.min(weeks.value, Math.max(1, target))
+    activeTab.value = Math.min(weeks.value, Math.max(1, target))
   },
   { immediate: true },
 )
@@ -99,9 +162,9 @@ watch(
           type="button"
           role="tab"
           class="week-tab"
-          :class="{ 'week-tab--active': w.n === activeWeek, 'week-tab--locked': w.locked }"
-          :aria-selected="w.n === activeWeek"
-          @click="activeWeek = w.n"
+          :class="{ 'week-tab--active': w.n === activeTab, 'week-tab--locked': w.locked }"
+          :aria-selected="w.n === activeTab"
+          @click="activeTab = w.n"
         >
           Week {{ w.n }}
           <svg v-if="w.locked" class="week-tab__lock" width="11" height="11" viewBox="0 0 24 24" fill="none"
@@ -115,6 +178,18 @@ watch(
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </button>
+
+        <button
+          v-if="hasGlobalTab"
+          type="button"
+          role="tab"
+          class="week-tab week-tab--all"
+          :class="{ 'week-tab--active': activeTab === 'all' }"
+          :aria-selected="activeTab === 'all'"
+          @click="activeTab = 'all'"
+        >
+          All Event
+        </button>
       </div>
     </header>
 
@@ -122,17 +197,48 @@ watch(
       Missions subject to change before release.
     </p>
 
-    <EmptyState v-if="!visibleRows.length" message="No missions unlocked for this week yet." />
+    <EmptyState v-if="!visibleRows.length && !visibleCommunity.length"
+      message="No missions unlocked for this week yet." />
     <div v-else class="missions__scroll" :class="{ 'missions__scroll--more': showScrollCue }">
       <div ref="listRef" class="missions__list" @scroll.passive="measureScroll">
-        <EventMissionRow
-          v-for="row in visibleRows"
-          :key="row.mission.id"
-          :mission="row.mission"
-          :lock="row.lock"
-        />
+        <div v-if="visibleRows.length" class="group">
+          <div v-if="showGroupLabels" class="group__head">
+            <span class="group__label">Personal</span>
+          </div>
+          <EventMissionRow
+            v-for="row in visibleRows"
+            :key="row.mission.id"
+            :mission="row.mission"
+            :lock="row.lock"
+          />
+        </div>
+
+        <div v-if="visibleCommunity.length" class="group">
+          <div v-if="showGroupLabels || joinPrompt" class="group__head">
+            <span v-if="showGroupLabels" class="group__label">Community</span>
+            <span v-if="showGroupLabels" class="group__note">
+              Optional, only personal missions unlock the next week.
+            </span>
+            <span v-if="joinPrompt" class="group__join">Join the event to contribute.</span>
+          </div>
+          <CommunityMissionRow
+            v-for="mission in visibleCommunity"
+            :key="mission.id"
+            :mission="mission"
+            :locked="communityLocked(mission)"
+            :now="now"
+            @contributors="openId = mission.id"
+          />
+        </div>
       </div>
     </div>
+
+    <CommunityContributorsModal
+      v-if="openMission"
+      :mission="openMission"
+      @close="openId = null"
+      @navigate="openId = null"
+    />
   </section>
 </template>
 
@@ -159,7 +265,8 @@ watch(
 
 .week-tabs {
   display: flex;
-  gap: var(--space-lg);
+  flex-wrap: wrap;
+  gap: 0 var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
 }
 
@@ -206,6 +313,46 @@ watch(
   color: var(--success);
 }
 
+.week-tab--all {
+  margin-left: auto;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group + .group {
+  border-top: 1px solid var(--bg-overlay);
+}
+
+.group__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding-top: var(--space-md);
+}
+
+.group__label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.group__note {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.group__join {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--warning);
+}
+
 .missions__disclaimer {
   margin: calc(-1 * var(--space-sm)) 0 0;
   font-size: 0.82rem;
@@ -237,7 +384,7 @@ watch(
 .missions__list {
   display: flex;
   flex-direction: column;
-  max-height: calc(var(--mission-row-h) * 3);
+  max-height: min(calc(var(--mission-row-h) * 5), 62vh);
   overflow-y: auto;
   padding-right: var(--space-sm);
   scrollbar-gutter: stable;

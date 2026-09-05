@@ -70,6 +70,27 @@ export function missionViewFromProgress(entry: EventMissionProgressResponse): Ev
   }
 }
 
+export function formatUnlockDate(value: string): string {
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+export function mergeCommunityMissions(
+  templates: MissionResponse[],
+  rows: MissionResponse[],
+): MissionResponse[] {
+  const byCode = new Map<string, MissionResponse>()
+  for (const row of rows) {
+    if (!row.code) continue
+    const prev = byCode.get(row.code)
+    if (prev && prev.status === 'active' && row.status !== 'active') continue
+    byCode.set(row.code, row)
+  }
+  return templates.map((t) => {
+    const row = t.code ? byCode.get(t.code) : undefined
+    return row ? { ...t, ...row } : t
+  })
+}
+
 export type MissionLock = 'not-begun' | 'calendar' | 'progression' | null
 
 export interface MissionLockContext {

@@ -83,20 +83,32 @@ function drawStreamers(ctx: Ctx, rim: Rim, fs: number, t: number, level: number)
 
 function drawPlumes(ctx: Ctx, rim: Rim, fs: number, t: number, level: number): void {
   if (!props.aura.plumes || props.aura.annular) return
-  for (const a of [Math.PI, 0]) {
-    const [x0, y0] = onRim(rim, a, 0.98)
-    const dir = a === 0 ? 1 : -1
-    const len = fs * (1.5 + 0.25 * Math.sin(t * 0.7 + a))
-    const g = ctx.createLinearGradient(x0, y0, x0 + dir * len, y0)
-    g.addColorStop(0, withAlpha(color(), 0.6 * level))
-    g.addColorStop(1, withAlpha(color(), 0))
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.moveTo(x0, y0 - fs * 0.2)
-    ctx.quadraticCurveTo(x0 + dir * len * 0.5, y0 - fs * 0.45, x0 + dir * len, y0)
-    ctx.quadraticCurveTo(x0 + dir * len * 0.5, y0 + fs * 0.45, x0, y0 + fs * 0.2)
-    ctx.closePath()
-    ctx.fill()
+  ctx.lineCap = 'round'
+  for (const base of [Math.PI, 0]) {
+    const sway = Math.sin(t * 0.5 + base) * 0.05
+    for (let i = 0; i < 7; i++) {
+      const spread = (i / 6 - 0.5) * 0.9
+      const a = base + spread + sway
+      const bend = spread * 0.45
+      const [x0, y0] = onRim(rim, a, 0.98)
+      const len = fs * (0.8 + hash01(i * 5 + (base > 0 ? 40 : 0)) * 0.7) * (0.85 + 0.15 * Math.sin(t * 1.4 + i * 1.3 + base))
+      const dir = base === 0 ? 1 : -1
+      const x1 = x0 + dir * Math.cos(bend) * len
+      const y1 = y0 + Math.sin(a + bend) * len * 0.6
+      const fade = 1 - Math.abs(spread) * 0.8
+      for (const [wMul, aMul] of [[3, 0.14], [1, 0.7]] as Array<[number, number]>) {
+        const g = ctx.createLinearGradient(x0, y0, x1, y1)
+        g.addColorStop(0, withAlpha(color(), aMul * fade * level))
+        g.addColorStop(0.55, withAlpha(color(), aMul * 0.5 * fade * level))
+        g.addColorStop(1, withAlpha(color(), 0))
+        ctx.strokeStyle = g
+        ctx.lineWidth = Math.max(0.5, fs * 0.05 * wMul)
+        ctx.beginPath()
+        ctx.moveTo(x0, y0)
+        ctx.quadraticCurveTo(x0 + dir * len * 0.5, y0 + (y1 - y0) * 0.35, x1, y1)
+        ctx.stroke()
+      }
+    }
   }
 }
 

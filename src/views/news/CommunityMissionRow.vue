@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MissionRewards from '@/components/domain/MissionRewards.vue'
 import type { MissionResponse } from '@/types/api/missions'
+import { formatUnlockDate } from '@/utils/events'
 import {
   formatMissionCountdown,
   formatMissionValue,
@@ -11,6 +12,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   mission: MissionResponse
+  locked: boolean
   now: number
 }>()
 
@@ -42,11 +44,18 @@ const remainingMs = computed(() => {
   return new Date(props.mission.expiresAt).getTime() - props.now
 })
 
-const state = computed<'active' | 'completed' | 'expired'>(() => {
+const state = computed<'upcoming' | 'active' | 'completed' | 'expired'>(() => {
+  if (props.mission.status == null) return 'upcoming'
   if (props.mission.status === 'completed') return 'completed'
   const closed = props.mission.endsWithWeek && (remainingMs.value ?? 1) <= 0
   return props.mission.status === 'active' && !closed ? 'active' : 'expired'
 })
+
+const unlockLabel = computed(() =>
+  (props.locked || state.value === 'upcoming') && props.mission.unlocksAt
+    ? `Unlocks ${formatUnlockDate(props.mission.unlocksAt)}`
+    : null,
+)
 
 const deadline = computed(() => {
   if (state.value !== 'active' || !props.mission.endsWithWeek || !props.mission.expiresAt) return null
@@ -56,11 +65,6 @@ const deadline = computed(() => {
 const urgent = computed(() =>
   deadline.value !== null && (remainingMs.value ?? Number.POSITIVE_INFINITY) <= URGENT_MS,
 )
-
-const windowLabel = computed(() => {
-  if (props.mission.week == null) return null
-  return props.mission.endsWithWeek ? `Week ${props.mission.week} only` : 'Runs all event'
-})
 
 const contributorsLabel = computed(() =>
   contributors.value === 1 ? '1 contributor' : `${formatMissionValue(contributors.value)} contributors`,
@@ -72,16 +76,20 @@ const yourShare = computed(() =>
 </script>
 
 <template>
-  <article class="cm" :class="[`cm--${state}`, { 'cm--urgent': urgent }]">
+  <article class="cm" :class="[`cm--${state}`, { 'cm--urgent': urgent, 'cm--locked': locked }]">
     <header class="cm__head">
+      <svg v-if="locked" class="cm__lock" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
       <h3 class="cm__name">{{ mission.name }}</h3>
-      <span v-if="windowLabel" class="cm__window">{{ windowLabel }}</span>
       <MissionRewards :xp-reward="mission.xpReward" :item-reward="mission.itemReward" :size="32" />
     </header>
 
     <p v-if="mission.description" class="cm__desc">{{ mission.description }}</p>
 
-    <div class="cm__bar">
+    <div v-if="!locked" class="cm__bar">
       <div class="cm__track" role="progressbar" :aria-valuenow="progress" :aria-valuemin="0"
         :aria-valuemax="target">
         <div class="cm__fill" :style="{ width: `${pct}%` }" />
@@ -91,7 +99,8 @@ const yourShare = computed(() =>
     </div>
 
     <div class="cm__meta">
-      <button v-if="contributors > 0" type="button" class="cm__contributors" aria-haspopup="dialog"
+      <span v-if="unlockLabel" class="cm__empty">{{ unlockLabel }}</span>
+      <button v-else-if="contributors > 0" type="button" class="cm__contributors" aria-haspopup="dialog"
         @click="emit('contributors')">
         {{ contributorsLabel }}
       </button>
@@ -129,6 +138,15 @@ const yourShare = computed(() =>
   opacity: 0.6;
 }
 
+.cm--locked {
+  opacity: 0.5;
+}
+
+.cm__lock {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
 .cm__head {
   display: flex;
   align-items: center;
@@ -142,19 +160,6 @@ const yourShare = computed(() =>
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.cm__window {
-  flex-shrink: 0;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.cm--urgent .cm__window {
-  color: var(--warning);
 }
 
 .cm__desc {

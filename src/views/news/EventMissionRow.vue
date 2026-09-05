@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MissionRewards from '@/components/domain/MissionRewards.vue'
-import type { EventMissionView, MissionLock } from '@/utils/events'
+import { formatUnlockDate, type EventMissionView, type MissionLock } from '@/utils/events'
 import { missionProgressLabel } from '@/utils/missions'
 import { computed } from 'vue'
 
@@ -41,7 +41,7 @@ const lockHint = computed(() => {
     case 'progression':
       return props.mission.week > 1 ? `Complete week ${props.mission.week - 1} to unlock` : 'Locked'
     case 'calendar':
-      return `Unlocks ${formatUnlock(props.mission.unlocksAt)}`
+      return `Unlocks ${formatUnlockDate(props.mission.unlocksAt)}`
     default:
       return null
   }
@@ -76,10 +76,6 @@ const repeatLabel = computed(() => {
   if (m.maxCompletions && !showsCount.value) return `Repeatable ×${m.maxCompletions}`
   return 'Repeatable'
 })
-
-function formatUnlock(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
 </script>
 
 <template>
