@@ -9,13 +9,16 @@ export function useOverlayMeasure(
   const contentBox = ref<ContentBox | null>(null)
   let ro: ResizeObserver | null = null
   let observedTarget: Element | null = null
+  let layoutSize: { w: number; h: number } | null = null
 
   function measure() {
     const el = overlayEl.value
     if (!el) return
     const r = el.getBoundingClientRect()
     if (!r.width || !r.height) return
-    overlayBox.value = { w: r.width, h: r.height }
+    const kx = layoutSize?.w ? layoutSize.w / r.width : 1
+    const ky = layoutSize?.h ? layoutSize.h / r.height : 1
+    overlayBox.value = { w: r.width * kx, h: r.height * ky }
     let target: Element | null = null
     const selector = measureSelector()
     if (selector && el.parentElement) {
@@ -31,12 +34,24 @@ export function useOverlayMeasure(
     }
     const tr = target?.getBoundingClientRect()
     contentBox.value = tr && tr.width && tr.height
-      ? { x: tr.left - r.left, y: tr.top - r.top, w: tr.width, h: tr.height }
+      ? {
+          x: (tr.left - r.left) * kx,
+          y: (tr.top - r.top) * ky,
+          w: tr.width * kx,
+          h: tr.height * ky,
+        }
       : null
   }
 
   onMounted(() => {
-    ro = new ResizeObserver(() => measure())
+    ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target !== overlayEl.value) continue
+        const size = entry.borderBoxSize[0]
+        if (size) layoutSize = { w: size.inlineSize, h: size.blockSize }
+      }
+      measure()
+    })
     if (overlayEl.value) ro.observe(overlayEl.value)
     measure()
   })
