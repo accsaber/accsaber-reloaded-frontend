@@ -10,10 +10,12 @@ const props = defineProps<{
   measure: EffectMeasure
 }>()
 
+const isPage = computed(() => props.measure.typeKey === 'theme')
+
 const anchorClass = computed(() => {
   const a = asString(props.composition.anchor)
   const anchor = a === 'top' || a === 'full' ? a : 'base'
-  return `comp-fx-glow--${anchor}`
+  return [`comp-fx-glow--${anchor}`, { 'comp-fx-glow--page': isPage.value }]
 })
 
 const hasCore = computed(() => !!asString(props.composition.coreColor))
@@ -25,7 +27,12 @@ function glowVars(core: boolean): Record<string, string> {
   const glowColor = core
     ? asString(c.coreColor) ?? asString(c.color) ?? '#ff7a1e'
     : asString(c.color) ?? '#ff7a1e'
-  return { '--glow-color': glowColor, '--gsize': `${size}%`, '--gd': `${flicker}ms` }
+  return {
+    '--glow-color': glowColor,
+    '--gsize': `${size}%`,
+    '--gd': `${flicker}ms`,
+    '--gspread': isPage.value ? '130%' : '76%',
+  }
 }
 </script>
 
@@ -55,7 +62,7 @@ function glowVars(core: boolean): Record<string, string> {
 
 .comp-fx-glow--base {
   bottom: 0;
-  background: radial-gradient(76% 100% at 50% 100%,
+  background: radial-gradient(var(--gspread, 76%) 100% at 50% 100%,
     color-mix(in srgb, var(--glow-color) 52%, transparent) 0%,
     color-mix(in srgb, var(--glow-color) 28%, transparent) 34%,
     color-mix(in srgb, var(--glow-color) 8%, transparent) 58%,
@@ -66,7 +73,7 @@ function glowVars(core: boolean): Record<string, string> {
 
 .comp-fx-glow--top {
   top: 0;
-  background: radial-gradient(76% 100% at 50% 0%,
+  background: radial-gradient(var(--gspread, 76%) 100% at 50% 0%,
     color-mix(in srgb, var(--glow-color) 52%, transparent) 0%,
     color-mix(in srgb, var(--glow-color) 28%, transparent) 34%,
     color-mix(in srgb, var(--glow-color) 8%, transparent) 58%,
@@ -82,6 +89,11 @@ function glowVars(core: boolean): Record<string, string> {
     color-mix(in srgb, var(--glow-color) 40%, transparent) 0%,
     color-mix(in srgb, var(--glow-color) 16%, transparent) 46%,
     transparent 72%);
+}
+
+.comp-fx-glow--page {
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 @keyframes comp-fx-glow-flicker {

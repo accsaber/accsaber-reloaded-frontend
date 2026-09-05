@@ -13,6 +13,7 @@ const CONTROL_BY_KIND: Record<JobFieldKind, ControlKind> = {
   CAMPAIGN: 'resource',
   MAP_DIFFICULTY: 'resource',
   MILESTONE: 'resource',
+  ITEM: 'resource',
   INSTANT: 'instant',
   PLATFORM: 'platform',
   FLAG: 'flag',

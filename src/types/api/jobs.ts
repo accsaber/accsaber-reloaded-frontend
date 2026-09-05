@@ -5,6 +5,7 @@ export type JobFieldKind =
   | 'CAMPAIGN'
   | 'MAP_DIFFICULTY'
   | 'MILESTONE'
+  | 'ITEM'
   | 'INSTANT'
   | 'PLATFORM'
   | 'FLAG'

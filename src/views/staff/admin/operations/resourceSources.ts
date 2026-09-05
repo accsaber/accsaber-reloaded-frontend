@@ -1,5 +1,6 @@
 import type { PickerOption } from '@/components/domain/ResourcePicker.vue'
 import type { JobFieldKind, LeaderboardPlatform } from '@/types/api/jobs'
+import type { ItemResponse } from '@/types/api/items'
 import type { MilestoneResponse } from '@/types/api/milestones'
 import type { KofiEventResponse } from '@/types/api/supporters'
 import { pickAvatarUrl, pickCoverUrl } from '@/composables/useAvatarFallback'
@@ -115,6 +116,42 @@ async function resolveMilestone(id: string): Promise<PickerOption | null> {
   return toMilestoneOption(await getMilestone(id))
 }
 
+let itemCache: Promise<ItemResponse[]> | null = null
+
+function loadItems(): Promise<ItemResponse[]> {
+  if (!itemCache) {
+    itemCache = import('@/api/admin/items')
+      .then((mod) => mod.getAdminItems({ includeInactive: true }))
+      .then((items) => [...items].sort((a, b) => a.name.localeCompare(b.name)))
+      .catch((err) => {
+        itemCache = null
+        throw err
+      })
+  }
+  return itemCache
+}
+
+function toItemOption(item: ItemResponse): PickerOption {
+  return {
+    id: item.id,
+    label: item.name,
+    hint: `${item.rarity} ${item.typeKey}`,
+    imageUrl: item.iconUrl,
+  }
+}
+
+async function searchItems(query: string): Promise<PickerOption[]> {
+  const items = await loadItems()
+  const needle = query.toLowerCase()
+  const matches = needle ? items.filter((i) => i.name.toLowerCase().includes(needle)) : items
+  return matches.slice(0, SEARCH_SIZE).map(toItemOption)
+}
+
+async function resolveItem(id: string): Promise<PickerOption | null> {
+  const { getAdminItem } = await import('@/api/admin/items')
+  return toItemOption(await getAdminItem(id))
+}
+
 export const RESOURCE_SOURCES: Partial<Record<JobFieldKind, ResourceSource>> = {
   USER: { search: searchUsers, resolve: resolveUser, placeholder: 'Search players by name...' },
   CAMPAIGN: {
@@ -132,6 +169,7 @@ export const RESOURCE_SOURCES: Partial<Record<JobFieldKind, ResourceSource>> = {
     resolve: resolveMilestone,
     placeholder: 'Search milestones by title...',
   },
+  ITEM: { search: searchItems, resolve: resolveItem, placeholder: 'Search items by name...' },
 }
 
 export const LEADERBOARD_PLATFORMS: LeaderboardPlatform[] = ['BEATLEADER', 'SCORESABER']
