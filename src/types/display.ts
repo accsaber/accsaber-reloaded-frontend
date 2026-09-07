@@ -118,6 +118,7 @@ export interface ScoreDisplay {
   streak115?: number
   maxStreak115?: number | null
   playCount?: number
+  lastPlayedAt?: string | null
   hmd?: string
   xpGained?: number
   rankWhenSet?: number
@@ -158,6 +159,7 @@ export interface DifficultyScoreDisplay {
   streak115: number
   maxStreak115: number | null
   playCount: number
+  lastPlayedAt: string | null
   hmd: string
   xpGained: number
   rankWhenSet: number

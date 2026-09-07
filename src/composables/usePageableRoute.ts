@@ -8,6 +8,7 @@ export interface PageableRouteOptions {
   defaultOrder?: SortDirection
   defaultSize?: number
   sortFieldMap?: Record<string, string>
+  initialOrder?: Record<string, SortDirection>
   secondarySort?: MaybeRefOrGetter<string | null>
 }
 
@@ -20,6 +21,7 @@ export function usePageableRoute(options: PageableRouteOptions) {
     defaultOrder = 'desc',
     defaultSize = 50,
     sortFieldMap = {},
+    initialOrder = {},
     secondarySort = 'ap,desc',
   } = options
 
@@ -51,7 +53,7 @@ export function usePageableRoute(options: PageableRouteOptions) {
       query.order = newDir
     } else {
       query.sort = key
-      query.order = 'desc'
+      query.order = initialOrder[key] ?? defaultOrder
     }
     delete query.page
     router.replace({ query })

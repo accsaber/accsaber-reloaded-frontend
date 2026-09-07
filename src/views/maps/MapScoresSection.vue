@@ -79,6 +79,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } 
     weighted: 'weightedAp',
     date: 'timeSet',
   },
+  initialOrder: { lastPlayedAt: 'asc' },
 })
 
 const searchQuery = ref('')
@@ -115,6 +116,7 @@ const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
   max_streak_115: { key: 'maxStreak115', label: 'Max 115s', sortable: true, align: 'right', mono: true, width: '76px' },
   pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '70px' },
   play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '70px' },
+  last_played_at: { key: 'lastPlayedAt', label: 'Last played', sortable: true, align: 'right', width: '92px' },
   date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
 }
 
@@ -151,6 +153,7 @@ const rows = computed(() => {
       maxStreak115: s.maxStreak115,
       pauses: s.pauses,
       playCount: s.playCount,
+      lastPlayedAt: s.lastPlayedAt,
       date: s.date,
       replay: resolveReplay(
         { blScoreId: s.blScoreId, ssScoreId: s.ssScoreId, date: s.date },

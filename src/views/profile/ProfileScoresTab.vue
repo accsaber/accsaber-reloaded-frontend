@@ -73,6 +73,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } 
   defaultOrder: 'desc',
   defaultSize: 20,
   sortFieldMap: { leaderboardRank: 'rank', weighted: 'weightedAp', date: 'timeSet' },
+  initialOrder: { lastPlayedAt: 'asc' },
 })
 
 const loading = ref(false)
@@ -141,6 +142,7 @@ const rows = computed(() =>
     maxStreak115: s.maxStreak115,
     pauses: s.pauses,
     playCount: s.playCount,
+    lastPlayedAt: s.lastPlayedAt ?? null,
     date: s.date,
     leaderboardRank: s.leaderboardRank,
     replay: resolveReplay(
@@ -205,6 +207,7 @@ const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
   max_streak_115: { key: 'maxStreak115', label: 'Max 115s', sortable: true, align: 'right', mono: true, width: '72px' },
   pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '58px' },
   play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '58px' },
+  last_played_at: { key: 'lastPlayedAt', label: 'Last played', sortable: true, align: 'right', width: '92px' },
   date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '72px' },
 }
 
@@ -413,6 +416,10 @@ watch(
               <template v-if="isScoreFieldVisible('date')">
                 <span class="ps-card__sep">·</span>
                 <span class="ps-card__date">{{ formatRelativeDate(row.date as string) }}</span>
+              </template>
+              <template v-if="isScoreFieldVisible('last_played_at') && row.lastPlayedAt">
+                <span class="ps-card__sep">·</span>
+                <span class="ps-card__date">played {{ formatRelativeDate(row.lastPlayedAt as string) }}</span>
               </template>
             </span>
             <span v-if="isScoreFieldVisible('ap')" class="ps-card__ap">{{ (row.ap as number).toFixed(2) }}</span>

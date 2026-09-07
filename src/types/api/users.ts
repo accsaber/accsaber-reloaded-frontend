@@ -96,6 +96,7 @@ export interface ScoreResponse {
   skillLevel?: number
   hmd: string
   timeSet: string
+  lastPlayedAt: string | null
   reweightDerivative: boolean
   xpGained: number
   baseXp: number

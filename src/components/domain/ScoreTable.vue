@@ -71,7 +71,7 @@ function onDirectionToggle() {
 
 const BUILT_IN_CELLS = new Set([
   'cell-rank', 'cell-leaderboardRank',
-  'cell-accuracy', 'cell-score', 'cell-ap', 'cell-weighted', 'cell-date',
+  'cell-accuracy', 'cell-score', 'cell-ap', 'cell-weighted', 'cell-date', 'cell-lastPlayedAt',
 ])
 
 const customSlots = computed(() => {
@@ -153,6 +153,13 @@ const customSlots = computed(() => {
           <span class="score-table__date" :class="{ 'score-table__date--recent': isRecentDate(sp.value as string) }">
             {{ formatRelativeDate(sp.value as string) }}
           </span>
+        </slot>
+      </template>
+
+      <template #cell-lastPlayedAt="sp">
+        <slot name="cell-lastPlayedAt" v-bind="sp">
+          <span v-if="sp.value" class="score-table__date">{{ formatRelativeDate(sp.value as string) }}</span>
+          <span v-else class="score-table__date">&ndash;</span>
         </slot>
       </template>
 

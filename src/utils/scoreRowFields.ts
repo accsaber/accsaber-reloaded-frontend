@@ -12,6 +12,7 @@ export const SCORE_ROW_FIELD_LABELS: Record<ScoreRowField, string> = {
   max_streak_115: 'Max 115 streak',
   pauses: 'Pauses',
   play_count: 'Play count',
+  last_played_at: 'Last played',
   date: 'Date',
 }
 

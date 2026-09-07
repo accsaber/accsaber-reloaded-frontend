@@ -17,6 +17,7 @@ export type ScoreRowField =
   | 'max_streak_115'
   | 'pauses'
   | 'play_count'
+  | 'last_played_at'
   | 'date'
 
 export type SettingKey =
