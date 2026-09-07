@@ -57,15 +57,15 @@ const mostAsked = MOST_ASKED
     <div class="home__below">
       <div class="home__blurb">
         <p>
-          This wiki covers all of AccSaber: how a score turns into AP, how maps get ranked, what
-          every system does and why it works that way. It is written for players first, so plain
-          words and real examples beat technical vocabulary everywhere except the developer
-          corner.
+          How a score turns into AP, how maps get ranked, what every system on the platform
+          actually does. It is written for players first, and plain words and real examples beat
+          technical vocabulary everywhere except the developer corner.
         </p>
         <p>
-          It exists because guessing sucks. The mechanics run deep, and for too long the answers
-          lived scattered across Discord threads. Now they live here, maintained right alongside
-          the platform itself so they never drift from the truth.
+          The mechanics run deep, and for too long the answers lived scattered across Discord
+          threads where you had to know the right person to ask. This exists because guessing
+          sucks, and now the answers live here, maintained right alongside the platform itself,
+          where they never get the chance to drift from the truth.
         </p>
       </div>
 

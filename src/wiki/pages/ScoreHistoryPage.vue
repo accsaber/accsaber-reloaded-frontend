@@ -45,9 +45,8 @@ const HISTORY_LABELS = [
     <p>
       Only one play per map feeds your AP, and that is your best one. Every other run you have
       ever submitted on that map is still sitting below it, and you can scroll the whole
-      pile from any score on your profile. Those older entries keep their own numbers, the
-      numbers on them can change long after you set them, and this page is about both halves of
-      that.
+      pile from any score on your profile. Those older entries keep their own numbers, and the
+      numbers on them can change long after you set them.
     </p>
     <p>
       One thing to get out of the way first: that pile only exists if you play with the
@@ -110,7 +109,7 @@ const HISTORY_LABELS = [
       comes from lives in <RouterLink to="/wiki/xp-and-levels">XP &amp; Levels</RouterLink>.
     </p>
 
-    <WikiHeading id="what-still-counts">What a run does even when it loses</WikiHeading>
+    <WikiHeading id="what-still-counts">When a run loses</WikiHeading>
     <WikiCompareTable :columns="OUTCOME_COLUMNS" :rows="OUTCOME_ROWS" />
     <p>
       Quit early covers anything you did not take to the end of the map, so a restart, a quit to
@@ -139,7 +138,7 @@ const HISTORY_LABELS = [
       </tbody>
     </table>
 
-    <WikiHeading id="rank-drift">The rank you set, and the rank now</WikiHeading>
+    <WikiHeading id="rank-drift">Rank when set</WikiHeading>
     <p>
       Each play remembers the leaderboard position it landed on the day you set it, and the
       score detail shows that as set as #N whenever it differs from where the play sits today.

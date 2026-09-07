@@ -58,11 +58,11 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
 
     <WikiHeading id="true-acc"><span class="cat cat--true">True Acc</span></WikiHeading>
     <p>
-      The rawest form of accuracy on the platform. True Acc maps are slow and spacious, with wide-open
-      swings and all the time in the world to read every note. That generosity is the trap:
-      with nothing rushing you, there is also nothing to blame. Every point you drop was
-      yours to keep, so the leaderboards come down to raw execution and the nerve to stay
-      consistent across a full map.
+      True Acc is the rawest accuracy on the platform, slow and spacious maps with wide-open
+      swings and all the time in the world to read every note. That generosity is the trap. With
+      nothing rushing you there is also nothing to blame, every point you drop was yours to
+      keep, and the leaderboards come down to raw execution and the nerve to stay consistent
+      across a full map.
       The lower complexity maps tend to be all-down notes to focus on only one type of swing, while
       the higher complexity ones mostly maintain parity and some include out of the ordinary angles
       to test your ability to stay precise even when the map is trying to throw you off.
@@ -70,26 +70,28 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
 
     <WikiHeading id="standard-acc"><span class="cat cat--standard">Standard Acc</span></WikiHeading>
     <p>
-      The middle ground, and for most players the most familiar one. Standard Acc maps move
-      like regular Beat Saber mapping, with real flow and tempo, but they do not pose any angle or positional challenges. 
-      The skill here is keeping your form intact while everything is in motion: full swings that stay consistent, 
-      angles that stay feasible. The higher complexity maps in this category push the limits of standard acc, 
-      posing a few angles and wider hits that, while not as demanding as Tech Acc, still require
-      a good understanding of how to maintain accuracy while repositioning.
+      Standard Acc is the middle ground and the one most players know best. Its maps move
+      like regular Beat Saber mapping, with real flow and tempo, but they do not pose any angle or positional challenges.
+      The skill here is keeping your form intact while everything is in motion, full swings that
+      stay consistent and angles that stay feasible. The higher complexity maps in this category
+      push the limits of standard acc and pose a few angles and wider hits that still need a
+      good understanding of how to hold accuracy while repositioning, without ever getting as
+      demanding as Tech Acc.
     </p>
 
     <WikiHeading id="tech-acc"><span class="cat cat--tech">Tech Acc</span></WikiHeading>
     <p>
-      The most challenging one. Tech Acc maps throw demanding angles and harder patterns at you and dare
-      you to stay precise through them. Repositioning takes a huge role, angle and timing matter, and composure
-      matters most of all, because the map is actively trying to bend your swing out of shape.
-      While the lower complexity maps might only include a few horizontal hits, the higher complexity ones will
-      have you rotating and repositioning your wrists constantly, testing your ability to maintain accuracy under pressure.
+      Tech Acc is the hardest of the three, and its maps throw demanding angles and harder
+      patterns at you and dare you to stay precise through them. Repositioning takes a huge role,
+      angle and timing matter, and composure matters most of all, since the map is actively
+      trying to bend your swing out of shape. The lower complexity maps might only include a few
+      horizontal hits. The higher complexity ones will have you rotating and repositioning your
+      wrists constantly and they test whether you can hold accuracy under that kind of pressure.
     </p>
 
     <WikiHeading id="the-fine-line">The line between Standard and Tech</WikiHeading>
     <p>
-      The two categories brush against each other at the edges: the top of Standard Acc allows
+      The two categories brush against each other at the edges. The top of Standard Acc allows
       itself a few angles and wider hits, and the bottom of Tech Acc might only add a few
       horizontal ones. What separates them is where the challenge comes from. On a Standard
       map, every note still sits in the same up-down flow. While there may be a few palm-in
@@ -106,22 +108,22 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
       A good example of a Standard Acc map that sits on the line is
       <RouterLink to="/maps/4b10c?difficulty=expert">"Always, Everytime"</RouterLink>, which has
       a few crossovers and wide hits in the chorus, but will never pull away from the vertical
-      flow. On the other hand, a Tech Acc map that sits on the line is
-      <RouterLink to="/maps/50017?difficulty=normal">"Ginger Lemonade"</RouterLink>, which
-      features simple patterns that don't require much repositioning, but has a few crossover
-      horizontals which deviate completely from the vertical flow. For maps that sit right on
-      the line, the ranking team makes the call when the map gets ranked, judging which of the
-      two skills the map truly tests.
+      flow. Going the other way,
+      <RouterLink to="/maps/50017?difficulty=normal">"Ginger Lemonade"</RouterLink> is a Tech Acc
+      map on the line, with simple patterns that do not need much repositioning and a few
+      crossover horizontals that deviate completely from the vertical flow. For maps that sit
+      right on the line, the ranking team makes the call at ranking time and decides which of
+      the two skills the map truly tests.
     </p>
 
     <WikiHeading id="overall">Overall</WikiHeading>
     <p>
-      Overall is simply your three category totals added together, with its own leaderboard on
-      top. That makes it the all-rounder's crown: a monster in a single category will post a
-      scary number there, but topping Overall means holding your own in all three at once. Your
-      per-category ranks stay visible either way, so specializing is always a valid way to
-      play. The <RouterLink to="/leaderboards">leaderboards</RouterLink> let you flip between
-      all four views, globally and per country.
+      Overall is your three category totals added together, with its own leaderboard on top.
+      That makes it the all-rounder's crown. A monster in a single category will post a scary
+      number there, but topping Overall means holding your own in all three at once, and your
+      per-category ranks stay visible either way. The
+      <RouterLink to="/leaderboards">leaderboards</RouterLink> let you flip between all four
+      views, globally and per country.
     </p>
   </WikiProse>
 </template>

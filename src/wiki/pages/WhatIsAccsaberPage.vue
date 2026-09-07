@@ -27,39 +27,37 @@ const CATEGORY_FEELS: { code: CategoryCode; feel: string }[] = [
 <template>
   <WikiProse>
     <p>
-      AccSaber is a Beat Saber platform built around a simple question: how precisely can you cut?
-      Most ranked ladders reward you for many different styles of play, and accuracy
-      ends up as an afterthought along the way. AccSaber takes that niche and builds
+      AccSaber is a Beat Saber platform built around one question, which is how precisely you
+      can cut. Most ranked ladders reward you for many different styles of play and accuracy
+      ends up as an afterthought along the way, while AccSaber takes that niche and builds
       everything on top of it, with a hand-picked pool of ranked maps where precision is the
       entire point.
     </p>
     <p>
-      That one idea grew into a whole different way to play the game. You get leaderboards for
+      That one idea grew into a whole different way to play the game. There are leaderboards for
       every flavor of accuracy, campaigns that guide you through curated maps, levels and
       milestones to chase, items to unlock, and a market to trade them on. Whether you take the
-      competition seriously or just want the best acc practice routine the game has, the loop
-      stays the same: play precise, get rewarded.
+      competition seriously or just want the best acc practice routine the game has, you play
+      precise and you get rewarded.
     </p>
     <p>
-      AccSaber has been part of the community for
-      years, and this site is the ground-up rebuild of the original project, carrying the same
-      idea miles further.
+      AccSaber has been part of the community for years, and this site is the ground-up rebuild
+      of the original project that takes the same idea miles further.
     </p>
 
     <WikiHeading id="how-it-works">From a play to the leaderboard</WikiHeading>
     <p>Here is the whole loop at a glance:</p>
     <WikiFlowDiagram :steps="SCORE_FLOW" />
     <p>
-      AP stands for Accuracy Points, and it stems from two core factors: how accurate your play was,
-      and how demanding the map is. Your total is weighted so your best plays matter the most,
-      which means improving a top score will always move you further than grinding out easy scores
-      all day.
+      AP stands for Accuracy Points, and two things feed it, how accurate your play was and how
+      demanding the map is. Your total is weighted so that your best plays matter the most, and
+      improving a top score will always move you further than grinding out easy scores all day.
     </p>
 
     <WikiHeading id="categories">The categories</WikiHeading>
     <p>
-      Acc means different things to different players, so ranked maps are split into three
-      categories, each with its own leaderboard. Overall then combines them all, so topping it
+      Acc means different things to different players, and ranked maps are split into three
+      categories to match, each with its own leaderboard. Overall combines all three. Topping it
       means you are good at every single one.
     </p>
     <table>

@@ -31,53 +31,52 @@ const PLUGIN_ROWS: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      There is no sign up on AccSaber. The first time you set a score on a ranked map, your
-      profile creates itself, name, avatar, country and all. So getting your scores counted
-      really comes down to one thing: making sure your plays actually reach us. Here is how that
-      works, and what to check when a score seems to be missing.
+      There is no sign up on AccSaber, and the first time you set a score on a ranked map your
+      profile creates itself, name, avatar, country and all. Everything after that comes down to
+      making sure your plays actually reach us.
     </p>
 
     <WikiHeading id="the-journey">The journey your score takes</WikiHeading>
     <p>
-      Your play reaches us on whichever road is available: we listen to BeatLeader and
-      ScoreSaber live around the clock, and the AccSaber plugin submits straight to us the
-      moment the map ends, no middleman involved:
+      Your play reaches us on whichever road is available, and we listen to BeatLeader and
+      ScoreSaber live around the clock while the AccSaber plugin submits straight to us the
+      moment the map ends with no middleman involved:
     </p>
     <WikiFlowDiagram :steps="SCORE_JOURNEY" />
     <p>
-      And if the same play reaches us from more than one of those, no drama: whoever reports it
-      first creates the score, and everyone arriving after just fills in whatever details were
-      missing. You never end up with duplicates.
+      If the same play reaches us from more than one of those, whoever reports it first creates
+      the score and everyone arriving after fills in whatever details were missing. You never end
+      up with duplicates.
     </p>
 
     <WikiHeading id="setting-up">Setting up</WikiHeading>
     <p>
-      The usual setup is one leaderboard mod: BeatLeader or ScoreSaber, whichever you prefer.
-      Both work on PC and Quest, and both feed AccSaber everything it needs for ranked play. On
-      PC, the AccSaber plugin submits plays directly too, so it holds its own even with neither
-      installed. The <RouterLink to="/getting-started">Getting Started</RouterLink> page has the
+      The usual setup is one leaderboard mod, either BeatLeader or ScoreSaber, whichever you
+      prefer. Both work on PC and Quest, and both feed AccSaber everything it needs for ranked
+      play. On PC the AccSaber plugin submits plays directly too and holds its own even with
+      neither of them installed. The <RouterLink to="/getting-started">Getting Started</RouterLink> page has the
       downloads and the three-step setup.
     </p>
     <p>
       Logging in on the site works through Steam or BeatLeader, and you can attach Discord to
-      your account for community roles. One thing that trips people up: you cannot log in before
-      AccSaber has seen at least one ranked score from you, because that first score is what
-      creates your profile in the first place.
+      your account for community roles. One thing trips people up more than anything else here.
+      You cannot log in before AccSaber has seen at least one ranked score from you, and that
+      first score is the thing that creates your profile in the first place.
     </p>
 
     <WikiHeading id="the-plugin">What the plugin adds</WikiHeading>
     <p>
-      BeatLeader and ScoreSaber only report your finished plays. The AccSaber plugin reports
-      every attempt, including runs you failed, quit or restarted, as long as you got through
-      at least three quarters of the map. Those attempts never touch your leaderboard standing,
-      but they feed your XP, missions, milestones and play stats, so the grind counts even when
-      the run does not. Campaigns also get a full in-game home: browse them, track your progress
-      and play missions without ever taking the headset off.
+      BeatLeader and ScoreSaber only report your finished plays, while the AccSaber plugin
+      reports every attempt, including runs you failed, quit or restarted, as long as you got
+      through at least three quarters of the map. Those attempts never touch your leaderboard
+      standing, but they feed your XP, missions, milestones and play stats, and the grind counts
+      even when the run does not. Campaigns get a full in-game home as well, where you can browse
+      them, track your progress and play missions without ever taking the headset off.
     </p>
     <WikiCompareTable :columns="PLUGIN_COLUMNS" :rows="PLUGIN_ROWS" />
     <p>
-      Two things to keep in mind: the plugin is PC only for now, and a failed run never advances
-      a campaign. Campaign objectives want the full map cleared.
+      The plugin is PC only for now, and a failed run never advances a campaign, because
+      campaign objectives want the full map cleared.
     </p>
 
     <WikiHeading id="troubleshooting">When a score does not show up</WikiHeading>

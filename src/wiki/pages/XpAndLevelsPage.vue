@@ -85,8 +85,7 @@ onMounted(async () => {
     <p>
       AP measures how good you are. XP measures how much you have lived here. Everything you do
       on AccSaber feeds one bar that only ever fills, levels never cap, and the ladder hands
-      out real items as you climb it. This page covers where XP comes from and what the climb
-      looks like.
+      out real items as you climb it.
     </p>
 
     <WikiHeading id="sources">Five ways to earn</WikiHeading>
@@ -108,10 +107,10 @@ onMounted(async () => {
 
     <WikiHeading id="score-xp">What a play pays</WikiHeading>
     <p>
-      Score XP is exact math, so here it is, live. Every completed play starts at a flat 25 XP,
-      and a bonus stacks on top based on your accuracy and the map's complexity. The bonus
-      curve is even more top-heavy than the AP curve, so clean plays on demanding maps are
-      where the XP fountain really opens up:
+      Score XP is exact math and here it is, live. Every completed play starts at a flat 25 XP,
+      and a bonus stacks on top based on your accuracy and the map's complexity. The bonus curve
+      is even more top-heavy than the AP curve, and clean plays on demanding maps are where the
+      XP fountain really opens up:
     </p>
     <WikiCurveExplorer
       :fn="scoreXp"
@@ -138,11 +137,11 @@ onMounted(async () => {
 
     <WikiHeading id="ladder">The ladder</WikiHeading>
     <p>
-      Levels follow a curve that keeps early climbing quick and late climbing prestigious: each
-      level costs more than the last until level 100, where the price locks in flat for the
-      rest of the road. There is a named tier for every stretch of the ladder and real
-      unlockable items waiting at milestone levels. Drag through it, this is live data, so what
-      you see here is exactly what is waiting:
+      Levels follow a curve that keeps early climbing quick and late climbing prestigious. Each
+      level costs more than the last until level 100, where the price locks in flat for the rest
+      of the road. There is a named tier for every stretch of the ladder and real unlockable
+      items waiting at milestone levels. Drag through it, this is live data and what you see
+      here is exactly what is waiting:
     </p>
     <WikiXpLadder
       v-if="ladderReady"

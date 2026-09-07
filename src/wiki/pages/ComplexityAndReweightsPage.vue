@@ -36,21 +36,21 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
 
     <WikiHeading id="what-drives-it">What makes a map complex</WikiHeading>
     <p>
-      Complexity tracks how hard a map is to hit cleanly, which is a different question from how hard
-      it is to pass. What pushes it up is technicality and note
-      density, so anything that forces your swings to be harder to stay consistent on. A map that
-      keeps handing you awkward setups will sit high even if you never come close to failing it.
+      Complexity tracks how hard a map is to hit cleanly. How hard it is to pass is a different
+      question entirely. What pushes it up is technicality and note density, anything that forces
+      your swings to be harder to stay consistent on, and a map that keeps handing you awkward
+      setups will sit high even if you never come close to failing it.
     </p>
     <p>
-      A map you can swing through comfortably stays low, and it stays low even when it is fast or
-      busy, because speed on its own does not stop you from holding accuracy. The starting number
+      A map you can swing through comfortably stays low, and it stays low even when it is fast
+      and busy. Speed on its own does not stop you from holding accuracy. The starting number
       comes out of an estimate when the map is imported, and the ranking team adjusts from there.
     </p>
 
     <WikiHeading id="what-it-does">What complexity does to your AP</WikiHeading>
     <p>
-      Here is the same 96% score priced across the complexity range, using the real curve the site
-      runs on.
+      Here is the same 96% score priced across the complexity range, straight off the real curve
+      the site runs on.
     </p>
 
     <table>
@@ -72,7 +72,7 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
 
     <p>
       The gain per step is flat, and that is the part worth internalising. Complexity does not
-      multiply your AP, it adds to it, because the curve builds in a sizeable head start before
+      multiply your AP, it adds to it, and the curve builds in a sizeable head start before
       complexity is applied at all. Going from complexity 5 to complexity 10 doubles the number on the
       badge and only moves your AP by about {{ doubleGain }}%. A hard map pays better than an easy one
       at the same accuracy, and the difference is smaller than the badge makes it look.
@@ -85,32 +85,32 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
       actually ask of you, and a reweight levels them back to where they belong.
     </p>
     <p>
-      <strong>Reweights are not running at the moment.</strong> When they do run, the usual shape is a
-      monthly pass over the batch before last, so a round in August would go over the maps released in
-      July. Every so often there is a global reweight instead, which goes over every ranked map at
-      once. There is no fixed schedule for that one.
+      <strong>Reweights are not running at the moment.</strong> When they do run, the usual shape
+      is a monthly pass over the batch before last. A round in August would go over the maps
+      released in July. Every so often a global reweight goes over every ranked map at once
+      instead, and that one runs to no fixed schedule.
     </p>
 
     <WikiHeading id="what-changes">What a reweight does to your scores</WikiHeading>
     <p>
-      A complexity going up is a buff and a complexity coming down is a nerf, which is the same
-      wording the map page uses. Your play itself never changes, since the score you set stays exactly
-      the score you set. What changes is what it is worth.
+      A complexity going up is a buff and a complexity coming down is a nerf, the same wording
+      the map page uses. Your play itself never changes and the score you set stays exactly the
+      score you set. What changes is what it is worth.
     </p>
     <p>
-      Everything downstream is redone from there. Every score on that difficulty gets its AP
-      recalculated, the map's own leaderboard is reordered, and then your category total, your rank,
-      your Overall standing and the XP those scores paid all follow. Milestones get another look too,
+      Every score on that difficulty gets its AP recalculated, the map's own leaderboard is
+      reordered, and then your category total, your rank, your Overall standing and the XP those
+      scores paid all follow. Milestones get another look too,
       in case the new numbers push you over a line you were sitting just under.
     </p>
     <p>
-      This can move you backwards. If a map you have a strong play on gets nerfed, that play is worth
-      less than it was, and a big enough change on a map high in your top plays will show up in your
-      total AP and your rank. As an example, a 96.5% on a map nerfed from 9.0 down to 8.0 goes from
-      {{ nerfBefore.toFixed(0) }} AP to {{ nerfAfter.toFixed(0) }} AP, so you lose {{ nerfLoss }} AP
-      on that score, or about {{ nerfPercent }}% of what it was paying. XP moves with it, though there
-      is a floor built into the XP side at complexity 4.5, so nerfs down at the bottom of the range
-      leave your XP alone.
+      If a map you have a strong play on gets nerfed, that play is worth less than it was, and a
+      big enough change on a map high in your top plays will drag your total AP and your rank down
+      with it. A 96.5% on a map nerfed from 9.0 down to 8.0 goes from
+      {{ nerfBefore.toFixed(0) }} AP to {{ nerfAfter.toFixed(0) }} AP. That is {{ nerfLoss }} AP
+      off that score, or about {{ nerfPercent }}% of what it was paying. XP moves with it, though
+      the XP side has a floor built in at complexity 4.5, and nerfs down at the bottom of the
+      range leave your XP alone.
     </p>
 
     <WikiHeading id="history">Reading a map's history</WikiHeading>

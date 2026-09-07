@@ -21,8 +21,7 @@ const formatWeight = (position: number) => {
       the platform. Each score has its raw AP, straight from
       <RouterLink to="/wiki/accuracy-and-ap">the curve</RouterLink>. Your profile total is
       something else: a weighted sum of all your plays, built so that your best work defines
-      you and filler does not. This page is about how that weighting behaves and why your total
-      moves the way it does.
+      you and filler does not.
     </p>
 
     <WikiHeading id="how-it-works">Your best plays carry the run</WikiHeading>
@@ -46,9 +45,9 @@ const formatWeight = (position: number) => {
       </tbody>
     </table>
     <p>
-      By the mid-twenties a play is contributing pocket change, and past thirty it is
-      essentially a spectator. Your total is the sum of every play times its multiplier, which
-      is why the top of your list is worth fighting for and the bottom barely matters.
+      By the mid-twenties a play is contributing pocket change, and past thirty it is a
+      spectator. Your total is the sum of every play times its multiplier, which is why the top
+      of your list is worth fighting for and the bottom barely matters.
     </p>
 
     <WikiHeading id="sandbox">Watch a new play land</WikiHeading>
@@ -68,21 +67,20 @@ const formatWeight = (position: number) => {
 
     <WikiHeading id="per-category">Each category keeps its own list</WikiHeading>
     <p>
-      The weighting runs separately in every category. Your True Acc plays compete for spots on
-      your True Acc list, your Tech Acc plays on your Tech Acc list, and the two never see each
-      other. That has a consequence worth internalizing: the same 900 raw AP play can be worth
-      wildly different amounts depending on where it lands. Dropped into a stacked True Acc
-      list it might slot in fifth and add a few hundred; dropped into a nearly empty Tech Acc
-      list it lands at number one and adds every bit of its 900. Your Overall total is then
-      simply the three category totals added together.
+      Your True Acc plays compete for spots on your True Acc list, your Tech Acc plays on your
+      Tech Acc list, and the two never see each other. The same 900 raw AP play is worth wildly
+      different amounts depending on which list it lands in. Dropped into a stacked True Acc
+      list it might slot in fifth and add a few hundred, and dropped into a nearly empty Tech
+      Acc list it lands at number one and adds every bit of its 900. Your Overall total is the
+      three category totals added together.
     </p>
 
     <WikiHeading id="never-down">Your total never goes down</WikiHeading>
     <p>
-      Playing is always safe. A worse score than your best on a map is recorded for your
-      history and still feeds your XP, but it never replaces the better play and never
-      subtracts from your total. The only direction a session can move your AP is up, so there
-      is no such thing as ruining your profile by having an off day.
+      A worse score than your best on a map is recorded for your history and still feeds your
+      XP, but it never replaces the better play and never subtracts from your total. The only
+      direction a session can move your AP is up. There is no such thing as ruining your profile
+      by having an off day.
     </p>
   </WikiProse>
 </template>

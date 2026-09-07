@@ -41,10 +41,11 @@ const PATTERN_ROWS: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      Before the ranking team ever votes on a difficulty, it has to clear these standards. They
-      exist so that every ranked map is fun, fair, and quality-assured. This
-      page uses mapping vocabulary freely, refer to the
-      <a href="https://bsmg.wiki/wiki/Mapping" target="_blank" rel="noopener noreferrer">BSMG Wiki</a> if you need a refresher.
+      Before the ranking team ever votes on a difficulty, it has to clear the standards below,
+      which are what keep every ranked map fun, fair and worth the pool it sits in. The mapping
+      vocabulary here is used freely and without explanation, and the
+      <a href="https://bsmg.wiki/wiki/Mapping" target="_blank" rel="noopener noreferrer">BSMG Wiki</a>
+      is the place to go for a refresher on any of it.
     </p>
 
     <WikiHeading id="general">General rules</WikiHeading>
@@ -94,10 +95,11 @@ const PATTERN_ROWS: WikiCompareRow[] = [
     <p>
       The criteria check is its own vote inside
       <RouterLink to="/wiki/how-maps-get-ranked#the-vote">the ranking vote</RouterLink>,
-      decided by simple majority with the ranking heads holding an override. And backing the
-      team up is the AccSaber Criteria Script, which automatically checks a map against
-      everything listed on this page and flags what it finds. The standards themselves evolve
-      with the game, so when in doubt about an edge case, ask in the Discord before suggesting.
+      decided by simple majority with the ranking heads holding an override. Backing the team up
+      is the AccSaber Criteria Script. It checks a map against everything listed here
+      automatically and flags what it finds, which saves the team from catching every hot start
+      and every stray bomb by eye. The standards themselves keep evolving with the game. When in
+      doubt about an edge case, ask in the Discord before suggesting.
     </p>
   </WikiProse>
 </template>

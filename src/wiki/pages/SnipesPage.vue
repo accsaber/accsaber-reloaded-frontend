@@ -137,9 +137,8 @@ onMounted(async () => {
 
     <WikiHeading id="playlist">The playlist</WikiHeading>
     <p>
-      The download picks up whatever you have already set. Category, page size and sort all
-      carry into the file, and a playlist you built on Most AP to gain arrives in the game in
-      that order and holds it when Beat Saber resyncs. Leaving it on All snipes gives you the
+      Category, page size and sort all carry into the file, and a playlist you built on Most AP
+      to gain arrives in the game in that order and holds it when Beat Saber resyncs. Leaving it on All snipes gives you the
       entire list, which gets unwieldy against somebody far ahead of you. Capping it at twenty
       or fifty gives you the top of whatever order you picked, and that is usually the version
       you actually want loaded in the game. You can sync the playlist in-game.

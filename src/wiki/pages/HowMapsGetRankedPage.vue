@@ -63,10 +63,9 @@ const PIPELINE: WikiFlowStep[] = [
 
     <WikiHeading id="batches">Batches</WikiHeading>
     <p>
-      Qualified maps do not trickle out one by one. The ranking heads gather them into a batch
-      and release it as one drop, usually about once a month, when it is ready rather than when
-      the calendar says so. That keeps every release a coherent set of new maps worth sitting
-      down with.
+      The ranking heads gather qualified maps into a batch and release it as one drop, usually
+      about once a month, and it goes when it is ready and not when the calendar says so. That
+      keeps every release a coherent set of new maps worth sitting down with.
     </p>
   </WikiProse>
 </template>

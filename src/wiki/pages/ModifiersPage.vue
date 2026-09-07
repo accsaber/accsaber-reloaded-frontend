@@ -24,9 +24,9 @@ const MODIFIER_ROWS: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      One rule covers everything on this page: on AccSaber, a modifier can never raise your
-      score. At best it leaves your play exactly as it was, and the one famous exception drags
-      it down hard. Faster Song, Ghost Notes and friends are there for your own enjoyment, and
+      A modifier on AccSaber can never raise your score, and at best it leaves your play exactly
+      as it was. The one famous exception drags it down hard. Faster Song, Ghost Notes and
+      friends are there for your own enjoyment, and
       the leaderboards treat a modified clean run the same as an unmodified one.
     </p>
 
@@ -35,15 +35,15 @@ const MODIFIER_ROWS: WikiCompareRow[] = [
 
     <WikiHeading id="banned">Why four of them are banned</WikiHeading>
     <p>
-      No Obstacles, No Bombs, Slower Song and Small Notes all break the same rule: they make
-      accuracy easier than the map intends, or change what a clean cut even means. A
-      leaderboard only works if everyone is cutting the same map under the same conditions, so
-      plays carrying any of these simply never enter the ranked pipeline. No AP, no leaderboard
-      entry, no partial credit, and the fix is always the same: play it again clean.
+      No Obstacles, No Bombs, Slower Song and Small Notes all break the same rule, and they
+      either make accuracy easier than the map intends or change what a clean cut even means. A
+      leaderboard only works if everyone is cutting the same map under the same conditions, and
+      plays carrying any of these never enter the ranked pipeline. No AP, no leaderboard entry,
+      no partial credit. Play it again clean.
     </p>
     <p>
-      There is one fun exception: campaigns. Some campaign challenges deliberately ask you to
-      play with modifiers that ranked play forbids, and those plays are recorded for the
+      Campaigns are the one fun exception, because some campaign challenges deliberately ask you
+      to play with modifiers that ranked play forbids, and those plays are recorded for the
       campaign even though they will never touch a leaderboard.
     </p>
   </WikiProse>
