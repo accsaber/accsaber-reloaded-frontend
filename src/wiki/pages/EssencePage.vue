@@ -79,8 +79,7 @@ onMounted(async () => {
       Untradeable items have no essence value at all, which rules out level unlocks, milestone
       rewards, official campaign rewards and event rewards. Anything currently equipped has to
       come off first, and anything sitting in a market listing or a pending trade stays locked
-      while that is open. Stacks are the one flexible case, where you can break down part of a
-      stack and keep the rest.
+      while that is open.
     </p>
     <p>
       None of it comes back. The item is gone, the serial number that came with it is gone, and

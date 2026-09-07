@@ -12,7 +12,7 @@ import { computed, onMounted, ref } from 'vue'
 const RARITY_ORDER: ItemRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
 const RARITY_WORTH = [2, 5, 10, 25, 50, 100]
 const BENCH_TYPES: ItemTypeKey[] = ['profile_border_shape', 'title', 'profile_border_color']
-const BENCH_MODIFIERS = ['unusual', 'holographic', 'haunted', 'battle_worn', 'collectors', 'ascendant', 'founders']
+const BENCH_MODIFIERS = ['unusual', 'holographic', 'haunted', 'battle_worn', 'strange', 'founders']
 const FOUNDERS_SERIAL = 5
 const MAX_SERIAL = 40
 
@@ -26,19 +26,6 @@ const SLOTS = [
   { slot: 'Thumbnail background', changes: 'The scene behind your small player card' },
 ]
 
-const MODIFIERS = [
-  { name: 'Unique', does: 'Marks a copy handed out for a specific occasion', from: 'Staff award, Tournaments & Special Events' },
-  { name: 'Strange', does: 'Counts every ranked personal best you set while it is equipped', from: 'Crate roll' },
-  { name: 'Unusual', does: 'Attaches a particle effect that plays on the item', from: 'Crate roll' },
-  { name: 'Holographic', does: 'Sweeps a shimmer across the item', from: 'Crate roll, the rarest of the markers' },
-  { name: 'Battle-Worn', does: 'Chips and cracks the item, and flakes fall off it', from: 'Crate roll during an event' },
-  { name: 'Haunted', does: 'Phases the item out for a few seconds at a time and opens a pair of eyes in it', from: 'Specific crate roll or roll any between October 25 and November 1' },
-  { name: 'Jolly', does: 'Trims the item with festive particles', from: 'Specific crate roll or roll any between December 20 and December 31' },
-  { name: "Founder's", does: 'Marks one of the first five copies ever handed out', from: 'Automatic on serials 1 to 5' },
-  { name: 'Vintage', does: 'Nothing: Stays as it was', from: 'Automatic on every copy when an item gets reworked' },
-  { name: 'Genuine', does: 'Outlines the item', from: 'Promotions run with somebody outside AccSaber, or user resolved a bug that prevented item granting' },
-  { name: "Collector's", does: 'Outlines the item and adds particles', from: 'Special, optional collectionist rewards' },
-]
 
 const { itemsById, ensureLoaded } = useItemCatalog()
 const modifierStore = useItemModifierStore()
@@ -155,36 +142,11 @@ onMounted(async () => {
 
     <WikiHeading id="modifiers">Modifiers</WikiHeading>
     <p>
-      A modifier is a marker stuck to your particular copy of an item. It changes how your copy
-      looks and what your copy is called, since the modifier name goes in front of the item
-      name. A Strange Cat Ears is the same border as a plain Cat Ears with an orange counter
-      bolted into the corner.
-    </p>
-    <table>
-      <thead>
-        <tr>
-          <th>Modifier</th>
-          <th>What it does</th>
-          <th>Where it comes from</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in MODIFIERS" :key="row.name">
-          <td>{{ row.name }}</td>
-          <td>{{ row.does }}</td>
-          <td>{{ row.from }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>
-      Most of them roll out of crates on a chance separate from the item itself, and the two
-      seasonal markers only turn up inside their window.
-    </p>
-    <p>
-      A Holographic Black Hole disintegrates for the same 100 as the plainest Black Hole
-      anybody owns, and that holds for every marker in the table. What a modifier does move is
-      what another player will pay you for the thing, and that price is set by whoever happens
-      to be bidding on the day.
+      A modifier is a marker stuck to your particular copy of an item, and it changes how that
+      copy looks and what it is called. Most of them roll out of a crate on a chance separate
+      from the item itself.
+      <RouterLink to="/wiki/modifiers-and-effects">Item Modifiers &amp; Effects</RouterLink> goes
+      through every marker, where each one comes from and what it does to the thing it lands on.
     </p>
 
     <WikiHeading id="serials">Serials</WikiHeading>

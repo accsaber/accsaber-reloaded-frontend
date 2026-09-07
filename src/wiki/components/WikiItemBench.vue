@@ -75,7 +75,7 @@ function cycleItem() {
   <figure class="bench">
     <div class="bench__stage">
       <div class="bench__cell">
-        <InventoryItemCell :user-item="userItem" @select="cycleItem" />
+        <InventoryItemCell :key="item.id" :user-item="userItem" @select="cycleItem" />
       </div>
       <span class="bench__name">{{ fullName }}</span>
       <span class="bench__rarity" :class="`rarity--${item.rarity}`">{{ item.rarity }}</span>
