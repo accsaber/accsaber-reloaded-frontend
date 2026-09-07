@@ -33,18 +33,18 @@ const categoryAccent = computed(() =>
   categoryCode.value ? categoryStore.getAccent(categoryCode.value) : 'var(--accent)',
 )
 
-const accDelta = computed(() => (target.value.accuracy - sniper.value.accuracy) * 100)
-const apDelta = computed(() => target.value.ap - sniper.value.ap)
+const accDelta = computed(() => (target.value.accuracy - (sniper.value?.accuracy ?? 0)) * 100)
+const apDelta = computed(() => target.value.ap - (sniper.value?.ap ?? 0))
 
 const tugFillPercent = computed(() => {
   const t = target.value.accuracy
   if (!t) return 0
-  return Math.max(0, Math.min(100, (sniper.value.accuracy / t) * 100))
+  return Math.max(0, Math.min(100, ((sniper.value?.accuracy ?? 0) / t) * 100))
 })
 
 interface SnipeSide {
   kind: 'sniper' | 'target'
-  score: ScoreResponse
+  score: ScoreResponse | null
   name: string
   roleLabel: string
 }
@@ -95,21 +95,27 @@ function navigateToMap(e: MouseEvent) {
     <div class="snipe-row__scores">
       <button v-for="side in sides" :key="side.kind" type="button"
         class="snipe-row__quadrant snipe-row__score" :class="`snipe-row__score--${side.kind}`"
-        @click="emit('open-detail', side.score)">
+        :disabled="!side.score" @click="side.score && emit('open-detail', side.score)">
         <span class="snipe-row__score-label">
           <span class="snipe-row__player-name">{{ side.name }}</span>
           <span class="snipe-row__role-pill" :class="`snipe-row__role-pill--${side.kind}`">{{ side.roleLabel }}</span>
         </span>
-        <span class="snipe-row__accuracy">{{ (side.score.accuracy * 100).toFixed(2) }}<span class="snipe-row__pct">%</span></span>
-        <span class="snipe-row__points">{{ side.score.score.toLocaleString() }} pts</span>
-        <span class="snipe-row__ap">{{ side.score.ap.toFixed(2) }} AP</span>
-        <span class="snipe-row__meta">
-          <template v-if="side.score.rank">
-            <span>#{{ side.score.rank }}</span>
-            <span class="snipe-row__sep">·</span>
-          </template>
-          <span>{{ formatRelativeDate(side.score.timeSet) }}</span>
-        </span>
+        <template v-if="side.score">
+          <span class="snipe-row__accuracy">{{ (side.score.accuracy * 100).toFixed(2) }}<span class="snipe-row__pct">%</span></span>
+          <span class="snipe-row__points">{{ side.score.score.toLocaleString() }} pts</span>
+          <span class="snipe-row__ap">{{ side.score.ap.toFixed(2) }} AP</span>
+          <span class="snipe-row__meta">
+            <template v-if="side.score.rank">
+              <span>#{{ side.score.rank }}</span>
+              <span class="snipe-row__sep">·</span>
+            </template>
+            <span>{{ formatRelativeDate(side.score.timeSet) }}</span>
+          </span>
+        </template>
+        <template v-else>
+          <span class="snipe-row__accuracy snipe-row__accuracy--empty">-</span>
+          <span class="snipe-row__not-played">Not played</span>
+        </template>
       </button>
 
       <div class="snipe-row__delta">
@@ -161,8 +167,12 @@ function navigateToMap(e: MouseEvent) {
   min-width: 0;
 }
 
-.snipe-row__quadrant:hover {
+.snipe-row__quadrant:hover:not(:disabled) {
   background: color-mix(in srgb, var(--row-accent) 8%, transparent);
+}
+
+.snipe-row__quadrant:disabled {
+  cursor: default;
 }
 
 .snipe-row__map {
@@ -297,6 +307,15 @@ function navigateToMap(e: MouseEvent) {
 
 .snipe-row__score--target .snipe-row__accuracy {
   color: var(--row-accent);
+}
+
+.snipe-row__accuracy--empty {
+  color: var(--text-tertiary);
+}
+
+.snipe-row__not-played {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
 }
 
 .snipe-row__pct {

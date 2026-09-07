@@ -20,7 +20,7 @@ import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import { useThemeStore } from '@/stores/theme'
 import type { EquippedItemsResponse } from '@/types/api/items'
-import type { SnipeComparisonResponse, SnipeSort } from '@/types/api/snipe'
+import type { SnipeComparisonResponse, SnipeSort, SnipeUnplayed } from '@/types/api/snipe'
 import type {
   LevelResponse,
   ScoreResponse,
@@ -58,6 +58,13 @@ const SORT_OPTIONS: { value: SnipeSort; label: string; defaultDirection: SortDir
   { value: 'RANK_GAP', label: 'Leaderboard gap', defaultDirection: 'desc' },
 ]
 const DEFAULT_SORT: SnipeSort = 'GAP'
+
+const UNPLAYED_OPTIONS: { value: SnipeUnplayed; label: string }[] = [
+  { value: 'EXCLUDE', label: 'Hide' },
+  { value: 'INCLUDE', label: 'Include' },
+  { value: 'ONLY', label: 'Only' },
+]
+const DEFAULT_UNPLAYED: SnipeUnplayed = 'EXCLUDE'
 
 const snipeCategoryCodes = computed(() =>
   categoryStore.categoryInfoList
@@ -117,6 +124,16 @@ const currentDirection = computed<SortDirection>(() =>
   route.query.dir === 'asc' || route.query.dir === 'desc' ? route.query.dir : defaultDirection.value,
 )
 
+const currentUnplayed = computed<SnipeUnplayed>(() => {
+  const raw = route.query.unplayed
+  if (typeof raw !== 'string') return DEFAULT_UNPLAYED
+  return UNPLAYED_OPTIONS.find((o) => o.value === raw.toUpperCase())?.value ?? DEFAULT_UNPLAYED
+})
+
+const unplayedParam = computed(() =>
+  currentUnplayed.value === DEFAULT_UNPLAYED ? undefined : currentUnplayed.value,
+)
+
 function setPage(page: number) {
   const query = { ...route.query }
   if (page <= 1) delete query.page
@@ -146,6 +163,14 @@ function setSort(value: string) {
   delete query.dir
   if (value === DEFAULT_SORT) delete query.sort
   else query.sort = value.toLowerCase()
+  router.replace({ query })
+}
+
+function setUnplayed(value: string) {
+  const query = { ...route.query }
+  delete query.page
+  if (value === DEFAULT_UNPLAYED) delete query.unplayed
+  else query.unplayed = value.toLowerCase()
   router.replace({ query })
 }
 
@@ -186,6 +211,7 @@ const loading = ref(false)
 const sniperAllStats = ref<UserAllStatisticsResponse | null>(null)
 const targetAllStats = ref<UserAllStatisticsResponse | null>(null)
 const rankedTotals = ref<Map<string, number>>(new Map())
+const forwardSnipeCount = ref<number | null>(null)
 const reverseSnipeCount = ref<number | null>(null)
 const tugLoading = ref(false)
 
@@ -205,11 +231,10 @@ const heroAccent = computed(() => {
 
 const rows = computed(() => data.value?.content ?? [])
 const totalPages = computed(() => data.value?.totalPages ?? 0)
-const totalElements = computed(() => data.value?.totalElements ?? 0)
 
 const closestGapPct = computed(() => {
   if (rows.value.length === 0) return 0
-  const gaps = rows.value.map((r) => r.targetScore.accuracy - r.sniperScore.accuracy)
+  const gaps = rows.value.map((r) => r.targetScore.accuracy - (r.sniperScore?.accuracy ?? 0))
   return Math.min(...gaps) * 100
 })
 
@@ -218,7 +243,13 @@ const totalPointsToGain = computed(() =>
 )
 
 const totalApAtStake = computed(() =>
-  rows.value.reduce((sum, r) => sum + (r.targetScore.ap - r.sniperScore.ap), 0),
+  rows.value.reduce((sum, r) => sum + (r.targetScore.ap - (r.sniperScore?.ap ?? 0)), 0),
+)
+
+const emptyMessage = computed(() =>
+  currentUnplayed.value === 'ONLY'
+    ? 'No unplayed maps. You already have a score on every map this player has played.'
+    : "No close scores. You've already beaten this player on every overlapping map, or you have no scores in common.",
 )
 
 const playlistUrl = computed(() =>
@@ -228,6 +259,7 @@ const playlistUrl = computed(() =>
         category: currentCategory.value || undefined,
         sort: currentSort.value,
         direction: currentDirection.value,
+        unplayed: unplayedParam.value,
       })
     : '',
 )
@@ -280,10 +312,8 @@ const targetPlaysInScope = computed(() => sumPlaysForScope(targetAllStats.value)
 
 const totalMapsInScope = computed(() => rankedTotals.value.get(totalsKey.value) ?? 0)
 
-const snipeable = computed(() => totalElements.value)
-
 const sniperWinsCount = computed(() =>
-  Math.max(0, sniperPlaysInScope.value - snipeable.value),
+  Math.max(0, sniperPlaysInScope.value - (forwardSnipeCount.value ?? 0)),
 )
 const targetWinsCount = computed(() =>
   Math.max(0, targetPlaysInScope.value - (reverseSnipeCount.value ?? 0)),
@@ -296,6 +326,7 @@ const tugReady = computed(
   () =>
     !!sniperAllStats.value &&
     !!targetAllStats.value &&
+    forwardSnipeCount.value != null &&
     reverseSnipeCount.value != null &&
     totalMapsInScope.value > 0,
 )
@@ -333,6 +364,7 @@ async function fetchComparisons() {
       category: currentCategory.value || undefined,
       sort: currentSort.value,
       direction: currentDirection.value,
+      unplayed: unplayedParam.value,
     })
   } catch {
     data.value = null
@@ -369,25 +401,23 @@ async function fetchTotalForCurrentScope() {
   }
 }
 
-async function fetchReverseSnipeCount() {
+async function fetchSnipeCounts() {
   if (!sniperId.value) return
+  forwardSnipeCount.value = null
   reverseSnipeCount.value = null
-  try {
-    const { getClosestScores } = await import('@/api/snipe')
-    const res = await getClosestScores(targetId.value, sniperId.value, {
-      page: 0,
-      size: 1,
-      category: currentCategory.value || undefined,
-    })
-    reverseSnipeCount.value = res.totalElements ?? 0
-  } catch {
-    reverseSnipeCount.value = 0
-  }
+  const { getClosestScores } = await import('@/api/snipe')
+  const params = { page: 0, size: 1, category: currentCategory.value || undefined }
+  const [forward, reverse] = await Promise.allSettled([
+    getClosestScores(sniperId.value, targetId.value, params),
+    getClosestScores(targetId.value, sniperId.value, params),
+  ])
+  forwardSnipeCount.value = forward.status === 'fulfilled' ? forward.value.totalElements ?? 0 : 0
+  reverseSnipeCount.value = reverse.status === 'fulfilled' ? reverse.value.totalElements ?? 0 : 0
 }
 
 async function refreshTugData() {
   tugLoading.value = true
-  await Promise.allSettled([fetchTotalForCurrentScope(), fetchReverseSnipeCount()])
+  await Promise.allSettled([fetchTotalForCurrentScope(), fetchSnipeCounts()])
   tugLoading.value = false
 }
 
@@ -431,6 +461,7 @@ watch(
       currentCategory.value,
       currentSort.value,
       currentDirection.value,
+      currentUnplayed.value,
     ] as const,
   () => {
     if (isValidPair.value) fetchComparisons()
@@ -547,6 +578,8 @@ watch(
           @update:model-value="setCategory" />
         <BaseSelect :model-value="sizeSelectValue" :options="SIZE_OPTIONS" label="Page size"
           @update:model-value="setSize" />
+        <BaseSelect :model-value="currentUnplayed" :options="UNPLAYED_OPTIONS" label="Unplayed maps"
+          @update:model-value="setUnplayed" />
         <div class="snipe-page__sort">
           <span class="snipe-page__sort-label">Sort</span>
           <div class="snipe-page__sort-row">
@@ -573,8 +606,7 @@ watch(
       </template>
 
       <template v-else-if="rows.length === 0">
-        <EmptyState
-          message="No close scores. You've already beaten this player on every overlapping map, or you have no scores in common." />
+        <EmptyState :message="emptyMessage" />
       </template>
 
       <template v-else>

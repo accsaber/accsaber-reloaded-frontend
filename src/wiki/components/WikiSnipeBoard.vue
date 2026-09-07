@@ -95,7 +95,7 @@ function openDetail(score: ScoreResponse) {
 const closestGap = computed(() => {
   const first = comparisons.value[0]
   if (!first) return 0
-  return (first.targetScore.accuracy - first.sniperScore.accuracy) * 100
+  return (first.targetScore.accuracy - (first.sniperScore?.accuracy ?? 0)) * 100
 })
 
 const pointsToGain = computed(() =>
@@ -103,7 +103,7 @@ const pointsToGain = computed(() =>
 )
 
 const apAtStake = computed(() =>
-  comparisons.value.reduce((sum, c) => sum + (c.targetScore.ap - c.sniperScore.ap), 0),
+  comparisons.value.reduce((sum, c) => sum + (c.targetScore.ap - (c.sniperScore?.ap ?? 0)), 0),
 )
 
 const playlistUrl = computed(() =>

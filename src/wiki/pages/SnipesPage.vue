@@ -95,8 +95,7 @@ onMounted(async () => {
     <p>
       You open it from any player's profile, from the button sitting next to their ScoreSaber and
       BeatLeader links. From there the site hunts for maps where you both have a score and they
-      are ahead of you, and those are the only maps it will ever show. A map they have played and
-      you have not cannot appear, because there is nothing to compare yet and nothing to take.
+      are ahead of you.
     </p>
 
     <WikiHeading id="order">How close counts as close</WikiHeading>
@@ -111,8 +110,8 @@ onMounted(async () => {
     <p>
       Closest first is the right order for taking a score off somebody. It is a poor one for
       planning where your next AP comes from. The map you are two hundredths of a percent away
-      from can be worth almost nothing. The dropdown next to the page size holds five orders and
-      the arrow beside it flips any of them around.
+      from can be worth almost nothing. The sort dropdown holds five orders and the arrow beside
+      it flips any of them around.
     </p>
 
     <WikiCompareTable :columns="SORT_COLUMNS" :rows="SORT_ROWS" />
@@ -137,7 +136,7 @@ onMounted(async () => {
 
     <WikiHeading id="playlist">The playlist</WikiHeading>
     <p>
-      Category, page size and sort all carry into the file, and a playlist you built on Most AP
+      The filters and sort all carry into the file, and a playlist you built on Most AP
       to gain arrives in the game in that order and holds it when Beat Saber resyncs. Leaving it on All snipes gives you the
       entire list, which gets unwieldy against somebody far ahead of you. Capping it at twenty
       or fifty gives you the top of whatever order you picked, and that is usually the version
