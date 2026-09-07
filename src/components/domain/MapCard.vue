@@ -5,6 +5,7 @@ import type { MapDisplay } from '@/types/display'
 import { computed, ref } from 'vue'
 import { useRouter, type RouteLocationRaw } from 'vue-router'
 import CategoryBadge from './CategoryBadge.vue'
+import SongTitle from './SongTitle.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
 import DifficultyBadge from './DifficultyBadge.vue'
 
@@ -35,7 +36,8 @@ function handleClick(event: MouseEvent) {
     </div>
     <div class="map-card__body">
       <CategoryBadge :category="map.categoryCode" size="sm" class="map-card__category" />
-      <span class="map-card__song">{{ map.songName }}</span>
+      <SongTitle class="map-card__song" layout="stacked" :name="map.songName"
+        :sub-name="map.songSubName" />
       <div class="map-card__primary">
         <DifficultyBadge :difficulty="map.difficulty" />
         <ComplexityBadge :complexity="map.complexity" />

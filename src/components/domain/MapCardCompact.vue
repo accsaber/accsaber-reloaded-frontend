@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { useRouter, type RouteLocationRaw } from 'vue-router';
 import ComplexityBadge from './ComplexityBadge.vue';
 import DifficultyBadge from './DifficultyBadge.vue';
+import SongTitle from './SongTitle.vue';
 
 const props = defineProps<{
   map: MapDisplay
@@ -28,7 +29,8 @@ function handleClick(event: MouseEvent) {
     <GlowImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover"
       :fallback-src="map.coverFallbackUrl ?? null" />
     <div class="map-card-compact__info">
-      <span class="map-card-compact__song">{{ map.songName }}</span>
+      <SongTitle class="map-card-compact__song" layout="stacked" :name="map.songName"
+        :sub-name="map.songSubName" />
       <div class="map-card-compact__primary">
         <DifficultyBadge :difficulty="map.difficulty" />
         <ComplexityBadge :complexity="map.complexity" />

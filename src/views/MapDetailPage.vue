@@ -305,7 +305,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
         <div class="map-detail__details">
           <div class="map-detail__name-row">
             <h1 class="map-detail__song">
-              <SongTitle :name="map.songName" :sub-name="map.songSubName" />
+              <SongTitle layout="stacked" :name="map.songName" :sub-name="map.songSubName" />
             </h1>
           </div>
           <p class="map-detail__artist">{{ map.songAuthor }}</p>
@@ -530,6 +530,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   font-size: var(--text-page-title);
   font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
   margin: 0;
 }
 
