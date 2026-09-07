@@ -105,7 +105,7 @@ const LEADING_COLUMNS: TableColumn[] = [
 ]
 
 const TRAILING_COLUMNS: TableColumn[] = [
-  { key: 'detail', label: '', align: 'center', width: '80px', noLink: true },
+  { key: 'detail', label: '', align: 'center', width: '88px', noLink: true },
 ]
 
 const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {

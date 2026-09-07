@@ -193,7 +193,7 @@ const LEADING_COLUMNS: TableColumn[] = [
 ]
 
 const TRAILING_COLUMNS: TableColumn[] = [
-  { key: 'actions', label: '', align: 'center', width: '84px', noLink: true },
+  { key: 'actions', label: '', align: 'center', width: '120px', noLink: true },
 ]
 
 const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
