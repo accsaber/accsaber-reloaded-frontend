@@ -45,7 +45,7 @@ const SHORT_LABEL_MAP: Record<string, string> = {
   'Max': 'Max 115 streak',
   'Diff': 'Difficulty',
   'COMP': 'Complexity',
-  'W.AP': 'Weighted AP',
+  'Weighted': 'Weighted AP',
   'Played': 'Last played',
 }
 

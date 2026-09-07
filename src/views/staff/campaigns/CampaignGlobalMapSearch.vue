@@ -4,6 +4,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import type { ImportCampaignMapRequest } from '@/types/api/campaigns'
 import {
@@ -544,7 +545,8 @@ function resetFilters() {
               <img v-if="coverFor(map)" :src="coverFor(map)" :alt="map.metadata.songName" loading="lazy" />
             </span>
             <span class="gms__meta">
-              <span class="gms__title">{{ map.metadata.songName }}</span>
+              <SongTitle class="gms__title" :name="map.metadata.songName"
+                :sub-name="map.metadata.songSubName" />
               <span class="gms__sub">
                 <span>{{ map.metadata.songAuthorName }}</span>
                 <span class="gms__sep" aria-hidden="true">·</span>

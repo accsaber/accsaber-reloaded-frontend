@@ -4,6 +4,7 @@ export interface MapAvgApResponse {
   mapDifficultyId: string
   mapId: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   mapAuthor: string
   coverUrl: string
@@ -23,6 +24,7 @@ export interface MapRetryResponse {
   mapDifficultyId: string
   mapId: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   mapAuthor: string
   coverUrl: string
@@ -57,6 +59,7 @@ export interface UserMapImprovementsResponse {
   mapDifficultyId: string
   mapId: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   mapAuthor: string
   coverUrl: string

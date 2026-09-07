@@ -6,6 +6,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
@@ -103,7 +104,9 @@ const playerSupporterTier = computed(
 const complexity = computed(() => mapDifficulty.value?.complexity ?? null)
 const difficultyRaw = computed(() => mapDifficulty.value?.difficulty ?? null)
 const characteristic = computed(() => mapDifficulty.value?.characteristic ?? null)
-const songSubName = computed(() => mapDifficulty.value?.songSubName ?? null)
+const songSubName = computed(
+  () => props.score?.mapSubName ?? mapDifficulty.value?.songSubName ?? null,
+)
 
 const isFc = computed(() => {
   const s = props.score
@@ -367,7 +370,7 @@ watch(
         </div>
         <div class="score-detail__map-info">
           <h3 class="score-detail__song">
-            {{ score.mapName }}<span v-if="songSubName" class="score-detail__song-sub"> {{ songSubName }}</span>
+            <SongTitle :name="score.mapName" :sub-name="songSubName" />
           </h3>
           <p class="score-detail__credits">
             <span v-if="score.artistName">{{ score.artistName }}</span>
@@ -676,11 +679,6 @@ watch(
   white-space: nowrap;
   min-width: 0;
   letter-spacing: -0.005em;
-}
-
-.score-detail__song-sub {
-  color: var(--text-secondary);
-  font-weight: 400;
 }
 
 .score-detail__credits {

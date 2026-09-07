@@ -28,6 +28,7 @@ export interface MapChartStatsSource {
 export interface MapResponse {
   id: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   songHash: string
   mapAuthor: string
@@ -41,6 +42,7 @@ export interface MapResponse {
 export interface PublicMapResponse {
   id: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   songHash: string
   mapAuthor: string
@@ -170,6 +172,7 @@ export interface VoteResponse {
   createdAt: string
   updatedAt: string
   songName: string | null
+  songSubName: string | null
   songAuthor: string | null
   mapAuthor: string | null
   coverUrl: string | null

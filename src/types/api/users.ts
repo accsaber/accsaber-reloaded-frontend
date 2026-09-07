@@ -67,6 +67,7 @@ export interface ScoreResponse {
   beatsaverCode: string | null
   characteristic: string
   songName: string
+  songSubName: string | null
   songAuthor: string
   mapAuthor: string
   coverUrl: string

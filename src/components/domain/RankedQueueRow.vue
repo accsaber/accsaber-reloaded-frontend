@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import GlowImage from '@/components/common/GlowImage.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import { DIFF_COLOR } from '@/utils/constants'
@@ -97,10 +98,8 @@ const dateLabel = computed(() => {
     </div>
 
     <div class="queue-row__info">
-      <div class="queue-row__title-row">
-        <span class="queue-row__song">{{ entry.songName }}</span>
-        <span v-if="entry.songSubName" class="queue-row__subname">{{ entry.songSubName }}</span>
-      </div>
+      <SongTitle class="queue-row__song" layout="stacked" :name="entry.songName"
+        :sub-name="entry.songSubName" />
       <div class="queue-row__meta">
         <span class="queue-row__artist">{{ entry.songAuthor }}</span>
         <span class="queue-row__sep">/</span>
@@ -188,25 +187,10 @@ const dateLabel = computed(() => {
   min-width: 0;
 }
 
-.queue-row__title-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
 .queue-row__song {
   font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.queue-row__subname {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

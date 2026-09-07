@@ -10,6 +10,7 @@ import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import QueuedPlaylistsButton from '@/components/domain/QueuedPlaylistsButton.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -405,7 +406,8 @@ function criteriaClassName(row: Record<string, unknown>): string {
 
       <template #cell-song="{ row }">
         <div class="ranking-dashboard__song-cell">
-          <span class="ranking-dashboard__song-name">{{ row.songName }}</span>
+          <SongTitle class="ranking-dashboard__song-name" :name="(row.songName as string)"
+            :sub-name="(row.songSubName as string | null)" />
           <span class="ranking-dashboard__song-meta">
             {{ row.songAuthor }}
             <span class="diff-badge" :class="'diff-badge--' + (row.difficulty as string).toLowerCase()">
@@ -481,7 +483,8 @@ function criteriaClassName(row: Record<string, unknown>): string {
           <GlowImage :src="row.coverUrl as string" alt="" :size="48"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div class="ranking-dashboard__mobile-info">
-            <span class="ranking-dashboard__song-name">{{ row.songName }}</span>
+            <SongTitle class="ranking-dashboard__song-name" :name="(row.songName as string)"
+              :sub-name="(row.songSubName as string | null)" />
             <span class="ranking-dashboard__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>
             <div class="ranking-dashboard__mobile-meta">
               <span v-if="row.status !== 'RANKED'" class="ranking-dashboard__status"

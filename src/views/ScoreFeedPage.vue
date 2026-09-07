@@ -46,6 +46,7 @@ function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
     characteristic: entry.characteristic,
     rawDifficulty: entry.rawDifficulty,
     mapName: entry.mapName,
+    mapSubName: entry.mapSubName,
     artistName: entry.artistName,
     difficulty: entry.difficulty,
     categoryCode: entry.categoryCode,

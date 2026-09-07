@@ -11,6 +11,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LeaderboardPreviewPanel from '@/components/domain/LeaderboardPreviewPanel.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { rankingDashboardRoute } from '@/router'
@@ -596,8 +597,10 @@ watch(availableActions, (actions) => {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </span>
-            <h1 class="rank-detail__song-name">{{ difficulty.songName }}</h1>
-            <p v-if="difficulty.songSubName" class="rank-detail__song-sub">{{ difficulty.songSubName }}</p>
+            <h1 class="rank-detail__song-name">
+              <SongTitle layout="stacked" :name="difficulty.songName"
+                :sub-name="difficulty.songSubName" />
+            </h1>
             <p class="rank-detail__song-meta">{{ difficulty.songAuthor }} - Mapped by {{ difficulty.mapAuthor }}</p>
 
             <div class="rank-detail__primary">
@@ -1126,12 +1129,6 @@ watch(availableActions, (actions) => {
   font-size: var(--text-section);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
-}
-
-.rank-detail__song-sub {
-  font-size: var(--text-body);
-  color: var(--text-secondary);
   margin: 0;
 }
 

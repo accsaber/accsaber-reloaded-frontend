@@ -220,6 +220,7 @@ function toNode(meta: PublicMapDifficultyResponse): CampaignDifficultyResponse {
     nps: meta.nps,
     maxCombo: meta.maxCombo,
     songName: meta.songName,
+    songSubName: meta.songSubName,
     songAuthor: meta.songAuthor,
     mapAuthor: meta.mapAuthor,
     coverUrl: meta.coverUrl,

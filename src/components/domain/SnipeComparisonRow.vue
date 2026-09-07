@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router'
 import CategoryBadge from './CategoryBadge.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
 import DifficultyBadge from './DifficultyBadge.vue'
+import SongTitle from './SongTitle.vue'
 
 const props = defineProps<{
   comparison: SnipeComparisonResponse
@@ -78,16 +79,15 @@ function navigateToMap(e: MouseEvent) {
         :fallback-src="map.cdnCoverUrl && map.coverUrl && map.cdnCoverUrl !== map.coverUrl ? map.coverUrl : null" />
       <div class="snipe-row__map-info">
         <CategoryBadge v-if="categoryCode" :category="categoryCode" size="sm" class="snipe-row__category-eyebrow" />
-        <span class="snipe-row__song" :title="map.songName">{{ map.songName }}</span>
+        <SongTitle class="snipe-row__song" layout="stacked" :name="map.songName"
+          :sub-name="map.songSubName" :title="map.songName" />
         <div class="snipe-row__badges">
           <DifficultyBadge :difficulty="map.difficulty" />
           <ComplexityBadge v-if="map.complexity != null" :complexity="map.complexity" />
           <span v-if="map.characteristic && map.characteristic !== 'Standard'"
             class="snipe-row__characteristic">{{ map.characteristic }}</span>
         </div>
-        <span class="snipe-row__artist">
-          {{ map.songAuthor }}<template v-if="map.songSubName"> · {{ map.songSubName }}</template>
-        </span>
+        <span class="snipe-row__artist">{{ map.songAuthor }}</span>
         <span class="snipe-row__mapper">{{ map.mapAuthor }}</span>
       </div>
     </a>

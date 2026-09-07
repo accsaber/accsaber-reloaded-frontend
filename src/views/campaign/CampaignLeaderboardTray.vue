@@ -6,6 +6,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { getApiErrorMessage } from '@/api/client'
 import type {
@@ -237,7 +238,9 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
             </svg>
           </button>
           <div class="lb__head-meta">
-            <h2 class="lb__title">{{ drillNode.songName }}</h2>
+            <h2 class="lb__title">
+              <SongTitle :name="drillNode.songName" :sub-name="drillNode.songSubName" />
+            </h2>
             <p class="lb__subtitle">{{ formatDifficulty(drillNode.difficulty) }} · map scores</p>
           </div>
         </template>

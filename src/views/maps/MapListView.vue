@@ -3,6 +3,7 @@ import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { TableColumn } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -42,7 +43,8 @@ const listColumns: TableColumn[] = [
     </template>
     <template #cell-songName="{ row }">
       <div class="name-cell">
-        <span class="name">{{ row.songName }}</span>
+        <SongTitle class="name" :name="(row.songName as string)"
+          :sub-name="(row.songSubName as string | null)" />
         <span class="diff-label">{{ row.difficultyLabel }}</span>
       </div>
     </template>
@@ -70,7 +72,8 @@ const listColumns: TableColumn[] = [
           class="list-card-cover" :fallback-src="(row.coverFallback as string | null | undefined) ?? null" />
         <div v-else class="list-card-cover-placeholder" />
         <div class="list-card-info">
-          <span class="name">{{ row.songName }}</span>
+          <SongTitle class="name" :name="(row.songName as string)"
+            :sub-name="(row.songSubName as string | null)" />
           <span class="list-card-meta">{{ row.artistName }} · {{ row.mapperName }}</span>
         </div>
         <div class="list-card-badges">

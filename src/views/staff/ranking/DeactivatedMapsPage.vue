@@ -8,6 +8,7 @@ import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
@@ -110,6 +111,7 @@ const rows = computed(() =>
       coverUrl: d.cdnCoverUrl ?? d.coverUrl,
       coverFallbackUrl: d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null,
       songName: truncate(d.songName, 30),
+      songSubName: d.songSubName,
       songAuthor: truncate(d.songAuthor, 25),
       mapper: d.mapAuthor,
       categoryName: catInfo?.name ?? '',
@@ -202,7 +204,8 @@ watch(
 
         <template #cell-song="{ row }">
           <div class="deactivated-page__song-cell">
-            <span class="deactivated-page__song-name">{{ row.songName }}</span>
+            <SongTitle class="deactivated-page__song-name" :name="(row.songName as string)"
+              :sub-name="(row.songSubName as string | null)" />
             <span class="deactivated-page__song-meta">
               {{ row.songAuthor }}
               <span class="diff-badge" :class="'diff-badge--' + (row.difficulty as string).toLowerCase()">
@@ -243,7 +246,8 @@ watch(
             <GlowImage :src="row.coverUrl as string" alt="" :size="48"
               :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
             <div class="deactivated-page__mobile-info">
-              <span class="deactivated-page__song-name">{{ row.songName }}</span>
+              <SongTitle class="deactivated-page__song-name" :name="(row.songName as string)"
+                :sub-name="(row.songSubName as string | null)" />
               <span class="deactivated-page__song-meta">{{ row.songAuthor }} - {{ row.mapper }}</span>
               <div class="deactivated-page__mobile-meta">
                 <ComplexityBadge

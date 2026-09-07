@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import GlowImage from '@/components/common/GlowImage.vue';
+import SongTitle from '@/components/domain/SongTitle.vue';
 import type { ScoreDisplay } from '@/types/display';
 import { formatRelativeDate, isRecentDate } from '@/utils/formatters';
 import { buildMapRoute } from '@/utils/mapRoute';
@@ -59,7 +60,7 @@ function handleClick(e: MouseEvent) {
     <span class="score-row__rank">#{{ score.leaderboardRank }}</span>
     <GlowImage v-if="score.coverUrl" :src="score.coverUrl" :alt="score.mapName"
       :fallback-src="score.coverFallbackUrl ?? null" />
-    <span class="score-row__map">{{ score.mapName }}</span>
+    <SongTitle class="score-row__map" :name="score.mapName" :sub-name="score.mapSubName" />
     <span class="score-row__difficulty">{{ score.difficulty }}</span>
     <span class="score-row__ap">{{ score.ap.toFixed(2) }}</span>
     <span class="score-row__accuracy">{{ (score.accuracy * 100).toFixed(2) }}%</span>

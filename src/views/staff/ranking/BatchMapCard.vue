@@ -2,6 +2,7 @@
 import GlowImage from '@/components/common/GlowImage.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import type { MapDifficultyResponse } from '@/types/api/maps'
 import { truncate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
@@ -67,7 +68,8 @@ const actionClass = computed(() => (props.action ? `batch-card__action--${props.
     />
 
     <div class="batch-card__info" @click="emit('open', diff.id)">
-      <span class="batch-card__title">{{ truncate(diff.songName, 22) }}</span>
+      <SongTitle class="batch-card__title" :name="truncate(diff.songName, 22)"
+        :sub-name="diff.songSubName ? truncate(diff.songSubName, 22) : null" />
       <span class="batch-card__meta">
         <DifficultyBadge :difficulty="diff.difficulty" />
         <span class="batch-card__author">{{ truncate(diff.songAuthor, 18) }}</span>

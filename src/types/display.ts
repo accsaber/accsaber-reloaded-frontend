@@ -72,6 +72,7 @@ export interface MapDisplay {
   id: string
   difficultyId: string
   songName: string
+  songSubName?: string | null
   artistName: string
   mapperName: string
   coverUrl: string
@@ -95,6 +96,7 @@ export interface ScoreDisplay {
   characteristic?: string
   rawDifficulty?: string
   mapName: string
+  mapSubName?: string | null
   artistName?: string
   difficulty: string
   categoryCode: CategoryCode
@@ -233,6 +235,7 @@ export interface ScoreFeedEntry {
   characteristic?: string
   rawDifficulty?: string
   mapName: string
+  mapSubName?: string | null
   artistName: string
   mapAuthor: string
   coverUrl: string

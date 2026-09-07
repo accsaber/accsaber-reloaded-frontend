@@ -4,6 +4,7 @@ import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
@@ -131,6 +132,7 @@ const rows = computed(() =>
     coverUrl: s.coverUrl,
     coverFallbackUrl: s.coverFallbackUrl,
     mapName: s.mapName,
+    mapSubName: s.mapSubName,
     difficulty: s.difficulty,
     category: (categoryStore.getCategoryInfo(s.categoryCode)?.name ?? s.categoryCode).replace(/ Acc$/, ''),
     categoryCode: s.categoryCode,
@@ -200,7 +202,7 @@ const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
   difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '72px' },
   accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '72px' },
   ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '100px' },
-  weighted_ap: { key: 'weighted', label: 'W.AP', sortable: true, align: 'right', mono: true, width: '76px' },
+  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '112px' },
   complexity: { key: 'complexity', label: 'COMP', sortable: true, align: 'center', mono: true, width: '72px' },
   category: { key: 'category', label: 'Category', align: 'center', width: '90px' },
   streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
@@ -291,8 +293,9 @@ watch(
           :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
       </template>
 
-      <template #cell-mapName="{ value }">
-        <span class="scores-tab__map-name" :title="(value as string)">{{ value }}</span>
+      <template #cell-mapName="{ row }">
+        <SongTitle class="scores-tab__map-name" :name="(row.mapName as string)"
+          :sub-name="(row.mapSubName as string | null)" :title="(row.mapName as string)" />
       </template>
 
       <template #cell-ap="{ row }">
@@ -394,7 +397,8 @@ watch(
           <div class="ps-card__grid">
             <span class="ps-card__name-cell">
               <span class="ps-card__rank" :class="getRankClass(row.leaderboardRank as number)">#{{ row.leaderboardRank }}</span>
-              <span class="ps-card__name" :title="(row.mapName as string)">{{ row.mapName }}</span>
+              <SongTitle class="ps-card__name" :name="(row.mapName as string)"
+                :sub-name="(row.mapSubName as string | null)" :title="(row.mapName as string)" />
               <span v-if="isScoreFieldVisible('difficulty')" class="ps-card__diff">{{ row.difficulty }}</span>
             </span>
             <span v-if="isScoreFieldVisible('accuracy')" class="ps-card__acc">

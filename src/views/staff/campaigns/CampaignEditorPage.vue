@@ -8,6 +8,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignPresenceActionGlyph from '@/components/domain/CampaignPresenceActionGlyph.vue'
 import CampaignRoadmap from '@/components/domain/CampaignRoadmap.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { formatDifficulty } from '@/utils/mappers'
 import {
   colorForUser,
@@ -590,7 +591,10 @@ function peerActivity(p: PresencePeer): string {
               />
             </div>
             <div class="campaign-editor__node-song-meta">
-              <h3>{{ selectedDifficulty.songName }}</h3>
+              <h3>
+                <SongTitle :name="selectedDifficulty.songName"
+                  :sub-name="selectedDifficulty.songSubName" />
+              </h3>
               <p>{{ selectedDifficulty.songAuthor }} · {{ selectedDifficulty.mapAuthor }}</p>
               <p class="campaign-editor__node-diff">
                 {{ formatDifficulty(selectedDifficulty.difficulty) }}

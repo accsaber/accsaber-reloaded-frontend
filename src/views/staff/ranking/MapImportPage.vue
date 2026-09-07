@@ -4,6 +4,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { rankingDashboardRoute } from '@/router'
@@ -205,8 +206,10 @@ function goToDetail(difficultyId: string) {
       <div class="map-import__hero">
         <GlowImage :src="coverUrl" alt="" :size="96" />
         <div class="map-import__hero-info">
-          <h2 class="map-import__song-name">{{ bsMap.metadata.songName }}</h2>
-          <p v-if="bsMap.metadata.songSubName" class="map-import__song-sub">{{ bsMap.metadata.songSubName }}</p>
+          <h2 class="map-import__song-name">
+            <SongTitle layout="stacked" :name="bsMap.metadata.songName"
+              :sub-name="bsMap.metadata.songSubName" />
+          </h2>
           <p class="map-import__song-meta">
             {{ bsMap.metadata.songAuthorName }} - Mapped by {{ bsMap.metadata.levelAuthorName }}
           </p>
@@ -346,12 +349,6 @@ function goToDetail(difficultyId: string) {
   font-size: var(--text-section);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
-}
-
-.map-import__song-sub {
-  font-size: var(--text-body);
-  color: var(--text-secondary);
   margin: 0;
 }
 

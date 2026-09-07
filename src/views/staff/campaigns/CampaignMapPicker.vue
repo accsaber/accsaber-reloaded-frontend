@@ -9,6 +9,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
@@ -274,7 +275,8 @@ function commit() {
                 </span>
                 <span class="map-picker__meta">
                   <CategoryBadge :category="categoryCodeFor(diff)" size="sm" class="map-picker__cat" />
-                  <span class="map-picker__title">{{ diff.songName }}</span>
+                  <SongTitle class="map-picker__title" :name="diff.songName"
+                    :sub-name="diff.songSubName" />
                   <span class="map-picker__sub">
                     <span>{{ diff.songAuthor }}</span>
                     <span class="map-picker__sep" aria-hidden="true">·</span>
@@ -347,7 +349,8 @@ function commit() {
                 <img v-if="pickCoverUrl(d)" :src="pickCoverUrl(d)" :alt="d.songName" loading="lazy" />
               </span>
               <span class="map-picker__staged-meta">
-                <span class="map-picker__staged-title">{{ d.songName }}</span>
+                <SongTitle class="map-picker__staged-title" :name="d.songName"
+                  :sub-name="d.songSubName" />
                 <span class="map-picker__staged-sub">{{ d.songAuthor }}</span>
               </span>
               <DifficultyBadge :difficulty="d.difficulty" />

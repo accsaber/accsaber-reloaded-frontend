@@ -2,6 +2,7 @@
 import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useCategoryStore } from '@/stores/categories'
 import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
 import type { TableColumn } from '@/types/display'
@@ -84,7 +85,8 @@ function pushRow(row: Record<string, unknown>) {
         <div class="map-cell__info">
           <div class="map-cell__title-row">
             <span class="map-cell__dot" :style="{ background: categoryDotColor(row.categoryId as string) }" />
-            <span class="map-cell__name">{{ row.songName }}</span>
+            <SongTitle class="map-cell__name" :name="(row.songName as string)"
+              :sub-name="(row.songSubName as string | null)" />
           </div>
           <div class="map-cell__meta">
             <span class="map-cell__mapper">{{ row.mapAuthor }}</span>
@@ -130,7 +132,8 @@ function pushRow(row: Record<string, unknown>) {
           <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div class="stats-card__map-info">
-            <span class="stats-card__map-name">{{ row.songName }}</span>
+            <SongTitle class="stats-card__map-name" :name="(row.songName as string)"
+              :sub-name="(row.songSubName as string | null)" />
             <span class="stats-card__map-meta"><span class="map-cell__dot"
                 :style="{ background: categoryDotColor(row.categoryId as string) }" /> {{ row.mapAuthor }} · {{
                   formatDifficulty(row.difficulty as string) }}</span>

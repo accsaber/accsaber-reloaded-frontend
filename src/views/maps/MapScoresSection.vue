@@ -29,6 +29,7 @@ const props = defineProps<{
   difficultyId: string
   mapId?: string
   mapName?: string
+  mapSubName?: string | null
   artistName?: string
   coverUrl?: string
   coverFallbackUrl?: string | null
@@ -111,7 +112,7 @@ const TRAILING_COLUMNS: TableColumn[] = [
 const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
   accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '72px' },
   ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '80px' },
-  weighted_ap: { key: 'weighted', label: 'W.AP', sortable: true, align: 'right', mono: true, width: '80px' },
+  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '112px' },
   streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
   max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
   pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '82px' },
@@ -200,6 +201,7 @@ function openDetail(userId: string, event: Event) {
     mapId: props.mapId,
     mapDifficultyId: props.difficultyId,
     mapName: props.mapName ?? 'Unknown Map',
+    mapSubName: props.mapSubName ?? null,
     artistName: props.artistName,
     difficulty: props.difficulty ?? '',
     categoryCode: props.categoryCode ?? 'overall',

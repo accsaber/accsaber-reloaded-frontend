@@ -103,6 +103,7 @@ export interface MilestoneCompletionResponse {
   cdnCoverUrl?: string | null
   difficulty?: string
   songName?: string
+  songSubName?: string
   songAuthor?: string
   mapAuthor?: string
 }

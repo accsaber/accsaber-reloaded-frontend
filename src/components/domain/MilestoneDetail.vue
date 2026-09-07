@@ -3,6 +3,7 @@ import MilestoneHolderTooltip from '@/components/domain/MilestoneHolderTooltip.v
 import type { MilestoneCompletionResponse } from '@/types/api/milestones';
 import { tierColor as getTierColor, formatPercent } from '@/utils/constants';
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue';
+import SongTitle from '@/components/domain/SongTitle.vue';
 import { resolveMilestoneGlyph, type MilestoneGlyphKey } from '@/utils/milestoneIcons';
 import { formatDifficulty } from '@/utils/mappers';
 import { computed, ref } from 'vue';
@@ -170,8 +171,11 @@ function handleMilestoneCoverError(event: Event) {
           <div class="milestone-detail__score-info">
             <span class="milestone-detail__score-text">
               <strong>{{ accuracy }}%</strong> on
-              <em>{{ milestone.songName ?? 'Unknown Song' }}{{ milestone.songAuthor ? ` - ${milestone.songAuthor}` : ''
-              }}</em>
+              <em>
+                <SongTitle
+                  :name="milestone.songName ?? 'Unknown Song'"
+                  :sub-name="milestone.songSubName"
+                />{{ milestone.songAuthor ? ` - ${milestone.songAuthor}` : '' }}</em>
               <template v-if="milestone.difficulty"> ({{ formatDifficulty(milestone.difficulty) }})</template>
             </span>
             <span v-if="milestone.mapAuthor" class="milestone-detail__mapper">Mapped by {{ milestone.mapAuthor }}</span>
@@ -206,8 +210,11 @@ function handleMilestoneCoverError(event: Event) {
         <div class="milestone-detail__score-info">
           <span class="milestone-detail__score-text">
             Completed with <strong>{{ accuracy }}%</strong> on
-            <em>{{ milestone.songName ?? 'Unknown Song' }}{{ milestone.songAuthor ? ` - ${milestone.songAuthor}` : ''
-            }}</em>
+            <em>
+              <SongTitle
+                :name="milestone.songName ?? 'Unknown Song'"
+                :sub-name="milestone.songSubName"
+              />{{ milestone.songAuthor ? ` - ${milestone.songAuthor}` : '' }}</em>
             <template v-if="milestone.difficulty"> ({{ formatDifficulty(milestone.difficulty) }})</template>
           </span>
           <span v-if="milestone.mapAuthor" class="milestone-detail__mapper">Mapped by {{ milestone.mapAuthor }}</span>

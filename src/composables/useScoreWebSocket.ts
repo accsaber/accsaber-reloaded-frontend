@@ -74,6 +74,7 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
       characteristic: raw.characteristic,
       rawDifficulty: raw.difficulty,
       mapName: raw.songName ?? 'Unknown',
+      mapSubName: raw.songSubName ?? null,
       artistName: raw.songAuthor ?? '',
       mapAuthor: raw.mapAuthor ?? '',
       coverUrl: pickCoverUrl(raw),

@@ -24,6 +24,7 @@ import CampaignRewardNotice from '@/views/campaign/CampaignRewardNotice.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import {
   onAvatarError,
   pickAvatarFallback,
@@ -1082,7 +1083,10 @@ function unpinTooltip() {
                   :alt="displayedDifficulty.songName" loading="lazy" />
               </div>
               <div class="campaign-detail__node-meta">
-                <h2 class="campaign-detail__node-title">{{ displayedDifficulty.songName }}</h2>
+                <h2 class="campaign-detail__node-title">
+                  <SongTitle :name="displayedDifficulty.songName"
+                    :sub-name="displayedDifficulty.songSubName" />
+                </h2>
                 <p class="campaign-detail__node-artist">
                   {{ displayedDifficulty.songAuthor }}
                   <span class="campaign-detail__node-sep">·</span>
@@ -1180,7 +1184,7 @@ function unpinTooltip() {
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </span>
-                  {{ pr.songName }}
+                  <SongTitle :name="pr.songName" :sub-name="pr.songSubName" />
                 </li>
               </ul>
             </div>

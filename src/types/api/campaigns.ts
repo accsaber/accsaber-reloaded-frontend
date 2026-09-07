@@ -113,6 +113,7 @@ export interface CampaignDifficultyResponse extends MapChartStatsSource {
   beatsaverCode: string | null
   maxScore: number | null
   songName: string
+  songSubName: string | null
   songAuthor: string
   mapAuthor: string
   coverUrl: string

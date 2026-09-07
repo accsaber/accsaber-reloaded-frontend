@@ -176,6 +176,7 @@ const listRows = computed(() =>
     cover: m.coverUrl,
     coverFallback: m.coverFallbackUrl,
     songName: m.songName,
+    songSubName: m.songSubName,
     difficultyLabel: m.difficultyLabel,
     difficulty: m.difficulty,
     artistName: m.artistName,

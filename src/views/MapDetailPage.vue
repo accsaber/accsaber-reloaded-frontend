@@ -7,6 +7,7 @@ import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
@@ -303,7 +304,9 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 
         <div class="map-detail__details">
           <div class="map-detail__name-row">
-            <h1 class="map-detail__song">{{ map.songName }}</h1>
+            <h1 class="map-detail__song">
+              <SongTitle :name="map.songName" :sub-name="map.songSubName" />
+            </h1>
           </div>
           <p class="map-detail__artist">{{ map.songAuthor }}</p>
           <p class="map-detail__mapper">Mapped by <strong>{{ map.mapAuthor }}</strong></p>
@@ -386,7 +389,8 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
         :class="{ 'map-detail__wide': activeTab === 'leaderboard' }">
         <div v-show="activeTab === 'leaderboard'">
           <MapScoresSection v-if="activeDifficultyId" :difficulty-id="activeDifficultyId" :map-id="map?.id"
-            :map-name="map?.songName" :artist-name="map?.songAuthor" :map-author="map?.mapAuthor"
+            :map-name="map?.songName" :map-sub-name="map?.songSubName"
+            :artist-name="map?.songAuthor" :map-author="map?.mapAuthor"
             :cover-url="coverUrl" :cover-fallback-url="coverFallbackUrl" :category-code="categoryCode"
             :difficulty="activeDifficulty ? formatDifficulty(activeDifficulty.difficulty) : undefined"
             :complexity="activeDifficulty?.complexity ?? null"

@@ -2,6 +2,7 @@
 import GlowImage from '@/components/common/GlowImage.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
+import SongTitle from '@/components/domain/SongTitle.vue'
 import { onAvatarError } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreFeedEntry } from '@/types/display'
@@ -68,7 +69,7 @@ const handleAvatarError = (e: Event) => onAvatarError(props.entry.avatarFallback
       </div>
 
       <div class="feed-card__info">
-        <span class="feed-card__song">{{ entry.mapName }}</span>
+        <SongTitle class="feed-card__song" :name="entry.mapName" :sub-name="entry.mapSubName" />
         <span class="feed-card__meta">{{ entry.artistName }} - {{ entry.mapAuthor }}</span>
         <span class="feed-card__row3">
           <span class="feed-card__diff">{{ entry.difficulty }}</span>
