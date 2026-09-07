@@ -99,25 +99,25 @@ const showStreak115 = computed(() =>
 )
 
 const LEADING_COLUMNS: TableColumn[] = [
-  { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: '80px' },
-  { key: 'player', label: 'Player', align: 'left', width: '100%' },
-  { key: 'score', label: 'Score', sortable: true, align: 'right', mono: true, width: '80px' },
+  { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: '76px' },
+  { key: 'player', label: 'Player', align: 'left', width: '200px' },
+  { key: 'score', label: 'Score', sortable: true, align: 'right', mono: true, width: '88px' },
 ]
 
 const TRAILING_COLUMNS: TableColumn[] = [
-  { key: 'detail', label: '', align: 'center', width: '76px', noLink: true },
+  { key: 'detail', label: '', align: 'center', width: '80px', noLink: true },
 ]
 
 const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
-  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '80px' },
+  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '72px' },
   ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '80px' },
-  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '80px' },
+  weighted_ap: { key: 'weighted', label: 'W.AP', sortable: true, align: 'right', mono: true, width: '80px' },
   streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
-  max_streak_115: { key: 'maxStreak115', label: 'Max 115s', sortable: true, align: 'right', mono: true, width: '76px' },
-  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '70px' },
-  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '70px' },
-  last_played_at: { key: 'lastPlayedAt', label: 'Last played', sortable: true, align: 'right', width: '92px' },
-  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
+  max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
+  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '82px' },
+  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '72px' },
+  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '80px' },
+  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '84px' },
 }
 
 const columns = computed(() =>
@@ -305,7 +305,7 @@ watch(
             :country="(row.country as string)">
             <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)"
               :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-            <span class="map-scores__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
+            <span class="map-scores__name" :title="(row.userName as string)">{{ row.userName }}</span>
             <CountryFlag :country="(row.country as string)" />
             <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
           </PlayerTooltipTrigger>

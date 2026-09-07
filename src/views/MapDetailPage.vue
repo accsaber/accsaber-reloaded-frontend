@@ -379,9 +379,11 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
         </div>
       </div>
 
-      <BaseTabs v-if="isActiveDifficultyRanked" :tabs="contentTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
+      <BaseTabs v-if="isActiveDifficultyRanked" :tabs="contentTabs" :model-value="activeTab"
+        :class="{ 'map-detail__wide': activeTab === 'leaderboard' }" @update:model-value="activeTab = $event" />
 
-      <div v-if="isActiveDifficultyRanked" class="map-detail__content">
+      <div v-if="isActiveDifficultyRanked" class="map-detail__content"
+        :class="{ 'map-detail__wide': activeTab === 'leaderboard' }">
         <div v-show="activeTab === 'leaderboard'">
           <MapScoresSection v-if="activeDifficultyId" :difficulty-id="activeDifficultyId" :map-id="map?.id"
             :map-name="map?.songName" :artist-name="map?.songAuthor" :map-author="map?.mapAuthor"
@@ -411,9 +413,13 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 
 .map-detail>*:not(.map-detail__bg) {
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--page-column, 1100px);
   position: relative;
   z-index: 1;
+}
+
+.map-detail__wide {
+  --page-column: var(--page-width-wide);
 }
 
 .map-detail__bg {

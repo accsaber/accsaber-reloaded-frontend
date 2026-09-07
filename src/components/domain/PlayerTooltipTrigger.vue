@@ -145,6 +145,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+  min-width: 0;
 }
 </style>
 

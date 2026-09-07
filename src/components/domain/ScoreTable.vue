@@ -42,8 +42,11 @@ const SHORT_LABEL_MAP: Record<string, string> = {
   'Acc': 'Accuracy',
   'AP': 'AP',
   '115s': '115 streak',
+  'Max': 'Max 115 streak',
   'Diff': 'Difficulty',
   'COMP': 'Complexity',
+  'W.AP': 'Weighted AP',
+  'Played': 'Last played',
 }
 
 const SORT_PRIORITY: Record<string, number> = { weighted: 0, date: 1 }

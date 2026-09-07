@@ -20,15 +20,15 @@ const emit = defineEmits<{ sort: [key: string] }>()
 const categoryStore = useCategoryStore()
 
 const listColumns: TableColumn[] = [
-  { key: 'cover', label: '', width: '56px' },
+  { key: 'cover', label: '', width: '76px' },
   { key: 'songName', label: 'Name', sortable: true, align: 'left' },
   { key: 'artistName', label: 'Artist', align: 'left' },
   { key: 'mapperName', label: 'Mapper', align: 'left' },
-  { key: 'category', label: 'Category', sortable: true, align: 'center', width: '100px' },
-  { key: 'difficulty', label: 'Difficulty', align: 'center', width: '100px' },
-  { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '100px' },
-  { key: 'totalScores', label: 'Scores', sortable: true, align: 'right', mono: true, width: '80px' },
-  { key: 'rankedAt', label: 'Released', sortable: true, align: 'right', width: '100px' },
+  { key: 'category', label: 'Category', sortable: true, align: 'center', width: '112px' },
+  { key: 'difficulty', label: 'Difficulty', align: 'center', width: '104px' },
+  { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '124px' },
+  { key: 'totalScores', label: 'Scores', sortable: true, align: 'right', mono: true, width: '96px' },
+  { key: 'rankedAt', label: 'Released', sortable: true, align: 'right', width: '112px' },
 ]
 </script>
 

@@ -135,7 +135,7 @@ const SECTION_TITLES: Record<SectionKey, string> = {
 }
 const sectionTitle = computed(() => SECTION_TITLES[activeSection.value])
 
-const detailColumn: TableColumn = { key: 'detail', label: '', width: '44px', align: 'center', noLink: true }
+const detailColumn: TableColumn = { key: 'detail', label: '', width: '64px', align: 'center', noLink: true }
 
 const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
   'streaks': [

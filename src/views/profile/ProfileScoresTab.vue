@@ -187,28 +187,28 @@ const showStreak115 = computed(() =>
 )
 
 const LEADING_COLUMNS: TableColumn[] = [
-  { key: 'leaderboardRank', label: '#', sortable: true, align: 'right', mono: true, width: '46px' },
-  { key: 'cover', label: '', width: '44px' },
-  { key: 'mapName', label: 'Map', align: 'left', width: '100%' },
+  { key: 'leaderboardRank', label: '#', sortable: true, align: 'right', mono: true, width: '44px' },
+  { key: 'cover', label: '', width: '60px' },
+  { key: 'mapName', label: 'Map', align: 'left', width: '200px' },
 ]
 
 const TRAILING_COLUMNS: TableColumn[] = [
-  { key: 'actions', label: '', align: 'center', width: '96px', noLink: true },
+  { key: 'actions', label: '', align: 'center', width: '84px', noLink: true },
 ]
 
 const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
-  difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '64px' },
-  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '76px' },
-  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '88px' },
-  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '76px' },
-  complexity: { key: 'complexity', label: 'COMP', sortable: true, align: 'center', mono: true, width: '64px' },
-  category: { key: 'category', label: 'Category', align: 'center', width: '80px' },
-  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '56px' },
-  max_streak_115: { key: 'maxStreak115', label: 'Max 115s', sortable: true, align: 'right', mono: true, width: '72px' },
-  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '58px' },
-  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '58px' },
-  last_played_at: { key: 'lastPlayedAt', label: 'Last played', sortable: true, align: 'right', width: '92px' },
-  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '72px' },
+  difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '72px' },
+  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '72px' },
+  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '100px' },
+  weighted_ap: { key: 'weighted', label: 'W.AP', sortable: true, align: 'right', mono: true, width: '76px' },
+  complexity: { key: 'complexity', label: 'COMP', sortable: true, align: 'center', mono: true, width: '72px' },
+  category: { key: 'category', label: 'Category', align: 'center', width: '90px' },
+  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
+  max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
+  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '82px' },
+  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '72px' },
+  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '80px' },
+  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
 }
 
 const columns = computed(() =>
@@ -292,9 +292,7 @@ watch(
       </template>
 
       <template #cell-mapName="{ value }">
-        <span class="scores-tab__map-name" :title="(value as string)">
-          {{ (value as string).length > 24 ? (value as string).slice(0, 24) + '…' : value }}
-        </span>
+        <span class="scores-tab__map-name" :title="(value as string)">{{ value }}</span>
       </template>
 
       <template #cell-ap="{ row }">

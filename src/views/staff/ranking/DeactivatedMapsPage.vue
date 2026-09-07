@@ -81,11 +81,11 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 })
 
 const columns: TableColumn[] = [
-  { key: 'cover', label: '', width: '48px' },
+  { key: 'cover', label: '', width: '72px' },
   { key: 'song', label: 'Song', align: 'left' },
   { key: 'mapper', label: 'Mapper', align: 'left', width: '140px' },
   { key: 'category', label: 'Category', align: 'center', width: '120px' },
-  { key: 'complexity', label: 'Complexity', align: 'center', width: '100px' },
+  { key: 'complexity', label: 'Complexity', align: 'center', width: '108px' },
   { key: 'created', label: 'Created', sortable: true, align: 'right', width: '120px' },
   { key: 'lastUpdatedBy', label: 'Last Edited By', align: 'left', width: '140px' },
 ]

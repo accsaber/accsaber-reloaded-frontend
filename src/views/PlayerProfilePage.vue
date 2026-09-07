@@ -800,7 +800,7 @@ watch(activeCategory, (newCategory) => {
           :loading="pinnedMilestonesLoading" :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
           :glyphs="milestoneGlyphs" @unpin="onMilestonePinToggle" />
 
-        <div class="profile-page__tabs-row">
+        <div class="profile-page__tabs-row" :class="{ 'profile-page__wide': activeTab === 'scores' }">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
           <div v-if="activeTab === 'scores'" class="profile-page__scores-tools">
             <ScoresPlaylistButton v-if="scorePlaylistParams" :user-id="userId" :params="scorePlaylistParams" />
@@ -808,7 +808,7 @@ watch(activeCategory, (newCategory) => {
           </div>
         </div>
 
-        <div class="profile-page__content">
+        <div class="profile-page__content" :class="{ 'profile-page__wide': activeTab === 'scores' }">
           <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
             :search="scoreSearch" :is-self-profile="isSelfProfile" :pinned-score-ids="pinnedScoreIds"
             :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle"
@@ -825,7 +825,7 @@ watch(activeCategory, (newCategory) => {
 
         <Transition name="cat-dock">
           <div v-if="showCategoryDock" class="profile-page__cat-dock">
-            <div class="profile-page__cat-dock-inner">
+            <div class="profile-page__cat-dock-inner" :class="{ 'profile-page__wide': activeTab === 'scores' }">
               <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
                 @update:model-value="activeCategory = $event" />
             </div>
@@ -848,8 +848,12 @@ watch(activeCategory, (newCategory) => {
 
 .profile-page>*:not(.profile-page__bg):not(.profile-page__cat-dock) {
   width: 100%;
-  max-width: 1280px;
+  max-width: var(--page-column, 1280px);
   position: relative;
+}
+
+.profile-page__wide {
+  --page-column: var(--page-width-wide);
 }
 
 .profile-page__cat-dock {
@@ -863,7 +867,7 @@ watch(activeCategory, (newCategory) => {
 }
 
 .profile-page__cat-dock-inner {
-  max-width: 1280px;
+  max-width: var(--page-column, 1280px);
   margin: 0 auto;
   padding: 0 var(--space-xl);
   overflow-x: auto;

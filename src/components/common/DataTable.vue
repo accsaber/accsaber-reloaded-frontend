@@ -28,6 +28,13 @@ const emit = defineEmits<{
 const router = useRouter()
 const slots = useSlots()
 const skeletonCount = computed(() => props.loadingRows ?? 5)
+const FLEX_COLUMN_WIDTH = 120
+const minWidth = computed(
+  () => props.columns.reduce(
+    (sum, col) => sum + (Number.parseInt(col.width ?? '', 10) || FLEX_COLUMN_WIDTH),
+    0,
+  ) + 'px',
+)
 const dense = computed(() => props.dense || props.columns.length >= 13)
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
@@ -68,7 +75,7 @@ function sortIcon(col: TableColumn): string {
 <template>
   <div class="data-table-wrapper">
     <div class="data-table-scroll">
-      <table class="data-table" :class="{ 'data-table--dense': dense }">
+      <table class="data-table" :class="{ 'data-table--dense': dense }" :style="{ minWidth }">
         <thead>
           <tr>
             <th v-for="col in columns" :key="col.key" class="data-table__th" :class="{
@@ -164,6 +171,19 @@ function sortIcon(col: TableColumn): string {
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.data-table__th,
+.data-table__td,
+.data-table__cell-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table__td,
+.data-table__cell-link {
+  white-space: nowrap;
 }
 
 .data-table__th {
@@ -253,7 +273,7 @@ function sortIcon(col: TableColumn): string {
 .data-table--dense .data-table__th,
 .data-table--dense .data-table__td,
 .data-table--dense .data-table__cell-link {
-  padding-inline: calc(var(--space-sm) * 1.5);
+  padding-inline: calc(var(--space-sm) * 1.25);
 }
 
 .data-table--dense .data-table__td--linked {
