@@ -272,10 +272,10 @@ onMounted(resolveProfile)
     <WikiHeading id="events">Events work differently</WikiHeading>
     <p>
       Missions that show up during a live event do not go through any of this. Their targets are
-      fixed by whoever built the event, identical for everyone, and they unlock on a schedule rather
-      than rotating daily. They also include a few mission types that only ever exist inside events,
-      like clearing campaigns or playing maps from the newest batch. The daily and weekly pools
-      are a separate thing from all of that.
+      fixed by whoever built the event and identical for everyone, they unlock in weeks on a
+      schedule, and some of them only ever exist inside events at all. The daily and weekly pools
+      are a separate thing from all of that, and
+      <RouterLink to="/wiki/events">Events</RouterLink> covers how the weeks work.
     </p>
   </WikiProse>
 </template>
