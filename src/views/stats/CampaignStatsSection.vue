@@ -16,6 +16,8 @@ import type {
 import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
+import { useRouter } from 'vue-router'
 import CampaignHardestNodes from './CampaignHardestNodes.vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
 import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
@@ -38,6 +40,7 @@ interface CampaignBoardDef {
   columns: TableColumn[]
   minParticipants: boolean
   creatorCountry: boolean
+  players?: boolean
   fetch?: (api: StatsApi, params: PaginationParams, filters: CampaignStatsParams) => Promise<Page<unknown>>
 }
 
@@ -87,6 +90,7 @@ const BOARDS: CampaignBoardDef[] = [
     description: 'Top campaign finishers',
     minParticipants: false,
     creatorCountry: false,
+    players: true,
     columns: [
       rankCol, playerCol,
       { key: 'completed', label: 'Completed', align: 'right', mono: true, width: '125px' },
@@ -103,6 +107,7 @@ const BOARDS: CampaignBoardDef[] = [
     description: 'Builders by reach',
     minParticipants: false,
     creatorCountry: true,
+    players: true,
     columns: [
       rankCol,
       { key: 'player', label: 'Creator', align: 'left' },
@@ -120,6 +125,7 @@ const BOARD_MAP = new Map<CampaignBoard, CampaignBoardDef>(BOARDS.map((b) => [b.
 const pickerOptions = BOARDS.map((b) => ({ key: b.key, label: b.label, icon: b.icon, description: b.description }))
 const RANGE_KEYS = Object.keys(STATS_CHART_RANGE_PARAMS) as TimeRange[]
 
+const router = useRouter()
 const { currentPage, param, multiParam, numberParam, patch, setParam, toggleMulti, setPage } = useStatsQueryState()
 
 const activeBoard = computed<CampaignBoard>(() => {
@@ -151,7 +157,19 @@ function selectBoard(board: CampaignBoard) {
   patch({ board: board === 'funnel' ? undefined : board, campaign: undefined })
 }
 
-function openNodes(row: Record<string, unknown>) {
+function playerRoute(row: Record<string, unknown>): RouteLocationRaw | undefined {
+  const userId = row.userId as string | undefined
+  return userId ? { name: 'player-profile', params: { userId } } : undefined
+}
+
+const rowTo = computed(() => (boardDef.value.players ? playerRoute : undefined))
+
+function onRowClick(row: Record<string, unknown>) {
+  const target = playerRoute(row)
+  if (boardDef.value.players) {
+    if (target) router.push(target)
+    return
+  }
   const campaignId = row.campaignId as string | undefined
   if (campaignId) patch({ campaign: campaignId }, true)
 }
@@ -298,11 +316,11 @@ watch(
 
 
       <DataTable :columns="boardDef.columns" :rows="rows" :loading="loading" :loading-rows="10" row-key="rank"
-        :row-clickable="activeBoard === 'funnel'"
+        :row-clickable="activeBoard === 'funnel' || !!boardDef.players" :row-to="rowTo"
         :empty-message="activeBoard === 'funnel'
           ? 'No campaigns match these filters. Try lowering the minimum participants.'
           : 'No records found.'"
-        @row-click="openNodes">
+        @row-click="onRowClick">
         <template #cell-rank="{ value }">
           <span class="campaign-stats__rank">#{{ value }}</span>
         </template>

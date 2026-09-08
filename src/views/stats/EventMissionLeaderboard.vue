@@ -6,6 +6,8 @@ import type { EventMissionLeaderboardResponse } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
+import { useRouter } from 'vue-router'
 import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
 import { NO_VALUE, fmtInt } from './statsFormat'
 
@@ -26,6 +28,18 @@ const COLUMNS: TableColumn[] = [
   { key: 'itemsAwarded', label: 'Items', align: 'right', mono: true, width: '90px' },
   { key: 'lastCompletedAt', label: 'Last done', align: 'right', width: '130px' },
 ]
+
+const router = useRouter()
+
+function playerRoute(row: Record<string, unknown>): RouteLocationRaw | undefined {
+  const userId = row.userId as string | undefined
+  return userId ? { name: 'player-profile', params: { userId } } : undefined
+}
+
+function onRowClick(row: Record<string, unknown>) {
+  const target = playerRoute(row)
+  if (target) router.push(target)
+}
 
 const page = ref(1)
 const loading = ref(false)
@@ -89,8 +103,8 @@ watch(page, () => fetchLeaderboard())
       </button>
     </header>
 
-    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="5" row-key="rank"
-      empty-message="Nobody has completed this mission yet.">
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="5" row-key="rank" row-clickable
+      :row-to="playerRoute" empty-message="Nobody has completed this mission yet." @row-click="onRowClick">
       <template #cell-rank="{ value }"><span class="mission-lb__rank">#{{ fmtInt(value) }}</span></template>
       <template #cell-player="{ row }">
         <LeaderboardPlayerCell :user-id="(row.userId as string)" :user-name="(row.userName as string)"

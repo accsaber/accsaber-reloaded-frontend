@@ -19,6 +19,8 @@ import type {
 import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
+import { useRouter } from 'vue-router'
 import LeaderboardPicker from './LeaderboardPicker.vue'
 import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
 import MissionCalibrationDetail from './MissionCalibrationDetail.vue'
@@ -52,6 +54,7 @@ interface MissionBoardDef {
   description: string
   columns: TableColumn[]
   filters: MissionFilterKey[]
+  players?: boolean
   fetch?: (api: StatsApi, params: PaginationParams, filters: MissionStatsParams) => Promise<Page<unknown>>
 }
 
@@ -118,6 +121,7 @@ const BOARDS: MissionBoardDef[] = [
     icon: 'trophy',
     description: 'Top mission finishers',
     filters: ['pool', 'type', 'tier'],
+    players: true,
     columns: [
       rankCol, playerCol,
       { key: 'missionsCompleted', label: 'Missions', align: 'right', mono: true, width: '120px' },
@@ -131,6 +135,7 @@ const BOARDS: MissionBoardDef[] = [
     icon: 'star',
     description: 'Lifetime mission XP',
     filters: [],
+    players: true,
     columns: [
       rankCol, playerCol,
       { key: 'missionXp', label: 'Mission XP', align: 'right', mono: true, width: '140px' },
@@ -145,6 +150,7 @@ const pickerOptions = BOARDS.map((b) => ({ key: b.key, label: b.label, icon: b.i
 
 const RANGE_KEYS = Object.keys(STATS_CHART_RANGE_PARAMS) as TimeRange[]
 
+const router = useRouter()
 const categoryStore = useCategoryStore()
 const { currentPage, param, multiParam, numberParam, patch, setParam, toggleMulti, setPage } = useStatsQueryState()
 
@@ -239,7 +245,19 @@ function setNumberParam(key: string, raw: string) {
   patch({ [key]: raw.trim() || undefined })
 }
 
-function openDetail(row: Record<string, unknown>) {
+function playerRoute(row: Record<string, unknown>): RouteLocationRaw | undefined {
+  const userId = row.userId as string | undefined
+  return userId ? { name: 'player-profile', params: { userId } } : undefined
+}
+
+const rowTo = computed(() => (boardDef.value.players ? playerRoute : undefined))
+
+function onRowClick(row: Record<string, unknown>) {
+  const target = playerRoute(row)
+  if (boardDef.value.players) {
+    if (target) router.push(target)
+    return
+  }
   const templateId = row.templateId as string | undefined
   if (templateId) patch({ template: templateId }, true)
 }
@@ -447,9 +465,9 @@ watch(
       <p v-if="stillAccruing" class="mission-stats__note">No missions in view have expired yet.</p>
 
       <DataTable :columns="boardDef.columns" :rows="rows" :loading="loading" :loading-rows="10" row-key="rank"
-        :row-clickable="activeBoard === 'calibration'"
+        :row-clickable="activeBoard === 'calibration' || !!boardDef.players" :row-to="rowTo"
         :empty-message="activeBoard === 'calibration' ? 'No missions match these filters yet.' : 'No records found.'"
-        @row-click="openDetail">
+        @row-click="onRowClick">
         <template #cell-rank="{ value }">
           <span class="mission-stats__rank">#{{ value }}</span>
         </template>
