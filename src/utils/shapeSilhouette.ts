@@ -83,18 +83,12 @@ function boundsFor(shape: BorderShapeValue, paths: BorderShapePathValue[], viewB
   return result
 }
 
-function largest(list: FrameBounds[]): FrameBounds | null {
-  return list.reduce<FrameBounds | null>((best, b) => (b.w * b.h > (best ? best.w * best.h : 0) ? b : best), null)
-}
-
 export function shapeFrameBounds(shape: BorderShapeValue | null | undefined): FrameBounds {
   const viewBox = shapeViewBox(shape)
   if (!shape) return viewBox
   const paths = shapePaths(shape)
-  const themed = paths.filter((p) => isThemed(p.fill) || isThemed(p.stroke))
-  if (themed.length > 0) return boundsFor(shape, themed, viewBox, largest)
-  if (paths.length > 0) return boundsFor(shape, paths, viewBox, unionBounds)
-  return viewBox
+  if (paths.length === 0) return viewBox
+  return unionBounds([boundsFor(shape, paths, viewBox, unionBounds), viewBox]) ?? viewBox
 }
 
 export function shapeSilhouetteMask(shape: BorderShapeValue | null | undefined): ShapeMask | null {
@@ -103,7 +97,7 @@ export function shapeSilhouetteMask(shape: BorderShapeValue | null | undefined):
   const paths = shapePaths(shape)
   if (paths.length === 0) return null
   const viewBox = shapeViewBox(shape)
-  const b = unionBounds([boundsFor(shape, paths, viewBox, unionBounds), viewBox]) ?? viewBox
+  const b = shapeFrameBounds(shape)
   const inner = paths
     .map((p) => {
       const stroke = p.stroke && p.stroke !== 'none' ? 'white' : 'none'
