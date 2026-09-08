@@ -8,9 +8,8 @@ import type { ItemResponse } from '@/types/api/items'
 import type { ItemStatsPlayerRef } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
-import { loadStoredCountry, storeCountry } from '@/utils/statsCountry'
+import { useStatsQueryState } from '@/composables/useStatsQueryState'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import ItemStatsTable from './ItemStatsTable.vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
 
@@ -140,66 +139,28 @@ const BOARD_MAP = new Map<ItemStatsBoard, BoardDef>(BOARDS.map((b) => [b.key, b]
 
 const pickerOptions = BOARDS.map((b) => ({ key: b.key, label: b.label, icon: b.icon, description: b.description }))
 
-const route = useRoute()
-const router = useRouter()
 const itemTypeStore = useItemTypeStore()
 const modifierStore = useItemModifierStore()
+const { currentPage, param, patch, setParam: setQueryParam, setPage } = useStatsQueryState()
 
 const activeBoard = computed<ItemStatsBoard>(() => {
-  const board = route.query.board as ItemStatsBoard
+  const board = param('board') as ItemStatsBoard
   return BOARD_MAP.has(board) ? board : 'most-items'
 })
 const boardDef = computed(() => BOARD_MAP.get(activeBoard.value) as BoardDef)
 
-const countryFilter = computed<string>(() => (route.query.country as string) || '')
-const typeFilter = computed<string>(() => (route.query.type as string) || '')
-const modifierFilter = computed<string>(() => (route.query.modifier as string) || '')
-const crateFilter = computed<string>(() => (route.query.crate as string) || '')
-
-const currentPage = computed<number>(() => {
-  const p = Number(route.query.page)
-  return p > 0 ? p : 1
-})
+const countryFilter = computed<string>(() => param('country'))
+const typeFilter = computed<string>(() => param('type'))
+const modifierFilter = computed<string>(() => param('modifier'))
+const crateFilter = computed<string>(() => param('crate'))
 
 function selectBoard(board: ItemStatsBoard) {
-  const query = { ...route.query }
-  query.board = board
-  delete query.type
-  delete query.modifier
-  delete query.crate
-  delete query.page
-  router.replace({ query })
-}
-
-function setQueryParam(key: string, value: string) {
-  const query = { ...route.query }
-  if (value) {
-    query[key] = value
-  } else {
-    delete query[key]
-  }
-  delete query.page
-  if (key === 'country') storeCountry(value)
-  router.replace({ query })
-}
-
-function setPage(page: number) {
-  const query = { ...route.query }
-  if (page <= 1) {
-    delete query.page
-  } else {
-    query.page = String(page)
-  }
-  router.push({ query })
+  patch({ board, type: undefined, modifier: undefined, crate: undefined })
 }
 
 onMounted(() => {
   itemTypeStore.fetchItemTypes()
   modifierStore.fetchModifiers()
-  if (!route.query.country) {
-    const persisted = loadStoredCountry()
-    if (persisted) router.replace({ query: { ...route.query, country: persisted } })
-  }
 })
 
 const typeOptions = computed(() => [
@@ -247,12 +208,16 @@ async function fetchItemCatalog() {
 
 const loading = ref(false)
 const pageData = ref<Page<unknown> | null>(null)
+const pageBoard = ref<ItemStatsBoard | null>(null)
 
-const totalPages = computed(() => pageData.value?.totalPages ?? 0)
-const totalElements = computed(() => pageData.value?.totalElements ?? 0)
+const currentPageData = computed(() => (pageBoard.value === activeBoard.value ? pageData.value : null))
+
+const totalPages = computed(() => currentPageData.value?.totalPages ?? 0)
+const totalElements = computed(() => currentPageData.value?.totalElements ?? 0)
 
 function withRank(item: Record<string, unknown>, index: number): Record<string, unknown> {
-  return { ...item, rank: pageData.value!.number * pageData.value!.size + index + 1 }
+  const page = currentPageData.value!
+  return { ...item, rank: page.number * page.size + index + 1 }
 }
 
 function enrichItem(item: Record<string, unknown>): Record<string, unknown> {
@@ -267,8 +232,8 @@ function enrichItem(item: Record<string, unknown>): Record<string, unknown> {
 }
 
 const rows = computed<Record<string, unknown>[]>(() => {
-  if (!pageData.value) return []
-  return pageData.value.content.map((raw, i) => {
+  if (!currentPageData.value) return []
+  return currentPageData.value.content.map((raw, i) => {
     const item = raw as Record<string, unknown>
     if (activeBoard.value === 'rarest-items') {
       return withRank(enrichItem(item), i)
@@ -312,10 +277,12 @@ async function fetchData() {
 
     if (id !== requestId) return
     pageData.value = result
+    pageBoard.value = def.key
   } catch (error) {
     if (id !== requestId) return
     console.error('Failed to fetch item stats:', error)
     pageData.value = null
+    pageBoard.value = def.key
   }
   loading.value = false
 }

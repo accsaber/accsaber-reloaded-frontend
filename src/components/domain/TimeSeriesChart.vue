@@ -22,6 +22,7 @@ const props = defineProps<{
   yMax?: number
   yMin?: number
   fitToData?: boolean
+  emptyMessage?: string
 }>()
 
 interface ResolvedSeries {
@@ -276,7 +277,7 @@ watch([
     <div class="chart-container__canvas-wrap">
       <SkeletonLoader v-if="isLoading" variant="card" height="240px" />
       <div v-else-if="!hasData" class="chart-container__empty">
-        No scores could be found with the timeframe selected.
+        {{ emptyMessage ?? 'No scores could be found with the timeframe selected.' }}
       </div>
       <canvas v-show="!isLoading && hasData" ref="canvasRef" />
     </div>

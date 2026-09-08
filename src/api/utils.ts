@@ -17,5 +17,7 @@ export function buildQuery(params?: object): string {
     }
   }
 
+  if (parts.length === 0) return ''
+
   return `?${parts.join('&').split('%2C').join(',')}`
 }

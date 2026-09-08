@@ -14,13 +14,18 @@ import type { Page } from '@/types/pagination'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { toScoreDisplay } from '@/utils/mappers'
 import { loadStoredCountry, storeCountry } from '@/utils/statsCountry'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ItemStatsSection from './stats/ItemStatsSection.vue'
 import LeaderboardPicker from './stats/LeaderboardPicker.vue'
 import LeaderboardTable from './stats/LeaderboardTable.vue'
-import PlatformGrowthSection from './stats/PlatformGrowthSection.vue'
 import SectionToggle from './stats/SectionToggle.vue'
+import { resolveSection, sectionTitle as titleForSection, type SectionKey } from './stats/sections'
+
+const ItemStatsSection = defineAsyncComponent(() => import('./stats/ItemStatsSection.vue'))
+const PlatformGrowthSection = defineAsyncComponent(() => import('./stats/PlatformGrowthSection.vue'))
+const MissionStatsSection = defineAsyncComponent(() => import('./stats/MissionStatsSection.vue'))
+const CampaignStatsSection = defineAsyncComponent(() => import('./stats/CampaignStatsSection.vue'))
+const EventStatsSection = defineAsyncComponent(() => import('./stats/EventStatsSection.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -33,7 +38,6 @@ usePageMeta({
   description: 'Platform-wide statistics, leaderboards, and score distributions across AccSaber.',
 })
 
-type SectionKey = 'leaderboards' | 'items' | 'platform'
 type LeaderboardTab = 'streaks' | 'max-ap' | 'avg-ap' | 'most-retried' | 'grinders' | 'dedication' | 'collectors'
 
 const leaderboardOptions: { key: LeaderboardTab; label: string; icon: string; description: string }[] = [
@@ -57,9 +61,12 @@ const DEFAULT_SORTS: Record<LeaderboardTab, string> = {
 }
 
 const activeSection = computed<SectionKey>({
-  get: () => (route.query.section as SectionKey) || 'leaderboards',
+  get: () => resolveSection(route.query.section),
   set: (section) => {
-    router.push({ query: { section: section === 'leaderboards' ? undefined : section } })
+    const query: Record<string, string> = {}
+    if (section !== 'leaderboards') query.section = section
+    if (route.query.country) query.country = route.query.country as string
+    router.push({ query })
   },
 })
 
@@ -128,12 +135,7 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 const accent = computed(() => categoryStore.getAccent(activeCategory.value))
 const isScoreTab = computed(() => activeTab.value === 'streaks' || activeTab.value === 'max-ap')
 
-const SECTION_TITLES: Record<SectionKey, string> = {
-  leaderboards: 'Extra Leaderboards',
-  items: 'Item Stats',
-  platform: 'Platform Stats',
-}
-const sectionTitle = computed(() => SECTION_TITLES[activeSection.value])
+const sectionTitle = computed(() => titleForSection(activeSection.value))
 
 const detailColumn: TableColumn = { key: 'detail', label: '', width: '64px', align: 'center', noLink: true }
 
@@ -325,6 +327,13 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
     </template>
 
     <ItemStatsSection v-else-if="activeSection === 'items'" :accent="accent" :country-options="countryOptions" />
+
+    <MissionStatsSection v-else-if="activeSection === 'missions'" :accent="accent" :country-options="countryOptions" />
+
+    <CampaignStatsSection v-else-if="activeSection === 'campaigns'" :accent="accent"
+      :country-options="countryOptions" />
+
+    <EventStatsSection v-else-if="activeSection === 'events'" :accent="accent" :country-options="countryOptions" />
 
     <PlatformGrowthSection v-else :accent="accent" />
   </div>

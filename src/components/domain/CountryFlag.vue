@@ -2,11 +2,11 @@
 import { computed } from 'vue';
 
 const props = defineProps<{
-  country: string
+  country?: string | null
 }>()
 
 const flag = computed(() => {
-  const code = props.country.toUpperCase()
+  const code = (props.country ?? '').toUpperCase()
   if (code.length !== 2) return code
   return String.fromCodePoint(
     ...code.split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),
@@ -15,7 +15,7 @@ const flag = computed(() => {
 </script>
 
 <template>
-  <span class="country-flag" :aria-label="country" role="img">{{ flag }}</span>
+  <span v-if="flag" class="country-flag" :aria-label="country ?? undefined" role="img">{{ flag }}</span>
 </template>
 
 <style scoped>
