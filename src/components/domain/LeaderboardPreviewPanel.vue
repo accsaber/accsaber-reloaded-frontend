@@ -129,8 +129,8 @@ watch(
 )
 
 const columns: TableColumn[] = [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '56px' },
-  { key: 'player', label: 'Player' },
+  { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
+  { key: 'player', label: 'Player', width: '200px', flex: true },
   { key: 'score', label: 'Score', align: 'right', mono: true },
   { key: 'accuracy', label: 'Accuracy', align: 'right', mono: true },
   { key: 'ap', label: 'AP (preview)', align: 'right', mono: true },

@@ -141,7 +141,7 @@ const detailColumn: TableColumn = { key: 'detail', label: '', width: '64px', ali
 
 const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
   'streaks': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'player', label: 'Player', align: 'left' },
     { key: 'map', label: 'Map', align: 'left' },
     { key: 'streak115', label: 'Streak', align: 'right', mono: true, width: '100px' },
@@ -151,7 +151,7 @@ const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
     detailColumn,
   ],
   'max-ap': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'player', label: 'Player', align: 'left' },
     { key: 'map', label: 'Map', align: 'left' },
     { key: 'ap', label: 'AP', align: 'right', mono: true, width: '100px' },
@@ -160,7 +160,7 @@ const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
     detailColumn,
   ],
   'avg-ap': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'map', label: 'Map', align: 'left' },
     { key: 'categoryName', label: 'Category', align: 'left', width: '130px' },
     { key: 'averageWeightedAp', label: 'Avg AP', align: 'right', mono: true, width: '110px' },
@@ -168,27 +168,27 @@ const COLUMNS: Record<LeaderboardTab, TableColumn[]> = {
     { key: 'latestScoreTimeSet', label: 'Latest', align: 'right', width: '110px' },
   ],
   'most-retried': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'map', label: 'Map', align: 'left' },
     { key: 'categoryName', label: 'Category', align: 'left', width: '130px' },
     { key: 'supersededCount', label: 'Retries', align: 'right', mono: true, width: '110px' },
     { key: 'latestScoreTimeSet', label: 'Latest', align: 'right', width: '110px' },
   ],
   'grinders': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'player', label: 'Player', align: 'left' },
     { key: 'improvementCount', label: 'Improvements', align: 'right', mono: true, width: '140px' },
     { key: 'latestScoreTimeSet', label: 'Latest', align: 'right', width: '110px' },
   ],
   'dedication': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'player', label: 'Player', align: 'left' },
     { key: 'map', label: 'Map', align: 'left' },
     { key: 'improvementCount', label: 'Improvements', align: 'right', mono: true, width: '140px' },
     { key: 'latestScoreTimeSet', label: 'Latest', align: 'right', width: '110px' },
   ],
   'collectors': [
-    { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+    { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
     { key: 'player', label: 'Player', align: 'left' },
     { key: 'milestoneCount', label: 'Milestones', align: 'right', mono: true, width: '140px' },
   ],

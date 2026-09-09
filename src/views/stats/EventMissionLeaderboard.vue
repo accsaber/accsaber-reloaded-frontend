@@ -21,7 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const COLUMNS: TableColumn[] = [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' },
+  { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
   { key: 'player', label: 'Player', align: 'left' },
   { key: 'completions', label: 'Completions', align: 'right', mono: true, width: '140px' },
   { key: 'xpEarned', label: 'XP', align: 'right', mono: true, width: '100px' },

@@ -52,7 +52,7 @@ interface BoardDef {
   fetch: (api: StatsApi, params: PaginationParams, q: BoardQuery) => Promise<Page<unknown>>
 }
 
-const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' }
+const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
 const playerCol: TableColumn = { key: 'player', label: 'Player', align: 'left' }
 const itemCol: TableColumn = { key: 'item', label: 'Item', align: 'left' }
 

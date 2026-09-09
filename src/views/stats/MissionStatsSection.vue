@@ -68,7 +68,7 @@ const MISSION_TYPES: MissionType[] = [
 ]
 
 const templateCol: TableColumn = { key: 'template', label: 'Template', align: 'left', width: '270px' }
-const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' }
+const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
 const playerCol: TableColumn = { key: 'player', label: 'Player', align: 'left' }
 
 const BOARDS: MissionBoardDef[] = [

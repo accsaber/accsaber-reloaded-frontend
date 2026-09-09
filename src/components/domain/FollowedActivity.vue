@@ -84,10 +84,10 @@ const modalUserId = ref('')
 const accent = computed(() => categoryStore.getAccent('overall'))
 
 const rankingColumns: TableColumn[] = [
-  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '60px' },
-  { key: 'player', label: 'Player', align: 'left' },
-  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '92px' },
-  { key: 'avgAccuracy', label: 'Avg Acc', align: 'right', mono: true, width: '84px' },
+  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '84px' },
+  { key: 'player', label: 'Player', align: 'left', width: '180px', flex: true },
+  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '112px' },
+  { key: 'avgAccuracy', label: 'Avg Acc', align: 'right', mono: true, width: '100px' },
 ]
 
 const rankingRows = computed<Record<string, unknown>[]>(() => {

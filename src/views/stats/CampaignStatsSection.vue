@@ -52,7 +52,7 @@ const STATUS_CHIPS: { key: CampaignStatsStatus; label: string; hint: string }[] 
   { key: 'loved', label: 'Loved', hint: 'Curator flag, not a lifecycle state' },
 ]
 
-const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '60px' }
+const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
 const playerCol: TableColumn = { key: 'player', label: 'Player', align: 'left' }
 
 const BOARDS: CampaignBoardDef[] = [
