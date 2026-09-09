@@ -42,6 +42,7 @@ const loading = ref(true)
 const error = ref(false)
 
 const activeTab = ref('leaderboard')
+const scoresTableWidth = ref(0)
 const contentTabs = [
   { key: 'leaderboard', label: 'Leaderboard' },
   { key: 'statistics', label: 'Statistics' },
@@ -264,7 +265,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 </script>
 
 <template>
-  <div class="map-detail" :style="{ '--page-accent': resolvedAccent }">
+  <div class="map-detail" :style="{ '--page-accent': resolvedAccent, '--scores-column': scoresTableWidth + 'px' }">
     <template v-if="loading">
       <div class="map-detail__skeleton">
         <SkeletonLoader variant="avatar" width="120px" height="120px" />
@@ -394,7 +395,8 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
             :cover-url="coverUrl" :cover-fallback-url="coverFallbackUrl" :category-code="categoryCode"
             :difficulty="activeDifficulty ? formatDifficulty(activeDifficulty.difficulty) : undefined"
             :complexity="activeDifficulty?.complexity ?? null"
-            :accent-color="resolvedAccent" @top-scores-loaded="onTopScoresLoaded" />
+            :accent-color="resolvedAccent" @top-scores-loaded="onTopScoresLoaded"
+            @width-change="scoresTableWidth = $event" />
         </div>
 
         <MapStatisticsSection v-if="activeTab === 'statistics' && activeDifficultyId"
@@ -423,7 +425,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 }
 
 .map-detail__wide {
-  --page-column: var(--page-width-wide);
+  --page-column: clamp(1100px, var(--scores-column, 1100px), var(--page-width-wide));
 }
 
 .map-detail__bg {

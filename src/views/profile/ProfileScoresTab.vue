@@ -19,6 +19,7 @@ import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
 import { buildScoreColumns } from '@/utils/scoreRowFields'
+import { tableNaturalWidth } from '@/utils/tableLayout'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -39,6 +40,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'pin-toggle': [scoreId: string]
   'params-change': [params: UserScoresParams | null]
+  'width-change': [width: number]
 }>()
 
 const router = useRouter()
@@ -189,39 +191,45 @@ const showStreak115 = computed(() =>
 )
 
 const LEADING_COLUMNS: TableColumn[] = [
-  { key: 'leaderboardRank', label: '#', sortable: true, align: 'right', mono: true, width: '44px' },
-  { key: 'cover', label: '', width: '60px' },
-  { key: 'mapName', label: 'Map', align: 'left', width: '200px' },
+  { key: 'leaderboardRank', label: '#', sortable: true, align: 'right', mono: true, width: '80px' },
+  { key: 'cover', label: '', width: '56px' },
+  { key: 'mapName', label: 'Map', align: 'left', width: '240px', flex: true },
 ]
 
-const TRAILING_COLUMNS: TableColumn[] = [
-  { key: 'actions', label: '', align: 'center', width: '120px', noLink: true },
-]
+const trailingColumns = computed<TableColumn[]>(() => [
+  { key: 'actions', label: '', align: 'center', width: props.isSelfProfile ? '112px' : '84px', noLink: true },
+])
 
 const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
-  difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '72px' },
-  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '72px' },
+  difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '76px' },
+  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '76px' },
   ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '100px' },
-  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '112px' },
-  complexity: { key: 'complexity', label: 'COMP', sortable: true, align: 'center', mono: true, width: '72px' },
-  category: { key: 'category', label: 'Category', align: 'center', width: '90px' },
-  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '60px' },
+  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '100px' },
+  complexity: { key: 'complexity', label: 'COMP', sortable: true, align: 'center', mono: true, width: '76px' },
+  category: { key: 'category', label: 'Category', align: 'center', width: '92px' },
+  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '64px' },
   max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
-  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '82px' },
-  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '72px' },
-  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '80px' },
-  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '80px' },
+  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '84px' },
+  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '76px' },
+  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '84px' },
+  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '84px' },
 }
 
 const columns = computed(() =>
   buildScoreColumns(scoreRowFields.value, {
     leading: LEADING_COLUMNS,
-    trailing: TRAILING_COLUMNS,
+    trailing: trailingColumns.value,
     fields: {
       ...FIELD_COLUMNS,
       streak_115: showStreak115.value ? FIELD_COLUMNS.streak_115 : null,
     },
   }),
+)
+
+watch(
+  columns,
+  (cols) => emit('width-change', tableNaturalWidth(cols)),
+  { immediate: true },
 )
 
 const scoreParams = computed<UserScoresParams>(() => ({

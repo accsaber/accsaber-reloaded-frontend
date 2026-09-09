@@ -128,6 +128,7 @@ watch(() => route.query.category, (newQueryCategory) => {
 
 const scoreSearch = ref('')
 const scorePlaylistParams = ref<UserScoresParams | null>(null)
+const scoresTableWidth = ref(0)
 const editMode = ref(false)
 const nameDraft = ref('')
 const nameSaving = ref(false)
@@ -553,7 +554,7 @@ watch(activeCategory, (newCategory) => {
 </script>
 
 <template>
-  <div class="profile-page" :style="{ '--page-accent': accent }">
+  <div class="profile-page" :style="{ '--page-accent': accent, '--scores-column': scoresTableWidth + 'px' }">
     <template v-if="loading">
       <div class="profile-page__skeleton-hero">
         <SkeletonLoader variant="avatar" width="96px" height="96px" />
@@ -812,7 +813,7 @@ watch(activeCategory, (newCategory) => {
           <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
             :search="scoreSearch" :is-self-profile="isSelfProfile" :pinned-score-ids="pinnedScoreIds"
             :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle"
-            @params-change="scorePlaylistParams = $event" />
+            @params-change="scorePlaylistParams = $event" @width-change="scoresTableWidth = $event" />
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
             :xp-stats="xpStats" />
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId"
@@ -853,7 +854,7 @@ watch(activeCategory, (newCategory) => {
 }
 
 .profile-page__wide {
-  --page-column: var(--page-width-wide);
+  --page-column: clamp(1280px, var(--scores-column, 1280px), var(--page-width-wide));
 }
 
 .profile-page__cat-dock {

@@ -25,6 +25,7 @@ export interface TableColumn {
   sortable?: boolean
   align?: 'left' | 'center' | 'right'
   width?: string
+  flex?: boolean
   mono?: boolean
   noLink?: boolean
   icon?: string

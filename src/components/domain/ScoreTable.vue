@@ -98,6 +98,7 @@ const customSlots = computed(() => {
     </div>
 
     <DataTable
+      dense
       :columns="columns"
       :rows="rows"
       :sort-state="sortState"
