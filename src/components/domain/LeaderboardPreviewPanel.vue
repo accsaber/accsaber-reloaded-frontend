@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseInput from '@/components/common/BaseInput.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { parseApiError } from '@/api/client'
+import { useCategoryStore } from '@/stores/categories'
+import type { CurveResponse } from '@/types/api/categories'
 import type { LeaderboardPreviewResponse } from '@/types/api/maps'
 import type { TableColumn } from '@/types/display'
 import type { Difficulty } from '@/types/enums'
+import { calculateAp } from '@/utils/curveEval'
 import { formatAccuracy, formatCount, formatFixed } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
@@ -20,10 +24,14 @@ const props = defineProps<{
 }>()
 
 const PREVIEW_LIMIT = 100
+const SLIDER_SPAN = 7
+
+const categoryStore = useCategoryStore()
 
 const preview = ref<LeaderboardPreviewResponse | null>(null)
 const loading = ref(false)
 const error = ref('')
+const curve = ref<CurveResponse | null>(null)
 
 const estimate = ref<{ complexity: number | null; version: string | null } | null>(null)
 const estimateLoading = ref(false)
@@ -32,6 +40,22 @@ const estimateError = ref('')
 const canEstimate = computed(
   () => !!props.songHash && !!props.difficulty && !!props.characteristic,
 )
+
+const priced = computed(() => preview.value?.complexity ?? null)
+
+const base = computed(() => priced.value ?? estimate.value?.complexity ?? 0)
+
+const complexity = ref(0)
+
+const atBase = computed(() => Math.abs(complexity.value - base.value) < 0.005)
+
+const sliderMin = computed(() => Math.max(0, base.value - SLIDER_SPAN))
+const sliderMax = computed(() => base.value + SLIDER_SPAN)
+
+function setComplexity(value: string | number) {
+  const parsed = Number(value)
+  if (Number.isFinite(parsed)) complexity.value = parsed
+}
 
 const columns: TableColumn[] = [
   { key: 'rank', label: '#', align: 'right', mono: true, width: '64px' },
@@ -52,13 +76,13 @@ const rows = computed(() =>
     avatarUrl: pickAvatarUrl(row),
     avatarFallbackUrl: pickAvatarFallback(row),
     accuracy: row.accuracy,
-    ap: row.ap,
+    ap: atBase.value || !curve.value
+      ? row.ap
+      : calculateAp(curve.value, row.accuracy, complexity.value),
     platform: row.platform,
     modifiers: row.modifiers,
   })),
 )
-
-const priced = computed(() => !!preview.value?.complexitySource)
 
 const complexityLine = computed(() => {
   const source = preview.value
@@ -70,12 +94,35 @@ const complexityLine = computed(() => {
     : `Priced at ${value} from the ${source.complexitySource}.`
 })
 
+const sliderNote = computed(() => {
+  if (atBase.value) return ''
+  if (!curve.value) return 'This category has no curve loaded, so AP cannot be repriced here.'
+  return `Showing AP at ${formatFixed(complexity.value, 2)}, not what the map pays today.`
+})
+
+async function loadCurve(code: string) {
+  const id = categoryStore.byCode.get(code)?.scoreCurve?.id
+  if (!id) {
+    curve.value = null
+    return
+  }
+  try {
+    const { getCurve } = await import('@/api/curves')
+    curve.value = await getCurve(id)
+  } catch {
+    curve.value = null
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
   try {
     const { getLeaderboardPreview } = await import('@/api/ranking/maps')
-    preview.value = await getLeaderboardPreview(props.mapDifficultyId, PREVIEW_LIMIT)
+    const result = await getLeaderboardPreview(props.mapDifficultyId, PREVIEW_LIMIT)
+    preview.value = result
+    complexity.value = result.complexity ?? 0
+    await loadCurve(result.categoryCode)
   } catch (err) {
     preview.value = null
     error.value = parseApiError(err, 'Could not read the platform boards.').message
@@ -94,6 +141,7 @@ async function fetchEstimate() {
       difficulty: props.difficulty as Difficulty,
       characteristic: props.characteristic as string,
     })
+    if (estimate.value.complexity != null) complexity.value = estimate.value.complexity
   } catch (err) {
     estimate.value = null
     estimateError.value = parseApiError(err, 'Could not run the script on this map.').message
@@ -135,6 +183,16 @@ watch(() => props.mapDifficultyId, () => {
       </div>
     </header>
 
+    <div class="lb-preview__controls">
+      <BaseInput class="lb-preview__value" label="Complexity" type="number" step="0.1" min="0"
+        :model-value="complexity" @update:model-value="setComplexity" />
+      <input class="lb-preview__slider" type="range" :min="sliderMin" :max="sliderMax" step="0.1"
+        :value="complexity" aria-label="Complexity"
+        @input="setComplexity(($event.target as HTMLInputElement).value)" />
+      <BaseButton size="sm" :disabled="atBase" @click="complexity = base">Reset</BaseButton>
+    </div>
+
+    <p v-if="sliderNote" class="lb-preview__meta">{{ sliderNote }}</p>
     <p v-if="error" class="lb-preview__error">{{ error }}</p>
 
     <DataTable
@@ -242,6 +300,25 @@ watch(() => props.mapDifficultyId, () => {
   color: var(--text-tertiary);
   font-family: var(--font-code);
   font-size: var(--text-caption);
+}
+
+.lb-preview__controls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.lb-preview__value {
+  max-width: 140px;
+}
+
+.lb-preview__slider {
+  flex: 1;
+  min-width: 200px;
+  height: 18px;
+  accent-color: var(--page-accent, var(--accent));
+  cursor: pointer;
 }
 
 .lb-preview__error {

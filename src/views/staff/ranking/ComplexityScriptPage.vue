@@ -318,7 +318,6 @@ async function loadBatches() {
       sort: 'releasedAt,desc',
     })
     batches.value = res.content
-    if (!batchId.value && res.content.length > 0) batchId.value = res.content[0].id
   } catch {
     batches.value = []
   }
