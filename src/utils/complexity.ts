@@ -61,8 +61,8 @@ export const SCENARIO_ORDER: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SC
 
 export const SCENARIO_SHORT: Record<ComplexityScenario, string> = {
   CURRENT: 'now',
-  NEW_SCRIPT: 'script',
-  PREVIEW: 'preview',
+  NEW_SCRIPT: 'after',
+  PREVIEW: 'after',
 }
 
 export const PREVIEW_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'PREVIEW']

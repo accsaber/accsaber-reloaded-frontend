@@ -26,7 +26,7 @@ const props = defineProps<{
 const METRICS: { key: PlayMetric; label: string; decimals: number; invert: boolean }[] = [
   { key: 'ap', label: 'AP', decimals: AP_DECIMALS, invert: false },
   { key: 'weightedAp', label: 'Wgt', decimals: AP_DECIMALS, invert: false },
-  { key: 'position', label: 'Slot', decimals: 0, invert: true },
+  { key: 'position', label: 'List', decimals: 0, invert: true },
   { key: 'rank', label: 'Rank', decimals: 0, invert: true },
 ]
 
@@ -69,13 +69,13 @@ const { sortState, visible, onSort } = useScenarioSort({
 
 const WIDTHS: Record<PlayMetric, string> = {
   ap: '104px',
-  weightedAp: '104px',
-  position: '104px',
-  rank: '104px',
+  weightedAp: '108px',
+  position: '108px',
+  rank: '112px',
 }
 
 const tableColumns = computed<TableColumn[]>(() => [
-  { key: 'song', label: 'Map', sortable: true, width: '200px', flex: true },
+  { key: 'song', label: 'Map', sortable: true, width: '190px', flex: true },
   { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', width: '88px' },
   ...props.columns.flatMap((scenario) =>
     METRICS.map((metric) => ({

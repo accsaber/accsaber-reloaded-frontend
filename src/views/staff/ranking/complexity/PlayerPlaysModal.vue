@@ -137,6 +137,11 @@ const avatarFallback = computed(() => pickAvatarFallback(props.player))
           </div>
         </div>
 
+        <p class="plays-modal__legend">
+          List is where the play sits in this player's own list, which sets how much of its AP
+          counts. Rank is where it sits on the map.
+        </p>
+
         <PlayerPlaysTable :plays="plays" :scenario="scenario" :columns="columns" />
       </template>
     </div>
@@ -211,6 +216,13 @@ const avatarFallback = computed(() => pickAvatarFallback(props.player))
 
 .plays-modal__limit-input:focus {
   border-color: var(--page-accent, var(--accent));
+}
+
+.plays-modal__legend {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.5;
 }
 
 .plays-modal__error {

@@ -65,7 +65,6 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
 
 const tableColumns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
-  const apWidth = props.columns.length > 2 ? '108px' : '124px'
   return [
     { key: 'rankCurrent', label: 'Rank now', sortable: true, align: 'right', width: '108px' },
     { key: 'player', label: 'Player', width: '240px', flex: true },
@@ -74,7 +73,7 @@ const tableColumns = computed<TableColumn[]>(() => {
       label: `AP ${SCENARIO_SHORT[scenario]}`,
       sortable: true,
       align: 'right' as const,
-      width: apWidth,
+      width: '124px',
     })),
     {
       key: 'apMove',

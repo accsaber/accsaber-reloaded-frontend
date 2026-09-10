@@ -35,6 +35,7 @@ import LadderStrip from './complexity/LadderStrip.vue'
 import PlayerPlaysModal from './complexity/PlayerPlaysModal.vue'
 import RaterForm from './complexity/RaterForm.vue'
 import { estimateHealth } from './complexity/estimates'
+import { buildComplexityReport } from './complexity/report'
 import { useTuningState } from './complexity/tuning'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -532,6 +533,52 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
   applying.value = false
 }
 
+const reportScenario = computed<ComparisonScenario>(
+  () => (tab.value === 'tuning' ? 'PREVIEW' : SCRIPT_SCENARIO),
+)
+
+const reportMaps = computed(() => {
+  if (tab.value === 'tuning') return previewMaps.value
+  if (tab.value === 'worth') return worthRows.value
+  return difficulties.value
+})
+
+const reportBoard = computed(() => (tab.value === 'tuning' ? previewBoard.value : board.value))
+
+const reportReady = computed(() => reportMaps.value.length > 0 || !!reportBoard.value)
+
+function exportReport() {
+  const preview = tab.value === 'tuning'
+  const scope = [
+    `Maps: ${activeBatch.value ? activeBatch.value.name : 'the whole ranked pool'}, status ${status.value.toLowerCase()}`,
+    `Category: ${categoryStore.getCategoryInfo(category.value)?.name ?? category.value}`,
+    'Players: the whole category, not only the maps above',
+  ]
+  if (mapSearch.value) scope.push(`Map search: ${mapSearch.value}`)
+  if (playerSearch.value) scope.push(`Player search: ${playerSearch.value}`)
+  if (preview) scope.push('Priced from the edited constants, nothing stored')
+  else if (scriptVersion.value) scope.push(`Script: ${scriptVersion.value}`)
+  if (health.value.updatedAt) scope.push(`Estimated ${formatRelativeDate(health.value.updatedAt)}`)
+
+  const markdown = buildComplexityReport({
+    title: preview ? 'Complexity script preview' : 'Complexity script round',
+    scope,
+    scenarioLabel: preview ? 'Preview' : 'Script',
+    scenario: reportScenario.value,
+    maps: reportMaps.value,
+    board: reportBoard.value,
+  })
+
+  const slug = activeBatch.value
+    ? activeBatch.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    : 'ranked-pool'
+  const stamp = new Date().toISOString().slice(0, 10)
+  saveBlob(
+    new Blob([markdown], { type: 'text/markdown;charset=utf-8' }),
+    `complexity-${preview ? 'preview' : 'round'}-${slug}-${stamp}.md`,
+  )
+}
+
 async function download(kind: ComplexityDatasetKind) {
   downloading.value = kind
   try {
@@ -568,14 +615,19 @@ watch([tab, category, status, () => tuning.edited.value], () => {
         <h1 class="script-page__title">Complexity Script</h1>
         <p class="script-page__subtitle">{{ subtitle }}</p>
       </div>
-      <div v-if="isHead" class="script-page__actions">
-        <BaseButton v-for="dataset in DATASETS" :key="dataset.kind" size="sm"
-          :loading="downloading === dataset.kind" @click="download(dataset.kind)">
-          {{ dataset.label }}
+      <div class="script-page__actions">
+        <BaseButton size="sm" :disabled="!reportReady" @click="exportReport">
+          Export markdown
         </BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="preparingApply" @click="openApply">
-          Apply this round
-        </BaseButton>
+        <template v-if="isHead">
+          <BaseButton v-for="dataset in DATASETS" :key="dataset.kind" size="sm"
+            :loading="downloading === dataset.kind" @click="download(dataset.kind)">
+            {{ dataset.label }}
+          </BaseButton>
+          <BaseButton variant="primary" size="sm" :loading="preparingApply" @click="openApply">
+            Apply this round
+          </BaseButton>
+        </template>
       </div>
     </header>
 

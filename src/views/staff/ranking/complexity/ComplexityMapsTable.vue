@@ -84,7 +84,6 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
 
 const tableColumns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
-  const cxWidth = props.columns.length > 2 ? '84px' : '104px'
   const list: TableColumn[] = [
     { key: 'song', label: 'Song', sortable: true, width: '260px' },
     { key: 'mapper', label: 'Mapper', width: '124px' },
@@ -93,7 +92,7 @@ const tableColumns = computed<TableColumn[]>(() => {
       label: `CX ${SCENARIO_SHORT[scenario]}`,
       sortable: true,
       align: 'right' as const,
-      width: cxWidth,
+      width: '104px',
     })),
     {
       key: 'cxDelta',
@@ -103,7 +102,7 @@ const tableColumns = computed<TableColumn[]>(() => {
       width: '108px',
     },
     { key: 'topApCurrent', label: 'Top AP now', sortable: true, align: 'right', width: '116px' },
-    { key: 'topAp', label: `Top AP ${tag}`, sortable: true, align: 'right', width: '116px' },
+    { key: 'topAp', label: `Top AP ${tag}`, sortable: true, align: 'right', width: '120px' },
     {
       key: 'topApDelta',
       label: `Δ top AP ${deltaMode.value}`,
@@ -112,7 +111,7 @@ const tableColumns = computed<TableColumn[]>(() => {
       width: '124px',
     },
     { key: 'avgWeightedCurrent', label: 'Avg wgt now', sortable: true, align: 'right', width: '124px' },
-    { key: 'avgWeighted', label: `Avg wgt ${tag}`, sortable: true, align: 'right', width: '124px' },
+    { key: 'avgWeighted', label: `Avg wgt ${tag}`, sortable: true, align: 'right', width: '134px' },
     {
       key: 'avgWeightedDelta',
       label: `Δ avg wgt ${deltaMode.value}`,
@@ -120,7 +119,7 @@ const tableColumns = computed<TableColumn[]>(() => {
       align: 'right',
       width: '132px',
     },
-    { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '78px' },
+    { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '84px' },
   ]
   if (props.board) {
     list.splice(1, 0, { key: 'board', label: 'Board', sortable: true, align: 'center', width: '116px' })

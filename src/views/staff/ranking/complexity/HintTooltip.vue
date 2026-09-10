@@ -6,17 +6,50 @@ defineProps<{
   label: string
 }>()
 
+const PANEL_WIDTH = 240
+const PANEL_HEIGHT = 108
+const MARGIN = 12
+
 const open = ref(false)
+const flipX = ref(false)
+const flipY = ref(false)
+const trigger = ref<HTMLElement | null>(null)
+
+function boundsFor(el: HTMLElement): DOMRect {
+  let node = el.parentElement
+  while (node) {
+    const style = getComputedStyle(node)
+    if (style.overflowX !== 'visible' || style.overflowY !== 'visible') {
+      return node.getBoundingClientRect()
+    }
+    node = node.parentElement
+  }
+  return new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+}
+
+function show() {
+  const el = trigger.value
+  if (el) {
+    const rect = el.getBoundingClientRect()
+    const bounds = boundsFor(el)
+    flipX.value = rect.left + PANEL_WIDTH > bounds.right - MARGIN
+    flipY.value = rect.top - PANEL_HEIGHT < bounds.top + MARGIN
+  }
+  open.value = true
+}
 </script>
 
 <template>
   <span class="hint">
-    <button type="button" class="hint__trigger" :aria-label="`What ${label} does`"
-      @mouseenter="open = true" @mouseleave="open = false" @focus="open = true" @blur="open = false"
+    <button ref="trigger" type="button" class="hint__trigger" :aria-label="`What ${label} does`"
+      @mouseenter="show" @mouseleave="open = false" @focus="show" @blur="open = false"
       @click.prevent>
       ?
     </button>
-    <span v-if="open" class="hint__panel" role="tooltip">{{ text }}</span>
+    <span v-if="open" class="hint__panel" role="tooltip"
+      :class="{ 'hint__panel--end': flipX, 'hint__panel--below': flipY }">
+      {{ text }}
+    </span>
   </span>
 </template>
 
@@ -66,5 +99,15 @@ const open = ref(false)
   text-transform: none;
   letter-spacing: 0;
   white-space: normal;
+}
+
+.hint__panel--end {
+  left: auto;
+  right: -4px;
+}
+
+.hint__panel--below {
+  bottom: auto;
+  top: calc(100% + 6px);
 }
 </style>
