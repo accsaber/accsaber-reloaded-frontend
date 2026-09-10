@@ -99,6 +99,12 @@ function goToSettings() {
             <span class="provider__label">{{ providerLabels[provider] }}</span>
           </button>
         </div>
+
+        <p class="auth-modal__legal">
+          Logging in means you accept the
+          <RouterLink to="/terms" @click="emit('close')">Terms</RouterLink> and the
+          <RouterLink to="/privacy" @click="emit('close')">Privacy Policy</RouterLink>.
+        </p>
       </template>
     </div>
   </BaseModal>
@@ -117,6 +123,25 @@ function goToSettings() {
   font-size: var(--text-body);
   line-height: 1.55;
   margin: 0;
+}
+
+.auth-modal__legal {
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.auth-modal__legal a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-modal__legal a:hover,
+.auth-modal__legal a:focus-visible {
+  color: var(--text-primary);
 }
 
 .auth-modal__profile {

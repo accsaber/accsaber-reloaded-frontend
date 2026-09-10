@@ -107,6 +107,12 @@ export const KOFI_URL = 'https://ko-fi.com/accsaberreloaded'
 
 export const DISCORD_URL = 'https://discord.gg/DmzKSgcJWe'
 
+export const CONTACT_EMAIL = 'tikugato@gmail.com'
+
+export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`
+
+export const LEGAL_UPDATED = '10 September 2026'
+
 export const ROLE_ORDER: Record<string, number> = {
   ADMIN: 0,
   DEVELOPER: 1,

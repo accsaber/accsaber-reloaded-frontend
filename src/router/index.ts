@@ -180,6 +180,16 @@ const router = createRouter({
       component: () => import('@/views/CreditsPage.vue'),
     },
     {
+      path: '/terms',
+      name: 'terms',
+      component: () => import('@/views/TermsPage.vue'),
+    },
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: () => import('@/views/PrivacyPage.vue'),
+    },
+    {
       path: '/auth/callback',
       name: 'auth-callback',
       component: () => import('@/views/auth/AuthCallbackPage.vue'),

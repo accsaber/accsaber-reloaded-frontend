@@ -47,6 +47,21 @@ const backendLabel = computed(() =>
   backendBuild.value ? buildLabel(backendBuild.value.version, backendBuild.value.channel) : null,
 )
 
+interface FooterLink {
+  label: string
+  to?: string
+  href?: string
+}
+
+const FOOTER_LINKS: FooterLink[] = [
+  { label: 'GitHub (Site)', href: 'https://github.com/accsaber/accsaber-reloaded-frontend' },
+  { label: 'GitHub (API)', href: 'https://github.com/accsaber/accsaber-reloaded-backend' },
+  { label: 'Score Feed', to: '/score-feed' },
+  { label: 'Credits', to: '/credits' },
+  { label: 'Terms', to: '/terms' },
+  { label: 'Privacy', to: '/privacy' },
+]
+
 async function loadBackendVersion(): Promise<void> {
   try {
     const health = await getHealth()
@@ -442,27 +457,16 @@ onUnmounted(() => {
     <footer class="home-footer">
       <p class="home-footer__text">Logo by Brylanbbab and Interz.</p>
       <nav class="home-footer__links" aria-label="Footer links">
-        <a
-          href="https://github.com/accsaber/accsaber-reloaded-frontend"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="home-footer__link"
-        >
-          GitHub (Site)
-        </a>
-        <span class="home-footer__sep" aria-hidden="true">·</span>
-        <a
-          href="https://github.com/accsaber/accsaber-reloaded-backend"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="home-footer__link"
-        >
-          GitHub (API)
-        </a>
-        <span class="home-footer__sep" aria-hidden="true">·</span>
-        <RouterLink to="/score-feed" class="home-footer__link">Score Feed</RouterLink>
-        <span class="home-footer__sep" aria-hidden="true">·</span>
-        <RouterLink to="/credits" class="home-footer__link">Credits</RouterLink>
+        <template v-for="(link, index) in FOOTER_LINKS" :key="link.label">
+          <span v-if="index > 0" class="home-footer__sep" aria-hidden="true">·</span>
+          <a v-if="link.href" :href="link.href" target="_blank" rel="noopener noreferrer"
+            class="home-footer__link">
+            {{ link.label }}
+          </a>
+          <RouterLink v-else-if="link.to" :to="link.to" class="home-footer__link">
+            {{ link.label }}
+          </RouterLink>
+        </template>
       </nav>
       <p class="home-footer__versions">
         <span>Frontend {{ frontendLabel }}</span>
@@ -1062,8 +1066,10 @@ onUnmounted(() => {
 }
 
 .home-footer__links {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   margin-top: var(--space-sm);
   font-size: var(--text-caption);
