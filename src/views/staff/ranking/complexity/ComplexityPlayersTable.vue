@@ -5,28 +5,58 @@ import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
-import type { ComplexityPlayerRow, EstimateScenario } from '@/types/api/complexity'
+import type {
+  ComparisonScenario,
+  ComplexityPlayerRow,
+  ComplexityScenario,
+} from '@/types/api/complexity'
 import type { TableColumn } from '@/types/display'
-import { AP_DECIMALS, SCENARIO_SHORT } from '@/utils/complexity'
+import { AP_DECIMALS, SCENARIO_ORDER, SCENARIO_SHORT } from '@/utils/complexity'
 import { getRankClass } from '@/utils/ranking'
 import ScenarioCell from './ScenarioCell.vue'
+import { apKey } from './scenarioKeys'
 import { useScenarioSort } from './useScenarioSort'
 import { computed, toRef } from 'vue'
 
 const props = withDefaults(defineProps<{
   rows: ComplexityPlayerRow[]
-  scenario: EstimateScenario
+  scenario: ComparisonScenario
+  columns?: readonly ComplexityScenario[]
   loading?: boolean
 }>(), {
+  columns: () => SCENARIO_ORDER,
   loading: false,
 })
 
-function apOf(row: ComplexityPlayerRow, scenario: EstimateScenario | 'CURRENT'): number | null {
+const emit = defineEmits<{
+  select: [userId: string]
+}>()
+
+const ALL_SCENARIOS: readonly ComplexityScenario[] = [
+  'CURRENT',
+  'OLD_SCRIPT',
+  'NEW_SCRIPT',
+  'PREVIEW',
+]
+
+function apOf(row: ComplexityPlayerRow, scenario: ComplexityScenario): number | null {
   return row.scenarios[scenario]?.ap ?? null
 }
 
-function rankOf(row: ComplexityPlayerRow, scenario: EstimateScenario | 'CURRENT'): number | null {
+function rankOf(row: ComplexityPlayerRow, scenario: ComplexityScenario): number | null {
   return row.scenarios[scenario]?.rank ?? null
+}
+
+const accessors: Record<string, (row: ComplexityPlayerRow) => number | string | null> = {
+  rankCurrent: (row) => rankOf(row, 'CURRENT'),
+  name: (row) => row.name.toLowerCase(),
+  apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
+  rankScenario: (row) => rankOf(row, props.scenario),
+  rankMove: (row) => row.deltas[props.scenario]?.rank ?? null,
+}
+
+for (const key of ALL_SCENARIOS) {
+  accessors[apKey(key)] = (row) => apOf(row, key)
 }
 
 const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
@@ -35,26 +65,22 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
   defaultKey: 'rankCurrent',
   ascendingKeys: ['rankCurrent', 'rankScenario', 'name'],
   revision: () => props.scenario,
-  accessors: {
-    rankCurrent: (row) => rankOf(row, 'CURRENT'),
-    name: (row) => row.name.toLowerCase(),
-    apCurrent: (row) => apOf(row, 'CURRENT'),
-    apOld: (row) => apOf(row, 'OLD_SCRIPT'),
-    apNew: (row) => apOf(row, 'NEW_SCRIPT'),
-    apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
-    rankScenario: (row) => rankOf(row, props.scenario),
-    rankMove: (row) => row.deltas[props.scenario]?.rank ?? null,
-  },
+  accessors,
 })
 
-const columns = computed<TableColumn[]>(() => {
+const tableColumns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
+  const apWidth = props.columns.length > 2 ? '108px' : '124px'
   return [
     { key: 'rankCurrent', label: 'Rank now', sortable: true, align: 'right', width: '108px' },
-    { key: 'player', label: 'Player', sortable: false, width: '240px', flex: true },
-    { key: 'apCurrent', label: 'AP now', sortable: true, align: 'right', width: '108px' },
-    { key: 'apOld', label: 'AP old', sortable: true, align: 'right', width: '108px' },
-    { key: 'apNew', label: 'AP new', sortable: true, align: 'right', width: '108px' },
+    { key: 'player', label: 'Player', width: '240px', flex: true },
+    ...props.columns.map((scenario) => ({
+      key: apKey(scenario),
+      label: `AP ${SCENARIO_SHORT[scenario]}`,
+      sortable: true,
+      align: 'right' as const,
+      width: apWidth,
+    })),
     {
       key: 'apMove',
       label: `Δ AP ${deltaMode.value}`,
@@ -62,7 +88,7 @@ const columns = computed<TableColumn[]>(() => {
       align: 'right',
       width: '118px',
     },
-    { key: 'rankScenario', label: `Rank ${tag}`, sortable: true, align: 'right', width: '104px' },
+    { key: 'rankScenario', label: `Rank ${tag}`, sortable: true, align: 'right', width: '112px' },
     {
       key: 'rankMove',
       label: `Δ rank ${deltaMode.value}`,
@@ -75,6 +101,7 @@ const columns = computed<TableColumn[]>(() => {
 
 const tableRows = computed(() =>
   visible.value.map((row) => ({
+    ...Object.fromEntries(props.columns.map((scenario) => [apKey(scenario), apOf(row, scenario)])),
     id: row.userId,
     userId: row.userId,
     name: row.name,
@@ -83,16 +110,15 @@ const tableRows = computed(() =>
     avatarFallbackUrl: pickAvatarFallback(row),
     rankCurrent: rankOf(row, 'CURRENT'),
     apCurrent: apOf(row, 'CURRENT'),
-    apOld: apOf(row, 'OLD_SCRIPT'),
-    apNew: apOf(row, 'NEW_SCRIPT'),
+    apScenario: apOf(row, props.scenario),
     apMove: row.deltas[props.scenario]?.ap ?? null,
     rankScenario: rankOf(row, props.scenario),
     rankMove: row.deltas[props.scenario]?.rank ?? null,
   })),
 )
 
-function playerRoute(row: Record<string, unknown>) {
-  return { name: 'player-profile', params: { userId: row.userId as string } }
+function selectPlayer(row: Record<string, unknown>) {
+  emit('select', row.userId as string)
 }
 </script>
 
@@ -100,15 +126,16 @@ function playerRoute(row: Record<string, unknown>) {
   <div class="complexity-players">
     <DataTable
       dense
-      :columns="columns"
+      :columns="tableColumns"
       :rows="tableRows"
       :sort-state="sortState"
       :loading="loading"
       :loading-rows="10"
       row-key="id"
-      :row-to="playerRoute"
+      row-clickable
       empty-message="No players on this board yet"
       @sort="onSort"
+      @row-click="selectPlayer"
     >
       <template #cell-rankCurrent="{ row }">
         <span class="complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
@@ -125,18 +152,9 @@ function playerRoute(row: Record<string, unknown>) {
         </div>
       </template>
 
-      <template #cell-apCurrent="{ row }">
-        <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
-      </template>
-
-      <template #cell-apOld="{ row }">
-        <ScenarioCell :value="(row.apOld as number | null)" :decimals="AP_DECIMALS"
-          :emphasis="scenario === 'OLD_SCRIPT'" />
-      </template>
-
-      <template #cell-apNew="{ row }">
-        <ScenarioCell :value="(row.apNew as number | null)" :decimals="AP_DECIMALS"
-          :emphasis="scenario === 'NEW_SCRIPT'" />
+      <template v-for="key in columns" :key="key" #[`cell-${apKey(key)}`]="{ row }">
+        <ScenarioCell :value="(row[apKey(key)] as number | null)" :decimals="AP_DECIMALS"
+          :emphasis="key === 'CURRENT' || key === scenario" />
       </template>
 
       <template #cell-apMove="{ row }">
@@ -156,7 +174,7 @@ function playerRoute(row: Record<string, unknown>) {
       </template>
 
       <template #mobile-card="{ row }">
-        <RouterLink class="complexity-players__card" :to="playerRoute(row)">
+        <button type="button" class="complexity-players__card" @click="selectPlayer(row)">
           <span class="complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
             {{ row.rankCurrent != null ? `#${row.rankCurrent}` : '–' }}
           </span>
@@ -166,14 +184,13 @@ function playerRoute(row: Record<string, unknown>) {
             <span class="complexity-players__name">{{ row.name }}</span>
             <div class="complexity-players__card-values">
               <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
-              <ScenarioCell
-                :value="((scenario === 'NEW_SCRIPT' ? row.apNew : row.apOld) as number | null)"
+              <ScenarioCell :value="(row.apScenario as number | null)"
                 :delta="(row.apMove as number | null)" :decimals="AP_DECIMALS" emphasis />
               <ScenarioCell delta-only invert :value="(row.rankMove as number | null)"
                 :delta="(row.rankMove as number | null)" :decimals="0" />
             </div>
           </div>
-        </RouterLink>
+        </button>
       </template>
 
       <template #empty>
@@ -219,11 +236,13 @@ function playerRoute(row: Record<string, unknown>) {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  width: 100%;
   padding: var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
 }
 
 .complexity-players__card-body {

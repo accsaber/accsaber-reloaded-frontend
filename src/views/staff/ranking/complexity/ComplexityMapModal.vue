@@ -7,10 +7,11 @@ import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
 import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import type {
+  ComparisonScenario,
   ComplexityDifficultyRow,
   ComplexityMapLeaderboard,
+  ComplexityScenario,
   ComplexityScoreRow,
-  EstimateScenario,
 } from '@/types/api/complexity'
 import type { CategoryCode, TableColumn } from '@/types/display'
 import { AP_DECIMALS, CX_DECIMALS, ESTIMATE_SCENARIOS, SCENARIO_SHORT } from '@/utils/complexity'
@@ -25,14 +26,16 @@ const props = defineProps<{
   open: boolean
   row: ComplexityDifficultyRow | null
   leaderboard: ComplexityMapLeaderboard | null
-  scenario: EstimateScenario
+  scenario: ComparisonScenario
   modelHash: string | null
+  maxNudge?: number | null
   loading?: boolean
   error?: string
 }>()
 
 const emit = defineEmits<{
   close: []
+  selectPlayer: [userId: string]
 }>()
 
 const inputsOpen = ref(false)
@@ -50,13 +53,13 @@ const title = computed(() => {
 
 const scoreRows = computed<ComplexityScoreRow[]>(() => props.leaderboard?.rows ?? [])
 
-function apOf(row: ComplexityScoreRow, scenario: EstimateScenario | 'CURRENT'): number | null {
+function apOf(row: ComplexityScoreRow, scenario: ComplexityScenario): number | null {
   return row.scenarios[scenario]?.ap ?? null
 }
 
 const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
   rows: scoreRows,
-  deltaKeys: ['apMove', 'rankMove'],
+  deltaKeys: ['apMove', 'weightedMove', 'rankMove'],
   defaultKey: 'rank',
   ascendingKeys: ['rank', 'rankScenario'],
   revision: () => props.scenario,
@@ -64,10 +67,11 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
     rank: (row) => row.scenarios.CURRENT?.rank ?? null,
     accuracy: (row) => row.accuracy,
     apCurrent: (row) => apOf(row, 'CURRENT'),
-    apOld: (row) => apOf(row, 'OLD_SCRIPT'),
-    apNew: (row) => apOf(row, 'NEW_SCRIPT'),
+    apScenario: (row) => apOf(row, props.scenario),
     apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
-    weighted: (row) => row.scenarios[props.scenario]?.weightedAp ?? null,
+    weightedCurrent: (row) => row.scenarios.CURRENT?.weightedAp ?? null,
+    weightedScenario: (row) => row.scenarios[props.scenario]?.weightedAp ?? null,
+    weightedMove: (row) => row.deltas[props.scenario]?.weightedAp ?? null,
     rankScenario: (row) => row.scenarios[props.scenario]?.rank ?? null,
     rankMove: (row) => row.deltas[props.scenario]?.rank ?? null,
   },
@@ -76,12 +80,11 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
 const columns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
   return [
-    { key: 'rank', label: 'Rank', sortable: true, align: 'right', width: '88px' },
-    { key: 'player', label: 'Player', width: '190px', flex: true },
-    { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right', width: '112px' },
+    { key: 'rank', label: 'Rank', sortable: true, align: 'right', width: '84px' },
+    { key: 'player', label: 'Player', width: '180px', flex: true },
+    { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right', width: '104px' },
     { key: 'apCurrent', label: 'AP now', sortable: true, align: 'right', width: '96px' },
-    { key: 'apOld', label: 'AP old', sortable: true, align: 'right', width: '96px' },
-    { key: 'apNew', label: 'AP new', sortable: true, align: 'right', width: '96px' },
+    { key: 'apScenario', label: `AP ${tag}`, sortable: true, align: 'right', width: '100px' },
     {
       key: 'apMove',
       label: `Δ AP ${deltaMode.value}`,
@@ -89,7 +92,15 @@ const columns = computed<TableColumn[]>(() => {
       align: 'right',
       width: '112px',
     },
-    { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', width: '112px' },
+    { key: 'weightedCurrent', label: 'Wgt now', sortable: true, align: 'right', width: '100px' },
+    { key: 'weightedScenario', label: `Wgt ${tag}`, sortable: true, align: 'right', width: '104px' },
+    {
+      key: 'weightedMove',
+      label: `Δ wgt ${deltaMode.value}`,
+      sortable: true,
+      align: 'right',
+      width: '116px',
+    },
     { key: 'rankScenario', label: `Rank ${tag}`, sortable: true, align: 'right', width: '104px' },
     {
       key: 'rankMove',
@@ -112,10 +123,11 @@ const tableRows = computed(() =>
     rank: row.scenarios.CURRENT?.rank ?? null,
     accuracy: row.accuracy,
     apCurrent: apOf(row, 'CURRENT'),
-    apOld: apOf(row, 'OLD_SCRIPT'),
-    apNew: apOf(row, 'NEW_SCRIPT'),
+    apScenario: apOf(row, props.scenario),
     apMove: row.deltas[props.scenario]?.ap ?? null,
-    weighted: row.scenarios[props.scenario]?.weightedAp ?? null,
+    weightedCurrent: row.scenarios.CURRENT?.weightedAp ?? null,
+    weightedScenario: row.scenarios[props.scenario]?.weightedAp ?? null,
+    weightedMove: row.deltas[props.scenario]?.weightedAp ?? null,
     rankScenario: row.scenarios[props.scenario]?.rank ?? null,
     rankMove: row.deltas[props.scenario]?.rank ?? null,
   })),
@@ -144,8 +156,8 @@ const complexities = computed(() => {
 const coverUrl = computed(() => pickCoverUrl(difficulty.value))
 const coverFallback = computed(() => pickCoverFallback(difficulty.value))
 
-function playerRoute(row: Record<string, unknown>) {
-  return { name: 'player-profile', params: { userId: row.userId as string } }
+function selectPlayer(row: Record<string, unknown>) {
+  emit('selectPlayer', row.userId as string)
 }
 </script>
 
@@ -179,7 +191,7 @@ function playerRoute(row: Record<string, unknown>) {
         </BaseButton>
         <div v-if="inputsOpen" class="map-modal__inputs-body">
           <EstimateInputs v-for="source in ESTIMATE_SCENARIOS" :key="source" :scenario="source"
-            :estimate="difficulty.estimates[source]"
+            :estimate="difficulty.estimates[source]" :max-nudge="maxNudge"
             :stale="isStaleEstimate(difficulty.estimates[source], modelHash)" />
         </div>
       </div>
@@ -196,10 +208,11 @@ function playerRoute(row: Record<string, unknown>) {
         :page="page"
         :total-pages="totalPages"
         row-key="id"
-        :row-to="playerRoute"
+        row-clickable
         empty-message="No active scores on this difficulty"
         @sort="onSort"
         @update:page="setPage"
+        @row-click="selectPlayer"
       >
         <template #cell-player="{ row }">
           <div class="map-modal__player">
@@ -217,14 +230,8 @@ function playerRoute(row: Record<string, unknown>) {
           <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
         </template>
 
-        <template #cell-apOld="{ row }">
-          <ScenarioCell :value="(row.apOld as number | null)" :decimals="AP_DECIMALS"
-            :emphasis="scenario === 'OLD_SCRIPT'" />
-        </template>
-
-        <template #cell-apNew="{ row }">
-          <ScenarioCell :value="(row.apNew as number | null)" :decimals="AP_DECIMALS"
-            :emphasis="scenario === 'NEW_SCRIPT'" />
+        <template #cell-apScenario="{ row }">
+          <ScenarioCell :value="(row.apScenario as number | null)" :decimals="AP_DECIMALS" emphasis />
         </template>
 
         <template #cell-apMove="{ row }">
@@ -232,8 +239,19 @@ function playerRoute(row: Record<string, unknown>) {
             :delta="(row.apMove as number | null)" :decimals="AP_DECIMALS" />
         </template>
 
-        <template #cell-weighted="{ row }">
-          <ScenarioCell :value="(row.weighted as number | null)" :decimals="AP_DECIMALS" emphasis />
+        <template #cell-weightedCurrent="{ row }">
+          <ScenarioCell :value="(row.weightedCurrent as number | null)" :decimals="AP_DECIMALS"
+            emphasis />
+        </template>
+
+        <template #cell-weightedScenario="{ row }">
+          <ScenarioCell :value="(row.weightedScenario as number | null)" :decimals="AP_DECIMALS"
+            emphasis />
+        </template>
+
+        <template #cell-weightedMove="{ row }">
+          <ScenarioCell delta-only :value="(row.weightedMove as number | null)"
+            :delta="(row.weightedMove as number | null)" :decimals="AP_DECIMALS" />
         </template>
 
         <template #cell-rankScenario="{ row }">
@@ -322,7 +340,7 @@ function playerRoute(row: Record<string, unknown>) {
 .map-modal__inputs-body {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: var(--space-lg);
 }
 

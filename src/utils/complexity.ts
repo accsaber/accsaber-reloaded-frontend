@@ -1,4 +1,5 @@
 import type {
+  ComparisonScenario,
   ComplexityScenario,
   EstimateScenario,
   ScenarioMapValues,
@@ -54,6 +55,7 @@ export const SCENARIO_LABELS: Record<ComplexityScenario, string> = {
   CURRENT: 'Current',
   OLD_SCRIPT: 'Old script',
   NEW_SCRIPT: 'New script',
+  PREVIEW: 'Preview',
 }
 
 export const SCENARIO_ORDER: readonly ComplexityScenario[] = ['CURRENT', 'OLD_SCRIPT', 'NEW_SCRIPT']
@@ -62,7 +64,10 @@ export const SCENARIO_SHORT: Record<ComplexityScenario, string> = {
   CURRENT: 'now',
   OLD_SCRIPT: 'old',
   NEW_SCRIPT: 'new',
+  PREVIEW: 'preview',
 }
+
+export const PREVIEW_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'PREVIEW']
 
 export const ESTIMATE_SCENARIOS: readonly EstimateScenario[] = ['OLD_SCRIPT', 'NEW_SCRIPT']
 
@@ -80,7 +85,10 @@ export function deltaTone(delta: number | null | undefined, invert = false): Del
   return signed > 0 ? 'up' : 'down'
 }
 
-export function movesUnder(row: { deltas: Partial<Record<EstimateScenario, ScenarioMapValues>> }, scenario: EstimateScenario): boolean {
+export function movesUnder(
+  row: { deltas: Partial<Record<ComparisonScenario, ScenarioMapValues>> },
+  scenario: ComparisonScenario,
+): boolean {
   const delta = row.deltas[scenario]?.complexity
   return delta != null && Math.abs(delta) >= EPSILON
 }

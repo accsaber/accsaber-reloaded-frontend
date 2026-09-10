@@ -3,6 +3,7 @@ import type {
   ComplexityEstimateInfo,
   EstimateScenario,
 } from '@/types/api/complexity'
+import { COEFFICIENT_FIELDS } from './tuning'
 
 export type EstimateFormat = 'percent' | 'number' | 'count' | 'text'
 
@@ -13,28 +14,75 @@ export interface EstimateField {
   decimals?: number
 }
 
-export const ESTIMATE_FIELDS: Record<EstimateScenario, EstimateField[]> = {
+export interface EstimateGroup {
+  key: string
+  title: string
+  fields: EstimateField[]
+}
+
+export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
   OLD_SCRIPT: [
-    { key: 'aiAccuracy', label: 'BeatLeader accuracy', format: 'percent' },
-    { key: 'shiftedAccuracy', label: 'Shifted accuracy', format: 'percent' },
-    { key: 'apTarget', label: 'AP target', format: 'number', decimals: 0 },
-    { key: 'rawMultiplier', label: 'Raw multiplier', format: 'number', decimals: 3 },
-    { key: 'transformedMultiplier', label: 'Transformed multiplier', format: 'number', decimals: 3 },
+    {
+      key: 'accuracy',
+      title: 'Accuracy',
+      fields: [
+        { key: 'aiAccuracy', label: 'BeatLeader accuracy', format: 'percent' },
+        { key: 'shiftedAccuracy', label: 'Shifted accuracy', format: 'percent' },
+      ],
+    },
+    {
+      key: 'target',
+      title: 'Target',
+      fields: [
+        { key: 'apTarget', label: 'AP target', format: 'number', decimals: 0 },
+        { key: 'rawMultiplier', label: 'Raw multiplier', format: 'number', decimals: 3 },
+        { key: 'transformedMultiplier', label: 'Transformed multiplier', format: 'number', decimals: 3 },
+      ],
+    },
   ],
   NEW_SCRIPT: [
-    { key: 'meanNoteAccuracy', label: 'Mean note accuracy', format: 'percent' },
-    { key: 'worstNoteAccuracy', label: 'Worst note accuracy', format: 'percent' },
-    { key: 'meanTerm', label: 'Mean term', format: 'number', decimals: 4 },
-    { key: 'worstTerm', label: 'Worst term', format: 'number', decimals: 4 },
-    { key: 'intercept', label: 'Intercept', format: 'number', decimals: 3 },
-    { key: 'meanSlope', label: 'Mean slope', format: 'number', decimals: 3 },
-    { key: 'worstSlope', label: 'Worst slope', format: 'number', decimals: 3 },
-    { key: 'notes', label: 'Notes', format: 'count' },
-    { key: 'predictedNotes', label: 'Predicted notes', format: 'count' },
-    { key: 'model', label: 'Model', format: 'text' },
-    { key: 'mapVersion', label: 'Map version', format: 'text' },
+    {
+      key: 'notes',
+      title: 'Note terms',
+      fields: [
+        { key: 'meanNoteAccuracy', label: 'Mean note accuracy', format: 'percent' },
+        { key: 'worstNoteAccuracy', label: 'Worst note accuracy', format: 'percent' },
+        { key: 'meanTerm', label: 'Mean term', format: 'number', decimals: 4 },
+        { key: 'worstTerm', label: 'Worst term', format: 'number', decimals: 4 },
+        { key: 'notes', label: 'Notes', format: 'count' },
+        { key: 'notesTerm', label: 'Notes term', format: 'number', decimals: 4 },
+        { key: 'njs', label: 'Note jump speed', format: 'number', decimals: 2 },
+      ],
+    },
+    {
+      key: 'swings',
+      title: 'Swing shares',
+      fields: [
+        { key: 'resetShare', label: 'Resets', format: 'percent' },
+        { key: 'dotShare', label: 'Dots', format: 'percent' },
+      ],
+    },
+    {
+      key: 'board',
+      title: 'Board',
+      fields: [
+        { key: 'boardEase', label: 'Board ease', format: 'number', decimals: 4 },
+        { key: 'boardPlayers', label: 'Players', format: 'count' },
+        { key: 'scores', label: 'Scores', format: 'count' },
+        { key: 'boardWeight', label: 'Board weight', format: 'percent' },
+        { key: 'chartComplexity', label: 'Chart complexity', format: 'number', decimals: 2 },
+        { key: 'boardComplexity', label: 'Board complexity', format: 'number', decimals: 2 },
+      ],
+    },
   ],
 }
+
+export const COEFFICIENT_SETS: { key: 'chart' | 'board'; title: string }[] = [
+  { key: 'chart', title: 'Chart coefficients' },
+  { key: 'board', title: 'Board coefficients' },
+]
+
+export const COEFFICIENT_ROWS = COEFFICIENT_FIELDS
 
 export function readNumber(
   inputs: Record<string, unknown> | undefined,
@@ -57,6 +105,16 @@ export function readString(
   if (typeof raw === 'string') return raw
   if (typeof raw === 'number') return String(raw)
   return null
+}
+
+export function readObject(
+  inputs: Record<string, unknown> | undefined,
+  key: string,
+): Record<string, unknown> | null {
+  const raw = inputs?.[key]
+  return raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? (raw as Record<string, unknown>)
+    : null
 }
 
 export function worstShareLabel(inputs: Record<string, unknown> | undefined): string | null {

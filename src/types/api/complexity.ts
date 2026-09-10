@@ -1,8 +1,10 @@
 import type { Difficulty, MapDifficultyStatus } from '@/types/enums'
 
-export type ComplexityScenario = 'CURRENT' | 'OLD_SCRIPT' | 'NEW_SCRIPT'
+export type ComplexityScenario = 'CURRENT' | 'OLD_SCRIPT' | 'NEW_SCRIPT' | 'PREVIEW'
 
-export type EstimateScenario = Exclude<ComplexityScenario, 'CURRENT'>
+export type EstimateScenario = 'OLD_SCRIPT' | 'NEW_SCRIPT'
+
+export type ComparisonScenario = Exclude<ComplexityScenario, 'CURRENT'>
 
 export type ComplexityDatasetKind = 'scores' | 'difficulties' | 'complexity-history'
 
@@ -36,13 +38,14 @@ export interface ComplexityDifficultyRow {
   status: MapDifficultyStatus
   scores: number
   scenarios: Partial<Record<ComplexityScenario, ScenarioMapValues>>
-  deltas: Partial<Record<EstimateScenario, ScenarioMapValues>>
+  deltas: Partial<Record<ComparisonScenario, ScenarioMapValues>>
   estimates: Partial<Record<EstimateScenario, ComplexityEstimateInfo>>
 }
 
 export interface ScenarioPlayValues {
   ap: number | null
   weightedAp: number | null
+  position: number | null
   rank: number | null
 }
 
@@ -54,7 +57,7 @@ export interface ComplexityScoreRow {
   country: string
   accuracy: number
   scenarios: Partial<Record<ComplexityScenario, ScenarioPlayValues>>
-  deltas: Partial<Record<EstimateScenario, ScenarioPlayValues>>
+  deltas: Partial<Record<ComparisonScenario, ScenarioPlayValues>>
 }
 
 export interface ComplexityMapLeaderboard {
@@ -85,7 +88,7 @@ export interface ComplexityPlayerRow {
   cdnAvatarUrl: string | null
   country: string
   scenarios: Partial<Record<ComplexityScenario, ScenarioTotalValues>>
-  deltas: Partial<Record<EstimateScenario, ScenarioTotalValues>>
+  deltas: Partial<Record<ComparisonScenario, ScenarioTotalValues>>
 }
 
 export interface ComplexityPlayerBoard {
@@ -98,6 +101,7 @@ export interface ComplexityPlayerBoard {
 export interface ComplexityDifficultyParams {
   categoryId?: string
   status?: MapDifficultyStatus
+  search?: string
 }
 
 export interface HighestAverageApParams {
@@ -105,9 +109,79 @@ export interface HighestAverageApParams {
   categoryId?: string
   minScores?: number
   limit?: number
+  search?: string
 }
 
 export interface ComplexityPlayerParams {
   categoryId?: string
   limit?: number
+  search?: string
+}
+
+export interface RaterCoefficients {
+  intercept: number
+  meanSlope: number
+  worstSlope: number
+  resetSlope: number
+  dotSlope: number
+  notesSlope: number
+  njsSlope: number
+  boardSlope: number
+}
+
+export interface RaterBoardGate {
+  minScores: number
+  fullScores: number
+  minPlayers: number
+  minPlayerPlays: number
+  maxNudge: number
+}
+
+export interface ComplexityRaterSpec {
+  worstShare: number
+  board: RaterBoardGate
+  categories: Record<string, RaterCoefficients>
+  boardCategories: Record<string, RaterCoefficients>
+}
+
+export interface ComplexityRaterResponse {
+  version: string
+  worstBands: number[]
+  rater: ComplexityRaterSpec
+}
+
+export interface ComplexityPreviewResponse {
+  rater: ComplexityRaterSpec
+  difficulties: ComplexityDifficultyRow[]
+  players: ComplexityPlayerBoard
+}
+
+export interface ComplexityPreviewParams {
+  categoryId?: string
+  status?: MapDifficultyStatus
+  playerLimit?: number
+}
+
+export interface ComplexityPlayerPlay {
+  difficulty: ComplexityDifficultyRow
+  accuracy: number
+  scenarios: Partial<Record<ComplexityScenario, ScenarioPlayValues>>
+  deltas: Partial<Record<ComparisonScenario, ScenarioPlayValues>>
+}
+
+export interface ComplexityPlayerCategory {
+  categoryId: string
+  categoryCode: string
+  scenarios: Partial<Record<ComplexityScenario, ScenarioTotalValues>>
+  deltas: Partial<Record<ComparisonScenario, ScenarioTotalValues>>
+  plays: ComplexityPlayerPlay[]
+}
+
+export interface ComplexityPlayerPlays {
+  userId: string
+  name: string
+  avatarUrl: string | null
+  cdnAvatarUrl: string | null
+  country: string
+  categories: ComplexityPlayerCategory[]
 }

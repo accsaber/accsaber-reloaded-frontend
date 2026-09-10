@@ -1,27 +1,36 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import CategoryBadge from '@/components/domain/CategoryBadge.vue'
-import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
-import SongTitle from '@/components/domain/SongTitle.vue'
-import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
-import type { ComplexityDifficultyRow, EstimateScenario } from '@/types/api/complexity'
-import type { CategoryCode, TableColumn } from '@/types/display'
-import { AP_DECIMALS, CX_DECIMALS, isBigMove } from '@/utils/complexity'
-import { formatCount } from '@/utils/formatters'
+import type {
+  ComparisonScenario,
+  ComplexityDifficultyRow,
+  ComplexityScenario,
+} from '@/types/api/complexity'
+import type { TableColumn } from '@/types/display'
+import {
+  AP_DECIMALS,
+  CX_DECIMALS,
+  SCENARIO_ORDER,
+  SCENARIO_SHORT,
+  isBigMove,
+} from '@/utils/complexity'
+import { formatCount, formatFixed } from '@/utils/formatters'
+import MapIdentityCell from './MapIdentityCell.vue'
 import ScenarioCell from './ScenarioCell.vue'
+import { cxKey } from './scenarioKeys'
 import { useScenarioSort } from './useScenarioSort'
-import { computed, toRef } from 'vue'
+import { computed, ref, toRef } from 'vue'
 
 const props = withDefaults(defineProps<{
   rows: ComplexityDifficultyRow[]
-  scenario: EstimateScenario
+  scenario: ComparisonScenario
+  columns?: readonly ComplexityScenario[]
   loading?: boolean
   board?: boolean
   emptyMessage?: string
 }>(), {
+  columns: () => SCENARIO_ORDER,
   loading: false,
   board: false,
   emptyMessage: 'No difficulties match these filters',
@@ -31,7 +40,20 @@ const emit = defineEmits<{
   select: [row: ComplexityDifficultyRow]
 }>()
 
-type MapMetric = 'complexity' | 'topAp' | 'averageWeightedAp' | 'boardRank'
+type MapMetric = 'complexity' | 'topAp' | 'averageAp' | 'averageWeightedAp' | 'boardRank'
+
+const ALL_SCENARIOS: readonly ComplexityScenario[] = [
+  'CURRENT',
+  'OLD_SCRIPT',
+  'NEW_SCRIPT',
+  'PREVIEW',
+]
+
+const expanded = ref(new Set<string | number>())
+
+function currentValue(row: ComplexityDifficultyRow, key: MapMetric): number | null {
+  return row.scenarios.CURRENT?.[key] ?? null
+}
 
 function scenarioValue(row: ComplexityDifficultyRow, key: MapMetric): number | null {
   return row.scenarios[props.scenario]?.[key] ?? null
@@ -41,46 +63,75 @@ function deltaValue(row: ComplexityDifficultyRow, key: MapMetric): number | null
   return row.deltas[props.scenario]?.[key] ?? null
 }
 
+const accessors: Record<string, (row: ComplexityDifficultyRow) => number | string | null> = {
+  song: (row) => row.songName.toLowerCase(),
+  cxDelta: (row) => deltaValue(row, 'complexity'),
+  topApCurrent: (row) => currentValue(row, 'topAp'),
+  topAp: (row) => scenarioValue(row, 'topAp'),
+  topApDelta: (row) => deltaValue(row, 'topAp'),
+  avgWeightedCurrent: (row) => currentValue(row, 'averageWeightedAp'),
+  avgWeighted: (row) => scenarioValue(row, 'averageWeightedAp'),
+  avgWeightedDelta: (row) => deltaValue(row, 'averageWeightedAp'),
+  scores: (row) => row.scores,
+  board: (row) => row.scenarios[props.scenario]?.boardRank ?? null,
+}
+
+for (const key of ALL_SCENARIOS) {
+  accessors[cxKey(key)] = (row) => row.scenarios[key]?.complexity ?? null
+}
+
 const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
   rows: toRef(props, 'rows'),
-  deltaKeys: ['cxDelta'],
+  deltaKeys: ['cxDelta', 'topApDelta', 'avgWeightedDelta'],
   defaultKey: props.board ? 'avgWeighted' : 'cxDelta',
   ascendingKeys: ['song', 'board'],
   revision: () => props.scenario,
-  accessors: {
-    song: (row) => row.songName.toLowerCase(),
-    cxCurrent: (row) => row.scenarios.CURRENT?.complexity ?? null,
-    cxOld: (row) => row.scenarios.OLD_SCRIPT?.complexity ?? null,
-    cxNew: (row) => row.scenarios.NEW_SCRIPT?.complexity ?? null,
-    cxDelta: (row) => deltaValue(row, 'complexity'),
-    board: (row) => row.scenarios[props.scenario]?.boardRank ?? null,
-    topAp: (row) => scenarioValue(row, 'topAp'),
-    avgWeighted: (row) => scenarioValue(row, 'averageWeightedAp'),
-    scores: (row) => row.scores,
-  },
+  accessors,
 })
 
-const columns = computed<TableColumn[]>(() => {
+const tableColumns = computed<TableColumn[]>(() => {
+  const tag = SCENARIO_SHORT[props.scenario]
+  const cxWidth = props.columns.length > 2 ? '84px' : '104px'
   const list: TableColumn[] = [
-    { key: 'cover', label: '', width: '56px', noLink: true },
-    { key: 'song', label: 'Song', sortable: true, width: '300px' },
-    { key: 'mapper', label: 'Mapper', width: '150px' },
-    { key: 'cxCurrent', label: 'CX now', sortable: true, align: 'right', width: '84px' },
-    { key: 'cxOld', label: 'CX old', sortable: true, align: 'right', width: '84px' },
-    { key: 'cxNew', label: 'CX new', sortable: true, align: 'right', width: '84px' },
+    { key: 'expand', label: '', width: '40px', noLink: true },
+    { key: 'song', label: 'Song', sortable: true, width: '280px' },
+    { key: 'mapper', label: 'Mapper', width: '140px' },
+    ...props.columns.map((scenario) => ({
+      key: cxKey(scenario),
+      label: `CX ${SCENARIO_SHORT[scenario]}`,
+      sortable: true,
+      align: 'right' as const,
+      width: cxWidth,
+    })),
     {
       key: 'cxDelta',
       label: `Δ CX ${deltaMode.value}`,
       sortable: true,
       align: 'right',
-      width: '112px',
+      width: '108px',
     },
-    { key: 'topAp', label: 'Top AP', sortable: true, align: 'right', width: '104px' },
-    { key: 'avgWeighted', label: 'Avg wgt', sortable: true, align: 'right', width: '112px' },
+    { key: 'topApCurrent', label: 'Top AP now', sortable: true, align: 'right', width: '116px' },
+    { key: 'topAp', label: `Top AP ${tag}`, sortable: true, align: 'right', width: '116px' },
+    {
+      key: 'topApDelta',
+      label: `Δ top AP ${deltaMode.value}`,
+      sortable: true,
+      align: 'right',
+      width: '124px',
+    },
+    { key: 'avgWeightedCurrent', label: 'Avg wgt now', sortable: true, align: 'right', width: '124px' },
+    { key: 'avgWeighted', label: `Avg wgt ${tag}`, sortable: true, align: 'right', width: '124px' },
+    {
+      key: 'avgWeightedDelta',
+      label: `Δ avg wgt ${deltaMode.value}`,
+      sortable: true,
+      align: 'right',
+      width: '132px',
+    },
     { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '82px' },
   ]
   if (props.board) {
-    list.unshift({ key: 'board', label: 'Board', sortable: true, align: 'center', width: '120px' })
+    list.splice(1, 0, { key: 'board', label: 'Board', sortable: true, align: 'center', width: '116px' })
   }
   return list
 })
@@ -88,27 +139,27 @@ const columns = computed<TableColumn[]>(() => {
 const tableRows = computed(() =>
   visible.value.map((row) => {
     const cxDelta = deltaValue(row, 'complexity')
+    const complexities = Object.fromEntries(
+      props.columns.map((scenario) => [cxKey(scenario), row.scenarios[scenario]?.complexity ?? null]),
+    )
     return {
+      ...complexities,
       id: row.mapDifficultyId,
       source: row,
-      coverUrl: pickCoverUrl(row),
-      coverFallbackUrl: pickCoverFallback(row),
       songName: row.songName,
-      songSubName: row.songSubName,
-      songAuthor: row.songAuthor,
       mapper: row.mapAuthor,
-      difficulty: row.difficulty,
-      categoryCode: row.categoryCode as CategoryCode,
-      status: row.status,
       scores: row.scores,
       cxCurrent: row.scenarios.CURRENT?.complexity ?? null,
-      cxOld: row.scenarios.OLD_SCRIPT?.complexity ?? null,
-      cxNew: row.scenarios.NEW_SCRIPT?.complexity ?? null,
       cxScenario: scenarioValue(row, 'complexity'),
       cxDelta,
       moved: isBigMove(cxDelta),
+      topApCurrent: currentValue(row, 'topAp'),
       topAp: scenarioValue(row, 'topAp'),
       topApDelta: deltaValue(row, 'topAp'),
+      avgApCurrent: currentValue(row, 'averageAp'),
+      avgAp: scenarioValue(row, 'averageAp'),
+      avgApDelta: deltaValue(row, 'averageAp'),
+      avgWeightedCurrent: currentValue(row, 'averageWeightedAp'),
       avgWeighted: scenarioValue(row, 'averageWeightedAp'),
       avgWeightedDelta: deltaValue(row, 'averageWeightedAp'),
       boardNow: row.scenarios.CURRENT?.boardRank ?? null,
@@ -120,13 +171,20 @@ const tableRows = computed(() =>
 function rowClass(row: Record<string, unknown>) {
   return row.moved ? 'complexity-maps__row--moved' : ''
 }
+
+function toggleDetail(id: string) {
+  const next = new Set(expanded.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expanded.value = next
+}
 </script>
 
 <template>
   <div class="complexity-maps">
     <DataTable
       dense
-      :columns="columns"
+      :columns="tableColumns"
       :rows="tableRows"
       :sort-state="sortState"
       :loading="loading"
@@ -134,10 +192,24 @@ function rowClass(row: Record<string, unknown>) {
       row-key="id"
       row-clickable
       :row-class="rowClass"
+      :expanded-rows="expanded"
       :empty-message="emptyMessage"
       @sort="onSort"
       @row-click="(row) => emit('select', row.source as ComplexityDifficultyRow)"
     >
+      <template #cell-expand="{ row }">
+        <button type="button" class="complexity-maps__expand"
+          :aria-expanded="expanded.has(row.id as string)"
+          :aria-label="`Average AP for ${row.songName}`"
+          @click.stop="toggleDetail(row.id as string)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            :class="{ 'complexity-maps__chevron--open': expanded.has(row.id as string) }">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </template>
+
       <template #cell-board="{ row }">
         <span class="complexity-maps__board">
           <span class="complexity-maps__board-pos">{{ row.boardNow != null ? `#${row.boardNow}` : '–' }}</span>
@@ -146,41 +218,17 @@ function rowClass(row: Record<string, unknown>) {
         </span>
       </template>
 
-      <template #cell-cover="{ row }">
-        <GlowImage :src="row.coverUrl as string" alt="" :size="36"
-          :fallback-src="(row.coverFallbackUrl as string | null)" />
-      </template>
-
       <template #cell-song="{ row }">
-        <div class="complexity-maps__song">
-          <SongTitle class="complexity-maps__song-name" :name="(row.songName as string)"
-            :sub-name="(row.songSubName as string | null)" />
-          <span class="complexity-maps__song-meta">
-            <CategoryBadge :category="(row.categoryCode as CategoryCode)" size="sm" />
-            <DifficultyBadge :difficulty="(row.difficulty as string)" />
-            <span v-if="row.status !== 'RANKED'" class="status-pill"
-              :class="`status-pill--${String(row.status).toLowerCase()}`">{{ row.status }}</span>
-            <span class="complexity-maps__artist">{{ row.songAuthor }}</span>
-          </span>
-        </div>
+        <MapIdentityCell cover :row="(row.source as ComplexityDifficultyRow)" :size="34" />
       </template>
 
       <template #cell-mapper="{ row }">
         <span class="complexity-maps__mapper">{{ row.mapper }}</span>
       </template>
 
-      <template #cell-cxCurrent="{ row }">
-        <ScenarioCell :value="(row.cxCurrent as number | null)" :decimals="CX_DECIMALS" emphasis />
-      </template>
-
-      <template #cell-cxOld="{ row }">
-        <ScenarioCell :value="(row.cxOld as number | null)" :decimals="CX_DECIMALS"
-          :emphasis="scenario === 'OLD_SCRIPT'" />
-      </template>
-
-      <template #cell-cxNew="{ row }">
-        <ScenarioCell :value="(row.cxNew as number | null)" :decimals="CX_DECIMALS"
-          :emphasis="scenario === 'NEW_SCRIPT'" />
+      <template v-for="key in columns" :key="key" #[`cell-${cxKey(key)}`]="{ row }">
+        <ScenarioCell :value="(row[cxKey(key)] as number | null)" :decimals="CX_DECIMALS"
+          :emphasis="key === 'CURRENT' || key === scenario" />
       </template>
 
       <template #cell-cxDelta="{ row }">
@@ -188,40 +236,71 @@ function rowClass(row: Record<string, unknown>) {
           :delta="(row.cxDelta as number | null)" :decimals="CX_DECIMALS" big-threshold />
       </template>
 
+      <template #cell-topApCurrent="{ row }">
+        <ScenarioCell :value="(row.topApCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
+      </template>
+
       <template #cell-topAp="{ row }">
-        <ScenarioCell :value="(row.topAp as number | null)" :delta="(row.topApDelta as number | null)"
-          :decimals="AP_DECIMALS" emphasis />
+        <ScenarioCell :value="(row.topAp as number | null)" :decimals="AP_DECIMALS" emphasis />
+      </template>
+
+      <template #cell-topApDelta="{ row }">
+        <ScenarioCell delta-only :value="(row.topApDelta as number | null)"
+          :delta="(row.topApDelta as number | null)" :decimals="AP_DECIMALS" />
+      </template>
+
+      <template #cell-avgWeightedCurrent="{ row }">
+        <ScenarioCell :value="(row.avgWeightedCurrent as number | null)" :decimals="AP_DECIMALS"
+          emphasis />
       </template>
 
       <template #cell-avgWeighted="{ row }">
-        <ScenarioCell :value="(row.avgWeighted as number | null)" :delta="(row.avgWeightedDelta as number | null)"
-          :decimals="AP_DECIMALS" emphasis />
+        <ScenarioCell :value="(row.avgWeighted as number | null)" :decimals="AP_DECIMALS" emphasis />
+      </template>
+
+      <template #cell-avgWeightedDelta="{ row }">
+        <ScenarioCell delta-only :value="(row.avgWeightedDelta as number | null)"
+          :delta="(row.avgWeightedDelta as number | null)" :decimals="AP_DECIMALS" />
       </template>
 
       <template #cell-scores="{ row }">
         <span class="complexity-maps__scores">{{ formatCount(row.scores as number) }}</span>
       </template>
 
+      <template #row-detail="{ row }">
+        <div class="complexity-maps__detail">
+          <span class="complexity-maps__detail-label">Average AP</span>
+          <ScenarioCell :value="(row.avgApCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
+          <span class="complexity-maps__detail-label" aria-hidden="true">&rarr;</span>
+          <ScenarioCell :value="(row.avgAp as number | null)" :delta="(row.avgApDelta as number | null)"
+            :decimals="AP_DECIMALS" emphasis />
+        </div>
+      </template>
+
       <template #mobile-card="{ row }">
         <button type="button" class="complexity-maps__card"
           @click="emit('select', row.source as ComplexityDifficultyRow)">
-          <GlowImage :src="row.coverUrl as string" alt="" :size="44"
-            :fallback-src="(row.coverFallbackUrl as string | null)" />
-          <div class="complexity-maps__card-body">
-            <SongTitle class="complexity-maps__song-name" :name="(row.songName as string)"
-              :sub-name="(row.songSubName as string | null)" />
-            <span class="complexity-maps__song-meta">
-              <CategoryBadge :category="(row.categoryCode as CategoryCode)" size="sm" />
-              <DifficultyBadge :difficulty="(row.difficulty as string)" />
-              <span class="complexity-maps__artist">{{ row.mapper }}</span>
+          <MapIdentityCell cover :row="(row.source as ComplexityDifficultyRow)" :size="44" />
+          <div class="complexity-maps__card-values">
+            <span class="complexity-maps__card-label">CX</span>
+            <ScenarioCell :value="(row.cxCurrent as number | null)" :decimals="CX_DECIMALS" emphasis />
+            <span class="complexity-maps__card-label" aria-hidden="true">&rarr;</span>
+            <ScenarioCell :value="(row.cxScenario as number | null)"
+              :delta="(row.cxDelta as number | null)" :decimals="CX_DECIMALS" emphasis big-threshold />
+          </div>
+          <div class="complexity-maps__card-values">
+            <span class="complexity-maps__card-label">Avg wgt</span>
+            <ScenarioCell :value="(row.avgWeightedCurrent as number | null)" :decimals="AP_DECIMALS"
+              emphasis />
+            <span class="complexity-maps__card-label" aria-hidden="true">&rarr;</span>
+            <ScenarioCell :value="(row.avgWeighted as number | null)"
+              :delta="(row.avgWeightedDelta as number | null)" :decimals="AP_DECIMALS" emphasis />
+          </div>
+          <div class="complexity-maps__card-values">
+            <span class="complexity-maps__card-label">Avg AP</span>
+            <span class="complexity-maps__card-value">
+              {{ formatFixed(row.avgAp as number | null, AP_DECIMALS) }}
             </span>
-            <div class="complexity-maps__card-values">
-              <span class="complexity-maps__card-label">CX</span>
-              <ScenarioCell :value="(row.cxCurrent as number | null)" :decimals="CX_DECIMALS" emphasis />
-              <span class="complexity-maps__card-label" aria-hidden="true">&rarr;</span>
-              <ScenarioCell :value="(row.cxScenario as number | null)" :delta="(row.cxDelta as number | null)"
-                :decimals="CX_DECIMALS" emphasis big-threshold />
-            </div>
           </div>
         </button>
       </template>
@@ -241,37 +320,42 @@ function rowClass(row: Record<string, unknown>) {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  min-width: 0;
 }
 
-.complexity-maps :deep(.data-table__row.complexity-maps__row--moved) {
+.complexity-maps :deep(.data-table__row--odd.complexity-maps__row--moved) {
   background: color-mix(in srgb, var(--bg-surface) 93%, var(--warning) 7%);
 }
 
-.complexity-maps :deep(.data-table__row.complexity-maps__row--moved:nth-child(even)) {
+.complexity-maps :deep(.data-table__row--even.complexity-maps__row--moved) {
   background: color-mix(in srgb, var(--bg-elevated) 93%, var(--warning) 7%);
 }
 
-.complexity-maps__song {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.complexity-maps__song-name {
-  color: var(--text-primary);
-  font-size: var(--text-body);
-  font-weight: 500;
-}
-
-.complexity-maps__song-meta {
+.complexity-maps__expand {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
 }
 
-.complexity-maps__artist,
+.complexity-maps__expand:hover {
+  color: var(--text-primary);
+}
+
+.complexity-maps__expand svg {
+  transition: transform 120ms ease;
+}
+
+.complexity-maps__chevron--open {
+  transform: rotate(90deg);
+}
+
 .complexity-maps__mapper {
   color: var(--text-secondary);
   font-size: var(--text-caption);
@@ -280,7 +364,8 @@ function rowClass(row: Record<string, unknown>) {
   white-space: nowrap;
 }
 
-.complexity-maps__scores {
+.complexity-maps__scores,
+.complexity-maps__card-value {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-secondary);
@@ -298,10 +383,25 @@ function rowClass(row: Record<string, unknown>) {
   color: var(--text-primary);
 }
 
+.complexity-maps__detail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.complexity-maps__detail-label,
+.complexity-maps__card-label {
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .complexity-maps__card {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-md);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm);
   width: 100%;
   padding: var(--space-md);
   background: var(--bg-surface);
@@ -311,23 +411,15 @@ function rowClass(row: Record<string, unknown>) {
   cursor: pointer;
 }
 
-.complexity-maps__card-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
 .complexity-maps__card-values {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
 
-.complexity-maps__card-label {
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+@media (prefers-reduced-motion: reduce) {
+  .complexity-maps__expand svg {
+    transition: none;
+  }
 }
 </style>
