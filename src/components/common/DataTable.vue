@@ -19,7 +19,6 @@ const props = defineProps<{
   emptyMessage?: string
   rowClass?: (row: Record<string, unknown>, index: number) => string | Record<string, boolean> | undefined
   dense?: boolean
-  expandedRows?: Set<string | number>
 }>()
 
 const emit = defineEmits<{
@@ -108,12 +107,8 @@ function sortIcon(col: TableColumn): string {
             </tr>
           </template>
           <template v-else>
-            <template v-for="(row, index) in rows" :key="resolveRowKey(row, index)">
-            <tr class="data-table__row" :class="[
-              index % 2 === 0 ? 'data-table__row--odd' : 'data-table__row--even',
-              { 'data-table__row--clickable': rowClickable || !!rowTo },
-              rowClass?.(row, index),
-            ]"
+            <tr v-for="(row, index) in rows" :key="resolveRowKey(row, index)" class="data-table__row"
+              :class="[{ 'data-table__row--clickable': rowClickable || !!rowTo }, rowClass?.(row, index)]"
               @click="handleRowClick(row, index, $event)">
               <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
                 'data-table__td--mono': col.mono,
@@ -130,13 +125,6 @@ function sortIcon(col: TableColumn): string {
                 </slot>
               </td>
             </tr>
-            <tr v-if="slots['row-detail'] && expandedRows?.has(resolveRowKey(row, index))"
-              class="data-table__detail-row">
-              <td class="data-table__detail" :colspan="columns.length">
-                <slot name="row-detail" :row="row" :index="index" />
-              </td>
-            </tr>
-            </template>
           </template>
         </tbody>
       </table>
@@ -249,11 +237,11 @@ function sortIcon(col: TableColumn): string {
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
-.data-table__row--odd {
+.data-table__row:nth-child(odd) {
   background: var(--bg-surface);
 }
 
-.data-table__row--even {
+.data-table__row:nth-child(even) {
   background: var(--bg-elevated);
 }
 
@@ -308,13 +296,6 @@ function sortIcon(col: TableColumn): string {
 
 .data-table__td--mono {
   font-family: var(--font-mono);
-}
-
-.data-table__detail {
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-base);
-  border-bottom: 1px solid var(--bg-overlay);
-  white-space: normal;
 }
 
 .data-table__empty {

@@ -67,7 +67,7 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
       title: 'Board',
       fields: [
         { key: 'boardEase', label: 'Board ease', format: 'number', decimals: 4 },
-        { key: 'boardPlayers', label: 'Players', format: 'count' },
+        { key: 'boardPlayers', label: 'Top players on map', format: 'count' },
         { key: 'scores', label: 'Scores', format: 'count' },
         { key: 'boardWeight', label: 'Board weight', format: 'percent' },
         { key: 'chartComplexity', label: 'Chart complexity', format: 'number', decimals: 2 },

@@ -132,6 +132,7 @@ export interface RaterCoefficients {
 export interface RaterBoardGate {
   minScores: number
   fullScores: number
+  topPlayers: number
   minPlayers: number
   minPlayerPlays: number
   maxNudge: number

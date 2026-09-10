@@ -153,6 +153,16 @@ const complexities = computed(() => {
   ]
 })
 
+const averageAp = computed(() => {
+  const source = difficulty.value
+  if (!source) return null
+  return {
+    now: source.scenarios.CURRENT?.averageAp ?? null,
+    scenario: source.scenarios[props.scenario]?.averageAp ?? null,
+    delta: source.deltas[props.scenario]?.averageAp ?? null,
+  }
+})
+
 const coverUrl = computed(() => pickCoverUrl(difficulty.value))
 const coverFallback = computed(() => pickCoverFallback(difficulty.value))
 
@@ -162,7 +172,7 @@ function selectPlayer(row: Record<string, unknown>) {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="title" max-width="1180px" @close="emit('close')">
+  <BaseModal :open="open" :title="title" max-width="1320px" @close="emit('close')">
     <div v-if="difficulty" class="map-modal">
       <header class="map-modal__head">
         <GlowImage :src="coverUrl" alt="" :size="64" :fallback-src="coverFallback" />
@@ -175,6 +185,13 @@ function selectPlayer(row: Record<string, unknown>) {
           </div>
           <span class="map-modal__mapper">{{ difficulty.mapAuthor }}</span>
           <span class="map-modal__scores">{{ formatCount(difficulty.scores) }} active scores</span>
+          <div v-if="averageAp" class="map-modal__average">
+            <span class="map-modal__average-label">Average AP</span>
+            <ScenarioCell :value="averageAp.now" :decimals="AP_DECIMALS" />
+            <span class="map-modal__average-label" aria-hidden="true">&rarr;</span>
+            <ScenarioCell :value="averageAp.scenario" :delta="averageAp.delta"
+              :decimals="AP_DECIMALS" emphasis />
+          </div>
         </div>
         <div class="map-modal__complexities">
           <div v-for="entry in complexities" :key="entry.key" class="map-modal__complexity">
@@ -227,7 +244,7 @@ function selectPlayer(row: Record<string, unknown>) {
         </template>
 
         <template #cell-apCurrent="{ row }">
-          <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
+          <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" />
         </template>
 
         <template #cell-apScenario="{ row }">
@@ -240,8 +257,7 @@ function selectPlayer(row: Record<string, unknown>) {
         </template>
 
         <template #cell-weightedCurrent="{ row }">
-          <ScenarioCell :value="(row.weightedCurrent as number | null)" :decimals="AP_DECIMALS"
-            emphasis />
+          <ScenarioCell :value="(row.weightedCurrent as number | null)" :decimals="AP_DECIMALS" />
         </template>
 
         <template #cell-weightedScenario="{ row }">
@@ -307,6 +323,19 @@ function selectPlayer(row: Record<string, unknown>) {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-secondary);
+}
+
+.map-modal__average {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.map-modal__average-label {
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .map-modal__complexities {

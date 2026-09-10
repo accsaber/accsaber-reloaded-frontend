@@ -67,16 +67,23 @@ const { sortState, visible, onSort } = useScenarioSort({
   accessors,
 })
 
+const WIDTHS: Record<PlayMetric, string> = {
+  ap: '104px',
+  weightedAp: '104px',
+  position: '104px',
+  rank: '104px',
+}
+
 const tableColumns = computed<TableColumn[]>(() => [
-  { key: 'song', label: 'Map', sortable: true, width: '260px', flex: true },
-  { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right', width: '100px' },
+  { key: 'song', label: 'Map', sortable: true, width: '200px', flex: true },
+  { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', width: '88px' },
   ...props.columns.flatMap((scenario) =>
     METRICS.map((metric) => ({
       key: cellKey(scenario, metric.key),
       label: `${metric.label} ${SCENARIO_SHORT[scenario]}`,
       sortable: true,
       align: 'right' as const,
-      width: metric.key === 'ap' || metric.key === 'weightedAp' ? '108px' : '104px',
+      width: WIDTHS[metric.key],
     })),
   ),
 ])
@@ -133,8 +140,7 @@ const cellDefinitions = computed(() =>
       <template v-for="cell in cellDefinitions" :key="cell.key" #[`cell-${cell.key}`]="{ row }">
         <ScenarioCell :value="(row[cell.key] as number | null)"
           :delta="(row[`${cell.key}_delta`] as number | null)" :decimals="cell.metric.decimals"
-          :invert="cell.metric.invert"
-          :emphasis="cell.scenario === 'CURRENT' || cell.scenario === scenario" />
+          :invert="cell.metric.invert" :emphasis="cell.scenario === scenario" />
       </template>
 
       <template #mobile-card="{ row }">
@@ -143,7 +149,7 @@ const cellDefinitions = computed(() =>
           <div class="plays-table__card-values">
             <span class="plays-table__accuracy">{{ formatAccuracy(row.accuracy as number) }}</span>
             <ScenarioCell :value="(row[cellKey('CURRENT', 'ap')] as number | null)"
-              :decimals="AP_DECIMALS" emphasis />
+              :decimals="AP_DECIMALS" />
             <ScenarioCell :value="(row[cellKey(scenario, 'ap')] as number | null)"
               :delta="(row[`${cellKey(scenario, 'ap')}_delta`] as number | null)"
               :decimals="AP_DECIMALS" emphasis />

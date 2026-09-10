@@ -9,27 +9,138 @@ export type CoefficientKey = keyof RaterCoefficients
 
 export type GateKey = keyof RaterBoardGate
 
-export const COEFFICIENT_FIELDS: { key: CoefficientKey; label: string }[] = [
-  { key: 'intercept', label: 'Intercept' },
-  { key: 'meanSlope', label: 'Mean' },
-  { key: 'worstSlope', label: 'Worst' },
-  { key: 'resetSlope', label: 'Resets' },
-  { key: 'dotSlope', label: 'Dots' },
-  { key: 'notesSlope', label: 'Notes' },
-  { key: 'njsSlope', label: 'NJS' },
-  { key: 'boardSlope', label: 'Board ease' },
+export type FieldKind = 'intercept' | 'slope' | 'share' | 'count' | 'nudge'
+
+export interface FieldRange {
+  min: number
+  max: number
+  step: number
+}
+
+export const COEFFICIENT_FIELDS: {
+  key: CoefficientKey
+  label: string
+  kind: FieldKind
+  hint: string
+}[] = [
+  {
+    key: 'intercept',
+    label: 'Intercept',
+    kind: 'intercept',
+    hint: 'Where the line starts before any term moves it.',
+  },
+  {
+    key: 'meanSlope',
+    label: 'Mean',
+    kind: 'slope',
+    hint: 'Weight on the mean note accuracy the model predicts.',
+  },
+  {
+    key: 'worstSlope',
+    label: 'Worst',
+    kind: 'slope',
+    hint: 'Weight on the accuracy of the worst share of notes.',
+  },
+  {
+    key: 'resetSlope',
+    label: 'Resets',
+    kind: 'slope',
+    hint: 'Weight on the share of notes that need a reset.',
+  },
+  {
+    key: 'dotSlope',
+    label: 'Dots',
+    kind: 'slope',
+    hint: 'Weight on the share of dot notes.',
+  },
+  {
+    key: 'notesSlope',
+    label: 'Notes',
+    kind: 'slope',
+    hint: 'Weight on the note count, on a log scale.',
+  },
+  {
+    key: 'njsSlope',
+    label: 'NJS',
+    kind: 'slope',
+    hint: 'Weight on the note jump speed.',
+  },
+  {
+    key: 'boardSlope',
+    label: 'Board ease',
+    kind: 'slope',
+    hint: 'Weight on how easily the top players score on the map.',
+  },
 ]
 
-export const GATE_FIELDS: { key: GateKey; label: string; step: number }[] = [
-  { key: 'minScores', label: 'Min scores', step: 1 },
-  { key: 'fullScores', label: 'Full scores', step: 1 },
-  { key: 'minPlayers', label: 'Min players', step: 1 },
-  { key: 'minPlayerPlays', label: 'Min plays per player', step: 1 },
-  { key: 'maxNudge', label: 'Max nudge', step: 0.01 },
+export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: string }[] = [
+  {
+    key: 'minScores',
+    label: 'Min scores',
+    kind: 'count',
+    hint: 'Scores a map needs before its leaderboard counts.',
+  },
+  {
+    key: 'fullScores',
+    label: 'Full scores',
+    kind: 'count',
+    hint: 'Scores at which the leaderboard counts in full.',
+  },
+  {
+    key: 'topPlayers',
+    label: 'Top players',
+    kind: 'count',
+    hint: "How many of the category's best players, by fitted skill, the leaderboard ease is read from.",
+  },
+  {
+    key: 'minPlayers',
+    label: 'Min players',
+    kind: 'count',
+    hint: 'How many of those players need a score on the map.',
+  },
+  {
+    key: 'minPlayerPlays',
+    label: 'Min plays per player',
+    kind: 'count',
+    hint: "Ranked plays in the category a player needs before their scores count toward any player's level.",
+  },
+  {
+    key: 'maxNudge',
+    label: 'Max nudge',
+    kind: 'nudge',
+    hint: 'Furthest the leaderboard may move a map from the chart line, either way. 0 removes the limit.',
+  },
 ]
 
-export const SLOPE_STEP = 0.001
-export const SHARE_STEP = 0.01
+export const WORST_SHARE_HINT = 'Share of the worst notes on the map that the worst term reads.'
+
+const NICE_STEPS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
+
+const BASE_SPAN: Record<FieldKind, number> = {
+  intercept: 5,
+  slope: 2,
+  share: 0,
+  count: 0,
+  nudge: 0,
+}
+
+function niceCeil(value: number): number {
+  return NICE_STEPS.find((step) => step >= value) ?? NICE_STEPS[NICE_STEPS.length - 1]
+}
+
+export function fieldRange(kind: FieldKind, live: number, current: number): FieldRange {
+  if (kind === 'share') return { min: 0.005, max: 0.5, step: 0.005 }
+  if (kind === 'count') {
+    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 2), step: 1 }
+  }
+  if (kind === 'nudge') {
+    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 2), step: 0.05 }
+  }
+  const span = niceCeil(
+    Math.max(BASE_SPAN[kind], Math.abs(live) * 0.5, Math.abs(current - live) * 1.2),
+  )
+  return { min: live - span, max: live + span, step: 0.001 }
+}
 
 const live = ref<ComplexityRaterSpec | null>(null)
 const edited = ref<ComplexityRaterSpec | null>(null)

@@ -15,12 +15,12 @@ import {
   SCENARIO_SHORT,
   isBigMove,
 } from '@/utils/complexity'
-import { formatCount, formatFixed } from '@/utils/formatters'
+import { formatCount } from '@/utils/formatters'
 import MapIdentityCell from './MapIdentityCell.vue'
 import ScenarioCell from './ScenarioCell.vue'
 import { cxKey } from './scenarioKeys'
 import { useScenarioSort } from './useScenarioSort'
-import { computed, ref, toRef } from 'vue'
+import { computed, toRef } from 'vue'
 
 const props = withDefaults(defineProps<{
   rows: ComplexityDifficultyRow[]
@@ -48,8 +48,6 @@ const ALL_SCENARIOS: readonly ComplexityScenario[] = [
   'NEW_SCRIPT',
   'PREVIEW',
 ]
-
-const expanded = ref(new Set<string | number>())
 
 function currentValue(row: ComplexityDifficultyRow, key: MapMetric): number | null {
   return row.scenarios.CURRENT?.[key] ?? null
@@ -93,9 +91,8 @@ const tableColumns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
   const cxWidth = props.columns.length > 2 ? '84px' : '104px'
   const list: TableColumn[] = [
-    { key: 'expand', label: '', width: '40px', noLink: true },
-    { key: 'song', label: 'Song', sortable: true, width: '280px' },
-    { key: 'mapper', label: 'Mapper', width: '140px' },
+    { key: 'song', label: 'Song', sortable: true, width: '260px' },
+    { key: 'mapper', label: 'Mapper', width: '124px' },
     ...props.columns.map((scenario) => ({
       key: cxKey(scenario),
       label: `CX ${SCENARIO_SHORT[scenario]}`,
@@ -128,7 +125,7 @@ const tableColumns = computed<TableColumn[]>(() => {
       align: 'right',
       width: '132px',
     },
-    { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '82px' },
+    { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '78px' },
   ]
   if (props.board) {
     list.splice(1, 0, { key: 'board', label: 'Board', sortable: true, align: 'center', width: '116px' })
@@ -146,7 +143,6 @@ const tableRows = computed(() =>
       ...complexities,
       id: row.mapDifficultyId,
       source: row,
-      songName: row.songName,
       mapper: row.mapAuthor,
       scores: row.scores,
       cxCurrent: row.scenarios.CURRENT?.complexity ?? null,
@@ -156,9 +152,6 @@ const tableRows = computed(() =>
       topApCurrent: currentValue(row, 'topAp'),
       topAp: scenarioValue(row, 'topAp'),
       topApDelta: deltaValue(row, 'topAp'),
-      avgApCurrent: currentValue(row, 'averageAp'),
-      avgAp: scenarioValue(row, 'averageAp'),
-      avgApDelta: deltaValue(row, 'averageAp'),
       avgWeightedCurrent: currentValue(row, 'averageWeightedAp'),
       avgWeighted: scenarioValue(row, 'averageWeightedAp'),
       avgWeightedDelta: deltaValue(row, 'averageWeightedAp'),
@@ -172,12 +165,6 @@ function rowClass(row: Record<string, unknown>) {
   return row.moved ? 'complexity-maps__row--moved' : ''
 }
 
-function toggleDetail(id: string) {
-  const next = new Set(expanded.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
-  expanded.value = next
-}
 </script>
 
 <template>
@@ -192,24 +179,10 @@ function toggleDetail(id: string) {
       row-key="id"
       row-clickable
       :row-class="rowClass"
-      :expanded-rows="expanded"
       :empty-message="emptyMessage"
       @sort="onSort"
       @row-click="(row) => emit('select', row.source as ComplexityDifficultyRow)"
     >
-      <template #cell-expand="{ row }">
-        <button type="button" class="complexity-maps__expand"
-          :aria-expanded="expanded.has(row.id as string)"
-          :aria-label="`Average AP for ${row.songName}`"
-          @click.stop="toggleDetail(row.id as string)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            :class="{ 'complexity-maps__chevron--open': expanded.has(row.id as string) }">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
-      </template>
-
       <template #cell-board="{ row }">
         <span class="complexity-maps__board">
           <span class="complexity-maps__board-pos">{{ row.boardNow != null ? `#${row.boardNow}` : '–' }}</span>
@@ -237,7 +210,7 @@ function toggleDetail(id: string) {
       </template>
 
       <template #cell-topApCurrent="{ row }">
-        <ScenarioCell :value="(row.topApCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
+        <ScenarioCell :value="(row.topApCurrent as number | null)" :decimals="AP_DECIMALS" />
       </template>
 
       <template #cell-topAp="{ row }">
@@ -250,8 +223,7 @@ function toggleDetail(id: string) {
       </template>
 
       <template #cell-avgWeightedCurrent="{ row }">
-        <ScenarioCell :value="(row.avgWeightedCurrent as number | null)" :decimals="AP_DECIMALS"
-          emphasis />
+        <ScenarioCell :value="(row.avgWeightedCurrent as number | null)" :decimals="AP_DECIMALS" />
       </template>
 
       <template #cell-avgWeighted="{ row }">
@@ -267,16 +239,6 @@ function toggleDetail(id: string) {
         <span class="complexity-maps__scores">{{ formatCount(row.scores as number) }}</span>
       </template>
 
-      <template #row-detail="{ row }">
-        <div class="complexity-maps__detail">
-          <span class="complexity-maps__detail-label">Average AP</span>
-          <ScenarioCell :value="(row.avgApCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
-          <span class="complexity-maps__detail-label" aria-hidden="true">&rarr;</span>
-          <ScenarioCell :value="(row.avgAp as number | null)" :delta="(row.avgApDelta as number | null)"
-            :decimals="AP_DECIMALS" emphasis />
-        </div>
-      </template>
-
       <template #mobile-card="{ row }">
         <button type="button" class="complexity-maps__card"
           @click="emit('select', row.source as ComplexityDifficultyRow)">
@@ -290,17 +252,11 @@ function toggleDetail(id: string) {
           </div>
           <div class="complexity-maps__card-values">
             <span class="complexity-maps__card-label">Avg wgt</span>
-            <ScenarioCell :value="(row.avgWeightedCurrent as number | null)" :decimals="AP_DECIMALS"
-              emphasis />
+            <ScenarioCell :value="(row.avgWeightedCurrent as number | null)"
+              :decimals="AP_DECIMALS" />
             <span class="complexity-maps__card-label" aria-hidden="true">&rarr;</span>
             <ScenarioCell :value="(row.avgWeighted as number | null)"
               :delta="(row.avgWeightedDelta as number | null)" :decimals="AP_DECIMALS" emphasis />
-          </div>
-          <div class="complexity-maps__card-values">
-            <span class="complexity-maps__card-label">Avg AP</span>
-            <span class="complexity-maps__card-value">
-              {{ formatFixed(row.avgAp as number | null, AP_DECIMALS) }}
-            </span>
           </div>
         </button>
       </template>
@@ -323,37 +279,12 @@ function toggleDetail(id: string) {
   min-width: 0;
 }
 
-.complexity-maps :deep(.data-table__row--odd.complexity-maps__row--moved) {
+.complexity-maps :deep(.data-table__row.complexity-maps__row--moved) {
   background: color-mix(in srgb, var(--bg-surface) 93%, var(--warning) 7%);
 }
 
-.complexity-maps :deep(.data-table__row--even.complexity-maps__row--moved) {
+.complexity-maps :deep(.data-table__row.complexity-maps__row--moved:nth-child(even)) {
   background: color-mix(in srgb, var(--bg-elevated) 93%, var(--warning) 7%);
-}
-
-.complexity-maps__expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-}
-
-.complexity-maps__expand:hover {
-  color: var(--text-primary);
-}
-
-.complexity-maps__expand svg {
-  transition: transform 120ms ease;
-}
-
-.complexity-maps__chevron--open {
-  transform: rotate(90deg);
 }
 
 .complexity-maps__mapper {
@@ -364,8 +295,7 @@ function toggleDetail(id: string) {
   white-space: nowrap;
 }
 
-.complexity-maps__scores,
-.complexity-maps__card-value {
+.complexity-maps__scores {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-secondary);
@@ -383,13 +313,6 @@ function toggleDetail(id: string) {
   color: var(--text-primary);
 }
 
-.complexity-maps__detail {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.complexity-maps__detail-label,
 .complexity-maps__card-label {
   color: var(--text-tertiary);
   font-size: var(--text-caption);
@@ -415,11 +338,5 @@ function toggleDetail(id: string) {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .complexity-maps__expand svg {
-    transition: none;
-  }
 }
 </style>

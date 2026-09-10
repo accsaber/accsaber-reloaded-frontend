@@ -200,6 +200,11 @@ const router = createRouter({
       component: () => import('@/views/auth/LoginFinishPage.vue'),
     },
     {
+      path: '/dev/tune',
+      name: 'dev-tune',
+      component: () => import('@/views/DevTuneCheck.vue'),
+    },
+    {
       path: '/staff/login',
       name: 'staff-login',
       component: () => import('@/views/staff/AdminLoginPage.vue'),

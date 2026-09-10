@@ -665,7 +665,7 @@ watch([tab, category, status, () => tuning.edited.value], () => {
   gap: var(--space-lg);
   min-width: 0;
   width: 100%;
-  max-width: var(--page-width-wide);
+  max-width: 1760px;
   margin: 0 auto;
 }
 

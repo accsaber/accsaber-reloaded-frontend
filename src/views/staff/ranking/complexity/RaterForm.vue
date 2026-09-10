@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseInput from '@/components/common/BaseInput.vue'
 import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type { RaterCoefficients } from '@/types/api/complexity'
 import type { CategoryCode } from '@/types/display'
 import { formatFixed } from '@/utils/formatters'
+import HintTooltip from './HintTooltip.vue'
+import RaterField from './RaterField.vue'
 import {
   COEFFICIENT_FIELDS,
   GATE_FIELDS,
-  SHARE_STEP,
-  SLOPE_STEP,
+  WORST_SHARE_HINT,
   categoryCodes,
   nearestBand,
   useTuningState,
+  type CoefficientKey,
+  type GateKey,
 } from './tuning'
 import { computed } from 'vue'
 
@@ -25,11 +27,11 @@ const emit = defineEmits<{
   change: []
 }>()
 
-const { edited, bands, version, reset, dirty } = useTuningState()
+const { live, edited, bands, version, reset, dirty } = useTuningState()
 
-const rater = computed(() => edited.value)
+type LineKey = 'categories' | 'boardCategories'
 
-const LINES: { key: 'categories' | 'boardCategories'; title: string; hint: string }[] = [
+const LINES: { key: LineKey; title: string; hint: string }[] = [
   {
     key: 'categories',
     title: 'Chart line',
@@ -42,26 +44,42 @@ const LINES: { key: 'categories' | 'boardCategories'; title: string; hint: strin
   },
 ]
 
-const codes = computed(() => (rater.value ? categoryCodes(rater.value) : []))
+const codes = computed(() => (edited.value ? categoryCodes(edited.value) : []))
 
 const snapped = computed(() => {
-  if (!rater.value) return null
-  const band = nearestBand(rater.value.worstShare, bands.value)
+  if (!edited.value) return null
+  const band = nearestBand(edited.value.worstShare, bands.value)
   if (band == null) return null
-  return Math.abs(band - rater.value.worstShare) < 0.0001 ? null : band
+  return Math.abs(band - edited.value.worstShare) < 0.0001 ? null : band
 })
 
 const bandList = computed(() => bands.value.map((band) => formatFixed(band, 3)).join('  '))
 
-function setNumber(target: Record<string, number>, key: string, value: string | number) {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return
-  target[key] = parsed
+function coefficients(line: LineKey, code: string): RaterCoefficients | undefined {
+  return edited.value?.[line][code]
+}
+
+function liveCoefficient(line: LineKey, code: string, key: CoefficientKey): number {
+  return live.value?.[line][code]?.[key] ?? 0
+}
+
+function setCoefficient(line: LineKey, code: string, key: CoefficientKey, value: number) {
+  const target = coefficients(line, code)
+  if (!target) return
+  target[key] = value
   emit('change')
 }
 
-function coefficients(line: 'categories' | 'boardCategories', code: string): RaterCoefficients | undefined {
-  return rater.value?.[line][code]
+function setGate(key: GateKey, value: number) {
+  if (!edited.value) return
+  edited.value.board[key] = value
+  emit('change')
+}
+
+function setWorstShare(value: number) {
+  if (!edited.value) return
+  edited.value.worstShare = value
+  emit('change')
 }
 
 function resetToLive() {
@@ -72,7 +90,7 @@ function resetToLive() {
 
 <template>
   <div class="rater-form">
-    <template v-if="loading || !rater">
+    <template v-if="loading || !edited">
       <SkeletonLoader variant="card" />
       <SkeletonLoader variant="card" />
     </template>
@@ -91,53 +109,50 @@ function resetToLive() {
         </div>
       </header>
 
-      <section class="rater-form__section">
-        <h4 class="rater-form__section-title">Worst share</h4>
-        <div class="rater-form__row">
-          <BaseInput class="rater-form__field" label="Share" type="number" :step="SHARE_STEP"
-            :model-value="rater.worstShare"
-            @update:model-value="setNumber(rater as unknown as Record<string, number>, 'worstShare', $event)" />
-          <p class="rater-form__hint">
-            These shares price exactly: <span class="rater-form__code">{{ bandList }}</span>
-            <template v-if="snapped">
-              . This one snaps to {{ formatFixed(snapped, 3) }}.
-            </template>
+      <div class="rater-form__top">
+        <section class="rater-form__group">
+          <h4 class="rater-form__group-title">
+            Worst share
+            <HintTooltip :text="WORST_SHARE_HINT" label="worst share" />
+          </h4>
+          <RaterField label="Share" :hint="WORST_SHARE_HINT" kind="share"
+            :live="live?.worstShare ?? edited.worstShare" :model-value="edited.worstShare"
+            @update:model-value="setWorstShare" />
+          <p class="rater-form__bands">
+            Prices exactly at <span class="rater-form__code">{{ bandList }}</span>
+            <template v-if="snapped">. Snaps to {{ formatFixed(snapped, 3) }}.</template>
           </p>
-        </div>
-      </section>
+        </section>
 
-      <section class="rater-form__section">
-        <h4 class="rater-form__section-title">Board gate</h4>
-        <div class="rater-form__gate">
-          <BaseInput v-for="field in GATE_FIELDS" :key="field.key" class="rater-form__field"
-            :label="field.label" type="number" :step="field.step"
-            :model-value="rater.board[field.key]"
-            @update:model-value="setNumber(rater.board as unknown as Record<string, number>, field.key, $event)" />
-        </div>
-      </section>
+        <section class="rater-form__group">
+          <h4 class="rater-form__group-title">Board gate</h4>
+          <div class="rater-form__gate">
+            <RaterField v-for="field in GATE_FIELDS" :key="field.key" :label="field.label"
+              :hint="field.hint" :kind="field.kind" :live="live?.board[field.key] ?? 0"
+              :model-value="edited.board[field.key]"
+              @update:model-value="setGate(field.key, $event)" />
+          </div>
+        </section>
+      </div>
 
       <section v-for="line in LINES" :key="line.key" class="rater-form__section">
         <div class="rater-form__section-head">
-          <h4 class="rater-form__section-title">{{ line.title }}</h4>
-          <span class="rater-form__hint">{{ line.hint }}</span>
+          <h4 class="rater-form__group-title">{{ line.title }}</h4>
+          <span class="rater-form__note">{{ line.hint }}</span>
         </div>
 
-        <div class="rater-form__matrix" :style="{ '--rater-columns': codes.length }">
-          <span class="rater-form__matrix-corner" />
-          <span v-for="code in codes" :key="code" class="rater-form__matrix-head">
-            <CategoryBadge :category="(code as CategoryCode)" size="sm" />
-          </span>
-
-          <template v-for="field in COEFFICIENT_FIELDS" :key="field.key">
-            <span class="rater-form__matrix-label">{{ field.label }}</span>
-            <div v-for="code in codes" :key="code + field.key" class="rater-form__matrix-cell">
-              <BaseInput v-if="coefficients(line.key, code)" type="number" :step="SLOPE_STEP"
-                :aria-label="`${field.label} for ${code}`"
+        <div class="rater-form__lines">
+          <div v-for="code in codes" :key="code" class="rater-form__line">
+            <CategoryBadge :category="(code as CategoryCode)" />
+            <template v-if="coefficients(line.key, code)">
+              <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label"
+                :hint="field.hint" :kind="field.kind"
+                :live="liveCoefficient(line.key, code, field.key)"
                 :model-value="coefficients(line.key, code)![field.key]"
-                @update:model-value="setNumber(coefficients(line.key, code) as unknown as Record<string, number>, field.key, $event)" />
-              <span v-else class="rater-form__absent">–</span>
-            </div>
-          </template>
+                @update:model-value="setCoefficient(line.key, code, field.key, $event)" />
+            </template>
+            <p v-else class="rater-form__absent">This category has no board line.</p>
+          </div>
         </div>
       </section>
     </template>
@@ -148,9 +163,9 @@ function resetToLive() {
 .rater-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
   min-width: 0;
-  padding: var(--space-lg);
+  padding: var(--space-xl);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
@@ -180,7 +195,8 @@ function resetToLive() {
 .rater-form__note {
   margin: 0;
   color: var(--text-secondary);
-  font-size: var(--text-body);
+  font-size: var(--text-caption);
+  line-height: 1.5;
 }
 
 .rater-form__head-actions {
@@ -195,12 +211,57 @@ function resetToLive() {
   color: var(--text-secondary);
 }
 
-.rater-form__section {
+.rater-form__top {
+  display: grid;
+  grid-template-columns: minmax(min(280px, 100%), 1fr) minmax(min(420px, 100%), 2fr);
+  gap: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--bg-overlay);
+}
+
+.rater-form__group {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   min-width: 0;
-  padding-top: var(--space-md);
+}
+
+.rater-form__group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rater-form__gate {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: var(--space-md) var(--space-xl);
+}
+
+.rater-form__bands {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+}
+
+.rater-form__code {
+  font-family: var(--font-code);
+  color: var(--text-secondary);
+}
+
+.rater-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+  padding-top: var(--space-lg);
   border-top: 1px solid var(--bg-overlay);
 }
 
@@ -211,95 +272,39 @@ function resetToLive() {
   flex-wrap: wrap;
 }
 
-.rater-form__section-title {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.rater-form__lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  gap: var(--space-lg) var(--space-xl);
 }
 
-.rater-form__row {
+.rater-form__line {
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-lg);
-  flex-wrap: wrap;
-}
-
-.rater-form__gate {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
-  gap: var(--space-md);
-}
-
-.rater-form__field {
-  max-width: 200px;
-}
-
-.rater-form__hint {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
-
-.rater-form__code {
-  font-family: var(--font-code);
-  color: var(--text-primary);
-}
-
-.rater-form__matrix {
-  display: grid;
-  grid-template-columns: 120px repeat(var(--rater-columns), minmax(104px, 150px));
-  justify-content: start;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-sm);
   min-width: 0;
-  overflow-x: auto;
-}
-
-.rater-form__matrix-corner {
-  min-height: 1px;
-}
-
-.rater-form__matrix-head {
-  display: flex;
-  justify-content: center;
-}
-
-.rater-form__matrix-label {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-}
-
-.rater-form__matrix-cell {
-  display: flex;
-  justify-content: center;
-}
-
-.rater-form__matrix-cell :deep(.base-input) {
-  width: 100%;
-}
-
-.rater-form__matrix-cell :deep(.base-input__field) {
-  padding: var(--space-xs) var(--space-sm);
-  font-family: var(--font-mono);
-  text-align: right;
+  padding: var(--space-md);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .rater-form__absent {
+  margin: 0;
   color: var(--text-tertiary);
-  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+@media (max-width: 1100px) {
+  .rater-form__top {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 767px) {
   .rater-form {
+    gap: var(--space-lg);
     padding: var(--space-md);
-  }
-
-  .rater-form__matrix {
-    grid-template-columns: 104px repeat(var(--rater-columns), minmax(92px, 132px));
   }
 }
 </style>
