@@ -11,6 +11,7 @@ export interface ScenarioMapValues {
   topAp: number | null
   averageAp: number | null
   averageWeightedAp: number | null
+  boardRank: number | null
 }
 
 export interface ComplexityEstimateInfo {

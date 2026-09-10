@@ -64,6 +64,9 @@ const statusToggles: ChartToggle[] = STATUSES.map((status) => ({
   ...STATUS_LABELS[status],
 }))
 
+const WORTH_BOARD_LIMIT = 50
+const WORTH_BOARD_MIN_SCORES = 10
+
 const DATASETS: { kind: ComplexityDatasetKind; label: string }[] = [
   { kind: 'scores', label: 'Scores CSV' },
   { kind: 'difficulties', label: 'Difficulties CSV' },
@@ -137,7 +140,6 @@ const search = ref('')
 const difficulties = ref<ComplexityDifficultyRow[]>([])
 const difficultiesLoading = ref(true)
 const worthRows = ref<ComplexityDifficultyRow[]>([])
-const worthPositions = ref(new Map<string, { now: number | null; next: number | null }>())
 const worthLoading = ref(false)
 const board = ref<ComplexityPlayerBoard | null>(null)
 const boardLoading = ref(true)
@@ -234,36 +236,18 @@ async function loadBoard() {
   boardLoading.value = false
 }
 
-function positionsFrom(
-  current: ComplexityDifficultyRow[],
-  next: ComplexityDifficultyRow[],
-): Map<string, { now: number | null; next: number | null }> {
-  const positions = new Map<string, { now: number | null; next: number | null }>()
-  next.forEach((row, index) => {
-    positions.set(row.mapDifficultyId, { now: null, next: index + 1 })
-  })
-  current.forEach((row, index) => {
-    const entry = positions.get(row.mapDifficultyId)
-    if (entry) entry.now = index + 1
-    else positions.set(row.mapDifficultyId, { now: index + 1, next: null })
-  })
-  return positions
-}
-
 async function loadWorthBoard() {
   worthLoading.value = true
   try {
     const { getHighestAverageApMaps } = await import('@/api/ranking/complexity')
-    const params = { categoryId: await categoryId(), minScores: 10, limit: 50 }
-    const [currentBoard, scenarioBoard] = await Promise.all([
-      getHighestAverageApMaps({ ...params, scenario: 'CURRENT' }),
-      getHighestAverageApMaps({ ...params, scenario: scenario.value }),
-    ])
-    worthRows.value = scenarioBoard
-    worthPositions.value = positionsFrom(currentBoard, scenarioBoard)
+    worthRows.value = await getHighestAverageApMaps({
+      categoryId: await categoryId(),
+      scenario: scenario.value,
+      minScores: WORTH_BOARD_MIN_SCORES,
+      limit: WORTH_BOARD_LIMIT,
+    })
   } catch {
     worthRows.value = []
-    worthPositions.value = new Map()
   }
   worthLoading.value = false
 }
@@ -288,15 +272,21 @@ function closeMap() {
   leaderboard.value = null
 }
 
+let rankedScope: ComplexityDifficultyRow[] | null = null
+
+async function loadRankedScope(): Promise<ComplexityDifficultyRow[]> {
+  if (category.value === 'overall' && status.value === 'RANKED') return difficulties.value
+  if (rankedScope) return rankedScope
+  const { getComplexityDifficulties } = await import('@/api/ranking/complexity')
+  rankedScope = await getComplexityDifficulties({ status: 'RANKED' })
+  return rankedScope
+}
+
 async function openApply() {
   applyError.value = ''
   preparingApply.value = true
   try {
-    let scope = difficulties.value
-    if (category.value !== 'overall' || status.value !== 'RANKED') {
-      const { getComplexityDifficulties } = await import('@/api/ranking/complexity')
-      scope = await getComplexityDifficulties({ status: 'RANKED' })
-    }
+    const scope = await loadRankedScope()
     const moving = scope.filter((row) => movesUnder(row, scenario.value)).length
     applyScope.value = { moving, total: scope.length }
     applyOpen.value = true
@@ -398,9 +388,8 @@ watch([tab, category, scenario], () => {
           Top fifty by average weighted AP, at least ten scores each. The board column is where a map
           sits today next to where it would sit.
         </p>
-        <ComplexityMapsTable board :rows="worthRows" :positions="worthPositions" :scenario="scenario"
-          :loading="worthLoading" empty-message="No maps clear the score threshold here"
-          @select="openMap" />
+        <ComplexityMapsTable board :rows="worthRows" :scenario="scenario" :loading="worthLoading"
+          empty-message="No maps clear the score threshold here" @select="openMap" />
       </div>
 
       <div v-else class="reweight-page__view">

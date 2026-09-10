@@ -20,12 +20,10 @@ const props = withDefaults(defineProps<{
   scenario: EstimateScenario
   loading?: boolean
   board?: boolean
-  positions?: Map<string, { now: number | null; next: number | null }>
   emptyMessage?: string
 }>(), {
   loading: false,
   board: false,
-  positions: undefined,
   emptyMessage: 'No difficulties match these filters',
 })
 
@@ -33,7 +31,7 @@ const emit = defineEmits<{
   select: [row: ComplexityDifficultyRow]
 }>()
 
-type MapMetric = 'complexity' | 'topAp' | 'averageWeightedAp'
+type MapMetric = 'complexity' | 'topAp' | 'averageWeightedAp' | 'boardRank'
 
 function scenarioValue(row: ComplexityDifficultyRow, key: MapMetric): number | null {
   return row.scenarios[props.scenario]?.[key] ?? null
@@ -47,7 +45,7 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
   rows: toRef(props, 'rows'),
   deltaKeys: ['cxDelta'],
   defaultKey: props.board ? 'avgWeighted' : 'cxDelta',
-  ascendingKeys: ['song'],
+  ascendingKeys: ['song', 'board'],
   revision: () => props.scenario,
   accessors: {
     song: (row) => row.songName.toLowerCase(),
@@ -55,6 +53,7 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
     cxOld: (row) => row.scenarios.OLD_SCRIPT?.complexity ?? null,
     cxNew: (row) => row.scenarios.NEW_SCRIPT?.complexity ?? null,
     cxDelta: (row) => deltaValue(row, 'complexity'),
+    board: (row) => row.scenarios[props.scenario]?.boardRank ?? null,
     topAp: (row) => scenarioValue(row, 'topAp'),
     avgWeighted: (row) => scenarioValue(row, 'averageWeightedAp'),
     scores: (row) => row.scores,
@@ -64,8 +63,8 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
 const columns = computed<TableColumn[]>(() => {
   const list: TableColumn[] = [
     { key: 'cover', label: '', width: '56px', noLink: true },
-    { key: 'song', label: 'Song', sortable: true, width: '250px', flex: true },
-    { key: 'mapper', label: 'Mapper', width: '130px' },
+    { key: 'song', label: 'Song', sortable: true, width: '300px' },
+    { key: 'mapper', label: 'Mapper', width: '150px' },
     { key: 'cxCurrent', label: 'CX now', sortable: true, align: 'right', width: '84px' },
     { key: 'cxOld', label: 'CX old', sortable: true, align: 'right', width: '84px' },
     { key: 'cxNew', label: 'CX new', sortable: true, align: 'right', width: '84px' },
@@ -81,14 +80,13 @@ const columns = computed<TableColumn[]>(() => {
     { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '82px' },
   ]
   if (props.board) {
-    list.unshift({ key: 'board', label: 'Board', align: 'center', width: '120px' })
+    list.unshift({ key: 'board', label: 'Board', sortable: true, align: 'center', width: '120px' })
   }
   return list
 })
 
 const tableRows = computed(() =>
   visible.value.map((row) => {
-    const position = props.positions?.get(row.mapDifficultyId)
     const cxDelta = deltaValue(row, 'complexity')
     return {
       id: row.mapDifficultyId,
@@ -113,8 +111,8 @@ const tableRows = computed(() =>
       topApDelta: deltaValue(row, 'topAp'),
       avgWeighted: scenarioValue(row, 'averageWeightedAp'),
       avgWeightedDelta: deltaValue(row, 'averageWeightedAp'),
-      boardNow: position?.now ?? null,
-      boardMove: position?.now != null && position.next != null ? position.next - position.now : null,
+      boardNow: row.scenarios.CURRENT?.boardRank ?? null,
+      boardMove: deltaValue(row, 'boardRank'),
     }
   }),
 )

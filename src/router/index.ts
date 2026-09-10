@@ -200,11 +200,6 @@ const router = createRouter({
       component: () => import('@/views/auth/LoginFinishPage.vue'),
     },
     {
-      path: '/dev/complexity',
-      name: 'dev-complexity',
-      component: () => import('@/views/DevComplexityHarness.vue'),
-    },
-    {
       path: '/staff/login',
       name: 'staff-login',
       component: () => import('@/views/staff/AdminLoginPage.vue'),
