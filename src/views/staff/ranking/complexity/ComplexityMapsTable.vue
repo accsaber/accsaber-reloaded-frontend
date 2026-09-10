@@ -82,6 +82,10 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
   accessors,
 })
 
+function deltaLabel(key: string, label: string): string {
+  return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
+}
+
 const tableColumns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
   const list: TableColumn[] = [
@@ -96,7 +100,7 @@ const tableColumns = computed<TableColumn[]>(() => {
     })),
     {
       key: 'cxDelta',
-      label: `Δ CX ${deltaMode.value}`,
+      label: deltaLabel('cxDelta', 'Δ CX'),
       sortable: true,
       align: 'right',
       width: '108px',
@@ -105,7 +109,7 @@ const tableColumns = computed<TableColumn[]>(() => {
     { key: 'topAp', label: `Top AP ${tag}`, sortable: true, align: 'right', width: '120px' },
     {
       key: 'topApDelta',
-      label: `Δ top AP ${deltaMode.value}`,
+      label: deltaLabel('topApDelta', 'Δ top AP'),
       sortable: true,
       align: 'right',
       width: '124px',
@@ -114,7 +118,7 @@ const tableColumns = computed<TableColumn[]>(() => {
     { key: 'avgWeighted', label: `Avg wgt ${tag}`, sortable: true, align: 'right', width: '134px' },
     {
       key: 'avgWeightedDelta',
-      label: `Δ avg wgt ${deltaMode.value}`,
+      label: deltaLabel('avgWeightedDelta', 'Δ avg wgt'),
       sortable: true,
       align: 'right',
       width: '132px',

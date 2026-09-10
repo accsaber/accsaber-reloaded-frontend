@@ -11,6 +11,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
+import ScenarioCell from '@/views/staff/ranking/complexity/ScenarioCell.vue'
 import QueuedPlaylistsButton from '@/components/domain/QueuedPlaylistsButton.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -171,6 +172,7 @@ const baseColumns: TableColumn[] = [
   { key: 'category', label: 'Category', align: 'center', width: '110px' },
   { key: 'status', label: 'Status', align: 'center', width: '96px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '124px' },
+  { key: 'script', label: 'Script', align: 'center', width: '104px' },
   { key: 'avgComplexity', label: 'Vote Avg', align: 'center', width: '90px' },
   { key: 'criteria', label: 'Criteria', align: 'center', width: '90px' },
   { key: 'rating', label: 'Rating', sortable: true, align: 'center', mono: true, width: '96px' },
@@ -211,6 +213,11 @@ const rows = computed(() =>
       categoryAccent: categoryStore.getAccent(catCode ?? 'overall'),
       status: d.status,
       complexity: d.complexity,
+      scriptComplexity: d.scriptComplexity,
+      scriptVersion: d.scriptVersion,
+      scriptDelta: d.scriptComplexity != null && d.complexity != null
+        ? d.scriptComplexity - d.complexity
+        : null,
       avgComplexity: d.averageVoteComplexity,
       criteriaStatus: d.criteriaStatus,
       autoCriteriaStatus: d.autoCriteriaStatus,
@@ -430,6 +437,15 @@ function criteriaClassName(row: Record<string, unknown>): string {
         </span>
       </template>
 
+      <template #cell-script="{ row }">
+        <span v-if="row.scriptComplexity != null" class="rank-queue__script"
+          :title="(row.scriptVersion as string | null) ?? undefined">
+          <ScenarioCell :value="(row.scriptComplexity as number | null)"
+            :delta="(row.scriptDelta as number | null)" :decimals="1" emphasis />
+        </span>
+        <span v-else class="rank-queue__muted">-</span>
+      </template>
+
       <template #cell-complexity="{ row }">
         <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" />
         <span v-else class="ranking-dashboard__rating--neutral">-</span>
@@ -536,6 +552,15 @@ function criteriaClassName(row: Record<string, unknown>): string {
 </template>
 
 <style scoped>
+.rank-queue__script {
+  display: inline-flex;
+}
+
+.rank-queue__muted {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
 .ranking-dashboard {
   display: flex;
   flex-direction: column;

@@ -2,6 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import type { MapDifficultyStatus } from '@/types/enums'
 import { CX_DECIMALS } from '@/utils/complexity'
 import { formatCount, formatFixed } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
@@ -10,6 +11,7 @@ const DEFAULT_STEP = 0.5
 
 const props = defineProps<{
   open: boolean
+  status: MapDifficultyStatus
   batchName: string | null
   moving: number
   total: number
@@ -27,9 +29,21 @@ const reason = ref('')
 const maxStep = ref(DEFAULT_STEP)
 const capped = ref(true)
 
+const STATUS_WORD: Record<string, string> = {
+  RANKED: 'ranked pool',
+  QUALIFIED: 'qualified maps',
+  QUEUE: 'queue maps',
+}
+
+const scoreless = computed(() => props.status !== 'RANKED')
+
+const title = computed(() =>
+  scoreless.value ? `Set ${STATUS_WORD[props.status]} to the script` : 'Apply the script',
+)
+
 const defaultReason = computed(() => {
-  const round = props.batchName ? `${props.batchName} round` : 'Full ranked pool'
-  return props.version ? `${round} (${props.version})` : round
+  const scope = props.batchName ? `${props.batchName} round` : `Full ${STATUS_WORD[props.status]}`
+  return props.version ? `${scope} (${props.version})` : scope
 })
 
 watch(() => props.open, (open) => {
@@ -40,31 +54,34 @@ watch(() => props.open, (open) => {
 })
 
 const canConfirm = computed(
-  () => reason.value.trim().length > 0 && props.moving > 0 && (!capped.value || maxStep.value > 0),
+  () => reason.value.trim().length > 0
+    && props.moving > 0
+    && (scoreless.value || !capped.value || maxStep.value > 0),
 )
 
 function confirm() {
-  emit('confirm', reason.value.trim(), capped.value ? maxStep.value : undefined)
+  emit('confirm', reason.value.trim(), scoreless.value || !capped.value ? undefined : maxStep.value)
 }
 </script>
 
 <template>
-  <BaseModal :open="open" title="Apply the script" max-width="560px" @close="emit('close')">
+  <BaseModal :open="open" :title="title" max-width="560px" @close="emit('close')">
     <div class="apply-script">
       <p class="apply-script__summary">
         <template v-if="batchName">
-          This reweights <strong>{{ formatCount(moving) }}</strong> of the
-          {{ formatCount(total) }} maps in {{ batchName }} to what the script says.
+          This sets <strong>{{ formatCount(moving) }}</strong> of the {{ formatCount(total) }} maps
+          in {{ batchName }} to what the script says.
         </template>
         <template v-else>
-          No batch is selected, so this reweights <strong>{{ formatCount(moving) }}</strong> of the
-          {{ formatCount(total) }} maps in the whole ranked pool.
+          No batch is selected, so this sets <strong>{{ formatCount(moving) }}</strong> of the
+          {{ formatCount(total) }} maps in the whole {{ STATUS_WORD[status] }} to what the script
+          says.
         </template>
       </p>
 
       <BaseInput v-model="reason" label="Reason" placeholder="Lands on every complexity history row" />
 
-      <div class="apply-script__step">
+      <div v-if="!scoreless" class="apply-script__step">
         <BaseInput v-if="capped" class="apply-script__step-field" label="Step limit" type="number"
           step="0.1" min="0.1" :model-value="maxStep"
           @update:model-value="maxStep = Number($event)" />
@@ -84,8 +101,13 @@ function confirm() {
       </div>
 
       <p class="apply-script__effect">
-        Applying reprices every affected player's scores, statistics, rankings, milestones and XP in
-        the background.
+        <template v-if="scoreless">
+          These maps carry no scores yet, so the change lands right away and nothing is recalculated.
+        </template>
+        <template v-else>
+          Applying reprices every affected player's scores, statistics, rankings, milestones and XP
+          in the background.
+        </template>
       </p>
 
       <p v-if="error" class="apply-script__error">{{ error }}</p>

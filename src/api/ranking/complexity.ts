@@ -1,4 +1,5 @@
 import type {
+  ApplyScriptParams,
   ComplexityDatasetKind,
   ComplexityPreviewParams,
   ComplexityPreviewResponse,
@@ -68,11 +69,7 @@ export function previewComplexity(
   return post<ComplexityPreviewResponse>(`${BASE}/preview${buildQuery(params)}`, rater)
 }
 
-export function applyComplexityScript(params: {
-  reason: string
-  maxStep?: number
-  batchId?: string
-}): Promise<void> {
+export function applyComplexityScript(params: ApplyScriptParams): Promise<void> {
   return post<void>(`${BASE}/apply${buildQuery(params)}`)
 }
 

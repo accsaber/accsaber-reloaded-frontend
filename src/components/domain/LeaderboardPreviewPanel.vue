@@ -11,16 +11,14 @@ import { useCategoryStore } from '@/stores/categories'
 import type { CurveResponse } from '@/types/api/categories'
 import type { LeaderboardPreviewResponse } from '@/types/api/maps'
 import type { TableColumn } from '@/types/display'
-import type { Difficulty } from '@/types/enums'
 import { calculateAp } from '@/utils/curveEval'
 import { formatAccuracy, formatCount, formatFixed } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
   mapDifficultyId: string
-  songHash?: string | null
-  difficulty?: Difficulty | null
-  characteristic?: string | null
+  scriptComplexity?: number | null
+  scriptVersion?: string | null
 }>()
 
 const PREVIEW_LIMIT = 100
@@ -33,17 +31,9 @@ const loading = ref(false)
 const error = ref('')
 const curve = ref<CurveResponse | null>(null)
 
-const estimate = ref<{ complexity: number | null; version: string | null } | null>(null)
-const estimateLoading = ref(false)
-const estimateError = ref('')
-
-const canEstimate = computed(
-  () => !!props.songHash && !!props.difficulty && !!props.characteristic,
-)
-
 const priced = computed(() => preview.value?.complexity ?? null)
 
-const base = computed(() => priced.value ?? estimate.value?.complexity ?? 0)
+const base = computed(() => priced.value ?? props.scriptComplexity ?? 0)
 
 const complexity = ref(0)
 
@@ -130,30 +120,7 @@ async function load() {
   loading.value = false
 }
 
-async function fetchEstimate() {
-  if (!canEstimate.value) return
-  estimateLoading.value = true
-  estimateError.value = ''
-  try {
-    const { getComplexityEstimate } = await import('@/api/ranking/maps')
-    estimate.value = await getComplexityEstimate({
-      songHash: props.songHash as string,
-      difficulty: props.difficulty as Difficulty,
-      characteristic: props.characteristic as string,
-    })
-    if (estimate.value.complexity != null) complexity.value = estimate.value.complexity
-  } catch (err) {
-    estimate.value = null
-    estimateError.value = parseApiError(err, 'Could not run the script on this map.').message
-  }
-  estimateLoading.value = false
-}
-
-watch(() => props.mapDifficultyId, () => {
-  estimate.value = null
-  estimateError.value = ''
-  load()
-}, { immediate: true })
+watch(() => props.mapDifficultyId, load, { immediate: true })
 </script>
 
 <template>
@@ -168,18 +135,15 @@ watch(() => props.mapDifficultyId, () => {
         </p>
       </div>
 
-      <div class="lb-preview__estimate">
-        <BaseButton v-if="canEstimate" size="sm" :loading="estimateLoading" @click="fetchEstimate">
-          Run the script
+      <div v-if="scriptComplexity != null" class="lb-preview__estimate">
+        <BaseButton size="sm" :disabled="complexity === scriptComplexity"
+          @click="complexity = scriptComplexity">
+          Use the script number
         </BaseButton>
-        <span v-if="estimate" class="lb-preview__estimate-value">
-          <template v-if="estimate.complexity != null">
-            {{ formatFixed(estimate.complexity, 2) }}
-            <span class="lb-preview__estimate-version">{{ estimate.version }}</span>
-          </template>
-          <template v-else>The model could not read this map.</template>
+        <span class="lb-preview__estimate-value" :title="scriptVersion ?? undefined">
+          {{ formatFixed(scriptComplexity, 1) }}
+          <span class="lb-preview__estimate-version">{{ scriptVersion }}</span>
         </span>
-        <span v-if="estimateError" class="lb-preview__error">{{ estimateError }}</span>
       </div>
     </header>
 

@@ -75,6 +75,8 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   blLeaderboardId: string | null
   maxScore: number
   complexity: number
+  scriptComplexity: number | null
+  scriptVersion: string | null
   averageVoteComplexity: number | null
   commentCount: number
   rankedAt: string | null
@@ -151,7 +153,11 @@ export interface MapDifficultyStatisticsResponse {
 export interface MapComplexityHistoryResponse {
   id: string
   mapDifficultyId: string
+  difficulty: Difficulty
+  characteristic: string
   complexity: number
+  reason: string | null
+  active: boolean
   createdAt: string
 }
 
@@ -210,11 +216,6 @@ export interface DifficultyListParams extends PaginationParams {
 export interface DifficultyScoreParams extends PaginationParams {
   country?: string
   relation?: UserRelationType
-}
-
-export interface ComplexityEstimateResponse {
-  complexity: number | null
-  version: string | null
 }
 
 export interface LeaderboardPreviewRow {

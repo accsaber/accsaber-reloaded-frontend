@@ -59,9 +59,9 @@ function apOf(row: ComplexityScoreRow, scenario: ComplexityScenario): number | n
 
 const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
   rows: scoreRows,
-  deltaKeys: ['apMove', 'weightedMove', 'rankMove'],
+  deltaKeys: ['apMove', 'weightedMove'],
   defaultKey: 'rank',
-  ascendingKeys: ['rank', 'rankScenario'],
+  ascendingKeys: ['rank'],
   revision: () => props.scenario,
   accessors: {
     rank: (row) => row.scenarios.CURRENT?.rank ?? null,
@@ -72,10 +72,12 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
     weightedCurrent: (row) => row.scenarios.CURRENT?.weightedAp ?? null,
     weightedScenario: (row) => row.scenarios[props.scenario]?.weightedAp ?? null,
     weightedMove: (row) => row.deltas[props.scenario]?.weightedAp ?? null,
-    rankScenario: (row) => row.scenarios[props.scenario]?.rank ?? null,
-    rankMove: (row) => row.deltas[props.scenario]?.rank ?? null,
   },
 })
+
+function deltaLabel(key: string, label: string): string {
+  return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
+}
 
 const columns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
@@ -87,7 +89,7 @@ const columns = computed<TableColumn[]>(() => {
     { key: 'apScenario', label: `AP ${tag}`, sortable: true, align: 'right', width: '100px' },
     {
       key: 'apMove',
-      label: `Δ AP ${deltaMode.value}`,
+      label: deltaLabel('apMove', 'Δ AP'),
       sortable: true,
       align: 'right',
       width: '112px',
@@ -96,18 +98,10 @@ const columns = computed<TableColumn[]>(() => {
     { key: 'weightedScenario', label: `Wgt ${tag}`, sortable: true, align: 'right', width: '104px' },
     {
       key: 'weightedMove',
-      label: `Δ wgt ${deltaMode.value}`,
+      label: deltaLabel('weightedMove', 'Δ wgt'),
       sortable: true,
       align: 'right',
-      width: '116px',
-    },
-    { key: 'rankScenario', label: `Rank ${tag}`, sortable: true, align: 'right', width: '104px' },
-    {
-      key: 'rankMove',
-      label: `Δ rank ${deltaMode.value}`,
-      sortable: true,
-      align: 'right',
-      width: '132px',
+      width: '124px',
     },
   ]
 })
@@ -128,8 +122,6 @@ const tableRows = computed(() =>
     weightedCurrent: row.scenarios.CURRENT?.weightedAp ?? null,
     weightedScenario: row.scenarios[props.scenario]?.weightedAp ?? null,
     weightedMove: row.deltas[props.scenario]?.weightedAp ?? null,
-    rankScenario: row.scenarios[props.scenario]?.rank ?? null,
-    rankMove: row.deltas[props.scenario]?.rank ?? null,
   })),
 )
 
@@ -264,16 +256,6 @@ function selectPlayer(row: Record<string, unknown>) {
             :delta="(row.weightedMove as number | null)" :decimals="AP_DECIMALS" />
         </template>
 
-        <template #cell-rankScenario="{ row }">
-          <span class="map-modal__rank">
-            {{ row.rankScenario != null ? `#${row.rankScenario}` : '–' }}
-          </span>
-        </template>
-
-        <template #cell-rankMove="{ row }">
-          <ScenarioCell delta-only invert :value="(row.rankMove as number | null)"
-            :delta="(row.rankMove as number | null)" :decimals="0" />
-        </template>
       </ScoreTable>
     </div>
   </BaseModal>

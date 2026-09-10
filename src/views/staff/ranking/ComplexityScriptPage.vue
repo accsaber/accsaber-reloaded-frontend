@@ -207,11 +207,12 @@ const leaderboard = ref<ComplexityMapLeaderboard | null>(null)
 const leaderboardLoading = ref(false)
 const leaderboardError = ref('')
 
+const applyStatus = ref<MapDifficultyStatus>('RANKED')
 const applyOpen = ref(false)
 const applying = ref(false)
 const applyError = ref('')
 const applyScope = ref<{ moving: number; total: number } | null>(null)
-const preparingApply = ref(false)
+const preparingApply = ref<MapDifficultyStatus | null>(null)
 const feedback = ref<{ variant: 'success' | 'error'; text: string } | null>(null)
 const downloading = ref<ComplexityDatasetKind | null>(null)
 
@@ -484,34 +485,35 @@ function setPlaysLimit(limit: number) {
 
 let roundScope: { key: string; rows: ComplexityDifficultyRow[] } | null = null
 
-async function loadRoundScope(): Promise<ComplexityDifficultyRow[]> {
+async function loadRoundScope(target: MapDifficultyStatus): Promise<ComplexityDifficultyRow[]> {
   const unfiltered = category.value === 'overall'
-    && status.value === 'RANKED'
+    && status.value === target
     && !mapSearch.value
   if (unfiltered) return difficulties.value
-  const key = batchId.value
+  const key = `${target}:${batchId.value}`
   if (roundScope?.key === key) return roundScope.rows
   const { getComplexityDifficulties } = await import('@/api/ranking/complexity')
   const rows = await getComplexityDifficulties({
-    status: 'RANKED',
+    status: target,
     batchId: batchId.value || undefined,
   })
   roundScope = { key, rows }
   return rows
 }
 
-async function openApply() {
+async function openApply(target: MapDifficultyStatus) {
   applyError.value = ''
-  preparingApply.value = true
+  applyStatus.value = target
+  preparingApply.value = target
   try {
-    const scope = await loadRoundScope()
+    const scope = await loadRoundScope(target)
     const moving = scope.filter((row) => movesUnder(row, SCRIPT_SCENARIO)).length
     applyScope.value = { moving, total: scope.length }
     applyOpen.value = true
   } catch (err) {
     feedback.value = { variant: 'error', text: failure(err, 'Could not count the affected maps.') }
   }
-  preparingApply.value = false
+  preparingApply.value = null
 }
 
 async function confirmApply(reason: string, maxStep: number | undefined) {
@@ -519,13 +521,24 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
   applyError.value = ''
   try {
     const { applyComplexityScript } = await import('@/api/ranking/complexity')
-    await applyComplexityScript({ reason, maxStep, batchId: batchId.value || undefined })
+    await applyComplexityScript({
+      reason,
+      maxStep,
+      batchId: batchId.value || undefined,
+      status: applyStatus.value,
+    })
     applyOpen.value = false
-    const scope = activeBatch.value ? activeBatch.value.name : 'the whole ranked pool'
-    feedback.value = {
-      variant: 'success',
-      text: `The script is being applied to ${scope}. Scores, statistics, rankings, milestones and XP update in the background.`,
-    }
+    const scope = activeBatch.value ? activeBatch.value.name : 'every map in scope'
+    feedback.value = applyStatus.value === 'RANKED'
+      ? {
+        variant: 'success',
+        text: `The script is being applied to ${scope}. Scores, statistics, rankings, milestones and XP update in the background.`,
+      }
+      : {
+        variant: 'success',
+        text: `${STATUS_LABELS[applyStatus.value].label} maps in ${scope} now carry the script value.`,
+      }
+    loadDifficulties()
   } catch (err) {
     if (markForbidden(err)) applyOpen.value = false
     else applyError.value = failure(err, 'The apply request failed.')
@@ -624,7 +637,15 @@ watch([tab, category, status, () => tuning.edited.value], () => {
             :loading="downloading === dataset.kind" @click="download(dataset.kind)">
             {{ dataset.label }}
           </BaseButton>
-          <BaseButton variant="primary" size="sm" :loading="preparingApply" @click="openApply">
+          <BaseButton size="sm" :loading="preparingApply === 'QUEUE'" @click="openApply('QUEUE')">
+            Set queue
+          </BaseButton>
+          <BaseButton size="sm" :loading="preparingApply === 'QUALIFIED'"
+            @click="openApply('QUALIFIED')">
+            Set qualified
+          </BaseButton>
+          <BaseButton variant="primary" size="sm" :loading="preparingApply === 'RANKED'"
+            @click="openApply('RANKED')">
             Apply this round
           </BaseButton>
         </template>
@@ -724,7 +745,7 @@ watch([tab, category, status, () => tuning.edited.value], () => {
       :columns="playsColumns" :limit="playsLimit" :loading="playsLoading" :error="playsError"
       @close="closePlays" @update:limit="setPlaysLimit" />
 
-    <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen"
+    <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen" :status="applyStatus"
       :batch-name="activeBatch?.name ?? null" :moving="applyScope.moving" :total="applyScope.total"
       :version="scriptVersion" :submitting="applying" :error="applyError"
       @close="applyOpen = false" @confirm="confirmApply" />

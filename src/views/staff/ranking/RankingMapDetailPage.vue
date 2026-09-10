@@ -18,7 +18,12 @@ import { rankingDashboardRoute } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
-import type { AutoCriteriaStatus, MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
+import type {
+  AutoCriteriaStatus,
+  MapComplexityHistoryResponse,
+  MapDifficultyResponse,
+  VoteListResponse,
+} from '@/types/api/maps'
 import type { Tab } from '@/types/display'
 import type { MapVoteAction, VoteType } from '@/types/enums'
 import { useRankingQueueStore } from '@/stores/rankingQueue'
@@ -201,9 +206,7 @@ const voteError = ref('')
 const showComplexityModal = ref(false)
 const complexityValue = ref<number>(0)
 const complexityLoading = ref(false)
-const scriptEstimate = ref<{ complexity: number | null; version: string | null } | null>(null)
-const scriptLoading = ref(false)
-const scriptError = ref('')
+const complexityHistory = ref<MapComplexityHistoryResponse[]>([])
 
 const showCategoryModal = ref(false)
 const categoryValue = ref<string>('')
@@ -296,7 +299,13 @@ function prefillFromExistingVote() {
   const existing = voteData.value.votes.find(
     (v) => v.staffId === staffId.value && v.type === voteAction.value
   )
-  if (!existing) return
+  if (!existing) {
+    const suggestion = difficulty.value?.scriptComplexity
+    if (voteAction.value === 'REWEIGHT' && suggestion != null) {
+      voteSuggestedComplexity.value = suggestion
+    }
+    return
+  }
   voteType.value = existing.vote
   voteReason.value = existing.reason ?? ''
   voteSuggestedComplexity.value = existing.suggestedComplexity ?? ''
@@ -360,35 +369,34 @@ async function deactivateVote(voteId: string) {
   }
 }
 
+const SCRIPT_REASON = 'complexity script'
+
+const scriptSetThis = computed(() => {
+  const current = difficulty.value?.complexity
+  if (current == null) return false
+  const entry = complexityHistory.value.find(
+    (row) => row.mapDifficultyId === difficultyId.value && row.active,
+  )
+  const reason = entry?.reason?.trim().toLowerCase() ?? ''
+  return reason.startsWith(SCRIPT_REASON)
+})
+
+async function loadComplexityHistory() {
+  const mapId = difficulty.value?.mapId
+  if (!mapId) return
+  try {
+    const { getComplexityHistory } = await import('@/api/maps')
+    complexityHistory.value = await getComplexityHistory(mapId)
+  } catch {
+    complexityHistory.value = []
+  }
+}
+
 function openComplexityModal() {
   if (!difficulty.value) return
   complexityValue.value = difficulty.value.complexity ?? 0
-  scriptEstimate.value = null
-  scriptError.value = ''
   showComplexityModal.value = true
-}
-
-async function runScript() {
-  const source = difficulty.value
-  if (!source || !songHash.value) return
-  scriptLoading.value = true
-  scriptError.value = ''
-  try {
-    const { getComplexityEstimate } = await import('@/api/ranking/maps')
-    scriptEstimate.value = await getComplexityEstimate({
-      songHash: songHash.value,
-      difficulty: source.difficulty,
-      characteristic: source.characteristic,
-    })
-    if (scriptEstimate.value.complexity != null) {
-      complexityValue.value = scriptEstimate.value.complexity
-    }
-  } catch (err) {
-    const { parseApiError } = await import('@/api/client')
-    scriptEstimate.value = null
-    scriptError.value = parseApiError(err, 'Could not run the script on this map.').message
-  }
-  scriptLoading.value = false
+  loadComplexityHistory()
 }
 
 async function handleComplexityChange() {
@@ -775,8 +783,8 @@ watch(availableActions, (actions) => {
         </div>
 
         <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'"
-          :map-difficulty-id="difficulty.id" :song-hash="songHash"
-          :difficulty="difficulty.difficulty" :characteristic="difficulty.characteristic" />
+          :map-difficulty-id="difficulty.id" :script-complexity="difficulty.scriptComplexity"
+          :script-version="difficulty.scriptVersion" />
 
         <div v-if="activeTab === 'voting' && isHeadRanking" class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="managementOpen = !managementOpen">
@@ -846,8 +854,15 @@ watch(availableActions, (actions) => {
                 @update:model-value="voteAction = $event as MapVoteAction" />
             </div>
 
-            <BaseInput v-model.number="voteSuggestedComplexity" type="number" label="Suggested Complexity"
-              placeholder="e.g. 8.5" />
+            <div class="rank-detail__vote-complexity-field">
+              <BaseInput v-model.number="voteSuggestedComplexity" type="number"
+                label="Suggested Complexity" placeholder="e.g. 8.5" />
+              <p v-if="voteAction === 'REWEIGHT' && difficulty.scriptComplexity != null"
+                class="rank-detail__script-note">
+                The script suggests {{ difficulty.scriptComplexity.toFixed(1) }} on
+                <span class="rank-detail__script-version">{{ difficulty.scriptVersion }}</span>.
+              </p>
+            </div>
 
             <div v-if="difficulty.status !== 'RANKED'" class="rank-detail__criteria-vote-section">
               <label class="rank-detail__field-label">Criteria Vote</label>
@@ -977,19 +992,19 @@ watch(availableActions, (actions) => {
       @close="showComplexityModal = false">
       <div class="rank-detail__complexity-form">
         <BaseInput v-model.number="complexityValue" type="number" label="Complexity" placeholder="e.g. 8.5" />
-        <div class="rank-detail__script">
-          <BaseButton v-if="songHash" size="sm" :loading="scriptLoading" @click="runScript">
-            Run the script
+        <p v-if="scriptSetThis" class="rank-detail__script-note">
+          The complexity script suggested this value at import.
+        </p>
+        <div v-if="difficulty?.scriptComplexity != null" class="rank-detail__script">
+          <BaseButton size="sm" :disabled="complexityValue === difficulty.scriptComplexity"
+            @click="complexityValue = difficulty.scriptComplexity">
+            Use the script number
           </BaseButton>
-          <span v-if="scriptEstimate" class="rank-detail__script-value">
-            <template v-if="scriptEstimate.complexity != null">
-              {{ scriptEstimate.complexity.toFixed(2) }}
-              <span class="rank-detail__script-version">{{ scriptEstimate.version }}</span>
-            </template>
-            <template v-else>The model could not read this map.</template>
+          <span class="rank-detail__script-value">
+            {{ difficulty.scriptComplexity.toFixed(1) }}
+            <span class="rank-detail__script-version">{{ difficulty.scriptVersion }}</span>
           </span>
         </div>
-        <p v-if="scriptError" class="rank-detail__category-error">{{ scriptError }}</p>
       </div>
       <template #footer>
         <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
@@ -1257,6 +1272,19 @@ watch(availableActions, (actions) => {
   color: var(--text-tertiary);
   font-family: var(--font-code);
   font-size: var(--text-caption);
+}
+
+.rank-detail__vote-complexity-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.rank-detail__script-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1.5;
 }
 
 .rank-detail__category-error {

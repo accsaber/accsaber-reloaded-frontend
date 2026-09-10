@@ -159,6 +159,13 @@ export interface ComplexityPreviewResponse {
   players: ComplexityPlayerBoard
 }
 
+export interface ApplyScriptParams {
+  reason: string
+  maxStep?: number
+  batchId?: string
+  status?: MapDifficultyStatus
+}
+
 export interface ComplexityPreviewParams {
   categoryId?: string
   status?: MapDifficultyStatus

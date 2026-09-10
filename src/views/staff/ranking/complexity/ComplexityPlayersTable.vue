@@ -63,6 +63,10 @@ const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = use
   accessors,
 })
 
+function deltaLabel(key: string, label: string): string {
+  return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
+}
+
 const tableColumns = computed<TableColumn[]>(() => {
   const tag = SCENARIO_SHORT[props.scenario]
   return [
@@ -77,7 +81,7 @@ const tableColumns = computed<TableColumn[]>(() => {
     })),
     {
       key: 'apMove',
-      label: `Δ AP ${deltaMode.value}`,
+      label: deltaLabel('apMove', 'Δ AP'),
       sortable: true,
       align: 'right',
       width: '118px',
@@ -85,7 +89,7 @@ const tableColumns = computed<TableColumn[]>(() => {
     { key: 'rankScenario', label: `Rank ${tag}`, sortable: true, align: 'right', width: '112px' },
     {
       key: 'rankMove',
-      label: `Δ rank ${deltaMode.value}`,
+      label: deltaLabel('rankMove', 'Δ rank'),
       sortable: true,
       align: 'right',
       width: '128px',
