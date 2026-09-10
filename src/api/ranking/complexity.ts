@@ -11,7 +11,6 @@ import type {
   ComplexityPlayerBoard,
   ComplexityPlayerParams,
   ComplexityPlayerPlays,
-  HighestAverageApParams,
 } from '@/types/api/complexity'
 import type { DownloadedFile } from '../client'
 import { get, getFile, post } from '../client'
@@ -29,12 +28,6 @@ export function getComplexityLeaderboard(
   mapDifficultyId: string,
 ): Promise<ComplexityMapLeaderboard> {
   return get<ComplexityMapLeaderboard>(`${BASE}/difficulties/${mapDifficultyId}/leaderboard`)
-}
-
-export function getHighestAverageApMaps(
-  params: HighestAverageApParams,
-): Promise<ComplexityDifficultyRow[]> {
-  return get<ComplexityDifficultyRow[]>(`${BASE}/leaderboards/highest-avg-ap${buildQuery(params)}`)
 }
 
 export function getComplexityPlayers(

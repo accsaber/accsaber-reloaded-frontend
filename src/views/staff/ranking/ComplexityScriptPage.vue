@@ -49,12 +49,10 @@ const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 
-type PanelTab = 'maps' | 'worth' | 'players' | 'tuning'
+type PanelTab = 'maps' | 'players' | 'tuning'
 
 const STATUSES: MapDifficultyStatus[] = ['RANKED', 'QUALIFIED', 'QUEUE']
 const PLAYER_BOARD_LIMIT = 250
-const WORTH_BOARD_LIMIT = 50
-const WORTH_BOARD_MIN_SCORES = 10
 const PREVIEW_PLAYER_LIMIT = 100
 const PREVIEW_DEBOUNCE = 500
 const DEFAULT_PLAYS_LIMIT = 10
@@ -103,7 +101,7 @@ function setQuery(changes: Record<string, string>) {
 const tab = computed<PanelTab>({
   get() {
     const value = queryValue('tab')
-    return value === 'worth' || value === 'players' || value === 'tuning' ? value : 'maps'
+    return value === 'players' || value === 'tuning' ? value : 'maps'
   },
   set(value) {
     setQuery({ tab: value })
@@ -181,7 +179,6 @@ function clearFilters() {
 
 const tabs: Tab[] = [
   { key: 'maps', label: 'Maps' },
-  { key: 'worth', label: 'Most worth' },
   { key: 'players', label: 'Players' },
   { key: 'tuning', label: 'Tuning' },
 ]
@@ -190,8 +187,6 @@ const accent = computed(() => categoryStore.getAccent(category.value))
 
 const difficulties = ref<ComplexityDifficultyRow[]>([])
 const difficultiesLoading = ref(true)
-const worthRows = ref<ComplexityDifficultyRow[]>([])
-const worthLoading = ref(false)
 const board = ref<ComplexityPlayerBoard | null>(null)
 const boardLoading = ref(true)
 
@@ -347,24 +342,6 @@ async function loadBoard() {
     board.value = null
   }
   boardLoading.value = false
-}
-
-async function loadWorthBoard() {
-  worthLoading.value = true
-  try {
-    const { getHighestAverageApMaps } = await import('@/api/ranking/complexity')
-    worthRows.value = await getHighestAverageApMaps({
-      categoryId: await categoryId(),
-      scenario: SCRIPT_SCENARIO,
-      minScores: WORTH_BOARD_MIN_SCORES,
-      limit: WORTH_BOARD_LIMIT,
-      batchId: batchId.value || undefined,
-      search: searchParam(mapSearch.value),
-    })
-  } catch {
-    worthRows.value = []
-  }
-  worthLoading.value = false
 }
 
 async function loadRater() {
@@ -544,7 +521,6 @@ const reportScenario = computed<ComparisonScenario>(
 
 const reportMaps = computed(() => {
   if (tab.value === 'tuning') return previewMaps.value
-  if (tab.value === 'worth') return worthRows.value
   return difficulties.value
 })
 
@@ -589,10 +565,6 @@ loadBatches()
 
 watch([category, status, batchId, mapSearch], loadDifficulties, { immediate: true })
 watch([category, playerSearch], loadBoard, { immediate: true })
-
-watch([tab, category, batchId, mapSearch], () => {
-  if (tab.value === 'worth') loadWorthBoard()
-}, { immediate: true })
 
 watch([tab, category, status, () => tuning.edited.value], () => {
   if (tab.value === 'tuning') bumpPreview()
@@ -684,20 +656,6 @@ watch([tab, category, status, () => tuning.edited.value], () => {
         </div>
         <ComplexityMapsTable :rows="difficulties" :scenario="SCRIPT_SCENARIO"
           :loading="difficultiesLoading" @select="openMap" />
-      </div>
-
-      <div v-else-if="tab === 'worth'" class="script-page__view">
-        <div class="script-page__filters">
-          <SearchBox :model-value="mapSearch" placeholder="Search song, artist or mapper"
-            @update:model-value="mapSearch = $event" />
-        </div>
-        <p class="script-page__note">
-          Top fifty by average weighted AP, at least ten scores each. The board column is where a
-          map sits today next to where it would sit, and a match keeps its real position.
-        </p>
-        <ComplexityMapsTable board :rows="worthRows" :scenario="SCRIPT_SCENARIO"
-          :loading="worthLoading" empty-message="No maps clear the score threshold here"
-          @select="openMap" />
       </div>
 
       <div v-else class="script-page__view">

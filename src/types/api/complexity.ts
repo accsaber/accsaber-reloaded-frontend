@@ -105,15 +105,6 @@ export interface ComplexityDifficultyParams {
   search?: string
 }
 
-export interface HighestAverageApParams {
-  scenario: ComplexityScenario
-  categoryId?: string
-  minScores?: number
-  limit?: number
-  batchId?: string
-  search?: string
-}
-
 export interface ComplexityPlayerParams {
   categoryId?: string
   limit?: number

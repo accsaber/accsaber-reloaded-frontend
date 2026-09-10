@@ -27,12 +27,10 @@ const props = withDefaults(defineProps<{
   scenario: ComparisonScenario
   columns?: readonly ComplexityScenario[]
   loading?: boolean
-  board?: boolean
   emptyMessage?: string
 }>(), {
   columns: () => SCENARIO_ORDER,
   loading: false,
-  board: false,
   emptyMessage: 'No difficulties match these filters',
 })
 
@@ -40,7 +38,7 @@ const emit = defineEmits<{
   select: [row: ComplexityDifficultyRow]
 }>()
 
-type MapMetric = 'complexity' | 'topAp' | 'averageAp' | 'averageWeightedAp' | 'boardRank'
+type MapMetric = 'complexity' | 'topAp' | 'averageAp' | 'averageWeightedAp'
 
 const ALL_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT', 'PREVIEW']
 
@@ -66,7 +64,6 @@ const accessors: Record<string, (row: ComplexityDifficultyRow) => number | strin
   avgWeighted: (row) => scenarioValue(row, 'averageWeightedAp'),
   avgWeightedDelta: (row) => deltaValue(row, 'averageWeightedAp'),
   scores: (row) => row.scores,
-  board: (row) => row.scenarios[props.scenario]?.boardRank ?? null,
 }
 
 for (const key of ALL_SCENARIOS) {
@@ -76,8 +73,8 @@ for (const key of ALL_SCENARIOS) {
 const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
   rows: toRef(props, 'rows'),
   deltaKeys: ['cxDelta', 'topApDelta', 'avgWeightedDelta'],
-  defaultKey: props.board ? 'avgWeighted' : 'cxDelta',
-  ascendingKeys: ['song', 'board'],
+  defaultKey: 'cxDelta',
+  ascendingKeys: ['song'],
   revision: () => props.scenario,
   accessors,
 })
@@ -125,9 +122,6 @@ const tableColumns = computed<TableColumn[]>(() => {
     },
     { key: 'scores', label: 'Scores', sortable: true, align: 'right', width: '84px' },
   ]
-  if (props.board) {
-    list.splice(1, 0, { key: 'board', label: 'Board', sortable: true, align: 'center', width: '116px' })
-  }
   return list
 })
 
@@ -153,8 +147,6 @@ const tableRows = computed(() =>
       avgWeightedCurrent: currentValue(row, 'averageWeightedAp'),
       avgWeighted: scenarioValue(row, 'averageWeightedAp'),
       avgWeightedDelta: deltaValue(row, 'averageWeightedAp'),
-      boardNow: row.scenarios.CURRENT?.boardRank ?? null,
-      boardMove: deltaValue(row, 'boardRank'),
     }
   }),
 )
@@ -181,14 +173,6 @@ function rowClass(row: Record<string, unknown>) {
       @sort="onSort"
       @row-click="(row) => emit('select', row.source as ComplexityDifficultyRow)"
     >
-      <template #cell-board="{ row }">
-        <span class="complexity-maps__board">
-          <span class="complexity-maps__board-pos">{{ row.boardNow != null ? `#${row.boardNow}` : '–' }}</span>
-          <ScenarioCell delta-only invert :value="(row.boardMove as number | null)"
-            :delta="(row.boardMove as number | null)" :decimals="0" />
-        </span>
-      </template>
-
       <template #cell-song="{ row }">
         <MapIdentityCell cover :row="(row.source as ComplexityDifficultyRow)" :size="34" />
       </template>
@@ -297,18 +281,6 @@ function rowClass(row: Record<string, unknown>) {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-secondary);
-}
-
-.complexity-maps__board {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.complexity-maps__board-pos {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--text-primary);
 }
 
 .complexity-maps__card-label {
