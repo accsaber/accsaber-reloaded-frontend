@@ -165,7 +165,7 @@ const rows = computed(() => {
       lastPlayedAt: s.lastPlayedAt,
       date: s.date,
       replay: resolveReplay(
-        { blScoreId: s.blScoreId, ssScoreId: s.ssScoreId, date: s.date },
+        { blScoreId: s.blScoreId, ssScoreId: s.ssScoreId },
         primaryReplayService.value,
         fallbackReplayService.value,
       ),

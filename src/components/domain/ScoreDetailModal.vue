@@ -51,7 +51,6 @@ const replayChain = computed(() =>
     {
       blScoreId: props.score?.blScoreId,
       ssScoreId: props.score?.ssScoreId,
-      date: props.score?.date,
     },
     primaryReplayService.value,
     fallbackReplayService.value,

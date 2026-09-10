@@ -1,31 +1,29 @@
 import type { ReplayService } from '@/types/api/settings'
-
-const SCORESABER_2_RELEASE_MS = Date.parse('2026-05-25T00:00:00Z')
+import chroViewerIcon from '@/assets/chroviewer.svg'
 
 const REPLAY_ICON: Record<ReplayService, string> = {
   beatleader: 'https://beatleader.com/assets/bs-pepe.gif',
   arcviewer: 'https://beatleader.com/assets/ArcViewerIcon.webp',
-  scoresaber: 'https://scoresaber.com/favicon-32x32.png',
+  chroviewer: chroViewerIcon,
 }
 
 const REPLAY_LABEL: Record<ReplayService, string> = {
   beatleader: 'Watch replay',
   arcviewer: 'Watch in ArcViewer',
-  scoresaber: 'Watch on ScoreSaber',
+  chroviewer: 'Watch in ChroViewer',
 }
 
 const REPLAY_NAME: Record<ReplayService, string> = {
   beatleader: 'BeatLeader',
   arcviewer: 'ArcViewer',
-  scoresaber: 'ScoreSaber',
+  chroviewer: 'ChroViewer',
 }
 
-const PROVIDER_ORDER: ReplayService[] = ['beatleader', 'arcviewer', 'scoresaber']
+const PROVIDER_ORDER: ReplayService[] = ['beatleader', 'arcviewer', 'chroviewer']
 
 export interface ReplaySource {
   blScoreId?: number | null
   ssScoreId?: number | null
-  date?: string | null
 }
 
 export interface ResolvedReplay {
@@ -45,21 +43,20 @@ export function arcViewerReplayUrl(blScoreId: number | null | undefined): string
 }
 
 /**
- * ScoreSaber 2 replay link. Requires a non-null ssScoreId and a score set on or
- * after the ScoreSaber 2 release (2026-05-25) since the viewer cannot play
- * older ScoreSaber replays.
+ * ChroViewer plays either score id. The BeatLeader id is preferred; the
+ * ScoreSaber id is the fallback so older scores still resolve.
  */
-export function scoreSaberReplayUrl(src: ReplaySource): string | null {
-  if (src.ssScoreId == null) return null
-  if (!src.date || Date.parse(src.date) < SCORESABER_2_RELEASE_MS) return null
-  return `https://watch.scoresaber.com/?ssScoreId=${src.ssScoreId}&autoPlay=true`
+export function chroViewerReplayUrl(src: ReplaySource): string | null {
+  if (src.blScoreId != null) return `https://chroviewer.com/?scoreIdBL=${src.blScoreId}`
+  if (src.ssScoreId != null) return `https://chroviewer.com/?scoreId=${src.ssScoreId}`
+  return null
 }
 
 function providerUrl(src: ReplaySource, provider: ReplayService): string | null {
   switch (provider) {
     case 'beatleader': return beatLeaderReplayUrl(src.blScoreId)
     case 'arcviewer': return arcViewerReplayUrl(src.blScoreId)
-    case 'scoresaber': return scoreSaberReplayUrl(src)
+    case 'chroviewer': return chroViewerReplayUrl(src)
   }
 }
 

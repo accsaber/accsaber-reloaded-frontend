@@ -2,7 +2,7 @@ export type Visibility = 'public' | 'followers_only' | 'private'
 
 export type SettingGroup = 'privacy' | 'appearance' | 'notifications'
 
-export type ReplayService = 'beatleader' | 'scoresaber' | 'arcviewer'
+export type ReplayService = 'beatleader' | 'chroviewer' | 'arcviewer'
 
 export type ComplexityNumberStyle = 'colored' | 'plain'
 

@@ -4,6 +4,7 @@ import {
   refreshPlayerToken,
 } from '@/api/auth'
 import { login as apiLogin, refreshToken as apiRefresh, logout as apiLogout } from '@/api/staff-auth'
+import type { ItemVariant } from '@/types/api/items'
 import type { AuthMeResponse, OAuthProvider } from '@/types/api/player-auth'
 import type { StaffRole } from '@/types/enums'
 import {
@@ -12,6 +13,7 @@ import {
   readPlayerSession,
   writePlayerSession,
 } from '@/utils/playerSession'
+import { useThemeStore } from '@/stores/theme'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -28,6 +30,8 @@ const ROLE_HIERARCHY: Record<StaffRole, number> = {
 const PROACTIVE_REFRESH_MS = 24 * 60 * 60 * 1000
 
 const LEGACY_LS_USER_ID = 'userId'
+
+type ItemVariantValue = { variants?: ItemVariant[] }
 
 migrateLegacyPlayerSession()
 
@@ -157,6 +161,7 @@ export const useAuthStore = defineStore('auth', () => {
     authMe.value = null
     restricted.value = false
     clearPlayerSession()
+    useThemeStore().resetToBuiltin()
   }
 
   let playerRefreshPromise: Promise<boolean> | null = null
@@ -204,11 +209,35 @@ export const useAuthStore = defineStore('auth', () => {
         })
       }
       userId.value = me.userId
+      void syncEquippedTheme(me.userId)
       return me
     } catch {
       authMe.value = null
       return null
     }
+  }
+
+  async function syncEquippedTheme(uid: string): Promise<void> {
+    const [{ useInventoryStore }, { buildEffectLayers, readThemeValue, resolveItemVariant }] =
+      await Promise.all([import('@/stores/inventory'), import('@/utils/items')])
+    const inventory = useInventoryStore()
+    await inventory.fetchEquipped(uid)
+
+    const themeStore = useThemeStore()
+    const slot = inventory.equipped.theme
+    if (!slot) {
+      themeStore.resetToBuiltin()
+      return
+    }
+    const themeKey = `item:${slot.item.id}`
+    if (themeStore.theme === themeKey) return
+    const value = readThemeValue(resolveItemVariant(slot.item.value as ItemVariantValue, slot.variantKey))
+    if (!value) return
+    themeStore.setThemeFromTokens(
+      themeKey,
+      value.tokens,
+      buildEffectLayers(slot.modifiers, slot.unusualEffect),
+    )
   }
 
   async function bootstrap(): Promise<void> {

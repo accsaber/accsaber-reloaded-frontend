@@ -150,7 +150,7 @@ const rows = computed(() =>
     date: s.date,
     leaderboardRank: s.leaderboardRank,
     replay: resolveReplay(
-      { blScoreId: s.blScoreId, ssScoreId: s.ssScoreId, date: s.date },
+      { blScoreId: s.blScoreId, ssScoreId: s.ssScoreId },
       primaryReplayService.value,
       fallbackReplayService.value,
     ),

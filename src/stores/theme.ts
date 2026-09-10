@@ -110,6 +110,10 @@ export const useThemeStore = defineStore('theme', () => {
     setTheme(resolvedBase.value === 'dark' ? 'light' : 'dark')
   }
 
+  function resetToBuiltin() {
+    setTheme(resolvedBase.value)
+  }
+
   watch(theme, (value) => {
     localStorage.setItem('theme', value)
   }, { immediate: true })
@@ -122,5 +126,5 @@ export const useThemeStore = defineStore('theme', () => {
     applyThemeTokens(activeTokens.value)
   }
 
-  return { theme, activeTokens, activeEffects, resolvedBase, toggle, setTheme, setThemeFromTokens, previewThemeTokens }
+  return { theme, activeTokens, activeEffects, resolvedBase, toggle, setTheme, resetToBuiltin, setThemeFromTokens, previewThemeTokens }
 })

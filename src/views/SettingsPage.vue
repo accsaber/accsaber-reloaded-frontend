@@ -65,7 +65,7 @@ const PRIVACY_CONTROLS: { key: keyof PrivacySettings; title: string; hint: strin
 const REPLAY_SERVICE_OPTIONS = [
   { value: 'beatleader' as const, label: 'BeatLeader', description: 'Open replays in BeatLeader.' },
   { value: 'arcviewer' as const, label: 'ArcViewer', description: 'Open replays in ArcViewer.' },
-  { value: 'scoresaber' as const, label: 'ScoreSaber', description: 'Open replays in ScoreSaber.' },
+  { value: 'chroviewer' as const, label: 'ChroViewer', description: 'Open replays in ChroViewer.' },
 ]
 
 const COMPLEXITY_STYLE_OPTIONS = [
