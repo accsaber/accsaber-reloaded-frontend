@@ -58,8 +58,6 @@ const FOOTER_LINKS: FooterLink[] = [
   { label: 'GitHub (API)', href: 'https://github.com/accsaber/accsaber-reloaded-backend' },
   { label: 'Score Feed', to: '/score-feed' },
   { label: 'Credits', to: '/credits' },
-  { label: 'Terms', to: '/terms' },
-  { label: 'Privacy', to: '/privacy' },
 ]
 
 async function loadBackendVersion(): Promise<void> {
