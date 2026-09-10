@@ -52,9 +52,14 @@ const columns: TableColumn[] = [
   { key: 'player', label: 'Player', width: '220px', flex: true },
   { key: 'accuracy', label: 'Accuracy', align: 'right', width: '104px' },
   { key: 'ap', label: 'AP', align: 'right', width: '96px' },
-  { key: 'platform', label: 'From', align: 'center', width: '84px' },
-  { key: 'modifiers', label: 'Modifiers', width: '120px' },
+  { key: 'platform', label: 'From', align: 'center', width: '72px' },
+  { key: 'modifiers', label: 'Modifiers', width: '130px' },
 ]
+
+const PLATFORM_SHORT: Record<string, string> = {
+  beatleader: 'BL',
+  scoresaber: 'SS',
+}
 
 const rows = computed(() =>
   (preview.value?.rows ?? []).map((row) => ({
@@ -69,7 +74,8 @@ const rows = computed(() =>
     ap: atBase.value || !curve.value
       ? row.ap
       : calculateAp(curve.value, row.accuracy, complexity.value),
-    platform: row.platform,
+    platform: PLATFORM_SHORT[row.platform.toLowerCase()] ?? row.platform,
+    platformName: row.platform,
     modifiers: row.modifiers,
   })),
 )
@@ -181,7 +187,9 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
       </template>
 
       <template #cell-platform="{ row }">
-        <span class="lb-preview__platform">{{ row.platform }}</span>
+        <span class="lb-preview__platform" :title="(row.platformName as string)">
+          {{ row.platform }}
+        </span>
       </template>
 
       <template #cell-modifiers="{ row }">

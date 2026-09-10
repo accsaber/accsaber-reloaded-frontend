@@ -611,7 +611,8 @@ watch(availableActions, (actions) => {
         <div class="rank-detail__bg-image" :style="{ backgroundImage: `url(${coverUrl})` }" />
       </div>
 
-      <div class="rank-detail__content">
+      <div class="rank-detail__content"
+        :class="{ 'rank-detail__content--wide': activeTab === 'leaderboard' }">
         <div class="rank-detail__nav">
           <button class="rank-detail__back" @click="goBackToQueue"
             aria-label="Back to queue">
@@ -1142,9 +1143,14 @@ watch(availableActions, (actions) => {
 }
 
 .rank-detail__content {
-  max-width: 800px;
+  min-width: 0;
+  max-width: var(--rank-detail-column, 800px);
   margin: 0 auto;
   padding: var(--space-lg) var(--space-xl) var(--space-3xl);
+}
+
+.rank-detail__content--wide {
+  --rank-detail-column: 1280px;
 }
 
 .rank-detail__nav {

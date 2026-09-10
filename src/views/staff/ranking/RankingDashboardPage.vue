@@ -166,9 +166,9 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 })
 
 const baseColumns: TableColumn[] = [
-  { key: 'cover', label: '', width: '72px' },
-  { key: 'song', label: 'Song', align: 'left' },
-  { key: 'mapper', label: 'Mapper', align: 'left', width: '104px' },
+  { key: 'cover', label: '', width: '64px' },
+  { key: 'song', label: 'Song', align: 'left', width: '300px', flex: true },
+  { key: 'mapper', label: 'Mapper', align: 'left', width: '150px' },
   { key: 'category', label: 'Category', align: 'center', width: '110px' },
   { key: 'status', label: 'Status', align: 'center', width: '96px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '124px' },
@@ -204,9 +204,9 @@ const rows = computed(() =>
       mapId: d.mapId,
       coverUrl: d.cdnCoverUrl ?? d.coverUrl,
       coverFallbackUrl: d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null,
-      songName: truncate(d.songName, 25),
+      songName: truncate(d.songName, 44),
       songSubName: d.songSubName,
-      songAuthor: truncate(d.songAuthor, 25),
+      songAuthor: truncate(d.songAuthor, 40),
       mapper: d.mapAuthor,
       categoryName: catInfo?.name ?? '',
       categoryCode: catCode ?? 'overall',
@@ -565,7 +565,8 @@ function criteriaClassName(row: Record<string, unknown>): string {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  max-width: 1200px;
+  min-width: 0;
+  max-width: 1760px;
   margin: 0 auto;
   width: 100%;
 }
