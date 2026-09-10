@@ -5,7 +5,6 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type { RaterCoefficients } from '@/types/api/complexity'
 import type { CategoryCode } from '@/types/display'
 import { formatFixed } from '@/utils/formatters'
-import HintTooltip from './HintTooltip.vue'
 import RaterField from './RaterField.vue'
 import {
   COEFFICIENT_FIELDS,
@@ -111,11 +110,8 @@ function resetToLive() {
 
       <div class="rater-form__top">
         <section class="rater-form__group">
-          <h4 class="rater-form__group-title">
-            Worst share
-            <HintTooltip :text="WORST_SHARE_HINT" label="worst share" />
-          </h4>
-          <RaterField label="Share" :hint="WORST_SHARE_HINT" kind="share"
+          <h4 class="rater-form__group-title">Worst share</h4>
+          <RaterField label="Share of notes" :hint="WORST_SHARE_HINT" kind="share"
             :live="live?.worstShare ?? edited.worstShare" :model-value="edited.worstShare"
             @update:model-value="setWorstShare" />
           <p class="rater-form__bands">

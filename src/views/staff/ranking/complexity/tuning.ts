@@ -27,49 +27,49 @@ export const COEFFICIENT_FIELDS: {
     key: 'intercept',
     label: 'Intercept',
     kind: 'intercept',
-    hint: 'Where the line starts before any term moves it.',
+    hint: 'The number every map in this category starts from. Raise it and every map here gets more complexity.',
   },
   {
     key: 'meanSlope',
     label: 'Mean',
     kind: 'slope',
-    hint: 'Weight on the mean note accuracy the model predicts.',
+    hint: 'How much the average note counts. The model guesses how accurately each note gets hit, and this weights that average.',
   },
   {
     key: 'worstSlope',
     label: 'Worst',
     kind: 'slope',
-    hint: 'Weight on the accuracy of the worst share of notes.',
+    hint: "How much the map's hardest notes count, the slice that worst share picks out.",
   },
   {
     key: 'resetSlope',
     label: 'Resets',
     kind: 'slope',
-    hint: 'Weight on the share of notes that need a reset.',
+    hint: 'How much wrist resets count. More resets usually means a map is harder to hit clean.',
   },
   {
     key: 'dotSlope',
     label: 'Dots',
     kind: 'slope',
-    hint: 'Weight on the share of dot notes.',
+    hint: 'How much dot notes count, the ones with no arrow telling you which way to swing.',
   },
   {
     key: 'notesSlope',
     label: 'Notes',
     kind: 'slope',
-    hint: 'Weight on the note count, on a log scale.',
+    hint: 'How much the map length counts. Doubling the notes moves it by a fixed step, so a long map is not twice a short one.',
   },
   {
     key: 'njsSlope',
     label: 'NJS',
     kind: 'slope',
-    hint: 'Weight on the note jump speed.',
+    hint: 'How much note jump speed counts, meaning how fast notes fly at you.',
   },
   {
     key: 'boardSlope',
     label: 'Board ease',
     kind: 'slope',
-    hint: 'Weight on how easily the top players score on the map.',
+    hint: 'How much the real scores count. Board ease is how easily the top players hit this map.',
   },
 ]
 
@@ -112,7 +112,7 @@ export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: 
   },
 ]
 
-export const WORST_SHARE_HINT = 'Share of the worst notes on the map that the worst term reads.'
+export const WORST_SHARE_HINT = "How much of the map's hardest part the script reads. At 0.05 it looks at the worst 5 percent of notes, so a short brutal section counts for more than a wider slice would let it."
 
 const NICE_STEPS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
 
