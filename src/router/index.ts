@@ -200,6 +200,11 @@ const router = createRouter({
       component: () => import('@/views/auth/LoginFinishPage.vue'),
     },
     {
+      path: '/dev/complexity',
+      name: 'dev-complexity',
+      component: () => import('@/views/DevComplexityHarness.vue'),
+    },
+    {
       path: '/staff/login',
       name: 'staff-login',
       component: () => import('@/views/staff/AdminLoginPage.vue'),
@@ -273,7 +278,7 @@ const router = createRouter({
       path: isRankingSubdomain ? '/reweight' : '/staff/ranking/reweight',
       name: 'staff-ranking-reweight',
       component: () => import('@/views/staff/ranking/ReweightPage.vue'),
-      meta: { requiresStaff: true, requiredRole: 'RANKING_HEAD' as StaffRole },
+      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
     },
     {
       path: isRankingSubdomain ? '/batches/build/:batchId?' : '/staff/ranking/batches/build/:batchId?',

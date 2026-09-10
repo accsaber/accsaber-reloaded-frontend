@@ -1,3 +1,9 @@
+import type {
+  ComplexityScenario,
+  EstimateScenario,
+  ScenarioMapValues,
+} from '@/types/api/complexity'
+
 const STOPS = [
   { at: 0, token: '--complexity-0' },
   { at: 3, token: '--complexity-3' },
@@ -42,4 +48,43 @@ export function complexityPercent(complexity: number): number {
 function clamp(complexity: number): number {
   if (!Number.isFinite(complexity)) return 0
   return Math.min(Math.max(complexity, 0), COMPLEXITY_MAX)
+}
+
+export const SCENARIO_LABELS: Record<ComplexityScenario, string> = {
+  CURRENT: 'Current',
+  OLD_SCRIPT: 'Old script',
+  NEW_SCRIPT: 'New script',
+}
+
+export const SCENARIO_ORDER: readonly ComplexityScenario[] = ['CURRENT', 'OLD_SCRIPT', 'NEW_SCRIPT']
+
+export const SCENARIO_SHORT: Record<ComplexityScenario, string> = {
+  CURRENT: 'now',
+  OLD_SCRIPT: 'old',
+  NEW_SCRIPT: 'new',
+}
+
+export const ESTIMATE_SCENARIOS: readonly EstimateScenario[] = ['OLD_SCRIPT', 'NEW_SCRIPT']
+
+export const CX_DECIMALS = 2
+export const AP_DECIMALS = 1
+export const BIG_MOVE = 1
+
+const EPSILON = 0.005
+
+export type DeltaTone = 'up' | 'down' | 'flat'
+
+export function deltaTone(delta: number | null | undefined, invert = false): DeltaTone {
+  if (delta == null || !Number.isFinite(delta) || Math.abs(delta) < EPSILON) return 'flat'
+  const signed = invert ? -delta : delta
+  return signed > 0 ? 'up' : 'down'
+}
+
+export function movesUnder(row: { deltas: Partial<Record<EstimateScenario, ScenarioMapValues>> }, scenario: EstimateScenario): boolean {
+  const delta = row.deltas[scenario]?.complexity
+  return delta != null && Math.abs(delta) >= EPSILON
+}
+
+export function isBigMove(delta: number | null | undefined): boolean {
+  return delta != null && Math.abs(delta) >= BIG_MOVE
 }

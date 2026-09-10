@@ -82,9 +82,9 @@ const rankingNavItems = computed<NavItem[]>(() => {
     { to: rankingPrefix || '/', label: 'Queue' },
     { to: `${rankingPrefix}/import`, label: 'Import' },
     { to: batchesPath, label: 'Batches' },
+    { to: reweightPath, label: 'Reweight' },
   ]
   if (authStore.hasRole('RANKING_HEAD')) {
-    items.push({ to: reweightPath, label: 'Reweight' })
     items.push({ to: newsPath, label: 'News' })
   }
   items.push({ to: activityPath, label: 'Activity' })

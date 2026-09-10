@@ -53,3 +53,38 @@ export function parseNullableNumber(value: string): number | null {
   const n = Number(trimmed)
   return Number.isFinite(n) ? n : null
 }
+
+const EN_DASH = '–'
+
+export function formatFixed(
+  value: number | null | undefined,
+  decimals: number,
+  fallback = EN_DASH,
+): string {
+  if (value == null || !Number.isFinite(value)) return fallback
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+}
+
+export function formatSigned(
+  value: number | null | undefined,
+  decimals: number,
+  fallback = EN_DASH,
+): string {
+  if (value == null || !Number.isFinite(value)) return fallback
+  const rounded = formatFixed(Math.abs(value), decimals)
+  if (value > 0) return `+${rounded}`
+  return value < 0 ? `-${rounded}` : rounded
+}
+
+export function formatAccuracy(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return EN_DASH
+  return `${(value * 100).toFixed(2)}%`
+}
+
+export function formatCount(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return EN_DASH
+  return value.toLocaleString()
+}
