@@ -12,7 +12,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
 import type {
-  ComplexityDatasetKind,
   ComplexityDifficultyRow,
   ComplexityMapLeaderboard,
   ComplexityPlayerBoard,
@@ -81,12 +80,6 @@ const statusToggles: ChartToggle[] = STATUSES.map((status) => ({
 const previewViewToggles: ChartToggle[] = [
   { key: 'maps', label: 'Maps', color: 'var(--page-accent, var(--accent))' },
   { key: 'players', label: 'Players', color: 'var(--page-accent, var(--accent))' },
-]
-
-const DATASETS: { kind: ComplexityDatasetKind; label: string }[] = [
-  { kind: 'scores', label: 'Scores CSV' },
-  { kind: 'difficulties', label: 'Difficulties CSV' },
-  { kind: 'complexity-history', label: 'History CSV' },
 ]
 
 const headForbidden = ref(false)
@@ -214,7 +207,6 @@ const applyError = ref('')
 const applyScope = ref<{ moving: number; total: number } | null>(null)
 const preparingApply = ref<MapDifficultyStatus | null>(null)
 const feedback = ref<{ variant: 'success' | 'error'; text: string } | null>(null)
-const downloading = ref<ComplexityDatasetKind | null>(null)
 
 const tuning = useTuningState()
 const raterLoading = ref(true)
@@ -592,20 +584,6 @@ function exportReport() {
   )
 }
 
-async function download(kind: ComplexityDatasetKind) {
-  downloading.value = kind
-  try {
-    const { downloadComplexityDataset } = await import('@/api/ranking/complexity')
-    const { blob, filename } = await downloadComplexityDataset(kind)
-    saveBlob(blob, filename ?? `accsaber-${kind}.csv`)
-  } catch (err) {
-    if (!markForbidden(err)) {
-      feedback.value = { variant: 'error', text: failure(err, 'The download failed.') }
-    }
-  }
-  downloading.value = null
-}
-
 loadRater()
 loadBatches()
 
@@ -633,10 +611,6 @@ watch([tab, category, status, () => tuning.edited.value], () => {
           Export markdown
         </BaseButton>
         <template v-if="isHead">
-          <BaseButton v-for="dataset in DATASETS" :key="dataset.kind" size="sm"
-            :loading="downloading === dataset.kind" @click="download(dataset.kind)">
-            {{ dataset.label }}
-          </BaseButton>
           <BaseButton size="sm" :loading="preparingApply === 'QUEUE'" @click="openApply('QUEUE')">
             Set queue
           </BaseButton>
