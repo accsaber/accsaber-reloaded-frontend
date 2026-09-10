@@ -1,341 +1,185 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseInput from '@/components/common/BaseInput.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import GlowImage from '@/components/common/GlowImage.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { ApiError } from '@/api/client'
-import { useCategoryStore } from '@/stores/categories'
-import { useModifierStore } from '@/stores/modifiers'
-import type { CurveResponse } from '@/types/api/categories'
+import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { parseApiError } from '@/api/client'
+import type { LeaderboardPreviewResponse } from '@/types/api/maps'
 import type { TableColumn } from '@/types/display'
 import type { Difficulty } from '@/types/enums'
-import type { BeatLeaderScore } from '@/utils/beatsaver'
-import { calculateAp } from '@/utils/curveEval'
+import { formatAccuracy, formatCount, formatFixed } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
-  blLeaderboardId: string | null
-  ssLeaderboardId?: string | null
-  originalComplexity: number | null
-  maxScore: number
-  categoryCode: string
+  mapDifficultyId: string
   songHash?: string | null
   difficulty?: Difficulty | null
   characteristic?: string | null
-  aiAvailable?: boolean
 }>()
 
-const categoryStore = useCategoryStore()
-const modifierStore = useModifierStore()
+const PREVIEW_LIMIT = 100
 
-interface NormalizedScore {
-  id: string
-  userId: string
-  baseScore: number
-  modifiedScore: number
-  modifiers: string
-  player: {
-    id: string
-    name: string
-    avatar: string
-    country: string
-  }
-}
-
-const scores = ref<NormalizedScore[]>([])
-const fetchedMaxScore = ref(0)
-const curve = ref<CurveResponse | null>(null)
+const preview = ref<LeaderboardPreviewResponse | null>(null)
 const loading = ref(false)
 const error = ref('')
-const blFailed = ref(false)
-const ssFailed = ref(false)
 
-const base = computed(() => props.originalComplexity ?? 0)
-const previewComplexity = ref(base.value)
-const sliderMin = computed(() => Math.max(0, base.value - 7))
-const sliderMax = computed(() => base.value + 7)
-const effectiveMaxScore = computed(() => (props.maxScore > 0 ? props.maxScore : fetchedMaxScore.value))
+const estimate = ref<{ complexity: number | null; version: string | null } | null>(null)
+const estimateLoading = ref(false)
+const estimateError = ref('')
 
-const modifierMultiplierByCode = computed(() => {
-  const map = new Map<string, number>()
-  for (const m of modifierStore.modifiers) map.set(m.code.toUpperCase(), m.multiplier)
-  return map
-})
-
-function modifierMultiplier(modifiers: string): number {
-  if (!modifiers) return 1
-  let mult = 1
-  for (const code of modifiers.split(/[,\s+]+/).filter(Boolean)) {
-    const m = modifierMultiplierByCode.value.get(code.toUpperCase())
-    if (m != null) mult *= m
-  }
-  return mult
-}
-
-function setPreviewComplexity(v: string | number) {
-  const n = Number(v)
-  previewComplexity.value = Number.isFinite(n) ? n : 0
-}
-
-const aiLoading = ref(false)
-const aiError = ref('')
-const aiNotice = ref('')
-
-const canFetchAi = computed(() =>
-  !!props.aiAvailable && !!props.songHash && !!props.difficulty && !!props.characteristic,
-)
-
-async function fetchAiComplexity() {
-  if (!canFetchAi.value) return
-  aiLoading.value = true
-  aiError.value = ''
-  aiNotice.value = ''
-  try {
-    const { getAiComplexity } = await import('@/api/ranking/maps')
-    const res = await getAiComplexity({
-      songHash: props.songHash!,
-      difficulty: props.difficulty!,
-      characteristic: props.characteristic!,
-    })
-    if (res.complexity == null) {
-      aiNotice.value = 'BeatLeader has no AI accuracy for this map.'
-    } else {
-      previewComplexity.value = res.complexity
-    }
-  } catch (e) {
-    if (e instanceof ApiError) {
-      if (e.status === 400) {
-        aiError.value = 'AI complexity is only available for ranked difficulties.'
-      } else if (e.status === 404) {
-        aiError.value = 'No matching ranked difficulty found.'
-      } else {
-        aiError.value = 'Failed to fetch AI complexity.'
-      }
-    } else {
-      aiError.value = 'Failed to fetch AI complexity.'
-    }
-  } finally {
-    aiLoading.value = false
-  }
-}
-
-watch(
-  [() => props.songHash, () => props.difficulty, () => props.characteristic, () => props.aiAvailable],
-  () => {
-    aiError.value = ''
-    aiNotice.value = ''
-  },
+const canEstimate = computed(
+  () => !!props.songHash && !!props.difficulty && !!props.characteristic,
 )
 
 const columns: TableColumn[] = [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
-  { key: 'player', label: 'Player', width: '200px', flex: true },
-  { key: 'score', label: 'Score', align: 'right', mono: true },
-  { key: 'accuracy', label: 'Accuracy', align: 'right', mono: true },
-  { key: 'ap', label: 'AP (preview)', align: 'right', mono: true },
+  { key: 'rank', label: '#', align: 'right', mono: true, width: '64px' },
+  { key: 'player', label: 'Player', width: '220px', flex: true },
+  { key: 'accuracy', label: 'Accuracy', align: 'right', width: '104px' },
+  { key: 'ap', label: 'AP', align: 'right', width: '96px' },
+  { key: 'platform', label: 'From', align: 'center', width: '84px' },
+  { key: 'modifiers', label: 'Modifiers', width: '120px' },
 ]
 
-const rows = computed(() => {
-  const c = curve.value
-  const complexity = previewComplexity.value
-  const max = effectiveMaxScore.value
-  return [...scores.value]
-    .sort((a, b) => b.modifiedScore - a.modifiedScore)
-    .map((s, i) => {
-      const accuracy = max > 0 ? (s.baseScore * modifierMultiplier(s.modifiers)) / max : 0
-      const ap = c && max > 0 ? calculateAp(c, accuracy, complexity) : 0
-      return {
-        key: s.id,
-        rank: i + 1,
-        player: s.player,
-        score: s.modifiedScore,
-        accuracy,
-        ap,
-      }
-    })
+const rows = computed(() =>
+  (preview.value?.rows ?? []).map((row) => ({
+    key: `${row.platform}-${row.userId}`,
+    rank: row.rank,
+    userId: row.userId,
+    name: row.name,
+    country: row.country,
+    avatarUrl: pickAvatarUrl(row),
+    avatarFallbackUrl: pickAvatarFallback(row),
+    accuracy: row.accuracy,
+    ap: row.ap,
+    platform: row.platform,
+    modifiers: row.modifiers,
+  })),
+)
+
+const priced = computed(() => !!preview.value?.complexitySource)
+
+const complexityLine = computed(() => {
+  const source = preview.value
+  if (!source) return ''
+  if (!source.complexitySource) return 'This map has no complexity yet, so every play reads 0 AP.'
+  const value = formatFixed(source.complexity, 2)
+  return source.complexitySource === 'current'
+    ? `Priced at the ${value} the map carries today.`
+    : `Priced at ${value} from the ${source.complexitySource}.`
 })
 
-function cleanPlayerName(name: string): string {
-  const stripped = name.replace(/<[^>]+>/g, '').trim()
-  return stripped || name
-}
-
-function normalizeBl(s: BeatLeaderScore): NormalizedScore {
-  return {
-    id: `bl-${s.id}`,
-    userId: s.player.id,
-    baseScore: s.baseScore,
-    modifiedScore: s.modifiedScore,
-    modifiers: s.modifiers,
-    player: {
-      id: s.player.id,
-      name: cleanPlayerName(s.player.name),
-      avatar: s.player.avatar,
-      country: s.player.country,
-    },
-  }
-}
-
-async function loadScores() {
-  const hasBl = !!props.blLeaderboardId
-  const hasSs = !!props.ssLeaderboardId
-  if (!hasBl && !hasSs) {
-    scores.value = []
-    fetchedMaxScore.value = 0
-    blFailed.value = false
-    ssFailed.value = false
-    return
-  }
+async function load() {
   loading.value = true
   error.value = ''
-  blFailed.value = false
-  ssFailed.value = false
-
-  const { fetchBeatLeaderScores, fetchScoreSaberScores } = await import('@/utils/beatsaver')
-  const blPromise = hasBl
-    ? fetchBeatLeaderScores(props.blLeaderboardId!, 100).catch(() => null)
-    : Promise.resolve(null)
-  const ssPromise = hasSs
-    ? fetchScoreSaberScores(props.ssLeaderboardId!, 100).catch(() => null)
-    : Promise.resolve(null)
-
   try {
-  const [blResult, ssResult] = await Promise.all([blPromise, ssPromise])
-
-  if (hasBl && !blResult) blFailed.value = true
-  if (hasSs && !ssResult) ssFailed.value = true
-
-  const byUser = new Map<string, NormalizedScore>()
-  if (blResult) {
-    for (const s of blResult.scores) {
-      const norm = normalizeBl(s)
-      if (!norm.userId) continue
-      const existing = byUser.get(norm.userId)
-      if (!existing || norm.baseScore > existing.baseScore) {
-        byUser.set(norm.userId, norm)
-      }
-    }
+    const { getLeaderboardPreview } = await import('@/api/ranking/maps')
+    preview.value = await getLeaderboardPreview(props.mapDifficultyId, PREVIEW_LIMIT)
+  } catch (err) {
+    preview.value = null
+    error.value = parseApiError(err, 'Could not read the platform boards.').message
   }
-  if (ssResult) {
-    for (const s of ssResult.scores) {
-      const info = s.leaderboardPlayerInfo
-      if (!info?.id) continue
-      const norm: NormalizedScore = {
-        id: `ss-${s.id}`,
-        userId: info.id,
-        baseScore: s.baseScore,
-        modifiedScore: s.modifiedScore,
-        modifiers: s.modifiers,
-        player: {
-          id: info.id,
-          name: cleanPlayerName(info.name),
-          avatar: info.profilePicture,
-          country: info.country,
-        },
-      }
-      const existing = byUser.get(norm.userId)
-      if (!existing || norm.baseScore > existing.baseScore) {
-        byUser.set(norm.userId, norm)
-      }
-    }
-  }
-
-  scores.value = Array.from(byUser.values())
-  fetchedMaxScore.value = blResult?.maxScore ?? ssResult?.maxScore ?? 0
-
-  if (hasBl && hasSs && !blResult && !ssResult) {
-    error.value = 'Failed to load scores from BeatLeader and ScoreSaber.'
-  } else if (hasBl && !hasSs && !blResult) {
-    error.value = 'Failed to load BeatLeader scores.'
-  } else if (!hasBl && hasSs && !ssResult) {
-    error.value = 'Failed to load ScoreSaber scores.'
-  }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load scores'
-    scores.value = []
-    fetchedMaxScore.value = 0
-  } finally {
-    loading.value = false
-  }
+  loading.value = false
 }
 
-async function loadCurve() {
-  const id = categoryStore.byCode.get(props.categoryCode)?.scoreCurve?.id
-  if (!id) {
-    curve.value = null
-    return
-  }
+async function fetchEstimate() {
+  if (!canEstimate.value) return
+  estimateLoading.value = true
+  estimateError.value = ''
   try {
-    const { getCurve } = await import('@/api/curves')
-    curve.value = await getCurve(id)
-  } catch {
-    curve.value = null
+    const { getComplexityEstimate } = await import('@/api/ranking/maps')
+    estimate.value = await getComplexityEstimate({
+      songHash: props.songHash as string,
+      difficulty: props.difficulty as Difficulty,
+      characteristic: props.characteristic as string,
+    })
+  } catch (err) {
+    estimate.value = null
+    estimateError.value = parseApiError(err, 'Could not run the script on this map.').message
   }
+  estimateLoading.value = false
 }
 
-watch(
-  [() => props.blLeaderboardId, () => props.ssLeaderboardId],
-  loadScores,
-  { immediate: true },
-)
-watch(() => props.categoryCode, loadCurve, { immediate: true })
-watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 })
+watch(() => props.mapDifficultyId, () => {
+  estimate.value = null
+  estimateError.value = ''
+  load()
+}, { immediate: true })
 </script>
 
 <template>
   <div class="lb-preview">
-    <div class="lb-preview__controls">
-      <label class="lb-preview__label">Preview Complexity</label>
-      <div class="lb-preview__inputs">
-        <BaseInput :model-value="previewComplexity" type="number" step="0.1" min="0"
-          @update:model-value="setPreviewComplexity" />
-        <input type="range" class="lb-preview__slider" :min="sliderMin" :max="sliderMax" step="0.1"
-          :value="previewComplexity" @input="setPreviewComplexity(($event.target as HTMLInputElement).value)" />
-        <BaseButton size="sm" @click="previewComplexity = base">Reset</BaseButton>
-        <BaseButton v-if="canFetchAi" size="sm" :loading="aiLoading" @click="fetchAiComplexity">
-          Get AI Complexity
-        </BaseButton>
+    <header class="lb-preview__head">
+      <div class="lb-preview__summary">
+        <p class="lb-preview__line" :class="{ 'lb-preview__line--warn': !priced && !loading }">
+          {{ loading ? 'Reading BeatLeader and ScoreSaber.' : complexityLine }}
+        </p>
+        <p v-if="preview" class="lb-preview__meta">
+          {{ formatCount(preview.fetched) }} players read, best play each, BeatLeader first.
+        </p>
       </div>
-      <p class="lb-preview__hint">
-        Original: <span class="lb-preview__mono">{{ base.toFixed(2) }}</span>
-        <span v-if="previewComplexity !== base"> · Delta:
-          <span class="lb-preview__mono"
-            :class="previewComplexity > base ? 'lb-preview__delta--up' : 'lb-preview__delta--down'">
-            {{ (previewComplexity - base >= 0 ? '+' : '') + (previewComplexity - base).toFixed(2) }}
-          </span>
-        </span>
-      </p>
-      <p v-if="aiError" class="lb-preview__ai-error">{{ aiError }}</p>
-      <p v-else-if="aiNotice" class="lb-preview__ai-notice">{{ aiNotice }}</p>
-    </div>
 
-    <EmptyState v-if="!blLeaderboardId && !ssLeaderboardId"
-      message="No BeatLeader or ScoreSaber leaderboard linked to this difficulty." />
-    <EmptyState v-else-if="error && !loading && scores.length === 0" :message="error" />
-    <template v-else>
-      <p v-if="!loading && (blFailed || ssFailed)" class="lb-preview__partial">
-        {{ blFailed && ssFailed
-          ? 'Failed to load scores from BeatLeader and ScoreSaber.'
-          : blFailed
-            ? 'BeatLeader scores failed to load - showing ScoreSaber only.'
-            : 'ScoreSaber scores failed to load - showing BeatLeader only.' }}
-      </p>
-      <DataTable :columns="columns" :rows="rows" :loading="loading" row-key="key"
-        empty-message="No scores found.">
-        <template #cell-player="{ row }">
-          <div class="lb-preview__player">
-            <img :src="(row.player as NormalizedScore['player']).avatar" alt="" class="lb-preview__avatar"
-              loading="lazy" decoding="async" />
-            <span class="lb-preview__player-name">{{ (row.player as NormalizedScore['player']).name }}</span>
-            <CountryFlag :country="(row.player as NormalizedScore['player']).country" />
-          </div>
-        </template>
-        <template #cell-score="{ value }">{{ (value as number).toLocaleString('en-US') }}</template>
-        <template #cell-accuracy="{ value }">{{ ((value as number) * 100).toFixed(2) }}%</template>
-        <template #cell-ap="{ value }">{{ (value as number).toFixed(2) }}</template>
-      </DataTable>
-    </template>
+      <div class="lb-preview__estimate">
+        <BaseButton v-if="canEstimate" size="sm" :loading="estimateLoading" @click="fetchEstimate">
+          Run the script
+        </BaseButton>
+        <span v-if="estimate" class="lb-preview__estimate-value">
+          <template v-if="estimate.complexity != null">
+            {{ formatFixed(estimate.complexity, 2) }}
+            <span class="lb-preview__estimate-version">{{ estimate.version }}</span>
+          </template>
+          <template v-else>The model could not read this map.</template>
+        </span>
+        <span v-if="estimateError" class="lb-preview__error">{{ estimateError }}</span>
+      </div>
+    </header>
+
+    <p v-if="error" class="lb-preview__error">{{ error }}</p>
+
+    <DataTable
+      dense
+      :columns="columns"
+      :rows="rows"
+      :loading="loading"
+      :loading-rows="8"
+      row-key="key"
+      empty-message="No plays on either platform yet"
+    >
+      <template #cell-rank="{ row }">
+        <span class="lb-preview__rank">#{{ row.rank }}</span>
+      </template>
+
+      <template #cell-player="{ row }">
+        <div class="lb-preview__player">
+          <GlowImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="28"
+            :fallback-src="(row.avatarFallbackUrl as string | null)" />
+          <span class="lb-preview__name">{{ row.name }}</span>
+          <CountryFlag v-if="row.country" :country="(row.country as string)" />
+        </div>
+      </template>
+
+      <template #cell-accuracy="{ row }">
+        <span class="lb-preview__mono">{{ formatAccuracy(row.accuracy as number) }}</span>
+      </template>
+
+      <template #cell-ap="{ row }">
+        <span class="lb-preview__ap">{{ formatFixed(row.ap as number, 1) }}</span>
+      </template>
+
+      <template #cell-platform="{ row }">
+        <span class="lb-preview__platform">{{ row.platform }}</span>
+      </template>
+
+      <template #cell-modifiers="{ row }">
+        <span v-if="row.modifiers" class="lb-preview__mods">{{ row.modifiers }}</span>
+        <span v-else class="lb-preview__mono">–</span>
+      </template>
+
+      <template #empty>
+        <EmptyState message="No plays on either platform yet." />
+      </template>
+    </DataTable>
   </div>
 </template>
 
@@ -343,111 +187,66 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
 .lb-preview {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
+  min-width: 0;
 }
 
-.lb-preview__controls {
+.lb-preview__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.lb-preview__summary {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  gap: 2px;
+  min-width: 0;
 }
 
-.lb-preview__label {
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.lb-preview__line {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-body);
+}
+
+.lb-preview__line--warn {
+  color: var(--warning);
+}
+
+.lb-preview__meta {
+  margin: 0;
   color: var(--text-secondary);
+  font-size: var(--text-caption);
 }
 
-.lb-preview__inputs {
+.lb-preview__estimate {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
+  flex-wrap: wrap;
 }
 
-.lb-preview__inputs :deep(.base-input) {
-  width: 120px;
-  flex-shrink: 0;
-}
-
-.lb-preview__slider {
-  flex: 1;
-  min-width: 0;
-  height: 4px;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--bg-overlay);
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-.lb-preview__slider::-webkit-slider-thumb {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--page-accent, var(--accent));
-  border: 2px solid var(--bg-base);
-  cursor: pointer;
-  transition: transform 120ms ease;
-}
-
-.lb-preview__slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-
-.lb-preview__slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--page-accent, var(--accent));
-  border: 2px solid var(--bg-base);
-  cursor: pointer;
-}
-
-.lb-preview__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.lb-preview__mono {
+.lb-preview__estimate-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  color: var(--text-primary);
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-body);
 }
 
-.lb-preview__delta--up {
-  color: var(--success);
-}
-
-.lb-preview__delta--down {
-  color: var(--error);
-}
-
-.lb-preview__ai-error {
-  margin: 0;
+.lb-preview__estimate-version {
+  color: var(--text-tertiary);
+  font-family: var(--font-code);
   font-size: var(--text-caption);
+}
+
+.lb-preview__error {
+  margin: 0;
   color: var(--error);
-}
-
-.lb-preview__ai-notice {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.lb-preview__partial {
-  margin: 0;
-  padding: var(--space-xs) var(--space-sm);
-  background: color-mix(in srgb, var(--warning) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-  border-radius: var(--radius-btn);
-  color: var(--warning);
   font-size: var(--text-caption);
 }
 
@@ -458,19 +257,32 @@ watch(() => props.originalComplexity, (v) => { previewComplexity.value = v ?? 0 
   min-width: 0;
 }
 
-.lb-preview__avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.lb-preview__player-name {
+.lb-preview__name {
   color: var(--text-primary);
-  white-space: nowrap;
+  font-size: var(--text-body);
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  white-space: nowrap;
+}
+
+.lb-preview__rank,
+.lb-preview__mono {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.lb-preview__ap {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.lb-preview__platform,
+.lb-preview__mods {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 </style>

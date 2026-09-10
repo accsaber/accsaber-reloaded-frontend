@@ -10,7 +10,6 @@ import type {
   ComplexityPlayerBoard,
   ComplexityPlayerParams,
   ComplexityPlayerPlays,
-  EstimateScenario,
   HighestAverageApParams,
 } from '@/types/api/complexity'
 import type { DownloadedFile } from '../client'
@@ -69,12 +68,12 @@ export function previewComplexity(
   return post<ComplexityPreviewResponse>(`${BASE}/preview${buildQuery(params)}`, rater)
 }
 
-export function applyComplexityScenario(
-  scenario: EstimateScenario,
-  reason: string,
-  maxStep?: number,
-): Promise<void> {
-  return post<void>(`${BASE}/apply${buildQuery({ scenario, reason, maxStep })}`)
+export function applyComplexityScript(params: {
+  reason: string
+  maxStep?: number
+  batchId?: string
+}): Promise<void> {
+  return post<void>(`${BASE}/apply${buildQuery(params)}`)
 }
 
 export function downloadComplexityDataset(kind: ComplexityDatasetKind): Promise<DownloadedFile> {

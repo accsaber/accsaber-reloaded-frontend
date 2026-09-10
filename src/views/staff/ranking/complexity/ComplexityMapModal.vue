@@ -14,7 +14,7 @@ import type {
   ComplexityScoreRow,
 } from '@/types/api/complexity'
 import type { CategoryCode, TableColumn } from '@/types/display'
-import { AP_DECIMALS, CX_DECIMALS, ESTIMATE_SCENARIOS, SCENARIO_SHORT } from '@/utils/complexity'
+import { AP_DECIMALS, CX_DECIMALS, SCRIPT_SCENARIO, SCENARIO_SHORT } from '@/utils/complexity'
 import { formatAccuracy, formatCount } from '@/utils/formatters'
 import EstimateInputs from './EstimateInputs.vue'
 import ScenarioCell from './ScenarioCell.vue'
@@ -139,14 +139,8 @@ const complexities = computed(() => {
   return [
     { key: 'CURRENT', label: 'Now', value: source.scenarios.CURRENT?.complexity ?? null, delta: null },
     {
-      key: 'OLD_SCRIPT',
-      label: 'Old script',
-      value: source.scenarios.OLD_SCRIPT?.complexity ?? null,
-      delta: source.deltas.OLD_SCRIPT?.complexity ?? null,
-    },
-    {
       key: 'NEW_SCRIPT',
-      label: 'New script',
+      label: 'Script',
       value: source.scenarios.NEW_SCRIPT?.complexity ?? null,
       delta: source.deltas.NEW_SCRIPT?.complexity ?? null,
     },
@@ -207,9 +201,9 @@ function selectPlayer(row: Record<string, unknown>) {
           {{ inputsOpen ? 'Hide estimate inputs' : 'Show estimate inputs' }}
         </BaseButton>
         <div v-if="inputsOpen" class="map-modal__inputs-body">
-          <EstimateInputs v-for="source in ESTIMATE_SCENARIOS" :key="source" :scenario="source"
-            :estimate="difficulty.estimates[source]" :max-nudge="maxNudge"
-            :stale="isStaleEstimate(difficulty.estimates[source], modelHash)" />
+          <EstimateInputs :scenario="SCRIPT_SCENARIO"
+            :estimate="difficulty.estimates[SCRIPT_SCENARIO]" :max-nudge="maxNudge"
+            :stale="isStaleEstimate(difficulty.estimates[SCRIPT_SCENARIO], modelHash)" />
         </div>
       </div>
 

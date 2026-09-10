@@ -21,25 +21,6 @@ export interface EstimateGroup {
 }
 
 export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
-  OLD_SCRIPT: [
-    {
-      key: 'accuracy',
-      title: 'Accuracy',
-      fields: [
-        { key: 'aiAccuracy', label: 'BeatLeader accuracy', format: 'percent' },
-        { key: 'shiftedAccuracy', label: 'Shifted accuracy', format: 'percent' },
-      ],
-    },
-    {
-      key: 'target',
-      title: 'Target',
-      fields: [
-        { key: 'apTarget', label: 'AP target', format: 'number', decimals: 0 },
-        { key: 'rawMultiplier', label: 'Raw multiplier', format: 'number', decimals: 3 },
-        { key: 'transformedMultiplier', label: 'Transformed multiplier', format: 'number', decimals: 3 },
-      ],
-    },
-  ],
   NEW_SCRIPT: [
     {
       key: 'notes',

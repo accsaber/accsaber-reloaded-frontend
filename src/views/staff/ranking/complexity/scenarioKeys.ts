@@ -2,15 +2,13 @@ import type { ComplexityScenario } from '@/types/api/complexity'
 
 const CX_KEYS: Record<ComplexityScenario, string> = {
   CURRENT: 'cxCurrent',
-  OLD_SCRIPT: 'cxOld',
-  NEW_SCRIPT: 'cxNew',
+  NEW_SCRIPT: 'cxScript',
   PREVIEW: 'cxPreview',
 }
 
 const AP_KEYS: Record<ComplexityScenario, string> = {
   CURRENT: 'apCurrent',
-  OLD_SCRIPT: 'apOld',
-  NEW_SCRIPT: 'apNew',
+  NEW_SCRIPT: 'apScript',
   PREVIEW: 'apPreview',
 }
 

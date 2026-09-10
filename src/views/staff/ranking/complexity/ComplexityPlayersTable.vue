@@ -32,12 +32,7 @@ const emit = defineEmits<{
   select: [userId: string]
 }>()
 
-const ALL_SCENARIOS: readonly ComplexityScenario[] = [
-  'CURRENT',
-  'OLD_SCRIPT',
-  'NEW_SCRIPT',
-  'PREVIEW',
-]
+const ALL_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT', 'PREVIEW']
 
 function apOf(row: ComplexityPlayerRow, scenario: ComplexityScenario): number | null {
   return row.scenarios[scenario]?.ap ?? null

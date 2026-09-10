@@ -72,7 +72,7 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <div class="ladder-strip" :data-emphasis="scenario">
+  <div class="ladder-strip">
     <DataTable
       :columns="tableColumns"
       :rows="rows"
@@ -125,9 +125,7 @@ const rows = computed(() =>
   font-size: var(--text-body);
 }
 
-.ladder-strip[data-emphasis='OLD_SCRIPT'] :deep(.data-table__th:nth-child(3)),
-.ladder-strip[data-emphasis='PREVIEW'] :deep(.data-table__th:nth-child(3)),
-.ladder-strip[data-emphasis='NEW_SCRIPT'] :deep(.data-table__th:nth-child(4)) {
+.ladder-strip :deep(.data-table__th:nth-child(3)) {
   color: var(--page-accent, var(--accent));
 }
 

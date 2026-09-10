@@ -212,6 +212,37 @@ export interface DifficultyScoreParams extends PaginationParams {
   relation?: UserRelationType
 }
 
+export interface ComplexityEstimateResponse {
+  complexity: number | null
+  version: string | null
+}
+
+export interface LeaderboardPreviewRow {
+  rank: number
+  userId: string
+  name: string
+  avatarUrl: string | null
+  cdnAvatarUrl: string | null
+  country: string
+  platform: string
+  accuracy: number
+  ap: number
+  modifiers: string
+}
+
+export interface LeaderboardPreviewResponse {
+  mapDifficultyId: string
+  songName: string
+  difficulty: Difficulty
+  characteristic: string
+  categoryCode: string
+  status: MapDifficultyStatus
+  complexity: number | null
+  complexitySource: string | null
+  fetched: number
+  rows: LeaderboardPreviewRow[]
+}
+
 export interface RefreshDifficultyRequest {
   blLeaderboardId: string
   ssLeaderboardId: string

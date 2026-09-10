@@ -9,7 +9,9 @@ import type {
 } from '@/types/api/admin'
 import type {
   AutoCriteriaCheckResponse,
+  ComplexityEstimateResponse,
   DifficultyListParams,
+  LeaderboardPreviewResponse,
   MapDifficultyResponse,
   MapListParams,
   MapResponse,
@@ -20,17 +22,22 @@ import type { Difficulty } from '@/types/enums'
 import { get, patch, post } from '../client'
 import { buildQuery } from '../utils'
 
-export interface AiComplexityResponse {
-  complexity: number | null
-}
-
-export function getAiComplexity(params: {
+export function getComplexityEstimate(params: {
   songHash: string
   difficulty: Difficulty
   characteristic: string
-}): Promise<AiComplexityResponse> {
-  return get<AiComplexityResponse>(
+}): Promise<ComplexityEstimateResponse> {
+  return get<ComplexityEstimateResponse>(
     `/ranking/maps/difficulties/ai-complexity${buildQuery(params)}`,
+  )
+}
+
+export function getLeaderboardPreview(
+  mapDifficultyId: string,
+  limit = 100,
+): Promise<LeaderboardPreviewResponse> {
+  return get<LeaderboardPreviewResponse>(
+    `/ranking/maps/difficulties/${mapDifficultyId}/leaderboard-preview${buildQuery({ limit })}`,
   )
 }
 

@@ -1,8 +1,8 @@
 import type { Difficulty, MapDifficultyStatus } from '@/types/enums'
 
-export type ComplexityScenario = 'CURRENT' | 'OLD_SCRIPT' | 'NEW_SCRIPT' | 'PREVIEW'
+export type ComplexityScenario = 'CURRENT' | 'NEW_SCRIPT' | 'PREVIEW'
 
-export type EstimateScenario = 'OLD_SCRIPT' | 'NEW_SCRIPT'
+export type EstimateScenario = 'NEW_SCRIPT'
 
 export type ComparisonScenario = Exclude<ComplexityScenario, 'CURRENT'>
 
@@ -101,6 +101,7 @@ export interface ComplexityPlayerBoard {
 export interface ComplexityDifficultyParams {
   categoryId?: string
   status?: MapDifficultyStatus
+  batchId?: string
   search?: string
 }
 
@@ -109,6 +110,7 @@ export interface HighestAverageApParams {
   categoryId?: string
   minScores?: number
   limit?: number
+  batchId?: string
   search?: string
 }
 
@@ -132,7 +134,7 @@ export interface RaterCoefficients {
 export interface RaterBoardGate {
   minScores: number
   fullScores: number
-  topPlayers: number
+  topPlays: number
   minPlayers: number
   minPlayerPlays: number
   maxNudge: number

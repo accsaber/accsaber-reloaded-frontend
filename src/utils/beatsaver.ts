@@ -177,50 +177,6 @@ const BL_DIFF_VALUE_TO_NAME: Record<number, string> = {
   9: 'ExpertPlus',
 }
 
-
-export interface BeatLeaderScore {
-  id: number
-  baseScore: number
-  modifiedScore: number
-  accuracy: number
-  rank: number
-  modifiers: string
-  player: {
-    id: string
-    name: string
-    avatar: string
-    country: string
-  }
-}
-
-export interface BeatLeaderLeaderboardPayload {
-  scores: BeatLeaderScore[]
-  maxScore: number
-}
-
-interface BeatLeaderLeaderboardResponse {
-  scores?: { data?: BeatLeaderScore[] } | BeatLeaderScore[]
-  difficulty?: { maxScore?: number; maxScoreGraph?: unknown }
-  song?: { difficulties?: Array<{ maxScore?: number }> }
-}
-
-export async function fetchBeatLeaderScores(
-  leaderboardId: string,
-  count = 100,
-): Promise<BeatLeaderLeaderboardPayload> {
-  const url = `/proxy/beatleader/leaderboard/${encodeURIComponent(leaderboardId)}?page=1&count=${count}`
-  const res = await fetch(url, { headers: { accept: 'application/json' } })
-  if (!res.ok) throw new Error(`BeatLeader request failed: ${res.status}`)
-  const data = (await res.json()) as BeatLeaderLeaderboardResponse
-  const rawScores = Array.isArray(data.scores)
-    ? data.scores
-    : (data.scores?.data ?? [])
-  const maxScore = data.difficulty?.maxScore
-    ?? data.song?.difficulties?.[0]?.maxScore
-    ?? 0
-  return { scores: rawScores, maxScore }
-}
-
 export interface BeatLeaderMapInfo {
   leaderboards: Map<string, string>
   coverUrl: string | null
@@ -313,87 +269,6 @@ const SS_DIFF_VALUE_TO_NAME: Record<number, string> = {
   5: 'Hard',
   7: 'Expert',
   9: 'ExpertPlus',
-}
-
-export interface ScoreSaberScoreEntry {
-  id: number
-  baseScore: number
-  modifiedScore: number
-  modifiers: string
-  rank: number
-  leaderboardPlayerInfo: {
-    id: string
-    name: string
-    profilePicture: string
-    country: string
-  } | null
-}
-
-export interface ScoreSaberLeaderboardScoresResponse {
-  scores?: ScoreSaberScoreEntry[]
-  metadata?: { maxScore?: number }
-  leaderboard?: { maxScore?: number }
-}
-
-export interface ScoreSaberScoresPayload {
-  scores: ScoreSaberScoreEntry[]
-  maxScore: number
-}
-
-export async function fetchScoreSaberLeaderboardMaxScore(leaderboardId: string): Promise<number> {
-  try {
-    const res = await fetch(
-      `/proxy/scoresaber/api/leaderboard/by-id/${encodeURIComponent(leaderboardId)}/info`,
-      { headers: { accept: 'application/json' } },
-    )
-    if (!res.ok) return 0
-    const data = (await res.json()) as { maxScore?: number }
-    return data.maxScore ?? 0
-  } catch {
-    return 0
-  }
-}
-
-export async function fetchBeatLeaderLeaderboardMaxScore(leaderboardId: string): Promise<number> {
-  try {
-    const res = await fetch(
-      `/proxy/beatleader/leaderboard/${encodeURIComponent(leaderboardId)}?page=1&count=1`,
-      { headers: { accept: 'application/json' } },
-    )
-    if (!res.ok) return 0
-    const data = (await res.json()) as BeatLeaderLeaderboardResponse
-    return data.difficulty?.maxScore ?? data.song?.difficulties?.[0]?.maxScore ?? 0
-  } catch {
-    return 0
-  }
-}
-
-export async function fetchScoreSaberScores(
-  leaderboardId: string,
-  count = 100,
-): Promise<ScoreSaberScoresPayload> {
-  const all: ScoreSaberScoreEntry[] = []
-  let maxScore = 0
-  const pageSize = 12
-  const maxPages = Math.ceil(count / pageSize)
-  for (let page = 1; page <= maxPages; page++) {
-    const url = `/proxy/scoresaber/api/leaderboard/by-id/${encodeURIComponent(leaderboardId)}/scores?page=${page}&withMetadata=true`
-    const res = await fetch(url, { headers: { accept: 'application/json' } })
-    if (!res.ok) throw new Error(`ScoreSaber request failed: ${res.status}`)
-    const data = (await res.json()) as ScoreSaberLeaderboardScoresResponse
-    const batch = data.scores ?? []
-    if (!maxScore) {
-      maxScore = data.metadata?.maxScore ?? data.leaderboard?.maxScore ?? 0
-    }
-    for (const s of batch) {
-      if (s.leaderboardPlayerInfo) all.push(s)
-    }
-    if (batch.length < pageSize || all.length >= count) break
-  }
-  if (!maxScore) {
-    maxScore = await fetchScoreSaberLeaderboardMaxScore(leaderboardId)
-  }
-  return { scores: all.slice(0, count), maxScore }
 }
 
 export async function fetchScoreSaberLeaderboards(hash: string): Promise<Map<string, number>> {

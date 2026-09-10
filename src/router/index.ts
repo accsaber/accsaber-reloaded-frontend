@@ -270,10 +270,16 @@ const router = createRouter({
       meta: { requiresStaff: true, requiredRole: 'RANKING_HEAD' as StaffRole },
     },
     {
-      path: isRankingSubdomain ? '/reweight' : '/staff/ranking/reweight',
-      name: 'staff-ranking-reweight',
-      component: () => import('@/views/staff/ranking/ReweightPage.vue'),
+      path: isRankingSubdomain ? '/script' : '/staff/ranking/script',
+      name: 'staff-ranking-script',
+      component: () => import('@/views/staff/ranking/ComplexityScriptPage.vue'),
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+    },
+    {
+      path: isRankingSubdomain ? '/vote-reweight' : '/staff/ranking/vote-reweight',
+      name: 'staff-ranking-vote-reweight',
+      component: () => import('@/views/staff/ranking/VoteReweightPage.vue'),
+      meta: { requiresStaff: true, requiredRole: 'RANKING_HEAD' as StaffRole },
     },
     {
       path: isRankingSubdomain ? '/batches/build/:batchId?' : '/staff/ranking/batches/build/:batchId?',

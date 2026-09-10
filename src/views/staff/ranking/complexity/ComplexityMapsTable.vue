@@ -42,12 +42,7 @@ const emit = defineEmits<{
 
 type MapMetric = 'complexity' | 'topAp' | 'averageAp' | 'averageWeightedAp' | 'boardRank'
 
-const ALL_SCENARIOS: readonly ComplexityScenario[] = [
-  'CURRENT',
-  'OLD_SCRIPT',
-  'NEW_SCRIPT',
-  'PREVIEW',
-]
+const ALL_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT', 'PREVIEW']
 
 function currentValue(row: ComplexityDifficultyRow, key: MapMetric): number | null {
   return row.scenarios.CURRENT?.[key] ?? null

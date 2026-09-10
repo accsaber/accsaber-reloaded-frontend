@@ -53,23 +53,21 @@ function clamp(complexity: number): number {
 
 export const SCENARIO_LABELS: Record<ComplexityScenario, string> = {
   CURRENT: 'Current',
-  OLD_SCRIPT: 'Old script',
-  NEW_SCRIPT: 'New script',
+  NEW_SCRIPT: 'Script',
   PREVIEW: 'Preview',
 }
 
-export const SCENARIO_ORDER: readonly ComplexityScenario[] = ['CURRENT', 'OLD_SCRIPT', 'NEW_SCRIPT']
+export const SCENARIO_ORDER: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT']
 
 export const SCENARIO_SHORT: Record<ComplexityScenario, string> = {
   CURRENT: 'now',
-  OLD_SCRIPT: 'old',
-  NEW_SCRIPT: 'new',
+  NEW_SCRIPT: 'script',
   PREVIEW: 'preview',
 }
 
 export const PREVIEW_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'PREVIEW']
 
-export const ESTIMATE_SCENARIOS: readonly EstimateScenario[] = ['OLD_SCRIPT', 'NEW_SCRIPT']
+export const SCRIPT_SCENARIO: EstimateScenario = 'NEW_SCRIPT'
 
 export const CX_DECIMALS = 2
 export const AP_DECIMALS = 1

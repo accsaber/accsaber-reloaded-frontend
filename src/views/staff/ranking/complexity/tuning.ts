@@ -87,16 +87,16 @@ export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: 
     hint: 'Scores at which the leaderboard counts in full.',
   },
   {
-    key: 'topPlayers',
-    label: 'Top players',
+    key: 'topPlays',
+    label: 'Top plays',
     kind: 'count',
-    hint: "How many of the category's best players, by fitted skill, the leaderboard ease is read from.",
+    hint: "How many of the map's best plays the ease is read from, each one adjusted for how good the player is.",
   },
   {
     key: 'minPlayers',
-    label: 'Min players',
+    label: 'Min plays',
     kind: 'count',
-    hint: 'How many of those players need a score on the map.',
+    hint: 'How many of those plays the map needs before its leaderboard counts.',
   },
   {
     key: 'minPlayerPlays',

@@ -201,6 +201,9 @@ const voteError = ref('')
 const showComplexityModal = ref(false)
 const complexityValue = ref<number>(0)
 const complexityLoading = ref(false)
+const scriptEstimate = ref<{ complexity: number | null; version: string | null } | null>(null)
+const scriptLoading = ref(false)
+const scriptError = ref('')
 
 const showCategoryModal = ref(false)
 const categoryValue = ref<string>('')
@@ -355,6 +358,37 @@ async function deactivateVote(voteId: string) {
     await fetchVotes()
   } catch {
   }
+}
+
+function openComplexityModal() {
+  if (!difficulty.value) return
+  complexityValue.value = difficulty.value.complexity ?? 0
+  scriptEstimate.value = null
+  scriptError.value = ''
+  showComplexityModal.value = true
+}
+
+async function runScript() {
+  const source = difficulty.value
+  if (!source || !songHash.value) return
+  scriptLoading.value = true
+  scriptError.value = ''
+  try {
+    const { getComplexityEstimate } = await import('@/api/ranking/maps')
+    scriptEstimate.value = await getComplexityEstimate({
+      songHash: songHash.value,
+      difficulty: source.difficulty,
+      characteristic: source.characteristic,
+    })
+    if (scriptEstimate.value.complexity != null) {
+      complexityValue.value = scriptEstimate.value.complexity
+    }
+  } catch (err) {
+    const { parseApiError } = await import('@/api/client')
+    scriptEstimate.value = null
+    scriptError.value = parseApiError(err, 'Could not run the script on this map.').message
+  }
+  scriptLoading.value = false
 }
 
 async function handleComplexityChange() {
@@ -609,7 +643,7 @@ watch(availableActions, (actions) => {
                 {{ difficulty.characteristic }}
               </span>
               <span v-if="canEditComplexity" class="rank-detail__complexity-editable"
-                @click="complexityValue = difficulty.complexity ?? 0; showComplexityModal = true">
+                @click="openComplexityModal">
                 <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
                 <span v-else class="rank-detail__complexity-unset">Set complexity</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -740,11 +774,9 @@ watch(availableActions, (actions) => {
             @update:model-value="(v: string) => activeTab = v as 'voting' | 'leaderboard'" />
         </div>
 
-        <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'" :bl-leaderboard-id="difficulty.blLeaderboardId"
-          :ss-leaderboard-id="difficulty.ssLeaderboardId" :original-complexity="difficulty.complexity"
-          :max-score="difficulty.maxScore" :category-code="categoryCode" :song-hash="songHash"
-          :difficulty="difficulty.difficulty" :characteristic="difficulty.characteristic"
-          :ai-available="difficulty.status === 'RANKED' && !!songHash" />
+        <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'"
+          :map-difficulty-id="difficulty.id" :song-hash="songHash"
+          :difficulty="difficulty.difficulty" :characteristic="difficulty.characteristic" />
 
         <div v-if="activeTab === 'voting' && isHeadRanking" class="rank-detail__collapsible">
           <button class="rank-detail__collapsible-header" @click="managementOpen = !managementOpen">
@@ -943,7 +975,22 @@ watch(availableActions, (actions) => {
 
     <BaseModal :open="showComplexityModal" title="Set Complexity" max-width="400px"
       @close="showComplexityModal = false">
-      <BaseInput v-model.number="complexityValue" type="number" label="Complexity" placeholder="e.g. 8.5" />
+      <div class="rank-detail__complexity-form">
+        <BaseInput v-model.number="complexityValue" type="number" label="Complexity" placeholder="e.g. 8.5" />
+        <div class="rank-detail__script">
+          <BaseButton v-if="songHash" size="sm" :loading="scriptLoading" @click="runScript">
+            Run the script
+          </BaseButton>
+          <span v-if="scriptEstimate" class="rank-detail__script-value">
+            <template v-if="scriptEstimate.complexity != null">
+              {{ scriptEstimate.complexity.toFixed(2) }}
+              <span class="rank-detail__script-version">{{ scriptEstimate.version }}</span>
+            </template>
+            <template v-else>The model could not read this map.</template>
+          </span>
+        </div>
+        <p v-if="scriptError" class="rank-detail__category-error">{{ scriptError }}</p>
+      </div>
       <template #footer>
         <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
           <BaseButton @click="showComplexityModal = false">Cancel</BaseButton>
@@ -1182,6 +1229,34 @@ watch(availableActions, (actions) => {
   font-size: var(--text-caption);
   color: var(--text-secondary);
   letter-spacing: 0.04em;
+}
+
+.rank-detail__complexity-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.rank-detail__script {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.rank-detail__script-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+}
+
+.rank-detail__script-version {
+  color: var(--text-tertiary);
+  font-family: var(--font-code);
+  font-size: var(--text-caption);
 }
 
 .rank-detail__category-error {
