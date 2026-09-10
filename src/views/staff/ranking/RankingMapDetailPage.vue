@@ -1251,8 +1251,8 @@ watch(availableActions, (actions) => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
+  gap: var(--space-md) var(--space-lg);
+  margin-top: var(--space-md);
 }
 
 .rank-detail__chart-stats {
@@ -1302,17 +1302,19 @@ watch(availableActions, (actions) => {
 .rank-detail__script-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 2px var(--space-sm);
+  gap: var(--space-md);
+  padding: var(--space-xs) var(--space-md);
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-card);
+  line-height: 1.3;
 }
 
 .rank-detail__script-chip-label {
   color: var(--text-tertiary);
   font-size: var(--text-caption);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .rank-detail__script-note {
