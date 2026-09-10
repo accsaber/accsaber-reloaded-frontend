@@ -12,6 +12,7 @@ import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LeaderboardPreviewPanel from '@/components/domain/LeaderboardPreviewPanel.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
+import ScenarioCell from '@/views/staff/ranking/complexity/ScenarioCell.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { rankingDashboardRoute } from '@/router'
@@ -371,6 +372,12 @@ async function deactivateVote(voteId: string) {
 
 const SCRIPT_REASON = 'complexity script'
 
+const scriptDelta = computed(() => {
+  const script = difficulty.value?.scriptComplexity
+  const current = difficulty.value?.complexity
+  return script == null || current == null ? null : script - current
+})
+
 const scriptSetThis = computed(() => {
   const current = difficulty.value?.complexity
   if (current == null) return false
@@ -661,6 +668,12 @@ watch(availableActions, (actions) => {
                 </svg>
               </span>
               <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
+              <span v-if="difficulty.scriptComplexity != null" class="rank-detail__script-chip"
+                :title="difficulty.scriptVersion ?? undefined">
+                <span class="rank-detail__script-chip-label">Script</span>
+                <ScenarioCell :value="difficulty.scriptComplexity" :delta="scriptDelta"
+                  :decimals="1" emphasis />
+              </span>
             </div>
 
             <MapChartStats :source="difficulty" class="rank-detail__chart-stats" />
@@ -1278,6 +1291,22 @@ watch(availableActions, (actions) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+}
+
+.rank-detail__script-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-sm);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-pill);
+}
+
+.rank-detail__script-chip-label {
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .rank-detail__script-note {

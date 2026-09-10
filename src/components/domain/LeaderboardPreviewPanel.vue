@@ -74,16 +74,6 @@ const rows = computed(() =>
   })),
 )
 
-const complexityLine = computed(() => {
-  const source = preview.value
-  if (!source) return ''
-  if (!source.complexitySource) return 'This map has no complexity yet, so every play reads 0 AP.'
-  const value = formatFixed(source.complexity, 2)
-  return source.complexitySource === 'current'
-    ? `Priced at the ${value} the map carries today.`
-    : `Priced at ${value} from the ${source.complexitySource}.`
-})
-
 const sliderNote = computed(() => {
   if (atBase.value) return ''
   if (!curve.value) return 'This category has no curve loaded, so AP cannot be repriced here.'
@@ -127,8 +117,9 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
   <div class="lb-preview">
     <header class="lb-preview__head">
       <div class="lb-preview__summary">
-        <p class="lb-preview__line" :class="{ 'lb-preview__line--warn': !priced && !loading }">
-          {{ loading ? 'Reading BeatLeader and ScoreSaber.' : complexityLine }}
+        <p v-if="loading" class="lb-preview__meta">Reading BeatLeader and ScoreSaber.</p>
+        <p v-else-if="preview && !preview.complexitySource" class="lb-preview__line--warn">
+          This map has no complexity yet, so every play reads 0 AP.
         </p>
         <p v-if="preview" class="lb-preview__meta">
           {{ formatCount(preview.fetched) }} players read, best play each, BeatLeader first.
@@ -228,14 +219,10 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
   min-width: 0;
 }
 
-.lb-preview__line {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--text-body);
-}
-
 .lb-preview__line--warn {
+  margin: 0;
   color: var(--warning);
+  font-size: var(--text-body);
 }
 
 .lb-preview__meta {
