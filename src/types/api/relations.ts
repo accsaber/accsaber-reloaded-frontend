@@ -12,13 +12,14 @@ export interface UserRelationRequest {
 export interface UserRelationResponse {
   id: string
   userId: string
-  targetUserId: string
+  targetUserId: string | null
   targetName: string
   targetAvatarUrl: string | null
   targetCdnAvatarUrl?: string | null
   targetCountry: string | null
   type: UserRelationType
   createdAt: string
+  hidden?: boolean
 }
 
 export interface UserRelationCounts {

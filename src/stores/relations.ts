@@ -24,6 +24,7 @@ export const useRelationsStore = defineStore('relations', () => {
   const byTarget = computed(() => {
     const map = new Map<string, Map<UserRelationType, UserRelationResponse>>()
     for (const r of relations.value) {
+      if (!r.targetUserId) continue
       let inner = map.get(r.targetUserId)
       if (!inner) {
         inner = new Map()

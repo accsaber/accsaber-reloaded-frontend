@@ -79,6 +79,10 @@ async function load() {
   loading.value = false
 }
 
+function isHidden(item: UserRelationResponse): boolean {
+  return item.hidden === true
+}
+
 function goToProfile(targetUserId: string) {
   emit('close')
   router.push({ name: 'player-profile', params: { userId: targetUserId } })
@@ -86,7 +90,7 @@ function goToProfile(targetUserId: string) {
 
 async function removeRelation(item: UserRelationResponse, event: Event) {
   event.stopPropagation()
-  if (removingId.value) return
+  if (removingId.value || !item.targetUserId) return
   removingId.value = item.id
   try {
     await relationsStore.remove(item.targetUserId, item.type)
@@ -133,49 +137,57 @@ watch(page, () => {
           v-for="item in items"
           :key="item.id"
           class="relation-list__row"
-          role="button"
-          tabindex="0"
-          @click="goToProfile(item.targetUserId)"
-          @keydown.enter="goToProfile(item.targetUserId)"
+          :class="{ 'relation-list__row--hidden': isHidden(item) }"
+          :role="isHidden(item) ? undefined : 'button'"
+          :tabindex="isHidden(item) ? undefined : 0"
+          @click="!isHidden(item) && item.targetUserId && goToProfile(item.targetUserId)"
+          @keydown.enter="!isHidden(item) && item.targetUserId && goToProfile(item.targetUserId)"
         >
-          <GlowImage
-            v-if="item.targetCdnAvatarUrl ?? item.targetAvatarUrl"
-            :src="(item.targetCdnAvatarUrl ?? item.targetAvatarUrl) ?? ''"
-            :alt="item.targetName"
-            :size="36"
-          />
-          <span v-else class="relation-list__avatar-fallback" />
-          <PlayerTooltipTrigger
-            :user-id="item.targetUserId"
-            :user-name="item.targetName"
-            :avatar-url="(item.targetCdnAvatarUrl ?? item.targetAvatarUrl) ?? ''"
-            :country="item.targetCountry ?? ''"
-            class="relation-list__trigger"
-          >
+          <template v-if="isHidden(item)">
+            <span class="relation-list__avatar-fallback" />
             <span class="relation-list__name">{{ item.targetName }}</span>
-          </PlayerTooltipTrigger>
-          <button
-            v-if="canRemove"
-            class="relation-list__remove"
-            :disabled="removingId === item.id"
-            :aria-label="removeLabel"
-            :title="removeLabel"
-            @click="removeRelation(item, $event)"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5"
-                stroke-linecap="round" />
-            </svg>
-          </button>
-          <RelationActions
-            v-else
-            :target-user-id="item.targetUserId"
-            :target-name="item.targetName"
-            dense
-            class="relation-list__actions"
-            @click.stop
-          />
-          <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
+          </template>
+
+          <template v-else>
+            <GlowImage
+              v-if="item.targetCdnAvatarUrl ?? item.targetAvatarUrl"
+              :src="(item.targetCdnAvatarUrl ?? item.targetAvatarUrl) ?? ''"
+              :alt="item.targetName"
+              :size="36"
+            />
+            <span v-else class="relation-list__avatar-fallback" />
+            <PlayerTooltipTrigger
+              :user-id="item.targetUserId ?? ''"
+              :user-name="item.targetName"
+              :avatar-url="(item.targetCdnAvatarUrl ?? item.targetAvatarUrl) ?? ''"
+              :country="item.targetCountry ?? ''"
+              class="relation-list__trigger"
+            >
+              <span class="relation-list__name">{{ item.targetName }}</span>
+            </PlayerTooltipTrigger>
+            <button
+              v-if="canRemove"
+              class="relation-list__remove"
+              :disabled="removingId === item.id"
+              :aria-label="removeLabel"
+              :title="removeLabel"
+              @click="removeRelation(item, $event)"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" />
+              </svg>
+            </button>
+            <RelationActions
+              v-else-if="item.targetUserId"
+              :target-user-id="item.targetUserId"
+              :target-name="item.targetName"
+              dense
+              class="relation-list__actions"
+              @click.stop
+            />
+            <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
+          </template>
         </div>
 
         <PaginationControls class="relation-list__pagination"
@@ -219,6 +231,20 @@ watch(page, () => {
 .relation-list__row:hover {
   border-color: var(--text-tertiary);
   background: var(--bg-elevated);
+}
+
+.relation-list__row--hidden {
+  cursor: default;
+}
+
+.relation-list__row--hidden:hover {
+  border-color: var(--bg-overlay);
+  background: var(--bg-surface);
+}
+
+.relation-list__row--hidden .relation-list__name {
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
 .relation-list__avatar-fallback {
