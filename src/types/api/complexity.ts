@@ -150,6 +150,7 @@ export interface RaterCoefficients {
   resetSlope: number
   dotSlope: number
   notesSlope: number
+  npsSlope: number
   njsSlope: number
   boardSlope: number
 }

@@ -60,6 +60,12 @@ export const COEFFICIENT_FIELDS: {
     hint: 'How much the map length counts. Doubling the notes moves it by a fixed step, so a long map is not twice a short one.',
   },
   {
+    key: 'npsSlope',
+    label: 'NPS',
+    kind: 'slope',
+    hint: 'How much note density counts, meaning how tightly the notes sit over the map length. Negative raises sparse maps, positive lowers them.',
+  },
+  {
     key: 'njsSlope',
     label: 'NJS',
     kind: 'slope',

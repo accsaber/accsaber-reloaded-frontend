@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/complexity'
+import { formatChartDuration } from '@/utils/chartMetadata'
 import { CX_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
 import { formatAccuracy, formatCount, formatFixed, formatRelativeDate } from '@/utils/formatters'
 import {
@@ -23,11 +24,16 @@ const props = defineProps<{
 
 const inputs = computed(() => props.estimate?.inputs)
 
+function blank(field: EstimateField): string | null {
+  return field.always ? formatFixed(null, 0) : null
+}
+
 function formatField(field: EstimateField): string | null {
   const source = inputs.value
   if (field.format === 'text') return readString(source, field.key)
   const value = readNumber(source, field.key)
-  if (value == null) return null
+  if (field.format === 'duration') return formatChartDuration(value) ?? blank(field)
+  if (value == null) return blank(field)
   if (field.format === 'percent') return formatAccuracy(value)
   if (field.format === 'count') return formatCount(value)
   return formatFixed(value, field.decimals ?? 3)
@@ -76,6 +82,7 @@ const chartLine = computed(() => {
     ['resetSlope', readNumber(inputs.value, 'resetShare')],
     ['dotSlope', readNumber(inputs.value, 'dotShare')],
     ['notesSlope', readNumber(inputs.value, 'notesTerm')],
+    ['npsSlope', readNumber(inputs.value, 'npsTerm')],
     ['njsSlope', readNumber(inputs.value, 'njs')],
     ['boardSlope', readNumber(inputs.value, 'boardEase')],
   ]

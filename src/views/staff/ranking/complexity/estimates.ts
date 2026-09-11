@@ -1,13 +1,14 @@
 import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/complexity'
 import { COEFFICIENT_FIELDS } from './tuning'
 
-export type EstimateFormat = 'percent' | 'number' | 'count' | 'text'
+export type EstimateFormat = 'percent' | 'number' | 'count' | 'duration' | 'text'
 
 export interface EstimateField {
   key: string
   label: string
   format: EstimateFormat
   decimals?: number
+  always?: boolean
 }
 
 export interface EstimateGroup {
@@ -28,6 +29,8 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
         { key: 'worstTerm', label: 'Worst term', format: 'number', decimals: 4 },
         { key: 'notes', label: 'Notes', format: 'count' },
         { key: 'notesTerm', label: 'Notes term', format: 'number', decimals: 4 },
+        { key: 'duration', label: 'Duration', format: 'duration', always: true },
+        { key: 'npsTerm', label: 'NPS term', format: 'number', decimals: 4, always: true },
         { key: 'njs', label: 'Note jump speed', format: 'number', decimals: 2 },
       ],
     },
