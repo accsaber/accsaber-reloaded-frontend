@@ -1,9 +1,4 @@
-import type {
-  ComparisonScenario,
-  ComplexityScenario,
-  EstimateScenario,
-  ScenarioMapValues,
-} from '@/types/api/complexity'
+import type { ComplexityScenario, EstimateScenario } from '@/types/api/complexity'
 
 const STOPS = [
   { at: 0, token: '--complexity-0' },
@@ -83,14 +78,6 @@ export function deltaTone(delta: number | null | undefined, invert = false): Del
   if (delta == null || !Number.isFinite(delta) || Math.abs(delta) < EPSILON) return 'flat'
   const signed = invert ? -delta : delta
   return signed > 0 ? 'up' : 'down'
-}
-
-export function movesUnder(
-  row: { deltas: Partial<Record<ComparisonScenario, ScenarioMapValues>> },
-  scenario: ComparisonScenario,
-): boolean {
-  const delta = row.deltas[scenario]?.complexity
-  return delta != null && Math.abs(delta) >= EPSILON
 }
 
 export function isBigMove(delta: number | null | undefined): boolean {

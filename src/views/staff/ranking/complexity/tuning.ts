@@ -73,7 +73,13 @@ export const COEFFICIENT_FIELDS: {
   },
 ]
 
-export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: string }[] = [
+export const GATE_FIELDS: {
+  key: GateKey
+  label: string
+  kind: FieldKind
+  hint: string
+  slow?: boolean
+}[] = [
   {
     key: 'minScores',
     label: 'Min scores',
@@ -91,6 +97,7 @@ export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: 
     label: 'Top plays',
     kind: 'count',
     hint: "How many of the map's best plays the ease is read from, each one adjusted for how good the player is.",
+    slow: true,
   },
   {
     key: 'minPlayers',
@@ -103,6 +110,7 @@ export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: 
     label: 'Min plays per player',
     kind: 'count',
     hint: "Ranked plays in the category a player needs before their scores count toward any player's level.",
+    slow: true,
   },
   {
     key: 'maxNudge',
@@ -111,6 +119,8 @@ export const GATE_FIELDS: { key: GateKey; label: string; kind: FieldKind; hint: 
     hint: 'Furthest the leaderboard may move a map from the chart line, either way. 0 removes the limit.',
   },
 ]
+
+export const SLOW_GATE_NOTE = 'Top plays and min plays per player re-read every leaderboard, so they price on release and take a moment the first time.'
 
 export const WORST_SHARE_HINT = "How much of the map's hardest part the script reads. At 0.05 it looks at the worst 5 percent of notes, so a short brutal section counts for more than a wider slice would let it."
 

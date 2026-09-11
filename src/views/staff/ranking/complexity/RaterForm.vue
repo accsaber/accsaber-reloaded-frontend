@@ -9,6 +9,7 @@ import RaterField from './RaterField.vue'
 import {
   COEFFICIENT_FIELDS,
   GATE_FIELDS,
+  SLOW_GATE_NOTE,
   WORST_SHARE_HINT,
   categoryCodes,
   nearestBand,
@@ -20,10 +21,6 @@ import { computed } from 'vue'
 
 defineProps<{
   loading?: boolean
-}>()
-
-const emit = defineEmits<{
-  change: []
 }>()
 
 const { live, edited, bands, version, reset, dirty } = useTuningState()
@@ -66,24 +63,16 @@ function setCoefficient(line: LineKey, code: string, key: CoefficientKey, value:
   const target = coefficients(line, code)
   if (!target) return
   target[key] = value
-  emit('change')
 }
 
 function setGate(key: GateKey, value: number) {
   if (!edited.value) return
   edited.value.board[key] = value
-  emit('change')
 }
 
 function setWorstShare(value: number) {
   if (!edited.value) return
   edited.value.worstShare = value
-  emit('change')
-}
-
-function resetToLive() {
-  reset()
-  emit('change')
 }
 </script>
 
@@ -104,7 +93,7 @@ function resetToLive() {
         </div>
         <div class="rater-form__head-actions">
           <span class="rater-form__version">{{ version }}</span>
-          <BaseButton size="sm" :disabled="!dirty()" @click="resetToLive">Reset to live</BaseButton>
+          <BaseButton size="sm" :disabled="!dirty()" @click="reset">Reset to live</BaseButton>
         </div>
       </header>
 
@@ -124,10 +113,11 @@ function resetToLive() {
           <h4 class="rater-form__group-title">Board gate</h4>
           <div class="rater-form__gate">
             <RaterField v-for="field in GATE_FIELDS" :key="field.key" :label="field.label"
-              :hint="field.hint" :kind="field.kind" :live="live?.board[field.key] ?? 0"
-              :model-value="edited.board[field.key]"
+              :hint="field.hint" :kind="field.kind" :deferred="field.slow"
+              :live="live?.board[field.key] ?? 0" :model-value="edited.board[field.key]"
               @update:model-value="setGate(field.key, $event)" />
           </div>
+          <p class="rater-form__bands">{{ SLOW_GATE_NOTE }}</p>
         </section>
       </div>
 

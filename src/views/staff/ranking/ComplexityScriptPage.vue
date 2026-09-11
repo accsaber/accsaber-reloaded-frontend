@@ -12,18 +12,22 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
 import type {
+  ComplexityDifficultyPage,
+  ComplexityDifficultyParams,
   ComplexityDifficultyRow,
   ComplexityMapLeaderboard,
   ComplexityPlayerBoard,
   ComplexityPlayerPlays,
+  ComplexityPreviewParams,
   ComplexityScenario,
   ComparisonScenario,
   ScenarioLadderValues,
+  ScenarioPageParams,
 } from '@/types/api/complexity'
 import type { CategoryCode, ChartToggle, Tab } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
 import { parseApiError } from '@/api/client'
-import { PREVIEW_SCENARIOS, SCRIPT_SCENARIO, movesUnder } from '@/utils/complexity'
+import { PREVIEW_SCENARIOS, SCRIPT_SCENARIO } from '@/utils/complexity'
 import { saveBlob } from '@/utils/download'
 import { formatCount, formatRelativeDate } from '@/utils/formatters'
 import ApplyScriptModal from './complexity/ApplyScriptModal.vue'
@@ -33,8 +37,12 @@ import ComplexityPlayersTable from './complexity/ComplexityPlayersTable.vue'
 import LadderStrip from './complexity/LadderStrip.vue'
 import PlayerPlaysModal from './complexity/PlayerPlaysModal.vue'
 import RaterForm from './complexity/RaterForm.vue'
-import { estimateHealth } from './complexity/estimates'
 import { buildComplexityReport } from './complexity/report'
+import {
+  DEFAULT_LEADERBOARD_SORT,
+  DEFAULT_MAP_SORT,
+  type ScenarioSortRequest,
+} from './complexity/scenarioKeys'
 import { useTuningState } from './complexity/tuning'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -56,6 +64,8 @@ const PLAYER_BOARD_LIMIT = 250
 const PREVIEW_PLAYER_LIMIT = 100
 const PREVIEW_DEBOUNCE = 500
 const DEFAULT_PLAYS_LIMIT = 10
+const PAGE_SIZE = 50
+const REPORT_PAGE_SIZE = 100
 
 const PREVIEW_LADDER: (keyof ScenarioLadderValues)[] = [
   'playersWith900',
@@ -165,10 +175,6 @@ const pinnedOnly = computed<boolean>({
   },
 })
 
-function visibleMaps(rows: ComplexityDifficultyRow[]): ComplexityDifficultyRow[] {
-  return pinnedOnly.value ? rows.filter((row) => row.complexityPinned) : rows
-}
-
 const batches = ref<BatchResponse[]>([])
 
 const batchOptions = computed(() => [
@@ -201,15 +207,20 @@ const tabs: Tab[] = [
 
 const accent = computed(() => categoryStore.getAccent(category.value))
 
-const difficulties = ref<ComplexityDifficultyRow[]>([])
+const round = ref<ComplexityDifficultyPage | null>(null)
 const difficultiesLoading = ref(true)
 const board = ref<ComplexityPlayerBoard | null>(null)
 const boardLoading = ref(true)
+
+const mapsPage = ref(1)
+const mapsSort = ref<ScenarioSortRequest>(DEFAULT_MAP_SORT)
 
 const selectedRow = ref<ComplexityDifficultyRow | null>(null)
 const leaderboard = ref<ComplexityMapLeaderboard | null>(null)
 const leaderboardLoading = ref(false)
 const leaderboardError = ref('')
+const leaderboardPage = ref(1)
+const leaderboardSort = ref<ScenarioSortRequest>(DEFAULT_LEADERBOARD_SORT)
 
 const applyStatus = ref<MapDifficultyStatus>('RANKED')
 const applyOpen = ref(false)
@@ -221,7 +232,7 @@ const feedback = ref<{ variant: 'success' | 'error'; text: string } | null>(null
 
 const tuning = useTuningState()
 const raterLoading = ref(true)
-const previewRows = ref<ComplexityDifficultyRow[]>([])
+const preview = ref<ComplexityDifficultyPage | null>(null)
 const previewBoard = ref<ComplexityPlayerBoard | null>(null)
 const previewLoading = ref(false)
 const previewError = ref('')
@@ -241,58 +252,43 @@ const playsScenario = computed<ComparisonScenario>(
 
 const playsColumns = computed<ComplexityScenario[]>(() => ['CURRENT', playsScenario.value])
 
-const health = computed(() => estimateHealth(difficulties.value, SCRIPT_SCENARIO))
+const tuningTab = computed(() => tab.value === 'tuning')
+
+const summary = computed(() => (tuningTab.value ? preview.value : round.value)?.summary ?? null)
+
+const roundSummary = computed(() => round.value?.summary ?? null)
+
 const maxNudge = computed(() => tuning.live.value?.board.maxNudge ?? null)
 
 const estimateNotice = computed(() => {
-  if (difficultiesLoading.value || !difficulties.value.length) return ''
+  const health = roundSummary.value
+  if (difficultiesLoading.value || !health || !health.difficulties) return ''
   if (mapSearch.value) return ''
   const parts: string[] = []
-  if (health.value.missing > 0) {
+  if (health.missingEstimate > 0) {
     parts.push(
-      `The script has no estimate on ${formatCount(health.value.missing)} of ${formatCount(health.value.total)} difficulties. Run the refresh complexity estimates job in the admin jobs panel.`,
+      `The script has no estimate on ${formatCount(health.missingEstimate)} of ${formatCount(health.difficulties)} difficulties. Run the refresh complexity estimates job in the admin jobs panel.`,
     )
   }
-  if (health.value.stale > 0) {
+  if (health.staleEstimate > 0) {
     parts.push(
-      `${formatCount(health.value.stale)} difficulties still carry an estimate from an older model.`,
+      `${formatCount(health.staleEstimate)} difficulties still carry an estimate from an older model.`,
     )
   }
   return parts.join(' ')
 })
 
-const scriptVersion = computed(() => {
-  for (const row of difficulties.value) {
-    const version = row.estimates[SCRIPT_SCENARIO]?.version
-    if (version) return version
-  }
-  return null
-})
-
-const roundMaps = computed(() => visibleMaps(difficulties.value))
-
-const previewMaps = computed(() => {
-  const term = mapSearch.value.trim().toLowerCase()
-  const rows = visibleMaps(previewRows.value)
-  if (!term) return rows
-  return rows.filter((row) =>
-    row.songName.toLowerCase().includes(term)
-    || row.songSubName?.toLowerCase().includes(term)
-    || row.songAuthor.toLowerCase().includes(term)
-    || row.mapAuthor.toLowerCase().includes(term),
-  )
-})
-
 const subtitle = computed(() => {
-  if (difficultiesLoading.value) return 'Loading this round'
-  const total = roundMaps.value.length
+  const health = roundSummary.value
+  if (difficultiesLoading.value || !health) return 'Loading this round'
+  const total = health.difficulties
   const count = formatCount(total)
   const noun = total === 1 ? 'difficulty' : 'difficulties'
   const held = pinnedOnly.value ? 'pinned ' : ''
   if (mapSearch.value) return `${count} ${held}${noun} match this search`
   const scope = activeBatch.value ? activeBatch.value.name : 'the whole ranked pool'
-  const stamp = health.value.updatedAt
-    ? `, estimated ${formatRelativeDate(health.value.updatedAt)}`
+  const stamp = health.estimatedAt
+    ? `, estimated ${formatRelativeDate(health.estimatedAt)}`
     : ''
   return `${count} ${held}${noun} in ${scope}${stamp}`
 })
@@ -318,6 +314,35 @@ function searchParam(value: string): string | undefined {
   return term ? term : undefined
 }
 
+const tableWindow = computed<ScenarioPageParams>(() => ({
+  page: mapsPage.value - 1,
+  size: PAGE_SIZE,
+  sort: mapsSort.value.sort,
+  absolute: mapsSort.value.absolute,
+}))
+
+async function roundParams(window: ScenarioPageParams): Promise<ComplexityDifficultyParams> {
+  return {
+    categoryId: await categoryId(),
+    status: status.value,
+    batchId: batchId.value || undefined,
+    search: searchParam(mapSearch.value),
+    pinned: pinnedOnly.value || undefined,
+    ...window,
+  }
+}
+
+async function previewParams(window: ScenarioPageParams): Promise<ComplexityPreviewParams> {
+  return {
+    categoryId: await categoryId(),
+    status: status.value,
+    search: searchParam(mapSearch.value),
+    pinned: pinnedOnly.value || undefined,
+    playerLimit: PREVIEW_PLAYER_LIMIT,
+    ...window,
+  }
+}
+
 async function loadBatches() {
   try {
     const { listBatches } = await import('@/api/ranking/batches')
@@ -333,18 +358,19 @@ async function loadBatches() {
   }
 }
 
+let roundToken = 0
+
 async function loadDifficulties() {
+  const token = ++roundToken
   difficultiesLoading.value = true
   try {
     const { getComplexityDifficulties } = await import('@/api/ranking/complexity')
-    difficulties.value = await getComplexityDifficulties({
-      categoryId: await categoryId(),
-      status: status.value,
-      batchId: batchId.value || undefined,
-      search: searchParam(mapSearch.value),
-    })
+    const result = await getComplexityDifficulties(await roundParams(tableWindow.value))
+    if (token !== roundToken) return
+    round.value = result
   } catch (err) {
-    difficulties.value = []
+    if (token !== roundToken) return
+    round.value = null
     feedback.value = { variant: 'error', text: failure(err, 'Could not load this round.') }
   }
   difficultiesLoading.value = false
@@ -377,62 +403,86 @@ async function loadRater() {
   raterLoading.value = false
 }
 
+let previewToken = 0
+
 async function runPreview() {
   const rater = tuning.edited.value
   if (!rater) return
+  const token = ++previewToken
   previewLoading.value = true
   previewError.value = ''
   try {
     const { previewComplexity } = await import('@/api/ranking/complexity')
-    const response = await previewComplexity(rater, {
-      categoryId: await categoryId(),
-      status: status.value,
-      playerLimit: PREVIEW_PLAYER_LIMIT,
-    })
-    previewRows.value = response.difficulties
+    const response = await previewComplexity(rater, await previewParams(tableWindow.value))
+    if (token !== previewToken) return
+    preview.value = response.difficulties
     previewBoard.value = response.players
   } catch (err) {
-    previewRows.value = []
+    if (token !== previewToken) return
+    preview.value = null
     previewBoard.value = null
     previewError.value = failure(err, 'The preview failed.')
   }
   previewLoading.value = false
 }
 
-const previewKey = ref('')
-
-function bumpPreview() {
-  previewKey.value = JSON.stringify({
-    rater: tuning.edited.value,
-    category: category.value,
-    status: status.value,
-  })
+function setMapsPage(page: number) {
+  mapsPage.value = page
 }
 
-const debouncedPreviewKey = useDebouncedRef(previewKey, PREVIEW_DEBOUNCE)
+function setMapsSort(request: ScenarioSortRequest) {
+  mapsSort.value = request
+  mapsPage.value = 1
+}
 
-watch(debouncedPreviewKey, (key) => {
-  if (key && tab.value === 'tuning') runPreview()
-})
+let leaderboardToken = 0
 
-async function openMap(row: ComplexityDifficultyRow) {
-  selectedRow.value = row
-  leaderboard.value = null
-  leaderboardError.value = ''
-  if (row.scores === 0) return
+async function loadLeaderboard() {
+  const row = selectedRow.value
+  if (!row) return
+  const token = ++leaderboardToken
   leaderboardLoading.value = true
+  leaderboardError.value = ''
   try {
     const { getComplexityLeaderboard } = await import('@/api/ranking/complexity')
-    leaderboard.value = await getComplexityLeaderboard(row.mapDifficultyId)
+    const result = await getComplexityLeaderboard(row.mapDifficultyId, {
+      page: leaderboardPage.value - 1,
+      size: PAGE_SIZE,
+      sort: leaderboardSort.value.sort,
+      absolute: leaderboardSort.value.absolute,
+    })
+    if (token !== leaderboardToken) return
+    leaderboard.value = result
   } catch (err) {
+    if (token !== leaderboardToken) return
     leaderboardError.value = failure(err, 'Could not load this leaderboard.')
   }
   leaderboardLoading.value = false
 }
 
+function openMap(row: ComplexityDifficultyRow) {
+  selectedRow.value = row
+  leaderboard.value = null
+  leaderboardPage.value = 1
+  loadLeaderboard()
+}
+
+function setLeaderboardPage(page: number) {
+  leaderboardPage.value = page
+  loadLeaderboard()
+}
+
+function setLeaderboardSort(request: ScenarioSortRequest) {
+  leaderboardSort.value = request
+  leaderboardPage.value = 1
+  loadLeaderboard()
+}
+
 function closeMap() {
+  leaderboardToken += 1
   selectedRow.value = null
   leaderboard.value = null
+  leaderboardLoading.value = false
 }
 
 async function loadPlays() {
@@ -454,7 +504,7 @@ async function loadPlays() {
 
 function openPlayer(userId: string) {
   playsUserId.value = userId
-  playsPreview.value = tab.value === 'tuning'
+  playsPreview.value = tuningTab.value
   playsPlayer.value = null
   playsOpen.value = true
   closeMap()
@@ -473,35 +523,23 @@ function setPlaysLimit(limit: number) {
   loadPlays()
 }
 
-let roundScope: { key: string; rows: ComplexityDifficultyRow[] } | null = null
-
-async function loadRoundScope(target: MapDifficultyStatus): Promise<ComplexityDifficultyRow[]> {
-  const unfiltered = category.value === 'overall'
-    && status.value === target
-    && !mapSearch.value
-  if (unfiltered) return difficulties.value
-  const key = `${target}:${batchId.value}`
-  if (roundScope?.key === key) return roundScope.rows
-  const { getComplexityDifficulties } = await import('@/api/ranking/complexity')
-  const rows = await getComplexityDifficulties({
-    status: target,
-    batchId: batchId.value || undefined,
-  })
-  roundScope = { key, rows }
-  return rows
-}
-
 async function openApply(target: MapDifficultyStatus) {
   applyError.value = ''
   applyStatus.value = target
   preparingApply.value = target
   try {
-    const scope = await loadRoundScope(target)
-    const pinned = scope.filter((row) => row.complexityPinned).length
-    const moving = scope.filter(
-      (row) => !row.complexityPinned && movesUnder(row, SCRIPT_SCENARIO),
-    ).length
-    applyScope.value = { moving, total: scope.length, pinned }
+    const { getComplexityDifficulties } = await import('@/api/ranking/complexity')
+    const scope = await getComplexityDifficulties({
+      status: target,
+      batchId: batchId.value || undefined,
+      page: 0,
+      size: 1,
+    })
+    applyScope.value = {
+      moving: scope.summary.moving[SCRIPT_SCENARIO] ?? 0,
+      total: scope.summary.difficulties,
+      pinned: scope.summary.pinned,
+    }
     applyOpen.value = true
   } catch (err) {
     feedback.value = { variant: 'error', text: failure(err, 'Could not count the affected maps.') }
@@ -521,7 +559,6 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
       status: applyStatus.value,
     })
     applyOpen.value = false
-    roundScope = null
     const scope = activeBatch.value ? activeBatch.value.name : 'every map in scope'
     feedback.value = applyStatus.value === 'RANKED'
       ? {
@@ -541,59 +578,117 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
 }
 
 const reportScenario = computed<ComparisonScenario>(
-  () => (tab.value === 'tuning' ? 'PREVIEW' : SCRIPT_SCENARIO),
+  () => (tuningTab.value ? 'PREVIEW' : SCRIPT_SCENARIO),
 )
 
-const reportMaps = computed(() => {
-  if (tab.value === 'tuning') return previewMaps.value
-  return roundMaps.value
-})
+const reportBoard = computed(() => (tuningTab.value ? previewBoard.value : board.value))
 
-const reportBoard = computed(() => (tab.value === 'tuning' ? previewBoard.value : board.value))
+const reportReady = computed(() => !!summary.value?.difficulties || !!reportBoard.value)
 
-const reportReady = computed(() => reportMaps.value.length > 0 || !!reportBoard.value)
+const exporting = ref(false)
 
-function exportReport() {
-  const preview = tab.value === 'tuning'
-  const scope = [
-    `Maps: ${activeBatch.value ? activeBatch.value.name : 'the whole ranked pool'}, status ${status.value.toLowerCase()}`,
-    `Category: ${categoryStore.getCategoryInfo(category.value)?.name ?? category.value}`,
-    'Players: the whole category, not only the maps above',
-  ]
-  if (mapSearch.value) scope.push(`Map search: ${mapSearch.value}`)
-  if (pinnedOnly.value) scope.push('Pinned maps only')
-  if (playerSearch.value) scope.push(`Player search: ${playerSearch.value}`)
-  if (preview) scope.push('Priced from the edited constants, nothing stored')
-  else if (scriptVersion.value) scope.push(`Script: ${scriptVersion.value}`)
-  if (health.value.updatedAt) scope.push(`Estimated ${formatRelativeDate(health.value.updatedAt)}`)
+async function collectReportMaps(): Promise<ComplexityDifficultyRow[]> {
+  const api = await import('@/api/ranking/complexity')
+  const rater = tuning.edited.value
+  const maps: ComplexityDifficultyRow[] = []
+  let page = 0
+  let totalPages = 1
+  while (page < totalPages) {
+    const window = {
+      page,
+      size: REPORT_PAGE_SIZE,
+      sort: mapsSort.value.sort,
+      absolute: mapsSort.value.absolute,
+    }
+    const result = tuningTab.value && rater
+      ? (await api.previewComplexity(rater, await previewParams(window))).difficulties
+      : await api.getComplexityDifficulties(await roundParams(window))
+    maps.push(...result.rows)
+    totalPages = result.totalPages
+    page += 1
+  }
+  return maps
+}
 
-  const markdown = buildComplexityReport({
-    title: preview ? 'Complexity script preview' : 'Complexity script round',
-    scope,
-    scenarioLabel: preview ? 'Preview' : 'Script',
-    scenario: reportScenario.value,
-    maps: reportMaps.value,
-    board: reportBoard.value,
-  })
+async function exportReport() {
+  exporting.value = true
+  try {
+    const maps = await collectReportMaps()
+    const scope = [
+      `Maps: ${activeBatch.value ? activeBatch.value.name : 'the whole ranked pool'}, status ${status.value.toLowerCase()}`,
+      `Category: ${categoryStore.getCategoryInfo(category.value)?.name ?? category.value}`,
+      'Players: the whole category, not only the maps above',
+    ]
+    if (mapSearch.value) scope.push(`Map search: ${mapSearch.value}`)
+    if (pinnedOnly.value) scope.push('Pinned maps only')
+    if (playerSearch.value) scope.push(`Player search: ${playerSearch.value}`)
+    if (tuningTab.value) scope.push('Priced from the edited constants, nothing stored')
+    else if (roundSummary.value?.scriptVersion) {
+      scope.push(`Script: ${roundSummary.value.scriptVersion}`)
+    }
+    if (summary.value?.estimatedAt) {
+      scope.push(`Estimated ${formatRelativeDate(summary.value.estimatedAt)}`)
+    }
 
-  const slug = activeBatch.value
-    ? activeBatch.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    : 'ranked-pool'
-  const stamp = new Date().toISOString().slice(0, 10)
-  saveBlob(
-    new Blob([markdown], { type: 'text/markdown;charset=utf-8' }),
-    `complexity-${preview ? 'preview' : 'round'}-${slug}-${stamp}.md`,
-  )
+    const markdown = buildComplexityReport({
+      title: tuningTab.value ? 'Complexity script preview' : 'Complexity script round',
+      scope,
+      scenarioLabel: tuningTab.value ? 'Preview' : 'Script',
+      scenario: reportScenario.value,
+      maps,
+      board: reportBoard.value,
+    })
+
+    const slug = activeBatch.value
+      ? activeBatch.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      : 'ranked-pool'
+    const stamp = new Date().toISOString().slice(0, 10)
+    saveBlob(
+      new Blob([markdown], { type: 'text/markdown;charset=utf-8' }),
+      `complexity-${tuningTab.value ? 'preview' : 'round'}-${slug}-${stamp}.md`,
+    )
+  } catch (err) {
+    feedback.value = { variant: 'error', text: failure(err, 'Could not build the report.') }
+  }
+  exporting.value = false
 }
 
 loadRater()
 loadBatches()
 
-watch([category, status, batchId, mapSearch], loadDifficulties, { immediate: true })
+watch([category, status, batchId, mapSearch, pinnedOnly], () => {
+  mapsPage.value = 1
+})
+
+const roundKey = computed(() => JSON.stringify([
+  category.value,
+  status.value,
+  batchId.value,
+  mapSearch.value,
+  pinnedOnly.value,
+  tableWindow.value,
+]))
+
+watch(roundKey, loadDifficulties, { immediate: true })
+
 watch([category, playerSearch], loadBoard, { immediate: true })
 
-watch([tab, category, status, () => tuning.edited.value], () => {
-  if (tab.value === 'tuning') bumpPreview()
+const raterKey = computed(() => JSON.stringify(tuning.edited.value))
+
+const debouncedRaterKey = useDebouncedRef(raterKey, PREVIEW_DEBOUNCE)
+
+const previewKey = computed(() => JSON.stringify([
+  tab.value,
+  debouncedRaterKey.value,
+  category.value,
+  status.value,
+  mapSearch.value,
+  pinnedOnly.value,
+  tableWindow.value,
+]))
+
+watch(previewKey, () => {
+  if (tuningTab.value) runPreview()
 }, { immediate: true })
 </script>
 
@@ -605,7 +700,8 @@ watch([tab, category, status, () => tuning.edited.value], () => {
         <p class="script-page__subtitle">{{ subtitle }}</p>
       </div>
       <div class="script-page__actions">
-        <BaseButton size="sm" :disabled="!reportReady" @click="exportReport">
+        <BaseButton size="sm" :disabled="!reportReady" :loading="exporting"
+          @click="exportReport">
           Export markdown
         </BaseButton>
         <template v-if="isHead">
@@ -646,7 +742,7 @@ watch([tab, category, status, () => tuning.edited.value], () => {
     </BaseBanner>
 
     <template v-if="tab === 'tuning'">
-      <RaterForm :loading="raterLoading" @change="bumpPreview" />
+      <RaterForm :loading="raterLoading" />
 
       <p v-if="previewError" class="script-page__error">{{ previewError }}</p>
 
@@ -664,9 +760,11 @@ watch([tab, category, status, () => tuning.edited.value], () => {
           @select="previewView = $event as 'maps' | 'players'" />
       </div>
 
-      <ComplexityMapsTable v-if="previewView === 'maps'" :rows="previewMaps" scenario="PREVIEW"
-        :columns="PREVIEW_SCENARIOS" :loading="previewLoading"
-        empty-message="No difficulties priced under these constants" @select="openMap" />
+      <ComplexityMapsTable v-if="previewView === 'maps'" :rows="preview?.rows ?? []"
+        scenario="PREVIEW" :columns="PREVIEW_SCENARIOS" :loading="previewLoading"
+        :page="mapsPage" :total-pages="preview?.totalPages ?? 0"
+        empty-message="No difficulties priced under these constants" @select="openMap"
+        @update:page="setMapsPage" @update:sort="setMapsSort" />
       <ComplexityPlayersTable v-else :rows="previewBoard?.rows ?? []" scenario="PREVIEW"
         :columns="PREVIEW_SCENARIOS" :loading="previewLoading" @select="openPlayer" />
     </template>
@@ -684,8 +782,9 @@ watch([tab, category, status, () => tuning.edited.value], () => {
           <ChartToggleGroup :toggles="pinnedToggles" :active="pinnedOnly ? ['pinned'] : []"
             label="Pin filter" @select="pinnedOnly = !pinnedOnly" />
         </div>
-        <ComplexityMapsTable :rows="roundMaps" :scenario="SCRIPT_SCENARIO"
-          :loading="difficultiesLoading" @select="openMap" />
+        <ComplexityMapsTable :rows="round?.rows ?? []" :scenario="SCRIPT_SCENARIO"
+          :loading="difficultiesLoading" :page="mapsPage" :total-pages="round?.totalPages ?? 0"
+          @select="openMap" @update:page="setMapsPage" @update:sort="setMapsSort" />
       </div>
 
       <div v-else class="script-page__view">
@@ -699,9 +798,11 @@ watch([tab, category, status, () => tuning.edited.value], () => {
     </template>
 
     <ComplexityMapModal :open="!!selectedRow" :row="selectedRow" :leaderboard="leaderboard"
-      :scenario="SCRIPT_SCENARIO" :model-hash="health.modelHash" :max-nudge="maxNudge"
+      :scenario="SCRIPT_SCENARIO" :model-hash="summary?.modelHash ?? null" :max-nudge="maxNudge"
+      :page="leaderboardPage" :total-pages="leaderboard?.totalPages ?? 0"
       :loading="leaderboardLoading" :error="leaderboardError" @close="closeMap"
-      @select-player="openPlayer" />
+      @select-player="openPlayer" @update:page="setLeaderboardPage"
+      @update:sort="setLeaderboardSort" />
 
     <PlayerPlaysModal :open="playsOpen" :player="playsPlayer" :scenario="playsScenario"
       :columns="playsColumns" :limit="playsLimit" :loading="playsLoading" :error="playsError"
@@ -710,7 +811,7 @@ watch([tab, category, status, () => tuning.edited.value], () => {
     <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen" :status="applyStatus"
       :batch-name="activeBatch?.name ?? null" :moving="applyScope.moving" :total="applyScope.total"
       :pinned="applyScope.pinned"
-      :version="scriptVersion" :submitting="applying" :error="applyError"
+      :version="roundSummary?.scriptVersion ?? null" :submitting="applying" :error="applyError"
       @close="applyOpen = false" @confirm="confirmApply" />
   </div>
 </template>

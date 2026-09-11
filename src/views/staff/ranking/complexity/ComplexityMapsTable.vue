@@ -20,13 +20,22 @@ import { formatCount } from '@/utils/formatters'
 import ComplexityPin from './ComplexityPin.vue'
 import MapIdentityCell from './MapIdentityCell.vue'
 import ScenarioCell from './ScenarioCell.vue'
-import { cxKey } from './scenarioKeys'
-import { useScenarioSort } from './useScenarioSort'
-import { computed, toRef } from 'vue'
+import {
+  MAP_ASCENDING_KEYS,
+  MAP_DELTA_KEYS,
+  MAP_SORT_KEY,
+  cxKey,
+  mapSortRequest,
+  type ScenarioSortRequest,
+} from './scenarioKeys'
+import { useSortState } from './useScenarioSort'
+import { computed, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   rows: ComplexityDifficultyRow[]
   scenario: ComparisonScenario
+  page: number
+  totalPages: number
   columns?: readonly ComplexityScenario[]
   loading?: boolean
   emptyMessage?: string
@@ -38,11 +47,11 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   select: [row: ComplexityDifficultyRow]
+  'update:page': [page: number]
+  'update:sort': [request: ScenarioSortRequest]
 }>()
 
-type MapMetric = 'complexity' | 'topAp' | 'averageAp' | 'averageWeightedAp'
-
-const ALL_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT', 'PREVIEW']
+type MapMetric = 'complexity' | 'topAp' | 'averageWeightedAp'
 
 function currentValue(row: ComplexityDifficultyRow, key: MapMetric): number | null {
   return row.scenarios.CURRENT?.[key] ?? null
@@ -56,30 +65,15 @@ function deltaValue(row: ComplexityDifficultyRow, key: MapMetric): number | null
   return row.deltas[props.scenario]?.[key] ?? null
 }
 
-const accessors: Record<string, (row: ComplexityDifficultyRow) => number | string | null> = {
-  song: (row) => row.songName.toLowerCase(),
-  cxDelta: (row) => deltaValue(row, 'complexity'),
-  topApCurrent: (row) => currentValue(row, 'topAp'),
-  topAp: (row) => scenarioValue(row, 'topAp'),
-  topApDelta: (row) => deltaValue(row, 'topAp'),
-  avgWeightedCurrent: (row) => currentValue(row, 'averageWeightedAp'),
-  avgWeighted: (row) => scenarioValue(row, 'averageWeightedAp'),
-  avgWeightedDelta: (row) => deltaValue(row, 'averageWeightedAp'),
-  scores: (row) => row.scores,
-}
-
-for (const key of ALL_SCENARIOS) {
-  accessors[cxKey(key)] = (row) => row.scenarios[key]?.complexity ?? null
-}
-
-const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
-  rows: toRef(props, 'rows'),
-  deltaKeys: ['cxDelta', 'topApDelta', 'avgWeightedDelta'],
-  defaultKey: 'cxDelta',
-  ascendingKeys: ['song'],
-  revision: () => props.scenario,
-  accessors,
+const { sortKey, sortDirection, deltaMode, sortState, absolute, onSort } = useSortState({
+  deltaKeys: MAP_DELTA_KEYS,
+  defaultKey: MAP_SORT_KEY,
+  ascendingKeys: MAP_ASCENDING_KEYS,
 })
+
+watch([sortKey, sortDirection, absolute], () => {
+  emit('update:sort', mapSortRequest(sortKey.value, sortDirection.value, absolute.value))
+}, { immediate: true })
 
 function deltaLabel(key: string, label: string): string {
   return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
@@ -128,7 +122,7 @@ const tableColumns = computed<TableColumn[]>(() => {
 })
 
 const tableRows = computed(() =>
-  visible.value.map((row) => {
+  props.rows.map((row) => {
     const cxDelta = deltaValue(row, 'complexity')
     const complexities = Object.fromEntries(
       props.columns.map((scenario) => [cxKey(scenario), row.scenarios[scenario]?.complexity ?? null]),
@@ -258,7 +252,7 @@ function rowClass(row: Record<string, unknown>) {
     </DataTable>
 
     <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages"
-      @update:page="setPage" />
+      @update:page="emit('update:page', $event)" />
   </div>
 </template>
 

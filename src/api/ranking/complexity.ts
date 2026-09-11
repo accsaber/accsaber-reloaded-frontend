@@ -6,11 +6,12 @@ import type {
   ComplexityRaterResponse,
   ComplexityRaterSpec,
   ComplexityDifficultyParams,
-  ComplexityDifficultyRow,
+  ComplexityDifficultyPage,
   ComplexityMapLeaderboard,
   ComplexityPlayerBoard,
   ComplexityPlayerParams,
   ComplexityPlayerPlays,
+  ScenarioPageParams,
 } from '@/types/api/complexity'
 import type { DownloadedFile } from '../client'
 import { get, getFile, post } from '../client'
@@ -20,14 +21,17 @@ const BASE = '/ranking/complexity'
 
 export function getComplexityDifficulties(
   params?: ComplexityDifficultyParams,
-): Promise<ComplexityDifficultyRow[]> {
-  return get<ComplexityDifficultyRow[]>(`${BASE}/difficulties${buildQuery(params)}`)
+): Promise<ComplexityDifficultyPage> {
+  return get<ComplexityDifficultyPage>(`${BASE}/difficulties${buildQuery(params)}`)
 }
 
 export function getComplexityLeaderboard(
   mapDifficultyId: string,
+  params?: ScenarioPageParams,
 ): Promise<ComplexityMapLeaderboard> {
-  return get<ComplexityMapLeaderboard>(`${BASE}/difficulties/${mapDifficultyId}/leaderboard`)
+  return get<ComplexityMapLeaderboard>(
+    `${BASE}/difficulties/${mapDifficultyId}/leaderboard${buildQuery(params)}`,
+  )
 }
 
 export function getComplexityPlayers(

@@ -78,9 +78,6 @@ function mapTable(input: ComplexityReportInput): string[] {
     'Avg wgt now',
     `Avg wgt ${after}`,
     'Δ avg wgt',
-    'Avg AP now',
-    `Avg AP ${after}`,
-    'Δ avg AP',
     'Scores',
   ])
   for (const map of maps) {
@@ -100,9 +97,6 @@ function mapTable(input: ComplexityReportInput): string[] {
       ap(current?.averageWeightedAp),
       ap(next?.averageWeightedAp),
       formatSigned(delta?.averageWeightedAp, AP_DECIMALS),
-      ap(current?.averageAp),
-      ap(next?.averageAp),
-      formatSigned(delta?.averageAp, AP_DECIMALS),
       formatCount(map.scores),
     ]))
   }

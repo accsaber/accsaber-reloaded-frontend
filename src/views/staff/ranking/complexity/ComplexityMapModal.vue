@@ -19,7 +19,14 @@ import { formatAccuracy, formatCount } from '@/utils/formatters'
 import EstimateInputs from './EstimateInputs.vue'
 import ScenarioCell from './ScenarioCell.vue'
 import { isStaleEstimate } from './estimates'
-import { useScenarioSort } from './useScenarioSort'
+import {
+  LEADERBOARD_ASCENDING_KEYS,
+  LEADERBOARD_DELTA_KEYS,
+  LEADERBOARD_SORT_KEY,
+  leaderboardSortRequest,
+  type ScenarioSortRequest,
+} from './scenarioKeys'
+import { useSortState } from './useScenarioSort'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -28,6 +35,8 @@ const props = defineProps<{
   leaderboard: ComplexityMapLeaderboard | null
   scenario: ComparisonScenario
   modelHash: string | null
+  page: number
+  totalPages: number
   maxNudge?: number | null
   loading?: boolean
   error?: string
@@ -36,6 +45,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   selectPlayer: [userId: string]
+  'update:page': [page: number]
+  'update:sort': [request: ScenarioSortRequest]
 }>()
 
 const inputsOpen = ref(false)
@@ -57,23 +68,15 @@ function apOf(row: ComplexityScoreRow, scenario: ComplexityScenario): number | n
   return row.scenarios[scenario]?.ap ?? null
 }
 
-const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
-  rows: scoreRows,
-  deltaKeys: ['apMove', 'weightedMove'],
-  defaultKey: 'rank',
-  ascendingKeys: ['rank'],
-  revision: () => props.scenario,
-  accessors: {
-    rank: (row) => row.scenarios.CURRENT?.rank ?? null,
-    accuracy: (row) => row.accuracy,
-    apCurrent: (row) => apOf(row, 'CURRENT'),
-    apScenario: (row) => apOf(row, props.scenario),
-    apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
-    weightedCurrent: (row) => row.scenarios.CURRENT?.weightedAp ?? null,
-    weightedScenario: (row) => row.scenarios[props.scenario]?.weightedAp ?? null,
-    weightedMove: (row) => row.deltas[props.scenario]?.weightedAp ?? null,
-  },
+const { sortKey, sortDirection, deltaMode, sortState, absolute, onSort } = useSortState({
+  deltaKeys: LEADERBOARD_DELTA_KEYS,
+  defaultKey: LEADERBOARD_SORT_KEY,
+  ascendingKeys: LEADERBOARD_ASCENDING_KEYS,
 })
+
+watch([sortKey, sortDirection, absolute], () => {
+  emit('update:sort', leaderboardSortRequest(sortKey.value, sortDirection.value, absolute.value))
+}, { immediate: true })
 
 function deltaLabel(key: string, label: string): string {
   return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
@@ -107,7 +110,7 @@ const columns = computed<TableColumn[]>(() => {
 })
 
 const tableRows = computed(() =>
-  visible.value.map((row) => ({
+  scoreRows.value.map((row) => ({
     id: row.userId,
     userId: row.userId,
     name: row.name,
@@ -139,16 +142,6 @@ const complexities = computed(() => {
   ]
 })
 
-const averageAp = computed(() => {
-  const source = difficulty.value
-  if (!source) return null
-  return {
-    now: source.scenarios.CURRENT?.averageAp ?? null,
-    scenario: source.scenarios[props.scenario]?.averageAp ?? null,
-    delta: source.deltas[props.scenario]?.averageAp ?? null,
-  }
-})
-
 const coverUrl = computed(() => pickCoverUrl(difficulty.value))
 const coverFallback = computed(() => pickCoverFallback(difficulty.value))
 
@@ -171,13 +164,6 @@ function selectPlayer(row: Record<string, unknown>) {
           </div>
           <span class="map-modal__mapper">{{ difficulty.mapAuthor }}</span>
           <span class="map-modal__scores">{{ formatCount(difficulty.scores) }} active scores</span>
-          <div v-if="averageAp" class="map-modal__average">
-            <span class="map-modal__average-label">Average AP</span>
-            <ScenarioCell :value="averageAp.now" :decimals="AP_DECIMALS" />
-            <span class="map-modal__average-label" aria-hidden="true">&rarr;</span>
-            <ScenarioCell :value="averageAp.scenario" :delta="averageAp.delta"
-              :decimals="AP_DECIMALS" emphasis />
-          </div>
         </div>
         <div class="map-modal__complexities">
           <div v-for="entry in complexities" :key="entry.key" class="map-modal__complexity">
@@ -214,7 +200,7 @@ function selectPlayer(row: Record<string, unknown>) {
         row-clickable
         empty-message="No active scores on this difficulty"
         @sort="onSort"
-        @update:page="setPage"
+        @update:page="emit('update:page', $event)"
         @row-click="selectPlayer"
       >
         <template #cell-player="{ row }">
@@ -299,19 +285,6 @@ function selectPlayer(row: Record<string, unknown>) {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-secondary);
-}
-
-.map-modal__average {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.map-modal__average-label {
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .map-modal__complexities {

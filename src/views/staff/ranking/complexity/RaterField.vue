@@ -10,6 +10,7 @@ const props = defineProps<{
   kind: FieldKind
   live: number
   modelValue: number
+  deferred?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -38,11 +39,16 @@ function commit(raw: string) {
   emit('update:modelValue', parsed)
 }
 
-function slide(event: Event) {
+function type(raw: string) {
+  if (props.deferred) typed.value = raw
+  else commit(raw)
+}
+
+function slide(event: Event, settled: boolean) {
   const parsed = Number((event.target as HTMLInputElement).value)
   if (!Number.isFinite(parsed)) return
   typed.value = formatFixed(parsed, decimals.value)
-  emit('update:modelValue', parsed)
+  if (settled || !props.deferred) emit('update:modelValue', parsed)
 }
 
 const changed = computed(() => Math.abs(props.modelValue - props.live) > 1e-9)
@@ -55,9 +61,13 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > 1e-9)
       <HintTooltip :text="hint" :label="label" />
     </span>
     <input class="rater-field__slider" type="range" :min="range.min" :max="range.max"
-      :step="range.step" :value="modelValue" :aria-label="label" @input="slide" />
+      :step="range.step" :value="modelValue" :aria-label="label" @input="slide($event, false)"
+      @change="slide($event, true)" />
     <input class="rater-field__value" type="text" inputmode="decimal" :value="typed"
-      :aria-label="`${label} value`" @input="commit(($event.target as HTMLInputElement).value)" />
+      :aria-label="`${label} value`" @input="type(($event.target as HTMLInputElement).value)"
+      @change="commit(($event.target as HTMLInputElement).value)"
+      @blur="commit(($event.target as HTMLInputElement).value)"
+      @keyup.enter="commit(($event.target as HTMLInputElement).value)" />
   </div>
 </template>
 

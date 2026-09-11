@@ -11,7 +11,6 @@ export type ComplexityDatasetKind = 'scores' | 'difficulties' | 'complexity-hist
 export interface ScenarioMapValues {
   complexity: number | null
   topAp: number | null
-  averageAp: number | null
   averageWeightedAp: number | null
   boardRank: number | null
 }
@@ -64,6 +63,10 @@ export interface ComplexityScoreRow {
 export interface ComplexityMapLeaderboard {
   difficulty: ComplexityDifficultyRow
   rows: ComplexityScoreRow[]
+  page: number
+  size: number
+  total: number
+  totalPages: number
 }
 
 export interface ScenarioLadderValues {
@@ -99,11 +102,39 @@ export interface ComplexityPlayerBoard {
   rows: ComplexityPlayerRow[]
 }
 
-export interface ComplexityDifficultyParams {
+export interface ComplexityRoundSummary {
+  difficulties: number
+  pinned: number
+  missingEstimate: number
+  staleEstimate: number
+  modelHash: string | null
+  scriptVersion: string | null
+  estimatedAt: string | null
+  moving: Partial<Record<ComparisonScenario, number>>
+}
+
+export interface ComplexityDifficultyPage {
+  summary: ComplexityRoundSummary
+  rows: ComplexityDifficultyRow[]
+  page: number
+  size: number
+  total: number
+  totalPages: number
+}
+
+export interface ScenarioPageParams {
+  page?: number
+  size?: number
+  sort?: string
+  absolute?: boolean
+}
+
+export interface ComplexityDifficultyParams extends ScenarioPageParams {
   categoryId?: string
   status?: MapDifficultyStatus
   batchId?: string
   search?: string
+  pinned?: boolean
 }
 
 export interface ComplexityPlayerParams {
@@ -147,7 +178,7 @@ export interface ComplexityRaterResponse {
 
 export interface ComplexityPreviewResponse {
   rater: ComplexityRaterSpec
-  difficulties: ComplexityDifficultyRow[]
+  difficulties: ComplexityDifficultyPage
   players: ComplexityPlayerBoard
 }
 
@@ -158,9 +189,11 @@ export interface ApplyScriptParams {
   status?: MapDifficultyStatus
 }
 
-export interface ComplexityPreviewParams {
+export interface ComplexityPreviewParams extends ScenarioPageParams {
   categoryId?: string
   status?: MapDifficultyStatus
+  search?: string
+  pinned?: boolean
   playerLimit?: number
 }
 
