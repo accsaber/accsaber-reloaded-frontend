@@ -54,6 +54,12 @@ export const COEFFICIENT_FIELDS: {
     hint: 'How much dot notes count, the ones with no arrow telling you which way to swing.',
   },
   {
+    key: 'bottomUpSlope',
+    label: 'Bottom-row ups',
+    kind: 'slope',
+    hint: 'How much bottom-row notes cut upward count. The model reads those as harder than they play, so a negative value pulls those maps back down.',
+  },
+  {
     key: 'notesSlope',
     label: 'Notes',
     kind: 'slope',

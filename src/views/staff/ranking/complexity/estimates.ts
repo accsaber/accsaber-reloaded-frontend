@@ -40,6 +40,7 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
       fields: [
         { key: 'resetShare', label: 'Resets', format: 'percent' },
         { key: 'dotShare', label: 'Dots', format: 'percent' },
+        { key: 'bottomUpShare', label: 'Bottom-row ups', format: 'percent', always: true },
       ],
     },
     {

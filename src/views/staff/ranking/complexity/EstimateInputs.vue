@@ -81,6 +81,7 @@ const chartLine = computed(() => {
     ['worstSlope', readNumber(inputs.value, 'worstTerm')],
     ['resetSlope', readNumber(inputs.value, 'resetShare')],
     ['dotSlope', readNumber(inputs.value, 'dotShare')],
+    ['bottomUpSlope', readNumber(inputs.value, 'bottomUpShare')],
     ['notesSlope', readNumber(inputs.value, 'notesTerm')],
     ['npsSlope', readNumber(inputs.value, 'npsTerm')],
     ['njsSlope', readNumber(inputs.value, 'njs')],

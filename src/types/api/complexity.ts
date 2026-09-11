@@ -149,6 +149,7 @@ export interface RaterCoefficients {
   worstSlope: number
   resetSlope: number
   dotSlope: number
+  bottomUpSlope: number
   notesSlope: number
   npsSlope: number
   njsSlope: number
