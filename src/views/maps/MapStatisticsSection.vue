@@ -127,6 +127,31 @@ const complexityChanges = computed<ComplexityChange[]>(() => {
   return changes.reverse()
 })
 
+type TopHistoryItem =
+  | { kind: 'score'; key: string; entry: TopScoreSnapshot; current: boolean }
+  | { kind: 'break'; key: string; change: ComplexityChange }
+
+const topHistoryItems = computed<TopHistoryItem[]>(() => {
+  const scores = topScoreHistory.value
+  if (scores.length === 0) return []
+  const breaks = complexityChanges.value.filter((c) => c.type !== 'INITIAL')
+  const oldest = new Date(scores[scores.length - 1].timeSet).getTime()
+  const items: TopHistoryItem[] = []
+  let b = 0
+
+  for (let i = 0; i < scores.length; i++) {
+    const entry = scores[i]
+    const setAt = new Date(entry.timeSet).getTime()
+    while (b < breaks.length && new Date(breaks[b].date).getTime() > setAt) {
+      const change = breaks[b++]
+      items.push({ kind: 'break', key: `b${change.date}`, change })
+    }
+    items.push({ kind: 'score', key: entry.scoreId, entry, current: i === 0 })
+  }
+
+  return items.filter((item) => item.kind === 'score' || new Date(item.change.date).getTime() > oldest)
+})
+
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
 }
@@ -168,16 +193,26 @@ watch(selectedRange, fetchHistoricStats)
     <section v-if="topScoreHistory.length > 0" class="map-stats__section">
       <h2 class="map-stats__heading">#1 History</h2>
       <div class="map-stats__top-history">
-        <div v-for="(entry, i) in topScoreHistory" :key="entry.scoreId" class="map-stats__top-row"
-          :class="{ 'map-stats__top-row--current': i === 0 }" tabindex="0" role="button"
-          @click="emit('navigate-player', entry.userId)" @keydown.enter="emit('navigate-player', entry.userId)">
-          <img class="map-stats__top-avatar" :src="entry.cdnAvatarUrl ?? entry.avatarUrl" :alt="entry.userName"
-            loading="lazy" decoding="async" @error="handleTopAvatarError(entry, $event)" />
-          <span class="map-stats__top-name">{{ entry.userName }}</span>
-          <span class="map-stats__top-acc">{{ (entry.accuracy * 100).toFixed(2) }}%</span>
-          <span class="map-stats__top-ap">{{ entry.ap.toFixed(2) }} AP</span>
-          <span class="map-stats__top-date">{{ formatRelativeDate(entry.timeSet) }}</span>
-        </div>
+        <template v-for="item in topHistoryItems" :key="item.key">
+          <div v-if="item.kind === 'score'" class="map-stats__top-row"
+            :class="{ 'map-stats__top-row--current': item.current }" tabindex="0" role="button"
+            @click="emit('navigate-player', item.entry.userId)"
+            @keydown.enter="emit('navigate-player', item.entry.userId)">
+            <img class="map-stats__top-avatar" :src="item.entry.cdnAvatarUrl ?? item.entry.avatarUrl"
+              :alt="item.entry.userName" loading="lazy" decoding="async"
+              @error="handleTopAvatarError(item.entry, $event)" />
+            <span class="map-stats__top-name">{{ item.entry.userName }}</span>
+            <span class="map-stats__top-acc">{{ (item.entry.accuracy * 100).toFixed(2) }}%</span>
+            <span class="map-stats__top-ap">{{ item.entry.ap.toFixed(2) }} AP</span>
+            <span class="map-stats__top-date">{{ formatRelativeDate(item.entry.timeSet) }}</span>
+          </div>
+          <div v-else class="map-stats__break"
+            :class="item.change.type === 'BUFF' ? 'map-stats__break--buff' : 'map-stats__break--nerf'">
+            <span class="map-stats__break-tag">{{ item.change.type === 'BUFF' ? '↑ BUFF' : '↓ NERF' }}</span>
+            <span class="map-stats__break-val">{{ item.change.from.toFixed(1) }} → {{ item.change.to.toFixed(1) }}</span>
+            <span class="map-stats__break-date">{{ formatDate(item.change.date) }}</span>
+          </div>
+        </template>
       </div>
     </section>
 
@@ -293,6 +328,46 @@ watch(selectedRange, fetchHistoricStats)
   font-size: var(--text-caption);
   color: var(--text-tertiary);
   flex-shrink: 0;
+}
+
+.map-stats__break {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  margin: var(--space-xs) 0;
+}
+
+.map-stats__break::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.map-stats__break--buff {
+  color: var(--success);
+}
+
+.map-stats__break--nerf {
+  color: var(--error);
+}
+
+.map-stats__break-tag {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.map-stats__break-val {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.map-stats__break-date {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
 }
 
 .map-stats__complexity-list {
