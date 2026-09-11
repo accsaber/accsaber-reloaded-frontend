@@ -69,6 +69,8 @@ export const PREVIEW_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'PRE
 
 export const SCRIPT_SCENARIO: EstimateScenario = 'NEW_SCRIPT'
 
+export const PIN_HINT = "The script's apply leaves this map alone."
+
 export const CX_DECIMALS = 2
 export const AP_DECIMALS = 1
 export const BIG_MOVE = 1

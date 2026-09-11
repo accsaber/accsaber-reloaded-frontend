@@ -80,6 +80,8 @@ const previewViewToggles: ChartToggle[] = [
   { key: 'players', label: 'Players', color: 'var(--page-accent, var(--accent))' },
 ]
 
+const pinnedToggles: ChartToggle[] = [{ key: 'pinned', label: 'Pinned only' }]
+
 const headForbidden = ref(false)
 const isHead = computed(() => authStore.hasRole('RANKING_HEAD') && !headForbidden.value)
 
@@ -154,6 +156,19 @@ const playerSearch = computed<string>({
   },
 })
 
+const pinnedOnly = computed<boolean>({
+  get() {
+    return queryValue('pinned') === '1'
+  },
+  set(value) {
+    setQuery({ pinned: value ? '1' : '' })
+  },
+})
+
+function visibleMaps(rows: ComplexityDifficultyRow[]): ComplexityDifficultyRow[] {
+  return pinnedOnly.value ? rows.filter((row) => row.complexityPinned) : rows
+}
+
 const batches = ref<BatchResponse[]>([])
 
 const batchOptions = computed(() => [
@@ -170,11 +185,12 @@ const filtersActive = computed(
   () => category.value !== 'overall'
     || status.value !== 'RANKED'
     || !!mapSearch.value
-    || !!playerSearch.value,
+    || !!playerSearch.value
+    || pinnedOnly.value,
 )
 
 function clearFilters() {
-  setQuery({ category: '', status: '', search: '', player: '' })
+  setQuery({ category: '', status: '', search: '', player: '', pinned: '' })
 }
 
 const tabs: Tab[] = [
@@ -199,7 +215,7 @@ const applyStatus = ref<MapDifficultyStatus>('RANKED')
 const applyOpen = ref(false)
 const applying = ref(false)
 const applyError = ref('')
-const applyScope = ref<{ moving: number; total: number } | null>(null)
+const applyScope = ref<{ moving: number; total: number; pinned: number } | null>(null)
 const preparingApply = ref<MapDifficultyStatus | null>(null)
 const feedback = ref<{ variant: 'success' | 'error'; text: string } | null>(null)
 
@@ -253,10 +269,13 @@ const scriptVersion = computed(() => {
   return null
 })
 
+const roundMaps = computed(() => visibleMaps(difficulties.value))
+
 const previewMaps = computed(() => {
   const term = mapSearch.value.trim().toLowerCase()
-  if (!term) return previewRows.value
-  return previewRows.value.filter((row) =>
+  const rows = visibleMaps(previewRows.value)
+  if (!term) return rows
+  return rows.filter((row) =>
     row.songName.toLowerCase().includes(term)
     || row.songSubName?.toLowerCase().includes(term)
     || row.songAuthor.toLowerCase().includes(term)
@@ -266,14 +285,16 @@ const previewMaps = computed(() => {
 
 const subtitle = computed(() => {
   if (difficultiesLoading.value) return 'Loading this round'
-  const count = formatCount(difficulties.value.length)
-  const noun = difficulties.value.length === 1 ? 'difficulty' : 'difficulties'
-  if (mapSearch.value) return `${count} ${noun} match this search`
+  const total = roundMaps.value.length
+  const count = formatCount(total)
+  const noun = total === 1 ? 'difficulty' : 'difficulties'
+  const held = pinnedOnly.value ? 'pinned ' : ''
+  if (mapSearch.value) return `${count} ${held}${noun} match this search`
   const scope = activeBatch.value ? activeBatch.value.name : 'the whole ranked pool'
   const stamp = health.value.updatedAt
     ? `, estimated ${formatRelativeDate(health.value.updatedAt)}`
     : ''
-  return `${count} ${noun} in ${scope}${stamp}`
+  return `${count} ${held}${noun} in ${scope}${stamp}`
 })
 
 function failure(err: unknown, fallback: string): string {
@@ -476,8 +497,11 @@ async function openApply(target: MapDifficultyStatus) {
   preparingApply.value = target
   try {
     const scope = await loadRoundScope(target)
-    const moving = scope.filter((row) => movesUnder(row, SCRIPT_SCENARIO)).length
-    applyScope.value = { moving, total: scope.length }
+    const pinned = scope.filter((row) => row.complexityPinned).length
+    const moving = scope.filter(
+      (row) => !row.complexityPinned && movesUnder(row, SCRIPT_SCENARIO),
+    ).length
+    applyScope.value = { moving, total: scope.length, pinned }
     applyOpen.value = true
   } catch (err) {
     feedback.value = { variant: 'error', text: failure(err, 'Could not count the affected maps.') }
@@ -497,6 +521,7 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
       status: applyStatus.value,
     })
     applyOpen.value = false
+    roundScope = null
     const scope = activeBatch.value ? activeBatch.value.name : 'every map in scope'
     feedback.value = applyStatus.value === 'RANKED'
       ? {
@@ -521,7 +546,7 @@ const reportScenario = computed<ComparisonScenario>(
 
 const reportMaps = computed(() => {
   if (tab.value === 'tuning') return previewMaps.value
-  return difficulties.value
+  return roundMaps.value
 })
 
 const reportBoard = computed(() => (tab.value === 'tuning' ? previewBoard.value : board.value))
@@ -536,6 +561,7 @@ function exportReport() {
     'Players: the whole category, not only the maps above',
   ]
   if (mapSearch.value) scope.push(`Map search: ${mapSearch.value}`)
+  if (pinnedOnly.value) scope.push('Pinned maps only')
   if (playerSearch.value) scope.push(`Player search: ${playerSearch.value}`)
   if (preview) scope.push('Priced from the edited constants, nothing stored')
   else if (scriptVersion.value) scope.push(`Script: ${scriptVersion.value}`)
@@ -632,6 +658,8 @@ watch([tab, category, status, () => tuning.edited.value], () => {
           @update:model-value="mapSearch = $event" />
         <ChartToggleGroup :toggles="statusToggles" :active="[status]" label="Map status"
           @select="status = $event as MapDifficultyStatus" />
+        <ChartToggleGroup :toggles="pinnedToggles" :active="pinnedOnly ? ['pinned'] : []"
+          label="Pin filter" @select="pinnedOnly = !pinnedOnly" />
         <ChartToggleGroup :toggles="previewViewToggles" :active="[previewView]" label="Preview board"
           @select="previewView = $event as 'maps' | 'players'" />
       </div>
@@ -653,8 +681,10 @@ watch([tab, category, status, () => tuning.edited.value], () => {
             @update:model-value="mapSearch = $event" />
           <ChartToggleGroup :toggles="statusToggles" :active="[status]" label="Map status"
             @select="status = $event as MapDifficultyStatus" />
+          <ChartToggleGroup :toggles="pinnedToggles" :active="pinnedOnly ? ['pinned'] : []"
+            label="Pin filter" @select="pinnedOnly = !pinnedOnly" />
         </div>
-        <ComplexityMapsTable :rows="difficulties" :scenario="SCRIPT_SCENARIO"
+        <ComplexityMapsTable :rows="roundMaps" :scenario="SCRIPT_SCENARIO"
           :loading="difficultiesLoading" @select="openMap" />
       </div>
 
@@ -679,6 +709,7 @@ watch([tab, category, status, () => tuning.edited.value], () => {
 
     <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen" :status="applyStatus"
       :batch-name="activeBatch?.name ?? null" :moving="applyScope.moving" :total="applyScope.total"
+      :pinned="applyScope.pinned"
       :version="scriptVersion" :submitting="applying" :error="applyError"
       @close="applyOpen = false" @confirm="confirmApply" />
   </div>

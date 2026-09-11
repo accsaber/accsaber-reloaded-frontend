@@ -36,6 +36,7 @@ export interface ComplexityDifficultyRow {
   categoryId: string
   categoryCode: string
   status: MapDifficultyStatus
+  complexityPinned: boolean
   scores: number
   scenarios: Partial<Record<ComplexityScenario, ScenarioMapValues>>
   deltas: Partial<Record<ComparisonScenario, ScenarioMapValues>>

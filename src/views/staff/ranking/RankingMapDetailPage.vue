@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -12,6 +13,7 @@ import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LeaderboardPreviewPanel from '@/components/domain/LeaderboardPreviewPanel.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
+import ComplexityPin from '@/views/staff/ranking/complexity/ComplexityPin.vue'
 import ScenarioCell from '@/views/staff/ranking/complexity/ScenarioCell.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -208,6 +210,10 @@ const showComplexityModal = ref(false)
 const complexityValue = ref<number>(0)
 const complexityLoading = ref(false)
 const complexityHistory = ref<MapComplexityHistoryResponse[]>([])
+const complexityError = ref('')
+const complexityNotice = ref('')
+const pinLoading = ref(false)
+const pinError = ref('')
 
 const showCategoryModal = ref(false)
 const categoryValue = ref<string>('')
@@ -235,10 +241,6 @@ const categoryOptions = computed(() =>
 )
 
 const canEditCategory = computed(() => isHeadRanking.value)
-
-const canEditComplexity = computed(
-  () => isHeadRanking.value && difficulty.value?.status !== 'RANKED'
-)
 
 const canRefreshFromBeatSaver = computed(
   () =>
@@ -326,6 +328,8 @@ async function fetchBatches() {
 }
 
 watch(difficultyId, async () => {
+  complexityNotice.value = ''
+  pinError.value = ''
   fetchBatches()
   await fetchDifficulty()
   fetchVotes()
@@ -402,20 +406,45 @@ async function loadComplexityHistory() {
 function openComplexityModal() {
   if (!difficulty.value) return
   complexityValue.value = difficulty.value.complexity ?? 0
+  complexityError.value = ''
   showComplexityModal.value = true
   loadComplexityHistory()
 }
 
+const REWEIGHT_NOTICE = 'Complexity saved and the reweight is now running on this map. Scores, statistics, rankings, milestones, XP and skills adjust in the background, and the numbers on this page stay behind until it lands.'
+
 async function handleComplexityChange() {
+  const wasRanked = difficulty.value?.status === 'RANKED'
   complexityLoading.value = true
+  complexityError.value = ''
   try {
     const { updateMapComplexity } = await import('@/api/ranking/maps')
-    await updateMapComplexity(difficultyId.value, { complexity: complexityValue.value })
+    difficulty.value = await updateMapComplexity(difficultyId.value, {
+      complexity: complexityValue.value,
+    })
     showComplexityModal.value = false
-    await fetchDifficulty()
-  } catch {
+    complexityNotice.value = wasRanked ? REWEIGHT_NOTICE : ''
+  } catch (e) {
+    const { parseApiError } = await import('@/api/client')
+    complexityError.value = parseApiError(e, 'Could not save the complexity.').message
   } finally {
     complexityLoading.value = false
+  }
+}
+
+async function toggleComplexityPin() {
+  const current = difficulty.value
+  if (!current) return
+  pinLoading.value = true
+  pinError.value = ''
+  try {
+    const { setComplexityPin } = await import('@/api/ranking/maps')
+    difficulty.value = await setComplexityPin(difficultyId.value, !current.complexityPinned)
+  } catch (e) {
+    const { parseApiError } = await import('@/api/client')
+    pinError.value = parseApiError(e, 'Could not change the pin.').message
+  } finally {
+    pinLoading.value = false
   }
 }
 
@@ -624,6 +653,10 @@ watch(availableActions, (actions) => {
           </button>
         </div>
 
+        <BaseBanner v-if="complexityNotice" variant="info" @close="complexityNotice = ''">
+          {{ complexityNotice }}
+        </BaseBanner>
+
         <div class="rank-detail__hero">
           <div class="rank-detail__cover-wrap">
             <img class="rank-detail__cover" :src="coverUrl" :alt="difficulty.songName" fetchpriority="high"
@@ -658,17 +691,22 @@ watch(availableActions, (actions) => {
               <span v-if="difficulty.characteristic !== 'Standard'" class="rank-detail__characteristic">
                 {{ difficulty.characteristic }}
               </span>
-              <span v-if="canEditComplexity" class="rank-detail__complexity-editable"
-                @click="openComplexityModal">
-                <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
-                <span v-else class="rank-detail__complexity-unset">Set complexity</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
+              <span v-if="isHeadRanking || difficulty.complexity != null"
+                class="rank-detail__complexity">
+                <span v-if="isHeadRanking" class="rank-detail__complexity-editable"
+                  @click="openComplexityModal">
+                  <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
+                  <span v-else class="rank-detail__complexity-unset">Set complexity</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </span>
+                <ComplexityBadge v-else-if="difficulty.complexity != null"
+                  :complexity="difficulty.complexity" />
+                <ComplexityPin v-if="difficulty.complexityPinned" />
               </span>
-              <ComplexityBadge v-else-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
               <span v-if="difficulty.scriptComplexity != null" class="rank-detail__script-chip"
                 :title="difficulty.scriptVersion ?? undefined">
                 <span class="rank-detail__script-chip-label">Script</span>
@@ -810,16 +848,27 @@ watch(availableActions, (actions) => {
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
-          <div v-if="managementOpen" class="rank-detail__action-row">
-            <BaseSelect v-if="batchOptions.length" :options="[{ value: '', label: 'Add to Batch...' }, ...batchOptions]"
-              model-value="" @update:model-value="(v: string) => v && addToBatch(v)" />
-            <BaseButton v-if="canRefreshFromBeatSaver" size="sm" :disabled="!driftInfo || refreshChecking"
-              :loading="refreshChecking"
-              :title="refreshChecking ? 'Checking BeatSaver for updates...' : driftInfo ? 'A newer version of this map is available on BeatSaver' : 'Already on the latest version'"
-              @click="refreshError = ''; showRefreshModal = true">
-              Refresh from BeatSaver
-            </BaseButton>
-            <BaseButton variant="destructive" size="sm" @click="handleDeactivate">Deactivate</BaseButton>
+          <div v-if="managementOpen" class="rank-detail__management">
+            <div class="rank-detail__action-row">
+              <BaseButton size="sm" :loading="pinLoading" @click="toggleComplexityPin">
+                {{ difficulty.complexityPinned ? 'Unpin Complexity' : 'Pin Complexity' }}
+              </BaseButton>
+              <BaseSelect v-if="batchOptions.length"
+                :options="[{ value: '', label: 'Add to Batch...' }, ...batchOptions]"
+                model-value="" @update:model-value="(v: string) => v && addToBatch(v)" />
+              <BaseButton v-if="canRefreshFromBeatSaver" size="sm" :disabled="!driftInfo || refreshChecking"
+                :loading="refreshChecking"
+                :title="refreshChecking ? 'Checking BeatSaver for updates...' : driftInfo ? 'A newer version of this map is available on BeatSaver' : 'Already on the latest version'"
+                @click="refreshError = ''; showRefreshModal = true">
+                Refresh from BeatSaver
+              </BaseButton>
+              <BaseButton variant="destructive" size="sm" @click="handleDeactivate">Deactivate</BaseButton>
+            </div>
+            <p class="rank-detail__script-note rank-detail__management-note">
+              The script's apply leaves a pinned map alone in every round until you unpin it. Single,
+              bulk and batch reweights still go through.
+            </p>
+            <p v-if="pinError" class="rank-detail__error">{{ pinError }}</p>
           </div>
         </div>
 
@@ -1009,6 +1058,13 @@ watch(availableActions, (actions) => {
         <p v-if="scriptSetThis" class="rank-detail__script-note">
           The complexity script suggested this value at import.
         </p>
+        <p v-if="difficulty?.status === 'RANKED'" class="rank-detail__script-note">
+          Saving runs a full reweight, and scores, statistics, rankings, milestones, XP and skills
+          adjust in the background.
+        </p>
+        <p class="rank-detail__script-note">
+          Saving pins this map and the script's apply leaves it alone.
+        </p>
         <div v-if="difficulty?.scriptComplexity != null" class="rank-detail__script">
           <BaseButton size="sm" :disabled="complexityValue === difficulty.scriptComplexity"
             @click="complexityValue = difficulty.scriptComplexity">
@@ -1019,6 +1075,7 @@ watch(availableActions, (actions) => {
             <span class="rank-detail__script-version">{{ difficulty.scriptVersion }}</span>
           </span>
         </div>
+        <p v-if="complexityError" class="rank-detail__error">{{ complexityError }}</p>
       </div>
       <template #footer>
         <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
@@ -1031,7 +1088,7 @@ watch(availableActions, (actions) => {
     <BaseModal :open="showCategoryModal" title="Change Category" max-width="400px"
       @close="showCategoryModal = false">
       <BaseSelect v-model="categoryValue" :options="categoryOptions" label="Category" />
-      <p v-if="categoryError" class="rank-detail__category-error">{{ categoryError }}</p>
+      <p v-if="categoryError" class="rank-detail__error">{{ categoryError }}</p>
       <template #footer>
         <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
           <BaseButton @click="showCategoryModal = false">Cancel</BaseButton>
@@ -1324,7 +1381,7 @@ watch(availableActions, (actions) => {
   line-height: 1.5;
 }
 
-.rank-detail__category-error {
+.rank-detail__error {
   margin: var(--space-sm) 0 0;
   font-size: var(--text-caption);
   color: var(--error);
@@ -1400,6 +1457,12 @@ watch(availableActions, (actions) => {
   margin: var(--space-md) 0 0;
   font-size: var(--text-caption);
   color: var(--error);
+}
+
+.rank-detail__complexity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .rank-detail__complexity-editable {
@@ -1667,12 +1730,20 @@ watch(availableActions, (actions) => {
   transform: rotate(180deg);
 }
 
+.rank-detail__management {
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+}
+
 .rank-detail__action-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
   align-items: center;
-  padding: var(--space-md) var(--space-lg) var(--space-lg);
+}
+
+.rank-detail__management-note {
+  margin-top: var(--space-sm);
+  max-width: 62ch;
 }
 
 .rank-detail__vote-form-content {

@@ -11,11 +11,13 @@ import type { TableColumn } from '@/types/display'
 import {
   AP_DECIMALS,
   CX_DECIMALS,
+  PIN_HINT,
   SCENARIO_ORDER,
   SCENARIO_SHORT,
   isBigMove,
 } from '@/utils/complexity'
 import { formatCount } from '@/utils/formatters'
+import ComplexityPin from './ComplexityPin.vue'
 import MapIdentityCell from './MapIdentityCell.vue'
 import ScenarioCell from './ScenarioCell.vue'
 import { cxKey } from './scenarioKeys'
@@ -137,10 +139,11 @@ const tableRows = computed(() =>
       source: row,
       mapper: row.mapAuthor,
       scores: row.scores,
+      pinned: row.complexityPinned,
       cxCurrent: row.scenarios.CURRENT?.complexity ?? null,
       cxScenario: scenarioValue(row, 'complexity'),
       cxDelta,
-      moved: isBigMove(cxDelta),
+      moved: !row.complexityPinned && isBigMove(cxDelta),
       topApCurrent: currentValue(row, 'topAp'),
       topAp: scenarioValue(row, 'topAp'),
       topApDelta: deltaValue(row, 'topAp'),
@@ -182,12 +185,16 @@ function rowClass(row: Record<string, unknown>) {
       </template>
 
       <template v-for="key in columns" :key="key" #[`cell-${cxKey(key)}`]="{ row }">
-        <ScenarioCell :value="(row[cxKey(key)] as number | null)" :decimals="CX_DECIMALS"
-          :emphasis="key === 'CURRENT' || key === scenario" />
+        <span class="complexity-maps__cx">
+          <ComplexityPin v-if="key === 'CURRENT' && row.pinned" />
+          <ScenarioCell :value="(row[cxKey(key)] as number | null)" :decimals="CX_DECIMALS"
+            :emphasis="key === 'CURRENT' || key === scenario" />
+        </span>
       </template>
 
       <template #cell-cxDelta="{ row }">
-        <ScenarioCell delta-only :value="(row.cxDelta as number | null)"
+        <span v-if="row.pinned" class="complexity-maps__pinned" :title="PIN_HINT">pinned</span>
+        <ScenarioCell v-else delta-only :value="(row.cxDelta as number | null)"
           :delta="(row.cxDelta as number | null)" :decimals="CX_DECIMALS" big-threshold />
       </template>
 
@@ -228,9 +235,11 @@ function rowClass(row: Record<string, unknown>) {
           <div class="complexity-maps__card-values">
             <span class="complexity-maps__card-label">CX</span>
             <ScenarioCell :value="(row.cxCurrent as number | null)" :decimals="CX_DECIMALS" emphasis />
+            <ComplexityPin v-if="row.pinned" />
             <span class="complexity-maps__card-label" aria-hidden="true">&rarr;</span>
             <ScenarioCell :value="(row.cxScenario as number | null)"
-              :delta="(row.cxDelta as number | null)" :decimals="CX_DECIMALS" emphasis big-threshold />
+              :delta="row.pinned ? null : (row.cxDelta as number | null)" :decimals="CX_DECIMALS"
+              emphasis big-threshold />
           </div>
           <div class="complexity-maps__card-values">
             <span class="complexity-maps__card-label">Avg wgt</span>
@@ -267,6 +276,19 @@ function rowClass(row: Record<string, unknown>) {
 
 .complexity-maps :deep(.data-table__row.complexity-maps__row--moved:nth-child(even)) {
   background: color-mix(in srgb, var(--bg-elevated) 93%, var(--warning) 7%);
+}
+
+.complexity-maps__cx {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.complexity-maps__pinned {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--text-tertiary);
+  cursor: help;
 }
 
 .complexity-maps__mapper {

@@ -11,6 +11,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
+import ComplexityPin from '@/views/staff/ranking/complexity/ComplexityPin.vue'
 import ScenarioCell from '@/views/staff/ranking/complexity/ScenarioCell.vue'
 import QueuedPlaylistsButton from '@/components/domain/QueuedPlaylistsButton.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -213,6 +214,7 @@ const rows = computed(() =>
       categoryAccent: categoryStore.getAccent(catCode ?? 'overall'),
       status: d.status,
       complexity: d.complexity,
+      complexityPinned: d.complexityPinned,
       scriptComplexity: d.scriptComplexity,
       scriptVersion: d.scriptVersion,
       scriptDelta: d.scriptComplexity != null && d.complexity != null
@@ -447,7 +449,10 @@ function criteriaClassName(row: Record<string, unknown>): string {
       </template>
 
       <template #cell-complexity="{ row }">
-        <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" />
+        <span v-if="row.complexity != null" class="ranking-dashboard__complexity">
+          <ComplexityBadge :complexity="row.complexity as number" />
+          <ComplexityPin v-if="row.complexityPinned" />
+        </span>
         <span v-else class="ranking-dashboard__rating--neutral">-</span>
       </template>
 
@@ -507,7 +512,10 @@ function criteriaClassName(row: Record<string, unknown>): string {
                 :class="'ranking-dashboard__status--' + (row.status as string).toLowerCase()">
                 {{ row.status === 'QUALIFIED' ? 'Qualified' : 'In Queue' }}
               </span>
-              <ComplexityBadge v-if="row.complexity != null" :complexity="row.complexity as number" />
+              <span v-if="row.complexity != null" class="ranking-dashboard__complexity">
+                <ComplexityBadge :complexity="row.complexity as number" />
+                <ComplexityPin v-if="row.complexityPinned" />
+              </span>
               <span v-if="row.avgComplexity != null" class="ranking-dashboard__mobile-avg">
                 <span class="ranking-dashboard__mobile-avg-label">Vote</span>
                 <ComplexityBadge :complexity="row.avgComplexity as number" />
@@ -709,6 +717,12 @@ function criteriaClassName(row: Record<string, unknown>): string {
   align-items: center;
   gap: var(--space-sm);
   margin-top: var(--space-xs);
+}
+
+.ranking-dashboard__complexity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .ranking-dashboard__mobile-avg {

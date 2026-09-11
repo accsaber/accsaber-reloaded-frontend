@@ -75,6 +75,7 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   blLeaderboardId: string | null
   maxScore: number
   complexity: number
+  complexityPinned: boolean
   scriptComplexity: number | null
   scriptVersion: string | null
   averageVoteComplexity: number | null

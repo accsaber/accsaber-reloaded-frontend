@@ -84,6 +84,15 @@ export function updateMapComplexity(
   return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/complexity`, req)
 }
 
+export function setComplexityPin(
+  difficultyId: string,
+  pinned: boolean,
+): Promise<MapDifficultyResponse> {
+  return patch<MapDifficultyResponse>(
+    `/ranking/maps/difficulties/${difficultyId}/complexity-pin${buildQuery({ pinned })}`,
+  )
+}
+
 export function refreshDifficulty(
   difficultyId: string,
   req: RefreshDifficultyRequest,

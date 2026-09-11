@@ -15,6 +15,7 @@ const props = defineProps<{
   batchName: string | null
   moving: number
   total: number
+  pinned: number
   version: string | null
   submitting?: boolean
   error?: string
@@ -36,6 +37,14 @@ const STATUS_WORD: Record<string, string> = {
 }
 
 const scoreless = computed(() => props.status !== 'RANKED')
+
+const pinnedNote = computed(() => {
+  if (props.pinned === 0) return ''
+  if (props.pinned === 1) {
+    return "One pinned map is in scope, and the script's apply leaves it alone."
+  }
+  return `${formatCount(props.pinned)} pinned maps are in scope, and the script's apply leaves them alone.`
+})
 
 const title = computed(() =>
   scoreless.value ? `Set ${STATUS_WORD[props.status]} to the script` : 'Apply the script',
@@ -79,6 +88,8 @@ function confirm() {
         </template>
       </p>
 
+      <p v-if="pinnedNote" class="apply-script__pinned">{{ pinnedNote }}</p>
+
       <BaseInput v-model="reason" label="Reason" placeholder="Lands on every complexity history row" />
 
       <div v-if="!scoreless" class="apply-script__step">
@@ -105,7 +116,7 @@ function confirm() {
           These maps carry no scores yet, so the change lands right away and nothing is recalculated.
         </template>
         <template v-else>
-          Applying reprices every affected player's scores, statistics, rankings, milestones and XP
+          Applying adjusts every affected player's scores, statistics, rankings, milestones and XP
           in the background.
         </template>
       </p>
@@ -132,6 +143,7 @@ function confirm() {
 }
 
 .apply-script__summary,
+.apply-script__pinned,
 .apply-script__effect {
   margin: 0;
   color: var(--text-secondary);
