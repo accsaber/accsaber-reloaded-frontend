@@ -138,18 +138,23 @@ function niceCeil(value: number): number {
   return NICE_STEPS.find((step) => step >= value) ?? NICE_STEPS[NICE_STEPS.length - 1]
 }
 
+function onStep(value: number, step: number): number {
+  return Math.round(Math.floor(value / step) * step * 1e6) / 1e6
+}
+
 export function fieldRange(kind: FieldKind, live: number, current: number): FieldRange {
   if (kind === 'share') return { min: 0.005, max: 0.5, step: 0.005 }
   if (kind === 'count') {
-    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 2), step: 1 }
+    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 4), step: 1 }
   }
   if (kind === 'nudge') {
-    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 2), step: 0.05 }
+    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 4), step: 0.05 }
   }
   const span = niceCeil(
     Math.max(BASE_SPAN[kind], Math.abs(live) * 0.5, Math.abs(current - live) * 1.2),
   )
-  return { min: live - span, max: live + span, step: 0.001 }
+  const step = 0.001
+  return { min: onStep(live - span, step), max: live + span, step }
 }
 
 const live = ref<ComplexityRaterSpec | null>(null)

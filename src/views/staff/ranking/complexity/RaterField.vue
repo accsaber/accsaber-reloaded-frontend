@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formatFixed } from '@/utils/formatters'
 import HintTooltip from './HintTooltip.vue'
-import { fieldRange, type FieldKind } from './tuning'
+import { fieldRange, type FieldKind, type FieldRange } from './tuning'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -17,8 +17,6 @@ const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
 
-const range = computed(() => fieldRange(props.kind, props.live, props.modelValue))
-
 const decimals = computed(() => {
   if (props.kind === 'count') return 0
   if (props.kind === 'share') return 3
@@ -26,10 +24,19 @@ const decimals = computed(() => {
   return 3
 })
 
+const range = ref<FieldRange>(fieldRange(props.kind, props.live, props.modelValue))
+
 const typed = ref(formatFixed(props.modelValue, decimals.value))
+
+watch(() => props.live, (live) => {
+  range.value = fieldRange(props.kind, live, props.modelValue)
+})
 
 watch(() => props.modelValue, (value) => {
   if (Number(typed.value) !== value) typed.value = formatFixed(value, decimals.value)
+  if (value < range.value.min || value > range.value.max) {
+    range.value = fieldRange(props.kind, props.live, value)
+  }
 })
 
 function commit(raw: string) {
