@@ -53,7 +53,7 @@ export interface StaffOAuthLinkResponse {
 }
 
 export interface ImportMapFromLeaderboardIdsRequest {
-  ssLeaderboardId: string
+  ssLeaderboardId?: string
   blLeaderboardId: string
   categoryId: string
   difficulty: Difficulty

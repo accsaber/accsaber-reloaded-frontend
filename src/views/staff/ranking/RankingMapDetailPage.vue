@@ -534,8 +534,8 @@ watch(songHash, () => checkDrift())
 
 async function handleRefreshFromBeatSaver() {
   if (!driftInfo.value) return
-  if (!driftInfo.value.newBlLeaderboardId || !driftInfo.value.newSsLeaderboardId) {
-    refreshError.value = 'New BeatLeader or ScoreSaber leaderboard not yet available. Try again in a minute.'
+  if (!driftInfo.value.newBlLeaderboardId) {
+    refreshError.value = 'New BeatLeader leaderboard not yet available. Try again in a minute.'
     return
   }
   refreshLoading.value = true
@@ -546,7 +546,7 @@ async function handleRefreshFromBeatSaver() {
     try {
       await refreshDifficulty(difficultyId.value, {
         blLeaderboardId: driftInfo.value.newBlLeaderboardId,
-        ssLeaderboardId: driftInfo.value.newSsLeaderboardId,
+        ssLeaderboardId: driftInfo.value.newSsLeaderboardId ?? undefined,
       })
       showRefreshModal.value = false
       driftInfo.value = null
@@ -1127,9 +1127,8 @@ watch(availableActions, (actions) => {
             {{ driftInfo.newSsLeaderboardId ?? 'Not yet on ScoreSaber' }}
           </span>
         </div>
-        <p v-if="!driftInfo.newBlLeaderboardId || !driftInfo.newSsLeaderboardId"
-          class="rank-detail__refresh-hint">
-          BeatLeader and ScoreSaber edge caches can lag a minute or two after a re-upload.
+        <p v-if="!driftInfo.newBlLeaderboardId" class="rank-detail__refresh-hint">
+          BeatLeader edge caches can lag a minute or two after a re-upload.
         </p>
       </div>
       <p v-if="refreshError" class="rank-detail__refresh-error">{{ refreshError }}</p>
@@ -1137,7 +1136,7 @@ watch(availableActions, (actions) => {
         <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
           <BaseButton @click="showRefreshModal = false">Cancel</BaseButton>
           <BaseButton variant="primary" :loading="refreshLoading"
-            :disabled="!driftInfo?.newBlLeaderboardId || !driftInfo?.newSsLeaderboardId"
+            :disabled="!driftInfo?.newBlLeaderboardId"
             @click="handleRefreshFromBeatSaver">
             Refresh
           </BaseButton>

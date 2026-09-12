@@ -247,6 +247,6 @@ export interface LeaderboardPreviewResponse {
 
 export interface RefreshDifficultyRequest {
   blLeaderboardId: string
-  ssLeaderboardId: string
+  ssLeaderboardId?: string
 }
 

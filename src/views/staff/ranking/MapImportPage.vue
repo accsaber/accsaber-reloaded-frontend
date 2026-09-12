@@ -149,12 +149,12 @@ async function handleSubmit() {
     diff.importing = true
     diff.importError = ''
     try {
-      if (!diff.blLeaderboardId || !diff.ssLeaderboardId) {
-        throw new Error('Missing leaderboard IDs. BeatLeader or ScoreSaber may not have this difficulty.')
+      if (!diff.blLeaderboardId) {
+        throw new Error('Missing BeatLeader leaderboard ID. BeatLeader may not have this difficulty.')
       }
       const result = await importMap({
         blLeaderboardId: diff.blLeaderboardId,
-        ssLeaderboardId: String(diff.ssLeaderboardId),
+        ssLeaderboardId: diff.ssLeaderboardId != null ? String(diff.ssLeaderboardId) : undefined,
         categoryId: diff.categoryId,
         difficulty: difficultyToEnum(diff.difficulty) as Difficulty,
         characteristic: diff.characteristic,
@@ -241,9 +241,8 @@ function goToDetail(difficultyId: string) {
               </span>
               <span class="map-import__diff-meta">
                 NJS {{ diff.njs }} - {{ diff.notes }} notes
-                <span v-if="!diff.blLeaderboardId || !diff.ssLeaderboardId" class="map-import__diff-warn">
-                  {{ !diff.blLeaderboardId ? 'No BL ID' : '' }}{{ !diff.blLeaderboardId && !diff.ssLeaderboardId ? ', '
-                  : '' }}{{ !diff.ssLeaderboardId ? 'No SS ID' : '' }}
+                <span v-if="!diff.blLeaderboardId" class="map-import__diff-warn">
+                  No BL ID
                 </span>
               </span>
             </div>
