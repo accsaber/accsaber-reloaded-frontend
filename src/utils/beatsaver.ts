@@ -256,11 +256,11 @@ export async function fetchBeatSaverMap(code: string): Promise<BeatSaverMapRespo
   return res.json()
 }
 
-export interface ScoreSaberDifficulty {
-  leaderboardId: number
+export interface ScoreSaberLeaderboard {
+  id: number
   difficulty: number
   gameMode: string
-  difficultyRaw: string
+  rawDifficulty: string
 }
 
 const SS_DIFF_VALUE_TO_NAME: Record<number, string> = {
@@ -274,14 +274,14 @@ const SS_DIFF_VALUE_TO_NAME: Record<number, string> = {
 export async function fetchScoreSaberLeaderboards(hash: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
   try {
-    const res = await fetch(`/proxy/scoresaber/api/leaderboard/get-difficulties/${hash}`)
+    const res = await fetch(`/proxy/scoresaber/api/v2/maps/hash/${hash}`)
     if (!res.ok) return map
-    const data: ScoreSaberDifficulty[] = await res.json()
-    for (const entry of data) {
+    const data: { leaderboards?: ScoreSaberLeaderboard[] } = await res.json()
+    for (const entry of data.leaderboards ?? []) {
       const diffName = SS_DIFF_VALUE_TO_NAME[entry.difficulty] ?? ''
       const characteristic = entry.gameMode.replace('Solo', '')
       const key = `${diffName}-${characteristic}`
-      map.set(key, entry.leaderboardId)
+      map.set(key, entry.id)
     }
   } catch {
   }
