@@ -17,7 +17,7 @@ import {
   type CoefficientKey,
   type GateKey,
 } from './tuning'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 defineProps<{
   loading?: boolean
@@ -27,18 +27,32 @@ const { live, edited, bands, version, reset, dirty } = useTuningState()
 
 type LineKey = 'categories' | 'boardCategories'
 
-const LINES: { key: LineKey; title: string; hint: string }[] = [
-  {
-    key: 'categories',
-    title: 'Chart line',
-    hint: 'Prices every map from its notes.',
-  },
-  {
-    key: 'boardCategories',
-    title: 'Board line',
-    hint: 'Nudges maps that clear the gate toward what players score on them.',
-  },
-]
+const BOARD_LINE = {
+  key: 'boardCategories' as LineKey,
+  title: 'Board line',
+  hint: 'Weights every map that clears the gate from what players score on it.',
+}
+
+const CHART_LINE = {
+  key: 'categories' as LineKey,
+  title: 'Chart line',
+  hint: 'The baseline read from the notes. A map is weighted from it until enough scores come in, then the board line moves it from there.',
+}
+
+const chartDirty = computed(
+  () => !!live.value && !!edited.value
+    && JSON.stringify(live.value.categories) !== JSON.stringify(edited.value.categories),
+)
+
+const chartOpen = ref(false)
+
+watch(chartDirty, (value) => {
+  if (value) chartOpen.value = true
+})
+
+function syncChartOpen(event: Event) {
+  chartOpen.value = (event.target as HTMLDetailsElement).open
+}
 
 const codes = computed(() => (edited.value ? categoryCodes(edited.value) : []))
 
@@ -88,7 +102,7 @@ function setWorstShare(value: number) {
         <div class="rater-form__intro">
           <h3 class="rater-form__title">Constants</h3>
           <p class="rater-form__note">
-            Editing these prices the whole pool below. Nothing here is saved.
+            Editing these reweights the whole pool below. Nothing here is saved.
           </p>
         </div>
         <div class="rater-form__head-actions">
@@ -104,7 +118,7 @@ function setWorstShare(value: number) {
             :live="live?.worstShare ?? edited.worstShare" :model-value="edited.worstShare"
             @update:model-value="setWorstShare" />
           <p class="rater-form__bands">
-            Prices exactly at <span class="rater-form__code">{{ bandList }}</span>
+            Weights exactly at <span class="rater-form__code">{{ bandList }}</span>
             <template v-if="snapped">. Snaps to {{ formatFixed(snapped, 3) }}.</template>
           </p>
         </section>
@@ -121,26 +135,49 @@ function setWorstShare(value: number) {
         </section>
       </div>
 
-      <section v-for="line in LINES" :key="line.key" class="rater-form__section">
+      <section class="rater-form__section">
         <div class="rater-form__section-head">
-          <h4 class="rater-form__group-title">{{ line.title }}</h4>
-          <span class="rater-form__note">{{ line.hint }}</span>
+          <h4 class="rater-form__group-title">{{ BOARD_LINE.title }}</h4>
+          <span class="rater-form__note">{{ BOARD_LINE.hint }}</span>
         </div>
 
         <div class="rater-form__lines">
           <div v-for="code in codes" :key="code" class="rater-form__line">
             <CategoryBadge :category="(code as CategoryCode)" />
-            <template v-if="coefficients(line.key, code)">
+            <template v-if="coefficients(BOARD_LINE.key, code)">
               <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label"
                 :hint="field.hint" :kind="field.kind"
-                :live="liveCoefficient(line.key, code, field.key)"
-                :model-value="coefficients(line.key, code)![field.key]"
-                @update:model-value="setCoefficient(line.key, code, field.key, $event)" />
+                :live="liveCoefficient(BOARD_LINE.key, code, field.key)"
+                :model-value="coefficients(BOARD_LINE.key, code)![field.key]"
+                @update:model-value="setCoefficient(BOARD_LINE.key, code, field.key, $event)" />
             </template>
             <p v-else class="rater-form__absent">This category has no board line.</p>
           </div>
         </div>
       </section>
+
+      <details class="rater-form__section rater-form__fold" :open="chartOpen"
+        @toggle="syncChartOpen">
+        <summary class="rater-form__section-head rater-form__fold-head">
+          <h4 class="rater-form__group-title">{{ CHART_LINE.title }}</h4>
+          <span class="rater-form__note">{{ CHART_LINE.hint }}</span>
+          <span class="rater-form__fold-toggle" aria-hidden="true"></span>
+        </summary>
+
+        <div class="rater-form__lines">
+          <div v-for="code in codes" :key="code" class="rater-form__line">
+            <CategoryBadge :category="(code as CategoryCode)" />
+            <template v-if="coefficients(CHART_LINE.key, code)">
+              <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label"
+                :hint="field.hint" :kind="field.kind"
+                :live="liveCoefficient(CHART_LINE.key, code, field.key)"
+                :model-value="coefficients(CHART_LINE.key, code)![field.key]"
+                @update:model-value="setCoefficient(CHART_LINE.key, code, field.key, $event)" />
+            </template>
+            <p v-else class="rater-form__absent">This category has no chart line.</p>
+          </div>
+        </div>
+      </details>
     </template>
   </div>
 </template>
@@ -256,6 +293,38 @@ function setWorstShare(value: number) {
   align-items: baseline;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+.rater-form__fold-head {
+  cursor: pointer;
+  list-style: none;
+}
+
+.rater-form__fold-head::-webkit-details-marker {
+  display: none;
+}
+
+.rater-form__fold-head:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent, var(--accent)) 20%, transparent);
+}
+
+.rater-form__fold-toggle {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+}
+
+.rater-form__fold-toggle::before {
+  content: 'Show';
+}
+
+.rater-form__fold[open] .rater-form__fold-toggle::before {
+  content: 'Hide';
+}
+
+.rater-form__fold-head:hover .rater-form__fold-toggle {
+  color: var(--text-secondary);
 }
 
 .rater-form__lines {

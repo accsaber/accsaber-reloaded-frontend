@@ -49,7 +49,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 usePageMeta({
   title: 'Complexity Script | AccSaber Ranking',
-  description: 'Compare what the complexity script would pay before a round is applied.',
+  description: 'Compare how the complexity script would weight the pool before a round is applied.',
 })
 
 const route = useRoute()
@@ -627,7 +627,7 @@ async function exportReport() {
     if (mapSearch.value) scope.push(`Map search: ${mapSearch.value}`)
     if (pinnedOnly.value) scope.push('Pinned maps only')
     if (playerSearch.value) scope.push(`Player search: ${playerSearch.value}`)
-    if (tuningTab.value) scope.push('Priced from the edited constants, nothing stored')
+    if (tuningTab.value) scope.push('Weighted from the edited constants, nothing stored')
     else if (roundSummary.value?.scriptVersion) {
       scope.push(`Script: ${roundSummary.value.scriptVersion}`)
     }
@@ -768,7 +768,7 @@ watch(previewKey, () => {
       <ComplexityMapsTable v-if="previewView === 'maps'" :rows="preview?.rows ?? []"
         scenario="PREVIEW" :columns="PREVIEW_SCENARIOS" :loading="previewLoading"
         :page="mapsPage" :total-pages="preview?.totalPages ?? 0"
-        empty-message="No difficulties priced under these constants" @select="openMap"
+        empty-message="No difficulties weighted under these constants" @select="openMap"
         @update:page="setMapsPage" @update:sort="setMapsSort" />
       <ComplexityPlayersTable v-else :rows="previewBoard?.rows ?? []" scenario="PREVIEW"
         :columns="PREVIEW_SCENARIOS" :loading="previewLoading" @select="openPlayer" />

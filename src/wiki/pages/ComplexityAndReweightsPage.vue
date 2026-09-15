@@ -49,7 +49,7 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
 
     <WikiHeading id="what-it-does">What complexity does to your AP</WikiHeading>
     <p>
-      Here is the same 96% score priced across the complexity range, straight off the real curve
+      Here is the same 96% score weighted across the complexity range, straight off the real curve
       the site runs on.
     </p>
 
@@ -120,7 +120,7 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
       change after that, with the old and new numbers side by side.
     </p>
     <p>
-      On your own scores, a play that was repriced by a reweight is labelled Reweighted in its
+      On your own scores, a play that was reweighted is labelled Reweighted in its
       history, which is covered over on the score history page.
     </p>
   </WikiProse>

@@ -298,7 +298,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         ? range.max < spread.min
           ? `${priced} Every ranked map in ${categoryName} would hand you your starting point of ${fmtAp(target)} below ${accLo}, which counts as free, so nothing qualifies and this mission cannot be built. On a young account that is the usual reason a map mission quietly sits the day out, and it opens up on its own as you set scores.`
           : `${priced} Your starting point of ${fmtAp(target)} would need more than ${accHi} on every ranked map in ${categoryName}, which is past what anyone holds, so nothing qualifies and this mission cannot be built.`
-        : `${priced} ${qualified} of the ${total} ranked maps in ${categoryName} price ${fmtAp(target)} inside that window, running from complexity ${fmtComplexity(Math.max(spread.min, range.min))} to ${fmtComplexity(Math.min(spread.max, range.max))}. On the rest it would either be out of reach or come close to free.`,
+        : `${priced} ${qualified} of the ${total} ranked maps in ${categoryName} weight ${fmtAp(target)} inside that window, running from complexity ${fmtComplexity(Math.max(spread.min, range.min))} to ${fmtComplexity(Math.min(spread.max, range.max))}. On the rest it would either be out of reach or come close to free.`,
       data: {
         kind: 'window',
         min: range.min,
@@ -322,7 +322,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     rejected: number,
   ): ForgeStage {
     const opening = coversAll
-      ? `Every one of the ${qualified} ranked maps in this category prices your starting point sensibly, so all of them are in play.`
+      ? `Every one of the ${qualified} ranked maps in this category weights your starting point sensibly, so all of them are in play.`
       : `These are the ${qualified} ranked maps sitting inside that range.`
     return {
       key: 'pool',

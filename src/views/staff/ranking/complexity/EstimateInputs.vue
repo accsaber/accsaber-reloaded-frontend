@@ -166,11 +166,19 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
         </div>
       </div>
 
-      <p v-if="chartLine" class="estimate-inputs__formula">{{ chartLine }}</p>
-      <p v-if="boardLine" class="estimate-inputs__formula">{{ boardLine }}</p>
-      <p v-else-if="nudgeNote && scenario === 'NEW_SCRIPT'" class="estimate-inputs__hash">
-        {{ nudgeNote }}
-      </p>
+      <template v-if="boardLine">
+        <p class="estimate-inputs__formula">{{ boardLine }}</p>
+        <details v-if="chartLine" class="estimate-inputs__fold">
+          <summary class="estimate-inputs__fold-head">Chart line</summary>
+          <p class="estimate-inputs__formula">{{ chartLine }}</p>
+        </details>
+      </template>
+      <template v-else>
+        <p v-if="chartLine" class="estimate-inputs__formula">{{ chartLine }}</p>
+        <p v-if="nudgeNote && scenario === 'NEW_SCRIPT'" class="estimate-inputs__hash">
+          {{ nudgeNote }}
+        </p>
+      </template>
       <p v-if="meta || modelHash" class="estimate-inputs__hash">
         {{ [meta, modelHash].filter(Boolean).join(' · ') }}
       </p>
@@ -283,5 +291,38 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 .estimate-inputs__hash {
   color: var(--text-tertiary);
   white-space: normal;
+}
+
+.estimate-inputs__fold {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.estimate-inputs__fold-head {
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.estimate-inputs__fold-head::-webkit-details-marker {
+  display: none;
+}
+
+.estimate-inputs__fold-head::after {
+  content: ' · show';
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.estimate-inputs__fold[open] .estimate-inputs__fold-head::after {
+  content: ' · hide';
+}
+
+.estimate-inputs__fold-head:hover {
+  color: var(--text-secondary);
 }
 </style>

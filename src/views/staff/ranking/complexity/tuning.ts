@@ -144,7 +144,7 @@ export const GATE_FIELDS: {
   },
 ]
 
-export const SLOW_GATE_NOTE = 'Top plays and min plays per player re-read every leaderboard, so they price on release and take a moment the first time.'
+export const SLOW_GATE_NOTE = 'Top plays and min plays per player re-read every leaderboard, so they weight on release and take a moment the first time.'
 
 export const WORST_SHARE_HINT = "How much of the map's hardest part the script reads. At 0.05 it looks at the worst 5 percent of notes, so a short brutal section counts for more than a wider slice would let it."
 

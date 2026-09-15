@@ -61,8 +61,8 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
 }
 
 export const COEFFICIENT_SETS: { key: 'chart' | 'board'; title: string }[] = [
-  { key: 'chart', title: 'Chart coefficients' },
   { key: 'board', title: 'Board coefficients' },
+  { key: 'chart', title: 'Chart coefficients' },
 ]
 
 export const COEFFICIENT_ROWS = COEFFICIENT_FIELDS
