@@ -34,6 +34,17 @@ export function getComplexityLeaderboard(
   )
 }
 
+export function previewComplexityLeaderboard(
+  mapDifficultyId: string,
+  rater: ComplexityRaterSpec,
+  params?: ScenarioPageParams,
+): Promise<ComplexityMapLeaderboard> {
+  return post<ComplexityMapLeaderboard>(
+    `${BASE}/preview/difficulties/${mapDifficultyId}/leaderboard${buildQuery(params)}`,
+    rater,
+  )
+}
+
 export function getComplexityPlayers(
   params?: ComplexityPlayerParams,
 ): Promise<ComplexityPlayerBoard> {

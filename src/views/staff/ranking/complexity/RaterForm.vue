@@ -93,7 +93,7 @@ function setWorstShare(value: number) {
         </div>
         <div class="rater-form__head-actions">
           <span class="rater-form__version">{{ version }}</span>
-          <BaseButton size="sm" :disabled="!dirty()" @click="reset">Reset to live</BaseButton>
+          <BaseButton size="sm" :disabled="!dirty" @click="reset">Reset to live</BaseButton>
         </div>
       </header>
 

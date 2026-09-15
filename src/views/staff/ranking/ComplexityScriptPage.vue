@@ -215,6 +215,9 @@ const boardLoading = ref(true)
 const mapsPage = ref(1)
 const mapsSort = ref<ScenarioSortRequest>(DEFAULT_MAP_SORT)
 
+const drillScenario = ref<ComparisonScenario>(SCRIPT_SCENARIO)
+const drillColumns = computed<ComplexityScenario[]>(() => ['CURRENT', drillScenario.value])
+
 const selectedRow = ref<ComplexityDifficultyRow | null>(null)
 const leaderboard = ref<ComplexityMapLeaderboard | null>(null)
 const leaderboardLoading = ref(false)
@@ -239,18 +242,11 @@ const previewError = ref('')
 const previewView = ref<'maps' | 'players'>('maps')
 
 const playsOpen = ref(false)
-const playsPreview = ref(false)
 const playsUserId = ref('')
 const playsPlayer = ref<ComplexityPlayerPlays | null>(null)
 const playsLoading = ref(false)
 const playsError = ref('')
 const playsLimit = ref(DEFAULT_PLAYS_LIMIT)
-
-const playsScenario = computed<ComparisonScenario>(
-  () => (playsPreview.value ? 'PREVIEW' : SCRIPT_SCENARIO),
-)
-
-const playsColumns = computed<ComplexityScenario[]>(() => ['CURRENT', playsScenario.value])
 
 const tuningTab = computed(() => tab.value === 'tuning')
 
@@ -437,6 +433,10 @@ function setMapsSort(request: ScenarioSortRequest) {
 
 let leaderboardToken = 0
 
+function drillRater() {
+  return drillScenario.value === 'PREVIEW' ? tuning.edited.value : null
+}
+
 async function loadLeaderboard() {
   const row = selectedRow.value
   if (!row) return
@@ -444,13 +444,17 @@ async function loadLeaderboard() {
   leaderboardLoading.value = true
   leaderboardError.value = ''
   try {
-    const { getComplexityLeaderboard } = await import('@/api/ranking/complexity')
-    const result = await getComplexityLeaderboard(row.mapDifficultyId, {
+    const api = await import('@/api/ranking/complexity')
+    const window = {
       page: leaderboardPage.value - 1,
       size: PAGE_SIZE,
       sort: leaderboardSort.value.sort,
       absolute: leaderboardSort.value.absolute,
-    })
+    }
+    const rater = drillRater()
+    const result = rater
+      ? await api.previewComplexityLeaderboard(row.mapDifficultyId, rater, window)
+      : await api.getComplexityLeaderboard(row.mapDifficultyId, window)
     if (token !== leaderboardToken) return
     leaderboard.value = result
   } catch (err) {
@@ -461,6 +465,7 @@ async function loadLeaderboard() {
 }
 
 function openMap(row: ComplexityDifficultyRow) {
+  drillScenario.value = tuning.dirty.value ? 'PREVIEW' : SCRIPT_SCENARIO
   selectedRow.value = row
   leaderboard.value = null
   leaderboardPage.value = 1
@@ -490,11 +495,11 @@ async function loadPlays() {
   playsLoading.value = true
   playsError.value = ''
   try {
-    const { getPlayerPlays, previewPlayerPlays } = await import('@/api/ranking/complexity')
-    const rater = tuning.edited.value
-    playsPlayer.value = playsPreview.value && rater
-      ? await previewPlayerPlays(playsUserId.value, rater, playsLimit.value)
-      : await getPlayerPlays(playsUserId.value, playsLimit.value)
+    const api = await import('@/api/ranking/complexity')
+    const rater = drillRater()
+    playsPlayer.value = rater
+      ? await api.previewPlayerPlays(playsUserId.value, rater, playsLimit.value)
+      : await api.getPlayerPlays(playsUserId.value, playsLimit.value)
   } catch (err) {
     playsPlayer.value = null
     playsError.value = failure(err, 'Could not load these plays.')
@@ -503,8 +508,8 @@ async function loadPlays() {
 }
 
 function openPlayer(userId: string) {
+  drillScenario.value = tuning.dirty.value ? 'PREVIEW' : SCRIPT_SCENARIO
   playsUserId.value = userId
-  playsPreview.value = tuningTab.value
   playsPlayer.value = null
   playsOpen.value = true
   closeMap()
@@ -798,14 +803,14 @@ watch(previewKey, () => {
     </template>
 
     <ComplexityMapModal :open="!!selectedRow" :row="selectedRow" :leaderboard="leaderboard"
-      :scenario="SCRIPT_SCENARIO" :model-hash="summary?.modelHash ?? null" :max-nudge="maxNudge"
+      :scenario="drillScenario" :model-hash="summary?.modelHash ?? null" :max-nudge="maxNudge"
       :page="leaderboardPage" :total-pages="leaderboard?.totalPages ?? 0"
       :loading="leaderboardLoading" :error="leaderboardError" @close="closeMap"
       @select-player="openPlayer" @update:page="setLeaderboardPage"
       @update:sort="setLeaderboardSort" />
 
-    <PlayerPlaysModal :open="playsOpen" :player="playsPlayer" :scenario="playsScenario"
-      :columns="playsColumns" :limit="playsLimit" :loading="playsLoading" :error="playsError"
+    <PlayerPlaysModal :open="playsOpen" :player="playsPlayer" :scenario="drillScenario"
+      :columns="drillColumns" :limit="playsLimit" :loading="playsLoading" :error="playsError"
       @close="closePlays" @update:limit="setPlaysLimit" />
 
     <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen" :status="applyStatus"

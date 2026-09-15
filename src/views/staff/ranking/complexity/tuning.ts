@@ -3,7 +3,7 @@ import type {
   RaterBoardGate,
   RaterCoefficients,
 } from '@/types/api/complexity'
-import { ref, type Ref } from 'vue'
+import { computed, type ComputedRef, ref, type Ref } from 'vue'
 
 export type CoefficientKey = keyof RaterCoefficients
 
@@ -186,6 +186,11 @@ const edited = ref<ComplexityRaterSpec | null>(null)
 const bands = ref<number[]>([])
 const version = ref('')
 
+const dirty = computed(
+  () => !!live.value && !!edited.value
+    && JSON.stringify(live.value) !== JSON.stringify(edited.value),
+)
+
 export function cloneRater(rater: ComplexityRaterSpec): ComplexityRaterSpec {
   return {
     worstShare: rater.worstShare,
@@ -206,7 +211,7 @@ export function useTuningState(): {
   version: Ref<string>
   adopt: (spec: ComplexityRaterSpec, worstBands: number[], raterVersion: string) => void
   reset: () => void
-  dirty: () => boolean
+  dirty: ComputedRef<boolean>
 } {
   function adopt(spec: ComplexityRaterSpec, worstBands: number[], raterVersion: string) {
     live.value = cloneRater(spec)
@@ -217,11 +222,6 @@ export function useTuningState(): {
 
   function reset() {
     edited.value = live.value ? cloneRater(live.value) : null
-  }
-
-  function dirty(): boolean {
-    if (!live.value || !edited.value) return false
-    return JSON.stringify(live.value) !== JSON.stringify(edited.value)
   }
 
   return { live, edited, bands, version, adopt, reset, dirty }
