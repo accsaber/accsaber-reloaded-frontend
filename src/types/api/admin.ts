@@ -16,10 +16,6 @@ export interface UpdateStaffStatusRequest {
   status: StaffUserStatus
 }
 
-export interface UpdateStaffActiveRequest {
-  active: boolean
-}
-
 export interface LinkUserRequest {
   userId: string
 }

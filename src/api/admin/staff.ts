@@ -5,7 +5,6 @@ import type {
   OAuthLinkRequest,
   StaffOAuthLinkResponse,
   StaffUserResponse,
-  UpdateStaffActiveRequest,
   UpdateStaffRoleRequest,
   UpdateStaffStatusRequest,
 } from '@/types/api/admin'
@@ -16,7 +15,7 @@ import { buildQuery } from '../utils'
 import type { StaffUserStatus } from '@/types/enums'
 
 export function getStaffUsers(
-  params?: PaginationParams & { status?: StaffUserStatus },
+  params?: PaginationParams & { status?: StaffUserStatus; active?: boolean },
 ): Promise<Page<StaffUserResponse>> {
   return get<Page<StaffUserResponse>>(`/staff/users${buildQuery(params)}`)
 }
@@ -39,11 +38,8 @@ export function updateStaffStatus(
   return patch<StaffUserResponse>(`/staff/users/${id}/status`, req)
 }
 
-export function updateStaffActive(
-  id: string,
-  req: UpdateStaffActiveRequest,
-): Promise<StaffUserResponse> {
-  return patch<StaffUserResponse>(`/staff/users/${id}/active`, req)
+export function setStaffActive(id: string, active: boolean): Promise<StaffUserResponse> {
+  return patch<StaffUserResponse>(`/staff/users/${id}/active${buildQuery({ active })}`)
 }
 
 export function linkOAuth(
@@ -65,6 +61,6 @@ export function forceChangePassword(id: string, req: ForceChangePasswordRequest)
   return patch<void>(`/staff/users/${id}/password`, req)
 }
 
-export function deactivateStaffUser(id: string): Promise<void> {
+export function deleteStaffUser(id: string): Promise<void> {
   return del<void>(`/staff/users/${id}`)
 }

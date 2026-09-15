@@ -9,7 +9,7 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
-import { getApiErrorMessage } from '@/api/client'
+import { ApiError, getApiErrorMessage } from '@/api/client'
 import { generatePassword } from '@/utils/credentials'
 
 const users = ref<StaffUserResponse[]>([])
@@ -20,6 +20,8 @@ const size = 20
 const loading = ref(false)
 const actionLoading = ref<Record<string, boolean>>({})
 const statusFilter = ref<StaffUserStatus | ''>('')
+const activeFilter = ref<'' | 'active' | 'inactive'>('')
+const actionError = ref('')
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All statuses' },
@@ -27,6 +29,17 @@ const STATUS_OPTIONS = [
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'DENIED', label: 'Denied' },
 ]
+
+const ACTIVE_OPTIONS = [
+  { value: '', label: 'All accounts' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+]
+
+const deleteTarget = ref<StaffUserResponse | null>(null)
+const deleteLoading = ref(false)
+const deleteError = ref('')
+const deleteBlocked = ref(false)
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -74,6 +87,7 @@ async function fetchUsers() {
       page: page.value - 1,
       size,
       status: statusFilter.value || undefined,
+      active: activeFilter.value ? activeFilter.value === 'active' : undefined,
     })
     users.value = res.content
     totalPages.value = res.totalPages
@@ -83,7 +97,12 @@ async function fetchUsers() {
   }
 }
 
-watch(statusFilter, () => {
+function replaceUser(updated: StaffUserResponse) {
+  const idx = users.value.findIndex((u) => u.id === updated.id)
+  if (idx !== -1) users.value[idx] = updated
+}
+
+watch([statusFilter, activeFilter], () => {
   page.value = 1
   fetchUsers()
 })
@@ -177,22 +196,22 @@ async function saveRole() {
   actionLoading.value[id] = true
   try {
     const { updateStaffRole } = await import('@/api/admin/staff')
-    const updated = await updateStaffRole(id, { role: editRole.value })
-    const idx = users.value.findIndex((u) => u.id === id)
-    if (idx !== -1) users.value[idx] = updated
+    replaceUser(await updateStaffRole(id, { role: editRole.value }))
     showEditModal.value = false
   } finally {
     delete actionLoading.value[id]
   }
 }
 
-async function toggleActive(user: StaffUserResponse) {
+async function setActive(user: StaffUserResponse, active: boolean) {
   actionLoading.value[user.id] = true
+  actionError.value = ''
   try {
-    const { updateStaffActive } = await import('@/api/admin/staff')
-    const updated = await updateStaffActive(user.id, { active: !user.active })
-    const idx = users.value.findIndex((u) => u.id === user.id)
-    if (idx !== -1) users.value[idx] = updated
+    const { setStaffActive } = await import('@/api/admin/staff')
+    replaceUser(await setStaffActive(user.id, active))
+  } catch (err) {
+    const fallback = active ? 'Failed to reactivate staff user.' : 'Failed to deactivate staff user.'
+    actionError.value = getApiErrorMessage(err, fallback)
   } finally {
     delete actionLoading.value[user.id]
   }
@@ -202,9 +221,7 @@ async function setUserStatus(user: StaffUserResponse, status: 'ACCEPTED' | 'DENI
   actionLoading.value[user.id] = true
   try {
     const { updateStaffStatus } = await import('@/api/admin/staff')
-    const updated = await updateStaffStatus(user.id, { status })
-    const idx = users.value.findIndex((u) => u.id === user.id)
-    if (idx !== -1) users.value[idx] = updated
+    replaceUser(await updateStaffStatus(user.id, { status }))
   } finally {
     delete actionLoading.value[user.id]
   }
@@ -224,9 +241,7 @@ async function saveLink() {
   linkError.value = ''
   try {
     const { linkUser } = await import('@/api/admin/staff')
-    const updated = await linkUser(id, { userId: linkUserId.value })
-    const idx = users.value.findIndex((u) => u.id === id)
-    if (idx !== -1) users.value[idx] = updated
+    replaceUser(await linkUser(id, { userId: linkUserId.value }))
     showLinkModal.value = false
   } catch (err) {
     linkError.value = getApiErrorMessage(err, 'Failed to link user.')
@@ -257,17 +272,36 @@ async function savePassword() {
   }
 }
 
-async function removeUser(user: StaffUserResponse) {
-  if (!confirm(`Remove ${user.username} from staff? This cannot be undone.`)) return
-  actionLoading.value[user.id] = true
+function openDelete(user: StaffUserResponse) {
+  deleteTarget.value = user
+  deleteError.value = ''
+  deleteBlocked.value = false
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  const id = deleteTarget.value.id
+  deleteLoading.value = true
+  deleteError.value = ''
   try {
-    const { deactivateStaffUser } = await import('@/api/admin/staff')
-    await deactivateStaffUser(user.id)
-    users.value = users.value.filter((u) => u.id !== user.id)
+    const { deleteStaffUser } = await import('@/api/admin/staff')
+    await deleteStaffUser(id)
+    users.value = users.value.filter((u) => u.id !== id)
     totalElements.value--
+    deleteTarget.value = null
+  } catch (err) {
+    deleteBlocked.value = err instanceof ApiError && err.status === 409
+    deleteError.value = getApiErrorMessage(err, 'Failed to delete staff user.')
   } finally {
-    delete actionLoading.value[user.id]
+    deleteLoading.value = false
   }
+}
+
+async function deactivateInstead() {
+  if (!deleteTarget.value) return
+  const user = deleteTarget.value
+  deleteTarget.value = null
+  await setActive(user, false)
 }
 </script>
 
@@ -279,6 +313,7 @@ async function removeUser(user: StaffUserResponse) {
         <p class="tab__meta">{{ totalElements }} staff accounts</p>
       </div>
       <div class="filter-row">
+        <BaseSelect v-model="activeFilter" :options="ACTIVE_OPTIONS" style="width: 150px" />
         <BaseSelect v-model="statusFilter" :options="STATUS_OPTIONS" style="width: 160px" />
         <BaseButton variant="primary" @click="openCreate()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -288,6 +323,8 @@ async function removeUser(user: StaffUserResponse) {
         </BaseButton>
       </div>
     </div>
+
+    <p v-if="actionError" class="form-error" role="alert">{{ actionError }}</p>
 
     <AdminTable :items="users" :loading="loading" :loading-rows="size" empty-message="No staff users">
       <template #head>
@@ -313,9 +350,8 @@ async function removeUser(user: StaffUserResponse) {
           </span>
         </td>
         <td>
-          <span class="status-dot" :class="item.active ? 'status-dot--active' : 'status-dot--inactive'">
-            {{ item.active ? 'Active' : 'Inactive' }}
-          </span>
+          <span v-if="item.active" class="active-label">Active</span>
+          <span v-else class="inactive-badge">Inactive</span>
         </td>
         <td class="mono muted">
           <button class="link-btn" @click="openLink(item)">
@@ -330,11 +366,14 @@ async function removeUser(user: StaffUserResponse) {
             </template>
             <BaseButton size="sm" @click="openEdit(item)">Role</BaseButton>
             <BaseButton size="sm" @click="openPasswordChange(item)">Password</BaseButton>
-            <BaseButton size="sm" :loading="actionLoading[item.id]" @click="toggleActive(item)">
-              {{ item.active ? 'Deactivate' : 'Activate' }}
+            <BaseButton v-if="item.active" size="sm" :loading="actionLoading[item.id]" @click="setActive(item, false)">
+              Deactivate
             </BaseButton>
-            <BaseButton size="sm" variant="destructive" :loading="actionLoading[item.id]" @click="removeUser(item)">
-              Remove
+            <BaseButton v-else size="sm" variant="primary" :loading="actionLoading[item.id]" @click="setActive(item, true)">
+              Reactivate
+            </BaseButton>
+            <BaseButton size="sm" variant="destructive" :disabled="actionLoading[item.id]" @click="openDelete(item)">
+              Delete
             </BaseButton>
           </div>
         </td>
@@ -445,6 +484,24 @@ async function removeUser(user: StaffUserResponse) {
     </template>
   </BaseModal>
 
+  <BaseModal :open="!!deleteTarget" :title="`Delete ${deleteTarget?.username}`" @close="deleteTarget = null">
+    <div class="modal-form">
+      <p class="created-note">
+        This permanently deletes the account and cannot be undone. Their map votes and staff credits
+        on batches, maps, curated and loved campaigns, and item awards are removed too.
+      </p>
+      <p v-if="deleteError" class="form-error" role="alert">{{ deleteError }}</p>
+      <p v-if="deleteBlocked" class="form-hint">Deactivate the account instead to keep that history.</p>
+    </div>
+    <template #footer>
+      <BaseButton @click="deleteTarget = null">Cancel</BaseButton>
+      <BaseButton v-if="deleteBlocked && deleteTarget?.active" @click="deactivateInstead">Deactivate</BaseButton>
+      <BaseButton v-else variant="destructive" :loading="deleteLoading" :disabled="deleteBlocked" @click="confirmDelete">
+        Delete permanently
+      </BaseButton>
+    </template>
+  </BaseModal>
+
   <BaseModal :open="showLinkModal" :title="`Link Player - ${linkTarget?.username}`" @close="showLinkModal = false">
     <div class="modal-form">
       <div class="form-field">
@@ -492,12 +549,18 @@ async function removeUser(user: StaffUserResponse) {
 .request-status--accepted { color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); background: color-mix(in srgb, var(--success) 8%, transparent); }
 .request-status--denied { color: var(--error); border-color: color-mix(in srgb, var(--error) 30%, transparent); background: color-mix(in srgb, var(--error) 8%, transparent); }
 
-.status-dot { font-size: var(--text-caption); font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
-.status-dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-.status-dot--active { color: var(--success); }
-.status-dot--active::before { background: var(--success); }
-.status-dot--inactive { color: var(--text-tertiary); }
-.status-dot--inactive::before { background: var(--text-tertiary); }
+.active-label { font-size: var(--text-caption); color: var(--text-secondary); }
+.inactive-badge {
+  font-size: var(--text-caption);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--bg-overlay);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
 
 .link-btn {
   background: none;
