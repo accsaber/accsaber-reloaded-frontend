@@ -202,23 +202,41 @@ async function executeFetch<T>(
   return { res, parsed: JSON.parse(sanitizedJsonText) as T }
 }
 
+async function recoverRejectedToken(authHeader: string | null): Promise<string | null> {
+  if (!authHeader) return null
+  const auth = useAuthStore()
+  if (authHeader === auth.accessToken) {
+    if (!auth.refreshTokenValue) return null
+    return (await auth.refreshPlayerSession()) ? auth.accessToken : null
+  }
+  if (authHeader === auth.staffToken) {
+    await auth.refreshStaffToken()
+    return auth.staffToken
+  }
+  return null
+}
+
+function resyncStaffRoleOnForbidden(path: string, status: number, authHeader: string | null): void {
+  if (status !== 403 || !isStaffPath(path)) return
+  const auth = useAuthStore()
+  if (authHeader && authHeader === auth.accessToken && auth.oauthStaffRole) void auth.fetchAuthMe()
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const authHeader = await resolveAuthHeader(path)
 
   let { res, parsed } = await executeFetch<T>(method, path, body, authHeader)
 
   if (res.status === 401 && !shouldSkipAuth(path)) {
-    const auth = useAuthStore()
-    const attachedPlayerToken = !!authHeader && authHeader === auth.accessToken
-    if (attachedPlayerToken && auth.refreshTokenValue) {
-      const refreshed = await auth.refreshPlayerSession()
-      if (refreshed && auth.accessToken) {
-        const retry = await executeFetch<T>(method, path, body, auth.accessToken)
-        res = retry.res
-        parsed = retry.parsed
-      }
+    const retryToken = await recoverRejectedToken(authHeader)
+    if (retryToken) {
+      const retry = await executeFetch<T>(method, path, body, retryToken)
+      res = retry.res
+      parsed = retry.parsed
     }
   }
+
+  resyncStaffRoleOnForbidden(path, res.status, authHeader)
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)

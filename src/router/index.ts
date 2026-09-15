@@ -6,6 +6,7 @@ import {
   isCurationSubdomain,
   isRankingSubdomain,
 } from '@/utils/subdomain'
+import { watch } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 declare module 'vue-router' {
@@ -426,6 +427,18 @@ router.beforeEach(async (to) => {
   if (to.meta.requiredRole && !auth.hasRole(to.meta.requiredRole)) {
     return { name: rankingDashboardRoute }
   }
+})
+
+void router.isReady().then(() => {
+  const auth = useAuthStore()
+  watch(
+    () => auth.currentStaffRole,
+    (role, previous) => {
+      if (!previous || role === previous) return
+      const { path, query, hash } = router.currentRoute.value
+      void router.replace({ path, query, hash, force: true })
+    },
+  )
 })
 
 export default router
