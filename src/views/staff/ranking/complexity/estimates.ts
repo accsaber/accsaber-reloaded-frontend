@@ -41,6 +41,8 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
         { key: 'resetShare', label: 'Resets', format: 'percent' },
         { key: 'dotShare', label: 'Dots', format: 'percent' },
         { key: 'bottomUpShare', label: 'Bottom-row ups', format: 'percent', always: true },
+        { key: 'midDiagDoubleShare', label: 'Mid-row diagonal doubles', format: 'percent', always: true },
+        { key: 'topDownShare', label: 'Top-row down swings', format: 'percent', always: true },
       ],
     },
     {

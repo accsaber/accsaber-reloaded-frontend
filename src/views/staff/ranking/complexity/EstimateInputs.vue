@@ -82,6 +82,8 @@ const chartLine = computed(() => {
     ['resetSlope', readNumber(inputs.value, 'resetShare')],
     ['dotSlope', readNumber(inputs.value, 'dotShare')],
     ['bottomUpSlope', readNumber(inputs.value, 'bottomUpShare')],
+    ['midDiagDoubleSlope', readNumber(inputs.value, 'midDiagDoubleShare')],
+    ['topDownSlope', readNumber(inputs.value, 'topDownShare')],
     ['notesSlope', readNumber(inputs.value, 'notesTerm')],
     ['npsSlope', readNumber(inputs.value, 'npsTerm')],
     ['njsSlope', readNumber(inputs.value, 'njs')],

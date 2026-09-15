@@ -150,6 +150,8 @@ export interface RaterCoefficients {
   resetSlope: number
   dotSlope: number
   bottomUpSlope: number
+  midDiagDoubleSlope: number
+  topDownSlope: number
   notesSlope: number
   npsSlope: number
   njsSlope: number

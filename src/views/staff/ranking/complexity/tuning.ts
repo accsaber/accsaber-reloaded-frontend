@@ -60,6 +60,18 @@ export const COEFFICIENT_FIELDS: {
     hint: 'How much bottom-row notes cut upward count. The model reads those as harder than they play, so a negative value pulls those maps back down.',
   },
   {
+    key: 'midDiagDoubleSlope',
+    label: 'Mid-row diagonal doubles',
+    kind: 'slope',
+    hint: 'How much middle-row diagonal doubles count, one note cut up and one cut down on the same beat. A positive value raises maps that have them.',
+  },
+  {
+    key: 'topDownSlope',
+    label: 'Top-row down swings',
+    kind: 'slope',
+    hint: 'How much top-row notes cut downward count, the mirror of bottom-row ups. A positive value raises maps that have them.',
+  },
+  {
     key: 'notesSlope',
     label: 'Notes',
     kind: 'slope',
