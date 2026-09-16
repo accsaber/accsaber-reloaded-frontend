@@ -11,8 +11,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useRelationsStore } from '@/stores/relations'
 import type {
   RelationDirection,
+  ScoreRelationType,
   UserRelationResponse,
-  UserRelationType,
 } from '@/types/api/relations'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -20,7 +20,7 @@ import { useRouter } from 'vue-router'
 const props = defineProps<{
   open: boolean
   userId: string | null
-  type: UserRelationType
+  type: ScoreRelationType
   direction: RelationDirection
   title: string
 }>()
@@ -47,28 +47,21 @@ const canRemove = computed(
   () => isSelf.value && props.direction === 'outgoing',
 )
 
-const removeLabel = computed(() => {
-  if (props.type === 'follower') return 'Unfollow'
-  if (props.type === 'rival') return 'Stop rivaling'
-  return 'Unblock'
-})
+const removeLabel = computed(() =>
+  props.type === 'follower' ? 'Unfollow' : 'Stop rivaling',
+)
 
 async function load() {
   if (!props.userId) return
   loading.value = true
   try {
-    const { getMyRelations, getUserRelations } = await import('@/api/relations')
-    const params = {
+    const { getUserRelations } = await import('@/api/relations')
+    const res = await getUserRelations(props.userId, {
       type: props.type,
       direction: props.direction,
       page: page.value - 1,
       size: PAGE_SIZE,
-    }
-
-    const res =
-      props.type === 'blocked' && isSelf.value
-        ? await getMyRelations({ type: 'blocked', page: params.page, size: PAGE_SIZE })
-        : await getUserRelations(props.userId, params)
+    })
 
     items.value = res.content
     totalPages.value = res.totalPages

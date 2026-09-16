@@ -4,9 +4,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useRelationsStore } from '@/stores/relations'
 import type {
   RelationDirection,
+  ScoreRelationType,
   UserRelationCounts,
   UserRelationResponse,
-  UserRelationType,
 } from '@/types/api/relations'
 import { computed, ref, watch } from 'vue'
 
@@ -57,7 +57,7 @@ interface Tile {
   key: string
   label: string
   count: number
-  type: UserRelationType
+  type: ScoreRelationType
   direction: RelationDirection
   modalTitle: string
 }
@@ -101,16 +101,6 @@ const tiles = computed<Tile[]>(() => {
     direction: 'incoming',
     modalTitle: 'Rivaled by',
   })
-  if (c.blockedCount !== undefined) {
-    result.push({
-      key: 'blocked',
-      label: 'Blocked',
-      count: c.blockedCount,
-      type: 'blocked',
-      direction: 'outgoing',
-      modalTitle: 'Blocked',
-    })
-  }
   return result
 })
 
@@ -120,8 +110,6 @@ function handleRemoved(item: UserRelationResponse) {
     c.followingCount = Math.max(0, c.followingCount - 1)
   } else if (item.type === 'rival' && c.rivalCount !== undefined) {
     c.rivalCount = Math.max(0, c.rivalCount - 1)
-  } else if (item.type === 'blocked' && c.blockedCount !== undefined) {
-    c.blockedCount = Math.max(0, c.blockedCount - 1)
   }
 }
 

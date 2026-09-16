@@ -22,6 +22,7 @@ import ScoreFieldEditor from './settings/ScoreFieldEditor.vue'
 import { isRankingSubdomain } from '@/utils/subdomain'
 import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { computed, onMounted, ref, watch } from 'vue'
+import BlockedUsersSection from './settings/BlockedUsersSection.vue'
 import ConnectionsSection from './settings/ConnectionsSection.vue'
 import NotificationSettingsSection from './settings/NotificationSettingsSection.vue'
 import SettingsPicker from './settings/SettingsPicker.vue'
@@ -448,6 +449,8 @@ watch(activeSection, (section) => {
               {{ settingsStore.privacyError }}
             </p>
           </section>
+
+          <BlockedUsersSection />
         </template>
 
         <template v-else-if="activeSection === 'account' && canAccessAccount">
