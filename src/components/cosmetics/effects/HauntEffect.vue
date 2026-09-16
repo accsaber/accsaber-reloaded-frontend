@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/api/items'
-import type { EffectMeasure } from '@/utils/cosmetics/effects'
+import { isFieldKey, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { readHauntSpec } from '@/utils/items'
 import { hash01 } from '@/utils/random'
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const props = defineProps<{
   composition: Composition
@@ -12,57 +12,65 @@ const props = defineProps<{
   measure: EffectMeasure
 }>()
 
-const THEME_GHOST_PX = 200
-const THEME_CYCLE_FACTOR = 3
+const VIEWPORT_GHOSTS = 5
+const VIEWPORT_GHOST_PX = 44
+const TILE_GHOSTS = 3
+const TILE_GHOST_PCT = 0.16
+const TILE_GHOST_MIN_PX = 8
 
 const spec = computed(() => readHauntSpec(props.composition))
-const theme = computed(() => props.measure.typeKey === 'theme')
-const thumbnail = computed(() => props.measure.typeKey === 'profile_thumbnail_background')
+const viewport = computed(() => !!props.measure.host?.viewport)
+const field = computed(() => viewport.value || isFieldKey(props.measure.typeKey))
 const box = computed(() => props.measure.box)
 const seedKey = computed(() => props.measure.stack * 31 + 7)
 
-const ghost = computed(() => {
-  const b = box.value
-  if (theme.value) {
-    const size = THEME_GHOST_PX
-    return {
-      x: b.x + b.w * (0.12 + hash01(seedKey.value) * 0.76),
-      y: b.y + b.h + size * 0.6,
-      size,
-      rise: b.h + size * 1.4,
-      cycle: spec.value.cycleS * THEME_CYCLE_FACTOR,
-      peak: spec.value.opacity * 0.45,
-    }
-  }
-  const size = Math.max(16, Math.min(b.w, b.h) * 0.6)
-  return {
-    x: b.x + b.w * 0.5,
-    y: b.y + b.h * 0.7,
-    size,
-    rise: b.h * 0.7 + size * 0.9,
-    cycle: spec.value.cycleS,
-    peak: spec.value.opacity * 0.85,
-  }
+const clipEl = ref<HTMLElement | null>(null)
+const staticHost = ref(false)
+
+onMounted(() => {
+  staticHost.value = !!clipEl.value?.closest('[data-fx-static]')
 })
 
-const ghostStyle = computed(() => ({
-  '--haunt-color': spec.value.color,
-  '--haunt-cycle': `${ghost.value.cycle}s`,
-  '--haunt-rise': `${-ghost.value.rise}px`,
-  '--haunt-peak': String(ghost.value.peak),
-  left: `${ghost.value.x}px`,
-  top: `${ghost.value.y}px`,
-  width: `${ghost.value.size}px`,
-  height: `${ghost.value.size * 1.2}px`,
-  animationDelay: `${-props.measure.stack * 2.7}s`,
+const clipStyle = computed(() => ({
+  left: `${box.value.x}px`,
+  top: `${box.value.y}px`,
+  width: `${box.value.w}px`,
+  height: `${box.value.h}px`,
 }))
+
+const ghosts = computed(() => {
+  const b = box.value
+  const count = viewport.value ? VIEWPORT_GHOSTS : TILE_GHOSTS
+  const base = viewport.value ? VIEWPORT_GHOST_PX : Math.max(TILE_GHOST_MIN_PX, Math.min(b.w, b.h) * TILE_GHOST_PCT)
+  const slowest = spec.value.cycleS * (viewport.value ? 3 : 1.6)
+  return Array.from({ length: count }, (_, i) => {
+    const k = seedKey.value + i * 131
+    const size = base * (0.75 + hash01(k * 3) * 0.5)
+    const cycle = slowest * (0.75 + hash01(k * 5) * 0.4)
+    const lane = (i + 0.2 + hash01(k * 7) * 0.6) / count
+    return {
+      key: i,
+      style: {
+        '--haunt-color': spec.value.color,
+        '--haunt-cycle': `${cycle}s`,
+        '--haunt-rise': `${-(b.h + size * 2.6)}px`,
+        '--haunt-peak': String(spec.value.opacity * (viewport.value ? 0.5 : 0.8)),
+        left: `${b.w * lane}px`,
+        top: `${b.h + size * 1.3}px`,
+        width: `${size}px`,
+        height: `${size * 1.2}px`,
+        animationDelay: `${-(i / count) * cycle - props.measure.stack * 1.7}s`,
+      },
+    }
+  })
+})
 
 const eyeAt = computed(() => {
   const b = box.value
-  if (theme.value) {
+  if (viewport.value) {
     return { x: 0.08 + hash01(seedKey.value) * 0.84, y: 0.55 + hash01(seedKey.value * 3) * 0.35, size: 5, gap: 14 }
   }
-  const size = thumbnail.value ? Math.max(3, Math.min(b.w, b.h) * 0.05) : 3
+  const size = field.value ? Math.max(3, Math.min(b.w, b.h) * 0.05) : 3
   return { x: 0.5, y: 0.42, size, gap: Math.max(3, b.w * 0.06) }
 })
 
@@ -77,13 +85,22 @@ const eyeStyle = computed(() => ({
 </script>
 
 <template>
-  <span v-if="(theme || thumbnail) && box.w > 0 && box.h > 0" class="comp-fx-haunt-ghost" :style="ghostStyle" aria-hidden="true">
-    <svg class="comp-fx-haunt-ghost__sheet" viewBox="0 0 40 48">
-      <path d="M20 3C10.5 3 6 12 6 22v23l4.7-4.4 4.6 4.4 4.7-4.4 4.7 4.4 4.6-4.4L34 45V22C34 12 29.5 3 20 3Z" />
-      <ellipse class="comp-fx-haunt-ghost__hole" cx="14.5" cy="20" rx="2.6" ry="3.6" />
-      <ellipse class="comp-fx-haunt-ghost__hole" cx="25.5" cy="20" rx="2.6" ry="3.6" />
-      <ellipse class="comp-fx-haunt-ghost__hole" cx="20" cy="29.5" rx="2" ry="2.8" />
-    </svg>
+  <span
+    v-if="field && box.w > 0 && box.h > 0"
+    ref="clipEl"
+    class="comp-fx-haunt-clip"
+    :class="{ 'comp-fx-haunt-clip--off': staticHost }"
+    :style="clipStyle"
+    aria-hidden="true"
+  >
+    <span v-for="g in ghosts" :key="g.key" class="comp-fx-haunt-ghost" :style="g.style">
+      <svg class="comp-fx-haunt-ghost__sheet" viewBox="0 0 40 48">
+        <path d="M20 3C10.5 3 6 12 6 22v23l4.7-4.4 4.6 4.4 4.7-4.4 4.7 4.4 4.6-4.4L34 45V22C34 12 29.5 3 20 3Z" />
+        <ellipse class="comp-fx-haunt-ghost__hole" cx="14.5" cy="20" rx="2.6" ry="3.6" />
+        <ellipse class="comp-fx-haunt-ghost__hole" cx="25.5" cy="20" rx="2.6" ry="3.6" />
+        <ellipse class="comp-fx-haunt-ghost__hole" cx="20" cy="29.5" rx="2" ry="2.8" />
+      </svg>
+    </span>
   </span>
   <span v-if="spec.eyes && box.w > 0 && box.h > 0" class="comp-fx-haunt-eyes" :style="eyeStyle" aria-hidden="true">
     <span class="comp-fx-haunt-eyes__eye" />
@@ -92,12 +109,23 @@ const eyeStyle = computed(() => ({
 </template>
 
 <style scoped>
+.comp-fx-haunt-clip {
+  position: absolute;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.comp-fx-haunt-clip--off {
+  display: none;
+}
+
 .comp-fx-haunt-ghost {
   position: absolute;
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.7);
+  transform: translate(-50%, -50%);
   pointer-events: none;
-  animation: haunt-rise var(--haunt-cycle, 8s) ease-in-out infinite;
+  animation: haunt-rise var(--haunt-cycle, 8s) linear infinite;
 }
 
 .comp-fx-haunt-ghost__sheet {
@@ -106,7 +134,6 @@ const eyeStyle = computed(() => ({
   height: 100%;
   overflow: visible;
   fill: var(--haunt-color);
-  filter: blur(0.4px);
   animation: haunt-sway 2.6s ease-in-out infinite;
 }
 
@@ -117,18 +144,17 @@ const eyeStyle = computed(() => ({
 @keyframes haunt-rise {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) translateY(0) scale(0.7);
+    transform: translate(-50%, -50%) translateY(0);
   }
-  7% {
+  15% {
     opacity: var(--haunt-peak, 0.6);
   }
-  30% {
+  75% {
     opacity: var(--haunt-peak, 0.6);
   }
-  38%,
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) translateY(var(--haunt-rise, -60px)) scale(1);
+    transform: translate(-50%, -50%) translateY(var(--haunt-rise, -60px));
   }
 }
 

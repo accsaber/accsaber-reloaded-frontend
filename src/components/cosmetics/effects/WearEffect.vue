@@ -15,7 +15,7 @@ const props = defineProps<{
 const THEME_CRACK_PX = 3.2
 
 const spec = computed(() => readWearSpec(props.composition))
-const theme = computed(() => props.measure.typeKey === 'theme')
+const theme = computed(() => !!props.measure.host?.viewport)
 const seed = computed(() => `${props.measure.typeKey ?? 'item'}:${props.measure.stack}`)
 const box = computed(() => props.measure.box)
 const unit = computed(() => Math.min(box.value.w, box.value.h))

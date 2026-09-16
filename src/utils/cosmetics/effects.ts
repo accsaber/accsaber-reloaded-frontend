@@ -22,6 +22,7 @@ export interface EffectHostContext {
   auraType?: string
   sceneType?: string
   backdropType?: string
+  viewport?: boolean
 }
 
 export interface EffectMeasure {

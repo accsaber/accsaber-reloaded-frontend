@@ -11,7 +11,7 @@ const themeStore = useThemeStore()
 const config = computed(() => readBackdropConfig(themeStore.activeTokens))
 const configKey = computed(() => (config.value ? JSON.stringify(config.value) : ''))
 const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffects))
-const fxHost = computed(() => ({ backdropType: config.value?.type }))
+const fxHost = computed(() => ({ backdropType: config.value?.type, viewport: true }))
 </script>
 
 <template>
