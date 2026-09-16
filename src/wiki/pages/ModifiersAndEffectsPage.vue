@@ -127,7 +127,7 @@ onMounted(async () => {
     <p>
       A marker on a theme you have equipped is the exception, because it goes full screen instead
       of decorating a small tile. Battle-Worn cracks run in from the edges of the page, and
-      Haunted sends a few little ghosts drifting up the page and opens its eyes somewhere in
+      Haunted sends a few faint ghosts drifting up the page and opens its eyes somewhere new in
       the lower half. A Haunted thumbnail background gets the same ghosts, rising up through the
       scene behind your badge.
     </p>
