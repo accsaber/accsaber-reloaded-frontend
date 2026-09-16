@@ -123,6 +123,9 @@ useBackdropCanvas(canvasRef, {
     unit = sceneUnit(w, h)
     eyes = Array.from({ length: props.config.count }, makeEye)
   },
+  resize(w, h) {
+    unit = sceneUnit(w, h)
+  },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000
     ctx.fillStyle = BLACK

@@ -28,16 +28,7 @@ const maskStyle = computed(() => (props.spec ? { mask: `url(#${maskId})`, Webkit
         <mask :id="maskId" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox" x="0" y="0" width="1" height="1">
           <rect x="0" y="0" width="1" height="1" fill="#ffffff" />
           <path v-for="(b, i) in bites" :key="`b${i}`" :d="b.d" fill="#000000" />
-          <path
-            v-for="(c, i) in cracks"
-            :key="`c${i}`"
-            :d="crackPath(c)"
-            fill="none"
-            stroke="#000000"
-            :stroke-width="i % 3 === 0 ? 0.016 : 0.01"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+          <path v-for="(c, i) in cracks" :key="`c${i}`" :d="crackPath(c)" fill="#000000" />
         </mask>
       </defs>
     </svg>

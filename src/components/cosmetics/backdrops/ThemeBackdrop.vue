@@ -5,15 +5,11 @@ import { useThemeStore } from '@/stores/theme'
 import { themeCompositionLayers } from '@/utils/items'
 import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 
 const themeStore = useThemeStore()
-const route = useRoute()
 
 const config = computed(() => readBackdropConfig(themeStore.activeTokens))
-const configKey = computed(() =>
-  config.value ? `${route.path}|${JSON.stringify(config.value)}` : '',
-)
+const configKey = computed(() => (config.value ? JSON.stringify(config.value) : ''))
 const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffects))
 const fxHost = computed(() => ({ backdropType: config.value?.type }))
 </script>

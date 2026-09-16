@@ -4,6 +4,7 @@ import { useRenderLoop } from '@/composables/useRenderLoop'
 
 export interface CanvasScene {
   init: (w: number, h: number, nowMs: number, scale: number) => void
+  resize?: (w: number, h: number, nowMs: number, scale: number) => void
   draw: (
     ctx: CanvasRenderingContext2D,
     w: number,
@@ -40,6 +41,9 @@ function useSceneCanvas(
   let stopObserving: (() => void) | null = null
   let logicalW = 0
   let logicalH = 0
+  let logicalScale = 0
+  let initialized = false
+  let pendingLayout = 0
 
   function isStatic(): boolean {
     return reduced.value || !!canvasRef.value?.closest('[data-fx-static]')
@@ -54,32 +58,47 @@ function useSceneCanvas(
 
   const loop = useRenderLoop(render, () => !isStatic())
 
-  function resize() {
+  function layout() {
     if (!canvasRef.value) return
     const { w, h, scale } = sizing.measure(canvasRef.value)
     if (w <= 0 || h <= 0) return
+    if (w === logicalW && h === logicalH && scale === logicalScale) return
     canvasRef.value.width = w * scale
     canvasRef.value.height = h * scale
     const ctx = canvasRef.value.getContext('2d')
     if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0)
     logicalW = w
     logicalH = h
-    scene.init(w, h, performance.now(), scale)
-    if (isStatic()) render(performance.now())
+    logicalScale = scale
+    const now = performance.now()
+    if (initialized) (scene.resize ?? scene.init)(w, h, now, scale)
+    else scene.init(w, h, now, scale)
+    initialized = true
+    if (isStatic()) render(now)
+  }
+
+  function scheduleLayout() {
+    if (pendingLayout) return
+    pendingLayout = requestAnimationFrame(() => {
+      pendingLayout = 0
+      layout()
+    })
   }
 
   onMounted(() => {
-    resize()
-    window.addEventListener('resize', resize)
+    layout()
+    window.addEventListener('resize', scheduleLayout)
     if (canvasRef.value && sizing.observe) {
-      stopObserving = sizing.observe(canvasRef.value, resize)
+      stopObserving = sizing.observe(canvasRef.value, scheduleLayout)
     }
     loop.start()
   })
 
   onUnmounted(() => {
     loop.stop()
-    window.removeEventListener('resize', resize)
+    if (pendingLayout) cancelAnimationFrame(pendingLayout)
+    pendingLayout = 0
+    window.removeEventListener('resize', scheduleLayout)
     stopObserving?.()
     stopObserving = null
   })

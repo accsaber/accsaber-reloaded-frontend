@@ -2,7 +2,7 @@
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
 import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
 import { cell, drawDitheredBands } from '@/utils/cosmetics/pixelScene'
-import { hash01, randBetween as rand } from '@/utils/random'
+import { hash01, makeRng, randBetween as rand } from '@/utils/random'
 import { blitSceneLayer, createRadialSprite, createSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import type { ForestBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
@@ -100,7 +100,14 @@ let fireflies: Firefly[] = []
 let eyes: Eye[] = []
 let spores: Spore[] = []
 let startTime = 0
+let seed = ''
+let sceneW = 0
+let sceneH = 0
 let bg: HTMLCanvasElement | null = null
+
+function stream(tag: string): () => number {
+  return makeRng(`${seed}:${tag}`)
+}
 
 function fogColor(): string {
   return props.config.canopyColors[props.config.canopyColors.length - 1]
@@ -122,36 +129,36 @@ function treeColorAt(t: number): string {
   return lerpHex(colors[n - 1 - i], colors[Math.max(0, n - 2 - i)], pos - i)
 }
 
-function makeTree(side: number, t: number): Tree {
+function makeTree(side: number, t: number, r: () => number): Tree {
   const gap = 2 + (0.3 - 0.28 * t) * cols
-  const col = Math.round(vpCol + side * (pathHalfAt(t) + gap + rand(-3, 3)))
-  const width = Math.max(2, Math.round(19 - 16 * t + rand(-1, 1)))
+  const col = Math.round(vpCol + side * (pathHalfAt(t) + gap + rand(-3, 3, r)))
+  const width = Math.max(2, Math.round(19 - 16 * t + rand(-1, 1, r)))
   const baseRow = groundRowAt(t)
   const top = Math.round(baseRow - (rows * 1.5 - rows * 1.3 * t))
   const branches: Branch[] = []
-  let row = Math.max(top + 5, 2) + Math.round(rand(0, 6))
+  let row = Math.max(top + 5, 2) + Math.round(rand(0, 6, r))
   while (row < baseRow - Math.round(10 - 6 * t)) {
     branches.push({
       row,
-      dir: Math.random() < 0.6 ? -side : side,
-      len: Math.max(2, Math.round((10 - 7 * t) * rand(0.6, 1.15))),
-      leaf: Math.random() < 0.75,
+      dir: r() < 0.6 ? -side : side,
+      len: Math.max(2, Math.round((10 - 7 * t) * rand(0.6, 1.15, r))),
+      leaf: r() < 0.75,
     })
-    row += Math.round(rand(6, 13) * (1 - t * 0.4) + 3)
+    row += Math.round(rand(6, 13, r) * (1 - t * 0.4) + 3)
   }
-  return { side, t, col, width, top, baseRow, branches, phase: rand(0, Math.PI * 2), color: treeColorAt(t) }
+  return { side, t, col, width, top, baseRow, branches, phase: rand(0, Math.PI * 2, r), color: treeColorAt(t) }
 }
 
-function makeMushroom(col: number, baseRow: number, capW: number, phase: number): Mushroom {
+function makeMushroom(col: number, baseRow: number, capW: number, phase: number, r: () => number, now: number): Mushroom {
   const colors = props.config.mushroomColors
   return {
     col,
     baseRow,
     capW,
-    cap: colors[Math.floor(Math.random() * colors.length)],
-    pulseSpeed: rand(0.5, 1.0),
+    cap: colors[Math.floor(r() * colors.length)],
+    pulseSpeed: rand(0.5, 1.0, r),
     phase,
-    nextSporeAt: startTime + rand(1000, 6000),
+    nextSporeAt: now + rand(1000, 6000, r),
   }
 }
 
@@ -193,63 +200,86 @@ function makeEye(now: number): Eye {
   }
 }
 
-function initScene(w: number, h: number, now: number) {
+function makeFirefly(w: number, h: number): Firefly {
   const ps = props.config.pixelSize
+  const side = Math.random() < 0.5 ? -1 : 1
+  return {
+    x: vpCol * ps + side * rand(pathHalfNear * ps * 0.6, w * 0.48),
+    y: rand(h * 0.3, h * 0.92),
+    speed: rand(0.4, 1.2),
+    phase: rand(0, Math.PI * 2),
+  }
+}
+
+function wispCountFor(w: number): number {
+  return Math.max(2, Math.round(w / 500))
+}
+
+function fireflyCountFor(w: number): number {
+  return Math.max(4, Math.round(w / 130))
+}
+
+function layoutTrees(): void {
+  trees = []
+  const depths = [0.04, 0.22, 0.42, 0.62, 0.78]
+  for (const side of [-1, 1]) {
+    depths.forEach((d, i) => {
+      const r = stream(`tree:${side}:${i}`)
+      trees.push(makeTree(side, Math.min(0.95, d + rand(-0.04, 0.04, r)), r))
+    })
+  }
+  trees.sort((a, b) => b.t - a.t)
+}
+
+function layoutMushrooms(now: number): void {
+  mushrooms = []
+  trees.forEach((tree, ti) => {
+    const r = stream(`shroom:${ti}`)
+    if (tree.t > 0.55 || r() < 0.25) return
+    const capW = Math.max(3, Math.round(9 - 9 * tree.t))
+    const count = tree.t < 0.25 ? 2 : 1
+    for (let i = 0; i < count; i++) {
+      const off = tree.side * Math.round(tree.width / 2 + capW / 2 + rand(0, 4, r)) * (i === 0 ? 1 : -1)
+      mushrooms.push(makeMushroom(tree.col + off, tree.baseRow, capW, rand(0, Math.PI * 2, r), r, now))
+    }
+  })
+  const guideDepths = [0.12, 0.3, 0.48, 0.66]
+  for (const side of [-1, 1]) {
+    guideDepths.forEach((d, i) => {
+      const r = stream(`guide:${side}:${i}`)
+      const t = Math.min(0.9, d + rand(-0.03, 0.03, r))
+      const col = Math.round(vpCol + side * (pathHalfAt(t) + rand(1, 3, r)))
+      mushrooms.push(makeMushroom(col, groundRowAt(t), t < 0.4 ? 3 : 2, 5 - t * 5, r, now))
+    })
+  }
+}
+
+function layoutScene(w: number, h: number, now: number): void {
+  const ps = props.config.pixelSize
+  sceneW = w
+  sceneH = h
   cols = Math.ceil(w / ps)
   rows = Math.ceil(h / ps)
   vpRow = Math.round(rows * 0.4)
   vpCol = Math.round(cols / 2)
   pathHalfNear = Math.round(cols * 0.13)
   bg = null
+  layoutTrees()
+  layoutMushrooms(now)
+}
 
-  trees = []
-  const depths = [0.04, 0.22, 0.42, 0.62, 0.78]
-  for (const side of [-1, 1]) {
-    for (const d of depths) trees.push(makeTree(side, Math.min(0.95, d + rand(-0.04, 0.04))))
-  }
-  trees.sort((a, b) => b.t - a.t)
-
-  mushrooms = []
-  for (const tree of trees) {
-    if (tree.t > 0.55 || Math.random() < 0.25) continue
-    const capW = Math.max(3, Math.round(9 - 9 * tree.t))
-    const count = tree.t < 0.25 ? 2 : 1
-    for (let i = 0; i < count; i++) {
-      const off = tree.side * Math.round(tree.width / 2 + capW / 2 + rand(0, 4)) * (i === 0 ? 1 : -1)
-      mushrooms.push(makeMushroom(tree.col + off, tree.baseRow, capW, rand(0, Math.PI * 2)))
-    }
-  }
-  const guideDepths = [0.12, 0.3, 0.48, 0.66]
-  for (const side of [-1, 1]) {
-    for (const d of guideDepths) {
-      const t = Math.min(0.9, d + rand(-0.03, 0.03))
-      const col = Math.round(vpCol + side * (pathHalfAt(t) + rand(1, 3)))
-      mushrooms.push(makeMushroom(col, groundRowAt(t), t < 0.4 ? 3 : 2, 5 - t * 5))
-    }
-  }
-
-  wisps = []
-  const wispCount = Math.max(2, Math.round(w / 500))
-  for (let i = 0; i < wispCount; i++) wisps.push(makeWisp(w, h, now - rand(2000, 9000)))
-
-  fireflies = []
-  const flyCount = Math.max(4, Math.round(w / 130))
-  for (let i = 0; i < flyCount; i++) {
-    const side = Math.random() < 0.5 ? -1 : 1
-    fireflies.push({
-      x: vpCol * ps + side * rand(pathHalfNear * ps * 0.6, w * 0.48),
-      y: rand(h * 0.3, h * 0.92),
-      speed: rand(0.4, 1.2),
-      phase: rand(0, Math.PI * 2),
-    })
-  }
-
-  eyes = []
-  if (props.config.eyes) {
-    eyes.push(makeEye(now - rand(0, 3000)))
-    eyes.push(makeEye(now - rand(0, 3000)))
-  }
+function seedParticles(w: number, h: number, now: number): void {
+  wisps = Array.from({ length: wispCountFor(w) }, () => makeWisp(w, h, now - rand(2000, 9000)))
+  fireflies = Array.from({ length: fireflyCountFor(w) }, () => makeFirefly(w, h))
+  eyes = props.config.eyes ? [makeEye(now - rand(0, 3000)), makeEye(now - rand(0, 3000))] : []
   spores = []
+}
+
+function fitParticleCounts(w: number, h: number, now: number): void {
+  wisps.length = Math.min(wisps.length, wispCountFor(w))
+  while (wisps.length < wispCountFor(w)) wisps.push(makeWisp(w, h, now))
+  fireflies.length = Math.min(fireflies.length, fireflyCountFor(w))
+  while (fireflies.length < fireflyCountFor(w)) fireflies.push(makeFirefly(w, h))
 }
 
 function drawFoliage(
@@ -612,7 +642,33 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 useBackdropCanvas(canvasRef, {
   init(w, h, now) {
     startTime = now
-    initScene(w, h, now)
+    seed = String(Math.floor(rand(0, 1e9)))
+    layoutScene(w, h, now)
+    seedParticles(w, h, now)
+  },
+  resize(w, h, now) {
+    const sx = w / sceneW
+    const sy = h / sceneH
+    const prevCols = cols
+    const prevRows = rows
+    layoutScene(w, h, now)
+    for (const wp of wisps) {
+      wp.x0 *= sx
+      wp.y0 *= sy
+    }
+    for (const f of fireflies) {
+      f.x *= sx
+      f.y *= sy
+    }
+    for (const e of eyes) {
+      e.col = Math.round((e.col * cols) / prevCols)
+      e.row = Math.round((e.row * rows) / prevRows)
+    }
+    for (const s of spores) {
+      s.x0 *= sx
+      s.y0 *= sy
+    }
+    fitParticleCounts(w, h, now)
   },
   draw(ctx, w, h, now, reduced) {
     const ps = props.config.pixelSize

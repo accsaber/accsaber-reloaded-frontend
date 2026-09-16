@@ -69,10 +69,12 @@ let fieldIdleTimer: ReturnType<typeof setTimeout> | undefined
 function applyFieldPointer() {
   fieldRaf = 0
   const gloss = glossEl.value
-  if (!gloss || !window.innerWidth || !window.innerHeight) return
-  gloss.style.transform = `translate(${fieldX - GLOSS_SIZE / 2}px, ${fieldY - GLOSS_SIZE / 2}px)`
-  gloss.style.setProperty('--holo-mx', (fieldX / window.innerWidth).toFixed(3))
-  gloss.style.setProperty('--holo-my', (fieldY / window.innerHeight).toFixed(3))
+  const el = root.value
+  if (!gloss || !el || !window.innerWidth || !window.innerHeight) return
+  const r = el.getBoundingClientRect()
+  gloss.style.transform = `translate(${fieldX - r.left - GLOSS_SIZE / 2}px, ${fieldY - r.top - GLOSS_SIZE / 2}px)`
+  const tilt = (fieldX / window.innerWidth - 0.5) * 70 + (fieldY / window.innerHeight - 0.5) * 40
+  gloss.style.setProperty('--holo-angle', `${(angleDeg.value + tilt).toFixed(1)}deg`)
   gloss.classList.add('is-on')
   if (fieldIdleTimer) clearTimeout(fieldIdleTimer)
   fieldIdleTimer = setTimeout(() => glossEl.value?.classList.remove('is-on'), 150)
@@ -313,7 +315,7 @@ onBeforeUnmount(() => {
   background-image: var(--holo-foil);
   background-size: 250% 250%;
   background-repeat: no-repeat;
-  background-position: calc(var(--holo-mx, 0.5) * 100%) calc(var(--holo-my, 0.5) * 100%);
+  background-position: 50% 50%;
   mask-image: radial-gradient(circle, #000 20%, transparent 68%);
   -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 68%);
   mix-blend-mode: screen;

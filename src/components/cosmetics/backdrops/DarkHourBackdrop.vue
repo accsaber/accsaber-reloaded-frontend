@@ -523,23 +523,30 @@ function drawPuddles(ctx: Ctx, w: number, h: number, t: number): void {
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
+function layout(w: number, h: number, scale: number): void {
+  unit = sceneUnit(w, h)
+  dpr = scale
+  ripples = []
+  clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
+  skyline = buildSkyline(w, h, scale)
+  mirror = true
+  mirrored = buildSkyline(w, h, scale)
+  mirror = false
+  street = buildStreet(w, h, scale)
+  puddles = buildPuddles(w, h)
+  const size = unit * 22 * 7
+  litLayer = offscreen(size, size, scale)[0]
+}
+
 useBackdropCanvas(canvasRef, {
   init(w, h, now, scale) {
     startTime = now
     seed = Math.floor(rand(0, 100000))
-    unit = sceneUnit(w, h)
-    dpr = scale
-    ripples = []
     nextRipple = 1
-    clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
-    skyline = buildSkyline(w, h, scale)
-    mirror = true
-    mirrored = buildSkyline(w, h, scale)
-    mirror = false
-    street = buildStreet(w, h, scale)
-    puddles = buildPuddles(w, h)
-    const size = unit * 22 * 7
-    litLayer = offscreen(size, size, scale)[0]
+    layout(w, h, scale)
+  },
+  resize(w, h, _now, scale) {
+    layout(w, h, scale)
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000

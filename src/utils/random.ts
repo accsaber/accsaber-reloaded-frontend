@@ -1,5 +1,5 @@
-export function randBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min)
+export function randBetween(min: number, max: number, r: () => number = Math.random): number {
+  return min + r() * (max - min)
 }
 
 export function hash01(n: number): number {
@@ -27,6 +27,6 @@ export function makeRng(seed: string): () => number {
   let k = hashSeed(seed)
   return () => {
     k = (Math.imul(k, 1103515245) + 12345) & 0x7fffffff
-    return (k >> 8) / 0x7fffff
+    return (k >> 8) / 0x800000
   }
 }

@@ -56,15 +56,14 @@ function h01(n: number): number {
   return hash01(seed + n)
 }
 
-function initScene(w: number, h: number) {
+function layout(w: number, h: number, scale: number) {
   unit = sceneUnit(w, h)
-  seed = Math.floor(rand(0, 100000))
   project = makeProjector(w / 2, h * 0.42, w * 0.5)
   base = null
   furniture = null
-  windowSprite = null
-  motes = Array.from({ length: 40 }, () => ({ x: Math.random(), y: Math.random(), speed: rand(0.01, 0.03) }))
+  figLayer = null
   flames = []
+  windowSprite = buildWindowSprite(Math.max(1, scale) * 2)
 }
 
 function figurePoint(): Point {
@@ -764,8 +763,12 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 useBackdropCanvas(canvasRef, {
   init(w, h, now, scale) {
     startTime = now
-    initScene(w, h)
-    windowSprite = buildWindowSprite(Math.max(1, scale) * 2)
+    seed = Math.floor(rand(0, 100000))
+    motes = Array.from({ length: 40 }, () => ({ x: Math.random(), y: Math.random(), speed: rand(0.01, 0.03) }))
+    layout(w, h, scale)
+  },
+  resize(w, h, _now, scale) {
+    layout(w, h, scale)
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000

@@ -255,15 +255,22 @@ function drawBats(ctx: Ctx, w: number, h: number, t: number): void {
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
+function layout(w: number, h: number, scale: number): void {
+  unit = sceneUnit(w, h)
+  stones = buildStones(w, h)
+  ghostPlot = stones[Math.floor(stones.length * 0.5)] ?? null
+  buildSprites(w, h, scale)
+  base = buildBase(w, h, scale)
+}
+
 useBackdropCanvas(canvasRef, {
   init(w, h, now, scale) {
     startTime = now
     seed = Math.floor(rand(0, 100000))
-    unit = sceneUnit(w, h)
-    stones = buildStones(w, h)
-    ghostPlot = stones[Math.floor(stones.length * 0.5)] ?? null
-    buildSprites(w, h, scale)
-    base = buildBase(w, h, scale)
+    layout(w, h, scale)
+  },
+  resize(w, h, _now, scale) {
+    layout(w, h, scale)
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000

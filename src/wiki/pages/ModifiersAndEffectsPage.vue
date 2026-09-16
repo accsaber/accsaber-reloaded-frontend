@@ -116,9 +116,9 @@ onMounted(async () => {
     <WikiHeading id="rendering">How the effects show up</WikiHeading>
     <p>
       Some effects sit behind the item, some sit over the top of it, and some cut into the item
-      itself. Battle-Worn chips lumps out of the edges and runs cracks inward from every bite,
-      Haunted phases the whole thing out for a couple of seconds at a time and opens a pair of
-      eyes in the middle of it, and Holographic just sweeps a shimmer across the surface.
+      itself. Battle-Worn chips lumps out of the edges and runs forking cracks inward from every
+      bite, Haunted phases the whole thing out for a couple of seconds at a time and opens a pair
+      of eyes in the middle of it, and Holographic just sweeps a shimmer across the surface.
     </p>
     <p>
       Wherever your item gets drawn the effect comes with it, whether that is your profile, the
@@ -127,7 +127,9 @@ onMounted(async () => {
     <p>
       A marker on a theme you have equipped is the exception, because it goes full screen instead
       of decorating a small tile. Battle-Worn cracks run in from the edges of the page, and
-      Haunted veils the whole site and opens its eyes somewhere in the lower half.
+      Haunted sends a ghost floating up the page now and then and opens its eyes somewhere in
+      the lower half. A Haunted thumbnail background gets the same ghost, rising up through the
+      scene behind your badge.
     </p>
     <WikiItemBench
       v-if="benchReady"

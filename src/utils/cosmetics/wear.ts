@@ -24,7 +24,13 @@ export interface WearBite {
 
 export interface WearCrack {
   points: [number, number][]
+  width: number
+  branches: WearCrack[]
 }
+
+const BITE_CRACK_WIDTH = 0.022
+const EDGE_CRACK_WIDTH = 0.016
+const MAX_BRANCHES = 2
 
 function seedNumber(seed: string): number {
   let h = 7
@@ -60,27 +66,38 @@ export function wearBites(seed: string, count: number): WearBite[] {
   return out
 }
 
-function crackFrom(x: number, y: number, angle: number, k: number, steps: number): WearCrack {
+function inwardAngle(edge: number): number {
+  return edge === 0 ? Math.PI / 2 : edge === 1 ? Math.PI : edge === 2 ? -Math.PI / 2 : 0
+}
+
+function crackFrom(x: number, y: number, angle: number, k: number, steps: number, width: number, depth: number): WearCrack {
   const points: [number, number][] = [[r3(x), r3(y)]]
+  const branches: WearCrack[] = []
   let a = angle
   let px = x
   let py = y
   for (let i = 0; i < steps; i++) {
-    const len = 0.04 + hash01(k * 7 + i) * 0.07
-    a += (hash01(k * 11 + i) - 0.5) * 1.4
+    const len = 0.025 + hash01(k * 7 + i) * 0.045
+    a += (hash01(k * 11 + i) - 0.5) * 1.1
     px += Math.cos(a) * len
     py += Math.sin(a) * len
     points.push([r3(px), r3(py)])
+    const left = steps - i
+    if (depth > 0 && i > 0 && left > 2 && branches.length < MAX_BRANCHES && hash01(k * 17 + i) < 0.3) {
+      const side = hash01(k * 19 + i) < 0.5 ? -1 : 1
+      const fork = a + side * (0.55 + hash01(k * 23 + i) * 0.6)
+      branches.push(crackFrom(px, py, fork, k * 31 + i * 7 + 1, Math.ceil(left * 0.6), width * 0.55, depth - 1))
+    }
   }
-  return { points }
+  return { points, width, branches }
 }
 
 export function wearCracks(seed: string, bites: WearBite[], extra: number): WearCrack[] {
   const s = seedNumber(seed) + 311
   const out: WearCrack[] = []
   bites.forEach((b, i) => {
-    const inward = b.edge === 0 ? Math.PI / 2 : b.edge === 1 ? Math.PI : b.edge === 2 ? -Math.PI / 2 : 0
-    out.push(crackFrom(b.x, b.y, inward + (hash01(s + i) - 0.5) * 0.9, s + i * 53, 3 + Math.floor(hash01(s + i * 3) * 3)))
+    const angle = inwardAngle(b.edge) + (hash01(s + i) - 0.5) * 0.9
+    out.push(crackFrom(b.x, b.y, angle, s + i * 53, 5 + Math.floor(hash01(s + i * 3) * 4), BITE_CRACK_WIDTH, 1))
   })
   for (let i = 0; i < extra; i++) {
     const k = s + 400 + i * 67
@@ -88,12 +105,38 @@ export function wearCracks(seed: string, bites: WearBite[], extra: number): Wear
     const along = hash01(k * 3) * 0.8 + 0.1
     const x = edge === 1 ? 1 : edge === 3 ? 0 : along
     const y = edge === 0 ? 0 : edge === 2 ? 1 : along
-    const inward = edge === 0 ? Math.PI / 2 : edge === 1 ? Math.PI : edge === 2 ? -Math.PI / 2 : 0
-    out.push(crackFrom(x, y, inward + (hash01(k * 5) - 0.5) * 1.2, k, 4 + Math.floor(hash01(k * 9) * 4)))
+    const angle = inwardAngle(edge) + (hash01(k * 5) - 0.5) * 1.2
+    out.push(crackFrom(x, y, angle, k, 6 + Math.floor(hash01(k * 9) * 5), EDGE_CRACK_WIDTH, 1))
   }
   return out
 }
 
-export function crackPath(c: WearCrack): string {
-  return 'M' + c.points.map(([x, y]) => `${x},${y}`).join(' L')
+function sliver(points: [number, number][], sx: number, sy: number, rootWidth: number): string {
+  const n = points.length - 1
+  const p = points.map(([x, y]) => [x * sx, y * sy] as const)
+  const k = Math.round((points[0]?.[0] ?? 0) * 997 + (points[0]?.[1] ?? 0) * 613)
+  const left: string[] = []
+  const right: string[] = []
+  for (let i = 0; i <= n; i++) {
+    const [ax, ay] = p[Math.max(0, i - 1)] ?? [0, 0]
+    const [bx, by] = p[Math.min(n, i + 1)] ?? [0, 0]
+    const [x, y] = p[i] ?? [0, 0]
+    const dx = bx - ax
+    const dy = by - ay
+    const l = Math.hypot(dx, dy) || 1
+    const nx = -dy / l
+    const ny = dx / l
+    const taper = rootWidth * Math.pow(1 - i / n, 0.75)
+    const wl = taper * (0.5 + hash01(k + i * 3) * 0.7)
+    const wr = taper * (0.5 + hash01(k + i * 5) * 0.7)
+    left.push(`${r3(x + nx * wl)},${r3(y + ny * wl)}`)
+    right.push(`${r3(x - nx * wr)},${r3(y - ny * wr)}`)
+  }
+  return `M${left.join(' L')} L${right.reverse().join(' L')} Z`
+}
+
+export function crackPath(c: WearCrack, sx = 1, sy = 1, rootWidth = c.width): string {
+  const parts = [sliver(c.points, sx, sy, rootWidth)]
+  for (const b of c.branches) parts.push(crackPath(b, sx, sy, rootWidth * (b.width / c.width)))
+  return parts.join(' ')
 }

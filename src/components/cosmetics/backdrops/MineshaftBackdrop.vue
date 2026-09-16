@@ -44,15 +44,10 @@ function h01(n: number): number {
   return hash01(seed + n)
 }
 
-function initScene(w: number, h: number) {
+function layout(w: number, h: number) {
   unit = sceneUnit(w, h)
-  seed = Math.floor(rand(0, 100000))
   project = makeProjector(w / 2, h * 0.5, w * 0.45)
   scene = null
-  theta = rand(-0.4, 0.4)
-  omega = 0
-  nextGust = rand(2, 5)
-  motes = Array.from({ length: 30 }, () => ({ x: Math.random(), y: Math.random(), speed: rand(0.08, 0.23) }))
 }
 
 function quad(ctx: Ctx, pts: Point[]): void {
@@ -289,7 +284,15 @@ useBackdropCanvas(canvasRef, {
   init(w, h, now) {
     startTime = now
     lastNow = now
-    initScene(w, h)
+    seed = Math.floor(rand(0, 100000))
+    theta = rand(-0.4, 0.4)
+    omega = 0
+    nextGust = rand(2, 5)
+    motes = Array.from({ length: 30 }, () => ({ x: Math.random(), y: Math.random(), speed: rand(0.08, 0.23) }))
+    layout(w, h)
+  },
+  resize(w, h) {
+    layout(w, h)
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000

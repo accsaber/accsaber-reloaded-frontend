@@ -208,6 +208,7 @@ const chips = computed(() => {
               :key="layer.key"
               :spec="layer.spec"
               :stack-index="layer.stackIndex"
+              type-key="profile_thumbnail_background"
             />
           </div>
         </div>

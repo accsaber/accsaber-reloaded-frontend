@@ -2,7 +2,7 @@
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
 import { darken, lighten } from '@/utils/color'
 import { cell, drawDitheredBands } from '@/utils/cosmetics/pixelScene'
-import { randBetween as rand } from '@/utils/random'
+import { hash01, randBetween as rand } from '@/utils/random'
 import { blitSceneLayer, createSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import type { PixelFieldBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
@@ -54,6 +54,7 @@ let birds: Bird[] = []
 let nextLeafAt = 0
 let nextFlockAt = 0
 let startTime = 0
+let seed = 0
 let cols = 0
 let rows = 0
 let horizonRow = 0
@@ -62,6 +63,10 @@ let sunCore = ''
 let sunMid = ''
 let sunGlow = ''
 let bg: HTMLCanvasElement | null = null
+
+function h01(n: number): number {
+  return hash01(seed + n)
+}
 
 function initField(w: number, h: number) {
   const ps = props.config.pixelSize
@@ -83,15 +88,16 @@ function initField(w: number, h: number) {
     const back = layerCount - 1 - layer
     const layerStalks: Stalk[] = []
     for (let col = 0; col < cols; col++) {
-      const base = wheat[Math.floor(Math.random() * wheat.length)]
+      const k = layer * 100003 + col * 3
+      const base = wheat[Math.floor(h01(k) * wheat.length)]
       const color = back === 0 ? base : darken(base, 0.18 * back)
       layerStalks.push({
         col,
-        tipRow: boundary + Math.floor(rand(0, 3)),
+        tipRow: boundary + Math.floor(h01(k + 1) * 3),
         color,
         headColor: back === 0 ? lighten(color, 0.18) : color,
         underColor: darken(color, 0.14),
-        phase: col * 0.22 + layer * 1.7 + rand(-0.15, 0.15),
+        phase: col * 0.22 + layer * 1.7 + (h01(k + 2) - 0.5) * 0.3,
         amp: 1 + layer * 0.25,
       })
     }
@@ -283,8 +289,12 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 useBackdropCanvas(canvasRef, {
   init(w, h, now) {
     startTime = now
+    seed = Math.floor(rand(0, 100000))
     nextLeafAt = now + rand(500, 2000)
     nextFlockAt = now + rand(3000, 10000)
+    initField(w, h)
+  },
+  resize(w, h) {
     initField(w, h)
   },
   draw(ctx, w, h, now, reduced) {

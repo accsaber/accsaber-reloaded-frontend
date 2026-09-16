@@ -610,18 +610,25 @@ function flareLevel(t: number): number {
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
+function layout(w: number, h: number, scale: number): void {
+  unit = sceneUnit(w, h)
+  sky = buildSky(w, h, scale)
+  clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
+  land = buildLand(w, h, scale)
+  corn = [0, 1, 2].map((li) => buildCorn(w, h, scale, li))
+  leaves = seedFallingLeaves({ count: LEAVES, colors: props.config.leafColors, unit, w, h, seed: h01 })
+}
+
 useBackdropCanvas(canvasRef, {
   init(w, h, now, scale) {
     startTime = now
     seed = Math.floor(rand(0, 100000))
-    unit = sceneUnit(w, h)
-    sky = buildSky(w, h, scale)
-    clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
-    land = buildLand(w, h, scale)
-    corn = [0, 1, 2].map((li) => buildCorn(w, h, scale, li))
-    leaves = seedFallingLeaves({ count: LEAVES, colors: props.config.leafColors, unit, w, h, seed: h01 })
     nextBlink = rand(6, 12)
     blinkAt = -1
+    layout(w, h, scale)
+  },
+  resize(w, h, _now, scale) {
+    layout(w, h, scale)
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000

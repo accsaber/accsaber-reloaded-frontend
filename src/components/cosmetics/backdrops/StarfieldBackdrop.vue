@@ -24,6 +24,7 @@ interface StarSprite {
 interface Star {
   x: number
   y: number
+  size: number
   sprite: StarSprite
   baseOpacity: number
   twinkleSpeed: number
@@ -66,6 +67,8 @@ let nextCometAt = 0
 let startTime = 0
 let starRgb: RGB = FALLBACK_STAR
 let deviceScale = 1
+let sceneW = 0
+let sceneH = 0
 
 function makeStarSprite(size: number): StarSprite {
   const px = Math.max(2, Math.ceil((size + SPRITE_PAD * 2) * deviceScale))
@@ -107,12 +110,25 @@ function initStars(w: number, h: number) {
     stars.push({
       x: Math.random() * w,
       y: Math.random() * h,
+      size,
       sprite,
       baseOpacity: bright ? rand(0.55, 0.9) : rand(0.18, 0.45),
       twinkleSpeed: rand(0.3, 1.6),
       twinklePhase: rand(0, Math.PI * 2),
       twinkleDepth: bright ? rand(0.5, 0.8) : rand(0.25, 0.55),
     })
+  }
+}
+
+function rebuildStarSprites() {
+  const sprites = new Map<number, StarSprite>()
+  for (const s of stars) {
+    let sprite = sprites.get(s.size)
+    if (!sprite) {
+      sprite = makeStarSprite(s.size)
+      sprites.set(s.size, sprite)
+    }
+    s.sprite = sprite
   }
 }
 
@@ -306,6 +322,8 @@ useBackdropCanvas(canvasRef, {
   init(w, h, now, scale) {
     startTime = now
     deviceScale = scale
+    sceneW = w
+    sceneH = h
     starRgb = parseHex(props.config.starColor) ?? FALLBACK_STAR
     nextShootingAt = now + rand(1000, 3500)
     nextCometAt = now + rand(4000, props.config.cometMaxMs)
@@ -313,6 +331,30 @@ useBackdropCanvas(canvasRef, {
     comets = []
     initStars(w, h)
     initNebulas(w, h)
+  },
+  resize(w, h, _now, scale) {
+    const sx = w / sceneW
+    const sy = h / sceneH
+    const sr = Math.min(w, h) / Math.min(sceneW, sceneH)
+    sceneW = w
+    sceneH = h
+    if (scale !== deviceScale) {
+      deviceScale = scale
+      rebuildStarSprites()
+    }
+    for (const s of stars) {
+      s.x *= sx
+      s.y *= sy
+    }
+    for (const n of nebulas) {
+      n.x *= sx
+      n.y *= sy
+      n.radius *= sr
+    }
+    nebulaLayer = null
+    nebulaAlphas = []
+    shootingStars = []
+    comets = []
   },
   draw(ctx, w, h, now, reduced) {
     const elapsed = (now - startTime) / 1000
