@@ -543,6 +543,15 @@ export function thumbnailSceneInk(scene: ThumbnailScene): string {
   }
 }
 
+export function thumbnailHostAttrs(
+  value: ProfileThumbnailBackgroundValue | null | undefined,
+): Record<string, unknown> {
+  if (!value || (!value.scene && !pickAssetUrl(value.asset))) return {}
+  const attrs: Record<string, unknown> = { 'data-thumb-base': value.scene?.base ?? 'dark' }
+  if (value.scene) attrs.style = { '--thumb-ink': thumbnailSceneInk(value.scene) }
+  return attrs
+}
+
 export function readThemeValue(value: unknown): ThemeValue | null {
   if (!isObj(value) || !isObj(value.tokens)) return null
   return value as unknown as ThemeValue

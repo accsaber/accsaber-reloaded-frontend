@@ -7,6 +7,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
 import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
@@ -196,6 +197,8 @@ const {
   borderColorValue: sniperBorderColor,
   titleEffects: sniperTitleEffects,
   borderEffects: sniperBorderEffects,
+  thumbnailValue: sniperThumb,
+  thumbnailEffects: sniperThumbEffects,
 } = useEquippedRenderProps(sniperEquipped)
 
 const {
@@ -204,6 +207,8 @@ const {
   borderColorValue: targetBorderColor,
   titleEffects: targetTitleEffects,
   borderEffects: targetBorderEffects,
+  thumbnailValue: targetThumb,
+  thumbnailEffects: targetThumbEffects,
 } = useEquippedRenderProps(targetEquipped)
 const data = ref<Page<SnipeComparisonResponse> | null>(null)
 const loading = ref(false)
@@ -495,6 +500,8 @@ watch(
     </nav>
 
     <header class="snipe-hero">
+      <ThumbnailBackdrop class="snipe-hero__thumb snipe-hero__thumb--sniper" :value="sniperThumb" :effects="sniperThumbEffects" />
+      <ThumbnailBackdrop class="snipe-hero__thumb snipe-hero__thumb--target" :value="targetThumb" :effects="targetThumbEffects" />
       <div class="snipe-hero__player snipe-hero__player--sniper">
         <LevelBadge v-if="sniper" :level="sniperLevel?.level ?? 0"
           :current-xp="sniperLevel?.xpForCurrentLevel ?? 0" :required-xp="sniperLevel?.xpForNextLevel ?? 1"
@@ -679,6 +686,7 @@ watch(
 }
 
 .snipe-hero {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -687,6 +695,26 @@ watch(
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.snipe-hero > :not(.thumbnail-backdrop) {
+  position: relative;
+}
+
+.snipe-hero__thumb {
+  border-radius: 0;
+  width: 60%;
+}
+
+.snipe-hero__thumb--sniper {
+  inset: 0 auto 0 0;
+  mask-image: linear-gradient(to right, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.2) 50%, transparent);
+}
+
+.snipe-hero__thumb--target {
+  inset: 0 0 0 auto;
+  mask-image: linear-gradient(to left, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.2) 50%, transparent);
 }
 
 .snipe-hero__player {

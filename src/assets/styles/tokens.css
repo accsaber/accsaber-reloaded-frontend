@@ -215,6 +215,22 @@ html.theme-transitioning *::after {
     border-color 200ms ease;
 }
 
+[data-thumb-base] {
+  --thumb-ink: #0b0710;
+}
+
+[data-thumb-base='dark'] {
+  --text-primary: #f2f0f7;
+  --text-secondary: #b9b4c9;
+  --text-tertiary: #8d879e;
+}
+
+[data-thumb-base='light'] {
+  --text-primary: #241826;
+  --text-secondary: #5d4a5c;
+  --text-tertiary: #8a7389;
+}
+
 /* --- Milestone node/badge surfaces --- */
 .ms-surface {
   --ms-rim-idle: color-mix(in srgb, var(--ms-tier) 8%, var(--bg-overlay));

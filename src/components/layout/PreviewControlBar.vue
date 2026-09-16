@@ -3,15 +3,14 @@ import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PreviewModifierPicker from '@/components/domain/PreviewModifierPicker.vue'
 import PreviewPicker from '@/components/domain/PreviewPicker.vue'
 import PreviewVariantRow from '@/components/domain/PreviewVariantRow.vue'
-import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
+import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { usePreviewTheme } from '@/composables/usePreviewTheme'
 import { useAuthStore } from '@/stores/auth'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { usePreviewStore } from '@/stores/preview'
 import type { ItemResponse, UnusualEffectResponse } from '@/types/api/items'
-import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import { itemVariantPreviews, pickAssetUrl, readItemVariants, themeCompositionLayers } from '@/utils/items'
+import { itemVariantPreviews, readItemVariants, thumbnailHostAttrs } from '@/utils/items'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { computed, ref, watch } from 'vue'
 
@@ -140,16 +139,7 @@ const {
   thumbnailEffects,
 } = useEquippedRenderProps(() => preview.overrides)
 
-const thumbEffectLayers = computed(() => themeCompositionLayers(thumbnailEffects.value))
-
-const thumbScene = computed(() => thumbnailValue.value?.scene ?? null)
-const thumbImageUrl = computed(() => pickAssetUrl(thumbnailValue.value?.asset))
-const hasThumb = computed(() => !!thumbScene.value || !!thumbImageUrl.value)
-const thumbLayerStyle = computed<Record<string, string> | undefined>(() => {
-  const opacity = thumbnailValue.value?.opacity
-  return opacity != null ? { opacity: String(opacity) } : undefined
-})
-const thumbBase = computed<'light' | 'dark'>(() => thumbScene.value?.base ?? 'dark')
+const thumbAttrs = computed(() => thumbnailHostAttrs(thumbnailValue.value))
 
 const sampleAvatar = computed(() => authStore.userProfile?.avatarUrl || undefined)
 
@@ -195,23 +185,8 @@ const chips = computed(() => {
     <div class="preview-dock__reveal" :class="{ 'preview-dock__reveal--open': expanded }">
       <div class="preview-dock__reveal-clip">
         <div class="preview-dock__panel">
-          <div
-            class="preview-dock__stage"
-            :class="hasThumb ? ['preview-dock__stage--themed', `preview-dock__stage--themed-${thumbBase}`] : undefined"
-          >
-        <div v-if="hasThumb" class="preview-dock__thumb-bg" :style="thumbLayerStyle" aria-hidden="true">
-          <ThumbnailSceneRenderer v-if="thumbScene" :scene="thumbScene" />
-          <img v-else-if="thumbImageUrl" class="preview-dock__thumb-img" :src="thumbImageUrl" alt="" />
-          <div v-if="thumbEffectLayers.length" class="preview-dock__thumb-effects">
-            <ModifierCompositions
-              v-for="layer in thumbEffectLayers"
-              :key="layer.key"
-              :spec="layer.spec"
-              :stack-index="layer.stackIndex"
-              type-key="profile_thumbnail_background"
-            />
-          </div>
-        </div>
+          <div class="preview-dock__stage" v-bind="thumbAttrs">
+        <ThumbnailBackdrop :value="thumbnailValue" :effects="thumbnailEffects" />
         <LevelBadge
           :level="30"
           :current-xp="600"
@@ -364,44 +339,13 @@ const chips = computed(() => {
   overflow: hidden;
 }
 
-.preview-dock__stage--themed {
+.preview-dock__stage[data-thumb-base] {
   padding: var(--space-md);
   border: 1px solid var(--bg-overlay);
 }
 
-.preview-dock__stage--themed-dark {
-  --text-primary: #f2f0f7;
-  --text-secondary: #b9b4c9;
-  --text-tertiary: #8d879e;
-}
-
-.preview-dock__stage--themed-light {
-  --text-primary: #241826;
-  --text-secondary: #5d4a5c;
-  --text-tertiary: #8a7389;
-}
-
 .preview-dock__stage :deep(.level-badge) {
   position: relative;
-}
-
-.preview-dock__thumb-bg {
-  position: absolute;
-  inset: 0;
-}
-
-.preview-dock__thumb-effects {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.preview-dock__thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 .preview-dock__controls {

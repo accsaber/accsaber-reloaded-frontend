@@ -9,6 +9,7 @@ import ApToNextTooltip from '@/components/domain/ApToNextTooltip.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import NameHistoryPopover from '@/components/domain/NameHistoryPopover.vue'
 import PinnedMilestonesSection from '@/components/domain/PinnedMilestonesSection.vue'
@@ -108,7 +109,11 @@ const {
   backgroundIsVideo: equippedBackgroundIsVideo,
   backgroundImageUrl: equippedBackgroundImageUrl,
   backgroundStyle: equippedBackgroundStyle,
+  thumbnailValue: equippedThumbnailValue,
+  thumbnailEffects: equippedThumbnailEffects,
 } = useEquippedRenderProps(equipped, { previewable: true })
+
+const heroThumbValue = computed(() => (hideReloadedProfileFeatures.value ? null : equippedThumbnailValue.value))
 
 const equippedBackgroundFitClass = computed(() =>
   equippedBackgroundValue.value?.fit ? `profile-page__bg-equipped--${equippedBackgroundValue.value.fit}` : '',
@@ -604,6 +609,7 @@ watch(activeCategory, (newCategory) => {
       </div>
 
       <div class="profile-hero">
+        <ThumbnailBackdrop class="profile-hero__thumb" :value="heroThumbValue" :effects="equippedThumbnailEffects" />
         <div class="profile-hero__level-col">
           <PlayerTooltipTrigger class="profile-hero__badge-hover" :user-id="userId" :user-name="user.name"
             :avatar-url="userAvatarUrl" :country="user.country">
@@ -975,11 +981,26 @@ watch(activeCategory, (newCategory) => {
 }
 
 .profile-hero {
+  position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: stretch;
   gap: var(--space-xl);
   padding: var(--space-xl) 0 var(--space-lg);
+}
+
+.profile-hero > :not(.thumbnail-backdrop) {
+  position: relative;
+}
+
+.profile-hero__thumb {
+  inset: 0 auto 0 calc(-1 * var(--space-xl));
+  width: min(calc(100% + var(--space-xl)), 960px);
+  border-radius: 0;
+  mask-image:
+    linear-gradient(to right, transparent, rgb(0 0 0 / 0.5) 12%, rgb(0 0 0 / 0.25) 50%, transparent),
+    linear-gradient(to bottom, transparent, black 20%, black 70%, transparent);
+  mask-composite: intersect;
 }
 
 .profile-hero__top-row {
@@ -1495,6 +1516,11 @@ watch(activeCategory, (newCategory) => {
   }
 
   .profile-hero__name-row {
+    justify-content: center;
+  }
+
+  .profile-hero__supporter {
+    align-self: center;
     justify-content: center;
   }
 

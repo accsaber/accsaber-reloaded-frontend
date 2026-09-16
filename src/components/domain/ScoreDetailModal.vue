@@ -6,6 +6,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
+import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
@@ -83,6 +84,8 @@ const {
   borderColorValue: equippedBorderColor,
   titleEffects: equippedTitleEffects,
   borderEffects: equippedBorderEffects,
+  thumbnailValue: equippedThumbnail,
+  thumbnailEffects: equippedThumbnailEffects,
 } = useEquippedRenderProps(equipped)
 
 const playerName = computed(() => player.value?.name ?? props.score?.userName ?? '')
@@ -330,6 +333,7 @@ watch(
 
 
       <div class="score-detail__player">
+        <ThumbnailBackdrop class="score-detail__thumb" :value="equippedThumbnail" :effects="equippedThumbnailEffects" />
         <LevelBadge
           v-if="playerAvatar"
           class="score-detail__levelbadge"
@@ -547,6 +551,20 @@ watch(
   position: relative;
   z-index: 1;
   min-height: 64px;
+}
+
+.score-detail__thumb {
+  inset: calc(-1 * var(--space-lg)) auto calc(-1 * var(--space-md)) calc(-1 * var(--space-lg));
+  width: min(70%, 640px);
+  border-radius: 0;
+  mask-image:
+    linear-gradient(to right, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.2) 50%, transparent),
+    linear-gradient(to bottom, black 60%, transparent);
+  mask-composite: intersect;
+}
+
+.score-detail__player > :not(.thumbnail-backdrop) {
+  position: relative;
 }
 
 .score-detail__levelbadge {

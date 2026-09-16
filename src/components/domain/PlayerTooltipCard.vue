@@ -2,11 +2,10 @@
 import CountryFlag from '@/components/domain/CountryFlag.vue';
 import LevelBadge from '@/components/domain/LevelBadge.vue';
 import RelationActions from '@/components/domain/RelationActions.vue';
-import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue';
+import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue';
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
-import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue';
-import { fillToCss, pickAssetUrl, themeCompositionLayers, thumbnailSceneInk } from '@/utils/items';
+import { fillToCss, thumbnailHostAttrs } from '@/utils/items';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -32,18 +31,7 @@ const {
   thumbnailEffects: equippedThumbnailEffects,
 } = useEquippedRenderProps(() => profile.value?.equipped, { previewable: true })
 
-const thumbEffectLayers = computed(() => themeCompositionLayers(equippedThumbnailEffects.value))
-
-const thumbScene = computed(() => equippedThumbnail.value?.scene ?? null)
-const thumbImageUrl = computed(() => pickAssetUrl(equippedThumbnail.value?.asset))
-const hasThumb = computed(() => !!thumbScene.value || !!thumbImageUrl.value)
-const thumbLayerStyle = computed<Record<string, string> | undefined>(() => {
-  const opacity = equippedThumbnail.value?.opacity
-  return opacity != null ? { opacity: String(opacity) } : undefined
-})
-const thumbInk = computed(() => (thumbScene.value ? thumbnailSceneInk(thumbScene.value) : null))
-const thumbBase = computed<'light' | 'dark'>(() => thumbScene.value?.base ?? 'dark')
-const thumbFxHost = computed(() => ({ sceneType: thumbScene.value?.type, base: thumbBase.value }))
+const thumbAttrs = computed(() => thumbnailHostAttrs(equippedThumbnail.value))
 
 const tierKey = computed(() => {
   if (level.value?.title) return level.value.title.toLowerCase().replace(/\s+/g, '-')
@@ -68,26 +56,10 @@ const cardBorder = computed(() => {
 <template>
   <div
     class="player-tooltip"
-    :class="hasThumb ? ['player-tooltip--themed', `player-tooltip--themed-${thumbBase}`] : undefined"
-    :style="{
-      ...(cardBorder ? { '--tooltip-border': cardBorder } : undefined),
-      ...(thumbInk ? { '--thumb-ink': thumbInk } : undefined),
-    }"
+    v-bind="thumbAttrs"
+    :style="cardBorder ? { '--tooltip-border': cardBorder } : undefined"
   >
-    <div v-if="hasThumb" class="player-tooltip__thumb-bg" :style="thumbLayerStyle" aria-hidden="true">
-      <ThumbnailSceneRenderer v-if="thumbScene" :scene="thumbScene" />
-      <img v-else-if="thumbImageUrl" class="player-tooltip__thumb-img" :src="thumbImageUrl" alt="" />
-      <div v-if="thumbEffectLayers.length" class="player-tooltip__thumb-effects">
-        <ModifierCompositions
-          v-for="layer in thumbEffectLayers"
-          :key="layer.key"
-          :spec="layer.spec"
-          :stack-index="layer.stackIndex"
-          type-key="profile_thumbnail_background"
-          :host="thumbFxHost"
-        />
-      </div>
-    </div>
+    <ThumbnailBackdrop :value="equippedThumbnail" :effects="equippedThumbnailEffects" />
     <div class="player-tooltip__content">
       <div v-if="loading" class="player-tooltip__badge-skeleton" aria-hidden="true">
         <div class="player-tooltip__badge-skeleton-stack" />
@@ -161,39 +133,8 @@ const cardBorder = computed(() => {
     var(--tooltip-border, linear-gradient(var(--bg-overlay), var(--bg-overlay))) border-box;
 }
 
-.player-tooltip__thumb-bg {
-  position: absolute;
-  inset: 0;
-}
-
-.player-tooltip__thumb-effects {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.player-tooltip__thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.player-tooltip--themed-dark {
-  --text-primary: #f2f0f7;
-  --text-secondary: #b9b4c9;
-  --text-tertiary: #8d879e;
-}
-
-.player-tooltip--themed-light {
-  --text-primary: #241826;
-  --text-secondary: #5d4a5c;
-  --text-tertiary: #8a7389;
-}
-
-.player-tooltip--themed .player-tooltip__stat {
-  background: color-mix(in srgb, var(--thumb-ink, #0b0710) 62%, transparent);
+.player-tooltip[data-thumb-base] .player-tooltip__stat {
+  background: color-mix(in srgb, var(--thumb-ink) 62%, transparent);
 }
 
 .player-tooltip__content {

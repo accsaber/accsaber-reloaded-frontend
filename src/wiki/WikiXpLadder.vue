@@ -3,11 +3,10 @@ import type { LevelThreshold } from '@/api/levels'
 import logoUrl from '@/assets/logo.png'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
-import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
+import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import { tierKey } from '@/stores/levels'
 import type { ItemResponse } from '@/types/api/items'
 import {
-  pickAssetUrl,
   readBorderColorValue,
   readBorderShapeValue,
   readThumbnailBackgroundValue,
@@ -116,13 +115,6 @@ const wornThumb = computed(() => {
   return item ? readThumbnailBackgroundValue(item.value) : null
 })
 
-const thumbScene = computed(() => wornThumb.value?.scene ?? null)
-const thumbImageUrl = computed(() => pickAssetUrl(wornThumb.value?.asset))
-const thumbStyle = computed<Record<string, string> | undefined>(() => {
-  const opacity = wornThumb.value?.opacity
-  return opacity != null ? { opacity: String(opacity) } : undefined
-})
-
 const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 </script>
 
@@ -183,10 +175,7 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
     <div class="ladder__stage">
       <div class="ladder__person">
         <div class="ladder__card">
-          <div v-if="thumbScene || thumbImageUrl" class="ladder__card-bg" :style="thumbStyle" aria-hidden="true">
-            <ThumbnailSceneRenderer v-if="thumbScene" :scene="thumbScene" />
-            <img v-else-if="thumbImageUrl" class="ladder__card-img" :src="thumbImageUrl" alt="" />
-          </div>
+          <ThumbnailBackdrop :value="wornThumb" />
           <div class="ladder__card-content">
             <div class="ladder__badge">
               <LevelBadge
@@ -345,18 +334,6 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
   border-radius: var(--radius-card);
   background: var(--bg-surface);
   overflow: hidden;
-}
-
-.ladder__card-bg {
-  position: absolute;
-  inset: 0;
-}
-
-.ladder__card-bg :deep(canvas),
-.ladder__card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .ladder__card-content {
