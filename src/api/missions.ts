@@ -1,5 +1,5 @@
 import type {
-  CommunityContributorResponse,
+  MissionContributorResponse,
   CommunityMissionListParams,
   MissionListParams,
   MissionResponse,
@@ -25,8 +25,8 @@ export function getCommunityMissions(
 export function getCommunityContributors(
   missionId: string,
   params?: PaginationParams,
-): Promise<Page<CommunityContributorResponse>> {
-  return get<Page<CommunityContributorResponse>>(
+): Promise<Page<MissionContributorResponse>> {
+  return get<Page<MissionContributorResponse>>(
     `/missions/community/${missionId}/contributors${buildQuery(params)}`,
   )
 }

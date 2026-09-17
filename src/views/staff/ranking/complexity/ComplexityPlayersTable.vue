@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import type {
   ComparisonScenario,
   ComplexityPlayerRow,
   ComplexityScenario,
 } from '@/types/api/complexity'
-import type { TableColumn } from '@/types/display'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
+import { toUserRef } from '@/utils/mappers'
 import { AP_DECIMALS, SCENARIO_ORDER, SCENARIO_SHORT } from '@/utils/complexity'
 import { getRankClass } from '@/utils/ranking'
 import ScenarioCell from './ScenarioCell.vue'
@@ -103,9 +102,7 @@ const tableRows = computed(() =>
     id: row.userId,
     userId: row.userId,
     name: row.name,
-    country: row.country,
-    avatarUrl: pickAvatarUrl(row),
-    avatarFallbackUrl: pickAvatarFallback(row),
+    player: toUserRef(row),
     rankCurrent: rankOf(row, 'CURRENT'),
     apCurrent: apOf(row, 'CURRENT'),
     apScenario: apOf(row, props.scenario),
@@ -142,12 +139,7 @@ function selectPlayer(row: Record<string, unknown>) {
       </template>
 
       <template #cell-player="{ row }">
-        <div class="complexity-players__player">
-          <GlowImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="30"
-            :fallback-src="(row.avatarFallbackUrl as string | null)" />
-          <span class="complexity-players__name">{{ row.name }}</span>
-          <CountryFlag :country="(row.country as string)" />
-        </div>
+        <UserChip :user="(row.player as UserRefDisplay)" />
       </template>
 
       <template v-for="key in columns" :key="key" #[`cell-${apKey(key)}`]="{ row }">
@@ -176,10 +168,8 @@ function selectPlayer(row: Record<string, unknown>) {
           <span class="complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
             {{ row.rankCurrent != null ? `#${row.rankCurrent}` : '–' }}
           </span>
-          <GlowImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="36"
-            :fallback-src="(row.avatarFallbackUrl as string | null)" />
           <div class="complexity-players__card-body">
-            <span class="complexity-players__name">{{ row.name }}</span>
+            <UserChip :user="(row.player as UserRefDisplay)" />
             <div class="complexity-players__card-values">
               <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
               <ScenarioCell :value="(row.apScenario as number | null)"
@@ -212,22 +202,6 @@ function selectPlayer(row: Record<string, unknown>) {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-secondary);
-}
-
-.complexity-players__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.complexity-players__name {
-  color: var(--text-primary);
-  font-size: var(--text-body);
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .complexity-players__card {

@@ -17,7 +17,7 @@ import {
   type PresenceKind,
   type PresencePeer,
 } from '@/composables/useCampaignPresence'
-import { useCampaignChat } from '@/composables/useCampaignChat'
+import { useChat } from '@/composables/useChat'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useThemeStore } from '@/stores/theme'
@@ -157,7 +157,10 @@ onMounted(() => {
 
 const campaignIdRef = computed(() => campaign.value?.id ?? null)
 
-const chat = useCampaignChat(campaignIdRef)
+const chat = useChat(campaignIdRef, {
+  load: (id, params) => import('@/api/campaigns').then((m) => m.getCampaignChat(id, params)),
+  send: (id, req) => import('@/api/campaigns').then((m) => m.sendCampaignChatMessage(id, req)),
+})
 
 const canChat = computed(() => (isCreator.value || isCollaborator.value) && !isUnsavedDraft.value)
 

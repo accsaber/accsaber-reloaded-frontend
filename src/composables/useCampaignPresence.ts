@@ -1,8 +1,9 @@
+import { useSocket } from '@/composables/useSocket'
 import { useAuthStore } from '@/stores/auth'
-import type { CampaignChatMessageResponse } from '@/types/api/campaigns'
+import type { ChatMessageResponse } from '@/types/api/chat'
 import { hashString } from '@/utils/constants'
 import { isUuid } from '@/utils/mapRoute'
-import { onUnmounted, ref, watch, type Ref } from 'vue'
+import { onScopeDispose, ref, type Ref } from 'vue'
 
 export type PresenceAction = 'move' | 'select' | 'drag' | 'connect' | 'place' | 'edit'
 export type PresenceKind = 'node' | 'barrier' | 'text' | null
@@ -33,40 +34,17 @@ interface PresenceWire {
   y?: number | null
   field?: string | null
   members?: { userId: string; name?: string | null; avatarUrl?: string | null }[] | null
-  message?: CampaignChatMessageResponse | null
+  message?: ChatMessageResponse | null
 }
 
 const SEND_INTERVAL = 33
-const INITIAL_RETRY_MS = 1000
-const MAX_RETRY_MS = 30000
 const HEARTBEAT_MS = 30000
 const CURSOR_STALE_MS = 20000
+const STALE_SWEEP_MS = 5000
 const TYPING_SEND_INTERVAL = 2000
 const TYPING_TTL = 3500
 
 const ACTIONS: PresenceAction[] = ['move', 'select', 'drag', 'connect', 'place', 'edit']
-
-function presenceBase(): string {
-  const wsBase: string = import.meta.env.VITE_WS_BASE ?? ''
-  if (wsBase) {
-    try {
-      const u = new URL(wsBase)
-      const proto = u.protocol === 'https:' || u.protocol === 'wss:' ? 'wss:' : 'ws:'
-      return `${proto}//${u.host}`
-    } catch {
-      /* fall through to VITE_API_BASE */
-    }
-  }
-  const apiBase: string = import.meta.env.VITE_API_BASE ?? ''
-  try {
-    const parsed = new URL(apiBase)
-    const proto = parsed.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${parsed.host}`
-  } catch {
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${window.location.host}`
-  }
-}
 
 export function colorForUser(userId: string): string {
   return `oklch(0.72 0.15 ${hashString(userId) % 360})`
@@ -103,7 +81,7 @@ export function useCampaignPresence(
   active: Ref<boolean>,
   options: {
     onRemoteChange?: () => void
-    onChat?: (message: CampaignChatMessageResponse) => void
+    onChat?: (message: ChatMessageResponse) => void
   } = {},
 ): UseCampaignPresenceReturn {
   const auth = useAuthStore()
@@ -111,12 +89,6 @@ export function useCampaignPresence(
   let remoteChangeTimer: ReturnType<typeof setTimeout> | null = null
 
   const peerMap = new Map<string, PresencePeer>()
-  let ws: WebSocket | null = null
-  let disposed = false
-  let connecting = false
-  let retryMs = INITIAL_RETRY_MS
-  let retryTimeout: ReturnType<typeof setTimeout> | null = null
-  let heartbeat: ReturnType<typeof setInterval> | null = null
   let staleSweep: ReturnType<typeof setInterval> | null = null
 
   let pending: {
@@ -167,13 +139,35 @@ export function useCampaignPresence(
     return peer
   }
 
-  function onMessage(event: MessageEvent) {
-    let msg: PresenceWire
-    try {
-      msg = JSON.parse(typeof event.data === 'string' ? event.data : '')
-    } catch {
-      return
+  function clearTypingTimer(id: string) {
+    const timer = typingTimers.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      typingTimers.delete(id)
     }
+  }
+
+  function markTyping(actorId: string, on: boolean) {
+    const p = peerMap.get(actorId)
+    if (!p) return
+    clearTypingTimer(actorId)
+    p.typing = on
+    if (on) {
+      typingTimers.set(
+        actorId,
+        setTimeout(() => {
+          typingTimers.delete(actorId)
+          const t = peerMap.get(actorId)
+          if (t) {
+            t.typing = false
+            syncPeers()
+          }
+        }, TYPING_TTL),
+      )
+    }
+  }
+
+  function onMessage(msg: PresenceWire) {
     const type = msg.type
     if (!type) return
 
@@ -214,23 +208,7 @@ export function useCampaignPresence(
     if (type === 'typing') {
       const p = upsertPeer(actorId, msg.actorName, msg.actorAvatarUrl)
       p.lastSeen = Date.now()
-      clearTypingTimer(actorId)
-      if (msg.field === 'off') {
-        p.typing = false
-      } else {
-        p.typing = true
-        typingTimers.set(
-          actorId,
-          setTimeout(() => {
-            typingTimers.delete(actorId)
-            const t = peerMap.get(actorId)
-            if (t) {
-              t.typing = false
-              syncPeers()
-            }
-          }, TYPING_TTL),
-        )
-      }
+      markTyping(actorId, msg.field !== 'off')
       syncPeers()
       return
     }
@@ -255,18 +233,69 @@ export function useCampaignPresence(
     syncPeers()
   }
 
+  function stopStaleSweep() {
+    if (staleSweep) {
+      clearInterval(staleSweep)
+      staleSweep = null
+    }
+  }
+
+  function startStaleSweep() {
+    stopStaleSweep()
+    staleSweep = setInterval(() => {
+      const now = Date.now()
+      let changed = false
+      for (const peer of peerMap.values()) {
+        if (peer.x !== null && now - peer.lastCursorAt > CURSOR_STALE_MS) {
+          peer.x = null
+          peer.y = null
+          changed = true
+        }
+      }
+      if (changed) syncPeers()
+    }, STALE_SWEEP_MS)
+  }
+
+  function clearRoom() {
+    stopStaleSweep()
+    for (const timer of typingTimers.values()) clearTimeout(timer)
+    typingTimers.clear()
+    peerMap.clear()
+    syncPeers()
+  }
+
+  const { status, send } = useSocket<PresenceWire>({
+    path: '/ws/campaigns/presence',
+    auth: true,
+    heartbeatMs: HEARTBEAT_MS,
+    params: () => {
+      const id = campaignId.value
+      return active.value && id && isUuid(id) && auth.hasPlayerSession ? { campaignId: id } : null
+    },
+    onOpen: startStaleSweep,
+    onMessage,
+    onClose: clearRoom,
+  })
+
+  function sendJson(payload: Record<string, unknown>): boolean {
+    return status.value === 'connected' && send(JSON.stringify(payload))
+  }
+
   function flushCursor() {
-    if (!pending || ws?.readyState !== WebSocket.OPEN) return
+    if (!pending) return
     const { x, y, action, targetId, kind, tray } = pending
     const field = `${action}:${kind ?? ''}:${tray ?? ''}`
-    try {
-      ws.send(JSON.stringify({ type: 'cursor', x, y, targetId: targetId ?? null, field }))
-    } catch {
-      return
-    }
+    if (!sendJson({ type: 'cursor', x, y, targetId: targetId ?? null, field })) return
     lastSentAt = Date.now()
     lastSentKey = `${action}:${targetId ?? ''}`
     pending = null
+  }
+
+  function clearSendTimer() {
+    if (sendTimer) {
+      clearTimeout(sendTimer)
+      sendTimer = null
+    }
   }
 
   function sendCursor(
@@ -277,14 +306,11 @@ export function useCampaignPresence(
     kind: PresenceKind,
     tray: string | null = null,
   ) {
-    if (ws?.readyState !== WebSocket.OPEN) return
+    if (status.value !== 'connected') return
     pending = { x, y, action, targetId, kind, tray }
     const key = `${action}:${targetId ?? ''}`
     if (key !== lastSentKey) {
-      if (sendTimer) {
-        clearTimeout(sendTimer)
-        sendTimer = null
-      }
+      clearSendTimer()
       flushCursor()
       return
     }
@@ -301,206 +327,34 @@ export function useCampaignPresence(
 
   function sendCursorOff() {
     pending = null
-    if (sendTimer) {
-      clearTimeout(sendTimer)
-      sendTimer = null
-    }
-    if (ws?.readyState !== WebSocket.OPEN) return
+    clearSendTimer()
     lastSentKey = 'off'
-    try {
-      ws.send(JSON.stringify({ type: 'cursor', x: null, y: null, field: 'off' }))
-    } catch {
-      return
-    }
+    sendJson({ type: 'cursor', x: null, y: null, field: 'off' })
   }
 
   function sendChange() {
-    if (ws?.readyState !== WebSocket.OPEN) return
-    try {
-      ws.send(JSON.stringify({ type: 'change' }))
-    } catch {
-      return
-    }
+    sendJson({ type: 'change' })
   }
 
   function sendTyping() {
-    if (ws?.readyState !== WebSocket.OPEN) return
     const now = Date.now()
     if (now - lastTypingSentAt < TYPING_SEND_INTERVAL) return
-    lastTypingSentAt = now
-    try {
-      ws.send(JSON.stringify({ type: 'typing', field: 'on' }))
-    } catch {
-      return
-    }
+    if (sendJson({ type: 'typing', field: 'on' })) lastTypingSentAt = now
   }
 
   function sendTypingStop() {
     lastTypingSentAt = 0
-    if (ws?.readyState !== WebSocket.OPEN) return
-    try {
-      ws.send(JSON.stringify({ type: 'typing', field: 'off' }))
-    } catch {
-      return
-    }
+    sendJson({ type: 'typing', field: 'off' })
   }
 
-  function clearTypingTimer(id: string) {
-    const timer = typingTimers.get(id)
-    if (timer) {
-      clearTimeout(timer)
-      typingTimers.delete(id)
-    }
-  }
-
-  function clearAllTypingTimers() {
-    for (const timer of typingTimers.values()) clearTimeout(timer)
-    typingTimers.clear()
-  }
-
-  function stopTimers() {
-    if (heartbeat) {
-      clearInterval(heartbeat)
-      heartbeat = null
-    }
-    if (staleSweep) {
-      clearInterval(staleSweep)
-      staleSweep = null
-    }
-    clearAllTypingTimers()
-  }
-
-  function startTimers() {
-    stopTimers()
-    heartbeat = setInterval(() => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        try {
-          ws.send('ping')
-        } catch {
-          ws.close()
-        }
-      }
-    }, HEARTBEAT_MS)
-    staleSweep = setInterval(() => {
-      const now = Date.now()
-      let changed = false
-      for (const peer of peerMap.values()) {
-        if (peer.x !== null && now - peer.lastCursorAt > CURSOR_STALE_MS) {
-          peer.x = null
-          peer.y = null
-          changed = true
-        }
-      }
-      if (changed) syncPeers()
-    }, 5000)
-  }
-
-  function scheduleReconnect() {
-    if (disposed || retryTimeout || !active.value) return
-    retryTimeout = setTimeout(() => {
-      retryTimeout = null
-      if (!disposed) void connect()
-    }, retryMs)
-    retryMs = Math.min(retryMs * 2, MAX_RETRY_MS)
-  }
-
-  async function connect() {
-    if (ws || connecting || disposed) return
-    const id = campaignId.value
-    if (!id || !isUuid(id) || !active.value || !auth.hasPlayerSession) return
-    connecting = true
-    try {
-      if (auth.isPlayerTokenExpiringSoon) {
-        try {
-          await auth.refreshPlayerSession()
-        } catch {
-          /* proceed with the current token; handshake will decide */
-        }
-      }
-      const token = auth.accessToken
-      if (!token || disposed || !active.value) return
-      const url = `${presenceBase()}/ws/campaigns/presence?campaignId=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`
-      ws = new WebSocket(url)
-
-      ws.addEventListener('open', () => {
-        if (disposed) {
-          ws?.close()
-          return
-        }
-        retryMs = INITIAL_RETRY_MS
-        startTimers()
-      })
-
-      ws.addEventListener('message', onMessage)
-
-      ws.addEventListener('close', () => {
-        ws = null
-        stopTimers()
-        peerMap.clear()
-        syncPeers()
-        if (!disposed && active.value) scheduleReconnect()
-      })
-
-      ws.addEventListener('error', () => {
-        ws?.close()
-      })
-    } catch {
-      ws = null
-      scheduleReconnect()
-    } finally {
-      connecting = false
-    }
-  }
-
-  function disconnect() {
-    disposed = true
-    if (retryTimeout) {
-      clearTimeout(retryTimeout)
-      retryTimeout = null
-    }
-    if (sendTimer) {
-      clearTimeout(sendTimer)
-      sendTimer = null
-    }
+  onScopeDispose(() => {
+    clearSendTimer()
     if (remoteChangeTimer) {
       clearTimeout(remoteChangeTimer)
       remoteChangeTimer = null
     }
-    stopTimers()
-    if (ws) {
-      ws.close()
-      ws = null
-    }
-    peerMap.clear()
-    syncPeers()
-  }
-
-  watch(
-    [campaignId, active],
-    () => {
-      const id = campaignId.value
-      const shouldConnect = active.value && !!id && isUuid(id) && auth.hasPlayerSession
-      if (shouldConnect) {
-        disposed = false
-        void connect()
-      } else {
-        if (retryTimeout) {
-          clearTimeout(retryTimeout)
-          retryTimeout = null
-        }
-        stopTimers()
-        if (ws) {
-          ws.close()
-          ws = null
-        }
-        peerMap.clear()
-        syncPeers()
-      }
-    },
-    { immediate: true },
-  )
-
-  onUnmounted(disconnect)
+    clearRoom()
+  })
 
   return { peers, sendCursor, sendCursorOff, sendChange, sendTyping, sendTypingStop }
 }

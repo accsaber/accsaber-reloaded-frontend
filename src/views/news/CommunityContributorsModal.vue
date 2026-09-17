@@ -4,9 +4,9 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
-import type { CommunityContributorResponse, MissionResponse } from '@/types/api/missions'
+import UserChip from '@/components/domain/UserChip.vue'
+import type { MissionContributorResponse, MissionResponse } from '@/types/api/missions'
+import type { UserRefDisplay } from '@/types/display'
 import { getRankClass } from '@/utils/ranking'
 import { missionUnitLabel } from '@/utils/missions'
 import { computed, ref, watch } from 'vue'
@@ -22,11 +22,7 @@ const emit = defineEmits<{
 
 interface ContributorRow {
   rank: number
-  userId: string
-  userName: string
-  userCountry: string
-  avatarUrl: string
-  avatarFallbackUrl: string | null
+  player: UserRefDisplay
   rewarded: boolean
   amount: string
 }
@@ -41,15 +37,10 @@ const error = ref<string | null>(null)
 
 const paid = computed(() => props.mission.status === 'completed')
 
-function toRow(row: CommunityContributorResponse): ContributorRow {
-  const source = { avatarUrl: row.userAvatarUrl, cdnAvatarUrl: row.userCdnAvatarUrl }
+function toRow(row: MissionContributorResponse): ContributorRow {
   return {
     rank: row.rank,
-    userId: row.userId,
-    userName: row.userName,
-    userCountry: row.userCountry,
-    avatarUrl: pickAvatarUrl(source),
-    avatarFallbackUrl: pickAvatarFallback(source),
+    player: row.player,
     rewarded: row.rewardedAt != null,
     amount: missionUnitLabel(props.mission.type, row.contribution),
   }
@@ -94,15 +85,9 @@ watch(
     <EmptyState v-else-if="!rows.length" icon="🤝" message="Nobody has contributed yet." />
 
     <ol v-else class="contrib__list">
-      <li v-for="row in rows" :key="row.userId" class="contrib__row">
+      <li v-for="row in rows" :key="row.player.id" class="contrib__row">
         <span class="contrib__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
-        <img class="contrib__avatar" :src="row.avatarUrl" :alt="row.userName" loading="lazy"
-          decoding="async" @error="onAvatarError(row.avatarFallbackUrl)($event)" />
-        <router-link class="contrib__name" :to="{ name: 'player-profile', params: { userId: row.userId } }"
-          @click="emit('navigate')">
-          {{ row.userName }}
-          <CountryFlag v-if="row.userCountry" :country="row.userCountry" />
-        </router-link>
+        <UserChip :user="row.player" link class="contrib__player" @click="emit('navigate')" />
         <span v-if="paid" class="contrib__reward" :class="{ 'contrib__reward--pending': !row.rewarded }">
           {{ row.rewarded ? 'Rewarded' : 'Paying out' }}
         </span>
@@ -165,32 +150,8 @@ watch(
 .contrib__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
 .contrib__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
-.contrib__avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-  background: var(--bg-overlay);
-  flex-shrink: 0;
-}
-
-.contrib__name {
+.contrib__player {
   flex: 1;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--text-primary);
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contrib__name:hover {
-  color: var(--page-accent, var(--accent));
 }
 
 .contrib__reward {

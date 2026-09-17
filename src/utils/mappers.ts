@@ -2,9 +2,13 @@ import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MilestoneCompletionResponse, MilestoneResponse } from '@/types/api/milestones'
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import type { PublicStaffUserResponse } from '@/types/api/staff'
+import type { PublicClanResponse } from '@/types/api/clans'
+import type { UserRelationResponse } from '@/types/api/relations'
+import type { CampaignCollaboratorResponse } from '@/types/api/campaigns'
+import type { SupporterTier } from '@/types/api/supporters'
 import type { LeaderboardResponse, ScoreResponse, UserMilestoneProgressResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, UserRefDisplay, XpPlayerDisplay } from '@/types/display'
-import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 
 export function formatDifficulty(diff: string): string {
   switch (diff) {
@@ -14,6 +18,58 @@ export function formatDifficulty(diff: string): string {
     case 'EXPERT': return 'Expert'
     case 'EXPERT_PLUS': return 'Expert+'
     default: return diff
+  }
+}
+
+export type FlatUserRef = {
+  userId: string
+  avatarUrl?: string | null
+  cdnAvatarUrl?: string | null
+  country?: string | null
+  supporterTier?: SupporterTier | null
+  clan?: PublicClanResponse | null
+} & ({ userName: string } | { name: string })
+
+export function toUserRef(source: UserRefDisplay | FlatUserRef): UserRefDisplay {
+  if ('userId' in source) {
+    return {
+      id: source.userId,
+      name: 'userName' in source ? source.userName : source.name,
+      avatarUrl: source.avatarUrl ?? null,
+      cdnAvatarUrl: source.cdnAvatarUrl ?? null,
+      country: source.country ?? null,
+      supporterTier: source.supporterTier ?? null,
+      clan: source.clan ?? null,
+    }
+  }
+  return {
+    id: source.id,
+    name: source.name,
+    avatarUrl: source.avatarUrl ?? null,
+    cdnAvatarUrl: source.cdnAvatarUrl ?? null,
+    country: source.country ?? null,
+    supporterTier: source.supporterTier ?? null,
+    clan: source.clan ?? null,
+  }
+}
+
+export function toRelationUserRef(item: UserRelationResponse): UserRefDisplay {
+  return {
+    id: item.targetUserId ?? '',
+    name: item.targetName,
+    avatarUrl: item.targetAvatarUrl ?? null,
+    cdnAvatarUrl: item.targetCdnAvatarUrl ?? null,
+    country: item.targetCountry ?? null,
+  }
+}
+
+export function toCollaboratorUserRef(item: CampaignCollaboratorResponse): UserRefDisplay {
+  return {
+    id: item.userId,
+    name: item.userName,
+    avatarUrl: item.userAvatarUrl,
+    cdnAvatarUrl: item.userCdnAvatarUrl,
+    country: item.userCountry,
   }
 }
 
@@ -29,10 +85,7 @@ export function toStaffUserDisplay(staff: PublicStaffUserResponse): UserRefDispl
 export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
   return {
     userId: entry.userId,
-    name: entry.userName,
-    country: entry.country,
-    avatarUrl: pickAvatarUrl(entry),
-    avatarFallbackUrl: pickAvatarFallback(entry),
+    player: toUserRef(entry),
     rank: entry.ranking,
     countryRank: entry.countryRanking,
     rankChange: entry.rankingLastWeek != null ? entry.rankingLastWeek - entry.ranking : null,
@@ -40,24 +93,19 @@ export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
     avgAccuracy: entry.averageAcc,
     rankedPlays: entry.rankedPlays,
     playerInactive: entry.playerInactive,
-    supporterTier: entry.supporterTier ?? null,
   }
 }
 
 export function toXpPlayerDisplay(entry: XpLeaderboardResponse): XpPlayerDisplay {
   return {
     userId: entry.userId,
-    name: entry.userName,
-    country: entry.country,
-    avatarUrl: pickAvatarUrl(entry),
-    avatarFallbackUrl: pickAvatarFallback(entry),
+    player: toUserRef(entry),
     rank: entry.ranking,
     countryRank: entry.countryRanking,
     rankChange: entry.rankingLastWeek != null ? entry.rankingLastWeek - entry.ranking : null,
     totalXp: entry.totalXp,
     level: entry.level,
     playerInactive: entry.playerInactive,
-    supporterTier: entry.supporterTier ?? null,
   }
 }
 
@@ -145,10 +193,7 @@ export function toDifficultyScoreDisplay(
     rank: score.rank,
     countryRank: score.countryRank,
     userId: score.userId,
-    userName: score.userName,
-    avatarUrl: pickAvatarUrl(score),
-    avatarFallbackUrl: pickAvatarFallback(score),
-    country: score.country,
+    player: toUserRef(score),
     accuracy: score.accuracy,
     score: score.score,
     scoreNoMods: score.scoreNoMods,
@@ -171,7 +216,6 @@ export function toDifficultyScoreDisplay(
     hmd: score.hmd,
     xpGained: score.xpGained,
     rankWhenSet: score.rankWhenSet,
-    supporterTier: score.supporterTier ?? null,
   }
 }
 

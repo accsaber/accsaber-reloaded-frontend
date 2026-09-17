@@ -5,13 +5,12 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
 import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
-import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
@@ -514,11 +513,8 @@ watch(
         <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
         <div class="snipe-hero__player-info">
           <span class="snipe-hero__role">You</span>
-          <span class="snipe-hero__player-name">
-            <CountryFlag v-if="sniper" :country="sniper.country" />
-            {{ sniper?.name ?? '...' }}
-            <SupporterTierIcon v-if="sniper?.supporterTier" :tier="sniper.supporterTier" :size="16" />
-          </span>
+          <UserChip v-if="sniper" :user="sniper" size="lg" hide-avatar class="snipe-hero__player-name" />
+          <span v-else class="snipe-hero__player-name">...</span>
         </div>
       </div>
 
@@ -547,11 +543,8 @@ watch(
         <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
         <div class="snipe-hero__player-info">
           <span class="snipe-hero__role snipe-hero__role--target">Target</span>
-          <span class="snipe-hero__player-name">
-            {{ target?.name ?? '...' }}
-            <CountryFlag v-if="target" :country="target.country" />
-            <SupporterTierIcon v-if="target?.supporterTier" :tier="target.supporterTier" :size="16" />
-          </span>
+          <UserChip v-if="target" :user="target" size="lg" hide-avatar class="snipe-hero__player-name" />
+          <span v-else class="snipe-hero__player-name">...</span>
         </div>
       </div>
     </header>

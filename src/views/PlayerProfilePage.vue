@@ -7,10 +7,10 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import ApToNextTooltip from '@/components/domain/ApToNextTooltip.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import NameHistoryPopover from '@/components/domain/NameHistoryPopover.vue'
 import PinnedMilestonesSection from '@/components/domain/PinnedMilestonesSection.vue'
 import PinnedScoresSection from '@/components/domain/PinnedScoresSection.vue'
@@ -32,7 +32,7 @@ import { useInventoryStore } from '@/stores/inventory'
 import { useRelationsStore } from '@/stores/relations'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
 import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserMilestoneProgressResponse, UserResponse, UserScoresParams } from '@/types/api/users'
-import type { CategoryCode } from '@/types/display'
+import type { CategoryCode, UserRefDisplay } from '@/types/display'
 import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { getRankClass } from '@/utils/ranking'
@@ -69,6 +69,13 @@ const canSnipe = computed(
 
 const user = ref<UserResponse | null>(null)
 const userAvatarUrl = computed(() => pickAvatarUrl(user.value))
+const heroUser = computed<UserRefDisplay>(() => ({
+  id: userId.value,
+  name: user.value?.name ?? '',
+  avatarUrl: user.value?.avatarUrl ?? null,
+  cdnAvatarUrl: user.value?.cdnAvatarUrl ?? null,
+  country: user.value?.country ?? null,
+}))
 const level = ref<LevelResponse | null>(null)
 const stats = ref<UserCategoryStatisticsResponse[]>([])
 const xpStats = ref<UserAllStatisticsResponse | null>(null)
@@ -611,8 +618,7 @@ watch(activeCategory, (newCategory) => {
       <div class="profile-hero">
         <ThumbnailBackdrop class="profile-hero__thumb" :value="heroThumbValue" :effects="equippedThumbnailEffects" />
         <div class="profile-hero__level-col">
-          <PlayerTooltipTrigger class="profile-hero__badge-hover" :user-id="userId" :user-name="user.name"
-            :avatar-url="userAvatarUrl" :country="user.country">
+          <PlayerTooltipTrigger class="profile-hero__badge-hover" :user="heroUser">
             <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
               :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="userAvatarUrl"
               :plain="hideReloadedProfileFeatures"
@@ -637,11 +643,9 @@ watch(activeCategory, (newCategory) => {
                     :disabled="nameSaving" aria-label="Edit display name"
                     @keydown.enter.prevent="saveName" @keydown.escape.prevent="cancelNameEdit" />
                 </template>
-                <template v-else>
-                  <h1 class="profile-hero__name">{{ user.name }}</h1>
+                <UserChip v-else :user="heroUser" hide-avatar name-tag="h1" class="profile-hero__name">
                   <NameHistoryPopover :user-id="userId" :current-name="user.name" />
-                </template>
-                <CountryFlag :country="user.country" />
+                </UserChip>
                 <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
               </div>
               <p v-if="editMode && nameError" class="profile-hero__name-error">{{ nameError }}</p>

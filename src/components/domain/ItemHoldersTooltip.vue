@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import CountryFlag from '@/components/domain/CountryFlag.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useAuthStore } from '@/stores/auth'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemHolderResponse, ItemHolderSort } from '@/types/api/items'
 import { resolveModifierRefs } from '@/utils/items'
+import { toUserRef } from '@/utils/mappers'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -374,18 +374,9 @@ let activeLock: (() => void) | null = null
                 :to="{ name: 'player-profile', params: { userId: h.userId } }"
                 class="holders-tip__row"
               >
-                <img
-                  :src="pickAvatarUrl(h)"
-                  :alt="h.userName"
-                  class="holders-tip__avatar"
-                  loading="lazy"
-                  decoding="async"
-                  @error="onAvatarError(pickAvatarFallback(h))($event)"
-                />
                 <div class="holders-tip__who">
                   <div class="holders-tip__nameline">
-                    <span class="holders-tip__name">{{ h.userName }}</span>
-                    <CountryFlag :country="h.country" />
+                    <UserChip :user="toUserRef(h)" size="sm" />
                     <svg v-if="h.following" class="holders-tip__follow" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                       aria-hidden="true"><title>Following</title>
@@ -617,14 +608,6 @@ let activeLock: (() => void) | null = null
   background: var(--bg-elevated);
 }
 
-.holders-tip__avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
 .holders-tip__who {
   display: flex;
   flex-direction: column;
@@ -640,15 +623,6 @@ let activeLock: (() => void) | null = null
   min-width: 0;
 }
 
-.holders-tip__name {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
 
 .holders-tip__follow {
   width: 12px;

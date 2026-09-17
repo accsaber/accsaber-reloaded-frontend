@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import CountryFlag from '@/components/domain/CountryFlag.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { getUser } from '@/api/users'
 import { useCategoryStore } from '@/stores/categories'
 import type { LeaderboardResponse } from '@/types/api/users'
+import type { UserRefDisplay } from '@/types/display'
+import { toUserRef } from '@/utils/mappers'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -31,7 +32,7 @@ const results = ref<LeaderboardResponse[]>([])
 const loading = ref(false)
 const open = ref(false)
 const focusedIndex = ref(-1)
-const selected = ref<{ userId: string; userName: string; country: string; avatarUrl: string; avatarFallbackUrl: string | null } | null>(null)
+const selected = ref<UserRefDisplay | null>(null)
 
 const containerRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -78,13 +79,7 @@ function updatePanelPosition() {
 }
 
 function pick(user: LeaderboardResponse) {
-  selected.value = {
-    userId: user.userId,
-    userName: user.userName,
-    country: user.country,
-    avatarUrl: pickAvatarUrl(user),
-    avatarFallbackUrl: pickAvatarFallback(user),
-  }
+  selected.value = toUserRef(user)
   emit('update:modelValue', user.userId)
   emit('select', { userId: user.userId, userName: user.userName })
   open.value = false
@@ -142,16 +137,10 @@ watch(() => props.modelValue, async (val) => {
     selected.value = null
     return
   }
-  if (selected.value?.userId === val) return
+  if (selected.value?.id === val) return
   try {
     const u = await getUser(val)
-    selected.value = {
-      userId: u.id,
-      userName: u.name,
-      country: u.country,
-      avatarUrl: pickAvatarUrl(u),
-      avatarFallbackUrl: pickAvatarFallback(u),
-    }
+    selected.value = toUserRef(u)
     emit('select', { userId: u.id, userName: u.name })
   } catch {
     selected.value = null
@@ -178,10 +167,7 @@ onUnmounted(() => {
 <template>
   <div ref="containerRef" class="user-picker">
     <div v-if="selected" class="user-picker__selected">
-      <img v-if="selected.avatarUrl" class="user-picker__avatar" :src="selected.avatarUrl" :alt="selected.userName"
-        loading="lazy" decoding="async" @error="onAvatarError(selected.avatarFallbackUrl)($event)" />
-      <CountryFlag v-if="selected.country" :country="selected.country" />
-      <span class="user-picker__name">{{ selected.userName }}</span>
+      <UserChip :user="selected" size="sm" class="user-picker__name" />
       <button type="button" class="user-picker__clear" :disabled="disabled" aria-label="Clear selection" @click="clear">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
@@ -217,11 +203,7 @@ onUnmounted(() => {
           @mouseenter="focusedIndex = i"
           @click="pick(user)"
         >
-          <img v-if="user.cdnAvatarUrl || user.avatarUrl" class="user-picker__avatar"
-            :src="user.cdnAvatarUrl ?? user.avatarUrl" :alt="user.userName" loading="lazy" decoding="async"
-            @error="onAvatarError(user.cdnAvatarUrl && user.avatarUrl && user.cdnAvatarUrl !== user.avatarUrl ? user.avatarUrl : null)($event)" />
-          <CountryFlag v-if="user.country" :country="user.country" />
-          <span class="user-picker__option-name">{{ user.userName }}</span>
+          <UserChip :user="toUserRef(user)" size="sm" class="user-picker__option-name" />
           <span class="user-picker__option-rank">#{{ user.ranking }}</span>
         </button>
       </div>
@@ -266,20 +248,8 @@ onUnmounted(() => {
   background: var(--bg-base);
 }
 
-.user-picker__avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-}
-
 .user-picker__name {
   flex: 1;
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .user-picker__clear {
@@ -342,9 +312,6 @@ onUnmounted(() => {
 
 .user-picker__option-name {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .user-picker__option-rank {

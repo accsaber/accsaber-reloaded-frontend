@@ -1,20 +1,14 @@
+import { useSocket } from '@/composables/useSocket'
 import type { ScoreResponse } from '@/types/api/users'
 import type { ConnectionStatus, ScoreFeedEntry } from '@/types/display'
-import { formatDifficulty } from '@/utils/mappers'
-import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { formatDifficulty, toUserRef } from '@/utils/mappers'
+import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
-import { wsOrigin } from '@/utils/ws'
-import { onUnmounted, ref, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 
 const MAX_ENTRIES = 50
-const INITIAL_RETRY_MS = 1000
-const MAX_RETRY_MS = 30000
 const HEARTBEAT_MS = 30000
-
-function buildWsUrl(): string {
-  return `${wsOrigin()}/ws/scores`
-}
 
 interface UseScoreWebSocketReturn {
   scores: Ref<ScoreFeedEntry[]>
@@ -25,37 +19,11 @@ interface UseScoreWebSocketReturn {
 
 export function useScoreWebSocket(): UseScoreWebSocketReturn {
   const scores = ref<ScoreFeedEntry[]>([])
-  const status = ref<ConnectionStatus>('disconnected')
 
   const categoryStore = useCategoryStore()
   const modifierStore = useModifierStore()
 
-  let ws: WebSocket | null = null
-  let retryMs = INITIAL_RETRY_MS
-  let retryTimeout: ReturnType<typeof setTimeout> | null = null
-  let heartbeatInterval: ReturnType<typeof setInterval> | null = null
   let entryCounter = 0
-  let disposed = false
-
-  function stopHeartbeat() {
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval)
-      heartbeatInterval = null
-    }
-  }
-
-  function startHeartbeat() {
-    stopHeartbeat()
-    heartbeatInterval = setInterval(() => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        try {
-          ws.send('ping')
-        } catch {
-          ws.close()
-        }
-      }
-    }, HEARTBEAT_MS)
-  }
 
   function toFeedEntry(raw: ScoreResponse): ScoreFeedEntry {
     const categoryCode = categoryStore.getCategoryCode(raw.categoryId) ?? 'overall'
@@ -64,10 +32,7 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
     return {
       key: `${raw.id}-${entryCounter++}`,
       userId: raw.userId,
-      userName: raw.userName,
-      avatarUrl: pickAvatarUrl(raw),
-      avatarFallbackUrl: pickAvatarFallback(raw),
-      country: raw.country,
+      player: toUserRef(raw),
       mapId: raw.mapId,
       mapDifficultyId: raw.mapDifficultyId,
       beatsaverCode: raw.beatsaverCode ?? null,
@@ -79,7 +44,7 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
       mapAuthor: raw.mapAuthor ?? '',
       coverUrl: pickCoverUrl(raw),
       coverFallbackUrl: pickCoverFallback(raw),
-      difficulty: formatDifficulty(raw.difficulty as 'EASY' | 'NORMAL' | 'HARD' | 'EXPERT' | 'EXPERT_PLUS'),
+      difficulty: formatDifficulty(raw.difficulty),
       categoryCode,
       rank: raw.rank,
       score: raw.score,
@@ -97,71 +62,14 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
     }
   }
 
-  function onMessage(event: MessageEvent) {
-    if (event.data === 'pong') return
-    try {
-      const data = JSON.parse(event.data) as ScoreResponse
-      const entry = toFeedEntry(data)
-      scores.value = [entry, ...scores.value].slice(0, MAX_ENTRIES)
-    } catch {
-    }
-  }
-
-  function scheduleReconnect() {
-    if (disposed || retryTimeout) return
-    status.value = 'reconnecting'
-    retryTimeout = setTimeout(() => {
-      retryTimeout = null
-      if (!disposed) connect()
-    }, retryMs)
-    retryMs = Math.min(retryMs * 2, MAX_RETRY_MS)
-  }
-
-  function connect() {
-    if (ws) return
-    disposed = false
-    try {
-      ws = new WebSocket(buildWsUrl())
-
-      ws.addEventListener('open', () => {
-        if (disposed) { ws?.close(); return }
-        status.value = 'connected'
-        retryMs = INITIAL_RETRY_MS
-        startHeartbeat()
-      })
-
-      ws.addEventListener('message', onMessage)
-
-      ws.addEventListener('close', () => {
-        ws = null
-        stopHeartbeat()
-        if (!disposed) scheduleReconnect()
-      })
-
-      ws.addEventListener('error', () => {
-        ws?.close()
-      })
-    } catch {
-      ws = null
-      if (!disposed) scheduleReconnect()
-    }
-  }
-
-  function disconnect() {
-    disposed = true
-    if (retryTimeout) {
-      clearTimeout(retryTimeout)
-      retryTimeout = null
-    }
-    stopHeartbeat()
-    if (ws) {
-      ws.close()
-      ws = null
-    }
-    status.value = 'disconnected'
-  }
-
-  onUnmounted(disconnect)
+  const { status, connect, disconnect } = useSocket<ScoreResponse>({
+    path: '/ws/scores',
+    autoConnect: false,
+    heartbeatMs: HEARTBEAT_MS,
+    onMessage: (raw) => {
+      scores.value = [toFeedEntry(raw), ...scores.value].slice(0, MAX_ENTRIES)
+    },
+  })
 
   return { scores, status, connect, disconnect }
 }

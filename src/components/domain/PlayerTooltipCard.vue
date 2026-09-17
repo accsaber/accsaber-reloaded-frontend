@@ -3,20 +3,18 @@ import CountryFlag from '@/components/domain/CountryFlag.vue';
 import LevelBadge from '@/components/domain/LevelBadge.vue';
 import RelationActions from '@/components/domain/RelationActions.vue';
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue';
+import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback';
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
+import type { UserRefDisplay } from '@/types/display';
 import { fillToCss, thumbnailHostAttrs } from '@/utils/items';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  userId: string
-  userName: string
-  avatarUrl: string
-  avatarFallbackUrl?: string | null
-  country: string
+  user: UserRefDisplay
 }>()
 
-const { profile, loading } = useMiniProfile(() => props.userId)
+const { profile, loading } = useMiniProfile(() => props.user.id)
 
 const stats = computed(() => profile.value?.stats ?? null)
 const level = computed(() => profile.value?.level ?? null)
@@ -70,8 +68,8 @@ const cardBorder = computed(() => {
           :level="level?.level ?? 0"
           :current-xp="level?.xpForCurrentLevel ?? 0"
           :required-xp="level?.xpForNextLevel ?? 1"
-          :avatar-url="avatarUrl"
-          :avatar-fallback-url="avatarFallbackUrl"
+          :avatar-url="pickAvatarUrl(user)"
+          :avatar-fallback-url="pickAvatarFallback(user)"
           :fallback-title="level?.title"
           hide-progress
           :equipped-title="equippedTitle"
@@ -83,9 +81,9 @@ const cardBorder = computed(() => {
       </div>
 
       <div class="player-tooltip__info">
-        <span class="player-tooltip__name">{{ userName }}</span>
+        <span class="player-tooltip__name">{{ user.name }}</span>
         <span class="player-tooltip__country">
-          <CountryFlag :country="country" />
+          <CountryFlag :country="user.country" />
         </span>
       </div>
 
@@ -110,8 +108,8 @@ const cardBorder = computed(() => {
       </div>
 
       <RelationActions
-        :target-user-id="userId"
-        :target-name="userName"
+        :target-user-id="user.id"
+        :target-name="user.name"
         show-snipe
         dense
         class="player-tooltip__actions"

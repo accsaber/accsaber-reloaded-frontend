@@ -1,3 +1,4 @@
+import type { ClanStatsResponse } from './clans'
 import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
 import type { MilestoneIconGroup, MilestoneRewardResponse } from './milestones'
 import type { PaginationParams } from '../pagination'
@@ -162,6 +163,7 @@ export interface UserAllStatisticsResponse {
   totalMissionXp: number
   totalCampaignXp: number
   categories: UserCategoryStatisticsResponse[]
+  clan: ClanStatsResponse | null
 }
 
 export interface UserCategoryStatisticsResponse {

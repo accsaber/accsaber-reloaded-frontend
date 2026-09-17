@@ -1,3 +1,4 @@
+import type { PlayerRef } from './common'
 import type { CategoryCode } from '@/types/display'
 import type { ItemResponse } from './items'
 
@@ -20,7 +21,7 @@ export type MissionType =
   | 'PB_RANKED_BEFORE_N'
   | 'CAMPAIGN_COMPLETE_N'
 
-export type MissionPool = 'daily' | 'weekly' | 'event' | 'community'
+export type MissionPool = 'daily' | 'weekly' | 'event' | 'community' | 'clan'
 
 export type MissionStatus = 'active' | 'completed' | 'expired' | 'voided'
 
@@ -32,6 +33,7 @@ export interface MissionResponse {
   description: string
   type: MissionType
   pool: MissionPool
+  parentMissionId?: string | null
 
   categoryId?: string
   categoryCode?: CategoryCode
@@ -85,13 +87,9 @@ export interface CommunityMissionListParams {
   active?: boolean
 }
 
-export interface CommunityContributorResponse {
+export interface MissionContributorResponse {
   rank: number
-  userId: string
-  userName: string
-  userCountry: string
-  userAvatarUrl?: string
-  userCdnAvatarUrl?: string
+  player: PlayerRef
   contribution: number
   firstAt: string
   lastAt: string

@@ -4,6 +4,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import NewsArticle from '@/components/domain/NewsArticle.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import type { PublicNewsResponse } from '@/types/api/news'
+import { isUuid } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -27,8 +28,7 @@ async function load(slugVal: string) {
   notFound.value = false
   try {
     const { getNewsBySlug, getNewsById } = await import('@/api/news')
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugVal)
-    news.value = isUuid ? await getNewsById(slugVal) : await getNewsBySlug(slugVal)
+    news.value = isUuid(slugVal) ? await getNewsById(slugVal) : await getNewsBySlug(slugVal)
   } catch {
     news.value = null
     notFound.value = true

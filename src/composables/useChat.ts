@@ -1,10 +1,15 @@
-import { getCampaignChat, sendCampaignChatMessage } from '@/api/campaigns'
 import { parseApiError } from '@/api/client'
-import type { CampaignChatMessageResponse } from '@/types/api/campaigns'
+import type { ChatMessageResponse, SendChatMessageRequest } from '@/types/api/chat'
+import type { Page, PaginationParams } from '@/types/pagination'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, ref, watch, type Ref } from 'vue'
 
 const PAGE_SIZE = 20
+
+export interface ChatChannelApi {
+  load: (channelId: string, params: PaginationParams) => Promise<Page<ChatMessageResponse>>
+  send: (channelId: string, req: SendChatMessageRequest) => Promise<ChatMessageResponse>
+}
 
 export function messageTimeMillis(createdAt: unknown): number {
   if (typeof createdAt === 'number' && Number.isFinite(createdAt)) {
@@ -19,8 +24,8 @@ export function messageTimeMillis(createdAt: unknown): number {
   return 0
 }
 
-export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
-  const byId = ref(new Map<string, CampaignChatMessageResponse>())
+export function useChat(channelId: Ref<string | null | undefined>, api: ChatChannelApi) {
+  const byId = ref(new Map<string, ChatMessageResponse>())
   let seqById = new Map<string, number>()
   let headSeq = 0
   let tailSeq = 0
@@ -31,8 +36,8 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
   }
 
   function orderMessages(
-    a: CampaignChatMessageResponse,
-    b: CampaignChatMessageResponse,
+    a: ChatMessageResponse,
+    b: ChatMessageResponse,
   ): number {
     return (seqById.get(a.id) ?? 0) - (seqById.get(b.id) ?? 0)
   }
@@ -49,7 +54,7 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
 
   let nextPage = 0
 
-  function addMessage(message: CampaignChatMessageResponse, overwrite = false) {
+  function addMessage(message: ChatMessageResponse, overwrite = false) {
     if (!overwrite && byId.value.has(message.id)) return
     assignSeq(message.id, 'append')
     const next = new Map(byId.value)
@@ -57,7 +62,7 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
     byId.value = next
   }
 
-  function addMany(list: CampaignChatMessageResponse[]) {
+  function addMany(list: ChatMessageResponse[]) {
     if (list.length === 0) return
     const next = new Map(byId.value)
     for (const m of list) {
@@ -81,7 +86,7 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
   }
 
   function currentId(): string | null {
-    const id = campaignId.value
+    const id = channelId.value
     return id && isUuid(id) ? id : null
   }
 
@@ -91,7 +96,7 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
     loading.value = true
     error.value = null
     try {
-      const page = await getCampaignChat(id, { page: 0, size: PAGE_SIZE })
+      const page = await api.load(id, { page: 0, size: PAGE_SIZE })
       addMany(page.content)
       hasMore.value = !page.last
       nextPage = 1
@@ -109,7 +114,7 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
     loadingMore.value = true
     error.value = null
     try {
-      const page = await getCampaignChat(id, { page: nextPage, size: PAGE_SIZE })
+      const page = await api.load(id, { page: nextPage, size: PAGE_SIZE })
       addMany(page.content)
       hasMore.value = !page.last
       nextPage += 1
@@ -128,7 +133,7 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
     contentError.value = null
     error.value = null
     try {
-      const created = await sendCampaignChatMessage(id, { content: trimmed })
+      const created = await api.send(id, { content: trimmed })
       addMessage(created, true)
       return true
     } catch (err) {
@@ -142,11 +147,11 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
     }
   }
 
-  function ingest(message: CampaignChatMessageResponse) {
+  function ingest(message: ChatMessageResponse) {
     addMessage(message)
   }
 
-  watch(campaignId, reset)
+  watch(channelId, reset)
 
   return {
     messages,
@@ -163,4 +168,4 @@ export function useCampaignChat(campaignId: Ref<string | null | undefined>) {
   }
 }
 
-export type UseCampaignChatReturn = ReturnType<typeof useCampaignChat>
+export type UseChatReturn = ReturnType<typeof useChat>

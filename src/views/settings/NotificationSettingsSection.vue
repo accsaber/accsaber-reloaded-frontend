@@ -12,6 +12,9 @@ const NOTIFICATION_DEFAULTS: NotificationSettings = {
   'notifications.marketOutbid': true,
   'notifications.itemEarned': true,
   'notifications.server': true,
+  'notifications.clanMembership': true,
+  'notifications.clanAlliance': true,
+  'notifications.clanWar': true,
 }
 
 const CONTROLS: { key: keyof NotificationSettings & string; title: string; hint: string }[] = [
@@ -44,6 +47,21 @@ const CONTROLS: { key: keyof NotificationSettings & string; title: string; hint:
     key: 'notifications.itemEarned',
     title: 'You receive a new item',
     hint: 'Crates, drops, and rewards arriving in your inventory.',
+  },
+  {
+    key: 'notifications.clanMembership',
+    title: 'Clan membership',
+    hint: 'Join requests, invites, and rank changes in your clan.',
+  },
+  {
+    key: 'notifications.clanAlliance',
+    title: 'Clan alliances and rivals',
+    hint: 'Another clan allies with, rivals, or drops your clan.',
+  },
+  {
+    key: 'notifications.clanWar',
+    title: 'Clan wars',
+    hint: 'A war is declared on your clan, starts, or ends.',
   },
   {
     key: 'notifications.server',

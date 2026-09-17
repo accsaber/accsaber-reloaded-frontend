@@ -1,8 +1,5 @@
-import type {
-  MarketListingResponse,
-  MarketListingStatus,
-  MarketUserRef,
-} from '@/types/api/market'
+import type { PlayerRef } from '@/types/api/common'
+import type { MarketListingResponse, MarketListingStatus } from '@/types/api/market'
 import { digitsOnly } from '@/utils/formatters'
 
 export type MarketListingKind = 'shop' | 'auction' | 'auction_buyout'
@@ -31,11 +28,10 @@ export function listingPrice(listing: MarketListingResponse): ListingPrice {
 }
 
 export function isSameMarketUser(
-  ref: MarketUserRef | null | undefined,
+  ref: PlayerRef | null | undefined,
   userId: string | null | undefined,
 ): boolean {
-  if (!ref || userId == null) return false
-  return String(ref.id) === String(userId)
+  return !!ref && userId != null && ref.id === userId
 }
 
 export function sanitizeEssenceInput(raw: string | number): number | null {

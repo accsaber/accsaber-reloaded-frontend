@@ -369,10 +369,7 @@ onMounted(() => {
           <span class="trade-builder__banner-text">
             <template v-if="recipientUser">
               You are trading with
-              <router-link
-                class="trade-builder__banner-user"
-                :to="{ name: 'player-profile', params: { userId: recipientUser.id } }"
-              >{{ recipientUser.name }}</router-link>
+              <UserChip :user="recipientUser" size="xs" link class="trade-builder__banner-user" />
             </template>
             <template v-else-if="recipientLoading">Loading recipient...</template>
             <template v-else>Pick a player to start an offer.</template>
@@ -686,13 +683,10 @@ onMounted(() => {
 }
 
 .trade-builder__banner-user {
+  vertical-align: middle;
+  font-size: inherit;
   color: var(--page-accent);
   font-weight: 600;
-  text-decoration: none;
-}
-
-.trade-builder__banner-user:hover {
-  text-decoration: underline;
 }
 
 .trade-builder__layout {

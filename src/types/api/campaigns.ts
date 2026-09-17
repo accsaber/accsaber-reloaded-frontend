@@ -269,21 +269,6 @@ export interface InviteCampaignCollaboratorRequest {
   userId: string
 }
 
-export interface CampaignChatMessageResponse {
-  id: string
-  campaignId: string
-  authorId: string
-  authorName: string
-  authorAvatarUrl: string | null
-  authorCdnAvatarUrl: string | null
-  content: string
-  createdAt: string
-}
-
-export interface SendCampaignChatRequest {
-  content: string
-}
-
 export interface CampaignCollaborationListParams extends PaginationParams {
   status?: CampaignCollaboratorStatus
 }

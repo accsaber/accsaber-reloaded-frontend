@@ -3,11 +3,11 @@ import { getApiErrorMessage } from '@/api/client'
 import BaseModal from '@/components/common/BaseModal.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
 import type { LeaderboardResponse } from '@/types/api/users'
+import { toUserRef } from '@/utils/mappers'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{ loading?: boolean; existingIds?: string[] }>(), {
@@ -110,22 +110,8 @@ function rowClick(entry: LeaderboardResponse) {
             :disabled="loading || existingSet.has(String(entry.userId))"
             @click="rowClick(entry)"
           >
-            <span class="collab-picker__avatar">
-              <img
-                v-if="pickAvatarUrl(entry)"
-                :src="pickAvatarUrl(entry)"
-                :alt="entry.userName"
-                loading="lazy"
-                @error="onAvatarError(pickAvatarFallback(entry))($event)"
-              />
-            </span>
-            <span class="collab-picker__meta">
-              <span class="collab-picker__name">{{ entry.userName }}</span>
-              <span class="collab-picker__sub">
-                <CountryFlag v-if="entry.country" :country="entry.country" />
-                <span class="collab-picker__rank">#{{ entry.ranking }}</span>
-              </span>
-            </span>
+            <UserChip :user="toUserRef(entry)" size="lg" />
+            <span class="collab-picker__rank">#{{ entry.ranking }}</span>
             <span class="collab-picker__trailing">
               <span v-if="existingSet.has(String(entry.userId))" class="collab-picker__on">
                 On campaign
@@ -225,7 +211,7 @@ function rowClick(entry: LeaderboardResponse) {
 .collab-picker__row {
   width: 100%;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: var(--space-sm);
   align-items: center;
   padding: 8px;
@@ -250,42 +236,7 @@ function rowClick(entry: LeaderboardResponse) {
   cursor: not-allowed;
 }
 
-.collab-picker__avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--bg-elevated);
-}
-
-.collab-picker__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.collab-picker__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.collab-picker__name {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.collab-picker__sub {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.collab-picker__rank {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-secondary);

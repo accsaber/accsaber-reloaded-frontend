@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import type { MapComplexityHistoryResponse, MapDifficultyStatisticsResponse, TopScoreSnapshot } from '@/types/api/maps'
 import type { DifficultyScoreDisplay, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { MAP_STATS_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
 import { formatRelativeDate } from '@/utils/formatters'
+import { toUserRef } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -44,20 +46,13 @@ function snapshotFromScore(score: DifficultyScoreDisplay): TopScoreSnapshot {
   return {
     scoreId: score.id,
     userId: score.userId,
-    userName: score.userName,
-    avatarUrl: score.avatarFallbackUrl ?? score.avatarUrl,
-    cdnAvatarUrl: score.avatarFallbackUrl ? score.avatarUrl : null,
+    userName: score.player.name,
+    avatarUrl: score.player.avatarUrl ?? '',
+    cdnAvatarUrl: score.player.cdnAvatarUrl ?? null,
     score: score.score,
     accuracy: score.accuracy,
     ap: score.ap,
     timeSet: score.date,
-  }
-}
-
-function handleTopAvatarError(entry: TopScoreSnapshot, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (entry.cdnAvatarUrl && entry.avatarUrl && img.src !== entry.avatarUrl) {
-    img.src = entry.avatarUrl
   }
 }
 
@@ -198,10 +193,7 @@ watch(selectedRange, fetchHistoricStats)
             :class="{ 'map-stats__top-row--current': item.current }" tabindex="0" role="button"
             @click="emit('navigate-player', item.entry.userId)"
             @keydown.enter="emit('navigate-player', item.entry.userId)">
-            <img class="map-stats__top-avatar" :src="item.entry.cdnAvatarUrl ?? item.entry.avatarUrl"
-              :alt="item.entry.userName" loading="lazy" decoding="async"
-              @error="handleTopAvatarError(item.entry, $event)" />
-            <span class="map-stats__top-name">{{ item.entry.userName }}</span>
+            <UserChip :user="toUserRef(item.entry)" class="map-stats__top-player" />
             <span class="map-stats__top-acc">{{ (item.entry.accuracy * 100).toFixed(2) }}%</span>
             <span class="map-stats__top-ap">{{ item.entry.ap.toFixed(2) }} AP</span>
             <span class="map-stats__top-date">{{ formatRelativeDate(item.entry.timeSet) }}</span>
@@ -291,23 +283,8 @@ watch(selectedRange, fetchHistoricStats)
   border: 1px solid var(--bg-overlay);
 }
 
-.map-stats__top-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-btn);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.map-stats__top-name {
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--text-primary);
+.map-stats__top-player {
   flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .map-stats__top-acc {

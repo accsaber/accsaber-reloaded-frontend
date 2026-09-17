@@ -2,13 +2,14 @@
 import BaseModal from '@/components/common/BaseModal.vue'
 import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { LeaderboardResponse } from '@/types/api/users'
 import { buildMapRoute } from '@/utils/mapRoute'
+import { toUserRef } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { isStaffSubdomain, playerProfileHref, mainSiteUrl } from '@/utils/subdomain'
 import { nextTick, ref, useTemplateRef, watch } from 'vue'
@@ -163,13 +164,6 @@ function goToDifficulty(diff: PublicMapDifficultyResponse, event: MouseEvent) {
   emit('close')
 }
 
-function handlePlayerAvatarError(p: LeaderboardResponse, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (p.cdnAvatarUrl && p.avatarUrl && img.src !== p.avatarUrl) {
-    img.src = p.avatarUrl
-  }
-}
-
 function handleDiffCoverError(diff: PublicMapDifficultyResponse, event: Event) {
   const img = event.currentTarget as HTMLImageElement
   if (diff.cdnCoverUrl && diff.coverUrl && img.src !== diff.coverUrl) {
@@ -226,14 +220,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
             <a v-for="p in players" :key="p.userId" :href="playerHref(p.userId)" class="search-modal__row"
               @click="goToPlayer(p.userId, $event)">
               <span class="search-modal__rank" :class="getRankClass(p.ranking)">#{{ p.ranking }}</span>
-              <img :src="p.cdnAvatarUrl ?? p.avatarUrl" :alt="p.userName" class="search-modal__avatar"
-                loading="lazy" decoding="async" @error="handlePlayerAvatarError(p, $event)" />
-              <span class="search-modal__row-main">
-                <span class="search-modal__row-title">{{ p.userName }}</span>
-                <span class="search-modal__row-sub">
-                  <CountryFlag :country="p.country" />
-                </span>
-              </span>
+              <UserChip :user="toUserRef(p)" class="search-modal__player" />
               <span class="search-modal__row-meta">
                 <span class="search-modal__stat">{{ formatAp(p.ap) }}</span>
                 <span class="search-modal__stat-label">AP</span>
@@ -447,20 +434,16 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
   font-weight: 700;
 }
 
-.search-modal__avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
 .search-modal__cover {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-avatar);
   object-fit: cover;
   flex-shrink: 0;
+}
+
+.search-modal__player {
+  flex: 1;
 }
 
 .search-modal__row-main {

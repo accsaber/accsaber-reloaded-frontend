@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { colorForUser } from '@/composables/useCampaignPresence'
-import { messageTimeMillis, type UseCampaignChatReturn } from '@/composables/useCampaignChat'
+import { messageTimeMillis, type UseChatReturn } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
-import type { CampaignChatMessageResponse } from '@/types/api/campaigns'
+import type { ChatMessageResponse } from '@/types/api/chat'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, nextTick, ref, watch } from 'vue'
 
-const props = defineProps<{ chat: UseCampaignChatReturn }>()
+const props = defineProps<{ chat: UseChatReturn }>()
 
 const emit = defineEmits<{ typing: []; 'typing-stop': [] }>()
 
@@ -41,30 +41,22 @@ function markSeen() {
   if (changed) seenIds.value = next
 }
 
-function isSelf(m: CampaignChatMessageResponse): boolean {
-  return !!auth.userId && m.authorId === auth.userId
+function isSelf(m: ChatMessageResponse): boolean {
+  return !!auth.userId && m.author.id === auth.userId
 }
 
-function displayTime(m: CampaignChatMessageResponse): string {
+function displayTime(m: ChatMessageResponse): string {
   const ms = messageTimeMillis(m.createdAt)
   return ms ? formatRelativeDate(new Date(ms).toISOString()) : 'just now'
 }
 
-function isoTime(m: CampaignChatMessageResponse): string {
+function isoTime(m: ChatMessageResponse): string {
   const ms = messageTimeMillis(m.createdAt)
   return ms ? new Date(ms).toISOString() : ''
 }
 
-function authorColor(m: CampaignChatMessageResponse): string {
-  return colorForUser(m.authorId)
-}
-
-function avatarSrc(m: CampaignChatMessageResponse): string {
-  return pickAvatarUrl({ avatarUrl: m.authorAvatarUrl, cdnAvatarUrl: m.authorCdnAvatarUrl })
-}
-
-function avatarFallback(m: CampaignChatMessageResponse): string | null {
-  return pickAvatarFallback({ avatarUrl: m.authorAvatarUrl, cdnAvatarUrl: m.authorCdnAvatarUrl })
+function authorColor(m: ChatMessageResponse): string {
+  return colorForUser(m.author.id)
 }
 
 function scrollToBottom() {
@@ -220,17 +212,17 @@ watch(
         >
           <span class="campaign-chat__avatar" aria-hidden="true">
             <img
-              v-if="avatarSrc(m)"
-              :src="avatarSrc(m)"
-              :alt="m.authorName"
+              v-if="pickAvatarUrl(m.author)"
+              :src="pickAvatarUrl(m.author)"
+              :alt="m.author.name"
               loading="lazy"
-              @error="onAvatarError(avatarFallback(m))($event)"
+              @error="onAvatarError(pickAvatarFallback(m.author))($event)"
             />
-            <span v-else class="campaign-chat__avatar-initial">{{ m.authorName.charAt(0) }}</span>
+            <span v-else class="campaign-chat__avatar-initial">{{ m.author.name.charAt(0) }}</span>
           </span>
           <div class="campaign-chat__bubble">
             <div class="campaign-chat__meta">
-              <span class="campaign-chat__author">{{ m.authorName }}</span>
+              <span class="campaign-chat__author">{{ m.author.name }}</span>
               <time class="campaign-chat__time" :datetime="isoTime(m)">
                 {{ displayTime(m) }}
               </time>

@@ -1,4 +1,5 @@
 import type { PaginationParams } from '../pagination'
+import type { PlayerRef } from './common'
 import type { ItemRarity, UserItemResponse } from './items'
 
 export type MarketListingStatus = 'active' | 'sold' | 'expired' | 'cancelled'
@@ -9,40 +10,32 @@ export type MarketSortOption = 'ending_soon' | 'newest' | 'price_asc' | 'price_d
 
 export type MarketEventType = 'bid' | 'extended' | 'sold' | 'expired' | 'cancelled'
 
-export interface MarketUserRef {
-  id: string
-  name: string
-  avatarUrl: string | null
-  cdnAvatarUrl: string | null
-  country: string | null
-}
-
 export interface MarketListingResponse {
   id: string
   title: string
   description: string | null
-  seller: MarketUserRef
+  seller: PlayerRef
   item: UserItemResponse
   quantity: number
   startingBid: number | null
   buyoutPrice: number | null
   minIncrement: number
   currentBid: number | null
-  currentBidder: MarketUserRef | null
+  currentBidder: PlayerRef | null
   minimumNextBid: number | null
   bidCount: number
   status: MarketListingStatus
   createdAt: string
   endsAt: string | null
   settledAt: string | null
-  winner: MarketUserRef | null
+  winner: PlayerRef | null
   finalPrice: number | null
 }
 
 export interface MarketBidResponse {
   id: string
   listingId: string
-  bidder: MarketUserRef
+  bidder: PlayerRef
   amount: number
   buyout: boolean
   createdAt: string
@@ -53,7 +46,7 @@ export interface MarketListingEvent {
   type: MarketEventType
   status: MarketListingStatus
   amount: number | null
-  actor: MarketUserRef | null
+  actor: PlayerRef | null
   endsAt: string | null
 }
 

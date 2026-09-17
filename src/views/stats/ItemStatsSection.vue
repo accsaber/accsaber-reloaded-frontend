@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
 import type { ItemStatsPlayerRef } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
+import { toUserRef } from '@/utils/mappers'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { useStatsQueryState } from '@/composables/useStatsQueryState'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -243,18 +243,11 @@ const rows = computed<Record<string, unknown>[]>(() => {
       return withRank(enrichItem({
         ...item,
         ownerUserId: owner.userId,
-        ownerUserName: owner.userName,
-        ownerAvatarUrl: pickAvatarUrl(owner),
-        ownerAvatarFallbackUrl: pickAvatarFallback(owner),
-        ownerCountry: owner.country,
+        owner: toUserRef(owner),
       }), i)
     }
     const player = item as unknown as ItemStatsPlayerRef
-    return withRank({
-      ...item,
-      avatarUrl: pickAvatarUrl(player),
-      avatarFallbackUrl: pickAvatarFallback(player),
-    }, i)
+    return withRank({ ...item, player: toUserRef(player) }, i)
   })
 })
 

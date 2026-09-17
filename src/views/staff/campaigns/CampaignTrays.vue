@@ -5,7 +5,7 @@ import ImageUploader from '@/components/common/ImageUploader.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
 import CampaignRewardItem from '@/components/domain/CampaignRewardItem.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import CampaignBackgroundPlacer from './CampaignBackgroundPlacer.vue'
 import CampaignBoundsField from './CampaignBoundsField.vue'
 import CampaignEditorNote from './CampaignEditorNote.vue'
@@ -18,8 +18,8 @@ import CampaignTargetRow from './CampaignTargetRow.vue'
 import CampaignShapeGlyph from './CampaignShapeGlyph.vue'
 import CampaignLabelPositionPicker from './CampaignLabelPositionPicker.vue'
 import { useCampaignEditorContext } from './campaignEditorContext'
-import { onAvatarError } from '@/composables/useAvatarFallback'
 import { resolveSize } from '@/utils/campaignLayout'
+import { toCollaboratorUserRef } from '@/utils/mappers'
 import type { CampaignTargetMode } from '@/types/enums'
 import { computed, ref } from 'vue'
 
@@ -782,32 +782,12 @@ const connectionSwatch = computed(() => {
 
     <ul v-else-if="activeCollaborators.length > 0" class="campaign-editor__collab-list">
       <li v-for="c in activeCollaborators" :key="c.id" class="campaign-editor__collab">
-        <span class="campaign-editor__collab-avatar">
-          <img
-            v-if="c.userCdnAvatarUrl || c.userAvatarUrl"
-            :src="c.userCdnAvatarUrl ?? c.userAvatarUrl ?? ''"
-            :alt="c.userName"
-            loading="lazy"
-            @error="
-              onAvatarError(
-                c.userCdnAvatarUrl && c.userAvatarUrl && c.userCdnAvatarUrl !== c.userAvatarUrl
-                  ? c.userAvatarUrl
-                  : null,
-              )($event)
-            "
-          />
-        </span>
-        <span class="campaign-editor__collab-meta">
-          <span class="campaign-editor__collab-name">{{ c.userName }}</span>
-          <span class="campaign-editor__collab-sub">
-            <CountryFlag v-if="c.userCountry" :country="c.userCountry" />
-            <span
-              class="campaign-editor__collab-status"
-              :class="`campaign-editor__collab-status--${c.status.toLowerCase()}`"
-            >
-              {{ c.status === 'PENDING' ? 'Invited' : 'Collaborator' }}
-            </span>
-          </span>
+        <UserChip :user="toCollaboratorUserRef(c)" size="sm" class="campaign-editor__collab-player" />
+        <span
+          class="campaign-editor__collab-status"
+          :class="`campaign-editor__collab-status--${c.status.toLowerCase()}`"
+        >
+          {{ c.status === 'PENDING' ? 'Invited' : 'Collaborator' }}
         </span>
         <button
           v-if="isCreator"
@@ -2435,7 +2415,7 @@ const connectionSwatch = computed(() => {
 
 .campaign-editor__collab {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: var(--space-sm);
   align-items: center;
   padding: 6px 8px;
@@ -2444,43 +2424,8 @@ const connectionSwatch = computed(() => {
   border-radius: 3px;
 }
 
-.campaign-editor__collab-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--bg-elevated);
-}
-
-.campaign-editor__collab-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.campaign-editor__collab-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.campaign-editor__collab-name {
-  font-family: var(--font-sans);
+.campaign-editor__collab-player {
   font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.campaign-editor__collab-sub {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.6875rem;
 }
 
 .campaign-editor__collab-status {

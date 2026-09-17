@@ -5,12 +5,12 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemRarity, ItemResponse, ItemTypeKey } from '@/types/api/items'
-import type { TableColumn } from '@/types/display'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
 import { rarityClass, resolveModifierRefs } from '@/utils/items'
 import { getRankClass } from '@/utils/ranking'
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 
 const props = defineProps<{
   columns: TableColumn[]
@@ -112,17 +112,11 @@ onMounted(() => {
     </template>
 
     <template #cell-player="{ row }">
-      <LeaderboardPlayerCell :user-id="(row.userId as string)" :user-name="(row.userName as string)"
-        :avatar-url="(row.avatarUrl as string)"
-        :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
-        :country="(row.country as string)" />
+      <UserChip :user="(row.player as UserRefDisplay)" tooltip />
     </template>
 
     <template #cell-owner="{ row }">
-      <LeaderboardPlayerCell :user-id="(row.ownerUserId as string)" :user-name="(row.ownerUserName as string)"
-        :avatar-url="(row.ownerAvatarUrl as string)"
-        :avatar-fallback-url="(row.ownerAvatarFallbackUrl as string | null | undefined) ?? null"
-        :country="(row.ownerCountry as string)" />
+      <UserChip :user="(row.owner as UserRefDisplay)" tooltip />
     </template>
 
     <template #cell-item="{ row }">
@@ -191,10 +185,7 @@ onMounted(() => {
         <div class="stats-card__details">
           <div v-if="hasOwner" class="stats-card__detail">
             <span class="stats-card__label">{{ board === 'first-edition-holders' ? 'Holder' : 'Owner' }}</span>
-            <LeaderboardPlayerCell :user-id="(row.ownerUserId as string)" :user-name="(row.ownerUserName as string)"
-              :avatar-url="(row.ownerAvatarUrl as string)"
-              :avatar-fallback-url="(row.ownerAvatarFallbackUrl as string | null | undefined) ?? null"
-              :country="(row.ownerCountry as string)" :size="24" />
+            <UserChip :user="(row.owner as UserRefDisplay)" size="sm" tooltip />
           </div>
           <div v-if="board === 'rarest-unboxed'" class="stats-card__detail stats-card__detail--stacked">
             <span class="stats-card__label">Modifiers</span>
@@ -222,12 +213,7 @@ onMounted(() => {
       <div v-else class="stats-card" @click="pushRow(row)">
         <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
 
-        <div class="stats-card__player">
-          <LeaderboardPlayerCell :user-id="(row.userId as string)" :user-name="(row.userName as string)"
-            :avatar-url="(row.avatarUrl as string)"
-            :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
-            :country="(row.country as string)" :size="28" />
-        </div>
+        <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip class="stats-card__player" />
 
         <span v-if="primaryStat" class="stats-card__stat" :class="primaryStat.cls">
           {{ primaryStat.fmt(row[primaryStat.key]) }}
@@ -393,10 +379,6 @@ onMounted(() => {
 }
 
 .stats-card__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
   flex: 1;
 }
 

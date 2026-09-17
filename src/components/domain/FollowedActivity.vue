@@ -5,10 +5,8 @@ import BaseTabs from '@/components/common/BaseTabs.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -16,9 +14,9 @@ import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRelationType } from '@/types/api/relations'
 import type { LeaderboardResponse, ScoreResponse } from '@/types/api/users'
-import type { ScoreDisplay, ScoreFeedEntry, SortDirection, Tab, TableColumn } from '@/types/display'
+import type { ScoreDisplay, ScoreFeedEntry, SortDirection, Tab, TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatDifficulty, toPlayerDisplay } from '@/utils/mappers'
+import { formatDifficulty, toPlayerDisplay, toUserRef } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
@@ -98,10 +96,7 @@ const rankingRows = computed<Record<string, unknown>[]>(() => {
     return {
       userId: player.userId,
       rank: player.rank,
-      name: player.name,
-      country: player.country,
-      avatarUrl: player.avatarUrl,
-      avatarFallbackUrl: player.avatarFallbackUrl,
+      player: player.player,
       ap: player.ap,
       avgAccuracy: player.avgAccuracy,
       playerInactive: player.playerInactive,
@@ -115,10 +110,7 @@ const scoreFeedEntries = computed<ScoreFeedEntry[]>(() => {
   return page.content.map((score) => ({
     key: score.id,
     userId: score.userId,
-    userName: score.userName,
-    avatarUrl: score.cdnAvatarUrl ?? score.avatarUrl ?? '',
-    avatarFallbackUrl: score.cdnAvatarUrl && score.avatarUrl && score.cdnAvatarUrl !== score.avatarUrl ? score.avatarUrl : null,
-    country: score.country ?? '',
+    player: toUserRef(score),
     mapId: score.mapId,
     mapDifficultyId: score.mapDifficultyId,
     beatsaverCode: score.beatsaverCode,
@@ -179,7 +171,7 @@ function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
     bombHits: entry.bombHits,
     streak115: entry.streak115,
     blScoreId: entry.blScoreId,
-    userName: entry.userName,
+    userName: entry.player.name,
     mapAuthor: entry.mapAuthor,
   }
 }
@@ -329,19 +321,7 @@ watch([sortField, sortDir, filterCategoryId], () => {
         </template>
 
         <template #cell-player="{ row }">
-          <PlayerTooltipTrigger
-            :user-id="(row.userId as string)"
-            :user-name="(row.name as string)"
-            :avatar-url="(row.avatarUrl as string)"
-            :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
-            :country="(row.country as string)"
-            class="followed-activity__player"
-          >
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28"
-              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-            <span class="followed-activity__player-name">{{ row.name }}</span>
-            <CountryFlag :country="(row.country as string)" />
-          </PlayerTooltipTrigger>
+          <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip />
         </template>
 
         <template #cell-ap="{ value }">
@@ -356,10 +336,7 @@ watch([sortField, sortDir, filterCategoryId], () => {
         <template #mobile-card="{ row }">
           <RouterLink :to="buildRankingPlayerRoute(row)" class="followed-activity__player-card">
             <span class="followed-activity__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28"
-              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-            <span class="followed-activity__player-name">{{ row.name }}</span>
-            <CountryFlag :country="(row.country as string)" />
+            <UserChip :user="(row.player as UserRefDisplay)" size="sm" class="followed-activity__player" />
             <span class="followed-activity__ap">{{ (row.ap as number).toFixed(2) }}</span>
           </RouterLink>
         </template>
@@ -587,19 +564,7 @@ watch([sortField, sortDir, filterCategoryId], () => {
 }
 
 .followed-activity__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.followed-activity__player-name {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-primary);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
 }
 
 .followed-activity__ap {

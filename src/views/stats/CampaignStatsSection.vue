@@ -5,7 +5,7 @@ import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import { STATS_CHART_RANGE_PARAMS } from '@/composables/useStatsChartConfig'
 import { useStatsQueryState } from '@/composables/useStatsQueryState'
 import type {
@@ -13,14 +13,14 @@ import type {
   CampaignStatsStatus,
   TimeSeriesPointResponse,
 } from '@/types/api/statistics'
-import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint } from '@/types/display'
+import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
+import { toUserRef, type FlatUserRef } from '@/utils/mappers'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { useRouter } from 'vue-router'
 import CampaignHardestNodes from './CampaignHardestNodes.vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
-import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
 import StatsFilterChips from './StatsFilterChips.vue'
 import { fmtDecimal, fmtFraction, fmtInt, labelCase, plural, rateClass } from './statsFormat'
 
@@ -191,8 +191,7 @@ const rows = computed<Record<string, unknown>[]>(() => {
     return {
       ...item,
       rank: offset + index + 1,
-      avatarUrl: pickAvatarUrl(item),
-      avatarFallbackUrl: pickAvatarFallback(item),
+      player: toUserRef(item as unknown as FlatUserRef),
     }
   })
 })
@@ -326,9 +325,7 @@ watch(
         </template>
 
         <template #cell-player="{ row }">
-          <LeaderboardPlayerCell :user-id="(row.userId as string)" :user-name="(row.userName as string)"
-            :avatar-url="(row.avatarUrl as string)"
-            :avatar-fallback-url="(row.avatarFallbackUrl as string | null)" :country="(row.country as string)" />
+          <UserChip :user="(row.player as UserRefDisplay)" tooltip />
         </template>
 
         <template #cell-campaign="{ row }">

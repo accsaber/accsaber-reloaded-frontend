@@ -30,14 +30,14 @@ function drift(id: string): number {
 
 const leaderId = computed(() => {
   const leader = props.listing.winner ?? props.listing.currentBidder
-  return leader ? String(leader.id) : null
+  return leader?.id ?? null
 })
 
 const messages = computed<ChatMessage[]>(() => {
   const chronological = [...props.bids].reverse()
   return chronological.map((bid, index) => ({
     bid,
-    right: leaderId.value !== null && String(bid.bidder.id) === leaderId.value,
+    right: leaderId.value !== null && bid.bidder.id === leaderId.value,
     mine: isSameMarketUser(bid.bidder, props.viewerId),
     latest: index === chronological.length - 1 && props.listing.status === 'active',
     drift: drift(bid.id),

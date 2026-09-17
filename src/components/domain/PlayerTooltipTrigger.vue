@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onUnmounted, ref, watch } from 'vue';
+import type { UserRefDisplay } from '@/types/display'
+import { defineAsyncComponent, onUnmounted, ref, watch } from 'vue'
+import { RouterLink, type RouteLocationRaw } from 'vue-router'
 
 const loadCard = () => import('@/components/domain/PlayerTooltipCard.vue')
 const PlayerTooltipCard = defineAsyncComponent(loadCard)
 
 defineProps<{
-  userId: string
-  userName: string
-  avatarUrl: string
-  avatarFallbackUrl?: string | null
-  country: string
+  user: UserRefDisplay
+  to?: RouteLocationRaw
 }>()
 
 const showTooltip = ref(false)
-const triggerRef = ref<HTMLElement | null>(null)
+const triggerRef = ref<HTMLElement | { $el: HTMLElement } | null>(null)
 const popupRef = ref<HTMLElement | null>(null)
 const tooltipStyle = ref<Record<string, string>>({})
 const VIEWPORT_MARGIN = 8
@@ -37,8 +36,14 @@ function clearHideTimer() {
   }
 }
 
+function triggerElement(): HTMLElement | null {
+  const raw = triggerRef.value
+  if (!raw) return null
+  return raw instanceof HTMLElement ? raw : raw.$el
+}
+
 function updatePosition() {
-  const el = triggerRef.value
+  const el = triggerElement()
   if (!el) return
   const rect = el.getBoundingClientRect()
   const popup = popupRef.value?.getBoundingClientRect()
@@ -126,26 +131,27 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <span ref="triggerRef" class="tooltip-trigger" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <component :is="to ? RouterLink : 'span'" ref="triggerRef" :to="to" class="tooltip-trigger"
+    @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <slot />
     <Teleport to="body">
       <Transition name="tooltip">
         <div v-if="showTooltip" ref="popupRef" class="tooltip-trigger__popup" :style="tooltipStyle"
           @mouseenter="onPopupEnter" @mouseleave="onPopupLeave">
-          <PlayerTooltipCard :user-id="userId" :user-name="userName" :avatar-url="avatarUrl"
-            :avatar-fallback-url="avatarFallbackUrl" :country="country" />
+          <PlayerTooltipCard :user="user" />
         </div>
       </Transition>
     </Teleport>
-  </span>
+  </component>
 </template>
 
 <style scoped>
 .tooltip-trigger {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
 }
 </style>
 
