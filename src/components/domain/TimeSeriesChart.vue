@@ -6,7 +6,7 @@ import { chartAnimationDuration, readChartTheme, useLineChart } from '@/composab
 import { useThemeStore } from '@/stores/theme'
 import type { ChartSeries, ChartToggle, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { DAY_MS, HOUR_MS, rangeWindowStart } from '@/utils/constants'
-import type { ChartConfiguration } from 'chart.js'
+import type { ChartConfiguration, Scale } from 'chart.js'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -21,7 +21,7 @@ const props = defineProps<{
   formatValue?: (v: number) => string
   yMax?: number
   yMin?: number
-  fitToData?: boolean
+  ordinal?: boolean
   emptyMessage?: string
 }>()
 
@@ -104,16 +104,25 @@ function dataExtent(series: { points: TimeSeriesPoint[] }[]) {
 }
 
 function timeDomain(series: { points: TimeSeriesPoint[] }[], windowMin: number, now: number) {
-  const extent = dataExtent(series)
-
-  if (props.fitToData && extent) {
-    const span = extent.max - extent.min
-    const pad = span > 0 ? span * 0.05 : HOUR_MS / 2
-    return { min: extent.min - pad, max: extent.max + pad }
-  }
-
-  const max = Math.max(now, extent?.max ?? now)
+  const max = Math.max(now, dataExtent(series)?.max ?? now)
   return max - windowMin < HOUR_MS ? { min: max - HOUR_MS, max } : { min: windowMin, max }
+}
+
+function dayKey(ts: number): string {
+  return new Date(ts).toDateString()
+}
+
+function ordinalTickIndices(points: TimeSeriesPoint[], spanMs: number): number[] {
+  if (spanMs <= 36 * HOUR_MS) return points.map((_, i) => i)
+  const indices: number[] = []
+  let lastDay = ''
+  points.forEach((p, i) => {
+    const day = dayKey(p.timestamp)
+    if (day === lastDay) return
+    lastDay = day
+    indices.push(i)
+  })
+  return indices
 }
 
 function buildChart(): ChartConfiguration<'line'> {
@@ -124,10 +133,12 @@ function buildChart(): ChartConfiguration<'line'> {
   const now = Date.now()
   const windowMin = rangeWindowStart(activeRange.value, dataExtent(series)?.min ?? now, now)
 
+  const ordinal = !!props.ordinal
+
   const prepared = series.map((s, idx) => {
-    const points = clampToWindow(s.points, windowMin)
+    const points = ordinal ? s.points : clampToWindow(s.points, windowMin)
     const pointMap = new Map<number, TimeSeriesPoint>()
-    for (const p of points) pointMap.set(p.timestamp, p)
+    points.forEach((p, i) => pointMap.set(ordinal ? i : p.timestamp, p))
     return {
       ...s,
       idx,
@@ -138,8 +149,12 @@ function buildChart(): ChartConfiguration<'line'> {
     }
   })
 
-  const domain = timeDomain(prepared, windowMin, now)
-  const spanMs = domain.max - domain.min
+  const extent = dataExtent(prepared)
+  const domain = ordinal
+    ? { min: -0.5, max: Math.max(...prepared.map((s) => s.points.length), 1) - 0.5 }
+    : timeDomain(prepared, windowMin, now)
+  const spanMs = ordinal ? (extent ? extent.max - extent.min : 0) : domain.max - domain.min
+  const tickIndices = ordinal ? ordinalTickIndices(prepared[0]?.points ?? [], spanMs) : []
 
   const formatTick = (ts: number): string => {
     const d = new Date(ts)
@@ -158,8 +173,16 @@ function buildChart(): ChartConfiguration<'line'> {
   const formatTooltipTitle = (ts: number): string => {
     const d = new Date(ts)
     const date = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
-    if (spanMs > 14 * DAY_MS) return date
+    if (!ordinal && spanMs > 14 * DAY_MS) return date
     return `${date}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+  }
+
+  const pointAt = (datasetIndex: number, x: number | null | undefined) =>
+    x != null ? prepared[datasetIndex]?.pointMap.get(x) : undefined
+
+  const xTickLabel = (value: number): string => {
+    const ts = ordinal ? pointAt(0, value)?.timestamp : value
+    return ts != null ? formatTick(ts) : ''
   }
 
   const yScales = Object.fromEntries(prepared.map((s) => [s.axisId, {
@@ -182,7 +205,7 @@ function buildChart(): ChartConfiguration<'line'> {
     data: {
       datasets: prepared.map((s) => ({
         label: s.label,
-        data: s.points.map((p) => ({ x: p.timestamp, y: p.value })),
+        data: s.points.map((p, i) => ({ x: ordinal ? i : p.timestamp, y: p.value })),
         borderColor: s.color,
         backgroundColor: `color-mix(in srgb, ${s.color} 10%, transparent)`,
         fill: isMulti ? false : s.invertY ? 'start' : true,
@@ -207,12 +230,13 @@ function buildChart(): ChartConfiguration<'line'> {
         tooltip: {
           callbacks: {
             title: (items) => {
-              const ts = items[0]?.parsed?.x
+              const first = items[0]
+              const ts = first ? pointAt(first.datasetIndex, first.parsed.x)?.timestamp : undefined
               return ts != null ? formatTooltipTitle(ts) : ''
             },
             label: (item) => {
               const s = prepared[item.datasetIndex]
-              const point = item.parsed.x != null ? s?.pointMap.get(item.parsed.x) : undefined
+              const point = pointAt(item.datasetIndex, item.parsed.x)
               if (point?.tooltipLines?.length) {
                 return point.tooltipLines
               }
@@ -230,13 +254,16 @@ function buildChart(): ChartConfiguration<'line'> {
           min: domain.min,
           max: domain.max,
           grid: { color: theme.grid },
+          afterBuildTicks: ordinal
+            ? (axis: Scale) => { axis.ticks = tickIndices.map((value) => ({ value })) }
+            : undefined,
           ticks: {
             color: theme.text,
             font: theme.font,
             maxTicksLimit: 8,
             maxRotation: 0,
             autoSkip: true,
-            callback: (value: number | string) => formatTick(value as number),
+            callback: (value: number | string) => xTickLabel(value as number),
           },
         },
         ...yScales,
