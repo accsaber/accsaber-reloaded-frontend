@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type { PaginationParams } from '../pagination'
 
 export type UserRelationType = 'follower' | 'rival' | 'blocked'
@@ -17,6 +18,7 @@ export interface UserRelationResponse {
   targetAvatarUrl: string | null
   targetCdnAvatarUrl?: string | null
   targetCountry: string | null
+  targetClan?: PublicClanResponse | null
   type: UserRelationType
   createdAt: string
   hidden?: boolean

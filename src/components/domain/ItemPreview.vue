@@ -23,6 +23,7 @@ import {
   readBorderShapeValue,
   readCrateValue,
   readThemeValue,
+  readClanTagEffectValue,
   readThumbnailBackgroundValue,
   readTitleValue,
   tokenize,
@@ -39,9 +40,14 @@ const props = defineProps<{
 
 const typeKey = computed(() => props.item.typeKey)
 
-const titleValue = computed<TitleValue | null>(() =>
-  typeKey.value === 'title' ? readTitleValue(props.item.value) : null,
-)
+const CLAN_TAG_SAMPLE = 'ACC'
+
+const titleValue = computed<TitleValue | null>(() => {
+  if (typeKey.value === 'title') return readTitleValue(props.item.value)
+  if (typeKey.value !== 'clan_tag_effect') return null
+  const effect = readClanTagEffectValue(props.item.value)
+  return effect ? { ...effect, text: CLAN_TAG_SAMPLE } : null
+})
 
 const borderColorValue = computed<BorderColorValue | null>(() =>
   typeKey.value === 'profile_border_color' ? readBorderColorValue(props.item.value) : null,
@@ -90,14 +96,16 @@ const shapeAvatarClipId = `ip-avatar-clip-${Math.random().toString(36).slice(2, 
 
 const pedestalBeamId = `ip-beam-${Math.random().toString(36).slice(2, 9)}`
 
-const badgeValue = computed(() =>
-  typeKey.value === 'badge' ? readBadgeValue(props.item.value) : null,
-)
+const isBadge = computed(() => typeKey.value === 'badge' || typeKey.value === 'clan_emblem')
+const isTitle = computed(() => typeKey.value === 'title' || typeKey.value === 'clan_tag_effect')
+const isBackground = computed(() => typeKey.value === 'profile_background' || typeKey.value === 'clan_banner')
+
+const badgeValue = computed(() => (isBadge.value ? readBadgeValue(props.item.value) : null))
 const badgeUrl = computed(() => pickAssetUrl(badgeValue.value?.asset) ?? props.item.iconUrl)
 const badgeAlt = computed(() => badgeValue.value?.asset.altText ?? props.item.name)
 
 const backgroundValue = computed(() =>
-  typeKey.value === 'profile_background' || typeKey.value === 'profile_thumbnail_background'
+  isBackground.value || typeKey.value === 'profile_thumbnail_background'
     ? readBackgroundValue(props.item.value)
     : null,
 )
@@ -155,7 +163,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 <template>
   <span class="item-preview" :class="`item-preview--${typeKey}`">
     <img
-      v-if="typeKey === 'badge' && badgeUrl"
+      v-if="isBadge && badgeUrl"
       class="item-preview__img"
       :src="badgeUrl"
       :alt="badgeAlt"
@@ -164,7 +172,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     />
 
     <span
-      v-else-if="typeKey === 'title' && titleValue"
+      v-else-if="isTitle && titleValue"
       ref="titleHost"
       class="item-preview__title"
       :style="titleAuraStyle"
@@ -290,7 +298,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     </span>
 
     <img
-      v-else-if="typeKey === 'profile_background' && backgroundUrl"
+      v-else-if="isBackground && backgroundUrl"
       class="item-preview__img item-preview__img--cover"
       :src="backgroundUrl"
       :alt="item.name"

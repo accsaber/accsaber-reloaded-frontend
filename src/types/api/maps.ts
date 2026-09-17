@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type { Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
 import type { PaginationParams } from '../pagination'
 import type { UserRelationType } from './relations'
@@ -135,6 +136,7 @@ export interface TopScoreSnapshot {
   userName: string
   avatarUrl: string
   cdnAvatarUrl?: string | null
+  clan?: PublicClanResponse | null
   score: number
   accuracy: number
   ap: number

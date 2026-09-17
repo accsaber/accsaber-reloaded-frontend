@@ -3,6 +3,7 @@ import type { HauntSpec, WearSpec } from '@/utils/cosmetics/wear'
 import type {
   AssetSet,
   BadgeValue,
+  ClanTagEffectValue,
   BorderColorFill,
   BorderColorStateValue,
   BorderColorValue,
@@ -317,6 +318,29 @@ export function readTitleValue(value: unknown): TitleValue | null {
   const states = value.states.filter((s): s is Record<string, unknown> => isObj(s) && isNumber(s.atMs))
   if (states.length === 0) return null
   return value as unknown as TitleValue
+}
+
+export function readClanTagEffectValue(value: unknown): ClanTagEffectValue | null {
+  if (!isObj(value)) return null
+  if (!Array.isArray(value.states) || value.states.length === 0) return null
+  const states = value.states.filter((s): s is Record<string, unknown> => isObj(s) && isNumber(s.atMs))
+  if (states.length === 0) return null
+  return value as unknown as ClanTagEffectValue
+}
+
+export interface ClanCosmetics {
+  emblem: BadgeValue | null
+  tagEffect: ClanTagEffectValue | null
+}
+
+export function readClanCosmetics(equipped: ItemResponse[] | null | undefined): ClanCosmetics {
+  let emblem: BadgeValue | null = null
+  let tagEffect: ClanTagEffectValue | null = null
+  for (const item of equipped ?? []) {
+    if (item.typeKey === 'clan_emblem') emblem = readBadgeValue(item.value)
+    else if (item.typeKey === 'clan_tag_effect') tagEffect = readClanTagEffectValue(item.value)
+  }
+  return { emblem, tagEffect }
 }
 
 export function readBorderShapeValue(value: unknown): BorderShapeValue | null {

@@ -49,6 +49,7 @@ function snapshotFromScore(score: DifficultyScoreDisplay): TopScoreSnapshot {
     userName: score.player.name,
     avatarUrl: score.player.avatarUrl ?? '',
     cdnAvatarUrl: score.player.cdnAvatarUrl ?? null,
+    clan: score.player.clan ?? null,
     score: score.score,
     accuracy: score.accuracy,
     ap: score.ap,

@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type {
   BarrierConditionType,
   CampaignCollaboratorStatus,
@@ -260,6 +261,7 @@ export interface CampaignCollaboratorResponse {
   userAvatarUrl: string | null
   userCdnAvatarUrl: string | null
   userCountry: string | null
+  userClan?: PublicClanResponse | null
   status: CampaignCollaboratorStatus
   invitedById: string
   createdAt: string
@@ -298,6 +300,7 @@ export interface CampaignLeaderboardPlayer {
   country?: string
   avatarUrl?: string
   cdnAvatarUrl?: string
+  clan?: PublicClanResponse | null
 }
 
 export interface CampaignLeaderboardEntry {

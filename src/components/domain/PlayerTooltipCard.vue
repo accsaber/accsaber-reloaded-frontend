@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClanTag from '@/components/domain/ClanTag.vue';
 import CountryFlag from '@/components/domain/CountryFlag.vue';
 import LevelBadge from '@/components/domain/LevelBadge.vue';
 import RelationActions from '@/components/domain/RelationActions.vue';
@@ -85,6 +86,10 @@ const cardBorder = computed(() => {
         <span class="player-tooltip__country">
           <CountryFlag :country="user.country" />
         </span>
+      </div>
+      <div v-if="user.clan" class="player-tooltip__clan">
+        <ClanTag :clan="user.clan" size="sm" />
+        <span class="player-tooltip__clan-name">{{ user.clan.name }}</span>
       </div>
 
       <div v-if="loading" class="player-tooltip__stats">
@@ -209,6 +214,23 @@ const cardBorder = computed(() => {
 
 .player-tooltip__country {
   flex-shrink: 0;
+}
+
+.player-tooltip__clan {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: calc(-1 * var(--space-xs));
+  max-width: 100%;
+  font-size: var(--text-body);
+}
+
+.player-tooltip__clan-name {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .player-tooltip__stats {

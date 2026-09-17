@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type { PaginationParams } from '../pagination'
 
 export type ItemSource =
@@ -26,6 +27,9 @@ export type KnownItemTypeKey =
   | 'perk'
   | 'saber'
   | 'item_pedestal'
+  | 'clan_emblem'
+  | 'clan_banner'
+  | 'clan_tag_effect'
 
 export type ItemTypeKey = KnownItemTypeKey | (string & {})
 
@@ -1443,6 +1447,8 @@ export interface BorderColorValue {
   easing?: Easing
 }
 
+export type ClanTagEffectValue = Omit<TitleValue, 'text'>
+
 export interface BadgeValue {
   asset: AssetSet
   tint?: string
@@ -1832,6 +1838,7 @@ export interface ItemHolderResponse {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   quantity: number
   lowestSerial: number | null
   acquiredAt: string

@@ -75,6 +75,7 @@ const heroUser = computed<UserRefDisplay>(() => ({
   avatarUrl: user.value?.avatarUrl ?? null,
   cdnAvatarUrl: user.value?.cdnAvatarUrl ?? null,
   country: user.value?.country ?? null,
+  clan: user.value?.clan ?? null,
 }))
 const level = ref<LevelResponse | null>(null)
 const stats = ref<UserCategoryStatisticsResponse[]>([])
@@ -643,7 +644,7 @@ watch(activeCategory, (newCategory) => {
                     :disabled="nameSaving" aria-label="Edit display name"
                     @keydown.enter.prevent="saveName" @keydown.escape.prevent="cancelNameEdit" />
                 </template>
-                <UserChip v-else :user="heroUser" hide-avatar name-tag="h1" class="profile-hero__name">
+                <UserChip v-else :user="heroUser" hide-avatar name-tag="h1" clan-effects class="profile-hero__name">
                   <NameHistoryPopover :user-id="userId" :current-name="user.name" />
                 </UserChip>
                 <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>

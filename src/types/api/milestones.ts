@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type { MilestoneTier } from '../display'
 import type { MilestoneComparison, MilestoneStatus, MilestoneType } from '../enums'
 import type { PaginationParams } from '../pagination'
@@ -136,6 +137,7 @@ export interface MilestoneHolderResponse {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   completedAt: string
 }
 

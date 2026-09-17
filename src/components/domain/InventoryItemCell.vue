@@ -81,7 +81,7 @@ onMounted(() => {
           'inventory-cell--equipped': equipped,
           'inventory-cell--deprecated': item.deprecated,
           'inventory-cell--locked': locked,
-          'inventory-cell--title-fx': item.typeKey === 'title',
+          'inventory-cell--title-fx': item.typeKey === 'title' || item.typeKey === 'clan_tag_effect',
           'inventory-cell--checked': selectMode && checked,
           'inventory-cell--unselectable': selectMode && !selectable,
         },

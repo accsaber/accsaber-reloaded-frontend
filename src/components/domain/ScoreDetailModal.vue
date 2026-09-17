@@ -92,6 +92,7 @@ const playerRef = computed<UserRefDisplay>(() => ({
   name: player.value?.name ?? props.score?.userName ?? '',
   country: player.value?.country ?? null,
   supporterTier: player.value?.supporterTier ?? props.score?.supporterTier ?? null,
+  clan: player.value?.clan ?? null,
 }))
 const playerAvatar = computed(() => player.value?.cdnAvatarUrl ?? player.value?.avatarUrl ?? '')
 const handleScoreCoverError = (e: Event) => {

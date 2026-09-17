@@ -60,6 +60,7 @@ export function toRelationUserRef(item: UserRelationResponse): UserRefDisplay {
     avatarUrl: item.targetAvatarUrl ?? null,
     cdnAvatarUrl: item.targetCdnAvatarUrl ?? null,
     country: item.targetCountry ?? null,
+    clan: item.targetClan ?? null,
   }
 }
 
@@ -70,6 +71,7 @@ export function toCollaboratorUserRef(item: CampaignCollaboratorResponse): UserR
     avatarUrl: item.userAvatarUrl,
     cdnAvatarUrl: item.userCdnAvatarUrl,
     country: item.userCountry,
+    clan: item.userClan ?? null,
   }
 }
 

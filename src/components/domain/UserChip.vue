@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClanTag from '@/components/domain/ClanTag.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
@@ -18,6 +19,7 @@ const props = withDefaults(
     tooltip?: boolean
     hideAvatar?: boolean
     nameTag?: string
+    clanEffects?: boolean
   }>(),
   { size: 'md', nameTag: 'span' },
 )
@@ -54,8 +56,8 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
       />
       <span v-else class="user-chip__avatar user-chip__avatar--blank" aria-hidden="true" />
     </template>
-    <slot name="clan" />
     <component :is="nameTag" class="user-chip__name" :title="user.name">{{ user.name }}</component>
+    <ClanTag v-if="user.clan" :clan="user.clan" :size="size" :compact="compact" :effects="clanEffects" />
     <CountryFlag v-if="user.country" class="user-chip__flag" :country="user.country" />
     <SupporterTierIcon v-if="user.supporterTier" :tier="user.supporterTier" :size="iconSize" />
     <slot />

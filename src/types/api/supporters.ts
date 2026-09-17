@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 export type SupporterTier = 'bronze' | 'silver' | 'gold'
 
 export interface SupporterStateResponse {
@@ -18,6 +19,7 @@ export interface SupporterCreditEntry {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   currentTier: SupporterTier | null
   currentTierDisplayName: string | null
   lifetimeSupportedCents: number
