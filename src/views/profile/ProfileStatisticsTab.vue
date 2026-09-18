@@ -7,6 +7,7 @@ import ProfileStatsChart from '@/views/profile/ProfileStatsChart.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { useCategoryStore } from '@/stores/categories'
 import type { ClanStatsResponse } from '@/types/api/clans'
+import { CLAN_ROLE_LABEL } from '@/utils/clans'
 import type {
   SkillResponse,
   UserAllStatisticsResponse,
@@ -24,13 +25,6 @@ const props = defineProps<{
 
 const categoryStore = useCategoryStore()
 const { hideReloadedProfileFeatures } = useAppearance()
-
-const CLAN_ROLE_LABEL: Record<NonNullable<ClanStatsResponse['role']>, string> = {
-  member: 'Member',
-  officer: 'Officer',
-  commander: 'Commander',
-  founder: 'Founder',
-}
 
 const clanStats = computed<ClanStatsResponse | null>(() => {
   const clan = props.xpStats?.clan

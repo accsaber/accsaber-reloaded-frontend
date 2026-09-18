@@ -90,4 +90,6 @@ export function leaderboardSortRequest(
 
 export const DEFAULT_MAP_SORT = mapSortRequest(MAP_SORT_KEY, 'desc', true)
 
+export const REPORT_MAP_SORT = mapSortRequest(MAP_SORT_KEY, 'desc', false)
+
 export const DEFAULT_LEADERBOARD_SORT = leaderboardSortRequest(LEADERBOARD_SORT_KEY, 'asc', false)

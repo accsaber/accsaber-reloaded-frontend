@@ -53,6 +53,7 @@ const publicNavItems: NavItem[] = [
   { to: '/leaderboards', label: 'Leaderboards', mobileIcon: 'leaderboard' },
   { to: '/maps', label: 'Maps', mobileIcon: 'map' },
   { to: '/campaigns', label: 'Campaigns' },
+  { to: '/clans', label: 'Clans' },
 ]
 
 const morePublicNavItems: NavItem[] = [
