@@ -6,12 +6,14 @@ import type {
 } from '@/types/api/complexity'
 import { AP_DECIMALS, CX_DECIMALS } from '@/utils/complexity'
 import { formatCount, formatFixed, formatSigned } from '@/utils/formatters'
+import { formatDifficulty } from '@/utils/mappers'
 
 export interface ComplexityReportInput {
   title: string
   scope: string[]
   scenarioLabel: string
   scenario: ComparisonScenario
+  categoryName: (code: string) => string
   maps: ComplexityDifficultyRow[]
   board: ComplexityPlayerBoard | null
 }
@@ -30,131 +32,75 @@ const LADDER_ROWS: { key: LadderKey; label: string; decimals: number }[] = [
 ]
 
 function cx(value: number | null | undefined): string {
-  return formatFixed(value, CX_DECIMALS)
+  return formatFixed(value, CX_DECIMALS, '-')
 }
 
 function ap(value: number | null | undefined): string {
-  return formatFixed(value, AP_DECIMALS)
+  return formatFixed(value, AP_DECIMALS, '-')
 }
 
-function row(cells: (string | number)[]): string {
-  return `| ${cells.join(' | ')} |`
-}
-
-function header(cells: string[]): string[] {
-  return [row(cells), row(cells.map(() => '---'))]
-}
-
-function ladderTable(input: ComplexityReportInput): string[] {
+function ladderSection(input: ComplexityReportInput): string[] {
   const now = input.board?.ladders.CURRENT
   const next = input.board?.ladders[input.scenario]
   if (!now || !next) return []
-  const lines = header(['Ladder', 'Now', input.scenarioLabel, 'Change'])
-  for (const metric of LADDER_ROWS) {
-    lines.push(row([
-      metric.label,
-      formatFixed(now[metric.key], metric.decimals),
-      formatFixed(next[metric.key], metric.decimals),
-      formatSigned(next[metric.key] - now[metric.key], metric.decimals),
-    ]))
-  }
-  return lines
+  const columns: [string, (key: LadderKey, decimals: number) => string][] = [
+    ['Now', (key, decimals) => formatFixed(now[key], decimals)],
+    [input.scenarioLabel, (key, decimals) => formatFixed(next[key], decimals)],
+    ['Change', (key, decimals) => formatSigned(next[key] - now[key], decimals, '-')],
+  ]
+  return columns.flatMap(([label, read], index) => [
+    ...(index ? [''] : []),
+    label,
+    ...LADDER_ROWS.map((metric) => `- ${metric.label}: ${read(metric.key, metric.decimals)}`),
+  ])
 }
 
-function mapTable(input: ComplexityReportInput): string[] {
-  const { maps, scenario, scenarioLabel } = input
-  if (!maps.length) return []
-  const after = scenarioLabel.toLowerCase()
-  const lines = header([
-    'Song',
-    'Mapper',
-    'Category',
-    'CX now',
-    `CX ${after}`,
-    'Δ CX',
-    'Top AP now',
-    `Top AP ${after}`,
-    'Δ top AP',
-    'Avg wgt now',
-    `Avg wgt ${after}`,
-    'Δ avg wgt',
-    'Scores',
-  ])
-  for (const map of maps) {
-    const current = map.scenarios.CURRENT
-    const next = map.scenarios[scenario]
-    const delta = map.deltas[scenario]
-    lines.push(row([
-      `${map.songName}${map.songSubName ? ` ${map.songSubName}` : ''}`,
+function mapLines(input: ComplexityReportInput): string[] {
+  return input.maps.map((map) => {
+    const song = `${map.songName}${map.songSubName ? ` ${map.songSubName}` : ''}`
+    const tags = [
       map.mapAuthor,
-      map.categoryCode,
-      cx(current?.complexity),
-      cx(next?.complexity),
-      formatSigned(delta?.complexity, CX_DECIMALS),
-      ap(current?.topAp),
-      ap(next?.topAp),
-      formatSigned(delta?.topAp, AP_DECIMALS),
-      ap(current?.averageWeightedAp),
-      ap(next?.averageWeightedAp),
-      formatSigned(delta?.averageWeightedAp, AP_DECIMALS),
-      formatCount(map.scores),
-    ]))
-  }
-  return lines
+      input.categoryName(map.categoryCode),
+      formatDifficulty(map.difficulty),
+    ].join(', ')
+    const now = cx(map.scenarios.CURRENT?.complexity)
+    const next = cx(map.scenarios[input.scenario]?.complexity)
+    const change = formatSigned(map.deltas[input.scenario]?.complexity, CX_DECIMALS, '-')
+    return `- ${map.songAuthor} - ${song} (${tags}): ${now} --> ${next} (${change})`
+  })
 }
 
-function playerTable(input: ComplexityReportInput): string[] {
-  const rows = input.board?.rows ?? []
-  if (!rows.length) return []
-  const lines = header([
-    'Rank now',
-    'Player',
-    'Country',
-    'AP now',
-    `AP ${input.scenarioLabel.toLowerCase()}`,
-    'Δ AP',
-    'Rank after',
-    'Δ rank (+ is down)',
-  ])
-  for (const player of rows) {
+function playerLines(input: ComplexityReportInput): string[] {
+  const rows = [...(input.board?.rows ?? [])].sort(
+    (a, b) =>
+      (a.scenarios[input.scenario]?.rank ?? Infinity) -
+      (b.scenarios[input.scenario]?.rank ?? Infinity),
+  )
+  return rows.map((player) => {
     const current = player.scenarios.CURRENT
     const next = player.scenarios[input.scenario]
     const delta = player.deltas[input.scenario]
-    lines.push(row([
-      current?.rank != null ? `#${current.rank}` : '-',
-      player.name,
-      player.country,
-      ap(current?.ap),
-      ap(next?.ap),
-      formatSigned(delta?.ap, AP_DECIMALS),
-      next?.rank != null ? `#${next.rank}` : '-',
-      formatSigned(delta?.rank, 0),
-    ]))
-  }
-  return lines
+    const climbed = delta?.rank != null ? -delta.rank : null
+    const rankNow = current?.rank != null ? `#${current.rank}` : '-'
+    return (
+      `${next?.rank ?? '-'} - ${player.name} (${player.country}): ` +
+      `${ap(current?.ap)} --> ${ap(next?.ap)} (${formatSigned(delta?.ap, AP_DECIMALS, '-')}); ` +
+      `Rank Now: ${rankNow} (${formatSigned(climbed, 0, '-')})`
+    )
+  })
 }
 
 export function buildComplexityReport(input: ComplexityReportInput): string {
-  const sections: string[][] = [
-    [`# ${input.title}`, '', ...input.scope.map((line) => `- ${line}`)],
-  ]
+  const sections: string[][] = [[input.title, '', ...input.scope.map((line) => `- ${line}`)]]
 
-  const ladder = ladderTable(input)
-  if (ladder.length) sections.push(['## Ladder', '', ...ladder])
+  const ladder = ladderSection(input)
+  if (ladder.length) sections.push(['STATS', '', ...ladder])
 
-  const maps = mapTable(input)
-  if (maps.length) {
-    sections.push([`## Maps (${formatCount(input.maps.length)})`, '', ...maps])
-  }
+  const maps = mapLines(input)
+  if (maps.length) sections.push([`MAPS (${formatCount(maps.length)})`, '', ...maps])
 
-  const players = playerTable(input)
-  if (players.length) {
-    sections.push([
-      `## Players (${formatCount(input.board?.rows.length ?? 0)})`,
-      '',
-      ...players,
-    ])
-  }
+  const players = playerLines(input)
+  if (players.length) sections.push([`PLAYERS (${formatCount(players.length)})`, '', ...players])
 
-  return `${sections.map((section) => section.join('\n')).join('\n\n')}\n`
+  return `${sections.map((section) => section.join('\n')).join('\n\n\n')}\n`
 }
