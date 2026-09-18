@@ -41,6 +41,7 @@ import { buildComplexityReport } from './complexity/report'
 import {
   DEFAULT_LEADERBOARD_SORT,
   DEFAULT_MAP_SORT,
+  REPORT_MAP_SORT,
   type ScenarioSortRequest,
 } from './complexity/scenarioKeys'
 import { useTuningState } from './complexity/tuning'
@@ -602,8 +603,7 @@ async function collectReportMaps(): Promise<ComplexityDifficultyRow[]> {
     const window = {
       page,
       size: REPORT_PAGE_SIZE,
-      sort: mapsSort.value.sort,
-      absolute: mapsSort.value.absolute,
+      ...REPORT_MAP_SORT,
     }
     const result = tuningTab.value && rater
       ? (await api.previewComplexity(rater, await previewParams(window))).difficulties
@@ -635,11 +635,12 @@ async function exportReport() {
       scope.push(`Estimated ${formatRelativeDate(summary.value.estimatedAt)}`)
     }
 
-    const markdown = buildComplexityReport({
+    const report = buildComplexityReport({
       title: tuningTab.value ? 'Complexity script preview' : 'Complexity script round',
       scope,
       scenarioLabel: tuningTab.value ? 'Preview' : 'Script',
       scenario: reportScenario.value,
+      categoryName: (code) => categoryStore.getCategoryInfo(code)?.name ?? code,
       maps,
       board: reportBoard.value,
     })
@@ -649,8 +650,8 @@ async function exportReport() {
       : 'ranked-pool'
     const stamp = new Date().toISOString().slice(0, 10)
     saveBlob(
-      new Blob([markdown], { type: 'text/markdown;charset=utf-8' }),
-      `complexity-${tuningTab.value ? 'preview' : 'round'}-${slug}-${stamp}.md`,
+      new Blob([report], { type: 'text/plain;charset=utf-8' }),
+      `complexity-${tuningTab.value ? 'preview' : 'round'}-${slug}-${stamp}.txt`,
     )
   } catch (err) {
     feedback.value = { variant: 'error', text: failure(err, 'Could not build the report.') }
@@ -707,7 +708,7 @@ watch(previewKey, () => {
       <div class="script-page__actions">
         <BaseButton size="sm" :disabled="!reportReady" :loading="exporting"
           @click="exportReport">
-          Export markdown
+          Export report
         </BaseButton>
         <template v-if="isHead">
           <BaseButton size="sm" :loading="preparingApply === 'QUEUE'" @click="openApply('QUEUE')">
