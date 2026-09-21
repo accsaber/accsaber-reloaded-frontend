@@ -29,7 +29,7 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
 <template>
   <WikiProse>
     <p>
-      Every ranked difficulty carries a complexity, and that number decides what accuracy on it is
+      Every ranked difficulty carries a complexity. That number decides what accuracy on it is
       worth. Two players sitting at the same 96% on two different maps will walk away with different AP.
     </p>
 
@@ -64,7 +64,7 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
 
     <p>
       The gain per step is flat. Complexity does not
-      multiply your AP, it adds to it, and the curve builds in a sizeable head start before
+      multiply your AP, it adds to it. The curve builds in a sizeable head start before
       complexity is applied at all. Going from complexity 5 to complexity 10 doubles the number on the
       badge and only moves your AP by about {{ doubleGain }}%.
     </p>
@@ -73,13 +73,13 @@ const doubleGain = ((rawAp(0.96, 10) / rawAp(0.96, 5) - 1) * 100).toFixed(0)
     <p>
       A reweight is the ranking team changing a map's complexity after it is already ranked. The point
       is balance. Maps sometimes end up with a complexity that sits out of proportion to what they
-      actually ask of you, and a reweight levels them back to where they belong.
+      actually ask of you. A reweight levels them back to where they belong.
     </p>
     <p>
       The usual shape
       is a monthly pass over the batch before last. A round in August would go over the maps
       released in July. Every so often a global reweight goes over every ranked map at once
-      instead, and that one runs to no fixed schedule.
+      instead. That one runs to no fixed schedule.
     </p>
 
     <WikiHeading id="what-changes">What a reweight does to your scores</WikiHeading>

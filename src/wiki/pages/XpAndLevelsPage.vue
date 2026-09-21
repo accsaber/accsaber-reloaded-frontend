@@ -106,7 +106,7 @@ onMounted(async () => {
 
     <WikiHeading id="score-xp">XP from a play</WikiHeading>
     <p>
-      Every completed play starts at a flat 25 XP, and a bonus goes on top based on your
+      Every completed play starts at a flat 25 XP. A bonus goes on top based on your
       accuracy and the map's complexity. The bonus curve is even steeper near the top than the
       AP curve:
     </p>
@@ -135,7 +135,7 @@ onMounted(async () => {
     <WikiHeading id="ladder">The ladder</WikiHeading>
     <p>
       Each level costs more XP than the last until level 100, where the cost stays flat. Every
-      stretch of levels has a named tier, and some levels unlock items. Drag through it, this is
+      stretch of levels has a named tier. Some levels unlock items. Drag through it, this is
       live data:
     </p>
     <WikiXpLadder

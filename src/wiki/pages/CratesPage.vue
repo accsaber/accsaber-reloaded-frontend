@@ -44,18 +44,17 @@ onMounted(async () => {
     <p>
       Live events are the main road, where event missions roll them and event objectives hand
       them out. Campaigns built after the previous event can also hand them out.
-      Outside an event they still move around, because crates are tradeable like most items, and
-      you can pick one up off the market or straight out of a trade with another player. The
+      Outside an event they still move around, because crates are tradeable like most items. You can pick one up off the market or straight out of a trade with another player. The
       occasional one goes out as a reward for reporting a bug.
     </p>
     <p>
       The Random Active Crate is not really a crate at all. It is a placeholder that resolves the
-      moment somebody hands it to you, and what you get is whatever crate is in season that day.
+      moment somebody hands it to you. What you get is whatever crate is in season that day.
     </p>
 
     <WikiHeading id="odds">The odds</WikiHeading>
     <p>
-      Every reward inside a crate carries a weight, and those weights decide how often each one
+      Every reward inside a crate carries a weight. Those weights decide how often each one
       comes out.
     </p>
     <WikiCrateOdds
@@ -75,17 +74,17 @@ onMounted(async () => {
 
     <WikiHeading id="modifiers">Modifiers roll separately</WikiHeading>
     <p>
-      The reward is one roll and the modifiers are another, and they do not compete with each other.
+      The reward is one roll and the modifiers are another. They do not compete with each other.
       Each modifier a crate carries gets its own independent chance. A single open can attach two of
-      them or none at all, and rolling Strange never costs you a shot at Holographic.
+      them or none at all. Rolling Strange never costs you a shot at Holographic.
     </p>
     <p>
       Seasonal modifiers are worth knowing about, because they ignore which crate you are holding.
       Around Halloween, Haunted rolls on every crate you open, including ones that have nothing to
-      do with that event, and Christmas does the same thing with Jolly.
+      do with that event. Christmas does the same thing with Jolly.
     </p>
     <p>
-      Unusual is the one modifier that pulls a second thing behind it, and rolling it picks a
+      Unusual is the one modifier that pulls a second thing behind it. Rolling it picks a
       particle effect from the list that crate carries. Each crate ships its own set of effects.
     </p>
 
@@ -104,7 +103,7 @@ onMounted(async () => {
     <p>
       A crate leaving rotation only means it stops arriving as a new reward. The one already
       sitting in your inventory is untouched and opens whenever you feel like opening it.
-      Permanent crates that do not depend on a season or an event are planned, and the cycle above
+      Permanent crates that do not depend on a season or an event are planned. The cycle above
       will not be the only way this works forever.
     </p>
   </WikiProse>

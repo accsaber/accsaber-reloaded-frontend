@@ -26,7 +26,7 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
 <template>
   <WikiProse>
     <p>
-      There is more than one way to gain AP, and the categories exist so that each way gets
+      There is more than one way to gain AP. The categories exist so that each way gets
       its own fair fight. Every ranked map belongs to exactly one category, every category has
       its own leaderboard, and your plays only ever compete against your other plays in the same
       category. Your <RouterLink to="/wiki/weighted-ap">weighted totals</RouterLink> are kept
@@ -81,7 +81,7 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
 
     <WikiHeading id="tech-acc"><span class="cat cat--tech">Tech Acc</span></WikiHeading>
     <p>
-      Tech Acc is the hardest of the three, and its maps throw demanding angles and harder
+      Tech Acc is the hardest of the three. Its maps throw demanding angles and harder
       patterns at you and dare you to stay precise through them. Repositioning takes a huge role,
       angle and timing matter, and composure matters most of all, since the map is actively
       trying to bend your swing out of shape. The lower complexity maps might only include a few
@@ -92,7 +92,7 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
     <WikiHeading id="the-fine-line">The line between Standard and Tech</WikiHeading>
     <p>
       The two categories brush against each other at the edges. The top of Standard Acc allows
-      itself a few angles and wider hits, and the bottom of Tech Acc might only add a few
+      itself a few angles and wider hits. The bottom of Tech Acc might only add a few
       horizontal ones. What separates them is where the challenge comes from. On a Standard
       map, every note still sits in the same up-down flow. While there may be a few palm-in
       swings and outerlane middle down hits, the map can still be played with a vertical flow

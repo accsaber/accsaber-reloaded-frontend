@@ -42,7 +42,7 @@ const PATTERN_ROWS: WikiCompareRow[] = [
   <WikiProse>
     <p>
       Before the ranking team votes on a difficulty, it has to meet the rules below. The mapping
-      terms here are not explained, and the <a href="https://bsmg.wiki/wiki/Mapping"
+      terms here are not explained. The <a href="https://bsmg.wiki/wiki/Mapping"
       target="_blank" rel="noopener noreferrer">BSMG Wiki</a> covers all of them.
     </p>
 

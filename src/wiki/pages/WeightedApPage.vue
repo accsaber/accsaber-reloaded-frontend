@@ -49,7 +49,7 @@ const formatWeight = (position: number) => {
     <WikiHeading id="sandbox">Watch a new play land</WikiHeading>
     <p>
       Here is a sample profile. Slide the raw AP of an incoming play and watch what happens to
-      the total. A play landing mid-list only counts at its landing spot's multiplier, and it
+      the total. A play landing mid-list only counts at its landing spot's multiplier. It
       pushes every play below it one spot down.
     </p>
     <WikiWeightSandbox :plays="SAMPLE_PLAYS" :max="900" :initial="560" />

@@ -108,14 +108,14 @@ onMounted(async () => {
     </table>
     <p>
       Swapping is free and instant. Some items have variants, which are alternate looks of the
-      same item, and you pick one when you equip it. Sabers and pedestals do not use a slot,
+      same item. You pick one when you equip it. Sabers and pedestals do not use a slot,
       because they are files you install into Beat Saber by hand.
     </p>
 
     <WikiHeading id="rarity">Rarity</WikiHeading>
     <p>
       There are six rarities from common up to mythic. Rarer items come out of crates less
-      often, and they give more essence when you break them down.
+      often. They give more essence when you break them down.
     </p>
     <table>
       <thead>
@@ -134,7 +134,7 @@ onMounted(async () => {
 
     <WikiHeading id="modifiers">Modifiers</WikiHeading>
     <p>
-      A modifier is attached to your particular copy of an item, and it changes how that copy
+      A modifier is attached to your particular copy of an item. It changes how that copy
       looks and what it is called. Most of them roll out of a crate on a chance separate from
       the item itself. <RouterLink to="/wiki/modifiers-and-effects">Item Modifiers &amp;
       Effects</RouterLink> goes through every modifier, where each one comes from and what it
@@ -152,7 +152,7 @@ onMounted(async () => {
     </p>
     <p>
       A Strange item counts every ranked personal best you set while it is equipped. The count
-      stays on that copy permanently, and taking the item off freezes the number.
+      stays on that copy permanently. Taking the item off freezes the number.
     </p>
 
     <WikiHeading id="bench">Try it</WikiHeading>

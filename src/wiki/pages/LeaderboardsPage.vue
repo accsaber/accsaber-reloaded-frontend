@@ -31,8 +31,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="boards">The boards</WikiHeading>
     <p>
-      Every <RouterLink to="/wiki/categories">category</RouterLink> keeps its own board, and
-      Overall ranks you on the three added together. There is also an XP board that ignores AP
+      Every <RouterLink to="/wiki/categories">category</RouterLink> keeps its own board. Overall ranks you on the three added together. There is also an XP board that ignores AP
       and ranks by level and total XP. How XP grows is covered in <RouterLink
       to="/wiki/xp-and-levels">XP &amp; Levels</RouterLink>.
     </p>
@@ -62,7 +61,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="inactive">Inactive players</WikiHeading>
     <p>
-      An account gets the inactive flag from the platform your profile syncs with, and it clears
+      An account gets the inactive flag from the platform your profile syncs with. It clears
       the moment you set any score here. Your AP is not touched while you are away.
     </p>
     <p>

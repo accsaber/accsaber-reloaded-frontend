@@ -125,7 +125,7 @@ onMounted(resolveProfile)
   <WikiProse>
     <p>
       Missions are built around what you can do and ask for slightly more than that. You will
-      find them in the missions menu in the navbar, and during a live event on the event page.
+      find them in the missions menu in the navbar and during a live event on the event page.
     </p>
     <p>
       A mission only shows you a number, like "Score 812 AP on this map." Nothing tells you
@@ -135,17 +135,17 @@ onMounted(resolveProfile)
 
     <WikiHeading id="rhythm">The rhythm</WikiHeading>
     <p>
-      You get two daily missions, and they reset at 4am UTC. The first of the two uses templates
-      that can always be built, and a day with no playable daily is very rare.
+      You get two daily missions. They reset at 4am UTC. The first of the two uses templates
+      that can always be built. A day with no playable daily is very rare.
     </p>
     <p>
-      You get one weekly per category you have played. They reset on Monday at 4am UTC, and one
+      You get one weekly per category you have played. They reset on Monday at 4am UTC. One
       of them is always extreme. If you only play Tech, you get one weekly.
     </p>
     <p>
       At reset, anything you finished stays finished and you keep what it gave you. Anything
       unfinished is replaced, with no progress carried over. The roll is seeded from your
-      account and the date, and logging out and back in will not change your missions.
+      account and the date. Logging out and back in will not change your missions.
     </p>
 
     <WikiHeading id="forge">Watch one get built</WikiHeading>
@@ -164,7 +164,7 @@ onMounted(resolveProfile)
     <WikiHeading id="bands">Bands</WikiHeading>
     <p>
       The tag on a mission card reading easy, medium, hard or extreme is its band. It is the
-      mission's own difficulty, and we call it a band to keep it apart from map difficulties
+      mission's own difficulty. We call it a band to keep it apart from map difficulties
       like Expert+.
     </p>
     <p>
@@ -181,7 +181,7 @@ onMounted(resolveProfile)
     </p>
     <p>
       Three corrections run on top of the table. If you are under about 70 skill in a category,
-      the easy, medium and hard ceilings get lowered, and extreme does not.
+      the easy, medium and hard ceilings get lowered. Extreme does not.
     </p>
     <p>
       A second ceiling comes from the map instead of your best play. The game looks at how you
@@ -190,7 +190,7 @@ onMounted(resolveProfile)
     <p>
       On AP and accuracy missions, if the map is one you already have a score on, the game
       compares that score to your best in the category and blends it into the rolled band. A
-      mission that has to beat one of your best plays gets pulled up toward extreme, and an
+      mission that has to beat one of your best plays gets pulled up toward extreme. An
       extreme roll on a map you barely tried goes back down.
     </p>
     <p>
@@ -204,12 +204,12 @@ onMounted(resolveProfile)
     </p>
     <p>
       A target AP gets worked out first, the same way it would for any other map mission. That
-      number then opens a range. The floor keeps the snipe from being a two AP gap, and the
+      number then opens a range. The floor keeps the snipe from being a two AP gap. The
       ceiling keeps it inside what you could hit today. Anyone whose skill is too far from yours
       is also removed, five points on easy and up to eighteen on extreme.
     </p>
     <p>
-      Whoever is left gets ranked by how close they sit to the target, and one of the closest
+      Whoever is left gets ranked by how close they sit to the target. One of the closest
       three is picked at random. If nobody is left, the map is dropped and another one is tried.
     </p>
     <p>
@@ -226,7 +226,7 @@ onMounted(resolveProfile)
     </p>
     <p>
       Missions can also give an item, but only while a live event is running. During one,
-      roughly one mission in seven comes with an item, and difficulty has nothing to do with
+      roughly one mission in seven comes with an item. Difficulty has nothing to do with
       which ones. Before that, about one in five rolls the event's crate instead.
     </p>
 
@@ -236,24 +236,24 @@ onMounted(resolveProfile)
     </p>
     <p>
       The other reason affects newer accounts. Every map mission starts from the AP you would
-      need to move your total by one point, and that number decides which part of the ranked
-      pool the map gets picked from. Early on that part sits below the easiest ranked map, and
-      no map missions can be built. It opens up on its own as you set scores, and you can see
-      where the edge is in the builder above.
+      need to move your total by one point. That number decides which part of the ranked pool
+      the map gets picked from. Early on that part sits below the easiest ranked map and no map
+      missions can be built. This fixes itself as you set scores. You can see where the edge is
+      in the builder above.
     </p>
     <p>
       A slot will also refuse to give you something pointless. A target under a score you
       already have gets thrown out. So does one that is too small, and so does a map whose world
       record sits far below your level. Streak missions compare you against maps of similar
-      complexity, and a map in a range you have never streaked on gets rerolled. When a template
-      fails another one gets a turn, and if they all fail the slot stays empty. This happens
+      complexity. A map in a range you have never streaked on gets rerolled. When a template
+      fails another one gets a turn. If they all fail the slot stays empty. This happens
       extremely rarely.
     </p>
 
     <WikiHeading id="events">Events work differently</WikiHeading>
     <p>
       Missions that show up during a live event do not go through any of this. Their targets are
-      fixed by whoever built the event and identical for everyone, and they unlock in weeks on a
+      fixed by whoever built the event and identical for everyone. They unlock in weeks on a
       schedule. <RouterLink to="/wiki/events">Events</RouterLink> covers how the weeks work.
     </p>
   </WikiProse>

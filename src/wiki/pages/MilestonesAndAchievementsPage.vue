@@ -79,7 +79,7 @@ onMounted(async () => {
     <WikiHeading id="tiers">Tiers</WikiHeading>
     <p>
       Everything on the board has a tier that runs from Bronze up through Silver, Gold, Platinum
-      and Diamond. The tier tells you roughly how hard it is, and the XP scales with it. Apex
+      and Diamond. The tier tells you roughly how hard it is. The XP scales with it. Apex
       sits above all of them and is used once per set collection, for the ones that are supposed
       to look impossible.
     </p>
@@ -98,18 +98,18 @@ onMounted(async () => {
     <WikiHeading id="the-map">The map on the milestones page</WikiHeading>
     <p>
       The milestones page opens on one set at a time. The rest sit beside it as cards showing
-      how far along you are, and clicking one swaps it into view. Families like General and
+      how far along you are. Clicking one swaps it into view. Families like General and
       Completionist stay together, roughly easiest to hardest.
     </p>
     <p>
       Inside the open set, every milestone gets its own marker. The icon says what the milestone
       measures, like a play count, a best accuracy or a rank. The frame around it shows the
-      tier, and a small colored bar underneath means the milestone only counts scores from one
+      tier. A small colored bar underneath means the milestone only counts scores from one
       category.
     </p>
     <p>
       Lines between markers show which milestones were designed to lead into each other. Nothing
-      on that map is locked, and you can complete any milestone at any time in any order.
+      on that map is locked. You can complete any milestone at any time in any order.
     </p>
 
     <WikiHeading id="checking">When they get checked</WikiHeading>
@@ -139,7 +139,7 @@ onMounted(async () => {
 
     <WikiHeading id="rewards">Rewards</WikiHeading>
     <p>
-      Everything on the board gives XP, and that XP goes into your level the same way score XP
+      Everything on the board gives XP. That XP goes into your level the same way score XP
       and mission XP do. Some milestones also give an item for your profile.
     </p>
     <p>

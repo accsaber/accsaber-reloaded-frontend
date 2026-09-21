@@ -37,7 +37,7 @@ const PLUGIN_ROWS: WikiCompareRow[] = [
 
     <WikiHeading id="the-journey">The journey your score takes</WikiHeading>
     <p>
-      AccSaber listens to BeatLeader and ScoreSaber live, and the AccSaber plugin submits
+      AccSaber listens to BeatLeader and ScoreSaber live. The AccSaber plugin submits
       straight to us the moment the map ends:
     </p>
     <WikiFlowDiagram :steps="SCORE_JOURNEY" />
@@ -54,7 +54,7 @@ const PLUGIN_ROWS: WikiCompareRow[] = [
       Started</RouterLink> page has the downloads and the three-step setup.
     </p>
     <p>
-      Logging in on the site works through Steam or BeatLeader, and you can attach Discord to
+      Logging in on the site works through Steam or BeatLeader. You can attach Discord to
       your account for community roles. You cannot log in before AccSaber has seen at least one
       ranked score from you, because that first score is what creates your profile.
     </p>

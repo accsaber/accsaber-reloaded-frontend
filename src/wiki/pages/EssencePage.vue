@@ -39,31 +39,31 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      Essence is the currency the item economy runs on, and your balance can be viewed in your inventory.
+      Essence is the currency the item economy runs on. Your balance can be viewed in your inventory.
       It has no effect on your AP, your rank or your level. It only touches items.
     </p>
 
     <WikiHeading id="sources">Where it comes from</WikiHeading>
     <p>
-      Breaking an item down is the reliable way to make essence, and it gives whatever that
-      item is worth. Selling something on the market is the other way, and when a listing settles
+      Breaking an item down is the reliable way to make essence. It gives whatever that
+      item is worth. Selling something on the market is the other way. When a listing settles
       the winner's essence lands in your balance. A trade can carry essence on either side too.
     </p>
 
     <WikiHeading id="spending">What it buys</WikiHeading>
     <p>
-      Nothing on AccSaber is sold to you for essence, and there is no way to turn it into AP, XP
+      Nothing on AccSaber is sold to you for essence. There is no way to turn it into AP, XP
       or a level either.
     </p>
     <p>
-      That makes the whole economy player to player, and it means the price of a thing is whatever
+      That makes the whole economy player to player. It means the price of a thing is whatever
       somebody else will pay for it on the day.
     </p>
 
     <WikiHeading id="disintegrating">Breaking items down</WikiHeading>
     <p>
       Disintegrating an item destroys it and credits you its worth. Worth follows rarity, which
-      the <RouterLink to="/wiki/items-and-inventory">items page</RouterLink> covers, and the
+      the <RouterLink to="/wiki/items-and-inventory">items page</RouterLink> covers. The
       number never moves for any other reason. Stack a few together and watch what they add up to:
     </p>
     <WikiEssenceCalculator v-if="catalogReady" :items="grinderItems" />
@@ -83,7 +83,7 @@ onMounted(async () => {
     <WikiHeading id="held">Held essence</WikiHeading>
     <p>
       The market never spends your essence at the moment you bid, it holds it instead. A held
-      amount is still yours and still counted in your balance, and it simply cannot be spent twice
+      amount is still yours and still counted in your balance. It simply cannot be spent twice
       while the bid stands. Get outbid and the hold lifts immediately with the full amount back in
       play, win the auction and the hold turns into the payment.
     </p>

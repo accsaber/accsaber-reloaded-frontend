@@ -74,7 +74,7 @@ onMounted(async () => {
     </p>
     <p>
       Here is a preview running on live scores. If you are logged in it is your own profile
-      against the top player, and you can point it at anybody else instead.
+      against the top player. You can point it at anybody else instead.
     </p>
 
     <WikiSnipeBoard
@@ -99,7 +99,7 @@ onMounted(async () => {
 
     <WikiHeading id="order">How close counts as close</WikiHeading>
     <p>
-      By default the list runs closest first, and it measures closeness in accuracy instead of
+      By default the list runs closest first. It measures closeness in accuracy instead of
       raw points. Five thousand points is nothing on a long map and a lot on a short one.
     </p>
 
@@ -117,7 +117,7 @@ onMounted(async () => {
       Most AP to gain is the one to use when you are chasing your own total. Leaderboard gap
       shows where they sit furthest ahead on the map's leaderboard. A handful of old scores have
       no rank stored and those drop to the bottom whichever way you flip it. The sort goes into
-      the address bar, and you can share the link with the exact view you were looking at.
+      the address bar. You can share the link with the exact view you were looking at.
     </p>
 
     <WikiHeading id="numbers">The three numbers on top</WikiHeading>
@@ -125,7 +125,7 @@ onMounted(async () => {
       Closest Gap is the accuracy you need to find on the single nearest map. Points to Gain
       adds up the raw score you would have to make up across the maps in front of you. AP at
       Stake is what all of it is worth if you took every one of them. All three only count the
-      maps currently loaded, and they cover everything once you switch the page size to All
+      maps currently loaded. They cover everything once you switch the page size to All
       snipes.
     </p>
 

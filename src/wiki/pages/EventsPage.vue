@@ -21,7 +21,7 @@ const WEEK_CYCLE: WikiFlowStep[] = [
 
     <WikiHeading id="joining">Joining</WikiHeading>
     <p>
-      An event does not start tracking you until you press the button on its page, and anything
+      An event does not start tracking you until you press the button on its page. Anything
       you played before that counts for nothing toward it.
     </p>
     <p>
@@ -55,7 +55,7 @@ const WEEK_CYCLE: WikiFlowStep[] = [
 
     <WikiHeading id="community">Community missions</WikiHeading>
     <p>
-      A community mission is one goal shared by everybody on the site, and it fills up from every
+      A community mission is one goal shared by everybody on the site. It fills up from every
       contribution at once instead of tracking you on your own. When it lands, every player who
       put something into it gets the full reward.
     </p>

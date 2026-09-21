@@ -120,7 +120,7 @@ onMounted(async () => {
     </p>
     <p>
       A modifier on a theme you have equipped goes full screen. Battle-Worn cracks run in from
-      the edges of the page, and Haunted sends a few faint ghosts drifting up the page and opens
+      the edges of the page. Haunted sends a few faint ghosts drifting up the page and opens
       its eyes somewhere in the lower half. A Haunted thumbnail background gets the same ghosts
       in the scene behind your badge.
     </p>

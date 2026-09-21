@@ -35,7 +35,7 @@ const ROWS: WikiCompareRow[] = [
       straight sale with no timer.
     </p>
     <p>
-      Twenty listings can run at once, and supporters have no cap. You can cancel a listing
+      Twenty listings can run at once. Supporters have no cap. You can cancel a listing
       until the first bid lands.
     </p>
 
@@ -56,7 +56,7 @@ const ROWS: WikiCompareRow[] = [
 
     <WikiHeading id="trades">Trades</WikiHeading>
     <p>
-      A trade is aimed at one player. Items and essence can sit on either side, and you can ask
+      A trade is aimed at one player. Items and essence can sit on either side. You can ask
       for specific items out of their inventory as well as offering your own. You build the
       entire deal and they accept or decline it as it stands.
     </p>

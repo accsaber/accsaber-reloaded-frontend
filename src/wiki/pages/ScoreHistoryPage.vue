@@ -43,9 +43,8 @@ const HISTORY_LABELS = [
 <template>
   <WikiProse>
     <p>
-      Only one play per map counts for your AP, and that is your best one. Every other run you
-      have submitted on that map is saved below it, and you can see all of them from any score
-      on your profile.
+      Only your best play on a map counts for your AP. Every other run you have submitted on
+      that map is saved below it. You can see all of them from any score on your profile.
     </p>
     <p>
       That history only fills up if you play with the <RouterLink
@@ -59,7 +58,7 @@ const HISTORY_LABELS = [
     <p>
       When a run lands, it gets compared against your current best on that difficulty using the
       score before any modifier multiplier. Accuracy and AP are not compared. A run has to beat
-      the old score, and an exact tie keeps the play you already had.
+      the old score. An exact tie keeps the play you already had.
     </p>
     <WikiPlayOutcome
       :max-score="DEMO_MAX_SCORE"
@@ -109,8 +108,8 @@ const HISTORY_LABELS = [
     <WikiCompareTable :columns="OUTCOME_COLUMNS" :rows="OUTCOME_ROWS" />
     <p>
       Quit early covers a restart, a quit to menu or a fail. The plugin submits those by
-      default, and you can stop it under Disable incomplete submissions in its leaderboard
-      settings. An unfinished run cannot become your best or touch your AP, and it still gives
+      default. You can stop it under Disable incomplete submissions in its leaderboard
+      settings. An unfinished run cannot become your best or touch your AP. It still gives
       the flat 25.
     </p>
 

@@ -24,7 +24,7 @@ const PIPELINE: WikiFlowStep[] = [
     <WikiHeading id="suggesting">Suggesting a map</WikiHeading>
     <p>
       Map suggestions happen in <a :href="DISCORD_URL" target="_blank" rel="noopener
-      noreferrer">our Discord</a>, and anyone can bring one. If a map looks like a well-built
+      noreferrer">our Discord</a>. Anyone can bring one. If a map looks like a well-built
       accuracy map, the ranking team imports it into the queue.
     </p>
 
@@ -45,7 +45,7 @@ const PIPELINE: WikiFlowStep[] = [
     <WikiHeading id="complexity">Where complexity comes from</WikiHeading>
     <p>
       When a map is imported, an algorithm assigns its starting complexity. From there the team
-      can vote to move it up or down, and suggested values get averaged.
+      can vote to move it up or down. Suggested values get averaged.
     </p>
 
     <WikiHeading id="border-calls">Borderline categories</WikiHeading>
