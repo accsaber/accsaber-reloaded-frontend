@@ -76,7 +76,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'accuracy-and-ap',
         title: 'Accuracy & AP',
-        summary: 'The two ingredients behind every AP number, and the curve that ties them together.',
+        summary: 'The two numbers behind every AP value and the curve they go through.',
         keywords: [
           'ap',
           'accuracy points',
@@ -207,7 +207,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'score-history',
         title: 'Score History & Rewards',
-        summary: 'Only one play on a map counts for AP. The rest still pay you something.',
+        summary: 'Only one play on a map counts for AP. The rest still give XP.',
         keywords: [
           'score history',
           'history',
@@ -254,7 +254,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'snipes',
         title: 'Snipes',
-        summary: 'The tool that finds the maps you are closest to taking off another player, and hands you the playlist.',
+        summary: 'Finds the maps you are closest to taking off another player and gives you the playlist.',
         keywords: [
           'snipe',
           'snipes',
@@ -400,7 +400,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'xp-and-levels',
         title: 'XP & Levels',
-        summary: 'Five ways to earn XP and a level ladder with real items on it.',
+        summary: 'Five sources of XP and the levels that unlock items.',
         keywords: [
           'xp',
           'experience',
@@ -729,7 +729,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'modifiers-and-effects',
         title: 'Item Modifiers & Effects',
-        summary: 'The markers that can land on your copy of an item. Most arrive out of a crate.',
+        summary: 'The modifiers that can land on your copy of an item. Most come out of a crate.',
         keywords: [
           'item modifier',
           'item modifiers',

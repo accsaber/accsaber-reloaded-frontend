@@ -17,18 +17,15 @@ const formatWeight = (position: number) => {
 <template>
   <WikiProse>
     <p>
-      Two numbers share the name AP, and mixing them up is the single most common confusion on
-      the platform. Each score has its raw AP, straight from
-      <RouterLink to="/wiki/accuracy-and-ap">the curve</RouterLink>. Your profile total is
-      something else: a weighted sum of all your plays, built so that your best work defines
-      you and filler does not.
+      Two numbers share the name AP. Each score has its raw AP, straight from <RouterLink
+      to="/wiki/accuracy-and-ap">the curve</RouterLink>. Your profile total is a weighted sum of
+      all your plays, where your best plays count the most.
     </p>
 
-    <WikiHeading id="how-it-works">Your best plays carry the run</WikiHeading>
+    <WikiHeading id="how-it-works">Your best plays count the most</WikiHeading>
     <p>
       Picture your plays in a category lined up from best raw AP to worst. The play at the top
-      counts at full value. From there, each spot down the line counts a little less, gently at
-      first, then steeply:
+      counts at full value. Each spot down the line counts a little less:
     </p>
     <table>
       <thead>
@@ -45,42 +42,35 @@ const formatWeight = (position: number) => {
       </tbody>
     </table>
     <p>
-      By the mid-twenties a play is contributing pocket change, and past thirty it is a
-      spectator. Your total is the sum of every play times its multiplier, which is why the top
-      of your list is worth fighting for and the bottom barely matters.
+      By the mid-twenties a play adds almost nothing. Your total is the sum of every play times
+      its multiplier.
     </p>
 
     <WikiHeading id="sandbox">Watch a new play land</WikiHeading>
     <p>
-      Here is a sample profile. Slide the raw AP of an incoming play and watch what actually
-      happens to the total. Notice how a play landing mid-list moves the total by a fraction of
-      its raw value: it only counts at its landing spot's multiplier, and it pushes every play
-      below it one spot down the scale at the same time.
+      Here is a sample profile. Slide the raw AP of an incoming play and watch what happens to
+      the total. A play landing mid-list only counts at its landing spot's multiplier, and it
+      pushes every play below it one spot down.
     </p>
     <WikiWeightSandbox :plays="SAMPLE_PLAYS" :max="900" :initial="560" />
     <p>
-      This is the answer to "I set a 500 AP score and my total moved 12". Nothing is broken.
-      The play landed low on your list, where the multiplier is small. And you do not have to
-      do this math yourself: the small ? next to the total AP on your profile tells you exactly
+      This is why a 500 AP score can move your total by 12. The play landed low on your list,
+      where the multiplier is small. The small ? next to the total AP on your profile tells you
       how much raw AP a single new play needs to lift your total by one point.
     </p>
 
     <WikiHeading id="per-category">Each category keeps its own list</WikiHeading>
     <p>
-      Your True Acc plays compete for spots on your True Acc list, your Tech Acc plays on your
-      Tech Acc list, and the two never see each other. The same 900 raw AP play is worth wildly
-      different amounts depending on which list it lands in. Dropped into a stacked True Acc
-      list it might slot in fifth and add a few hundred, and dropped into a nearly empty Tech
-      Acc list it lands at number one and adds every bit of its 900. Your Overall total is the
-      three category totals added together.
+      Your True Acc plays compete for spots on your True Acc list and your Tech Acc plays on
+      your Tech Acc list. The same 900 raw AP play can slot in fifth on a stacked True Acc list
+      and add a few hundred, or land at number one on a nearly empty Tech Acc list and add all
+      900. Your Overall total is the three category totals added together.
     </p>
 
     <WikiHeading id="never-down">Your total never goes down</WikiHeading>
     <p>
-      A worse score than your best on a map is recorded for your history and still feeds your
-      XP, but it never replaces the better play and never subtracts from your total. The only
-      direction a session can move your AP is up. There is no such thing as ruining your profile
-      by having an off day.
+      A worse score than your best on a map is saved in your history and still gives XP. It
+      never replaces the better play and never lowers your total.
     </p>
   </WikiProse>
 </template>

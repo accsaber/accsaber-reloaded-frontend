@@ -39,25 +39,21 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      Essence is the currency the item economy runs on, and your balance sits at the top of your
-      inventory next to the search box. It has no effect on your AP, your rank or your level, and
-      the only thing it ever touches is items.
+      Essence is the currency the item economy runs on, and your balance can be viewed in your inventory.
+      It has no effect on your AP, your rank or your level. It only touches items.
     </p>
 
     <WikiHeading id="sources">Where it comes from</WikiHeading>
     <p>
-      Breaking an item down is the reliable way to make essence, and it pays out whatever that
+      Breaking an item down is the reliable way to make essence, and it gives whatever that
       item is worth. Selling something on the market is the other way, and when a listing settles
-      the winner's essence lands in your balance in full, because nothing is taken out of it on
-      the way through. A trade can carry essence on either side too, and somebody can hand you
-      essence for an item you own without either of you touching the market.
+      the winner's essence lands in your balance. A trade can carry essence on either side too.
     </p>
 
     <WikiHeading id="spending">What it buys</WikiHeading>
     <p>
       Nothing on AccSaber is sold to you for essence, and there is no way to turn it into AP, XP
-      or a level either. What essence buys is what other players have put up for sale, and that
-      is the entire list.
+      or a level either.
     </p>
     <p>
       That makes the whole economy player to player, and it means the price of a thing is whatever
@@ -78,12 +74,10 @@ onMounted(async () => {
     <p>
       Untradeable items have no essence value at all, which rules out level unlocks, milestone
       rewards, official campaign rewards and event rewards. Anything currently equipped has to
-      come off first, and anything sitting in a market listing or a pending trade stays locked
-      while that is open.
+      come off first.
     </p>
     <p>
-      None of it comes back. The item is gone, the serial number that came with it is gone, and
-      buying another copy later starts you at whatever serial that item happens to be up to now.
+      None of it comes back. The item is gone and the serial number that came with it is gone.
     </p>
 
     <WikiHeading id="held">Held essence</WikiHeading>
@@ -91,8 +85,7 @@ onMounted(async () => {
       The market never spends your essence at the moment you bid, it holds it instead. A held
       amount is still yours and still counted in your balance, and it simply cannot be spent twice
       while the bid stands. Get outbid and the hold lifts immediately with the full amount back in
-      play, win the auction and the hold turns into the payment, and either way you were never at
-      risk of losing essence to a bid you did not win.
+      play, win the auction and the hold turns into the payment.
     </p>
     <p>
       Essence you attach to a trade offer you sent works the same way, held while the offer is
@@ -103,12 +96,11 @@ onMounted(async () => {
     <p>
       A Holographic Black Hole and the plainest Black Hole anybody owns disintegrate for exactly
       the same amount, because essence value is set by the item's rarity and nothing else reads
-      the markers.
+      the modifiers.
     </p>
     <p>
-      What the markers move is what another player will pay you. A rare marker on a mythic item
-      can be worth a fortune on the market and it is still worth the same essence in the grinder.
-      Anything with a serial worth bragging about is nearly always worth more sold than disintegrated.
+      What the modifiers move is what another player will pay you. A rare modifier on a mythic item
+      can be worth a fortune on the market and it is still worth the same essence in the disintegration chamber.
     </p>
   </WikiProse>
 </template>

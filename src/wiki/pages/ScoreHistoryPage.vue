@@ -15,7 +15,7 @@ const OUTCOME_ROWS: WikiCompareRow[] = [
   { label: 'Becomes your best play', values: [true, true, false, false] },
   { label: 'Moves your AP', values: [true, true, false, false] },
   {
-    label: 'Pays XP',
+    label: 'Gives XP',
     values: ['25 + full bonus', '25 + boosted gain', '25 flat', '25 flat'],
   },
   { label: 'Saved to your history', values: [true, true, true, true] },
@@ -43,25 +43,23 @@ const HISTORY_LABELS = [
 <template>
   <WikiProse>
     <p>
-      Only one play per map feeds your AP, and that is your best one. Every other run you have
-      ever submitted on that map is still sitting below it, and you can scroll the whole
-      pile from any score on your profile. Those older entries keep their own numbers, and the
-      numbers on them can change long after you set them.
+      Only one play per map counts for your AP, and that is your best one. Every other run you
+      have submitted on that map is saved below it, and you can see all of them from any score
+      on your profile.
     </p>
     <p>
-      One thing to get out of the way first: that pile only exists if you play with the
-      <RouterLink to="/wiki/getting-your-scores-counted">AccSaber plugin</RouterLink>. The plugin
-      is the only thing that sends up the runs that lost. If your scores reach the site through a
-      BeatLeader or ScoreSaber backfill instead, all it ever sees is your best play on each map,
-      and there is nothing sitting underneath it but any previous best plays.
+      That history only fills up if you play with the <RouterLink
+      to="/wiki/getting-your-scores-counted">AccSaber plugin</RouterLink>, because the plugin is
+      the only thing that sends the runs that were not a new best. If your scores reach the site
+      through BeatLeader or ScoreSaber, the site only sees your best play on each map and any
+      previous bests.
     </p>
 
     <WikiHeading id="which-play-counts">Which play counts</WikiHeading>
     <p>
       When a run lands, it gets compared against your current best on that difficulty using the
-      score you earned before any modifier multiplier touched it. Accuracy is not what gets
-      compared, and neither is AP. A run also has to beat the old number outright, so an exact
-      tie leaves the play you already had in place.
+      score before any modifier multiplier. Accuracy and AP are not compared. A run has to beat
+      the old score, and an exact tie keeps the play you already had.
     </p>
     <WikiPlayOutcome
       :max-score="DEMO_MAX_SCORE"
@@ -70,21 +68,20 @@ const HISTORY_LABELS = [
       :initial-score="DEMO_INITIAL"
     />
     <p>
-      A play can reach the site from the plugin and then again through a
-      <RouterLink to="/wiki/getting-your-scores-counted">BeatLeader backfill</RouterLink>, and
-      the second copy gets merged into the first instead of being filed as another attempt.
+      A play can reach the site from the plugin and then again through a <RouterLink
+      to="/wiki/getting-your-scores-counted">BeatLeader backfill</RouterLink>. The second copy
+      gets merged into the first.
     </p>
 
-    <WikiHeading id="xp-per-play">Why the same map pays different XP</WikiHeading>
+    <WikiHeading id="xp-per-play">Why the same map gives different XP</WikiHeading>
     <p>
-      Every completed run pays XP, and this is the part that surprises people who beat a map
-      twice. There are three payouts:
+      Every completed run gives XP. There are three amounts:
     </p>
     <table>
       <thead>
         <tr>
           <th>The run</th>
-          <th>What it pays</th>
+          <th>What you get</th>
         </tr>
       </thead>
       <tbody>
@@ -103,25 +100,23 @@ const HISTORY_LABELS = [
       </tbody>
     </table>
     <p>
-      So a big XP number is usually a first-clear number. Going from 94% to 96% on a map you
-      already own pays you for the two percent you gained rather than for the whole play again,
-      with a boost on top to make chasing the improvement worth it. The full picture of where XP
-      comes from lives in <RouterLink to="/wiki/xp-and-levels">XP &amp; Levels</RouterLink>.
+      A big XP number is usually a first clear. Going from 94% to 96% on a map you already
+      cleared gives you XP for the two percent you gained, with a boost on top. Where XP comes
+      from is covered in <RouterLink to="/wiki/xp-and-levels">XP &amp; Levels</RouterLink>.
     </p>
 
     <WikiHeading id="what-still-counts">When a run loses</WikiHeading>
     <WikiCompareTable :columns="OUTCOME_COLUMNS" :rows="OUTCOME_ROWS" />
     <p>
-      Quit early covers anything you did not take to the end of the map, so a restart, a quit to
-      menu, or a fail. The plugin submits those by default and you can stop it under Disable
-      incomplete submissions in its leaderboard settings, though leaving it on costs you
-      nothing. An unfinished run cannot become your best and cannot touch your AP, and it still
-      banks the flat 25.
+      Quit early covers a restart, a quit to menu or a fail. The plugin submits those by
+      default, and you can stop it under Disable incomplete submissions in its leaderboard
+      settings. An unfinished run cannot become your best or touch your AP, and it still gives
+      the flat 25.
     </p>
 
     <WikiHeading id="legend">Reading your history</WikiHeading>
     <p>
-      Open any score and every entry in its history carries a label saying why it is there:
+      Open any score and every entry in its history has a label saying why it is there:
     </p>
     <table>
       <thead>
@@ -140,11 +135,10 @@ const HISTORY_LABELS = [
 
     <WikiHeading id="rank-drift">Rank when set</WikiHeading>
     <p>
-      Each play remembers the leaderboard position it landed on the day you set it, and the
-      score detail shows that as set as #N whenever it differs from where the play sits today.
-      Nothing has gone wrong when the two drift apart. Your play has not changed at all, other
-      people have simply put scores above it since, and the same thing happens in reverse when
-      scores above yours get beaten or a map leaves the ranked pool.
+      Each play remembers the leaderboard position it had the day you set it. The score detail
+      shows that as set as #N whenever it differs from where the play sits today. The two drift
+      apart when other people set scores above yours, when scores above yours get beaten or when
+      a map leaves the ranked pool.
     </p>
   </WikiProse>
 </template>

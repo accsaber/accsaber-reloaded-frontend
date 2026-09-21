@@ -18,7 +18,7 @@ const MODIFIERS = [
   { name: 'Unique', does: 'Marks a copy handed out for a specific occasion', from: 'Staff award, Tournaments & Special Events' },
   { name: 'Strange', does: 'Counts every ranked personal best you set while it is equipped', from: 'Crate roll' },
   { name: 'Unusual', does: 'Attaches a particle effect that plays on the item', from: 'Crate roll' },
-  { name: 'Holographic', does: 'Sweeps a shimmer across the item', from: 'Crate roll, the rarest of the markers' },
+  { name: 'Holographic', does: 'Sweeps a shimmer across the item', from: 'Crate roll, the rarest of the modifiers' },
   { name: 'Battle-Worn', does: 'Chips and cracks the item, and flakes fall off it', from: 'Crate roll during an event' },
   { name: 'Haunted', does: 'Phases the item out for a few seconds at a time and opens a pair of eyes in it', from: 'Specific crate roll or roll any between October 25 and November 1' },
   { name: 'Jolly', does: 'Trims the item with festive particles', from: 'Specific crate roll or roll any between December 20 and December 31' },
@@ -69,14 +69,9 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      A modifier is a marker stuck to your particular copy of an item. It changes how that copy
-      looks and what it is called, because the marker name goes in front of the item name. A
-      Strange Cat Ears is the same border you would get anyway, with an orange counter bolted
-      into the corner.
-    </p>
-    <p>
-      Markers live on your copy and not on the item, which is why two players holding the same
-      border can end up looking at completely different things.
+      A modifier is attached to your particular copy of an item. It changes how that copy looks
+      and what it is called, because the modifier name goes in front of the item name. A Strange
+      Cat Ears is the same border you would get anyway, with an orange counter in the corner.
     </p>
     <table>
       <thead>
@@ -97,39 +92,37 @@ onMounted(async () => {
 
     <WikiHeading id="rolls">How they land</WikiHeading>
     <p>
-      Most markers come out of a <RouterLink to="/wiki/crates">crate</RouterLink>, rolled on a
-      chance completely separate from the reward itself, and each marker a crate carries gets its
-      own independent roll. One of your opens can attach two of them and the next can attach
-      none.
+      Most modifiers come out of a <RouterLink to="/wiki/crates">crate</RouterLink>, rolled on a
+      chance separate from the reward itself. Each modifier a crate carries gets its own roll.
+      One open can attach two of them and the next can attach none.
     </p>
     <p>
-      Seasonal markers ignore which crate you happen to be holding, and around Halloween Haunted
-      rolls on every crate you open, including ones with nothing to do with that event. Christmas
-      does the same with Jolly.
+      Seasonal modifiers ignore which crate you are holding. Around Halloween, Haunted rolls on
+      every crate you open, including ones with nothing to do with that event. Christmas does
+      the same with Jolly.
     </p>
     <p>
-      A few markers never roll at all. Founder's attaches itself to the first five copies of
-      anything ever handed out, Vintage lands on every existing copy the day an item gets
-      reworked, and the rest are given deliberately by staff.
+      A few modifiers never roll at all. Founder's attaches itself to the first five copies of
+      anything, Vintage lands on every existing copy the day an item gets reworked, and the rest
+      are given by staff.
     </p>
 
     <WikiHeading id="rendering">How the effects show up</WikiHeading>
     <p>
-      Some effects sit behind the item, some sit over the top of it, and some cut into the item
-      itself. Battle-Worn chips lumps out of the edges and runs forking cracks inward from every
-      bite, Haunted phases the whole thing out for a couple of seconds at a time and opens a pair
-      of eyes in the middle of it, and Holographic just sweeps a shimmer across the surface.
+      Some effects sit behind the item, some sit on top of it and some cut into the item itself.
+      Battle-Worn chips pieces out of the edges and runs cracks inward from them. Haunted phases
+      the whole thing out for a couple of seconds at a time and opens a pair of eyes in the
+      middle of it. Holographic sweeps a shimmer across the surface.
     </p>
     <p>
-      Wherever your item gets drawn the effect comes with it, whether that is your profile, the
-      inventory grid or a player card sitting on a leaderboard.
+      The effect shows up everywhere your item does, on your profile, in the inventory grid and
+      on your player card on a leaderboard.
     </p>
     <p>
-      A marker on a theme you have equipped is the exception, because it goes full screen instead
-      of decorating a small tile. Battle-Worn cracks run in from the edges of the page, and
-      Haunted sends a few faint ghosts drifting up the page and opens its eyes somewhere new in
-      the lower half. A Haunted thumbnail background gets the same ghosts, rising up through the
-      scene behind your badge.
+      A modifier on a theme you have equipped goes full screen. Battle-Worn cracks run in from
+      the edges of the page, and Haunted sends a few faint ghosts drifting up the page and opens
+      its eyes somewhere in the lower half. A Haunted thumbnail background gets the same ghosts
+      in the scene behind your badge.
     </p>
     <WikiItemBench
       v-if="benchReady"
@@ -145,14 +138,13 @@ onMounted(async () => {
 
     <WikiHeading id="unusual">Unusual effects</WikiHeading>
     <p>
-      Unusual is the one marker that pulls something else along behind it. Rolling it picks a
-      particle effect out of the list its crate carries, and that effect is what you end up
-      looking at. Two Unusual items out of the same crate rarely look alike.
+      Unusual is the one modifier that comes with something else. Rolling it picks a particle
+      effect out of the list its crate carries.
     </p>
     <p>
-      Every crate ships its own set and the roster grows with each one that lands. Some are quiet,
-      like dust drifting off the item or fireflies circling it, and some are not, like a clawed
-      hand reaching across the thing or something eldritch looming up behind it.
+      Every crate has its own set of effects. Some are quiet, like dust drifting off the item or
+      fireflies circling it. Some are not, like a clawed hand reaching across it or something
+      eldritch behind it.
     </p>
     <p>
       Unusual effects get the same full screen treatment on a theme.

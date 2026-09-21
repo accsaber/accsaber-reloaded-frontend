@@ -25,31 +25,31 @@ const XP_SOURCES = [
     key: 'score',
     color: 'var(--xp-score)',
     label: 'Ranked plays',
-    body: 'Every completed play on a ranked map pays XP. The better the accuracy and the more demanding the map, the bigger the payout.',
+    body: 'Every completed play on a ranked map gives XP. Better accuracy and higher complexity give more.',
   },
   {
     key: 'milestone',
     color: 'var(--xp-milestone)',
     label: 'Milestones',
-    body: 'Lifetime achievements. Cross a threshold once, get its XP forever.',
+    body: 'Complete one once and you keep its XP.',
   },
   {
     key: 'set-bonus',
     color: 'var(--xp-set-bonus)',
     label: 'Set bonuses',
-    body: 'Finish every milestone in a set and a bonus lands on top of everything the set already paid.',
+    body: 'Finish every milestone in a set and you get a bonus on top.',
   },
   {
     key: 'mission',
     color: 'var(--xp-mission)',
     label: 'Missions',
-    body: 'Rotating objectives sized to your skill, and the missions that live events bring pay out through here too. Attempts count toward some of them, so even failed runs push these along.',
+    body: 'Daily and weekly objectives sized to your skill, plus the missions from live events. Attempts count toward some of them.',
   },
   {
     key: 'campaign',
     color: 'var(--xp-campaign)',
     label: 'Campaigns',
-    body: 'Clearing campaign challenges pays out on top of whatever the play itself earned.',
+    body: 'Clearing campaign challenges gives XP on top of what the play itself gave.',
   },
 ]
 
@@ -83,15 +83,14 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      AP measures how good you are. XP measures how much you have lived here. Everything you do
-      on AccSaber feeds one bar that only ever fills, levels never cap, and the ladder hands
-      out real items as you climb it.
+      AP measures how good you are. XP measures how much you have played. Everything you do on
+      AccSaber gives XP, levels never cap, and some levels give you items.
     </p>
 
-    <WikiHeading id="sources">Five ways to earn</WikiHeading>
+    <WikiHeading id="sources">Five sources</WikiHeading>
     <p>
-      Every point of XP arrives through one of five doors, and each has its own color, the same
-      colors your profile uses to break down where yours came from:
+      XP comes from five sources. Each has its own color, the same colors your profile uses to
+      show where yours came from:
     </p>
     <div class="sources">
       <div
@@ -105,12 +104,11 @@ onMounted(async () => {
       </div>
     </div>
 
-    <WikiHeading id="score-xp">What a play pays</WikiHeading>
+    <WikiHeading id="score-xp">XP from a play</WikiHeading>
     <p>
-      Score XP is exact math and here it is, live. Every completed play starts at a flat 25 XP,
-      and a bonus stacks on top based on your accuracy and the map's complexity. The bonus curve
-      is even more top-heavy than the AP curve, and clean plays on demanding maps are where the
-      XP fountain really opens up:
+      Every completed play starts at a flat 25 XP, and a bonus goes on top based on your
+      accuracy and the map's complexity. The bonus curve is even steeper near the top than the
+      AP curve:
     </p>
     <WikiCurveExplorer
       :fn="scoreXp"
@@ -130,18 +128,15 @@ onMounted(async () => {
       :initial-param="8"
     />
     <p>
-      Improving a personal best pays the same base plus one and a half times the bonus you
-      gained over your old play, and even a worse score than your best still banks the flat 25.
-      Playing is never wasted.
+      Improving a personal best gives the same base plus one and a half times the bonus you
+      gained over your old play. A worse score than your best still gives the flat 25.
     </p>
 
     <WikiHeading id="ladder">The ladder</WikiHeading>
     <p>
-      Levels follow a curve that keeps early climbing quick and late climbing prestigious. Each
-      level costs more than the last until level 100, where the price locks in flat for the rest
-      of the road. There is a named tier for every stretch of the ladder and real unlockable
-      items waiting at milestone levels. Drag through it, this is live data and what you see
-      here is exactly what is waiting:
+      Each level costs more XP than the last until level 100, where the cost stays flat. Every
+      stretch of levels has a named tier, and some levels unlock items. Drag through it, this is
+      live data:
     </p>
     <WikiXpLadder
       v-if="ladderReady"

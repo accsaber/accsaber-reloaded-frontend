@@ -41,11 +41,9 @@ const PATTERN_ROWS: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      Before the ranking team ever votes on a difficulty, it has to clear the standards below,
-      which are what keep every ranked map fun, fair and worth the pool it sits in. The mapping
-      vocabulary here is used freely and without explanation, and the
-      <a href="https://bsmg.wiki/wiki/Mapping" target="_blank" rel="noopener noreferrer">BSMG Wiki</a>
-      is the place to go for a refresher on any of it.
+      Before the ranking team votes on a difficulty, it has to meet the rules below. The mapping
+      terms here are not explained, and the <a href="https://bsmg.wiki/wiki/Mapping"
+      target="_blank" rel="noopener noreferrer">BSMG Wiki</a> covers all of them.
     </p>
 
     <WikiHeading id="general">General rules</WikiHeading>
@@ -77,29 +75,26 @@ const PATTERN_ROWS: WikiCompareRow[] = [
 
     <WikiHeading id="patterns">Pattern rules by category</WikiHeading>
     <p>
-      A check means the pattern is welcome in that category, a cross means it is not:
+      A check means the pattern is allowed in that category.
     </p>
     <WikiCompareTable :columns="PATTERN_COLUMNS" :rows="PATTERN_ROWS" />
     <p>
-      Resets in True Acc are tolerated only when they are consistent, the same
-      pattern resolved the same way every time it appears. A map that makes you guess is a map
-      that fails.
+      Resets in True Acc are allowed only when they are consistent, the same pattern resolved
+      the same way every time it appears.
     </p>
     <p>
-      Towers in Standard Acc are allowed only when their lead-in sits on
-      the same row as the tower's top note and carries proper emphasis. An arc 
-      connecting the previous note and the tower's top note is mandatory.
+      Towers in Standard Acc are allowed only when their lead-in sits on the same row as the
+      tower's top note and carries proper emphasis. An arc connecting the previous note and the
+      tower's top note is mandatory.
     </p>
 
     <WikiHeading id="enforcement">Who enforces this</WikiHeading>
     <p>
-      The criteria check is its own vote inside
-      <RouterLink to="/wiki/how-maps-get-ranked#the-vote">the ranking vote</RouterLink>,
-      decided by simple majority with the ranking heads holding an override. Backing the team up
-      is the AccSaber Criteria Script. It checks a map against everything listed here
-      automatically and flags what it finds, which saves the team from catching every hot start
-      and every stray bomb by eye. The standards themselves keep evolving with the game. When in
-      doubt about an edge case, ask in the Discord before suggesting.
+      The criteria check is its own vote inside <RouterLink
+      to="/wiki/how-maps-get-ranked#the-vote">the ranking vote</RouterLink>, decided by simple
+      majority with the ranking heads holding an override. The AccSaber Criteria Script checks a
+      map against everything listed here automatically and flags what it finds. If you are not
+      sure about an edge case, ask in the Discord before suggesting.
     </p>
   </WikiProse>
 </template>

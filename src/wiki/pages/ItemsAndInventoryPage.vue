@@ -26,7 +26,6 @@ const SLOTS = [
   { slot: 'Thumbnail background', changes: 'The scene behind your small player card' },
 ]
 
-
 const { itemsById, ensureLoaded } = useItemCatalog()
 const modifierStore = useItemModifierStore()
 
@@ -84,15 +83,14 @@ onMounted(async () => {
   <WikiProse>
     <p>
       Anything you can put on your profile is an item. Titles, avatar borders, site themes and
-      the little scene behind your player card all live in the Inventory tab on your profile,
-      sitting next to the crates you have not opened yet and the sabers that get pulled down
-      into the game as files.
+      the scene behind your player card are all in the Inventory tab on your profile, next to
+      your unopened crates and your sabers.
     </p>
 
     <WikiHeading id="slots">Slots</WikiHeading>
     <p>
-      You wear one item per slot, and the slots do not fight each other. A title, a border
-      shape, a border color, a theme, a badge and both backgrounds can all be on at once.
+      You equip one item per slot. A title, a border shape, a border color, a theme, a badge and
+      both backgrounds can all be on at once.
     </p>
     <table>
       <thead>
@@ -109,17 +107,15 @@ onMounted(async () => {
       </tbody>
     </table>
     <p>
-      Swapping costs nothing and lands the moment you click. Some items carry variants, which
-      are alternate looks packed into the same item, and you pick the one you want as part of
-      equipping it. Sabers and pedestals sit outside all of this, since they are files you
-      install into Beat Saber by hand and they never touch a slot on the site.
+      Swapping is free and instant. Some items have variants, which are alternate looks of the
+      same item, and you pick one when you equip it. Sabers and pedestals do not use a slot,
+      because they are files you install into Beat Saber by hand.
     </p>
 
     <WikiHeading id="rarity">Rarity</WikiHeading>
     <p>
-      Six steps run from common up to mythic, and where an item sits on that ladder decides two
-      numbers. Rarer items come out of crates less often, and they hand you back more essence
-      when you break them down.
+      There are six rarities from common up to mythic. Rarer items come out of crates less
+      often, and they give more essence when you break them down.
     </p>
     <table>
       <thead>
@@ -135,41 +131,34 @@ onMounted(async () => {
         </tr>
       </tbody>
     </table>
-    <p>
-      A mythic border you pulled on your first ever crate and a mythic border pulled by somebody
-      four hundred opens deep are worth exactly the same 100.
-    </p>
 
     <WikiHeading id="modifiers">Modifiers</WikiHeading>
     <p>
-      A modifier is a marker stuck to your particular copy of an item, and it changes how that
-      copy looks and what it is called. Most of them roll out of a crate on a chance separate
-      from the item itself.
-      <RouterLink to="/wiki/modifiers-and-effects">Item Modifiers &amp; Effects</RouterLink> goes
-      through every marker, where each one comes from and what it does to the thing it lands on.
+      A modifier is attached to your particular copy of an item, and it changes how that copy
+      looks and what it is called. Most of them roll out of a crate on a chance separate from
+      the item itself. <RouterLink to="/wiki/modifiers-and-effects">Item Modifiers &amp;
+      Effects</RouterLink> goes through every modifier, where each one comes from and what it
+      does.
     </p>
 
     <WikiHeading id="serials">Serials</WikiHeading>
     <p>
-      A serialized item hands out its numbers in the order players earn it. If you are the
-      eleventh person ever awarded a title, your copy reads number 11 for good, and nobody can
-      take the number off you.
+      A serialized item gives out its numbers in the order players get it. If you are the
+      eleventh person to ever get a title, your copy is number 11 for good.
     </p>
     <p>
-      The first five copies of anything pick up Founder's for free. It attaches on its own the
-      moment your serial lands. Being early is the whole requirement.
+      The first five copies of anything get Founder's for free. It attaches on its own the
+      moment you get your serial.
     </p>
     <p>
-      A Strange item runs a total of every ranked personal best you set while it is equipped,
-      the count sits on that copy permanently, and taking the item off just freezes the number
-      where it stands.
+      A Strange item counts every ranked personal best you set while it is equipped. The count
+      stays on that copy permanently, and taking the item off freezes the number.
     </p>
 
     <WikiHeading id="bench">Try it</WikiHeading>
     <p>
-      Here is a real item off the live catalog with the markers and the serial under your
-      control. Switch items to walk the rarity ladder, stack markers on, and drag the serial
-      through 5 to watch Founder's attach itself:
+      Here is a real item off the live catalog. Switch items to go through the rarities, stack
+      modifiers on, and drag the serial through 5 to watch Founder's attach itself:
     </p>
     <WikiItemBench
       v-if="benchReady"
@@ -186,10 +175,9 @@ onMounted(async () => {
     <WikiHeading id="bound">Locked to you</WikiHeading>
     <p>
       Level unlocks, milestone rewards, official campaign rewards and event rewards are bound to
-      the account that earned them. You cannot trade them, you cannot list them on the market,
-      and breaking them down pays out nothing. Everything that falls out of a crate is the
-      opposite, free to move between players and worth its full rarity value on the day
-      somebody decides they are finished with it.
+      the account that got them. You cannot trade them, you cannot list them on the market, and
+      breaking them down gives nothing. Everything that comes out of a crate can move between
+      players and is worth its full rarity value.
     </p>
   </WikiProse>
 </template>

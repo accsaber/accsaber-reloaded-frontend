@@ -8,7 +8,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 const SCORE_FLOW: WikiFlowStep[] = [
   { label: 'Play a ranked map', detail: 'any map in the AccSaber pool counts automatically' },
   { label: 'Your score comes in', detail: 'the score you hit against the maximum possible' },
-  { label: 'It turns into AP', detail: 'harder maps pay more for the same accuracy' },
+  { label: 'It turns into AP', detail: 'harder maps give more for the same accuracy' },
   {
     label: 'You climb',
     detail: 'your best plays stack up into your rank',
@@ -28,37 +28,31 @@ const CATEGORY_FEELS: { code: CategoryCode; feel: string }[] = [
   <WikiProse>
     <p>
       AccSaber is a Beat Saber platform built around one question, which is how precisely you
-      can cut. Most ranked ladders reward you for many different styles of play and accuracy
-      ends up as an afterthought along the way, while AccSaber takes that niche and builds
-      everything on top of it, with a hand-picked pool of ranked maps where precision is the
+      can cut. Most ranked ladders reward many different styles of play and accuracy ends up as
+      an afterthought. AccSaber has a hand-picked pool of ranked maps where precision is the
       entire point.
     </p>
     <p>
-      That one idea grew into a whole different way to play the game. There are leaderboards for
-      every flavor of accuracy, campaigns that guide you through curated maps, levels and
-      milestones to chase, items to unlock, and a market to trade them on. Whether you take the
-      competition seriously or just want the best acc practice routine the game has, you play
-      precise and you get rewarded.
+      There are leaderboards for every flavor of accuracy, campaigns that guide you through
+      curated maps, levels and milestones to chase, items to unlock and a market to trade them
+      on.
     </p>
     <p>
-      AccSaber has been part of the community for years, and this site is the ground-up rebuild
-      of the original project that takes the same idea miles further.
+      AccSaber has been part of the community for years. This site is a ground-up rebuild of the
+      original project.
     </p>
 
     <WikiHeading id="how-it-works">From a play to the leaderboard</WikiHeading>
-    <p>Here is the whole loop at a glance:</p>
     <WikiFlowDiagram :steps="SCORE_FLOW" />
     <p>
-      AP stands for Accuracy Points, and two things feed it, how accurate your play was and how
-      demanding the map is. Your total is weighted so that your best plays matter the most, and
-      improving a top score will always move you further than grinding out easy scores all day.
+      AP stands for Accuracy Points. Two things feed it, how accurate your play was and how hard
+      the map is to acc. Your total is weighted so that your best plays matter the most.
     </p>
 
     <WikiHeading id="categories">The categories</WikiHeading>
     <p>
-      Acc means different things to different players, and ranked maps are split into three
-      categories to match, each with its own leaderboard. Overall combines all three. Topping it
-      means you are good at every single one.
+      Ranked maps are split into three categories, each with its own leaderboard. Overall
+      combines all three.
     </p>
     <table>
       <thead>
@@ -79,9 +73,9 @@ const CATEGORY_FEELS: { code: CategoryCode; feel: string }[] = [
 
     <WikiHeading id="jumping-in">Jumping in</WikiHeading>
     <p>
-      Getting set up takes a few minutes and one mod. The
-      <RouterLink to="/getting-started">Getting Started</RouterLink> page walks you through it in
-      three steps, and once you are linked, every ranked map you play starts counting on its own.
+      Getting set up takes a few minutes and one mod. The <RouterLink
+      to="/getting-started">Getting Started</RouterLink> page walks you through it in three
+      steps. Once you are linked, every ranked map you play counts on its own.
     </p>
   </WikiProse>
 </template>

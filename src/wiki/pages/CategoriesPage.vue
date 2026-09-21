@@ -70,8 +70,8 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
 
     <WikiHeading id="standard-acc"><span class="cat cat--standard">Standard Acc</span></WikiHeading>
     <p>
-      Standard Acc is the middle ground and the one most players know best. Its maps move
-      like regular Beat Saber mapping, with real flow and tempo, but they do not pose any angle or positional challenges.
+      Standard Acc is the middle ground and the one most players know best. The maps in this category
+      move with real flow and tempo, but they do not pose any angle or positional challenges.
       The skill here is keeping your form intact while everything is in motion, full swings that
       stay consistent and angles that stay feasible. The higher complexity maps in this category
       push the limits of standard acc and pose a few angles and wider hits that still need a
@@ -119,9 +119,8 @@ const COMPARISON: { code: CategoryCode; maps: string; skill: string }[] = [
     <WikiHeading id="overall">Overall</WikiHeading>
     <p>
       Overall is your three category totals added together, with its own leaderboard on top.
-      That makes it the all-rounder's crown. A monster in a single category will post a scary
-      number there, but topping Overall means holding your own in all three at once, and your
-      per-category ranks stay visible either way. The
+      A monster in a single category will post a scary
+      number there, but topping Overall means you hold your ground everywhere. The
       <RouterLink to="/leaderboards">leaderboards</RouterLink> let you flip between all four
       views, globally and per country.
     </p>

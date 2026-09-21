@@ -69,13 +69,12 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      The snipe page ends in a button that hands you a Beat Saber playlist of the maps you are
-      closest to taking off somebody.
-      Everything above it is the site working out which maps have earned a place on that list.
+      The snipe page gives you a Beat Saber playlist of the maps you are closest to taking off
+      somebody.
     </p>
     <p>
-      Here is a preview of the real thing, running on live scores. If you are logged in it is your own
-      profile against the top player, and you can point it at anybody else instead.
+      Here is a preview running on live scores. If you are logged in it is your own profile
+      against the top player, and you can point it at anybody else instead.
     </p>
 
     <WikiSnipeBoard
@@ -93,54 +92,50 @@ onMounted(async () => {
 
     <WikiHeading id="what-it-shows">What lands on the list</WikiHeading>
     <p>
-      You open it from any player's profile, from the button sitting next to their ScoreSaber and
-      BeatLeader links. From there the site hunts for maps where you both have a score and they
-      are ahead of you.
+      You open it from any player's profile, from the button next to their ScoreSaber and
+      BeatLeader links. The site looks for maps where you both have a score and they are ahead
+      of you.
     </p>
 
     <WikiHeading id="order">How close counts as close</WikiHeading>
     <p>
-      By default the list runs closest first, and it measures closeness in accuracy. Raw points
-      do not decide it. Two maps can both sit five thousand points out of reach while being
-      nowhere near as hard to catch up on, because five thousand points is a rounding error on a
-      long map and a serious wall on a short one.
+      By default the list runs closest first, and it measures closeness in accuracy instead of
+      raw points. Five thousand points is nothing on a long map and a lot on a short one.
     </p>
 
     <WikiHeading id="sorting">Sorting the list</WikiHeading>
     <p>
       Closest first is the right order for taking a score off somebody. It is a poor one for
-      planning where your next AP comes from. The map you are two hundredths of a percent away
-      from can be worth almost nothing. The sort dropdown holds five orders and the arrow beside
-      it flips any of them around.
+      planning where your next AP comes from, because the map you are two hundredths of a
+      percent away from can be worth almost nothing. The sort dropdown has five orders and the
+      arrow beside it flips any of them around.
     </p>
 
     <WikiCompareTable :columns="SORT_COLUMNS" :rows="SORT_ROWS" />
 
     <p>
-      Most AP to gain is the one to reach for when you are chasing your own total, and the map it
-      hands you is often nowhere near the closest. Leaderboard gap answers a different question
-      and shows where they sit furthest ahead on the board itself. A handful of old scores have
-      no rank stored against them and those drop to the bottom whichever way you flip it. The
-      choice goes into the address bar. A sorted board survives a refresh, and the link hands
-      somebody else the exact view you were looking at.
+      Most AP to gain is the one to use when you are chasing your own total. Leaderboard gap
+      shows where they sit furthest ahead on the map's leaderboard. A handful of old scores have
+      no rank stored and those drop to the bottom whichever way you flip it. The sort goes into
+      the address bar, and you can share the link with the exact view you were looking at.
     </p>
 
     <WikiHeading id="numbers">The three numbers on top</WikiHeading>
     <p>
-      Closest Gap is the accuracy you need to find on the single nearest map. Points to Gain adds
-      up the raw score you would have to make up across the maps in front of you. AP at Stake is
-      what all of it is worth if you took every one of them. All three describe the maps
-      currently loaded rather than every snipe available, so they climb as you page through and
-      only tell the whole story once you switch the page size to All snipes.
+      Closest Gap is the accuracy you need to find on the single nearest map. Points to Gain
+      adds up the raw score you would have to make up across the maps in front of you. AP at
+      Stake is what all of it is worth if you took every one of them. All three only count the
+      maps currently loaded, and they cover everything once you switch the page size to All
+      snipes.
     </p>
 
     <WikiHeading id="playlist">The playlist</WikiHeading>
     <p>
-      The filters and sort all carry into the file, and a playlist you built on Most AP
-      to gain arrives in the game in that order and holds it when Beat Saber resyncs. Leaving it on All snipes gives you the
-      entire list, which gets unwieldy against somebody far ahead of you. Capping it at twenty
-      or fifty gives you the top of whatever order you picked, and that is usually the version
-      you actually want loaded in the game. You can sync the playlist in-game.
+      The filters and sort all carry into the file. A playlist you built on Most AP to gain
+      arrives in the game in that order and keeps it when Beat Saber resyncs. All snipes gives
+      you the entire list, which gets long against somebody far ahead of you. Capping it at
+      twenty or fifty gives you the top of whatever order you picked. You can sync the playlist
+      in-game.
     </p>
   </WikiProse>
 </template>
