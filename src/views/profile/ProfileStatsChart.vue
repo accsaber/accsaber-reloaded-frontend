@@ -4,13 +4,15 @@ import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import { useStatsChartConfig } from '@/composables/useStatsChartConfig'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
+import type { ReweightRoundResponse } from '@/types/api/categories'
 import type {
   RankingHistoryResponse,
   UserCategoryStatisticsResponse,
 } from '@/types/api/users'
-import type { CategoryCode, ChartSeries, ChartToggle, MetricType, TimeSeriesPoint } from '@/types/display'
+import type { CategoryCode, ChartMarker, ChartSeries, ChartToggle, MetricType, TimeSeriesPoint } from '@/types/display'
 import { rangeWindowStart } from '@/utils/constants'
 import { dedupeRequest } from '@/utils/dedupe'
+import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -31,6 +33,7 @@ const {
 
 const chartData = ref<UserCategoryStatisticsResponse[]>([])
 const rankHistoryData = ref<RankingHistoryResponse[]>([])
+const reweightRounds = ref<ReweightRoundResponse[]>([])
 
 const chartAccent = computed(() => categoryStore.getAccent(props.category))
 
@@ -113,6 +116,35 @@ const chartSeries = computed<ChartSeries[]>(() => {
   }))
 })
 
+function roundLines(round: ReweightRoundResponse): string[] {
+  if (!round.maps) return [`Reweight: ${round.mapCount} maps (${round.buffs} up, ${round.nerfs} down)`]
+  return round.maps.map((m) =>
+    `Reweight: ${m.songName} ${formatDifficulty(m.difficulty)} ${m.from.toFixed(1)} → ${m.to.toFixed(1)}`)
+}
+
+function roundTone(round: ReweightRoundResponse): ChartMarker['tone'] {
+  if (round.nerfs === 0) return 'up'
+  if (round.buffs === 0) return 'down'
+  return undefined
+}
+
+const reweightMarkers = computed<ChartMarker[]>(() =>
+  reweightRounds.value.map((round) => ({
+    timestamp: new Date(round.at).getTime(),
+    lines: roundLines(round),
+    tone: roundTone(round),
+  })),
+)
+
+async function fetchReweights() {
+  try {
+    const { getCategoryReweights } = await import('@/api/categories')
+    reweightRounds.value = await getCategoryReweights(props.category)
+  } catch {
+    reweightRounds.value = []
+  }
+}
+
 async function fetchChartData() {
   const range = selectedRange.value
   try {
@@ -149,6 +181,8 @@ watch(
   { immediate: true },
 )
 
+watch(() => props.category, fetchReweights, { immediate: true })
+
 watch(
   [() => props.userId, () => props.category, selectedRange, () => selectedMetrics.value.includes('rank')],
   () => {
@@ -163,7 +197,7 @@ watch(
   <div class="stats-chart">
     <ChartToggleGroup :toggles="metricToggles" :active="selectedMetrics" label="Chart metrics"
       @select="toggleMetric($event as MetricType)" />
-    <TimeSeriesChart :series="chartSeries" :selected-range="selectedRange"
+    <TimeSeriesChart :series="chartSeries" :selected-range="selectedRange" :markers="reweightMarkers"
       @update:selected-range="selectedRange = $event" />
   </div>
 </template>

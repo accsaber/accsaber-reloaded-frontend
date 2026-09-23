@@ -133,7 +133,7 @@ const reweightMarkers = computed<ChartMarker[]>(() => {
     .filter((c) => c.type !== 'INITIAL')
     .map((c) => ({
       timestamp: new Date(c.date).getTime(),
-      label: `Reweighted ${c.from.toFixed(1)} → ${c.to.toFixed(1)}`,
+      lines: [`Reweighted ${c.from.toFixed(1)} → ${c.to.toFixed(1)}`],
       tone: c.type === 'BUFF' ? 'up' : 'down',
     }))
 })

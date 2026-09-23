@@ -206,7 +206,7 @@ export interface TimeSeriesPoint {
 
 export interface ChartMarker {
   timestamp: number
-  label: string
+  lines: string[]
   tone?: 'up' | 'down'
 }
 

@@ -128,7 +128,7 @@ function ordinalTickIndices(points: TimeSeriesPoint[], spanMs: number): number[]
 
 interface PlacedMarker {
   x: number
-  label: string
+  lines: string[]
   color: string
 }
 
@@ -138,7 +138,7 @@ function placeMarkers(points: TimeSeriesPoint[], ordinal: boolean, min: number, 
     const x = ordinal ? points.findIndex((p) => p.timestamp >= m.timestamp) - 0.5 : m.timestamp
     if (x < min || x > max) continue
     const color = m.tone === 'up' ? theme.up : m.tone === 'down' ? theme.down : theme.text
-    placed.push({ x, label: m.label, color })
+    placed.push({ x, lines: m.lines, color })
   }
   return placed
 }
@@ -227,7 +227,7 @@ function buildChart(): ChartConfiguration<'line'> {
     const x = ordinal ? dataIndex : data[dataIndex]?.timestamp
     if (x == null) return []
     const prevX = dataIndex === 0 ? Number.NEGATIVE_INFINITY : ordinal ? dataIndex - 1 : data[dataIndex - 1].timestamp
-    return markers.filter((m) => m.x > prevX && m.x <= x).map((m) => m.label)
+    return markers.filter((m) => m.x > prevX && m.x <= x).flatMap((m) => m.lines)
   }
 
   const xTickLabel = (value: number): string => {

@@ -1,4 +1,4 @@
-import type { CurveType } from '../enums'
+import type { CurveType, Difficulty } from '../enums'
 
 export interface CategoryResponse {
   id: string
@@ -8,6 +8,26 @@ export interface CategoryResponse {
   scoreCurve: CurveResponse
   weightCurve: CurveResponse
   countForOverall: boolean
+}
+
+export interface ReweightRoundMapChange {
+  mapId: string
+  mapDifficultyId: string
+  songName: string
+  difficulty: Difficulty
+  from: number
+  to: number
+}
+
+export interface ReweightRoundResponse {
+  id: string
+  at: string
+  categoryCode: string
+  reason: string | null
+  mapCount: number
+  buffs: number
+  nerfs: number
+  maps: ReweightRoundMapChange[] | null
 }
 
 export interface CurvePointResponse {
