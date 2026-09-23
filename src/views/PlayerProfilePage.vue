@@ -120,6 +120,16 @@ const equippedBackgroundFitClass = computed(() =>
 )
 
 const activeTab = ref(route.query.inventoryHighlight ? 'inventory' : 'scores')
+
+const TAB_QUERY_KEYS = ['sort', 'order', 'page', 'unowned', 'inventoryHighlight']
+
+function setTab(tab: string) {
+  if (tab === activeTab.value) return
+  activeTab.value = tab
+  const query = { ...route.query }
+  for (const key of TAB_QUERY_KEYS) delete query[key]
+  router.replace({ query })
+}
 const initialCategory = (route.query.category as CategoryCode) || 'overall'
 const activeCategory = ref<CategoryCode>(initialCategory === 'xp' ? 'overall' : initialCategory)
 
@@ -808,7 +818,7 @@ watch(activeCategory, (newCategory) => {
           :glyphs="milestoneGlyphs" @unpin="onMilestonePinToggle" />
 
         <div class="profile-page__tabs-row" :class="{ 'profile-page__wide': activeTab === 'scores' }">
-          <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
+          <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="setTab" />
           <div v-if="activeTab === 'scores'" class="profile-page__scores-tools">
             <ScoresPlaylistButton v-if="scorePlaylistParams" :user-id="userId" :params="scorePlaylistParams" />
             <SearchBox v-model="scoreSearch" placeholder="Search maps..." />
