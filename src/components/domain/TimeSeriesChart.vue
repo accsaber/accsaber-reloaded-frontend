@@ -2,11 +2,11 @@
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import { chartAnimationDuration, readChartTheme, useLineChart } from '@/composables/useLineChart'
+import { chartAnimationDuration, readChartTheme, useLineChart, type ChartTheme } from '@/composables/useLineChart'
 import { useThemeStore } from '@/stores/theme'
-import type { ChartSeries, ChartToggle, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
+import type { ChartMarker, ChartSeries, ChartToggle, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { DAY_MS, HOUR_MS, rangeWindowStart } from '@/utils/constants'
-import type { ChartConfiguration, Scale } from 'chart.js'
+import type { ChartConfiguration, Plugin, Scale } from 'chart.js'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -23,6 +23,7 @@ const props = defineProps<{
   yMin?: number
   ordinal?: boolean
   emptyMessage?: string
+  markers?: ChartMarker[]
 }>()
 
 interface ResolvedSeries {
@@ -125,6 +126,46 @@ function ordinalTickIndices(points: TimeSeriesPoint[], spanMs: number): number[]
   return indices
 }
 
+interface PlacedMarker {
+  x: number
+  label: string
+  color: string
+}
+
+function placeMarkers(points: TimeSeriesPoint[], ordinal: boolean, min: number, max: number, theme: ChartTheme): PlacedMarker[] {
+  const placed: PlacedMarker[] = []
+  for (const m of props.markers ?? []) {
+    const x = ordinal ? points.findIndex((p) => p.timestamp >= m.timestamp) - 0.5 : m.timestamp
+    if (x < min || x > max) continue
+    const color = m.tone === 'up' ? theme.up : m.tone === 'down' ? theme.down : theme.text
+    placed.push({ x, label: m.label, color })
+  }
+  return placed
+}
+
+function markerPlugin(markers: PlacedMarker[]): Plugin<'line'> {
+  return {
+    id: 'markers',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart
+      ctx.save()
+      ctx.lineWidth = 1
+      for (const m of markers) {
+        const x = Math.round(scales.x.getPixelForValue(m.x)) + 0.5
+        ctx.strokeStyle = m.color
+        ctx.fillStyle = m.color
+        ctx.setLineDash([3, 3])
+        ctx.beginPath()
+        ctx.moveTo(x, chartArea.top + 6)
+        ctx.lineTo(x, chartArea.bottom)
+        ctx.stroke()
+        ctx.fillRect(x - 3, chartArea.top, 6, 6)
+      }
+      ctx.restore()
+    },
+  }
+}
+
 function buildChart(): ChartConfiguration<'line'> {
   const theme = readChartTheme()
 
@@ -180,6 +221,15 @@ function buildChart(): ChartConfiguration<'line'> {
   const pointAt = (datasetIndex: number, x: number | null | undefined) =>
     x != null ? prepared[datasetIndex]?.pointMap.get(x) : undefined
 
+  const markers = placeMarkers(prepared[0]?.points ?? [], ordinal, domain.min, domain.max, theme)
+  const markersBefore = (datasetIndex: number, dataIndex: number): string[] => {
+    const data = prepared[datasetIndex]?.points ?? []
+    const x = ordinal ? dataIndex : data[dataIndex]?.timestamp
+    if (x == null) return []
+    const prevX = dataIndex === 0 ? Number.NEGATIVE_INFINITY : ordinal ? dataIndex - 1 : data[dataIndex - 1].timestamp
+    return markers.filter((m) => m.x > prevX && m.x <= x).map((m) => m.label)
+  }
+
   const xTickLabel = (value: number): string => {
     const ts = ordinal ? pointAt(0, value)?.timestamp : value
     return ts != null ? formatTick(ts) : ''
@@ -202,6 +252,7 @@ function buildChart(): ChartConfiguration<'line'> {
 
   return {
     type: 'line',
+    plugins: markers.length ? [markerPlugin(markers)] : [],
     data: {
       datasets: prepared.map((s) => ({
         label: s.label,
@@ -245,6 +296,10 @@ function buildChart(): ChartConfiguration<'line'> {
               return isMulti ? `${s?.label}: ${val}` : val
             },
             afterLabel: () => '',
+            footer: (items) => {
+              const first = items[0]
+              return first ? markersBefore(first.datasetIndex, first.dataIndex) : []
+            },
           },
         },
       },
@@ -286,6 +341,7 @@ watch([
   () => props.series,
   () => props.accentColor,
   () => props.selectedRange,
+  () => props.markers,
   () => themeStore.theme,
 ], () => {
   loadChart()

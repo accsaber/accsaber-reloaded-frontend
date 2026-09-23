@@ -6,6 +6,8 @@ export interface ChartTheme {
   text: string
   font: { family: string; size: number }
   accent: string
+  up: string
+  down: string
 }
 
 export function readChartTheme(): ChartTheme {
@@ -15,6 +17,8 @@ export function readChartTheme(): ChartTheme {
     text: styles.getPropertyValue('--chart-text').trim(),
     font: { family: styles.getPropertyValue('--font-mono').trim(), size: 10 },
     accent: styles.getPropertyValue('--accent').trim(),
+    up: styles.getPropertyValue('--success').trim(),
+    down: styles.getPropertyValue('--error').trim(),
   }
 }
 

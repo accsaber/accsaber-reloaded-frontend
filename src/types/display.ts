@@ -204,6 +204,12 @@ export interface TimeSeriesPoint {
   tooltipLines?: string[]
 }
 
+export interface ChartMarker {
+  timestamp: number
+  label: string
+  tone?: 'up' | 'down'
+}
+
 export interface ChartSeries {
   key: string
   label: string

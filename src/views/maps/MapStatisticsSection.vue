@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import type { MapComplexityHistoryResponse, MapDifficultyStatisticsResponse, TopScoreSnapshot } from '@/types/api/maps'
-import type { DifficultyScoreDisplay, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
+import type { ChartMarker, DifficultyScoreDisplay, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { MAP_STATS_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
@@ -127,6 +127,17 @@ const complexityChanges = computed<ComplexityChange[]>(() => {
   return changes.reverse()
 })
 
+const reweightMarkers = computed<ChartMarker[]>(() => {
+  if (selectedMetric.value === 'rankedPlays') return []
+  return complexityChanges.value
+    .filter((c) => c.type !== 'INITIAL')
+    .map((c) => ({
+      timestamp: new Date(c.date).getTime(),
+      label: `Reweighted ${c.from.toFixed(1)} → ${c.to.toFixed(1)}`,
+      tone: c.type === 'BUFF' ? 'up' : 'down',
+    }))
+})
+
 type TopHistoryItem =
   | { kind: 'score'; key: string; entry: TopScoreSnapshot; current: boolean }
   | { kind: 'break'; key: string; change: ComplexityChange }
@@ -240,7 +251,7 @@ watch(selectedRange, fetchHistoricStats)
       <h2 class="map-stats__heading">Statistics Over Time</h2>
       <TimeSeriesChart :data="statsChartPoints" :metric-label="selectedMetricLabel" :accent-color="accentColor"
         :available-metrics="MAP_STATS_METRICS" :selected-metric="selectedMetric" :selected-range="selectedRange"
-        @update:selected-metric="selectedMetric = $event as MetricType"
+        :markers="reweightMarkers" @update:selected-metric="selectedMetric = $event as MetricType"
         @update:selected-range="selectedRange = $event" />
     </section>
   </div>
