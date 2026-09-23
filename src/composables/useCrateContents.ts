@@ -18,6 +18,7 @@ export function useCrateContents(item: MaybeRefOrGetter<ItemResponse | null | un
         loading.value = false
         return
       }
+      contents.value = []
       loading.value = true
       try {
         const { getCrateContents } = await import('@/api/crates')

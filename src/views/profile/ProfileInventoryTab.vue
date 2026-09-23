@@ -640,6 +640,7 @@ function handleOpenCrate(linkId: string) {
   if (isLockedLink(linkId)) return
   const target = findLink(linkId)
   if (!target || target.item.typeKey !== 'crate') return
+  if (crateContentsLoading.value || crateContents.value.length === 0) return
   mobileDetailOpen.value = false
   crateRefreshed.value = false
   crateOpening.value = {

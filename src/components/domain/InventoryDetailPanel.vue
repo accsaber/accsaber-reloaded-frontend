@@ -193,6 +193,9 @@ const crateLocked = ref(Date.now() < CRATE_UNLOCK_MS)
 const crateEmpty = computed(
   () => isCrate.value && !props.crateContentsLoading && !(props.crateContents ?? []).length,
 )
+const crateReady = computed(
+  () => !props.crateContentsLoading && (props.crateContents ?? []).length > 0,
+)
 const crateOpenNote = computed(() => {
   if (!showOpenCrate.value) return null
   if (crateLocked.value) return CRATE_UNLOCK_MESSAGE
@@ -287,7 +290,7 @@ onUnmounted(() => {
         variant="primary"
         size="md"
         :loading="busy"
-        :disabled="crateLocked || crateEmpty"
+        :disabled="crateLocked || !crateReady"
         @click="$emit('openCrate', userItem.linkId)"
       >
         Open crate
