@@ -7,7 +7,8 @@ const MissionsPanel = defineAsyncComponent(() => import('@/components/domain/Mis
 
 async function loadActive(): Promise<MissionResponse[]> {
   const { getMyMissions } = await import('@/api/missions')
-  return getMyMissions()
+  const [personal, clan] = await Promise.all([getMyMissions(), getMyMissions({ pool: 'clan' })])
+  return [...personal, ...clan]
 }
 
 async function loadHistory(): Promise<MissionResponse[]> {

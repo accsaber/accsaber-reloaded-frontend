@@ -20,6 +20,7 @@ import type {
   ClanWarDetailResponse,
   ClanWarHitResponse,
   ClanWarListParams,
+  ClanWarLoanListParams,
   ClanWarLoanResponse,
   ClanWarParticipantResponse,
   ClanWarResponse,
@@ -326,12 +327,12 @@ export function resolveClanWarLoan(
 
 export function getClanWarLoans(
   warId: string,
-  params?: PaginationParams,
+  params?: ClanWarLoanListParams,
 ): Promise<Page<ClanWarLoanResponse>> {
   return get<Page<ClanWarLoanResponse>>(`/clans/wars/${warId}/loans${buildQuery(params)}`)
 }
 
-export function getMyClanWarLoans(params?: PaginationParams): Promise<Page<ClanWarLoanResponse>> {
+export function getMyClanWarLoans(params?: ClanWarLoanListParams): Promise<Page<ClanWarLoanResponse>> {
   return get<Page<ClanWarLoanResponse>>(`/clans/wars/loans${buildQuery(params)}`)
 }
 

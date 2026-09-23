@@ -7,6 +7,7 @@ export const ADMIN_TABS = [
   { key: 'curves', label: 'Curves' },
   { key: 'news', label: 'News' },
   { key: 'events', label: 'Events' },
+  { key: 'clans', label: 'Clans' },
   { key: 'broadcast', label: 'Broadcast' },
   { key: 'operations', label: 'Operations' },
   { key: 'duplicates', label: 'Duplicates' },

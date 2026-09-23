@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import ClanIcon from '@/components/domain/ClanIcon.vue'
+import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -44,6 +47,11 @@ usePageMeta({
 })
 
 const running = computed(() => !!season.value && isSeasonRunning(season.value, now.value))
+const breadcrumbs = computed<Crumb[]>(() => [
+  { label: 'Clans', to: { name: 'clans' } },
+  { label: 'Seasons', to: { name: 'clan-seasons' } },
+  { label: season.value?.name ?? 'Season' },
+])
 const statusLine = computed(() => {
   const s = season.value
   if (!s) return ''
@@ -129,6 +137,7 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
 
 <template>
   <div class="season">
+    <Breadcrumbs :crumbs="breadcrumbs" />
     <header class="season__header">
       <template v-if="seasonLoading">
         <SkeletonLoader variant="text" :lines="2" width="320px" />
@@ -162,8 +171,9 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
         </template>
         <template #cell-clan="{ row }">
           <span class="season__identity">
-            <ClanTag :clan="(row.clan as PublicClanResponse)" size="lg" effects />
-            <span class="season__name">{{ (row.clan as PublicClanResponse).name }}</span>
+            <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
+          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
+            <ClanName class="season__name" :clan="(row.clan as PublicClanResponse)" />
           </span>
         </template>
         <template #cell-standing="{ value }">
@@ -173,8 +183,9 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
           <RouterLink :to="rowTo(row)" class="season-row">
             <span class="rank-cell season-row__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
             <span class="season__identity season-row__identity">
-              <ClanTag :clan="(row.clan as PublicClanResponse)" size="lg" effects />
-              <span class="season__name">{{ (row.clan as PublicClanResponse).name }}</span>
+              <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
+          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
+              <ClanName class="season__name" :clan="(row.clan as PublicClanResponse)" />
             </span>
             <span class="season__standing">{{ row.standing }}</span>
           </RouterLink>
@@ -202,7 +213,7 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
   align-items: center;
   gap: var(--space-xs);
   text-align: center;
-  padding: var(--space-2xl) 0 var(--space-lg);
+  padding: var(--space-lg) 0 var(--space-lg);
 }
 
 .season__title {
@@ -231,6 +242,7 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
 }
 
 .season__identity {
+  font-size: var(--text-card-title);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -240,9 +252,6 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
 .season__name {
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .season__standing {

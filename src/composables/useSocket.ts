@@ -7,6 +7,7 @@ const INITIAL_RETRY_MS = 1000
 const MAX_RETRY_MS = 30000
 const CLOSE_UNAUTHORIZED = 4401
 const CLOSE_FORBIDDEN = 4403
+const CLOSE_POLICY_VIOLATION = 1008
 
 export type SocketParams = Record<string, string>
 
@@ -20,6 +21,7 @@ export interface SocketOptions<T> {
   onMessage?: (data: T) => void
   onReconnect?: () => void
   onClose?: () => void
+  onHalt?: () => void
 }
 
 export interface UseSocketReturn {
@@ -100,6 +102,7 @@ export function useSocket<T = unknown>(options: SocketOptions<T>): UseSocketRetu
   function halt() {
     halted.value = true
     status.value = 'disconnected'
+    options.onHalt?.()
   }
 
   async function resolveToken(myGeneration: number): Promise<string | null | undefined> {
@@ -148,7 +151,7 @@ export function useSocket<T = unknown>(options: SocketOptions<T>): UseSocketRetu
       options.onClose?.()
       if (myGeneration !== generation) return
       dropped = true
-      if (event.code === CLOSE_FORBIDDEN) {
+      if (event.code === CLOSE_FORBIDDEN || event.code === CLOSE_POLICY_VIOLATION) {
         halt()
         return
       }

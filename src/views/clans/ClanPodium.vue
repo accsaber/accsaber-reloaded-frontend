@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import ClanIcon from '@/components/domain/ClanIcon.vue'
+import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { PublicClanResponse } from '@/types/api/clans'
-import { pickAssetUrl, readClanCosmetics } from '@/utils/items'
 import { getRankClass } from '@/utils/ranking'
 import { computed } from 'vue'
 
@@ -17,14 +18,7 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-const ordered = computed(() => {
-  const byRank = [...props.entries].sort((a, b) => a.rank - b.rank).slice(0, 3)
-  return byRank
-})
-
-function emblemUrl(clan: PublicClanResponse): string | null {
-  return pickAssetUrl(readClanCosmetics(clan.equipped).emblem?.asset)
-}
+const ordered = computed(() => [...props.entries].sort((a, b) => a.rank - b.rank).slice(0, 3))
 </script>
 
 <template>
@@ -41,16 +35,9 @@ function emblemUrl(clan: PublicClanResponse): string | null {
       :class="[`podium__card--${entry.rank}`, getRankClass(entry.rank)]"
     >
       <span class="podium__rank">#{{ entry.rank }}</span>
-      <img
-        v-if="emblemUrl(entry.clan)"
-        class="podium__emblem"
-        :src="emblemUrl(entry.clan)!"
-        alt=""
-        decoding="async"
-      />
-      <span v-else class="podium__emblem podium__emblem--blank" aria-hidden="true" />
-      <ClanTag :clan="entry.clan" size="lg" effects :emblem="false" class="podium__tag" />
-      <span class="podium__name">{{ entry.clan.name }}</span>
+      <ClanIcon :clan="entry.clan" :size="entry.rank === 1 ? 88 : 64" class="podium__icon" />
+      <ClanTag :clan="entry.clan" effects class="podium__tag" />
+      <ClanName class="podium__name" :clan="entry.clan" />
       <span class="podium__value">{{ entry.value }}</span>
     </RouterLink>
   </div>
@@ -122,42 +109,26 @@ function emblemUrl(clan: PublicClanResponse): string | null {
   color: var(--podium-accent, var(--text-secondary));
 }
 
-.podium__emblem {
-  width: 64px;
-  height: 64px;
+.podium__icon {
   margin: var(--space-xs) 0;
-  border-radius: var(--radius-avatar);
-  object-fit: contain;
-}
-
-.podium__card--1 .podium__emblem {
-  width: 88px;
-  height: 88px;
-}
-
-.podium__emblem--blank {
-  background: var(--bg-elevated);
 }
 
 .podium__tag {
-  font-size: 1.5rem;
+  font-size: var(--text-card-title);
 }
 
 .podium__card--1 .podium__tag {
-  font-size: 2rem;
+  font-size: var(--text-section-heading);
 }
 
 .podium__name {
   max-width: 100%;
-  font-size: var(--text-body);
+  font-size: var(--text-card-title);
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .podium__card--1 .podium__name {
-  font-size: var(--text-card-title);
+  font-size: var(--text-section-heading);
 }
 
 .podium__value {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
+import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -11,7 +13,9 @@ import { rarityClass } from '@/utils/items'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-const props = defineProps<{ clan: ClanResponse }>()
+const props = defineProps<{ clan: ClanResponse; canCustomize?: boolean }>()
+
+const emit = defineEmits<{ changed: [] }>()
 
 const route = useRoute()
 
@@ -24,6 +28,8 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 
 const pageData = ref<Page<ClanItemResponse> | null>(null)
 const loading = ref(true)
+const busyId = ref<string | null>(null)
+const error = ref<string | null>(null)
 
 const items = computed(() => pageData.value?.content ?? [])
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
@@ -40,12 +46,30 @@ async function fetchItems() {
   }
 }
 
+async function toggleEquip(entry: ClanItemResponse) {
+  busyId.value = entry.item.id
+  error.value = null
+  try {
+    const { equipClanItem, unequipClanItem } = await import('@/api/clans')
+    if (entry.equipped) await unequipClanItem(props.clan.clan.id, entry.item.typeKey)
+    else await equipClanItem(props.clan.clan.id, { itemId: entry.item.id })
+    await fetchItems()
+    emit('changed')
+  } catch (err) {
+    error.value = parseApiError(err, 'Could not change that cosmetic.').message
+  } finally {
+    busyId.value = null
+  }
+}
+
 watch(() => route.query.page, fetchItems, { immediate: true })
 </script>
 
 <template>
   <section class="cosmetics">
-    <div v-if="loading" class="cosmetics__grid">
+    <p v-if="error" class="cosmetics__error" role="alert">{{ error }}</p>
+
+    <div v-if="loading && items.length === 0" class="cosmetics__grid">
       <SkeletonLoader v-for="i in 8" :key="i" variant="card" class="cosmetics__skeleton" />
     </div>
 
@@ -66,6 +90,15 @@ watch(() => route.query.page, fetchItems, { immediate: true })
           <span class="cosmetic__source">{{ CLAN_ITEM_SOURCE_LABEL[entry.source] }}</span>
           <span v-if="entry.equipped" class="cosmetic__equipped">Equipped</span>
         </span>
+        <BaseButton
+          v-if="canCustomize"
+          size="sm"
+          :variant="entry.equipped ? 'default' : 'primary'"
+          :loading="busyId === entry.item.id"
+          @click="toggleEquip(entry)"
+        >
+          {{ entry.equipped ? 'Unequip' : 'Equip' }}
+        </BaseButton>
       </div>
     </div>
 
@@ -84,6 +117,12 @@ watch(() => route.query.page, fetchItems, { immediate: true })
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-md);
+}
+
+.cosmetics__error {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--error);
 }
 
 .cosmetics__skeleton {

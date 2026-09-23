@@ -151,6 +151,19 @@ export function useChat(channelId: Ref<string | null | undefined>, api: ChatChan
     addMessage(message)
   }
 
+  function trim(max: number) {
+    const ordered = messages.value
+    if (ordered.length <= max) return
+    const next = new Map(byId.value)
+    for (const m of ordered.slice(0, ordered.length - max)) {
+      next.delete(m.id)
+      seqById.delete(m.id)
+    }
+    byId.value = next
+    hasMore.value = true
+    nextPage = Math.floor(next.size / PAGE_SIZE)
+  }
+
   watch(channelId, reset)
 
   return {
@@ -165,6 +178,7 @@ export function useChat(channelId: Ref<string | null | undefined>, api: ChatChan
     loadOlder,
     send,
     ingest,
+    trim,
   }
 }
 

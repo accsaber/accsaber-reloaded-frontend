@@ -7,12 +7,14 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { MissionContributorResponse, MissionResponse } from '@/types/api/missions'
 import type { UserRefDisplay } from '@/types/display'
+import type { Page, PaginationParams } from '@/types/pagination'
 import { getRankClass } from '@/utils/ranking'
 import { missionUnitLabel } from '@/utils/missions'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
   mission: MissionResponse
+  loadPage: (missionId: string, params: PaginationParams) => Promise<Page<MissionContributorResponse>>
 }>()
 
 const emit = defineEmits<{
@@ -50,8 +52,7 @@ async function load(missionId: string, target: number) {
   loading.value = true
   error.value = null
   try {
-    const { getCommunityContributors } = await import('@/api/missions')
-    const res = await getCommunityContributors(missionId, { page: target - 1, size: PAGE_SIZE })
+    const res = await props.loadPage(missionId, { page: target - 1, size: PAGE_SIZE })
     rows.value = res.content.map(toRow)
     totalPages.value = res.totalPages
   } catch (err) {

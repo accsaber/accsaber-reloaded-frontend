@@ -6,6 +6,7 @@ import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignPresenceActionGlyph from '@/components/domain/CampaignPresenceActionGlyph.vue'
+import ChatPanel from '@/components/domain/ChatPanel.vue'
 import CampaignRoadmap from '@/components/domain/CampaignRoadmap.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
@@ -23,10 +24,9 @@ import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useThemeStore } from '@/stores/theme'
 import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { computed, onMounted, provide, ref, watch } from 'vue'
-import CampaignChatPanel from './CampaignChatPanel.vue'
+import MapPickerModal from '@/components/domain/MapPickerModal.vue'
 import CampaignCollaboratorPicker from './CampaignCollaboratorPicker.vue'
 import CampaignItemPicker from './CampaignItemPicker.vue'
-import CampaignMapPicker from './CampaignMapPicker.vue'
 import CampaignGlobalMapSearch from './CampaignGlobalMapSearch.vue'
 import CampaignTrayRail from './CampaignTrayRail.vue'
 import CampaignTrays from './CampaignTrays.vue'
@@ -547,8 +547,13 @@ function peerActivity(p: PresencePeer): string {
           </button>
         </div>
 
-        <CampaignChatPanel
+        <ChatPanel
           v-if="canChat"
+          floating
+          title="Team chat"
+          placeholder="Message your collaborators"
+          empty-text="No messages yet. Say hello to your collaborators."
+          :author-color="colorForUser"
           :chat="chat"
           @typing="onSelfTyping"
           @typing-stop="onSelfTypingStop"
@@ -737,8 +742,12 @@ function peerActivity(p: PresencePeer): string {
         </section>
       </Transition>
 
-      <CampaignMapPicker
+      <MapPickerModal
         v-if="showMapPicker"
+        title="Add nodes"
+        used-label="In campaign"
+        used-title="This difficulty is already a node in this campaign. You can still add it again."
+        :commit-label="(n) => `Add ${n} ${n === 1 ? 'node' : 'nodes'}`"
         :loading="actionPending"
         :global-submit="submitGlobalAdd"
         :initial-genre-slugs="campaignGenreBeatsaverSlugs"

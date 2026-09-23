@@ -144,6 +144,11 @@ const router = createRouter({
       component: () => import('@/views/ClansPage.vue'),
     },
     {
+      path: '/clans/new',
+      name: 'clan-create',
+      component: () => import('@/views/ClanCreatePage.vue'),
+    },
+    {
       path: '/clans/seasons',
       name: 'clan-seasons',
       component: () => import('@/views/ClanSeasonsPage.vue'),
@@ -152,6 +157,16 @@ const router = createRouter({
       path: '/clans/seasons/:slugOrId',
       name: 'clan-season',
       component: () => import('@/views/ClanSeasonPage.vue'),
+    },
+    {
+      path: '/clans/wars',
+      name: 'clan-wars',
+      component: () => import('@/views/ClanWarsPage.vue'),
+    },
+    {
+      path: '/clans/wars/:warId',
+      name: 'clan-war',
+      component: () => import('@/views/ClanWarPage.vue'),
     },
     {
       path: '/clans/:slugOrId',

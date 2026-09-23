@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -14,6 +15,8 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const now = useSharedNow()
+
+const breadcrumbs: Crumb[] = [{ label: 'Clans', to: { name: 'clans' } }, { label: 'Seasons' }]
 
 usePageMeta({
   title: 'Clan Seasons | AccSaber',
@@ -78,6 +81,7 @@ watch(() => route.query.page, fetchSeasons, { immediate: true })
 
 <template>
   <div class="seasons">
+    <Breadcrumbs :crumbs="breadcrumbs" />
     <header class="seasons__header">
       <h1 class="seasons__title">Clan Seasons</h1>
     </header>
@@ -122,7 +126,7 @@ watch(() => route.query.page, fetchSeasons, { immediate: true })
 
 .seasons__header {
   text-align: center;
-  padding: var(--space-2xl) 0 var(--space-lg);
+  padding: var(--space-lg) 0 var(--space-lg);
 }
 
 .seasons__title {

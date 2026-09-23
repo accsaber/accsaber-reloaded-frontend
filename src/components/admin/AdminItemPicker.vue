@@ -10,7 +10,11 @@ import type { ItemResponse, UserItemResponse } from '@/types/api/items'
 import { RARITY_ORDER } from '@/utils/items'
 import { computed, onMounted, ref, watch } from 'vue'
 
-const props = defineProps<{ excludeIds: string[] }>()
+const props = defineProps<{
+  excludeIds: string[]
+  title: string
+  parentTypeKey?: string
+}>()
 
 const emit = defineEmits<{
   close: []
@@ -37,10 +41,18 @@ const rarityRank = computed(() => {
 
 const excluded = computed(() => new Set(props.excludeIds))
 
+const allowedTypeIds = computed(() => {
+  if (!props.parentTypeKey) return null
+  const parent = itemTypeStore.itemTypes.find((t) => t.key === props.parentTypeKey)
+  if (!parent) return new Set<string>()
+  return new Set(itemTypeStore.itemTypes.filter((t) => t.parentTypeId === parent.id).map((t) => t.id))
+})
+
 const filtered = computed(() => {
   const q = debounced.value.trim().toLowerCase()
   const matched = items.value.filter((i) => {
     if (i.deprecated || excluded.value.has(i.id)) return false
+    if (allowedTypeIds.value && !allowedTypeIds.value.has(i.typeId)) return false
     if (!q) return true
     return i.name.toLowerCase().includes(q) || i.typeKey.toLowerCase().includes(q)
   })
@@ -102,7 +114,7 @@ function pickByLinkId(linkId: string) {
 </script>
 
 <template>
-  <BaseModal :open="true" title="Add bonus item" @close="emit('close')">
+  <BaseModal :open="true" :title="title" @close="emit('close')">
     <div class="event-item-picker">
       <input class="event-item-picker__search" v-model="query" type="search" autofocus
         placeholder="Search items by name" />

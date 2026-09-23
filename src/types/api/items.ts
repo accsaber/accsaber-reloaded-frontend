@@ -27,9 +27,9 @@ export type KnownItemTypeKey =
   | 'perk'
   | 'saber'
   | 'item_pedestal'
-  | 'clan_emblem'
   | 'clan_banner'
-  | 'clan_tag_effect'
+  | 'clan_title_effect'
+  | 'clan_tag_card'
 
 export type ItemTypeKey = KnownItemTypeKey | (string & {})
 
@@ -1447,7 +1447,7 @@ export interface BorderColorValue {
   easing?: Easing
 }
 
-export type ClanTagEffectValue = Omit<TitleValue, 'text'>
+export type ClanTitleEffectValue = Omit<TitleValue, 'text'>
 
 export interface BadgeValue {
   asset: AssetSet

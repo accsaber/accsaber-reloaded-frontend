@@ -3,7 +3,7 @@ import type { HauntSpec, WearSpec } from '@/utils/cosmetics/wear'
 import type {
   AssetSet,
   BadgeValue,
-  ClanTagEffectValue,
+  ClanTitleEffectValue,
   BorderColorFill,
   BorderColorStateValue,
   BorderColorValue,
@@ -320,27 +320,23 @@ export function readTitleValue(value: unknown): TitleValue | null {
   return value as unknown as TitleValue
 }
 
-export function readClanTagEffectValue(value: unknown): ClanTagEffectValue | null {
+export function readClanTitleEffectValue(value: unknown): ClanTitleEffectValue | null {
   if (!isObj(value)) return null
   if (!Array.isArray(value.states) || value.states.length === 0) return null
   const states = value.states.filter((s): s is Record<string, unknown> => isObj(s) && isNumber(s.atMs))
   if (states.length === 0) return null
-  return value as unknown as ClanTagEffectValue
+  return value as unknown as ClanTitleEffectValue
 }
 
-export interface ClanCosmetics {
-  emblem: BadgeValue | null
-  tagEffect: ClanTagEffectValue | null
+export function readClanTitle(clan: { name: string; equipped: ItemResponse[] | null }): TitleValue | null {
+  const item = clan.equipped?.find((i) => i.typeKey === 'clan_title_effect')
+  const effect = item ? readClanTitleEffectValue(item.value) : null
+  return effect ? { ...effect, text: clan.name } : null
 }
 
-export function readClanCosmetics(equipped: ItemResponse[] | null | undefined): ClanCosmetics {
-  let emblem: BadgeValue | null = null
-  let tagEffect: ClanTagEffectValue | null = null
-  for (const item of equipped ?? []) {
-    if (item.typeKey === 'clan_emblem') emblem = readBadgeValue(item.value)
-    else if (item.typeKey === 'clan_tag_effect') tagEffect = readClanTagEffectValue(item.value)
-  }
-  return { emblem, tagEffect }
+export function readClanTagCard(equipped: ItemResponse[] | null | undefined): BorderColorValue | null {
+  const item = equipped?.find((i) => i.typeKey === 'clan_tag_card')
+  return item ? readBorderColorValue(item.value) : null
 }
 
 export function readBorderShapeValue(value: unknown): BorderShapeValue | null {

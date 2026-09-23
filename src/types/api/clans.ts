@@ -2,6 +2,7 @@ import type { PaginationParams } from '../pagination'
 import type { PlayerRef } from './common'
 import type { ItemResponse } from './items'
 import type { PublicMapDifficultyResponse } from './maps'
+import type { MyScoreSummary } from './users'
 import type { LevelResponse } from './users'
 
 export type ClanRole = 'member' | 'officer' | 'commander' | 'founder'
@@ -65,6 +66,8 @@ export interface PublicClanResponse {
   slug: string
   name: string
   tag: string
+  tagColor: string | null
+  iconUrl: string | null
   equipped: ItemResponse[]
 }
 
@@ -249,12 +252,17 @@ export interface ClanWarPoolEntryResponse {
   difficulty: PublicMapDifficultyResponse
   pickedBy: PublicClanResponse | null
   source: ClanWarPoolSource
+  viewerScore: MyScoreSummary | null
 }
 
 export interface ClanWarDetailResponse {
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
 }
+
+export type ClanFeedFrame =
+  | { type: 'war'; warId: string; data: ClanWarResponse }
+  | { type: 'hit'; warId: string; data: ClanWarHitResponse }
 
 export interface ClanWarParticipantResponse {
   player: PlayerRef
@@ -323,9 +331,14 @@ export interface ClanListParams extends PaginationParams {
   search?: string
 }
 
+export interface ClanWarLoanListParams extends PaginationParams {
+  status?: ClanWarLoanStatus
+}
+
 export interface ClanWarListParams extends PaginationParams {
   clanId?: string
   open?: boolean
+  search?: string
 }
 
 export interface ClanStandingParams {
@@ -348,12 +361,14 @@ export interface CreateClanRequest {
   name: string
   tag: string
   description?: string
+  tagColor?: string
 }
 
 export interface UpdateClanRequest {
   name?: string
   tag?: string
   description?: string
+  tagColor?: string
   acceptingRequests?: boolean
 }
 
@@ -447,5 +462,6 @@ export interface ClanWarRewardItemRequest {
 
 export interface ModerateClanRequest {
   changes: UpdateClanRequest
+  removeIcon?: boolean
   reason: string
 }

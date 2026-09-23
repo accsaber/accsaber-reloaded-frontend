@@ -4,6 +4,7 @@ import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
 import CrateIcon from '@/components/cosmetics/CrateIcon.vue'
 import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
+import ClanTag from '@/components/domain/ClanTag.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
 import type {
@@ -23,7 +24,7 @@ import {
   readBorderShapeValue,
   readCrateValue,
   readThemeValue,
-  readClanTagEffectValue,
+  readClanTitleEffectValue,
   readThumbnailBackgroundValue,
   readTitleValue,
   tokenize,
@@ -40,13 +41,19 @@ const props = defineProps<{
 
 const typeKey = computed(() => props.item.typeKey)
 
-const CLAN_TAG_SAMPLE = 'ACC'
+const CLAN_NAME_SAMPLE = 'AccSaber'
+
+const tagCardSample = computed(() =>
+  typeKey.value === 'clan_tag_card'
+    ? { slug: '', name: props.item.name, tag: 'ACC', tagColor: null, equipped: [props.item] }
+    : null,
+)
 
 const titleValue = computed<TitleValue | null>(() => {
   if (typeKey.value === 'title') return readTitleValue(props.item.value)
-  if (typeKey.value !== 'clan_tag_effect') return null
-  const effect = readClanTagEffectValue(props.item.value)
-  return effect ? { ...effect, text: CLAN_TAG_SAMPLE } : null
+  if (typeKey.value !== 'clan_title_effect') return null
+  const effect = readClanTitleEffectValue(props.item.value)
+  return effect ? { ...effect, text: CLAN_NAME_SAMPLE } : null
 })
 
 const borderColorValue = computed<BorderColorValue | null>(() =>
@@ -96,8 +103,8 @@ const shapeAvatarClipId = `ip-avatar-clip-${Math.random().toString(36).slice(2, 
 
 const pedestalBeamId = `ip-beam-${Math.random().toString(36).slice(2, 9)}`
 
-const isBadge = computed(() => typeKey.value === 'badge' || typeKey.value === 'clan_emblem')
-const isTitle = computed(() => typeKey.value === 'title' || typeKey.value === 'clan_tag_effect')
+const isBadge = computed(() => typeKey.value === 'badge')
+const isTitle = computed(() => typeKey.value === 'title' || typeKey.value === 'clan_title_effect')
 const isBackground = computed(() => typeKey.value === 'profile_background' || typeKey.value === 'clan_banner')
 
 const badgeValue = computed(() => (isBadge.value ? readBadgeValue(props.item.value) : null))
@@ -180,6 +187,10 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       <span ref="titleFit" class="item-preview__title-fit" :style="titleFitStyle">
         <TitleRenderer :value="titleValue" />
       </span>
+    </span>
+
+    <span v-else-if="tagCardSample" class="item-preview__tag-card">
+      <ClanTag :clan="tagCardSample" preview effects />
     </span>
 
     <span
@@ -422,6 +433,13 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   font-size: 1.5rem;
   color: var(--cell-accent, var(--text-secondary));
   letter-spacing: 0.04em;
+}
+
+.item-preview__tag-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
 }
 
 .item-preview__title {

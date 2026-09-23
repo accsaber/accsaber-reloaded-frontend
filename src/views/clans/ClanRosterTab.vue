@@ -1,31 +1,30 @@
 <script setup lang="ts">
+import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useSharedNow } from '@/composables/useSharedNow'
-import type { ClanMemberResponse, ClanResponse, ClanRole } from '@/types/api/clans'
-import type { Page } from '@/types/pagination'
-import { CLAN_ROLE_ORDER, CLAN_ROLE_PLURAL } from '@/utils/clans'
+import type { ClanMemberResponse, ClanRole } from '@/types/api/clans'
+import { assignableRoles, CLAN_ROLE_LABEL, CLAN_ROLE_ORDER, CLAN_ROLE_PLURAL, hasClanRole, outranks } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
-import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref } from 'vue'
 
-const props = defineProps<{ clan: ClanResponse }>()
+const props = defineProps<{
+  members: ClanMemberResponse[]
+  loading: boolean
+  viewerRole: ClanRole | null
+  viewerId: string | null
+}>()
 
-const route = useRoute()
+const emit = defineEmits<{
+  'change-role': [member: ClanMemberResponse, role: ClanRole]
+  kick: [member: ClanMemberResponse]
+  transfer: [member: ClanMemberResponse]
+  claim: []
+}>()
+
 const now = useSharedNow()
-
-const { currentPage, paginationParams, setPage } = usePageableRoute({
-  defaultSort: 'joinedAt',
-  defaultOrder: 'asc',
-  defaultSize: 50,
-  secondarySort: null,
-})
-
-const pageData = ref<Page<ClanMemberResponse> | null>(null)
-const loading = ref(true)
+const openMenuFor = ref<string | null>(null)
 
 interface RoleGroup {
   role: ClanRole
@@ -33,34 +32,41 @@ interface RoleGroup {
   members: ClanMemberResponse[]
 }
 
-const groups = computed<RoleGroup[]>(() => {
-  const content = pageData.value?.content ?? []
-  return CLAN_ROLE_ORDER.map((role) => ({
+const groups = computed<RoleGroup[]>(() =>
+  CLAN_ROLE_ORDER.map((role) => ({
     role,
     label: CLAN_ROLE_PLURAL[role],
-    members: content.filter((m) => m.role === role),
-  })).filter((g) => g.members.length > 0)
-})
+    members: props.members.filter((m) => m.role === role),
+  })).filter((g) => g.members.length > 0),
+)
 
-const totalPages = computed(() => pageData.value?.totalPages ?? 0)
+interface RowActions {
+  roles: ClanRole[]
+  kick: boolean
+  transfer: boolean
+  claim: boolean
+}
+
+function actionsFor(member: ClanMemberResponse): RowActions | null {
+  if (!props.viewerRole || member.player.id === props.viewerId) return null
+  const below = outranks(props.viewerRole, member.role)
+  const actions: RowActions = {
+    roles: assignableRoles(props.viewerRole, member.role),
+    kick: below && hasClanRole(props.viewerRole, 'officer'),
+    transfer: below && hasClanRole(props.viewerRole, 'founder'),
+    claim: member.role === 'founder' && props.viewerRole === 'commander',
+  }
+  return actions.roles.length || actions.kick || actions.transfer || actions.claim ? actions : null
+}
 
 function lastPlayed(member: ClanMemberResponse): string {
   return member.lastPlayedAt ? `played ${formatRelativeDate(member.lastPlayedAt, now.value)}` : 'no plays yet'
 }
 
-async function fetchMembers() {
-  loading.value = true
-  try {
-    const { getClanMembers } = await import('@/api/clans')
-    pageData.value = await getClanMembers(props.clan.clan.id, { page: paginationParams.value.page, size: 50 })
-  } catch {
-    pageData.value = null
-  } finally {
-    loading.value = false
-  }
+function run(action: () => void) {
+  openMenuFor.value = null
+  action()
 }
-
-watch(() => route.query.page, fetchMembers, { immediate: true })
 </script>
 
 <template>
@@ -88,11 +94,71 @@ watch(() => route.query.page, fetchMembers, { immediate: true })
             />
             <UserChip :user="member.player" link tooltip class="roster__player" />
             <span class="roster__played">{{ lastPlayed(member) }}</span>
+            <BaseDropdown
+              v-if="actionsFor(member)"
+              :open="openMenuFor === member.player.id"
+              position="bottom-right"
+              @update:open="openMenuFor = $event ? member.player.id : null"
+            >
+              <template #trigger>
+                <button
+                  type="button"
+                  class="roster__menu-btn"
+                  :aria-label="`Manage ${member.player.name}`"
+                  :aria-expanded="openMenuFor === member.player.id"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="19" r="1" />
+                  </svg>
+                </button>
+              </template>
+              <div class="roster__menu" role="menu">
+                <button
+                  v-for="role in actionsFor(member)!.roles"
+                  :key="role"
+                  type="button"
+                  class="roster__item"
+                  role="menuitem"
+                  @click="run(() => emit('change-role', member, role))"
+                >
+                  Make {{ CLAN_ROLE_LABEL[role].toLowerCase() }}
+                </button>
+                <button
+                  v-if="actionsFor(member)!.transfer"
+                  type="button"
+                  class="roster__item"
+                  role="menuitem"
+                  @click="run(() => emit('transfer', member))"
+                >
+                  Transfer founder
+                </button>
+                <button
+                  v-if="actionsFor(member)!.claim"
+                  type="button"
+                  class="roster__item"
+                  role="menuitem"
+                  @click="run(() => emit('claim'))"
+                >
+                  Claim clan
+                </button>
+                <button
+                  v-if="actionsFor(member)!.kick"
+                  type="button"
+                  class="roster__item roster__item--danger"
+                  role="menuitem"
+                  @click="run(() => emit('kick', member))"
+                >
+                  Kick
+                </button>
+              </div>
+            </BaseDropdown>
+            <span v-else class="roster__menu-spacer" aria-hidden="true" />
           </li>
         </ul>
       </div>
-
-      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
     </template>
   </section>
 </template>
@@ -146,7 +212,7 @@ watch(() => route.query.page, fetchMembers, { immediate: true })
 
 .roster__row {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
+  grid-template-columns: 12px minmax(0, 1fr) auto 32px;
   align-items: center;
   gap: var(--space-md);
   min-height: 48px;
@@ -174,5 +240,73 @@ watch(() => route.query.page, fetchMembers, { immediate: true })
   font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.roster__menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+}
+
+.roster__menu-btn:hover,
+.roster__menu-btn[aria-expanded='true'] {
+  color: var(--text-primary);
+  border-color: var(--bg-overlay);
+  background: var(--bg-surface);
+}
+
+.roster__menu-spacer {
+  width: 32px;
+}
+
+.roster__menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: var(--space-xs);
+}
+
+.roster__item {
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  font-size: var(--text-body);
+  text-align: left;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+}
+
+.roster__item:hover {
+  background: var(--bg-overlay);
+}
+
+.roster__item--danger {
+  color: var(--error);
+}
+
+.roster__item--danger:hover {
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+}
+
+@media (max-width: 767px) {
+  .roster__row {
+    grid-template-columns: 12px minmax(0, 1fr) 32px;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .roster__played {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }
 </style>

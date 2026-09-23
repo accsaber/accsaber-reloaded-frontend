@@ -1,12 +1,24 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
+import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
+import ClanIcon from '@/components/domain/ClanIcon.vue'
+import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
-import type { ClanResponse, PublicClanResponse } from '@/types/api/clans'
+import { useAuthStore } from '@/stores/auth'
+import type {
+  ClanJoinRequestResponse,
+  ClanJoinStatus,
+  ClanResponse,
+  ClanWarLoanResponse,
+  ClanWarLoanStatus,
+  PublicClanResponse,
+} from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -14,12 +26,15 @@ import { formatStanding } from '@/utils/clans'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
+import ClanLoanList from './clans/ClanLoanList.vue'
 import ClanPodium, { type PodiumEntry } from './clans/ClanPodium.vue'
+import ClanRequestList from './clans/ClanRequestList.vue'
 
 const PAGE_SIZE = 25
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 usePageMeta({
   title: 'Clans | AccSaber',
@@ -108,6 +123,81 @@ async function fetchClans() {
   }
 }
 
+const myClan = computed(() => auth.userProfile?.clan ?? null)
+const myRequests = ref<ClanJoinRequestResponse[]>([])
+const requestBusyId = ref<string | null>(null)
+const requestError = ref<string | null>(null)
+
+async function fetchMyRequests() {
+  if (!auth.isLoggedIn) {
+    myRequests.value = []
+    return
+  }
+  try {
+    const { getMyClanJoinRequests } = await import('@/api/clans')
+    const page = await getMyClanJoinRequests({ page: 0, size: 50 })
+    myRequests.value = page.content.filter((r) => r.status === 'pending')
+  } catch {
+    myRequests.value = []
+  }
+}
+
+async function resolveMyRequest(request: ClanJoinRequestResponse, status: ClanJoinStatus) {
+  requestBusyId.value = request.id
+  requestError.value = null
+  try {
+    const { resolveClanJoinRequest } = await import('@/api/clans')
+    await resolveClanJoinRequest(request.id, { status })
+    if (status === 'accepted') {
+      await auth.fetchAuthMe()
+      await router.push({ name: 'clan-detail', params: { slugOrId: request.clan.slug } })
+      return
+    }
+    await fetchMyRequests()
+  } catch (err) {
+    requestError.value = parseApiError(err, 'Could not answer that.').message
+  } finally {
+    requestBusyId.value = null
+  }
+}
+
+const myLoans = ref<ClanWarLoanResponse[]>([])
+const loanBusyId = ref<string | null>(null)
+const loanError = ref<string | null>(null)
+
+async function fetchMyLoans() {
+  if (!auth.isLoggedIn) {
+    myLoans.value = []
+    return
+  }
+  try {
+    const { getMyClanWarLoans } = await import('@/api/clans')
+    myLoans.value = (await getMyClanWarLoans({ page: 0, size: 50, status: 'pending' })).content
+  } catch {
+    myLoans.value = []
+  }
+}
+
+async function resolveMyLoan(loan: ClanWarLoanResponse, status: ClanWarLoanStatus) {
+  loanBusyId.value = loan.id
+  loanError.value = null
+  try {
+    const { resolveClanWarLoan } = await import('@/api/clans')
+    await resolveClanWarLoan(loan.id, { status })
+    if (status === 'accepted') {
+      await router.push({ name: 'clan-war', params: { warId: loan.war.id } })
+      return
+    }
+    await fetchMyLoans()
+  } catch (err) {
+    loanError.value = parseApiError(err, 'Could not answer that loan.').message
+  } finally {
+    loanBusyId.value = null
+  }
+}
+
+watch(() => auth.isLoggedIn, () => Promise.all([fetchMyRequests(), fetchMyLoans()]), { immediate: true })
+
 watch(searchQuery, (value) => {
   const query: LocationQueryRaw = { ...route.query, search: value.trim() || undefined }
   delete query.page
@@ -126,7 +216,44 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
       <p v-if="totalClans > 0" class="clans__subtitle">{{ totalClans.toLocaleString() }} clans ranked</p>
     </header>
 
+    <section v-if="myRequests.length" class="clans__requests">
+      <h2 class="clans__section-title">Requests</h2>
+      <p v-if="requestError" class="clans__error" role="alert">{{ requestError }}</p>
+      <ClanRequestList
+        :requests="myRequests"
+        perspective="player"
+        :busy-id="requestBusyId"
+        @resolve="resolveMyRequest"
+      />
+    </section>
+
+    <section v-if="myLoans.length" class="clans__requests">
+      <h2 class="clans__section-title">Loans</h2>
+      <p v-if="loanError" class="clans__error" role="alert">{{ loanError }}</p>
+      <ClanLoanList
+        :loans="myLoans"
+        :busy-id="loanBusyId"
+        :viewer-id="auth.userId"
+        :can-cancel="() => false"
+        show-war
+        @resolve="resolveMyLoan"
+      />
+    </section>
+
     <div class="clans__controls">
+      <BaseButton size="sm" @click="router.push({ name: 'clan-wars' })">Wars</BaseButton>
+      <template v-if="auth.isLoggedIn">
+        <BaseButton
+          v-if="myClan"
+          size="sm"
+          @click="router.push({ name: 'clan-detail', params: { slugOrId: myClan.slug } })"
+        >
+          Your clan
+        </BaseButton>
+        <BaseButton v-else variant="primary" size="sm" @click="router.push({ name: 'clan-create' })">
+          Create clan
+        </BaseButton>
+      </template>
       <SearchBox v-model="searchQuery" placeholder="Search clans..." />
     </div>
 
@@ -152,8 +279,9 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
 
       <template #cell-clan="{ row }">
         <span class="clans__identity">
-          <ClanTag :clan="(row.clan as PublicClanResponse)" size="lg" effects />
-          <span class="clans__name">{{ (row.clan as PublicClanResponse).name }}</span>
+          <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
+          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
+          <ClanName class="clans__name" :clan="(row.clan as PublicClanResponse)" />
         </span>
       </template>
 
@@ -169,8 +297,9 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
         <RouterLink :to="rowTo(row)" class="clan-card">
           <span class="rank-cell clan-card__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
           <span class="clan-card__identity">
-            <ClanTag :clan="(row.clan as PublicClanResponse)" size="lg" effects />
-            <span class="clans__name">{{ (row.clan as PublicClanResponse).name }}</span>
+            <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
+          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
+            <ClanName class="clans__name" :clan="(row.clan as PublicClanResponse)" />
             <span class="clan-card__meta">Lv {{ row.level }} · {{ row.members }}</span>
           </span>
           <span class="clans__standing">{{ row.standing }}</span>
@@ -214,10 +343,34 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
 
 .clans__controls {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.clans__requests {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.clans__section-title {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.clans__error {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--error);
 }
 
 .clans__identity {
+  font-size: var(--text-card-title);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -227,9 +380,6 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
 .clans__name {
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .clans__standing {

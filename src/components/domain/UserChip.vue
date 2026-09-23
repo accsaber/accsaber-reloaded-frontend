@@ -57,7 +57,7 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
       <span v-else class="user-chip__avatar user-chip__avatar--blank" aria-hidden="true" />
     </template>
     <component :is="nameTag" class="user-chip__name" :title="user.name">{{ user.name }}</component>
-    <ClanTag v-if="user.clan" :clan="user.clan" :size="size" :compact="compact" :effects="clanEffects" />
+    <ClanTag v-if="user.clan" :clan="user.clan" :size="size" :effects="clanEffects" />
     <CountryFlag v-if="user.country" class="user-chip__flag" :country="user.country" />
     <SupporterTierIcon v-if="user.supporterTier" :tier="user.supporterTier" :size="iconSize" />
     <slot />

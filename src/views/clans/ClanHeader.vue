@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import ClanIcon from '@/components/domain/ClanIcon.vue'
+import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { ClanResponse, ClanStandingResponse } from '@/types/api/clans'
 import { formatStanding } from '@/utils/clans'
 import { formatFullDate } from '@/utils/formatters'
-import { pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue, readClanCosmetics } from '@/utils/items'
+import { pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue } from '@/utils/items'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -29,7 +31,6 @@ const bannerStyle = computed<Record<string, string> | undefined>(() => {
 })
 const bannerFitClass = computed(() => (banner.value?.fit ? `clan-header__banner--${banner.value.fit}` : ''))
 
-const emblemUrl = computed(() => pickAssetUrl(readClanCosmetics(props.clan.clan.equipped).emblem?.asset))
 const level = computed(() => props.clan.level)
 const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPercent)))
 </script>
@@ -56,15 +57,22 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
       />
     </div>
 
+    <div class="clan-header__top">
+      <slot name="top" />
+    </div>
+
     <div class="clan-header__card">
       <div class="clan-header__identity">
-        <img v-if="emblemUrl" class="clan-header__emblem" :src="emblemUrl" alt="" decoding="async" />
+        <ClanIcon :clan="clan.clan" :size="96" />
         <div class="clan-header__titles">
           <h1 class="clan-header__title">
-            <ClanTag :clan="clan.clan" size="lg" effects :emblem="!emblemUrl" class="clan-header__tag" />
-            <span class="clan-header__name">{{ clan.clan.name }}</span>
+            <ClanTag :clan="clan.clan" size="lg" effects class="clan-header__tag" />
+            <ClanName class="clan-header__name" :clan="clan.clan" />
           </h1>
           <p v-if="clan.description" class="clan-header__description">{{ clan.description }}</p>
+        </div>
+        <div class="clan-header__actions">
+          <slot name="actions" />
         </div>
       </div>
 
@@ -105,6 +113,13 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
 .clan-header {
   position: relative;
   padding-top: var(--space-2xl);
+}
+
+.clan-header__top {
+  position: absolute;
+  top: var(--space-sm);
+  left: 0;
+  z-index: 1;
 }
 
 .clan-header__bleed {
@@ -165,19 +180,17 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
   min-width: 0;
 }
 
-.clan-header__emblem {
-  flex-shrink: 0;
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius-avatar);
-  object-fit: contain;
-}
-
 .clan-header__titles {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-xs);
   min-width: 0;
+}
+
+.clan-header__actions {
+  align-self: flex-start;
+  flex-shrink: 0;
 }
 
 .clan-header__title {
@@ -193,14 +206,7 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
 }
 
 .clan-header__tag {
-  font-size: 0.7em;
-}
-
-.clan-header__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.55em;
 }
 
 .clan-header__description {

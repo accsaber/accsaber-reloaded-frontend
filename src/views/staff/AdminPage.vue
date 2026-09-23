@@ -20,6 +20,7 @@ const tabComponents: Record<AdminTab, ReturnType<typeof defineAsyncComponent>> =
   curves: defineAsyncComponent(() => import('./admin/AdminCurvesTab.vue')),
   news: defineAsyncComponent(() => import('./admin/AdminNewsTab.vue')),
   events: defineAsyncComponent(() => import('./admin/AdminEventsTab.vue')),
+  clans: defineAsyncComponent(() => import('./admin/AdminClansTab.vue')),
   broadcast: defineAsyncComponent(() => import('./admin/AdminBroadcastTab.vue')),
   operations: defineAsyncComponent(() => import('./admin/AdminOperationsTab.vue')),
   items: defineAsyncComponent(() => import('./admin/AdminItemsTab.vue')),

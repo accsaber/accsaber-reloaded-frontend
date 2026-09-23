@@ -2,6 +2,7 @@ import type {
   CampaignDifficultyResponse,
   CampaignResponse,
 } from '@/types/api/campaigns'
+import type { ClanResponse } from '@/types/api/clans'
 import type { UserResponse } from '@/types/api/users'
 import { del, get, postMultipart } from './client'
 
@@ -97,4 +98,12 @@ export function deleteCampaignNodeBorder(
 
 export function uploadMyAvatar(file: File): Promise<UserResponse> {
   return postMultipart<UserResponse>('/users/me/avatar', multipartFile(file))
+}
+
+export function uploadClanIcon(clanId: string, file: File): Promise<ClanResponse> {
+  return postMultipart<ClanResponse>(`/clans/${clanId}/icon`, multipartFile(file))
+}
+
+export function deleteClanIcon(clanId: string): Promise<ClanResponse> {
+  return del<ClanResponse>(`/clans/${clanId}/icon`)
 }
