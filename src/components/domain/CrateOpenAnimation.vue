@@ -653,6 +653,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   letter-spacing: 0.14em;
   color: var(--text-secondary);
   font-weight: 600;
+  text-align: center;
 }
 
 .crate-anim__reveal-rarity {
