@@ -2,6 +2,7 @@
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useTimeline } from '@/composables/useTimeline'
 import type {
+  BorderColorFill,
   BorderColorValue,
   BorderShapeValue,
   FrameRampBand,
@@ -126,38 +127,59 @@ const currentColorState = computed(() => {
 
 const colorIsAnimated = computed(() => isAnimated(props.color))
 
+type MetalTriple = [shadow: string, base: string, highlight: string]
+
+function tripleFromHex(base: string): MetalTriple {
+  return [darken(base, 0.45), base, lighten(base, 0.45)]
+}
+
+function tripleFromColors(colors: string[]): MetalTriple | null {
+  if (colors.length === 0) return null
+  const sorted = [...colors].sort((a, b) => luminance(a) - luminance(b))
+  const n = sorted.length
+  if (n === 1) return tripleFromHex(sorted[0])
+  return [sorted[0], sorted[Math.floor((n - 1) / 2)], sorted[n - 1]]
+}
+
+function fillTriple(fill: BorderColorFill): MetalTriple | null {
+  switch (fill.type) {
+    case 'pixel_metal': return [fill.shadow, fill.base, fill.highlight]
+    case 'solid': return tripleFromHex(fill.hex)
+    case 'linear':
+    case 'radial':
+    case 'conic': return tripleFromColors(fill.stops.map((s) => s.hex))
+    case 'cosmic': return [fill.space, fill.nebulas[0] ?? fill.accent, lighten(fill.star, 0.1)]
+    case 'toon': return [darken(fill.ink, 0.3), fill.ink, fill.line]
+    case 'laser': return [fill.dark, fill.glow, fill.core]
+    case 'candle': return [fill.dark, fill.flame, fill.glow]
+    case 'wood': return [fill.dark, fill.base, fill.light]
+    case 'brew': return tripleFromColors([...fill.colors, fill.bone])
+    case 'prism': return [fill.ink ?? darken(fill.rose, 0.45), fill.lo ?? fill.rose, fill.hi ?? fill.edge]
+    case 'grove': return [fill.deep, fill.moss, fill.vine]
+    case 'regalia': return [fill.shadow, fill.body, fill.core ?? fill.silver]
+    case 'colossus': return tripleFromColors([fill.stoneA, fill.stoneB, fill.block, fill.seam])
+    case 'stolenflame': return [fill.night, fill.flameDeep, fill.flame]
+    case 'dominion': return tripleFromColors(fill.colors)
+    case 'eclipse': return [fill.sky, fill.dusk, fill.corona]
+    case 'confetti': return fill.colors[0] ? [fill.dark, fill.colors[0], fill.flash ?? lighten(fill.colors[0], 0.45)] : tripleFromHex(fill.dark)
+    case 'jewel': return fill.gems[0] ? [fill.velvet, fill.gems[0], fill.glint ?? lighten(fill.gems[0], 0.45)] : tripleFromHex(fill.velvet)
+    case 'chart': return [fill.ink, fill.route, fill.paper]
+    case 'hazard': return tripleFromColors([fill.a, fill.b])
+    case 'warp': return [fill.space, fill.streak, fill.core]
+    default: {
+      const unhandled: never = fill
+      return unhandled
+    }
+  }
+}
+
 const ramp = computed<MetalRamp | null>(() => {
   if (colorIsAnimated.value) void tMs.value
   const fill = currentColorState.value?.fill
   if (!fill) return null
-  const derivation = props.shape.paletteDerivation
-  if (fill.type === 'pixel_metal') {
-    return rampFromTriple(fill.shadow, fill.base, fill.highlight, derivation)
-  }
-  if (fill.type === 'solid') {
-    const base = fill.hex
-    return rampFromTriple(darken(base, 0.45), base, lighten(base, 0.45), derivation)
-  }
-  if (fill.type === 'cosmic') {
-    const base = fill.nebulas[0] ?? fill.accent
-    return rampFromTriple(fill.space, base, lighten(fill.star, 0.1), derivation)
-  }
-  if (fill.type === 'toon') {
-    return rampFromTriple(darken(fill.ink, 0.3), fill.ink, fill.line, derivation)
-  }
-  if ('stops' in fill && Array.isArray(fill.stops) && fill.stops.length > 0) {
-    const sorted = [...fill.stops].sort((a, b) => luminance(a.hex) - luminance(b.hex))
-    const n = sorted.length
-    if (n === 1) {
-      const base = sorted[0].hex
-      return rampFromTriple(darken(base, 0.45), base, lighten(base, 0.45), derivation)
-    }
-    const shadow = sorted[0].hex
-    const highlight = sorted[n - 1].hex
-    const base = sorted[Math.floor((n - 1) / 2)].hex
-    return rampFromTriple(shadow, base, highlight, derivation)
-  }
-  return null
+  const triple = fillTriple(fill)
+  if (!triple) return null
+  return rampFromTriple(triple[0], triple[1], triple[2], props.shape.paletteDerivation)
 })
 
 const motif = computed(() => props.shape.motif ?? 'heart_climb')
