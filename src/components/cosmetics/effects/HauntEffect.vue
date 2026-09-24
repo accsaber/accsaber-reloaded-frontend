@@ -25,11 +25,6 @@ interface GhostRoll {
   speed: number
 }
 
-interface EyeRoll {
-  x: number
-  y: number
-}
-
 const spec = computed(() => readHauntSpec(props.composition))
 const viewport = computed(() => !!props.measure.host?.viewport)
 const field = computed(() => viewport.value || isFieldKey(props.measure.typeKey))
@@ -43,13 +38,7 @@ function rollGhost(): GhostRoll {
   return { x: 0.06 + Math.random() * 0.88, size: 0.75 + Math.random() * 0.5, speed: 0.75 + Math.random() * 0.4 }
 }
 
-function rollEyes(): EyeRoll {
-  if (viewport.value) return { x: 0.08 + Math.random() * 0.84, y: 0.55 + Math.random() * 0.35 }
-  return { x: 0.2 + Math.random() * 0.6, y: 0.3 + Math.random() * 0.45 }
-}
-
 const ghostRolls = ref<GhostRoll[]>(Array.from({ length: VIEWPORT_GHOSTS }, rollGhost))
-const eyeRoll = ref<EyeRoll>(rollEyes())
 
 onMounted(() => {
   staticHost.value = !!clipEl.value?.closest('[data-fx-static]')
@@ -61,10 +50,6 @@ function isOwnAnimation(e: AnimationEvent): boolean {
 
 function onGhostLoop(i: number, e: AnimationEvent) {
   if (isOwnAnimation(e)) ghostRolls.value[i] = rollGhost()
-}
-
-function onEyesLoop(e: AnimationEvent) {
-  if (field.value && isOwnAnimation(e)) eyeRoll.value = rollEyes()
 }
 
 const clipStyle = computed(() => ({
@@ -100,21 +85,6 @@ const ghosts = computed(() => {
     }
   })
 })
-
-const eyeStyle = computed(() => {
-  const b = box.value
-  const at = field.value ? eyeRoll.value : { x: 0.5, y: 0.42 }
-  const size = viewport.value ? 5 : field.value ? Math.max(3, Math.min(b.w, b.h) * 0.05) : 3
-  const gap = viewport.value ? 14 : Math.max(3, b.w * 0.06)
-  return {
-    '--haunt-color': spec.value.color,
-    '--haunt-eye': `${size}px`,
-    left: `${b.x + b.w * at.x}px`,
-    top: `${b.y + b.h * at.y}px`,
-    gap: `${gap}px`,
-    animationDelay: `${-props.measure.stack * 4}s`,
-  }
-})
 </script>
 
 <template>
@@ -140,16 +110,6 @@ const eyeStyle = computed(() => {
         <ellipse class="comp-fx-haunt-ghost__hole" cx="20" cy="29.5" rx="2" ry="2.8" />
       </svg>
     </span>
-  </span>
-  <span
-    v-if="spec.eyes && box.w > 0 && box.h > 0"
-    class="comp-fx-haunt-eyes"
-    :style="eyeStyle"
-    aria-hidden="true"
-    @animationiteration="onEyesLoop"
-  >
-    <span class="comp-fx-haunt-eyes__eye" />
-    <span class="comp-fx-haunt-eyes__eye" />
   </span>
 </template>
 
@@ -213,40 +173,9 @@ const eyeStyle = computed(() => {
   }
 }
 
-.comp-fx-haunt-eyes {
-  position: absolute;
-  display: flex;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  pointer-events: none;
-  animation: haunt-eyes 13s steps(1, end) infinite;
-}
-
-.comp-fx-haunt-eyes__eye {
-  width: var(--haunt-eye, 3px);
-  height: var(--haunt-eye, 3px);
-  border-radius: 50%;
-  background: var(--haunt-color);
-  box-shadow: 0 0 4px var(--haunt-color);
-}
-
-@keyframes haunt-eyes {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  91% {
-    opacity: 1;
-  }
-  99% {
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .comp-fx-haunt-ghost,
-  .comp-fx-haunt-ghost__sheet,
-  .comp-fx-haunt-eyes {
+  .comp-fx-haunt-ghost__sheet {
     animation: none;
   }
 }

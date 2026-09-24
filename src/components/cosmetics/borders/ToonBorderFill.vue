@@ -7,9 +7,10 @@ import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: ToonFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 
 interface Speck {
   x: number

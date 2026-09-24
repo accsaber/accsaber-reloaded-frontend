@@ -9,9 +9,10 @@ import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: CandleFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 const STATIC_T = 4
 const EMBERS = 12
 

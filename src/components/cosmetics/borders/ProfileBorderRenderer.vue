@@ -56,7 +56,7 @@ import {
   sampleShapeStates,
 } from '@/utils/items'
 import { randBetween as rand } from '@/utils/random'
-import { shapeFrameBounds, type FrameBounds } from '@/utils/shapeSilhouette'
+import { shapeFrameBounds, shapeFrameMargin, type FrameBounds } from '@/utils/shapeSilhouette'
 import { computed, ref, watch } from 'vue'
 import PixelBorderRenderer from '@/components/cosmetics/borders/PixelBorderRenderer.vue'
 
@@ -559,10 +559,12 @@ const frameBox = computed<FrameBounds>(() => {
   return { x: minX, y: minY, w, h }
 })
 
+const fillMargin = computed(() => shapeFrameMargin(props.shape))
+
 const cosmicBox = computed<FrameBounds>(() => {
   const f = frameBox.value
-  const mx = f.w * 0.25
-  const my = f.h * 0.25
+  const mx = (f.w * fillMargin.value) / 100
+  const my = (f.h * fillMargin.value) / 100
   return { x: f.x - mx, y: f.y - my, w: f.w + mx * 2, h: f.h + my * 2 }
 })
 
@@ -738,18 +740,18 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
         </mask>
       </defs>
     </svg>
-    <CosmicBorderFill v-if="cosmicFill" :fill="cosmicFill" :sink="cosmicSink" />
-    <ToonBorderFill v-else-if="toonFill" :fill="toonFill" />
-    <CandleBorderFill v-else-if="candleFill" :fill="candleFill" />
-    <WoodBorderFill v-else-if="woodFill" :fill="woodFill" />
-    <BrewBorderFill v-else-if="brewFill" :fill="brewFill" />
-    <PrismBorderFill v-else-if="prismFill" :fill="prismFill" />
-    <GroveBorderFill v-else-if="groveFill" :fill="groveFill" />
-    <RegaliaBorderFill v-else-if="regaliaFill" :fill="regaliaFill" />
-    <ColossusBorderFill v-else-if="colossusFill" :fill="colossusFill" />
-    <StolenFlameBorderFill v-else-if="stolenFlameFill" :fill="stolenFlameFill" />
-    <DominionBorderFill v-else-if="dominionFill" :fill="dominionFill" />
-    <EclipseBorderFill v-else-if="eclipseFill" :fill="eclipseFill" />
+    <CosmicBorderFill v-if="cosmicFill" :key="fillMargin" :fill="cosmicFill" :margin="fillMargin" :sink="cosmicSink" />
+    <ToonBorderFill v-else-if="toonFill" :key="fillMargin" :fill="toonFill" :margin="fillMargin" />
+    <CandleBorderFill v-else-if="candleFill" :key="fillMargin" :fill="candleFill" :margin="fillMargin" />
+    <WoodBorderFill v-else-if="woodFill" :key="fillMargin" :fill="woodFill" :margin="fillMargin" />
+    <BrewBorderFill v-else-if="brewFill" :key="fillMargin" :fill="brewFill" :margin="fillMargin" />
+    <PrismBorderFill v-else-if="prismFill" :key="fillMargin" :fill="prismFill" :margin="fillMargin" />
+    <GroveBorderFill v-else-if="groveFill" :key="fillMargin" :fill="groveFill" :margin="fillMargin" />
+    <RegaliaBorderFill v-else-if="regaliaFill" :key="fillMargin" :fill="regaliaFill" :margin="fillMargin" />
+    <ColossusBorderFill v-else-if="colossusFill" :key="fillMargin" :fill="colossusFill" :margin="fillMargin" />
+    <StolenFlameBorderFill v-else-if="stolenFlameFill" :key="fillMargin" :fill="stolenFlameFill" :margin="fillMargin" />
+    <DominionBorderFill v-else-if="dominionFill" :key="fillMargin" :fill="dominionFill" :margin="fillMargin" />
+    <EclipseBorderFill v-else-if="eclipseFill" :key="fillMargin" :fill="eclipseFill" :margin="fillMargin" />
     <ConfettiBorderFill v-else-if="confettiFill" :fill="confettiFill" />
     <JewelBorderFill v-else-if="jewelFill" :fill="jewelFill" />
     <LaserBorderFill v-else-if="laserFill" :fill="laserFill" :trace="laserTrace" />

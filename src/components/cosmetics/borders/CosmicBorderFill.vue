@@ -9,10 +9,11 @@ import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: CosmicFill
+  margin?: number
   sink?: { x: number; y: number; r: number } | null
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 const CENTER = 50
 const BAND = { min: 1.5, max: 98.5 }
 const SPIRAL_MS = 1100

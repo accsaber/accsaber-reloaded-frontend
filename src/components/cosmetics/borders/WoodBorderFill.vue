@@ -9,9 +9,10 @@ import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{
   fill: WoodFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 
 let seed = 0
 let board: HTMLCanvasElement | null = null

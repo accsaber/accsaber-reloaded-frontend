@@ -235,7 +235,6 @@ export function readHauntSpec(c: Composition): HauntSpec {
     color: asString(c.color) ?? '#38f3ab',
     opacity: Math.max(0.2, Math.min(1, asNumber(c.opacity) ?? 0.7)),
     cycleS: Math.max(4, asNumber(c.cycleS) ?? 8),
-    eyes: c.eyes !== false,
   }
 }
 

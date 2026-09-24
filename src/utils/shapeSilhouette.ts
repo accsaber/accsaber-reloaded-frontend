@@ -74,21 +74,84 @@ function unionBounds(list: FrameBounds[]): FrameBounds | null {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
-function boundsFor(shape: BorderShapeValue, paths: BorderShapePathValue[], viewBox: FrameBounds, pick: (list: FrameBounds[]) => FrameBounds | null): FrameBounds {
-  const key = `${shape.viewBox ?? ''}|${pick.name}|${paths.map((p) => `${p.d}|${p.transform ?? ''}|${p.strokeWidth ?? ''}`).join(';')}`
+function overlapRatio(a: FrameBounds, b: FrameBounds): number {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+  if (w <= 0 || h <= 0) return 0
+  const inter = w * h
+  return inter / (a.w * a.h + b.w * b.h - inter)
+}
+
+function pickBase(list: FrameBounds[], viewBox: FrameBounds): number {
+  let best = -1
+  let bestScore = 0
+  list.forEach((b, i) => {
+    const score = overlapRatio(b, viewBox)
+    if (score > bestScore) {
+      bestScore = score
+      best = i
+    }
+  })
+  return best
+}
+
+function themedPool(shape: BorderShapeValue): BorderShapePathValue[] {
+  const paths = shapePaths(shape)
+  const themed = paths.filter((p) => isThemed(p.fill) || isThemed(p.stroke))
+  return themed.length > 0 ? themed : paths
+}
+
+function cachedBounds(key: string, compute: () => FrameBounds | null, fallback: FrameBounds): FrameBounds {
   const cached = boundsCache.get(key)
   if (cached) return cached
-  const result = pick(pathBounds(paths, viewBox)) ?? viewBox
+  const result = compute() ?? fallback
   boundsCache.set(key, result)
   return result
 }
 
+function pathsKey(paths: BorderShapePathValue[]): string {
+  return paths.map((p) => `${p.d}|${p.transform ?? ''}|${p.strokeWidth ?? ''}`).join(';')
+}
+
+function basePath(shape: BorderShapeValue, viewBox: FrameBounds): { path: BorderShapePathValue; bounds: FrameBounds } | null {
+  const pool = themedPool(shape)
+  if (pool.length === 0) return null
+  const boxes = pathBounds(pool, viewBox)
+  const i = pickBase(boxes, viewBox)
+  const path = pool[i]
+  const bounds = boxes[i]
+  return path && bounds ? { path, bounds } : null
+}
+
 export function shapeFrameBounds(shape: BorderShapeValue | null | undefined): FrameBounds {
+  const viewBox = shapeViewBox(shape)
+  if (!shape || shapePaths(shape).length === 0) return viewBox
+  return cachedBounds(`base|${shape.viewBox ?? ''}|${pathsKey(themedPool(shape))}`, () => basePath(shape, viewBox)?.bounds ?? null, viewBox)
+}
+
+export function shapeExtentBounds(shape: BorderShapeValue | null | undefined): FrameBounds {
   const viewBox = shapeViewBox(shape)
   if (!shape) return viewBox
   const paths = shapePaths(shape)
   if (paths.length === 0) return viewBox
-  return unionBounds([boundsFor(shape, paths, viewBox, unionBounds), viewBox]) ?? viewBox
+  return cachedBounds(`extent|${shape.viewBox ?? ''}|${pathsKey(paths)}`, () => unionBounds([...pathBounds(paths, viewBox), viewBox]), viewBox)
+}
+
+const MIN_FRAME_MARGIN = 25
+const MARGIN_PAD = 2
+
+export function shapeFrameMargin(shape: BorderShapeValue | null | undefined): number {
+  if (!shape) return MIN_FRAME_MARGIN
+  const f = shapeFrameBounds(shape)
+  const e = shapeExtentBounds(shape)
+  if (f.w <= 0 || f.h <= 0) return MIN_FRAME_MARGIN
+  const reach = Math.max(
+    (f.x - e.x) / f.w,
+    (e.x + e.w - f.x - f.w) / f.w,
+    (f.y - e.y) / f.h,
+    (e.y + e.h - f.y - f.h) / f.h,
+  )
+  return Math.max(MIN_FRAME_MARGIN, Math.ceil(reach * 100 + MARGIN_PAD))
 }
 
 export function shapeSilhouetteMask(shape: BorderShapeValue | null | undefined): ShapeMask | null {
@@ -97,7 +160,7 @@ export function shapeSilhouetteMask(shape: BorderShapeValue | null | undefined):
   const paths = shapePaths(shape)
   if (paths.length === 0) return null
   const viewBox = shapeViewBox(shape)
-  const b = shapeFrameBounds(shape)
+  const b = shapeExtentBounds(shape)
   const inner = paths
     .map((p) => {
       const stroke = p.stroke && p.stroke !== 'none' ? 'white' : 'none'
@@ -181,27 +244,10 @@ function runArea(run: RingVec[]): number {
   return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys))
 }
 
-function ringPath(shape: BorderShapeValue, viewBox: FrameBounds): BorderShapePathValue | null {
-  const paths = shapePaths(shape)
-  const themed = paths.filter((p) => isThemed(p.fill) || isThemed(p.stroke))
-  const pool = themed.length > 0 ? themed : paths
-  if (pool.length === 0) return null
-  const boxes = pathBounds(pool, viewBox)
-  let best = -1
-  let bestArea = 0
-  boxes.forEach((b, i) => {
-    if (b.w * b.h > bestArea) {
-      bestArea = b.w * b.h
-      best = i
-    }
-  })
-  return pool[best] ?? null
-}
-
 export function shapeRing(shape: BorderShapeValue | null | undefined): ShapeRing | null {
   if (!shape || shape.renderMode === 'pixel' || typeof document === 'undefined') return null
   const viewBox = shapeViewBox(shape)
-  const ring = ringPath(shape, viewBox)
+  const ring = basePath(shape, viewBox)?.path
   if (!ring) return null
   const key = `${shape.viewBox ?? ''}|${ring.d}|${ring.transform ?? ''}|${shape.avatarMask ?? ''}`
   const cached = ringCache.get(key)

@@ -9,9 +9,10 @@ import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: DominionFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 
 function splitDir(i: number, n: number): [number, number] {
   const ang = (i / Math.max(1, n)) * Math.PI * 2 - Math.PI / 2

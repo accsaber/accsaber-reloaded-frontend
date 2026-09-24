@@ -10,6 +10,7 @@ import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{
   fill: BrewFill
+  margin?: number
 }>()
 
 interface Bubble {
@@ -38,7 +39,7 @@ interface Drop {
   land: number
 }
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 const TRANSITION_S = 1.6
 
 let bubbles: Bubble[] = []

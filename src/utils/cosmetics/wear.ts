@@ -11,7 +11,6 @@ export interface HauntSpec {
   color: string
   opacity: number
   cycleS: number
-  eyes: boolean
 }
 
 export interface WearBite {

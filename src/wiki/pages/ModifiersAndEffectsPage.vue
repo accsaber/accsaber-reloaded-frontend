@@ -20,7 +20,7 @@ const MODIFIERS = [
   { name: 'Unusual', does: 'Attaches a particle effect that plays on the item', from: 'Crate roll' },
   { name: 'Holographic', does: 'Sweeps a shimmer across the item', from: 'Crate roll, the rarest of the modifiers' },
   { name: 'Battle-Worn', does: 'Chips and cracks the item, and flakes fall off it', from: 'Crate roll during an event' },
-  { name: 'Haunted', does: 'Phases the item out for a few seconds at a time and opens a pair of eyes in it', from: 'Specific crate roll or roll any between October 25 and November 1' },
+  { name: 'Haunted', does: 'Phases the item out for a few seconds at a time', from: 'Specific crate roll or roll any between October 25 and November 1' },
   { name: 'Jolly', does: 'Trims the item with festive particles', from: 'Specific crate roll or roll any between December 20 and December 31' },
   { name: "Founder's", does: 'Marks one of the first five copies ever handed out', from: 'Automatic on serials 1 to 5' },
   { name: 'Vintage', does: 'Nothing: Stays as it was', from: 'Automatic on every copy when an item gets reworked' },
@@ -111,8 +111,7 @@ onMounted(async () => {
     <p>
       Some effects sit behind the item, some sit on top of it and some cut into the item itself.
       Battle-Worn chips pieces out of the edges and runs cracks inward from them. Haunted phases
-      the whole thing out for a couple of seconds at a time and opens a pair of eyes in the
-      middle of it. Holographic sweeps a shimmer across the surface.
+      the whole thing out for a couple of seconds at a time. Holographic sweeps a shimmer across the surface.
     </p>
     <p>
       The effect shows up everywhere your item does, on your profile, in the inventory grid and
@@ -120,8 +119,7 @@ onMounted(async () => {
     </p>
     <p>
       A modifier on a theme you have equipped goes full screen. Battle-Worn cracks run in from
-      the edges of the page. Haunted sends a few faint ghosts drifting up the page and opens
-      its eyes somewhere in the lower half. A Haunted thumbnail background gets the same ghosts
+      the edges of the page. Haunted sends a few faint ghosts drifting up the page. A Haunted thumbnail background gets the same ghosts
       in the scene behind your badge.
     </p>
     <WikiItemBench

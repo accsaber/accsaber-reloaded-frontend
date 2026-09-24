@@ -7,9 +7,10 @@ import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: PrismFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 const LO = -MARGIN
 const HI = 100 + MARGIN
 const GRID = 9

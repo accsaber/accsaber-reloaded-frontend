@@ -6,11 +6,12 @@ import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 
-const MARGIN = 25
-
 const props = defineProps<{
   fill: StolenFlameFill
+  margin?: number
 }>()
+
+const MARGIN = props.margin ?? 25
 
 interface Brazier {
   x: number

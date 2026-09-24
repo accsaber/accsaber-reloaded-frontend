@@ -11,9 +11,10 @@ import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{
   fill: EclipseFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 const SUN_Y = ECLIPSE_SUN[1]
 const SUN_R = ECLIPSE_SUN_R
 const PARTIAL_END = ECLIPSE_PARTIAL_END

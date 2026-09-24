@@ -8,9 +8,10 @@ import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: ColossusFill
+  margin?: number
 }>()
 
-const MARGIN = 25
+const MARGIN = props.margin ?? 25
 const LO = -MARGIN
 const SPAN = 100 + MARGIN * 2
 
