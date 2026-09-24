@@ -348,7 +348,9 @@ const activeGlyph = computed(() => {
   return null
 })
 
-const glyphChars = computed<string[] | null>(() => (activeGlyph.value ? props.value.text.split('') : null))
+const glyphChars = computed<string[] | null>(() =>
+  activeGlyph.value ? props.value.text.split('').map((ch) => (ch === ' ' ? '\u00a0' : ch)) : null,
+)
 
 function glyphStyle(i: number): CharStyle {
   return activeGlyph.value?.(i) ?? {}
