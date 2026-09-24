@@ -1,19 +1,17 @@
 <script setup lang="ts">
-import { useEffectCanvas, type EffectFrame } from '@/composables/useEffectCanvas'
+import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
+import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/api/items'
-import { useThemeStore } from '@/stores/theme'
-import { asNumber, asString, easeOut, isFieldKey, padBox, pctSize, ringAt, ringGeometry, type ContentBox, type EffectMeasure, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
+import { asColor, asNumber, clampNumber, easeOut, geometryMemo, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const props = defineProps<{
   composition: Composition
   ctx: TokenContext
   measure: EffectMeasure
 }>()
-
-const themeStore = useThemeStore()
 
 type Ctx = CanvasRenderingContext2D
 
@@ -25,27 +23,19 @@ interface BrambleConfig {
   berry: string
   count: number
   cycleSecs: number
-  lengthPct: number
-  minPx: number
-  maxPx: number
-  thornEvery: number
-  leafEvery: number
+  length: PctSizing
 }
 
 function readBrambles(c: Composition, light: boolean): BrambleConfig {
   return {
-    color: light ? asString(c.lightColor) ?? '#2a1d14' : asString(c.color) ?? '#4a3626',
-    highlight: light ? asString(c.lightHighlight) ?? '#6b4f3a' : asString(c.highlight) ?? '#8a6a4a',
-    leaf: asString(c.leaf) ?? '#5d7a3a',
-    leafDark: asString(c.leafDark) ?? '#3c5226',
-    berry: asString(c.berry) ?? '#8c1d2e',
-    count: Math.max(1, Math.min(8, Math.round(asNumber(c.count) ?? 4))),
+    color: asColor(light ? c.lightColor : c.color),
+    highlight: asColor(light ? c.lightHighlight : c.highlight),
+    leaf: asColor(c.leaf),
+    leafDark: asColor(c.leafDark),
+    berry: asColor(c.berry),
+    count: Math.round(clampNumber(c.count, 1, 8, 4)),
     cycleSecs: Math.max(6, asNumber(c.cycleSecs) ?? 16),
-    lengthPct: Math.max(10, Math.min(200, asNumber(c.lengthPct) ?? 90)),
-    minPx: Math.max(10, asNumber(c.minPx) ?? 30),
-    maxPx: Math.max(30, asNumber(c.maxPx) ?? 520),
-    thornEvery: Math.max(2, Math.min(8, Math.round(asNumber(c.thornEvery) ?? 4))),
-    leafEvery: Math.max(3, Math.min(12, Math.round(asNumber(c.leafEvery) ?? 7))),
+    length: readPctSizing(c, 'lengthPct', [10, 90, 200], [10, 30], [30, 520]),
   }
 }
 
@@ -68,19 +58,23 @@ interface Vine {
 }
 
 const STEPS = 36
+const THORN_EVERY = 4
+const LEAF_EVERY = 7
 
-const light = computed(() => (props.measure.host?.base ?? themeStore.resolvedBase) === 'light')
+const { isTitle, field, light } = useEffectSurface(() => props.measure)
 const cfg = computed(() => readBrambles(props.composition, light.value))
-const isTitle = computed(() => props.measure.typeKey === 'title')
-const field = computed(() => isFieldKey(props.measure.typeKey))
+
+const vines = geometryMemo<Vine>()
+watch([cfg, isTitle, field], vines.clear)
 
 const pad = computed(() => {
   const box = props.measure.box
   return Math.round(isTitle.value ? box.h * 0.6 : Math.min(box.w, box.h) * 0.14)
 })
 
-const ring = computed(() => ringGeometry(props.measure, padBox(props.measure.box, pad.value)))
-const walkPoly = computed<RingPoly>(() => (isTitle.value || field.value ? ring.value.outer : ring.value.band))
+function walkPoly(ring: RingGeometry): RingPoly {
+  return isTitle.value || field.value ? ring.outer : ring.band
+}
 
 interface VineSpec {
   start: number
@@ -92,10 +86,10 @@ interface VineSpec {
   leaf: number
 }
 
-function vineSpec(i: number, seed: number, box: ContentBox): VineSpec {
+function vineSpec(i: number, seed: number, box: ContentBox, poly: RingPoly): VineSpec {
   const c = cfg.value
   const minD = Math.min(box.w, box.h)
-  const P = walkPoly.value.total
+  const P = poly.total
   if (isTitle.value) {
     return {
       start: i === 0 ? box.w * 0.15 : box.w + box.h + box.w * 0.15,
@@ -108,7 +102,7 @@ function vineSpec(i: number, seed: number, box: ContentBox): VineSpec {
     }
   }
   if (field.value) {
-    const len = pctSize(minD, c.lengthPct * 0.4, c.minPx, c.maxPx)
+    const len = pctSize(minD, c.length, 0.4)
     const corner = [0, box.w, box.w + box.h, 2 * box.w + box.h][i % 4] ?? 0
     return {
       start: corner + (hash01(seed) - 0.5) * minD * 0.1,
@@ -124,7 +118,7 @@ function vineSpec(i: number, seed: number, box: ContentBox): VineSpec {
   return {
     start: (i / count) * P + hash01(seed) * (P / count) * 0.5,
     dir: hash01(seed + 1) > 0.5 ? 1 : -1,
-    len: pctSize(minD, c.lengthPct * 0.45, c.minPx, c.maxPx),
+    len: pctSize(minD, c.length, 0.45),
     amp: Math.max(2, minD * 0.03),
     width: Math.max(1.2, Math.min(4.5, minD * 0.024)),
     thorn: Math.max(2, minD * 0.05),
@@ -132,9 +126,7 @@ function vineSpec(i: number, seed: number, box: ContentBox): VineSpec {
   }
 }
 
-function buildVine(spec: VineSpec, seed: number): Vine {
-  const c = cfg.value
-  const poly = walkPoly.value
+function buildVine(spec: VineSpec, seed: number, poly: RingPoly): Vine {
   const nodes: Node[] = []
   const step = spec.len / STEPS
   let offset = 0
@@ -145,8 +137,8 @@ function buildVine(spec: VineSpec, seed: number): Vine {
     offset = Math.max(-spec.amp, Math.min(spec.amp, offset + drift))
     const { p, n, t } = ringAt(poly, spec.start + spec.dir * i * step)
     const tt = { x: t.x * spec.dir, y: t.y * spec.dir }
-    const leaf = i > 2 && i < STEPS - 1 && (i + 3) % c.leafEvery === 0
-    const thorn = !leaf && i > 1 && i < STEPS - 1 && i % c.thornEvery === 0
+    const leaf = i > 2 && i < STEPS - 1 && (i + 3) % LEAF_EVERY === 0
+    const thorn = !leaf && i > 1 && i < STEPS - 1 && i % THORN_EVERY === 0
     nodes.push({
       p: { x: p.x + n.x * offset, y: p.y + n.y * offset },
       n,
@@ -226,12 +218,13 @@ function drawLeaf(g: Ctx, v: Vine, nd: Node, s: number, droop: number) {
   g.fill()
   g.strokeStyle = cfg.value.leafDark
   g.lineWidth = Math.max(0.5, v.width * 0.3)
-  g.globalAlpha *= 0.75
+  const alpha = g.globalAlpha
+  g.globalAlpha = alpha * 0.75
   g.beginPath()
   g.moveTo(nd.p.x, nd.p.y)
   g.lineTo(tipX, tipY)
   g.stroke()
-  g.globalAlpha /= 0.75
+  g.globalAlpha = alpha
   if (nd.berry) {
     const r = Math.max(1, v.width * 0.9 * s)
     const bx = nd.p.x - ax * r * 0.6 + px * r * 1.6
@@ -261,44 +254,28 @@ function drawVine(g: Ctx, v: Vine, progress: number, alpha: number, droop: numbe
   g.globalAlpha = 1
 }
 
-function drawFrame(f: EffectFrame) {
+function drawFrame(f: EffectFrame): boolean {
   const c = cfg.value
   const count = isTitle.value ? 2 : c.count
   const seed0 = props.measure.stack * 101 + 11
+  const poly = walkPoly(f.ring)
+  let drew = false
   for (let i = 0; i < count; i++) {
     const phase = (i / count) * c.cycleSecs * 0.45 + hash01(seed0 + i * 3) * 2
     const k = Math.floor((f.t + phase) / c.cycleSecs)
     const u = f.reduced ? 0.6 : ((f.t + phase) % c.cycleSecs) / c.cycleSecs
     if (u >= 0.9) continue
     const seed = seed0 + i * 37 + k * 131
-    const vine = buildVine(vineSpec(i, seed, f.box), seed)
+    const vine = vines.get(f.ring, seed, () => buildVine(vineSpec(i, seed, f.box, poly), seed, poly))
     const wither = u > 0.74 ? (u - 0.74) / 0.16 : 0
     const progress = u < 0.42 ? easeOut(u / 0.42) : 1 - wither * wither * 0.35
     drawVine(f.g, vine, progress, 1 - wither * wither, wither)
+    drew = true
   }
+  return drew
 }
-
-const { canvasRef, canvasStyle } = useEffectCanvas(() => props.measure, () => pad.value, drawFrame)
 </script>
 
 <template>
-  <div class="comp-fx-region">
-    <canvas ref="canvasRef" class="comp-fx-canvas" :style="canvasStyle" aria-hidden="true"></canvas>
-  </div>
+  <EffectCanvas :measure="measure" :pad="pad" :draw="drawFrame" />
 </template>
-
-<style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.comp-fx-canvas {
-  position: absolute;
-  display: block;
-  max-width: none;
-  max-height: none;
-}
-</style>

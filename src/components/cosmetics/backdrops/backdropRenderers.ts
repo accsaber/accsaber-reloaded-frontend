@@ -21,3 +21,12 @@ export const BACKDROP_RENDERERS: Record<ThemeBackdropType, Component> = {
   dark_hour: DarkHourBackdrop,
   harvest: HarvestBackdrop,
 }
+
+export const LANDSCAPE_BACKDROPS: ReadonlySet<ThemeBackdropType> = new Set([
+  'forest',
+  'graveyard',
+  'church',
+  'mineshaft',
+  'dark_hour',
+  'harvest',
+])

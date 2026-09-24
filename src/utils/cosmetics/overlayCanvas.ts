@@ -22,6 +22,18 @@ export function overlaySpace(w: number, h: number, margin: number): OverlaySpace
   }
 }
 
+export function framePoint(u: number, inset: number): { x: number; y: number; angle: number } {
+  const lo = inset
+  const hi = 100 - inset
+  const d = (((u % 1) + 1) % 1) * 4
+  const side = Math.floor(d)
+  const f = (d - side) * (hi - lo)
+  if (side === 0) return { x: lo + f, y: lo, angle: 0 }
+  if (side === 1) return { x: hi, y: lo + f, angle: Math.PI / 2 }
+  if (side === 2) return { x: hi - f, y: hi, angle: Math.PI }
+  return { x: lo, y: hi - f, angle: -Math.PI / 2 }
+}
+
 export function withAlpha(hex: string, alpha: number): string {
   const rgb = parseHex(hex)
   if (!rgb) return hex
@@ -39,5 +51,15 @@ export function fillMeanLuminance(fill: BorderColorFill | undefined): number | n
     if (fill.stops.length === 0) return null
     return fill.stops.reduce((sum, s) => sum + luminance(s.hex), 0) / fill.stops.length
   }
+  return null
+}
+
+export function primaryFillHex(fill: BorderColorFill | undefined): string | null {
+  if (!fill) return null
+  if (fill.type === 'solid') return fill.hex
+  if (fill.type === 'linear' || fill.type === 'radial' || fill.type === 'conic') return fill.stops[0]?.hex ?? null
+  if (fill.type === 'pixel_metal') return fill.highlight
+  if (fill.type === 'cosmic') return fill.star
+  if (fill.type === 'toon') return fill.line
   return null
 }

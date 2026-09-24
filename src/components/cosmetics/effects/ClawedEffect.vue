@@ -1,19 +1,17 @@
 <script setup lang="ts">
-import { useEffectCanvas, type EffectFrame } from '@/composables/useEffectCanvas'
+import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
+import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/api/items'
-import { useThemeStore } from '@/stores/theme'
-import { activeEvents, asNumber, asString, easeIn, easeOut, isFieldKey, padBox, pctSize, ringAt, ringGeometry, type ContentBox, type CycleEvent, type EffectMeasure, type Vec } from '@/utils/cosmetics/effects'
+import { activeEvents, asColor, asNumber, clampNumber, easeIn, easeOut, geometryMemo, pctSize, polyBounds, readPctSizing, ringAt, type ContentBox, type CycleEvent, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const props = defineProps<{
   composition: Composition
   ctx: TokenContext
   measure: EffectMeasure
 }>()
-
-const themeStore = useThemeStore()
 
 type Ctx = CanvasRenderingContext2D
 
@@ -22,9 +20,7 @@ interface ClawConfig {
   rim: string
   count: number
   intervalSecs: number
-  sizePct: number
-  minPx: number
-  maxPx: number
+  size: PctSizing
   openSecs: number
   holdSecs: number
   closeSecs: number
@@ -32,13 +28,11 @@ interface ClawConfig {
 
 function readClaws(c: Composition, light: boolean): ClawConfig {
   return {
-    color: light ? asString(c.lightColor) ?? '#1a0808' : asString(c.color) ?? '#4a1010',
-    rim: asString(c.rim) ?? '#ff4d3a',
-    count: Math.max(2, Math.min(5, Math.round(asNumber(c.count) ?? 3))),
+    color: asColor(light ? c.lightColor : c.color),
+    rim: asColor(c.rim),
+    count: Math.round(clampNumber(c.count, 2, 5, 3)),
     intervalSecs: Math.max(1.5, asNumber(c.intervalSecs) ?? 5),
-    sizePct: Math.max(10, Math.min(120, asNumber(c.sizePct) ?? 45)),
-    minPx: Math.max(8, asNumber(c.minPx) ?? 14),
-    maxPx: Math.max(14, asNumber(c.maxPx) ?? 360),
+    size: readPctSizing(c, 'sizePct', [10, 45, 120], [8, 14], [14, 360]),
     openSecs: Math.max(0.1, asNumber(c.openSecs) ?? 0.25),
     holdSecs: Math.max(0.2, asNumber(c.holdSecs) ?? 1.4),
     closeSecs: Math.max(0.2, asNumber(c.closeSecs) ?? 0.9),
@@ -60,38 +54,33 @@ interface WoundState {
   cutA: number
 }
 
-const light = computed(() => (props.measure.host?.base ?? themeStore.resolvedBase) === 'light')
+const LENS_STEPS = 16
+
+const { isTitle, field, light } = useEffectSurface(() => props.measure)
 const cfg = computed(() => readClaws(props.composition, light.value))
-const isTitle = computed(() => props.measure.typeKey === 'title')
-const field = computed(() => isFieldKey(props.measure.typeKey))
 const life = computed(() => cfg.value.openSecs + cfg.value.holdSecs + cfg.value.closeSecs)
 
 const pad = computed(() => Math.round(Math.min(props.measure.box.w, props.measure.box.h) * 0.1) + 2)
 
-const ring = computed(() => ringGeometry(props.measure, padBox(props.measure.box, pad.value)))
+const wounds = geometryMemo<Wound>()
+watch(cfg, wounds.clear)
 
-function badgeSpot(seed: number): Vec {
-  const r = ring.value
-  if (hash01(seed + 7) < 0.45) return ringAt(r.band, hash01(seed + 8) * r.band.total).p
-  const xs = r.inner.pts.map((q) => q.x)
-  const ys = r.inner.pts.map((q) => q.y)
-  const x0 = Math.min(...xs)
-  const y0 = Math.min(...ys)
-  const w = Math.max(...xs) - x0
-  const h = Math.max(...ys) - y0
-  return { x: x0 + w * (0.15 + hash01(seed + 1) * 0.7), y: y0 + h * (0.15 + hash01(seed + 2) * 0.7) }
+function badgeSpot(ring: RingGeometry, seed: number): Vec {
+  if (hash01(seed + 7) < 0.45) return ringAt(ring.band, hash01(seed + 8) * ring.band.total).p
+  const b = polyBounds(ring.inner)
+  return { x: b.x + b.w * (0.15 + hash01(seed + 1) * 0.7), y: b.y + b.h * (0.15 + hash01(seed + 2) * 0.7) }
 }
 
-function woundFor(seed: number, box: ContentBox): Wound {
+function woundFor(seed: number, box: ContentBox, ring: RingGeometry): Wound {
   const c = cfg.value
   const minD = Math.min(box.w, box.h)
   const inner = isTitle.value ? 0.2 : 0.1
-  const spot = !isTitle.value && !field.value ? badgeSpot(seed) : null
+  const spot = !isTitle.value && !field.value ? badgeSpot(ring, seed) : null
   const cx = spot ? spot.x : box.x + box.w * (inner + hash01(seed + 1) * (1 - inner * 2))
   const cy = spot ? spot.y : isTitle.value ? box.y + box.h * 0.5 : box.y + box.h * (inner + hash01(seed + 2) * (1 - inner * 2))
   const tilt = (15 + hash01(seed + 3) * 40) * (Math.PI / 180)
   const angle = hash01(seed + 4) > 0.5 ? tilt : -tilt
-  const L = isTitle.value ? box.w * 0.45 : pctSize(minD, c.sizePct, c.minPx, c.maxPx) * (0.7 + hash01(seed + 5) * 0.35)
+  const L = isTitle.value ? box.w * 0.45 : pctSize(minD, c.size) * (0.7 + hash01(seed + 5) * 0.35)
   const gap = isTitle.value ? box.h * 0.28 : L * 0.11
   const wmax = isTitle.value ? Math.max(0.8, box.h * 0.07) : Math.max(1, L * 0.028)
   const claws = []
@@ -111,19 +100,27 @@ function stateAt(age: number): WoundState {
   return { reveal: 1, widthF: 1 - k, rimA: 0.5 * (1 - k), cutA: 0.95 * (1 - k * 0.5) }
 }
 
+function lensX(len: number, shift: number, u: number): number {
+  return -len / 2 + u * len + shift
+}
+
+function lensW(wmax: number, widthF: number, u: number): number {
+  return wmax * widthF * Math.pow(Math.sin(Math.PI * u), 0.8)
+}
+
 function lens(g: Ctx, len: number, wmax: number, shift: number, reveal: number, widthF: number) {
-  const n = 16
-  const top: Array<[number, number]> = []
-  const bottom: Array<[number, number]> = []
-  for (let i = 0; i <= n; i++) {
-    const u = (i / n) * reveal
-    const w = wmax * widthF * Math.pow(Math.sin(Math.PI * u), 0.8)
-    const x = -len / 2 + u * len + shift
-    top.push([x, -w])
-    bottom.unshift([x, w])
-  }
   g.beginPath()
-  top.concat(bottom).forEach(([x, y], i) => (i === 0 ? g.moveTo(x, y) : g.lineTo(x, y)))
+  for (let i = 0; i <= LENS_STEPS; i++) {
+    const u = (i / LENS_STEPS) * reveal
+    const x = lensX(len, shift, u)
+    const y = -lensW(wmax, widthF, u)
+    if (i === 0) g.moveTo(x, y)
+    else g.lineTo(x, y)
+  }
+  for (let i = LENS_STEPS; i >= 0; i--) {
+    const u = (i / LENS_STEPS) * reveal
+    g.lineTo(lensX(len, shift, u), lensW(wmax, widthF, u))
+  }
   g.closePath()
 }
 
@@ -149,39 +146,20 @@ function drawWound(g: Ctx, w: Wound, st: WoundState) {
   g.restore()
 }
 
-function drawFrame(f: EffectFrame) {
+function drawFrame(f: EffectFrame): boolean {
   const seed0 = props.measure.stack * 101 + 31
   const interval = cfg.value.intervalSecs
   let events: CycleEvent[]
-  if (f.reduced) events = [{ k: 0, age: cfg.value.openSecs + 0.3, seed: seed0 }]
+  if (f.reduced) events = [{ age: cfg.value.openSecs + 0.3, seed: seed0 }]
   else {
     events = activeEvents(f.t, interval, life.value, seed0)
     if (field.value) events = events.concat(activeEvents(f.t + interval / 2, interval, life.value, seed0 + 503))
   }
-  for (const ev of events) drawWound(f.g, woundFor(ev.seed, f.box), stateAt(ev.age))
+  for (const ev of events) drawWound(f.g, wounds.get(f.ring, ev.seed, () => woundFor(ev.seed, f.box, f.ring)), stateAt(ev.age))
+  return events.length > 0
 }
-
-const { canvasRef, canvasStyle } = useEffectCanvas(() => props.measure, () => pad.value, drawFrame)
 </script>
 
 <template>
-  <div class="comp-fx-region">
-    <canvas ref="canvasRef" class="comp-fx-canvas" :style="canvasStyle" aria-hidden="true"></canvas>
-  </div>
+  <EffectCanvas :measure="measure" :pad="pad" :draw="drawFrame" />
 </template>
-
-<style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.comp-fx-canvas {
-  position: absolute;
-  display: block;
-  max-width: none;
-  max-height: none;
-}
-</style>

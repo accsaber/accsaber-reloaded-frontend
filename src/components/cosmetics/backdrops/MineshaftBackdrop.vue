@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
-import { type Ctx, fillCircle, flickerNoise, makeProjector, type Point, type Projector, sceneUnit } from '@/utils/cosmetics/canvasShapes'
+import { type Ctx, fillCircle, fillPoly, flickerNoise, makeProjector, type Projector, sceneUnit } from '@/utils/cosmetics/canvasShapes'
 import { darken, lerpHex, lighten } from '@/utils/color'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { hash01, randBetween as rand } from '@/utils/random'
@@ -18,7 +18,6 @@ interface Mote {
   speed: number
 }
 
-const BLACK = '#000000'
 const STATIC_T = 5
 const RAIL_X = 0.45
 const RAIL_HW = 0.03
@@ -40,6 +39,19 @@ let theta = 0.35
 let omega = 0
 let nextGust = 3
 
+const lanternMetal = darken(props.config.timberColor, 0.4)
+const palette = {
+  gravel: darken(props.config.timberDark, 0.45),
+  sleeperTop: lerpHex(props.config.timberDark, props.config.timberColor, 0.35),
+  railHead: lighten(props.config.railColor, 0.45),
+  light: props.config.lanternColor,
+  lightMid: darken(props.config.lanternColor, 0.15),
+  chain: darken(props.config.timberColor, 0.55),
+  flame: withAlpha(lighten(props.config.lanternColor, 0.55), 0.95),
+  metal: lanternMetal,
+  rim: lighten(lanternMetal, 0.35),
+}
+
 function h01(n: number): number {
   return hash01(seed + n)
 }
@@ -48,14 +60,6 @@ function layout(w: number, h: number) {
   unit = sceneUnit(w, h)
   project = makeProjector(w / 2, h * 0.5, w * 0.45)
   scene = null
-}
-
-function quad(ctx: Ctx, pts: Point[]): void {
-  ctx.beginPath()
-  ctx.moveTo(pts[0]?.[0] ?? 0, pts[0]?.[1] ?? 0)
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]?.[0] ?? 0, pts[i]?.[1] ?? 0)
-  ctx.closePath()
-  ctx.fill()
 }
 
 function drawTimber(ctx: Ctx, z: number) {
@@ -77,10 +81,9 @@ function drawTimber(ctx: Ctx, z: number) {
 }
 
 function drawBallast(ctx: Ctx) {
-  const gravel = lerpHex(props.config.timberDark, BLACK, 0.45)
-  ctx.fillStyle = gravel
-  quad(ctx, [project(-0.8, 1, 1), project(0.8, 1, 1), project(0.8, 1, FAR_Z), project(-0.8, 1, FAR_Z)])
-  ctx.fillStyle = lighten(gravel, 0.25)
+  ctx.fillStyle = palette.gravel
+  fillPoly(ctx, [project(-0.8, 1, 1), project(0.8, 1, 1), project(0.8, 1, FAR_Z), project(-0.8, 1, FAR_Z)])
+  ctx.fillStyle = lighten(palette.gravel, 0.25)
   for (let i = 0; i < 140; i++) {
     const z = 1 + Math.pow(h01(i * 3), 1.6) * 5
     const p = project((h01(i * 5) - 0.5) * 1.5, 1, z)
@@ -90,29 +93,27 @@ function drawBallast(ctx: Ctx) {
 
 function drawSleeper(ctx: Ctx, z: number, k: number) {
   const skew = (h01(k * 11) - 0.5) * 0.08
-  const top = lerpHex(props.config.timberDark, props.config.timberColor, 0.35)
-  ctx.fillStyle = withAlpha(top, Math.min(1, 1.6 / z + 0.2))
-  quad(ctx, [project(-0.64, 1, z), project(0.64, 1, z + skew), project(0.64, 1, z + 0.2 + skew), project(-0.64, 1, z + 0.2)])
+  ctx.fillStyle = withAlpha(palette.sleeperTop, Math.min(1, 1.6 / z + 0.2))
+  fillPoly(ctx, [project(-0.64, 1, z), project(0.64, 1, z + skew), project(0.64, 1, z + 0.2 + skew), project(-0.64, 1, z + 0.2)])
   ctx.fillStyle = withAlpha(props.config.timberDark, Math.min(1, 1.6 / z + 0.2))
-  quad(ctx, [project(-0.64, 1, z), project(0.64, 1, z + skew), project(0.64, 1.05, z + skew), project(-0.64, 1.05, z)])
+  fillPoly(ctx, [project(-0.64, 1, z), project(0.64, 1, z + skew), project(0.64, 1.05, z + skew), project(-0.64, 1.05, z)])
   if (h01(k * 13) < 0.3) {
-    ctx.fillStyle = withAlpha(BLACK, 0.7)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
     const cx = (h01(k * 17) - 0.4) * 1.1
-    quad(ctx, [project(cx, 1, z), project(cx + 0.02, 1, z + 0.05), project(cx - 0.01, 1, z + 0.2)])
+    fillPoly(ctx, [project(cx, 1, z), project(cx + 0.02, 1, z + 0.05), project(cx - 0.01, 1, z + 0.2)])
   }
 }
 
 function drawRail(ctx: Ctx, xr: number) {
-  const head = lighten(props.config.railColor, 0.45)
   let z = 1
   while (z < FAR_Z) {
     const z2 = Math.min(FAR_Z, z * 1.12 + 0.02)
     const a = Math.max(0, 1 - (z - 1) / (FAR_Z - 1))
     ctx.fillStyle = withAlpha(props.config.railColor, a)
-    quad(ctx, [project(xr - RAIL_HW, 1, z), project(xr + RAIL_HW, 1, z), project(xr + RAIL_HW, 1, z2), project(xr - RAIL_HW, 1, z2)])
-    ctx.fillStyle = withAlpha(head, a * 0.9)
+    fillPoly(ctx, [project(xr - RAIL_HW, 1, z), project(xr + RAIL_HW, 1, z), project(xr + RAIL_HW, 1, z2), project(xr - RAIL_HW, 1, z2)])
+    ctx.fillStyle = withAlpha(palette.railHead, a * 0.9)
     const hx = xr + (xr < 0 ? RAIL_HW * 0.15 : -RAIL_HW * 0.55)
-    quad(ctx, [project(hx, 0.985, z), project(hx + RAIL_HW * 0.4, 0.985, z), project(hx + RAIL_HW * 0.4, 0.985, z2), project(hx, 0.985, z2)])
+    fillPoly(ctx, [project(hx, 0.985, z), project(hx + RAIL_HW * 0.4, 0.985, z), project(hx + RAIL_HW * 0.4, 0.985, z2), project(hx, 0.985, z2)])
     z = z2
   }
 }
@@ -133,16 +134,16 @@ function drawTrack(ctx: Ctx) {
 function drawDepthFog(ctx: Ctx, w: number, h: number) {
   const v = project(0, 0.4, FAR_Z)
   const g = ctx.createRadialGradient(v[0], v[1], w * 0.02, v[0], v[1], w * 0.42)
-  g.addColorStop(0, withAlpha(BLACK, 1))
-  g.addColorStop(0.35, withAlpha(BLACK, 0.85))
-  g.addColorStop(1, withAlpha(BLACK, 0))
+  g.addColorStop(0, 'rgba(0, 0, 0, 1)')
+  g.addColorStop(0.35, 'rgba(0, 0, 0, 0.85)')
+  g.addColorStop(1, 'rgba(0, 0, 0, 0)')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, w, h)
 }
 
 function buildScene(ctx: Ctx, w: number, h: number) {
   return paintSceneLayer(ctx, (lctx) => {
-    lctx.fillStyle = BLACK
+    lctx.fillStyle = 'rgb(0, 0, 0)'
     lctx.fillRect(0, 0, w, h)
     for (let z = 6; z >= 1; z -= 1) drawTimber(lctx, z)
     drawTrack(lctx)
@@ -162,19 +163,18 @@ function stepPendulum(dt: number, t: number) {
   theta += omega * dt
 }
 
-function drawLanternLight(ctx: Ctx, w: number, h: number, lx: number, ly: number, glow: number) {
-  const color = props.config.lanternColor
-  const g = ctx.createRadialGradient(lx, ly, 2 * unit, lx, ly, w * 0.42)
-  g.addColorStop(0, withAlpha(color, 0.5 * glow))
-  g.addColorStop(0.25, withAlpha(darken(color, 0.15), 0.2 * glow))
-  g.addColorStop(1, withAlpha(color, 0))
+function drawLanternLight(ctx: Ctx, w: number, lx: number, ly: number, glow: number) {
+  const r = w * 0.42
+  const g = ctx.createRadialGradient(lx, ly, 2 * unit, lx, ly, r)
+  g.addColorStop(0, withAlpha(palette.light, 0.5 * glow))
+  g.addColorStop(0.25, withAlpha(palette.lightMid, 0.2 * glow))
+  g.addColorStop(1, withAlpha(palette.light, 0))
   ctx.fillStyle = g
-  ctx.fillRect(0, 0, w, h)
+  ctx.fillRect(lx - r, ly - r, r * 2, r * 2)
 }
 
 function drawChain(ctx: Ctx, px: number, py: number, angle: number) {
-  const metal = darken(props.config.timberColor, 0.55)
-  ctx.strokeStyle = metal
+  ctx.strokeStyle = palette.chain
   ctx.lineWidth = Math.max(1, 0.8 * unit)
   const len = CHAIN * unit
   for (let i = 0; i < LINKS; i++) {
@@ -191,23 +191,21 @@ function drawChain(ctx: Ctx, px: number, py: number, angle: number) {
 
 function drawFlame(ctx: Ctx, flick: number) {
   const fh = (3.2 + flick * 1.6) * unit
-  ctx.fillStyle = withAlpha(lighten(props.config.lanternColor, 0.55), 0.95)
+  ctx.fillStyle = palette.flame
   ctx.beginPath()
   ctx.moveTo(0, -fh)
   ctx.quadraticCurveTo(1.6 * unit, -fh * 0.35, 0, unit * 0.8)
   ctx.quadraticCurveTo(-1.6 * unit, -fh * 0.35, 0, -fh)
   ctx.fill()
-  ctx.fillStyle = withAlpha('#ffffff', 0.7)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
   ctx.beginPath()
   ctx.ellipse(0, -fh * 0.15, 0.6 * unit, fh * 0.32, 0, 0, Math.PI * 2)
   ctx.fill()
 }
 
 function drawLanternBody(ctx: Ctx, angle: number, flick: number) {
-  const metal = darken(props.config.timberColor, 0.4)
-  const rim = lighten(metal, 0.35)
   ctx.rotate(-angle)
-  ctx.fillStyle = metal
+  ctx.fillStyle = palette.metal
   ctx.fillRect(-1.2 * unit, -1.6 * unit, 2.4 * unit, 1.6 * unit)
   ctx.beginPath()
   ctx.moveTo(-3.2 * unit, 2.4 * unit)
@@ -222,16 +220,16 @@ function drawLanternBody(ctx: Ctx, angle: number, flick: number) {
   ctx.translate(0, 12.5 * unit)
   drawFlame(ctx, flick)
   ctx.restore()
-  ctx.fillStyle = metal
+  ctx.fillStyle = palette.metal
   for (const bx of [-3.4, -0.35, 2.7]) ctx.fillRect(bx * unit, 4.2 * unit, 0.7 * unit, 10 * unit)
   ctx.fillRect(-4.4 * unit, 14.2 * unit, 8.8 * unit, 1.6 * unit)
   ctx.fillRect(-3 * unit, 15.8 * unit, 6 * unit, 0.8 * unit)
-  ctx.fillStyle = rim
+  ctx.fillStyle = palette.rim
   ctx.fillRect(-4.4 * unit, 4.2 * unit, 8.8 * unit, 0.5 * unit)
   ctx.fillRect(-4.4 * unit, 14.2 * unit, 8.8 * unit, 0.4 * unit)
 }
 
-function drawLantern(ctx: Ctx, w: number, h: number, t: number) {
+function drawLantern(ctx: Ctx, w: number, t: number) {
   const px = w * PIVOT_X
   const py = 0
   const len = CHAIN * unit
@@ -239,7 +237,7 @@ function drawLantern(ctx: Ctx, w: number, h: number, t: number) {
   const ly = py + Math.cos(theta) * len
   const flick = flickerNoise(t, 1.3)
   const glow = 0.82 + flick * 0.25
-  drawLanternLight(ctx, w, h, lx + Math.sin(theta) * 9 * unit, ly + Math.cos(theta) * 9 * unit, glow)
+  drawLanternLight(ctx, w, lx + Math.sin(theta) * 9 * unit, ly + Math.cos(theta) * 9 * unit, glow)
   drawChain(ctx, px, py, theta)
   ctx.save()
   ctx.translate(lx, ly)
@@ -271,13 +269,6 @@ function drawDustFall(ctx: Ctx, w: number, t: number) {
   ctx.globalAlpha = 1
 }
 
-function drawDarkWash(ctx: Ctx, w: number, h: number) {
-  ctx.fillStyle = BLACK
-  ctx.globalAlpha = 0.35
-  ctx.fillRect(0, 0, w, h)
-  ctx.globalAlpha = 1
-}
-
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useBackdropCanvas(canvasRef, {
@@ -302,12 +293,9 @@ useBackdropCanvas(canvasRef, {
     blitSceneLayer(ctx, scene)
     if (reduced) theta = 0.2
     else stepPendulum(dt, t)
-    drawLantern(ctx, w, h, t)
-    if (props.config.dust) {
-      drawDust(ctx, w, h, t)
-      drawDustFall(ctx, w, t)
-    }
-    drawDarkWash(ctx, w, h)
+    drawLantern(ctx, w, t)
+    drawDust(ctx, w, h, t)
+    drawDustFall(ctx, w, t)
   },
 })
 </script>
@@ -315,21 +303,7 @@ useBackdropCanvas(canvasRef, {
 <template>
   <canvas
     ref="canvas"
-    class="mineshaft-backdrop"
     :style="{ opacity: config.opacity }"
     aria-hidden="true"
   />
 </template>
-
-<style scoped>
-.mineshaft-backdrop {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  z-index: -1;
-  pointer-events: none;
-}
-</style>

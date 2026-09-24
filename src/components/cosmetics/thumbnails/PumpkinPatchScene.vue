@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { PumpkinPatchScene } from '@/types/api/items'
-import { darken, lerpHex, lighten } from '@/utils/color'
+import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
+import { flickerNoise, type Ctx, type Point } from '@/utils/cosmetics/canvasShapes'
+import { drawBranch } from '@/utils/cosmetics/graveyardScenery'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { createRadialSprite, offscreenLayer, wrapX } from '@/utils/cosmetics/sceneLayer'
 import { hash01, randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{ scene: PumpkinPatchScene }>()
-
-type Pt = [number, number]
 
 interface Pumpkin {
   x: number
@@ -19,24 +19,31 @@ interface Pumpkin {
   face: number
 }
 
+interface Slice {
+  img: HTMLCanvasElement
+  y: number
+  h: number
+}
+
+const STATIC_T = 3
 const COUNT = 120
 const HORIZON = 0.5
-const MOON: Pt = [0.7, 0.24]
+const MOON: Point = [0.3, 0.24]
 const MOON_R = 15
 const LIT = 3
+const MISTS = 3
 
-let seed = 0
+const seed = Math.floor(rand(0, 100000))
+let unit = 1
 let pumpkins: Pumpkin[] = []
 let lit: Pumpkin[] = []
 let base: HTMLCanvasElement | null = null
-let slices: HTMLCanvasElement[] = []
+let slices: Slice[] = []
+let faceGlow: HTMLCanvasElement | null = null
+let mist: HTMLCanvasElement | null = null
 
 function h01(n: number): number {
   return hash01(seed + n)
-}
-
-function noise(t: number, k: number): number {
-  return 0.5 + 0.5 * Math.sin(t * 7.3 * k + 1.7) * Math.sin(t * 3.1 * k + 0.4)
 }
 
 function buildPumpkins(w: number, h: number, s: number): Pumpkin[] {
@@ -87,22 +94,6 @@ function drawMoon(ctx: Ctx, w: number, h: number, s: number): void {
   }
 }
 
-function branch(ctx: Ctx, x: number, y: number, ang: number, len: number, wdt: number, depth: number, k: number): void {
-  const ex = x + Math.cos(ang) * len
-  const ey = y + Math.sin(ang) * len
-  ctx.lineWidth = Math.max(0.6, wdt)
-  ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.quadraticCurveTo(x + Math.cos(ang + 0.3) * len * 0.5, y + Math.sin(ang + 0.3) * len * 0.5, ex, ey)
-  ctx.stroke()
-  if (depth === 0) return
-  const n = 2 + (h01(k * 17) < 0.5 ? 1 : 0)
-  for (let i = 0; i < n; i++) {
-    const spread = (h01(k * 19 + i * 7) - 0.5) * 1.5
-    branch(ctx, ex, ey, ang + spread, len * (0.55 + h01(k * 23 + i) * 0.25), wdt * 0.62, depth - 1, k * 31 + i + 1)
-  }
-}
-
 function drawTrees(ctx: Ctx, w: number, h: number, s: number): void {
   ctx.strokeStyle = darken(props.scene.ground, 0.4)
   ctx.lineCap = 'round'
@@ -116,7 +107,7 @@ function drawTrees(ctx: Ctx, w: number, h: number, s: number): void {
     ctx.moveTo(x, y)
     ctx.quadraticCurveTo(x + (0.5 - tx) * s * 3, (y + top) * 0.5, x + (0.5 - tx) * s * 8, top)
     ctx.stroke()
-    branch(ctx, x + (0.5 - tx) * s * 8, top, -Math.PI / 2 + (0.5 - tx) * 0.7, len * s * 0.42, s * (0.8 + len * 0.016), depth, i * 101 + 1)
+    drawBranch(ctx, x + (0.5 - tx) * s * 8, top, -Math.PI / 2 + (0.5 - tx) * 0.7, len * s * 0.42, s * (0.8 + len * 0.016), depth, i * 101 + 1, h01)
   })
 }
 
@@ -156,7 +147,7 @@ function drawPumpkin(ctx: Ctx, p: Pumpkin, w: number, h: number): void {
   const sc = props.scene
   const r = p.r
   const far = 1 - Math.min(1, (p.y / h - HORIZON) / 0.5)
-  ctx.fillStyle = withAlpha('#000000', 0.45)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
   ctx.beginPath()
   ctx.ellipse(p.x, p.y + r * 0.72, r * 1.1, r * 0.25, 0, 0, Math.PI * 2)
   ctx.fill()
@@ -225,109 +216,111 @@ function facePath(ctx: Ctx, p: Pumpkin): void {
 }
 
 function drawFace(ctx: Ctx, p: Pumpkin, t: number): void {
-  const flick = 0.55 + noise(t + p.face * 3, 2.1) * 0.45
-  const glow = ctx.createRadialGradient(p.x, p.y, p.r * 0.3, p.x, p.y, p.r * 3)
-  glow.addColorStop(0, withAlpha(props.scene.candle, 0.28 * flick))
-  glow.addColorStop(1, withAlpha(props.scene.candle, 0))
-  ctx.fillStyle = glow
-  ctx.fillRect(p.x - p.r * 3, p.y - p.r * 3, p.r * 6, p.r * 6)
+  const flick = 0.55 + flickerNoise(t + p.face * 3, 2.1) * 0.45
+  if (faceGlow) {
+    ctx.globalAlpha = flick
+    ctx.drawImage(faceGlow, p.x - p.r * 3, p.y - p.r * 3, p.r * 6, p.r * 6)
+  }
+  ctx.globalAlpha = 0.7 + flick * 0.3
   ctx.save()
   ctx.translate(p.x, p.y)
   ctx.rotate(p.tilt)
-  ctx.fillStyle = withAlpha(props.scene.candle, 0.7 + flick * 0.3)
+  ctx.fillStyle = props.scene.candle
   facePath(ctx, p)
   ctx.fill()
   ctx.restore()
+  ctx.globalAlpha = 1
 }
 
-function drawMist(ctx: Ctx, w: number, h: number, s: number, t: number): void {
-  for (let i = 0; i < 3; i++) {
+function drawMist(ctx: Ctx, w: number, h: number, t: number): void {
+  if (!mist) return
+  const R = w * 0.45
+  const band = unit * 12
+  const sy = mist.height * (0.5 - band / (2 * R))
+  const sh = mist.height * (band / R)
+  for (let i = 0; i < MISTS; i++) {
     const y = h * (HORIZON + 0.04 + i * 0.07)
-    const x = ((t * s * (3 + i * 2) + i * w * 0.4) % (w * 1.5)) - w * 0.25
-    const g = ctx.createRadialGradient(x, y, 0, x, y, w * 0.45)
-    g.addColorStop(0, withAlpha(props.scene.moon, 0.09))
-    g.addColorStop(1, withAlpha(props.scene.moon, 0))
-    ctx.fillStyle = g
-    ctx.fillRect(0, y - s * 12, w, s * 24)
+    const x = wrapX(i * w * 0.4, unit * (3 + i * 2), t, w, R * 2)
+    ctx.drawImage(mist, 0, sy, mist.width, sh, x, y - band, R * 2, band * 2)
   }
 }
 
-function layer(w: number, h: number, scale: number): [HTMLCanvasElement, Ctx | null] {
-  const c = document.createElement('canvas')
-  c.width = Math.ceil(w * scale)
-  c.height = Math.ceil(h * scale)
-  const ctx = c.getContext('2d')
-  ctx?.setTransform(scale, 0, 0, scale, 0, 0)
-  return [c, ctx]
-}
-
-function drawRange(ctx: Ctx, from: number, to: number, w: number, h: number, s: number): void {
+function drawRange(ctx: Ctx, from: number, to: number, w: number, h: number): void {
   for (let k = from; k < to; k++) {
     const p = pumpkins[k]
     if (!p) continue
-    if (p.r > s * 5 && h01(k * 37) < 0.3) drawVine(ctx, p, k)
+    if (p.r > unit * 5 && h01(k * 37) < 0.3) drawVine(ctx, p, k)
     drawPumpkin(ctx, p, w, h)
   }
 }
 
-function buildBase(w: number, h: number, s: number, scale: number): HTMLCanvasElement {
-  const [c, ctx] = layer(w, h, scale)
+function buildBase(w: number, h: number, scale: number): HTMLCanvasElement {
+  const [c, ctx] = offscreenLayer(w, h, scale)
   if (!ctx) return c
   drawSky(ctx, w, h)
-  drawMoon(ctx, w, h, s)
-  drawGround(ctx, w, h, s)
-  drawTrees(ctx, w, h, s)
-  drawRange(ctx, 0, pumpkins.length, w, h, s)
+  drawMoon(ctx, w, h, unit)
+  drawGround(ctx, w, h, unit)
+  drawTrees(ctx, w, h, unit)
+  drawRange(ctx, 0, pumpkins.length, w, h)
   return c
 }
 
-function buildSlices(w: number, h: number, s: number, scale: number): HTMLCanvasElement[] {
+function buildSlice(from: number, to: number, w: number, h: number, scale: number): Slice {
+  let top = h
+  let bottom = 0
+  for (let k = from; k < to; k++) {
+    const p = pumpkins[k]
+    if (!p) continue
+    top = Math.min(top, p.y - p.r * 1.1)
+    bottom = Math.max(bottom, p.y + p.r)
+  }
+  const y = Math.max(0, Math.floor(top))
+  const sh = Math.max(1, Math.ceil(Math.min(h, bottom) - y))
+  const [img, ctx] = offscreenLayer(w, sh, scale)
+  if (ctx) {
+    ctx.translate(0, -y)
+    drawRange(ctx, from, to, w, h)
+  }
+  return { img, y, h: sh }
+}
+
+function buildSlices(w: number, h: number, scale: number): Slice[] {
   const idx = pumpkins.map((p, k) => (p.face >= 0 ? k : -1)).filter((k) => k >= 0)
-  return idx.map((k, i) => {
-    const [c, ctx] = layer(w, h, scale)
-    if (ctx) drawRange(ctx, k + 1, idx[i + 1] !== undefined ? (idx[i + 1] ?? 0) + 1 : pumpkins.length, w, h, s)
-    return c
-  })
+  return idx.map((k, i) => buildSlice(k + 1, (idx[i + 1] ?? pumpkins.length - 1) + 1, w, h, scale))
+}
+
+function buildSprites(): void {
+  const candle = parseHex(props.scene.candle)
+  faceGlow = candle ? createRadialSprite(64, candle, [[0.1, 0.28], [1, 0]]) : null
+  const moon = parseHex(props.scene.moon)
+  mist = moon ? createRadialSprite(128, moon, [[0, 0.09], [1, 0]]) : null
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
   init(w, h, _now, scale) {
-    seed = Math.floor(rand(0, 100000))
-    const s = Math.min(w, h) / 110
-    pumpkins = buildPumpkins(w, h, s)
+    unit = Math.min(w, h) / 110
+    pumpkins = buildPumpkins(w, h, unit)
     lit = pumpkins.filter((p) => p.face >= 0)
-    base = buildBase(w, h, s, scale)
-    slices = buildSlices(w, h, s, scale)
+    base = buildBase(w, h, scale)
+    slices = buildSlices(w, h, scale)
+    buildSprites()
   },
   draw(ctx, w, h, now, reduced) {
-    const t = reduced ? 3 : now / 1000
-    const s = Math.min(w, h) / 110
+    const t = reduced ? STATIC_T : now / 1000
     ctx.clearRect(0, 0, w, h)
     if (base) ctx.drawImage(base, 0, 0, w, h)
-    drawMist(ctx, w, h, s, t)
+    drawMist(ctx, w, h, t)
     lit.forEach((p, i) => {
       drawFace(ctx, p, t)
       const slice = slices[i]
-      if (slice) ctx.drawImage(slice, 0, 0, w, h)
+      if (slice) ctx.drawImage(slice.img, 0, slice.y, w, slice.h)
     })
   },
 })
 </script>
 
 <template>
-  <canvas ref="canvas" class="pumpkin-patch-scene" aria-hidden="true" />
+  <canvas ref="canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.pumpkin-patch-scene {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

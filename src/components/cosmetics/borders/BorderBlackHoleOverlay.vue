@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderBlackHoleOverlaySpec, BorderColorValue } from '@/types/api/items'
+import type { BorderBlackHoleOverlaySpec, BorderOverlayHost } from '@/types/api/items'
 import { darken, lerpHex } from '@/utils/color'
 import { fillMeanLuminance, frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
 
-const props = defineProps<{
-  overlay: BorderBlackHoleOverlaySpec
-  avatarUrl?: string | null
-  color?: BorderColorValue | null
-}>()
+const props = defineProps<BorderOverlayHost & { overlay: BorderBlackHoleOverlaySpec }>()
 
 const MARGIN = 20
 const HOLE_X = 50
@@ -179,17 +175,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="border-blackhole-overlay" aria-hidden="true" />
+  <canvas ref="canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.border-blackhole-overlay {
-  position: absolute;
-  inset: -20%;
-  width: 140%;
-  height: 140%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

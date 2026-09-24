@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/api/items'
-import { asNumber, asString, ringGeometry, type EffectMeasure } from '@/utils/cosmetics/effects'
+import { asNumber, asString, ringGeometry, ringPathD, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { computed } from 'vue'
 
@@ -21,9 +21,7 @@ const outline = computed(() => {
     const r = Math.min(box.w, box.h) * 0.06
     return { rect: { x: box.x, y: box.y, w: box.w, h: box.h, r }, d: null }
   }
-  const pts = ringGeometry(props.measure).outer.pts
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
-  return { rect: null, d }
+  return { rect: null, d: ringPathD(ringGeometry(props.measure).outer) }
 })
 </script>
 

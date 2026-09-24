@@ -213,6 +213,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       <BorderOverlay
         v-if="borderPreview.shape?.overlay?.enabled"
         :overlay="borderPreview.shape.overlay"
+        :avatar-mask="borderPreview.avatarMask"
         :color="borderPreview.color"
       />
     </span>

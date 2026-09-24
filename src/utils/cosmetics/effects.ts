@@ -1,4 +1,4 @@
-import type { ItemTypeKey } from '@/types/api/items'
+import type { Composition, ItemTypeKey } from '@/types/api/items'
 import { hash01 } from '@/utils/random'
 import type { ShapeRing } from '@/utils/shapeSilhouette'
 
@@ -42,6 +42,14 @@ export function asNumber(v: unknown): number | undefined {
   return typeof v === 'number' ? v : undefined
 }
 
+export function asColor(v: unknown): string {
+  return typeof v === 'string' ? v : 'transparent'
+}
+
+export function clampNumber(v: unknown, lo: number, hi: number, fallback: number): number {
+  return Math.max(lo, Math.min(hi, asNumber(v) ?? fallback))
+}
+
 export function boxScale(minD: number, min = 0.7): number {
   return Math.max(min, Math.min(1.8, minD / 140))
 }
@@ -50,8 +58,28 @@ export function isFieldKey(typeKey: ItemTypeKey | undefined): boolean {
   return typeKey === 'theme' || typeKey === 'profile_thumbnail_background'
 }
 
-export function pctSize(minD: number, pct: number, minPx: number, maxPx: number): number {
-  return Math.max(minPx, Math.min(maxPx, (pct / 100) * minD))
+export interface PctSizing {
+  pct: number
+  minPx: number
+  maxPx: number
+}
+
+export function readPctSizing(
+  c: Composition,
+  pctKey: 'sizePct' | 'lengthPct',
+  pct: [number, number, number],
+  minPx: [number, number],
+  maxPx: [number, number],
+): PctSizing {
+  return {
+    pct: clampNumber(c[pctKey], pct[0], pct[2], pct[1]),
+    minPx: Math.max(minPx[0], asNumber(c.minPx) ?? minPx[1]),
+    maxPx: Math.max(maxPx[0], asNumber(c.maxPx) ?? maxPx[1]),
+  }
+}
+
+export function pctSize(minD: number, s: PctSizing, scale = 1): number {
+  return Math.max(s.minPx, Math.min(s.maxPx, ((s.pct * scale) / 100) * minD))
 }
 
 export function hostMatches(
@@ -79,17 +107,17 @@ export interface RingPoly {
   pts: Vec[]
   cum: number[]
   total: number
+  clockwise: boolean
 }
 
 export interface RingGeometry {
   outer: RingPoly
   band: RingPoly
   inner: RingPoly
-  centroid: Vec
 }
 
-export function padBox(box: ContentBox, pad: number): ContentBox {
-  return { x: box.x + pad, y: box.y + pad, w: box.w, h: box.h }
+export function ringPathD(poly: RingPoly): string {
+  return poly.pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
 }
 
 function polyOf(pts: Vec[]): RingPoly {
@@ -99,7 +127,25 @@ function polyOf(pts: Vec[]): RingPoly {
     const b = pts[i % pts.length]
     cum.push((cum[i - 1] ?? 0) + (a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0))
   }
-  return { pts, cum, total: cum[pts.length] ?? 0 }
+  return { pts, cum, total: cum[pts.length] ?? 0, clockwise: signedArea(pts) > 0 }
+}
+
+export function boxRing(box: ContentBox): RingPoly {
+  return rectPoly(box, 0)
+}
+
+export function polyBounds(poly: RingPoly): ContentBox {
+  let x0 = Infinity
+  let y0 = Infinity
+  let x1 = -Infinity
+  let y1 = -Infinity
+  for (const q of poly.pts) {
+    if (q.x < x0) x0 = q.x
+    if (q.x > x1) x1 = q.x
+    if (q.y < y0) y0 = q.y
+    if (q.y > y1) y1 = q.y
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
 }
 
 function rectPoly(box: ContentBox, inset: number): RingPoly {
@@ -139,7 +185,7 @@ export function ringGeometry(measure: EffectMeasure, box: ContentBox = measure.b
   if (!ring) {
     const outer = rectPoly(box, 0)
     const inner = rectPoly(box, minD * 0.115)
-    return { outer, inner, band: rectPoly(box, minD * 0.058), centroid: { x: box.x + box.w / 2, y: box.y + box.h / 2 } }
+    return { outer, inner, band: rectPoly(box, minD * 0.058) }
   }
   const toPx = (f: Vec): Vec => ({ x: box.x + f.x * box.w, y: box.y + f.y * box.h })
   const outerPts = ring.outer.map(toPx)
@@ -148,8 +194,7 @@ export function ringGeometry(measure: EffectMeasure, box: ContentBox = measure.b
     const q = nearest(o, innerPts)
     return { x: (o.x + q.x) / 2, y: (o.y + q.y) / 2 }
   })
-  const centroid = outerPts.reduce((acc, q) => ({ x: acc.x + q.x / outerPts.length, y: acc.y + q.y / outerPts.length }), { x: 0, y: 0 })
-  return { outer: polyOf(outerPts), band: polyOf(bandPts), inner: polyOf(innerPts), centroid }
+  return { outer: polyOf(outerPts), band: polyOf(bandPts), inner: polyOf(innerPts) }
 }
 
 export function ringAt(poly: RingPoly, s: number): RingSample {
@@ -157,16 +202,21 @@ export function ringAt(poly: RingPoly, s: number): RingSample {
   const first = poly.pts[0] ?? { x: 0, y: 0 }
   if (n < 2 || poly.total <= 0) return { p: first, n: { x: 0, y: -1 }, t: { x: 1, y: 0 } }
   const u = ((s % poly.total) + poly.total) % poly.total
-  let i = 0
-  while (i < n - 1 && (poly.cum[i + 1] ?? 0) <= u) i++
+  let lo = 0
+  let hi = n - 1
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1
+    if ((poly.cum[mid] ?? 0) <= u) lo = mid
+    else hi = mid - 1
+  }
+  const i = lo
   const a = poly.pts[i] ?? first
   const b = poly.pts[(i + 1) % n] ?? first
   const segLen = (poly.cum[i + 1] ?? 0) - (poly.cum[i] ?? 0) || 1
   const k = (u - (poly.cum[i] ?? 0)) / segLen
   const tx = (b.x - a.x) / segLen
   const ty = (b.y - a.y) / segLen
-  const cw = signedArea(poly.pts) > 0
-  const nrm = cw ? { x: ty, y: -tx } : { x: -ty, y: tx }
+  const nrm = poly.clockwise ? { x: ty, y: -tx } : { x: -ty, y: tx }
   return { p: { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }, n: nrm, t: { x: tx, y: ty } }
 }
 
@@ -180,7 +230,13 @@ export function ringSpan(poly: RingPoly, y: number): { x0: number; x1: number } 
     if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) xs.push(a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x))
   }
   if (xs.length < 2) return null
-  return { x0: Math.min(...xs), x1: Math.max(...xs) }
+  let x0 = Infinity
+  let x1 = -Infinity
+  for (const x of xs) {
+    if (x < x0) x0 = x
+    if (x > x1) x1 = x
+  }
+  return { x0, x1 }
 }
 
 export function ringExtreme(poly: RingPoly, dir: Vec): RingSample {
@@ -197,7 +253,6 @@ export function ringExtreme(poly: RingPoly, dir: Vec): RingSample {
 }
 
 export interface CycleEvent {
-  k: number
   age: number
   seed: number
 }
@@ -209,7 +264,7 @@ export function activeEvents(t: number, interval: number, life: number, seed: nu
   for (let k = kMin; k <= kMax; k++) {
     const start = k * interval + hash01(seed + k * 11) * interval * 0.6
     const age = t - start
-    if (age >= 0 && age < life) out.push({ k, age, seed: seed + k * 97 })
+    if (age >= 0 && age < life) out.push({ age, seed: seed + k * 97 })
   }
   return out
 }
@@ -221,4 +276,40 @@ export function easeOut(x: number): number {
 export function easeIn(x: number): number {
   const c = Math.max(0, Math.min(1, x))
   return c * c * c
+}
+
+export interface GeometryMemo<T> {
+  get: (scope: unknown, key: number, build: () => T) => T
+  clear: () => void
+}
+
+export function geometryMemo<T>(limit = 32): GeometryMemo<T> {
+  let owner: unknown = null
+  const map = new Map<number, T>()
+  return {
+    get(scope, key, build) {
+      if (scope !== owner) {
+        owner = scope
+        map.clear()
+      }
+      const hit = map.get(key)
+      if (hit !== undefined) return hit
+      if (map.size >= limit) map.clear()
+      const value = build()
+      map.set(key, value)
+      return value
+    },
+    clear() {
+      owner = null
+      map.clear()
+    },
+  }
+}
+
+export interface EffectFrame {
+  g: CanvasRenderingContext2D
+  t: number
+  reduced: boolean
+  box: ContentBox
+  ring: RingGeometry
 }

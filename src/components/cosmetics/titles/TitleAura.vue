@@ -30,6 +30,7 @@ import TitleCurioAura from '@/components/cosmetics/titles/TitleCurioAura.vue'
 import TitleRadarAura from '@/components/cosmetics/titles/TitleRadarAura.vue'
 import TitleWaypointsAura from '@/components/cosmetics/titles/TitleWaypointsAura.vue'
 import type { TitleAuraSpec, TitleAuraType } from '@/types/api/items'
+import type { TitleAuraLinks } from '@/utils/cosmetics/titleAura'
 import { computed, type Component } from 'vue'
 
 const AURA_RENDERERS: Record<TitleAuraType, Component> = {
@@ -64,16 +65,27 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   waypoints: TitleWaypointsAura,
 }
 
+const LINKED: Partial<Record<TitleAuraType, keyof TitleAuraLinks>> = {
+  ice: 'frost',
+  blood: 'bleed',
+  lantern: 'lantern',
+}
+
 const props = defineProps<{
   aura: TitleAuraSpec
   light: boolean
+  links: TitleAuraLinks
 }>()
 
 const renderer = computed(() => AURA_RENDERERS[props.aura.type] ?? null)
+const linked = computed(() => {
+  const key = LINKED[props.aura.type]
+  return key ? { [key]: props.links[key] } : {}
+})
 </script>
 
 <template>
   <TitleLayerHost v-if="renderer">
-    <component :is="renderer" :aura="aura" :light="light" />
+    <component :is="renderer" :aura="aura" :light="light" v-bind="linked" />
   </TitleLayerHost>
 </template>

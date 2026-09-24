@@ -48,6 +48,7 @@ const avatarClipId = `bcp-avatar-clip-${Math.random().toString(36).slice(2, 9)}`
       class="border-composition__overlay"
       :overlay="overlay"
       :avatar-url="avatarUrl"
+      :avatar-mask="avatarMaskPath"
       :color="color"
     />
   </div>

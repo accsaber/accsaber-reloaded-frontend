@@ -17,6 +17,8 @@ const colors = computed(() => {
   return list && list.length ? list : ['#f9a8d4', '#a7f3d0', '#fde68a', '#c4b5fd']
 })
 
+const spark = computed(() => pickVariant(props.light, props.aura.lightSpark, props.aura.spark, colors.value[0]))
+
 const TRAIL = 22
 
 interface Pixie {
@@ -35,7 +37,7 @@ function tint(p: Pixie, t: number): string {
   const cs = colors.value
   const pos = t * 0.35 + p.hue
   const i = Math.floor(pos) % cs.length
-  return lerpHex(cs[i] ?? '#f9a8d4', cs[(i + 1) % cs.length] ?? '#a7f3d0', pos % 1)
+  return lerpHex(cs[i], cs[(i + 1) % cs.length], pos % 1)
 }
 
 function pixiePos(p: Pixie, t: number, r: TitleAuraRect): [number, number] {
@@ -58,22 +60,23 @@ function drawSpark(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
 
 function drawPixie(ctx: CanvasRenderingContext2D, p: Pixie, t: number, r: TitleAuraRect): void {
   const color = tint(p, t)
-  p.trail.forEach(([x, y], k) => {
+  for (let k = 0; k < p.trail.length; k++) {
+    const [x, y] = p.trail[k]
     const a = (k / TRAIL) * 0.5
     ctx.fillStyle = withAlpha(color, a)
     ctx.beginPath()
     ctx.arc(x, y, r.fs * 0.03 * (0.4 + k / TRAIL), 0, Math.PI * 2)
     ctx.fill()
     if (k % 5 === 0) drawSpark(ctx, x + Math.sin(k * 7) * r.fs * 0.1, y + Math.cos(k * 5) * r.fs * 0.1, r.fs * 0.06 * (k / TRAIL), color, a * 0.9)
-  })
+  }
   const [x, y] = p.trail[p.trail.length - 1] ?? [0, 0]
   const glow = ctx.createRadialGradient(x, y, 0, x, y, r.fs * 0.28)
-  glow.addColorStop(0, withAlpha('#ffffff', 0.95))
+  glow.addColorStop(0, withAlpha(spark.value, 0.95))
   glow.addColorStop(0.35, withAlpha(color, 0.7))
   glow.addColorStop(1, withAlpha(color, 0))
   ctx.fillStyle = glow
   ctx.fillRect(x - r.fs * 0.3, y - r.fs * 0.3, r.fs * 0.6, r.fs * 0.6)
-  drawSpark(ctx, x, y, r.fs * 0.14 * (0.7 + 0.3 * Math.sin(t * 9 + p.phase)), '#ffffff', 0.9)
+  drawSpark(ctx, x, y, r.fs * 0.14 * (0.7 + 0.3 * Math.sin(t * 9 + p.phase)), spark.value, 0.9)
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')

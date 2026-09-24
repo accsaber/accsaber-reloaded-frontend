@@ -373,19 +373,7 @@ useBackdropCanvas(canvasRef, {
 <template>
   <canvas
     ref="canvas"
-    class="starfield-backdrop"
     :style="{ opacity: config.opacity }"
     aria-hidden="true"
   />
 </template>
-
-<style scoped>
-.starfield-backdrop {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  pointer-events: none;
-}
-</style>

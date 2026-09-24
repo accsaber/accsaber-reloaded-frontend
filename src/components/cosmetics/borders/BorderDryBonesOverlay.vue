@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderColorValue, BorderDryBonesOverlaySpec, DryBonesPart } from '@/types/api/items'
-import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { useStackPointer } from '@/composables/useStackPointer'
+import type { BorderDryBonesOverlaySpec, BorderOverlayHost, DryBonesPart, DryBonesPathKind } from '@/types/api/items'
+import { frameDelta, overlaySpace, primaryFillHex, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
-import { onMounted, onUnmounted, useTemplateRef } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 
-const props = defineProps<{
-  overlay: BorderDryBonesOverlaySpec
-  avatarUrl?: string | null
-  color?: BorderColorValue | null
-}>()
+const props = defineProps<BorderOverlayHost & { overlay: BorderDryBonesOverlaySpec }>()
 
 const MARGIN = 20
 const FLOOR = 98.5
@@ -21,12 +18,19 @@ const ROLL_IN_S = 0.85
 const STOMP_S = 0.5
 const STOMP_COOLDOWN_S = 12
 const PUFF_LIFE_S = 0.5
+const LONG_BONE_FLAT = 0.1
+const HEAP_STEP = 0.85
+const HEAP_MAX = 8.5
+const SKULL_HEAP = 9
+const HEAP_BASE = 1.6
+const LONG_SPREAD: [number, number] = [24, 76]
+const SHORT_SPREAD: [number, number] = [12, 88]
 
 type Phase = 'idle' | 'collapse' | 'pile' | 'rebuild'
 
 interface Bone {
   part: DryBonesPart
-  paths: { p: Path2D; kind: string; opacity: number }[]
+  paths: { p: Path2D; kind: DryBonesPathKind; opacity: number }[]
   dx: number
   dy: number
   a: number
@@ -52,6 +56,7 @@ interface Puff {
 }
 
 let bones: Bone[] = []
+let head: Bone | undefined
 let order: Bone[] = []
 let puffs: Puff[] = []
 let phase: Phase = 'idle'
@@ -59,13 +64,11 @@ let clock = 0
 let last = 0
 let nextAt = 0
 let phaseAt = 0
-let hold = 3
+let hold = 0
 let socketLight = 1
 let shudder = 0
 let chatter = 0
 let dread = 0
-let pointer: { x: number; y: number } | null = null
-let pointerDirty = false
 let insideSince = -1
 let lastStomp = -100
 
@@ -73,15 +76,11 @@ function interval(): number {
   return rand(props.overlay.minIntervalMs ?? 14000, props.overlay.maxIntervalMs ?? 28000) / 1000
 }
 
-function skull(): Bone | undefined {
-  return bones.find((b) => b.part.role === 'skull')
-}
-
 function rebuildOrder(): Bone[] {
   const rest = bones.filter((b) => !b.part.role)
   const jaw = bones.filter((b) => b.part.role === 'jaw')
-  const head = bones.filter((b) => b.part.role === 'skull')
-  return [...rest, ...jaw, ...head]
+  const skulls = bones.filter((b) => b.part.role === 'skull')
+  return [...rest, ...jaw, ...skulls]
 }
 
 function buildBones(): void {
@@ -91,19 +90,31 @@ function buildBones(): void {
     dx: 0, dy: 0, a: 0, vx: 0, vy: 0, spin: 0, tx: 0, ty: 0, ta: 0,
     delay: 0, landed: true, start: 0, fx: 0, fy: 0, fa: 0, roll: 0,
   }))
+  head = bones.find((b) => b.part.role === 'skull')
+}
+
+function shuffledLevels(n: number): number[] {
+  const out = Array.from({ length: n }, (_, i) => i)
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rand(0, i + 1))
+    const swap = out[i]
+    out[i] = out[j]
+    out[j] = swap
+  }
+  return out
 }
 
 function collapse(): void {
   phase = 'collapse'
   phaseAt = clock
   order = []
-  const levels = bones.map((_, i) => i).sort(() => rand(0, 1) - 0.5)
+  const levels = shuffledLevels(bones.length)
   bones.forEach((b, i) => {
-    const long = Math.abs(b.part.flat ?? 0) > 0.1 || b.part.paths.length === 2
-    const absX = long ? rand(24, 76) : rand(12, 88)
-    const level = b.part.role === 'skull' ? 9 : Math.min(8.5, levels[i] * 0.85)
+    const long = Math.abs(b.part.flat ?? 0) > LONG_BONE_FLAT || b.part.paths.length === 2
+    const absX = rand(...(long ? LONG_SPREAD : SHORT_SPREAD))
+    const level = b.part.role === 'skull' ? SKULL_HEAP : Math.min(HEAP_MAX, levels[i] * HEAP_STEP)
     b.tx = absX - b.part.x
-    b.ty = FLOOR - 1.6 - level - b.part.y
+    b.ty = FLOOR - HEAP_BASE - level - b.part.y
     b.ta = (b.part.flat ?? 0) + rand(-0.35, 0.35)
     b.delay = rand(0, 0.3)
     b.landed = false
@@ -112,7 +123,6 @@ function collapse(): void {
     b.vy = -rand(0, 14)
     b.spin = rand(-7, 7)
   })
-  const head = skull()
   if (head && rand(0, 1) < ROLL_CHANCE) head.roll = rand(0, 1) < 0.5 ? -1 : 1
 }
 
@@ -218,30 +228,19 @@ function finishRebuild(): void {
 
 function stepRebuild(): void {
   for (const b of bones) stepFlyBack(b)
-  const head = skull()
   const total = head?.roll ? ROLL_IN_S + REBUILD_S : REBUILD_S
   if (head && clock >= head.start + total) finishRebuild()
 }
 
-function readPointer(canvas: HTMLCanvasElement): void {
-  if (!pointerDirty) return
-  pointerDirty = false
-  if (!pointer) {
+function readPointer(): void {
+  const p = pointer.read()
+  if (!p) {
     dread = 0
     insideSince = -1
     return
   }
-  const rect = canvas.getBoundingClientRect()
-  const stackW = rect.width / 1.4
-  const stackH = rect.height / 1.4
-  const cx = rect.left + rect.width / 2
-  const cy = rect.top + rect.height / 2
-  const nx = Math.abs(pointer.x - cx) / stackW
-  const ny = Math.abs(pointer.y - cy) / stackH
-  const d = Math.max(nx, ny)
-  dread = Math.max(0, Math.min(1, (1.3 - d) / 0.8))
-  const inside = nx < 0.5 && ny < 0.5
-  if (!inside) insideSince = -1
+  dread = Math.max(0, Math.min(1, (1.3 - Math.max(p.nx, p.ny)) / 0.8))
+  if (p.nx >= 0.5 || p.ny >= 0.5) insideSince = -1
   else if (insideSince < 0) insideSince = clock
 }
 
@@ -261,17 +260,13 @@ function stepIdle(): void {
 function step(dt: number): void {
   shudder = Math.max(0, shudder - dt)
   chatter = Math.max(0, chatter - dt * 1.6)
-  puffs = puffs.filter((p) => clock - p.born < PUFF_LIFE_S)
+  let kept = 0
+  for (const p of puffs) if (clock - p.born < PUFF_LIFE_S) puffs[kept++] = p
+  puffs.length = kept
   if (phase === 'idle') stepIdle()
   else if (phase === 'collapse') stepCollapse(dt)
   else if (phase === 'pile' && clock - phaseAt >= hold) beginRebuild()
   else if (phase === 'rebuild') stepRebuild()
-}
-
-function jitter(seed: number, amp: number): [number, number] {
-  if (amp <= 0) return [0, 0]
-  const t = clock * 47 + seed * 1.7
-  return [Math.sin(t) * amp, Math.cos(t * 1.3 + seed) * amp]
 }
 
 function jitterAmp(): number {
@@ -286,12 +281,7 @@ function jawOpen(): number {
   return Math.abs(Math.sin(clock * 44)) * 1.9 * amp
 }
 
-function socketHex(): string {
-  const fill = props.color?.states?.[0]?.fill
-  if (fill?.type === 'solid') return fill.hex
-  if (fill && (fill.type === 'linear' || fill.type === 'radial' || fill.type === 'conic') && fill.stops[0]) return fill.stops[0].hex
-  return props.overlay.rim
-}
+const socketHex = computed(() => primaryFillHex(props.color?.states?.[0]?.fill) ?? props.overlay.rim)
 
 function paint(ctx: CanvasRenderingContext2D, entry: Bone['paths'][number], lit: string): void {
   const o = props.overlay
@@ -319,7 +309,9 @@ function paint(ctx: CanvasRenderingContext2D, entry: Bone['paths'][number], lit:
 }
 
 function drawBone(ctx: CanvasRenderingContext2D, b: Bone, i: number, amp: number, lit: string): void {
-  const [jx, jy] = jitter(i, amp)
+  const jt = clock * 47 + i * 1.7
+  const jx = amp > 0 ? Math.sin(jt) * amp : 0
+  const jy = amp > 0 ? Math.cos(jt * 1.3 + i) * amp : 0
   const open = b.part.role === 'jaw' ? jawOpen() : 0
   ctx.save()
   ctx.translate(b.part.x + b.dx + jx, b.part.y + b.dy + jy + open)
@@ -341,48 +333,26 @@ function drawPuffs(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-function drawOrder(): Bone[] {
-  if (phase === 'collapse' || phase === 'pile') {
-    const airborne = bones.filter((b) => !order.includes(b))
-    return [...order, ...airborne]
-  }
-  return bones
-}
-
 function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
-  const lit = socketHex()
+  const lit = socketHex.value
   const amp = jitterAmp()
   ctx.save()
   ctx.translate(toX(0), toY(0))
   ctx.scale(sx, sy)
   drawPuffs(ctx)
-  drawOrder().forEach((b, i) => drawBone(ctx, b, i, amp, lit))
+  if (phase === 'collapse' || phase === 'pile') {
+    let i = 0
+    for (const b of order) drawBone(ctx, b, i++, amp, lit)
+    for (const b of bones) if (!b.landed) drawBone(ctx, b, i++, amp, lit)
+  } else {
+    bones.forEach((b, i) => drawBone(ctx, b, i, amp, lit))
+  }
   ctx.restore()
 }
 
-function onPointerMove(e: PointerEvent): void {
-  pointer = { x: e.clientX, y: e.clientY }
-  pointerDirty = true
-}
-
-function onPointerOut(): void {
-  pointer = null
-  pointerDirty = true
-}
-
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-onMounted(() => {
-  if (props.overlay.hover === false) return
-  window.addEventListener('pointermove', onPointerMove, { passive: true })
-  document.addEventListener('pointerleave', onPointerOut)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('pointermove', onPointerMove)
-  document.removeEventListener('pointerleave', onPointerOut)
-})
+const pointer = useStackPointer(canvasRef, MARGIN, () => props.overlay.hover !== false)
 
 useElementCanvas(canvasRef, {
   init(_w, _h, nowMs) {
@@ -398,6 +368,7 @@ useElementCanvas(canvasRef, {
     dread = 0
     nextAt = interval() * rand(0.2, 0.4)
   },
+  resize() {},
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
     if (reduced) {
@@ -405,10 +376,10 @@ useElementCanvas(canvasRef, {
       drawScene(ctx, w, h)
       return
     }
-    const dt = Math.min(0.05, (now - last) / 1000)
+    const dt = frameDelta(now, last, reduced)
     last = now
     clock += dt
-    if (canvasRef.value) readPointer(canvasRef.value)
+    readPointer()
     step(dt)
     const litTarget = phase === 'idle' ? 1 : 0
     socketLight += (litTarget - socketLight) * Math.min(1, dt * (litTarget ? 6 : 14))
@@ -418,17 +389,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="border-drybones" aria-hidden="true" />
+  <canvas ref="canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.border-drybones {
-  position: absolute;
-  inset: -20%;
-  width: 140%;
-  height: 140%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

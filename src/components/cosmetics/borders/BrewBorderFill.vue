@@ -1,9 +1,23 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BrewFill, BrewIngredientKind } from '@/types/api/items'
-import { BREW_INGREDIENT_KINDS, boneShape, drawBubble, drawIngredient, skullShape } from '@/utils/cosmetics/brewScenery'
-import { darken, lerpHex, lighten } from '@/utils/color'
-import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import type { BrewFill } from '@/types/api/items'
+import {
+  BREW_INGREDIENT_KINDS,
+  boneShape,
+  brewInk,
+  brewLiquid,
+  brewState,
+  drawBubble,
+  drawIngredient,
+  skullShape,
+  stepBrew,
+  swirlArms,
+  type BrewInk,
+  type BrewRules,
+  type BrewState,
+} from '@/utils/cosmetics/brewScenery'
+import { darken, lighten } from '@/utils/color'
+import { frameDelta, framePoint, overlaySpace, withAlpha, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
@@ -13,64 +27,28 @@ const props = defineProps<{
   margin?: number
 }>()
 
-interface Bubble {
-  x: number
-  y: number
-  r: number
-  vy: number
-  pop: number
-}
-
 interface Bone {
-  angle: number
-  radius: number
+  u: number
+  inset: number
   speed: number
   size: number
   skull: boolean
   phase: number
 }
 
-interface Drop {
-  kind: BrewIngredientKind
-  x: number
-  y: number
-  vy: number
-  splash: number
-  land: number
-}
-
 const MARGIN = props.margin ?? 25
-const TRANSITION_S = 1.6
+const STATIC_T = 3
+const RING_S = 1.2
+const SINK_S = 0.9
 
-let bubbles: Bubble[] = []
-let bones: Bone[] = []
-let drops: Drop[] = []
-let rings: { x: number; y: number; age: number }[] = []
-let colorIdx = 0
-let blend = 1
-let nextDropAt = 0
-let clock = 0
+let paletteIdx = 0
 let last = 0
+let vignette: CanvasGradient | null = null
 
-function palette(): string[] {
-  return props.fill.colors.length ? props.fill.colors : ['#4e7a2a']
-}
-
-function liquid(): string {
-  const cs = palette()
-  const from = cs[(colorIdx + cs.length - 1) % cs.length] ?? '#4e7a2a'
-  const to = cs[colorIdx % cs.length] ?? '#4e7a2a'
-  return lerpHex(from, to, blend)
-}
-
-function seed(): void {
-  bubbles = Array.from({ length: props.fill.bubbles ?? 20 }, () => ({ x: rand(-20, 120), y: rand(-20, 120), r: rand(0.8, 2.4), vy: rand(4, 9), pop: 0 }))
-  bones = Array.from({ length: 7 }, (_, i) => ({ angle: rand(0, 6.28), radius: rand(46, 66), speed: rand(0.12, 0.22) * (i % 2 ? 1 : -1), size: rand(5, 8), skull: i === 0, phase: rand(0, 6.28) }))
-  drops = []
-  rings = []
-  colorIdx = 0
-  blend = 1
-  nextDropAt = rand(2, 5)
+function nextColor(): string {
+  const cs = props.fill.colors
+  paletteIdx = (paletteIdx + 1) % cs.length
+  return cs[paletteIdx] ?? props.fill.bone
 }
 
 function landing(): { x: number; y: number } {
@@ -81,124 +59,96 @@ function landing(): { x: number; y: number } {
   return { x: rand(92, 114), y: rand(10, 90) }
 }
 
-function spawnDrop(): void {
-  const at = landing()
-  drops.push({ kind: BREW_INGREDIENT_KINDS[Math.floor(Math.random() * BREW_INGREDIENT_KINDS.length)] ?? 'eye', x: at.x, y: at.y - 60, vy: 90, splash: -1, land: at.y })
-}
-
-function step(dt: number): void {
-  clock += dt
-  if (clock >= nextDropAt) {
-    spawnDrop()
-    nextDropAt = clock + rand(props.fill.dropMinS ?? 5, props.fill.dropMaxS ?? 11)
-  }
-  for (const d of drops) {
-    if (d.splash >= 0) {
-      d.splash += dt
-      continue
-    }
-    d.vy += 160 * dt
-    d.y += d.vy * dt
-    if (d.y >= d.land) {
-      d.splash = 0
-      rings.push({ x: d.x, y: d.y, age: 0 })
-      colorIdx = (colorIdx + 1) % palette().length
-      blend = 0
-    }
-  }
-  drops = drops.filter((d) => d.splash < 0.9)
-  for (const r of rings) r.age += dt
-  rings = rings.filter((r) => r.age < 1.2)
-  blend = Math.min(1, blend + dt / TRANSITION_S)
-  for (const b of bubbles) {
-    if (b.pop > 0) {
-      b.pop += dt
-      if (b.pop > 0.3) Object.assign(b, { x: rand(-20, 120), y: 125, r: rand(0.8, 2.4), pop: 0 })
-      continue
-    }
+const rules: BrewRules = {
+  gravity: 160,
+  sinkS: SINK_S,
+  ringS: RING_S,
+  gap: () => rand(props.fill.dropMinS ?? 5, props.fill.dropMaxS ?? 11),
+  spawn: () => {
+    const at = landing()
+    const kind = BREW_INGREDIENT_KINDS[Math.floor(Math.random() * BREW_INGREDIENT_KINDS.length)] ?? 'eye'
+    return { kind, color: nextColor(), x: at.x, y: at.y - 60, vy: 90, land: at.y, splash: -1 }
+  },
+  rise: (b, dt, clock) => {
     b.y -= b.vy * dt
     b.x += Math.sin(clock * 2 + b.y * 0.2) * 3 * dt
     if (b.y < rand(-25, 30) && Math.random() < 0.02) b.pop = 0.01
     if (b.y < -25) b.y = 125
-  }
-  for (const bn of bones) bn.angle += bn.speed * dt
+  },
+  respawn: (b) => Object.assign(b, { x: rand(-20, 120), y: 125, r: rand(0.8, 2.4), pop: 0 }),
 }
+
+const bones: Bone[] = Array.from({ length: 7 }, (_, i) => ({
+  u: rand(0, 1),
+  inset: rand(1.5, 5),
+  speed: rand(0.02, 0.035) * (i % 2 ? 1 : -1),
+  size: rand(5, 8),
+  skull: i === 0,
+  phase: rand(0, 6.28),
+}))
+
+const brew: BrewState = brewState(
+  props.fill.colors[0] ?? props.fill.bone,
+  Array.from({ length: props.fill.bubbles ?? 14 }, () => ({ x: rand(-20, 120), y: rand(-20, 120), r: rand(0.8, 2.4), vy: rand(4, 9), pop: 0 })),
+  rand(2, 5),
+)
 
 function drawSwirl(ctx: Ctx, w: number, h: number, sx: number, t: number, color: string): void {
-  const cx = w * 0.5
-  const cy = h * 0.5
-  ctx.strokeStyle = withAlpha(lighten(color, 0.35), 0.16)
   ctx.lineWidth = Math.max(1, 1.4 * sx)
-  for (let arm = 0; arm < 3; arm++) {
-    ctx.beginPath()
-    for (let i = 0; i <= 60; i++) {
-      const u = i / 60
-      const a = u * Math.PI * 3.2 + arm * 2.09 + t * 0.35
-      const r = (4 + u * 70) * sx
-      const x = cx + Math.cos(a) * r
-      const y = cy + Math.sin(a) * r
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-    }
-    ctx.stroke()
-  }
+  ctx.strokeStyle = withAlpha(lighten(color, 0.35), 0.16)
+  swirlArms(ctx, w * 0.5, h * 0.5, sx, t * 0.35, 4)
   ctx.strokeStyle = withAlpha(darken(color, 0.4), 0.2)
-  for (let arm = 0; arm < 3; arm++) {
-    ctx.beginPath()
-    for (let i = 0; i <= 60; i++) {
-      const u = i / 60
-      const a = u * Math.PI * 3.2 + arm * 2.09 + 1 + t * 0.35
-      const r = (8 + u * 70) * sx
-      const x = cx + Math.cos(a) * r
-      const y = cy + Math.sin(a) * r
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-    }
-    ctx.stroke()
-  }
+  swirlArms(ctx, w * 0.5, h * 0.5, sx, t * 0.35 + 1, 8)
 }
 
-function drawBones(ctx: Ctx, w: number, h: number, sx: number, sy: number, t: number, color: string): void {
-  const cx = w * 0.5
-  const cy = h * 0.5
+function drawBones(ctx: Ctx, w: number, h: number, sp: OverlaySpace, t: number, color: string): void {
+  const shade = withAlpha(color, 0.55)
   for (const bn of bones) {
-    const x = cx + Math.cos(bn.angle) * bn.radius * sx
-    const y = cy + Math.sin(bn.angle) * bn.radius * sy
+    const p = framePoint(bn.u, bn.inset)
     const bob = Math.sin(t * 1.6 + bn.phase) * 0.6
+    const size = bn.size * sp.sx
     ctx.save()
-    ctx.translate(x, y + bob * sy)
-    ctx.rotate(bn.angle + Math.PI * 0.5 + Math.sin(t + bn.phase) * 0.2)
+    ctx.translate(w * 0.5 + (p.x - 50) * sp.sx, h * 0.5 + (p.y - 50 + bob) * sp.sy)
+    ctx.rotate(p.angle + Math.sin(t + bn.phase) * 0.2)
     ctx.fillStyle = props.fill.bone
-    if (bn.skull) skullShape(ctx, bn.size * sx, color)
-    else boneShape(ctx, bn.size * sx)
-    ctx.fillStyle = withAlpha(color, 0.55)
-    ctx.fillRect(-bn.size * 1.3 * sx, bn.size * sx * (0.1 + bob * 0.2), bn.size * 2.6 * sx, bn.size * 2 * sx)
+    if (bn.skull) skullShape(ctx, size, color)
+    else boneShape(ctx, size)
+    ctx.fillStyle = shade
+    ctx.fillRect(-size * 1.3, size * (0.1 + bob * 0.2), size * 2.6, size * 2)
     ctx.restore()
   }
 }
 
-function drawBubbles(ctx: Ctx, toX: (u: number) => number, toY: (u: number) => number, sx: number, color: string): void {
-  for (const b of bubbles) drawBubble(ctx, toX(b.x), toY(b.y), b.r * sx, b.pop, 0.6 * sx, color)
-}
-
-function drawDrops(ctx: Ctx, toX: (u: number) => number, toY: (u: number) => number, sx: number, color: string): void {
-  for (const r of rings) {
-    const u = r.age / 1.2
-    ctx.strokeStyle = withAlpha(lighten(color, 0.5), 0.7 * (1 - u))
-    ctx.lineWidth = Math.max(0.8, (2 - u * 1.5) * sx)
+function drawDrops(ctx: Ctx, sp: OverlaySpace, ink: BrewInk): void {
+  ctx.strokeStyle = ink.ring
+  for (const r of brew.rings) {
+    const u = r.age / RING_S
+    ctx.globalAlpha = 0.7 * (1 - u)
+    ctx.lineWidth = Math.max(0.8, (2 - u * 1.5) * sp.sx)
     ctx.beginPath()
-    ctx.ellipse(toX(r.x), toY(r.y), (3 + u * 26) * sx, (1.5 + u * 12) * sx, 0, 0, Math.PI * 2)
+    ctx.ellipse(sp.toX(r.x), sp.toY(r.y), (3 + u * 26) * sp.sx, (1.5 + u * 12) * sp.sx, 0, 0, Math.PI * 2)
     ctx.stroke()
   }
-  for (const d of drops) {
-    const sink = d.splash >= 0 ? d.splash / 0.9 : 0
+  ctx.globalAlpha = 1
+  for (const d of brew.drops) {
+    const sink = d.splash >= 0 ? d.splash / SINK_S : 0
     ctx.save()
-    ctx.translate(toX(d.x), toY(d.y) + sink * 6 * sx)
+    ctx.translate(sp.toX(d.x), sp.toY(d.y) + sink * 6 * sp.sx)
     ctx.globalAlpha = 1 - sink
     ctx.rotate(sink * 1.2)
-    drawIngredient(ctx, d.kind, 3.2 * sx)
+    drawIngredient(ctx, d.kind, 3.2 * sp.sx, d.color, props.fill.bone)
     ctx.restore()
   }
+}
+
+function drawVignette(ctx: Ctx, w: number, h: number): void {
+  if (!vignette) {
+    vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.2, w * 0.5, h * 0.5, Math.max(w, h) * 0.75)
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)')
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.25)')
+  }
+  ctx.fillStyle = vignette
+  ctx.fillRect(0, 0, w, h)
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
@@ -206,27 +156,28 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 useElementCanvas(canvasRef, {
   init(_w, _h, now) {
     last = now
-    clock = 0
-    seed()
+  },
+  resize() {
+    vignette = null
   },
   draw(ctx, w, h, now, reduced) {
     const dt = frameDelta(now, last, reduced)
     last = now
-    if (!reduced) step(dt)
-    const t = reduced ? 3 : clock
-    const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
-    const color = liquid()
+    if (!reduced) {
+      stepBrew(brew, dt, rules)
+      for (const bn of bones) bn.u += bn.speed * dt
+    }
+    const t = reduced ? STATIC_T : brew.clock
+    const sp = overlaySpace(w, h, MARGIN)
+    const color = brewLiquid(brew)
+    const ink = brewInk(color)
     ctx.fillStyle = color
     ctx.fillRect(0, 0, w, h)
-    const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.2, w * 0.5, h * 0.5, Math.max(w, h) * 0.75)
-    vignette.addColorStop(0, withAlpha(darken(color, 0.5), 0))
-    vignette.addColorStop(1, withAlpha(darken(color, 0.5), 0.5))
-    ctx.fillStyle = vignette
-    ctx.fillRect(0, 0, w, h)
-    drawSwirl(ctx, w, h, sx, t, color)
-    drawBones(ctx, w, h, sx, sy, t, color)
-    drawBubbles(ctx, toX, toY, sx, color)
-    drawDrops(ctx, toX, toY, sx, color)
+    drawVignette(ctx, w, h)
+    drawSwirl(ctx, w, h, sp.sx, t, color)
+    drawBones(ctx, w, h, sp, t, color)
+    for (const b of brew.bubbles) drawBubble(ctx, sp.toX(b.x), sp.toY(b.y), b.r * sp.sx, b.pop, 0.6 * sp.sx, ink)
+    drawDrops(ctx, sp, ink)
   },
 })
 </script>

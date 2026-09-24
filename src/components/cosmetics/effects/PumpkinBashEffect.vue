@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useEffectCanvas, type EffectFrame } from '@/composables/useEffectCanvas'
+import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
+import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/api/items'
-import { activeEvents, asNumber, asString, easeOut, isFieldKey, padBox, pctSize, ringAt, ringGeometry, type ContentBox, type EffectMeasure, type Vec } from '@/utils/cosmetics/effects'
+import { activeEvents, asColor, asNumber, boxRing, easeOut, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { lerpHex } from '@/utils/color'
 import { hash01 } from '@/utils/random'
@@ -20,24 +21,20 @@ interface BashConfig {
   dark: string
   stem: string
   splat: string
-  seed: string
+  pip: string
   intervalSecs: number
-  sizePct: number
-  minPx: number
-  maxPx: number
+  size: PctSizing
 }
 
 function readBash(c: Composition): BashConfig {
   return {
-    color: asString(c.color) ?? '#e8781e',
-    dark: asString(c.dark) ?? '#b4531a',
-    stem: asString(c.stem) ?? '#5a7a2e',
-    splat: asString(c.splat) ?? '#f4933a',
-    seed: asString(c.seed) ?? '#f3dfa8',
+    color: asColor(c.color),
+    dark: asColor(c.dark),
+    stem: asColor(c.stem),
+    splat: asColor(c.splat),
+    pip: asColor(c.pip),
     intervalSecs: Math.max(1.5, asNumber(c.intervalSecs) ?? 4),
-    sizePct: Math.max(5, Math.min(60, asNumber(c.sizePct) ?? 26)),
-    minPx: Math.max(6, asNumber(c.minPx) ?? 10),
-    maxPx: Math.max(10, asNumber(c.maxPx) ?? 90),
+    size: readPctSizing(c, 'sizePct', [5, 26, 60], [6, 10], [10, 90]),
   }
 }
 
@@ -51,46 +48,53 @@ interface Throw {
 const FLIGHT = 0.45
 const SPLAT = 3.6
 const LIFE = FLIGHT + SPLAT
+const THROW_REACH = 1.8
+const DRY_STEPS = 16
+const LOBES: Array<[number, number]> = [[-0.2, 0.2], [0.2, 0.2], [0, 0.19]]
 
 const cfg = computed(() => readBash(props.composition))
-const isTitle = computed(() => props.measure.typeKey === 'title')
-const field = computed(() => isFieldKey(props.measure.typeKey))
+const { isTitle, field } = useEffectSurface(() => props.measure)
 
 const size = computed(() => {
   const box = props.measure.box
   if (isTitle.value) return Math.max(6, box.h * 0.9)
-  return pctSize(Math.min(box.w, box.h), cfg.value.sizePct, cfg.value.minPx, cfg.value.maxPx)
+  return pctSize(Math.min(box.w, box.h), cfg.value.size)
 })
 
-const pad = computed(() => Math.round(size.value * 2.8))
+const pad = computed(() => (field.value ? 0 : Math.round(size.value * 2)))
 
-const ring = computed(() => ringGeometry(props.measure, padBox(props.measure.box, pad.value)))
+const dryRamp = computed(() => {
+  const c = cfg.value
+  return Array.from({ length: DRY_STEPS + 1 }, (_, i) => {
+    const dry = i / DRY_STEPS
+    return { base: lerpHex(c.splat, c.dark, dry * 0.6), pulp: lerpHex(c.color, c.dark, dry * 0.45) }
+  })
+})
 
-function throwFor(seed: number, box: ContentBox, D: number): Throw {
+function aimFrom(start: Vec, target: Vec, spin: number): Throw {
+  const d = Math.hypot(start.x - target.x, start.y - target.y) || 1
+  return { start, target, out: { x: (start.x - target.x) / d, y: (start.y - target.y) / d }, spin }
+}
+
+function throwFor(seed: number, box: ContentBox, ring: RingGeometry, D: number): Throw {
   const spin = (hash01(seed + 9) > 0.5 ? 1 : -1) * (6 + hash01(seed + 10) * 4)
   if (isTitle.value) {
     const tx = box.x + box.w * (0.1 + hash01(seed + 1) * 0.8)
     const side = hash01(seed + 2) > 0.5 ? 1 : -1
-    const target = { x: tx, y: box.y + box.h * 0.55 }
-    const start = { x: tx - side * D * 1.6, y: box.y - D * 2.2 }
-    const d = Math.hypot(start.x - target.x, start.y - target.y) || 1
-    return { start, target, out: { x: (start.x - target.x) / d, y: (start.y - target.y) / d }, spin }
+    return aimFrom({ x: tx - side * D * 1.6, y: box.y - D * THROW_REACH }, { x: tx, y: box.y + box.h * 0.55 }, spin)
   }
   if (field.value) {
-    const target = { x: box.x + box.w * (0.1 + hash01(seed + 1) * 0.8), y: box.y + box.h * (0.1 + hash01(seed + 2) * 0.8) }
-    const edge = Math.floor(hash01(seed + 3) * 4)
+    const wall = boxRing(box)
+    const edge = ringAt(wall, hash01(seed + 3) * wall.total)
+    const depth = (0.1 + hash01(seed + 2) * 0.8) * (Math.abs(edge.n.x) * box.w + Math.abs(edge.n.y) * box.h)
     const drift = (hash01(seed + 4) - 0.5) * D * 3
-    const start = edge === 0 ? { x: target.x + drift, y: box.y - D * 2.2 }
-      : edge === 1 ? { x: box.x + box.w + D * 2.2, y: target.y + drift }
-        : edge === 2 ? { x: target.x + drift, y: box.y + box.h + D * 2.2 }
-          : { x: box.x - D * 2.2, y: target.y + drift }
-    const d = Math.hypot(start.x - target.x, start.y - target.y) || 1
-    return { start, target, out: { x: (start.x - target.x) / d, y: (start.y - target.y) / d }, spin }
+    const target = { x: edge.p.x - edge.n.x * depth, y: edge.p.y - edge.n.y * depth }
+    const start = { x: edge.p.x + edge.n.x * D * 2.2 + edge.t.x * drift, y: edge.p.y + edge.n.y * D * 2.2 + edge.t.y * drift }
+    return aimFrom(start, target, spin)
   }
-  const band = ring.value.band
-  const hit = ringAt(band, hash01(seed + 1) * band.total)
+  const hit = ringAt(ring.band, hash01(seed + 1) * ring.band.total)
   const out = hit.n
-  return { start: { x: hit.p.x + out.x * D * 2.3, y: hit.p.y + out.y * D * 2.3 }, target: hit.p, out, spin }
+  return { start: { x: hit.p.x + out.x * D * THROW_REACH, y: hit.p.y + out.y * D * THROW_REACH }, target: hit.p, out, spin }
 }
 
 function drawPumpkin(g: Ctx, x: number, y: number, D: number, rot: number) {
@@ -103,7 +107,7 @@ function drawPumpkin(g: Ctx, x: number, y: number, D: number, rot: number) {
   g.ellipse(0, 0, D * 0.5, D * 0.42, 0, 0, Math.PI * 2)
   g.fill()
   g.fillStyle = c.color
-  for (const [ox, rx] of [[-0.2, 0.2], [0.2, 0.2], [0, 0.19]] as Array<[number, number]>) {
+  for (const [ox, rx] of LOBES) {
     g.beginPath()
     g.ellipse(ox * D, 0, rx * D, D * 0.39, 0, 0, Math.PI * 2)
     g.fill()
@@ -144,11 +148,11 @@ interface SplatLook {
 }
 
 function splatLook(tau: number): SplatLook {
-  const c = cfg.value
   const dry = Math.max(0, Math.min(1, (tau - 1.6) / 1.4))
+  const tone = dryRamp.value[Math.round(dry * DRY_STEPS)] ?? dryRamp.value[0]
   return {
-    base: lerpHex(c.splat, c.dark, dry * 0.6),
-    pulp: lerpHex(c.color, c.dark, dry * 0.45),
+    base: tone?.base ?? cfg.value.splat,
+    pulp: tone?.pulp ?? cfg.value.color,
     alpha: tau > SPLAT - 0.6 ? Math.max(0, (SPLAT - tau) / 0.6) : 1,
     dry,
   }
@@ -186,7 +190,7 @@ function drawStain(g: Ctx, t: Vec, R: number, seed: number, look: SplatLook) {
   }
 }
 
-function drawSeeds(g: Ctx, t: Vec, R: number, seed: number, look: SplatLook) {
+function drawPips(g: Ctx, t: Vec, R: number, seed: number, look: SplatLook) {
   g.globalAlpha = look.alpha
   for (let i = 0; i < 6; i++) {
     const s = seed + 120 + i * 11
@@ -197,7 +201,7 @@ function drawSeeds(g: Ctx, t: Vec, R: number, seed: number, look: SplatLook) {
     g.save()
     g.translate(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d)
     g.rotate(rot)
-    g.fillStyle = cfg.value.seed
+    g.fillStyle = cfg.value.pip
     g.beginPath()
     g.moveTo(-rx, 0)
     g.quadraticCurveTo(0, -rx * 0.75, rx, 0)
@@ -248,7 +252,7 @@ function drawSplat(g: Ctx, th: Throw, tau: number, D: number, seed: number) {
   const look = splatLook(tau)
   const R = D * 0.75 * easeOut(tau / 0.12) * (1 - look.dry * 0.08)
   drawStain(g, th.target, R, seed, look)
-  drawSeeds(g, th.target, R, seed, look)
+  drawPips(g, th.target, R, seed, look)
   drawDrips(g, th.target, R, tau, D, seed, look)
   if (tau < 0.9) drawChunks(g, th, tau, D, seed)
   g.globalAlpha = 1
@@ -275,12 +279,12 @@ function drawChunks(g: Ctx, th: Throw, tau: number, D: number, seed: number) {
   }
 }
 
-function drawFrame(f: EffectFrame) {
+function drawFrame(f: EffectFrame): boolean {
   const D = size.value
   const seed0 = props.measure.stack * 101 + 23
-  const events = f.reduced ? [{ k: 0, age: FLIGHT + 0.6, seed: seed0 }] : activeEvents(f.t, cfg.value.intervalSecs, LIFE, seed0)
+  const events = f.reduced ? [{ age: FLIGHT + 0.6, seed: seed0 }] : activeEvents(f.t, cfg.value.intervalSecs, LIFE, seed0)
   for (const ev of events) {
-    const th = throwFor(ev.seed, f.box, D)
+    const th = throwFor(ev.seed, f.box, f.ring, D)
     if (ev.age < FLIGHT) {
       const u = ev.age / FLIGHT
       const px = th.start.x + (th.target.x - th.start.x) * u - th.out.y * Math.sin(Math.PI * u) * D * 0.5
@@ -290,29 +294,10 @@ function drawFrame(f: EffectFrame) {
       drawSplat(f.g, th, ev.age - FLIGHT, D, ev.seed)
     }
   }
+  return events.length > 0
 }
-
-const { canvasRef, canvasStyle } = useEffectCanvas(() => props.measure, () => pad.value, drawFrame)
 </script>
 
 <template>
-  <div class="comp-fx-region">
-    <canvas ref="canvasRef" class="comp-fx-canvas" :style="canvasStyle" aria-hidden="true"></canvas>
-  </div>
+  <EffectCanvas :measure="measure" :pad="pad" :draw="drawFrame" />
 </template>
-
-<style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.comp-fx-canvas {
-  position: absolute;
-  display: block;
-  max-width: none;
-  max-height: none;
-}
-</style>

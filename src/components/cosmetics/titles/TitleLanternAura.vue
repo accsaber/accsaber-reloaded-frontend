@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleLanternAuraSpec } from '@/types/api/items'
+import type { TitleLanternAuraSpec, TitleLanternSpec } from '@/types/api/items'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
@@ -10,6 +10,7 @@ import { useTemplateRef } from 'vue'
 const props = defineProps<{
   aura: TitleLanternAuraSpec
   light: boolean
+  lantern?: TitleLanternSpec
 }>()
 
 interface Ember {
@@ -73,7 +74,7 @@ useElementCanvas(canvasRef, {
     ctx.clearRect(0, 0, w, h)
     if (!rect) return
     const t = reduced ? STATIC_T : now / 1000
-    const level = reduced ? 0.85 : lanternLevel(t, 0, props.aura)
+    const level = reduced ? 0.85 : lanternLevel(t, 0, props.lantern)
     ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     drawGlow(ctx, rect, level)
     if (!reduced) drawEmbers(ctx, rect, t, level)

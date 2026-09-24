@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { anchorCrack, bitePath, crackPath, wearBites, wearCracks, type WearSpec } from '@/utils/cosmetics/wear'
-import { computed, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, useId, useTemplateRef } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -14,8 +14,7 @@ const props = withDefaults(
 const FILL_WEAR = { band: 0, crack: 1, bite: 1, reach: 1 }
 const INTRINSIC_WEAR = { band: 0.22, crack: 3, bite: 2, reach: 2.2 }
 
-let counter = 0
-const maskId = `worn-${++counter}-${Math.random().toString(36).slice(2, 8)}`
+const maskId = `worn-${useId()}`
 
 const baseEl = useTemplateRef<HTMLElement>('base')
 const size = ref({ w: 0, h: 0, px: 0, py: 0 })
@@ -72,9 +71,9 @@ const maskStyle = computed(() =>
     <svg v-if="spec && measured" class="worn-content__defs" aria-hidden="true">
       <defs>
         <mask :id="maskId" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox" x="0" y="0" width="1" height="1">
-          <rect x="0" y="0" width="1" height="1" fill="#ffffff" />
+          <rect x="0" y="0" width="1" height="1" fill="white" />
           <g :transform="maskTransform">
-            <path v-for="(d, i) in maskPaths" :key="i" :d="d" fill="#000000" />
+            <path v-for="(d, i) in maskPaths" :key="i" :d="d" fill="black" />
           </g>
         </mask>
       </defs>

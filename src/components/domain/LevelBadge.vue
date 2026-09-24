@@ -122,6 +122,7 @@ const fallbackTitleStyle = computed(() => {
         class="level-badge__overlay"
         :overlay="overlay"
         :avatar-url="avatarUrl"
+        :avatar-mask="avatarMaskPath"
         :color="equippedBorderColor ?? null"
       />
       <ModifierCompositions

@@ -1,11 +1,14 @@
 import type { TitleBleedSpec, TitleDevourSpec, TitleFlareSpec, TitleGalaxySpec, TitleGustSpec, TitlePixieSpec, TitleQuakeSpec, TitleRippleSpec, TitleSearSpec, TitleShockSpec } from '@/types/api/items'
 import { lerpHex } from '@/utils/color'
+import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { pickVariant as pick } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
 
 type Style = Record<string, string>
 
-function pick(light: boolean, lightValue: string | undefined, value: string | undefined, fallback: string): string {
-  return (light ? lightValue : undefined) ?? value ?? fallback
+export function heartbeat(tSec: number, bpm: number): number {
+  const u = ((tSec * bpm) / 60) % 1
+  return Math.max(Math.max(0, 1 - Math.abs(u - 0.1) / 0.12), Math.max(0, 1 - Math.abs(u - 0.32) / 0.14) * 0.6)
 }
 
 function easeOut(u: number): number {
@@ -86,6 +89,7 @@ export function rippleCharStyle(tMs: number, i: number, n: number, spec: TitleRi
   const interval = spec.intervalMs ?? 5000
   const deep = pick(light, spec.lightDeep, spec.deep, '#3b82f6')
   const shallow = pick(light, spec.lightShallow, spec.shallow, '#bae6fd')
+  const glint = pick(light, spec.lightGlint, spec.glint, shallow)
   const phase = (tMs / period) * Math.PI * 2 - i * 0.9
   const wave = Math.sin(phase)
   let dy = wave * amp
@@ -99,7 +103,7 @@ export function rippleCharStyle(tMs: number, i: number, n: number, spec: TitleRi
     const dip = Math.sin(u * Math.PI) * Math.exp(-u * 2)
     dy += dip * 0.35
     sy *= 1 - dip * 0.25
-    shadow = `0 -0.1em 0.25em rgba(255,255,255,${(0.6 * dip).toFixed(2)})`
+    shadow = `0 -0.1em 0.25em ${withAlpha(glint, 0.6 * dip)}`
   }
   return {
     color: lerpHex(deep, shallow, 0.5 + 0.5 * wave),
@@ -115,7 +119,7 @@ export function pixieCharStyle(tMs: number, i: number, n: number, spec: TitlePix
   const pos = tMs / 900 + i * 0.7
   const idx = Math.floor(pos) % colors.length
   const next = (idx + 1) % colors.length
-  const color = lerpHex(colors[idx] ?? '#f9a8d4', colors[next] ?? '#a7f3d0', pos % 1)
+  const color = lerpHex(colors[idx], colors[next], pos % 1)
   const cycle = Math.floor(tMs / interval)
   const victim = Math.floor(hash01(cycle * 17 + 9) * n)
   const local = (tMs % interval) - interval * 0.5
@@ -140,8 +144,7 @@ export function bleedCharStyle(tMs: number, i: number, n: number, spec: TitleBle
   const blood = pick(light, spec.lightBlood, spec.blood, '#b91c1c')
   const bpm = spec.bpm ?? 56
   const interval = spec.intervalMs ?? 7000
-  const u = ((tMs / 1000) * bpm / 60) % 1
-  const beat = Math.max(Math.max(0, 1 - Math.abs(u - 0.1) / 0.12), Math.max(0, 1 - Math.abs(u - 0.32) / 0.14) * 0.6)
+  const beat = heartbeat(tMs / 1000, bpm)
   const scale = 1 + beat * 0.07
   const cycle = Math.floor(tMs / interval)
   const victim = Math.floor(hash01(cycle * 23 + 3) * n)
@@ -168,9 +171,9 @@ export function galaxyCharStyle(tMs: number, i: number, n: number, spec: TitleGa
   const colors = (light ? spec.lightColors : undefined) ?? spec.colors ?? ['#c4b5fd', '#60a5fa', '#f0abfc']
   const interval = spec.intervalMs ?? 6000
   const t = tMs / 1000
-  const a = colors[i % colors.length] ?? '#c4b5fd'
-  const b = colors[(i + 1) % colors.length] ?? '#60a5fa'
-  const c = colors[(i + 2) % colors.length] ?? '#f0abfc'
+  const a = colors[i % colors.length]
+  const b = colors[(i + 1) % colors.length]
+  const c = colors[(i + 2) % colors.length]
   const pos = ((t * 18 + i * 37) % 200)
   const tw = 0.85 + 0.15 * Math.sin(t * 3 + i * 1.3)
   const cycle = Math.floor(tMs / interval)
@@ -195,6 +198,7 @@ export function galaxyCharStyle(tMs: number, i: number, n: number, spec: TitleGa
 
 export function flareCharStyle(tMs: number, i: number, n: number, spec: TitleFlareSpec, light: boolean, base: string): Style {
   const color = pick(light, spec.lightColor, spec.color, '#fff3c4')
+  const core = pick(light, spec.lightCore, spec.core, color)
   const interval = spec.intervalMs ?? 6000
   const t = tMs / 1000
   const halo = 0.15 + 0.1 * Math.sin(t * 1.3 + i * 0.5)
@@ -203,7 +207,7 @@ export function flareCharStyle(tMs: number, i: number, n: number, spec: TitleFla
   let k = 0
   if (local >= delay && local < delay + 700) k = Math.sin(((local - delay) / 700) * Math.PI)
   return {
-    color: lerpHex(base, '#ffffff', k),
+    color: lerpHex(base, core, k),
     textShadow: `0 0 ${(halo + 0.6 * k).toFixed(2)}em ${color}${k > 0.3 ? `, 0 0 ${(1.2 * k).toFixed(2)}em ${color}` : ''}`,
     transform: `scale(${(1 + k * 0.12).toFixed(3)})`,
   }
@@ -211,7 +215,8 @@ export function flareCharStyle(tMs: number, i: number, n: number, spec: TitleFla
 
 export function devourCharStyle(tMs: number, i: number, n: number, spec: TitleDevourSpec, light: boolean): Style {
   const interval = spec.intervalMs ?? 8000
-  const dark = light ? '#1a0b2e' : '#05030a'
+  const dark = pick(light, spec.lightDark, spec.dark, '#05030a')
+  const edge = pick(light, spec.lightEdge, spec.edge, dark)
   const cycle = Math.floor(tMs / interval)
   const fromLeft = hash01(cycle * 31 + 11) < 0.5
   const order = fromLeft ? i : n - 1 - i
@@ -231,12 +236,15 @@ export function devourCharStyle(tMs: number, i: number, n: number, spec: TitleDe
     transform: `scale(${(1 - e).toFixed(3)}) rotate(${(e * 200).toFixed(1)}deg) translateY(${(e * 0.3).toFixed(3)}em)`,
     opacity: (1 - e * 0.85).toFixed(3),
     color: dark,
-    textShadow: e > 0.1 && e < 0.95 ? `0 0 ${(0.25 * e).toFixed(2)}em #a78bfa` : 'none',
+    textShadow: e > 0.1 && e < 0.95 ? `0 0 ${(0.25 * e).toFixed(2)}em ${edge}` : 'none',
   }
 }
 
 export function shockCharStyle(tMs: number, i: number, n: number, spec: TitleShockSpec, light: boolean, base: string): Style {
   const arc = pick(light, spec.lightArc, spec.arc, '#dbeafe')
+  const flashColor = pick(light, spec.lightFlash, spec.flash, arc)
+  const splitA = pick(light, spec.lightSplitA, spec.splitA, arc)
+  const splitB = pick(light, spec.lightSplitB, spec.splitB, arc)
   const interval = spec.intervalMs ?? 4200
   const c = (tMs % interval) / interval
   const charge = Math.pow(c, 3)
@@ -247,8 +255,8 @@ export function shockCharStyle(tMs: number, i: number, n: number, spec: TitleSho
   const after = c < 0.12 ? 1 - c / 0.12 : 0
   const flash = Math.max(strike, after * (0.4 + 0.6 * (hash01(Math.floor(tMs / 30) + i) < 0.7 ? 1 : 0)))
   const glow = 0.08 + 0.18 * charge + 0.6 * flash
-  const color = flash > 0 ? lerpHex(base, '#ffffff', Math.min(1, flash * 1.2)) : lerpHex(base, arc, crackle ? 0.6 : 0)
-  const split = flash > 0.3 ? `, -0.04em 0 0 rgba(96,165,250,${(0.7 * flash).toFixed(2)}), 0.04em 0 0 rgba(244,114,182,${(0.5 * flash).toFixed(2)})` : ''
+  const color = flash > 0 ? lerpHex(base, flashColor, Math.min(1, flash * 1.2)) : lerpHex(base, arc, crackle ? 0.6 : 0)
+  const split = flash > 0.3 ? `, -0.04em 0 0 ${withAlpha(splitA, 0.7 * flash)}, 0.04em 0 0 ${withAlpha(splitB, 0.5 * flash)}` : ''
   const jolt = strike > 0 ? -0.06 * strike : 0
   return {
     color,
@@ -260,6 +268,7 @@ export function shockCharStyle(tMs: number, i: number, n: number, spec: TitleSho
 export function searCharStyle(tMs: number, i: number, n: number, spec: TitleSearSpec, light: boolean, base: string): Style {
   const hot = pick(light, spec.lightHot, spec.hot, '#fff3c4')
   const ember = pick(light, spec.lightEmber, spec.ember, '#7c2d12')
+  const core = pick(light, spec.lightCore, spec.core, hot)
   const interval = spec.intervalMs ?? 6000
   const t = tMs / 1000
   const heat = 0.5 + 0.5 * Math.sin(t * 2.4 + i * 0.9) * Math.sin(t * 1.1 + i * 0.4)
@@ -274,7 +283,7 @@ export function searCharStyle(tMs: number, i: number, n: number, spec: TitleSear
     flare = u < 0.25 ? Math.sin((u / 0.25) * Math.PI * 0.5) : Math.max(0, 1 - (u - 0.25) / 0.35)
     cool = u > 0.5 ? Math.sin(((u - 0.5) / 0.5) * Math.PI) : 0
   }
-  const color = cool > 0 ? lerpHex(base, ember, cool) : lerpHex(lerpHex(base, hot, heat * 0.35), '#ffffff', flare)
+  const color = cool > 0 ? lerpHex(base, ember, cool) : lerpHex(lerpHex(base, hot, heat * 0.35), core, flare)
   return {
     color,
     transform: `translateY(${(-shimmer).toFixed(3)}em) scale(${(1 + flare * 0.16).toFixed(3)})`,

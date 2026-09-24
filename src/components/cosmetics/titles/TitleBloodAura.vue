@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleBloodAuraSpec } from '@/types/api/items'
+import type { TitleBleedSpec, TitleBloodAuraSpec } from '@/types/api/items'
 import { lighten } from '@/utils/color'
 import { drawCreature } from '@/utils/cosmetics/eclipseCreatures'
-import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { heartbeat } from '@/utils/cosmetics/titleSchools'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
@@ -11,6 +12,7 @@ import { computed, useTemplateRef } from 'vue'
 const props = defineProps<{
   aura: TitleBloodAuraSpec
   light: boolean
+  bleed?: TitleBleedSpec
 }>()
 
 const palette = computed(() => ({
@@ -20,6 +22,7 @@ const palette = computed(() => ({
 }))
 
 const DRIP_TOP = 0.74
+const FLOOR = 1.9
 
 interface Drop {
   x: number
@@ -42,15 +45,7 @@ let nextDrop = 0
 let last = 0
 let clock = 0
 
-function heartbeat(t: number): number {
-  const bpm = props.aura.bpm ?? 56
-  const u = (t * bpm / 60) % 1
-  const a = Math.max(0, 1 - Math.abs(u - 0.1) / 0.12)
-  const b = Math.max(0, 1 - Math.abs(u - 0.32) / 0.14) * 0.6
-  return Math.max(a, b)
-}
-
-function stepDrops(dt: number, r: TitleAuraRect): void {
+function stepDrops(dt: number): void {
   if (clock >= nextDrop) {
     const burst = rand(0, 1) < 0.3 ? 2 : 1
     for (let k = 0; k < burst; k++) drops.push({ x: rand(0.04, 0.96), born: clock, bead: rand(0.3, 1.2), r: rand(0.07, 0.14), vy: 0, y: 0 })
@@ -61,13 +56,13 @@ function stepDrops(dt: number, r: TitleAuraRect): void {
     d.vy += 9 * dt
     d.y += d.vy * dt
   }
-  const floor = 1.9
+  let kept = 0
   for (const d of drops) {
-    if (d.y >= floor) splats.push({ x: d.x, born: clock })
+    if (d.y >= FLOOR) splats.push({ x: d.x, born: clock })
+    else drops[kept++] = d
   }
-  drops = drops.filter((d) => d.y < floor)
-  splats = splats.filter((s) => clock - s.born < 0.8)
-  void r
+  drops.length = kept
+  if (splats.length && clock - splats[0].born >= 0.8) splats = splats.filter((s) => clock - s.born < 0.8)
 }
 
 function drawDrop(ctx: CanvasRenderingContext2D, d: Drop, r: TitleAuraRect): void {
@@ -101,7 +96,7 @@ function drawSplats(ctx: CanvasRenderingContext2D, r: TitleAuraRect): void {
   for (const s of splats) {
     const u = (clock - s.born) / 0.8
     const x = r.x + r.w * s.x
-    const y = r.y + r.h * DRIP_TOP + 1.9 * r.fs
+    const y = r.y + r.h * DRIP_TOP + FLOOR * r.fs
     ctx.fillStyle = withAlpha(palette.value.color, 0.7 * (1 - u))
     ctx.beginPath()
     ctx.ellipse(x, y, r.fs * (0.08 + u * 0.22), r.fs * (0.025 + u * 0.05), 0, 0, Math.PI * 2)
@@ -140,10 +135,10 @@ useElementCanvas(canvasRef, {
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
     if (!rect) return
-    const dt = reduced ? 0 : Math.min(0.05, (now - last) / 1000)
+    const dt = frameDelta(now, last, reduced)
     last = now
     clock = reduced ? 3 : clock + dt
-    const beat = heartbeat(clock)
+    const beat = heartbeat(clock, props.bleed?.bpm ?? 56)
     const cx = rect.x + rect.w / 2
     const cy = rect.y + rect.h / 2
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rect.w * 0.55 + rect.fs * 0.5)
@@ -151,7 +146,7 @@ useElementCanvas(canvasRef, {
     g.addColorStop(1, withAlpha(palette.value.glow, 0))
     ctx.fillStyle = g
     ctx.fillRect(0, 0, w, h)
-    if (!reduced) stepDrops(dt, rect)
+    if (!reduced) stepDrops(dt)
     else if (drops.length === 0) drops = [{ x: 0.3, born: 0, bead: 1, r: 0.07, vy: 2, y: 0.5 }, { x: 0.7, born: 0, bead: 1, r: 0.06, vy: 0, y: 0 }]
     for (const d of drops) drawDrop(ctx, d, rect)
     drawSplats(ctx, rect)

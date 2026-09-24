@@ -187,10 +187,9 @@ export interface TitleHazeAuraSpec {
 export interface TitleCoronaAuraSpec {
   type: 'corona'
   enabled: boolean
-  intervalS?: number
-  color?: string
+  color: string
   lightColor?: string
-  prominence?: string
+  prominence: string
   streamers?: number
   streamerLen?: number
   prominences?: number
@@ -206,8 +205,6 @@ export interface TitleLanternAuraSpec {
   lightGlow?: string
   lightCore?: string
   embers?: number
-  gutterEveryS?: number
-  gutterS?: number
 }
 
 export interface TitleGhostsAuraSpec {
@@ -302,6 +299,8 @@ export interface TitleFairyAuraSpec {
   enabled: boolean
   colors?: string[]
   lightColors?: string[]
+  spark?: string
+  lightSpark?: string
   count?: number
 }
 
@@ -315,7 +314,6 @@ export interface TitleBloodAuraSpec {
   bat?: string
   lightBat?: string
   bats?: number
-  bpm?: number
 }
 
 export interface TitleCosmicAuraSpec {
@@ -334,6 +332,8 @@ export interface TitleLightAuraSpec {
   enabled: boolean
   color?: string
   lightColor?: string
+  flare?: string
+  lightFlare?: string
 }
 
 export interface TitleVoidAuraSpec {
@@ -364,7 +364,8 @@ export interface TitleIceAuraSpec {
   ice?: string
   lightFrost?: string
   lightIce?: string
-  intervalMs?: number
+  snow?: string
+  lightSnow?: string
 }
 
 export interface TitleSpotlightAuraSpec {
@@ -621,12 +622,10 @@ export interface TitleRuneSpec {
 
 export interface TitleEclipseSpec {
   enabled: boolean
-  intervalS?: number
-  dark?: string
-  lightDark?: string
-  corona?: string
+  dark: string
+  corona: string
   lightCorona?: string
-  bead?: string
+  bead: string
   annular?: boolean
 }
 
@@ -653,7 +652,7 @@ export interface TitleBrewIngredient {
 export interface TitleBrewSpec {
   enabled: boolean
   ingredients: TitleBrewIngredient[]
-  bone?: string
+  bone: string
   bubbles?: number
   dropMinS?: number
   dropMaxS?: number
@@ -683,6 +682,8 @@ export interface TitleRippleSpec {
   shallow?: string
   lightDeep?: string
   lightShallow?: string
+  glint?: string
+  lightGlint?: string
   ampEm?: number
   periodMs?: number
   intervalMs?: number
@@ -714,11 +715,17 @@ export interface TitleFlareSpec {
   enabled: boolean
   color?: string
   lightColor?: string
+  core?: string
+  lightCore?: string
   intervalMs?: number
 }
 
 export interface TitleDevourSpec {
   enabled: boolean
+  dark?: string
+  lightDark?: string
+  edge?: string
+  lightEdge?: string
   intervalMs?: number
 }
 
@@ -728,6 +735,8 @@ export interface TitleSearSpec {
   ember?: string
   lightHot?: string
   lightEmber?: string
+  core?: string
+  lightCore?: string
   intervalMs?: number
 }
 
@@ -735,6 +744,12 @@ export interface TitleShockSpec {
   enabled: boolean
   arc?: string
   lightArc?: string
+  flash?: string
+  lightFlash?: string
+  splitA?: string
+  lightSplitA?: string
+  splitB?: string
+  lightSplitB?: string
   intervalMs?: number
 }
 
@@ -1103,13 +1118,14 @@ export type CoffinMaterial = 'oak' | 'iron' | 'stone' | 'glass'
 export interface BorderCoffinOverlaySpec {
   type: 'coffin'
   enabled: boolean
-  material?: CoffinMaterial
-  lid?: string
-  trim?: string
-  seam?: string
-  soil?: string
-  root?: string
-  bone?: string
+  material: CoffinMaterial
+  lid: string
+  trim: string
+  seam: string
+  soil: string
+  root: string
+  bone: string
+  rust?: string
   intervalMs?: number
   holdMs?: number
   hover?: boolean
@@ -1142,7 +1158,7 @@ export interface BorderDryBonesOverlaySpec {
 export interface BorderDripOverlaySpec {
   type: 'drip'
   enabled: boolean
-  color?: string
+  color: string
   sources: { x: number; y: number }[]
   minIntervalMs?: number
   maxIntervalMs?: number
@@ -1152,17 +1168,15 @@ export interface BorderDripOverlaySpec {
 export interface BorderUmbraOverlaySpec {
   type: 'umbra'
   enabled: boolean
-  intervalS?: number
-  moon?: string
-  corona?: string
-  prominence?: string
+  moon: string
+  corona: string
+  prominence: string
   streamers?: number
   streamerLen?: number
   prominences?: number
   plumes?: boolean
   flares?: boolean
   annular?: boolean
-  radius?: number
 }
 
 export type BorderOverlaySpec =
@@ -1177,6 +1191,12 @@ export type BorderOverlaySpec =
   | BorderBlueprintOverlaySpec
 
 export type BorderOverlayType = BorderOverlaySpec['type']
+
+export interface BorderOverlayHost {
+  avatarUrl?: string | null
+  avatarMask?: string | null
+  color?: BorderColorValue | null
+}
 
 export interface BorderShapeValue {
   viewBox?: string
@@ -1323,16 +1343,16 @@ export interface CandleFill {
 }
 
 export type EclipseCreatureKind =
-  | 'reaper' | 'brute' | 'swampthing' | 'deepone' | 'vampire' | 'wolf' | 'butcher' | 'psycho' | 'nailhead' | 'manfly' | 'zombie'
-  | 'eye' | 'wisp' | 'skull' | 'sphere'
+  | 'reaper' | 'brute' | 'swampthing' | 'deepone' | 'vampire' | 'wolf' | 'manfly' | 'zombie'
+  | 'eye' | 'wisp' | 'skull'
   | 'moth' | 'mothron' | 'bigbat' | 'raven' | 'fly' | 'dragonfly'
   | 'bat'
 
 export interface EclipseRoster {
-  walkers?: EclipseCreatureKind[]
-  drifters?: EclipseCreatureKind[]
-  flyers?: EclipseCreatureKind[]
-  swarm?: EclipseCreatureKind
+  walkers: EclipseCreatureKind[]
+  drifters: EclipseCreatureKind[]
+  flyers: EclipseCreatureKind[]
+  swarm: EclipseCreatureKind
 }
 
 export interface EclipseFill {
@@ -1340,10 +1360,9 @@ export interface EclipseFill {
   sky: string
   dusk: string
   corona: string
-  shadow?: string
-  creatures?: boolean
-  roster?: EclipseRoster
-  intervalS?: number
+  prominence: string
+  shadow: string
+  roster: EclipseRoster
 }
 
 export interface ConfettiFill {
@@ -1544,8 +1563,7 @@ export interface HallwayScene {
   beam: string
   figure: string
   face: string
-  scareMinS?: number
-  scareMaxS?: number
+  tints: string[]
 }
 
 export interface GraveyardScene {
@@ -1557,7 +1575,8 @@ export interface GraveyardScene {
   stone: string
   moon: string
   fog: string
-  wisp?: string
+  wisp: string
+  candle: string
 }
 
 export interface PumpkinPatchScene {

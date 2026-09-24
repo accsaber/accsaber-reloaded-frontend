@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { TitleWindAuraSpec } from '@/types/api/items'
-import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
@@ -102,7 +102,7 @@ useElementCanvas(canvasRef, {
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
     if (!rect) return
-    const dt = reduced ? 0 : Math.min(0.05, (now - last) / 1000)
+    const dt = frameDelta(now, last, reduced)
     last = now
     clock = reduced ? 3 : clock + dt
     const g = gust(clock)

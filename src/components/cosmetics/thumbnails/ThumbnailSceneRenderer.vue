@@ -29,5 +29,17 @@ defineProps<{ scene: ThumbnailScene }>()
 </script>
 
 <template>
-  <component :is="SCENE_RENDERERS[scene.type]" v-if="SCENE_RENDERERS[scene.type]" :scene="scene" />
+  <component :is="SCENE_RENDERERS[scene.type]" v-if="SCENE_RENDERERS[scene.type]" class="thumbnail-scene" :scene="scene" />
 </template>
+
+<style scoped>
+.thumbnail-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  pointer-events: none;
+}
+</style>

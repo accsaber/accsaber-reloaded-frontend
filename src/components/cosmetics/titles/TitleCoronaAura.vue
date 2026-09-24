@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { TitleCoronaAuraSpec } from '@/types/api/items'
-import { eclipsePeriod, eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
+import { eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
@@ -17,13 +18,16 @@ type Ctx = CanvasRenderingContext2D
 const STATIC_T = 10.5
 
 let rect: TitleAuraRect | null = null
+let corona: HTMLCanvasElement | null = null
+let coronaLight = false
+let layerScale = 1
 
 function color(): string {
-  return pickVariant(props.light, props.aura.lightColor, props.aura.color, '#f2b552')
+  return pickVariant(props.light, props.aura.lightColor, props.aura.color)
 }
 
 function prominence(): string {
-  return props.aura.prominence ?? '#ff6a3a'
+  return props.aura.prominence
 }
 
 interface Rim {
@@ -54,13 +58,12 @@ function drawGlow(ctx: Ctx, rim: Rim, fs: number, level: number): void {
   ctx.restore()
 }
 
-function drawStreamers(ctx: Ctx, rim: Rim, fs: number, t: number, level: number): void {
+function drawStreamers(ctx: Ctx, rim: Rim, fs: number): void {
   const n = props.aura.streamers ?? 14
   const lenMul = props.aura.streamerLen ?? 1
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + Math.sin(t * 0.4 + i) * 0.04
-    const wobble = 0.75 + 0.25 * Math.sin(t * 1.1 + i * 2.3)
-    const len = fs * (0.45 + hash01(i * 7) * 0.7) * wobble * lenMul
+    const a = (i / n) * Math.PI * 2
+    const len = fs * (0.45 + hash01(i * 7) * 0.7) * 0.85 * lenMul
     const [x0, y0] = onRim(rim, a, 0.98)
     const [x1, y1] = onRim(rim, a, 1)
     const dx = x1 - rim.cx
@@ -69,7 +72,7 @@ function drawStreamers(ctx: Ctx, rim: Rim, fs: number, t: number, level: number)
     const ex = x0 + (dx / d) * len
     const ey = y0 + (dy / d) * len
     const g = ctx.createLinearGradient(x0, y0, ex, ey)
-    g.addColorStop(0, withAlpha(color(), 0.75 * level))
+    g.addColorStop(0, withAlpha(color(), 0.75))
     g.addColorStop(1, withAlpha(color(), 0))
     ctx.strokeStyle = g
     ctx.lineWidth = Math.max(0.8, fs * 0.09 * (0.6 + hash01(i * 3) * 0.6))
@@ -81,25 +84,24 @@ function drawStreamers(ctx: Ctx, rim: Rim, fs: number, t: number, level: number)
   }
 }
 
-function drawPlumes(ctx: Ctx, rim: Rim, fs: number, t: number, level: number): void {
+function drawPlumes(ctx: Ctx, rim: Rim, fs: number): void {
   if (!props.aura.plumes || props.aura.annular) return
   ctx.lineCap = 'round'
   for (const base of [Math.PI, 0]) {
-    const sway = Math.sin(t * 0.5 + base) * 0.05
     for (let i = 0; i < 7; i++) {
       const spread = (i / 6 - 0.5) * 0.9
-      const a = base + spread + sway
+      const a = base + spread
       const bend = spread * 0.45
       const [x0, y0] = onRim(rim, a, 0.98)
-      const len = fs * (0.8 + hash01(i * 5 + (base > 0 ? 40 : 0)) * 0.7) * (0.85 + 0.15 * Math.sin(t * 1.4 + i * 1.3 + base))
+      const len = fs * (0.8 + hash01(i * 5 + (base > 0 ? 40 : 0)) * 0.7) * 0.92
       const dir = base === 0 ? 1 : -1
       const x1 = x0 + dir * Math.cos(bend) * len
       const y1 = y0 + Math.sin(a + bend) * len * 0.6
       const fade = 1 - Math.abs(spread) * 0.8
       for (const [wMul, aMul] of [[3, 0.14], [1, 0.7]] as Array<[number, number]>) {
         const g = ctx.createLinearGradient(x0, y0, x1, y1)
-        g.addColorStop(0, withAlpha(color(), aMul * fade * level))
-        g.addColorStop(0.55, withAlpha(color(), aMul * 0.5 * fade * level))
+        g.addColorStop(0, withAlpha(color(), aMul * fade))
+        g.addColorStop(0.55, withAlpha(color(), aMul * 0.5 * fade))
         g.addColorStop(1, withAlpha(color(), 0))
         ctx.strokeStyle = g
         ctx.lineWidth = Math.max(0.5, fs * 0.05 * wMul)
@@ -135,29 +137,28 @@ function drawFireRing(ctx: Ctx, rim: Rim, fs: number, t: number, level: number):
   ctx.beginPath()
   ctx.ellipse(rim.cx, rim.cy, rim.rx, rim.ry, 0, 0, Math.PI * 2)
   ctx.stroke()
-  ctx.strokeStyle = withAlpha('#ffffff', 0.5 * level * pulse)
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.5 * level * pulse})`
   ctx.lineWidth = Math.max(0.5, fs * 0.03)
   ctx.beginPath()
   ctx.ellipse(rim.cx, rim.cy, rim.rx, rim.ry, 0, 0, Math.PI * 2)
   ctx.stroke()
 }
 
-function drawRing(ctx: Ctx, r: TitleAuraRect, ph: EclipsePhase, t: number): void {
+function drawRing(ctx: Ctx, r: TitleAuraRect, ph: EclipsePhase): void {
   if (ph.flash <= 0.5) return
   const k = (ph.flash - 0.5) * 2
-  const cycle = Math.floor(t / eclipsePeriod(props.aura.intervalS))
-  const x = r.x + r.w * (0.1 + hash01(cycle * 17 + 3) * 0.8)
+  const x = r.x + r.w * (0.1 + hash01(ph.cycle * 17 + 3) * 0.8)
   const y = r.y + r.h * 0.5
   const rad = r.fs * (0.9 + k * 0.6)
   const g = ctx.createRadialGradient(x, y, 0, x, y, rad)
-  g.addColorStop(0, withAlpha('#ffffff', 0.95 * k))
+  g.addColorStop(0, `rgba(255, 255, 255, ${0.95 * k})`)
   g.addColorStop(0.3, withAlpha(color(), 0.5 * k))
   g.addColorStop(1, withAlpha(color(), 0))
   ctx.fillStyle = g
   ctx.beginPath()
   ctx.arc(x, y, rad, 0, Math.PI * 2)
   ctx.fill()
-  ctx.strokeStyle = withAlpha('#ffffff', 0.8 * k)
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 * k})`
   ctx.lineWidth = Math.max(0.6, r.fs * 0.04)
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI + 0.3
@@ -170,28 +171,52 @@ function drawRing(ctx: Ctx, r: TitleAuraRect, ph: EclipsePhase, t: number): void
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
+function paintCorona(w: number, h: number, scale: number, r: TitleAuraRect): HTMLCanvasElement {
+  const [layer, lctx] = offscreenLayer(w, h, scale)
+  if (!lctx) return layer
+  const rim = rimOf(r)
+  drawGlow(lctx, rim, r.fs, props.aura.annular ? 0.5 : 1)
+  if (!props.aura.annular) {
+    drawStreamers(lctx, rim, r.fs)
+    drawPlumes(lctx, rim, r.fs)
+  }
+  return layer
+}
+
+function layout(w: number, h: number, scale: number): void {
+  rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+  coronaLight = props.light
+  corona = rect ? paintCorona(w, h, scale, rect) : null
+}
+
 useElementCanvas(canvasRef, {
-  init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+  init(w, h, _now, scale) {
+    layerScale = scale
+    layout(w, h, scale)
+  },
+  resize(w, h, _now, scale) {
+    layerScale = scale
+    layout(w, h, scale)
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
+    if (coronaLight !== props.light) layout(w, h, layerScale)
     if (!rect) return
     const t = reduced ? STATIC_T : now / 1000
-    const ph = eclipsePhase(t, props.aura.intervalS)
+    const ph = eclipsePhase(t)
     const level = ph.tot
     ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     if (level > 0) {
-      const rim = rimOf(rect)
-      drawGlow(ctx, rim, rect.fs, level * (props.aura.annular ? 0.5 : 1))
-      if (props.aura.annular) drawFireRing(ctx, rim, rect.fs, t, level)
-      else {
-        drawStreamers(ctx, rim, rect.fs, t, level)
-        drawPlumes(ctx, rim, rect.fs, t, level)
-        drawProminences(ctx, rim, rect.fs, t, level)
+      if (corona) {
+        ctx.globalAlpha = level
+        ctx.drawImage(corona, 0, 0, w, h)
+        ctx.globalAlpha = 1
       }
+      const rim = rimOf(rect)
+      if (props.aura.annular) drawFireRing(ctx, rim, rect.fs, t, level)
+      else drawProminences(ctx, rim, rect.fs, t, level)
     }
-    if (!reduced) drawRing(ctx, rect, ph, t)
+    if (!reduced) drawRing(ctx, rect, ph)
     ctx.globalCompositeOperation = 'source-over'
   },
 })

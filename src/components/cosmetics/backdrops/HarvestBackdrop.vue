@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
 import { type Ctx, flickerNoise, sceneUnit } from '@/utils/cosmetics/canvasShapes'
-import { darken, lerpHex } from '@/utils/color'
-import { drawFallingLeaves, seedFallingLeaves, type FallingLeaf } from '@/utils/cosmetics/fallingLeaves'
+import { darken, lerpHex, parseHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { cloudMask, createRadialSprite, offscreenLayer, tintLayer, wrapX } from '@/utils/cosmetics/sceneLayer'
 import { hash01, randBetween as rand } from '@/utils/random'
 import type { HarvestBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
@@ -20,6 +20,15 @@ interface Cloud {
   y: number
   x0: number
   speed: number
+}
+
+interface Leaf {
+  x: number
+  y: number
+  size: number
+  speed: number
+  phase: number
+  color: string
 }
 
 interface CornLayer {
@@ -39,6 +48,14 @@ const CLOUDS = 6
 const PUFFS = 70
 const CROW_PERIOD_S = 13
 const CROW_CROSS_S = 4.5
+const LAND_RISE = 40
+const SOFT_SCALE = 0.5
+const GLOW_PX = 64
+
+const farTint = lerpHex(props.config.farmColor, props.config.skyColors[0], 0.5)
+const nearTint = lerpHex(props.config.farmColor, props.config.skyColors[0], 0.25)
+const windmillColor = lerpHex(props.config.farmColor, props.config.skyColors[0], 0.1)
+const lanternGlow = createRadialSprite(GLOW_PX, parseHex(props.config.flareColor) ?? [255, 255, 255], [[0, 0.4], [0.35, 0.12], [1, 0]])
 
 let startTime = 0
 let unit = 1
@@ -47,22 +64,14 @@ let sky: HTMLCanvasElement | null = null
 let clouds: Cloud[] = []
 let lanterns: [number, number][] = []
 let land: HTMLCanvasElement | null = null
+let landTop = 0
 let corn: CornLayer[] = []
-let leaves: FallingLeaf[] = []
+let leaves: Leaf[] = []
 let nextBlink = 8
 let blinkAt = -1
 
 function h01(n: number): number {
   return hash01(seed + n)
-}
-
-function offscreen(w: number, h: number, scale: number): [HTMLCanvasElement, Ctx | null] {
-  const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.ceil(w * scale))
-  c.height = Math.max(1, Math.ceil(h * scale))
-  const ctx = c.getContext('2d')
-  ctx?.setTransform(scale, 0, 0, scale, 0, 0)
-  return [c, ctx]
 }
 
 function drawSky(ctx: Ctx, w: number, h: number): void {
@@ -83,62 +92,13 @@ function drawSky(ctx: Ctx, w: number, h: number): void {
   }
 }
 
-function wave(x: number, sd: number): number {
-  return Math.sin(x * 1.7 + sd * 6.28) * 0.5 + Math.sin(x * 3.9 + sd * 12.9) * 0.3 + Math.sin(x * 8.3 + sd * 3.1) * 0.2
-}
-
-function puff(ctx: Ctx, x: number, y: number, rx: number, ry: number, a: number): void {
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.scale(rx, ry)
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
-  g.addColorStop(0, `rgba(255,255,255,${a})`)
-  g.addColorStop(0.5, `rgba(255,255,255,${a * 0.55})`)
-  g.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = g
-  ctx.fillRect(-1, -1, 2, 2)
-  ctx.restore()
-}
-
-function tinted(mask: HTMLCanvasElement, color: string): HTMLCanvasElement {
-  const c = document.createElement('canvas')
-  c.width = mask.width
-  c.height = mask.height
-  const ctx = c.getContext('2d')
-  if (!ctx) return c
-  ctx.drawImage(mask, 0, 0)
-  ctx.globalCompositeOperation = 'source-in'
-  ctx.fillStyle = color
-  ctx.fillRect(0, 0, c.width, c.height)
-  return c
-}
-
-function cloudMask(i: number, cw: number, ch: number, scale: number): HTMLCanvasElement {
-  const [c, ctx] = offscreen(cw, ch, scale)
-  if (!ctx) return c
-  const sd = h01(i * 31)
-  const thick = ch * 0.34
-  for (let k = 0; k <= PUFFS; k++) {
-    const u = k / PUFFS
-    const taper = Math.pow(Math.sin(u * Math.PI), 0.45)
-    const torn = 0.55 + 0.45 * wave(u * 5 + i, sd + 0.3)
-    const x = cw * 0.04 + u * cw * 0.92
-    const y = ch * 0.5 + wave(u * 2.4, sd) * thick * 0.8 + (h01(i * 71 + k) - 0.5) * thick * 0.6
-    const rx = (cw / PUFFS) * (2.6 + h01(i * 97 + k) * 2.4)
-    const ry = thick * (0.4 + h01(i * 53 + k) * 0.6) * taper
-    puff(ctx, x, y, rx, ry, 0.45 * torn * taper)
-  }
-  return c
-}
-
 function buildCloud(i: number, w: number, h: number, scale: number): Cloud {
   const cw = w * (0.35 + h01(i * 7) * 0.45)
   const ch = unit * (16 + h01(i * 11) * 18)
-  const mask = cloudMask(i, cw, ch, scale)
-  const top = props.config.skyColors[0] ?? props.config.farmColor
+  const mask = cloudMask(cw, ch, scale * SOFT_SCALE, h01, i, PUFFS, 0.45)
   return {
-    dark: tinted(mask, lerpHex(top, props.config.farmColor, 0.45)),
-    lit: tinted(mask, lerpHex(props.config.moonColor, props.config.flareColor, 0.4)),
+    dark: tintLayer(mask, lerpHex(props.config.skyColors[0], props.config.farmColor, 0.45)),
+    lit: tintLayer(mask, lerpHex(props.config.moonColor, props.config.flareColor, 0.4)),
     w: cw,
     h: ch,
     y: h * (0.04 + (i / CLOUDS) * 0.48) - ch * 0.5,
@@ -147,14 +107,9 @@ function buildCloud(i: number, w: number, h: number, scale: number): Cloud {
   }
 }
 
-function cloudX(c: Cloud, w: number, t: number): number {
-  const span = w + c.w
-  return ((((c.x0 + t * c.speed) % span) + span) % span) - c.w
-}
-
 function drawClouds(ctx: Ctx, w: number, h: number, t: number): void {
   for (const c of clouds) {
-    const x = cloudX(c, w, t)
+    const x = wrapX(c.x0, c.speed, t, w, c.w)
     ctx.globalAlpha = 0.8
     ctx.drawImage(c.dark, x, c.y, c.w, c.h)
     const near = 1 - Math.min(1, Math.abs(c.y + c.h * 0.5 - h * MOON_Y) / (h * 0.35))
@@ -204,6 +159,13 @@ function drawMoon(ctx: Ctx, w: number, h: number): void {
   ctx.restore()
 }
 
+const MOUTH: [number, number][] = [
+  [-0.62, 0.26], [-0.46, 0.2], [-0.38, 0.32], [-0.24, 0.2], [-0.12, 0.34], [0.02, 0.2], [0.14, 0.32], [0.28, 0.2], [0.4, 0.3], [0.52, 0.2], [0.64, 0.24],
+  [0.56, 0.4], [0.42, 0.62], [0.3, 0.48], [0.14, 0.66], [-0.02, 0.5], [-0.18, 0.66], [-0.32, 0.5], [-0.46, 0.58], [-0.58, 0.4],
+]
+
+const SCARECROWS: [number, number][] = [[0.6, 1.15], [0.86, 1.3]]
+
 function carvedFace(ctx: Ctx, mx: number, my: number, r: number): void {
   ctx.beginPath()
   for (const sgn of [-1, 1]) {
@@ -218,12 +180,9 @@ function carvedFace(ctx: Ctx, mx: number, my: number, r: number): void {
   ctx.lineTo(mx + r * 0.08, my + r * 0.16)
   ctx.lineTo(mx - r * 0.08, my + r * 0.16)
   ctx.closePath()
-  const top = [[-0.62, 0.26], [-0.46, 0.2], [-0.38, 0.32], [-0.24, 0.2], [-0.12, 0.34], [0.02, 0.2], [0.14, 0.32], [0.28, 0.2], [0.4, 0.3], [0.52, 0.2], [0.64, 0.24]]
-  const bottom = [[0.56, 0.4], [0.42, 0.62], [0.3, 0.48], [0.14, 0.66], [-0.02, 0.5], [-0.18, 0.66], [-0.32, 0.5], [-0.46, 0.58], [-0.58, 0.4]]
-  const pts = top.concat(bottom)
-  pts.forEach(([px, py], i) => {
-    const x = mx + (px ?? 0) * r
-    const y = my + (py ?? 0) * r
+  MOUTH.forEach(([px, py], i) => {
+    const x = mx + px * r
+    const y = my + py * r
     if (i === 0) ctx.moveTo(x, y)
     else ctx.lineTo(x, y)
   })
@@ -231,27 +190,24 @@ function carvedFace(ctx: Ctx, mx: number, my: number, r: number): void {
 }
 
 function drawCarving(ctx: Ctx, w: number, h: number): void {
-  if (!props.config.face) return
   ctx.fillStyle = withAlpha(props.config.moonShade, 0.85)
   carvedFace(ctx, w * MOON_X, h * MOON_Y, MOON_R * unit)
   ctx.fill()
 }
 
 function drawFlare(ctx: Ctx, w: number, h: number, flare: number): void {
-  if (!props.config.face || flare <= 0) return
+  if (flare <= 0) return
   const mx = w * MOON_X
   const my = h * MOON_Y
   const r = MOON_R * unit
   ctx.save()
   moonPath(ctx, w, h)
   ctx.clip()
-  {
-    const g = ctx.createRadialGradient(mx, my + r * 0.1, r * 0.2, mx, my + r * 0.1, r * 1.1)
-    g.addColorStop(0, withAlpha(props.config.flareColor, 0.35 * flare))
-    g.addColorStop(1, withAlpha(props.config.flareColor, 0))
-    ctx.fillStyle = g
-    ctx.fillRect(mx - r, my - r, r * 2, r * 2)
-  }
+  const g = ctx.createRadialGradient(mx, my + r * 0.1, r * 0.2, mx, my + r * 0.1, r * 1.1)
+  g.addColorStop(0, withAlpha(props.config.flareColor, 0.35 * flare))
+  g.addColorStop(1, withAlpha(props.config.flareColor, 0))
+  ctx.fillStyle = g
+  ctx.fillRect(mx - r, my - r, r * 2, r * 2)
   ctx.fillStyle = withAlpha(props.config.flareColor, 0.9 * flare)
   carvedFace(ctx, mx, my, r)
   ctx.fill()
@@ -347,12 +303,9 @@ function drawLanternPost(ctx: Ctx, x: number, base: number, color: string): void
 function drawLanternGlow(ctx: Ctx, x: number, y: number, t: number, k: number): void {
   const flick = 0.75 + flickerNoise(t + k * 3.1, 1.4) * 0.25
   const r = unit * 9 * flick
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
-  g.addColorStop(0, withAlpha(props.config.flareColor, 0.4 * flick))
-  g.addColorStop(0.35, withAlpha(props.config.flareColor, 0.12 * flick))
-  g.addColorStop(1, withAlpha(props.config.flareColor, 0))
-  ctx.fillStyle = g
-  ctx.fillRect(x - r, y - r, r * 2, r * 2)
+  ctx.globalAlpha = flick
+  ctx.drawImage(lanternGlow, x - r, y - r, r * 2, r * 2)
+  ctx.globalAlpha = 1
 }
 
 function drawWindmill(ctx: Ctx, x: number, base: number, color: string, angle: number): void {
@@ -395,7 +348,7 @@ function drawFence(ctx: Ctx, w: number, base: number, color: string): void {
 
 function drawScarecrow(ctx: Ctx, x: number, base: number, color: string): void {
   const u = unit
-  ctx.fillStyle = withAlpha('#000000', 0.35)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
   ctx.beginPath()
   ctx.ellipse(x, base, u * 4, u * 1.1, 0, 0, Math.PI * 2)
   ctx.fill()
@@ -467,7 +420,7 @@ function cornStalk(ctx: Ctx, x: number, base: number, hgt: number, k: number): v
 function buildCorn(w: number, h: number, scale: number, li: number): CornLayer {
   const hgt = unit * (30 + li * 12)
   const lh = hgt + unit * 8
-  const [c, ctx] = offscreen(w, lh, scale)
+  const [c, ctx] = offscreenLayer(w, lh, scale)
   const color = lerpHex(props.config.fieldColor, props.config.skyColors[2] ?? props.config.fieldColor, 0.12 + (2 - li) * 0.2)
   if (ctx) {
     ctx.strokeStyle = color
@@ -478,13 +431,13 @@ function buildCorn(w: number, h: number, scale: number, li: number): CornLayer {
       k++
     }
     if (li === 2) {
-      for (const [ex, es] of [[0.6, 1.15], [0.86, 1.3]]) {
+      for (const [ex, es] of SCARECROWS) {
         ctx.save()
-        ctx.translate(w * (ex ?? 0), lh - unit * 1.2)
-        ctx.scale(es ?? 1, es ?? 1)
+        ctx.translate(w * ex, lh - unit * 1.2)
+        ctx.scale(es, es)
         drawScarecrow(ctx, 0, 0, darken(color, 0.45))
         ctx.restore()
-        for (let i = 0; i < 4; i++) cornStalk(ctx, w * (ex ?? 0) + (i - 1.5) * unit * 3.6, lh, hgt * 0.5, k + 300 + i)
+        for (let i = 0; i < 4; i++) cornStalk(ctx, w * ex + (i - 1.5) * unit * 3.6, lh, hgt * 0.5, k + 300 + i)
       }
       const sx = w * 0.3
       ctx.save()
@@ -503,7 +456,7 @@ function buildCorn(w: number, h: number, scale: number, li: number): CornLayer {
 }
 
 function buildSky(w: number, h: number, scale: number): HTMLCanvasElement {
-  const [c, ctx] = offscreen(w, h, scale)
+  const [c, ctx] = offscreenLayer(w, h * HORIZON, scale)
   if (!ctx) return c
   drawSky(ctx, w, h)
   drawHaze(ctx, w, h)
@@ -513,12 +466,13 @@ function buildSky(w: number, h: number, scale: number): HTMLCanvasElement {
 }
 
 function buildLand(w: number, h: number, scale: number): HTMLCanvasElement {
-  const [c, ctx] = offscreen(w, h, scale)
-  if (!ctx) return c
   const base = h * HORIZON
-  const far = lerpHex(props.config.farmColor, props.config.skyColors[0] ?? props.config.farmColor, 0.5)
-  hill(ctx, w, h, base - unit * 4, unit * 16, 0.3, far)
-  hill(ctx, w, h, base + unit * 1, unit * 9, 2.1, lerpHex(props.config.farmColor, props.config.skyColors[0] ?? props.config.farmColor, 0.25))
+  landTop = Math.max(0, base - unit * LAND_RISE)
+  const [c, ctx] = offscreenLayer(w, h - landTop, scale)
+  if (!ctx) return c
+  ctx.translate(0, -landTop)
+  hill(ctx, w, h, base - unit * 4, unit * 16, 0.3, farTint)
+  hill(ctx, w, h, base + unit * 1, unit * 9, 2.1, nearTint)
   ctx.fillStyle = props.config.farmColor
   ctx.fillRect(0, base, w, h - base)
   drawBarn(ctx, w * 0.12, base + unit * 0.5, props.config.farmColor)
@@ -585,6 +539,33 @@ function drawCrows(ctx: Ctx, w: number, h: number, t: number): void {
   }
 }
 
+function seedLeaves(w: number, h: number): Leaf[] {
+  const colors = props.config.leafColors
+  return Array.from({ length: LEAVES }, (_, i) => ({
+    x: h01(i * 3) * w,
+    y: h01(i * 5) * h,
+    size: unit * (1.2 + h01(i * 7) * 1.4),
+    speed: unit * (4 + h01(i * 11) * 5),
+    phase: h01(i * 13) * 6.28,
+    color: colors[i % colors.length],
+  }))
+}
+
+function drawLeaves(ctx: Ctx, w: number, h: number, t: number): void {
+  for (const l of leaves) {
+    const y = ((l.y + t * l.speed) % (h + unit * 6)) - unit * 3
+    const x = ((l.x + Math.sin(t * 0.9 + l.phase) * unit * 6 + t * unit * 1.5) % (w + unit * 6)) - unit * 3
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(t * 2.2 + l.phase)
+    ctx.fillStyle = l.color
+    ctx.beginPath()
+    ctx.ellipse(0, 0, l.size, l.size * 0.45, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+}
+
 function drawCorn(ctx: Ctx, w: number, h: number, t: number): void {
   for (const layer of corn) {
     const skew = Math.sin(t * 0.7 + layer.phase) * layer.amp
@@ -616,7 +597,7 @@ function layout(w: number, h: number, scale: number): void {
   clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
   land = buildLand(w, h, scale)
   corn = [0, 1, 2].map((li) => buildCorn(w, h, scale, li))
-  leaves = seedFallingLeaves({ count: LEAVES, colors: props.config.leafColors, unit, w, h, seed: h01 })
+  leaves = seedLeaves(w, h)
 }
 
 useBackdropCanvas(canvasRef, {
@@ -632,16 +613,15 @@ useBackdropCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000
-    if (sky) ctx.drawImage(sky, 0, 0, w, h)
+    if (sky) ctx.drawImage(sky, 0, 0, w, h * HORIZON)
     drawFlare(ctx, w, h, reduced ? 0 : flareLevel(t))
     drawClouds(ctx, w, h, t)
     if (!reduced) drawCrows(ctx, w, h, t)
-    if (land) ctx.drawImage(land, 0, 0, w, h)
+    if (land) ctx.drawImage(land, 0, landTop, w, h - landTop)
     lanterns.forEach(([lx, ly], k) => drawLanternGlow(ctx, lx + unit * 2.65, ly - unit * 7.7, t, k))
-    const wm = lerpHex(props.config.farmColor, props.config.skyColors[0] ?? props.config.farmColor, 0.1)
-    drawWindmill(ctx, w * 0.58, h * HORIZON + unit * 1.5, wm, props.config.windmill ? t * 0.5 : 0.4)
+    drawWindmill(ctx, w * 0.58, h * HORIZON + unit * 1.5, windmillColor, t * 0.5)
     drawCorn(ctx, w, h, t)
-    if (!reduced) drawFallingLeaves(ctx, leaves, w, h, unit, t)
+    if (!reduced) drawLeaves(ctx, w, h, t)
   },
 })
 </script>
@@ -649,21 +629,7 @@ useBackdropCanvas(canvasRef, {
 <template>
   <canvas
     ref="canvas"
-    class="harvest-backdrop"
     :style="{ opacity: config.opacity }"
     aria-hidden="true"
   />
 </template>
-
-<style scoped>
-.harvest-backdrop {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  z-index: -1;
-  pointer-events: none;
-}
-</style>

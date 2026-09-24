@@ -9,7 +9,6 @@ export interface JoltFrame {
   flash: number
   rings: number[]
   scream: boolean
-  done: boolean
 }
 
 export function joltDurations(spec: TitleJoltSpec): { windup: number; hold: number; recoil: number } {
@@ -27,7 +26,6 @@ function windupFrame(e: number, windup: number): JoltFrame {
     flash: 0,
     rings: [],
     scream: false,
-    done: false,
   }
 }
 
@@ -43,7 +41,6 @@ function screamFrame(e: number, hold: number, pop: number, rings: boolean): Jolt
     flash: 0.6 * (1 - p),
     rings: rs,
     scream: true,
-    done: false,
   }
 }
 
@@ -58,7 +55,6 @@ function recoilFrame(e: number, recoil: number, pop: number): JoltFrame {
     flash: 0,
     rings: [],
     scream: p < 0.35,
-    done: false,
   }
 }
 
@@ -68,5 +64,5 @@ export function joltFrame(elapsedMs: number, spec: TitleJoltSpec): JoltFrame {
   if (elapsedMs < windup) return windupFrame(elapsedMs, windup)
   if (elapsedMs < windup + hold) return screamFrame(elapsedMs - windup, hold, pop, spec.rings !== false)
   if (elapsedMs < windup + hold + recoil) return recoilFrame(elapsedMs - windup - hold, recoil, pop)
-  return { scale: 1, rotate: 0, dx: 0, dy: 0, spacing: 0, flash: 0, rings: [], scream: false, done: true }
+  return { scale: 1, rotate: 0, dx: 0, dy: 0, spacing: 0, flash: 0, rings: [], scream: false }
 }

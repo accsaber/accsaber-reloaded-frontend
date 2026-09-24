@@ -351,7 +351,7 @@ function isCosmicFill(v: unknown): boolean {
 function isBrewFill(v: unknown): boolean {
   if (!isObj(v)) return false
   if (v.type !== 'brew') return false
-  return Array.isArray(v.colors) && v.colors.every(isString) && isString(v.bone)
+  return Array.isArray(v.colors) && v.colors.length > 0 && v.colors.every(isString) && isString(v.bone)
 }
 
 function isWoodFill(v: unknown): boolean {
@@ -407,7 +407,10 @@ function isStolenFlameFill(v: unknown): boolean {
 function isEclipseFill(v: unknown): boolean {
   if (!isObj(v)) return false
   if (v.type !== 'eclipse') return false
-  return isString(v.sky) && isString(v.dusk) && isString(v.corona)
+  const r = v.roster
+  return isString(v.sky) && isString(v.dusk) && isString(v.corona) && isString(v.prominence) && isString(v.shadow)
+    && isObj(r) && isString(r.swarm)
+    && [r.walkers, r.drifters, r.flyers].every((list) => Array.isArray(list) && list.every(isString))
 }
 
 function isDominionFill(v: unknown): boolean {
@@ -514,8 +517,14 @@ function isThumbnailScene(v: unknown): boolean {
     return isString(v.bg) && isString(v.beam)
       && Array.isArray(v.colors) && v.colors.every(isString)
   }
-  if (v.type === 'hallway') return isString(v.wall) && isString(v.floor) && isString(v.beam) && isString(v.figure) && isString(v.face)
-  if (v.type === 'graveyard') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.ground) && isString(v.stone) && isString(v.moon) && isString(v.fog)
+  if (v.type === 'hallway') {
+    return isString(v.wall) && isString(v.floor) && isString(v.beam) && isString(v.figure) && isString(v.face)
+      && Array.isArray(v.tints) && v.tints.every(isString)
+  }
+  if (v.type === 'graveyard') {
+    return isString(v.skyTop) && isString(v.skyBottom) && isString(v.ground) && isString(v.stone)
+      && isString(v.moon) && isString(v.fog) && isString(v.wisp) && isString(v.candle)
+  }
   if (v.type === 'pumpkin_patch') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.ground) && isString(v.pumpkin) && isString(v.pumpkinLit) && isString(v.vine) && isString(v.moon) && isString(v.candle)
   if (v.type === 'full_moon') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.moon) && isString(v.crater) && isString(v.cloud) && isString(v.bat)
   return false
@@ -523,8 +532,9 @@ function isThumbnailScene(v: unknown): boolean {
 
 export function readThumbnailBackgroundValue(value: unknown): ProfileThumbnailBackgroundValue | null {
   if (!isObj(value)) return null
-  if (!isObj(value.asset) && !isThumbnailScene(value.scene)) return null
-  return value as unknown as ProfileThumbnailBackgroundValue
+  const scene = isThumbnailScene(value.scene) ? value.scene : undefined
+  if (!isObj(value.asset) && !scene) return null
+  return { ...value, scene } as unknown as ProfileThumbnailBackgroundValue
 }
 
 export function thumbnailSceneInk(scene: ThumbnailScene): string {
@@ -790,7 +800,7 @@ export function fillToCss(fill: BorderColorFill): string {
     return `repeating-linear-gradient(135deg, ${fill.ink} 0px, ${fill.ink} 7px, ${fill.line} 7px, ${fill.line} 9px)`
   }
   if (fill.type === 'brew') {
-    const cs = fill.colors.length ? fill.colors : ['#4e7a2a']
+    const cs = fill.colors
     return `linear-gradient(135deg, ${cs.map((c, i) => `${c} ${Math.round((i / Math.max(1, cs.length - 1)) * 100)}%`).join(', ')})`
   }
   if (fill.type === 'wood') {
@@ -926,18 +936,16 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
   return t < 0.5 ? a : b
 }
 
-const CANVAS_FILL_TYPES = new Set([
+const CANVAS_FILL_LIST = [
   'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion', 'eclipse', 'candle', 'wood', 'brew',
   'confetti', 'jewel', 'laser', 'chart', 'hazard', 'warp',
-])
+] as const
 
-type CanvasFill = Extract<
-  BorderColorFill,
-  { type: 'cosmic' | 'toon' | 'prism' | 'grove' | 'regalia' | 'colossus' | 'stolenflame' | 'dominion' | 'eclipse' | 'candle' | 'wood' | 'brew'
-    | 'confetti' | 'jewel' | 'laser' | 'chart' | 'hazard' | 'warp' }
->
+const CANVAS_FILL_TYPES: ReadonlySet<string> = new Set(CANVAS_FILL_LIST)
 
-function isCanvasFill(fill: BorderColorFill): fill is CanvasFill {
+export type CanvasFill = Extract<BorderColorFill, { type: (typeof CANVAS_FILL_LIST)[number] }>
+
+export function isCanvasFill(fill: BorderColorFill): fill is CanvasFill {
   return CANVAS_FILL_TYPES.has(fill.type)
 }
 
@@ -1041,28 +1049,32 @@ export function isAnimated(value: { states: Array<unknown>; durationMs?: number 
   return value.states.length > 1
 }
 
-export function samplePath(pathEl: SVGPathElement, samples: number): [number, number][] {
-  const result: [number, number][] = []
-  const totalLen = pathEl.getTotalLength()
-  if (totalLen === 0 || samples === 0) return result
-  for (let i = 0; i < samples; i++) {
-    const dist = (i / samples) * totalLen
-    const p = pathEl.getPointAtLength(dist)
-    result.push([p.x, p.y])
-  }
-  return result
+type MorphPoint = [number, number]
+
+export interface MorphRun {
+  closed: boolean
+  frames: MorphPoint[][]
 }
 
-function alignmentCost(
-  a: [number, number][],
-  b: [number, number][],
-  offset: number,
-  reverse: boolean,
-): number {
-  const N = a.length
+export type ShapeTrack = string | MorphRun[]
+
+function sampleRun(pathEl: SVGPathElement, samples: number, closed: boolean): MorphPoint[] {
+  const total = pathEl.getTotalLength()
+  if (total === 0 || samples < 2) return []
+  const span = closed ? samples : samples - 1
+  const out: MorphPoint[] = new Array(samples)
+  for (let i = 0; i < samples; i++) {
+    const p = pathEl.getPointAtLength((i / span) * total)
+    out[i] = [p.x, p.y]
+  }
+  return out
+}
+
+function alignmentCost(a: MorphPoint[], b: MorphPoint[], offset: number, reverse: boolean): number {
+  const n = a.length
   let cost = 0
-  for (let i = 0; i < N; i++) {
-    const j = reverse ? (N - 1 - ((i + offset) % N) + N) % N : (i + offset) % N
+  for (let i = 0; i < n; i++) {
+    const j = reverse ? (n - 1 - ((i + offset) % n) + n) % n : (i + offset) % n
     const dx = a[i][0] - b[j][0]
     const dy = a[i][1] - b[j][1]
     cost += dx * dx + dy * dy
@@ -1070,105 +1082,83 @@ function alignmentCost(
   return cost
 }
 
-function rotateOrReverse(
-  arr: [number, number][],
-  offset: number,
-  reverse: boolean,
-): [number, number][] {
-  const N = arr.length
-  const out: [number, number][] = new Array(N)
-  for (let i = 0; i < N; i++) {
-    const j = reverse ? (N - 1 - ((i + offset) % N) + N) % N : (i + offset) % N
-    out[i] = arr[j]
-  }
-  return out
-}
-
-export function alignSamples(
-  reference: [number, number][],
-  target: [number, number][],
-): [number, number][] {
-  const N = reference.length
-  if (N === 0 || target.length !== N) return target
-  let bestOffset = 0
-  let bestReverse = false
-  let bestCost = alignmentCost(reference, target, 0, false)
-  for (let r = 1; r < N; r++) {
-    const cost = alignmentCost(reference, target, r, false)
-    if (cost < bestCost) {
-      bestCost = cost
-      bestOffset = r
-      bestReverse = false
+function alignRun(reference: MorphPoint[], target: MorphPoint[], closed: boolean): MorphPoint[] {
+  const n = reference.length
+  if (n === 0 || target.length !== n) return target
+  const offsets = closed ? n : 1
+  let best = { cost: Infinity, offset: 0, reverse: false }
+  for (const reverse of [false, true]) {
+    for (let offset = 0; offset < offsets; offset++) {
+      const cost = alignmentCost(reference, target, offset, reverse)
+      if (cost < best.cost) best = { cost, offset, reverse }
     }
   }
-  for (let r = 0; r < N; r++) {
-    const cost = alignmentCost(reference, target, r, true)
-    if (cost < bestCost) {
-      bestCost = cost
-      bestOffset = r
-      bestReverse = true
-    }
-  }
-  return rotateOrReverse(target, bestOffset, bestReverse)
+  return target.map((_, i) => {
+    const j = best.reverse ? (n - 1 - ((i + best.offset) % n) + n) % n : (i + best.offset) % n
+    return target[j]
+  })
 }
 
-export function sampleShapeStates(
-  states: BorderShapeStateValue[],
-  samples: number,
-): Array<Array<[number, number][]>> {
-  if (typeof document === 'undefined') return []
-  const SVG_NS = 'http://www.w3.org/2000/svg'
-  const svg = document.createElementNS(SVG_NS, 'svg')
+function splitSubpaths(d: string): string[] {
+  return d.split(/(?=M)/).map((part) => part.trim()).filter(Boolean)
+}
+
+function isClosed(d: string): boolean {
+  return /z\s*$/i.test(d)
+}
+
+function morphRuns(ds: string[], svg: SVGSVGElement, samples: number): MorphRun[] | null {
+  const split = ds.map(splitSubpaths)
+  const count = split[0].length
+  if (split.some((runs) => runs.length !== count)) return null
+  const path = document.createElementNS(svg.namespaceURI, 'path') as SVGPathElement
+  svg.appendChild(path)
+  try {
+    return split[0].map((first, ri) => {
+      const closed = isClosed(first)
+      const frames = split.map((runs) => {
+        path.setAttribute('d', runs[ri])
+        return sampleRun(path, samples, closed)
+      })
+      return { closed, frames: frames.map((f) => alignRun(frames[0], f, closed)) }
+    })
+  } finally {
+    svg.removeChild(path)
+  }
+}
+
+export function shapeTracks(states: BorderShapeStateValue[], samples: number): ShapeTrack[] {
+  const first = states[0]?.paths ?? []
+  if (typeof document === 'undefined') return first.map((p) => p.d)
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('style', 'position:absolute;width:0;height:0;visibility:hidden;pointer-events:none;')
   document.body.appendChild(svg)
-  let result: Array<Array<[number, number][]>>
   try {
-    result = states.map((state) =>
-      (state.paths ?? []).map((p) => {
-        const path = document.createElementNS(SVG_NS, 'path')
-        path.setAttribute('d', p.d)
-        svg.appendChild(path)
-        const sampled = samplePath(path, samples)
-        svg.removeChild(path)
-        return sampled
-      }),
-    )
+    return first.map((p, pi) => {
+      const ds = states.map((st) => st.paths?.[pi]?.d ?? p.d)
+      if (ds.every((d) => d === p.d)) return p.d
+      return morphRuns(ds, svg, samples) ?? p.d
+    })
   } finally {
     document.body.removeChild(svg)
   }
-  if (result.length > 1) {
-    const reference = result[0]
-    for (let s = 1; s < result.length; s++) {
-      for (let pi = 0; pi < result[s].length; pi++) {
-        const ref = reference[pi]
-        if (ref && ref.length === result[s][pi].length) {
-          result[s][pi] = alignSamples(ref, result[s][pi])
-        }
-      }
-    }
-  }
-  return result
 }
 
-export function pointsToPathD(points: [number, number][]): string {
+function pointsToPathD(points: MorphPoint[], closed: boolean): string {
   if (points.length === 0) return ''
-  let d = `M${points[0][0].toFixed(3)},${points[0][1].toFixed(3)}`
-  for (let i = 1; i < points.length; i++) {
-    d += `L${points[i][0].toFixed(3)},${points[i][1].toFixed(3)}`
-  }
-  return `${d}Z`
+  let d = `M${points[0][0].toFixed(2)},${points[0][1].toFixed(2)}`
+  for (let i = 1; i < points.length; i++) d += `L${points[i][0].toFixed(2)},${points[i][1].toFixed(2)}`
+  return closed ? `${d}Z` : d
 }
 
-export function lerpPoints(
-  a: [number, number][],
-  b: [number, number][],
-  t: number,
-): [number, number][] {
-  if (a.length !== b.length) return t < 0.5 ? a : b
-  return a.map(([ax, ay], i) => {
-    const [bx, by] = b[i]
-    return [ax + (bx - ax) * t, ay + (by - ay) * t]
-  })
+function lerpRun(a: MorphPoint[], b: MorphPoint[], t: number): MorphPoint[] {
+  if (t === 0 || a.length !== b.length) return a
+  return a.map(([ax, ay], i) => [ax + (b[i][0] - ax) * t, ay + (b[i][1] - ay) * t])
+}
+
+export function trackPathD(track: ShapeTrack, from: number, to: number, t: number): string {
+  if (typeof track === 'string') return track
+  return track.map((run) => pointsToPathD(lerpRun(run.frames[from], run.frames[to], t), run.closed)).join('')
 }
 
 export function tokenize(token: string): string {

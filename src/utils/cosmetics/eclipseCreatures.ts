@@ -152,51 +152,6 @@ const wolf: Painter = (ctx, p, pal) => {
   ctx.restore()
 }
 
-const butcher: Painter = (ctx, p, pal) => {
-  begin(ctx, p, pal)
-  legs(ctx, p.t, -2.6, 1.4, 2.6)
-  body(ctx, [[-3, -2.4], [-3.2, -7], [-1.4, -8.4], [1.4, -8.4], [3.2, -7], [3, -2.4]])
-  ctx.fillStyle = withAlpha(pal.corona, 0.18)
-  ctx.fillRect(-1.6, -6.4, 3.2, 4)
-  ctx.fillStyle = pal.shadow
-  const buzz = Math.sin(p.t * 40) * 0.15
-  ctx.fillRect(3, -5.6 + buzz, 4.4, 1.2)
-  ctx.beginPath()
-  for (let i = 0; i < 6; i++) ctx.rect(3.2 + i * 0.75, -6.1 + buzz, 0.35, 0.5)
-  ctx.fill()
-  eyes(ctx, pal, [[-0.7, -7.4], [0.7, -7.4]], 0.24)
-  ctx.restore()
-}
-
-const psycho: Painter = (ctx, p, pal) => {
-  begin(ctx, p, pal)
-  legs(ctx, p.t, -2.4, 1.1, 2.4)
-  body(ctx, [[-2, -2.2], [-2.2, -6.6], [-1.2, -8.4], [1.2, -8.4], [2.2, -6.6], [2, -2.2]])
-  const stab = Math.max(0, Math.sin(p.t * 5)) * 1.5
-  body(ctx, [[2, -6], [4.6 + stab, -7.4], [5.4 + stab, -6.8], [2.4, -4.6]])
-  ctx.fillStyle = withAlpha(pal.corona, 0.8)
-  ctx.fillRect(4.2 + stab, -7.2, 1.4, 0.35)
-  eyes(ctx, pal, [[-0.5, -7.6], [0.5, -7.6]], 0.2)
-  ctx.restore()
-}
-
-const nailhead: Painter = (ctx, p, pal) => {
-  begin(ctx, p, pal)
-  legs(ctx, p.t, -2.6, 1.4, 2.6)
-  body(ctx, [[-2.6, -2.4], [-2.8, -6.4], [-1.8, -8.6], [1.8, -8.6], [2.8, -6.4], [2.6, -2.4]])
-  ctx.strokeStyle = pal.shadow
-  ctx.lineWidth = 0.4
-  for (let i = 0; i < 5; i++) {
-    const a = -2.4 + i * 0.6
-    ctx.beginPath()
-    ctx.moveTo(Math.cos(a) * 1.6, -7.6 + Math.sin(a) * 1.2)
-    ctx.lineTo(Math.cos(a) * 3.6, -7.6 + Math.sin(a) * 3)
-    ctx.stroke()
-  }
-  eyes(ctx, pal, [[-0.6, -7.2], [0.6, -7.2]], 0.26)
-  ctx.restore()
-}
-
 const manfly: Painter = (ctx, p, pal) => {
   begin(ctx, p, pal)
   legs(ctx, p.t, -2.4, 1.2, 2.4)
@@ -284,22 +239,6 @@ const skull: Painter = (ctx, p, pal) => {
   eyes(ctx, pal, [[-0.75, -0.6], [0.75, -0.6]], 0.5)
   ctx.fillStyle = pal.shadow
   for (let i = -1; i <= 1; i++) ctx.fillRect(i * 0.7 - 0.15, 1.3, 0.3, 0.9)
-  ctx.restore()
-}
-
-const sphere: Painter = (ctx, p, pal) => {
-  begin(ctx, p, pal)
-  ctx.rotate(p.t * 9)
-  ctx.beginPath()
-  ctx.arc(0, 0, 2, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.stroke()
-  ctx.fillStyle = pal.shadow
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2
-    body(ctx, [[Math.cos(a) * 1.8, Math.sin(a) * 1.8], [Math.cos(a + 0.35) * 3.1, Math.sin(a + 0.35) * 3.1], [Math.cos(a + 0.55) * 1.8, Math.sin(a + 0.55) * 1.8]])
-  }
-  eyes(ctx, pal, [[0, 0]], 0.6)
   ctx.restore()
 }
 
@@ -424,8 +363,8 @@ const bat: Painter = (ctx, p, pal) => {
 }
 
 const PAINTERS: Record<EclipseCreatureKind, Painter> = {
-  reaper, brute, swampthing, deepone, vampire, wolf, butcher, psycho, nailhead, manfly, zombie,
-  eye, wisp, skull, sphere,
+  reaper, brute, swampthing, deepone, vampire, wolf, manfly, zombie,
+  eye, wisp, skull,
   moth, mothron, bigbat, raven, fly, dragonfly,
   bat,
 }

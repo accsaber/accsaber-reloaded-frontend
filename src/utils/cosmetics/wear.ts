@@ -31,7 +31,7 @@ const BITE_CRACK_WIDTH = 0.022
 const EDGE_CRACK_WIDTH = 0.016
 const MAX_BRANCHES = 2
 
-function seedNumber(seed: string): number {
+export function seedNumber(seed: string): number {
   let h = 7
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 100003
   return h

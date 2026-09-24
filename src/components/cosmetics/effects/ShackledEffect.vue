@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useEffectCanvas, type EffectFrame } from '@/composables/useEffectCanvas'
+import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
+import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/api/items'
-import { asNumber, asString, easeIn, easeOut, isFieldKey, padBox, ringGeometry, ringSpan, type ContentBox, type EffectMeasure, type Vec } from '@/utils/cosmetics/effects'
+import { asColor, asNumber, clampNumber, easeIn, easeOut, geometryMemo, polyBounds, ringSpan, type ContentBox, type EffectFrame, type EffectMeasure, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const props = defineProps<{
   composition: Composition
@@ -24,9 +25,9 @@ interface ChainConfig {
 
 function readChains(c: Composition): ChainConfig {
   return {
-    color: asString(c.color) ?? '#55556a',
-    highlight: asString(c.highlight) ?? '#a9a9bb',
-    count: Math.max(1, Math.min(8, Math.round(asNumber(c.count) ?? 3))),
+    color: asColor(c.color),
+    highlight: asColor(c.highlight),
+    count: Math.round(clampNumber(c.count, 1, 8, 3)),
     cycleSecs: Math.max(4, asNumber(c.cycleSecs) ?? 9),
     holdSecs: Math.max(0.5, asNumber(c.holdSecs) ?? 3),
   }
@@ -42,13 +43,15 @@ interface Chain {
   links: Link[]
   buildDt: number
   fadeDt: number
-  buildEnd: number
   fadeStart: number
+  cycle: number
 }
 
 const cfg = computed(() => readChains(props.composition))
-const isTitle = computed(() => props.measure.typeKey === 'title')
-const field = computed(() => isFieldKey(props.measure.typeKey))
+const { isTitle, field } = useEffectSurface(() => props.measure)
+
+const chains = geometryMemo<Chain>()
+watch(cfg, chains.clear)
 
 const linkLen = computed(() => {
   const box = props.measure.box
@@ -59,16 +62,12 @@ const linkLen = computed(() => {
 
 const pad = computed(() => Math.round(linkLen.value * 2.5))
 
-const ring = computed(() => ringGeometry(props.measure, padBox(props.measure.box, pad.value)))
-
-function chainFor(seed: number, box: ContentBox, link: number): Chain {
+function chainFor(seed: number, box: ContentBox, ring: RingGeometry, link: number): Chain {
   const badge = !isTitle.value && !field.value
-  const ys = badge ? ring.value.outer.pts.map((q) => q.y) : [box.y, box.y + box.h]
-  const yMin = Math.min(...ys)
-  const yMax = Math.max(...ys)
-  const y = isTitle.value ? box.y + box.h * 0.5 : yMin + (yMax - yMin) * (0.12 + hash01(seed + 1) * 0.76)
+  const bounds = badge ? polyBounds(ring.outer) : box
+  const y = isTitle.value ? box.y + box.h * 0.5 : bounds.y + bounds.h * (0.12 + hash01(seed + 1) * 0.76)
   const sag = isTitle.value ? 0 : link * (0.4 + hash01(seed + 2) * 1.2)
-  const span = badge ? ringSpan(ring.value.outer, y) : null
+  const span = badge ? ringSpan(ring.outer, y) : null
   const x0 = (span ? span.x0 : box.x) - link * 0.6
   const x1 = (span ? span.x1 : box.x + box.w) + link * 0.6
   const n = Math.max(2, Math.ceil((x1 - x0) / (link * 0.78)))
@@ -82,12 +81,8 @@ function chainFor(seed: number, box: ContentBox, link: number): Chain {
   }
   const buildDt = Math.min(0.07, 1.6 / n)
   const fadeDt = Math.min(0.06, 1.4 / n)
-  const buildEnd = n * buildDt
-  return { links, buildDt, fadeDt, buildEnd, fadeStart: buildEnd + cfg.value.holdSecs }
-}
-
-function cycleLength(ch: Chain): number {
-  return Math.max(cfg.value.cycleSecs, ch.fadeStart + ch.links.length * ch.fadeDt + 1)
+  const fadeStart = n * buildDt + cfg.value.holdSecs
+  return { links, buildDt, fadeDt, fadeStart, cycle: Math.max(cfg.value.cycleSecs, fadeStart + n * fadeDt + 1) }
 }
 
 function drawLink(g: Ctx, l: Link, link: number, alpha: number, dropY: number) {
@@ -115,10 +110,12 @@ function drawLink(g: Ctx, l: Link, link: number, alpha: number, dropY: number) {
   g.restore()
 }
 
-function drawChain(g: Ctx, ch: Chain, local: number, link: number, reduced: boolean) {
+function drawChain(g: Ctx, ch: Chain, local: number, link: number, reduced: boolean): boolean {
+  let drew = false
   ch.links.forEach((l, i) => {
     if (reduced) {
       drawLink(g, l, link, 1, 0)
+      drew = true
       return
     }
     const a = Math.max(0, Math.min(1, (local - i * ch.buildDt) / 0.2))
@@ -127,45 +124,30 @@ function drawChain(g: Ctx, ch: Chain, local: number, link: number, reduced: bool
     if (f >= 1) return
     const dropY = (1 - easeOut(a)) * -link * 1.4 + easeIn(f) * link * 0.8
     drawLink(g, l, link, a * (1 - f), dropY)
+    drew = true
   })
+  return drew
 }
 
-function drawFrame(f: EffectFrame) {
+function drawFrame(f: EffectFrame): boolean {
   const link = linkLen.value
   const count = isTitle.value ? 1 : cfg.value.count
   const seed0 = props.measure.stack * 101 + 41
+  let drew = false
   for (let c = 0; c < count; c++) {
-    const probe = chainFor(seed0 + c * 53, f.box, link)
-    const T = cycleLength(probe)
+    const probeSeed = seed0 + c * 53
+    const T = chains.get(f.ring, probeSeed, () => chainFor(probeSeed, f.box, f.ring, link)).cycle
     const phase = (c / count) * T + hash01(seed0 + c * 7) * 1.5
     const k = Math.floor((f.t + phase) / T)
     const local = (f.t + phase) % T
-    const chain = chainFor(seed0 + c * 53 + k * 131, f.box, link)
-    drawChain(f.g, chain, local, link, f.reduced)
+    const seed = probeSeed + k * 131
+    const chain = chains.get(f.ring, seed, () => chainFor(seed, f.box, f.ring, link))
+    if (drawChain(f.g, chain, local, link, f.reduced)) drew = true
   }
+  return drew
 }
-
-const { canvasRef, canvasStyle } = useEffectCanvas(() => props.measure, () => pad.value, drawFrame)
 </script>
 
 <template>
-  <div class="comp-fx-region">
-    <canvas ref="canvasRef" class="comp-fx-canvas" :style="canvasStyle" aria-hidden="true"></canvas>
-  </div>
+  <EffectCanvas :measure="measure" :pad="pad" :draw="drawFrame" />
 </template>
-
-<style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.comp-fx-canvas {
-  position: absolute;
-  display: block;
-  max-width: none;
-  max-height: none;
-}
-</style>

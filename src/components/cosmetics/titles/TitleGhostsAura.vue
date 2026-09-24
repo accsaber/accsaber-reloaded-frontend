@@ -25,6 +25,7 @@ const STATIC_T = 2
 
 let rect: TitleAuraRect | null = null
 let ghosts: Ghost[] = []
+let startMs = 0
 
 function sheet(): string {
   return pickVariant(props.light, props.aura.lightColor, props.aura.color, '#e9e3d0')
@@ -93,14 +94,17 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 useElementCanvas(canvasRef, {
   init(_w, _h, now) {
     rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-    const t = now / 1000
-    ghosts = Array.from({ length: props.aura.count ?? 4 }, () => spawn(t, true))
+    startMs = now
+    ghosts = Array.from({ length: props.aura.count ?? 4 }, () => spawn(0, true))
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
     if (!rect) return
-    const t = reduced ? STATIC_T : now / 1000
-    ghosts = ghosts.map((g) => (t - g.born > g.life ? spawn(t, false) : g))
+    const t = reduced ? STATIC_T : (now - startMs) / 1000
+    for (let i = 0; i < ghosts.length; i++) {
+      const g = ghosts[i]
+      if (g && t - g.born > g.life) ghosts[i] = spawn(t, false)
+    }
     for (const g of ghosts) drawGhost(ctx, g, t, rect)
   },
 })

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
 import { type Ctx, fillCircle, fillPoly, flickerNoise, makeProjector, type Point, type Projector, sceneUnit } from '@/utils/cosmetics/canvasShapes'
-import { darken, lerpHex, lighten } from '@/utils/color'
+import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
 import { drawHorrorFace } from '@/utils/cosmetics/horrorFace'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { blitSceneLayer, paintSceneLayer } from '@/utils/cosmetics/sceneLayer'
+import { createRadialSprite, offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import type { ChurchBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
 
@@ -26,6 +26,24 @@ interface Flame {
   phase: number
 }
 
+interface Candle {
+  x: number
+  top: number
+  width: number
+  height: number
+  flame: Flame
+}
+
+interface WindowPane {
+  canvas: HTMLCanvasElement
+  x: number
+  y: number
+  w: number
+  h: number
+  gain: number
+  k: number
+}
+
 const STATIC_T = 5
 const WINDOW_DEPTHS = [1.5, 3.1, 4.7, 6.3, 7.9, 9.5]
 const WINDOW_SPAN = 0.9
@@ -40,17 +58,26 @@ const PEW_DEPTH = 0.34
 const BACK_Y = 0.2
 const SEAT_Y = 0.36
 const ALTAR_Z = 11
+const FIGURE_PX = 512
+const GLOW_PX = 64
+
+const candleGlow = createRadialSprite(GLOW_PX, parseHex(props.config.candleColor) ?? [255, 255, 255], [[0, 0.28], [1, 0]])
+const candleCore = withAlpha(props.config.candleColor, 0.9)
 
 let motes: Mote[] = []
 let flames: Flame[] = []
 let startTime = 0
 let unit = 1
 let seed = 0
+let sceneW = 0
 let project: Projector = makeProjector(0, 0, 1)
 let base: HTMLCanvasElement | null = null
 let furniture: HTMLCanvasElement | null = null
-let windowSprite: HTMLCanvasElement | null = null
-let figLayer: HTMLCanvasElement | null = null
+let panes: WindowPane[] = []
+let figures = new Map<string, HTMLCanvasElement>()
+let figuresCycle = -1
+let planCycle = -1
+let plan: Hop[] = []
 
 function h01(n: number): number {
   return hash01(seed + n)
@@ -58,12 +85,25 @@ function h01(n: number): number {
 
 function layout(w: number, h: number, scale: number) {
   unit = sceneUnit(w, h)
+  sceneW = w
   project = makeProjector(w / 2, h * 0.42, w * 0.5)
-  base = null
-  furniture = null
-  figLayer = null
-  flames = []
-  windowSprite = buildWindowSprite(Math.max(1, scale) * 2)
+  base = paintLayer(w, h, scale, (o) => {
+    drawWalls(o, w, h)
+    drawLightShafts(o)
+  })
+  furniture = paintLayer(w, h, scale, (o) => {
+    drawAltar(o)
+    drawPews(o)
+  })
+  flames = altarFlames()
+  const sprite = buildWindowSprite(Math.max(1, scale) * 2)
+  panes = WINDOW_DEPTHS.flatMap((z, i) => [bakeWindow(sprite, -1, z, i, scale), bakeWindow(sprite, 1, z, i + 6, scale)])
+}
+
+function paintLayer(w: number, h: number, scale: number, paint: (o: Ctx) => void): HTMLCanvasElement {
+  const [c, o] = offscreenLayer(w, h, scale)
+  if (o) paint(o)
+  return c
 }
 
 function figurePoint(): Point {
@@ -92,8 +132,8 @@ function paintLattice(o: Ctx, x: number, y: number, w: number, h: number, k: num
       const cy = y + row * cell
       const idx = Math.floor(h01(k * 131 + row * 17 + col * 7) * colors.length)
       const bright = 0.55 + h01(k * 151 + row * 13 + col * 3) * 0.45
-      o.fillStyle = withAlpha(colors[idx] ?? '#ffffff', bright)
-      o.strokeStyle = withAlpha('#000000', 0.75)
+      o.fillStyle = withAlpha(colors[idx], bright)
+      o.strokeStyle = 'rgba(0, 0, 0, 0.75)'
       o.lineWidth = 0.8
       o.beginPath()
       o.moveTo(cx, cy - cell / 2)
@@ -113,7 +153,7 @@ function paintRose(o: Ctx, cx: number, cy: number, r: number): void {
   for (let i = 0; i < 8; i++) {
     const a0 = (i / 8) * Math.PI * 2
     const a1 = ((i + 1) / 8) * Math.PI * 2
-    o.fillStyle = withAlpha(colors[(i + 2) % colors.length] ?? '#ffffff', 0.85)
+    o.fillStyle = withAlpha(colors[(i + 2) % colors.length], 0.85)
     o.beginPath()
     o.moveTo(cx, cy)
     o.arc(cx, cy, r, a0, a1)
@@ -122,7 +162,7 @@ function paintRose(o: Ctx, cx: number, cy: number, r: number): void {
   }
   o.fillStyle = withAlpha(props.config.candleColor, 0.9)
   fillCircle(o, cx, cy, r * 0.3)
-  o.strokeStyle = withAlpha('#000000', 0.8)
+  o.strokeStyle = 'rgba(0, 0, 0, 0.8)'
   o.lineWidth = 1
   o.beginPath()
   o.arc(cx, cy, r, 0, Math.PI * 2)
@@ -137,12 +177,8 @@ function paintRose(o: Ctx, cx: number, cy: number, r: number): void {
 }
 
 function buildWindowSprite(scale: number): HTMLCanvasElement {
-  const c = document.createElement('canvas')
-  c.width = Math.ceil(WIN_W * scale)
-  c.height = Math.ceil(WIN_H * scale)
-  const o = c.getContext('2d')
+  const [c, o] = offscreenLayer(WIN_W, WIN_H, scale)
   if (!o) return c
-  o.setTransform(scale, 0, 0, scale, 0, 0)
   o.fillStyle = darken(props.config.wallBottom, 0.5)
   lancetPath(o, 0, 0, WIN_W, WIN_H)
   o.fill()
@@ -150,7 +186,7 @@ function buildWindowSprite(scale: number): HTMLCanvasElement {
   for (let i = 0; i < 3; i++) paintLattice(o, 2 + i * (mw + 2), 30, mw, WIN_H - 32, i + 1)
   paintLattice(o, 10, 4, WIN_W - 20, 34, 9)
   paintRose(o, WIN_W / 2, 20, 11)
-  o.strokeStyle = withAlpha('#000000', 0.9)
+  o.strokeStyle = 'rgba(0, 0, 0, 0.9)'
   o.lineWidth = 2
   lancetPath(o, 1, 1, WIN_W - 2, WIN_H - 2)
   o.stroke()
@@ -161,13 +197,8 @@ function buildWindowSprite(scale: number): HTMLCanvasElement {
   return c
 }
 
-function drawWindow(ctx: Ctx, sd: number, z: number, t: number, k: number): void {
-  if (!windowSprite) return
-  const sw = windowSprite.width / STRIPS
-  const depthGain = Math.min(1, 0.35 + z * 0.12)
-  const shine = 0.55 + 0.25 * Math.sin(t * 0.11 + k * 1.7) + 0.2 * Math.sin(t * 0.043 + k)
-  ctx.imageSmoothingQuality = 'high'
-  for (let i = 0; i < STRIPS; i++) {
+function windowStrips(sd: number, z: number): { x: number; y: number; w: number; h: number }[] {
+  return Array.from({ length: STRIPS }, (_, i) => {
     const u0 = i / STRIPS
     const u1 = (i + 1) / STRIPS
     const zz0 = z + (sd > 0 ? u0 : 1 - u1) * WINDOW_SPAN
@@ -175,13 +206,33 @@ function drawWindow(ctx: Ctx, sd: number, z: number, t: number, k: number): void
     const top0 = project(sd * 1.2, -0.75, zz0)
     const top1 = project(sd * 1.2, -0.75, zz1)
     const bot0 = project(sd * 1.2, 0.12, zz0)
-    const x0 = Math.min(top0[0], top1[0])
-    const x1 = Math.max(top0[0], top1[0])
-    const srcX = (STRIPS - 1 - i) * sw
-    const dw = Math.max(1, x1 - x0)
-    const pad = (dw / sw) * 2
-    ctx.globalAlpha = depthGain * shine * 0.7
-    ctx.drawImage(windowSprite, srcX - 2, 0, sw + 4, windowSprite.height, x0 - pad, Math.min(top0[1], top1[1]), dw + pad * 2, bot0[1] - top0[1])
+    const x = Math.min(top0[0], top1[0])
+    return { x, y: Math.min(top0[1], top1[1]), w: Math.max(1, Math.max(top0[0], top1[0]) - x), h: bot0[1] - top0[1] }
+  })
+}
+
+function bakeWindow(sprite: HTMLCanvasElement, sd: number, z: number, k: number, scale: number): WindowPane {
+  const strips = windowStrips(sd, z)
+  const sw = sprite.width / STRIPS
+  const pads = strips.map((s) => (s.w / sw) * 2)
+  const x = Math.min(...strips.map((s, i) => s.x - pads[i]))
+  const y = Math.min(...strips.map((s) => s.y))
+  const w = Math.max(...strips.map((s, i) => s.x + s.w + pads[i])) - x
+  const h = Math.max(...strips.map((s) => s.y + s.h)) - y
+  const [canvas, o] = offscreenLayer(w, h, scale)
+  if (o) {
+    o.imageSmoothingQuality = 'high'
+    strips.forEach((s, i) => {
+      o.drawImage(sprite, (STRIPS - 1 - i) * sw - 2, 0, sw + 4, sprite.height, s.x - pads[i] - x, s.y - y, s.w + pads[i] * 2, s.h)
+    })
+  }
+  return { canvas, x, y, w, h, gain: Math.min(1, 0.35 + z * 0.12) * 0.7, k }
+}
+
+function drawWindows(ctx: Ctx, t: number): void {
+  for (const p of panes) {
+    ctx.globalAlpha = p.gain * (0.55 + 0.25 * Math.sin(t * 0.11 + p.k * 1.7) + 0.2 * Math.sin(t * 0.043 + p.k))
+    ctx.drawImage(p.canvas, p.x, p.y, p.w, p.h)
   }
   ctx.globalAlpha = 1
 }
@@ -198,7 +249,7 @@ function drawWalls(ctx: Ctx, w: number, h: number) {
   for (const sd of [-1, 1]) {
     fillPoly(ctx, [project(sd * 1.2, -0.9, 0.45), project(sd * 1.2, 0.5, 0.45), project(sd * 1.2, 0.5, 12), project(sd * 1.2, -0.9, 12)])
   }
-  ctx.strokeStyle = withAlpha('#000000', 0.35)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'
   ctx.lineWidth = Math.max(1, unit * 0.4)
   for (const z of [1, ...WINDOW_DEPTHS.map((d) => d + WINDOW_SPAN + 0.35)]) {
     for (const sd of [-1, 1]) {
@@ -208,11 +259,10 @@ function drawWalls(ctx: Ctx, w: number, h: number) {
       ctx.moveTo(a[0], a[1])
       ctx.lineTo(b[0], b[1])
       ctx.stroke()
-      const c = project(sd * 1.2, -0.9, z)
       const d = project(0, -1.35, z)
       ctx.beginPath()
-      ctx.moveTo(c[0], c[1])
-      ctx.quadraticCurveTo(c[0] + (d[0] - c[0]) * 0.5, d[1], d[0], d[1])
+      ctx.moveTo(a[0], a[1])
+      ctx.quadraticCurveTo(a[0] + (d[0] - a[0]) * 0.5, d[1], d[0], d[1])
       ctx.stroke()
     }
   }
@@ -242,8 +292,7 @@ function convexHull(points: Point[]): Point[] {
 }
 
 function shaftFloorPoint(sd: number, y: number, z: number): Point {
-  const t = (0.5 - y) / 1
-  return project(sd * (1.2 - 0.9 * t), 0.5, z)
+  return project(sd * (1.2 - 0.9 * (0.5 - y)), 0.5, z)
 }
 
 function drawLightShafts(ctx: Ctx) {
@@ -286,7 +335,7 @@ function pewBack(ctx: Ctx, x0: number, x1: number, z: number, wood: string): voi
   fillPoly(ctx, [a, b, c, d])
   ctx.fillStyle = withAlpha(lighten(wood, 0.35), 0.55)
   fillPoly(ctx, [d, c, e, f])
-  ctx.strokeStyle = withAlpha('#000000', 0.3)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)'
   ctx.lineWidth = Math.max(0.5, unit * 0.15)
   for (const u of [0.3, 0.62]) {
     const p0 = project(x0, 0.5 + (BACK_Y - 0.5) * u, z)
@@ -306,7 +355,7 @@ function pewEnd(ctx: Ctx, x: number, z: number, wood: string): void {
   const e = project(x, BACK_Y - 0.03, z)
   ctx.fillStyle = lighten(wood, 0.12)
   fillPoly(ctx, [a, b, c, d, e])
-  ctx.strokeStyle = withAlpha('#000000', 0.45)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)'
   ctx.lineWidth = Math.max(0.6, unit * 0.2)
   ctx.beginPath()
   ctx.moveTo(a[0], a[1])
@@ -336,7 +385,7 @@ function drawPews(ctx: Ctx) {
   const wood = props.config.pewColor
   for (let i = PEW_ROWS - 1; i >= 0; i--) {
     const z = ROW_Z0 + i * ROW_DZ
-    const tone = i % 2 ? wood : lerpHex(wood, '#000000', 0.12)
+    const tone = i % 2 ? wood : darken(wood, 0.12)
     for (const sd of [-1, 1]) {
       const inner = sd * 0.14
       const outer = sd * 0.82
@@ -416,14 +465,14 @@ function drawRoseWindow(ctx: Ctx): void {
   ctx.fillStyle = g
   ctx.fillRect(c[0] - r * 3, c[1] - r * 3, r * 6, r * 6)
   for (let i = 0; i < 12; i++) {
-    ctx.fillStyle = withAlpha(colors[i % colors.length] ?? '#ffffff', 0.4)
+    ctx.fillStyle = withAlpha(colors[i % colors.length], 0.4)
     ctx.beginPath()
     ctx.moveTo(c[0], c[1])
     ctx.arc(c[0], c[1], r, (i / 12) * Math.PI * 2, ((i + 1) / 12) * Math.PI * 2)
     ctx.closePath()
     ctx.fill()
   }
-  ctx.strokeStyle = withAlpha('#000000', 0.8)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'
   ctx.lineWidth = Math.max(0.6, unit * 0.22)
   for (const rr of [r, r * 0.62]) {
     ctx.beginPath()
@@ -441,20 +490,57 @@ function drawRoseWindow(ctx: Ctx): void {
   fillCircle(ctx, c[0], c[1], r * 0.18)
 }
 
+function candelabrumCandles(x: number, z: number): Candle[] {
+  const base = project(x, 0.44, z)
+  const u = (unit * 5.5) / z
+  return [-6, 0, 6].map((dx) => {
+    const top = base[1] - u * (33 - Math.abs(dx) * 0.4)
+    return {
+      x: base[0] + dx * u - u * 0.6,
+      top,
+      width: u * 1.2,
+      height: u * (7 - Math.abs(dx) * 0.4),
+      flame: { x: base[0] + dx * u, y: top - u * 0.5, size: Math.max(0.5, u / unit), phase: h01(dx * 3 + x * 7) * 6 },
+    }
+  })
+}
+
+function rackAnchor(): Point {
+  return project(-1.15, 0.5, 8.6)
+}
+
+function rackCandles(): Candle[] {
+  const rx = rackAnchor()
+  return Array.from({ length: 6 }, (_, i) => {
+    const cx = rx[0] + 1.5 * unit + i * 2.2 * unit
+    const ch = (1.5 + h01(i * 5) * 2) * unit
+    return {
+      x: cx - 0.5 * unit,
+      top: rx[1] - 9.5 * unit - ch,
+      width: unit,
+      height: ch,
+      flame: { x: cx, y: rx[1] - 9.9 * unit - ch, size: 0.55, phase: h01(i * 9) * 6 },
+    }
+  })
+}
+
+function altarFlames(): Flame[] {
+  return [...candelabrumCandles(-0.55, ALTAR_Z - 0.2), ...candelabrumCandles(0.55, ALTAR_Z - 0.2), ...rackCandles()].map((c) => c.flame)
+}
+
+function drawCandles(ctx: Ctx, candles: Candle[], wax: string): void {
+  ctx.fillStyle = wax
+  for (const c of candles) ctx.fillRect(c.x, c.top, c.width, c.height)
+}
+
 function drawCandelabrum(ctx: Ctx, x: number, z: number, dark: string): void {
   const base = project(x, 0.44, z)
-  const scale = (unit * 5.5) / z
-  const u = scale
+  const u = (unit * 5.5) / z
   ctx.fillStyle = dark
   ctx.fillRect(base[0] - u * 0.7, base[1] - u * 26, u * 1.4, u * 26)
   ctx.fillRect(base[0] - u * 5, base[1] - u * 1, u * 10, u * 1.2)
   ctx.fillRect(base[0] - u * 7, base[1] - u * 26, u * 14, u * 1)
-  for (const dx of [-6, 0, 6]) {
-    const cy = base[1] - u * (33 - Math.abs(dx) * 0.4)
-    ctx.fillStyle = lighten(props.config.faceColor, 0.2)
-    ctx.fillRect(base[0] + dx * u - u * 0.6, cy, u * 1.2, u * (7 - Math.abs(dx) * 0.4))
-    flames.push({ x: base[0] + dx * u, y: cy - u * 0.5, size: Math.max(0.5, u / unit), phase: h01(dx * 3 + x * 7) * 6 })
-  }
+  drawCandles(ctx, candelabrumCandles(x, z), lighten(props.config.faceColor, 0.2))
 }
 
 function drawAltar(ctx: Ctx) {
@@ -490,7 +576,7 @@ function drawAltar(ctx: Ctx) {
   ctx.fillStyle = dark
   ctx.fillRect(lb[0] - lu * 0.6, lb[1] - lu * 14, lu * 1.2, lu * 14)
   fillPoly(ctx, [[lb[0] - lu * 4, lb[1] - lu * 13], [lb[0] + lu * 4, lb[1] - lu * 15], [lb[0] + lu * 4, lb[1] - lu * 17], [lb[0] - lu * 4, lb[1] - lu * 15]])
-  const rx = project(-1.15, 0.5, 8.6)
+  const rx = rackAnchor()
   const glow = ctx.createRadialGradient(rx[0] + 7 * unit, rx[1] - 11 * unit, 0, rx[0] + 7 * unit, rx[1] - 11 * unit, 18 * unit)
   glow.addColorStop(0, withAlpha(props.config.candleColor, 0.18))
   glow.addColorStop(1, withAlpha(props.config.candleColor, 0))
@@ -503,25 +589,18 @@ function drawAltar(ctx: Ctx) {
   ctx.fillRect(rx[0] - 1 * unit, rx[1] - 8.1 * unit, 16 * unit, 1.2 * unit)
   ctx.fillRect(rx[0] + 0.5 * unit, rx[1] - 7 * unit, 1.2 * unit, 7 * unit)
   ctx.fillRect(rx[0] + 12.3 * unit, rx[1] - 7 * unit, 1.2 * unit, 7 * unit)
-  for (let i = 0; i < 6; i++) {
-    const cx = rx[0] + 1.5 * unit + i * 2.2 * unit
-    const ch = (1.5 + h01(i * 5) * 2) * unit
-    ctx.fillStyle = lighten(props.config.faceColor, 0.1)
-    ctx.fillRect(cx - 0.5 * unit, rx[1] - 9.5 * unit - ch, 1 * unit, ch)
-    flames.push({ x: cx, y: rx[1] - 9.9 * unit - ch, size: 0.55, phase: h01(i * 9) * 6 })
-  }
+  drawCandles(ctx, rackCandles(), lighten(props.config.faceColor, 0.1))
 }
 
 function drawFlames(ctx: Ctx, t: number) {
   for (const f of flames) {
     const flick = 0.7 + flickerNoise(t + f.phase, 1.4) * 0.3
     const r = f.size * unit
-    const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r * 7 * flick)
-    g.addColorStop(0, withAlpha(props.config.candleColor, 0.28 * flick))
-    g.addColorStop(1, withAlpha(props.config.candleColor, 0))
-    ctx.fillStyle = g
-    ctx.fillRect(f.x - r * 7, f.y - r * 7, r * 14, r * 14)
-    ctx.fillStyle = withAlpha(props.config.candleColor, 0.9)
+    const gr = r * 7 * flick
+    ctx.globalAlpha = flick
+    ctx.drawImage(candleGlow, f.x - gr, f.y - gr, gr * 2, gr * 2)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = candleCore
     ctx.beginPath()
     ctx.ellipse(f.x, f.y - r * 0.6, r * 0.55, r * (1 + 0.5 * flick), 0, 0, Math.PI * 2)
     ctx.fill()
@@ -544,16 +623,7 @@ interface FigureFrame {
   streak: number
 }
 
-function figureLayer(): HTMLCanvasElement {
-  if (!figLayer) {
-    figLayer = document.createElement('canvas')
-    figLayer.width = 512
-    figLayer.height = 512
-  }
-  return figLayer
-}
-
-function paintCrouched(o: Ctx, c: string, u: number): void {
+function paintCrouched(o: Ctx, c: string): void {
   o.fillStyle = c
   o.strokeStyle = c
   o.lineCap = 'round'
@@ -562,7 +632,7 @@ function paintCrouched(o: Ctx, c: string, u: number): void {
   o.ellipse(0, -12, 9, 11, 0.15, 0, Math.PI * 2)
   o.fill()
   for (const sd of [-1, 1]) {
-    const sw = Math.sin(u * 6 + sd) * 0.6
+    const sw = Math.sin(sd) * 0.6
     o.beginPath()
     o.moveTo(sd * 7, -17)
     o.lineTo(sd * 8 + sw, -6)
@@ -589,15 +659,15 @@ function paintStanding(o: Ctx, c: string): void {
   o.fill()
 }
 
-function paintFigure(seed: number, crouch: boolean, u: number): HTMLCanvasElement {
-  const layer = figureLayer()
+function paintFigure(seed: number, crouch: boolean): HTMLCanvasElement {
+  const layer = document.createElement('canvas')
+  layer.width = FIGURE_PX
+  layer.height = FIGURE_PX
   const o = layer.getContext('2d')
   if (!o) return layer
-  o.setTransform(1, 0, 0, 1, 0, 0)
-  o.clearRect(0, 0, 512, 512)
-  o.setTransform(4, 0, 0, 4, 256, 400)
+  o.setTransform(4, 0, 0, 4, FIGURE_PX / 2, 400)
   const c = props.config.figureColor
-  if (crouch) paintCrouched(o, c, u)
+  if (crouch) paintCrouched(o, c)
   else paintStanding(o, c)
   const headY = crouch ? -26 : -51
   drawHorrorFace(o, 0, headY + 1, 12, seed, { figure: c, face: props.config.faceColor }, { hair: 1.9 })
@@ -609,7 +679,20 @@ function paintFigure(seed: number, crouch: boolean, u: number): HTMLCanvasElemen
   o.beginPath()
   o.ellipse(0, headY - 1, 9, 8, 0, 0, Math.PI * 2)
   o.fill()
-  o.globalCompositeOperation = 'source-over'
+  return layer
+}
+
+function figureSprite(n: number, crouch: boolean): HTMLCanvasElement {
+  if (n !== figuresCycle) {
+    figures = new Map()
+    figuresCycle = n
+  }
+  const key = crouch ? 'crouch' : 'stand'
+  let layer = figures.get(key)
+  if (!layer) {
+    layer = paintFigure(n * 7 + 3, crouch)
+    figures.set(key, layer)
+  }
   return layer
 }
 
@@ -626,7 +709,7 @@ function aisleClip(z: number): FigureClip {
 }
 
 function aboveBackClip(row: number): FigureClip {
-  return { x0: 0, x1: 1e6, y1: project(0, BACK_Y, rowZ(row))[1] }
+  return { x0: 0, x1: sceneW, y1: project(0, BACK_Y, rowZ(row))[1] }
 }
 
 const PEEK_X = 0.42
@@ -648,6 +731,7 @@ function sinkSide(n: number): number {
 }
 
 function hopPlan(n: number): Hop[] {
+  if (n === planCycle) return plan
   const out: Hop[] = []
   let row = PEW_ROWS - 1
   let side = sinkSide(n)
@@ -661,15 +745,18 @@ function hopPlan(n: number): Hop[] {
     side = -side
     k++
   }
+  planCycle = n
+  plan = out
   return out
 }
 
 function hopFrame(u: number, n: number): FigureFrame | null {
-  const plan = hopPlan(n)
-  const idx = plan.findIndex((hp, i) => u >= hp.start && (i === plan.length - 1 || u < (plan[i + 1]?.start ?? Infinity)))
-  const hop = plan[idx]
-  if (!hop) return null
-  const next = plan[idx + 1]
+  const hops = hopPlan(n)
+  if (!hops.length || u < hops[0].start) return null
+  let idx = 0
+  while (idx < hops.length - 1 && u >= hops[idx + 1].start) idx++
+  const hop = hops[idx]
+  const next = hops[idx + 1]
   const local = u - hop.start
   const pause = idx === 0 ? 0.15 : 0.4 + h01(n * 11 + idx) * 0.5
   const z = rowZ(hop.row) + 0.3
@@ -712,28 +799,28 @@ function standFrame(u: number, n: number): FigureFrame {
   return { x: ax + (to[0] - ax) * p, y: ay + (Math.max(to[1], sunkY) - ay) * p, k: kk, alpha: 1, crouch: false, clip, streak: 0 }
 }
 
-function figureFrame(t: number): { f: FigureFrame; n: number; u: number } | null {
+function figureFrame(t: number): { f: FigureFrame; n: number } | null {
   const n = Math.floor(t / FIGURE_PERIOD_S)
   const local = t - n * FIGURE_PERIOD_S
   const start = 6 + h01(n * 13) * 10
   const u = local - start
   if (u < 0) return null
-  if (u < 4.3) return { f: standFrame(u, n), n, u }
+  if (u < 4.3) return { f: standFrame(u, n), n }
   const hop = hopFrame(u - 4.3, n)
-  return hop ? { f: hop, n, u } : null
+  return hop ? { f: hop, n } : null
 }
 
 function blitFigure(ctx: Ctx, f: FigureFrame, layer: HTMLCanvasElement, dx: number, alpha: number): void {
-  const size = (f.k / 4) * 512
+  const size = (f.k / 4) * FIGURE_PX
   ctx.globalAlpha = alpha
-  ctx.drawImage(layer, f.x - size / 2 + dx, f.y - size * (400 / 512), size, size)
+  ctx.drawImage(layer, f.x - size / 2 + dx, f.y - size * (400 / FIGURE_PX), size, size)
 }
 
 function drawFigure(ctx: Ctx, t: number) {
   const fr = figureFrame(t)
   if (!fr || fr.f.alpha <= 0) return
-  const { f, n, u } = fr
-  const layer = paintFigure(n * 7 + 3, f.crouch, u)
+  const { f, n } = fr
+  const layer = figureSprite(n, f.crouch)
   ctx.save()
   if (f.clip) {
     ctx.beginPath()
@@ -772,28 +859,12 @@ useBackdropCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000
-    if (!base) {
-      base = paintSceneLayer(ctx, (lctx) => {
-        drawWalls(lctx, w, h)
-        drawLightShafts(lctx)
-      })
-    }
-    if (!furniture) {
-      flames = []
-      furniture = paintSceneLayer(ctx, (lctx) => {
-        drawAltar(lctx)
-        drawPews(lctx)
-      })
-    }
-    blitSceneLayer(ctx, base)
-    WINDOW_DEPTHS.forEach((z, i) => {
-      drawWindow(ctx, -1, z, t, i)
-      drawWindow(ctx, 1, z, t, i + 6)
-    })
-    blitSceneLayer(ctx, furniture, 'source-over')
+    if (base) ctx.drawImage(base, 0, 0, w, h)
+    drawWindows(ctx, t)
+    if (furniture) ctx.drawImage(furniture, 0, 0, w, h)
     drawFlames(ctx, t)
-    if (props.config.figure && !reduced) drawFigure(ctx, t)
-    if (props.config.dust) drawDust(ctx, w, h, t)
+    if (!reduced) drawFigure(ctx, t)
+    drawDust(ctx, w, h, t)
   },
 })
 </script>
@@ -801,21 +872,7 @@ useBackdropCanvas(canvasRef, {
 <template>
   <canvas
     ref="canvas"
-    class="church-backdrop"
     :style="{ opacity: config.opacity }"
     aria-hidden="true"
   />
 </template>
-
-<style scoped>
-.church-backdrop {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  z-index: -1;
-  pointer-events: none;
-}
-</style>

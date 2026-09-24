@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { TitleInfernoAuraSpec } from '@/types/api/items'
-import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
@@ -16,6 +16,12 @@ const palette = computed(() => ({
   flame: pickVariant(props.light, props.aura.lightFlame, props.aura.flame, '#e8781e'),
   ember: pickVariant(props.light, props.aura.lightEmber, props.aura.ember, '#7c2d12'),
 }))
+
+const layers = computed<[string, number][]>(() => [
+  [withAlpha(palette.value.ember, 0.45), 1.25],
+  [withAlpha(palette.value.flame, 0.7), 1],
+  [withAlpha(palette.value.core, 0.85), 0.55],
+])
 
 interface Ember {
   x: number
@@ -42,8 +48,8 @@ function drawTongue(ctx: CanvasRenderingContext2D, r: TitleAuraRect, i: number, 
   const height = r.fs * (0.4 + 0.45 * hash01(i * 3)) * tongueHeight(i, t)
   const wdt = r.fs * (0.14 + 0.1 * hash01(i * 5))
   const lean = Math.sin(t * 1.6 + i * 1.3) * r.fs * 0.12
-  for (const [color, scale, alpha] of [[palette.value.ember, 1.25, 0.45], [palette.value.flame, 1, 0.7], [palette.value.core, 0.55, 0.85]] as [string, number, number][]) {
-    ctx.fillStyle = withAlpha(color, alpha)
+  for (const [fill, scale] of layers.value) {
+    ctx.fillStyle = fill
     ctx.beginPath()
     ctx.moveTo(x - wdt * scale, base)
     ctx.quadraticCurveTo(x - wdt * scale * 0.9 + lean * 0.3, base - height * scale * 0.55, x + lean, base - height * scale)
@@ -78,14 +84,14 @@ useElementCanvas(canvasRef, {
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
     if (!rect) return
-    const dt = reduced ? 0 : Math.min(0.05, (now - last) / 1000)
+    const dt = frameDelta(now, last, reduced)
     last = now
     clock = reduced ? 3 : clock + dt
     if (!reduced && clock >= nextEmber) {
       embers.push({ x: rand(0, 1), born: clock, life: rand(1.2, 2.2), drift: rand(-0.3, 0.3), size: rand(0.025, 0.05) })
       nextEmber = clock + rand(0.08, 0.25)
     }
-    embers = embers.filter((e) => clock - e.born < e.life)
+    if (embers.some((e) => clock - e.born >= e.life)) embers = embers.filter((e) => clock - e.born < e.life)
     const glow = ctx.createLinearGradient(0, rect.y + rect.h * 0.2, 0, rect.y + rect.h)
     glow.addColorStop(0, withAlpha(palette.value.flame, 0))
     glow.addColorStop(1, withAlpha(palette.value.flame, 0.3))

@@ -1,59 +1,24 @@
 <script setup lang="ts">
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useTimeline } from '@/composables/useTimeline'
-import ColossusBorderFill from '@/components/cosmetics/borders/ColossusBorderFill.vue'
-import CosmicBorderFill from '@/components/cosmetics/borders/CosmicBorderFill.vue'
-import DominionBorderFill from '@/components/cosmetics/borders/DominionBorderFill.vue'
-import EclipseBorderFill from '@/components/cosmetics/borders/EclipseBorderFill.vue'
-import GroveBorderFill from '@/components/cosmetics/borders/GroveBorderFill.vue'
-import StolenFlameBorderFill from '@/components/cosmetics/borders/StolenFlameBorderFill.vue'
-import PrismBorderFill from '@/components/cosmetics/borders/PrismBorderFill.vue'
-import RegaliaBorderFill from '@/components/cosmetics/borders/RegaliaBorderFill.vue'
-import ToonBorderFill from '@/components/cosmetics/borders/ToonBorderFill.vue'
-import CandleBorderFill from '@/components/cosmetics/borders/CandleBorderFill.vue'
-import WoodBorderFill from '@/components/cosmetics/borders/WoodBorderFill.vue'
-import BrewBorderFill from '@/components/cosmetics/borders/BrewBorderFill.vue'
-import ConfettiBorderFill from '@/components/cosmetics/borders/ConfettiBorderFill.vue'
-import JewelBorderFill from '@/components/cosmetics/borders/JewelBorderFill.vue'
-import LaserBorderFill from '@/components/cosmetics/borders/LaserBorderFill.vue'
-import ChartBorderFill from '@/components/cosmetics/borders/ChartBorderFill.vue'
-import HazardBorderFill from '@/components/cosmetics/borders/HazardBorderFill.vue'
-import WarpBorderFill from '@/components/cosmetics/borders/WarpBorderFill.vue'
+import { fillRenderer } from '@/components/cosmetics/borders/fillRenderers'
 import type {
   BorderColorStateValue,
   BorderColorValue,
   BorderShapePathValue,
   BorderShapeStateValue,
   BorderShapeValue,
-  ColossusFill,
-  CosmicFill,
-  DominionFill,
-  EclipseFill,
-  GroveFill,
-  StolenFlameFill,
-  PrismFill,
   Gradient,
-  RegaliaFill,
-  ToonFill,
-  CandleFill,
-  WoodFill,
-  BrewFill,
-  ConfettiFill,
-  JewelFill,
-  LaserFill,
-  ChartFill,
-  HazardFill,
-  WarpFill,
 } from '@/types/api/items'
 import {
   fillToCss,
   gradientToCss,
   interpolateBorderColorState,
   isAnimated,
-  lerpPoints,
+  isCanvasFill,
   pickInterpolatedState,
-  pointsToPathD,
-  sampleShapeStates,
+  shapeTracks,
+  trackPathD,
 } from '@/utils/items'
 import { randBetween as rand } from '@/utils/random'
 import { shapeFrameBounds, shapeFrameMargin, type FrameBounds } from '@/utils/shapeSilhouette'
@@ -71,124 +36,29 @@ const isPixelShape = computed(() => props.shape?.renderMode === 'pixel')
 
 const colorIsConic = computed(() => props.color?.states?.[0]?.fill?.type === 'conic')
 
-const cosmicFill = computed<CosmicFill | null>(() => {
+const canvasFill = computed(() => {
   const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'cosmic' ? fill : null
+  return fill && isCanvasFill(fill) ? fill : null
 })
 
-const toonFill = computed<ToonFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'toon' ? fill : null
+const canvasFillActive = computed(() => !!canvasFill.value)
+
+const cosmicFill = computed(() => (canvasFill.value?.type === 'cosmic' ? canvasFill.value : null))
+const dominionFill = computed(() => (canvasFill.value?.type === 'dominion' ? canvasFill.value : null))
+const laserFill = computed(() => (canvasFill.value?.type === 'laser' ? canvasFill.value : null))
+
+const fillView = computed(() => {
+  const fill = canvasFill.value
+  if (!fill) return null
+  const renderer = fillRenderer(fill)
+  const attrs: Record<string, unknown> = { fill }
+  if (renderer.margin) attrs.margin = fillMargin.value
+  if (fill.type === 'cosmic') attrs.sink = cosmicSink.value
+  if (fill.type === 'laser') attrs.trace = laserTrace.value
+  return { component: renderer.component, attrs, key: `${JSON.stringify(fill)}:${renderer.margin ? fillMargin.value : 0}` }
 })
 
-const candleFill = computed<CandleFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'candle' ? fill : null
-})
-
-const woodFill = computed<WoodFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'wood' ? fill : null
-})
-
-const brewFill = computed<BrewFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'brew' ? fill : null
-})
-
-const prismFill = computed<PrismFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'prism' ? fill : null
-})
-
-const groveFill = computed<GroveFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'grove' ? fill : null
-})
-
-const regaliaFill = computed<RegaliaFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'regalia' ? fill : null
-})
-
-const colossusFill = computed<ColossusFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'colossus' ? fill : null
-})
-
-const stolenFlameFill = computed<StolenFlameFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'stolenflame' ? fill : null
-})
-
-const dominionFill = computed<DominionFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'dominion' ? fill : null
-})
-
-const eclipseFill = computed<EclipseFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'eclipse' ? fill : null
-})
-
-const confettiFill = computed<ConfettiFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'confetti' ? fill : null
-})
-
-const jewelFill = computed<JewelFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'jewel' ? fill : null
-})
-
-const laserFill = computed<LaserFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'laser' ? fill : null
-})
-
-const chartFill = computed<ChartFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'chart' ? fill : null
-})
-
-const hazardFill = computed<HazardFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'hazard' ? fill : null
-})
-
-const warpFill = computed<WarpFill | null>(() => {
-  const fill = props.color?.states?.[0]?.fill
-  return fill?.type === 'warp' ? fill : null
-})
-
-const canvasFillActive = computed(() =>
-  !!cosmicFill.value || !!toonFill.value || !!prismFill.value
-  || !!groveFill.value || !!regaliaFill.value || !!colossusFill.value
-  || !!stolenFlameFill.value || !!dominionFill.value || !!eclipseFill.value || !!candleFill.value || !!woodFill.value || !!brewFill.value
-  || !!confettiFill.value || !!jewelFill.value || !!laserFill.value || !!chartFill.value || !!hazardFill.value || !!warpFill.value,
-)
-
-const rimStyle = computed<{ stroke: string; width: number; opacity: number } | null>(() => {
-  if (cosmicFill.value) return { stroke: cosmicFill.value.star, width: 0.8, opacity: 0.45 }
-  if (toonFill.value) return { stroke: toonFill.value.line, width: 1.4, opacity: 1 }
-  if (prismFill.value) return { stroke: prismFill.value.edge, width: 0.9, opacity: 0.5 }
-  if (groveFill.value) return { stroke: groveFill.value.firefly, width: 0.8, opacity: 0.45 }
-  if (regaliaFill.value) return { stroke: regaliaFill.value.core ?? '#ffffff', width: 0.9, opacity: 0.55 }
-  if (colossusFill.value) return { stroke: colossusFill.value.seam, width: 0.9, opacity: 0.5 }
-  if (stolenFlameFill.value) return { stroke: stolenFlameFill.value.flame, width: 0.9, opacity: 0.5 }
-  if (dominionFill.value) return { stroke: dominionFill.value.body ?? '#ffffff', width: 0.9, opacity: 0.65 }
-  if (eclipseFill.value) return { stroke: eclipseFill.value.corona, width: 0.9, opacity: 0.5 }
-  if (candleFill.value) return { stroke: candleFill.value.glow, width: 0.8, opacity: 0.35 }
-  if (woodFill.value) return { stroke: woodFill.value.dark, width: 1, opacity: 0.7 }
-  if (brewFill.value) return { stroke: brewFill.value.bone, width: 0.8, opacity: 0.5 }
-  if (confettiFill.value) return { stroke: confettiFill.value.colors[0], width: 0.8, opacity: 0.45 }
-  if (jewelFill.value) return { stroke: jewelFill.value.glint ?? '#ffffff', width: 0.8, opacity: 0.5 }
-  if (laserFill.value) return { stroke: laserFill.value.core, width: 0.9, opacity: 0.55 }
-  if (chartFill.value) return { stroke: chartFill.value.ink, width: 1, opacity: 0.7 }
-  if (hazardFill.value) return { stroke: hazardFill.value.a, width: 0.9, opacity: 0.6 }
-  if (warpFill.value) return { stroke: warpFill.value.streak, width: 0.8, opacity: 0.45 }
-  return null
-})
+const rimStyle = computed(() => (canvasFill.value ? fillRenderer(canvasFill.value).rim(canvasFill.value) : null))
 
 const cosmicSink = computed<{ x: number; y: number; r: number } | null>(() => {
   const overlay = props.shape?.overlay
@@ -299,11 +169,11 @@ const basePaths = computed(() => sortedShapeStates.value[0]?.paths ?? [])
 
 const SHAPE_SAMPLES = 100
 
-const sampledStates = computed<Array<Array<[number, number][]>> | null>(() => {
+const tracks = computed(() => {
   const states = sortedShapeStates.value
   if (states.length < 2) return null
   try {
-    return sampleShapeStates(states, SHAPE_SAMPLES)
+    return shapeTracks(states, SHAPE_SAMPLES)
   } catch {
     return null
   }
@@ -359,22 +229,12 @@ const lerpedPaths = computed<string[] | null>(() => {
   const states = sortedShapeStates.value
   if (states.length === 0) return null
   if (states.length === 1) return (states[0].paths ?? []).map((p) => p.d)
-  const samples = sampledStates.value
-  if (!samples) return (states[0].paths ?? []).map((p) => p.d)
+  const list = tracks.value
   const bracket = currentShapeBracket()
-  if (!bracket) return (states[0].paths ?? []).map((p) => p.d)
-  if (bracket.idxA === bracket.idxB) {
-    return samples[bracket.idxA].map(pointsToPathD)
-  }
-  const a = samples[bracket.idxA]
-  const b = samples[bracket.idxB]
-  const eased = easeInOutLocal(bracket.localT)
-  const pathCount = Math.min(a.length, b.length)
-  const out: string[] = []
-  for (let pi = 0; pi < pathCount; pi++) {
-    out.push(pointsToPathD(lerpPoints(a[pi], b[pi], eased)))
-  }
-  return out
+  if (!list || !bracket) return (states[0].paths ?? []).map((p) => p.d)
+  const { idxA, idxB } = bracket
+  const eased = idxA === idxB ? 0 : easeInOutLocal(bracket.localT)
+  return list.map((track) => trackPathD(track, idxA, idxB, eased))
 })
 
 let gradientIdCounter = 0
@@ -740,24 +600,7 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
         </mask>
       </defs>
     </svg>
-    <CosmicBorderFill v-if="cosmicFill" :key="fillMargin" :fill="cosmicFill" :margin="fillMargin" :sink="cosmicSink" />
-    <ToonBorderFill v-else-if="toonFill" :key="fillMargin" :fill="toonFill" :margin="fillMargin" />
-    <CandleBorderFill v-else-if="candleFill" :key="fillMargin" :fill="candleFill" :margin="fillMargin" />
-    <WoodBorderFill v-else-if="woodFill" :key="fillMargin" :fill="woodFill" :margin="fillMargin" />
-    <BrewBorderFill v-else-if="brewFill" :key="fillMargin" :fill="brewFill" :margin="fillMargin" />
-    <PrismBorderFill v-else-if="prismFill" :key="fillMargin" :fill="prismFill" :margin="fillMargin" />
-    <GroveBorderFill v-else-if="groveFill" :key="fillMargin" :fill="groveFill" :margin="fillMargin" />
-    <RegaliaBorderFill v-else-if="regaliaFill" :key="fillMargin" :fill="regaliaFill" :margin="fillMargin" />
-    <ColossusBorderFill v-else-if="colossusFill" :key="fillMargin" :fill="colossusFill" :margin="fillMargin" />
-    <StolenFlameBorderFill v-else-if="stolenFlameFill" :key="fillMargin" :fill="stolenFlameFill" :margin="fillMargin" />
-    <DominionBorderFill v-else-if="dominionFill" :key="fillMargin" :fill="dominionFill" :margin="fillMargin" />
-    <EclipseBorderFill v-else-if="eclipseFill" :key="fillMargin" :fill="eclipseFill" :margin="fillMargin" />
-    <ConfettiBorderFill v-else-if="confettiFill" :fill="confettiFill" />
-    <JewelBorderFill v-else-if="jewelFill" :fill="jewelFill" />
-    <LaserBorderFill v-else-if="laserFill" :fill="laserFill" :trace="laserTrace" />
-    <ChartBorderFill v-else-if="chartFill" :fill="chartFill" />
-    <HazardBorderFill v-else-if="hazardFill" :fill="hazardFill" />
-    <WarpBorderFill v-else-if="warpFill" :fill="warpFill" />
+    <component :is="fillView.component" v-if="fillView" :key="fillView.key" v-bind="fillView.attrs" />
     <svg
       v-if="rimPaths.length || decorationPaths.length"
       class="profile-border__cosmic-decor"

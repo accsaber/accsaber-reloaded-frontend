@@ -61,11 +61,8 @@ export interface GraveyardBackdropConfig {
   treeColor: string
   moonColor: string
   fogColor: string
-  wisps: boolean
   wispColor: string
-  ghosts: boolean
   ghostColor: string
-  bats: boolean
   batColor: string
 }
 
@@ -79,8 +76,6 @@ export interface ChurchBackdropConfig {
   carpetColor: string
   glassColors: string[]
   candleColor: string
-  dust: boolean
-  figure: boolean
   figureColor: string
   faceColor: string
 }
@@ -92,7 +87,6 @@ export interface MineshaftBackdropConfig {
   timberDark: string
   railColor: string
   lanternColor: string
-  dust: boolean
   dustColor: string
 }
 
@@ -118,8 +112,6 @@ export interface HarvestBackdropConfig {
   farmColor: string
   leafColors: string[]
   crowColor: string
-  face: boolean
-  windmill: boolean
   stars: boolean
 }
 
@@ -127,7 +119,6 @@ export interface WatchersBackdropConfig {
   type: 'watchers'
   opacity: number
   count: number
-  blink: boolean
 }
 
 export type ThemeBackdropConfig =
@@ -243,11 +234,8 @@ function parseGraveyard(tokens: Record<string, string>): GraveyardBackdropConfig
     treeColor: readHex(tokens, 'fx-grave-tree-color', '#05070c'),
     moonColor: readHex(tokens, 'fx-grave-moon-color', '#d8dce8'),
     fogColor: readHex(tokens, 'fx-grave-fog-color', '#9aa6bf'),
-    wisps: readFlag(tokens, 'fx-grave-wisps', true),
     wispColor: readHex(tokens, 'fx-grave-wisp-color', '#b6e34a'),
-    ghosts: readFlag(tokens, 'fx-grave-ghosts', true),
     ghostColor: readHex(tokens, 'fx-grave-ghost-color', '#dfe6f5'),
-    bats: readFlag(tokens, 'fx-grave-bats', true),
     batColor: readHex(tokens, 'fx-grave-bat-color', '#05070f'),
   }
 }
@@ -263,8 +251,6 @@ function parseChurch(tokens: Record<string, string>): ChurchBackdropConfig {
     carpetColor: readHex(tokens, 'fx-church-carpet-color', '#4a1418'),
     glassColors: readHexList(tokens, 'fx-church-glass-colors', ['#c0392b', '#2e86c1', '#f2b552', '#7cb342', '#8e44ad']),
     candleColor: readHex(tokens, 'fx-church-candle-color', '#f2b552'),
-    dust: readFlag(tokens, 'fx-church-dust', true),
-    figure: readFlag(tokens, 'fx-church-figure', true),
     figureColor: readHex(tokens, 'fx-church-figure-color', '#05040c'),
     faceColor: readHex(tokens, 'fx-church-face-color', '#d9cfc4'),
   }
@@ -278,7 +264,6 @@ function parseMineshaft(tokens: Record<string, string>): MineshaftBackdropConfig
     timberDark: readHex(tokens, 'fx-mine-timber-dark', '#1e160e'),
     railColor: readHex(tokens, 'fx-mine-rail-color', '#4a3a2a'),
     lanternColor: readHex(tokens, 'fx-mine-lantern-color', '#f2b552'),
-    dust: readFlag(tokens, 'fx-mine-dust', true),
     dustColor: readHex(tokens, 'fx-mine-dust-color', '#8a7150'),
   }
 }
@@ -300,7 +285,7 @@ function parseHarvest(tokens: Record<string, string>): HarvestBackdropConfig {
   return {
     type: 'harvest',
     opacity: readOpacity(tokens),
-    skyColors: readHexList(tokens, 'fx-harvest-sky-colors', ['#3b2352', '#8a3f5e', '#d9782e', '#f2b552']),
+    skyColors: readHexList(tokens, 'fx-harvest-sky-colors', ['#b9a4cf', '#d09aa6', '#e8a25a', '#f2c27a']),
     moonColor: readHex(tokens, 'fx-harvest-moon-color', '#e8781e'),
     moonShade: readHex(tokens, 'fx-harvest-moon-shade', '#8a3a10'),
     flareColor: readHex(tokens, 'fx-harvest-flare-color', '#ffe08a'),
@@ -308,8 +293,6 @@ function parseHarvest(tokens: Record<string, string>): HarvestBackdropConfig {
     farmColor: readHex(tokens, 'fx-harvest-farm-color', '#321f2c'),
     leafColors: readHexList(tokens, 'fx-harvest-leaf-colors', ['#b8531c', '#d9782e', '#7a3a10']),
     crowColor: readHex(tokens, 'fx-harvest-crow-color', '#1a0f18'),
-    face: readFlag(tokens, 'fx-harvest-face', true),
-    windmill: readFlag(tokens, 'fx-harvest-windmill', true),
     stars: readFlag(tokens, 'fx-harvest-stars', false),
   }
 }
@@ -319,7 +302,6 @@ function parseWatchers(tokens: Record<string, string>): WatchersBackdropConfig {
     type: 'watchers',
     opacity: readOpacity(tokens),
     count: Math.max(1, Math.round(readNumber(tokens, 'fx-watch-count', 10))),
-    blink: readFlag(tokens, 'fx-watch-blink', true),
   }
 }
 

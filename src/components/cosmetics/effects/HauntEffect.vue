@@ -3,7 +3,7 @@ import type { Composition } from '@/types/api/items'
 import { isFieldKey, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { readHauntSpec } from '@/utils/items'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   composition: Composition
@@ -31,18 +31,11 @@ const field = computed(() => viewport.value || isFieldKey(props.measure.typeKey)
 const box = computed(() => props.measure.box)
 const ghostCount = computed(() => (viewport.value ? VIEWPORT_GHOSTS : TILE_GHOSTS))
 
-const clipEl = ref<HTMLElement | null>(null)
-const staticHost = ref(false)
-
 function rollGhost(): GhostRoll {
   return { x: 0.06 + Math.random() * 0.88, size: 0.75 + Math.random() * 0.5, speed: 0.75 + Math.random() * 0.4 }
 }
 
 const ghostRolls = ref<GhostRoll[]>(Array.from({ length: VIEWPORT_GHOSTS }, rollGhost))
-
-onMounted(() => {
-  staticHost.value = !!clipEl.value?.closest('[data-fx-static]')
-})
 
 function isOwnAnimation(e: AnimationEvent): boolean {
   return e.target === e.currentTarget
@@ -90,9 +83,7 @@ const ghosts = computed(() => {
 <template>
   <span
     v-if="field && box.w > 0 && box.h > 0"
-    ref="clipEl"
     class="comp-fx-haunt-clip"
-    :class="{ 'comp-fx-haunt-clip--off': staticHost }"
     :style="clipStyle"
     aria-hidden="true"
   >
@@ -121,7 +112,7 @@ const ghosts = computed(() => {
   pointer-events: none;
 }
 
-.comp-fx-haunt-clip--off {
+:global([data-fx-static]) .comp-fx-haunt-clip {
   display: none;
 }
 

@@ -1,31 +1,24 @@
 import { lerpHex, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { hash01 } from '@/utils/random'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { fillCircle as circle, type Ctx, type Point } from '@/utils/cosmetics/canvasShapes'
 
 export interface HorrorFaceColors {
   figure: string
   face: string
+  tints?: string[]
 }
 
-export interface HorrorFaceOptions {
+interface HorrorFaceOptions {
   hair?: number
 }
-
-type Pt = [number, number]
 
 const FACE_W = 40
 const FACE_H = 52
 const FACE_RES = 2
-const BLACK = '#000000'
-const FACE_TINTS = ['#8a1a12', '#56682a', '#7a5638', '']
-let faceLayer: HTMLCanvasElement | null = null
-
-function circle(o: Ctx, x: number, y: number, r: number): void {
-  o.beginPath()
-  o.arc(x, y, Math.max(0, r), 0, Math.PI * 2)
-  o.fill()
-}
+const GRAIN_FRAMES = 3
+const CACHE_LIMIT = 24
+const faceCache = new Map<string, HTMLCanvasElement[]>()
 
 function ellipse(o: Ctx, x: number, y: number, rx: number, ry: number): void {
   o.beginPath()
@@ -33,16 +26,7 @@ function ellipse(o: Ctx, x: number, y: number, rx: number, ry: number): void {
   o.fill()
 }
 
-function faceContext(): Ctx | null {
-  if (!faceLayer) {
-    faceLayer = document.createElement('canvas')
-    faceLayer.width = FACE_W * FACE_RES
-    faceLayer.height = FACE_H * FACE_RES
-  }
-  return faceLayer.getContext('2d')
-}
-
-function lightPoint(seed: number): Pt {
+function lightPoint(seed: number): Point {
   const side = hash01(seed * 5) < 0.5 ? -1 : 1
   return [20 + side * (5 + hash01(seed * 9) * 5), 22 + hash01(seed * 11) * 8]
 }
@@ -137,10 +121,15 @@ function paintShadowBands(o: Ctx, seed: number, c: HorrorFaceColors): void {
   }
 }
 
-function paintVignetteAndGrain(o: Ctx, seed: number, tinted: boolean, c: HorrorFaceColors): void {
-  const tint = FACE_TINTS[Math.floor(hash01(seed * 103) * FACE_TINTS.length)]
+function faceTint(seed: number, tinted: boolean, c: HorrorFaceColors): string | null {
+  const tints = c.tints ?? []
+  if (!tinted || !tints.length) return null
+  return tints[Math.floor(hash01(seed * 103) * (tints.length + 1))] ?? null
+}
+
+function paintVignetteAndGrain(o: Ctx, tint: string | null, c: HorrorFaceColors): void {
   o.globalCompositeOperation = 'source-atop'
-  if (tint && tinted) {
+  if (tint) {
     o.fillStyle = withAlpha(tint, 0.3)
     o.fillRect(0, 0, FACE_W, FACE_H)
   }
@@ -151,30 +140,47 @@ function paintVignetteAndGrain(o: Ctx, seed: number, tinted: boolean, c: HorrorF
   }
   o.globalCompositeOperation = 'destination-in'
   const v = o.createRadialGradient(20, 26, 6, 20, 26, 25)
-  v.addColorStop(0, withAlpha(BLACK, 1))
-  v.addColorStop(0.7, withAlpha(BLACK, 0.85))
-  v.addColorStop(1, withAlpha(BLACK, 0))
+  v.addColorStop(0, 'rgba(0, 0, 0, 1)')
+  v.addColorStop(0.7, 'rgba(0, 0, 0, 0.85)')
+  v.addColorStop(1, 'rgba(0, 0, 0, 0)')
   o.fillStyle = v
   o.fillRect(0, 0, FACE_W, FACE_H)
   o.globalCompositeOperation = 'source-over'
 }
 
-function paintFace(seed: number, tinted: boolean, c: HorrorFaceColors, hair: number): HTMLCanvasElement | null {
-  const o = faceContext()
-  if (!o || !faceLayer) return null
+function paintFace(seed: number, tint: string | null, c: HorrorFaceColors, hair: number): HTMLCanvasElement {
+  const layer = document.createElement('canvas')
+  layer.width = FACE_W * FACE_RES
+  layer.height = FACE_H * FACE_RES
+  const o = layer.getContext('2d')
+  if (!o) return layer
   o.setTransform(FACE_RES, 0, 0, FACE_RES, 0, 0)
-  o.clearRect(0, 0, FACE_W, FACE_H)
   paintHeadMass(o, seed, c)
   paintLitSkin(o, seed, c)
   paintFeatures(o, seed, c)
   paintStrands(o, seed, c, hair)
   paintShadowBands(o, seed, c)
-  paintVignetteAndGrain(o, seed, tinted, c)
-  return faceLayer
+  paintVignetteAndGrain(o, tint, c)
+  return layer
+}
+
+function faceFrames(seed: number, tinted: boolean, c: HorrorFaceColors, hair: number): HTMLCanvasElement[] {
+  const tint = faceTint(seed, tinted, c)
+  const key = `${seed}|${tint}|${hair}|${c.figure}|${c.face}`
+  const hit = faceCache.get(key)
+  if (hit) return hit
+  if (faceCache.size >= CACHE_LIMIT) {
+    const oldest = faceCache.keys().next().value
+    if (oldest !== undefined) faceCache.delete(oldest)
+  }
+  const frames = Array.from({ length: GRAIN_FRAMES }, () => paintFace(seed, tint, c, hair))
+  faceCache.set(key, frames)
+  return frames
 }
 
 export function drawHorrorFace(ctx: Ctx, cx: number, cy: number, H: number, seed: number, c: HorrorFaceColors, opts: HorrorFaceOptions = {}): void {
-  const layer = paintFace(seed, H >= 36, c, opts.hair ?? 1)
+  const frames = faceFrames(seed, H >= 36, c, opts.hair ?? 1)
+  const layer = frames[Math.floor(Math.random() * frames.length)]
   if (!layer) return
   const tilt = (hash01(seed * 107) - 0.5) * 0.5
   const k = H / 40

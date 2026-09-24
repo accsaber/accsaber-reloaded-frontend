@@ -1,3 +1,4 @@
+export const ECLIPSE_PERIOD = 18
 export const ECLIPSE_DAY_END = 5
 export const ECLIPSE_PARTIAL_END = 8
 export const ECLIPSE_TOTAL_END = 15
@@ -5,6 +6,7 @@ export const ECLIPSE_SUN: [number, number] = [50, 3.4]
 export const ECLIPSE_SUN_R = 2.9
 
 export interface EclipsePhase {
+  cycle: number
   c: number
   cover: number
   sunX: number
@@ -14,9 +16,8 @@ export interface EclipsePhase {
   flash: number
 }
 
-function eclipseSunX(t: number, T: number): number {
-  const u = (t % T) / T
-  const forward = Math.floor(t / T) % 2 === 0
+function eclipseSunX(c: number, forward: boolean): number {
+  const u = c / ECLIPSE_PERIOD
   return forward ? 22 + 56 * u : 78 - 56 * u
 }
 
@@ -24,15 +25,12 @@ function clamp01(u: number): number {
   return Math.min(1, Math.max(0, u))
 }
 
-export function eclipsePeriod(intervalS: number | undefined): number {
-  return Math.max(12, intervalS ?? 18)
-}
-
-export function eclipsePhase(t: number, intervalS: number | undefined): EclipsePhase {
-  const T = eclipsePeriod(intervalS)
-  const c = t % T
-  const sunX = eclipseSunX(t, T)
-  const dir = Math.floor(t / T) % 2 === 0 ? 1 : -1
+export function eclipsePhase(t: number): EclipsePhase {
+  const c = t % ECLIPSE_PERIOD
+  const cycle = Math.floor(t / ECLIPSE_PERIOD)
+  const forward = cycle % 2 === 0
+  const sunX = eclipseSunX(c, forward)
+  const dir = forward ? 1 : -1
   let cover = 0
   let moonX = sunX - dir * ECLIPSE_SUN_R * 2.6
   if (c >= ECLIPSE_DAY_END && c < ECLIPSE_PARTIAL_END) {
@@ -42,7 +40,7 @@ export function eclipsePhase(t: number, intervalS: number | undefined): EclipseP
     cover = 1
     moonX = sunX
   } else if (c >= ECLIPSE_TOTAL_END) {
-    cover = 1 - (c - ECLIPSE_TOTAL_END) / (T - ECLIPSE_TOTAL_END)
+    cover = 1 - (c - ECLIPSE_TOTAL_END) / (ECLIPSE_PERIOD - ECLIPSE_TOTAL_END)
     moonX = sunX + dir * (1 - cover) * ECLIPSE_SUN_R * 2.6
   }
   const tot = clamp01(Math.min((c - ECLIPSE_PARTIAL_END + 0.4) / 0.6, (ECLIPSE_TOTAL_END + 0.2 - c) / 0.6))
@@ -50,5 +48,5 @@ export function eclipsePhase(t: number, intervalS: number | undefined): EclipseP
   const ring = Math.max(0, 1 - Math.abs(c - ECLIPSE_TOTAL_END) / 0.45)
   const bead = Math.max(0, 1 - Math.abs(c - ECLIPSE_PARTIAL_END) / 0.3) * 0.5
   const flash = Math.max(ring * ring, bead)
-  return { c, cover, sunX, moonX, tot, out, flash }
+  return { cycle, c, cover, sunX, moonX, tot, out, flash }
 }

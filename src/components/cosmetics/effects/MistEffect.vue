@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/api/items'
-import { useThemeStore } from '@/stores/theme'
-import { asNumber, asString, isFieldKey, type EffectMeasure } from '@/utils/cosmetics/effects'
+import { asColor, asNumber, clampNumber, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
@@ -12,26 +12,21 @@ const props = defineProps<{
   measure: EffectMeasure
 }>()
 
-const themeStore = useThemeStore()
-
 interface MistConfig {
   color: string
   count: number
   heightPct: number
   driftSecs: number
-  fromLeft: boolean
   intensity: number
 }
 
 function readMist(c: Composition, light: boolean): MistConfig {
-  const dark = asString(c.color) ?? '#c9c4d8'
   return {
-    color: light ? asString(c.lightColor) ?? '#6d6787' : dark,
-    count: Math.max(3, Math.min(16, Math.round(asNumber(c.count) ?? 6))),
-    heightPct: Math.max(10, Math.min(80, asNumber(c.heightPct) ?? 30)),
+    color: asColor(light ? c.lightColor : c.color),
+    count: Math.round(clampNumber(c.count, 3, 16, 6)),
+    heightPct: clampNumber(c.heightPct, 10, 80, 30),
     driftSecs: Math.max(4, asNumber(c.driftSecs) ?? 14),
-    fromLeft: asString(c.from) !== 'right',
-    intensity: Math.max(0.1, Math.min(1, asNumber(c.intensity) ?? 0.8)),
+    intensity: clampNumber(c.intensity, 0.1, 1, 0.8),
   }
 }
 
@@ -44,15 +39,11 @@ interface Puff {
   delay: number
   travel: number
   bob: number
-  blur: number
   opacity: number
 }
 
-const light = computed(() => (props.measure.host?.base ?? themeStore.resolvedBase) === 'light')
+const { isTitle, field, light } = useEffectSurface(() => props.measure)
 const cfg = computed(() => readMist(props.composition, light.value))
-
-const field = computed(() => isFieldKey(props.measure.typeKey))
-const isTitle = computed(() => props.measure.typeKey === 'title')
 
 const fogTop = computed(() => {
   const box = props.measure.box
@@ -77,17 +68,15 @@ const puffs = computed<Puff[]>(() => {
     const s = i * 13 + stack * 101 + 5
     const w = span * (field.value ? 0.22 + hash01(s) * 0.2 : 0.34 + hash01(s) * 0.3)
     const h = fogH * (0.55 + hash01(s + 1) * 0.5)
-    const startX = c.fromLeft ? box.x - w * 0.6 : box.x + box.w - w * 0.4
     out.push({
-      x: startX,
+      x: box.x - w * 0.6,
       y: fogBottom.value - h * (0.35 + hash01(s + 2) * 0.55),
       w,
       h,
       dur: c.driftSecs * (0.8 + hash01(s + 3) * 0.5),
       delay: hash01(s + 4) * c.driftSecs * 1.2,
-      travel: (c.fromLeft ? 1 : -1) * (span + w * 0.2),
+      travel: span + w * 0.2,
       bob: 2 + hash01(s + 5) * Math.min(8, fogH * 0.12),
-      blur: Math.max(2, Math.min(10, fogH * 0.1)),
       opacity: c.intensity * (0.35 + hash01(s + 6) * 0.4),
     })
   }
@@ -126,7 +115,6 @@ const bedStyle = computed(() => {
         '--mtravel': `${p.travel.toFixed(1)}px`,
         '--mbob': `${p.bob.toFixed(1)}px`,
         '--mop': p.opacity.toFixed(2),
-        filter: `blur(${p.blur.toFixed(1)}px)`,
       }"
     ></span>
   </div>
@@ -138,15 +126,15 @@ const bedStyle = computed(() => {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
 }
 
 .comp-fx-mist-bed {
   position: absolute;
   background: linear-gradient(to bottom, transparent 0%, var(--mist-color) 70%, var(--mist-color) 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%);
   mix-blend-mode: var(--fx-blend, screen);
 }
 
@@ -154,8 +142,9 @@ const bedStyle = computed(() => {
   position: absolute;
   border-radius: 50%;
   background: radial-gradient(ellipse at 50% 60%,
-    color-mix(in srgb, var(--mist-color) 85%, transparent) 0%,
-    color-mix(in srgb, var(--mist-color) 40%, transparent) 45%,
+    color-mix(in srgb, var(--mist-color) 75%, transparent) 0%,
+    color-mix(in srgb, var(--mist-color) 42%, transparent) 30%,
+    color-mix(in srgb, var(--mist-color) 14%, transparent) 55%,
     transparent 72%);
   mix-blend-mode: var(--fx-blend, screen);
   opacity: 0;

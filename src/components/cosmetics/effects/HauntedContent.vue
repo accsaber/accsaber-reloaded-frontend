@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HauntSpec } from '@/utils/cosmetics/wear'
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -10,10 +10,13 @@ const props = withDefaults(
   { fill: true },
 )
 
+const filterId = `haunt-${useId()}`
+
 const style = computed(() => {
   if (!props.spec) return undefined
   return {
     '--haunt-color': props.spec.color,
+    '--haunt-tint': `url(#${filterId})`,
     '--haunt-opacity': String(props.spec.opacity),
     '--haunt-cycle': `${props.spec.cycleS}s`,
   }
@@ -22,6 +25,14 @@ const style = computed(() => {
 
 <template>
   <span class="haunted-content" :class="{ 'haunted-content--intrinsic': !fill, 'haunted-content--on': !!spec }" :style="style">
+    <svg v-if="spec" class="haunted-content__defs" aria-hidden="true">
+      <filter :id="filterId" color-interpolation-filters="sRGB">
+        <feColorMatrix type="saturate" values="0" result="gray" />
+        <feFlood :flood-color="spec.color" result="tint" />
+        <feBlend in="gray" in2="tint" mode="multiply" result="ghost" />
+        <feComposite in="ghost" in2="SourceAlpha" operator="in" />
+      </filter>
+    </svg>
     <span class="haunted-content__inner">
       <slot />
     </span>
@@ -43,6 +54,13 @@ const style = computed(() => {
   width: auto;
   height: auto;
   vertical-align: middle;
+}
+
+.haunted-content__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 .haunted-content__inner {
@@ -69,13 +87,10 @@ const style = computed(() => {
     opacity: 1;
     filter: none;
   }
-  4% {
-    opacity: var(--haunt-opacity, 0.7);
-    filter: grayscale(1) sepia(1) hue-rotate(95deg) saturate(2) brightness(1.1) drop-shadow(0 0 1px var(--haunt-color)) drop-shadow(0 -4px 0 color-mix(in srgb, var(--haunt-color) 25%, transparent));
-  }
+  4%,
   33% {
     opacity: var(--haunt-opacity, 0.7);
-    filter: grayscale(1) sepia(1) hue-rotate(95deg) saturate(2) brightness(1.1) drop-shadow(0 0 1px var(--haunt-color)) drop-shadow(0 -4px 0 color-mix(in srgb, var(--haunt-color) 25%, transparent));
+    filter: var(--haunt-tint) brightness(1.25) drop-shadow(0 0 1px var(--haunt-color));
   }
   37% {
     opacity: 1;

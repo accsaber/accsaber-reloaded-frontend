@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderColorValue, BorderRainOverlaySpec } from '@/types/api/items'
+import type { BorderOverlayHost, BorderRainOverlaySpec } from '@/types/api/items'
 import { frameDelta, overlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef, watch } from 'vue'
 
-const props = defineProps<{
-  overlay: BorderRainOverlaySpec
-  avatarUrl?: string | null
-  color?: BorderColorValue | null
-}>()
+const props = defineProps<BorderOverlayHost & { overlay: BorderRainOverlaySpec }>()
 
 const MARGIN = 20
 const SPLASH_MS = 260
@@ -181,17 +177,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="border-rain-overlay" aria-hidden="true" />
+  <canvas ref="canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.border-rain-overlay {
-  position: absolute;
-  inset: -20%;
-  width: 140%;
-  height: 140%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

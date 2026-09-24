@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import { BACKDROP_RENDERERS } from '@/components/cosmetics/backdrops/backdropRenderers'
+import { BACKDROP_RENDERERS, LANDSCAPE_BACKDROPS } from '@/components/cosmetics/backdrops/backdropRenderers'
 import { useThemeStore } from '@/stores/theme'
 import { themeCompositionLayers } from '@/utils/items'
 import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
@@ -15,12 +15,13 @@ const fxHost = computed(() => ({ backdropType: config.value?.type, viewport: tru
 </script>
 
 <template>
-  <component
-    :is="BACKDROP_RENDERERS[config.type]"
+  <div
     v-if="config"
-    :key="configKey"
-    :config="config"
-  />
+    class="theme-backdrop"
+    :class="{ 'theme-backdrop--landscape': LANDSCAPE_BACKDROPS.has(config.type) }"
+  >
+    <component :is="BACKDROP_RENDERERS[config.type]" :key="configKey" :config="config" />
+  </div>
   <div v-if="effectLayers.length" class="backdrop-effects">
     <ModifierCompositions
       v-for="layer in effectLayers"
@@ -34,6 +35,32 @@ const fxHost = computed(() => ({ backdropType: config.value?.type, viewport: tru
 </template>
 
 <style scoped>
+.theme-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.theme-backdrop :deep(canvas) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.theme-backdrop--landscape :deep(canvas) {
+  right: auto;
+  left: 50%;
+  width: auto;
+  min-width: 100%;
+  aspect-ratio: 3 / 2;
+  transform: translateX(-50%);
+}
+
 .backdrop-effects {
   position: fixed;
   top: var(--navbar-height);

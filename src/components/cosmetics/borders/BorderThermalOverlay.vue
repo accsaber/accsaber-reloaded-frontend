@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { useReducedMotion } from '@/composables/useReducedMotion'
-import type { BorderColorValue, BorderThermalOverlaySpec, ThermalPalette } from '@/types/api/items'
+import type { BorderOverlayHost, BorderThermalOverlaySpec, ThermalPalette } from '@/types/api/items'
+import { primaryFillHex } from '@/utils/cosmetics/overlayCanvas'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
-const props = defineProps<{
-  overlay: BorderThermalOverlaySpec
-  avatarUrl?: string | null
-  color?: BorderColorValue | null
-}>()
+const props = defineProps<BorderOverlayHost & { overlay: BorderThermalOverlaySpec }>()
 
 interface PaletteDef {
   r: number[]
@@ -58,18 +55,7 @@ const hudColor = computed(() => props.overlay.hud ?? palette.value.hud)
 const ledColor = computed(() => props.overlay.led ?? LED_DEFAULT)
 const win = computed(() => props.overlay.window ?? { x: 10, y: 10, w: 80, h: 80 })
 
-const bracketColor = computed(() => {
-  const fill = props.color?.states?.[0]?.fill
-  if (!fill) return '#e6e4ee'
-  if (fill.type === 'solid') return fill.hex
-  if (fill.type === 'linear' || fill.type === 'radial' || fill.type === 'conic') {
-    return fill.stops[0]?.hex ?? '#e6e4ee'
-  }
-  if (fill.type === 'pixel_metal') return fill.highlight
-  if (fill.type === 'cosmic') return fill.star
-  if (fill.type === 'toon') return fill.line
-  return '#e6e4ee'
-})
+const bracketColor = computed(() => primaryFillHex(props.color?.states?.[0]?.fill) ?? '#e6e4ee')
 
 const bladesClosed = ref(false)
 const bladesOpening = ref(false)
@@ -238,7 +224,7 @@ watch(() => props.overlay, () => schedule(), { deep: true })
 </script>
 
 <template>
-  <div class="border-thermal-overlay" :style="styleVars" aria-hidden="true">
+  <div :style="styleVars" aria-hidden="true">
     <div class="bto-stack">
       <div class="bto-window" :style="windowStyle">
         <div class="bto-map" :class="{ 'bto-map--on': thermalOn }">
@@ -304,16 +290,6 @@ watch(() => props.overlay, () => schedule(), { deep: true })
 </template>
 
 <style scoped>
-.border-thermal-overlay {
-  position: absolute;
-  inset: -20%;
-  width: 140%;
-  height: 140%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-
 .bto-stack {
   position: absolute;
   inset: 14.2857%;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleIceAuraSpec } from '@/types/api/items'
+import type { TitleFrostSpec, TitleIceAuraSpec } from '@/types/api/items'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
@@ -9,53 +9,73 @@ import { computed, useTemplateRef } from 'vue'
 const props = defineProps<{
   aura: TitleIceAuraSpec
   light: boolean
+  frost?: TitleFrostSpec
 }>()
 
 const palette = computed(() => ({
   frost: pickVariant(props.light, props.aura.lightFrost, props.aura.frost, '#e0f2fe'),
   ice: pickVariant(props.light, props.aura.lightIce, props.aura.ice, '#7dd3fc'),
+  snow: pickVariant(props.light, props.aura.lightSnow, props.aura.snow, '#ffffff'),
 }))
 
+const timing = computed(() => ({
+  interval: (props.frost?.intervalMs ?? 9000) / 1000,
+  creep: (props.frost?.creepMs ?? 1400) / 1000,
+  hold: (props.frost?.holdMs ?? 2200) / 1000,
+  thaw: (props.frost?.thawMs ?? 1200) / 1000,
+}))
+
+const REST = 0.25
+
 let rect: TitleAuraRect | null = null
+let fernPath: Path2D | null = null
+let fernGrowth = -1
 
 function growth(t: number): number {
-  const interval = (props.aura.intervalMs ?? 9000) / 1000
+  const { interval, creep, hold, thaw } = timing.value
   const local = (t % interval) - interval * 0.3
-  if (local < 0) return 0.25
-  if (local < 1.4) return 0.25 + 0.75 * (local / 1.4)
-  if (local < 3.6) return 1
-  if (local < 4.8) return 1 - 0.75 * ((local - 3.6) / 1.2)
-  return 0.25
+  if (local < 0) return REST
+  if (local < creep) return REST + (1 - REST) * (local / creep)
+  if (local < creep + hold) return 1
+  if (local < creep + hold + thaw) return 1 - (1 - REST) * ((local - creep - hold) / thaw)
+  return REST
 }
 
-function fern(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, len: number, depth: number, g: number, seed: number): void {
+function fern(path: Path2D, x: number, y: number, angle: number, len: number, depth: number, g: number, seed: number): void {
   if (depth === 0 || len < 1) return
-  const ex = x + Math.cos(angle) * len * g
-  const ey = y + Math.sin(angle) * len * g
-  ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.lineTo(ex, ey)
-  ctx.stroke()
+  path.moveTo(x, y)
+  path.lineTo(x + Math.cos(angle) * len * g, y + Math.sin(angle) * len * g)
   for (let k = 1; k <= 3; k++) {
     const u = k / 4
     if (u > g) break
     const bx = x + Math.cos(angle) * len * u
     const by = y + Math.sin(angle) * len * u
-    for (const sd of [-1, 1]) {
-      fern(ctx, bx, by, angle + sd * (0.9 + 0.2 * hash01(seed + k)), len * 0.4 * (1 - u * 0.5), depth - 1, g, seed * 3 + k)
-    }
+    const spread = 0.9 + 0.2 * hash01(seed + k)
+    const sub = len * 0.4 * (1 - u * 0.5)
+    fern(path, bx, by, angle - spread, sub, depth - 1, g, seed * 3 + k)
+    fern(path, bx, by, angle + spread, sub, depth - 1, g, seed * 3 + k)
   }
 }
 
+function buildFerns(r: TitleAuraRect, g: number): Path2D {
+  const path = new Path2D()
+  const corners: [number, number, number][] = [[r.x, r.y + r.h * 0.9, -0.5], [r.x + r.w, r.y + r.h * 0.9, Math.PI + 0.5], [r.x, r.y + r.h * 0.1, 0.5], [r.x + r.w, r.y + r.h * 0.1, Math.PI - 0.5]]
+  corners.forEach(([x, y, a], i) => {
+    fern(path, x, y, a, r.fs * 0.9, 3, g, i + 1)
+    fern(path, x, y, a + (i < 2 ? -0.7 : 0.7), r.fs * 0.6, 2, g, i + 7)
+  })
+  return path
+}
+
 function drawFerns(ctx: CanvasRenderingContext2D, r: TitleAuraRect, g: number): void {
+  if (!fernPath || g !== fernGrowth) {
+    fernPath = buildFerns(r, g)
+    fernGrowth = g
+  }
   ctx.strokeStyle = withAlpha(palette.value.frost, 0.85)
   ctx.lineWidth = Math.max(0.5, r.fs * 0.025)
   ctx.lineCap = 'round'
-  const corners: [number, number, number][] = [[r.x, r.y + r.h * 0.9, -0.5], [r.x + r.w, r.y + r.h * 0.9, Math.PI + 0.5], [r.x, r.y + r.h * 0.1, 0.5], [r.x + r.w, r.y + r.h * 0.1, Math.PI - 0.5]]
-  corners.forEach(([x, y, a], i) => {
-    fern(ctx, x, y, a, r.fs * 0.9, 3, g, i + 1)
-    fern(ctx, x, y, a + (i < 2 ? -0.7 : 0.7), r.fs * 0.6, 2, g, i + 7)
-  })
+  ctx.stroke(fernPath)
 }
 
 function drawIcicles(ctx: CanvasRenderingContext2D, r: TitleAuraRect, g: number, t: number): void {
@@ -71,7 +91,7 @@ function drawIcicles(ctx: CanvasRenderingContext2D, r: TitleAuraRect, g: number,
     ctx.lineTo(x, base + len)
     ctx.closePath()
     ctx.fill()
-    ctx.fillStyle = withAlpha('#ffffff', 0.6)
+    ctx.fillStyle = withAlpha(palette.value.snow, 0.6)
     ctx.fillRect(x - wdt * 0.5, base, wdt * 0.35, len * 0.55)
     const drip = (t * 0.35 + hash01(i * 11)) % 1
     if (g > 0.8 && drip > 0.85) {
@@ -88,7 +108,7 @@ function drawSnow(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): v
     const u = (t * (0.08 + hash01(i * 3) * 0.06) + hash01(i * 7)) % 1
     const x = r.x - r.fs * 0.6 + (r.w + r.fs * 1.2) * hash01(i * 11) + Math.sin(t * 1.2 + i) * r.fs * 0.15
     const y = r.y - r.fs * 1.2 + (r.h + r.fs * 1.7) * u
-    ctx.fillStyle = withAlpha('#ffffff', 0.7 * Math.sin(u * Math.PI))
+    ctx.fillStyle = withAlpha(palette.value.snow, 0.7 * Math.sin(u * Math.PI))
     ctx.beginPath()
     ctx.arc(x, y, r.fs * (0.015 + hash01(i * 13) * 0.03), 0, Math.PI * 2)
     ctx.fill()
@@ -114,6 +134,7 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 useElementCanvas(canvasRef, {
   init() {
     rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+    fernPath = null
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)

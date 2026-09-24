@@ -131,17 +131,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="monument-scene" aria-hidden="true" />
+  <canvas ref="canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.monument-scene {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

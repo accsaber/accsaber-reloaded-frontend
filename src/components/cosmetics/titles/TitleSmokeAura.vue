@@ -15,7 +15,7 @@ const props = defineProps<{
 const palette = computed(() => {
   const a = props.aura
   return {
-    smoke: pickVariant(props.light, a.lightSmoke, a.smoke, '#291d38'),
+    smoke: pickVariant(props.light, a.lightSmoke, a.smoke, '#2a1a3e'),
     ember: pickVariant(props.light, a.lightEmber, a.ember, '#dc2626'),
   }
 })

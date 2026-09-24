@@ -3,6 +3,7 @@ import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useRenderLoop } from '@/composables/useRenderLoop'
 
 export interface CanvasScene {
+  animated?: boolean
   init: (w: number, h: number, nowMs: number, scale: number) => void
   resize?: (w: number, h: number, nowMs: number, scale: number) => void
   draw: (
@@ -18,6 +19,8 @@ interface SceneSizing {
   measure: (canvas: HTMLCanvasElement) => { w: number; h: number; scale: number }
   observe?: (canvas: HTMLCanvasElement, onChange: () => void) => () => void
 }
+
+const OVERSCAN_BUDGET = 2
 
 function deviceScale(): number {
   return Math.min(window.devicePixelRatio, 2)
@@ -44,6 +47,8 @@ function useSceneCanvas(
   let logicalScale = 0
   let initialized = false
   let pendingLayout = 0
+  let onScreen = true
+  let visibility: IntersectionObserver | null = null
 
   function isStatic(): boolean {
     return reduced.value || !!canvasRef.value?.closest('[data-fx-static]')
@@ -56,7 +61,18 @@ function useSceneCanvas(
     scene.draw(ctx, logicalW, logicalH, now, isStatic())
   }
 
-  const loop = useRenderLoop(render, () => !isStatic())
+  const loop = useRenderLoop(render, () => onScreen && scene.animated !== false && !isStatic())
+
+  function watchVisibility(canvas: HTMLCanvasElement) {
+    visibility = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((e) => e.isIntersecting)
+        if (onScreen) loop.start()
+      },
+      { rootMargin: '64px' },
+    )
+    visibility.observe(canvas)
+  }
 
   function layout() {
     if (!canvasRef.value) return
@@ -74,7 +90,7 @@ function useSceneCanvas(
     if (initialized) (scene.resize ?? scene.init)(w, h, now, scale)
     else scene.init(w, h, now, scale)
     initialized = true
-    if (isStatic()) render(now)
+    if (isStatic() || scene.animated === false) render(now)
   }
 
   function scheduleLayout() {
@@ -91,6 +107,7 @@ function useSceneCanvas(
     if (canvasRef.value && sizing.observe) {
       stopObserving = sizing.observe(canvasRef.value, scheduleLayout)
     }
+    if (canvasRef.value) watchVisibility(canvasRef.value)
     loop.start()
   })
 
@@ -101,6 +118,8 @@ function useSceneCanvas(
     window.removeEventListener('resize', scheduleLayout)
     stopObserving?.()
     stopObserving = null
+    visibility?.disconnect()
+    visibility = null
   })
 }
 
@@ -125,10 +144,12 @@ export function useBackdropCanvas(
           scale: deviceScale() / zoom,
         }
       }
-      return { w: window.innerWidth, h: window.innerHeight, scale: deviceScale() }
+      const w = canvas.clientWidth
+      const h = canvas.clientHeight
+      const overscan = (w * h) / (window.innerWidth * window.innerHeight)
+      return { w, h, scale: deviceScale() * Math.min(1, Math.sqrt(OVERSCAN_BUDGET / overscan)) }
     },
-    observe: (canvas, onChange) =>
-      inlineHost(canvas) ? observeElement(canvas, onChange) : () => {},
+    observe: observeElement,
   })
 }
 

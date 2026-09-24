@@ -151,7 +151,7 @@ function fillTriple(fill: BorderColorFill): MetalTriple | null {
     case 'cosmic': return [fill.space, fill.nebulas[0] ?? fill.accent, lighten(fill.star, 0.1)]
     case 'toon': return [darken(fill.ink, 0.3), fill.ink, fill.line]
     case 'laser': return [fill.dark, fill.glow, fill.core]
-    case 'candle': return [fill.dark, fill.flame, fill.glow]
+    case 'candle': return tripleFromColors([fill.dark, fill.glow, fill.flame])
     case 'wood': return [fill.dark, fill.base, fill.light]
     case 'brew': return tripleFromColors([...fill.colors, fill.bone])
     case 'prism': return [fill.ink ?? darken(fill.rose, 0.45), fill.lo ?? fill.rose, fill.hi ?? fill.edge]
@@ -160,7 +160,7 @@ function fillTriple(fill: BorderColorFill): MetalTriple | null {
     case 'colossus': return tripleFromColors([fill.stoneA, fill.stoneB, fill.block, fill.seam])
     case 'stolenflame': return [fill.night, fill.flameDeep, fill.flame]
     case 'dominion': return tripleFromColors(fill.colors)
-    case 'eclipse': return [fill.sky, fill.dusk, fill.corona]
+    case 'eclipse': return tripleFromColors([fill.shadow, fill.dusk, fill.corona])
     case 'confetti': return fill.colors[0] ? [fill.dark, fill.colors[0], fill.flash ?? lighten(fill.colors[0], 0.45)] : tripleFromHex(fill.dark)
     case 'jewel': return fill.gems[0] ? [fill.velvet, fill.gems[0], fill.glint ?? lighten(fill.gems[0], 0.45)] : tripleFromHex(fill.velvet)
     case 'chart': return [fill.ink, fill.route, fill.paper]

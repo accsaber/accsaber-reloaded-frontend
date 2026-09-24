@@ -14,8 +14,7 @@ const props = defineProps<{
 
 const MARGIN = props.margin ?? 25
 
-let seed = 0
-let board: HTMLCanvasElement | null = null
+const seed = Math.floor(rand(0, 100000))
 
 function h01(n: number): number {
   return hash01(seed + n)
@@ -66,13 +65,7 @@ function plank(ctx: Ctx, x: number, y: number, w: number, h: number, k: number):
   ctx.fillRect(x, y, w, 0.8)
 }
 
-function buildBoard(w: number, h: number, scale: number): HTMLCanvasElement {
-  const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.ceil(w * scale))
-  c.height = Math.max(1, Math.ceil(h * scale))
-  const ctx = c.getContext('2d')
-  if (!ctx) return c
-  ctx.setTransform(scale, 0, 0, scale, 0, 0)
+function paintBoard(ctx: Ctx, w: number, h: number): void {
   const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
   const ph = (props.fill.plank ?? 14) * sy
   ctx.fillStyle = darken(props.fill.base, 0.5)
@@ -105,19 +98,14 @@ function buildBoard(w: number, h: number, scale: number): HTMLCanvasElement {
     ctx.lineTo(x0 + (h01(i * 97) - 0.5) * 30 * sx, y0 + (h01(i * 101) - 0.5) * 10 * sy)
     ctx.stroke()
   }
-  return c
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init(w, h, _now, scale) {
-    seed = Math.floor(rand(0, 100000))
-    board = buildBoard(w, h, scale)
-  },
-  draw(ctx, w, h) {
-    if (board) ctx.drawImage(board, 0, 0, w, h)
-  },
+  animated: false,
+  init() {},
+  draw: paintBoard,
 })
 </script>
 
