@@ -19,7 +19,7 @@ export interface WearBite {
   y: number
   r: number
   edge: 0 | 1 | 2 | 3
-  d: string
+  k: number
 }
 
 export interface WearCrack {
@@ -40,13 +40,14 @@ function seedNumber(seed: string): number {
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000
 
-function bitePath(x: number, y: number, r: number, k: number): string {
+export function bitePath(b: WearBite, w: number, h: number, scale = 1): string {
+  const unit = Math.min(w, h) * scale
   const pts: string[] = []
   const n = 9
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2
-    const rr = r * (0.55 + hash01(k * 13 + i * 7) * 0.7)
-    pts.push(`${r3(x + Math.cos(a) * rr)},${r3(y + Math.sin(a) * rr)}`)
+    const rr = b.r * unit * (0.55 + hash01(b.k * 13 + i * 7) * 0.7)
+    pts.push(`${r3(b.x * w + Math.cos(a) * rr)},${r3(b.y * h + Math.sin(a) * rr)}`)
   }
   return `M${pts.join(' L')} Z`
 }
@@ -61,7 +62,7 @@ export function wearBites(seed: string, count: number): WearBite[] {
     const r = 0.06 + hash01(k * 11) * 0.07
     const x = edge === 1 ? 1 : edge === 3 ? 0 : along
     const y = edge === 0 ? 0 : edge === 2 ? 1 : along
-    out.push({ x, y, r, edge, d: bitePath(x, y, r, k) })
+    out.push({ x, y, r, edge, k })
   }
   return out
 }
@@ -139,4 +140,21 @@ export function crackPath(c: WearCrack, sx = 1, sy = 1, rootWidth = c.width): st
   const parts = [sliver(c.points, sx, sy, rootWidth)]
   for (const b of c.branches) parts.push(crackPath(b, sx, sy, rootWidth * (b.width / c.width)))
   return parts.join(' ')
+}
+
+function anchorPoints(points: [number, number][], ox: number, oy: number, w: number, h: number, unit: number): [number, number][] {
+  return points.map(([x, y]) => [r3(ox * w + (x - ox) * unit), r3(oy * h + (y - oy) * unit)])
+}
+
+function anchorFrom(c: WearCrack, ox: number, oy: number, w: number, h: number, unit: number): WearCrack {
+  return {
+    points: anchorPoints(c.points, ox, oy, w, h, unit),
+    width: c.width,
+    branches: c.branches.map((b) => anchorFrom(b, ox, oy, w, h, unit)),
+  }
+}
+
+export function anchorCrack(c: WearCrack, w: number, h: number, scale = 1): WearCrack {
+  const [ox, oy] = c.points[0] ?? [0, 0]
+  return anchorFrom(c, ox, oy, w, h, Math.min(w, h) * scale)
 }

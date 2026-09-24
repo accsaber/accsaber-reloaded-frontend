@@ -4,6 +4,7 @@ import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
 import CrateIcon from '@/components/cosmetics/CrateIcon.vue'
 import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
+import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
 import type {
@@ -26,6 +27,7 @@ import {
   readThumbnailBackgroundValue,
   readTitleValue,
   tokenize,
+  type EffectLayer,
 } from '@/utils/items'
 import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
 import { TITLE_AURA_PAD } from '@/utils/cosmetics/titleAura'
@@ -35,6 +37,7 @@ import { computed, useTemplateRef } from 'vue'
 const props = defineProps<{
   item: ItemResponse
   selected?: boolean
+  effects?: EffectLayer[] | null
 }>()
 
 const typeKey = computed(() => props.item.typeKey)
@@ -170,7 +173,10 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       :style="titleAuraStyle"
     >
       <span ref="titleFit" class="item-preview__title-fit" :style="titleFitStyle">
-        <TitleRenderer :value="titleValue" />
+        <ContentEffects v-if="effects?.length" :layers="effects" :fill="false" subtle seed="title">
+          <TitleRenderer :value="titleValue" />
+        </ContentEffects>
+        <TitleRenderer v-else :value="titleValue" />
       </span>
     </span>
 

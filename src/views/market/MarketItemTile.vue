@@ -83,7 +83,7 @@ onMounted(() => {
         :color="colorValue"
         :avatar-url="avatarUrl"
       />
-      <ItemPreview v-else :item="item" />
+      <ItemPreview v-else :item="item" :effects="effectLayers" />
     </span>
 
     <template v-if="!composedView">

@@ -94,7 +94,7 @@ onMounted(() => {
     >
       <span class="inventory-cell__art">
         <FragmentedItem v-if="fragmentSpec" :item="item" :spec="fragmentSpec" :selected="selected" />
-        <ItemPreview v-else :item="item" :selected="selected" />
+        <ItemPreview v-else :item="item" :effects="effectLayers" :selected="selected" />
       </span>
 
       <ModifierCompositions

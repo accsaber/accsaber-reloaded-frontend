@@ -47,7 +47,7 @@ const py = (u: number) => u * box.value.h
 </script>
 
 <template>
-  <svg v-if="box.w > 0 && box.h > 0" class="comp-fx-wear" :class="{ 'comp-fx-wear--theme': theme }" :style="boxStyle" :viewBox="viewBox" aria-hidden="true">
+  <svg v-if="measure.typeKey !== 'title' && box.w > 0 && box.h > 0" class="comp-fx-wear" :class="{ 'comp-fx-wear--theme': theme }" :style="boxStyle" :viewBox="viewBox" aria-hidden="true">
     <g class="comp-fx-wear__light" :transform="`translate(${shadowOffset} ${shadowOffset})`">
       <path v-for="(c, i) in cracks" :key="`l${i}`" :d="crackPx(c)" />
     </g>

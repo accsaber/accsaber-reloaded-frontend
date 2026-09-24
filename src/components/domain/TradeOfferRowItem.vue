@@ -39,7 +39,7 @@ const accentStyle = computed(() => (accent.value ? { '--cell-accent': accent.val
       :aria-label="itemRef.item.name"
     >
       <FragmentedItem v-if="fragmentSpec" :item="itemRef.item" :spec="fragmentSpec" />
-      <ItemPreview v-else :item="itemRef.item" :selected="false" />
+      <ItemPreview v-else :item="itemRef.item" :effects="effectLayers" :selected="false" />
       <ModifierCompositions
         v-for="layer in effectLayers"
         :key="layer.key"
