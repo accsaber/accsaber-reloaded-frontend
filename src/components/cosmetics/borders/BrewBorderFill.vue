@@ -17,7 +17,7 @@ import {
   type BrewState,
 } from '@/utils/cosmetics/brewScenery'
 import { darken, lighten } from '@/utils/color'
-import { frameDelta, framePoint, overlaySpace, withAlpha, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, overlaySpace, withAlpha, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
@@ -28,8 +28,8 @@ const props = defineProps<{
 }>()
 
 interface Bone {
-  u: number
-  inset: number
+  angle: number
+  radius: number
   speed: number
   size: number
   skull: boolean
@@ -79,9 +79,9 @@ const rules: BrewRules = {
 }
 
 const bones: Bone[] = Array.from({ length: 7 }, (_, i) => ({
-  u: rand(0, 1),
-  inset: rand(1.5, 5),
-  speed: rand(0.02, 0.035) * (i % 2 ? 1 : -1),
+  angle: rand(0, 6.28),
+  radius: rand(46, 66),
+  speed: rand(0.12, 0.22) * (i % 2 ? 1 : -1),
   size: rand(5, 8),
   skull: i === 0,
   phase: rand(0, 6.28),
@@ -104,12 +104,11 @@ function drawSwirl(ctx: Ctx, w: number, h: number, sx: number, t: number, color:
 function drawBones(ctx: Ctx, w: number, h: number, sp: OverlaySpace, t: number, color: string): void {
   const shade = withAlpha(color, 0.55)
   for (const bn of bones) {
-    const p = framePoint(bn.u, bn.inset)
     const bob = Math.sin(t * 1.6 + bn.phase) * 0.6
     const size = bn.size * sp.sx
     ctx.save()
-    ctx.translate(w * 0.5 + (p.x - 50) * sp.sx, h * 0.5 + (p.y - 50 + bob) * sp.sy)
-    ctx.rotate(p.angle + Math.sin(t + bn.phase) * 0.2)
+    ctx.translate(w * 0.5 + Math.cos(bn.angle) * bn.radius * sp.sx, h * 0.5 + (Math.sin(bn.angle) * bn.radius + bob) * sp.sy)
+    ctx.rotate(bn.angle + Math.PI * 0.5 + Math.sin(t + bn.phase) * 0.2)
     ctx.fillStyle = props.fill.bone
     if (bn.skull) skullShape(ctx, size, color)
     else boneShape(ctx, size)
@@ -165,7 +164,7 @@ useElementCanvas(canvasRef, {
     last = now
     if (!reduced) {
       stepBrew(brew, dt, rules)
-      for (const bn of bones) bn.u += bn.speed * dt
+      for (const bn of bones) bn.angle += bn.speed * dt
     }
     const t = reduced ? STATIC_T : brew.clock
     const sp = overlaySpace(w, h, MARGIN)
