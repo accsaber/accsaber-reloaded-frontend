@@ -32,15 +32,27 @@ import {
 import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
 import { TITLE_AURA_PAD } from '@/utils/cosmetics/titleAura'
 import { useFitScale } from '@/composables/useFitScale'
+import { useThemeBase } from '@/composables/useThemeBase'
 import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   item: ItemResponse
   selected?: boolean
   effects?: EffectLayer[] | null
+  live?: boolean
 }>()
 
 const typeKey = computed(() => props.item.typeKey)
+
+const ICON_RENDERED_TYPES = new Set([
+  'title',
+  'profile_border_shape',
+  'profile_border_color',
+  'theme',
+  'profile_thumbnail_background',
+])
+
+const themeBase = useThemeBase()
 
 const titleValue = computed<TitleValue | null>(() =>
   typeKey.value === 'title' ? readTitleValue(props.item.value) : null,
@@ -152,13 +164,32 @@ const isPinnedPerk = computed(() => {
   return haystack.includes('pinned')
 })
 
+const iconMode = computed(
+  () =>
+    !props.live
+    && !props.effects?.length
+    && !!props.item.iconUrl
+    && themeBase.value === 'dark'
+    && ICON_RENDERED_TYPES.has(typeKey.value)
+    && (typeKey.value !== 'profile_thumbnail_background' || !!thumbScene.value),
+)
+
 const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 </script>
 
 <template>
   <span class="item-preview" :class="`item-preview--${typeKey}`">
     <img
-      v-if="typeKey === 'badge' && badgeUrl"
+      v-if="iconMode"
+      class="item-preview__icon"
+      :src="item.iconUrl!"
+      :alt="item.name"
+      loading="lazy"
+      decoding="async"
+    />
+
+    <img
+      v-else-if="typeKey === 'badge' && badgeUrl"
       class="item-preview__img"
       :src="badgeUrl"
       :alt="badgeAlt"
@@ -380,6 +411,12 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 .item-preview__img {
   max-width: 80%;
   max-height: 80%;
+  object-fit: contain;
+}
+
+.item-preview__icon {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 

@@ -112,7 +112,7 @@ const ghosts = computed(() => {
   pointer-events: none;
 }
 
-:global([data-fx-static]) .comp-fx-haunt-clip {
+[data-fx-static] .comp-fx-haunt-clip {
   display: none;
 }
 

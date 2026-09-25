@@ -8,7 +8,7 @@ import { getAdminItems } from '@/api/admin/items'
 import { parseApiError } from '@/api/client'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
-import { RARITY_ORDER } from '@/utils/items'
+import { RARITY_ORDER, readThumbnailBackgroundValue } from '@/utils/items'
 import { captureBox, useItemIconExport } from '@/composables/useItemIconExport'
 import { waitForRenderedAssets } from '@/utils/rasterize'
 import { computed, nextTick, ref, watch, type ComponentPublicInstance } from 'vue'
@@ -23,6 +23,11 @@ const emit = defineEmits<{
 const itemTypeStore = useItemTypeStore()
 
 const IMAGE_BACKED_TYPES = ['badge', 'profile_background', 'profile_thumbnail_background']
+
+function isImageBacked(item: ItemResponse): boolean {
+  if (!IMAGE_BACKED_TYPES.includes(item.typeKey)) return false
+  return item.typeKey !== 'profile_thumbnail_background' || !readThumbnailBackgroundValue(item.value)?.scene
+}
 
 const allItems = ref<ItemResponse[]>([])
 const loading = ref(false)
@@ -75,7 +80,7 @@ const filtered = computed(() => {
   const term = search.value.trim().toLowerCase()
   return allItems.value.filter((item) => {
     if (!includeInactive.value && !item.active) return false
-    if (!includeImageBacked.value && IMAGE_BACKED_TYPES.includes(item.typeKey)) return false
+    if (!includeImageBacked.value && isImageBacked(item)) return false
     if (typeFilter.value && item.typeKey !== typeFilter.value) return false
     if (rarityFilter.value && item.rarity !== rarityFilter.value) return false
     if (iconFilter.value === 'missing' && item.iconUrl) return false

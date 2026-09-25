@@ -77,7 +77,7 @@ const hostStyle = computed(() => {
     data-fx-static
     aria-hidden="true"
   >
-    <ItemPreview :item="item" />
+    <ItemPreview :item="item" live />
   </div>
 </template>
 
@@ -98,6 +98,14 @@ const hostStyle = computed(() => {
 
 .icon-capture :deep(.item-preview__shape-avatar) {
   display: none;
+}
+
+.icon-capture :deep(.item-preview__title) {
+  padding: 0 11%;
+}
+
+.icon-capture :deep(.item-preview__title .title-renderer) {
+  font-size: 40cqi;
 }
 
 .icon-capture :deep(.item-preview__title),

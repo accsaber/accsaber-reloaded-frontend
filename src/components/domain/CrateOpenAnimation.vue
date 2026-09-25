@@ -315,7 +315,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
           :spec="resultFragmentSpec"
           :selected="true"
         />
-        <ItemPreview v-else :item="result" :effects="resultLayers" selected />
+        <ItemPreview v-else :item="result" :effects="resultLayers" selected live />
         <ModifierCompositions
           v-for="layer in resultLayers"
           :key="layer.key"
