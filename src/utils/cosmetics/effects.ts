@@ -108,6 +108,7 @@ export interface RingPoly {
   cum: number[]
   total: number
   clockwise: boolean
+  facing: number[] | null
 }
 
 export interface RingGeometry {
@@ -120,21 +121,47 @@ export function ringPathD(poly: RingPoly): string {
   return poly.pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ' Z'
 }
 
-function polyOf(pts: Vec[]): RingPoly {
+function polyOf(pts: Vec[], avatar: Vec[] | null = null): RingPoly {
   const cum: number[] = [0]
   for (let i = 1; i <= pts.length; i++) {
     const a = pts[i - 1]
     const b = pts[i % pts.length]
     cum.push((cum[i - 1] ?? 0) + (a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0))
   }
-  return { pts, cum, total: cum[pts.length] ?? 0, clockwise: signedArea(pts) > 0 }
+  const clockwise = signedArea(pts) > 0
+  return { pts, cum, total: cum[pts.length] ?? 0, clockwise, facing: avatar ? segmentFacing(pts, clockwise, avatar) : null }
+}
+
+function centroid(pts: Vec[]): Vec {
+  let x = 0
+  let y = 0
+  for (const q of pts) {
+    x += q.x
+    y += q.y
+  }
+  return { x: x / (pts.length || 1), y: y / (pts.length || 1) }
+}
+
+function segmentFacing(pts: Vec[], clockwise: boolean, avatar: Vec[]): number[] {
+  const mid = centroid(avatar)
+  const size = polyBounds({ pts: avatar })
+  const touch = Math.min(size.w, size.h) * 0.02
+  return pts.map((a, i) => {
+    const b = pts[(i + 1) % pts.length] ?? a
+    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+    const nx = clockwise ? b.y - a.y : a.y - b.y
+    const ny = clockwise ? a.x - b.x : b.x - a.x
+    const q = nearest(m, avatar)
+    const from = Math.hypot(m.x - q.x, m.y - q.y) > touch ? q : mid
+    return nx * (m.x - from.x) + ny * (m.y - from.y) < 0 ? -1 : 1
+  })
 }
 
 export function boxRing(box: ContentBox): RingPoly {
   return rectPoly(box, 0)
 }
 
-export function polyBounds(poly: RingPoly): ContentBox {
+export function polyBounds(poly: Pick<RingPoly, 'pts'>): ContentBox {
   let x0 = Infinity
   let y0 = Infinity
   let x1 = -Infinity
@@ -194,7 +221,7 @@ export function ringGeometry(measure: EffectMeasure, box: ContentBox = measure.b
     const q = nearest(o, innerPts)
     return { x: (o.x + q.x) / 2, y: (o.y + q.y) / 2 }
   })
-  return { outer: polyOf(outerPts), band: polyOf(bandPts), inner: polyOf(innerPts) }
+  return { outer: polyOf(outerPts, innerPts), band: polyOf(bandPts, innerPts), inner: polyOf(innerPts) }
 }
 
 export function ringAt(poly: RingPoly, s: number): RingSample {
@@ -216,7 +243,8 @@ export function ringAt(poly: RingPoly, s: number): RingSample {
   const k = (u - (poly.cum[i] ?? 0)) / segLen
   const tx = (b.x - a.x) / segLen
   const ty = (b.y - a.y) / segLen
-  const nrm = poly.clockwise ? { x: ty, y: -tx } : { x: -ty, y: tx }
+  const side = poly.facing?.[i] ?? 1
+  const nrm = poly.clockwise ? { x: ty * side, y: -tx * side } : { x: -ty * side, y: tx * side }
   return { p: { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }, n: nrm, t: { x: tx, y: ty } }
 }
 
