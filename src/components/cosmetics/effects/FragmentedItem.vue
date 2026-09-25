@@ -23,6 +23,6 @@ withDefaults(
     :subtle="item.typeKey === 'title'"
     measure-selector=".item-preview > *"
   >
-    <ItemPreview :item="item" :selected="selected" live />
+    <ItemPreview :item="item" :selected="selected" />
   </FragmentedContent>
 </template>

@@ -77,7 +77,7 @@ const hostStyle = computed(() => {
     data-fx-static
     aria-hidden="true"
   >
-    <ItemPreview :item="item" live />
+    <ItemPreview :item="item" />
   </div>
 </template>
 
@@ -116,6 +116,7 @@ const hostStyle = computed(() => {
 }
 
 .icon-capture--flat-text :deep(.title-renderer__text),
+.icon-capture--flat-text :deep(.title-renderer__text *),
 .icon-capture--flat-text :deep(.title-renderer__glint) {
   background-image: none !important;
   color: var(--flat-text) !important;

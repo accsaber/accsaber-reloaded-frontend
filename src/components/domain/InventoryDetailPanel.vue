@@ -254,7 +254,7 @@ onUnmounted(() => {
         :avatar-url="avatarUrl"
       />
       <FragmentedItem v-else-if="fragmentSpec" :item="previewItem ?? item" :spec="fragmentSpec" :selected="true" />
-      <ItemPreview v-else :item="previewItem ?? item" :effects="effectLayers" :selected="true" live />
+      <ItemPreview v-else :item="previewItem ?? item" :effects="effectLayers" :selected="true" />
       <ModifierCompositions
         v-for="layer in effectLayers"
         :key="layer.key"

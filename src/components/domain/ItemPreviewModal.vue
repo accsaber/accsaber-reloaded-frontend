@@ -70,7 +70,7 @@ const typeLabel = computed(() => props.item?.typeKey.replace(/_/g, ' ') ?? '')
           :color="colorValue"
           :avatar-url="avatarUrl"
         />
-        <ItemPreview v-else :item="previewItem ?? item" live />
+        <ItemPreview v-else :item="previewItem ?? item" />
       </div>
 
       <span class="ipm__type">{{ typeLabel }}</span>

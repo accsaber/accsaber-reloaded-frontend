@@ -59,7 +59,7 @@ const slices = computed<VariantSlice[]>(() => {
       :style="{ clipPath: s.clipPath }"
       :title="s.label"
     >
-      <ItemPreview :item="s.item" live />
+      <ItemPreview :item="s.item" />
     </span>
   </span>
 </template>

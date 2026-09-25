@@ -260,6 +260,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
               :item="card.slot.item"
               :modifiers="card.slot.modifiers"
               :arrow="i === landingIndex && phase === 'landed'"
+              :icon="i !== landingIndex"
             />
             <template v-if="i === landingIndex">
               <ModifierCompositions
@@ -315,7 +316,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
           :spec="resultFragmentSpec"
           :selected="true"
         />
-        <ItemPreview v-else :item="result" :effects="resultLayers" selected live />
+        <ItemPreview v-else :item="result" :effects="resultLayers" selected />
         <ModifierCompositions
           v-for="layer in resultLayers"
           :key="layer.key"

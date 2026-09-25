@@ -40,7 +40,7 @@ const hoverTitle = computed(() => {
   >
     <template v-if="variants">
       <span v-if="isTitle" class="reward-tile__sizer" aria-hidden="true">
-        <ItemPreview :item="item" live />
+        <ItemPreview :item="item" />
       </span>
       <VariantSplitPreview :item="item" :variants="variants" />
     </template>

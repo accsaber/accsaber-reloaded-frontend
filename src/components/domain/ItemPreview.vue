@@ -39,7 +39,7 @@ const props = defineProps<{
   item: ItemResponse
   selected?: boolean
   effects?: EffectLayer[] | null
-  live?: boolean
+  icon?: boolean
 }>()
 
 const typeKey = computed(() => props.item.typeKey)
@@ -166,7 +166,7 @@ const isPinnedPerk = computed(() => {
 
 const iconMode = computed(
   () =>
-    !props.live
+    props.icon
     && !props.effects?.length
     && !!props.item.iconUrl
     && themeBase.value === 'dark'

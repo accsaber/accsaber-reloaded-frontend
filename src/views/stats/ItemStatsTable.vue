@@ -128,7 +128,7 @@ onMounted(() => {
     <template #cell-item="{ row }">
       <div class="item-cell">
         <span class="item-cell__frame" :class="rarityClass(row.rarity as ItemRarity)">
-          <ItemPreview :item="syntheticItem(row)" />
+          <ItemPreview :item="syntheticItem(row)" icon />
         </span>
         <div class="item-cell__info">
           <span class="item-cell__name" :class="rarityClass(row.rarity as ItemRarity)">{{ row.itemName }}</span>
@@ -172,7 +172,7 @@ onMounted(() => {
         <div class="stats-card__head">
           <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
           <span class="item-cell__frame item-cell__frame--sm" :class="rarityClass(row.rarity as ItemRarity)">
-            <ItemPreview :item="syntheticItem(row)" />
+            <ItemPreview :item="syntheticItem(row)" icon />
           </span>
           <div class="item-cell__info">
             <span class="item-cell__name" :class="rarityClass(row.rarity as ItemRarity)">{{ row.itemName }}</span>

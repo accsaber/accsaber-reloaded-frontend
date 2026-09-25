@@ -8,6 +8,7 @@ const props = defineProps<{
   item: ItemResponse
   modifiers?: ItemModifierRef[]
   arrow?: boolean
+  icon?: boolean
 }>()
 
 const name = computed(() => displayItemName(props.modifiers, props.item.name))
@@ -30,7 +31,7 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
       <path d="M6 9l6 6 6-6" />
     </svg>
     <div class="bloq__icon">
-      <ItemPreview :item="item" selected />
+      <ItemPreview :item="item" selected :icon="icon" />
     </div>
   </div>
   <div class="bloq-caption">

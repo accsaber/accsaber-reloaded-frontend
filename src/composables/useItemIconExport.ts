@@ -6,7 +6,7 @@ import { ref } from 'vue'
 
 const CAPTURE_SIDE = 256
 const UPLOAD_CONCURRENCY = 3
-const MIN_TEXT_COVERAGE = 0.01
+const MIN_TEXT_GAIN = 0.01
 
 const FLAT_TEXT_NOTE =
   'Some gradient titles were exported in a flat colour - this browser dropped the gradient clip on their letters.'
@@ -34,6 +34,20 @@ function textRegion(host: Element): Rect | null {
     y: rect.top - hostRect.top,
     w: rect.width,
     h: rect.height,
+  }
+}
+
+async function textPaints(host: Element, probe: Rect): Promise<boolean> {
+  const box = captureBox()
+  const withText = await rasterize(host, { ...box, scale: 1, probe })
+  const text = Array.from(host.querySelectorAll<HTMLElement>('.title-renderer__text'))
+  text.forEach((el) => (el.style.visibility = 'hidden'))
+  try {
+    const withoutText = await rasterize(host, { ...box, scale: 1, probe })
+    const gain = (withText.probeOpaque ?? 0) - (withoutText.probeOpaque ?? 0)
+    return gain >= probe.w * probe.h * MIN_TEXT_GAIN
+  } finally {
+    text.forEach((el) => (el.style.visibility = ''))
   }
 }
 
@@ -89,12 +103,9 @@ export function useItemIconExport(renderItem: RenderItem) {
     const box = captureBox()
 
     const probe = item.typeKey === 'title' ? textRegion(host) : null
-    if (probe) {
-      const check = await rasterize(host, { ...box, scale: 1, probe })
-      if ((check.probeOpaque ?? 0) < probe.w * probe.h * MIN_TEXT_COVERAGE) {
-        host = await renderItem(item, true)
-        addWarning(FLAT_TEXT_NOTE)
-      }
+    if (probe && !(await textPaints(host, probe))) {
+      host = await renderItem(item, true)
+      addWarning(FLAT_TEXT_NOTE)
     }
 
     const result = await rasterize(host, { ...box, scale: size / box.width })
