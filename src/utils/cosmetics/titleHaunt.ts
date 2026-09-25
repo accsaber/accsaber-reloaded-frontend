@@ -98,7 +98,7 @@ function possessed(t: number, i: number, bleed: string): Style {
   const dx = Math.sin(t * 37 + i * 9) * Math.sin(t * 23) * 0.06
   const flip = Math.sin(t * 5.3 + i * 2) > 0.985
   const out: Style = { transform: `translateX(${dx.toFixed(3)}em)${flip ? ' scaleX(-1)' : ''}` }
-  if (Math.sin(t * 41 + i) <= -0.9) out.opacity = '0.25'
+  if (Math.sin(t * 16 + i) <= -0.9) out.opacity = '0.25'
   if (Math.sin(t * 3 + i) > 0.94) out.textShadow = `0.12em 0.05em 0 ${withAlpha(bleed, 0.7)}`
   return out
 }

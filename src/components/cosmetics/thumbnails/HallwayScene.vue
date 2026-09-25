@@ -309,12 +309,12 @@ function drawReacher(ctx: Ctx, fx: number, fy: number, k: number, u: number, see
 function drawSlam(ctx: Ctx, w: number, h: number, u: number, s: number, seed: number): number {
   const grow = Math.min(1, u / 0.12)
   const H = Math.min(w, h) * (1.1 + 0.3 * grow)
-  const jx = (Math.random() - 0.5) * 6 * s
-  const jy = (Math.random() - 0.5) * 4 * s
+  const jx = Math.sin(u * 17) * 3 * s
+  const jy = Math.cos(u * 13) * 2 * s
   ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'
   ctx.fillRect(0, 0, w, h)
   drawHorrorFace(ctx, w * 0.5 + jx, h * 0.42 + jy, H * 1.15, seed, props.scene)
-  return Math.sin(u * 90) * 8 * s
+  return Math.sin(u * 16) * 8 * s
 }
 
 function drawRunner(ctx: Ctx, w: number, h: number, f: number, age: number, s: number, sc: Scare): number {
@@ -471,7 +471,7 @@ function beamStrength(t: number, reduced: boolean): number {
   if (scare && scare.kind !== 'spider') {
     const age = t - scare.start
     const win = slamWindow()
-    if (win && age > win[0] - 0.4) panic = 0.8 + Math.sin(t * 60) * 0.2
+    if (win) panic = 1 - 0.2 * Math.min(1, Math.max(0, (age - win[0] + 0.4) / 0.4))
   }
   return (0.94 + Math.sin(t * 53) * 0.03 + Math.sin(t * 31) * 0.02) * dip * panic
 }
@@ -497,15 +497,11 @@ function drawBeam(ctx: Ctx, w: number, h: number, lx: number, ly: number, flick:
   if (warmSprite) ctx.drawImage(warmSprite, lx - R * 0.5, ly - R * 0.5, R, R)
 }
 
-function drawFlash(ctx: Ctx, w: number, h: number, t: number): void {
+function drawBlackout(ctx: Ctx, w: number, h: number, t: number): void {
   if (!scare) return
   const age = t - scare.start
   const win = slamWindow()
   if (!win) return
-  if (age >= win[0] && age < win[0] + 0.05) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
-    ctx.fillRect(0, 0, w, h)
-  }
   if (age >= win[1] && age < win[1] + 0.12) {
     ctx.fillStyle = VOID
     ctx.fillRect(0, 0, w, h)
@@ -549,7 +545,7 @@ useElementCanvas(canvasRef, {
     const jolt = reduced ? 0 : drawScare(ctx, w, h, f, t, s)
     const beamX = phase === 'inside' ? w / 2 : cx + sway
     drawBeam(ctx, w, h, beamX + jolt, cy - 4 * s, beamStrength(t, reduced))
-    if (!reduced) drawFlash(ctx, w, h, t)
+    if (!reduced) drawBlackout(ctx, w, h, t)
   },
 })
 </script>
