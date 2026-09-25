@@ -113,9 +113,10 @@ function badgeTentacle(i: number, seed: number, count: number, ring: RingGeometr
   const side = i % 2 === 0 ? 1 : -1
   const thick = L * 0.2
   const inward = Math.atan2(-at.n.y, -at.n.x)
+  const tuck = (wall.clockwise ? 1 : -1) * thick * 0.7
   return {
     seed,
-    base: { x: at.p.x - at.n.x * thick * 0.7, y: at.p.y - at.n.y * thick * 0.7 },
+    base: { x: at.p.x - at.t.y * tuck, y: at.p.y + at.t.x * tuck },
     heading: inward + (hash01(seed + 5) - 0.5) * 0.24,
     out: at.n,
     len: liquid.value ? L * 0.85 : L,
