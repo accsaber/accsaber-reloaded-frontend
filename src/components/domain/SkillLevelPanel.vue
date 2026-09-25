@@ -35,7 +35,7 @@ function tierFor(level: number): { label: string; color: string } {
   if (level >= 80) return { label: 'Elite', color: '#4dd9e0' }
   if (level >= 60) return { label: 'Strong', color: '#ffd700' }
   if (level >= 40) return { label: 'Solid', color: '#c0c0c0' }
-  if (level >= 20) return { label: 'Casual', color: '#cd7f32' }
+  if (level >= 20) return { label: 'Novice', color: '#cd7f32' }
   return { label: 'Beginner', color: 'var(--text-tertiary)' }
 }
 
