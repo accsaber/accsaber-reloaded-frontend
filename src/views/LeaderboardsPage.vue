@@ -162,10 +162,14 @@ const pageData = computed(() => isXpMode.value ? xpPageData.value : apPageData.v
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalPlayers = computed(() => pageData.value?.totalElements ?? 0)
 
-const rankChangeColumn: TableColumn = { key: 'rankChange', label: '', align: 'center', width: '70px' }
+const rankChangeColumn: TableColumn = { key: 'rankChange', label: '', align: 'center', width: '90px' }
+
+const showsParenRank = computed(() => !showInactive.value || !!countryFilter.value || !!relationFilter.value)
+const rankColumn = computed<TableColumn>(() => ({
+  key: 'rank', label: 'Rank', align: 'right', mono: true, width: showsParenRank.value ? '150px' : '80px',
+}))
 
 const apColumns: TableColumn[] = [
-  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '80px' },
   { key: 'player', label: 'Player', align: 'left' },
   { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '120px' },
   { key: 'avgAccuracy', label: 'Avg Acc', sortable: true, align: 'right', mono: true, width: '120px' },
@@ -174,14 +178,13 @@ const apColumns: TableColumn[] = [
 ]
 
 const xpColumns: TableColumn[] = [
-  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '80px' },
   { key: 'player', label: 'Player', align: 'left' },
   { key: 'level', label: 'Level', sortable: true, align: 'right', mono: true, width: '100px' },
   { key: 'totalXp', label: 'Total XP', sortable: true, align: 'right', mono: true, width: '140px' },
   rankChangeColumn,
 ]
 
-const columns = computed(() => isXpMode.value ? xpColumns : apColumns)
+const columns = computed(() => [rankColumn.value, ...(isXpMode.value ? xpColumns : apColumns)])
 
 const countryOptions = computed(() => {
   const userCountry = authStore.userProfile?.country
