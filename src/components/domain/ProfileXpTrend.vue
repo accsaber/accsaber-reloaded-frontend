@@ -14,6 +14,7 @@ const totalXpDiff = computed(() => {
     + (d.milestoneSetBonusXpDiff ?? 0)
     + (d.missionXpDiff ?? 0)
     + (d.campaignXpDiff ?? 0)
+    + (d.eventXpDiff ?? 0)
 })
 
 const direction = computed<'up' | 'down' | null>(() => {
@@ -58,6 +59,10 @@ function withSign(value: number | null | undefined): string {
         <span class="xp-trend__row">
           <span class="xp-trend__label">Campaign XP</span>
           <span class="xp-trend__value xp-trend__value--campaign">{{ withSign(statsDiff?.campaignXpDiff) }}</span>
+        </span>
+        <span class="xp-trend__row">
+          <span class="xp-trend__label">Event XP</span>
+          <span class="xp-trend__value xp-trend__value--event">{{ withSign(statsDiff?.eventXpDiff) }}</span>
         </span>
       </span>
     </span>
@@ -165,5 +170,9 @@ function withSign(value: number | null | undefined): string {
 
 .xp-trend__value--campaign {
   color: var(--xp-campaign);
+}
+
+.xp-trend__value--event {
+  color: var(--xp-event);
 }
 </style>

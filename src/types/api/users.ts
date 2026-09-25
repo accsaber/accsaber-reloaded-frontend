@@ -161,6 +161,7 @@ export interface UserAllStatisticsResponse {
   totalMilestoneSetBonusXp: number
   totalMissionXp: number
   totalCampaignXp: number
+  totalEventXp: number
   categories: UserCategoryStatisticsResponse[]
 }
 
@@ -217,6 +218,7 @@ export interface StatsDiffResponse {
   milestoneSetBonusXpDiff: number
   missionXpDiff: number
   campaignXpDiff: number
+  eventXpDiff: number
   averageAccDiff: number
   averageApDiff: number
   rankingDiff: number

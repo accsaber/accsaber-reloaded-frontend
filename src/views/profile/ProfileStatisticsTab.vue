@@ -46,6 +46,19 @@ const peakStats = computed(() => {
 
 const xpAccent = computed(() => categoryStore.getAccent('xp'))
 
+const xpSources = computed(() => {
+  const stats = props.xpStats
+  if (!stats) return []
+  return [
+    { label: 'Score XP', value: stats.totalScoreXp },
+    { label: 'Milestone XP', value: stats.totalMilestoneXp },
+    { label: 'Set Bonus XP', value: stats.totalMilestoneSetBonusXp },
+    { label: 'Mission XP', value: stats.totalMissionXp },
+    { label: 'Campaign XP', value: stats.totalCampaignXp },
+    { label: 'Event XP', value: stats.totalEventXp },
+  ]
+})
+
 async function fetchAllTimeData() {
   try {
     const { getUserHistoricStatistics } = await import('@/api/users')
@@ -113,19 +126,12 @@ watch(
       <section v-if="xpStats" class="xp-breakdown">
         <h3 class="statistics-tab__section-title">XP Breakdown</h3>
         <StatBlock label="Total XP" :value="xpStats.totalXp" :decimals="0" :accent-color="xpAccent" />
-        <div class="xp-breakdown__tree">
-          <div class="xp-breakdown__drop" />
-          <div class="xp-breakdown__drop" />
-          <div class="xp-breakdown__drop" />
-          <div class="xp-breakdown__drop" />
-          <div class="xp-breakdown__drop" />
+        <div class="xp-breakdown__tree" :style="{ '--source-count': xpSources.length }">
+          <div v-for="source in xpSources" :key="source.label" class="xp-breakdown__drop" />
         </div>
-        <div class="xp-breakdown__sources">
-          <StatBlock label="Score XP" :value="xpStats.totalScoreXp" :decimals="0" />
-          <StatBlock label="Milestone XP" :value="xpStats.totalMilestoneXp" :decimals="0" />
-          <StatBlock label="Set Bonus XP" :value="xpStats.totalMilestoneSetBonusXp" :decimals="0" />
-          <StatBlock label="Mission XP" :value="xpStats.totalMissionXp" :decimals="0" />
-          <StatBlock label="Campaign XP" :value="xpStats.totalCampaignXp" :decimals="0" />
+        <div class="xp-breakdown__sources" :style="{ '--source-count': xpSources.length }">
+          <StatBlock v-for="source in xpSources" :key="source.label" :label="source.label" :value="source.value"
+            :decimals="0" />
         </div>
       </section>
     </div>
@@ -201,7 +207,7 @@ watch(
 
 .xp-breakdown__tree {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--source-count), 1fr);
   width: 100%;
   height: 28px;
 }
@@ -239,9 +245,7 @@ watch(
   right: 50%;
 }
 
-.xp-breakdown__drop:nth-child(2)::before,
-.xp-breakdown__drop:nth-child(3)::before,
-.xp-breakdown__drop:nth-child(4)::before {
+.xp-breakdown__drop:not(:first-child):not(:last-child)::before {
   content: '';
   position: absolute;
   top: 0;
@@ -253,7 +257,7 @@ watch(
 
 .xp-breakdown__sources {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--source-count), 1fr);
   width: 100%;
 }
 

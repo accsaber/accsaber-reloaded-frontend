@@ -43,13 +43,19 @@ const XP_SOURCES = [
     key: 'mission',
     color: 'var(--xp-mission)',
     label: 'Missions',
-    body: 'Daily and weekly objectives sized to your skill, plus the missions from live events. Attempts count toward some of them.',
+    body: 'Daily and weekly objectives sized to your skill. Attempts count toward some of them.',
   },
   {
     key: 'campaign',
     color: 'var(--xp-campaign)',
     label: 'Campaigns',
     body: 'Clearing campaign challenges gives XP on top of what the play itself gave.',
+  },
+  {
+    key: 'event',
+    color: 'var(--xp-event)',
+    label: 'Events',
+    body: 'Missions and bonuses from a live event.',
   },
 ]
 
@@ -87,9 +93,9 @@ onMounted(async () => {
       AccSaber gives XP, levels never cap, and some levels give you items.
     </p>
 
-    <WikiHeading id="sources">Five sources</WikiHeading>
+    <WikiHeading id="sources">Six sources</WikiHeading>
     <p>
-      XP comes from five sources. Each has its own color, the same colors your profile uses to
+      XP comes from six sources. Each has its own color, the same colors your profile uses to
       show where yours came from:
     </p>
     <div class="sources">

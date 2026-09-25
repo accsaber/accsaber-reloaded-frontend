@@ -400,7 +400,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'xp-and-levels',
         title: 'XP & Levels',
-        summary: 'Five sources of XP and the levels that unlock items.',
+        summary: 'Six sources of XP and the levels that unlock items.',
         keywords: [
           'xp',
           'experience',
@@ -419,9 +419,11 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'missions',
           'set bonus',
           'campaign xp',
+          'event xp',
+          'event bonus',
         ],
-        related: ['missions', 'score-history', 'leaderboards', 'milestones-and-achievements', 'items-and-inventory'],
-        updated: '2026-09-07',
+        related: ['missions', 'events', 'score-history', 'leaderboards', 'milestones-and-achievements', 'items-and-inventory'],
+        updated: '2026-09-25',
         loader: () => import('@/wiki/pages/XpAndLevelsPage.vue'),
       },
       {
