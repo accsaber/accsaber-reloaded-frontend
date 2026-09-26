@@ -7,7 +7,7 @@ import { eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { overlaySpace, withAlpha, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import { hash01 } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
+import { computed, useTemplateRef, watch } from 'vue'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderUmbraOverlaySpec }>()
@@ -18,6 +18,10 @@ const RADIUS = 44
 const STATIC_T = 10.5
 
 let coronaLayer: HTMLCanvasElement | null = null
+let coronaStale = false
+let layerW = 0
+let layerH = 0
+let layerScale = 0
 
 const moonCrater = computed(() => withAlpha(lighten(props.overlay.moon, 0.35), 0.35))
 const moonRim = computed(() => withAlpha(lighten(props.overlay.moon, 0.6), 0.45))
@@ -233,6 +237,10 @@ function drawDiamondRing(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase): void {
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 function paintCorona(w: number, h: number, scale: number): void {
+  layerW = w
+  layerH = h
+  layerScale = scale
+  coronaStale = false
   const [layer, lctx] = offscreenLayer(w, h, scale)
   if (lctx) {
     const sp = overlaySpace(w, h, MARGIN)
@@ -243,7 +251,18 @@ function paintCorona(w: number, h: number, scale: number): void {
   coronaLayer = layer
 }
 
+watch(
+  () => {
+    const o = props.overlay
+    return [o.corona, o.streamers, o.streamerLen, o.plumes, o.annular]
+  },
+  () => {
+    coronaStale = true
+  },
+)
+
 function blitCorona(ctx: Ctx, w: number, h: number, t: number, level: number): void {
+  if (coronaStale) paintCorona(layerW, layerH, layerScale)
   if (!coronaLayer) return
   ctx.save()
   ctx.globalAlpha = level
