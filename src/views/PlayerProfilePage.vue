@@ -677,6 +677,7 @@ watch(activeCategory, (newCategory) => {
                 :primary-link-id="equipped['badge']?.linkId ?? null"
                 class="profile-hero__badges"
               />
+              <p v-if="user.hmd" class="profile-hero__hmd">{{ user.hmd }}</p>
               <SupporterProfileSection
                 v-if="supporterState"
                 :state="supporterState"
@@ -1038,6 +1039,12 @@ watch(activeCategory, (newCategory) => {
 .profile-hero__badges {
   justify-content: flex-start !important;
   max-width: none !important;
+}
+
+.profile-hero__hmd {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .profile-hero__supporter {

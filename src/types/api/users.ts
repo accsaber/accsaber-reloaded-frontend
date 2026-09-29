@@ -18,6 +18,7 @@ export interface UserResponse {
   playerInactive: boolean
   banned: boolean
   createdAt: string
+  hmd: string | null
   relations: UserRelationCounts
   supporterTier?: SupporterTier | null
 }
