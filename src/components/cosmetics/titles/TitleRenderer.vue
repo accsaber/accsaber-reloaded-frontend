@@ -548,7 +548,7 @@ watch(
     activeFlashes.value = []
     activeSparkles.value = []
     nextJoltAt = -1
-    joltStartedAt = -1
+    joltStartedAt.value = -1
     nextFlashAt = -1
     nextSparkleAt = -1
     nextSplitAt = -1
@@ -568,12 +568,12 @@ const splitShadowStyle = computed<Record<string, string> | undefined>(() => {
 
 
 let nextJoltAt = -1
-let joltStartedAt = -1
+const joltStartedAt = ref(-1)
 
 const joltNow = computed(() => {
   const spec = joltSpec.value
-  if (!spec || joltStartedAt < 0) return null
-  return joltFrame(tMs.value - joltStartedAt, spec)
+  if (!spec || joltStartedAt.value < 0) return null
+  return joltFrame(tMs.value - joltStartedAt.value, spec)
 })
 
 const joltFlashColor = computed(() => {
@@ -805,12 +805,12 @@ watch(tMs, (now) => {
     const d = joltDurations(jolt)
     const total = d.windup + d.hold + d.recoil
     if (nextJoltAt < 0) nextJoltAt = now + rand(1200, jolt.maxIntervalMs ?? 6500)
-    if (joltStartedAt < 0 && now >= nextJoltAt) {
-      joltStartedAt = now
+    if (joltStartedAt.value < 0 && now >= nextJoltAt) {
+      joltStartedAt.value = now
       nextJoltAt = now + total + rand(jolt.minIntervalMs ?? 3000, jolt.maxIntervalMs ?? 6500)
     }
-    if (joltStartedAt >= 0 && now - joltStartedAt >= total) {
-      joltStartedAt = -1
+    if (joltStartedAt.value >= 0 && now - joltStartedAt.value >= total) {
+      joltStartedAt.value = -1
     }
   }
   const flashes = props.value.flashes
