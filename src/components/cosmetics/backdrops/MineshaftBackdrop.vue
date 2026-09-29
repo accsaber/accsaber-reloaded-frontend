@@ -269,6 +269,13 @@ function drawDustFall(ctx: Ctx, w: number, t: number) {
   ctx.globalAlpha = 1
 }
 
+function drawDarkWash(ctx: Ctx, w: number, h: number) {
+  ctx.fillStyle = 'rgb(0, 0, 0)'
+  ctx.globalAlpha = 0.35
+  ctx.fillRect(0, 0, w, h)
+  ctx.globalAlpha = 1
+}
+
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useBackdropCanvas(canvasRef, {
@@ -296,6 +303,7 @@ useBackdropCanvas(canvasRef, {
     drawLantern(ctx, w, t)
     drawDust(ctx, w, h, t)
     drawDustFall(ctx, w, t)
+    drawDarkWash(ctx, w, h)
   },
 })
 </script>

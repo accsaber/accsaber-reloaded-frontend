@@ -24,6 +24,17 @@ export function toHex(rgb: RGB): string {
     .join('')
 }
 
+export function hueOf(hex: string): number | null {
+  const rgb = parseHex(hex)
+  if (!rgb) return null
+  const [r, g, b] = rgb.map((v) => v / 255)
+  const max = Math.max(r, g, b)
+  const d = max - Math.min(r, g, b)
+  if (d === 0) return null
+  const h = max === r ? (g - b) / d : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return (h * 60 + 360) % 360
+}
+
 export function darken(hex: string, factor: number): string {
   const rgb = parseHex(hex)
   if (!rgb) return hex
