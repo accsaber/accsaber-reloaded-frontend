@@ -228,9 +228,6 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
   flex-direction: column;
   gap: var(--space-md);
   min-width: 260px;
-  max-height: min(65vh, 560px);
-  overflow-y: auto;
-  padding-right: var(--space-xs);
 }
 
 .item-filters__columns {
