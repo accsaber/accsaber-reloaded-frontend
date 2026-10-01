@@ -999,7 +999,12 @@ export function interpolateTitleState(
   }
   out.fontWeight = t < 0.5 ? a.fontWeight : b.fontWeight
   out.fontStyle = t < 0.5 ? a.fontStyle : b.fontStyle
-  out.effects = t < 0.5 ? a.effects : b.effects
+  out.glow = a.glow && b.glow
+    ? { color: lerpColor(a.glow.color, b.glow.color, t), blurEm: lerpNumber(a.glow.blurEm, b.glow.blurEm, t) }
+    : t < 0.5 ? a.glow : b.glow
+  out.outline = a.outline && b.outline
+    ? { color: lerpColor(a.outline.color, b.outline.color, t), widthPx: lerpNumber(a.outline.widthPx, b.outline.widthPx, t) }
+    : t < 0.5 ? a.outline : b.outline
   return out
 }
 

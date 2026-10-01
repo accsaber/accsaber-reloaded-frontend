@@ -35,7 +35,7 @@ import {
   pickInterpolatedState,
 } from '@/utils/items'
 import { randBetween as rand, sinHash01 } from '@/utils/random'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 
 const props = defineProps<{
   value: TitleValue
@@ -68,7 +68,13 @@ function motionSpec<T extends { enabled: boolean }>(spec: T | undefined): T | nu
   return spec?.enabled && !reducedMotion.value ? spec : null
 }
 
+const FONT_CLASSES: Record<string, string> = {
+  pixel_8bit: 'title-renderer--pixel',
+  varela_round: 'title-renderer--rounded',
+}
+
 const isPixelFont = computed(() => props.value.font === 'pixel_8bit')
+const fontClass = computed(() => (props.value.font ? FONT_CLASSES[props.value.font] : undefined))
 
 const themeBase = useThemeBase()
 const isLightBase = computed(() => themeBase.value === 'light')
@@ -83,6 +89,8 @@ const effectiveStates = computed<TitleStateValue[]>(() => {
     ...s,
     color: s.lightColor ?? s.color,
     gradient: s.lightGradient ?? s.gradient,
+    glow: s.glow && { ...s.glow, color: s.glow.lightColor ?? s.glow.color },
+    outline: s.outline && { ...s.outline, color: s.outline.lightColor ?? s.outline.color },
   }))
 })
 
@@ -387,6 +395,7 @@ const fxEnabled = computed(() =>
     || !!props.value.spectrumSplit?.enabled
     || !!props.value.jolt?.enabled
     || !!props.value.float?.enabled
+    || !!props.value.ornament?.orbit?.enabled
   ),
 )
 
@@ -427,6 +436,17 @@ const legacyGradientStyle = computed(() => {
     backgroundClip: 'text',
     color: 'transparent',
   } as Record<string, string>
+})
+
+const outlineId = `title-outline-${useId()}`
+
+const edgeStyle = computed<Record<string, string> | undefined>(() => {
+  const { glow, outline } = state.value
+  if (!glow && !outline) return undefined
+  const filters: string[] = []
+  if (outline) filters.push(`url(#${outlineId})`)
+  if (glow) filters.push(`drop-shadow(0 0 ${glow.blurEm.toFixed(3)}em ${glow.color})`)
+  return { filter: filters.join(' ') }
 })
 
 const BAND_WIDTH_PCT = 16
@@ -512,10 +532,37 @@ const ORNAMENT_ICONS: Record<string, { viewBox: string; d: string; fillRule?: 'e
 const ornament = computed(() => {
   const spec = props.value.ornament
   if (!spec) return null
-  const icon = ORNAMENT_ICONS[spec.icon]
-  if (!icon) return null
-  const color = tone(spec.lightColor, spec.color, 'currentColor')
-  return { ...icon, color, sizeEm: spec.sizeEm ?? 1, fillRule: icon.fillRule }
+  const icon = spec.icon ? ORNAMENT_ICONS[spec.icon] : undefined
+  const paths = spec.paths ?? (icon ? [{ d: icon.d }] : null)
+  if (!paths) return null
+  return {
+    viewBox: spec.viewBox ?? icon?.viewBox ?? '0 0 24 24',
+    paths,
+    fillRule: icon?.fillRule,
+    color: tone(spec.lightColor, spec.color, 'currentColor'),
+    sizeEm: spec.sizeEm ?? 1,
+  }
+})
+
+const orbitSpec = computed(() => motionSpec(props.value.ornament?.orbit))
+
+const ornamentStyle = computed<Record<string, string> | undefined>(() => {
+  const o = ornament.value
+  if (!o) return undefined
+  const style: Record<string, string> = { height: `${o.sizeEm}em`, color: o.color }
+  const spec = orbitSpec.value
+  if (!spec) return style
+  const a = (tMs.value / (spec.periodMs ?? 7000)) * Math.PI * 2
+  const depth = Math.sin(a)
+  const x = 50 + Math.cos(a) * (spec.rxPct ?? 62)
+  const y = depth * (spec.ryEm ?? 0.75)
+  const scale = 0.78 + 0.22 * (depth + 1) / 2
+  const tilt = Math.sin(a * 2 + 0.6) * (spec.tiltDeg ?? 12)
+  style.left = `${x.toFixed(2)}%`
+  style.transform = `translate(-50%, calc(-50% + ${y.toFixed(3)}em)) scale(${scale.toFixed(3)}) rotate(${tilt.toFixed(2)}deg)`
+  style.zIndex = depth > 0 ? '2' : '0'
+  style.opacity = (0.72 + 0.28 * (depth + 1) / 2).toFixed(3)
+  return style
 })
 
 const aura = computed(() => {
@@ -890,9 +937,20 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 <template>
   <span
     class="title-renderer"
-    :class="{ 'title-renderer--pixel': isPixelFont }"
+    :class="fontClass"
     :style="textStyle"
   >
+    <svg v-if="state.outline" class="title-renderer__defs" aria-hidden="true">
+      <filter :id="outlineId" x="-20%" y="-40%" width="140%" height="180%" color-interpolation-filters="sRGB">
+        <feMorphology in="SourceAlpha" operator="dilate" :radius="state.outline.widthPx" result="grown" />
+        <feFlood :flood-color="state.outline.color" />
+        <feComposite in2="grown" operator="in" result="rim" />
+        <feMerge>
+          <feMergeNode in="rim" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </svg>
     <TitleAura v-if="aura" :key="auraKey" :aura="aura" :light="isLightBase" :links="auraLinks" />
     <TitleBrewLayer
       v-if="brewSpec"
@@ -912,11 +970,26 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
     <svg
       v-if="ornament"
       class="title-renderer__ornament"
-      :style="{ height: `${ornament.sizeEm}em` }"
+      :class="{ 'title-renderer__ornament--orbit': orbitSpec }"
+      :style="ornamentStyle"
       :viewBox="ornament.viewBox"
+      :fill-rule="ornament.fillRule"
       aria-hidden="true"
     >
-      <path :d="ornament.d" :fill="ornament.color" :fill-rule="ornament.fillRule" />
+      <path
+        v-for="(p, pi) in ornament.paths"
+        :key="pi"
+        :d="p.d"
+        :fill="p.fill ?? 'currentColor'"
+        :fill-opacity="p.fillOpacity"
+        :stroke="p.stroke"
+        :stroke-width="p.strokeWidth"
+        :stroke-opacity="p.strokeOpacity"
+        :stroke-linecap="p.strokeLinecap"
+        :stroke-linejoin="p.strokeLinejoin"
+        :stroke-dasharray="p.strokeDasharray"
+        :transform="p.transform"
+      />
     </svg>
     <span
       v-if="joltFlashStyle"
@@ -944,7 +1017,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
       }"
       aria-hidden="true"
     >{{ qm.text }}</span>
-    <span v-if="glyphChars" class="title-renderer__text" :style="[floatStyle ?? {}, joltStyle ?? {}]">
+    <span v-if="glyphChars" class="title-renderer__text" :style="[edgeStyle ?? {}, floatStyle ?? {}, joltStyle ?? {}]">
       <span
         v-for="(ch, i) in glyphChars"
         :key="i"
@@ -961,7 +1034,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
     <span
       v-else
       class="title-renderer__text"
-      :style="[legacyGradientStyle ?? {}, splitShadowStyle ?? {}, crustBaseStyle ?? {}, spectrumStyle ?? {}, floatStyle ?? {}, joltStyle ?? {}]"
+      :style="[edgeStyle ?? {}, legacyGradientStyle ?? {}, splitShadowStyle ?? {}, crustBaseStyle ?? {}, spectrumStyle ?? {}, floatStyle ?? {}, joltStyle ?? {}]"
     >{{ value.text }}</span>
     <span
       v-if="crustMoltenStyle"
@@ -1014,6 +1087,13 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   image-rendering: pixelated;
 }
 
+.title-renderer--rounded {
+  font-family: 'Varela Round', var(--font-sans);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.03em;
+}
+
 .title-renderer__text {
   position: relative;
   z-index: 1;
@@ -1028,6 +1108,19 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   vertical-align: -0.12em;
   overflow: visible;
   z-index: 1;
+}
+
+.title-renderer__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.title-renderer__ornament--orbit {
+  position: absolute;
+  top: 50%;
+  margin-right: 0;
+  pointer-events: none;
 }
 
 .title-renderer__glint {

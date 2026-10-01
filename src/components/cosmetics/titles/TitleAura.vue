@@ -21,6 +21,7 @@ import TitleVoidAura from '@/components/cosmetics/titles/TitleVoidAura.vue'
 import TitleWaterAura from '@/components/cosmetics/titles/TitleWaterAura.vue'
 import TitleWindAura from '@/components/cosmetics/titles/TitleWindAura.vue'
 import TitleBloqsAura from '@/components/cosmetics/titles/TitleBloqsAura.vue'
+import TitleSplatterAura from '@/components/cosmetics/titles/TitleSplatterAura.vue'
 import TitleSpotlightAura from '@/components/cosmetics/titles/TitleSpotlightAura.vue'
 import TitleStampsAura from '@/components/cosmetics/titles/TitleStampsAura.vue'
 import TitleMeadowAura from '@/components/cosmetics/titles/TitleMeadowAura.vue'
@@ -63,6 +64,7 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   curio: TitleCurioAura,
   radar: TitleRadarAura,
   waypoints: TitleWaypointsAura,
+  splatter: TitleSplatterAura,
 }
 
 const LINKED: Partial<Record<TitleAuraType, keyof TitleAuraLinks>> = {

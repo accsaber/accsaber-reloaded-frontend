@@ -125,11 +125,24 @@ export interface TitleStateValue {
   fontWeight?: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
   fontStyle?: 'normal' | 'italic'
   letterSpacingPx?: number
-  effects?: VisualEffect[]
+  glow?: TitleGlowSpec
+  outline?: TitleOutlineSpec
   glisten?: TitleGlistenSpec
 }
 
-export type TitleFont = 'pixel_8bit' | (string & {})
+export interface TitleGlowSpec {
+  color: string
+  lightColor?: string
+  blurEm: number
+}
+
+export interface TitleOutlineSpec {
+  color: string
+  lightColor?: string
+  widthPx: number
+}
+
+export type TitleFont = 'pixel_8bit' | 'varela_round' | (string & {})
 
 export interface TitleFlashSpec {
   enabled: boolean
@@ -156,10 +169,21 @@ export interface TitleSparkleSpec {
 export type TitleOrnamentIcon = 'yarn_ball' | 'alpha' | (string & {})
 
 export interface TitleOrnamentSpec {
-  icon: TitleOrnamentIcon
+  icon?: TitleOrnamentIcon
+  viewBox?: string
+  paths?: Omit<BorderShapePathValue, 'twinkle'>[]
   color?: string
   lightColor?: string
   sizeEm?: number
+  orbit?: TitleOrnamentOrbitSpec
+}
+
+export interface TitleOrnamentOrbitSpec {
+  enabled: boolean
+  periodMs?: number
+  rxPct?: number
+  ryEm?: number
+  tiltDeg?: number
 }
 
 export interface TitleFlameAuraSpec {
@@ -476,7 +500,17 @@ export interface TitleBloqsAuraSpec {
   intervalMs?: number
 }
 
+export interface TitleSplatterAuraSpec {
+  type: 'splatter'
+  enabled: boolean
+  colors?: string[]
+  lightColors?: string[]
+  intervalMs?: number
+  lifeMs?: number
+}
+
 export type TitleAuraSpec =
+  | TitleSplatterAuraSpec
   | TitleBloqsAuraSpec
   | TitleSpotlightAuraSpec
   | TitleStampsAuraSpec
