@@ -5,7 +5,7 @@ import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
 import LevelBadgeAvatar from '@/components/domain/LevelBadgeAvatar.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
-import { ABOVE_CONTENT_TYPES } from '@/components/cosmetics/effects/registry'
+import { UNDER_CONTENT_TYPES } from '@/components/cosmetics/effects/registry'
 import type { BorderColorValue, BorderShapeValue } from '@/types/api/items'
 import { DEFAULT_AVATAR_MASK, resolveAvatarImageBox } from '@/utils/avatarBox'
 import type { EffectHostContext } from '@/utils/cosmetics/effects'
@@ -31,9 +31,10 @@ const avatarImageBox = computed(() => resolveAvatarImageBox(props.shape))
 const avatarClipId = `bc-avatar-clip-${Math.random().toString(36).slice(2, 9)}`
 
 const fxLayers = computed(() => annotateEffectLayerStacks(props.effects))
-const isAbove = (layer: EffectLayer) => layer.spec.compositions?.some((c) => ABOVE_CONTENT_TYPES.has(c.type)) ?? false
-const innerLayers = computed(() => fxLayers.value.filter((l) => !isAbove(l)))
-const aboveLayers = computed(() => fxLayers.value.filter(isAbove))
+const isUnder = (layer: EffectLayer) =>
+  !!layer.spec.compositions?.length && layer.spec.compositions.every((c) => UNDER_CONTENT_TYPES.has(c.type))
+const underLayers = computed(() => fxLayers.value.filter(isUnder))
+const overLayers = computed(() => fxLayers.value.filter((l) => !isUnder(l)))
 
 const fxMask = computed(() => (fxLayers.value.length ? shapeSilhouetteMask(props.shape) : null))
 const fxHost = computed<EffectHostContext>(() => ({
@@ -48,7 +49,7 @@ const fxHost = computed<EffectHostContext>(() => ({
     <ContentEffects :layers="effects" seed="border">
       <ProfileBorderRenderer :shape="shape" :color="color" />
       <ModifierCompositions
-        v-for="layer in innerLayers"
+        v-for="layer in underLayers"
         :key="layer.key"
         :spec="layer.spec"
         :context="context"
@@ -75,9 +76,9 @@ const fxHost = computed<EffectHostContext>(() => ({
       :color="color"
     />
     <ModifierCompositions
-      v-for="layer in aboveLayers"
+      v-for="layer in overLayers"
       :key="layer.key"
-      class="border-composition__fx-above"
+      class="border-composition__fx"
       :spec="layer.spec"
       :context="context"
       :stack-index="layer.stackIndex"
@@ -101,7 +102,7 @@ const fxHost = computed<EffectHostContext>(() => ({
   z-index: 3;
 }
 
-.border-composition__fx-above {
+.border-composition__fx {
   z-index: 4;
 }
 </style>

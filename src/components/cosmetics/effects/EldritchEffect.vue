@@ -47,6 +47,7 @@ interface Tentacle {
   curl: number
   phase: number
   mode: 'slide' | 'emerge' | 'fade'
+  cycle: number
 }
 
 const SEGMENTS = 36
@@ -88,23 +89,34 @@ function titleTentacle(i: number, seed: number, box: ContentBox, L: number): Ten
     curl: (i % 2 === 0 ? -1 : 1) * (2.4 + hash01(seed + 4) * 0.8),
     phase: i * (cfg.value.intervalSecs / 2),
     mode: 'fade',
+    cycle: 0,
   }
 }
 
-function fieldTentacle(i: number, seed: number, count: number, box: ContentBox, L: number): Tentacle {
-  const wall = boxRing(box)
-  const at = ringAt(wall, ((i + 0.15 + hash01(seed + 2) * 0.7) / count) * wall.total)
+function fieldTentacle(i: number, seed: number, count: number, L: number): Tentacle {
   return {
     seed,
-    base: at.p,
-    heading: Math.atan2(-at.n.y, -at.n.x),
-    out: at.n,
+    base: { x: 0, y: 0 },
+    heading: 0,
+    out: { x: 0, y: 0 },
     len: L,
     thick: L * 0.2,
-    curl: (hash01(seed + 5) > 0.5 ? 1 : -1) * (2.2 + hash01(seed + 4) * 0.9),
+    curl: 0,
     phase: (i / count) * cfg.value.intervalSecs,
     mode: 'slide',
+    cycle: -1,
   }
+}
+
+function placeOnEdge(t: Tentacle, box: ContentBox, cycle: number): void {
+  const roll = t.seed + cycle * 977
+  const wall = boxRing(box)
+  const at = ringAt(wall, hash01(roll + 2) * wall.total)
+  t.base = at.p
+  t.out = at.n
+  t.heading = Math.atan2(-at.n.y, -at.n.x)
+  t.curl = (hash01(roll + 5) > 0.5 ? 1 : -1) * (2.2 + hash01(roll + 4) * 0.9)
+  t.cycle = cycle
 }
 
 function badgeTentacle(i: number, seed: number, count: number, ring: RingGeometry, L: number): Tentacle {
@@ -124,6 +136,7 @@ function badgeTentacle(i: number, seed: number, count: number, ring: RingGeometr
     curl: side * (2.2 + hash01(seed + 4) * 0.8),
     phase: (i / count) * cfg.value.intervalSecs + hash01(seed + 6),
     mode: 'emerge',
+    cycle: 0,
   }
 }
 
@@ -134,7 +147,7 @@ function tentacles(box: ContentBox, ring: RingGeometry): Tentacle[] {
   for (let i = 0; i < count; i++) {
     const seed = props.measure.stack * 101 + i * 13 + 7
     if (isTitle.value) out.push(titleTentacle(i, seed, box, L))
-    else if (field.value) out.push(fieldTentacle(i, seed, count, box, L))
+    else if (field.value) out.push(fieldTentacle(i, seed, count, L))
     else out.push(badgeTentacle(i, seed, count, ring, L))
   }
   return out
@@ -244,6 +257,10 @@ function drawDrips(g: Ctx, t: Tentacle, count: number, tSec: number) {
 function drawFrame(f: EffectFrame): boolean {
   let drew = false
   for (const t of specs.get(f.ring, 0, () => tentacles(f.box, f.ring))) {
+    if (t.mode === 'slide') {
+      const cycle = f.reduced ? 0 : Math.floor((f.t + t.phase) / cfg.value.intervalSecs)
+      if (cycle !== t.cycle) placeOnEdge(t, f.box, cycle)
+    }
     const ext = f.reduced ? 1 : extension(t, f.t)
     if (ext <= 0.02) continue
     const count = spine(t, f.reduced ? 0 : f.t, ext)

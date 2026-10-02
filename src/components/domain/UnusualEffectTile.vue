@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
-import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import type { ItemResponse, ModifierEffectSpec } from '@/types/api/items'
-import { readFragmentSpec } from '@/utils/items'
+import type { EffectLayer } from '@/utils/items'
 import { computed } from 'vue'
 
 const props = withDefaults(
@@ -15,9 +13,7 @@ const props = withDefaults(
   { size: 96 },
 )
 
-const fragmentSpec = computed(() =>
-  readFragmentSpec({ id: 'preview', key: 'preview', name: props.name, effectSpec: props.effectSpec }),
-)
+const effects = computed<EffectLayer[]>(() => (props.effectSpec ? [{ key: 'u:preview', spec: props.effectSpec }] : []))
 
 const SAMPLE_GRAY = '#9b9ba4'
 
@@ -50,14 +46,7 @@ const SAMPLE_ITEM: ItemResponse = {
 <template>
   <figure class="ue-tile" :style="{ '--ue-tile-size': `${size}px` }" :title="name">
     <span class="ue-tile__frame">
-      <FragmentedItem v-if="fragmentSpec" :item="SAMPLE_ITEM" :spec="fragmentSpec" :selected="true" />
-      <ItemPreview v-else :item="SAMPLE_ITEM" />
-      <ModifierCompositions
-        v-if="effectSpec"
-        :spec="effectSpec"
-        type-key="profile_border_color"
-        measure-selector=".item-preview > *"
-      />
+      <ItemPreview :item="SAMPLE_ITEM" :effects="effects" selected />
     </span>
     <figcaption class="ue-tile__name">{{ name }}</figcaption>
   </figure>

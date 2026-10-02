@@ -50,6 +50,8 @@ export const EFFECT_REGISTRY: Record<string, Component> = {
 
 export const ABOVE_CONTENT_TYPES = new Set(['shackled'])
 
+export const UNDER_CONTENT_TYPES = new Set(['holographic'])
+
 export const BLEED_TYPES = new Set([
   'aurora',
   'entity',
