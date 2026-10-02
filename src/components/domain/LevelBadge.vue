@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import BorderDecals from '@/components/cosmetics/borders/BorderDecals.vue'
-import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
+import BorderComposition from '@/components/domain/BorderComposition.vue'
 import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
-import LevelBadgeAvatar from '@/components/domain/LevelBadgeAvatar.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
 import type {
   BorderColorValue,
@@ -16,10 +13,8 @@ import {
   fillToCss,
   type EffectLayer,
 } from '@/utils/items'
-import { DEFAULT_AVATAR_MASK, resolveAvatarImageBox } from '@/utils/avatarBox'
-import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
 import type { EffectHostContext } from '@/utils/cosmetics/effects'
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
   level: number
@@ -59,42 +54,10 @@ const borderColor = computed(() =>
 )
 const title = computed(() => (props.plain ? null : props.equippedTitle ?? null))
 
-const borderFxLayers = computed(() =>
-  props.plain ? [] : annotateEffectLayerStacks(props.borderEffects),
-)
 const titleFxLayers = computed(() =>
   props.plain ? [] : annotateEffectLayerStacks(props.titleEffects),
 )
-const borderFxMask = computed(() => shapeSilhouetteMask(borderShape.value))
-const borderFxHost = computed<EffectHostContext>(() => ({
-  ring: shapeRing(borderShape.value),
-  fillType: borderColor.value?.states?.[0]?.fill?.type,
-  overlayType: borderShape.value?.overlay?.enabled ? borderShape.value.overlay.type : undefined,
-}))
 const titleFxHost = computed<EffectHostContext>(() => ({ auraType: title.value?.aura?.type }))
-
-const hasShapeOverride = computed(() => !!borderShape.value)
-
-const decals = computed(() => borderShape.value?.decals ?? [])
-
-const overlay = computed(() =>
-  borderShape.value?.overlay?.enabled ? borderShape.value.overlay : null,
-)
-
-const avatarMaskPath = computed(() => borderShape.value?.avatarMask ?? DEFAULT_AVATAR_MASK)
-
-const avatarImageBox = ref({ x: 0, y: 0, size: 100 })
-
-watch(
-  borderShape,
-  (shape) => {
-    avatarImageBox.value = resolveAvatarImageBox(shape)
-  },
-  { immediate: true, deep: false },
-)
-
-let avatarClipCounter = 0
-const avatarClipId = `lb-avatar-clip-${++avatarClipCounter}-${Math.random().toString(36).slice(2, 8)}`
 
 const fallbackTitleStyle = computed(() => {
   if (!props.fallbackTitleColor) return undefined
@@ -104,38 +67,15 @@ const fallbackTitleStyle = computed(() => {
 
 <template>
   <div class="level-badge">
-    <div class="level-badge__stack" :class="{ 'level-badge__stack--shaped': hasShapeOverride }">
-      <ContentEffects :layers="plain ? null : borderEffects" seed="border">
-        <ProfileBorderRenderer :shape="borderShape" :color="borderColor" />
-        <LevelBadgeAvatar
-          v-if="avatarUrl"
-          :avatar-url="avatarUrl"
-          :fallback-url="avatarFallbackUrl"
-          :clip-id="avatarClipId"
-          :mask-path="avatarMaskPath"
-          :image-box="avatarImageBox"
-        />
-      </ContentEffects>
-      <BorderDecals v-if="decals.length" class="level-badge__decals" :decals="decals" />
-      <BorderOverlay
-        v-if="overlay"
-        class="level-badge__overlay"
-        :overlay="overlay"
-        :avatar-url="avatarUrl"
-        :avatar-mask="avatarMaskPath"
-        :color="equippedBorderColor ?? null"
-      />
-      <ModifierCompositions
-        v-for="layer in borderFxLayers"
-        :key="layer.key"
-        class="level-badge__border-fx"
-        :spec="layer.spec"
-        :stack-index="layer.stackIndex"
-        :content-mask="borderFxMask"
-        :host="borderFxHost"
-        hide-stat-counters
-      />
-    </div>
+    <BorderComposition
+      class="level-badge__stack"
+      :shape="borderShape"
+      :color="borderColor"
+      :avatar-url="avatarUrl"
+      :avatar-fallback-url="avatarFallbackUrl"
+      :effects="plain ? null : borderEffects"
+      hide-stat-counters
+    />
 
     <div v-if="!plain" class="level-badge__below">
       <span class="level-badge__title-line">
@@ -187,20 +127,6 @@ const fallbackTitleStyle = computed(() => {
   gap: var(--space-md);
 }
 
-.level-badge__stack {
-  position: relative;
-  width: 140px;
-  height: 140px;
-}
-
-.level-badge__decals {
-  z-index: 3;
-}
-
-.level-badge__overlay {
-  z-index: 3;
-}
-
 .level-badge__below {
   display: flex;
   flex-direction: column;
@@ -214,10 +140,6 @@ const fallbackTitleStyle = computed(() => {
   align-items: baseline;
   gap: var(--space-xs);
   white-space: nowrap;
-}
-
-.level-badge__border-fx {
-  z-index: 4;
 }
 
 .level-badge__title-fx {

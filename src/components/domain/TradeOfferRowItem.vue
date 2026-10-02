@@ -8,6 +8,7 @@ import type { TradeItemRef } from '@/types/api/trades'
 import {
   buildEffectLayers,
   displayItemName,
+  isBorderTypeKey,
   rarityClass,
   readFragmentSpec,
   sortModifiersByKey,
@@ -22,7 +23,10 @@ const sortedModifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(pro
 const effectLayers = computed(() =>
   buildEffectLayers(props.itemRef.modifiers, props.itemRef.unusualEffect),
 )
-const fragmentSpec = computed(() => readFragmentSpec(props.itemRef.unusualEffect))
+const ownFx = computed(() => isBorderTypeKey(props.itemRef.item.typeKey))
+const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.itemRef.unusualEffect)))
+const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
+const tokenCtx = computed(() => ({ serial: props.itemRef.serialNumber }))
 const quantity = computed(() => props.itemRef.quantity ?? 1)
 const name = computed(() => displayItemName(props.itemRef.modifiers, props.itemRef.item.name))
 
@@ -39,12 +43,12 @@ const accentStyle = computed(() => (accent.value ? { '--cell-accent': accent.val
       :aria-label="itemRef.item.name"
     >
       <FragmentedItem v-if="fragmentSpec" :item="itemRef.item" :spec="fragmentSpec" />
-      <ItemPreview v-else :item="itemRef.item" :effects="effectLayers" :selected="false" />
+      <ItemPreview v-else :item="itemRef.item" :effects="effectLayers" :context="tokenCtx" :selected="false" />
       <ModifierCompositions
-        v-for="layer in effectLayers"
+        v-for="layer in overlayLayers"
         :key="layer.key"
         :spec="layer.spec"
-        :context="{ serial: itemRef.serialNumber }"
+        :context="tokenCtx"
         :type-key="itemRef.item.typeKey"
         measure-selector=".title-renderer, .item-preview > *"
       />

@@ -2,7 +2,7 @@
 import { onAvatarError } from '@/composables/useAvatarFallback'
 
 const props = defineProps<{
-  avatarUrl: string
+  avatarUrl?: string | null
   clipId: string
   maskPath: string
   imageBox: { x: number; y: number; size: number }
@@ -17,7 +17,8 @@ const handleAvatarError = (e: Event) => onAvatarError(props.fallbackUrl)(e)
     class="level-badge__avatar-wrap"
     viewBox="0 0 100 100"
     preserveAspectRatio="xMidYMid meet"
-    aria-label="Avatar"
+    :aria-label="avatarUrl ? 'Avatar' : undefined"
+    :aria-hidden="avatarUrl ? undefined : 'true'"
   >
     <defs>
       <clipPath :id="clipId" clipPathUnits="userSpaceOnUse">
@@ -25,8 +26,16 @@ const handleAvatarError = (e: Event) => onAvatarError(props.fallbackUrl)(e)
       </clipPath>
     </defs>
     <g :clip-path="`url(#${clipId})`">
-      <rect x="0" y="0" width="100" height="100" class="level-badge__avatar-bg" />
+      <rect
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+        class="level-badge__avatar-bg"
+        :class="{ 'level-badge__avatar-bg--empty': !avatarUrl }"
+      />
       <foreignObject
+        v-if="avatarUrl"
         :x="imageBox.x"
         :y="imageBox.y"
         :width="imageBox.size"
@@ -50,8 +59,8 @@ const handleAvatarError = (e: Event) => onAvatarError(props.fallbackUrl)(e)
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 124px;
-  height: 124px;
+  width: 88.6%;
+  height: 88.6%;
   z-index: 2;
   display: block;
   overflow: visible;
@@ -59,6 +68,10 @@ const handleAvatarError = (e: Event) => onAvatarError(props.fallbackUrl)(e)
 
 .level-badge__avatar-bg {
   fill: var(--bg-base);
+}
+
+.level-badge__avatar-bg--empty {
+  fill: var(--bg-overlay);
 }
 
 .level-badge__avatar-img {

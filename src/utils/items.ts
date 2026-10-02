@@ -216,6 +216,10 @@ function parseFragment(c: Composition): FragmentSpec {
   }
 }
 
+export function isBorderTypeKey(typeKey: string | null | undefined): boolean {
+  return typeKey === 'profile_border_shape' || typeKey === 'profile_border_color'
+}
+
 export function readFragmentSpec(unusualEffect?: UnusualEffectRef | null): FragmentSpec | null {
   const c = unusualEffect?.effectSpec?.compositions?.find((comp) => comp.type === 'fragment')
   return c ? parseFragment(c) : null
@@ -779,7 +783,8 @@ export function gradientToCss(g: Gradient): string {
   if (g.type === 'radial') {
     const cx = g.centerXPct ?? 50
     const cy = g.centerYPct ?? 50
-    return `radial-gradient(circle at ${cx}% ${cy}%, ${stops})`
+    const r = g.radiusPct ?? 50
+    return `radial-gradient(${r}% ${r}% at ${cx}% ${cy}%, ${stops})`
   }
   const cx = g.centerXPct ?? 50
   const cy = g.centerYPct ?? 50

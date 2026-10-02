@@ -19,6 +19,7 @@ import {
   annotateEffectLayerStacks,
   buildEffectLayers,
   displayItemName,
+  isBorderTypeKey,
   rarityClass,
   readFragmentSpec,
   userItemTokenContext,
@@ -137,10 +138,12 @@ const cards = computed(() =>
   })),
 )
 
-const resultLayers = computed(() =>
-  annotateEffectLayerStacks(buildEffectLayers(props.resultModifiers, props.resultUnusualEffect)),
+const resultOwnFx = computed(() => isBorderTypeKey(props.result?.typeKey))
+const resultEffects = computed(() => buildEffectLayers(props.resultModifiers, props.resultUnusualEffect))
+const resultLayers = computed(() => (resultOwnFx.value ? [] : annotateEffectLayerStacks(resultEffects.value)))
+const resultFragmentSpec = computed(() =>
+  resultOwnFx.value ? null : readFragmentSpec(props.resultUnusualEffect ?? null),
 )
-const resultFragmentSpec = computed(() => readFragmentSpec(props.resultUnusualEffect ?? null))
 const revealName = computed(() =>
   props.result ? displayItemName(props.resultModifiers, props.result.name) : '',
 )
@@ -316,7 +319,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
           :spec="resultFragmentSpec"
           :selected="true"
         />
-        <ItemPreview v-else :item="result" :effects="resultLayers" selected />
+        <ItemPreview v-else :item="result" :effects="resultEffects" :context="tokenCtx" selected />
         <ModifierCompositions
           v-for="layer in resultLayers"
           :key="layer.key"

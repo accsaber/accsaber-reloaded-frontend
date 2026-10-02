@@ -8,13 +8,12 @@ import type { ItemModifierRef, UserItemResponse } from '@/types/api/items'
 import {
   buildEffectLayers,
   displayItemName,
+  isBorderTypeKey,
   rarityClass,
-  readBorderShapeValue,
   readFragmentSpec,
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
-import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
 import { computed, onMounted } from 'vue'
 
 const props = defineProps<{
@@ -48,13 +47,10 @@ const modifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(props.use
 const effectLayers = computed(() =>
   buildEffectLayers(props.userItem.modifiers, props.userItem.unusualEffect),
 )
-const fragmentSpec = computed(() => readFragmentSpec(props.userItem.unusualEffect))
+const ownFx = computed(() => isBorderTypeKey(item.value.typeKey))
+const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.userItem.unusualEffect)))
+const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
 const tokenCtx = computed(() => userItemTokenContext(props.userItem))
-const cellShape = computed(() =>
-  item.value.typeKey === 'profile_border_shape' ? readBorderShapeValue(item.value.value) : null,
-)
-const shapeMask = computed(() => shapeSilhouetteMask(cellShape.value))
-const cellHost = computed(() => ({ ring: shapeRing(cellShape.value) }))
 const quantity = computed(() => props.userItem.quantity ?? 1)
 
 const { accent } = useModifierColor(modifiers)
@@ -94,18 +90,23 @@ onMounted(() => {
     >
       <span class="inventory-cell__art">
         <FragmentedItem v-if="fragmentSpec" :item="item" :spec="fragmentSpec" :selected="selected" />
-        <ItemPreview v-else :item="item" :effects="effectLayers" :selected="selected" />
+        <ItemPreview
+          v-else
+          :item="item"
+          :effects="effectLayers"
+          :context="tokenCtx"
+          :selected="selected"
+          hide-stat-counters
+        />
       </span>
 
       <ModifierCompositions
-        v-for="layer in effectLayers"
+        v-for="layer in overlayLayers"
         :key="layer.key"
         :spec="layer.spec"
         :context="tokenCtx"
         :type-key="item.typeKey"
         measure-selector=".title-renderer, .item-preview > *"
-        :content-mask="shapeMask"
-        :host="cellHost"
         hide-stat-counters
       />
 

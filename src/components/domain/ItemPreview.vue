@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import BorderDecals from '@/components/cosmetics/borders/BorderDecals.vue'
-import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
+import BorderComposition from '@/components/domain/BorderComposition.vue'
 import CrateIcon from '@/components/cosmetics/CrateIcon.vue'
-import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
 import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
@@ -28,8 +26,8 @@ import {
   readTitleValue,
   tokenize,
   type EffectLayer,
+  type TokenContext,
 } from '@/utils/items'
-import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
 import { TITLE_AURA_PAD } from '@/utils/cosmetics/titleAura'
 import { useFitScale } from '@/composables/useFitScale'
 import { useThemeBase } from '@/composables/useThemeBase'
@@ -39,6 +37,8 @@ const props = defineProps<{
   item: ItemResponse
   selected?: boolean
   effects?: EffectLayer[] | null
+  context?: TokenContext
+  hideStatCounters?: boolean
   icon?: boolean
 }>()
 
@@ -83,25 +83,11 @@ const shapePreviewColor = computed<BorderColorValue | null>(() => {
   }
 })
 
-const borderPreview = computed<{
-  shape: BorderShapeValue | null
-  color: BorderColorValue | null
-  avatarMask: string
-} | null>(() => {
-  if (borderShapeValue.value) {
-    return {
-      shape: borderShapeValue.value,
-      color: shapePreviewColor.value,
-      avatarMask: borderShapeValue.value.avatarMask ?? DEFAULT_AVATAR_MASK,
-    }
-  }
-  if (borderColorValue.value) {
-    return { shape: null, color: borderColorValue.value, avatarMask: DEFAULT_AVATAR_MASK }
-  }
+const borderPreview = computed<{ shape: BorderShapeValue | null; color: BorderColorValue | null } | null>(() => {
+  if (borderShapeValue.value) return { shape: borderShapeValue.value, color: shapePreviewColor.value }
+  if (borderColorValue.value) return { shape: null, color: borderColorValue.value }
   return null
 })
-
-const shapeAvatarClipId = `ip-avatar-clip-${Math.random().toString(36).slice(2, 9)}`
 
 const pedestalBeamId = `ip-beam-${Math.random().toString(36).slice(2, 9)}`
 
@@ -211,43 +197,16 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
       </span>
     </span>
 
-    <span
+    <BorderComposition
       v-else-if="borderPreview"
       class="item-preview__shape-wrap"
+      :shape="borderPreview.shape"
+      :color="borderPreview.color"
+      :effects="effects"
+      :context="context"
+      :hide-stat-counters="hideStatCounters"
       aria-hidden="true"
-    >
-      <ProfileBorderRenderer :shape="borderPreview.shape" :color="borderPreview.color" />
-      <svg
-        class="item-preview__shape-avatar"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMid meet"
-        aria-hidden="true"
-      >
-        <defs>
-          <clipPath :id="shapeAvatarClipId">
-            <path :d="borderPreview.avatarMask" />
-          </clipPath>
-        </defs>
-        <rect
-          x="0"
-          y="0"
-          width="100"
-          height="100"
-          :clip-path="`url(#${shapeAvatarClipId})`"
-          class="item-preview__shape-avatar-fill"
-        />
-      </svg>
-      <BorderDecals
-        v-if="borderPreview.shape?.decals?.length"
-        :decals="borderPreview.shape.decals"
-      />
-      <BorderOverlay
-        v-if="borderPreview.shape?.overlay?.enabled"
-        :overlay="borderPreview.shape.overlay"
-        :avatar-mask="borderPreview.avatarMask"
-        :color="borderPreview.color"
-      />
-    </span>
+    />
 
     <span
       v-else-if="typeKey === 'theme' && themeValue"
@@ -482,27 +441,10 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   transform-origin: 50% 50%;
 }
 
-.item-preview__shape-wrap {
-  position: relative;
-  display: block;
+.item-preview > .item-preview__shape-wrap {
   width: 65%;
+  height: auto;
   aspect-ratio: 1 / 1;
-  color: var(--text-secondary);
-}
-
-.item-preview__shape-avatar {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 88.6%;
-  height: 88.6%;
-  display: block;
-  overflow: visible;
-}
-
-.item-preview__shape-avatar-fill {
-  fill: var(--bg-overlay);
 }
 
 .item-preview__theme {

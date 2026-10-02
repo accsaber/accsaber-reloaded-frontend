@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
-import BorderCompositionPreview from '@/components/domain/BorderCompositionPreview.vue'
+import BorderComposition from '@/components/domain/BorderComposition.vue'
 import CrateContentsList from '@/components/domain/CrateContentsList.vue'
 import CrateModifierList from '@/components/domain/CrateModifierList.vue'
 import CratePreviewModal from '@/components/domain/CratePreviewModal.vue'
@@ -15,10 +15,10 @@ import { useThemeStore } from '@/stores/theme'
 import type { BorderColorValue, BorderShapeValue, CrateContentResponse, CrateModifierResponse, ItemModifierRef, ItemResponse, ItemVariant, UnusualEffectResponse, UserItemResponse } from '@/types/api/items'
 import { formatEssence } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
-import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
 import {
   buildEffectLayers,
   displayItemName,
+  isBorderTypeKey,
   isEquippableTypeKey,
   rarityClass,
   readBorderColorValue,
@@ -131,12 +131,6 @@ const showComposition = computed(() =>
   props.isOwnProfile && (isBorderShapeItem.value || isBorderColorItem.value),
 )
 
-const effectShape = computed<BorderShapeValue | null>(() => {
-  if (showComposition.value) return compositionShape.value
-  return isBorderShapeItem.value ? selectedShapeValue.value : null
-})
-const effectMask = computed(() => shapeSilhouetteMask(effectShape.value))
-const effectHost = computed(() => ({ ring: shapeRing(effectShape.value) }))
 
 const modifiers = computed<ItemModifierRef[]>(() =>
   sortModifiersByKey(props.userItem?.modifiers ?? []),
@@ -145,7 +139,9 @@ const unusualEffect = computed(() => props.userItem?.unusualEffect ?? null)
 const effectLayers = computed(() =>
   buildEffectLayers(props.userItem?.modifiers, props.userItem?.unusualEffect),
 )
-const fragmentSpec = computed(() => readFragmentSpec(props.userItem?.unusualEffect))
+const ownFx = computed(() => isBorderTypeKey(item.value?.typeKey))
+const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.userItem?.unusualEffect)))
+const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
 const tokenCtx = computed(() => props.userItem ? userItemTokenContext(props.userItem) : {})
 const quantity = computed(() => props.userItem?.quantity ?? 1)
 const pbCount = computed(() => props.userItem?.counters?.play_count ?? null)
@@ -247,23 +243,23 @@ onUnmounted(() => {
       class="inv-detail__art"
       :class="[rarityClass(item.rarity), { 'inv-detail__art--title-fx': item.typeKey === 'title' }]"
     >
-      <BorderCompositionPreview
+      <BorderComposition
         v-if="showComposition"
         :shape="compositionShape"
         :color="compositionColor"
         :avatar-url="avatarUrl"
+        :effects="effectLayers"
+        :context="tokenCtx"
       />
       <FragmentedItem v-else-if="fragmentSpec" :item="previewItem ?? item" :spec="fragmentSpec" :selected="true" />
-      <ItemPreview v-else :item="previewItem ?? item" :effects="effectLayers" :selected="true" />
+      <ItemPreview v-else :item="previewItem ?? item" :effects="effectLayers" :context="tokenCtx" :selected="true" />
       <ModifierCompositions
-        v-for="layer in effectLayers"
+        v-for="layer in overlayLayers"
         :key="layer.key"
         :spec="layer.spec"
         :context="tokenCtx"
         :type-key="item?.typeKey"
-        measure-selector=".border-composition, .title-renderer, .item-preview > *"
-        :content-mask="effectMask"
-        :host="effectHost"
+        measure-selector=".title-renderer, .item-preview > *"
       />
     </div>
 

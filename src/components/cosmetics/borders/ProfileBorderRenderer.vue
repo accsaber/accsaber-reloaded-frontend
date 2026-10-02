@@ -11,7 +11,6 @@ import type {
   Gradient,
 } from '@/types/api/items'
 import {
-  fillToCss,
   gradientToCss,
   interpolateBorderColorState,
   isAnimated,
@@ -32,14 +31,26 @@ const props = defineProps<{
 
 const reducedMotion = useReducedMotion()
 
-const isPixelShape = computed(() => props.shape?.renderMode === 'pixel')
+const DEFAULT_RING_D
+  = 'M6,0 L94,0 Q100,0 100,6 L100,94 Q100,100 94,100 L6,100 Q0,100 0,94 L0,6 Q0,0 6,0 Z'
 
-const colorIsConic = computed(() => props.color?.states?.[0]?.fill?.type === 'conic')
+const DEFAULT_RING_SHAPE: BorderShapeValue = {
+  viewBox: '0 0 100 100',
+  states: [{ atMs: 0, paths: [{ d: DEFAULT_RING_D, fill: 'currentColor' }] }],
+}
 
 const canvasFill = computed(() => {
   const fill = props.color?.states?.[0]?.fill
   return fill && isCanvasFill(fill) ? fill : null
 })
+
+const shape = computed<BorderShapeValue | null>(() =>
+  props.shape ?? (props.color && !canvasFill.value ? DEFAULT_RING_SHAPE : null),
+)
+
+const isPixelShape = computed(() => shape.value?.renderMode === 'pixel')
+
+const colorIsConic = computed(() => props.color?.states?.[0]?.fill?.type === 'conic')
 
 const canvasFillActive = computed(() => !!canvasFill.value)
 
@@ -61,7 +72,7 @@ const fillView = computed(() => {
 const rimStyle = computed(() => (canvasFill.value ? fillRenderer(canvasFill.value).rim(canvasFill.value) : null))
 
 const cosmicSink = computed<{ x: number; y: number; r: number } | null>(() => {
-  const overlay = props.shape?.overlay
+  const overlay = shape.value?.overlay
   if (!cosmicFill.value || overlay?.type !== 'blackhole' || !overlay.enabled) return null
   if (overlay.suction?.fillType !== 'cosmic') return null
   const f = frameBox.value
@@ -72,14 +83,14 @@ const shapeFxActive = computed(
   () =>
     !reducedMotion.value
     && !isPixelShape.value
-    && (!!props.shape?.glisten?.enabled || !!props.shape?.sparkles?.enabled),
+    && (!!shape.value?.glisten?.enabled || !!shape.value?.sparkles?.enabled),
 )
 
 const needsTimeline = computed(
   () =>
     isAnimated(props.color)
-    || (colorIsConic.value && isAnimated(props.shape))
-    || isAnimated(props.shape)
+    || (colorIsConic.value && isAnimated(shape.value))
+    || isAnimated(shape.value)
     || shapeFxActive.value
     || (!!dominionFill.value && !reducedMotion.value),
 )
@@ -126,7 +137,7 @@ const solidColor = computed<string | null>(() => {
 })
 
 const vbBounds = computed(() => {
-  const vb = props.shape?.viewBox ?? '0 0 100 100'
+  const vb = shape.value?.viewBox ?? '0 0 100 100'
   const parts = vb.split(/[\s,]+/).map(Number)
   const valid = parts.length === 4 && parts.every((n) => Number.isFinite(n))
   const [minX, minY, w, h] = valid ? parts : [0, 0, 100, 100]
@@ -134,33 +145,32 @@ const vbBounds = computed(() => {
 })
 
 const linearGradAttrs = computed(() => {
-  const { minX, minY, w, h } = vbBounds.value
+  const { x, y, w, h } = frameBox.value
   const g = effectiveGradient.value
-  const angle = g && g.type === 'linear' ? g.angleDeg : 0
-  return {
-    x1: minX,
-    y1: minY + h / 2,
-    x2: minX + w,
-    y2: minY + h / 2,
-    transform: `rotate(${angle} ${minX + w / 2} ${minY + h / 2})`,
-  }
+  const rad = ((g && g.type === 'linear' ? g.angleDeg : 180) * Math.PI) / 180
+  const dx = Math.sin(rad)
+  const dy = -Math.cos(rad)
+  const half = (Math.abs(w * dx) + Math.abs(h * dy)) / 2
+  const cx = x + w / 2
+  const cy = y + h / 2
+  return { x1: cx - dx * half, y1: cy - dy * half, x2: cx + dx * half, y2: cy + dy * half }
 })
 
 const radialGradAttrs = computed(() => {
-  const { minX, minY, w, h } = vbBounds.value
+  const { x, y, w, h } = frameBox.value
   const g = effectiveGradient.value
   const cxPct = g && g.type === 'radial' ? (g.centerXPct ?? 50) : 50
   const cyPct = g && g.type === 'radial' ? (g.centerYPct ?? 50) : 50
   const rPct = g && g.type === 'radial' ? (g.radiusPct ?? 50) : 50
   return {
-    cx: minX + (w * cxPct) / 100,
-    cy: minY + (h * cyPct) / 100,
+    cx: x + (w * cxPct) / 100,
+    cy: y + (h * cyPct) / 100,
     r: (Math.min(w, h) * rPct) / 100,
   }
 })
 
 const sortedShapeStates = computed<BorderShapeStateValue[]>(() => {
-  const sv = props.shape
+  const sv = shape.value
   if (!sv) return []
   return [...sv.states].sort((a, b) => a.atMs - b.atMs)
 })
@@ -190,7 +200,7 @@ interface ShapeBracket {
 }
 
 function currentShapeBracket(): ShapeBracket | null {
-  const sv = props.shape
+  const sv = shape.value
   const states = sortedShapeStates.value
   if (!sv || states.length === 0) return null
   if (states.length === 1) return { idxA: 0, idxB: 0, localT: 0 }
@@ -243,7 +253,7 @@ const clipId = `pbr-clip-${gradientIdCounter}-${Math.random().toString(36).slice
 const glistenGradId = `pbr-glint-${gradientIdCounter}-${Math.random().toString(36).slice(2, 8)}`
 
 const glistenBand = computed(() => {
-  const g = props.shape?.glisten
+  const g = shape.value?.glisten
   if (!g?.enabled || reducedMotion.value) return null
   const interval = g.intervalMs ?? 5000
   const duration = g.durationMs ?? 900
@@ -279,13 +289,13 @@ let shapeSparkleId = 0
 let nextShapeSparkleAt = -1
 const activeShapeSparkles = ref<ShapeSparkle[]>([])
 
-watch(() => props.shape, () => {
+watch(() => shape.value, () => {
   activeShapeSparkles.value = []
   nextShapeSparkleAt = -1
 })
 
 watch(tMs, (now) => {
-  const spec = props.shape?.sparkles
+  const spec = shape.value?.sparkles
   if (!spec?.enabled || reducedMotion.value || isPixelShape.value) return
   const fade = spec.fadeMs ?? 900
   if (nextShapeSparkleAt < 0) nextShapeSparkleAt = now
@@ -307,13 +317,13 @@ watch(tMs, (now) => {
 })
 
 function shapeSparkleOpacity(s: ShapeSparkle): number {
-  const fade = props.shape?.sparkles?.fadeMs ?? 900
+  const fade = shape.value?.sparkles?.fadeMs ?? 900
   const p = Math.min(1, (tMs.value - s.bornAt) / fade)
   return Math.sin(Math.PI * p)
 }
 
 function shapeSparkleTransform(s: ShapeSparkle): string {
-  const fade = props.shape?.sparkles?.fadeMs ?? 900
+  const fade = shape.value?.sparkles?.fadeMs ?? 900
   const p = Math.min(1, (tMs.value - s.bornAt) / fade)
   const k = (s.size / 10) * (0.6 + 0.5 * Math.sin(Math.PI * p))
   return `translate(${s.x} ${s.y}) rotate(${s.rot}) scale(${k})`
@@ -384,15 +394,12 @@ const conicMaskStyle = computed<Record<string, string> | undefined>(() => {
   }
 })
 
-const DEFAULT_RING_D
-  = 'M6,0 L94,0 Q100,0 100,6 L100,94 Q100,100 94,100 L6,100 Q0,100 0,94 L0,6 Q0,0 6,0 Z'
-
 function isThemedRef(ref: string | undefined): boolean {
   return ref === 'currentColor' || ref === 'inherit'
 }
 
 const decorationPaths = computed(() => {
-  if (!props.shape) return []
+  if (!shape.value) return []
   const lerped = lerpedPaths.value
   return basePaths.value
     .map((p, i) => ({ path: p, d: lerped?.[i] ?? p.d }))
@@ -404,7 +411,7 @@ const decorationPaths = computed(() => {
 })
 
 const rimPaths = computed(() => {
-  if (!props.shape || !rimStyle.value) return []
+  if (!shape.value || !rimStyle.value) return []
   const lerped = lerpedPaths.value
   return basePaths.value
     .map((p, i) => ({ path: p, d: lerped?.[i] ?? p.d }))
@@ -414,12 +421,12 @@ const rimPaths = computed(() => {
 })
 
 const frameBox = computed<FrameBounds>(() => {
-  if (props.shape) return shapeFrameBounds(props.shape)
+  if (shape.value) return shapeFrameBounds(shape.value)
   const { minX, minY, w, h } = vbBounds.value
   return { x: minX, y: minY, w, h }
 })
 
-const fillMargin = computed(() => shapeFrameMargin(props.shape))
+const fillMargin = computed(() => shapeFrameMargin(shape.value))
 
 const cosmicBox = computed<FrameBounds>(() => {
   const f = frameBox.value
@@ -445,7 +452,7 @@ const cosmicHostStyle = computed<Record<string, string>>(() => {
 })
 
 const laserTrace = computed<{ ds: string[]; viewBox: string } | null>(() => {
-  if (!laserFill.value || !props.shape) return null
+  if (!laserFill.value || !shape.value) return null
   const ds = basePaths.value
     .filter((p) => !p.transform && ((!!p.fill && isThemedRef(p.fill)) || (!!p.stroke && isThemedRef(p.stroke))))
     .map((p) => p.d)
@@ -456,7 +463,7 @@ const cosmicMaskId = `pbr-cmask-${Math.random().toString(36).slice(2, 9)}`
 
 const cosmicMaskPaths = computed<MaskPathEntry[] | null>(() => {
   if (!canvasFillActive.value) return null
-  if (!props.shape || basePaths.value.length === 0) return null
+  if (!shape.value || basePaths.value.length === 0) return null
   const lerped = lerpedPaths.value
   return basePaths.value.map((p, i) => ({
     d: lerped?.[i] ?? p.d,
@@ -480,15 +487,6 @@ const cosmicMaskStyle = computed<Record<string, string> | undefined>(() => {
     ...cosmicHostStyle.value,
     mask: `url(#${cosmicMaskId})`,
     WebkitMask: `url(#${cosmicMaskId})`,
-  }
-})
-
-const ringStyle = computed<Record<string, string> | undefined>(() => {
-  if (props.shape) return undefined
-  const fill = colorState.value?.fill
-  if (!fill) return undefined
-  return {
-    background: fillToCss(fill),
   }
 })
 
@@ -716,7 +714,6 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
         :y1="linearGradAttrs.y1"
         :x2="linearGradAttrs.x2"
         :y2="linearGradAttrs.y2"
-        :gradientTransform="linearGradAttrs.transform"
       >
         <stop
           v-for="(s, i) in effectiveGradient.stops"
@@ -793,7 +790,6 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
       />
     </g>
   </svg>
-  <div v-else-if="ringStyle" class="profile-border__ring" :style="ringStyle"></div>
 </template>
 
 <style scoped>
@@ -866,12 +862,5 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
 
 .profile-border__shape {
   overflow: visible;
-}
-
-.profile-border__ring {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-avatar);
-  pointer-events: none;
 }
 </style>

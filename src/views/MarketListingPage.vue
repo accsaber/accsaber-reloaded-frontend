@@ -21,9 +21,9 @@ import type {
 import { formatRelativeDate } from '@/utils/formatters'
 import {
   displayItemName,
+  isBorderTypeKey,
   itemVariantPreviews,
   rarityClass,
-  readFragmentSpec,
   sortModifiersByKey,
   visibleModifiers,
 } from '@/utils/items'
@@ -117,12 +117,7 @@ const previewItem = computed(() => {
   return (previews.find((v) => v.key === activeVariantKey.value) ?? previews[0]).item
 })
 
-const composedBorder = computed(() => {
-  const current = listing.value
-  if (!current || readFragmentSpec(current.item.unusualEffect)) return false
-  const typeKey = current.item.item.typeKey
-  return typeKey === 'profile_border_shape' || typeKey === 'profile_border_color'
-})
+const composedBorder = computed(() => isBorderTypeKey(listing.value?.item.item.typeKey))
 
 const metaTitle = computed(() =>
   listing.value ? `${listing.value.title} | Market | AccSaber` : 'Market | AccSaber',

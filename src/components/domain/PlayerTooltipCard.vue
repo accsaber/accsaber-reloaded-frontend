@@ -155,11 +155,6 @@ const cardBorder = computed(() => {
   height: 96px;
 }
 
-.player-tooltip__badge :deep(.level-badge__avatar-wrap) {
-  width: 85px;
-  height: 85px;
-}
-
 .player-tooltip__badge :deep(.level-badge__title-line) {
   justify-content: center;
   flex-wrap: wrap;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
-import BorderCompositionPreview from '@/components/domain/BorderCompositionPreview.vue'
+import BorderComposition from '@/components/domain/BorderComposition.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { ItemResponse } from '@/types/api/items'
@@ -64,7 +64,7 @@ const typeLabel = computed(() => props.item?.typeKey.replace(/_/g, ' ') ?? '')
         class="ipm__art"
         :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle, 'ipm__art--border': isBorder }]"
       >
-        <BorderCompositionPreview
+        <BorderComposition
           v-if="isBorder"
           :shape="shapeValue"
           :color="colorValue"

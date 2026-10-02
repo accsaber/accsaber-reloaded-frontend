@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BorderCompositionPreview from '@/components/domain/BorderCompositionPreview.vue'
+import BorderComposition from '@/components/domain/BorderComposition.vue'
 import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
@@ -8,6 +8,7 @@ import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemModifierRef, ItemResponse, UserItemResponse } from '@/types/api/items'
 import {
   buildEffectLayers,
+  isBorderTypeKey,
   rarityClass,
   readBorderColorValue,
   readBorderShapeValue,
@@ -15,7 +16,6 @@ import {
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
-import { shapeRing } from '@/utils/shapeSilhouette'
 import { computed, onMounted } from 'vue'
 
 const props = defineProps<{
@@ -30,23 +30,14 @@ const modifierStore = useItemModifierStore()
 
 const item = computed(() => props.itemOverride ?? props.userItem.item)
 
-const composedView = computed(
-  () =>
-    props.composeBorders === true &&
-    !fragmentSpec.value &&
-    (item.value.typeKey === 'profile_border_shape' ||
-      item.value.typeKey === 'profile_border_color'),
-)
+const ownFx = computed(() => isBorderTypeKey(item.value.typeKey))
+const composedView = computed(() => props.composeBorders === true && ownFx.value)
 
 const shapeValue = computed(() =>
   composedView.value && item.value.typeKey === 'profile_border_shape'
     ? readBorderShapeValue(item.value.value)
     : null,
 )
-
-const tileHost = computed(() => ({
-  ring: shapeRing(item.value.typeKey === 'profile_border_shape' ? readBorderShapeValue(item.value.value) : null),
-}))
 
 const colorValue = computed(() =>
   composedView.value && item.value.typeKey === 'profile_border_color'
@@ -57,7 +48,8 @@ const modifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(props.use
 const effectLayers = computed(() =>
   buildEffectLayers(props.userItem.modifiers, props.userItem.unusualEffect),
 )
-const fragmentSpec = computed(() => readFragmentSpec(props.userItem.unusualEffect))
+const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.userItem.unusualEffect)))
+const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
 const tokenCtx = computed(() => userItemTokenContext(props.userItem))
 const shownQuantity = computed(() => props.quantity ?? props.userItem.quantity ?? 1)
 
@@ -77,27 +69,27 @@ onMounted(() => {
   >
     <span class="market-item-tile__art">
       <FragmentedItem v-if="fragmentSpec" :item="item" :spec="fragmentSpec" />
-      <BorderCompositionPreview
+      <BorderComposition
         v-else-if="composedView"
         :shape="shapeValue"
         :color="colorValue"
         :avatar-url="avatarUrl"
-      />
-      <ItemPreview v-else :item="item" :effects="effectLayers" />
-    </span>
-
-    <template v-if="!composedView">
-      <ModifierCompositions
-        v-for="layer in effectLayers"
-        :key="layer.key"
-        :spec="layer.spec"
+        :effects="effectLayers"
         :context="tokenCtx"
-        :type-key="item.typeKey"
-        measure-selector=".title-renderer, .item-preview > *"
-        :host="tileHost"
         hide-stat-counters
       />
-    </template>
+      <ItemPreview v-else :item="item" :effects="effectLayers" :context="tokenCtx" hide-stat-counters />
+    </span>
+
+    <ModifierCompositions
+      v-for="layer in overlayLayers"
+      :key="layer.key"
+      :spec="layer.spec"
+      :context="tokenCtx"
+      :type-key="item.typeKey"
+      measure-selector=".title-renderer, .item-preview > *"
+      hide-stat-counters
+    />
 
     <span v-if="userItem.serialNumber != null" class="market-item-tile__serial">#{{ userItem.serialNumber }}</span>
     <span v-if="shownQuantity > 1" class="market-item-tile__qty">x{{ shownQuantity }}</span>
