@@ -2,7 +2,7 @@
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/api/items'
-import { asColor, asNumber, boxRing, clampNumber, easeIn, easeOut, geometryMemo, hostMatches, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
+import { asColor, asNumber, boxRing, clampNumber, easeIn, easeOut, geometryMemo, hostMatches, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed, watch } from 'vue'
@@ -120,15 +120,14 @@ function placeOnEdge(t: Tentacle, box: ContentBox, cycle: number): void {
 }
 
 function badgeTentacle(i: number, seed: number, count: number, ring: RingGeometry, L: number): Tentacle {
-  const wall = ring.outer
-  const at = ringAt(wall, ((i + hash01(seed + 2) * 0.6) / count) * wall.total)
+  const edge = ring.inner
+  const at = ringAt(edge, ((i + hash01(seed + 2) * 0.6) / count) * edge.total)
   const side = i % 2 === 0 ? 1 : -1
   const thick = L * 0.2
   const inward = Math.atan2(-at.n.y, -at.n.x)
-  const tuck = (wall.clockwise ? 1 : -1) * thick * 0.7
   return {
     seed,
-    base: { x: at.p.x - at.t.y * tuck, y: at.p.y + at.t.x * tuck },
+    base: { x: at.p.x + at.n.x * thick, y: at.p.y + at.n.y * thick },
     heading: inward + (hash01(seed + 5) - 0.5) * 0.24,
     out: at.n,
     len: liquid.value ? L * 0.85 : L,
@@ -254,8 +253,20 @@ function drawDrips(g: Ctx, t: Tentacle, count: number, tSec: number) {
   g.globalAlpha = 1
 }
 
+function clipToEdge(g: Ctx, edge: RingPoly): void {
+  g.beginPath()
+  edge.pts.forEach((p, i) => (i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y)))
+  g.closePath()
+  g.clip()
+}
+
 function drawFrame(f: EffectFrame): boolean {
   let drew = false
+  const badge = !isTitle.value && !field.value
+  if (badge) {
+    f.g.save()
+    clipToEdge(f.g, f.ring.inner)
+  }
   for (const t of specs.get(f.ring, 0, () => tentacles(f.box, f.ring))) {
     if (t.mode === 'slide') {
       const cycle = f.reduced ? 0 : Math.floor((f.t + t.phase) / cfg.value.intervalSecs)
@@ -269,6 +280,7 @@ function drawFrame(f: EffectFrame): boolean {
     if (t.mode === 'emerge' && liquid.value && ext >= 1 && !f.reduced) drawDrips(f.g, t, count, f.t)
     drew = true
   }
+  if (badge) f.g.restore()
   f.g.globalAlpha = 1
   return drew
 }
