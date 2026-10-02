@@ -75,7 +75,7 @@ const LINKED: Partial<Record<TitleAuraType, keyof TitleAuraLinks>> = {
   ice: 'frost',
   blood: 'bleed',
   lantern: 'lantern',
-  constellation: 'constellation',
+  graffiti: 'boil',
 }
 
 const props = defineProps<{

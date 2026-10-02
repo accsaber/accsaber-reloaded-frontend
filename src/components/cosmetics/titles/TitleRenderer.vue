@@ -19,7 +19,7 @@ import type {
 } from '@/types/api/items'
 import { darken, lerpHex } from '@/utils/color'
 import { win } from '@/utils/cosmetics/canvasShapes'
-import { constellationCharStyle } from '@/utils/cosmetics/titleConstellation'
+import { boilCharStyle } from '@/utils/cosmetics/titleBoil'
 import { eclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
@@ -48,7 +48,7 @@ type GlyphKey =
   | 'brew' | 'sprout' | 'ascent' | 'slice' | 'tick' | 'metronome' | 'scrawl' | 'reel' | 'restart'
   | 'punch' | 'hammer' | 'excavate' | 'quest' | 'scales'
   | 'quake' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
-  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune' | 'constellation'
+  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune' | 'boil'
 
 type GlyphFx<K extends GlyphKey> = (
   tMs: number,
@@ -347,7 +347,7 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('eclipse', eclipseCharStyle),
   glyph('transmute', transmuteCharStyle),
   glyph('rune', runeCharStyle),
-  glyph('constellation', constellationCharStyle),
+  glyph('boil', boilCharStyle),
   liftGlyph,
 ]
 
@@ -577,7 +577,7 @@ const auraLinks = computed<TitleAuraLinks>(() => ({
   frost: props.value.frost,
   bleed: props.value.bleed,
   lantern: props.value.lantern,
-  constellation: props.value.constellation,
+  boil: props.value.boil,
 }))
 
 const auraKey = computed(() =>

@@ -1,10 +1,10 @@
-import type { TitleBleedSpec, TitleConstellationSpec, TitleFrostSpec, TitleLanternSpec } from '@/types/api/items'
+import type { TitleBleedSpec, TitleBoilSpec, TitleFrostSpec, TitleLanternSpec } from '@/types/api/items'
 
 export interface TitleAuraLinks {
   frost?: TitleFrostSpec
   bleed?: TitleBleedSpec
   lantern?: TitleLanternSpec
-  constellation?: TitleConstellationSpec
+  boil?: TitleBoilSpec
 }
 
 export const TITLE_AURA_PAD = { x: 0.9, top: 1.7, bottom: 1.05 } as const

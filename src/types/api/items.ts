@@ -516,7 +516,11 @@ export interface TitleConstellationAuraSpec {
   lightStar?: string
   accent?: string
   lightAccent?: string
+  letter?: string
+  lightLetter?: string
   nodesPerLetter?: number
+  breakEveryMs?: number
+  pull?: number
 }
 
 export interface TitleGraffitiAuraSpec {
@@ -524,8 +528,6 @@ export interface TitleGraffitiAuraSpec {
   enabled: boolean
   color?: string
   lightColor?: string
-  stepMs?: number
-  offsetEm?: number
 }
 
 export type TitleAuraSpec =
@@ -808,10 +810,12 @@ export interface TitleShockSpec {
   intervalMs?: number
 }
 
-export interface TitleConstellationSpec {
+export interface TitleBoilSpec {
   enabled: boolean
-  periodMs?: number
-  dimOpacity?: number
+  stepMs?: number
+  offsetEm?: number
+  tweakDeg?: number
+  tweakEm?: number
 }
 
 export interface TitleFloatSpec {
@@ -962,7 +966,7 @@ export interface TitleValue {
   haunt?: TitleHauntSpec
   jolt?: TitleJoltSpec
   float?: TitleFloatSpec
-  constellation?: TitleConstellationSpec
+  boil?: TitleBoilSpec
   lantern?: TitleLanternSpec
   eclipse?: TitleEclipseSpec
   brew?: TitleBrewSpec
