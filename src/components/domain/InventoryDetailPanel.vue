@@ -673,8 +673,8 @@ onUnmounted(() => {
 }
 
 .inv-detail__theme-mode {
-  flex: 1 0 0;
-  min-width: min(max-content, 100%);
+  flex: 1 1 auto;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
