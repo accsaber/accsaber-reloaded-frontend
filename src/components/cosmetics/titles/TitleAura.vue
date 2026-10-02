@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import TitleAscensionAura from '@/components/cosmetics/titles/TitleAscensionAura.vue'
 import TitleBloodAura from '@/components/cosmetics/titles/TitleBloodAura.vue'
+import TitleConstellationAura from '@/components/cosmetics/titles/TitleConstellationAura.vue'
 import TitleCoronaAura from '@/components/cosmetics/titles/TitleCoronaAura.vue'
 import TitleCosmicAura from '@/components/cosmetics/titles/TitleCosmicAura.vue'
 import TitleEarthAura from '@/components/cosmetics/titles/TitleEarthAura.vue'
 import TitleFairyAura from '@/components/cosmetics/titles/TitleFairyAura.vue'
 import TitleFlameAura from '@/components/cosmetics/titles/TitleFlameAura.vue'
 import TitleGhostsAura from '@/components/cosmetics/titles/TitleGhostsAura.vue'
+import TitleGraffitiAura from '@/components/cosmetics/titles/TitleGraffitiAura.vue'
 import TitleHazeAura from '@/components/cosmetics/titles/TitleHazeAura.vue'
 import TitleIceAura from '@/components/cosmetics/titles/TitleIceAura.vue'
 import TitleInfernoAura from '@/components/cosmetics/titles/TitleInfernoAura.vue'
@@ -65,12 +67,15 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   radar: TitleRadarAura,
   waypoints: TitleWaypointsAura,
   splatter: TitleSplatterAura,
+  constellation: TitleConstellationAura,
+  graffiti: TitleGraffitiAura,
 }
 
 const LINKED: Partial<Record<TitleAuraType, keyof TitleAuraLinks>> = {
   ice: 'frost',
   blood: 'bleed',
   lantern: 'lantern',
+  constellation: 'constellation',
 }
 
 const props = defineProps<{

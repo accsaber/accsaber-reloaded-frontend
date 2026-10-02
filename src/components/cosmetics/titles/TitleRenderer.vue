@@ -19,6 +19,7 @@ import type {
 } from '@/types/api/items'
 import { darken, lerpHex } from '@/utils/color'
 import { win } from '@/utils/cosmetics/canvasShapes'
+import { constellationCharStyle } from '@/utils/cosmetics/titleConstellation'
 import { eclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
@@ -47,7 +48,7 @@ type GlyphKey =
   | 'brew' | 'sprout' | 'ascent' | 'slice' | 'tick' | 'metronome' | 'scrawl' | 'reel' | 'restart'
   | 'punch' | 'hammer' | 'excavate' | 'quest' | 'scales'
   | 'quake' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
-  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune'
+  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune' | 'constellation'
 
 type GlyphFx<K extends GlyphKey> = (
   tMs: number,
@@ -71,6 +72,7 @@ function motionSpec<T extends { enabled: boolean }>(spec: T | undefined): T | nu
 const FONT_CLASSES: Record<string, string> = {
   pixel_8bit: 'title-renderer--pixel',
   varela_round: 'title-renderer--rounded',
+  graffiti: 'title-renderer--graffiti',
 }
 
 const isPixelFont = computed(() => props.value.font === 'pixel_8bit')
@@ -345,6 +347,7 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('eclipse', eclipseCharStyle),
   glyph('transmute', transmuteCharStyle),
   glyph('rune', runeCharStyle),
+  glyph('constellation', constellationCharStyle),
   liftGlyph,
 ]
 
@@ -574,6 +577,7 @@ const auraLinks = computed<TitleAuraLinks>(() => ({
   frost: props.value.frost,
   bleed: props.value.bleed,
   lantern: props.value.lantern,
+  constellation: props.value.constellation,
 }))
 
 const auraKey = computed(() =>
@@ -1085,6 +1089,12 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   text-transform: none;
   letter-spacing: 0.02em;
   image-rendering: pixelated;
+}
+
+.title-renderer--graffiti {
+  font-family: 'Permanent Marker', var(--font-sans);
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 .title-renderer--rounded {

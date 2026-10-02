@@ -142,7 +142,7 @@ export interface TitleOutlineSpec {
   widthPx: number
 }
 
-export type TitleFont = 'pixel_8bit' | 'varela_round' | (string & {})
+export type TitleFont = 'pixel_8bit' | 'varela_round' | 'graffiti' | (string & {})
 
 export interface TitleFlashSpec {
   enabled: boolean
@@ -509,7 +509,28 @@ export interface TitleSplatterAuraSpec {
   lifeMs?: number
 }
 
+export interface TitleConstellationAuraSpec {
+  type: 'constellation'
+  enabled: boolean
+  star?: string
+  lightStar?: string
+  accent?: string
+  lightAccent?: string
+  nodesPerLetter?: number
+}
+
+export interface TitleGraffitiAuraSpec {
+  type: 'graffiti'
+  enabled: boolean
+  color?: string
+  lightColor?: string
+  stepMs?: number
+  offsetEm?: number
+}
+
 export type TitleAuraSpec =
+  | TitleConstellationAuraSpec
+  | TitleGraffitiAuraSpec
   | TitleSplatterAuraSpec
   | TitleBloqsAuraSpec
   | TitleSpotlightAuraSpec
@@ -787,6 +808,12 @@ export interface TitleShockSpec {
   intervalMs?: number
 }
 
+export interface TitleConstellationSpec {
+  enabled: boolean
+  periodMs?: number
+  dimOpacity?: number
+}
+
 export interface TitleFloatSpec {
   enabled: boolean
   ampEm?: number
@@ -935,6 +962,7 @@ export interface TitleValue {
   haunt?: TitleHauntSpec
   jolt?: TitleJoltSpec
   float?: TitleFloatSpec
+  constellation?: TitleConstellationSpec
   lantern?: TitleLanternSpec
   eclipse?: TitleEclipseSpec
   brew?: TitleBrewSpec
