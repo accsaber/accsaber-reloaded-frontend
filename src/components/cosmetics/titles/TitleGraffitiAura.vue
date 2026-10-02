@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { TitleBoilSpec, TitleGraffitiAuraSpec } from '@/types/api/items'
+import { dripPath } from '@/utils/cosmetics/splat'
 import { boilOffsetEm, boilStep } from '@/utils/cosmetics/titleBoil'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
@@ -22,6 +23,7 @@ const CAP_HEIGHT = 0.72
 
 let sprites: HTMLCanvasElement[] = []
 let rect: TitleAuraRect | null = null
+let drawn = -1
 
 function jitter(pts: Pt[], amp: number, seed: number): Pt[] {
   return pts.map(([x, y], i) => [x + (hash01(seed + i * 7) - 0.5) * amp, y + (hash01(seed + i * 7 + 3) - 0.5) * amp])
@@ -68,19 +70,6 @@ function whiskers(g: Ctx, x: number, mid: number, side: number, fs: number, seed
   }
 }
 
-function drip(g: Ctx, x: number, y: number, len: number, w: number): void {
-  g.beginPath()
-  g.moveTo(x - w / 2, y)
-  g.lineTo(x - w * 0.28, y + len)
-  g.lineTo(x + w * 0.28, y + len)
-  g.lineTo(x + w / 2, y)
-  g.closePath()
-  g.fill()
-  g.beginPath()
-  g.arc(x, y + len, w * 0.5, 0, Math.PI * 2)
-  g.fill()
-}
-
 function paintMarks(g: Ctx, r: TitleAuraRect, seed: number): void {
   const fs = r.fs
   const mid = r.y + r.h / 2
@@ -93,10 +82,12 @@ function paintMarks(g: Ctx, r: TitleAuraRect, seed: number): void {
   ear(g, [R - earW, capTop + fs * 0.06], [R, capTop + fs * 0.06], [R - earW * 0.12, capTop - fs * 0.62], fs, seed + 50)
   whiskers(g, r.x - fs * 0.12, mid, -1, fs, seed + 100)
   whiskers(g, r.x + r.w + fs * 0.06, mid, 1, fs, seed + 120)
+  g.beginPath()
   for (let i = 0; i < 3; i++) {
     const h = seed + 200 + i * 7
-    drip(g, r.x + r.w * (0.15 + i * 0.3 + (hash01(h) - 0.5) * 0.12), base - fs * 0.04, fs * (0.18 + hash01(h + 1) * 0.36), fs * 0.07)
+    dripPath(g, r.x + r.w * (0.15 + i * 0.3 + (hash01(h) - 0.5) * 0.12), base - fs * 0.04, fs * (0.18 + hash01(h + 1) * 0.36), fs * 0.07, 0.28, fs * 0.035)
   }
+  g.fill()
   g.globalAlpha = 0.35
   spray(g, r.x + fs * 0.1, base + fs * 0.12, fs * 0.5, 14, fs * 0.022, seed + 300)
   spray(g, r.x + r.w - fs * 0.2, capTop - fs * 0.05, fs * 0.4, 10, fs * 0.02, seed + 320)
@@ -125,16 +116,18 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 function setup(w: number, h: number, _now: number, scale: number): void {
   rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
   buildSprites(w, h, scale)
+  drawn = -1
 }
 
 useElementCanvas(canvasRef, {
   init: setup,
   resize: setup,
   draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect || sprites.length === 0) return
     const step = reduced ? 0 : boilStep(now, props.boil)
+    if (step === drawn || !rect || sprites.length === 0) return
+    drawn = step
     const [dx, dy] = reduced ? [0, 0] : boilOffsetEm(step, props.boil)
+    ctx.clearRect(0, 0, w, h)
     ctx.drawImage(sprites[step % SPRITES], dx * rect.fs, dy * rect.fs, w, h)
   },
 })

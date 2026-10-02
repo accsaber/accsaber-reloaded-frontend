@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { TitleConstellationAuraSpec } from '@/types/api/items'
-import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
 import { computed, onBeforeUnmount, useTemplateRef } from 'vue'
@@ -42,11 +41,19 @@ const SAMPLE_SCALE = 4
 const STIFFNESS = 34
 const DAMPING = 6.5
 const BREAK_MS = 1500
+const INTRO_SEED = 77
 
 let rect: TitleAuraRect | null = null
 let stars: Star[] = []
 let letters: Letter[] = []
-let edges: [number, number, number][] = []
+let edges: [number, number, boolean][] = []
+let driftX = new Float64Array(0)
+let driftY = new Float64Array(0)
+let err = new Float64Array(0)
+let count = new Float64Array(0)
+let breakX = new Float64Array(0)
+let breakY = new Float64Array(0)
+let breakSeed = -1
 let last = 0
 let start = 0
 let hover = 0
@@ -121,10 +128,10 @@ function spread(points: Vec[], k: number): Vec[] {
   return picked
 }
 
-function treeEdges(ids: number[]): [number, number, number][] {
+function treeEdges(ids: number[]): [number, number, boolean][] {
   const inTree = ids.slice(0, 1)
   const rest = ids.slice(1)
-  const out: [number, number, number][] = []
+  const out: [number, number, boolean][] = []
   while (rest.length) {
     let bi = 0
     let bj = 0
@@ -133,17 +140,17 @@ function treeEdges(ids: number[]): [number, number, number][] {
         if (dist(stars[inTree[i]].home, stars[rest[j]].home) < dist(stars[inTree[bi]].home, stars[rest[bj]].home)) [bi, bj] = [i, j]
       }
     }
-    out.push([inTree[bi], rest[bj], 1])
+    out.push([inTree[bi], rest[bj], true])
     inTree.push(rest.splice(bj, 1)[0])
   }
   return out
 }
 
-function bridge(a: number[], b: number[]): [number, number, number] | null {
-  let best: [number, number, number] | null = null
+function bridge(a: number[], b: number[]): [number, number, boolean] | null {
+  let best: [number, number, boolean] | null = null
   for (const i of a) {
     for (const j of b) {
-      if (!best || dist(stars[i].home, stars[j].home) < dist(stars[best[0]].home, stars[best[1]].home)) best = [i, j, 0]
+      if (!best || dist(stars[i].home, stars[j].home) < dist(stars[best[0]].home, stars[best[1]].home)) best = [i, j, false]
     }
   }
   return best
@@ -162,7 +169,7 @@ function addLetter(ch: string, box: DOMRect, font: CSSStyleDeclaration, groups: 
   const ids: number[] = []
   for (const home of spread(samplePoints(glyph(ch, box, font, null, SAMPLE_SCALE), box, step), props.aura.nodesPerLetter ?? 7)) {
     const j = stars.length
-    const off = scatter(j, 77, fs)
+    const off = scatter(j, INTRO_SEED, fs)
     ids.push(j)
     stars.push({ letter, home, p: { x: home.x + off.x, y: home.y + off.y }, v: { x: 0, y: 0 }, accent: hash01(j * 31 + 7) < 0.22 })
   }
@@ -182,57 +189,65 @@ function build(canvas: HTMLCanvasElement): void {
   const font = getComputedStyle(text)
   const groups: number[][] = []
   for (const { ch, box } of letterBoxes(canvas)) if (ch.trim()) addLetter(ch, box, font, groups, rect.fs)
+  driftX = new Float64Array(letters.length)
+  driftY = new Float64Array(letters.length)
+  err = new Float64Array(letters.length)
+  count = new Float64Array(letters.length)
+  breakX = new Float64Array(stars.length)
+  breakY = new Float64Array(stars.length)
+  breakSeed = -1
 }
 
-function drift(i: number, t: number, fs: number): Vec {
-  return { x: Math.sin(t * 0.0011 + i * 1.3) * fs * 0.05, y: Math.cos(t * 0.0009 + i * 2.1) * fs * 0.07 }
+function updateDrift(t: number, fs: number): void {
+  for (let i = 0; i < letters.length; i++) {
+    driftX[i] = Math.sin(t * 0.0011 + i * 1.3) * fs * 0.05
+    driftY[i] = Math.cos(t * 0.0009 + i * 2.1) * fs * 0.07
+  }
 }
 
-function breakAt(t: number): { amount: number; seed: number } {
+function breakAmount(t: number, fs: number): number {
   const every = props.aura.breakEveryMs ?? 9000
   const cycle = Math.floor(t / every)
-  const at = cycle * every + every * (0.3 + hash01(cycle * 7 + 3) * 0.5)
-  const u = (t - at) / BREAK_MS
-  return { amount: u >= 0 && u < 1 ? Math.min(1, u * 6) : 0, seed: cycle * 97 }
-}
-
-function target(s: Star, j: number, t: number, fs: number): Vec {
-  const d = drift(s.letter, t, fs)
-  let x = s.home.x + d.x
-  let y = s.home.y + d.y
-  const brk = breakAt(t)
-  if (brk.amount > 0) {
-    const off = scatter(j, brk.seed, fs)
-    x += off.x * brk.amount
-    y += off.y * brk.amount
+  const u = (t - cycle * every - every * (0.3 + hash01(cycle * 7 + 3) * 0.5)) / BREAK_MS
+  if (u < 0 || u >= 1) return 0
+  if (breakSeed !== cycle) {
+    breakSeed = cycle
+    stars.forEach((_, j) => {
+      const off = scatter(j, cycle * 97, fs)
+      breakX[j] = off.x
+      breakY[j] = off.y
+    })
   }
-  if (hover > 0.001) {
-    const dx = mouse.x - s.home.x
-    const dy = mouse.y - s.home.y
-    const pull = (props.aura.pull ?? 0.55) * hover * Math.exp(-(dx * dx + dy * dy) / (2 * (fs * 1.8) ** 2))
-    x += dx * pull
-    y += dy * pull
-  }
-  return { x, y }
+  return Math.min(1, u * 6)
 }
 
 function stepStars(t: number, dt: number, fs: number): void {
   hover += ((hovering ? 1 : 0) - hover) * Math.min(1, dt * 5)
+  const brk = breakAmount(t, fs)
+  const pull = (props.aura.pull ?? 0.55) * hover
+  const reach = 2 * (fs * 1.8) ** 2
   stars.forEach((s, j) => {
-    const g = target(s, j, t, fs)
-    s.v.x += (STIFFNESS * (g.x - s.p.x) - DAMPING * s.v.x) * dt
-    s.v.y += (STIFFNESS * (g.y - s.p.y) - DAMPING * s.v.y) * dt
+    let x = s.home.x + driftX[s.letter] + breakX[j] * brk
+    let y = s.home.y + driftY[s.letter] + breakY[j] * brk
+    if (pull > 0.001) {
+      const dx = mouse.x - s.home.x
+      const dy = mouse.y - s.home.y
+      const k = pull * Math.exp(-(dx * dx + dy * dy) / reach)
+      x += dx * k
+      y += dy * k
+    }
+    s.v.x += (STIFFNESS * (x - s.p.x) - DAMPING * s.v.x) * dt
+    s.v.y += (STIFFNESS * (y - s.p.y) - DAMPING * s.v.y) * dt
     s.p.x += s.v.x * dt
     s.p.y += s.v.y * dt
   })
 }
 
-function stepLetters(t: number, dt: number, fs: number): void {
-  const err = letters.map(() => 0)
-  const count = letters.map(() => 0)
+function stepLetters(dt: number, fs: number): void {
+  err.fill(0)
+  count.fill(0)
   for (const s of stars) {
-    const d = drift(s.letter, t, fs)
-    err[s.letter] += Math.hypot(s.p.x - s.home.x - d.x, s.p.y - s.home.y - d.y)
+    err[s.letter] += Math.hypot(s.p.x - s.home.x - driftX[s.letter], s.p.y - s.home.y - driftY[s.letter])
     count[s.letter]++
   }
   letters.forEach((l, i) => {
@@ -242,22 +257,21 @@ function stepLetters(t: number, dt: number, fs: number): void {
   })
 }
 
-function drawLetters(g: Ctx, t: number, fs: number): void {
+function drawLetters(g: Ctx): void {
   letters.forEach((l, i) => {
     if (l.align <= 0.01) return
-    const d = drift(i, t, fs)
     g.globalAlpha = l.align * l.align
-    g.drawImage(l.sprite, l.box.x + d.x, l.box.y + d.y, l.box.width, l.box.height)
+    g.drawImage(l.sprite, l.box.x + driftX[i], l.box.y + driftY[i], l.box.width, l.box.height)
   })
-  g.globalAlpha = 1
 }
 
 function drawEdges(g: Ctx, fs: number): void {
   g.lineWidth = Math.max(0.5, fs * 0.03)
+  g.strokeStyle = palette.value.accent
   for (const [a, b, inner] of edges) {
     const fade = Math.max(0, Math.min(1, 2.4 - dist(stars[a].p, stars[b].p) / fs))
     if (fade <= 0) continue
-    g.strokeStyle = withAlpha(palette.value.accent, (inner ? 0.7 : 0.4) * fade)
+    g.globalAlpha = (inner ? 0.7 : 0.4) * fade
     g.beginPath()
     g.moveTo(stars[a].p.x, stars[a].p.y)
     g.lineTo(stars[b].p.x, stars[b].p.y)
@@ -265,18 +279,31 @@ function drawEdges(g: Ctx, fs: number): void {
   }
 }
 
-function drawStars(g: Ctx, t: number, fs: number): void {
+function twinkle(t: number, j: number): number {
+  return 0.65 + 0.35 * Math.sin(t * 0.0023 + j * 1.7)
+}
+
+function dotRadius(s: Star, fs: number): number {
+  return fs * (s.accent ? 0.065 : 0.045)
+}
+
+function drawHalos(g: Ctx, t: number, fs: number): void {
+  g.fillStyle = palette.value.accent
   stars.forEach((s, j) => {
-    const color = s.accent ? palette.value.accent : palette.value.star
-    const twinkle = 0.65 + 0.35 * Math.sin(t * 0.0023 + j * 1.7)
-    const r = fs * (s.accent ? 0.065 : 0.045)
-    g.fillStyle = withAlpha(palette.value.accent, 0.16 * twinkle)
+    g.globalAlpha = 0.16 * twinkle(t, j)
     g.beginPath()
-    g.arc(s.p.x, s.p.y, r * 2, 0, Math.PI * 2)
+    g.arc(s.p.x, s.p.y, dotRadius(s, fs) * 2, 0, Math.PI * 2)
     g.fill()
-    g.fillStyle = withAlpha(color, 0.95 * twinkle)
+  })
+}
+
+function drawCores(g: Ctx, t: number, fs: number, accent: boolean): void {
+  g.fillStyle = accent ? palette.value.accent : palette.value.star
+  stars.forEach((s, j) => {
+    if (s.accent !== accent) return
+    g.globalAlpha = 0.95 * twinkle(t, j)
     g.beginPath()
-    g.arc(s.p.x, s.p.y, r, 0, Math.PI * 2)
+    g.arc(s.p.x, s.p.y, dotRadius(s, fs), 0, Math.PI * 2)
     g.fill()
   })
 }
@@ -309,6 +336,10 @@ function listen(canvas: HTMLCanvasElement): void {
   host?.addEventListener('pointerleave', onLeave)
 }
 
+function rebuild(): void {
+  if (canvasRef.value) build(canvasRef.value)
+}
+
 onBeforeUnmount(() => {
   host?.removeEventListener('pointermove', onMove)
   host?.removeEventListener('pointerleave', onLeave)
@@ -319,12 +350,11 @@ useElementCanvas(canvasRef, {
     if (!canvasRef.value) return
     build(canvasRef.value)
     listen(canvasRef.value)
+    if (document.fonts.status !== 'loaded') void document.fonts.ready.then(rebuild)
     start = now
     last = now
   },
-  resize() {
-    if (canvasRef.value) build(canvasRef.value)
-  },
+  resize: rebuild,
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
     if (!rect || stars.length === 0) return
@@ -332,14 +362,18 @@ useElementCanvas(canvasRef, {
     const t = reduced ? 0 : now - start
     const dt = Math.min(0.05, (now - last) / 1000)
     last = now
+    updateDrift(t, fs)
     if (reduced) settle()
     else {
       stepStars(t, dt, fs)
-      stepLetters(t, dt, fs)
+      stepLetters(dt, fs)
     }
-    drawLetters(ctx, t, fs)
+    drawLetters(ctx)
     drawEdges(ctx, fs)
-    drawStars(ctx, t, fs)
+    drawHalos(ctx, t, fs)
+    drawCores(ctx, t, fs, false)
+    drawCores(ctx, t, fs, true)
+    ctx.globalAlpha = 1
   },
 })
 </script>

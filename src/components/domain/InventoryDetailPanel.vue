@@ -667,11 +667,17 @@ onUnmounted(() => {
 
 .inv-detail__theme-modes {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-xs);
+  min-width: 0;
 }
 
 .inv-detail__theme-mode {
-  flex: 1;
+  flex: 1 0 0;
+  min-width: min(max-content, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: var(--space-xs) var(--space-sm);
   font-family: var(--font-sans);
   font-size: var(--text-caption);

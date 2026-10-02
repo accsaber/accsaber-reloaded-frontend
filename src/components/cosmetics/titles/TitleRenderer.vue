@@ -19,7 +19,7 @@ import type {
 } from '@/types/api/items'
 import { darken, lerpHex } from '@/utils/color'
 import { win } from '@/utils/cosmetics/canvasShapes'
-import { boilCharStyle } from '@/utils/cosmetics/titleBoil'
+import { boilCharStyle, boilStep } from '@/utils/cosmetics/titleBoil'
 import { eclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
@@ -48,7 +48,7 @@ type GlyphKey =
   | 'brew' | 'sprout' | 'ascent' | 'slice' | 'tick' | 'metronome' | 'scrawl' | 'reel' | 'restart'
   | 'punch' | 'hammer' | 'excavate' | 'quest' | 'scales'
   | 'quake' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
-  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune' | 'boil'
+  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune'
 
 type GlyphFx<K extends GlyphKey> = (
   tMs: number,
@@ -309,6 +309,20 @@ function glyph<K extends GlyphKey>(key: K, fx: GlyphFx<K>, still = false): Glyph
   }
 }
 
+const boilSpec = computed(() => motionSpec(props.value.boil))
+
+const boilTick = computed(() => {
+  const spec = boilSpec.value
+  if (!spec) return 0
+  void tMs.value
+  return boilStep(performance.now(), spec)
+})
+
+const boilGlyph: GlyphEffect = () => {
+  const spec = boilSpec.value
+  return spec ? (i) => boilCharStyle(boilTick.value, i, spec, state.value.color ?? INK) : null
+}
+
 const liftGlyph: GlyphEffect = (value, reduced) => {
   const a = value.aura
   return a?.type === 'ascension' && a.enabled && a.lift && !reduced ? (i) => liftCharStyle(a, i) : null
@@ -347,7 +361,7 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('eclipse', eclipseCharStyle),
   glyph('transmute', transmuteCharStyle),
   glyph('rune', runeCharStyle),
-  glyph('boil', boilCharStyle),
+  boilGlyph,
   liftGlyph,
 ]
 

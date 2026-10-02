@@ -16,3 +16,13 @@ export function stainPath(g: CanvasRenderingContext2D, cx: number, cy: number, R
   }
   g.closePath()
 }
+
+export function dripPath(g: CanvasRenderingContext2D, x: number, top: number, len: number, w: number, taper: number, bulb: number): void {
+  g.moveTo(x - w / 2, top)
+  g.lineTo(x - w * taper, top + len)
+  g.lineTo(x + w * taper, top + len)
+  g.lineTo(x + w / 2, top)
+  g.closePath()
+  g.moveTo(x + bulb, top + len)
+  g.arc(x, top + len, bulb, 0, Math.PI * 2)
+}

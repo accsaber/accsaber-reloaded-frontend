@@ -13,10 +13,9 @@ export function boilOffsetEm(step: number, spec: TitleBoilSpec | undefined): [nu
   return [dx * amp, dy * amp]
 }
 
-export function boilCharStyle(_tMs: number, i: number, _n: number, spec: TitleBoilSpec, _light: boolean, base: string): Record<string, string> {
-  const step = boilStep(performance.now(), spec)
+export function boilCharStyle(step: number, i: number, spec: TitleBoilSpec, base: string): Record<string, string> {
   const [dx, dy] = boilOffsetEm(step, spec)
-  const seed = (step % 4) * 131 + i * 17
+  const seed = (step % CLOCKWISE.length) * 131 + i * 17
   const tweakEm = spec.tweakEm ?? 0.03
   const x = dx + (hash01(seed) - 0.5) * 2 * tweakEm
   const y = dy + (hash01(seed + 1) - 0.5) * 2 * tweakEm
