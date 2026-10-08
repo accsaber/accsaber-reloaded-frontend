@@ -58,7 +58,7 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
       <span v-else class="user-chip__avatar user-chip__avatar--blank" aria-hidden="true" />
     </template>
     <component :is="nameTag" class="user-chip__name" :title="user.name">{{ user.name }}</component>
-    <ClanTag v-if="user.clan && !hideClan" :clan="user.clan" :size="size" :effects="clanEffects" />
+    <ClanTag v-if="user.clan && !hideClan" class="user-chip__clan" :clan="user.clan" :size="size" :effects="clanEffects" />
     <CountryFlag v-if="user.country" class="user-chip__flag" :country="user.country" />
     <SupporterTierIcon v-if="user.supporterTier" :tier="user.supporterTier" :size="iconSize" />
     <slot />
@@ -95,6 +95,18 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.user-chip .user-chip__clan {
+  font-size: 0.6875rem;
+}
+
+.user-chip--xs .user-chip__clan {
+  font-size: 0.625rem;
+}
+
+.user-chip--lg .user-chip__clan {
+  font-size: 0.75rem;
 }
 
 .user-chip__flag {

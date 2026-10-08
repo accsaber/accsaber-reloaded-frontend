@@ -1196,21 +1196,7 @@ export interface BorderUmbraOverlaySpec {
   radius?: number
 }
 
-export interface BorderDragonOverlaySpec {
-  type: 'dragon'
-  enabled: boolean
-  mouth: { x: number; y: number }
-  angleDeg: number
-  core: string
-  flame: string
-  smoke: string
-  rangePct?: number
-  intervalMs?: number
-  burstMs?: number
-}
-
 export type BorderOverlaySpec =
-  | BorderDragonOverlaySpec
   | BorderUmbraOverlaySpec
   | BorderRainOverlaySpec
   | BorderDripOverlaySpec

@@ -342,13 +342,25 @@ function torchPos(tMs: number, n: number, spec: TitleTorchSpec): number {
   return span * (0.5 - 0.5 * Math.cos((raw / span) * Math.PI))
 }
 
+const TORCH_TRAIL_STEPS = 20
+const TORCH_TRAIL_MS = 80
+
+function torchGlow(tMs: number, i: number, n: number, spec: TitleTorchSpec): number {
+  let glow = 0
+  for (let j = 0; j <= TORCH_TRAIL_STEPS; j++) {
+    const near = Math.max(0, 1 - Math.abs(i - torchPos(tMs - j * TORCH_TRAIL_MS, n, spec)) / 1.2)
+    glow = Math.max(glow, near * (1 - j / TORCH_TRAIL_STEPS))
+  }
+  return glow
+}
+
 export function torchCharStyle(tMs: number, i: number, n: number, spec: TitleTorchSpec, light: boolean, base: string): Style {
   const lit = pick(light, spec.lightLit, spec.lit, '#ffd38a')
-  const warmth = Math.max(0, 1 - Math.abs(i - torchPos(tMs, n, spec)) / 2.4)
-  const breathe = 0.85 + 0.15 * Math.sin(tMs / 260 + i)
+  const glow = torchGlow(tMs, i, n, spec)
+  const flicker = 0.9 + 0.1 * Math.sin(tMs / 190 + i * 1.7)
   return {
-    color: lerpHex(base, lit, warmth * breathe * 0.9),
-    transform: `translateY(${(-0.04 * warmth).toFixed(3)}em)`,
+    color: lerpHex(base, lit, Math.min(1, glow * flicker)),
+    transform: `translateY(${(-0.05 * glow).toFixed(3)}em)`,
   }
 }
 
