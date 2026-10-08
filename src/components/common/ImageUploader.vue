@@ -63,8 +63,17 @@ async function onPick(e: Event) {
     return
   }
   err.value = null
-  if (props.crop) cropping.value = file
+  if (props.crop && !(await isAnimated(file))) cropping.value = file
   else await upload(file)
+}
+
+async function isAnimated(file: File): Promise<boolean> {
+  if (file.type === 'image/gif') return true
+  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer())
+  const ascii = String.fromCharCode(...head)
+  if (file.type === 'image/webp') return ascii.slice(12, 16) === 'VP8X' && (head[20] & 0x02) !== 0
+  if (file.type === 'image/avif') return ascii.includes('avis')
+  return false
 }
 
 async function upload(file: File) {
