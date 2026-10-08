@@ -119,7 +119,6 @@ const founded = computed(() =>
 
 .clan-header__band--plain {
   height: 140px;
-  background: color-mix(in oklch, var(--clan-accent) 45%, var(--bg-base));
 }
 
 .clan-header__banner {
