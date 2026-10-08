@@ -10,6 +10,7 @@ import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useSharedNow } from '@/composables/useSharedNow'
 import { useAuthStore } from '@/stores/auth'
 import type {
   ClanJoinRequestResponse,
@@ -22,19 +23,30 @@ import type {
 import type { PlayerRef } from '@/types/api/common'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatStanding } from '@/utils/clans'
+import { formatCountdown, formatStanding } from '@/utils/clans'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import ClanLoanList from './clans/ClanLoanList.vue'
 import ClanPodium, { type PodiumEntry } from './clans/ClanPodium.vue'
 import ClanRequestList from './clans/ClanRequestList.vue'
+import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
 
 const PAGE_SIZE = 25
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+
+const { season, upcoming } = useCurrentClanSeason()
+const now = useSharedNow()
+const title = computed(() => {
+  if (season.value) return `Clans: ${season.value.name}`
+  if (upcoming.value) {
+    return `Clans: ${upcoming.value.name} Starting in ${formatCountdown(new Date(upcoming.value.startsAt).getTime() - now.value)}`
+  }
+  return 'Clans'
+})
 
 usePageMeta({
   title: 'Clans | AccSaber',
@@ -212,7 +224,7 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
 <template>
   <div class="clans">
     <header class="clans__header">
-      <h1 class="clans__title">Clans</h1>
+      <h1 class="clans__title">{{ title }}</h1>
       <p v-if="totalClans > 0" class="clans__subtitle">{{ totalClans.toLocaleString() }} clans ranked</p>
     </header>
 

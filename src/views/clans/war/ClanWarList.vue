@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ApiError, parseApiError } from '@/api/client'
+import { parseApiError } from '@/api/client'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
@@ -17,9 +17,8 @@ const PAGE_SIZE = 20
 const props = defineProps<{
   clanId?: string
   latestWar?: ClanWarResponse | null
+  seasonRunning: boolean
 }>()
-
-const emit = defineEmits<{ season: [running: boolean] }>()
 
 const route = useRoute()
 const router = useRouter()
@@ -35,13 +34,12 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 const wars = ref<Page<ClanWarResponse> | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const seasonRunning = ref(true)
 
 const openOnly = computed(() => route.query.open === '1')
 const search = ref(String(route.query.search ?? ''))
 const totalPages = computed(() => wars.value?.totalPages ?? 0)
 const emptyMessage = computed(() => {
-  if (!seasonRunning.value) return 'No season is running.'
+  if (!props.seasonRunning) return 'No season is running.'
   return openOnly.value ? 'No open wars.' : 'No wars yet.'
 })
 
@@ -85,19 +83,7 @@ watch(
   },
 )
 
-async function fetchSeason() {
-  try {
-    const { getClanSeason } = await import('@/api/clans')
-    const season = await getClanSeason('current')
-    seasonRunning.value = !season.closedAt
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 404) seasonRunning.value = false
-  }
-  emit('season', seasonRunning.value)
-}
-
 watch(() => [route.query.page, route.query.open, route.query.search, props.clanId], fetchWars, { immediate: true })
-fetchSeason()
 </script>
 
 <template>

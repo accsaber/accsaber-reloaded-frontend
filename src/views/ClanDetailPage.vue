@@ -24,6 +24,7 @@ import ClanRosterTab from './clans/ClanRosterTab.vue'
 import { useClanChat } from './clans/useClanChat'
 import { useClanFeed } from './clans/useClanFeed'
 import { useClanPage } from './clans/useClanPage'
+import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
 
 type ClanTab =
   | 'roster'
@@ -156,6 +157,7 @@ async function loadRecentWar(clanId: string | null) {
 watch(chatClanId, loadRecentWar, { immediate: true })
 
 const declareOpen = ref(false)
+const { running: seasonRunning } = useCurrentClanSeason()
 
 function onDeclared(detail: ClanWarDetailResponse) {
   declareOpen.value = false
@@ -420,6 +422,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
             :accepting-requests="clan.acceptingRequests"
             :pending-request="pendingRequest"
             :busy="busy"
+            :season-running="seasonRunning"
             :error="actionError"
             @request="requestJoin"
             @resolve="resolveRequest"
@@ -485,7 +488,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         @claim="claimClan"
       />
       <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :notices="notices" :status="chatStatus" />
-      <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :latest-war="latestWar" />
+      <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :latest-war="latestWar" :season-running="seasonRunning" />
       <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
       <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
       <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" />

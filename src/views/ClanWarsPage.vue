@@ -2,8 +2,11 @@
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import ClanWarList from './clans/war/ClanWarList.vue'
+import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
 
 const breadcrumbs: Crumb[] = [{ label: 'Clans', to: { name: 'clans' } }, { label: 'Wars' }]
+
+const { running: seasonRunning } = useCurrentClanSeason()
 
 usePageMeta({
   title: 'Clan wars | AccSaber',
@@ -17,7 +20,7 @@ usePageMeta({
     <header class="wars-page__header">
       <h1 class="wars-page__title">Wars</h1>
     </header>
-    <ClanWarList />
+    <ClanWarList :season-running="seasonRunning" />
   </div>
 </template>
 
