@@ -1,33 +1,50 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
-import type { ClanWarHitResponse } from '@/types/api/clans'
+import type { ClanWarHitResponse, ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
-import { formatStanding } from '@/utils/clans'
+import { formatStanding, WAR_GUARD_MAX, warSideStyles } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const PAGE_SIZE = 50
-const GUARD_MAX = 100
 
 const props = defineProps<{
-  warId: string
+  war: ClanWarResponse
+  participants: ClanWarParticipantResponse[] | null
   incoming: ClanWarHitResponse | null
   reloadKey: number
   now: number
 }>()
 
 const page = ref(1)
+const player = ref('')
 const hits = ref<Page<ClanWarHitResponse> | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const styles = computed(() => warSideStyles(props.war))
+const sideOf = computed(() => new Map((props.participants ?? []).map((p) => [p.player.id, p.clan.id])))
+const playerOptions = computed(() => [
+  { value: '', label: 'Every fighter' },
+  ...(props.participants ?? []).map((p) => ({ value: p.player.id, label: p.player.name })),
+])
+
+function rowStyle(hit: ClanWarHitResponse) {
+  return sideOf.value.get(hit.attacker.id) === props.war.defender.clan.id ? styles.value.defender : styles.value.attacker
+}
+
 function breakLine(hit: ClanWarHitResponse): string {
   const moved = `Guard broken, ${formatStanding(hit.standingMoved)} Standing moved`
   return hit.xpAwarded == null ? moved : `${moved}, ${Math.round(hit.xpAwarded)} XP`
+}
+
+function involves(hit: ClanWarHitResponse): boolean {
+  return !player.value || hit.attacker.id === player.value || hit.victim.id === player.value
 }
 
 async function fetchHits() {
@@ -35,7 +52,11 @@ async function fetchHits() {
   error.value = null
   try {
     const { getClanWarHits } = await import('@/api/clans')
-    hits.value = await getClanWarHits(props.warId, { page: page.value - 1, size: PAGE_SIZE })
+    hits.value = await getClanWarHits(props.war.id, {
+      page: page.value - 1,
+      size: PAGE_SIZE,
+      userId: player.value || undefined,
+    })
   } catch (err) {
     error.value = parseApiError(err, 'Could not load the hits.').message
   } finally {
@@ -46,27 +67,48 @@ async function fetchHits() {
 watch(
   () => props.incoming,
   (hit) => {
-    if (!hit || !hits.value || page.value !== 1) return
+    if (!hit || !hits.value || page.value !== 1 || !involves(hit)) return
     if (hits.value.content.some((h) => h.id === hit.id)) return
     hits.value.content.unshift(hit)
     if (hits.value.content.length > PAGE_SIZE) hits.value.content.pop()
   },
 )
 
-watch([page, () => props.reloadKey, () => props.warId], fetchHits, { immediate: true })
+watch(player, () => {
+  if (page.value === 1) void fetchHits()
+  else page.value = 1
+})
+
+watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate: true })
 </script>
 
 <template>
   <section class="war-hits">
-    <h2 class="war-hits__title">Hits</h2>
+    <header class="war-hits__head">
+      <h2 class="war-hits__title">Hits</h2>
+      <BaseSelect
+        v-if="participants?.length"
+        v-model="player"
+        class="war-hits__filter"
+        :options="playerOptions"
+        searchable
+        placeholder="Every fighter"
+      />
+    </header>
     <p v-if="error" class="war-hits__error" role="alert">{{ error }}</p>
 
     <div v-if="loading && !hits" class="war-hits__list">
       <SkeletonLoader v-for="i in 4" :key="i" variant="table-row" />
     </div>
-    <p v-else-if="!hits?.content.length" class="war-hits__empty">No hits yet.</p>
+    <p v-else-if="!hits?.content.length" class="war-hits__empty">{{ player ? 'No hits for this fighter.' : 'No hits yet.' }}</p>
     <ul v-else class="war-hits__list">
-      <li v-for="hit in hits.content" :key="hit.id" class="war-hits__row" :class="{ 'war-hits__row--break': hit.broke }">
+      <li
+        v-for="hit in hits.content"
+        :key="hit.id"
+        class="war-hits__row clan-colors"
+        :class="{ 'war-hits__row--break': hit.broke }"
+        :style="rowStyle(hit)"
+      >
         <span class="war-hits__line">
           <UserChip :user="hit.attacker" size="xs" compact link />
           <span class="war-hits__verb">{{ hit.broke ? 'broke' : 'hit' }}</span>
@@ -80,7 +122,7 @@ watch([page, () => props.reloadKey, () => props.warId], fetchHits, { immediate: 
         </span>
         <span class="war-hits__numbers">
           <span class="war-hits__damage">-{{ hit.damage.toFixed(1) }}</span>
-          <span class="war-hits__guard">guard {{ Math.round(hit.guardAfter) }}/{{ GUARD_MAX }}</span>
+          <span class="war-hits__guard">guard {{ Math.round(hit.guardAfter) }}/{{ WAR_GUARD_MAX }}</span>
           <span class="war-hits__when">{{ formatRelativeDate(hit.createdAt, now) }}</span>
         </span>
         <span v-if="hit.broke" class="war-hits__break">{{ breakLine(hit) }}</span>
@@ -101,6 +143,18 @@ watch([page, () => props.reloadKey, () => props.warId], fetchHits, { immediate: 
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+}
+
+.war-hits__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.war-hits__filter {
+  width: 220px;
 }
 
 .war-hits__title {
@@ -151,7 +205,7 @@ watch([page, () => props.reloadKey, () => props.warId], fetchHits, { immediate: 
 }
 
 .war-hits__row--break {
-  background: color-mix(in srgb, var(--error) 10%, var(--bg-surface));
+  background: color-mix(in srgb, var(--war-side) 10%, var(--bg-surface));
 }
 
 .war-hits__line {
@@ -215,19 +269,23 @@ watch([page, () => props.reloadKey, () => props.warId], fetchHits, { immediate: 
 .war-hits__damage {
   font-size: var(--text-body);
   font-weight: 600;
-  color: var(--error);
+  color: var(--war-side);
 }
 
 .war-hits__break {
   grid-column: 1 / -1;
   font-size: var(--text-caption);
   font-weight: 600;
-  color: var(--error);
+  color: var(--war-side);
 }
 
 @media (max-width: 640px) {
   .war-hits__row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .war-hits__filter {
+    width: 100%;
   }
 }
 </style>

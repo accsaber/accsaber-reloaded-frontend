@@ -7,7 +7,8 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ClanProfileForm, { type ClanProfileDraft } from '@/components/domain/ClanProfileForm.vue'
+import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
+import { emptyClanDraft, type ClanProfileDraft } from '@/utils/clans'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -19,7 +20,7 @@ usePageMeta({
   description: 'Found a new AccSaber clan.',
 })
 
-const draft = ref<ClanProfileDraft>({ name: '', tag: '', description: '', tagColor: '' })
+const draft = ref<ClanProfileDraft>(emptyClanDraft())
 const iconFile = ref<File | null>(null)
 const iconPreview = ref<string | null>(null)
 const saving = ref(false)
@@ -49,6 +50,8 @@ async function submit() {
       tag: draft.value.tag,
       description: draft.value.description.trim() || undefined,
       tagColor: draft.value.tagColor || undefined,
+      primaryColor: draft.value.primaryColor || undefined,
+      secondaryColor: draft.value.secondaryColor || undefined,
     })
     if (iconFile.value) {
       const { uploadClanIcon } = await import('@/api/cdn')

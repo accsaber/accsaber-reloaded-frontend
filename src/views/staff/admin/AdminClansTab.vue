@@ -3,33 +3,35 @@ import BaseTabs from '@/components/common/BaseTabs.vue'
 import { computed, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-type ClansSubTab = 'levels' | 'seasons' | 'rewards' | 'moderate'
-const VALID: ClansSubTab[] = ['levels', 'seasons', 'rewards', 'moderate']
+type ClansSubTab = 'clans' | 'seasons' | 'rewards' | 'levels'
+const VALID: ClansSubTab[] = ['clans', 'seasons', 'rewards', 'levels']
 
 const route = useRoute()
 const router = useRouter()
 
 const tabs = [
-  { key: 'levels', label: 'Levels' },
+  { key: 'clans', label: 'Clans' },
   { key: 'seasons', label: 'Seasons' },
   { key: 'rewards', label: 'War rewards' },
-  { key: 'moderate', label: 'Moderate' },
+  { key: 'levels', label: 'Levels' },
 ]
 
 const subTab = computed<ClansSubTab>(() => {
   const t = route.query.ctab as string
-  return (VALID.includes(t as ClansSubTab) ? t : 'levels') as ClansSubTab
+  return (VALID.includes(t as ClansSubTab) ? t : 'clans') as ClansSubTab
 })
 
 function setSubTab(key: string) {
-  router.replace({ query: { ...route.query, ctab: key } })
+  const query = { ...route.query }
+  delete query.clan
+  router.replace({ query: { ...query, ctab: key } })
 }
 
 const subComponents: Record<ClansSubTab, ReturnType<typeof defineAsyncComponent>> = {
-  levels: defineAsyncComponent(() => import('./clans/ClanLevelsTab.vue')),
+  clans: defineAsyncComponent(() => import('./clans/ClanBrowserTab.vue')),
   seasons: defineAsyncComponent(() => import('./clans/ClanSeasonsTab.vue')),
   rewards: defineAsyncComponent(() => import('./clans/ClanWarRewardsTab.vue')),
-  moderate: defineAsyncComponent(() => import('./clans/ClanModerateTab.vue')),
+  levels: defineAsyncComponent(() => import('./clans/ClanLevelsTab.vue')),
 }
 
 const activeComponent = computed(() => subComponents[subTab.value])

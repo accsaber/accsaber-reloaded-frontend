@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
-import BorderCompositionPreview from '@/components/domain/BorderCompositionPreview.vue'
+import BorderStack from '@/components/cosmetics/borders/BorderStack.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { ItemResponse } from '@/types/api/items'
@@ -41,7 +41,8 @@ const isBorder = computed(
     previewItem.value?.typeKey === 'profile_border_color',
 )
 
-const isTitle = computed(() => previewItem.value?.typeKey === 'title')
+const isTitle = computed(() => previewItem.value?.typeKey === 'title' || previewItem.value?.typeKey === 'clan_title_effect')
+const isBanner = computed(() => previewItem.value?.typeKey === 'clan_banner')
 
 const shapeValue = computed(() =>
   previewItem.value?.typeKey === 'profile_border_shape'
@@ -62,9 +63,9 @@ const typeLabel = computed(() => props.item?.typeKey.replace(/_/g, ' ') ?? '')
     <div v-if="item" class="ipm">
       <div
         class="ipm__art"
-        :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle, 'ipm__art--border': isBorder }]"
+        :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle, 'ipm__art--banner': isBanner, 'ipm__art--border': isBorder }]"
       >
-        <BorderCompositionPreview
+        <BorderStack
           v-if="isBorder"
           :shape="shapeValue"
           :color="colorValue"
@@ -115,6 +116,12 @@ const typeLabel = computed(() => props.item?.typeKey.replace(/_/g, ' ') ?? '')
   border-radius: var(--radius-card);
   background: var(--bg-base);
   overflow: hidden;
+}
+
+.ipm__art--banner {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1600 / 420;
 }
 
 .ipm__art--wide {

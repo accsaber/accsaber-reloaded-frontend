@@ -91,7 +91,7 @@ onMounted(load)
     <div class="war-rewards__header">
       <div>
         <h2 class="war-rewards__title">War rewards</h2>
-        <p class="war-rewards__meta">Paid to the winning side when a war ends. Leave the contributor cap empty to pay every fighter.</p>
+        <p class="war-rewards__meta">Paid to the winning side when a war ends. Leave top contributors empty to pay everyone who contributed on the winning side.</p>
       </div>
     </div>
 
@@ -120,7 +120,7 @@ onMounted(load)
           <span class="war-rewards__type">{{ reward.item.typeKey.replace(/_/g, ' ') }}</span>
         </td>
         <td class="mono right">{{ reward.quantity }}</td>
-        <td>{{ reward.topContributors === null ? 'Every fighter' : `Top ${reward.topContributors} by contribution` }}</td>
+        <td>{{ reward.topContributors === null ? 'Every contributor' : `Top ${reward.topContributors} by contribution` }}</td>
         <td>{{ reward.active ? 'Yes' : 'No' }}</td>
         <td class="right">
           <span class="war-rewards__actions">

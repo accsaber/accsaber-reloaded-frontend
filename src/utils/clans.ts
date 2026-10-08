@@ -15,6 +15,7 @@ import type {
   ClanWarResponse,
   ClanWarStatus,
   ClanXpSource,
+  PublicClanResponse,
 } from '@/types/api/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 
@@ -56,7 +57,6 @@ export const CLAN_ROLE_PLURAL: Record<ClanRole, string> = {
 
 export const CLAN_CAPACITY_LABEL: Record<ClanCapacity, string> = {
   member_slots: 'member slots',
-  mission_slots: 'mission slots',
   ally_slots: 'ally slots',
   lend_slots: 'lend slots',
   receive_slots: 'borrow slots',
@@ -220,6 +220,8 @@ const PROFILE_FIELD_LABEL: Record<string, string> = {
   tag: 'Tag',
   description: 'Description',
   tagColor: 'Tag colour',
+  primaryColor: 'Primary colour',
+  secondaryColor: 'Secondary colour',
   icon: 'Icon',
   acceptingRequests: 'Taking requests',
   reason: 'Reason',
@@ -248,4 +250,90 @@ export function auditDetailLines(entry: ClanAuditEntryResponse): string[] {
       const shown = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)
       return `${PROFILE_FIELD_LABEL[key]}: ${shown}`
     })
+}
+
+export interface ClanProfileDraft {
+  name: string
+  tag: string
+  description: string
+  tagColor: string
+  primaryColor: string
+  secondaryColor: string
+}
+
+export function emptyClanDraft(): ClanProfileDraft {
+  return { name: '', tag: '', description: '', tagColor: '', primaryColor: '', secondaryColor: '' }
+}
+
+export function clanDraftFrom(clan: PublicClanResponse, description: string | null): ClanProfileDraft {
+  return {
+    name: clan.name,
+    tag: clan.tag,
+    description: description ?? '',
+    tagColor: clan.tagColor ?? '',
+    primaryColor: clan.primaryColor ?? '',
+    secondaryColor: clan.secondaryColor ?? '',
+  }
+}
+
+type ClanColors = Pick<PublicClanResponse, 'tagColor' | 'primaryColor' | 'secondaryColor'>
+
+export function clanColorVars(clan: ClanColors): Record<string, string> {
+  const vars: Record<string, string> = {}
+  const primary = clan.primaryColor ?? clan.tagColor
+  if (primary) vars['--clan-primary'] = primary
+  if (clan.secondaryColor) vars['--clan-secondary'] = clan.secondaryColor
+  return vars
+}
+
+export const WAR_GUARD_MAX = 100
+
+function hueLightness(hex: string): [number, number] {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const light = (max + min) / 2
+  if (max === min) return [0, light]
+  const d = max - min
+  const hue = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return [hue * 60, light]
+}
+
+function similarColors(a: string | null, b: string | null): boolean {
+  if (!a || !b) return a === b
+  const [ha, la] = hueLightness(a)
+  const [hb, lb] = hueLightness(b)
+  const hueGap = Math.min(Math.abs(ha - hb), 360 - Math.abs(ha - hb))
+  return hueGap < 30 && Math.abs(la - lb) < 0.2
+}
+
+export interface WarSideStyles {
+  attacker: Record<string, string>
+  defender: Record<string, string>
+}
+
+function clashSide(clan: PublicClanResponse): string {
+  return clan.secondaryColor ? 'var(--clan-accent-2)' : 'oklch(from var(--clan-accent) l c calc(h + 150))'
+}
+
+export function warSideStyles(war: ClanWarResponse): WarSideStyles {
+  const attacker = war.attacker.clan
+  const defender = war.defender.clan
+  const clash = similarColors(attacker.primaryColor ?? attacker.tagColor, defender.primaryColor ?? defender.tagColor)
+  return {
+    attacker: { ...clanColorVars(attacker), '--war-side': 'var(--clan-accent)' },
+    defender: { ...clanColorVars(defender), '--war-side': clash ? clashSide(defender) : 'var(--clan-accent)' },
+  }
+}
+
+export function warHeadline(war: ClanWarResponse): string | null {
+  if (!war.outcome) return null
+  if (war.outcome === 'attacker_won') return `${war.attacker.clan.tag} wins`
+  if (war.outcome === 'defender_won') return `${war.defender.clan.tag} wins`
+  if (war.outcome === 'retreated') return `${war.attacker.clan.tag} retreated`
+  return CLAN_WAR_OUTCOME_LABEL[war.outcome]
+}
+
+export function warModeLine(war: ClanWarResponse): string {
+  return `${CLAN_ARENA_LABEL[war.arena]}, ${CLAN_RULESET_LABEL[war.ruleset]}`
 }

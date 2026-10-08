@@ -26,7 +26,6 @@ export type ClanXpSource = 'daily_play' | 'mission' | 'war_break' | 'war_win' | 
 
 export type ClanCapacity =
   | 'member_slots'
-  | 'mission_slots'
   | 'ally_slots'
   | 'lend_slots'
   | 'receive_slots'
@@ -67,6 +66,8 @@ export interface PublicClanResponse {
   name: string
   tag: string
   tagColor: string | null
+  primaryColor: string | null
+  secondaryColor: string | null
   iconUrl: string | null
   equipped: ItemResponse[]
 }
@@ -83,12 +84,15 @@ export interface ClanResponse {
   createdAt: string
 }
 
-export interface ClanMemberResponse {
-  player: PlayerRef
+export interface ClanMembershipResponse {
   role: ClanRole
   joinedAt: string
   online: boolean
   lastPlayedAt: string | null
+  strengthShare: number
+  seasonPlayXp: number
+  seasonHits: number
+  seasonBreaks: number
 }
 
 export interface ClanJoinRequestResponse {
@@ -122,6 +126,8 @@ export interface ClanUnlocksResponse {
 export interface ClanLevelResponse {
   progress: LevelResponse
   unlocked: ClanUnlocksResponse
+  rosterFactor?: number
+  seasonXpBySource?: Partial<Record<ClanXpSource, number>>
 }
 
 export interface ClanLevelStepResponse {
@@ -255,9 +261,18 @@ export interface ClanWarPoolEntryResponse {
   viewerScore: MyScoreSummary | null
 }
 
+export interface ClanWarTimelineHitResponse {
+  at: string
+  clanId: string
+  damage: number
+  broke: boolean
+  standingMoved: number
+}
+
 export interface ClanWarDetailResponse {
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
+  timeline: ClanWarTimelineHitResponse[]
 }
 
 export type ClanFeedFrame =
@@ -362,6 +377,8 @@ export interface CreateClanRequest {
   tag: string
   description?: string
   tagColor?: string
+  primaryColor?: string
+  secondaryColor?: string
 }
 
 export interface UpdateClanRequest {
@@ -369,6 +386,8 @@ export interface UpdateClanRequest {
   tag?: string
   description?: string
   tagColor?: string
+  primaryColor?: string
+  secondaryColor?: string
   acceptingRequests?: boolean
 }
 
@@ -390,6 +409,7 @@ export interface ResolveClanJoinRequest {
 
 export interface EquipClanItemRequest {
   itemId: string
+  variantKey?: string
 }
 
 export interface CreateClanAllianceRequest {

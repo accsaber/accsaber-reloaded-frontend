@@ -50,8 +50,8 @@ const handleAvatarError = (e: Event) => onAvatarError(props.fallbackUrl)(e)
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 124px;
-  height: 124px;
+  width: 88.6%;
+  height: 88.6%;
   z-index: 2;
   display: block;
   overflow: visible;

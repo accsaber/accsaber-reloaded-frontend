@@ -12,6 +12,7 @@ const props = defineProps<{
   destructive?: boolean
   typedConfirmation?: string
   blocked?: boolean
+  disabled?: boolean
   loading?: boolean
   error?: string | null
 }>()
@@ -24,7 +25,9 @@ const emit = defineEmits<{
 const typed = ref('')
 
 const ready = computed(
-  () => !props.typedConfirmation || typed.value.trim().toUpperCase() === props.typedConfirmation.toUpperCase(),
+  () =>
+    !props.disabled &&
+    (!props.typedConfirmation || typed.value.trim().toUpperCase() === props.typedConfirmation.toUpperCase()),
 )
 
 watch(
@@ -38,6 +41,7 @@ watch(
 <template>
   <BaseModal :open="open" :title="title" max-width="460px" @close="emit('close')">
     <p class="confirm-modal__message">{{ message }}</p>
+    <slot />
 
     <BaseInput
       v-if="typedConfirmation && !blocked"

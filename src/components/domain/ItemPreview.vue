@@ -4,6 +4,7 @@ import BorderOverlay from '@/components/cosmetics/borders/BorderOverlay.vue'
 import CrateIcon from '@/components/cosmetics/CrateIcon.vue'
 import ProfileBorderRenderer from '@/components/cosmetics/borders/ProfileBorderRenderer.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
+import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
@@ -47,6 +48,10 @@ const tagCardSample = computed(() =>
   typeKey.value === 'clan_tag_card'
     ? { slug: '', name: props.item.name, tag: 'ACC', tagColor: null, equipped: [props.item] }
     : null,
+)
+
+const clanBorderSample = computed(() =>
+  typeKey.value === 'clan_border' ? { tag: 'ACC', iconUrl: null, equipped: [props.item] } : null,
 )
 
 const titleValue = computed<TitleValue | null>(() => {
@@ -191,6 +196,10 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
 
     <span v-else-if="tagCardSample" class="item-preview__tag-card">
       <ClanTag :clan="tagCardSample" preview effects />
+    </span>
+
+    <span v-else-if="clanBorderSample" class="item-preview__clan-border">
+      <ClanIcon :clan="clanBorderSample" size="62%" />
     </span>
 
     <span
@@ -433,6 +442,14 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   font-size: 1.5rem;
   color: var(--cell-accent, var(--text-secondary));
   letter-spacing: 0.04em;
+}
+
+.item-preview__clan-border {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .item-preview__tag-card {

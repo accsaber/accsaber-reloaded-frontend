@@ -5,14 +5,16 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { ItemResponse } from '@/types/api/items'
+import type { ClanProfileDraft } from '@/utils/clans'
 import { computed } from 'vue'
 
-export interface ClanProfileDraft {
-  name: string
-  tag: string
-  description: string
-  tagColor: string
-}
+type ColorKey = 'tagColor' | 'primaryColor' | 'secondaryColor'
+
+const COLOR_FIELDS: { key: ColorKey; label: string }[] = [
+  { key: 'tagColor', label: 'Tag colour' },
+  { key: 'primaryColor', label: 'Primary colour' },
+  { key: 'secondaryColor', label: 'Secondary colour' },
+]
 
 const draft = defineModel<ClanProfileDraft>({ required: true })
 
@@ -26,7 +28,6 @@ const props = defineProps<{
 }>()
 
 const neutral = getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()
-const swatch = computed(() => draft.value.tagColor || neutral)
 const tagPreview = computed(() => ({
   slug: '',
   name: draft.value.name,
@@ -35,8 +36,8 @@ const tagPreview = computed(() => ({
   equipped: props.equipped ?? [],
 }))
 
-function setColor(e: Event) {
-  draft.value = { ...draft.value, tagColor: (e.target as HTMLInputElement).value.toLowerCase() }
+function setColor(key: ColorKey, value: string) {
+  draft.value = { ...draft.value, [key]: value.toLowerCase() }
 }
 
 function setTag(value: string | number) {
@@ -78,21 +79,22 @@ function setTag(value: string | number) {
       class="clan-form__tag"
       @update:model-value="setTag"
     />
-    <div class="clan-form__color">
-      <span class="clan-form__label">Tag colour</span>
+    <div v-for="field in COLOR_FIELDS" :key="field.key" class="clan-form__color">
+      <span class="clan-form__label">{{ field.label }}</span>
       <div class="clan-form__color-row">
-        <input type="color" aria-label="Tag colour" :value="swatch" :disabled="disabled" @input="setColor" />
-        <span class="clan-form__preview"><ClanTag :clan="tagPreview" preview /></span>
-        <BaseButton
-          v-if="draft.tagColor"
-          size="sm"
+        <input
+          type="color"
+          :aria-label="field.label"
+          :value="draft[field.key] || neutral"
           :disabled="disabled"
-          @click="draft = { ...draft, tagColor: '' }"
-        >
+          @input="setColor(field.key, ($event.target as HTMLInputElement).value)"
+        />
+        <span v-if="field.key === 'tagColor'" class="clan-form__preview"><ClanTag :clan="tagPreview" preview /></span>
+        <BaseButton v-if="draft[field.key]" size="sm" :disabled="disabled" @click="setColor(field.key, '')">
           Clear
         </BaseButton>
       </div>
-      <p v-if="fieldErrors.tagColor" class="clan-form__error" role="alert">{{ fieldErrors.tagColor }}</p>
+      <p v-if="fieldErrors[field.key]" class="clan-form__error" role="alert">{{ fieldErrors[field.key] }}</p>
     </div>
     <BaseTextarea
       :model-value="draft.description"

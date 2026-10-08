@@ -1,164 +1,172 @@
 <script setup lang="ts">
-import BaseDropdown from '@/components/common/BaseDropdown.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useSharedNow } from '@/composables/useSharedNow'
-import type { ClanMemberResponse, ClanRole } from '@/types/api/clans'
-import { assignableRoles, CLAN_ROLE_LABEL, CLAN_ROLE_ORDER, CLAN_ROLE_PLURAL, hasClanRole, outranks } from '@/utils/clans'
+import type { ClanRole } from '@/types/api/clans'
+import type { PlayerRef } from '@/types/api/common'
+import type { SortState, TableColumn } from '@/types/display'
+import { assignableRoles, CLAN_ROLE_ORDER, hasClanRole, outranks } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
+import ClanLeaderTile from './ClanLeaderTile.vue'
+import ClanMemberMenu, { type MemberActions } from './ClanMemberMenu.vue'
 
 const props = defineProps<{
-  members: ClanMemberResponse[]
+  members: PlayerRef[]
   loading: boolean
   viewerRole: ClanRole | null
   viewerId: string | null
 }>()
 
 const emit = defineEmits<{
-  'change-role': [member: ClanMemberResponse, role: ClanRole]
-  kick: [member: ClanMemberResponse]
-  transfer: [member: ClanMemberResponse]
+  'change-role': [member: PlayerRef, role: ClanRole]
+  kick: [member: PlayerRef]
+  transfer: [member: PlayerRef]
   claim: []
 }>()
 
-const now = useSharedNow()
-const openMenuFor = ref<string | null>(null)
+const COLUMNS: TableColumn[] = [
+  { key: 'member', label: 'Member', align: 'left', flex: true, noLink: true },
+  { key: 'xp', label: 'Season XP', align: 'right', mono: true, sortable: true, width: '128px' },
+  { key: 'hits', label: 'Hits', align: 'right', mono: true, sortable: true, width: '88px' },
+  { key: 'breaks', label: 'Breaks', align: 'right', mono: true, sortable: true, width: '104px' },
+  { key: 'strength', label: 'Strength', align: 'right', mono: true, sortable: true, width: '120px' },
+  { key: 'played', label: 'Last played', align: 'right', sortable: true, width: '144px' },
+  { key: 'actions', label: '', align: 'right', noLink: true, width: '48px' },
+]
 
-interface RoleGroup {
-  role: ClanRole
-  label: string
-  members: ClanMemberResponse[]
+const now = useSharedNow()
+const sortState = ref<SortState>({ key: 'xp', direction: 'desc' })
+
+function seasonXp(member: PlayerRef): number {
+  return member.membership?.seasonPlayXp ?? 0
 }
 
-const groups = computed<RoleGroup[]>(() =>
-  CLAN_ROLE_ORDER.map((role) => ({
-    role,
-    label: CLAN_ROLE_PLURAL[role],
-    members: props.members.filter((m) => m.role === role),
-  })).filter((g) => g.members.length > 0),
+function roleIndex(member: PlayerRef): number {
+  return CLAN_ROLE_ORDER.indexOf(member.membership?.role ?? 'member')
+}
+
+const leaders = computed(() =>
+  props.members
+    .filter((m) => m.membership && m.membership.role !== 'member')
+    .sort((a, b) => roleIndex(a) - roleIndex(b) || seasonXp(b) - seasonXp(a)),
 )
 
-interface RowActions {
-  roles: ClanRole[]
-  kick: boolean
-  transfer: boolean
-  claim: boolean
+const rows = computed(() => {
+  const list = props.members
+    .filter((m) => !m.membership || m.membership.role === 'member')
+    .map((member) => {
+      const m = member.membership
+      return {
+        id: member.id,
+        player: member,
+        xp: m?.seasonPlayXp ?? 0,
+        hits: m?.seasonHits ?? 0,
+        breaks: m?.seasonBreaks ?? 0,
+        strength: m?.strengthShare ?? 0,
+        played: m?.lastPlayedAt ? new Date(m.lastPlayedAt).getTime() : 0,
+      }
+    })
+  const { key, direction } = sortState.value
+  const sign = direction === 'asc' ? 1 : -1
+  return list.sort((a, b) => sign * ((a[key as keyof typeof a] as number) - (b[key as keyof typeof b] as number)))
+})
+
+function onSort(key: string) {
+  const current = sortState.value
+  sortState.value = { key, direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc' }
 }
 
-function actionsFor(member: ClanMemberResponse): RowActions | null {
-  if (!props.viewerRole || member.player.id === props.viewerId) return null
-  const below = outranks(props.viewerRole, member.role)
-  const actions: RowActions = {
-    roles: assignableRoles(props.viewerRole, member.role),
+function actionsFor(member: PlayerRef): MemberActions | null {
+  const role = member.membership?.role
+  if (!props.viewerRole || !role || member.id === props.viewerId) return null
+  const below = outranks(props.viewerRole, role)
+  const actions: MemberActions = {
+    roles: assignableRoles(props.viewerRole, role),
     kick: below && hasClanRole(props.viewerRole, 'officer'),
     transfer: below && hasClanRole(props.viewerRole, 'founder'),
-    claim: member.role === 'founder' && props.viewerRole === 'commander',
+    claim: role === 'founder' && props.viewerRole === 'commander',
   }
   return actions.roles.length || actions.kick || actions.transfer || actions.claim ? actions : null
 }
 
-function lastPlayed(member: ClanMemberResponse): string {
-  return member.lastPlayedAt ? `played ${formatRelativeDate(member.lastPlayedAt, now.value)}` : 'no plays yet'
+function lastPlayed(member: PlayerRef): string {
+  const at = member.membership?.lastPlayedAt
+  return at ? formatRelativeDate(at, now.value) : 'never'
 }
 
-function run(action: () => void) {
-  openMenuFor.value = null
-  action()
+function asPlayer(row: Record<string, unknown>): PlayerRef {
+  return row.player as PlayerRef
 }
 </script>
 
 <template>
   <section class="roster">
-    <div v-if="loading" class="roster__skeleton">
-      <SkeletonLoader v-for="i in 8" :key="i" variant="table-row" />
-    </div>
+    <template v-if="loading">
+      <div class="roster__mosaic">
+        <SkeletonLoader variant="card" class="roster__skeleton-founder" />
+        <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="120px" class="roster__skeleton-wide" />
+      </div>
+      <SkeletonLoader v-for="i in 6" :key="`row-${i}`" variant="table-row" />
+    </template>
 
-    <EmptyState v-else-if="groups.length === 0" message="Nobody is in this clan yet." />
+    <EmptyState v-else-if="members.length === 0" message="Nobody is in this clan yet." />
 
     <template v-else>
-      <div v-for="group in groups" :key="group.role" class="roster__group">
-        <h2 class="roster__heading">
-          {{ group.label }}
-          <span v-if="group.role !== 'founder'" class="roster__count">{{ group.members.length }}</span>
-        </h2>
-        <ul class="roster__list">
-          <li v-for="member in group.members" :key="member.player.id" class="roster__row">
-            <span
-              class="roster__presence"
-              :class="{ 'roster__presence--online': member.online }"
-              :title="member.online ? 'Online' : 'Offline'"
-              role="img"
-              :aria-label="member.online ? 'Online' : 'Offline'"
-            />
-            <UserChip :user="member.player" link tooltip class="roster__player" />
-            <span class="roster__played">{{ lastPlayed(member) }}</span>
-            <BaseDropdown
-              v-if="actionsFor(member)"
-              :open="openMenuFor === member.player.id"
-              position="bottom-right"
-              @update:open="openMenuFor = $event ? member.player.id : null"
-            >
-              <template #trigger>
-                <button
-                  type="button"
-                  class="roster__menu-btn"
-                  :aria-label="`Manage ${member.player.name}`"
-                  :aria-expanded="openMenuFor === member.player.id"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                  </svg>
-                </button>
-              </template>
-              <div class="roster__menu" role="menu">
-                <button
-                  v-for="role in actionsFor(member)!.roles"
-                  :key="role"
-                  type="button"
-                  class="roster__item"
-                  role="menuitem"
-                  @click="run(() => emit('change-role', member, role))"
-                >
-                  Make {{ CLAN_ROLE_LABEL[role].toLowerCase() }}
-                </button>
-                <button
-                  v-if="actionsFor(member)!.transfer"
-                  type="button"
-                  class="roster__item"
-                  role="menuitem"
-                  @click="run(() => emit('transfer', member))"
-                >
-                  Transfer founder
-                </button>
-                <button
-                  v-if="actionsFor(member)!.claim"
-                  type="button"
-                  class="roster__item"
-                  role="menuitem"
-                  @click="run(() => emit('claim'))"
-                >
-                  Claim clan
-                </button>
-                <button
-                  v-if="actionsFor(member)!.kick"
-                  type="button"
-                  class="roster__item roster__item--danger"
-                  role="menuitem"
-                  @click="run(() => emit('kick', member))"
-                >
-                  Kick
-                </button>
-              </div>
-            </BaseDropdown>
-            <span v-else class="roster__menu-spacer" aria-hidden="true" />
-          </li>
-        </ul>
+      <div v-if="leaders.length" class="roster__mosaic">
+        <ClanLeaderTile
+          v-for="member in leaders"
+          :key="member.id"
+          :member="member"
+          :last-played="lastPlayed(member)"
+          :self="member.id === viewerId"
+        >
+          <ClanMemberMenu
+            v-if="actionsFor(member)"
+            :member="member"
+            :actions="actionsFor(member)!"
+            @change-role="emit('change-role', member, $event)"
+            @kick="emit('kick', member)"
+            @transfer="emit('transfer', member)"
+            @claim="emit('claim')"
+          />
+        </ClanLeaderTile>
       </div>
+
+      <section v-if="rows.length" class="roster__members">
+        <h2 class="roster__title">Members <span class="roster__count">{{ rows.length }}</span></h2>
+        <DataTable
+          :columns="COLUMNS"
+          :rows="rows"
+          :sort-state="sortState"
+          row-key="id"
+          :row-class="(row) => ({ 'roster__row--self': row.id === viewerId })"
+          @sort="onSort"
+        >
+          <template #cell-member="{ row }">
+            <span class="roster__who">
+              <UserChip :user="asPlayer(row)" link tooltip hide-clan />
+              <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
+            </span>
+          </template>
+          <template #cell-xp="{ value }">{{ Math.round(value as number).toLocaleString() }}</template>
+          <template #cell-strength="{ value }">{{ Math.round((value as number) * 100) }}%</template>
+          <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
+          <template #cell-actions="{ row }">
+            <ClanMemberMenu
+              v-if="actionsFor(asPlayer(row))"
+              :member="asPlayer(row)"
+              :actions="actionsFor(asPlayer(row))!"
+              @change-role="emit('change-role', asPlayer(row), $event)"
+              @kick="emit('kick', asPlayer(row))"
+              @transfer="emit('transfer', asPlayer(row))"
+              @claim="emit('claim')"
+            />
+          </template>
+        </DataTable>
+      </section>
     </template>
   </section>
 </template>
@@ -170,143 +178,62 @@ function run(action: () => void) {
   gap: var(--space-xl);
 }
 
-.roster__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.roster__mosaic {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  gap: var(--space-md);
 }
 
-.roster__group {
+.roster__skeleton-founder {
+  grid-column: span 2;
+  grid-row: span 2;
+  min-height: 260px;
+}
+
+.roster__skeleton-wide {
+  grid-column: span 2;
+}
+
+.roster__members {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
 }
 
-.roster__heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
+.roster__title {
   margin: 0;
-  padding-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--bg-overlay);
-  font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
+  font-size: var(--text-section-heading);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .roster__count {
   font-family: var(--font-mono);
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-tertiary);
 }
 
-.roster__list {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.roster__row {
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto 32px;
-  align-items: center;
-  gap: var(--space-md);
-  min-height: 48px;
-  padding: 0 var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.roster__row:nth-child(even) {
-  background: var(--bg-elevated);
-}
-
-.roster__presence {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-}
-
-.roster__presence--online {
-  background: var(--success);
-}
-
-.roster__played {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.roster__menu-btn {
+.roster__who {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
+  gap: var(--space-sm);
+  min-width: 0;
 }
 
-.roster__menu-btn:hover,
-.roster__menu-btn[aria-expanded='true'] {
-  color: var(--text-primary);
-  border-color: var(--bg-overlay);
-  background: var(--bg-surface);
+.roster__online {
+  font-size: var(--text-caption);
+  color: var(--success);
 }
 
-.roster__menu-spacer {
-  width: 32px;
-}
-
-.roster__menu {
-  display: flex;
-  flex-direction: column;
-  min-width: 180px;
-  padding: var(--space-xs);
-}
-
-.roster__item {
-  padding: var(--space-sm) var(--space-md);
-  font: inherit;
-  font-size: var(--text-body);
-  text-align: left;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.roster__item:hover {
-  background: var(--bg-overlay);
-}
-
-.roster__item--danger {
-  color: var(--error);
-}
-
-.roster__item--danger:hover {
-  background: color-mix(in srgb, var(--error) 12%, transparent);
+:deep(.roster__row--self) {
+  background: color-mix(in srgb, var(--clan-accent) 6%, transparent);
 }
 
 @media (max-width: 767px) {
-  .roster__row {
-    grid-template-columns: 12px minmax(0, 1fr) 32px;
-    padding: var(--space-xs) var(--space-sm);
-  }
-
-  .roster__played {
-    grid-column: 2;
-    grid-row: 2;
+  .roster__mosaic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

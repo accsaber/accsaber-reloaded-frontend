@@ -9,7 +9,7 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanItemResponse, ClanResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
 import { CLAN_ITEM_SOURCE_LABEL } from '@/utils/clans'
-import { rarityClass } from '@/utils/items'
+import { itemVariantPreviews, rarityClass } from '@/utils/items'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -33,6 +33,7 @@ const error = ref<string | null>(null)
 
 const items = computed(() => pageData.value?.content ?? [])
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
+const variants = computed(() => new Map(items.value.map((e) => [e.item.id, itemVariantPreviews(e.item)])))
 
 async function fetchItems() {
   loading.value = true
@@ -46,13 +47,18 @@ async function fetchItems() {
   }
 }
 
-async function toggleEquip(entry: ClanItemResponse) {
+function activeVariant(entry: ClanItemResponse): string | undefined {
+  if (!entry.equipped) return undefined
+  return props.clan.clan.equipped.find((i) => i.id === entry.item.id)?.variantKey ?? variants.value.get(entry.item.id)?.[0].key
+}
+
+async function toggleEquip(entry: ClanItemResponse, variantKey?: string) {
   busyId.value = entry.item.id
   error.value = null
   try {
     const { equipClanItem, unequipClanItem } = await import('@/api/clans')
-    if (entry.equipped) await unequipClanItem(props.clan.clan.id, entry.item.typeKey)
-    else await equipClanItem(props.clan.clan.id, { itemId: entry.item.id })
+    if (entry.equipped && !variantKey) await unequipClanItem(props.clan.clan.id, entry.item.typeKey)
+    else await equipClanItem(props.clan.clan.id, { itemId: entry.item.id, variantKey })
     await fetchItems()
     emit('changed')
   } catch (err) {
@@ -89,6 +95,18 @@ watch(() => route.query.page, fetchItems, { immediate: true })
         <span class="cosmetic__meta">
           <span class="cosmetic__source">{{ CLAN_ITEM_SOURCE_LABEL[entry.source] }}</span>
           <span v-if="entry.equipped" class="cosmetic__equipped">Equipped</span>
+        </span>
+        <span v-if="canCustomize && variants.get(entry.item.id)" class="cosmetic__variants">
+          <BaseButton
+            v-for="v in variants.get(entry.item.id)"
+            :key="v.key"
+            size="sm"
+            :variant="activeVariant(entry) === v.key ? 'primary' : 'default'"
+            :disabled="busyId === entry.item.id"
+            @click="toggleEquip(entry, v.key)"
+          >
+            {{ v.label }}
+          </BaseButton>
         </span>
         <BaseButton
           v-if="canCustomize"
@@ -151,6 +169,13 @@ watch(() => route.query.page, fetchItems, { immediate: true })
   background: var(--bg-base);
   border-radius: var(--radius-btn);
   overflow: hidden;
+}
+
+.cosmetic__variants {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs);
 }
 
 .cosmetic__name {

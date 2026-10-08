@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
+import TitleWithEffects from '@/components/cosmetics/titles/TitleWithEffects.vue'
 import type { PublicClanResponse } from '@/types/api/clans'
-import { readClanTitle } from '@/utils/items'
+import { readClanTitle, valueFxLayers } from '@/utils/items'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -9,10 +9,11 @@ const props = defineProps<{
 }>()
 
 const title = computed(() => readClanTitle(props.clan))
+const effects = computed(() => valueFxLayers(title.value))
 </script>
 
 <template>
-  <TitleRenderer v-if="title" class="clan-name clan-name--effect" :value="title" />
+  <TitleWithEffects v-if="title" class="clan-name clan-name--effect" :value="title" :effects="effects" />
   <span v-else class="clan-name">{{ clan.name }}</span>
 </template>
 
@@ -25,11 +26,14 @@ const title = computed(() => readClanTitle(props.clan))
 }
 
 .clan-name--effect {
+  overflow: visible;
+}
+
+.clan-name--effect :deep(.title-renderer) {
   font-family: inherit;
   font-size: inherit;
   font-weight: inherit;
   letter-spacing: inherit;
   text-transform: none;
-  overflow: visible;
 }
 </style>

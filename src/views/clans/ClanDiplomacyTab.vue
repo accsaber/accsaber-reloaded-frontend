@@ -120,6 +120,32 @@ function callRival(target: PublicClanResponse) {
   )
 }
 
+interface RivalRow {
+  clan: PublicClanResponse
+  called: ClanRivalResponse | null
+  calledBy: ClanRivalResponse | null
+}
+
+const rivals = computed<RivalRow[]>(() => {
+  const rows = new Map<string, RivalRow>()
+  for (const r of called.value) rows.set(r.clan.id, { clan: r.clan, called: r, calledBy: null })
+  for (const r of calledBy.value) {
+    const row = rows.get(r.clan.id)
+    if (row) row.calledBy = r
+    else rows.set(r.clan.id, { clan: r.clan, called: null, calledBy: r })
+  }
+  return [...rows.values()]
+})
+
+function rivalLine(row: RivalRow): string {
+  if (row.called && row.calledBy) {
+    const since = row.called.since > row.calledBy.since ? row.called.since : row.calledBy.since
+    return `Mutual since ${formatFullDate(since)}`
+  }
+  if (row.called) return `Called ${formatFullDate(row.called.since)}`
+  return `Called this clan ${formatFullDate(row.calledBy!.since)}`
+}
+
 function dropRival(rival: ClanRivalResponse) {
   return run(
     rival.clan.id,
@@ -213,29 +239,24 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
 
       <p v-if="!loading && called.length === 0 && calledBy.length === 0" class="diplomacy__empty">No rivals.</p>
 
-      <ul v-if="called.length" class="diplomacy__list">
-        <li v-for="rival in called" :key="rival.clan.id" class="diplomacy__row">
+      <ul v-if="rivals.length" class="diplomacy__list">
+        <li v-for="rival in rivals" :key="rival.clan.id" class="diplomacy__row">
           <RouterLink class="diplomacy__clan" :to="{ name: 'clan-detail', params: { slugOrId: rival.clan.slug } }">
             <ClanIcon :clan="rival.clan" :size="32" />
             <ClanTag :clan="rival.clan" size="md" effects />
             <span class="diplomacy__name">{{ rival.clan.name }}</span>
           </RouterLink>
-          <span class="diplomacy__meta">Called {{ formatFullDate(rival.since) }}</span>
+          <span class="diplomacy__meta">{{ rivalLine(rival) }}</span>
           <span class="diplomacy__actions">
-            <BaseButton v-if="isCommander" size="sm" :loading="busyId === rival.clan.id" @click="dropRival(rival)">Drop</BaseButton>
+            <BaseButton
+              v-if="isCommander && rival.called"
+              size="sm"
+              :loading="busyId === rival.clan.id"
+              @click="dropRival(rival.called)"
+            >
+              Drop
+            </BaseButton>
           </span>
-        </li>
-      </ul>
-
-      <ul v-if="calledBy.length" class="diplomacy__list">
-        <li v-for="rival in calledBy" :key="rival.clan.id" class="diplomacy__row">
-          <RouterLink class="diplomacy__clan" :to="{ name: 'clan-detail', params: { slugOrId: rival.clan.slug } }">
-            <ClanIcon :clan="rival.clan" :size="32" />
-            <ClanTag :clan="rival.clan" size="md" effects />
-            <span class="diplomacy__name">{{ rival.clan.name }}</span>
-          </RouterLink>
-          <span class="diplomacy__meta">Called this clan {{ formatFullDate(rival.since) }}</span>
-          <span class="diplomacy__actions" />
         </li>
       </ul>
     </div>

@@ -7,7 +7,6 @@ import type {
   ClanLevelResponse,
   ClanLevelStepResponse,
   ClanListParams,
-  ClanMemberResponse,
   ClanMissionListParams,
   ClanResponse,
   ClanRivalListParams,
@@ -41,6 +40,7 @@ import type {
   UpdateClanRequest,
   UpdateClanWarRequest,
 } from '@/types/api/clans'
+import type { PlayerRef } from '@/types/api/common'
 import type { ItemResponse } from '@/types/api/items'
 import type { MissionContributorResponse, MissionResponse } from '@/types/api/missions'
 import type { Page, PaginationParams } from '@/types/pagination'
@@ -77,16 +77,16 @@ export function getClanAudit(
 export function getClanMembers(
   clanId: string,
   params?: PaginationParams,
-): Promise<Page<ClanMemberResponse>> {
-  return get<Page<ClanMemberResponse>>(`/clans/${clanId}/members${buildQuery(params)}`)
+): Promise<Page<PlayerRef>> {
+  return get<Page<PlayerRef>>(`/clans/${clanId}/members${buildQuery(params)}`)
 }
 
 export function updateClanMember(
   clanId: string,
   userId: string,
   req: UpdateClanMemberRequest,
-): Promise<ClanMemberResponse> {
-  return patch<ClanMemberResponse>(`/clans/${clanId}/members/${userId}`, req)
+): Promise<PlayerRef> {
+  return patch<PlayerRef>(`/clans/${clanId}/members/${userId}`, req)
 }
 
 export function removeClanMember(clanId: string, userId: string): Promise<void> {
@@ -96,8 +96,8 @@ export function removeClanMember(clanId: string, userId: string): Promise<void> 
 export function transferClanFounder(
   clanId: string,
   req: TransferClanFounderRequest,
-): Promise<ClanMemberResponse> {
-  return patch<ClanMemberResponse>(`/clans/${clanId}/founder`, req)
+): Promise<PlayerRef> {
+  return patch<PlayerRef>(`/clans/${clanId}/founder`, req)
 }
 
 export function createClanJoinRequest(
@@ -306,7 +306,7 @@ export function getClanWarParticipants(
 
 export function getClanWarHits(
   warId: string,
-  params?: PaginationParams,
+  params?: PaginationParams & { userId?: string },
 ): Promise<Page<ClanWarHitResponse>> {
   return get<Page<ClanWarHitResponse>>(`/clans/wars/${warId}/hits${buildQuery(params)}`)
 }

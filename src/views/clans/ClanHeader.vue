@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import UserChip from '@/components/domain/UserChip.vue'
+import StatBlock from '@/components/common/StatBlock.vue'
 import type { ClanResponse, ClanStandingResponse } from '@/types/api/clans'
 import { formatStanding } from '@/utils/clans'
-import { formatFullDate } from '@/utils/formatters'
-import { pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue } from '@/utils/items'
+import { annotateEffectLayerStacks, pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue, readClanEquipped, valueFxLayers } from '@/utils/items'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -14,10 +14,7 @@ const props = defineProps<{
   standing: ClanStandingResponse | null
 }>()
 
-const banner = computed(() => {
-  const item = props.clan.clan.equipped.find((i) => i.typeKey === 'clan_banner')
-  return item ? readBackgroundValue(item.value) : null
-})
+const banner = computed(() => readClanEquipped(props.clan.clan.equipped, 'clan_banner', readBackgroundValue))
 const bannerUrl = computed(() => pickVideoOrAssetUrl(banner.value?.asset))
 const bannerIsVideo = computed(() => !!banner.value?.asset.video)
 const bannerImageUrl = computed(() => pickAssetUrl(banner.value?.asset))
@@ -29,110 +26,100 @@ const bannerStyle = computed<Record<string, string> | undefined>(() => {
   if (value.blendMode) style.mixBlendMode = value.blendMode
   return style
 })
+const bannerFx = computed(() => annotateEffectLayerStacks(valueFxLayers(banner.value)))
 const bannerFitClass = computed(() => (banner.value?.fit ? `clan-header__banner--${banner.value.fit}` : ''))
 
-const level = computed(() => props.clan.level)
-const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPercent)))
+const founded = computed(() =>
+  new Date(props.clan.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+)
 </script>
 
 <template>
   <header class="clan-header">
-    <div v-if="bannerUrl" class="clan-header__bleed" aria-hidden="true">
-      <video
-        v-if="bannerIsVideo"
-        class="clan-header__banner"
-        :class="bannerFitClass"
-        :src="bannerUrl"
-        :style="bannerStyle"
-        autoplay
-        loop
-        muted
-        playsinline
-      />
-      <div
-        v-else-if="bannerImageUrl"
-        class="clan-header__banner"
-        :class="bannerFitClass"
-        :style="{ ...bannerStyle, backgroundImage: `url(${bannerImageUrl})` }"
-      />
-    </div>
-
-    <div class="clan-header__top">
-      <slot name="top" />
-    </div>
-
-    <div class="clan-header__card">
-      <div class="clan-header__identity">
-        <ClanIcon :clan="clan.clan" :size="96" />
-        <div class="clan-header__titles">
-          <h1 class="clan-header__title">
-            <ClanTag :clan="clan.clan" size="lg" effects class="clan-header__tag" />
-            <ClanName class="clan-header__name" :clan="clan.clan" />
-          </h1>
-          <p v-if="clan.description" class="clan-header__description">{{ clan.description }}</p>
-        </div>
-        <div class="clan-header__actions">
-          <slot name="actions" />
-        </div>
+    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !bannerUrl }">
+      <template v-if="bannerUrl">
+        <video
+          v-if="bannerIsVideo"
+          class="clan-header__banner"
+          :class="bannerFitClass"
+          :src="bannerUrl"
+          :style="bannerStyle"
+          autoplay
+          loop
+          muted
+          playsinline
+          aria-hidden="true"
+        />
+        <div
+          v-else-if="bannerImageUrl"
+          class="clan-header__banner"
+          :class="bannerFitClass"
+          :style="{ ...bannerStyle, backgroundImage: `url(${bannerImageUrl})` }"
+          aria-hidden="true"
+        />
+        <span v-if="bannerFx.length" class="clan-header__fx" aria-hidden="true">
+          <ModifierCompositions
+            v-for="layer in bannerFx"
+            :key="layer.key"
+            :spec="layer.spec"
+            type-key="clan_banner"
+            :stack-index="layer.stackIndex"
+            hide-stat-counters
+          />
+        </span>
+      </template>
+      <div class="clan-header__top">
+        <slot name="top" />
       </div>
-
-      <dl class="clan-header__facts">
-        <div class="clan-header__fact clan-header__fact--level">
-          <dt>Level</dt>
-          <dd>
-            <span class="clan-header__number">{{ level.level }}</span>
-            <span class="clan-header__bar" aria-hidden="true">
-              <span class="clan-header__fill" :style="{ width: `${progress}%` }" />
-            </span>
-          </dd>
-        </div>
-        <div class="clan-header__fact">
-          <dt>Standing</dt>
-          <dd>
-            <span class="clan-header__number clan-header__number--accent">{{ formatStanding(clan.standing) }}</span>
-            <span v-if="standing" class="clan-header__rank">#{{ standing.rank }}</span>
-          </dd>
-        </div>
-        <div class="clan-header__fact">
-          <dt>Members</dt>
-          <dd><span class="clan-header__number">{{ clan.memberCount }}<span class="clan-header__cap">/{{ clan.memberCap }}</span></span></dd>
-        </div>
-        <div class="clan-header__fact clan-header__fact--founder">
-          <dt>Founded</dt>
-          <dd class="clan-header__founder">
-            <UserChip v-if="clan.founder" :user="clan.founder" size="sm" link tooltip />
-            <span class="clan-header__date">{{ formatFullDate(clan.createdAt) }}</span>
-          </dd>
-        </div>
-      </dl>
     </div>
+
+    <div class="clan-header__identity">
+      <ClanIcon :clan="clan.clan" :size="120" class="clan-header__icon" />
+      <div class="clan-header__titles">
+        <h1 class="clan-header__title">
+          <ClanTag :clan="clan.clan" size="lg" effects class="clan-header__tag" />
+          <ClanName class="clan-header__name" :clan="clan.clan" />
+        </h1>
+        <p v-if="clan.description" class="clan-header__description">{{ clan.description }}</p>
+      </div>
+      <div class="clan-header__actions">
+        <slot name="actions" />
+      </div>
+    </div>
+
+    <div class="clan-header__stats">
+      <StatBlock label="Level" :value="clan.level.level" :decimals="0" />
+      <StatBlock label="Rank" :value="standing ? `#${standing.rank}` : '-'" />
+      <StatBlock label="Standing" :value="formatStanding(clan.standing)" />
+      <StatBlock label="Members" :value="`${clan.memberCount} / ${clan.memberCap}`" />
+    </div>
+    <p class="clan-header__founded">Est. {{ founded }}</p>
   </header>
 </template>
 
 <style scoped>
 .clan-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.clan-header__band {
   position: relative;
-  padding-top: var(--space-2xl);
-}
-
-.clan-header__top {
-  position: absolute;
-  top: var(--space-sm);
-  left: 0;
-  z-index: 1;
-}
-
-.clan-header__bleed {
-  position: absolute;
-  top: calc(-1 * var(--space-xl));
-  left: calc(-1 * var(--space-xl));
-  right: calc(-1 * var(--space-xl));
-  height: 420px;
-  z-index: 0;
+  height: 280px;
+  margin: calc(-1 * var(--space-xl)) calc(-1 * var(--space-xl)) 0;
   overflow: hidden;
+}
+
+.clan-header__fx {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+}
+
+.clan-header__band--plain {
+  height: 140px;
+  background: color-mix(in oklch, var(--clan-accent) 45%, var(--bg-base));
 }
 
 .clan-header__banner {
@@ -144,6 +131,8 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
   background-position: center;
   background-repeat: no-repeat;
   object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
 }
 
 .clan-header__banner--contain {
@@ -161,23 +150,23 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
   object-fit: none;
 }
 
-.clan-header__card {
+.clan-header__top {
   position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  padding: var(--space-xl);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
+  padding: var(--space-md) var(--space-xl);
 }
 
 .clan-header__identity {
+  position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-lg);
+  margin-top: -64px;
   min-width: 0;
+}
+
+.clan-header__icon {
+  background: var(--bg-base);
+  border-radius: var(--radius-avatar);
 }
 
 .clan-header__titles {
@@ -186,27 +175,35 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
   flex-direction: column;
   gap: var(--space-xs);
   min-width: 0;
+  padding-bottom: var(--space-xs);
 }
 
 .clan-header__actions {
-  align-self: flex-start;
   flex-shrink: 0;
+  padding-bottom: var(--space-sm);
 }
 
 .clan-header__title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm) var(--space-md);
   margin: 0;
   min-width: 0;
   font-size: calc(var(--text-page-title) * 1.35);
   font-weight: 700;
+  line-height: 1.15;
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
 .clan-header__tag {
   font-size: 0.55em;
+}
+
+.clan-header__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .clan-header__description {
@@ -217,122 +214,77 @@ const progress = computed(() => Math.max(0, Math.min(100, level.value.progressPe
   color: var(--text-secondary);
 }
 
-.clan-header__facts {
+.clan-header__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-md);
-  margin: 0;
-  padding-top: var(--space-lg);
   border-top: 1px solid var(--bg-overlay);
+  border-bottom: 1px solid var(--bg-overlay);
 }
 
-.clan-header__fact {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-width: 0;
+.clan-header__stats > * + * {
+  border-inline-start: 1px solid var(--bg-overlay);
 }
 
-.clan-header__fact dt {
-  font-size: var(--text-caption);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.clan-header__fact dd {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
+.clan-header__founded {
   margin: 0;
-  min-width: 0;
-}
-
-.clan-header__number {
-  font-family: var(--font-mono);
-  font-size: var(--text-page-title);
-  font-weight: 600;
-  line-height: 1;
-  color: var(--text-primary);
-}
-
-.clan-header__number--accent {
-  color: var(--page-accent, var(--accent));
-}
-
-.clan-header__cap {
-  font-size: var(--text-card-title);
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
-.clan-header__rank {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.clan-header__bar {
-  flex: 1;
-  height: 4px;
-  min-width: 48px;
-  max-width: 140px;
-  background: var(--bg-overlay);
-  border-radius: 2px;
-  overflow: hidden;
-  align-self: center;
-}
-
-.clan-header__fill {
-  display: block;
-  height: 100%;
-  background: var(--page-accent, var(--accent));
-}
-
-.clan-header__founder {
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.clan-header__date {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
 @media (max-width: 767px) {
-  .clan-header {
-    padding-top: var(--space-lg);
+  .clan-header__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .clan-header__bleed {
-    top: calc(-1 * var(--space-md));
-    left: calc(-1 * var(--space-md));
-    right: calc(-1 * var(--space-md));
-    height: 300px;
+  .clan-header__stats > * + * {
+    border-inline-start: none;
   }
 
-  .clan-header__card {
-    padding: var(--space-lg) var(--space-md);
+  .clan-header__stats > :nth-child(even) {
+    border-inline-start: 1px solid var(--bg-overlay);
+  }
+
+  .clan-header__stats > :nth-child(n + 3) {
+    border-block-start: 1px solid var(--bg-overlay);
+  }
+
+  .clan-header__band {
+    height: 200px;
+    margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-md)) 0;
+  }
+
+  .clan-header__band--plain {
+    height: 112px;
+  }
+
+  .clan-header__top {
+    padding: var(--space-sm) var(--space-md);
   }
 
   .clan-header__identity {
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: var(--space-md);
+    margin-top: -48px;
+  }
+
+  .clan-header__icon {
+    width: 88px !important;
+    height: 88px !important;
+  }
+
+  .clan-header__titles {
+    flex-basis: 100%;
+  }
+
+  .clan-header__actions {
+    position: absolute;
+    top: 56px;
+    right: 0;
   }
 
   .clan-header__title {
-    flex-wrap: wrap;
     font-size: var(--text-page-title);
-  }
-
-  .clan-header__name {
-    white-space: normal;
-  }
-
-  .clan-header__facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

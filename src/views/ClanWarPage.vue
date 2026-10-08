@@ -6,21 +6,29 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useSharedNow } from '@/composables/useSharedNow'
 import { useAuthStore } from '@/stores/auth'
-import type { ClanWarDetailResponse, ClanWarHitResponse, ClanWarResponse } from '@/types/api/clans'
+import type {
+  ClanWarDetailResponse,
+  ClanWarHitResponse,
+  ClanWarParticipantResponse,
+  ClanWarResponse,
+  ClanWarTimelineHitResponse,
+} from '@/types/api/clans'
 import { hasClanRole } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useClanFeed } from './clans/useClanFeed'
 import { useOwnClan } from './clans/useOwnClan'
-import ClanWarHeader from './clans/war/ClanWarHeader.vue'
+import ClanWarFighters from './clans/war/ClanWarFighters.vue'
 import ClanWarHits from './clans/war/ClanWarHits.vue'
+import ClanWarHud from './clans/war/ClanWarHud.vue'
 import ClanWarLoans from './clans/war/ClanWarLoans.vue'
 import ClanWarPool from './clans/war/ClanWarPool.vue'
-import ClanWarRoster from './clans/war/ClanWarRoster.vue'
+import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
 import WarPicksModal from './clans/war/WarPicksModal.vue'
 
 const ALLIANCE_SIZE = 50
+const FIGHTERS_SIZE = 100
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -33,6 +41,9 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const reloadKey = ref(0)
 const lastHit = ref<ClanWarHitResponse | null>(null)
+const participants = ref<ClanWarParticipantResponse[] | null>(null)
+const participantsError = ref<string | null>(null)
+const liveHits = ref<ClanWarTimelineHitResponse[]>([])
 const alliedSides = ref<('attacker' | 'defender')[]>([])
 const picksOpen = ref(false)
 const retreatOpen = ref(false)
@@ -40,6 +51,8 @@ const retreating = ref(false)
 const retreatError = ref<string | null>(null)
 
 const war = computed(() => detail.value?.war ?? null)
+const fighting = computed(() => war.value?.status === 'active' || war.value?.status === 'ended')
+const timeline = computed(() => [...(detail.value?.timeline ?? []), ...liveHits.value])
 const viewerSide = computed<'attacker' | 'defender' | null>(() => {
   const ownId = own.clan.value?.id
   if (!ownId || !war.value) return null
@@ -89,6 +102,34 @@ async function load() {
   }
 }
 
+async function loadParticipants() {
+  participantsError.value = null
+  try {
+    const { getClanWarParticipants } = await import('@/api/clans')
+    participants.value = (await getClanWarParticipants(warId.value, { page: 0, size: FIGHTERS_SIZE })).content
+  } catch (err) {
+    participants.value = []
+    participantsError.value = parseApiError(err, 'Could not load the fighters.').message
+  }
+}
+
+function applyHit(hit: ClanWarHitResponse) {
+  lastHit.value = hit
+  const victim = participants.value?.find((p) => p.player.id === hit.victim.id)
+  if (victim) {
+    victim.guard = hit.guardAfter
+    if (hit.broke) victim.breaksSuffered += 1
+  }
+  const current = war.value
+  if (!current) return
+  const victimClan = victim?.clan.id ?? hit.victim.clan?.id
+  const clanId = victimClan === current.attacker.clan.id ? current.defender.clan.id : current.attacker.clan.id
+  liveHits.value = [
+    ...liveHits.value,
+    { at: hit.createdAt, clanId, damage: hit.damage, broke: hit.broke, standingMoved: hit.standingMoved },
+  ]
+}
+
 async function loadAlliedSides() {
   const ownId = own.clan.value?.id
   if (!ownId || !war.value || viewerSide.value !== null) {
@@ -112,20 +153,23 @@ function applyWar(next: ClanWarResponse) {
   detail.value.war = next
   if (statusChanged) {
     reloadKey.value += 1
+    liveHits.value = []
     void load()
+    void loadParticipants()
   }
 }
 
 useClanFeed(attackerClanId, {
   onWar: applyWar,
   onHit: (id, hit) => {
-    if (id === warId.value) lastHit.value = hit
+    if (id === warId.value) applyHit(hit)
   },
 })
 
 function onPicksSubmitted(next: ClanWarDetailResponse) {
   picksOpen.value = false
   detail.value = next
+  liveHits.value = []
   reloadKey.value += 1
 }
 
@@ -149,7 +193,9 @@ watch(
   async () => {
     detail.value = null
     lastHit.value = null
-    await Promise.all([load(), own.load()])
+    participants.value = null
+    liveHits.value = []
+    await Promise.all([load(), loadParticipants(), own.load()])
     await loadAlliedSides()
   },
   { immediate: true },
@@ -169,7 +215,19 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
     <EmptyState v-else-if="error || !war || !detail" :message="error ?? 'War not found.'" />
 
     <template v-else>
-      <ClanWarHeader :war="war" :now="now" :can-retreat="canRetreat" @retreat="retreatOpen = true" />
+      <ClanWarHud :war="war" :now="now" :can-retreat="canRetreat" @retreat="retreatOpen = true" />
+
+      <template v-if="fighting">
+        <ClanWarFighters :war="war" :participants="participants" :error="participantsError" />
+        <ClanWarTimeline :war="war" :hits="timeline" />
+        <ClanWarHits
+          :war="war"
+          :participants="participants"
+          :incoming="lastHit"
+          :reload-key="reloadKey"
+          :now="now"
+        />
+      </template>
 
       <ClanWarPool
         :war="war"
@@ -177,12 +235,9 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
         :viewer-side="viewerSide"
         :can-submit-picks="canSubmitPicks"
         :signed-in="auth.isLoggedIn"
+        :collapsible="fighting"
         @submit-picks="picksOpen = true"
       />
-
-      <ClanWarRoster :war="war" :last-hit="lastHit" :reload-key="reloadKey" />
-
-      <ClanWarHits :war-id="war.id" :incoming="lastHit" :reload-key="reloadKey" :now="now" />
 
       <ClanWarLoans
         :war="war"

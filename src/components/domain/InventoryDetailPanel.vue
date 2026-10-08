@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
-import BorderCompositionPreview from '@/components/domain/BorderCompositionPreview.vue'
+import BorderStack from '@/components/cosmetics/borders/BorderStack.vue'
 import CrateContentsList from '@/components/domain/CrateContentsList.vue'
 import CrateModifierList from '@/components/domain/CrateModifierList.vue'
 import CratePreviewModal from '@/components/domain/CratePreviewModal.vue'
@@ -244,7 +244,7 @@ onUnmounted(() => {
       class="inv-detail__art"
       :class="[rarityClass(item.rarity), { 'inv-detail__art--title-fx': item.typeKey === 'title' }]"
     >
-      <BorderCompositionPreview
+      <BorderStack
         v-if="showComposition"
         :shape="compositionShape"
         :color="compositionColor"
@@ -258,7 +258,7 @@ onUnmounted(() => {
         :spec="layer.spec"
         :context="tokenCtx"
         :type-key="item?.typeKey"
-        measure-selector=".border-composition, .title-renderer, .item-preview > *"
+        measure-selector=".border-stack, .title-renderer, .item-preview > *"
         :content-mask="effectMask"
         :host="effectHost"
       />

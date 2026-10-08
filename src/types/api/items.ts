@@ -160,7 +160,10 @@ export interface TitleSparkleSpec {
 export type TitleOrnamentIcon = 'yarn_ball' | 'alpha' | (string & {})
 
 export interface TitleOrnamentSpec {
-  icon: TitleOrnamentIcon
+  icon?: TitleOrnamentIcon
+  viewBox?: string
+  d?: string
+  fillRule?: 'evenodd'
   color?: string
   lightColor?: string
   sizeEm?: number
@@ -665,6 +668,27 @@ export interface TitleBrewSpec {
   bobEm?: number
 }
 
+export interface TitleTorchSpec {
+  enabled: boolean
+  flame?: string
+  core?: string
+  lit?: string
+  lightFlame?: string
+  lightCore?: string
+  lightLit?: string
+  stepMs?: number
+}
+
+export interface TitleWarcrySpec {
+  enabled: boolean
+  strain?: string
+  wave?: string
+  lightStrain?: string
+  lightWave?: string
+  intervalMs?: number
+  strainMs?: number
+}
+
 export interface TitleQuakeSpec {
   enabled: boolean
   stone?: string
@@ -894,6 +918,8 @@ export interface TitleValue {
   eclipse?: TitleEclipseSpec
   brew?: TitleBrewSpec
   quake?: TitleQuakeSpec
+  warcry?: TitleWarcrySpec
+  torch?: TitleTorchSpec
   gust?: TitleGustSpec
   ripple?: TitleRippleSpec
   pixie?: TitlePixieSpec
@@ -919,6 +945,7 @@ export interface TitleValue {
   excavate?: TitleExcavateSpec
   quest?: TitleQuestSpec
   scales?: TitleScalesSpec
+  fx?: ModifierEffectSpec
   variants?: ItemVariant[]
   durationMs?: number
   loop?: Loop
@@ -1169,7 +1196,21 @@ export interface BorderUmbraOverlaySpec {
   radius?: number
 }
 
+export interface BorderDragonOverlaySpec {
+  type: 'dragon'
+  enabled: boolean
+  mouth: { x: number; y: number }
+  angleDeg: number
+  core: string
+  flame: string
+  smoke: string
+  rangePct?: number
+  intervalMs?: number
+  burstMs?: number
+}
+
 export type BorderOverlaySpec =
+  | BorderDragonOverlaySpec
   | BorderUmbraOverlaySpec
   | BorderRainOverlaySpec
   | BorderDripOverlaySpec
@@ -1195,6 +1236,7 @@ export interface BorderShapeValue {
   paletteDerivation?: PaletteDerivation
   sparkles?: ShapeSparkleSpec
   glisten?: ShapeGlistenSpec
+  fx?: ModifierEffectSpec
   states: BorderShapeStateValue[]
   variants?: ItemVariant[]
   durationMs?: number
@@ -1449,6 +1491,26 @@ export interface BorderColorValue {
 
 export type ClanTitleEffectValue = Omit<TitleValue, 'text'>
 
+export interface ClanTagCap {
+  viewBox: string
+  paths: BorderShapePathValue[]
+}
+
+export interface ClanTagDecal extends Pick<BorderDecal, 'viewBox' | 'paths' | 'rotateDeg' | 'opacity' | 'pulse' | 'swing'> {
+  anchor: 'left' | 'center' | 'right'
+  xEm?: number
+  yEm?: number
+  sizeEm: number
+}
+
+export interface ClanTagCardValue {
+  left?: ClanTagCap
+  right?: ClanTagCap
+  decals?: ClanTagDecal[]
+  fx?: ModifierEffectSpec
+  variants?: ItemVariant[]
+}
+
 export interface BadgeValue {
   asset: AssetSet
   tint?: string
@@ -1469,6 +1531,8 @@ export interface ProfileBackgroundValue {
   blendMode?: BackgroundBlendMode
   filters?: VisualEffect[]
   parallax?: { depth?: number; [k: string]: unknown }
+  fx?: ModifierEffectSpec
+  variants?: ItemVariant[]
 }
 
 export interface FacetVaultScene {
@@ -1700,6 +1764,7 @@ export interface ItemResponse {
   requirement: string | null
   obtainableUntil: string | null
   createdAt: string
+  variantKey?: string
 }
 
 export interface CrateContentResponse {

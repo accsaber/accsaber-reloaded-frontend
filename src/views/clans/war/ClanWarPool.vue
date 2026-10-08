@@ -15,12 +15,16 @@ const props = defineProps<{
   viewerSide: 'attacker' | 'defender' | null
   canSubmitPicks: boolean
   signedIn: boolean
+  collapsible?: boolean
 }>()
 
 const emit = defineEmits<{
   'submit-picks': []
 }>()
 
+const expanded = ref(false)
+const showList = computed(() => !props.collapsible || expanded.value)
+const listId = `war-pool-${Math.random().toString(36).slice(2, 9)}`
 const downloading = ref(false)
 const downloadError = ref<string | null>(null)
 
@@ -50,8 +54,25 @@ async function download() {
   <section class="war-pool">
     <header class="war-pool__head">
       <h2 class="war-pool__title">
-        Pool
-        <span class="war-pool__count">{{ pool.length }}/{{ war.arenaSpec.poolSize }}</span>
+        <button
+          v-if="collapsible"
+          type="button"
+          class="war-pool__toggle"
+          :aria-expanded="expanded"
+          :aria-controls="listId"
+          @click="expanded = !expanded"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+          Pool
+          <span class="war-pool__count">{{ pool.length }} maps</span>
+        </button>
+        <template v-else>
+          Pool
+          <span class="war-pool__count">{{ pool.length }}/{{ war.arenaSpec.poolSize }}</span>
+        </template>
       </h2>
       <span class="war-pool__actions">
         <BaseButton v-if="canSubmitPicks" variant="primary" size="sm" @click="emit('submit-picks')">Submit picks</BaseButton>
@@ -63,7 +84,7 @@ async function download() {
     <p v-if="downloadError" class="war-pool__error" role="alert">{{ downloadError }}</p>
 
     <p v-if="pool.length === 0" class="war-pool__empty">No maps to show yet.</p>
-    <ul v-else class="war-pool__list">
+    <ul v-else v-show="showList" :id="listId" class="war-pool__list">
       <li v-for="entry in pool" :key="entry.difficulty.id" class="war-pool__row">
         <WarMapRow :difficulty="entry.difficulty">
           <span v-if="entry.viewerScore" class="war-pool__own">
@@ -102,6 +123,33 @@ async function download() {
   font-size: var(--text-section-heading);
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.war-pool__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.war-pool__toggle svg {
+  color: var(--text-secondary);
+  transition: transform 150ms ease-out;
+}
+
+.war-pool__toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .war-pool__toggle svg {
+    transition: none;
+  }
 }
 
 .war-pool__count {

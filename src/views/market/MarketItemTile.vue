@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BorderCompositionPreview from '@/components/domain/BorderCompositionPreview.vue'
+import BorderStack from '@/components/cosmetics/borders/BorderStack.vue'
 import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
@@ -77,7 +77,7 @@ onMounted(() => {
   >
     <span class="market-item-tile__art">
       <FragmentedItem v-if="fragmentSpec" :item="item" :spec="fragmentSpec" />
-      <BorderCompositionPreview
+      <BorderStack
         v-else-if="composedView"
         :shape="shapeValue"
         :color="colorValue"

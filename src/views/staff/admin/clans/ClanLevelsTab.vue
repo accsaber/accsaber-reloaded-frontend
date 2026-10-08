@@ -21,7 +21,6 @@ const CAPACITIES: ClanCapacity[] = [
   'member_slots',
   'officer_slots',
   'commander_slots',
-  'mission_slots',
   'ally_slots',
   'lend_slots',
   'receive_slots',

@@ -1,11 +1,11 @@
 import { useAuthStore } from '@/stores/auth'
 import type {
   ClanJoinRequestResponse,
-  ClanMemberResponse,
   ClanResponse,
   ClanRole,
   ClanStandingResponse,
 } from '@/types/api/clans'
+import type { PlayerRef } from '@/types/api/common'
 import { computed, ref, type Ref } from 'vue'
 import { useOwnClan } from './useOwnClan'
 
@@ -17,7 +17,7 @@ export function useClanPage(slugOrId: Ref<string>) {
 
   const clan = ref<ClanResponse | null>(null)
   const standing = ref<ClanStandingResponse | null>(null)
-  const members = ref<ClanMemberResponse[]>([])
+  const members = ref<PlayerRef[]>([])
   const myRequests = ref<ClanJoinRequestResponse[]>([])
   const own = useOwnClan()
   const loading = ref(true)
@@ -27,7 +27,7 @@ export function useClanPage(slugOrId: Ref<string>) {
   const viewerRole = computed<ClanRole | null>(() => {
     const id = auth.userId
     if (!id) return null
-    return members.value.find((m) => m.player.id === id)?.role ?? null
+    return members.value.find((m) => m.id === id)?.membership?.role ?? null
   })
 
   const viewerClanId = computed(() => own.clan.value?.id ?? null)
@@ -54,7 +54,9 @@ export function useClanPage(slugOrId: Ref<string>) {
   }
 
   function setOnline(playerId: string, online: boolean) {
-    members.value = members.value.map((m) => (m.player.id === playerId ? { ...m, online } : m))
+    members.value = members.value.map((m) =>
+      m.id === playerId && m.membership ? { ...m, membership: { ...m.membership, online } } : m,
+    )
   }
 
   async function loadMyRequests() {

@@ -10,7 +10,7 @@ import type { ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
-import ClanWarRow from './ClanWarRow.vue'
+import WarScorebug from './WarScorebug.vue'
 
 const PAGE_SIZE = 20
 
@@ -112,11 +112,11 @@ watch(() => [route.query.page, route.query.open, route.query.search, props.clanI
     <p v-if="error" class="war-list__error" role="alert">{{ error }}</p>
 
     <div v-if="loading && !wars" class="war-list__rows">
-      <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="140px" />
+      <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="112px" />
     </div>
     <EmptyState v-else-if="!wars?.content.length" :message="openOnly ? 'No open wars.' : 'No wars yet.'" />
     <div v-else class="war-list__rows">
-      <ClanWarRow v-for="war in wars.content" :key="war.id" :war="war" :now="now" :clan-id="clanId" />
+      <WarScorebug v-for="war in wars.content" :key="war.id" :war="war" :now="now" />
     </div>
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />

@@ -3,7 +3,8 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import type { ClanMemberResponse, ClanWarLoanResponse, ClanWarLoanStatus, ClanWarResponse } from '@/types/api/clans'
+import type { PlayerRef } from '@/types/api/common'
+import type { ClanWarLoanResponse, ClanWarLoanStatus, ClanWarResponse } from '@/types/api/clans'
 import { computed, ref, watch } from 'vue'
 import ClanLoanList from '../ClanLoanList.vue'
 
@@ -23,7 +24,7 @@ const loading = ref(true)
 const busyId = ref<string | null>(null)
 const error = ref<string | null>(null)
 const lending = ref(false)
-const members = ref<ClanMemberResponse[]>([])
+const members = ref<PlayerRef[]>([])
 const memberId = ref('')
 const sideKey = ref<'attacker' | 'defender'>('attacker')
 
@@ -32,7 +33,7 @@ const showLend = computed(() => open.value && props.canLend && props.alliedSides
 const sideOptions = computed(() =>
   props.alliedSides.map((role) => ({ value: role, label: `${props.war[role].clan.tag} (${role})` })),
 )
-const memberOptions = computed(() => members.value.map((m) => ({ value: m.player.id, label: m.player.name })))
+const memberOptions = computed(() => members.value.map((m) => ({ value: m.id, label: m.name })))
 
 function canCancel(loan: ClanWarLoanResponse): boolean {
   return props.canLend && loan.lendingClan.id === props.ownClanId
@@ -102,7 +103,7 @@ watch([() => props.war.id, () => props.reloadKey], fetchLoans, { immediate: true
 </script>
 
 <template>
-  <section class="war-loans">
+  <section v-if="showLend || loans.length" class="war-loans">
     <header class="war-loans__head">
       <h2 class="war-loans__title">Loans</h2>
       <BaseButton v-if="showLend && !lending" size="sm" @click="openLend">Lend a player</BaseButton>

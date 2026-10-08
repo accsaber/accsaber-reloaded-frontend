@@ -35,7 +35,6 @@ interface Mote {
 }
 
 let rect: TitleAuraRect | null = null
-let cw = 0
 let ch = 0
 let rays: Ray[] = []
 let motes: Mote[] = []
@@ -55,7 +54,6 @@ useElementCanvas(canvasRef, {
   init(w, h, now) {
     if (!canvasRef.value) return
     rect = titleAuraRect(canvasRef.value)
-    cw = w
     ch = h
     rays = Array.from({ length: 7 }, (_, i) => ({
       x: rect!.x + ((i + 0.5) / 7) * rect!.w + rand(-0.04, 0.04) * rect!.w,
@@ -82,14 +80,17 @@ useElementCanvas(canvasRef, {
 
     ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
 
-    const pad = ctx.createRadialGradient(
-      rect.x + rect.w / 2, bottom, 0,
-      rect.x + rect.w / 2, bottom, rect.w * 0.6,
-    )
+    const padRx = rect.w * 0.6
+    const padRy = Math.min(padRx, ch - bottom)
+    const pad = ctx.createRadialGradient(0, 0, 0, 0, 0, padRx)
     pad.addColorStop(0, withAlpha(ray, (props.light ? 0.14 : 0.18) + lift * 0.12))
     pad.addColorStop(1, withAlpha(ray, 0))
+    ctx.save()
+    ctx.translate(rect.x + rect.w / 2, bottom)
+    ctx.scale(1, padRy / padRx)
     ctx.fillStyle = pad
-    ctx.fillRect(0, 0, cw, ch)
+    ctx.fillRect(-padRx, -padRx, padRx * 2, padRx * 2)
+    ctx.restore()
 
     for (const r of rays) {
       const flicker = 0.5 + 0.3 * Math.sin(t * 1.1 + r.ph)
@@ -123,11 +124,17 @@ useElementCanvas(canvasRef, {
     if (lift > 0.25) {
       const cx = rect.x + rect.w / 2
       const cy = rect.y + rect.h / 2
-      const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, rect.w * 0.55)
+      const haloRx = rect.w * 0.55
+      const haloRy = Math.min(haloRx, cy, ch - cy)
+      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, haloRx)
       halo.addColorStop(0, withAlpha(shine, (lift - 0.25) * 0.22))
       halo.addColorStop(1, withAlpha(shine, 0))
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.scale(1, haloRy / haloRx)
       ctx.fillStyle = halo
-      ctx.fillRect(0, 0, cw, ch)
+      ctx.fillRect(-haloRx, -haloRx, haloRx * 2, haloRx * 2)
+      ctx.restore()
     }
 
     ctx.globalCompositeOperation = 'source-over'

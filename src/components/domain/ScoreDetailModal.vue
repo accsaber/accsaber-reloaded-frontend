@@ -576,11 +576,6 @@ watch(
   height: 64px;
 }
 
-.score-detail__levelbadge :deep(.level-badge__avatar-wrap) {
-  width: 56px;
-  height: 56px;
-}
-
 .score-detail__levelbadge :deep(.level-badge__below) {
   align-items: flex-start;
   width: auto;

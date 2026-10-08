@@ -1,4 +1,4 @@
-import type { PublicClanResponse } from './clans'
+import type { ClanMembershipResponse, PublicClanResponse } from './clans'
 
 export interface PlayerRef {
   id: string
@@ -7,4 +7,5 @@ export interface PlayerRef {
   cdnAvatarUrl: string | null
   country: string | null
   clan: PublicClanResponse | null
+  membership?: ClanMembershipResponse
 }

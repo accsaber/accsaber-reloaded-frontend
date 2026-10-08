@@ -16,7 +16,7 @@ import { randBetween as rand } from '@/utils/random'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { eclipsePeriod, eclipsePhase } from '@/utils/cosmetics/eclipseCycle'
-import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle } from '@/utils/cosmetics/titleSchools'
+import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle, torchCharStyle, torchFlameStyle, warcryArcStyles, warcryCharStyle } from '@/utils/cosmetics/titleSchools'
 import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
 import { lerpHex } from '@/utils/color'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -66,6 +66,8 @@ const fxEnabled = computed(() =>
     || !!props.value.eclipse?.enabled
     || !!props.value.brew?.enabled
     || !!props.value.quake?.enabled
+    || !!props.value.warcry?.enabled
+    || !!props.value.torch?.enabled
     || !!props.value.gust?.enabled
     || !!props.value.ripple?.enabled
     || !!props.value.pixie?.enabled
@@ -152,13 +154,14 @@ const BAND_WIDTH_PCT = 16
 const glistenPhase = computed<{ active: boolean; leftPct: number; highlight: string }>(() => {
   const g = state.value.glisten
   if (!g?.enabled || reducedMotion.value) return { active: false, leftPct: 0, highlight: '#ffffff' }
+  const highlight = g.highlight ?? '#ffffff'
   const interval = g.intervalMs ?? 5000
   const duration = g.durationMs ?? 800
   const cyclePos = tMs.value % interval
-  if (cyclePos > duration) return { active: false, leftPct: 0, highlight: g.highlight ?? '#ffffff' }
+  if (cyclePos > duration) return { active: false, leftPct: 0, highlight }
   const progress = cyclePos / duration
   const leftPct = -BAND_WIDTH_PCT + (100 + BAND_WIDTH_PCT * 2) * progress
-  return { active: true, leftPct, highlight: g.highlight ?? '#ffffff' }
+  return { active: true, leftPct, highlight }
 })
 
 const glistenClipStyle = computed<Record<string, string> | undefined>(() => {
@@ -230,7 +233,7 @@ const ORNAMENT_ICONS: Record<string, { viewBox: string; d: string; fillRule?: 'e
 const ornament = computed(() => {
   const spec = props.value.ornament
   if (!spec) return null
-  const icon = ORNAMENT_ICONS[spec.icon]
+  const icon = spec.d ? { viewBox: spec.viewBox ?? '0 0 24 24', d: spec.d, fillRule: spec.fillRule } : spec.icon ? ORNAMENT_ICONS[spec.icon] : null
   if (!icon) return null
   const color = (isLightBase.value ? spec.lightColor : undefined) ?? spec.color ?? 'currentColor'
   return { ...icon, color, sizeEm: spec.sizeEm ?? 1, fillRule: icon.fillRule }
@@ -529,6 +532,11 @@ const joltFlashStyle = computed<Record<string, string> | undefined>(() => {
   return { background: rgbaOf(joltFlashColor.value, fr.flash) }
 })
 
+const warcryArcs = computed(() => (warcrySpec.value ? warcryArcStyles(tMs.value, warcrySpec.value, isLightBase.value) : []))
+const torchFlame = computed(() =>
+  torchSpec.value ? torchFlameStyle(tMs.value, props.value.text.length, torchSpec.value, isLightBase.value) : null,
+)
+
 const joltRingStyles = computed<Record<string, string>[]>(() => {
   const fr = joltNow.value
   if (!fr) return []
@@ -651,6 +659,8 @@ function brewCharStyle(i: number): Record<string, string> {
 }
 
 const quakeSpec = computed(() => (props.value.quake?.enabled && !reducedMotion.value ? props.value.quake : null))
+const warcrySpec = computed(() => (props.value.warcry?.enabled && !reducedMotion.value ? props.value.warcry : null))
+const torchSpec = computed(() => (props.value.torch?.enabled && !reducedMotion.value ? props.value.torch : null))
 const gustSpec = computed(() => (props.value.gust?.enabled && !reducedMotion.value ? props.value.gust : null))
 const rippleSpec = computed(() => (props.value.ripple?.enabled && !reducedMotion.value ? props.value.ripple : null))
 const pixieSpec = computed(() => (props.value.pixie?.enabled && !reducedMotion.value ? props.value.pixie : null))
@@ -701,6 +711,8 @@ function schoolCharStyle(i: number): Record<string, string> | null {
   const n = props.value.text.length
   const base = state.value.color ?? '#e9e3d0'
   if (quakeSpec.value) return quakeCharStyle(tMs.value, i, n, quakeSpec.value, isLightBase.value, base)
+  if (warcrySpec.value) return warcryCharStyle(tMs.value, i, n, warcrySpec.value, isLightBase.value, base)
+  if (torchSpec.value) return torchCharStyle(tMs.value, i, n, torchSpec.value, isLightBase.value, base)
   if (gustSpec.value) return gustCharStyle(tMs.value, i, n, gustSpec.value)
   if (rippleSpec.value) return rippleCharStyle(tMs.value, i, n, rippleSpec.value, isLightBase.value)
   if (pixieSpec.value) return pixieCharStyle(tMs.value, i, n, pixieSpec.value, isLightBase.value)
@@ -811,7 +823,7 @@ const liftSpec = computed(() => {
 const glyphChars = computed<string[] | null>(() =>
   forgeActive.value || blazeSpec.value || liftSpec.value || hauntSpec.value
   || frostSpec.value || transmuteSpec.value || runeSpec.value || lanternSpec.value || eclipseSpec.value || brewSpec.value
-  || quakeSpec.value || gustSpec.value || rippleSpec.value || pixieSpec.value
+  || quakeSpec.value || warcrySpec.value || torchSpec.value || gustSpec.value || rippleSpec.value || pixieSpec.value
   || bleedSpec.value || galaxySpec.value || flareSpec.value || devourSpec.value || shockSpec.value || searSpec.value
   || sproutSpec.value || ascentSpec.value || sliceSpec.value || tickSpec.value || metronomeSpec.value
   || scrawlSpec.value || reelSpec.value || restartSpec.value || punchSpec.value || hammerSpec.value
@@ -1198,6 +1210,16 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
       :style="joltFlashStyle"
       aria-hidden="true"
     />
+    <span v-if="torchFlame" class="title-renderer__torch" :style="torchFlame" aria-hidden="true">
+      <span class="title-renderer__torch-core" />
+    </span>
+    <span
+      v-for="(arc, ai) in warcryArcs"
+      :key="`wa${ai}`"
+      class="title-renderer__warcry-arc"
+      :style="arc"
+      aria-hidden="true"
+    />
     <span
       v-for="(ring, ri) in joltRingStyles"
       :key="`jr${ri}`"
@@ -1306,7 +1328,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 
 .title-renderer__glint {
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 auto;
   pointer-events: none;
   z-index: 2;
   font: inherit;
@@ -1366,6 +1388,50 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   position: absolute;
   inset: -40% -30%;
   border-radius: 4px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.title-renderer__torch {
+  position: absolute;
+  top: -0.62em;
+  width: 0.5em;
+  height: 0.72em;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.title-renderer__torch::before,
+.title-renderer__torch-core {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  border-radius: 0 50% 50% 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.title-renderer__torch::before {
+  content: '';
+  width: 0.42em;
+  height: 0.42em;
+  background: var(--torch-flame);
+}
+
+.title-renderer__torch-core {
+  width: 0.2em;
+  height: 0.2em;
+  margin-bottom: 0.03em;
+  background: var(--torch-core);
+}
+
+.title-renderer__warcry-arc {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-radius: 50%;
   pointer-events: none;
   z-index: 0;
 }

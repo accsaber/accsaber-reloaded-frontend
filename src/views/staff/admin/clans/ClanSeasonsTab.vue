@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { parseApiError } from '@/api/client'
+import { ApiError, parseApiError } from '@/api/client'
 import AdminItemPicker from '@/components/admin/AdminItemPicker.vue'
 import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ClanSeasonResponse, ClanSeasonRewardResponse } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
 import { isoToLocalInput, localInputToIso, slugify } from '@/utils/events'
 import { formatFullDate } from '@/utils/formatters'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import ClanSeasonStandings from './ClanSeasonStandings.vue'
 
 interface SeasonDraft {
   name: string
@@ -23,6 +25,10 @@ interface SeasonDraft {
 const itemTypeStore = useItemTypeStore()
 
 const seasons = ref<ClanSeasonResponse[]>([])
+const current = ref<ClanSeasonResponse | null>(null)
+const page = ref(1)
+const totalPages = ref(0)
+const standingsId = ref<string | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const busy = ref(false)
@@ -46,7 +52,7 @@ const clanCosmeticTypeIds = computed(() => {
 })
 
 function recipient(item: ItemResponse): string {
-  return clanCosmeticTypeIds.value.has(item.typeId) ? 'the clan' : 'every member'
+  return clanCosmeticTypeIds.value.has(item.typeId) ? 'the clan' : 'contributing members'
 }
 
 function state(season: ClanSeasonResponse, now = Date.now()): string {
@@ -61,12 +67,30 @@ async function load() {
   error.value = null
   try {
     const { getClanSeasons } = await import('@/api/clans')
-    seasons.value = (await getClanSeasons({ page: 0, size: 50 })).content
+    const res = await getClanSeasons({ page: page.value - 1, size: 20 })
+    seasons.value = res.content
+    totalPages.value = res.totalPages
   } catch (err) {
     error.value = parseApiError(err, 'Could not load seasons.').message
   } finally {
     loading.value = false
   }
+}
+
+async function loadCurrent() {
+  try {
+    const { getClanSeason } = await import('@/api/clans')
+    current.value = await getClanSeason('current')
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 404)) {
+      error.value = parseApiError(err, 'Could not load the current season.').message
+    }
+    current.value = null
+  }
+}
+
+function toggleStandings(season: ClanSeasonResponse) {
+  standingsId.value = standingsId.value === season.id ? null : season.id
 }
 
 function openCreate() {
@@ -104,7 +128,7 @@ async function saveSeason() {
     const api = await import('@/api/admin/clans')
     const body = {
       name: draft.value.name.trim(),
-      slug: draft.value.slug.trim(),
+      slug: draft.value.slug.trim() || undefined,
       startsAt: localInputToIso(draft.value.startsAt) ?? undefined,
       endsAt: localInputToIso(draft.value.endsAt) ?? undefined,
     }
@@ -113,6 +137,7 @@ async function saveSeason() {
       ? seasons.value.map((s) => (s.id === saved.id ? saved : s))
       : [saved, ...seasons.value]
     editorOpen.value = false
+    void loadCurrent()
   } catch (err) {
     const parsed = parseApiError(err, 'Could not save the season.')
     const errors: Record<string, string> = {}
@@ -180,8 +205,11 @@ async function removeReward(reward: ClanSeasonRewardResponse) {
   }
 }
 
+watch(page, load)
+
 onMounted(() => {
   void load()
+  void loadCurrent()
   void itemTypeStore.fetchItemTypes()
 })
 </script>
@@ -196,6 +224,11 @@ onMounted(() => {
       <BaseButton variant="primary" @click="openCreate">New season</BaseButton>
     </div>
 
+    <p class="clan-seasons__current">
+      <template v-if="current">{{ current.name }} is running until {{ formatFullDate(current.endsAt) }}.</template>
+      <template v-else>No active season, wars are closed.</template>
+    </p>
+
     <p v-if="error" class="clan-seasons__error" role="alert">{{ error }}</p>
 
     <AdminTable :items="seasons" :loading="loading" :loading-rows="3" empty-message="No seasons yet">
@@ -204,12 +237,15 @@ onMounted(() => {
         <th style="width: 120px">State</th>
         <th style="width: 170px">Starts</th>
         <th style="width: 170px">Ends</th>
-        <th class="right" style="width: 200px">Actions</th>
+        <th class="right" style="width: 300px">Actions</th>
       </template>
       <template #default="{ item: season }">
         <td>
           <span class="clan-seasons__name">{{ season.name }}</span>
           <span class="clan-seasons__slug">/{{ season.slug }}</span>
+          <div v-if="standingsId === season.id" class="clan-seasons__rewards">
+            <ClanSeasonStandings :season-id="season.id" />
+          </div>
           <div v-if="expandedId === season.id" class="clan-seasons__rewards">
             <p v-if="rewardError" class="clan-seasons__error" role="alert">{{ rewardError }}</p>
             <div v-if="rewardsLoading" class="clan-seasons__reward-list">
@@ -233,6 +269,7 @@ onMounted(() => {
               </BaseButton>
               <BaseButton size="sm" variant="primary" :loading="busy" :disabled="!rewardDraft.item">Add reward</BaseButton>
             </form>
+            <p v-if="!season.closedAt" class="clan-seasons__empty">Clan cosmetics go to the clan. Any other item goes to each of the clan's contributing members.</p>
           </div>
         </td>
         <td>{{ state(season) }}</td>
@@ -240,12 +277,15 @@ onMounted(() => {
         <td>{{ formatFullDate(season.endsAt) }}</td>
         <td class="right">
           <span class="clan-seasons__actions">
+            <BaseButton size="sm" @click="toggleStandings(season)">{{ standingsId === season.id ? 'Hide standings' : 'Standings' }}</BaseButton>
             <BaseButton size="sm" @click="toggleRewards(season)">{{ expandedId === season.id ? 'Hide rewards' : 'Rewards' }}</BaseButton>
             <BaseButton v-if="!season.closedAt" size="sm" @click="openEdit(season)">Edit</BaseButton>
           </span>
         </td>
       </template>
     </AdminTable>
+
+    <PaginationControls :page="page" :total-pages="totalPages" @update:page="(p: number) => { page = p }" />
 
     <BaseModal :open="editorOpen" :title="editingId ? 'Edit season' : 'New season'" max-width="520px" @close="editorOpen = false">
       <div class="clan-seasons__form">
@@ -297,6 +337,12 @@ onMounted(() => {
   margin: 2px 0 0;
   font-size: var(--text-caption);
   color: var(--text-secondary);
+}
+
+.clan-seasons__current {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--text-primary);
 }
 
 .clan-seasons__error {

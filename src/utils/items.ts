@@ -22,6 +22,7 @@ import type {
   ItemVariant,
   Loop,
   ModifierEffectSpec,
+  ClanTagCardValue,
   PerkValue,
   ProfileBackgroundValue,
   ProfileThumbnailBackgroundValue,
@@ -168,6 +169,10 @@ export function buildEffectLayers(
     layers.push({ key: `u:${unusualEffect.id}`, spec: unusualEffect.effectSpec })
   }
   return layers
+}
+
+export function valueFxLayers(value: { fx?: ModifierEffectSpec } | null | undefined): EffectLayer[] {
+  return value?.fx?.compositions?.length ? [{ key: 'fx', spec: value.fx }] : []
 }
 
 export function unusualEffectLayers(unusualEffect?: UnusualEffectRef | null): EffectLayer[] {
@@ -328,15 +333,26 @@ export function readClanTitleEffectValue(value: unknown): ClanTitleEffectValue |
   return value as unknown as ClanTitleEffectValue
 }
 
+export function readClanEquipped<T extends { variants?: ItemVariant[] }>(
+  equipped: ItemResponse[] | null | undefined,
+  typeKey: string,
+  read: (value: unknown) => T | null,
+): T | null {
+  const item = equipped?.find((i) => i.typeKey === typeKey)
+  const value = item ? read(item.value) : null
+  return value ? resolveItemVariant(value, item?.variantKey) : null
+}
+
 export function readClanTitle(clan: { name: string; equipped: ItemResponse[] | null }): TitleValue | null {
-  const item = clan.equipped?.find((i) => i.typeKey === 'clan_title_effect')
-  const effect = item ? readClanTitleEffectValue(item.value) : null
+  const effect = readClanEquipped(clan.equipped, 'clan_title_effect', readClanTitleEffectValue)
   return effect ? { ...effect, text: clan.name } : null
 }
 
-export function readClanTagCard(equipped: ItemResponse[] | null | undefined): BorderColorValue | null {
-  const item = equipped?.find((i) => i.typeKey === 'clan_tag_card')
-  return item ? readBorderColorValue(item.value) : null
+export function readClanTagCardValue(value: unknown): ClanTagCardValue | null {
+  if (!isObj(value)) return null
+  return isObj(value.left) || isObj(value.right) || Array.isArray(value.decals) || isObj(value.fx)
+    ? (value as unknown as ClanTagCardValue)
+    : null
 }
 
 export function readBorderShapeValue(value: unknown): BorderShapeValue | null {

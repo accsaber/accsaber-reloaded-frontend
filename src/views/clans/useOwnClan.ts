@@ -19,7 +19,7 @@ export function useOwnClan() {
     try {
       const { getClanMembers } = await import('@/api/clans')
       const roster = await getClanMembers(own.id, { page: 0, size: ROSTER_SIZE })
-      role.value = roster.content.find((m) => m.player.id === id)?.role ?? null
+      role.value = roster.content.find((m) => m.id === id)?.membership?.role ?? null
     } catch {
       role.value = null
     }

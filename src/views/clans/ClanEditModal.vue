@@ -3,7 +3,8 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { ClanResponse, UpdateClanRequest } from '@/types/api/clans'
 import { ref, watch } from 'vue'
-import ClanProfileForm, { type ClanProfileDraft } from '@/components/domain/ClanProfileForm.vue'
+import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
+import { clanDraftFrom, emptyClanDraft, type ClanProfileDraft } from '@/utils/clans'
 
 const props = defineProps<{
   open: boolean
@@ -20,19 +21,14 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const draft = ref<ClanProfileDraft>({ name: '', tag: '', description: '', tagColor: '' })
+const draft = ref<ClanProfileDraft>(emptyClanDraft())
 const acceptingRequests = ref(true)
 
 watch(
   () => props.open,
   (open) => {
     if (!open) return
-    draft.value = {
-      name: props.clan.clan.name,
-      tag: props.clan.clan.tag,
-      description: props.clan.description ?? '',
-      tagColor: props.clan.clan.tagColor ?? '',
-    }
+    draft.value = clanDraftFrom(props.clan.clan, props.clan.description)
     acceptingRequests.value = props.clan.acceptingRequests
   },
   { immediate: true },
@@ -44,6 +40,8 @@ function save() {
     tag: draft.value.tag,
     description: draft.value.description,
     tagColor: draft.value.tagColor,
+    primaryColor: draft.value.primaryColor,
+    secondaryColor: draft.value.secondaryColor,
     acceptingRequests: acceptingRequests.value,
   })
 }

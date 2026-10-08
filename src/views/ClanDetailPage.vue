@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
+import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useSharedNow } from '@/composables/useSharedNow'
 import { useAuthStore } from '@/stores/auth'
-import type { ClanMemberResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
+import type { ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
+import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
-import { CLAN_ROLE_LABEL, hasClanRole } from '@/utils/clans'
+import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole } from '@/utils/clans'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -16,6 +19,7 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import ClanEditModal from './clans/ClanEditModal.vue'
 import ClanHeader from './clans/ClanHeader.vue'
 import ClanHeaderActions from './clans/ClanHeaderActions.vue'
+import ClanNowStrip from './clans/ClanNowStrip.vue'
 import ClanRosterTab from './clans/ClanRosterTab.vue'
 import { useClanChat } from './clans/useClanChat'
 import { useClanFeed } from './clans/useClanFeed'
@@ -77,26 +81,40 @@ const {
   refreshViewer,
 } = useClanPage(slugOrId)
 
+const TAB_ACCENT = 'var(--clan-accent)'
+
 const tabs = computed<Tab[]>(() => {
-  const list: Tab[] = [{ key: 'roster', label: 'Roster' }]
-  if (viewerRole.value) list.push({ key: 'chat', label: 'Chat' })
+  const list: Tab[] = [{ key: 'roster', label: 'Roster', accentColor: TAB_ACCENT }]
+  if (viewerRole.value) list.push({ key: 'chat', label: 'Chat', accentColor: TAB_ACCENT })
   list.push(
-    { key: 'wars', label: 'Wars' },
-    { key: 'missions', label: 'Missions' },
-    { key: 'diplomacy', label: 'Diplomacy' },
-    { key: 'level', label: 'Level' },
-    { key: 'standing', label: 'Standing' },
-    { key: 'cosmetics', label: 'Cosmetics' },
+    { key: 'wars', label: 'Wars', accentColor: TAB_ACCENT },
+    { key: 'level', label: 'Level', accentColor: TAB_ACCENT },
+    { key: 'standing', label: 'Standing', accentColor: TAB_ACCENT },
+    { key: 'missions', label: 'Missions', accentColor: TAB_ACCENT },
+    { key: 'diplomacy', label: 'Diplomacy', accentColor: TAB_ACCENT },
   )
+  return list
+})
+
+const manageTabs = computed<Tab[]>(() => {
+  if (!viewerRole.value) return []
+  const list: Tab[] = [{ key: 'cosmetics', label: 'Cosmetics' }]
   if (hasClanRole(viewerRole.value, 'officer')) list.push({ key: 'requests', label: 'Requests' })
-  if (viewerRole.value) list.push({ key: 'audit', label: 'Audit' })
+  list.push({ key: 'audit', label: 'Audit' })
   return list
 })
 
 const activeTab = computed<ClanTab>(() => {
   const requested = route.query.tab
-  return tabs.value.some((t) => t.key === requested) ? (requested as ClanTab) : 'roster'
+  return [...tabs.value, ...manageTabs.value].some((t) => t.key === requested) ? (requested as ClanTab) : 'roster'
 })
+const activeManage = computed(() => manageTabs.value.find((t) => t.key === activeTab.value) ?? null)
+const manageOpen = ref(false)
+
+function pickManage(tab: string) {
+  manageOpen.value = false
+  setTab(tab)
+}
 
 const isFounder = computed(() => hasClanRole(viewerRole.value, 'founder'))
 const breadcrumbs = computed<Crumb[]>(() => [
@@ -114,12 +132,28 @@ const { chat, notices, status: chatStatus } = useClanChat(chatClanId, isMember, 
   },
 })
 
+const now = useSharedNow()
 const latestWar = ref<ClanWarResponse | null>(null)
+const recentWar = ref<ClanWarResponse | null>(null)
 useClanFeed(chatClanId, {
   onWar: (war) => {
     latestWar.value = war
+    recentWar.value = war
   },
 })
+
+async function loadRecentWar(clanId: string | null) {
+  recentWar.value = null
+  if (!clanId) return
+  try {
+    const { getClanWars } = await import('@/api/clans')
+    recentWar.value = (await getClanWars({ clanId, page: 0, size: 1 })).content[0] ?? null
+  } catch {
+    recentWar.value = null
+  }
+}
+
+watch(chatClanId, loadRecentWar, { immediate: true })
 
 const declareOpen = ref(false)
 
@@ -249,31 +283,31 @@ function askDisband() {
   })
 }
 
-function askKick(member: ClanMemberResponse) {
+function askKick(member: PlayerRef) {
   const id = clan.value!.clan.id
   ask({
-    title: `Kick ${member.player.name}`,
-    message: `${member.player.name} is out of the clan right away, and their join cooldown is cleared because it was not their call.`,
+    title: `Kick ${member.name}`,
+    message: `${member.name} is out of the clan right away, and their join cooldown is cleared because it was not their call.`,
     confirmLabel: 'Kick',
     destructive: true,
     run: async () => {
       const { removeClanMember } = await import('@/api/clans')
-      await removeClanMember(id, member.player.id)
+      await removeClanMember(id, member.id)
       await reload()
     },
   })
 }
 
-function askTransfer(member: ClanMemberResponse) {
+function askTransfer(member: PlayerRef) {
   const id = clan.value!.clan.id
   ask({
     title: 'Transfer founder',
-    message: `${member.player.name} becomes Founder and you give up the rank, so only they can hand it back.`,
+    message: `${member.name} becomes Founder and you give up the rank, so only they can hand it back.`,
     confirmLabel: 'Transfer',
     destructive: true,
     run: async () => {
       const { transferClanFounder } = await import('@/api/clans')
-      await transferClanFounder(id, { userId: member.player.id })
+      await transferClanFounder(id, { userId: member.id })
       await reload()
     },
   })
@@ -294,13 +328,13 @@ function actAsOwnClan(action: 'ally' | 'rival') {
   )
 }
 
-function changeRole(member: ClanMemberResponse, role: ClanRole) {
+function changeRole(member: PlayerRef, role: ClanRole) {
   const id = clan.value!.clan.id
   return runAction(async () => {
     const { updateClanMember } = await import('@/api/clans')
-    await updateClanMember(id, member.player.id, { role })
+    await updateClanMember(id, member.id, { role })
     await reload()
-  }, `Could not make ${member.player.name} ${CLAN_ROLE_LABEL[role].toLowerCase()}.`)
+  }, `Could not make ${member.name} ${CLAN_ROLE_LABEL[role].toLowerCase()}.`)
 }
 
 function claimClan() {
@@ -364,7 +398,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
 </script>
 
 <template>
-  <div class="clan-page">
+  <div class="clan-page clan-colors" :style="clan ? clanColorVars(clan.clan) : undefined">
     <template v-if="loading">
       <SkeletonLoader variant="card" height="260px" />
       <SkeletonLoader variant="text" :lines="4" />
@@ -400,7 +434,44 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         </template>
       </ClanHeader>
 
-      <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="setTab" />
+      <ClanNowStrip :clan-id="clan.clan.id" :war="recentWar" :level="clan.level" :now="now" :show-level="activeTab !== 'level'" />
+
+      <div class="clan-page__tabs">
+        <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="setTab" />
+        <BaseDropdown
+          v-if="manageTabs.length"
+          :open="manageOpen"
+          position="bottom-right"
+          @update:open="manageOpen = $event"
+        >
+          <template #trigger>
+            <button
+              type="button"
+              class="clan-page__manage"
+              :class="{ 'clan-page__manage--active': activeManage }"
+              :aria-expanded="manageOpen"
+            >
+              {{ activeManage?.label ?? 'Manage' }}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          </template>
+          <div class="clan-page__manage-menu" role="menu">
+            <button
+              v-for="tab in manageTabs"
+              :key="tab.key"
+              type="button"
+              class="clan-page__manage-item"
+              role="menuitem"
+              @click="pickManage(tab.key)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+        </BaseDropdown>
+      </div>
 
       <ClanRosterTab
         v-if="activeTab === 'roster'"
@@ -475,6 +546,83 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
+}
+
+.clan-page__tabs {
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--bg-overlay);
+}
+
+.clan-page__tabs :deep(.base-tabs) {
+  flex: 1;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: none;
+  scrollbar-width: none;
+}
+
+.clan-page__tabs :deep(.base-tabs__tab) {
+  white-space: nowrap;
+}
+
+.clan-page__manage {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.clan-page__manage:hover {
+  color: var(--text-primary);
+}
+
+.clan-page__manage--active {
+  font-weight: 600;
+  color: var(--clan-accent);
+}
+
+.clan-page__manage--active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--clan-accent);
+}
+
+.clan-page__manage-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--space-xs);
+}
+
+.clan-page__manage-item {
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  font-size: var(--text-body);
+  text-align: left;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+}
+
+.clan-page__manage-item:hover {
+  background: var(--bg-overlay);
 }
 
 .clan-page__notice {
