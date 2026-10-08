@@ -18,8 +18,11 @@ const props = defineProps<{
 const router = useRouter()
 const openAttack = ref<ClanWarResponse | null>(null)
 const declareOpen = ref(false)
+const seasonRunning = ref(false)
 
-const canDeclare = computed(() => hasClanRole(props.viewerRole, 'commander') && openAttack.value === null)
+const canDeclare = computed(
+  () => seasonRunning.value && hasClanRole(props.viewerRole, 'commander') && openAttack.value === null,
+)
 
 async function fetchOpenAttack() {
   try {
@@ -52,7 +55,7 @@ watch(() => props.clan.clan.id, fetchOpenAttack, { immediate: true })
     <div v-if="canDeclare" class="clan-wars__actions">
       <BaseButton variant="destructive" size="sm" @click="declareOpen = true">Declare war</BaseButton>
     </div>
-    <ClanWarList :clan-id="clan.clan.id" :latest-war="latestWar" />
+    <ClanWarList :clan-id="clan.clan.id" :latest-war="latestWar" @season="seasonRunning = $event" />
     <DeclareWarModal :open="declareOpen" :own-clan-id="clan.clan.id" @close="declareOpen = false" @declared="onDeclared" />
   </section>
 </template>

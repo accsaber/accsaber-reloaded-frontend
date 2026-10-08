@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { parseApiError } from '@/api/client'
+import { ApiError, parseApiError } from '@/api/client'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
@@ -19,6 +19,8 @@ const props = defineProps<{
   latestWar?: ClanWarResponse | null
 }>()
 
+const emit = defineEmits<{ season: [running: boolean] }>()
+
 const route = useRoute()
 const router = useRouter()
 const now = useSharedNow()
@@ -33,10 +35,15 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 const wars = ref<Page<ClanWarResponse> | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const seasonRunning = ref(true)
 
 const openOnly = computed(() => route.query.open === '1')
 const search = ref(String(route.query.search ?? ''))
 const totalPages = computed(() => wars.value?.totalPages ?? 0)
+const emptyMessage = computed(() => {
+  if (!seasonRunning.value) return 'No season is running.'
+  return openOnly.value ? 'No open wars.' : 'No wars yet.'
+})
 
 watch(search, (value) => {
   const query: LocationQueryRaw = { ...route.query, search: value.trim() || undefined, page: undefined }
@@ -78,7 +85,19 @@ watch(
   },
 )
 
+async function fetchSeason() {
+  try {
+    const { getClanSeason } = await import('@/api/clans')
+    const season = await getClanSeason('current')
+    seasonRunning.value = !season.closedAt
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) seasonRunning.value = false
+  }
+  emit('season', seasonRunning.value)
+}
+
 watch(() => [route.query.page, route.query.open, route.query.search, props.clanId], fetchWars, { immediate: true })
+fetchSeason()
 </script>
 
 <template>
@@ -114,7 +133,7 @@ watch(() => [route.query.page, route.query.open, route.query.search, props.clanI
     <div v-if="loading && !wars" class="war-list__rows">
       <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="112px" />
     </div>
-    <EmptyState v-else-if="!wars?.content.length" :message="openOnly ? 'No open wars.' : 'No wars yet.'" />
+    <EmptyState v-else-if="!wars?.content.length" :message="emptyMessage" />
     <div v-else class="war-list__rows">
       <WarScorebug v-for="war in wars.content" :key="war.id" :war="war" :now="now" />
     </div>

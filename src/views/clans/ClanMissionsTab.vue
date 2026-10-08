@@ -114,7 +114,7 @@ watch(() => [route.query.page, route.query.missions, props.isMember], fetchMissi
 
     <EmptyState
       v-else-if="missions.length === 0"
-      :message="showHistory ? 'No finished missions yet.' : 'No missions running.'"
+      :message="showHistory ? 'No finished missions yet.' : 'New missions arrive with the weekly reset.'"
     />
 
     <div v-else class="clan-missions__list">
