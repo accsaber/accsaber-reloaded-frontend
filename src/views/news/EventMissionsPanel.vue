@@ -223,7 +223,7 @@ watch(
           <div v-if="showGroupLabels || joinPrompt" class="group__head">
             <span v-if="showGroupLabels" class="group__label">Community</span>
             <span v-if="showGroupLabels" class="group__note">
-              Optional, only personal missions unlock the next week.
+              Optional
             </span>
             <span v-if="joinPrompt" class="group__join">Join the event to contribute.</span>
           </div>

@@ -6,7 +6,6 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   bySource: Partial<Record<ClanXpSource, number>>
-  rosterFactor?: number
 }>()
 
 const rows = computed(() => {
@@ -17,7 +16,6 @@ const rows = computed(() => {
     .map(([source, xp]) => ({ source, label: CLAN_XP_SOURCE_LABEL[source], xp, share: xp / top }))
 })
 const total = computed(() => rows.value.reduce((sum, row) => sum + row.xp, 0))
-const kept = computed(() => (props.rosterFactor ? Math.round(100 / props.rosterFactor) : null))
 </script>
 
 <template>
@@ -25,9 +23,6 @@ const kept = computed(() => (props.rosterFactor ? Math.round(100 / props.rosterF
     <p class="xp-summary__line">
       <template v-if="rows.length">{{ Math.round(total).toLocaleString() }} XP banked this season.</template>
       <template v-else>No XP banked this season yet.</template>
-      <template v-if="kept !== null">
-        Bigger clans keep less of each grant so small clans can keep up. Yours keeps {{ kept }}%.
-      </template>
     </p>
     <dl v-if="rows.length" class="xp-summary__rows">
       <div v-for="row in rows" :key="row.source" class="xp-summary__row">

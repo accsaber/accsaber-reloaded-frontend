@@ -137,8 +137,7 @@ watch([filter, currentPage, () => authStore.isLoggedIn], fetchPage)
 
 <template>
   <div class="notifications-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
-    <PageHeaderBleed title="Notifications"
-      subtitle="Trades, market activity, drops, and announcements" />
+    <PageHeaderBleed title="Notifications" />
 
     <template v-if="authStore.isLoggedIn">
       <div class="notifications-page__toolbar">

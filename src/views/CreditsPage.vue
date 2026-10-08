@@ -84,9 +84,6 @@ function tierLabel(tier: SupporterTier): string {
     <header class="credits__header">
       <p class="credits__eyebrow">Credits</p>
       <h1 class="credits__title">The supporters of AccSaber</h1>
-      <p class="credits__subtitle">
-        Server bills, domain, assets, dev time. The names below keep this place running.
-      </p>
     </header>
 
     <div v-if="loading" class="credits__loading" aria-busy="true">
@@ -171,14 +168,6 @@ function tierLabel(tier: SupporterTier): string {
   line-height: 1.2;
   color: var(--text-primary);
   letter-spacing: -0.01em;
-}
-
-.credits__subtitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--text-secondary);
-  max-width: 56ch;
 }
 
 .credits__loading {

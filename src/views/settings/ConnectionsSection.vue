@@ -49,9 +49,6 @@ async function disconnect(provider: OAuthProvider) {
   <section class="settings-card">
     <header class="settings-card__header">
       <h2 class="settings-card__title">Linked accounts</h2>
-      <p class="settings-card__desc">
-        Keep at least one linked account so you can sign back in.
-      </p>
     </header>
 
     <ul class="connections">
@@ -77,7 +74,6 @@ async function disconnect(provider: OAuthProvider) {
   <section v-if="availableLinkProviders.length" class="settings-card">
     <header class="settings-card__header">
       <h2 class="settings-card__title">Link another account</h2>
-      <p class="settings-card__desc">Connect additional sign-in methods for easier access.</p>
     </header>
 
     <div class="provider-grid">

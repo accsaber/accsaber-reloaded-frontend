@@ -52,10 +52,7 @@ watch(
 <template>
   <BaseModal :open="open" title="Submit picks" max-width="640px" @close="emit('close')">
     <div class="picks">
-      <p class="picks__hint">
-        Pick {{ count }} maps. Any pick the attacker also made gets swapped for a random one, and if the window
-        runs out your whole half rolls at random.
-      </p>
+      <p class="picks__hint">Pick {{ count }} maps.</p>
       <WarMapPicker
         v-model="picks"
         :count="count"

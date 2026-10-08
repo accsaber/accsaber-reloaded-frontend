@@ -52,7 +52,6 @@ function cancel() {
           </span>
           <span class="provider__body">
             <span class="provider__label">Continue with BeatLeader</span>
-            <span class="provider__hint">If your scores are on BeatLeader</span>
           </span>
           <span class="provider__chev" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
@@ -71,7 +70,6 @@ function cancel() {
           </span>
           <span class="provider__body">
             <span class="provider__label">Continue with Steam</span>
-            <span class="provider__hint">If your scores are on ScoreSaber</span>
           </span>
           <span class="provider__chev" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
@@ -205,11 +203,6 @@ function cancel() {
   font-size: var(--text-body);
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.provider__hint {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .provider__chev {

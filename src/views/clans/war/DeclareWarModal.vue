@@ -248,7 +248,7 @@ watch(arena, () => {
 
       <section v-if="arena !== 'random'" class="declare__step">
         <h3 class="declare__label">Your picks</h3>
-        <p v-if="!target" class="declare__hint">Pick a target first, the pick count depends on both Standings.</p>
+        <p v-if="!target" class="declare__hint">Pick a target first.</p>
         <p v-else-if="targetStanding === null" class="declare__hint">Working out the pick count...</p>
         <WarMapPicker
           v-else
@@ -261,7 +261,6 @@ watch(arena, () => {
         />
         <p v-if="fieldErrors.mapDifficultyIds" class="declare__error" role="alert">{{ fieldErrors.mapDifficultyIds }}</p>
       </section>
-      <p v-else class="declare__hint">A random arena takes no picks, the whole pool rolls at random.</p>
 
       <p v-if="error" class="declare__error" role="alert">{{ error }}</p>
     </div>

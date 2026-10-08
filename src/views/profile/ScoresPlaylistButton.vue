@@ -48,7 +48,6 @@ function download(params: UserScoresParams) {
         This page
         <span v-if="params.size" class="spl__count">{{ params.size }}</span>
       </button>
-      <p class="spl__note">It keeps your sorting and filters.</p>
     </div>
   </BaseDropdown>
 </template>
@@ -130,13 +129,5 @@ function download(params: UserScoresParams) {
   height: 1px;
   background: var(--bg-overlay);
   margin: var(--space-xs) 0;
-}
-
-.spl__note {
-  margin: var(--space-xs) 0 0;
-  padding: 0 var(--space-sm);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.4;
 }
 </style>

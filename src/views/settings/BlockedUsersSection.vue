@@ -33,10 +33,6 @@ async function unblock(item: UserRelationResponse) {
   <section class="settings-card">
     <header class="settings-card__header">
       <h2 class="settings-card__title">Blocked users</h2>
-      <p class="settings-card__desc">
-        Blocked users can't follow or rival you, and their stats and scores are hidden from you.
-        Only you can see this list.
-      </p>
     </header>
 
     <p v-if="blocked.length === 0" class="blocked-users__empty">You haven't blocked anyone.</p>

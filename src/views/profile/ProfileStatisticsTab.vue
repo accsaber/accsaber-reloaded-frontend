@@ -138,7 +138,7 @@ watch(
           <span class="clan-record__role">{{ clanRoleLine }}</span>
         </div>
         <p v-else class="clan-record__note">
-          Not in a clan today. This record covers wars fought for clans they have since left.
+          Not in a clan.
         </p>
         <div class="clan-record__grid">
           <StatBlock label="Wars Fought" :value="clanStats.warsFought" :decimals="0" />

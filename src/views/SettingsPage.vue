@@ -50,16 +50,14 @@ const VISIBILITY_OPTIONS = [
   { value: 'private' as const, label: 'Private', description: 'Only you.' },
 ]
 
-const PRIVACY_CONTROLS: { key: keyof PrivacySettings; title: string; hint: string }[] = [
+const PRIVACY_CONTROLS: { key: keyof PrivacySettings; title: string }[] = [
   {
     key: 'privacy.followingVisibility',
     title: 'Following list',
-    hint: 'Controls who can see the count and list of users you follow.',
   },
   {
     key: 'privacy.rivalsVisibility',
     title: 'Rivals list',
-    hint: 'Controls who can see the count and list of users you have rivaled.',
   },
 ]
 
@@ -264,7 +262,7 @@ watch(activeSection, (section) => {
 
 <template>
   <div class="settings" :style="{ '--page-accent': 'var(--accent-overall)' }">
-    <PageHeaderBleed title="Settings" subtitle="Preferences and linked accounts" />
+    <PageHeaderBleed title="Settings" />
 
     <div class="settings__layout">
       <nav class="settings__nav" aria-label="Settings sections">
@@ -287,9 +285,6 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Theme</h2>
-              <p class="settings-card__desc">
-                Choose a theme. Defaults are always available; inventory themes unlock as you earn them.
-              </p>
             </header>
             <ThemeCatalog />
           </section>
@@ -297,18 +292,11 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Replay service</h2>
-              <p class="settings-card__desc">
-                Pick which replay viewer opens when you click a replay on a score.
-              </p>
             </header>
 
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Primary replay service</span>
-                <span class="settings-row__hint">
-                  Used when only one replay button fits. In the score detail modal the chosen
-                  service is shown first.
-                </span>
               </div>
               <SettingsPicker :model-value="primaryReplayService" :options="REPLAY_SERVICE_OPTIONS"
                 aria-label="Primary replay service" :disabled="settingsStore.appearanceSaving"
@@ -318,9 +306,6 @@ watch(activeSection, (section) => {
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Fallback replay service</span>
-                <span class="settings-row__hint">
-                  Tried once when the primary service cannot open a replay.
-                </span>
               </div>
               <SettingsPicker :model-value="rawFallbackReplayService ?? ''" :options="fallbackReplayOptions"
                 aria-label="Fallback replay service" :disabled="settingsStore.appearanceSaving"
@@ -335,15 +320,11 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Complexity</h2>
-              <p class="settings-card__desc">
-                How map complexity is rendered everywhere it appears.
-              </p>
             </header>
 
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Number style</span>
-                <span class="settings-row__hint">The value itself is always shown.</span>
               </div>
               <SettingsPicker :model-value="complexityNumberStyle" :options="COMPLEXITY_STYLE_OPTIONS"
                 aria-label="Complexity number style" :disabled="settingsStore.appearanceSaving"
@@ -353,7 +334,6 @@ watch(activeSection, (section) => {
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Complexity bar</span>
-                <span class="settings-row__hint">The gradient scale bar under the number.</span>
               </div>
               <SettingsPicker :model-value="complexityBar" :options="ON_OFF_OPTIONS"
                 aria-label="Complexity bar" :disabled="settingsStore.appearanceSaving"
@@ -364,10 +344,6 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Score rows</h2>
-              <p class="settings-card__desc">
-                Pick which fields score rows show and in what order, on profiles and map
-                leaderboards. Drag a row or use the arrows to reorder.
-              </p>
             </header>
 
             <ScoreFieldEditor :model-value="scoreRowFields" :disabled="settingsStore.appearanceSaving"
@@ -377,19 +353,11 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Profiles</h2>
-              <p class="settings-card__desc">
-                How other players' profiles render for you. These apply to every profile,
-                including your own.
-              </p>
             </header>
 
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Hide profile extras</span>
-                <span class="settings-row__hint">
-                  Hides the about section, pinned scores and level badge, and renders avatar
-                  borders as a plain gray shape.
-                </span>
               </div>
               <SettingsPicker :model-value="hideReloadedProfileFeatures" :options="ON_OFF_OPTIONS"
                 aria-label="Hide profile extras" :disabled="settingsStore.appearanceSaving"
@@ -399,9 +367,6 @@ watch(activeSection, (section) => {
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Statistics chart on profile</span>
-                <span class="settings-row__hint">
-                  Shows the history chart inline on the profile, not just under Statistics.
-                </span>
               </div>
               <SettingsPicker :model-value="showStatisticsChart" :options="ON_OFF_OPTIONS"
                 aria-label="Statistics chart on profile" :disabled="settingsStore.appearanceSaving"
@@ -412,9 +377,6 @@ watch(activeSection, (section) => {
           <section v-if="!canAccessAccount" class="settings-card settings-card--gated">
             <header class="settings-card__header">
               <h2 class="settings-card__title">More options locked</h2>
-              <p class="settings-card__desc">
-                Sign in to manage your account and linked accounts.
-              </p>
             </header>
             <BaseButton variant="primary" @click="loginModalOpen = true">Sign in</BaseButton>
           </section>
@@ -428,16 +390,11 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Privacy</h2>
-              <p class="settings-card__desc">
-                Control who can see your following and rivals lists. Your followers and people who
-                rival you are always visible.
-              </p>
             </header>
 
             <div v-for="control in PRIVACY_CONTROLS" :key="control.key" class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">{{ control.title }}</span>
-                <span class="settings-row__hint">{{ control.hint }}</span>
               </div>
               <SettingsPicker :model-value="settingsStore.privacy[control.key] as Visibility"
                 :options="VISIBILITY_OPTIONS"
@@ -457,7 +414,6 @@ watch(activeSection, (section) => {
           <section class="settings-card">
             <header class="settings-card__header">
               <h2 class="settings-card__title">Account</h2>
-              <p class="settings-card__desc">Your public profile across AccSaber.</p>
             </header>
 
             <div v-if="me" class="settings-profile settings-profile--with-uploader">
@@ -476,9 +432,6 @@ watch(activeSection, (section) => {
             <div v-if="isLoggedIn" class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sync display name from BeatLeader / ScoreSaber</span>
-                <span class="settings-row__hint">
-                  When off, your custom name stays put. When on, your platform name overwrites it once a day (4 AM).
-                </span>
                 <span v-if="syncResyncQueued" class="settings-row__notice">
                   Will resync on the next refresh.
                 </span>
@@ -491,10 +444,6 @@ watch(activeSection, (section) => {
             <div v-if="isLoggedIn" class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sync avatar from BeatLeader / ScoreSaber</span>
-                <span class="settings-row__hint">
-                  Uploading a custom avatar turns this off automatically. Turn it back on to let the daily refresh
-                  pull your platform avatar again.
-                </span>
                 <span v-if="avatarResyncQueued" class="settings-row__notice">
                   Will resync on the next refresh.
                 </span>
@@ -512,11 +461,6 @@ watch(activeSection, (section) => {
             <div class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sign out</span>
-                <span class="settings-row__hint">
-                  {{ isRankingSubdomain
-                    ? 'Signs you out of ranking and across AccSaber.'
-                    : 'Clears your session on this device.' }}
-                </span>
               </div>
               <BaseButton variant="destructive" @click="logoutConfirm = true">Log out</BaseButton>
             </div>

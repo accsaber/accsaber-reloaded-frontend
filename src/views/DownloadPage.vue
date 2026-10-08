@@ -22,7 +22,6 @@ usePageMeta({
 
     <header class="download__header">
       <h1 class="download__title">Download</h1>
-      <p class="download__sub">Pick your platform.</p>
     </header>
 
     <div class="download__options">
@@ -88,12 +87,6 @@ usePageMeta({
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 var(--space-sm);
-}
-
-.download__sub {
-  font-size: var(--text-body);
-  color: var(--text-secondary);
-  margin: 0;
 }
 
 .download__options {

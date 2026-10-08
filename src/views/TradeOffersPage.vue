@@ -149,7 +149,7 @@ const incomingPendingLabel = computed(() => `(${tradeStore.pendingIncomingCount}
   <div class="trades-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
     <Breadcrumbs class="trades-page__breadcrumbs" :crumbs="breadcrumbs" />
 
-    <PageHeaderBleed title="Trade Offers" subtitle="Items you can trade with other AccSaber players" />
+    <PageHeaderBleed title="Trade Offers" />
 
     <div v-if="!isLoggedIn" class="trades-page__gate">
       <EmptyState message="Sign in to view your trade offers." />

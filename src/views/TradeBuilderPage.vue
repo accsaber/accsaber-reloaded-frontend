@@ -347,7 +347,6 @@ onMounted(() => {
 
     <PageHeaderBleed
       title="New Trade Offer"
-      subtitle="Build an offer with up to 8 items on each side."
     />
 
     <div v-if="!isLoggedIn" class="trade-builder__gate">
@@ -438,7 +437,6 @@ onMounted(() => {
               @update:page="(p) => myInvCurrentPage = p"
             />
 
-            <p class="trade-builder__hint">Displaying tradable items only.</p>
           </div>
 
           <div v-else-if="activeTab === 'theirs'" class="trade-builder__pane">
@@ -477,7 +475,6 @@ onMounted(() => {
               @update:page="(p) => theirInvCurrentPage = p"
             />
 
-            <p class="trade-builder__hint">Displaying tradable items only.</p>
           </div>
         </section>
 

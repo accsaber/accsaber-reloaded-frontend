@@ -73,9 +73,6 @@ watch(
 
 <template>
   <BaseModal open :title="mission.name" max-width="620px" @close="emit('close')">
-    <p class="contrib__lead">
-      Every contributor earns the full reward, however small their share.
-    </p>
 
     <div v-if="loading && !rows.length" class="contrib__skeletons">
       <SkeletonLoader v-for="n in 6" :key="n" variant="table-row" />
@@ -103,12 +100,6 @@ watch(
 </template>
 
 <style scoped>
-.contrib__lead {
-  margin: 0 0 var(--space-md);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
 .contrib__skeletons {
   display: flex;
   flex-direction: column;

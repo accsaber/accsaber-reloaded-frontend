@@ -232,7 +232,6 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
       <ClanWarPool
         :war="war"
         :pool="detail.pool"
-        :viewer-side="viewerSide"
         :can-submit-picks="canSubmitPicks"
         :signed-in="auth.isLoggedIn"
         :collapsible="fighting"

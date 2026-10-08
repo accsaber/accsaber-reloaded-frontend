@@ -358,7 +358,7 @@ watch(
 
 <template>
   <div class="campaigns-page" style="--page-accent: var(--accent-overall);">
-    <PageHeaderBleed title="Campaigns" subtitle="custom journeys through ranked maps" />
+    <PageHeaderBleed title="Campaigns" />
 
     <div class="campaigns-page__bar">
       <nav class="campaigns-page__panes" aria-label="Campaign panes">

@@ -37,10 +37,10 @@ const inventoryStore = useInventoryStore()
 
 type ListingMode = 'auction' | 'shop' | 'auction_buyout'
 
-const MODE_OPTIONS: { value: ListingMode; label: string; hint: string }[] = [
-  { value: 'auction', label: 'Auction', hint: 'Bidders compete; the highest bid wins when time runs out.' },
-  { value: 'shop', label: 'Buy now', hint: 'Fixed price. The first buyer takes it.' },
-  { value: 'auction_buyout', label: 'Auction + buyout', hint: 'Bidding, plus a price that ends the auction instantly.' },
+const MODE_OPTIONS: { value: ListingMode; label: string }[] = [
+  { value: 'auction', label: 'Auction' },
+  { value: 'shop', label: 'Buy now' },
+  { value: 'auction_buyout', label: 'Auction + buyout' },
 ]
 
 const pickerItems = ref<UserItemResponse[]>([])
@@ -93,8 +93,6 @@ const buyoutPrice = computed(() => sanitizeEssenceInput(buyoutInput.value))
 const minIncrement = computed(() => sanitizeEssenceInput(minIncrementInput.value) ?? 1)
 const isAuctionMode = computed(() => mode.value !== 'shop')
 const hasBuyout = computed(() => mode.value !== 'auction')
-const modeHint = computed(() => MODE_OPTIONS.find((o) => o.value === mode.value)?.hint ?? '')
-
 const slotsFull = computed(
   () =>
     !isSupporter.value &&
@@ -335,7 +333,6 @@ const breadcrumbs: Crumb[] = [
               {{ option.label }}
             </button>
           </div>
-          <p class="create-page__hint">{{ modeHint }}</p>
         </div>
 
         <div class="create-page__prices">
@@ -391,9 +388,6 @@ const breadcrumbs: Crumb[] = [
               <span aria-hidden="true">∞</span> No time limit
             </button>
           </div>
-          <p v-if="mode === 'shop' && durationMinutes === null" class="create-page__hint">
-            The listing stays up until it sells or you cancel it.
-          </p>
           <p v-if="fieldErrors.durationMinutes" class="create-page__field-error">
             {{ fieldErrors.durationMinutes }}
           </p>

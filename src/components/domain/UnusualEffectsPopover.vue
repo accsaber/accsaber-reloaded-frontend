@@ -45,7 +45,6 @@ watch(open, (isOpen) => {
         Rolls the default Unusual sparkle.
       </p>
       <template v-else>
-        <p class="unusual-pop__note">On an Unusual roll you get one of these, equal chance.</p>
         <ul class="unusual-pop__list">
           <li v-for="effect in effects" :key="effect.id">
             <UnusualEffectTile :name="effect.name" :effect-spec="effect.effectSpec" :size="64" />
@@ -107,13 +106,6 @@ watch(open, (isOpen) => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-tertiary);
-}
-
-.unusual-pop__note {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  line-height: 1.4;
 }
 
 .unusual-pop__state {

@@ -12,7 +12,6 @@ import WarMapRow from './WarMapRow.vue'
 const props = defineProps<{
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
-  viewerSide: 'attacker' | 'defender' | null
   canSubmitPicks: boolean
   signedIn: boolean
   collapsible?: boolean
@@ -29,12 +28,6 @@ const downloading = ref(false)
 const downloadError = ref<string | null>(null)
 
 const picking = computed(() => props.war.status === 'picking')
-const pickingNote = computed(() => {
-  if (!picking.value) return null
-  if (props.viewerSide === null) return 'The defense is still picking, so the pool stays hidden until it locks.'
-  return 'Only your own picks show while the defense is picking. The full pool appears once it locks.'
-})
-
 async function download() {
   downloading.value = true
   downloadError.value = null
@@ -80,7 +73,6 @@ async function download() {
       </span>
     </header>
 
-    <p v-if="pickingNote" class="war-pool__note">{{ pickingNote }}</p>
     <p v-if="downloadError" class="war-pool__error" role="alert">{{ downloadError }}</p>
 
     <p v-if="pool.length === 0" class="war-pool__empty">No maps to show yet.</p>
@@ -164,7 +156,6 @@ async function download() {
   gap: var(--space-xs);
 }
 
-.war-pool__note,
 .war-pool__empty {
   margin: 0;
   font-size: var(--text-caption);

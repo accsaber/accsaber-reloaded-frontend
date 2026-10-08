@@ -134,7 +134,7 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     <div class="level-tab__xp">
       <h2 class="level-tab__heading">XP this season</h2>
       <SkeletonLoader v-if="loading" variant="text" :lines="3" />
-      <ClanXpSummary v-else-if="level?.seasonXpBySource" :by-source="level.seasonXpBySource" :roster-factor="level.rosterFactor" />
+      <ClanXpSummary v-else-if="level?.seasonXpBySource" :by-source="level.seasonXpBySource" />
       <BaseButton class="level-tab__toggle" size="sm" :aria-expanded="showAll" @click="toggleAll">
         {{ showAll ? 'Hide grants' : 'Show all grants' }}
       </BaseButton>

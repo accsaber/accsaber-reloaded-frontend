@@ -46,12 +46,7 @@ function lentBy(p: ClanWarParticipantResponse) {
 
 <template>
   <section class="fighters">
-    <header class="fighters__head">
-      <h2 class="fighters__title">Fighters</h2>
-      <p class="fighters__legend">
-        Guard drops when an enemy beats your score on a pool map and breaks at 0. A personal best on a pool map restores it.
-      </p>
-    </header>
+    <h2 class="fighters__title">Fighters</h2>
     <p v-if="error" class="fighters__error" role="alert">{{ error }}</p>
 
     <div v-if="!participants" class="fighters__grid">
@@ -102,19 +97,12 @@ function lentBy(p: ClanWarParticipantResponse) {
   gap: var(--space-md);
 }
 
-.fighters__head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
 .fighters__title {
   margin: 0;
   font-size: var(--text-section-heading);
   font-weight: 700;
 }
 
-.fighters__legend,
 .fighters__empty {
   margin: 0;
   font-size: var(--text-caption);
