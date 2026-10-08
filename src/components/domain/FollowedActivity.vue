@@ -321,7 +321,7 @@ watch([sortField, sortDir, filterCategoryId], () => {
         </template>
 
         <template #cell-player="{ row }">
-          <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip />
+          <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip hide-clan />
         </template>
 
         <template #cell-ap="{ value }">
@@ -336,7 +336,7 @@ watch([sortField, sortDir, filterCategoryId], () => {
         <template #mobile-card="{ row }">
           <RouterLink :to="buildRankingPlayerRoute(row)" class="followed-activity__player-card">
             <span class="followed-activity__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-            <UserChip :user="(row.player as UserRefDisplay)" size="sm" class="followed-activity__player" />
+            <UserChip :user="(row.player as UserRefDisplay)" size="sm" hide-clan class="followed-activity__player" />
             <span class="followed-activity__ap">{{ (row.ap as number).toFixed(2) }}</span>
           </RouterLink>
         </template>
