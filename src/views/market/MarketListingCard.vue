@@ -68,7 +68,7 @@ const settledLabel = computed(() => {
       </div>
 
       <div class="market-card__meta">
-        <UserChip :user="listing.seller" compact class="market-card__seller" />
+        <UserChip :user="listing.seller" compact hide-clan class="market-card__seller" />
         <span class="market-card__meta-right">
           <span v-if="auction" class="market-card__bids">
             {{ listing.bidCount }} {{ listing.bidCount === 1 ? 'bid' : 'bids' }}
