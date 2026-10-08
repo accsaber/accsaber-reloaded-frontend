@@ -8,8 +8,8 @@ import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useItemTypeStore } from '@/stores/itemTypes'
-import type { ItemResponse, UserItemResponse } from '@/types/api/items'
-import { isItemObtainable, rarityClass } from '@/utils/items'
+import type { ItemResponse } from '@/types/api/items'
+import { asUserItem, isItemObtainable, rarityClass } from '@/utils/items'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{ loading?: boolean; unrestricted?: boolean }>()
@@ -85,22 +85,6 @@ watch(totalPages, (n) => {
   if (page.value > n) page.value = n
 })
 
-function wrapAsUserItem(item: ItemResponse): UserItemResponse {
-  return {
-    linkId: item.id,
-    item,
-    modifiers: [],
-    unusualEffect: null,
-    serialNumber: null,
-    quantity: 1,
-    source: 'manual',
-    sourceId: null,
-    awardedByStaffId: null,
-    reason: null,
-    awardedAt: '',
-  }
-}
-
 async function load() {
   fetching.value = true
   err.value = null
@@ -165,7 +149,7 @@ function confirm() {
 
         <div v-else class="item-picker__grid">
           <InventoryItemCell v-for="item in paged" :key="item.id"
-            :user-item="wrapAsUserItem(item)"
+            :user-item="asUserItem(item)"
             @select="selectByLinkId" />
         </div>
 

@@ -4,6 +4,7 @@ import type {
   ClanAuditEntryResponse,
   ClanCapacity,
   ClanItemSource,
+  ClanLevelStepResponse,
   ClanRole,
   ClanRuleset,
   ClanSeasonResponse,
@@ -149,7 +150,7 @@ export function warClock(war: ClanWarResponse, now: number): WarClock {
 }
 
 export const CLAN_XP_SOURCE_LABEL: Record<ClanXpSource, string> = {
-  daily_play: 'Daily play',
+  play: 'Plays',
   mission: 'Mission',
   war_break: 'War break',
   war_win: 'War win',
@@ -166,6 +167,28 @@ export const CLAN_ITEM_SOURCE_LABEL: Record<ClanItemSource, string> = {
   season: 'Season',
   war: 'War',
   manual: 'Granted',
+}
+
+export interface LockedRankSlot {
+  role: ClanRole
+  level: number
+}
+
+const RANK_SLOT_CAPACITY: Partial<Record<ClanRole, ClanCapacity>> = {
+  commander: 'commander_slots',
+  officer: 'officer_slots',
+}
+
+export function lockedRankSlots(steps: ClanLevelStepResponse[], level: number): LockedRankSlot[] {
+  const slots: LockedRankSlot[] = []
+  const upcoming = steps.filter((s) => s.level > level).sort((a, b) => a.level - b.level)
+  for (const [role, capacity] of Object.entries(RANK_SLOT_CAPACITY) as [ClanRole, ClanCapacity][]) {
+    for (const step of upcoming) {
+      const amount = step.unlocks.capacities[capacity] ?? 0
+      for (let i = 0; i < amount; i++) slots.push({ role, level: step.level })
+    }
+  }
+  return slots
 }
 
 export function unlockLines(unlocks: ClanUnlocksResponse): string[] {

@@ -35,7 +35,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps<{
   userItem: UserItemResponse | null
-  isOwnProfile: boolean
+  canManage: boolean
+  canUnequip?: boolean
+  sourceLabel?: string
   equipped: boolean
   equippedVariantKey?: string | null
   busy?: boolean
@@ -128,7 +130,7 @@ const compositionColor = computed<BorderColorValue | null>(() =>
 )
 
 const showComposition = computed(() =>
-  props.isOwnProfile && (isBorderShapeItem.value || isBorderColorItem.value),
+  props.canManage && (isBorderShapeItem.value || isBorderColorItem.value),
 )
 
 
@@ -162,17 +164,17 @@ const typeName = computed(() => {
 })
 
 const equippable = computed(() => !!item.value && isEquippableTypeKey(item.value.typeKey))
-const showEquipActions = computed(() => !props.locked && props.isOwnProfile && equippable.value && item.value?.active && !item.value.deprecated)
-const showDownload = computed(() => !props.locked && props.isOwnProfile && !!item.value?.downloadable && item.value.active && !item.value.deprecated)
+const showEquipActions = computed(() => !props.locked && props.canManage && equippable.value && item.value?.active && !item.value.deprecated)
+const showDownload = computed(() => !props.locked && props.canManage && !!item.value?.downloadable && item.value.active && !item.value.deprecated)
 
 const untradeable = computed(() => !item.value?.tradeable)
 const essenceWorth = computed(() => item.value?.worth ?? 0)
 const showDisintegrate = computed(
-  () => !props.locked && props.isOwnProfile && !untradeable.value && essenceWorth.value > 0,
+  () => !props.locked && props.canManage && !untradeable.value && essenceWorth.value > 0,
 )
 const disintegrateEssence = computed(() => essenceWorth.value * quantity.value)
 const showOpenCrate = computed(
-  () => isCrate.value && props.isOwnProfile && !props.locked && !!item.value?.active && !item.value.deprecated,
+  () => isCrate.value && props.canManage && !props.locked && !!item.value?.active && !item.value.deprecated,
 )
 
 const previewOpen = ref(false)
@@ -212,6 +214,7 @@ const hasMetaRows = computed(() => {
 
 const sourceLabel = computed(() => {
   if (!props.userItem) return ''
+  if (props.sourceLabel) return props.sourceLabel
   switch (props.userItem.source) {
     case 'milestone': return 'Milestone reward'
     case 'milestone_set': return 'Milestone set reward'
@@ -241,7 +244,7 @@ onUnmounted(() => {
   <div v-if="userItem && item" class="inv-detail">
     <div
       class="inv-detail__art"
-      :class="[rarityClass(item.rarity), { 'inv-detail__art--title-fx': item.typeKey === 'title' }]"
+      :class="[rarityClass(item.rarity), { 'inv-detail__art--title-fx': item.typeKey === 'title' || item.typeKey === 'clan_title_effect' }]"
     >
       <BorderComposition
         v-if="showComposition"
@@ -468,6 +471,14 @@ onUnmounted(() => {
           @click="$emit('equip', userItem.linkId)"
         >
           Equip
+        </BaseButton>
+        <BaseButton
+          v-else-if="showEquipActions && canUnequip"
+          size="md"
+          :loading="busy"
+          @click="$emit('unequip', item.typeKey)"
+        >
+          Unequip
         </BaseButton>
         <span v-else-if="showEquipActions" class="inv-detail__equipped">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

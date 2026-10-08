@@ -17,7 +17,7 @@ import type {
   UserItemResponse,
 } from '@/types/api/items'
 import type { Page } from '@/types/pagination'
-import { del, get, getFile, post, type DownloadedFile } from './client'
+import { get, getFile, post, type DownloadedFile } from './client'
 import { buildQuery } from './utils'
 
 export function getItemTypes(): Promise<ItemTypeResponse[]> {
@@ -75,10 +75,6 @@ export function getUserInventoryCrates(userId: string): Promise<ItemResponse[]> 
 
 export function equipItem(req: EquipItemRequest): Promise<void> {
   return post<void>('/users/me/items/equip', req)
-}
-
-export function unequipItem(typeKey: string): Promise<void> {
-  return del<void>(`/users/me/items/equip/${typeKey}`)
 }
 
 export function disintegrateItems(

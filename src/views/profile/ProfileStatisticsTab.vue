@@ -76,6 +76,7 @@ const xpSources = computed(() => {
     { label: 'Mission XP', value: stats.totalMissionXp },
     { label: 'Campaign XP', value: stats.totalCampaignXp },
     { label: 'Event XP', value: stats.totalEventXp },
+    { label: 'Clan XP', value: stats.totalClanXp },
   ]
 })
 

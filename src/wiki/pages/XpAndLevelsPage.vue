@@ -57,6 +57,12 @@ const XP_SOURCES = [
     label: 'Events',
     body: 'Missions and bonuses from a live event.',
   },
+  {
+    key: 'clan',
+    color: 'var(--xp-clan)',
+    label: 'Clans',
+    body: 'Clan missions and fighting in clan wars.',
+  },
 ]
 
 const formatAccuracy = (v: number) => `${(v * 100).toFixed(2)}%`
@@ -93,9 +99,9 @@ onMounted(async () => {
       AccSaber gives XP, levels never cap, and some levels give you items.
     </p>
 
-    <WikiHeading id="sources">Six sources</WikiHeading>
+    <WikiHeading id="sources">Seven sources</WikiHeading>
     <p>
-      XP comes from six sources. Each has its own color, the same colors your profile uses to
+      XP comes from seven sources. Each has its own color, the same colors your profile uses to
       show where yours came from:
     </p>
     <div class="sources">

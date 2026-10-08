@@ -194,7 +194,7 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
               <BaseButton variant="primary" size="sm" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'active')">Accept</BaseButton>
               <BaseButton size="sm" :disabled="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Decline</BaseButton>
             </template>
-            <BaseButton v-else size="sm" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'ended')">Withdraw</BaseButton>
+            <BaseButton v-else size="sm" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Withdraw</BaseButton>
           </span>
         </li>
 

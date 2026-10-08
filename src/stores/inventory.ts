@@ -1,10 +1,9 @@
 import {
   equipItem as apiEquipItem,
   getUserEquippedItems,
-  unequipItem as apiUnequipItem,
 } from '@/api/items'
 import { invalidateMiniProfile } from '@/composables/useMiniProfile'
-import type { EquippedItemsResponse, ItemTypeKey } from '@/types/api/items'
+import type { EquippedItemsResponse } from '@/types/api/items'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -36,14 +35,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   }
 
-  async function unequip(typeKey: ItemTypeKey, currentUserId?: string | null): Promise<void> {
-    await apiUnequipItem(typeKey)
-    if (currentUserId) {
-      invalidateMiniProfile(currentUserId)
-      await fetchEquipped(currentUserId, true)
-    }
-  }
-
   function reset(): void {
     equipped.value = {}
     equippedUserId.value = null
@@ -57,7 +48,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     equippedLoading,
     fetchEquipped,
     equip,
-    unequip,
     reset,
   }
 })

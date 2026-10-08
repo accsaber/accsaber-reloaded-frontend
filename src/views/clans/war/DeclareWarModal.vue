@@ -22,6 +22,7 @@ import { attackerPickCount, CLAN_ARENA_LABEL, CLAN_RULESET_LABEL } from '@/utils
 import { COMPLEXITY_MAX } from '@/utils/complexity'
 import { computed, ref, watch } from 'vue'
 import ClanPicker from '../ClanPicker.vue'
+import { loadClanLevels } from '../clanLevels'
 import WarMapPicker from './WarMapPicker.vue'
 
 const ARENAS: ClanArena[] = ['mixed', 'random', 'category_turf', 'complexity_turf']
@@ -89,7 +90,7 @@ async function load() {
     const [clan, level, table] = await Promise.all([
       api.getClan(props.ownClanId),
       api.getClanLevel(props.ownClanId),
-      api.getClanLevels(),
+      loadClanLevels(),
     ])
     own.value = clan
     unlocked.value = level.unlocked

@@ -46,6 +46,10 @@ const EQUIPPABLE_TYPE_KEYS = new Set<ItemTypeKey>([
   'profile_visual',
   'profile_background',
   'profile_thumbnail_background',
+  'clan_tag_card',
+  'clan_title_effect',
+  'clan_banner',
+  'clan_border',
 ])
 
 export function isEquippableTypeKey(typeKey: ItemTypeKey): boolean {
@@ -801,6 +805,23 @@ export function substituteTokens(text: string, ctx: TokenContext): string | null
     return String(resolved)
   })
   return missing ? null : out
+}
+
+export function asUserItem(item: ItemResponse, overrides: Partial<UserItemResponse> = {}): UserItemResponse {
+  return {
+    linkId: item.id,
+    item,
+    modifiers: [],
+    unusualEffect: null,
+    serialNumber: null,
+    quantity: 1,
+    source: 'manual',
+    sourceId: null,
+    awardedByStaffId: null,
+    reason: null,
+    awardedAt: '',
+    ...overrides,
+  }
 }
 
 export function userItemTokenContext(

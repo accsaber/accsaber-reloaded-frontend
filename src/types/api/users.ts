@@ -169,6 +169,7 @@ export interface UserAllStatisticsResponse {
   totalMissionXp: number
   totalCampaignXp: number
   totalEventXp: number
+  totalClanXp: number
   categories: UserCategoryStatisticsResponse[]
   clan: ClanStatsResponse | null
 }
@@ -227,6 +228,7 @@ export interface StatsDiffResponse {
   missionXpDiff: number
   campaignXpDiff: number
   eventXpDiff: number
+  clanXpDiff: number
   averageAccDiff: number
   averageApDiff: number
   rankingDiff: number

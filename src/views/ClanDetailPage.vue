@@ -8,10 +8,10 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useSharedNow } from '@/composables/useSharedNow'
 import { useAuthStore } from '@/stores/auth'
-import type { ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
+import type { ClanLevelStepResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
-import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole } from '@/utils/clans'
+import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, lockedRankSlots } from '@/utils/clans'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -21,6 +21,7 @@ import ClanHeader from './clans/ClanHeader.vue'
 import ClanHeaderActions from './clans/ClanHeaderActions.vue'
 import ClanNowStrip from './clans/ClanNowStrip.vue'
 import ClanRosterTab from './clans/ClanRosterTab.vue'
+import { loadClanLevels } from './clans/clanLevels'
 import { useClanChat } from './clans/useClanChat'
 import { useClanFeed } from './clans/useClanFeed'
 import { useClanPage } from './clans/useClanPage'
@@ -109,6 +110,22 @@ const activeTab = computed<ClanTab>(() => {
   const requested = route.query.tab
   return [...tabs.value, ...manageTabs.value].some((t) => t.key === requested) ? (requested as ClanTab) : 'roster'
 })
+const levelSteps = ref<ClanLevelStepResponse[]>([])
+const lockedSlots = computed(() => (clan.value ? lockedRankSlots(levelSteps.value, clan.value.level.level) : []))
+
+watch(
+  () => activeTab.value === 'roster',
+  async (onRoster) => {
+    if (!onRoster || levelSteps.value.length) return
+    try {
+      levelSteps.value = await loadClanLevels()
+    } catch {
+      levelSteps.value = []
+    }
+  },
+  { immediate: true },
+)
+
 const activeManage = computed(() => manageTabs.value.find((t) => t.key === activeTab.value) ?? null)
 const manageOpen = ref(false)
 
@@ -254,7 +271,7 @@ function askLeave() {
     message: founderBlocked
       ? 'A Founder cannot walk out while anyone else is still in the clan, so hand it to another member first.'
       : others
-        ? 'You walk out now and the two week join cooldown starts, so you sit clanless until it is up.'
+        ? 'You can join another clan 14 days after you joined this one.'
         : 'You are the last member, so leaving shuts the clan down for good.',
     confirmLabel: 'Leave clan',
     destructive: true,
@@ -479,6 +496,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
       <ClanRosterTab
         v-if="activeTab === 'roster'"
         :members="members"
+        :locked-slots="lockedSlots"
         :loading="rosterLoading && members.length === 0"
         :viewer-role="viewerRole"
         :viewer-id="auth.userId"

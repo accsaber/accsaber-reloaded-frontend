@@ -12,6 +12,7 @@ import { CLAN_XP_SOURCE_LABEL, unlockLines } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { loadClanLevels } from './clanLevels'
 import ClanLevelReward from './ClanLevelReward.vue'
 import ClanLevelTrail from './ClanLevelTrail.vue'
 import ClanXpSummary from './ClanXpSummary.vue'
@@ -74,8 +75,8 @@ const xpTotalPages = computed(() => xpPage.value?.totalPages ?? 0)
 async function fetchLevel() {
   loading.value = true
   try {
-    const { getClanLevel, getClanLevels } = await import('@/api/clans')
-    const [current, table] = await Promise.all([getClanLevel(props.clan.clan.id), getClanLevels()])
+    const { getClanLevel } = await import('@/api/clans')
+    const [current, table] = await Promise.all([getClanLevel(props.clan.clan.id), loadClanLevels()])
     level.value = current
     steps.value = table
   } catch {

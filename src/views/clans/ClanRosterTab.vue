@@ -7,14 +7,16 @@ import { useSharedNow } from '@/composables/useSharedNow'
 import type { ClanRole } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { SortState, TableColumn } from '@/types/display'
-import { assignableRoles, CLAN_ROLE_ORDER, hasClanRole, outranks } from '@/utils/clans'
+import { assignableRoles, CLAN_ROLE_ORDER, hasClanRole, outranks, type LockedRankSlot } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import ClanLeaderTile from './ClanLeaderTile.vue'
+import ClanLockedSlot from './ClanLockedSlot.vue'
 import ClanMemberMenu, { type MemberActions } from './ClanMemberMenu.vue'
 
 const props = defineProps<{
   members: PlayerRef[]
+  lockedSlots: LockedRankSlot[]
   loading: boolean
   viewerRole: ClanRole | null
   viewerId: string | null
@@ -37,21 +39,36 @@ const COLUMNS: TableColumn[] = [
   { key: 'actions', label: '', align: 'right', noLink: true, width: '48px' },
 ]
 
+const FOUNDER_INACTIVITY_MS = 365 * 24 * 60 * 60 * 1000
+
 const now = useSharedNow()
+
+const canClaim = computed(() => {
+  if (props.viewerRole !== 'commander') return false
+  const commanders = props.members.filter((m) => m.membership?.role === 'commander')
+  const longest = commanders.reduce<PlayerRef | null>(
+    (best, m) => (!best || m.membership!.joinedAt < best.membership!.joinedAt ? m : best),
+    null,
+  )
+  if (longest?.id !== props.viewerId) return false
+  const founder = props.members.find((m) => m.membership?.role === 'founder')
+  const lastPlayed = founder?.membership?.lastPlayedAt
+  return !lastPlayed || now.value - new Date(lastPlayed).getTime() > FOUNDER_INACTIVITY_MS
+})
 const sortState = ref<SortState>({ key: 'xp', direction: 'desc' })
 
 function seasonXp(member: PlayerRef): number {
   return member.membership?.seasonPlayXp ?? 0
 }
 
-function roleIndex(member: PlayerRef): number {
-  return CLAN_ROLE_ORDER.indexOf(member.membership?.role ?? 'member')
-}
-
-const leaders = computed(() =>
-  props.members
-    .filter((m) => m.membership && m.membership.role !== 'member')
-    .sort((a, b) => roleIndex(a) - roleIndex(b) || seasonXp(b) - seasonXp(a)),
+const leaderGroups = computed(() =>
+  CLAN_ROLE_ORDER.filter((role) => role !== 'member').map((role) => ({
+    role,
+    members: props.members
+      .filter((m) => m.membership?.role === role)
+      .sort((a, b) => seasonXp(b) - seasonXp(a)),
+    locked: props.lockedSlots.filter((s) => s.role === role),
+  })).filter((g) => g.members.length || g.locked.length),
 )
 
 const rows = computed(() => {
@@ -87,7 +104,7 @@ function actionsFor(member: PlayerRef): MemberActions | null {
     roles: assignableRoles(props.viewerRole, role),
     kick: below && hasClanRole(props.viewerRole, 'officer'),
     transfer: below && hasClanRole(props.viewerRole, 'founder'),
-    claim: role === 'founder' && props.viewerRole === 'commander',
+    claim: role === 'founder' && canClaim.value,
   }
   return actions.roles.length || actions.kick || actions.transfer || actions.claim ? actions : null
 }
@@ -115,24 +132,32 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
     <EmptyState v-else-if="members.length === 0" message="Nobody is in this clan yet." />
 
     <template v-else>
-      <div v-if="leaders.length" class="roster__mosaic">
-        <ClanLeaderTile
-          v-for="member in leaders"
-          :key="member.id"
-          :member="member"
-          :last-played="lastPlayed(member)"
-          :self="member.id === viewerId"
-        >
-          <ClanMemberMenu
-            v-if="actionsFor(member)"
+      <div v-if="leaderGroups.length" class="roster__mosaic">
+        <template v-for="group in leaderGroups" :key="group.role">
+          <ClanLeaderTile
+            v-for="member in group.members"
+            :key="member.id"
             :member="member"
-            :actions="actionsFor(member)!"
-            @change-role="emit('change-role', member, $event)"
-            @kick="emit('kick', member)"
-            @transfer="emit('transfer', member)"
-            @claim="emit('claim')"
+            :last-played="lastPlayed(member)"
+            :self="member.id === viewerId"
+          >
+            <ClanMemberMenu
+              v-if="actionsFor(member)"
+              :member="member"
+              :actions="actionsFor(member)!"
+              @change-role="emit('change-role', member, $event)"
+              @kick="emit('kick', member)"
+              @transfer="emit('transfer', member)"
+              @claim="emit('claim')"
+            />
+          </ClanLeaderTile>
+          <ClanLockedSlot
+            v-for="(slot, i) in group.locked"
+            :key="`${group.role}-${i}`"
+            :role="slot.role"
+            :level="slot.level"
           />
-        </ClanLeaderTile>
+        </template>
       </div>
 
       <section v-if="rows.length" class="roster__members">

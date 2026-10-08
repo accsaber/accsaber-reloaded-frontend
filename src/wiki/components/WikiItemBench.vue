@@ -4,10 +4,9 @@ import type {
   ItemModifierRef,
   ItemModifierResponse,
   ItemResponse,
-  UserItemResponse,
 } from '@/types/api/items'
 import { formatEssence } from '@/utils/essence'
-import { displayItemName } from '@/utils/items'
+import { asUserItem, displayItemName } from '@/utils/items'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
@@ -43,19 +42,15 @@ const activeModifiers = computed<ItemModifierRef[]>(() => {
   return chosen
 })
 
-const userItem = computed<UserItemResponse>(() => ({
-  linkId: `bench:${item.value.id}`,
-  item: item.value,
-  modifiers: activeModifiers.value,
-  unusualEffect: null,
-  serialNumber: serial.value,
-  quantity: 1,
-  source: 'crate_drop',
-  sourceId: null,
-  awardedByStaffId: null,
-  reason: null,
-  awardedAt: item.value.createdAt,
-}))
+const userItem = computed(() =>
+  asUserItem(item.value, {
+    linkId: `bench:${item.value.id}`,
+    modifiers: activeModifiers.value,
+    serialNumber: serial.value,
+    source: 'crate_drop',
+    awardedAt: item.value.createdAt,
+  }),
+)
 
 const fullName = computed(() => displayItemName(activeModifiers.value, item.value.name))
 

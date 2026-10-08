@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
@@ -13,6 +12,7 @@ import CrateOpeningOverlay from '@/components/domain/CrateOpeningOverlay.vue'
 import DisintegrateDialog from '@/components/domain/DisintegrateDialog.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
+import InventoryLayout from '@/components/domain/InventoryLayout.vue'
 import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
 import ItemFilterPanel, {
   type ItemFilterCollectionOption,
@@ -42,7 +42,7 @@ import { useThemeStore } from '@/stores/theme'
 import type { CrateOpenResponse, DisintegrateEntryRequest, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
 import type { Page } from '@/types/pagination'
 import { ESSENCE_GLYPH, formatEssence, formatEssenceAmount } from '@/utils/essence'
-import { RARITY_ORDER, buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
+import { RARITY_ORDER, asUserItem, buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
@@ -173,22 +173,6 @@ function isLockedLink(linkId: string | null | undefined): boolean {
   return !!linkId && linkId.startsWith('locked:')
 }
 
-function syntheticLockedEntry(it: ItemResponse): UserItemResponse {
-  return {
-    linkId: `locked:${it.id}`,
-    item: it,
-    modifiers: [],
-    unusualEffect: null,
-    serialNumber: null,
-    quantity: 0,
-    source: 'manual',
-    sourceId: null,
-    awardedByStaffId: null,
-    reason: null,
-    awardedAt: '',
-  }
-}
-
 function compareCatalog(a: UserItemResponse, b: UserItemResponse, key: string): number {
   switch (key) {
     case 'name':
@@ -224,7 +208,7 @@ const catalogMerged = computed<UserItemResponse[]>(() => {
   for (const it of catalogAllItems.value) {
     if (!it.visible || !it.active) continue
     if (ownedIds.has(it.id)) continue
-    locked.push(syntheticLockedEntry(it))
+    locked.push(asUserItem(it, { linkId: `locked:${it.id}`, quantity: 0 }))
   }
   return [...catalogOwnedItems.value, ...locked]
 })
@@ -494,17 +478,6 @@ async function handleSelectVariant(linkId: string, variantKey: string) {
     }
   } catch (err) {
     reportActionError(err, 'Could not switch variant.')
-  } finally {
-    actionBusy.value = false
-  }
-}
-
-async function handleUnequip(typeKeyArg: string) {
-  actionBusy.value = true
-  try {
-    await inventoryStore.unequip(typeKeyArg as ItemTypeKey, props.userId)
-  } catch (err) {
-    reportActionError(err, 'Could not unequip item.')
   } finally {
     actionBusy.value = false
   }
@@ -939,44 +912,49 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="inv-tab__layout">
-      <div class="inv-tab__main">
-        <div v-if="loading || (showUnowned && catalogLoading)" class="inv-tab__grid">
-          <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
-        </div>
+    <InventoryLayout
+      :detail-open="mobileDetailOpen"
+      :detail-title="selectedItem?.item.name"
+      @close-detail="mobileDetailOpen = false"
+    >
+      <template v-if="loading || (showUnowned && catalogLoading)">
+        <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
+      </template>
+      <template v-else>
+        <InventoryItemCell
+          v-for="userItem in items"
+          :key="userItem.linkId"
+          :data-link-id="userItem.linkId"
+          :user-item="userItem"
+          :selected="userItem.linkId === selectedLinkId"
+          :highlighted="userItem.linkId === flashLinkId"
+          :equipped="isEquipped(userItem)"
+          :locked="isLockedLink(userItem.linkId)"
+          :select-mode="selectMode"
+          :checked="selectedLinkIds.has(userItem.linkId)"
+          :selectable="isDisintegratable(userItem)"
+          @select="selectItem"
+          @toggle="toggleSelection"
+        />
+      </template>
 
-        <EmptyState v-else-if="items.length === 0" message="No items found." />
+      <template v-if="!loading && !(showUnowned && catalogLoading) && items.length === 0" #empty>
+        <EmptyState message="No items found." />
+      </template>
 
-        <div v-else class="inv-tab__grid">
-          <InventoryItemCell
-            v-for="userItem in items"
-            :key="userItem.linkId"
-            :data-link-id="userItem.linkId"
-            :user-item="userItem"
-            :selected="userItem.linkId === selectedLinkId"
-            :highlighted="userItem.linkId === flashLinkId"
-            :equipped="isEquipped(userItem)"
-            :locked="isLockedLink(userItem.linkId)"
-            :select-mode="selectMode"
-            :checked="selectedLinkIds.has(userItem.linkId)"
-            :selectable="isDisintegratable(userItem)"
-            @select="selectItem"
-            @toggle="toggleSelection"
-          />
-        </div>
-
+      <template #footer>
         <PaginationControls
           v-if="totalPages > 1"
           :page="currentPage"
           :total-pages="totalPages"
           @update:page="setPage"
         />
-      </div>
+      </template>
 
-      <aside class="inv-tab__detail">
+      <template #detail>
         <InventoryDetailPanel
           :user-item="selectedItem"
-          :is-own-profile="isOwnProfile"
+          :can-manage="isOwnProfile"
           :equipped="isSelectedEquipped"
           :equipped-variant-key="selectedEquippedVariantKey"
           :equipped-border-shape="equippedBorderShape"
@@ -996,45 +974,13 @@ onUnmounted(() => {
           @equip="handleEquip"
           @apply-theme-mode="handleApplyThemeMode"
           @select-variant="handleSelectVariant"
-          @unequip="handleUnequip"
           @disintegrate="handleDisintegrateRequest"
           @open-crate="handleOpenCrate"
           @download="handleDownload"
           @preview-crate="openCratePreview"
         />
-      </aside>
-    </div>
-
-    <BaseModal :open="mobileDetailOpen" :title="selectedItem?.item.name" @close="mobileDetailOpen = false">
-      <InventoryDetailPanel
-        :user-item="selectedItem"
-        :is-own-profile="isOwnProfile"
-        :equipped="isSelectedEquipped"
-        :equipped-variant-key="selectedEquippedVariantKey"
-        :equipped-border-shape="equippedBorderShape"
-        :equipped-border-color="equippedBorderColor"
-        :avatar-url="avatarUrl"
-        :busy="actionBusy"
-        :locked="isSelectedLocked"
-        :downloading="downloadingLinkId === selectedLinkId"
-        :crate-contents="crateContents"
-        :crate-contents-loading="crateContentsLoading"
-        :crate-modifiers="crateModifiers"
-        :crate-modifiers-loading="crateModifiersLoading"
-        :crate-effects="crateEffects"
-        :crate-effects-loading="crateEffectsLoading"
-        :owned-item-ids="ownedIds"
-        @load-crate-effects="loadCrateEffects"
-        @equip="handleEquip"
-        @apply-theme-mode="handleApplyThemeMode"
-        @select-variant="handleSelectVariant"
-        @unequip="handleUnequip"
-        @disintegrate="handleDisintegrateRequest"
-        @open-crate="handleOpenCrate"
-        @download="handleDownload"
-        @preview-crate="openCratePreview"
-      />
-    </BaseModal>
+      </template>
+    </InventoryLayout>
 
     <PublicCratePreview
       :open="previewCrate !== null"
@@ -1279,52 +1225,5 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--space-sm);
   margin-left: auto;
-}
-
-.inv-tab__layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: var(--space-lg);
-  align-items: start;
-}
-
-.inv-tab__main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  min-width: 0;
-}
-
-.inv-tab__grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: var(--space-md);
-}
-
-@media (max-width: 1023px) {
-  .inv-tab__grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 639px) {
-  .inv-tab__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.inv-tab__detail {
-  position: sticky;
-  top: calc(var(--navbar-height, 64px) + var(--space-md));
-}
-
-@media (max-width: 1023px) {
-  .inv-tab__layout {
-    grid-template-columns: 1fr;
-  }
-
-  .inv-tab__detail {
-    display: none;
-  }
 }
 </style>

@@ -5,6 +5,7 @@ import type {
   UnusualEffectRef,
   UserItemResponse,
 } from '@/types/api/items'
+import { asUserItem } from '@/utils/items'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -79,20 +80,13 @@ function syntheticEntry(
     modifiers?: ItemModifierRef[]
   },
 ): UserItemResponse {
-  return {
+  return asUserItem(item, {
     linkId: `preview:${item.id}`,
-    item,
     modifiers: opts?.modifiers ?? [],
     unusualEffect: opts?.unusualEffect ?? null,
-    serialNumber: null,
     quantity: 0,
-    source: 'manual',
-    sourceId: null,
-    awardedByStaffId: null,
-    reason: null,
-    awardedAt: '',
     variantKey: opts?.variantKey ?? null,
-  }
+  })
 }
 
 export const usePreviewStore = defineStore('creativesPreview', () => {

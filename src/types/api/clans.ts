@@ -22,7 +22,7 @@ export type ClanAuditAction =
   | 'alliance_ended'
   | 'disbanded'
 
-export type ClanXpSource = 'daily_play' | 'mission' | 'war_break' | 'war_win' | 'war_loan'
+export type ClanXpSource = 'play' | 'mission' | 'war_break' | 'war_win' | 'war_loan'
 
 export type ClanCapacity =
   | 'member_slots'

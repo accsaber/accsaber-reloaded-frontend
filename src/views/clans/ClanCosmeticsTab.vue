@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
-import BaseButton from '@/components/common/BaseButton.vue'
+import BaseBanner from '@/components/common/BaseBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import ItemPreview from '@/components/domain/ItemPreview.vue'
+import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
+import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
+import InventoryLayout from '@/components/domain/InventoryLayout.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanItemResponse, ClanResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
 import { CLAN_ITEM_SOURCE_LABEL } from '@/utils/clans'
-import { itemVariantPreviews, rarityClass } from '@/utils/items'
+import { asUserItem } from '@/utils/items'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -28,18 +30,32 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 
 const pageData = ref<Page<ClanItemResponse> | null>(null)
 const loading = ref(true)
-const busyId = ref<string | null>(null)
+const busy = ref(false)
 const error = ref<string | null>(null)
+const selectedId = ref<string | null>(null)
+const mobileDetailOpen = ref(false)
 
-const items = computed(() => pageData.value?.content ?? [])
+const entries = computed(() => pageData.value?.content ?? [])
+const items = computed(() =>
+  entries.value.map((e) => asUserItem(e.item, { awardedAt: e.acquiredAt })),
+)
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
-const variants = computed(() => new Map(items.value.map((e) => [e.item.id, itemVariantPreviews(e.item)])))
+const selectedEntry = computed(() => entries.value.find((e) => e.item.id === selectedId.value) ?? null)
+const selectedItem = computed(() => items.value.find((u) => u.linkId === selectedId.value) ?? null)
+const selectedVariantKey = computed(
+  () => props.clan.clan.equipped.find((i) => i.id === selectedId.value)?.variantKey ?? null,
+)
+
+function isEquipped(itemId: string): boolean {
+  return entries.value.some((e) => e.item.id === itemId && e.equipped)
+}
 
 async function fetchItems() {
   loading.value = true
   try {
     const { getClanItems } = await import('@/api/clans')
     pageData.value = await getClanItems(props.clan.clan.id, { page: paginationParams.value.page, size: 50 })
+    if (!selectedEntry.value) selectedId.value = entries.value[0]?.item.id ?? null
   } catch {
     pageData.value = null
   } finally {
@@ -47,25 +63,37 @@ async function fetchItems() {
   }
 }
 
-function activeVariant(entry: ClanItemResponse): string | undefined {
-  if (!entry.equipped) return undefined
-  return props.clan.clan.equipped.find((i) => i.id === entry.item.id)?.variantKey ?? variants.value.get(entry.item.id)?.[0].key
+function selectItem(itemId: string) {
+  selectedId.value = itemId
+  if (window.matchMedia('(max-width: 1023px)').matches) mobileDetailOpen.value = true
 }
 
-async function toggleEquip(entry: ClanItemResponse, variantKey?: string) {
-  busyId.value = entry.item.id
+async function run(action: (clanId: string) => Promise<void>) {
+  busy.value = true
   error.value = null
   try {
-    const { equipClanItem, unequipClanItem } = await import('@/api/clans')
-    if (entry.equipped && !variantKey) await unequipClanItem(props.clan.clan.id, entry.item.typeKey)
-    else await equipClanItem(props.clan.clan.id, { itemId: entry.item.id, variantKey })
+    await action(props.clan.clan.id)
     await fetchItems()
     emit('changed')
   } catch (err) {
     error.value = parseApiError(err, 'Could not change that cosmetic.').message
   } finally {
-    busyId.value = null
+    busy.value = false
   }
+}
+
+function equip(itemId: string, variantKey?: string) {
+  return run(async (clanId) => {
+    const { equipClanItem } = await import('@/api/clans')
+    await equipClanItem(clanId, { itemId, variantKey })
+  })
+}
+
+function unequip(typeKey: string) {
+  return run(async (clanId) => {
+    const { unequipClanItem } = await import('@/api/clans')
+    await unequipClanItem(clanId, typeKey)
+  })
 }
 
 watch(() => route.query.page, fetchItems, { immediate: true })
@@ -73,54 +101,50 @@ watch(() => route.query.page, fetchItems, { immediate: true })
 
 <template>
   <section class="cosmetics">
-    <p v-if="error" class="cosmetics__error" role="alert">{{ error }}</p>
+    <BaseBanner v-if="error" variant="error" role="alert" @close="error = null">{{ error }}</BaseBanner>
 
-    <div v-if="loading && items.length === 0" class="cosmetics__grid">
-      <SkeletonLoader v-for="i in 8" :key="i" variant="card" class="cosmetics__skeleton" />
-    </div>
+    <InventoryLayout
+      :detail-open="mobileDetailOpen"
+      :detail-title="selectedItem?.item.name"
+      @close-detail="mobileDetailOpen = false"
+    >
+      <template v-if="loading && items.length === 0">
+        <SkeletonLoader v-for="i in 10" :key="i" variant="card" />
+      </template>
+      <template v-else>
+        <InventoryItemCell
+          v-for="userItem in items"
+          :key="userItem.linkId"
+          :user-item="userItem"
+          :selected="userItem.linkId === selectedId"
+          :equipped="isEquipped(userItem.linkId)"
+          @select="selectItem"
+        />
+      </template>
 
-    <EmptyState v-else-if="items.length === 0" message="This clan has not earned any cosmetics yet." />
+      <template v-if="!loading && items.length === 0" #empty>
+        <EmptyState message="This clan has not earned any cosmetics yet." />
+      </template>
 
-    <div v-else class="cosmetics__grid">
-      <div
-        v-for="entry in items"
-        :key="entry.item.id"
-        class="cosmetic"
-        :class="[rarityClass(entry.item.rarity), { 'cosmetic--equipped': entry.equipped }]"
-      >
-        <span class="cosmetic__art">
-          <ItemPreview :item="entry.item" />
-        </span>
-        <span class="cosmetic__name">{{ entry.item.name }}</span>
-        <span class="cosmetic__meta">
-          <span class="cosmetic__source">{{ CLAN_ITEM_SOURCE_LABEL[entry.source] }}</span>
-          <span v-if="entry.equipped" class="cosmetic__equipped">Equipped</span>
-        </span>
-        <span v-if="canCustomize && variants.get(entry.item.id)" class="cosmetic__variants">
-          <BaseButton
-            v-for="v in variants.get(entry.item.id)"
-            :key="v.key"
-            size="sm"
-            :variant="activeVariant(entry) === v.key ? 'primary' : 'default'"
-            :disabled="busyId === entry.item.id"
-            @click="toggleEquip(entry, v.key)"
-          >
-            {{ v.label }}
-          </BaseButton>
-        </span>
-        <BaseButton
-          v-if="canCustomize"
-          size="sm"
-          :variant="entry.equipped ? 'default' : 'primary'"
-          :loading="busyId === entry.item.id"
-          @click="toggleEquip(entry)"
-        >
-          {{ entry.equipped ? 'Unequip' : 'Equip' }}
-        </BaseButton>
-      </div>
-    </div>
+      <template #footer>
+        <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+      </template>
 
-    <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+      <template #detail>
+        <InventoryDetailPanel
+          :user-item="selectedItem"
+          :can-manage="!!canCustomize"
+          can-unequip
+          :source-label="selectedEntry ? CLAN_ITEM_SOURCE_LABEL[selectedEntry.source] : undefined"
+          :equipped="!!selectedEntry?.equipped"
+          :equipped-variant-key="selectedVariantKey"
+          :busy="busy"
+          @equip="equip"
+          @select-variant="equip"
+          @unequip="unequip"
+        />
+      </template>
+    </InventoryLayout>
   </section>
 </template>
 
@@ -129,76 +153,5 @@ watch(() => route.query.page, fetchItems, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-}
-
-.cosmetics__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-md);
-}
-
-.cosmetics__error {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--error);
-}
-
-.cosmetics__skeleton {
-  aspect-ratio: 1;
-}
-
-.cosmetic {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.cosmetic--equipped {
-  border-color: var(--page-accent, var(--accent));
-}
-
-.cosmetic__art {
-  display: flex;
-  aspect-ratio: 1;
-  width: 100%;
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border-radius: var(--radius-btn);
-  overflow: hidden;
-}
-
-.cosmetic__variants {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-xs);
-}
-
-.cosmetic__name {
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--rarity-color, var(--text-primary));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cosmetic__meta {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.cosmetic__equipped {
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--page-accent, var(--accent));
 }
 </style>
