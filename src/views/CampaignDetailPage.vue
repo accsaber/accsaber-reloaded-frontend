@@ -18,20 +18,16 @@ import CampaignRoadmap from '@/components/domain/CampaignRoadmap.vue'
 import CampaignRewardItem from '@/components/domain/CampaignRewardItem.vue'
 import CampaignStatusBadge from '@/components/domain/CampaignStatusBadge.vue'
 import CampaignVoteControl from '@/components/domain/CampaignVoteControl.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import CampaignLeaderboardTray from '@/views/campaign/CampaignLeaderboardTray.vue'
 import CampaignRewardNotice from '@/views/campaign/CampaignRewardNotice.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import {
-  onAvatarError,
-  pickAvatarFallback,
-  pickAvatarUrl,
-  pickCoverUrl,
-} from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useItemCatalog } from '@/composables/useItemCatalog'
+import { toUserRef } from '@/utils/mappers'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
@@ -808,17 +804,8 @@ function unpinTooltip() {
               <span class="campaign-detail__spectate-rule" aria-hidden="true" />
 
               <p class="campaign-detail__spectate-who" role="status">
-                <img
-                  v-if="spectatePlayer"
-                  class="campaign-detail__spectate-avatar"
-                  :src="pickAvatarUrl(spectatePlayer)"
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  @error="onAvatarError(pickAvatarFallback(spectatePlayer))($event)"
-                />
-                <span class="campaign-detail__spectate-name">{{ spectateName }}</span>
-                <CountryFlag v-if="spectatePlayer?.country" :country="spectatePlayer.country" />
+                <UserChip v-if="spectatePlayer" :user="toUserRef(spectatePlayer)" size="xs" />
+                <span v-else class="campaign-detail__spectate-name">{{ spectateName }}</span>
               </p>
 
               <span v-if="spectateLoading" class="campaign-detail__spectate-note">Loading run</span>
@@ -1478,15 +1465,6 @@ function unpinTooltip() {
   gap: 6px;
   min-width: 0;
   margin: 0;
-}
-
-.campaign-detail__spectate-avatar {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-  background: var(--bg-elevated);
 }
 
 .campaign-detail__spectate-name {

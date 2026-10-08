@@ -316,8 +316,7 @@ onUnmounted(() => {
             <div class="missions-panel__notice-text">
               <p class="missions-panel__notice-title">Daily missions paused</p>
               <p class="missions-panel__notice-body">
-                Your profile is marked inactive, so dailies stopped rolling. Play a ranked map to reactivate it, then
-                sign in again to get them back.
+                Play a ranked map, then sign in again.
               </p>
             </div>
           </div>

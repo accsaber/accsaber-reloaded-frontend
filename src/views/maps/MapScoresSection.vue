@@ -1,21 +1,17 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
-import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRowField } from '@/types/api/settings'
 import type { UserRelationType } from '@/types/api/relations'
-import type { SupporterTier } from '@/types/api/supporters'
-import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn } from '@/types/display'
+import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn, UserRefDisplay } from '@/types/display'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { formatPlayCount, formatRelativeDate } from '@/utils/formatters'
 import { toDifficultyScoreDisplay } from '@/utils/mappers'
@@ -149,11 +145,7 @@ const rows = computed(() => {
       _userId: s.userId,
       rank: filtering ? positional : s.rank,
       parenRank: filtering ? s.rank : null,
-      avatarUrl: s.avatarUrl,
-      avatarFallbackUrl: s.avatarFallbackUrl,
-      userName: s.userName,
-      country: s.country,
-      supporterTier: s.supporterTier,
+      player: s.player,
       accuracy: s.accuracy,
       score: s.score,
       ap: s.ap,
@@ -238,7 +230,7 @@ function openDetail(userId: string, event: Event) {
     blScoreId: s.blScoreId,
     ssScoreId: s.ssScoreId,
     mapAuthor: props.mapAuthor,
-    userName: s.userName,
+    userName: s.player.name,
   }
   detailOpen.value = true
 }
@@ -308,18 +300,7 @@ watch(
       </template>
 
       <template #cell-player="{ row }">
-        <div class="map-scores__player">
-          <PlayerTooltipTrigger :user-id="(row._userId as string)" :user-name="(row.userName as string)"
-            :avatar-url="(row.avatarUrl as string)"
-            :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
-            :country="(row.country as string)">
-            <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)"
-              :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-            <span class="map-scores__name" :title="(row.userName as string)">{{ row.userName }}</span>
-            <CountryFlag :country="(row.country as string)" />
-            <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
-          </PlayerTooltipTrigger>
-        </div>
+        <UserChip :user="(row.player as UserRefDisplay)" tooltip />
       </template>
 
       <template #cell-streak115="{ value }">
@@ -361,16 +342,12 @@ watch(
       <template #mobile-card="{ row }">
         <router-link :to="playerRowTo(row)" class="ms-card"
           :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }">
-          <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28"
-            :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
           <div class="ms-card__grid">
             <span class="ms-card__name-cell">
               <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
                 #{{ row.rank }}<span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
               </span>
-              <span class="ms-card__name" :title="(row.userName as string)">{{ (row.userName as string).length > 18 ? (row.userName as string).slice(0, 18) + '…' : row.userName }}</span>
-              <CountryFlag :country="(row.country as string)" />
-              <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
+              <UserChip :user="(row.player as UserRefDisplay)" size="sm" />
             </span>
             <span v-if="isScoreFieldVisible('accuracy')" class="ms-card__acc">
               {{ ((row.accuracy as number) * 100).toFixed(2) }}%
@@ -437,21 +414,6 @@ watch(
   color: var(--text-tertiary);
   font-weight: 400;
   margin-left: 2px;
-}
-
-.map-scores__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.map-scores__name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .map-scores__muted {
@@ -537,15 +499,6 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.ms-card__name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
 }
 
 .ms-card__streak-cell {

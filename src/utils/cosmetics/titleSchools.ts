@@ -1,4 +1,4 @@
-import type { TitleBleedSpec, TitleDevourSpec, TitleFlareSpec, TitleGalaxySpec, TitleGustSpec, TitlePixieSpec, TitleQuakeSpec, TitleRippleSpec, TitleSearSpec, TitleShockSpec } from '@/types/api/items'
+import type { TitleBleedSpec, TitleDevourSpec, TitleFlareSpec, TitleGalaxySpec, TitleGustSpec, TitlePixieSpec, TitleQuakeSpec, TitleRippleSpec, TitleSearSpec, TitleShockSpec, TitleTorchSpec, TitleWarcrySpec } from '@/types/api/items'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant as pick } from '@/utils/cosmetics/titleAura'
@@ -288,5 +288,101 @@ export function searCharStyle(tMs: number, i: number, n: number, spec: TitleSear
     color,
     transform: `translateY(${(-shimmer).toFixed(3)}em) scale(${(1 + flare * 0.16).toFixed(3)})`,
     textShadow: `0 0 ${(0.12 + 0.2 * heat + 0.7 * flare).toFixed(2)}em ${hot}, 0 0.02em 0.04em ${ember}`,
+  }
+}
+
+const WARCRY_KNOCK = 900
+const WARCRY_ARC = 1500
+const WARCRY_ARCS = 3
+const WARCRY_ARC_GAP = 260
+
+function warcryPhase(tMs: number, spec: TitleWarcrySpec) {
+  const interval = spec.intervalMs ?? 7000
+  const strain = spec.strainMs ?? 1300
+  return { local: tMs % interval, strain }
+}
+
+export function warcryCharStyle(tMs: number, i: number, n: number, spec: TitleWarcrySpec, light: boolean, base: string): Style {
+  const tint = pick(light, spec.lightStrain, spec.strain, '#ff5a3c')
+  const { local, strain } = warcryPhase(tMs, spec)
+  if (local < strain) {
+    const k = Math.pow(local / strain, 1.6)
+    const bucket = Math.floor(tMs / 40)
+    const jx = (hash01(bucket * 7 + i * 13) - 0.5) * 0.08 * k
+    const jy = (hash01(bucket * 11 + i * 5) - 0.5) * 0.06 * k
+    return {
+      color: lerpHex(base, tint, 0.75 * k),
+      transform: `translate(${jx.toFixed(3)}em, ${jy.toFixed(3)}em) scale(${(1 + 0.08 * k).toFixed(3)})`,
+    }
+  }
+  const u = (local - strain) / WARCRY_KNOCK
+  if (u >= 1) return {}
+  const side = n > 1 ? (i - (n - 1) / 2) / ((n - 1) / 2) : 0
+  const spring = Math.exp(-4 * u) * Math.cos(u * 9)
+  return {
+    color: lerpHex(tint, base, clamp01(u * 1.4)),
+    transform: `translateX(${(side * 0.22 * spring).toFixed(3)}em) rotate(${(side * 9 * spring).toFixed(1)}deg)`,
+  }
+}
+
+export function warcryArcStyles(tMs: number, spec: TitleWarcrySpec, light: boolean): Style[] {
+  const wave = pick(light, spec.lightWave, spec.wave, '#ffd2c2')
+  const { local, strain } = warcryPhase(tMs, spec)
+  const arcs: Style[] = []
+  for (let k = 0; k < WARCRY_ARCS; k++) {
+    const p = (local - strain - k * WARCRY_ARC_GAP) / WARCRY_ARC
+    if (p < 0 || p >= 1) continue
+    const e = easeOut(p)
+    arcs.push({
+      width: `calc(${(100 + e * 90).toFixed(1)}% + ${(1.4 + e * 3).toFixed(2)}em)`,
+      height: `${(1.6 + e * 2.6).toFixed(2)}em`,
+      opacity: (0.85 * (1 - p)).toFixed(3),
+      borderColor: `transparent ${wave}`,
+      borderWidth: `${Math.max(1, 2.5 * (1 - p)).toFixed(1)}px`,
+    })
+  }
+  return arcs
+}
+
+function torchPos(tMs: number, n: number, spec: TitleTorchSpec): number {
+  const span = Math.max(1, n - 1)
+  const u = (tMs / (spec.stepMs ?? 900)) % (span * 2)
+  const raw = u <= span ? u : span * 2 - u
+  return span * (0.5 - 0.5 * Math.cos((raw / span) * Math.PI))
+}
+
+const TORCH_TRAIL_STEPS = 20
+const TORCH_TRAIL_MS = 80
+
+function torchGlow(tMs: number, i: number, n: number, spec: TitleTorchSpec): number {
+  let glow = 0
+  for (let j = 0; j <= TORCH_TRAIL_STEPS; j++) {
+    const near = Math.max(0, 1 - Math.abs(i - torchPos(tMs - j * TORCH_TRAIL_MS, n, spec)) / 1.2)
+    glow = Math.max(glow, near * (1 - j / TORCH_TRAIL_STEPS))
+  }
+  return glow
+}
+
+export function torchCharStyle(tMs: number, i: number, n: number, spec: TitleTorchSpec, light: boolean, base: string): Style {
+  const lit = pick(light, spec.lightLit, spec.lit, '#ffd38a')
+  const glow = torchGlow(tMs, i, n, spec)
+  const flicker = 0.9 + 0.1 * Math.sin(tMs / 190 + i * 1.7)
+  return {
+    color: lerpHex(base, lit, Math.min(1, glow * flicker)),
+    transform: `translateY(${(-0.05 * glow).toFixed(3)}em)`,
+  }
+}
+
+export function torchFlameStyle(tMs: number, n: number, spec: TitleTorchSpec, light: boolean): Style {
+  const flame = pick(light, spec.lightFlame, spec.flame, '#ff9a3c')
+  const core = pick(light, spec.lightCore, spec.core, '#ffe7b0')
+  const t = tMs / 1000
+  const lick = 1 + 0.12 * Math.sin(t * 7.3) + 0.07 * Math.sin(t * 12.9 + 1)
+  const sway = 6 * Math.sin(t * 2.1) + 3 * Math.sin(t * 5.7)
+  return {
+    left: `${(((torchPos(tMs, n, spec) + 0.5) / Math.max(1, n)) * 100).toFixed(2)}%`,
+    '--torch-flame': flame,
+    '--torch-core': core,
+    transform: `translateX(-50%) skewX(${sway.toFixed(1)}deg) scaleY(${lick.toFixed(3)})`,
   }
 }

@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import RelationActions from '@/components/domain/RelationActions.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRelationsStore } from '@/stores/relations'
 import type {
@@ -14,6 +12,7 @@ import type {
   ScoreRelationType,
   UserRelationResponse,
 } from '@/types/api/relations'
+import { toRelationUserRef } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -142,22 +141,7 @@ watch(page, () => {
           </template>
 
           <template v-else>
-            <GlowImage
-              v-if="item.targetCdnAvatarUrl ?? item.targetAvatarUrl"
-              :src="(item.targetCdnAvatarUrl ?? item.targetAvatarUrl) ?? ''"
-              :alt="item.targetName"
-              :size="36"
-            />
-            <span v-else class="relation-list__avatar-fallback" />
-            <PlayerTooltipTrigger
-              :user-id="item.targetUserId ?? ''"
-              :user-name="item.targetName"
-              :avatar-url="(item.targetCdnAvatarUrl ?? item.targetAvatarUrl) ?? ''"
-              :country="item.targetCountry ?? ''"
-              class="relation-list__trigger"
-            >
-              <span class="relation-list__name">{{ item.targetName }}</span>
-            </PlayerTooltipTrigger>
+            <UserChip :user="toRelationUserRef(item)" tooltip class="relation-list__player" />
             <button
               v-if="canRemove"
               class="relation-list__remove"
@@ -179,7 +163,6 @@ watch(page, () => {
               class="relation-list__actions"
               @click.stop
             />
-            <CountryFlag v-if="item.targetCountry" :country="item.targetCountry" />
           </template>
         </div>
 
@@ -248,12 +231,8 @@ watch(page, () => {
   flex-shrink: 0;
 }
 
-.relation-list__trigger {
+.relation-list__player {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
 }
 
 .relation-list__name {

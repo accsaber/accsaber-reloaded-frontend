@@ -66,7 +66,7 @@ function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
     bombHits: entry.bombHits,
     streak115: entry.streak115,
     blScoreId: entry.blScoreId,
-    userName: entry.userName,
+    userName: entry.player.name,
     mapAuthor: entry.mapAuthor,
   }
 }

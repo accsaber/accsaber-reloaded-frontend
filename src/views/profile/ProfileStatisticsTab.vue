@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import StatBlock from '@/components/common/StatBlock.vue'
+import ClanTag from '@/components/domain/ClanTag.vue'
 import SkillLevelPanel from '@/components/domain/SkillLevelPanel.vue'
 import ProfileApCurveChart from '@/views/profile/ProfileApCurveChart.vue'
 import ProfileStatsChart from '@/views/profile/ProfileStatsChart.vue'
+import { useAppearance } from '@/composables/useAppearance'
 import { useCategoryStore } from '@/stores/categories'
+import type { ClanStatsResponse } from '@/types/api/clans'
+import { CLAN_ROLE_LABEL } from '@/utils/clans'
 import type {
   SkillResponse,
   UserAllStatisticsResponse,
   UserCategoryStatisticsResponse,
 } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
+import { formatFullDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -19,6 +24,21 @@ const props = defineProps<{
 }>()
 
 const categoryStore = useCategoryStore()
+const { hideReloadedProfileFeatures } = useAppearance()
+
+const clanStats = computed<ClanStatsResponse | null>(() => {
+  const clan = props.xpStats?.clan
+  if (!clan || hideReloadedProfileFeatures.value) return null
+  const fought = clan.warsFought + clan.hits + clan.breaksDealt + clan.breaksSuffered > 0
+  return clan.clan || fought ? clan : null
+})
+
+const clanRoleLine = computed(() => {
+  const clan = clanStats.value
+  if (!clan?.clan) return ''
+  const role = clan.role ? CLAN_ROLE_LABEL[clan.role] : 'Member'
+  return clan.joinedAt ? `${role} since ${formatFullDate(clan.joinedAt)}` : role
+})
 const allTimeData = ref<UserCategoryStatisticsResponse[]>([])
 const skill = ref<SkillResponse | null>(null)
 const skillLoading = ref(false)
@@ -111,7 +131,7 @@ watch(
       </section>
     </div>
 
-    <div v-if="peakStats || xpStats" class="statistics-tab__split">
+    <div v-if="peakStats || xpStats || clanStats" class="statistics-tab__split">
       <section v-if="peakStats" class="statistics-tab__peaks">
         <h3 class="statistics-tab__section-title">Peak Stats</h3>
         <div class="statistics-tab__peaks-grid">
@@ -120,6 +140,28 @@ watch(
           <StatBlock v-if="peakStats.peakCountryRank != null" label="Peak Country Rank" :value="peakStats.peakCountryRank"
             :decimals="0" />
           <StatBlock v-if="peakStats.peakAp != null" label="Peak AP" :value="peakStats.peakAp" />
+        </div>
+      </section>
+
+      <section v-if="clanStats" class="clan-record">
+        <h3 class="statistics-tab__section-title">Clan</h3>
+        <div v-if="clanStats.clan" class="clan-record__head">
+          <ClanTag :clan="clanStats.clan" size="lg" effects class="clan-record__tag" />
+          <span class="clan-record__name">{{ clanStats.clan.name }}</span>
+          <span class="clan-record__role">{{ clanRoleLine }}</span>
+        </div>
+        <p v-else class="clan-record__note">
+          Not in a clan.
+        </p>
+        <div class="clan-record__grid">
+          <StatBlock label="Wars Fought" :value="clanStats.warsFought" :decimals="0" />
+          <StatBlock label="Wars Won" :value="clanStats.warsWon" :decimals="0" />
+          <StatBlock label="Hits" :value="clanStats.hits" :decimals="0" />
+          <StatBlock label="Breaks Dealt" :value="clanStats.breaksDealt" :decimals="0" />
+          <StatBlock label="Breaks Suffered" :value="clanStats.breaksSuffered" :decimals="0" />
+          <StatBlock label="Standing Moved" :value="clanStats.standingMoved" :decimals="1" />
+          <StatBlock label="Contribution" :value="clanStats.contribution" :decimals="1" />
+          <StatBlock label="War XP" :value="clanStats.warXp" :decimals="0" />
         </div>
       </section>
 
@@ -203,6 +245,69 @@ watch(
   align-items: center;
   width: 100%;
   max-width: 800px;
+}
+
+.clan-record {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+}
+
+.clan-record__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: var(--space-md);
+  font-size: var(--text-card-title);
+}
+
+.clan-record__name {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clan-record__role {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.clan-record__note {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.clan-record__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.clan-record__grid :deep(.stat-block) {
+  align-items: center;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .clan-record__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .clan-record__head {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 .xp-breakdown__tree {

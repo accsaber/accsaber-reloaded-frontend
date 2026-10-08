@@ -61,6 +61,10 @@
   --tier-diamond: #b9f2ff;
   --tier-apex: #a855f7;
 
+  /* --- Clan tag card ink, fixed over any fill --- */
+  --clan-tag-ink-dark: #14121f;
+  --clan-tag-ink-light: #f7f6fb;
+
   /* --- XP source colors (dark) — fixed hex, not theme-token refs, so equipped
      item themes cannot collapse them; each distinct + AA on its own background --- */
   --xp-score: #e58a3a;

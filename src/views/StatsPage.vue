@@ -12,7 +12,7 @@ import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
-import { toScoreDisplay } from '@/utils/mappers'
+import { toScoreDisplay, toUserRef, type FlatUserRef } from '@/utils/mappers'
 import { loadStoredCountry, storeCountry } from '@/utils/statsCountry'
 import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -212,18 +212,14 @@ function openScoreDetail(scoreId: string) {
 }
 
 function addRank(item: Record<string, unknown>, index: number) {
-  const cdnAvatar = item.cdnAvatarUrl as string | null | undefined
-  const upstreamAvatar = item.avatarUrl as string | null | undefined
-  const resolvedAvatar = cdnAvatar ?? upstreamAvatar ?? ''
-  const fallbackAvatar = cdnAvatar && upstreamAvatar && cdnAvatar !== upstreamAvatar ? upstreamAvatar : null
+  const player = item.userId ? toUserRef(item as unknown as FlatUserRef) : undefined
   const cdnCover = item.cdnCoverUrl as string | null | undefined
   const upstreamCover = item.coverUrl as string | null | undefined
   const resolvedCover = cdnCover ?? upstreamCover ?? ''
   const fallbackCover = cdnCover && upstreamCover && cdnCover !== upstreamCover ? upstreamCover : null
   return {
     ...item,
-    avatarUrl: resolvedAvatar,
-    avatarFallbackUrl: fallbackAvatar,
+    player,
     coverUrl: resolvedCover,
     coverFallbackUrl: fallbackCover,
     rank: pageData.value!.number * pageData.value!.size + index + 1,

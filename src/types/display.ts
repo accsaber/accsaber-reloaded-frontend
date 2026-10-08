@@ -1,6 +1,7 @@
 import type { MilestoneRewardResponse } from './api/milestones'
 import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import type { SupporterTier } from './api/supporters'
+import type { PublicClanResponse } from './api/clans'
 import type { MilestoneType, SupersedesReason } from './enums'
 
 export interface Tab {
@@ -40,10 +41,7 @@ export interface SortState {
 
 export interface PlayerDisplay {
   userId: string
-  name: string
-  country: string
-  avatarUrl: string
-  avatarFallbackUrl?: string | null
+  player: UserRefDisplay
   rank: number
   countryRank?: number
   rankChange?: number | null
@@ -51,22 +49,17 @@ export interface PlayerDisplay {
   avgAccuracy?: number
   rankedPlays?: number
   playerInactive?: boolean
-  supporterTier?: SupporterTier | null
 }
 
 export interface XpPlayerDisplay {
   userId: string
-  name: string
-  country: string
-  avatarUrl: string
-  avatarFallbackUrl?: string | null
+  player: UserRefDisplay
   rank: number
   countryRank?: number
   rankChange?: number | null
   totalXp: number
   level: number
   playerInactive?: boolean
-  supporterTier?: SupporterTier | null
 }
 
 export interface MapDisplay {
@@ -140,10 +133,7 @@ export interface DifficultyScoreDisplay {
   rank: number
   countryRank: number
   userId: string
-  userName: string
-  avatarUrl: string
-  avatarFallbackUrl?: string | null
-  country: string
+  player: UserRefDisplay
   accuracy: number
   score: number
   scoreNoMods: number
@@ -166,7 +156,6 @@ export interface DifficultyScoreDisplay {
   hmd: string
   xpGained: number
   rankWhenSet: number
-  supporterTier?: SupporterTier | null
 }
 
 export type MilestoneTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'APEX'
@@ -232,10 +221,7 @@ export type MetricType = 'ap' | 'avgAccuracy' | 'avgAp' | 'rankedPlays' | 'rank'
 export interface ScoreFeedEntry {
   key: string
   userId: string
-  userName: string
-  avatarUrl: string
-  avatarFallbackUrl?: string | null
-  country: string
+  player: UserRefDisplay
   mapId: string
   mapDifficultyId: string
   beatsaverCode?: string | null
@@ -267,9 +253,11 @@ export interface ScoreFeedEntry {
 export type ConnectionStatus = 'connected' | 'reconnecting' | 'disconnected'
 
 export interface UserRefDisplay {
-  id: string | number
+  id: string
   name: string
   avatarUrl?: string | null
   cdnAvatarUrl?: string | null
   country?: string | null
+  supporterTier?: SupporterTier | null
+  clan?: PublicClanResponse | null
 }

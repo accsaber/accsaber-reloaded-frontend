@@ -347,7 +347,6 @@ onMounted(() => {
 
     <PageHeaderBleed
       title="New Trade Offer"
-      subtitle="Build an offer with up to 8 items on each side."
     />
 
     <div v-if="!isLoggedIn" class="trade-builder__gate">
@@ -369,10 +368,7 @@ onMounted(() => {
           <span class="trade-builder__banner-text">
             <template v-if="recipientUser">
               You are trading with
-              <router-link
-                class="trade-builder__banner-user"
-                :to="{ name: 'player-profile', params: { userId: recipientUser.id } }"
-              >{{ recipientUser.name }}</router-link>
+              <UserChip :user="recipientUser" size="xs" link class="trade-builder__banner-user" />
             </template>
             <template v-else-if="recipientLoading">Loading recipient...</template>
             <template v-else>Pick a player to start an offer.</template>
@@ -441,7 +437,6 @@ onMounted(() => {
               @update:page="(p) => myInvCurrentPage = p"
             />
 
-            <p class="trade-builder__hint">Displaying tradable items only.</p>
           </div>
 
           <div v-else-if="activeTab === 'theirs'" class="trade-builder__pane">
@@ -480,7 +475,6 @@ onMounted(() => {
               @update:page="(p) => theirInvCurrentPage = p"
             />
 
-            <p class="trade-builder__hint">Displaying tradable items only.</p>
           </div>
         </section>
 
@@ -686,13 +680,10 @@ onMounted(() => {
 }
 
 .trade-builder__banner-user {
+  vertical-align: middle;
+  font-size: inherit;
   color: var(--page-accent);
   font-weight: 600;
-  text-decoration: none;
-}
-
-.trade-builder__banner-user:hover {
-  text-decoration: underline;
 }
 
 .trade-builder__layout {

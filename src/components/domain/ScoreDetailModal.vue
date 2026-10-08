@@ -3,13 +3,12 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { useAppearance } from '@/composables/useAppearance'
 import { useThemeStore } from '@/stores/theme'
@@ -22,7 +21,7 @@ import type {
   UserResponse,
 } from '@/types/api/users'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import type { MetricType, ScoreDisplay, TimeRange, TimeSeriesPoint } from '@/types/display'
+import type { MetricType, ScoreDisplay, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { SCORE_DETAIL_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -88,8 +87,13 @@ const {
   thumbnailEffects: equippedThumbnailEffects,
 } = useEquippedRenderProps(equipped)
 
-const playerName = computed(() => player.value?.name ?? props.score?.userName ?? '')
-const playerCountry = computed(() => player.value?.country ?? '')
+const playerRef = computed<UserRefDisplay>(() => ({
+  id: props.userId,
+  name: player.value?.name ?? props.score?.userName ?? '',
+  country: player.value?.country ?? null,
+  supporterTier: player.value?.supporterTier ?? props.score?.supporterTier ?? null,
+  clan: player.value?.clan ?? null,
+}))
 const playerAvatar = computed(() => player.value?.cdnAvatarUrl ?? player.value?.avatarUrl ?? '')
 const handleScoreCoverError = (e: Event) => {
   const img = e.currentTarget as HTMLImageElement
@@ -99,10 +103,6 @@ const handleScoreCoverError = (e: Event) => {
     img.src = fb
   }
 }
-const playerSupporterTier = computed(
-  () => player.value?.supporterTier ?? props.score?.supporterTier ?? null,
-)
-
 const complexity = computed(() => mapDifficulty.value?.complexity ?? null)
 const difficultyRaw = computed(() => mapDifficulty.value?.difficulty ?? null)
 const characteristic = computed(() => mapDifficulty.value?.characteristic ?? null)
@@ -353,13 +353,7 @@ watch(
 
         <div class="score-detail__player-info">
           <div class="score-detail__player-name-row">
-            <h2 class="score-detail__player-name">{{ playerName || '\u00A0' }}</h2>
-            <SupporterTierIcon
-              v-if="playerSupporterTier"
-              :tier="playerSupporterTier"
-              :size="16"
-            />
-            <CountryFlag v-if="playerCountry" :country="playerCountry" />
+            <UserChip :user="playerRef" size="lg" hide-avatar name-tag="h2" class="score-detail__player-name" />
           </div>
         </div>
 

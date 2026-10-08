@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import CountryFlag from '@/components/domain/CountryFlag.vue';
+import UserChip from '@/components/domain/UserChip.vue';
 import type { MilestoneHolderResponse } from '@/types/api/milestones';
+import { toUserRef } from '@/utils/mappers';
 import { nextTick, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -67,13 +68,6 @@ onUnmounted(() => {
   if (leaveTimer) clearTimeout(leaveTimer)
 })
 
-function handleHolderAvatarError(h: MilestoneHolderResponse, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (h.cdnAvatarUrl && h.avatarUrl && img.src !== h.avatarUrl) {
-    img.src = h.avatarUrl
-  }
-}
-
 function formatRelative(dateStr: string): string {
   const now = Date.now()
   const then = new Date(dateStr).getTime()
@@ -123,11 +117,7 @@ function formatRelative(dateStr: string): string {
             <div v-else class="holder-popup__list">
               <router-link v-for="h in holders" :key="h.userId"
                 :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
-                <img :src="h.cdnAvatarUrl ?? h.avatarUrl" :alt="h.name" class="holder-popup__avatar"
-                  loading="lazy" decoding="async"
-                  @error="handleHolderAvatarError(h, $event)" />
-                <span class="holder-popup__name">{{ h.name }}</span>
-                <CountryFlag :country="h.country" />
+                <UserChip :user="toUserRef(h)" size="sm" class="holder-popup__player" />
                 <span class="holder-popup__time">{{ formatRelative(h.completedAt) }}</span>
               </router-link>
             </div>
@@ -228,23 +218,9 @@ function formatRelative(dateStr: string): string {
   background: var(--bg-elevated);
 }
 
-.holder-popup__avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.holder-popup__name {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.holder-popup__player {
   flex: 1;
-  min-width: 0;
+  font-size: var(--text-caption);
 }
 
 .holder-popup__time {

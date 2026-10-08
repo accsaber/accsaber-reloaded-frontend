@@ -348,8 +348,7 @@ watch(() => authStore.userId, fetchData)
             </template>
 
             <p v-else class="milestones-page__hint">
-              Pick a milestone on the map to read its target, progress and reward. Click a set heading
-              for the set bonus.
+              Pick a milestone.
             </p>
           </div>
         </Transition>

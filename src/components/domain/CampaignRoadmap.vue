@@ -1669,7 +1669,6 @@ const arrowDecorations = computed(() =>
       <p v-if="overlapMarkers.length > 0" class="campaign-roadmap__overlap-note" role="status">
         {{ overlapMarkers.length }} elements are stacked on top of each other
       </p>
-      <div class="campaign-roadmap__hint" aria-hidden="true">drag · scroll to zoom</div>
       <div class="campaign-roadmap__controls" aria-label="Roadmap controls">
         <button
           type="button"
@@ -2191,17 +2190,6 @@ const arrowDecorations = computed(() =>
   background: color-mix(in srgb, var(--error) 12%, var(--bg-surface));
   border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);
   border-radius: 3px;
-  pointer-events: none;
-}
-
-.campaign-roadmap__hint {
-  order: -1;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
   pointer-events: none;
 }
 </style>

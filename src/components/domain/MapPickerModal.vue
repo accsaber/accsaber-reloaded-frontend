@@ -19,16 +19,32 @@ import type { CategoryCode } from '@/types/display'
 import { QUEUE_STATUSES } from '@/utils/constants'
 import { computed, onMounted, ref, watch } from 'vue'
 import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
-import CampaignGlobalMapSearch from './CampaignGlobalMapSearch.vue'
+import CampaignGlobalMapSearch from '@/views/staff/campaigns/CampaignGlobalMapSearch.vue'
+
+export interface FixedMapFilters {
+  categoryId?: string | null
+  complexityMin?: number | null
+  complexityMax?: number | null
+}
 
 const props = withDefaults(
   defineProps<{
+    title: string
+    commitLabel: (count: number) => string
     loading?: boolean
     globalSubmit?: (ids: ImportCampaignMapRequest) => Promise<{ attached: boolean }>
     initialGenreSlugs?: string[]
     usedDifficultyIds?: string[]
+    usedLabel?: string
+    usedTitle?: string
+    disableUsed?: boolean
+    initialMulti?: boolean
+    modeToggle?: boolean
+    rankedOnly?: boolean
+    limit?: number
+    fixedFilters?: FixedMapFilters
   }>(),
-  { usedDifficultyIds: () => [] },
+  { usedDifficultyIds: () => [], usedLabel: 'Already added', usedTitle: '', modeToggle: true },
 )
 
 const emit = defineEmits<{
@@ -61,12 +77,14 @@ const filtersOpen = ref(false)
 const selectedCategory = ref<string | null>(null)
 const complexityRange = ref<[number, number]>([0, 20])
 
-const multi = ref(false)
+const multi = ref(props.initialMulti ?? false)
 const staged = ref<PublicMapDifficultyResponse[]>([])
 
 const stagedIds = computed(() => new Set(staged.value.map((d) => d.id)))
 
 const usedIds = computed(() => new Set(props.usedDifficultyIds))
+
+const atLimit = computed(() => props.limit !== undefined && staged.value.length >= props.limit)
 
 const hasActiveFilters = computed(
   () =>
@@ -90,14 +108,21 @@ async function search() {
       search: debounced.value || undefined,
       sort: statusFilter.value === 'RANKED' ? 'rankedAt,desc' : 'createdAt,desc',
     }
-    if (selectedCategory.value) {
-      params.categoryId = selectedCategory.value
-    }
-    if (complexityRange.value[0] > 0) {
-      params.complexityMin = complexityRange.value[0]
-    }
-    if (complexityRange.value[1] < 20) {
-      params.complexityMax = complexityRange.value[1]
+    const fixed = props.fixedFilters
+    if (fixed) {
+      if (fixed.categoryId) params.categoryId = fixed.categoryId
+      if (fixed.complexityMin != null) params.complexityMin = fixed.complexityMin
+      if (fixed.complexityMax != null) params.complexityMax = fixed.complexityMax
+    } else {
+      if (selectedCategory.value) {
+        params.categoryId = selectedCategory.value
+      }
+      if (complexityRange.value[0] > 0) {
+        params.complexityMin = complexityRange.value[0]
+      }
+      if (complexityRange.value[1] < 20) {
+        params.complexityMax = complexityRange.value[1]
+      }
     }
     const data = await getDifficulties(params as never)
     results.value = data.content
@@ -114,7 +139,7 @@ async function search() {
 
 onMounted(search)
 
-watch([debounced, page, selectedCategory, complexityRange, statusFilter], () => {
+watch([debounced, page, selectedCategory, complexityRange, statusFilter, () => props.fixedFilters], () => {
   if (source.value === 'system') void search()
 })
 
@@ -133,8 +158,14 @@ function setMulti(value: boolean) {
   if (!value) staged.value = []
 }
 
+function rowDisabled(diff: PublicMapDifficultyResponse): boolean {
+  if (props.loading) return true
+  if (props.disableUsed && usedIds.value.has(diff.id)) return true
+  return multi.value && atLimit.value && !stagedIds.value.has(diff.id)
+}
+
 function rowClick(diff: PublicMapDifficultyResponse) {
-  if (props.loading) return
+  if (rowDisabled(diff)) return
   if (!multi.value) {
     emit('pick', [diff])
     return
@@ -157,7 +188,7 @@ function commit() {
 </script>
 
 <template>
-  <BaseModal :open="true" title="Add nodes" max-width="900px" @close="emit('close')">
+  <BaseModal :open="true" :title="title" max-width="900px" @close="emit('close')">
     <div class="map-picker" :class="{ 'map-picker--multi': multi && source === 'system' }">
       <div v-if="globalSubmit" class="map-picker__source" role="radiogroup" aria-label="Map source">
         <button
@@ -192,11 +223,12 @@ function commit() {
           placeholder="Search song, artist, or mapper"
         />
         <FilterButton
+          v-if="!fixedFilters"
           :active="filtersOpen || hasActiveFilters"
           :has-indicator="hasActiveFilters"
           @click="filtersOpen = !filtersOpen"
         />
-        <div class="map-picker__mode" role="radiogroup" aria-label="Selection mode">
+        <div v-if="modeToggle" class="map-picker__mode" role="radiogroup" aria-label="Selection mode">
           <button
             type="button"
             role="radio"
@@ -220,7 +252,7 @@ function commit() {
         </div>
       </div>
 
-      <div class="map-picker__status" role="radiogroup" aria-label="Map status">
+      <div v-if="!rankedOnly" class="map-picker__status" role="radiogroup" aria-label="Map status">
         <button
           v-for="s in STATUS_OPTIONS"
           :key="s.value"
@@ -235,7 +267,7 @@ function commit() {
         </button>
       </div>
 
-      <div v-if="filtersOpen" class="map-picker__filters">
+      <div v-if="filtersOpen && !fixedFilters" class="map-picker__filters">
         <MapFilterSidebar
           :selected-category="selectedCategory"
           :complexity-range="complexityRange"
@@ -267,7 +299,7 @@ function commit() {
                 type="button"
                 class="map-picker__row"
                 :class="{ 'map-picker__row--staged': multi && stagedIds.has(diff.id) }"
-                :disabled="loading"
+                :disabled="rowDisabled(diff)"
                 @click="rowClick(diff)"
               >
                 <span class="map-picker__cover">
@@ -285,12 +317,8 @@ function commit() {
                 </span>
                 <span class="map-picker__trailing">
                   <span class="map-picker__diff">
-                    <span
-                      v-if="usedIds.has(diff.id)"
-                      class="map-picker__used"
-                      title="This difficulty is already a node in this campaign. You can still add it again."
-                    >
-                      In campaign
+                    <span v-if="usedIds.has(diff.id)" class="map-picker__used" :title="usedTitle">
+                      {{ usedLabel }}
                     </span>
                     <DifficultyBadge :difficulty="diff.difficulty" />
                     <span v-if="characteristicHint(diff)" class="map-picker__char">
@@ -331,7 +359,7 @@ function commit() {
           <header class="map-picker__pane-head">
             <span class="map-picker__pane-title">
               Selected
-              <span class="map-picker__pane-count">{{ staged.length }}</span>
+              <span class="map-picker__pane-count">{{ staged.length }}<template v-if="limit !== undefined">/{{ limit }}</template></span>
             </span>
             <button
               v-if="staged.length > 0"
@@ -399,7 +427,7 @@ function commit() {
         :loading="loading"
         @click="commit"
       >
-        Add {{ staged.length }} {{ staged.length === 1 ? 'node' : 'nodes' }}
+        {{ commitLabel(staged.length) }}
       </BaseButton>
     </template>
   </BaseModal>

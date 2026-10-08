@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useCategoryStore } from '@/stores/categories'
-import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
-import type { TableColumn } from '@/types/display'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
@@ -72,10 +71,7 @@ function pushRow(row: Record<string, unknown>) {
     </template>
 
     <template #cell-player="{ row }">
-      <LeaderboardPlayerCell :user-id="(row.userId as string)" :user-name="(row.userName as string)"
-        :avatar-url="(row.avatarUrl as string)"
-        :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
-        :country="(row.country as string)" />
+      <UserChip :user="(row.player as UserRefDisplay)" tooltip />
     </template>
 
     <template #cell-map="{ row }">
@@ -122,12 +118,7 @@ function pushRow(row: Record<string, unknown>) {
       <div class="stats-card" :class="{ 'stats-card--superseded': isScoreTab && row.active === false }"
         @click="pushRow(row)">
         <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-        <div v-if="row.userName" class="stats-card__player">
-          <GlowImage :src="(row.avatarUrl as string)" :alt="(row.userName as string)" :size="28"
-            :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-          <span class="stats-card__name">{{ row.userName }}</span>
-          <CountryFlag v-if="row.country" :country="(row.country as string)" />
-        </div>
+        <UserChip v-if="row.player" :user="(row.player as UserRefDisplay)" size="sm" class="stats-card__player" />
         <router-link v-if="row.songName" class="stats-card__map" :to="mapRowRoute(row)" @click.stop>
           <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
@@ -291,19 +282,7 @@ function pushRow(row: Record<string, unknown>) {
 }
 
 .stats-card__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
   flex: 1;
-}
-
-.stats-card__name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .stats-card__stat {

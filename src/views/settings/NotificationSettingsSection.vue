@@ -12,43 +12,51 @@ const NOTIFICATION_DEFAULTS: NotificationSettings = {
   'notifications.marketOutbid': true,
   'notifications.itemEarned': true,
   'notifications.server': true,
+  'notifications.clanMembership': true,
+  'notifications.clanAlliance': true,
+  'notifications.clanWar': true,
 }
 
-const CONTROLS: { key: keyof NotificationSettings & string; title: string; hint: string }[] = [
+const CONTROLS: { key: keyof NotificationSettings & string; title: string }[] = [
   {
     key: 'notifications.tradeOffer',
     title: 'New trade offers',
-    hint: 'Someone sends you a trade offer.',
   },
   {
     key: 'notifications.tradeResolved',
     title: 'Trade offers accepted or declined',
-    hint: 'One of your outgoing offers is resolved, either way.',
   },
   {
     key: 'notifications.marketSold',
     title: 'Your market item sells',
-    hint: 'A listing of yours is bought or won.',
   },
   {
     key: 'notifications.marketBid',
     title: 'Someone bids on your listing',
-    hint: 'A new bid lands on one of your active listings.',
   },
   {
     key: 'notifications.marketOutbid',
     title: 'You get outbid on a listing',
-    hint: 'Someone tops your bid on an active auction.',
   },
   {
     key: 'notifications.itemEarned',
     title: 'You receive a new item',
-    hint: 'Crates, drops, and rewards arriving in your inventory.',
+  },
+  {
+    key: 'notifications.clanMembership',
+    title: 'Clan membership',
+  },
+  {
+    key: 'notifications.clanAlliance',
+    title: 'Clan alliances and rivals',
+  },
+  {
+    key: 'notifications.clanWar',
+    title: 'Clan wars',
   },
   {
     key: 'notifications.server',
     title: 'Server announcements',
-    hint: 'One-line announcements from the AccSaber team.',
   },
 ]
 
@@ -97,10 +105,6 @@ async function setToggle(key: keyof NotificationSettings & string, value: boolea
   <section class="settings-card">
     <header class="settings-card__header">
       <h2 class="settings-card__title">Notifications</h2>
-      <p class="settings-card__desc">
-        Choose what shows up under the bell. Notifications only exist on AccSaber itself; nothing
-        is ever emailed.
-      </p>
     </header>
 
     <template v-if="settings === null && !error">
@@ -113,7 +117,6 @@ async function setToggle(key: keyof NotificationSettings & string, value: boolea
       <div v-for="control in CONTROLS" :key="control.key" class="settings-row">
         <div class="settings-row__label">
           <span class="settings-row__title">{{ control.title }}</span>
-          <span class="settings-row__hint">{{ control.hint }}</span>
         </div>
         <SettingsPicker :model-value="settings[control.key] as boolean" :options="ON_OFF_OPTIONS"
           :aria-label="control.title" :disabled="saving"
@@ -123,10 +126,6 @@ async function setToggle(key: keyof NotificationSettings & string, value: boolea
 
     <p v-if="error" class="settings-card__error">{{ error }}</p>
 
-    <p class="settings-card__note">
-      Turning a category off stops future notifications of that type. It does not delete ones you
-      already received, and turning it back on does not bring back anything sent while it was off.
-    </p>
   </section>
 </template>
 

@@ -228,7 +228,6 @@ onUnmounted(() => {
         >
           <div class="ap-next-tip__head">
             <span class="ap-next-tip__title">Next AP point</span>
-            <span class="ap-next-tip__sub">Raw AP needed to raise your total AP by 1.</span>
           </div>
 
           <div v-if="loading" class="ap-next-tip__body">
@@ -306,12 +305,6 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-secondary);
-}
-
-.ap-next-tip__sub {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.4;
 }
 
 .ap-next-tip__rows {

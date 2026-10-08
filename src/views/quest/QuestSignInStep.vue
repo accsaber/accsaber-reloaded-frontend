@@ -20,9 +20,6 @@ defineEmits<{
         <UserChip :user="user" link />
         <BaseButton size="sm" @click="$emit('sign-in')">Not you?</BaseButton>
       </div>
-      <p class="sign-in__note">
-        The mod you generate next is tied to this account.
-      </p>
     </template>
 
     <EmptyState v-else message="Sign in to generate a mod linked to your AccSaber account."
@@ -46,11 +43,5 @@ defineEmits<{
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-}
-
-.sign-in__note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-body);
 }
 </style>

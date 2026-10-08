@@ -3,14 +3,13 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import { parseApiError } from '@/api/client'
 import { useCategoryStore } from '@/stores/categories'
 import type { CurveResponse } from '@/types/api/categories'
 import type { LeaderboardPreviewResponse } from '@/types/api/maps'
-import type { TableColumn } from '@/types/display'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
+import { toUserRef } from '@/utils/mappers'
 import { calculateAp } from '@/utils/curveEval'
 import { formatAccuracy, formatCount, formatFixed } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
@@ -66,10 +65,7 @@ const rows = computed(() =>
     key: `${row.platform}-${row.userId}`,
     rank: row.rank,
     userId: row.userId,
-    name: row.name,
-    country: row.country,
-    avatarUrl: pickAvatarUrl(row),
-    avatarFallbackUrl: pickAvatarFallback(row),
+    player: toUserRef(row),
     accuracy: row.accuracy,
     ap: atBase.value || !curve.value
       ? row.ap
@@ -170,12 +166,7 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
       </template>
 
       <template #cell-player="{ row }">
-        <div class="lb-preview__player">
-          <GlowImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="28"
-            :fallback-src="(row.avatarFallbackUrl as string | null)" />
-          <span class="lb-preview__name">{{ row.name }}</span>
-          <CountryFlag v-if="row.country" :country="(row.country as string)" />
-        </div>
+        <UserChip :user="(row.player as UserRefDisplay)" size="sm" />
       </template>
 
       <template #cell-accuracy="{ row }">
@@ -284,21 +275,6 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
   margin: 0;
   color: var(--error);
   font-size: var(--text-caption);
-}
-
-.lb-preview__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.lb-preview__name {
-  color: var(--text-primary);
-  font-size: var(--text-body);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .lb-preview__rank,

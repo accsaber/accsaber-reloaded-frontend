@@ -7,7 +7,7 @@ import type {
 } from '@/types/api/campaigns'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import CampaignMapPicker from './CampaignMapPicker.vue'
+import MapPickerModal from '@/components/domain/MapPickerModal.vue'
 import CampaignTrayIcon from './CampaignTrayIcon.vue'
 
 withDefaults(defineProps<{ accent?: string }>(), {
@@ -871,8 +871,11 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <CampaignMapPicker
+      <MapPickerModal
         v-if="pickerOpen"
+        title="Add nodes"
+        used-label="In campaign"
+        :commit-label="(n) => `Add ${n} ${n === 1 ? 'node' : 'nodes'}`"
         @close="pickerOpen = false"
         @pick="handlePicked"
       />

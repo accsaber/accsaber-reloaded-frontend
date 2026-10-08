@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import RankChange from '@/components/common/RankChange.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
-import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
@@ -17,9 +14,8 @@ import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import { useLevelStore } from '@/stores/levels'
 import type { UserRelationType } from '@/types/api/relations'
-import type { SupporterTier } from '@/types/api/supporters'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
-import type { CategoryCode, TableColumn } from '@/types/display'
+import type { CategoryCode, TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { toPlayerDisplay, toXpPlayerDisplay } from '@/utils/mappers'
@@ -385,18 +381,7 @@ watch(() => categoryStore.loaded, (loaded) => {
         </template>
 
         <template #cell-player="{ row }">
-          <PlayerTooltipTrigger :user-id="(row.userId as string)" :user-name="(row.name as string)"
-            :avatar-url="(row.avatarUrl as string)"
-            :avatar-fallback-url="(row.avatarFallbackUrl as string | null | undefined) ?? null"
-            :country="(row.country as string)">
-            <div class="player-cell" :data-user-id="row.userId">
-              <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="32"
-                :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-              <span class="player-cell__name">{{ row.name }}</span>
-              <CountryFlag :country="(row.country as string)" />
-              <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
-            </div>
-          </PlayerTooltipTrigger>
+          <UserChip :user="(row.player as UserRefDisplay)" tooltip :data-user-id="row.userId" />
         </template>
 
         <template #cell-ap="{ value }">
@@ -427,13 +412,7 @@ watch(() => categoryStore.loaded, (loaded) => {
               #{{ row.rank }}
               <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
             </span>
-            <div class="lb-card__player">
-              <GlowImage :src="(row.avatarUrl as string)" :alt="(row.name as string)" :size="28"
-                :fallback-src="(row.avatarFallbackUrl as string | null | undefined) ?? null" />
-              <span class="lb-card__name">{{ row.name }}</span>
-              <CountryFlag :country="(row.country as string)" />
-              <SupporterTierIcon v-if="row.supporterTier" :tier="(row.supporterTier as SupporterTier)" />
-            </div>
+            <UserChip :user="(row.player as UserRefDisplay)" size="sm" class="lb-card__player" />
             <RankChange :value="(row.rankChange as number) ?? 0" class="lb-card__change" />
             <template v-if="isXpMode">
               <span class="lb-card__level">Lv. {{ row.level }}</span>
@@ -611,22 +590,6 @@ watch(() => categoryStore.loaded, (loaded) => {
   }
 }
 
-.player-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.player-cell__name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
 .ap-cell {
   color: var(--page-accent);
   font-weight: 600;
@@ -665,19 +628,6 @@ watch(() => categoryStore.loaded, (loaded) => {
 
 .lb-card__player {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
-.lb-card__name {
-  flex: 1;
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .lb-card__ap {

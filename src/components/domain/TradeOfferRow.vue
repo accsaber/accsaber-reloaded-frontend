@@ -31,7 +31,7 @@ const counterpartUserId = computed(() =>
 
 const counterpart = computed<UserRefDisplay>(() => {
   const ref = props.perspective === 'incoming' ? props.trade.fromUser : props.trade.toUser
-  return ref ?? { id: counterpartUserId.value, name: String(counterpartUserId.value) }
+  return ref ?? { id: counterpartUserId.value, name: counterpartUserId.value }
 })
 
 const yourSide = computed<TradeItemRef[]>(() =>

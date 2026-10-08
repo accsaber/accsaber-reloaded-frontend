@@ -18,7 +18,7 @@ const props = withDefaults(
 const open = ref(false)
 
 const isCrate = computed(() => props.item.typeKey === 'crate')
-const isTitle = computed(() => props.item.typeKey === 'title')
+const isTitle = computed(() => props.item.typeKey === 'title' || props.item.typeKey === 'clan_title_effect')
 const variants = computed(() => itemVariantPreviews(props.item))
 
 const hoverTitle = computed(() => {

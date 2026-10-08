@@ -33,7 +33,7 @@ import {
   localInputToIso,
   slugify,
 } from '@/utils/events'
-import EventItemPicker from '@/views/staff/admin/events/EventItemPicker.vue'
+import AdminItemPicker from '@/components/admin/AdminItemPicker.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -420,7 +420,7 @@ function missionXp(m: MissionTemplateResponse): string {
       </section>
     </template>
 
-    <EventItemPicker v-if="pickerOpen" :exclude-ids="bonusItemIds" @close="pickerOpen = false"
+    <AdminItemPicker v-if="pickerOpen" title="Add bonus item" :exclude-ids="bonusItemIds" @close="pickerOpen = false"
       @pick="onPickItem" />
   </div>
 </template>

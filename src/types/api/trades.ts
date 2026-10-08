@@ -1,4 +1,5 @@
 import type { PaginationParams } from '../pagination'
+import type { PlayerRef } from './common'
 import type { ItemModifierRef, ItemResponse, UnusualEffectRef } from './items'
 
 export type TradeStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired'
@@ -16,20 +17,12 @@ export interface TradeItemRef {
   quantity: number
 }
 
-export interface TradeUserRef {
-  id: string
-  name: string
-  avatarUrl: string | null
-  cdnAvatarUrl: string | null
-  country: string | null
-}
-
 export interface TradeResponse {
   id: string
   fromUserId: string
   toUserId: string
-  fromUser: TradeUserRef | null
-  toUser: TradeUserRef | null
+  fromUser: PlayerRef | null
+  toUser: PlayerRef | null
   offeredItems: TradeItemRef[]
   requestedItems: TradeItemRef[]
   offeredEssence: number

@@ -15,13 +15,14 @@ export const BAND_RANK: Record<MissionBand, number> = {
   easy: 3,
 }
 
-export const POOL_ORDER: MissionPool[] = ['daily', 'weekly', 'event']
+export const POOL_ORDER: MissionPool[] = ['daily', 'weekly', 'event', 'clan']
 
 export const POOL_LABEL: Record<MissionPool, string> = {
   daily: 'Daily',
   weekly: 'Weekly',
   event: 'Event',
   community: 'Community',
+  clan: 'Clan',
 }
 
 const MISSION_UNIT: Partial<Record<MissionType, string>> = {

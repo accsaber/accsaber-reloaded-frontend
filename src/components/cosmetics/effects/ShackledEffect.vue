@@ -21,6 +21,8 @@ interface ChainConfig {
   count: number
   cycleSecs: number
   holdSecs: number
+  rows: number[] | null
+  reach: number
 }
 
 function readChains(c: Composition): ChainConfig {
@@ -30,6 +32,8 @@ function readChains(c: Composition): ChainConfig {
     count: Math.round(clampNumber(c.count, 1, 8, 3)),
     cycleSecs: Math.max(4, asNumber(c.cycleSecs) ?? 9),
     holdSecs: Math.max(0.5, asNumber(c.holdSecs) ?? 3),
+    rows: Array.isArray(c.rows) && c.rows.length ? c.rows.filter((r): r is number => typeof r === 'number') : null,
+    reach: Math.max(0, asNumber(c.reach) ?? 0),
   }
 }
 
@@ -49,6 +53,7 @@ interface Chain {
 
 const cfg = computed(() => readChains(props.composition))
 const { isTitle, field } = useEffectSurface(() => props.measure)
+const isTag = computed(() => props.measure.typeKey === 'clan_tag_card')
 
 const chains = geometryMemo<Chain>()
 watch(cfg, chains.clear)
@@ -56,13 +61,31 @@ watch(cfg, chains.clear)
 const linkLen = computed(() => {
   const box = props.measure.box
   if (isTitle.value) return Math.max(2.5, box.h * 0.22)
+  if (isTag.value) return Math.max(3, box.h * 0.3)
   const minD = Math.min(box.w, box.h)
   return field.value ? Math.max(5, Math.min(20, minD * 0.03)) : Math.max(4, Math.min(12, minD * 0.055))
 })
 
-const pad = computed(() => Math.round(linkLen.value * 2.5))
+const pad = computed(() =>
+  Math.round(Math.max(linkLen.value * 2.5, cfg.value.reach * props.measure.box.h + linkLen.value * 2)),
+)
 
-function chainFor(seed: number, box: ContentBox, ring: RingGeometry, link: number): Chain {
+function anchoredChain(row: number, box: ContentBox, link: number): Link[] {
+  const reach = cfg.value.reach * box.h
+  const x0 = box.x - reach
+  const x1 = box.x + box.w + reach
+  const y = box.y + box.h * row
+  const sag = link * 0.35
+  const n = Math.max(2, Math.ceil((x1 - x0) / (link * 0.78)))
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const u = i / n
+    const slope = (sag * 4 * (1 - 2 * u)) / (x1 - x0)
+    return { p: { x: x0 + (x1 - x0) * u, y: y + sag * 4 * u * (1 - u) }, rot: Math.atan(slope), flat: i % 2 === 0 }
+  })
+}
+
+function chainFor(seed: number, box: ContentBox, ring: RingGeometry, link: number, row?: number): Chain {
+  if (row !== undefined) return timed(anchoredChain(row, box, link))
   const badge = !isTitle.value && !field.value
   const bounds = badge ? polyBounds(ring.outer) : box
   const y = isTitle.value ? box.y + box.h * 0.5 : bounds.y + bounds.h * (0.12 + hash01(seed + 1) * 0.76)
@@ -79,6 +102,11 @@ function chainFor(seed: number, box: ContentBox, ring: RingGeometry, link: numbe
     const slope = (sag * 4 * (1 - 2 * u)) / (x1 - x0)
     links.push({ p: { x: px, y: py }, rot: Math.atan(slope), flat: i % 2 === 0 })
   }
+  return timed(links)
+}
+
+function timed(links: Link[]): Chain {
+  const n = links.length
   const buildDt = Math.min(0.07, 1.6 / n)
   const fadeDt = Math.min(0.06, 1.4 / n)
   const fadeStart = n * buildDt + cfg.value.holdSecs
@@ -131,17 +159,19 @@ function drawChain(g: Ctx, ch: Chain, local: number, link: number, reduced: bool
 
 function drawFrame(f: EffectFrame): boolean {
   const link = linkLen.value
-  const count = isTitle.value ? 1 : cfg.value.count
+  const rows = cfg.value.rows
+  const count = rows ? rows.length : isTitle.value ? 1 : cfg.value.count
   const seed0 = props.measure.stack * 101 + 41
   let drew = false
   for (let c = 0; c < count; c++) {
+    const row = rows ? rows[c] : undefined
     const probeSeed = seed0 + c * 53
-    const T = chains.get(f.ring, probeSeed, () => chainFor(probeSeed, f.box, f.ring, link)).cycle
+    const T = chains.get(f.ring, probeSeed, () => chainFor(probeSeed, f.box, f.ring, link, row)).cycle
     const phase = (c / count) * T + hash01(seed0 + c * 7) * 1.5
     const k = Math.floor((f.t + phase) / T)
     const local = (f.t + phase) % T
     const seed = probeSeed + k * 131
-    const chain = chains.get(f.ring, seed, () => chainFor(seed, f.box, f.ring, link))
+    const chain = chains.get(f.ring, seed, () => chainFor(seed, f.box, f.ring, link, row))
     if (drawChain(f.g, chain, local, link, f.reduced)) drew = true
   }
   return drew

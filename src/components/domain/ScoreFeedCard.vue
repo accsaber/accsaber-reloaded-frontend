@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import GlowImage from '@/components/common/GlowImage.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
-import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { onAvatarError } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreFeedEntry } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -45,19 +43,12 @@ function goToPlayer() {
   router.push(`/players/${props.entry.userId}`)
 }
 
-const handleAvatarError = (e: Event) => onAvatarError(props.entry.avatarFallbackUrl ?? null)(e)
 </script>
 
 <template>
   <div class="feed-card" :style="{ '--card-accent': accent }" @click="handleClick">
     <div class="feed-card__player-tab" @click.stop="goToPlayer">
-      <PlayerTooltipTrigger :user-id="entry.userId" :user-name="entry.userName" :avatar-url="entry.avatarUrl"
-        :avatar-fallback-url="entry.avatarFallbackUrl" :country="entry.country">
-        <img v-if="entry.avatarUrl" :src="entry.avatarUrl" :alt="entry.userName" class="feed-card__avatar"
-          loading="lazy" decoding="async" @error="handleAvatarError" />
-        <span class="feed-card__player-name">{{ entry.userName }}</span>
-        <CountryFlag :country="entry.country" />
-      </PlayerTooltipTrigger>
+      <UserChip :user="entry.player" size="xs" tooltip class="feed-card__player" />
     </div>
 
     <div class="feed-card__body">
@@ -155,26 +146,9 @@ const handleAvatarError = (e: Event) => onAvatarError(props.entry.avatarFallback
   z-index: 10000;
 }
 
-.feed-card__avatar {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-btn);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-:deep(.tooltip-trigger) {
-  gap: var(--space-xs);
-}
-
-.feed-card__player-name {
-  font-size: var(--text-caption);
+.feed-card__player {
+  max-width: 220px;
   font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
 }
 
 .feed-card__body {

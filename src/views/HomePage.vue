@@ -389,11 +389,6 @@ onUnmounted(() => {
 
     <section class="section xp-section">
       <h2 class="section__title">The XP System</h2>
-      <p class="xp-section__intro">
-        While <strong>AP</strong> rewards the <em>quality</em> of your play,
-        <strong>XP</strong> rewards <em>participation</em>. Play more ranked maps, earn milestones,
-        improve your scores. Quality still matters, but the biggest factor is showing up.
-      </p>
 
       <div v-if="levelsLoading" class="xp-skeleton">
         <SkeletonLoader v-for="i in 7" :key="i" width="72px" height="52px" />
@@ -940,20 +935,6 @@ onUnmounted(() => {
 
 .xp-section {
   padding: 0 var(--space-md);
-}
-
-.xp-section__intro {
-  max-width: 560px;
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: var(--text-body);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.xp-section__intro strong {
-  color: var(--text-primary);
-  font-weight: 700;
 }
 
 .xp-skeleton {

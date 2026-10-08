@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import HintTooltip from './HintTooltip.vue'
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import type {
   ComparisonScenario,
   ComplexityPlayerCategory,
@@ -13,6 +11,7 @@ import type {
   ComplexityScenario,
 } from '@/types/api/complexity'
 import type { CategoryCode } from '@/types/display'
+import { toUserRef } from '@/utils/mappers'
 import { AP_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
 import { CATEGORY_ORDER } from '@/utils/constants'
 import PlayerPlaysTable from './PlayerPlaysTable.vue'
@@ -77,8 +76,6 @@ const totals = computed(() => {
   }))
 })
 
-const avatarUrl = computed(() => pickAvatarUrl(props.player))
-const avatarFallback = computed(() => pickAvatarFallback(props.player))
 </script>
 
 <template>
@@ -86,13 +83,8 @@ const avatarFallback = computed(() => pickAvatarFallback(props.player))
     @close="emit('close')">
     <div class="plays-modal">
       <header class="plays-modal__head">
-        <GlowImage v-if="player" :src="avatarUrl" :alt="player.name" :size="40"
-          :fallback-src="avatarFallback" />
         <div v-if="player" class="plays-modal__identity">
-          <span class="plays-modal__name">
-            {{ player.name }}
-            <CountryFlag :country="player.country" />
-          </span>
+          <UserChip :user="toUserRef(player)" size="lg" />
           <span class="plays-modal__meta">
             Best plays under {{ SCENARIO_LABELS[scenario].toLowerCase() }} next to today
           </span>
@@ -169,15 +161,6 @@ const avatarFallback = computed(() => pickAvatarFallback(props.player))
   gap: 2px;
   flex: 1;
   min-width: 160px;
-}
-
-.plays-modal__name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  color: var(--text-primary);
-  font-size: var(--text-card-title);
-  font-weight: 600;
 }
 
 .plays-modal__meta {

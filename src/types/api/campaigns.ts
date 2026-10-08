@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type {
   BarrierConditionType,
   CampaignCollaboratorStatus,
@@ -260,6 +261,7 @@ export interface CampaignCollaboratorResponse {
   userAvatarUrl: string | null
   userCdnAvatarUrl: string | null
   userCountry: string | null
+  userClan?: PublicClanResponse | null
   status: CampaignCollaboratorStatus
   invitedById: string
   createdAt: string
@@ -267,21 +269,6 @@ export interface CampaignCollaboratorResponse {
 
 export interface InviteCampaignCollaboratorRequest {
   userId: string
-}
-
-export interface CampaignChatMessageResponse {
-  id: string
-  campaignId: string
-  authorId: string
-  authorName: string
-  authorAvatarUrl: string | null
-  authorCdnAvatarUrl: string | null
-  content: string
-  createdAt: string
-}
-
-export interface SendCampaignChatRequest {
-  content: string
 }
 
 export interface CampaignCollaborationListParams extends PaginationParams {
@@ -313,6 +300,7 @@ export interface CampaignLeaderboardPlayer {
   country?: string
   avatarUrl?: string
   cdnAvatarUrl?: string
+  clan?: PublicClanResponse | null
 }
 
 export interface CampaignLeaderboardEntry {

@@ -3,6 +3,8 @@ import BorderComposition from '@/components/domain/BorderComposition.vue'
 import CrateIcon from '@/components/cosmetics/CrateIcon.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
 import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
+import ClanIcon from '@/components/domain/ClanIcon.vue'
+import ClanTag from '@/components/domain/ClanTag.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
 import type {
@@ -22,6 +24,7 @@ import {
   readBorderShapeValue,
   readCrateValue,
   readThemeValue,
+  readClanTitleEffectValue,
   readThumbnailBackgroundValue,
   readTitleValue,
   tokenize,
@@ -54,9 +57,24 @@ const ICON_RENDERED_TYPES = new Set([
 
 const themeBase = useThemeBase()
 
-const titleValue = computed<TitleValue | null>(() =>
-  typeKey.value === 'title' ? readTitleValue(props.item.value) : null,
+const CLAN_NAME_SAMPLE = 'AccSaber'
+
+const tagCardSample = computed(() =>
+  typeKey.value === 'clan_tag_card'
+    ? { slug: '', name: props.item.name, tag: 'ACC', tagColor: null, equipped: [props.item] }
+    : null,
 )
+
+const clanBorderSample = computed(() =>
+  typeKey.value === 'clan_border' ? { tag: 'ACC', iconUrl: null, equipped: [props.item] } : null,
+)
+
+const titleValue = computed<TitleValue | null>(() => {
+  if (typeKey.value === 'title') return readTitleValue(props.item.value)
+  if (typeKey.value !== 'clan_title_effect') return null
+  const effect = readClanTitleEffectValue(props.item.value)
+  return effect ? { ...effect, text: CLAN_NAME_SAMPLE } : null
+})
 
 const borderColorValue = computed<BorderColorValue | null>(() =>
   typeKey.value === 'profile_border_color' ? readBorderColorValue(props.item.value) : null,
@@ -91,14 +109,16 @@ const borderPreview = computed<{ shape: BorderShapeValue | null; color: BorderCo
 
 const pedestalBeamId = `ip-beam-${Math.random().toString(36).slice(2, 9)}`
 
-const badgeValue = computed(() =>
-  typeKey.value === 'badge' ? readBadgeValue(props.item.value) : null,
-)
+const isBadge = computed(() => typeKey.value === 'badge')
+const isTitle = computed(() => typeKey.value === 'title' || typeKey.value === 'clan_title_effect')
+const isBackground = computed(() => typeKey.value === 'profile_background' || typeKey.value === 'clan_banner')
+
+const badgeValue = computed(() => (isBadge.value ? readBadgeValue(props.item.value) : null))
 const badgeUrl = computed(() => pickAssetUrl(badgeValue.value?.asset) ?? props.item.iconUrl)
 const badgeAlt = computed(() => badgeValue.value?.asset.altText ?? props.item.name)
 
 const backgroundValue = computed(() =>
-  typeKey.value === 'profile_background' || typeKey.value === 'profile_thumbnail_background'
+  isBackground.value || typeKey.value === 'profile_thumbnail_background'
     ? readBackgroundValue(props.item.value)
     : null,
 )
@@ -175,7 +195,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     />
 
     <img
-      v-else-if="typeKey === 'badge' && badgeUrl"
+      v-else-if="isBadge && badgeUrl"
       class="item-preview__img"
       :src="badgeUrl"
       :alt="badgeAlt"
@@ -184,7 +204,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     />
 
     <span
-      v-else-if="typeKey === 'title' && titleValue"
+      v-else-if="isTitle && titleValue"
       ref="titleHost"
       class="item-preview__title"
       :style="titleAuraStyle"
@@ -195,6 +215,14 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
         </ContentEffects>
         <TitleRenderer v-else :value="titleValue" />
       </span>
+    </span>
+
+    <span v-else-if="tagCardSample" class="item-preview__tag-card">
+      <ClanTag :clan="tagCardSample" preview effects />
+    </span>
+
+    <span v-else-if="clanBorderSample" class="item-preview__clan-border">
+      <ClanIcon :clan="clanBorderSample" size="62%" />
     </span>
 
     <BorderComposition
@@ -287,7 +315,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     </span>
 
     <img
-      v-else-if="typeKey === 'profile_background' && backgroundUrl"
+      v-else-if="isBackground && backgroundUrl"
       class="item-preview__img item-preview__img--cover"
       :src="backgroundUrl"
       :alt="item.name"
@@ -417,6 +445,21 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   font-size: 1.5rem;
   color: var(--cell-accent, var(--text-secondary));
   letter-spacing: 0.04em;
+}
+
+.item-preview__clan-border {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.item-preview__tag-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
 }
 
 .item-preview__title {

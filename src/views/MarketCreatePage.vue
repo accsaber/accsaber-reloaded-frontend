@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { parseApiError } from '@/api/client'
@@ -36,10 +37,10 @@ const inventoryStore = useInventoryStore()
 
 type ListingMode = 'auction' | 'shop' | 'auction_buyout'
 
-const MODE_OPTIONS: { value: ListingMode; label: string; hint: string }[] = [
-  { value: 'auction', label: 'Auction', hint: 'Bidders compete; the highest bid wins when time runs out.' },
-  { value: 'shop', label: 'Buy now', hint: 'Fixed price. The first buyer takes it.' },
-  { value: 'auction_buyout', label: 'Auction + buyout', hint: 'Bidding, plus a price that ends the auction instantly.' },
+const MODE_OPTIONS: { value: ListingMode; label: string }[] = [
+  { value: 'auction', label: 'Auction' },
+  { value: 'shop', label: 'Buy now' },
+  { value: 'auction_buyout', label: 'Auction + buyout' },
 ]
 
 const pickerItems = ref<UserItemResponse[]>([])
@@ -92,8 +93,6 @@ const buyoutPrice = computed(() => sanitizeEssenceInput(buyoutInput.value))
 const minIncrement = computed(() => sanitizeEssenceInput(minIncrementInput.value) ?? 1)
 const isAuctionMode = computed(() => mode.value !== 'shop')
 const hasBuyout = computed(() => mode.value !== 'auction')
-const modeHint = computed(() => MODE_OPTIONS.find((o) => o.value === mode.value)?.hint ?? '')
-
 const slotsFull = computed(
   () =>
     !isSupporter.value &&
@@ -302,24 +301,14 @@ const breadcrumbs: Crumb[] = [
           :error="fieldErrors.title"
         />
 
-        <div class="create-page__field">
-          <label class="create-page__label" for="listing-description">Description</label>
-          <textarea
-            id="listing-description"
-            v-model="description"
-            class="create-page__textarea"
-            :class="{ 'create-page__textarea--error': fieldErrors.description }"
-            rows="4"
-            maxlength="1000"
-            placeholder="Optional details for buyers..."
-          />
-          <div class="create-page__textarea-foot">
-            <span v-if="fieldErrors.description" class="create-page__field-error">
-              {{ fieldErrors.description }}
-            </span>
-            <span class="create-page__counter">{{ description.length }}/1000</span>
-          </div>
-        </div>
+        <BaseTextarea
+          v-model="description"
+          label="Description"
+          :rows="4"
+          :maxlength="1000"
+          placeholder="Optional details for buyers..."
+          :error="fieldErrors.description"
+        />
 
         <BaseInput
           v-if="stackable"
@@ -344,7 +333,6 @@ const breadcrumbs: Crumb[] = [
               {{ option.label }}
             </button>
           </div>
-          <p class="create-page__hint">{{ modeHint }}</p>
         </div>
 
         <div class="create-page__prices">
@@ -400,9 +388,6 @@ const breadcrumbs: Crumb[] = [
               <span aria-hidden="true">∞</span> No time limit
             </button>
           </div>
-          <p v-if="mode === 'shop' && durationMinutes === null" class="create-page__hint">
-            The listing stays up until it sells or you cancel it.
-          </p>
           <p v-if="fieldErrors.durationMinutes" class="create-page__field-error">
             {{ fieldErrors.durationMinutes }}
           </p>
@@ -549,48 +534,6 @@ const breadcrumbs: Crumb[] = [
 
 .create-page__hint {
   margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.create-page__textarea {
-  width: 100%;
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  resize: vertical;
-  min-height: 88px;
-}
-
-.create-page__textarea::placeholder {
-  color: var(--text-tertiary);
-}
-
-.create-page__textarea:focus {
-  outline: none;
-  border-color: var(--page-accent, var(--accent));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent, var(--accent)) 20%, transparent);
-}
-
-.create-page__textarea--error {
-  border-color: var(--error);
-}
-
-.create-page__textarea-foot {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.create-page__counter {
-  margin-left: auto;
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
 }

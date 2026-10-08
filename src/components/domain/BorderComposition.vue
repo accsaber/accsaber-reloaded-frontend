@@ -58,13 +58,15 @@ const fxHost = computed<EffectHostContext>(() => ({
         :host="fxHost"
         :hide-stat-counters="hideStatCounters"
       />
-      <LevelBadgeAvatar
-        :avatar-url="avatarUrl"
-        :fallback-url="avatarFallbackUrl"
-        :clip-id="avatarClipId"
-        :mask-path="avatarMaskPath"
-        :image-box="avatarImageBox"
-      />
+      <slot :mask-path="avatarMaskPath" :clip-id="avatarClipId">
+        <LevelBadgeAvatar
+          :avatar-url="avatarUrl"
+          :fallback-url="avatarFallbackUrl"
+          :clip-id="avatarClipId"
+          :mask-path="avatarMaskPath"
+          :image-box="avatarImageBox"
+        />
+      </slot>
     </ContentEffects>
     <BorderDecals v-if="decals.length" class="border-composition__decals" :decals="decals" />
     <BorderOverlay

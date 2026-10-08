@@ -27,7 +27,7 @@ import { pickVariant, type TitleAuraLinks } from '@/utils/cosmetics/titleAura'
 import { hauntCharStyle } from '@/utils/cosmetics/titleHaunt'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
-import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle } from '@/utils/cosmetics/titleSchools'
+import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle, torchCharStyle, torchFlameStyle, warcryArcStyles, warcryCharStyle } from '@/utils/cosmetics/titleSchools'
 import {
   gradientToCss,
   interpolateTitleState,
@@ -47,7 +47,7 @@ type CharStyle = Record<string, string>
 type GlyphKey =
   | 'brew' | 'sprout' | 'ascent' | 'slice' | 'tick' | 'metronome' | 'scrawl' | 'reel' | 'restart'
   | 'punch' | 'hammer' | 'excavate' | 'quest' | 'scales'
-  | 'quake' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
+  | 'quake' | 'warcry' | 'torch' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
   | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune'
 
 type GlyphFx<K extends GlyphKey> = (
@@ -344,6 +344,8 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('quest', questCharStyle),
   glyph('scales', (t, i, n, spec, light) => scalesCharStyle(reducedMotion.value ? 0 : t, i, n, spec, light), true),
   glyph('quake', quakeCharStyle),
+  glyph('warcry', warcryCharStyle),
+  glyph('torch', torchCharStyle),
   glyph('gust', gustCharStyle),
   glyph('ripple', rippleCharStyle),
   glyph('pixie', pixieCharStyle),
@@ -383,6 +385,8 @@ function glyphStyle(i: number): CharStyle {
 
 const reelSpec = computed(() => motionSpec(props.value.reel))
 const questSpec = computed(() => motionSpec(props.value.quest))
+const warcrySpec = computed(() => motionSpec(props.value.warcry))
+const torchSpec = computed(() => motionSpec(props.value.torch))
 
 function glyphText(ch: string, i: number): string {
   if (reelSpec.value) return reelCharAt(tMs.value, i, ch, reelSpec.value)
@@ -471,13 +475,14 @@ const BAND_WIDTH_PCT = 16
 const glistenPhase = computed<{ active: boolean; leftPct: number; highlight: string }>(() => {
   const g = state.value.glisten
   if (!g?.enabled || reducedMotion.value) return { active: false, leftPct: 0, highlight: '#ffffff' }
+  const highlight = g.highlight ?? '#ffffff'
   const interval = g.intervalMs ?? 5000
   const duration = g.durationMs ?? 800
   const cyclePos = tMs.value % interval
-  if (cyclePos > duration) return { active: false, leftPct: 0, highlight: g.highlight ?? '#ffffff' }
+  if (cyclePos > duration) return { active: false, leftPct: 0, highlight }
   const progress = cyclePos / duration
   const leftPct = -BAND_WIDTH_PCT + (100 + BAND_WIDTH_PCT * 2) * progress
-  return { active: true, leftPct, highlight: g.highlight ?? '#ffffff' }
+  return { active: true, leftPct, highlight }
 })
 
 const glistenClipStyle = computed<Record<string, string> | undefined>(() => {
@@ -555,7 +560,7 @@ const ornament = computed(() => {
   return {
     viewBox: spec.viewBox ?? icon?.viewBox ?? '0 0 24 24',
     paths,
-    fillRule: icon?.fillRule,
+    fillRule: spec.fillRule ?? icon?.fillRule,
     color: tone(spec.lightColor, spec.color, 'currentColor'),
     sizeEm: spec.sizeEm ?? 1,
   }
@@ -666,6 +671,11 @@ const joltFlashStyle = computed<Record<string, string> | undefined>(() => {
   if (!fr || fr.flash <= 0) return undefined
   return { background: withAlpha(joltFlashColor.value, fr.flash) }
 })
+
+const warcryArcs = computed(() => (warcrySpec.value ? warcryArcStyles(tMs.value, warcrySpec.value, isLightBase.value) : []))
+const torchFlame = computed(() =>
+  torchSpec.value ? torchFlameStyle(tMs.value, props.value.text.length, torchSpec.value, isLightBase.value) : null,
+)
 
 const joltRingStyles = computed<Record<string, string>[]>(() => {
   const fr = joltNow.value
@@ -1015,6 +1025,16 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
       :style="joltFlashStyle"
       aria-hidden="true"
     />
+    <span v-if="torchFlame" class="title-renderer__torch" :style="torchFlame" aria-hidden="true">
+      <span class="title-renderer__torch-core" />
+    </span>
+    <span
+      v-for="(arc, ai) in warcryArcs"
+      :key="`wa${ai}`"
+      class="title-renderer__warcry-arc"
+      :style="arc"
+      aria-hidden="true"
+    />
     <span
       v-for="(ring, ri) in joltRingStyles"
       :key="`jr${ri}`"
@@ -1041,7 +1061,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
         :key="i"
         class="title-renderer__forge-char"
         :style="glyphStyle(i)"
-      ><template v-if="reelSpec && glyphText(ch, i) !== ch"><span class="title-renderer__reel-hold">{{ ch }}</span><span class="title-renderer__reel-face">{{ glyphText(ch, i) }}</span></template><template v-else>{{ glyphText(ch, i) }}</template></span>
+      ><template v-if="glyphText(ch, i) !== ch"><span class="title-renderer__reel-hold">{{ ch }}</span><span class="title-renderer__reel-face">{{ glyphText(ch, i) }}</span></template><template v-else>{{ glyphText(ch, i) }}</template></span>
       <span
         v-if="forgeHeadStyle"
         class="title-renderer__forge-head"
@@ -1149,7 +1169,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 
 .title-renderer__glint {
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 auto;
   pointer-events: none;
   z-index: 2;
   font: inherit;
@@ -1209,6 +1229,50 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   position: absolute;
   inset: -40% -30%;
   border-radius: 4px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.title-renderer__torch {
+  position: absolute;
+  top: -0.62em;
+  width: 0.5em;
+  height: 0.72em;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.title-renderer__torch::before,
+.title-renderer__torch-core {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  border-radius: 0 50% 50% 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.title-renderer__torch::before {
+  content: '';
+  width: 0.42em;
+  height: 0.42em;
+  background: var(--torch-flame);
+}
+
+.title-renderer__torch-core {
+  width: 0.2em;
+  height: 0.2em;
+  margin-bottom: 0.03em;
+  background: var(--torch-core);
+}
+
+.title-renderer__warcry-arc {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-radius: 50%;
   pointer-events: none;
   z-index: 0;
 }

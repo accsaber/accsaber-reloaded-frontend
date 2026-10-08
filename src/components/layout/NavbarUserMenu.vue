@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClanTag from '@/components/domain/ClanTag.vue'
 import { onAvatarError } from '@/composables/useAvatarFallback'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useOwnProfileLink } from '@/composables/useOwnProfileLink'
@@ -85,6 +86,7 @@ function onTriggerAuxClick() {
       <div v-if="open" class="navbar-menu navbar-user__panel" role="menu">
         <span v-if="authStore.userProfile" class="navbar-user__name">
           {{ authStore.userProfile.name }}
+          <ClanTag v-if="authStore.userProfile.clan" :clan="authStore.userProfile.clan" size="sm" />
         </span>
 
         <a v-if="authStore.isLoggedIn && ownProfileHref" :href="ownProfileHref"
@@ -138,6 +140,9 @@ function onTriggerAuxClick() {
 }
 
 .navbar-user__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   padding: var(--space-xs) var(--space-md);
   color: var(--text-primary);
   font-size: var(--text-body);

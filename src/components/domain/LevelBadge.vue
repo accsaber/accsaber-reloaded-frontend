@@ -1,19 +1,8 @@
 <script setup lang="ts">
 import BorderComposition from '@/components/domain/BorderComposition.vue'
-import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
-import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
-import type {
-  BorderColorValue,
-  BorderShapeValue,
-  TitleValue,
-} from '@/types/api/items'
-import {
-  annotateEffectLayerStacks,
-  fillToCss,
-  type EffectLayer,
-} from '@/utils/items'
-import type { EffectHostContext } from '@/utils/cosmetics/effects'
+import TitleWithEffects from '@/components/cosmetics/titles/TitleWithEffects.vue'
+import type { BorderColorValue, BorderShapeValue, TitleValue } from '@/types/api/items'
+import { fillToCss, type EffectLayer } from '@/utils/items'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -54,11 +43,6 @@ const borderColor = computed(() =>
 )
 const title = computed(() => (props.plain ? null : props.equippedTitle ?? null))
 
-const titleFxLayers = computed(() =>
-  props.plain ? [] : annotateEffectLayerStacks(props.titleEffects),
-)
-const titleFxHost = computed<EffectHostContext>(() => ({ auraType: title.value?.aura?.type }))
-
 const fallbackTitleStyle = computed(() => {
   if (!props.fallbackTitleColor) return undefined
   return { color: props.fallbackTitleColor }
@@ -80,24 +64,7 @@ const fallbackTitleStyle = computed(() => {
     <div v-if="!plain" class="level-badge__below">
       <span class="level-badge__title-line">
         <span class="level-badge__level">Lv. {{ level }}</span>
-        <span v-if="title" class="level-badge__title-fx">
-          <ModifierCompositions
-            v-for="layer in titleFxLayers"
-            :key="layer.key"
-            class="level-badge__title-fx-layer"
-            :spec="layer.spec"
-            type-key="title"
-            measure-selector=".title-renderer"
-            :stack-index="layer.stackIndex"
-            :host="titleFxHost"
-            hide-stat-counters
-          />
-          <span class="level-badge__title-fx-text">
-            <ContentEffects :layers="plain ? null : titleEffects" :fill="false" subtle seed="title">
-              <TitleRenderer :value="title" />
-            </ContentEffects>
-          </span>
-        </span>
+        <TitleWithEffects v-if="title" :value="title" :effects="titleEffects" />
         <span
           v-else-if="fallbackTitle"
           class="level-badge__fallback-title"
@@ -140,22 +107,6 @@ const fallbackTitleStyle = computed(() => {
   align-items: baseline;
   gap: var(--space-xs);
   white-space: nowrap;
-}
-
-.level-badge__title-fx {
-  position: relative;
-  display: inline-block;
-  padding: 0.45em 0.4em;
-  margin: -0.45em -0.4em;
-}
-
-.level-badge__title-fx-layer {
-  z-index: 0;
-}
-
-.level-badge__title-fx-text {
-  position: relative;
-  z-index: 1;
 }
 
 .level-badge__level {

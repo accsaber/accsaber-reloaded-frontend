@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from '@/types/api/clans'
 import {
   getAuthMe,
   logoutPlayer,
@@ -40,6 +41,7 @@ interface UserProfileShape {
   avatarUrl: string
   avatarFallbackUrl: string | null
   country: string
+  clan: PublicClanResponse | null
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -87,6 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
       avatarUrl: resolved,
       avatarFallbackUrl: fallback,
       country: me.country ?? '',
+      clan: me.clan ?? null,
     }
   })
 

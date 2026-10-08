@@ -1,3 +1,4 @@
+import type { PublicClanResponse } from './clans'
 import type { CampaignRequirementType, Difficulty } from '../enums'
 import type { ItemRarity, ItemTypeKey } from './items'
 import type { MissionBand, MissionPool, MissionType } from './missions'
@@ -47,6 +48,7 @@ export interface UserImprovementsResponse {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   improvementCount: number
   latestScoreId: string
   latestScoreTimeSet: string
@@ -58,6 +60,7 @@ export interface UserMapImprovementsResponse {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   mapDifficultyId: string
   mapId: string
   songName: string
@@ -80,6 +83,7 @@ export interface MilestoneCollectorResponse {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   milestoneCount: number
 }
 
@@ -89,6 +93,7 @@ export interface ItemStatsPlayerRef {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
 }
 
 export interface UserItemCountResponse extends ItemStatsPlayerRef {
@@ -223,6 +228,7 @@ export interface MissionCompletorResponse {
   avatarUrl: string | null
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   missionsCompleted: number
   missionXp: number
 }
@@ -272,6 +278,7 @@ export interface CampaignCompletorResponse {
   avatarUrl: string | null
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   completed: number
   inProgress: number
   nodesCleared: number
@@ -284,6 +291,7 @@ export interface CampaignCreatorResponse {
   avatarUrl: string | null
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   campaigns: number
   curatedCampaigns: number
   participants: number
@@ -328,6 +336,7 @@ export interface EventMissionLeaderboardResponse {
   avatarUrl: string | null
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   completions: number
   xpEarned: number
   itemsAwarded: number

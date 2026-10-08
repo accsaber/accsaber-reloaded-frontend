@@ -94,8 +94,7 @@ onMounted(loadReleases)
 
 <template>
   <div class="quest" :style="{ '--page-accent': 'var(--accent-overall)' }">
-    <PageHeaderBleed title="AccSaber on Quest"
-      subtitle="Three steps to a headset that uploads your scores" />
+    <PageHeaderBleed title="AccSaber on Quest" />
 
     <QuestStepper :steps="STEPS" :current="step" :unlocked="unlocked" @select="goTo" />
 

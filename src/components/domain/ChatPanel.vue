@@ -1,19 +1,42 @@
 <script setup lang="ts">
 import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
-import { colorForUser } from '@/composables/useCampaignPresence'
-import { messageTimeMillis, type UseCampaignChatReturn } from '@/composables/useCampaignChat'
+import { messageTimeMillis, type UseChatReturn } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
-import type { CampaignChatMessageResponse } from '@/types/api/campaigns'
+import type { ChatEvent, ChatMessageResponse } from '@/types/api/chat'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, nextTick, ref, watch } from 'vue'
 
-const props = defineProps<{ chat: UseCampaignChatReturn }>()
+export interface ChatNotice {
+  id: string
+  at: number
+}
+
+type ChatEntry =
+  | { kind: 'message'; key: string; message: ChatMessageResponse }
+  | { kind: 'event'; key: string; message: ChatMessageResponse; count: number }
+  | { kind: 'notice'; key: string; notice: ChatNotice }
+
+const MAX_LIVE_MESSAGES = 300
+
+const props = withDefaults(
+  defineProps<{
+    chat: UseChatReturn
+    title: string
+    placeholder: string
+    emptyText: string
+    floating?: boolean
+    notices?: ChatNotice[]
+    collapseEvents?: ChatEvent[]
+    authorColor?: (userId: string) => string
+  }>(),
+  { notices: () => [], collapseEvents: () => [] },
+)
 
 const emit = defineEmits<{ typing: []; 'typing-stop': [] }>()
 
 const auth = useAuthStore()
 
-const open = ref(false)
+const open = ref(!props.floating)
 const draft = ref('')
 const seenIds = ref(new Set<string>())
 const scroller = ref<HTMLDivElement | null>(null)
@@ -41,31 +64,52 @@ function markSeen() {
   if (changed) seenIds.value = next
 }
 
-function isSelf(m: CampaignChatMessageResponse): boolean {
-  return !!auth.userId && m.authorId === auth.userId
+function isSelf(m: ChatMessageResponse): boolean {
+  return !!auth.userId && m.author.id === auth.userId
 }
 
-function displayTime(m: CampaignChatMessageResponse): string {
+function displayTime(m: ChatMessageResponse): string {
   const ms = messageTimeMillis(m.createdAt)
   return ms ? formatRelativeDate(new Date(ms).toISOString()) : 'just now'
 }
 
-function isoTime(m: CampaignChatMessageResponse): string {
+function isoTime(m: ChatMessageResponse): string {
   const ms = messageTimeMillis(m.createdAt)
   return ms ? new Date(ms).toISOString() : ''
 }
 
-function authorColor(m: CampaignChatMessageResponse): string {
-  return colorForUser(m.authorId)
+function colorOf(m: ChatMessageResponse): string | undefined {
+  return props.authorColor?.(m.author.id)
 }
 
-function avatarSrc(m: CampaignChatMessageResponse): string {
-  return pickAvatarUrl({ avatarUrl: m.authorAvatarUrl, cdnAvatarUrl: m.authorCdnAvatarUrl })
+function sameRun(a: ChatMessageResponse, b: ChatMessageResponse): boolean {
+  return !!a.event && a.event === b.event && props.collapseEvents.includes(a.event) && a.war?.id === b.war?.id
 }
 
-function avatarFallback(m: CampaignChatMessageResponse): string | null {
-  return pickAvatarFallback({ avatarUrl: m.authorAvatarUrl, cdnAvatarUrl: m.authorCdnAvatarUrl })
-}
+const entries = computed<ChatEntry[]>(() => {
+  const timeline: { at: number; entry: ChatEntry }[] = []
+  for (const m of messages.value) {
+    const at = messageTimeMillis(m.createdAt)
+    const last = timeline[timeline.length - 1]?.entry
+    if (m.event && last?.kind === 'event' && sameRun(last.message, m)) {
+      timeline[timeline.length - 1] = {
+        at,
+        entry: { kind: 'event', key: last.key, message: m, count: last.count + 1 },
+      }
+    } else if (m.event) {
+      timeline.push({ at, entry: { kind: 'event', key: m.id, message: m, count: 1 } })
+    } else {
+      timeline.push({ at, entry: { kind: 'message', key: m.id, message: m } })
+    }
+  }
+  for (const notice of props.notices) {
+    const index = timeline.findIndex((t) => t.at > notice.at)
+    const item = { at: notice.at, entry: { kind: 'notice', key: notice.id, notice } as ChatEntry }
+    if (index === -1) timeline.push(item)
+    else timeline.splice(index, 0, item)
+  }
+  return timeline.map((t) => t.entry)
+})
 
 function scrollToBottom() {
   const el = scroller.value
@@ -118,24 +162,32 @@ async function onSend() {
 }
 
 watch(
-  () => messages.value.length,
+  () => entries.value.length,
   async () => {
     if (!open.value) return
     const stick = nearBottom()
+    if (stick) props.chat.trim(MAX_LIVE_MESSAGES)
     await nextTick()
     if (stick) scrollToBottom()
     markSeen()
   },
 )
+
+if (!props.floating) void props.chat.loadHistory()
 </script>
 
 <template>
-  <section class="campaign-chat" :class="{ 'campaign-chat--open': open }" aria-label="Team chat">
+  <section
+    class="chat-panel"
+    :class="{ 'chat-panel--open': open, 'chat-panel--floating': floating }"
+    :aria-label="title"
+  >
     <button
+      v-if="floating"
       type="button"
-      class="campaign-chat__toggle"
+      class="chat-panel__toggle"
       :aria-expanded="open"
-      aria-label="Team chat"
+      :aria-label="title"
       @click="toggle"
     >
       <svg
@@ -151,22 +203,23 @@ watch(
       >
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
-      <span class="campaign-chat__toggle-label">Chat</span>
+      <span class="chat-panel__toggle-label">Chat</span>
       <span
         v-if="unread > 0"
         :key="unread"
-        class="campaign-chat__badge"
+        class="chat-panel__badge"
         :aria-label="`${unread} unread ${unread === 1 ? 'message' : 'messages'}`"
         >{{ unread > 99 ? '99+' : unread }}</span
       >
     </button>
 
-    <div v-if="open" class="campaign-chat__panel">
-      <header class="campaign-chat__head">
-        <h2 class="campaign-chat__title">Team chat</h2>
+    <div v-if="open" class="chat-panel__panel">
+      <header class="chat-panel__head">
+        <h2 class="chat-panel__title">{{ title }}</h2>
         <button
+          v-if="floating"
           type="button"
-          class="campaign-chat__close"
+          class="chat-panel__close"
           aria-label="Collapse chat"
           @click="toggle"
         >
@@ -188,71 +241,78 @@ watch(
 
       <div
         ref="scroller"
-        class="campaign-chat__log"
+        class="chat-panel__log"
         role="log"
         aria-live="polite"
         @scroll.passive="onScroll"
       >
-        <div v-if="chat.loading.value && messages.length === 0" class="campaign-chat__state">
+        <div v-if="chat.loading.value && messages.length === 0" class="chat-panel__state">
           Loading messages…
         </div>
 
-        <div v-if="messages.length > 0" class="campaign-chat__spacer" aria-hidden="true" />
+        <div v-if="messages.length > 0" class="chat-panel__spacer" aria-hidden="true" />
 
-        <div v-if="chat.loadingMore.value" class="campaign-chat__loading-more" aria-live="polite">
-          <span class="campaign-chat__spinner" aria-hidden="true" />
+        <div v-if="chat.loadingMore.value" class="chat-panel__loading-more" aria-live="polite">
+          <span class="chat-panel__spinner" aria-hidden="true" />
           Loading earlier messages…
         </div>
 
         <p
           v-if="!chat.loading.value && messages.length === 0"
-          class="campaign-chat__state campaign-chat__state--empty"
+          class="chat-panel__state chat-panel__state--empty"
         >
-          No messages yet. Say hello to your collaborators.
+          {{ emptyText }}
         </p>
 
+        <template v-for="entry in entries" :key="entry.key">
+        <div v-if="entry.kind === 'event'" class="chat-panel__line">
+          <slot name="event" :message="entry.message" :count="entry.count" />
+        </div>
+        <div v-else-if="entry.kind === 'notice'" class="chat-panel__line">
+          <slot name="notice" :notice="entry.notice" />
+        </div>
         <article
-          v-for="m in messages"
-          :key="m.id"
-          class="campaign-chat__msg"
-          :class="{ 'campaign-chat__msg--self': isSelf(m) }"
-          :style="{ '--author-color': authorColor(m) }"
+          v-else
+          class="chat-panel__msg"
+          :class="{ 'chat-panel__msg--self': isSelf(entry.message) }"
+          :style="colorOf(entry.message) ? { '--author-color': colorOf(entry.message) } : undefined"
         >
-          <span class="campaign-chat__avatar" aria-hidden="true">
+          <span class="chat-panel__avatar" aria-hidden="true">
             <img
-              v-if="avatarSrc(m)"
-              :src="avatarSrc(m)"
-              :alt="m.authorName"
+              v-if="pickAvatarUrl(entry.message.author)"
+              :src="pickAvatarUrl(entry.message.author)"
+              :alt="entry.message.author.name"
               loading="lazy"
-              @error="onAvatarError(avatarFallback(m))($event)"
+              @error="onAvatarError(pickAvatarFallback(entry.message.author))($event)"
             />
-            <span v-else class="campaign-chat__avatar-initial">{{ m.authorName.charAt(0) }}</span>
+            <span v-else class="chat-panel__avatar-initial">{{ entry.message.author.name.charAt(0) }}</span>
           </span>
-          <div class="campaign-chat__bubble">
-            <div class="campaign-chat__meta">
-              <span class="campaign-chat__author">{{ m.authorName }}</span>
-              <time class="campaign-chat__time" :datetime="isoTime(m)">
-                {{ displayTime(m) }}
+          <div class="chat-panel__bubble">
+            <div class="chat-panel__meta">
+              <span class="chat-panel__author">{{ entry.message.author.name }}</span>
+              <time class="chat-panel__time" :datetime="isoTime(entry.message)">
+                {{ displayTime(entry.message) }}
               </time>
             </div>
-            <p class="campaign-chat__text">{{ m.content }}</p>
+            <p class="chat-panel__text">{{ entry.message.content }}</p>
           </div>
         </article>
+        </template>
       </div>
 
-      <div class="campaign-chat__composer">
-        <p v-if="chat.error.value" class="campaign-chat__error" role="alert">
+      <div class="chat-panel__composer">
+        <p v-if="chat.error.value" class="chat-panel__error" role="alert">
           {{ chat.error.value }}
         </p>
-        <p v-if="chat.contentError.value" class="campaign-chat__error" role="alert">
+        <p v-if="chat.contentError.value" class="chat-panel__error" role="alert">
           {{ chat.contentError.value }}
         </p>
-        <div class="campaign-chat__input-row">
+        <div class="chat-panel__input-row">
           <textarea
             v-model="draft"
-            class="campaign-chat__input"
+            class="chat-panel__input"
             rows="1"
-            placeholder="Message your collaborators"
+            :placeholder="placeholder"
             aria-label="Message"
             :aria-invalid="!!chat.contentError.value"
             @focus="emit('typing')"
@@ -262,7 +322,7 @@ watch(
           />
           <button
             type="button"
-            class="campaign-chat__send"
+            class="chat-panel__send"
             aria-label="Send message"
             :disabled="chat.sending.value || draft.trim().length === 0"
             @click="onSend"
@@ -289,19 +349,24 @@ watch(
 </template>
 
 <style scoped>
-.campaign-chat {
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.chat-panel--floating {
   position: absolute;
   right: var(--space-md);
   bottom: var(--space-md);
   z-index: 6;
-  display: flex;
-  flex-direction: column;
   align-items: flex-end;
   gap: var(--space-sm);
+  width: auto;
   pointer-events: none;
 }
 
-.campaign-chat__toggle {
+.chat-panel__toggle {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -323,16 +388,16 @@ watch(
     border-color 120ms ease;
 }
 
-.campaign-chat__toggle:hover {
+.chat-panel__toggle:hover {
   color: var(--text-primary);
   border-color: var(--text-tertiary);
 }
 
-.campaign-chat--open .campaign-chat__toggle {
+.chat-panel--open .chat-panel__toggle {
   display: none;
 }
 
-.campaign-chat__badge {
+.chat-panel__badge {
   position: absolute;
   top: -7px;
   right: -7px;
@@ -364,16 +429,16 @@ watch(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .campaign-chat__badge {
+  .chat-panel__badge {
     animation: none;
   }
 }
 
-.campaign-chat__panel {
+.chat-panel__panel {
   display: flex;
   flex-direction: column;
-  width: min(340px, calc(100vw - var(--space-lg)));
-  height: min(460px, 60vh);
+  width: 100%;
+  height: min(620px, 70vh);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: 6px;
@@ -381,7 +446,21 @@ watch(
   pointer-events: auto;
 }
 
-.campaign-chat__head {
+.chat-panel--floating .chat-panel__panel {
+  width: min(340px, calc(100vw - var(--space-lg)));
+  height: min(460px, 60vh);
+}
+
+.chat-panel__line {
+  align-self: center;
+  max-width: 100%;
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.chat-panel__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -389,7 +468,7 @@ watch(
   border-bottom: 1px solid var(--bg-overlay);
 }
 
-.campaign-chat__title {
+.chat-panel__title {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 0.8125rem;
@@ -397,7 +476,7 @@ watch(
   color: var(--text-primary);
 }
 
-.campaign-chat__close {
+.chat-panel__close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -413,12 +492,12 @@ watch(
     background 120ms ease;
 }
 
-.campaign-chat__close:hover {
+.chat-panel__close:hover {
   color: var(--text-primary);
   background: var(--bg-elevated);
 }
 
-.campaign-chat__log {
+.chat-panel__log {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -430,20 +509,20 @@ watch(
   scrollbar-color: var(--bg-overlay) transparent;
 }
 
-.campaign-chat__log::-webkit-scrollbar {
+.chat-panel__log::-webkit-scrollbar {
   width: 5px;
 }
 
-.campaign-chat__log::-webkit-scrollbar-thumb {
+.chat-panel__log::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
   border-radius: 3px;
 }
 
-.campaign-chat__spacer {
+.chat-panel__spacer {
   flex: 1 0 0;
 }
 
-.campaign-chat__state {
+.chat-panel__state {
   margin: auto;
   font-family: var(--font-sans);
   font-size: var(--text-caption);
@@ -452,7 +531,7 @@ watch(
   line-height: 1.5;
 }
 
-.campaign-chat__loading-more {
+.chat-panel__loading-more {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,7 +545,7 @@ watch(
   color: var(--text-tertiary);
 }
 
-.campaign-chat__spinner {
+.chat-panel__spinner {
   width: 12px;
   height: 12px;
   border: 2px solid var(--bg-overlay);
@@ -482,12 +561,12 @@ watch(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .campaign-chat__spinner {
+  .chat-panel__spinner {
     animation: none;
   }
 }
 
-.campaign-chat__msg {
+.chat-panel__msg {
   display: flex;
   gap: var(--space-sm);
   align-items: flex-start;
@@ -495,12 +574,12 @@ watch(
   max-width: 85%;
 }
 
-.campaign-chat__msg--self {
+.chat-panel__msg--self {
   flex-direction: row-reverse;
   align-self: flex-end;
 }
 
-.campaign-chat__avatar {
+.chat-panel__avatar {
   box-sizing: border-box;
   width: 28px;
   height: 28px;
@@ -514,14 +593,14 @@ watch(
   flex-shrink: 0;
 }
 
-.campaign-chat__avatar img {
+.chat-panel__avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.campaign-chat__avatar-initial {
+.chat-panel__avatar-initial {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 600;
@@ -529,7 +608,7 @@ watch(
   text-transform: uppercase;
 }
 
-.campaign-chat__bubble {
+.chat-panel__bubble {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -540,18 +619,18 @@ watch(
   border-radius: 4px;
 }
 
-.campaign-chat__msg--self .campaign-chat__bubble {
+.chat-panel__msg--self .chat-panel__bubble {
   border-color: color-mix(in srgb, var(--author-color, var(--bg-overlay)) 35%, var(--bg-overlay));
 }
 
-.campaign-chat__meta {
+.chat-panel__meta {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-sm);
 }
 
-.campaign-chat__author {
+.chat-panel__author {
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -561,14 +640,14 @@ watch(
   white-space: nowrap;
 }
 
-.campaign-chat__time {
+.chat-panel__time {
   flex-shrink: 0;
   font-family: var(--font-sans);
   font-size: 0.5625rem;
   color: var(--text-tertiary);
 }
 
-.campaign-chat__text {
+.chat-panel__text {
   margin: 0;
   font-family: var(--font-sans);
   font-size: var(--text-caption);
@@ -578,7 +657,7 @@ watch(
   overflow-wrap: anywhere;
 }
 
-.campaign-chat__composer {
+.chat-panel__composer {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -586,7 +665,7 @@ watch(
   border-top: 1px solid var(--bg-overlay);
 }
 
-.campaign-chat__error {
+.chat-panel__error {
   margin: 0;
   font-family: var(--font-sans);
   font-size: var(--text-caption);
@@ -594,14 +673,14 @@ watch(
   line-height: 1.4;
 }
 
-.campaign-chat__input-row {
+.chat-panel__input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 34px;
   gap: 6px;
   align-items: end;
 }
 
-.campaign-chat__input {
+.chat-panel__input {
   width: 100%;
   min-height: 34px;
   max-height: 110px;
@@ -618,16 +697,16 @@ watch(
   transition: border-color 120ms ease;
 }
 
-.campaign-chat__input:focus {
+.chat-panel__input:focus {
   border-color: var(--page-accent, var(--accent));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent, var(--accent)) 20%, transparent);
 }
 
-.campaign-chat__input[aria-invalid='true'] {
+.chat-panel__input[aria-invalid='true'] {
   border-color: var(--error);
 }
 
-.campaign-chat__send {
+.chat-panel__send {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -644,18 +723,18 @@ watch(
     background 120ms ease;
 }
 
-.campaign-chat__send:hover:not(:disabled) {
+.chat-panel__send:hover:not(:disabled) {
   border-color: var(--page-accent, var(--accent));
   background: color-mix(in srgb, var(--page-accent, var(--accent)) 10%, transparent);
 }
 
-.campaign-chat__send:disabled {
+.chat-panel__send:disabled {
   color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
 @media (max-width: 860px) {
-  .campaign-chat {
+  .chat-panel--floating {
     position: fixed;
   }
 }

@@ -3,6 +3,7 @@ import type { HauntSpec, WearSpec } from '@/utils/cosmetics/wear'
 import type {
   AssetSet,
   BadgeValue,
+  ClanTitleEffectValue,
   BorderColorFill,
   BorderColorStateValue,
   BorderColorValue,
@@ -21,6 +22,7 @@ import type {
   ItemVariant,
   Loop,
   ModifierEffectSpec,
+  ClanTagCardValue,
   PerkValue,
   ProfileBackgroundValue,
   ProfileThumbnailBackgroundValue,
@@ -167,6 +169,10 @@ export function buildEffectLayers(
     layers.push({ key: `u:${unusualEffect.id}`, spec: unusualEffect.effectSpec })
   }
   return layers
+}
+
+export function valueFxLayers(value: { fx?: ModifierEffectSpec } | null | undefined): EffectLayer[] {
+  return value?.fx?.compositions?.length ? [{ key: 'fx', spec: value.fx }] : []
 }
 
 export function unusualEffectLayers(unusualEffect?: UnusualEffectRef | null): EffectLayer[] {
@@ -320,6 +326,36 @@ export function readTitleValue(value: unknown): TitleValue | null {
   const states = value.states.filter((s): s is Record<string, unknown> => isObj(s) && isNumber(s.atMs))
   if (states.length === 0) return null
   return value as unknown as TitleValue
+}
+
+export function readClanTitleEffectValue(value: unknown): ClanTitleEffectValue | null {
+  if (!isObj(value)) return null
+  if (!Array.isArray(value.states) || value.states.length === 0) return null
+  const states = value.states.filter((s): s is Record<string, unknown> => isObj(s) && isNumber(s.atMs))
+  if (states.length === 0) return null
+  return value as unknown as ClanTitleEffectValue
+}
+
+export function readClanEquipped<T extends { variants?: ItemVariant[] }>(
+  equipped: ItemResponse[] | null | undefined,
+  typeKey: string,
+  read: (value: unknown) => T | null,
+): T | null {
+  const item = equipped?.find((i) => i.typeKey === typeKey)
+  const value = item ? read(item.value) : null
+  return value ? resolveItemVariant(value, item?.variantKey) : null
+}
+
+export function readClanTitle(clan: { name: string; equipped: ItemResponse[] | null }): TitleValue | null {
+  const effect = readClanEquipped(clan.equipped, 'clan_title_effect', readClanTitleEffectValue)
+  return effect ? { ...effect, text: clan.name } : null
+}
+
+export function readClanTagCardValue(value: unknown): ClanTagCardValue | null {
+  if (!isObj(value)) return null
+  return isObj(value.left) || isObj(value.right) || Array.isArray(value.decals) || isObj(value.fx)
+    ? (value as unknown as ClanTagCardValue)
+    : null
 }
 
 export function readBorderShapeValue(value: unknown): BorderShapeValue | null {

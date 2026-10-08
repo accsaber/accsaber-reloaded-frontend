@@ -33,12 +33,6 @@ let savedClearTimer: ReturnType<typeof setTimeout> | null = null
 const charCount = computed(() => bioHtml.value.length)
 const overLimit = computed(() => charCount.value > BIO_MAX.value)
 
-const hintText = computed(() =>
-  props.canUseEffects
-    ? 'Server strips disallowed tags on save.'
-    : 'Colors, fonts & effects are a supporter perk. Server strips disallowed tags on save.',
-)
-
 onBeforeUnmount(() => {
   if (savedClearTimer) clearTimeout(savedClearTimer)
 })
@@ -87,7 +81,6 @@ async function onSave() {
           </svg>
           Saved
         </span>
-        <span v-else class="bio-editor__hint">{{ hintText }}</span>
         <span class="bio-editor__counter-row">
           <span class="bio-editor__counter" :class="{ 'bio-editor__counter--over': overLimit }">
             {{ charCount.toLocaleString() }} / {{ BIO_MAX.toLocaleString() }}
@@ -136,10 +129,6 @@ async function onSave() {
   display: flex;
   gap: var(--space-xs);
   flex-shrink: 0;
-}
-
-.bio-editor__hint {
-  color: var(--text-tertiary);
 }
 
 .bio-editor__counter-row {

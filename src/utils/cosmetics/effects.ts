@@ -55,7 +55,7 @@ export function boxScale(minD: number, min = 0.7): number {
 }
 
 export function isFieldKey(typeKey: ItemTypeKey | undefined): boolean {
-  return typeKey === 'theme' || typeKey === 'profile_thumbnail_background'
+  return typeKey === 'theme' || typeKey === 'profile_thumbnail_background' || typeKey === 'clan_banner'
 }
 
 export interface PctSizing {

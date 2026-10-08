@@ -3,12 +3,13 @@ import { getApiErrorMessage } from '@/api/client'
 import { getSupporterCredits } from '@/api/supporters'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CountryFlag from '@/components/domain/CountryFlag.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import type { SupporterCreditEntry, SupporterTier } from '@/types/api/supporters'
 import { SUPPORTER_TIER_DISPLAY, SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import { KOFI_URL } from '@/utils/constants'
 import { formatCents } from '@/utils/formatters'
+import { toUserRef } from '@/utils/mappers'
 import { computed, onMounted, ref } from 'vue'
 
 usePageMeta({
@@ -69,13 +70,6 @@ const activeTotal = computed(() => activeByTier.value.reduce((n, g) => n + g.row
 
 const showAnything = computed(() => activeTotal.value > 0 || pastSupporters.value.length > 0)
 
-function handleCreditAvatarError(row: SupporterCreditEntry, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (row.cdnAvatarUrl && row.avatarUrl && img.src !== row.avatarUrl) {
-    img.src = row.avatarUrl
-  }
-}
-
 function tierColor(tier: SupporterTier): string {
   return SUPPORTER_TIER_PALETTE[tier].base
 }
@@ -90,9 +84,6 @@ function tierLabel(tier: SupporterTier): string {
     <header class="credits__header">
       <p class="credits__eyebrow">Credits</p>
       <h1 class="credits__title">The supporters of AccSaber</h1>
-      <p class="credits__subtitle">
-        Server bills, domain, assets, dev time. The names below keep this place running.
-      </p>
     </header>
 
     <div v-if="loading" class="credits__loading" aria-busy="true">
@@ -113,12 +104,7 @@ function tierLabel(tier: SupporterTier): string {
         <ul class="credits__rows">
           <li v-for="row in group.rows" :key="row.userId" class="credits__row">
             <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <img v-if="row.cdnAvatarUrl || row.avatarUrl" :src="row.cdnAvatarUrl ?? row.avatarUrl"
-                :alt="row.name" class="credits__avatar" loading="lazy" decoding="async"
-                @error="handleCreditAvatarError(row, $event)" />
-              <span v-else class="credits__avatar credits__avatar--blank" aria-hidden="true"></span>
-              <span class="credits__name">{{ row.name }}</span>
-              <CountryFlag v-if="row.country" :country="row.country" class="credits__flag" />
+              <UserChip :user="toUserRef(row)" class="credits__player" />
               <span class="credits__meta">{{ formatCents(row.lifetimeSupportedCents) }}</span>
             </router-link>
           </li>
@@ -132,12 +118,7 @@ function tierLabel(tier: SupporterTier): string {
         <ul class="credits__rows credits__rows--past">
           <li v-for="row in pastSupporters" :key="row.userId" class="credits__row">
             <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <img v-if="row.cdnAvatarUrl || row.avatarUrl" :src="row.cdnAvatarUrl ?? row.avatarUrl"
-                :alt="row.name" class="credits__avatar" loading="lazy" decoding="async"
-                @error="handleCreditAvatarError(row, $event)" />
-              <span v-else class="credits__avatar credits__avatar--blank" aria-hidden="true"></span>
-              <span class="credits__name">{{ row.name }}</span>
-              <CountryFlag v-if="row.country" :country="row.country" class="credits__flag" />
+              <UserChip :user="toUserRef(row)" class="credits__player" />
               <span class="credits__meta">{{ formatCents(row.lifetimeSupportedCents) }}</span>
             </router-link>
           </li>
@@ -187,14 +168,6 @@ function tierLabel(tier: SupporterTier): string {
   line-height: 1.2;
   color: var(--text-primary);
   letter-spacing: -0.01em;
-}
-
-.credits__subtitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--text-secondary);
-  max-width: 56ch;
 }
 
 .credits__loading {
@@ -264,7 +237,7 @@ function tierLabel(tier: SupporterTier): string {
 
 .credits__row-link {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-xs);
@@ -283,30 +256,8 @@ function tierLabel(tier: SupporterTier): string {
   outline-offset: -2px;
 }
 
-.credits__avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: var(--bg-elevated);
-}
-
-.credits__avatar--blank {
-  background: var(--bg-elevated);
-}
-
-.credits__name {
-  font-family: var(--font-sans);
+.credits__player {
   font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.credits__flag {
-  flex-shrink: 0;
 }
 
 .credits__meta {

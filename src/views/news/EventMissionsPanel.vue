@@ -2,11 +2,17 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useNow } from '@/composables/useNow'
 import type { MissionResponse } from '@/types/api/missions'
-import CommunityContributorsModal from '@/views/news/CommunityContributorsModal.vue'
-import CommunityMissionRow from '@/views/news/CommunityMissionRow.vue'
+import MissionContributorsModal from '@/components/domain/MissionContributorsModal.vue'
+import SharedMissionRow from '@/components/domain/SharedMissionRow.vue'
 import EventMissionRow from '@/views/news/EventMissionRow.vue'
+import type { PaginationParams } from '@/types/pagination'
 import { missionLockState, type EventMissionView } from '@/utils/events'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+
+async function loadContributors(missionId: string, params: PaginationParams) {
+  const { getCommunityContributors } = await import('@/api/missions')
+  return getCommunityContributors(missionId, params)
+}
 
 const props = defineProps<{
   missions: EventMissionView[]
@@ -217,11 +223,11 @@ watch(
           <div v-if="showGroupLabels || joinPrompt" class="group__head">
             <span v-if="showGroupLabels" class="group__label">Community</span>
             <span v-if="showGroupLabels" class="group__note">
-              Optional, only personal missions unlock the next week.
+              Optional
             </span>
             <span v-if="joinPrompt" class="group__join">Join the event to contribute.</span>
           </div>
-          <CommunityMissionRow
+          <SharedMissionRow
             v-for="mission in visibleCommunity"
             :key="mission.id"
             :mission="mission"
@@ -233,9 +239,10 @@ watch(
       </div>
     </div>
 
-    <CommunityContributorsModal
+    <MissionContributorsModal
       v-if="openMission"
       :mission="openMission"
+      :load-page="loadContributors"
       @close="openId = null"
       @navigate="openId = null"
     />

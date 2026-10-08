@@ -39,6 +39,9 @@ export type SettingKey =
   | 'notifications.marketOutbid'
   | 'notifications.itemEarned'
   | 'notifications.server'
+  | 'notifications.clanMembership'
+  | 'notifications.clanAlliance'
+  | 'notifications.clanWar'
 
 export type SettingsBag = Record<string, unknown>
 
@@ -67,4 +70,7 @@ export interface NotificationSettings extends SettingsBag {
   'notifications.marketOutbid': boolean
   'notifications.itemEarned': boolean
   'notifications.server': boolean
+  'notifications.clanMembership': boolean
+  'notifications.clanAlliance': boolean
+  'notifications.clanWar': boolean
 }

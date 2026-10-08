@@ -189,7 +189,6 @@ const breadcrumbs: Crumb[] = [
     <div class="activity-page__header">
       <div>
         <h1 class="activity-page__title">My Market Activity</h1>
-        <p class="activity-page__subtitle">Selling, bidding, and wins in one place</p>
       </div>
       <div v-if="authStore.isLoggedIn" class="activity-page__header-actions">
         <MarketWallet
@@ -266,12 +265,6 @@ const breadcrumbs: Crumb[] = [
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
-}
-
-.activity-page__subtitle {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
 }
 
 .activity-page__header-actions {

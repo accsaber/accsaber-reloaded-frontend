@@ -160,3 +160,14 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+.clan-colors {
+  --clan-accent: oklch(from var(--clan-primary, var(--accent-overall)) clamp(0.68, l, 0.84) min(c, 0.2) h);
+  --clan-accent-2: oklch(from var(--clan-secondary, var(--clan-primary, var(--text-secondary))) clamp(0.6, l, 0.8) min(c, 0.18) h);
+  --page-accent: var(--clan-accent);
+}
+
+[data-theme='light'] .clan-colors {
+  --clan-accent: oklch(from var(--clan-primary, var(--accent-overall)) clamp(0.4, l, 0.54) min(c, 0.2) h);
+  --clan-accent-2: oklch(from var(--clan-secondary, var(--clan-primary, var(--text-secondary))) clamp(0.38, l, 0.56) min(c, 0.18) h);
+}

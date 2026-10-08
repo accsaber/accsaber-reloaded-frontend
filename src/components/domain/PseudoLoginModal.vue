@@ -64,9 +64,6 @@ function goToSettings() {
           </div>
         </div>
 
-        <p class="auth-modal__hint">
-          Manage linked accounts and preferences from your settings.
-        </p>
 
         <div class="auth-modal__actions">
           <BaseButton variant="primary" @click="goToSettings">Open Settings</BaseButton>
@@ -75,9 +72,6 @@ function goToSettings() {
       </template>
 
       <template v-else>
-        <p class="auth-modal__intro">
-          Log in with any of your linked accounts - We recommend Discord, but you can log in with either Steam or BeatLeader directly.
-        </p>
 
         <button class="provider provider--discord provider--primary" @click="startLogin('discord')">
           <span class="provider__icon" aria-hidden="true">
@@ -109,14 +103,6 @@ function goToSettings() {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.auth-modal__intro,
-.auth-modal__hint {
-  color: var(--text-secondary);
-  font-size: var(--text-body);
-  line-height: 1.55;
-  margin: 0;
 }
 
 .auth-modal__profile {

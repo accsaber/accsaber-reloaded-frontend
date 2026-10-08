@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import UserChip from '@/components/domain/UserChip.vue'
 import type { EventMissionLeaderboardResponse } from '@/types/api/statistics'
-import type { TableColumn } from '@/types/display'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
+import { toUserRef } from '@/utils/mappers'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { useRouter } from 'vue-router'
-import LeaderboardPlayerCell from './LeaderboardPlayerCell.vue'
 import { NO_VALUE, fmtInt } from './statsFormat'
 
 const props = defineProps<{
@@ -50,8 +50,7 @@ const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const rows = computed<Record<string, unknown>[]>(() =>
   (pageData.value?.content ?? []).map((item) => ({
     ...item,
-    avatarUrl: pickAvatarUrl(item),
-    avatarFallbackUrl: pickAvatarFallback(item),
+    player: toUserRef(item),
   })))
 
 function formatDate(value: unknown): string {
@@ -107,9 +106,7 @@ watch(page, () => fetchLeaderboard())
       :row-to="playerRoute" empty-message="Nobody has completed this mission yet." @row-click="onRowClick">
       <template #cell-rank="{ value }"><span class="mission-lb__rank">#{{ fmtInt(value) }}</span></template>
       <template #cell-player="{ row }">
-        <LeaderboardPlayerCell :user-id="(row.userId as string)" :user-name="(row.userName as string)"
-          :avatar-url="(row.avatarUrl as string)"
-          :avatar-fallback-url="(row.avatarFallbackUrl as string | null)" :country="(row.country as string)" />
+        <UserChip :user="(row.player as UserRefDisplay)" tooltip />
       </template>
       <template #cell-completions="{ value }"><span class="mission-lb__strong">{{ fmtInt(value) }}</span></template>
       <template #cell-xpEarned="{ value }">{{ fmtInt(value) }}</template>

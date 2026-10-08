@@ -1,3 +1,5 @@
+import type { PublicClanResponse } from './clans'
+import type { ClanStatsResponse } from './clans'
 import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
 import type { MilestoneIconGroup, MilestoneRewardResponse } from './milestones'
 import type { PaginationParams } from '../pagination'
@@ -21,6 +23,7 @@ export interface UserResponse {
   hmd: string | null
   relations: UserRelationCounts
   supporterTier?: SupporterTier | null
+  clan?: PublicClanResponse | null
 }
 
 export interface PinnedScoreInput {
@@ -63,6 +66,7 @@ export interface ScoreResponse {
   avatarUrl: string
   cdnAvatarUrl?: string | null
   country: string
+  clan?: PublicClanResponse | null
   mapDifficultyId: string
   mapId: string
   beatsaverCode: string | null
@@ -138,6 +142,7 @@ export interface LeaderboardResponse {
   topPlayId: string
   playerInactive: boolean
   supporterTier?: SupporterTier | null
+  clan?: PublicClanResponse | null
 }
 
 export interface XpLeaderboardResponse {
@@ -153,6 +158,7 @@ export interface XpLeaderboardResponse {
   level: number
   playerInactive: boolean
   supporterTier?: SupporterTier | null
+  clan?: PublicClanResponse | null
 }
 
 export interface UserAllStatisticsResponse {
@@ -164,6 +170,7 @@ export interface UserAllStatisticsResponse {
   totalCampaignXp: number
   totalEventXp: number
   categories: UserCategoryStatisticsResponse[]
+  clan: ClanStatsResponse | null
 }
 
 export interface UserCategoryStatisticsResponse {
