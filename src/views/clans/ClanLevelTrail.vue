@@ -146,6 +146,7 @@ function toggle(level: number) {
   background: var(--bg-elevated);
   border: none;
   clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+  isolation: isolate;
   cursor: pointer;
   transition: background-color 150ms ease-out, color 150ms ease-out;
 }
@@ -156,8 +157,7 @@ function toggle(level: number) {
 }
 
 .trail__node:focus-visible {
-  outline: 2px solid var(--clan-accent, var(--page-accent, var(--accent)));
-  outline-offset: 2px;
+  outline: none;
 }
 
 .trail__stop--reached .trail__node {
@@ -172,10 +172,20 @@ function toggle(level: number) {
   background: var(--clan-accent, var(--page-accent, var(--accent)));
 }
 
-.trail__node[aria-pressed='true'] {
+.trail__node[aria-pressed='true'],
+.trail__node:focus-visible {
   color: var(--text-primary);
+  background: var(--clan-accent, var(--page-accent, var(--accent)));
+}
+
+.trail__node[aria-pressed='true']::before,
+.trail__node:focus-visible::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
   background: var(--bg-overlay);
-  box-shadow: inset 0 0 0 2px var(--clan-accent, var(--page-accent, var(--accent)));
+  clip-path: inherit;
 }
 
 .trail__tick {
