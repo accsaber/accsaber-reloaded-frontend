@@ -217,6 +217,14 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
     <template v-else>
       <ClanWarHud :war="war" :now="now" :can-retreat="canRetreat" @retreat="retreatOpen = true" />
 
+      <ClanWarPool
+        :war="war"
+        :pool="detail.pool"
+        :can-submit-picks="canSubmitPicks"
+        :signed-in="auth.isLoggedIn"
+        @submit-picks="picksOpen = true"
+      />
+
       <template v-if="fighting">
         <ClanWarFighters :war="war" :participants="participants" :error="participantsError" />
         <ClanWarTimeline :war="war" :hits="timeline" />
@@ -228,15 +236,6 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
           :now="now"
         />
       </template>
-
-      <ClanWarPool
-        :war="war"
-        :pool="detail.pool"
-        :can-submit-picks="canSubmitPicks"
-        :signed-in="auth.isLoggedIn"
-        :collapsible="fighting"
-        @submit-picks="picksOpen = true"
-      />
 
       <ClanWarLoans
         :war="war"

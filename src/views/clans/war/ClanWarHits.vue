@@ -7,7 +7,7 @@ import UserChip from '@/components/domain/UserChip.vue'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import type { ClanWarHitResponse, ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
-import { formatStanding, WAR_GUARD_MAX, warSideStyles } from '@/utils/clans'
+import { formatStanding, warSideStyles } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
@@ -38,7 +38,7 @@ function rowStyle(hit: ClanWarHitResponse) {
   return sideOf.value.get(hit.attacker.id) === props.war.defender.clan.id ? styles.value.defender : styles.value.attacker
 }
 
-function breakLine(hit: ClanWarHitResponse): string {
+function breakTitle(hit: ClanWarHitResponse): string {
   const moved = `Guard broken, ${formatStanding(hit.standingMoved)} Standing moved`
   return hit.xpAwarded == null ? moved : `${moved}, ${Math.round(hit.xpAwarded)} XP`
 }
@@ -109,23 +109,21 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
         :class="{ 'war-hits__row--break': hit.broke }"
         :style="rowStyle(hit)"
       >
-        <span class="war-hits__line">
-          <UserChip :user="hit.attacker" size="xs" compact link />
+        <span class="war-hits__who">
+          <UserChip :user="hit.attacker" size="xs" link hide-clan />
           <span class="war-hits__verb">{{ hit.broke ? 'broke' : 'hit' }}</span>
-          <UserChip :user="hit.victim" size="xs" compact link />
-          <span class="war-hits__verb">on</span>
-          <RouterLink class="war-hits__map" :to="{ name: 'map-detail', params: { mapId: hit.difficulty.mapId } }">
-            <img class="war-hits__cover" :src="pickCoverUrl(hit.difficulty)" alt="" loading="lazy" decoding="async" />
-            <span class="war-hits__song">{{ hit.difficulty.songName }}</span>
-          </RouterLink>
+          <UserChip :user="hit.victim" size="xs" compact link hide-clan />
+        </span>
+        <RouterLink class="war-hits__map" :to="{ name: 'map-detail', params: { mapId: hit.difficulty.mapId } }">
+          <img class="war-hits__cover" :src="pickCoverUrl(hit.difficulty)" alt="" loading="lazy" decoding="async" />
+          <span class="war-hits__song">{{ hit.difficulty.songName }}</span>
           <span v-if="hit.missingScore" class="war-hits__flag">no score</span>
+        </RouterLink>
+        <span class="war-hits__damage">-{{ hit.damage.toFixed(1) }}</span>
+        <span class="war-hits__result" :title="hit.broke ? breakTitle(hit) : undefined">
+          {{ hit.broke ? `${formatStanding(hit.standingMoved)} Standing` : `guard ${Math.round(hit.guardAfter)}` }}
         </span>
-        <span class="war-hits__numbers">
-          <span class="war-hits__damage">-{{ hit.damage.toFixed(1) }}</span>
-          <span class="war-hits__guard">guard {{ Math.round(hit.guardAfter) }}/{{ WAR_GUARD_MAX }}</span>
-          <span class="war-hits__when">{{ formatRelativeDate(hit.createdAt, now) }}</span>
-        </span>
-        <span v-if="hit.broke" class="war-hits__break">{{ breakLine(hit) }}</span>
+        <span class="war-hits__when">{{ formatRelativeDate(hit.createdAt, now) }}</span>
       </li>
     </ul>
 
@@ -189,11 +187,13 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
 
 .war-hits__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-xs) var(--space-md);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 7ch 13ch 7ch;
+  gap: var(--space-md);
   align-items: center;
-  padding: var(--space-sm) var(--space-md);
+  height: 40px;
+  padding: 0 var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
+  font-size: var(--text-caption);
 }
 
 .war-hits__row:last-child {
@@ -204,25 +204,25 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
   background: var(--bg-elevated);
 }
 
-.war-hits__row--break {
-  background: color-mix(in srgb, var(--war-side) 10%, var(--bg-surface));
-}
-
-.war-hits__line {
+.war-hits__who {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
-  font-size: var(--text-body);
 }
 
 .war-hits__verb {
-  color: var(--text-secondary);
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.war-hits__row--break .war-hits__verb {
+  font-weight: 600;
+  color: var(--war-side);
 }
 
 .war-hits__map {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
@@ -235,6 +235,7 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
 }
 
 .war-hits__cover {
+  flex-shrink: 0;
   width: 20px;
   height: 20px;
   object-fit: cover;
@@ -242,46 +243,50 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
 }
 
 .war-hits__song {
-  font-weight: 600;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .war-hits__flag {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--warning);
+  flex-shrink: 0;
+  color: var(--text-tertiary);
 }
 
-.war-hits__numbers {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-md);
+.war-hits__damage,
+.war-hits__result,
+.war-hits__when {
   font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  text-align: right;
   white-space: nowrap;
+  color: var(--text-secondary);
 }
 
 .war-hits__damage {
-  font-size: var(--text-body);
   font-weight: 600;
   color: var(--war-side);
 }
 
-.war-hits__break {
-  grid-column: 1 / -1;
-  font-size: var(--text-caption);
+.war-hits__row--break .war-hits__result {
   font-weight: 600;
   color: var(--war-side);
 }
 
-@media (max-width: 640px) {
+.war-hits__when {
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 720px) {
   .war-hits__row {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 7ch 13ch;
+    height: auto;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .war-hits__map,
+  .war-hits__when {
+    display: none;
   }
 
   .war-hits__filter {

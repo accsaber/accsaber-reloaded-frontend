@@ -41,6 +41,7 @@ const host = computed<EffectHostContext>(() => ({ auraType: props.value.aura?.ty
 .title-fx {
   position: relative;
   display: inline-block;
+  box-sizing: content-box;
   padding: 0.45em 0.4em;
   margin: -0.45em -0.4em;
 }
