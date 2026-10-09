@@ -15,6 +15,7 @@ import type {
   ClanWarPoolSource,
   ClanWarResponse,
   ClanWarStatus,
+  ClanXpGrantResponse,
   ClanXpSource,
   PublicClanResponse,
 } from '@/types/api/clans'
@@ -156,6 +157,25 @@ export const CLAN_XP_SOURCE_LABEL: Record<ClanXpSource, string> = {
   war_break: 'War break',
   war_win: 'War win',
   war_loan: 'War loan',
+}
+
+const DAY_MS = 86400000
+
+export function formatClanXp(xp: number): string {
+  return xp.toLocaleString(undefined, { maximumFractionDigits: 1 })
+}
+
+export function clanXpGrantLabel(grant: ClanXpGrantResponse): string {
+  if (grant.source !== 'play') return CLAN_XP_SOURCE_LABEL[grant.source]
+  return grant.count > 1 ? `Plays ×${grant.count}` : 'Play'
+}
+
+export function clanXpGrantWhen(grant: ClanXpGrantResponse, now = Date.now()): string {
+  if (grant.source !== 'play') return formatRelativeDate(grant.createdAt, now)
+  const days = Math.floor(now / DAY_MS) - Math.floor(new Date(grant.createdAt).getTime() / DAY_MS)
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return new Date(grant.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
 export const CLAN_STANDING_SOURCE_LABEL: Record<ClanStandingSource, string> = {

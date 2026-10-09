@@ -9,8 +9,7 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanLevelResponse, ClanLevelStepResponse, ClanResponse, ClanXpGrantResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { CLAN_XP_SOURCE_LABEL, unlockLines } from '@/utils/clans'
-import { formatRelativeDate } from '@/utils/formatters'
+import { clanXpGrantLabel, clanXpGrantWhen, formatClanXp, unlockLines } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { loadClanLevels } from './clanLevels'
@@ -18,7 +17,7 @@ import ClanLevelReward from './ClanLevelReward.vue'
 import ClanLevelTrail from './ClanLevelTrail.vue'
 import ClanXpSummary from './ClanXpSummary.vue'
 
-const props = defineProps<{ clan: ClanResponse }>()
+const props = defineProps<{ clan: ClanResponse; seasonRunning: boolean }>()
 
 const route = useRoute()
 
@@ -66,15 +65,15 @@ const xpColumns: TableColumn[] = [
 ]
 
 const xpRows = computed(() =>
-  (xpPage.value?.content ?? []).map((grant) => ({
-    id: grant.id,
-    source: CLAN_XP_SOURCE_LABEL[grant.source],
-    amount: Math.round(grant.amount).toLocaleString(),
+  (xpPage.value?.content ?? []).map((grant, index) => ({
+    key: `${grant.source}-${grant.createdAt}-${index}`,
+    source: clanXpGrantLabel(grant),
+    amount: formatClanXp(grant.amount),
     detail:
       grant.rosterFactor > 1
-        ? `${Math.round(grant.rawAmount).toLocaleString()} XP with clan size scaling ×${grant.rosterFactor.toFixed(1)}`
+        ? `${formatClanXp(grant.rawAmount)} XP with clan size scaling ×${grant.rosterFactor.toFixed(1)}`
         : '',
-    createdAt: formatRelativeDate(grant.createdAt),
+    createdAt: clanXpGrantWhen(grant),
   })),
 )
 const xpTotalPages = computed(() => xpPage.value?.totalPages ?? 0)
@@ -146,12 +145,13 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     <div class="level-tab__xp">
       <h2 class="level-tab__heading">XP this season</h2>
       <SkeletonLoader v-if="loading" variant="text" :lines="3" />
-      <ClanXpSummary v-else-if="level?.seasonXpBySource" :by-source="level.seasonXpBySource" />
+      <ClanXpSummary v-else-if="seasonRunning" :by-source="level?.seasonXpBySource ?? {}" />
+      <p v-else class="level-tab__no-season">No season running.</p>
       <BaseButton class="level-tab__toggle" size="sm" :aria-expanded="showAll" @click="toggleAll">
         {{ showAll ? 'Hide grants' : 'Show all grants' }}
       </BaseButton>
       <template v-if="showAll">
-        <DataTable :columns="xpColumns" :rows="xpRows" :loading="xpLoading" :loading-rows="6" row-key="id" empty-message="No XP yet">
+        <DataTable :columns="xpColumns" :rows="xpRows" :loading="xpLoading" :loading-rows="6" row-key="key" empty-message="No XP yet">
           <template #cell-amount="{ row }">
             <span :title="String(row.detail)">{{ row.amount }}</span>
           </template>
@@ -212,6 +212,12 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.level-tab__no-season {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--text-secondary);
 }
 
 .level-tab__toggle {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ClanBar from './ClanBar.vue'
 import type { ClanXpSource } from '@/types/api/clans'
-import { CLAN_XP_SOURCE_LABEL } from '@/utils/clans'
+import { CLAN_XP_SOURCE_LABEL, formatClanXp } from '@/utils/clans'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -21,7 +21,7 @@ const total = computed(() => rows.value.reduce((sum, row) => sum + row.xp, 0))
 <template>
   <div class="xp-summary">
     <p class="xp-summary__line">
-      <template v-if="rows.length">{{ Math.round(total).toLocaleString() }} XP this season.</template>
+      <template v-if="rows.length">{{ formatClanXp(total) }} XP this season.</template>
       <template v-else>No XP this season yet.</template>
     </p>
     <dl v-if="rows.length" class="xp-summary__rows">
@@ -29,7 +29,7 @@ const total = computed(() => rows.value.reduce((sum, row) => sum + row.xp, 0))
         <dt>{{ row.label }}</dt>
         <dd>
           <ClanBar class="xp-summary__bar" :value="row.share" :max="1" />
-          <span class="xp-summary__value">{{ Math.round(row.xp).toLocaleString() }}</span>
+          <span class="xp-summary__value">{{ formatClanXp(row.xp) }}</span>
         </dd>
       </div>
     </dl>

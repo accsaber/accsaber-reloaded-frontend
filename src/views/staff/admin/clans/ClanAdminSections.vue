@@ -20,7 +20,9 @@ import {
   CLAN_ITEM_SOURCE_LABEL,
   CLAN_ROLE_LABEL,
   CLAN_STANDING_SOURCE_LABEL,
-  CLAN_XP_SOURCE_LABEL,
+  clanXpGrantLabel,
+  clanXpGrantWhen,
+  formatClanXp,
   formatSignedStanding,
   formatStanding,
   unlockLines,
@@ -120,11 +122,11 @@ function missionProgress(mission: MissionResponse): string {
           <th style="width: 130px">When</th>
         </template>
         <template #default="{ item: grant }">
-          <td>{{ CLAN_XP_SOURCE_LABEL[grant.source] }}</td>
-          <td class="mono right">{{ Math.round(grant.rawAmount).toLocaleString() }}</td>
+          <td>{{ clanXpGrantLabel(grant) }}</td>
+          <td class="mono right">{{ formatClanXp(grant.rawAmount) }}</td>
           <td class="mono right">{{ grant.rosterFactor.toFixed(2) }}</td>
-          <td class="mono right">{{ Math.round(grant.amount).toLocaleString() }}</td>
-          <td>{{ formatRelativeDate(grant.createdAt) }}</td>
+          <td class="mono right">{{ formatClanXp(grant.amount) }}</td>
+          <td>{{ clanXpGrantWhen(grant) }}</td>
         </template>
       </AdminTable>
     </section>

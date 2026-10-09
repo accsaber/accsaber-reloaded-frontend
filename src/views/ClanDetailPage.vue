@@ -509,7 +509,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
       <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :latest-war="latestWar" :season-running="seasonRunning" />
       <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
       <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
-      <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" />
+      <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
       <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" />
       <ClanCosmeticsTab
         v-else-if="activeTab === 'cosmetics'"

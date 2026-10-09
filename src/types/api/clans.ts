@@ -144,9 +144,10 @@ export interface ClanItemResponse {
 }
 
 export interface ClanXpGrantResponse {
-  id: string
+  id: string | null
   source: ClanXpSource
   sourceId: string | null
+  count: number
   rawAmount: number
   rosterFactor: number
   amount: number
