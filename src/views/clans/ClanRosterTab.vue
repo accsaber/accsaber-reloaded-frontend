@@ -225,6 +225,30 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
               @claim="emit('claim')"
             />
           </template>
+          <template #mobile-card="{ row }">
+            <div class="member-card" :class="{ 'member-card--self': row.id === viewerId }">
+              <div class="member-card__grid">
+                <span class="roster__who">
+                  <UserChip :user="asPlayer(row)" size="sm" link hide-clan />
+                  <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
+                </span>
+                <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
+                <span class="member-card__played">{{ lastPlayed(asPlayer(row)) }}</span>
+                <span class="member-card__stats">
+                  {{ row.hits }} hits · {{ row.breaks }} breaks · {{ Math.round((row.strength as number) * 100) }}%
+                </span>
+              </div>
+              <ClanMemberMenu
+                v-if="actionsFor(asPlayer(row))"
+                :member="asPlayer(row)"
+                :actions="actionsFor(asPlayer(row))!"
+                @change-role="emit('change-role', asPlayer(row), $event)"
+                @kick="emit('kick', asPlayer(row))"
+                @transfer="emit('transfer', asPlayer(row))"
+                @claim="emit('claim')"
+              />
+            </div>
+          </template>
         </DataTable>
       </section>
     </template>
@@ -298,7 +322,52 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   }
 
   .roster__column {
+    flex: none;
     min-height: 0;
   }
+}
+
+.member-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 48px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.member-card--self {
+  background: color-mix(in srgb, var(--clan-accent) 6%, var(--bg-surface));
+}
+
+.member-card__grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px var(--space-sm);
+  min-width: 0;
+}
+
+.member-card__xp {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.member-card__played,
+.member-card__stats {
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.member-card__stats {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  justify-self: end;
 }
 </style>
