@@ -24,9 +24,8 @@ const props = withDefaults(
 )
 
 const card = computed(() => readClanEquipped(props.clan.equipped, 'clan_tag_card', readClanTagCardValue))
-const fx = computed(() =>
-  props.effects && (props.size === 'lg' || props.preview) ? annotateEffectLayerStacks(valueFxLayers(card.value)) : [],
-)
+const live = computed(() => !!props.effects && (props.size === 'lg' || !!props.preview))
+const fx = computed(() => (live.value ? annotateEffectLayerStacks(valueFxLayers(card.value)) : []))
 
 function capWidthEm(cap: ClanTagCap | undefined): number {
   if (!cap) return 0
@@ -86,7 +85,7 @@ const style = computed<Record<string, string> | undefined>(() => {
     :is="preview ? 'span' : RouterLink"
     v-bind="preview ? {} : { to: { name: 'clan-detail', params: { slugOrId: clan.slug } }, title: clan.name, 'aria-label': `Clan ${clan.name}` }"
     class="clan-tag"
-    :class="[`clan-tag--${size}`, { 'clan-tag--shaped': card }]"
+    :class="[`clan-tag--${size}`, { 'clan-tag--shaped': card, 'clan-tag--still': !live }]"
     :style="style"
     @click.stop
   >
@@ -178,6 +177,11 @@ const style = computed<Record<string, string> | undefined>(() => {
 
 .clan-tag__text {
   position: relative;
+}
+
+.clan-tag--still :deep(.border-decals__pulse),
+.clan-tag--still :deep(.border-decals__swing) {
+  animation: none;
 }
 
 .clan-tag:hover,

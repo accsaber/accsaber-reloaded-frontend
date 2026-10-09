@@ -79,7 +79,7 @@ function whole(value: number | undefined): string {
 
 .leader--founder {
   --portrait: 168px;
-  grid-column: span 2;
+  grid-column: span 6;
   grid-row: span 2;
   align-items: center;
   padding: var(--space-lg);
@@ -88,7 +88,11 @@ function whole(value: number | undefined): string {
 
 .leader--commander {
   --portrait: 96px;
-  grid-column: span 2;
+  grid-column: span 6;
+}
+
+.leader--officer {
+  grid-column: span 4;
 }
 
 .leader--self {
@@ -196,7 +200,13 @@ function whole(value: number | undefined): string {
     grid-row: auto;
   }
 
+  .leader--founder,
+  .leader--commander {
+    grid-column: span 12;
+  }
+
   .leader--officer {
+    grid-column: span 6;
     grid-template-columns: minmax(0, 1fr);
   }
 

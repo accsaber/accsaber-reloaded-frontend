@@ -39,7 +39,21 @@ defineProps<{
 
 .locked--commander {
   --portrait: 96px;
-  grid-column: span 2;
+  grid-column: span 6;
+}
+
+.locked--officer {
+  grid-column: span 4;
+}
+
+@media (max-width: 767px) {
+  .locked--commander {
+    grid-column: span 12;
+  }
+
+  .locked--officer {
+    grid-column: span 6;
+  }
 }
 
 .locked__portrait {

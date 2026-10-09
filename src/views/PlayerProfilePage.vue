@@ -131,12 +131,12 @@ const activeTab = ref(route.query.inventoryHighlight ? 'inventory' : 'scores')
 
 const TAB_QUERY_KEYS = ['sort', 'order', 'page', 'unowned', 'inventoryHighlight']
 
-function setTab(tab: string) {
+async function setTab(tab: string) {
   if (tab === activeTab.value) return
-  activeTab.value = tab
   const query = { ...route.query }
   for (const key of TAB_QUERY_KEYS) delete query[key]
-  router.replace({ query })
+  await router.replace({ query })
+  activeTab.value = tab
 }
 const initialCategory = (route.query.category as CategoryCode) || 'overall'
 const activeCategory = ref<CategoryCode>(initialCategory === 'xp' ? 'overall' : initialCategory)

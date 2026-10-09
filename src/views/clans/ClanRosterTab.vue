@@ -205,19 +205,19 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 
 .roster__mosaic {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-flow: dense;
   gap: var(--space-md);
 }
 
 .roster__skeleton-founder {
-  grid-column: span 2;
+  grid-column: span 6;
   grid-row: span 2;
   min-height: 260px;
 }
 
 .roster__skeleton-wide {
-  grid-column: span 2;
+  grid-column: span 6;
 }
 
 .roster__members {
@@ -257,8 +257,9 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 }
 
 @media (max-width: 767px) {
-  .roster__mosaic {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .roster__skeleton-founder,
+  .roster__skeleton-wide {
+    grid-column: span 12;
   }
 }
 </style>

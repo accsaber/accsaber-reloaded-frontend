@@ -53,6 +53,8 @@ const ICON_RENDERED_TYPES = new Set([
   'profile_border_color',
   'theme',
   'profile_thumbnail_background',
+  'saber',
+  'item_pedestal',
 ])
 
 const themeBase = useThemeBase()
@@ -326,7 +328,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     <CrateIcon v-else-if="typeKey === 'crate'" class="item-preview__crate" :value="crateValue" />
 
     <svg
-      v-else-if="typeKey === 'saber' && !item.iconUrl"
+      v-else-if="typeKey === 'saber'"
       class="item-preview__saber"
       :class="rarityClass(item.rarity)"
       viewBox="0 0 24 24"
@@ -346,7 +348,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
     </svg>
 
     <svg
-      v-else-if="typeKey === 'item_pedestal' && !item.iconUrl"
+      v-else-if="typeKey === 'item_pedestal'"
       class="item-preview__pedestal"
       :class="rarityClass(item.rarity)"
       viewBox="0 0 24 24"
