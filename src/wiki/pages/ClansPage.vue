@@ -49,8 +49,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="disbanding">Disbanding</WikiHeading>
     <p>
       Only the Founder can disband the clan. Everyone else can join a new clan right away. The
-      Founder still has to wait out their 14 days. If staff disband it, the Founder does not wait
-      either. Alliances end and any open wars are lost.
+      Founder still has to wait out their 14 days, unless they were the only one in the clan. If
+      staff disband it, the Founder does not wait either. Alliances end and any open wars are lost.
     </p>
   </WikiProse>
 </template>
