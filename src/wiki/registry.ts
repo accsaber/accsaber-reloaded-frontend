@@ -656,7 +656,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'category turf',
           'complexity turf',
           'plays',
-          'kept',
+          'clan size scaling',
           'roster factor',
           'big clans',
           '50 members',

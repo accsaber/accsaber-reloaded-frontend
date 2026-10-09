@@ -36,9 +36,8 @@ const UNLOCKS: WikiCompareRow[] = [
 
     <WikiHeading id="big-clans">Big clans</WikiHeading>
     <p>
-      A small clan keeps all of its clan XP. The bigger and stronger a clan gets, the less of
-      it the clan gets to keep (to compensate for roster quantity). You can see how much your clan
-      earned on its Level tab.
+      Bigger and stronger clans earn more XP per week, so their XP is scaled to keep every clan
+      levelling at the same pace. Your clan's Level tab shows its clan size scaling.
     </p>
 
     <WikiHeading id="unlocks">Unlocks</WikiHeading>

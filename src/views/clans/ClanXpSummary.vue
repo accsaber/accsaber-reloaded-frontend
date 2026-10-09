@@ -21,8 +21,8 @@ const total = computed(() => rows.value.reduce((sum, row) => sum + row.xp, 0))
 <template>
   <div class="xp-summary">
     <p class="xp-summary__line">
-      <template v-if="rows.length">{{ Math.round(total).toLocaleString() }} XP banked this season.</template>
-      <template v-else>No XP banked this season yet.</template>
+      <template v-if="rows.length">{{ Math.round(total).toLocaleString() }} XP this season.</template>
+      <template v-else>No XP this season yet.</template>
     </p>
     <dl v-if="rows.length" class="xp-summary__rows">
       <div v-for="row in rows" :key="row.source" class="xp-summary__row">

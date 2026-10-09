@@ -3,7 +3,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import HintTooltip from './HintTooltip.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import type {
   ComparisonScenario,
   ComplexityPlayerCategory,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { formatFixed } from '@/utils/formatters'
-import HintTooltip from './HintTooltip.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import { fieldRange, type FieldKind, type FieldRange } from './tuning'
 import { computed, ref, watch } from 'vue'
 

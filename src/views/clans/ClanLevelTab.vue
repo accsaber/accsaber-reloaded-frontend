@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import ClanBar from './ClanBar.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -45,6 +46,12 @@ const headline = computed(() =>
     ? `Level ${progress.value.level}, every reward unlocked.`
     : `Level ${progress.value.level}, ${xpToNext.value.toLocaleString()} XP to level ${progress.value.level + 1}.`,
 )
+const scaling = computed(() => {
+  const factor = level.value?.rosterFactor ?? 1
+  return factor > 1 ? `×${factor.toFixed(1)}` : null
+})
+const SCALING_HINT =
+  "Bigger and stronger clans earn more XP per week, so it's scaled to keep every clan levelling at the same pace."
 const nextRewards = computed(() =>
   steps.value
     .filter((s) => s.level > progress.value.level && (unlockLines(s.unlocks).length || s.unlocks.cosmetics.length))
@@ -54,9 +61,7 @@ const nextRewards = computed(() =>
 
 const xpColumns: TableColumn[] = [
   { key: 'source', label: 'Source', align: 'left' },
-  { key: 'rawAmount', label: 'Earned', align: 'right', mono: true, width: '120px' },
-  { key: 'kept', label: 'Kept', align: 'right', mono: true, width: '100px' },
-  { key: 'amount', label: 'Banked', align: 'right', mono: true, width: '120px' },
+  { key: 'amount', label: 'XP', align: 'right', mono: true, width: '120px' },
   { key: 'createdAt', label: 'When', align: 'right', mono: true, width: '120px' },
 ]
 
@@ -64,9 +69,11 @@ const xpRows = computed(() =>
   (xpPage.value?.content ?? []).map((grant) => ({
     id: grant.id,
     source: CLAN_XP_SOURCE_LABEL[grant.source],
-    rawAmount: Math.round(grant.rawAmount).toLocaleString(),
-    kept: `${Math.round(100 / grant.rosterFactor)}%`,
     amount: Math.round(grant.amount).toLocaleString(),
+    detail:
+      grant.rosterFactor > 1
+        ? `${Math.round(grant.rawAmount).toLocaleString()} XP with clan size scaling ×${grant.rosterFactor.toFixed(1)}`
+        : '',
     createdAt: formatRelativeDate(grant.createdAt),
   })),
 )
@@ -114,6 +121,10 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     <div class="level-tab__now">
       <p class="level-tab__headline">{{ headline }}</p>
       <ClanBar v-if="!atMax" class="level-tab__bar" :value="percent" :max="100" />
+      <p v-if="scaling" class="level-tab__scaling">
+        Clan size scaling {{ scaling }}
+        <HintTooltip :text="SCALING_HINT" label="clan size scaling" />
+      </p>
     </div>
 
     <div v-if="loading" class="level-tab__next">
@@ -140,11 +151,14 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
         {{ showAll ? 'Hide grants' : 'Show all grants' }}
       </BaseButton>
       <template v-if="showAll">
-        <DataTable :columns="xpColumns" :rows="xpRows" :loading="xpLoading" :loading-rows="6" row-key="id" empty-message="No XP banked yet">
+        <DataTable :columns="xpColumns" :rows="xpRows" :loading="xpLoading" :loading-rows="6" row-key="id" empty-message="No XP yet">
+          <template #cell-amount="{ row }">
+            <span :title="String(row.detail)">{{ row.amount }}</span>
+          </template>
           <template #mobile-card="{ row }">
             <span class="level-tab__grant">
               <span>{{ row.source }}</span>
-              <span class="level-tab__grant-value">{{ row.amount }} ({{ row.kept }})</span>
+              <span class="level-tab__grant-value" :title="String(row.detail)">{{ row.amount }} XP</span>
               <span class="level-tab__grant-when">{{ row.createdAt }}</span>
             </span>
           </template>
@@ -177,6 +191,15 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
 
 .level-tab__bar {
   max-width: 560px;
+}
+
+.level-tab__scaling {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .level-tab__next {
