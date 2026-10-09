@@ -26,6 +26,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       much you can lose.
     </p>
     <p>
+      Each side's bar only ever goes down. Standing you take by breaking someone goes to your clan, 
+      not back into your bar.
+    </p>
+    <p>
       You can only lose <RouterLink to="/wiki/clan-standing#earned">earned standing</RouterLink>,
       the part you picked up this season. Your base standing comes from your members' skill and
       a war can't touch it. So even if your whole side gets drained, the worst case is dropping
@@ -77,7 +81,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="rewards">Rewards</WikiHeading>
     <p>
-      The winning clan gets 345 clan XP. Everyone who fought gets XP from their contribution. Some
+      The winning clan gets 345 clan XP. Everyone who fought gets XP from the damage they did. Some
       wars also give items to the top fighters on the winning side.
     </p>
   </WikiProse>

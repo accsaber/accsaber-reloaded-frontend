@@ -86,7 +86,7 @@ const pbCount = computed(() => listing.value?.item.counters?.play_count ?? null)
 const typeLabel = computed(() => {
   const typeKey = listing.value?.item.item.typeKey
   if (!typeKey) return ''
-  return itemTypeStore.byKey.get(typeKey)?.name ?? typeKey.replace(/_/g, ' ')
+  return itemTypeStore.typeLabel(typeKey)
 })
 
 const avatarUrl = computed(() => authStore.userProfile?.avatarUrl ?? null)

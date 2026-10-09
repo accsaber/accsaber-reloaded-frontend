@@ -604,7 +604,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'not taking requests',
         ],
         related: ['clan-ranks', 'clan-levels', 'clan-standing', 'clan-wars'],
-        updated: '2026-10-08',
+        updated: '2026-10-09',
         loader: () => import('@/wiki/pages/ClansPage.vue'),
       },
       {
@@ -786,7 +786,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'one attack',
         ],
         related: ['war-combat', 'war-loans', 'clan-standing', 'clan-seasons', 'alliances-and-rivals'],
-        updated: '2026-10-08',
+        updated: '2026-10-09',
         loader: () => import('@/wiki/pages/ClanWarsPage.vue'),
       },
       {
@@ -804,7 +804,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'berserker',
           'rulesets',
           'broken',
-          'contribution',
+          'damage',
           'war xp',
           'skill level',
           'no score',

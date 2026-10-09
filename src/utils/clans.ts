@@ -18,6 +18,7 @@ import type {
   ClanXpSource,
   PublicClanResponse,
 } from '@/types/api/clans'
+import type { Rule } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
 
 export const CLAN_ROLE_LABEL: Record<ClanRole, string> = {
@@ -360,3 +361,27 @@ export function warHeadline(war: ClanWarResponse): string | null {
 export function warModeLine(war: ClanWarResponse): string {
   return `${CLAN_ARENA_LABEL[war.arena]}, ${CLAN_RULESET_LABEL[war.ruleset]}`
 }
+
+export const CLAN_RULES_LEAD = 'Clans are public. Keep yours within these rules:'
+
+export const CLAN_RULES_NOTE =
+  'By creating a clan, you agree to these rules. Breaking them results in an automatic, indefinite suspension from every AccSaber feature.'
+
+export const CLAN_RULES: Rule[] = [
+  {
+    title: 'Keep artwork clean.',
+    text: 'No NSFW or questionable imagery in clan icons, banners, or names.',
+  },
+  {
+    title: 'No AI.',
+    text: 'No AI-generated icons, banners, or text.',
+  },
+  {
+    title: 'No hate.',
+    text: 'No homophobia, racism, or slurs anywhere: names, tags, descriptions, or chat.',
+  },
+  {
+    title: 'No mocking.',
+    text: 'Do not build a clan to make fun of, call out, or disrespect other players or clans.',
+  },
+]

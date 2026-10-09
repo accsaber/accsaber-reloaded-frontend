@@ -79,8 +79,6 @@ function whole(value: number | undefined): string {
 
 .leader--founder {
   --portrait: 168px;
-  grid-column: span 6;
-  grid-row: span 2;
   align-items: center;
   padding: var(--space-lg);
   border-top: 2px solid var(--clan-accent);
@@ -88,11 +86,6 @@ function whole(value: number | undefined): string {
 
 .leader--commander {
   --portrait: 96px;
-  grid-column: span 6;
-}
-
-.leader--officer {
-  grid-column: span 4;
 }
 
 .leader--self {
@@ -171,10 +164,6 @@ function whole(value: number | undefined): string {
   margin: var(--space-sm) 0 0;
 }
 
-.leader--officer .leader__stats {
-  grid-template-columns: repeat(2, max-content);
-}
-
 .leader__stats dt {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
@@ -197,21 +186,6 @@ function whole(value: number | undefined): string {
 @media (max-width: 767px) {
   .leader--founder {
     --portrait: 96px;
-    grid-row: auto;
-  }
-
-  .leader--founder,
-  .leader--commander {
-    grid-column: span 12;
-  }
-
-  .leader--officer {
-    grid-column: span 6;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .leader--officer .leader__body {
-    padding-right: 0;
   }
 
   .leader__stats {

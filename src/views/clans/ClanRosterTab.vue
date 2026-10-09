@@ -7,7 +7,13 @@ import { useSharedNow } from '@/composables/useSharedNow'
 import type { ClanRole } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { SortState, TableColumn } from '@/types/display'
-import { assignableRoles, CLAN_ROLE_ORDER, hasClanRole, outranks, type LockedRankSlot } from '@/utils/clans'
+import {
+  assignableRoles,
+  CLAN_ROLE_ORDER,
+  hasClanRole,
+  outranks,
+  type LockedRankSlot,
+} from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import ClanLeaderTile from './ClanLeaderTile.vue'
@@ -34,7 +40,14 @@ const COLUMNS: TableColumn[] = [
   { key: 'xp', label: 'Season XP', align: 'right', mono: true, sortable: true, width: '128px' },
   { key: 'hits', label: 'Hits', align: 'right', mono: true, sortable: true, width: '88px' },
   { key: 'breaks', label: 'Breaks', align: 'right', mono: true, sortable: true, width: '104px' },
-  { key: 'strength', label: 'Strength', align: 'right', mono: true, sortable: true, width: '120px' },
+  {
+    key: 'strength',
+    label: 'Strength',
+    align: 'right',
+    mono: true,
+    sortable: true,
+    width: '120px',
+  },
   { key: 'played', label: 'Last played', align: 'right', sortable: true, width: '144px' },
   { key: 'actions', label: '', align: 'right', noLink: true, width: '48px' },
 ]
@@ -62,13 +75,22 @@ function seasonXp(member: PlayerRef): number {
 }
 
 const leaderGroups = computed(() =>
-  CLAN_ROLE_ORDER.filter((role) => role !== 'member').map((role) => ({
-    role,
-    members: props.members
-      .filter((m) => m.membership?.role === role)
-      .sort((a, b) => seasonXp(b) - seasonXp(a)),
-    locked: props.lockedSlots.filter((s) => s.role === role),
-  })).filter((g) => g.members.length || g.locked.length),
+  CLAN_ROLE_ORDER.filter((role) => role !== 'member')
+    .map((role) => ({
+      role,
+      members: props.members
+        .filter((m) => m.membership?.role === role)
+        .sort((a, b) => seasonXp(b) - seasonXp(a)),
+      locked: props.lockedSlots.filter((s) => s.role === role),
+    }))
+    .filter((g) => g.members.length || g.locked.length),
+)
+
+const leaderColumns = computed(() =>
+  [
+    leaderGroups.value.filter((g) => g.role === 'founder'),
+    leaderGroups.value.filter((g) => g.role !== 'founder'),
+  ].filter((column) => column.length),
 )
 
 const rows = computed(() => {
@@ -88,12 +110,17 @@ const rows = computed(() => {
     })
   const { key, direction } = sortState.value
   const sign = direction === 'asc' ? 1 : -1
-  return list.sort((a, b) => sign * ((a[key as keyof typeof a] as number) - (b[key as keyof typeof b] as number)))
+  return list.sort(
+    (a, b) => sign * ((a[key as keyof typeof a] as number) - (b[key as keyof typeof b] as number)),
+  )
 })
 
 function onSort(key: string) {
   const current = sortState.value
-  sortState.value = { key, direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc' }
+  sortState.value = {
+    key,
+    direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc',
+  }
 }
 
 function actionsFor(member: PlayerRef): MemberActions | null {
@@ -123,8 +150,10 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   <section class="roster">
     <template v-if="loading">
       <div class="roster__mosaic">
-        <SkeletonLoader variant="card" class="roster__skeleton-founder" />
-        <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="120px" class="roster__skeleton-wide" />
+        <SkeletonLoader variant="card" class="roster__column" />
+        <div class="roster__column">
+          <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="120px" />
+        </div>
       </div>
       <SkeletonLoader v-for="i in 6" :key="`row-${i}`" variant="table-row" />
     </template>
@@ -133,35 +162,39 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 
     <template v-else>
       <div v-if="leaderGroups.length" class="roster__mosaic">
-        <template v-for="group in leaderGroups" :key="group.role">
-          <ClanLeaderTile
-            v-for="member in group.members"
-            :key="member.id"
-            :member="member"
-            :last-played="lastPlayed(member)"
-            :self="member.id === viewerId"
-          >
-            <ClanMemberMenu
-              v-if="actionsFor(member)"
+        <div v-for="(column, c) in leaderColumns" :key="c" class="roster__column">
+          <template v-for="group in column" :key="group.role">
+            <ClanLeaderTile
+              v-for="member in group.members"
+              :key="member.id"
               :member="member"
-              :actions="actionsFor(member)!"
-              @change-role="emit('change-role', member, $event)"
-              @kick="emit('kick', member)"
-              @transfer="emit('transfer', member)"
-              @claim="emit('claim')"
+              :last-played="lastPlayed(member)"
+              :self="member.id === viewerId"
+            >
+              <ClanMemberMenu
+                v-if="actionsFor(member)"
+                :member="member"
+                :actions="actionsFor(member)!"
+                @change-role="emit('change-role', member, $event)"
+                @kick="emit('kick', member)"
+                @transfer="emit('transfer', member)"
+                @claim="emit('claim')"
+              />
+            </ClanLeaderTile>
+            <ClanLockedSlot
+              v-for="(slot, i) in group.locked"
+              :key="`${group.role}-${i}`"
+              :role="slot.role"
+              :level="slot.level"
             />
-          </ClanLeaderTile>
-          <ClanLockedSlot
-            v-for="(slot, i) in group.locked"
-            :key="`${group.role}-${i}`"
-            :role="slot.role"
-            :level="slot.level"
-          />
-        </template>
+          </template>
+        </div>
       </div>
 
       <section v-if="rows.length" class="roster__members">
-        <h2 class="roster__title">Members <span class="roster__count">{{ rows.length }}</span></h2>
+        <h2 class="roster__title">
+          Members <span class="roster__count">{{ rows.length }}</span>
+        </h2>
         <DataTable
           :columns="COLUMNS"
           :rows="rows"
@@ -176,7 +209,9 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
               <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
             </span>
           </template>
-          <template #cell-xp="{ value }">{{ Math.round(value as number).toLocaleString() }}</template>
+          <template #cell-xp="{ value }">{{
+            Math.round(value as number).toLocaleString()
+          }}</template>
           <template #cell-strength="{ value }">{{ Math.round((value as number) * 100) }}%</template>
           <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
           <template #cell-actions="{ row }">
@@ -204,20 +239,21 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 }
 
 .roster__mosaic {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-auto-flow: dense;
+  display: flex;
   gap: var(--space-md);
 }
 
-.roster__skeleton-founder {
-  grid-column: span 6;
-  grid-row: span 2;
+.roster__column {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
   min-height: 260px;
 }
 
-.roster__skeleton-wide {
-  grid-column: span 6;
+.roster__column > :only-child {
+  flex: 1;
 }
 
 .roster__members {
@@ -257,9 +293,12 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 }
 
 @media (max-width: 767px) {
-  .roster__skeleton-founder,
-  .roster__skeleton-wide {
-    grid-column: span 12;
+  .roster__mosaic {
+    flex-direction: column;
+  }
+
+  .roster__column {
+    min-height: 0;
   }
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
+import RulesButton from '@/components/domain/RulesButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -19,6 +19,7 @@ import type {
   CampaignProgressSummary,
   CampaignResponse,
 } from '@/types/api/campaigns'
+import type { Rule } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import type { CampaignStatus } from '@/types/enums'
 import type { CampaignFilterState } from '@/utils/campaignFilters'
@@ -83,9 +84,7 @@ const selectedTagIds = computed<string[]>(() => {
 })
 
 const { tags, load: loadTags } = useCampaignTags()
-const rulesOpen = ref(false)
-
-const CAMPAIGN_RULES = [
+const CAMPAIGN_RULES: Rule[] = [
   {
     title: 'No impersonation.',
     text: 'Do not use aliases to pass yourself off as another person.',
@@ -93,6 +92,10 @@ const CAMPAIGN_RULES = [
   {
     title: 'Keep artwork clean.',
     text: 'No NSFW or questionable imagery in campaign icons or backgrounds.',
+  },
+  {
+    title: 'No AI.',
+    text: 'No AI-generated icons, backgrounds, or text.',
   },
   {
     title: 'No discriminatory language.',
@@ -395,13 +398,19 @@ watch(
         placeholder="Search title or creator..." @update:model-value="setSearch" />
 
       <div class="campaigns-page__bar-actions">
-        <button type="button" class="campaigns-page__rules-btn" @click="rulesOpen = true">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          Rules
-        </button>
+        <RulesButton
+          title="Campaign rules"
+          lead="Campaigns are player-made and public. Keep yours within these rules:"
+          :rules="CAMPAIGN_RULES"
+          note="By creating a campaign, you agree to these rules. Breaking them results in an automatic, indefinite suspension from every AccSaber feature."
+        >
+          <h3>What curation means</h3>
+          <p>
+            Unlike BeatSaver, curation here does not mean a campaign is objectively good. It means
+            rewards-eligible: the rewards are well laid out and the paths through the campaign are
+            clear rather than confusing. Only curated campaigns pay out XP and items.
+          </p>
+        </RulesButton>
         <button v-if="auth.isLoggedIn || isCurator" type="button" class="campaigns-page__new"
           @click="goToNewCampaign">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -485,35 +494,6 @@ watch(
         <PaginationControls :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
       </div>
     </template>
-
-    <BaseModal :open="rulesOpen" title="Campaign rules" max-width="480px" @close="rulesOpen = false">
-      <div class="campaigns-page__rules">
-        <p class="campaigns-page__rules-lead">
-          Campaigns are player-made and public. Keep yours within these rules:
-        </p>
-        <ol class="campaigns-page__rules-list">
-          <li v-for="(rule, i) in CAMPAIGN_RULES" :key="rule.title" class="campaigns-page__rule">
-            <span class="campaigns-page__rule-num" aria-hidden="true">{{ i + 1 }}</span>
-            <span class="campaigns-page__rule-text">
-              <strong>{{ rule.title }}</strong> {{ rule.text }}
-            </span>
-          </li>
-        </ol>
-        <p class="campaigns-page__rules-note">
-          By creating a campaign, you agree to these rules. Breaking them results in an automatic,
-          indefinite suspension from every AccSaber feature.
-        </p>
-
-        <div class="campaigns-page__rules-aside">
-          <h3 class="campaigns-page__rules-aside-title">What curation means</h3>
-          <p>
-            Unlike BeatSaver, curation here does not mean a campaign is objectively good. It means
-            rewards-eligible: the rewards are well laid out and the paths through the campaign are
-            clear rather than confusing. Only curated campaigns pay out XP and items.
-          </p>
-        </div>
-      </div>
-    </BaseModal>
   </div>
 </template>
 
@@ -730,108 +710,6 @@ watch(
   .campaigns-page__bar-actions {
     justify-content: flex-start;
   }
-}
-
-.campaigns-page__rules-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 3px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease;
-}
-
-.campaigns-page__rules-btn:hover {
-  color: var(--text-primary);
-}
-
-.campaigns-page__rules {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.campaigns-page__rules-lead {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.campaigns-page__rules-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.campaigns-page__rule {
-  display: flex;
-  gap: var(--space-sm);
-  align-items: baseline;
-}
-
-.campaigns-page__rule-num {
-  flex-shrink: 0;
-  min-width: 16px;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
-  text-align: right;
-}
-
-.campaigns-page__rule-text {
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.campaigns-page__rule-text strong {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.campaigns-page__rules-note {
-  margin: var(--space-sm) 0 0;
-  padding: var(--space-md);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: 4px;
-}
-
-.campaigns-page__rules-aside {
-  margin-top: var(--space-sm);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
-}
-
-.campaigns-page__rules-aside p {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.campaigns-page__rules-aside-title {
-  margin: 0 0 var(--space-xs);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 @media (max-width: 560px) {

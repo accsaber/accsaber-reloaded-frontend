@@ -3,6 +3,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BorderComposition from '@/components/domain/BorderComposition.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
 import { itemVariantPreviews, rarityClass, readBorderColorValue, readBorderShapeValue } from '@/utils/items'
 import { computed, ref, watch } from 'vue'
@@ -55,7 +56,8 @@ const colorValue = computed(() =>
     : null,
 )
 
-const typeLabel = computed(() => props.item?.typeKey.replace(/_/g, ' ') ?? '')
+const itemTypeStore = useItemTypeStore()
+const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.item.typeKey) : ''))
 </script>
 
 <template>

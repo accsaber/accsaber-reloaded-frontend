@@ -20,6 +20,10 @@ export const useItemTypeStore = defineStore('itemTypes', () => {
     return map
   })
 
+  function typeLabel(key: string): string {
+    return byKey.value.get(key)?.name ?? key.replace(/_/g, ' ')
+  }
+
   async function fetchItemTypes(force = false): Promise<void> {
     if (loaded.value && !force) return
     if (loading.value) return
@@ -39,6 +43,7 @@ export const useItemTypeStore = defineStore('itemTypes', () => {
     loading,
     byId,
     byKey,
+    typeLabel,
     fetchItemTypes,
   }
 })

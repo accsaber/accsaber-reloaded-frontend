@@ -160,7 +160,7 @@ const fullItemName = computed(() => {
 
 const typeName = computed(() => {
   if (!item.value) return ''
-  return itemTypeStore.byKey.get(item.value.typeKey)?.name ?? item.value.typeKey
+  return itemTypeStore.typeLabel(item.value.typeKey)
 })
 
 const equippable = computed(() => !!item.value && isEquippableTypeKey(item.value.typeKey))

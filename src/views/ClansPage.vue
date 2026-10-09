@@ -7,6 +7,7 @@ import SearchBox from '@/components/common/SearchBox.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
+import RulesButton from '@/components/domain/RulesButton.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -23,7 +24,7 @@ import type {
 import type { PlayerRef } from '@/types/api/common'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatCountdown, formatStanding } from '@/utils/clans'
+import { CLAN_RULES, CLAN_RULES_LEAD, CLAN_RULES_NOTE, formatCountdown, formatStanding } from '@/utils/clans'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
@@ -253,6 +254,7 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
     </section>
 
     <div class="clans__controls">
+      <RulesButton title="Clan rules" :lead="CLAN_RULES_LEAD" :rules="CLAN_RULES" :note="CLAN_RULES_NOTE" />
       <BaseButton size="sm" @click="router.push({ name: 'clan-wars' })">Wars</BaseButton>
       <template v-if="auth.isLoggedIn">
         <BaseButton

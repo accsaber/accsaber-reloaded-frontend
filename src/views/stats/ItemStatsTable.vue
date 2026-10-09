@@ -4,6 +4,7 @@ import ItemHoldersTooltip from '@/components/domain/ItemHoldersTooltip.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
 import { useItemModifierStore } from '@/stores/itemModifiers'
+import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemRarity, ItemResponse, ItemTypeKey } from '@/types/api/items'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
 import { rarityClass, resolveModifierRefs } from '@/utils/items'
@@ -94,8 +95,10 @@ function resolveModifiers(keys: unknown) {
   return resolveModifierRefs(keys, modifierStore.byKey)
 }
 
+const itemTypeStore = useItemTypeStore()
+
 function typeLabel(typeKey: unknown): string {
-  return String(typeKey ?? '').replace(/_/g, ' ')
+  return itemTypeStore.typeLabel(String(typeKey ?? ''))
 }
 
 onMounted(() => {

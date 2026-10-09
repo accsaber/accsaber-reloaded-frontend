@@ -4,9 +4,12 @@ import AdminItemPicker from '@/components/admin/AdminItemPicker.vue'
 import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ClanWarRewardItemResponse } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
 import { onMounted, ref } from 'vue'
+
+const itemTypeStore = useItemTypeStore()
 
 const rewards = ref<ClanWarRewardItemResponse[]>([])
 const loading = ref(true)
@@ -117,7 +120,7 @@ onMounted(load)
       <template #default="{ item: reward }">
         <td>
           <span class="war-rewards__name">{{ reward.item.name }}</span>
-          <span class="war-rewards__type">{{ reward.item.typeKey.replace(/_/g, ' ') }}</span>
+          <span class="war-rewards__type">{{ itemTypeStore.typeLabel(reward.item.typeKey) }}</span>
         </td>
         <td class="mono right">{{ reward.quantity }}</td>
         <td>{{ reward.topContributors === null ? 'Every contributor' : `Top ${reward.topContributors} by contribution` }}</td>

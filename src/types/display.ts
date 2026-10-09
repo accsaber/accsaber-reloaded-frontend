@@ -261,3 +261,8 @@ export interface UserRefDisplay {
   supporterTier?: SupporterTier | null
   clan?: PublicClanResponse | null
 }
+
+export interface Rule {
+  title: string
+  text: string
+}

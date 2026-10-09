@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ItemPreview from '@/components/domain/ItemPreview.vue'
+import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
 import { rarityClass } from '@/utils/items'
 import { computed } from 'vue'
@@ -12,7 +13,8 @@ const props = defineProps<{
 
 const displayName = computed(() => props.item?.name ?? props.name)
 
-const typeLabel = computed(() => (props.item ? props.item.typeKey.replace(/_/g, ' ') : null))
+const itemTypeStore = useItemTypeStore()
+const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.item.typeKey) : null))
 
 const initial = computed(() => displayName.value.charAt(0).toUpperCase())
 </script>

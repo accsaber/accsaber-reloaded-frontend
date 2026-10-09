@@ -167,7 +167,7 @@ function confirm() {
           <div class="item-picker__selected-meta">
             <p class="item-picker__name">{{ selectedItem.name }}</p>
             <p class="item-picker__sub">
-              <span class="item-picker__type">{{ selectedItem.typeKey.replace(/_/g, ' ') }}</span>
+              <span class="item-picker__type">{{ itemTypeStore.typeLabel(selectedItem.typeKey) }}</span>
               <span class="item-picker__rarity" :class="rarityClass(selectedItem.rarity)">
                 {{ selectedItem.rarity }}
               </span>

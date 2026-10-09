@@ -8,7 +8,8 @@ import { useAuthStore } from '@/stores/auth'
 import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
-import { emptyClanDraft, type ClanProfileDraft } from '@/utils/clans'
+import RulesButton from '@/components/domain/RulesButton.vue'
+import { CLAN_RULES, CLAN_RULES_LEAD, CLAN_RULES_NOTE, emptyClanDraft, type ClanProfileDraft } from '@/utils/clans'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -98,6 +99,9 @@ async function submit() {
       />
       <p v-if="error" class="clan-create__error" role="alert">{{ error }}</p>
       <div class="clan-create__footer">
+        <span class="clan-create__rules">
+          <RulesButton title="Clan rules" :lead="CLAN_RULES_LEAD" :rules="CLAN_RULES" :note="CLAN_RULES_NOTE" />
+        </span>
         <BaseButton :disabled="saving" @click="router.push({ name: 'clans' })">Cancel</BaseButton>
         <BaseButton variant="primary" :loading="saving" :disabled="!ready" @click="submit">Create clan</BaseButton>
       </div>
@@ -141,6 +145,10 @@ async function submit() {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-sm);
+}
+
+.clan-create__rules {
+  margin-right: auto;
 }
 
 .clan-create__error {

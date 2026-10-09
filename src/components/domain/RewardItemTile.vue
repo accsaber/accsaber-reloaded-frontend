@@ -3,6 +3,7 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
 import VariantSplitPreview from '@/components/domain/VariantSplitPreview.vue'
 import ItemPreviewModal from '@/components/domain/ItemPreviewModal.vue'
+import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
 import { itemVariantPreviews, rarityClass } from '@/utils/items'
 import { computed, ref } from 'vue'
@@ -15,6 +16,7 @@ const props = withDefaults(
   { size: 56 },
 )
 
+const itemTypeStore = useItemTypeStore()
 const open = ref(false)
 
 const isCrate = computed(() => props.item.typeKey === 'crate')
@@ -22,7 +24,7 @@ const isTitle = computed(() => props.item.typeKey === 'title' || props.item.type
 const variants = computed(() => itemVariantPreviews(props.item))
 
 const hoverTitle = computed(() => {
-  let base = `${props.item.name} · ${props.item.typeKey.replace(/_/g, ' ')}`
+  let base = `${props.item.name} · ${itemTypeStore.typeLabel(props.item.typeKey)}`
   if (variants.value) base += ` · ${variants.value.length} variants`
   return `${base} (click to preview)`
 })

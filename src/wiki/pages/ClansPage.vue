@@ -36,9 +36,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="cooldown">The cooldown</WikiHeading>
     <p>
       After joining a clan you have to wait 14 days before you can join another one. Leaving does
-      not reset the timer.
+      not reset the timer. Getting kicked does not either.
     </p>
-    <p>If you got kicked or your clan got disbanded, there is no wait.</p>
+    <p>If your clan gets disbanded and you were not the one who did it, there is no wait.</p>
 
     <WikiHeading id="leaving">Leaving</WikiHeading>
     <p>
@@ -48,8 +48,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="disbanding">Disbanding</WikiHeading>
     <p>
-      Only the Founder can disband the clan, which kicks everyone out. Nobody gets a cooldown.
-      Alliances end and any open wars are lost.
+      Only the Founder can disband the clan. Everyone else can join a new clan right away. The
+      Founder still has to wait out their 14 days. If staff disband it, the Founder does not wait
+      either. Alliances end and any open wars are lost.
     </p>
   </WikiProse>
 </template>
