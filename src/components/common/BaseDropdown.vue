@@ -12,23 +12,24 @@ const emit = defineEmits<{
 
 const containerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
-const shiftX = ref(0)
+const coords = ref({ top: 0, left: 0 })
 
 const VIEWPORT_MARGIN = 8
+const GAP = 4
 
-function clampToViewport() {
-  const el = panelRef.value
-  if (!el) return
-  shiftX.value = 0
-  const rect = el.getBoundingClientRect()
-  let shift = 0
-  if (rect.right > window.innerWidth - VIEWPORT_MARGIN) {
-    shift = window.innerWidth - VIEWPORT_MARGIN - rect.right
+function place() {
+  const container = containerRef.value
+  const panel = panelRef.value
+  if (!container || !panel) return
+  const r = container.getBoundingClientRect()
+  const w = panel.offsetWidth
+  const position = props.position ?? 'bottom-left'
+  const left = position === 'bottom-right' ? r.right - w : position === 'right' ? r.right + GAP : r.left
+  const maxLeft = window.innerWidth - VIEWPORT_MARGIN - w
+  coords.value = {
+    top: position === 'right' ? r.top : r.bottom + GAP,
+    left: Math.max(VIEWPORT_MARGIN, Math.min(left, maxLeft)),
   }
-  if (rect.left + shift < VIEWPORT_MARGIN) {
-    shift = VIEWPORT_MARGIN - rect.left
-  }
-  shiftX.value = shift
 }
 
 function onClickOutside(e: MouseEvent) {
@@ -45,20 +46,22 @@ watch(() => props.open, (isOpen) => {
   if (isOpen) {
     document.addEventListener('click', onClickOutside)
     document.addEventListener('keydown', onKeydown)
-    window.addEventListener('resize', clampToViewport)
-    nextTick(clampToViewport)
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    nextTick(place)
   } else {
     document.removeEventListener('click', onClickOutside)
     document.removeEventListener('keydown', onKeydown)
-    window.removeEventListener('resize', clampToViewport)
-    shiftX.value = 0
+    window.removeEventListener('resize', place)
+    window.removeEventListener('scroll', place, true)
   }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onClickOutside)
   document.removeEventListener('keydown', onKeydown)
-  window.removeEventListener('resize', clampToViewport)
+  window.removeEventListener('resize', place)
+  window.removeEventListener('scroll', place, true)
 })
 </script>
 
@@ -69,8 +72,7 @@ onUnmounted(() => {
     </div>
     <Transition name="dropdown">
       <div v-if="open" ref="panelRef" class="base-dropdown__panel"
-        :class="`base-dropdown__panel--${position ?? 'bottom-left'}`"
-        :style="{ '--shift-x': `${shiftX}px` }">
+        :style="{ top: `${coords.top}px`, left: `${coords.left}px` }">
         <slot />
       </div>
     </Transition>
@@ -88,7 +90,7 @@ onUnmounted(() => {
 }
 
 .base-dropdown__panel {
-  position: absolute;
+  position: fixed;
   z-index: 100;
   min-width: 180px;
   max-width: calc(100vw - 16px);
@@ -97,25 +99,6 @@ onUnmounted(() => {
   border-radius: var(--radius-card);
   padding: var(--space-sm);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transform: translateX(var(--shift-x, 0px));
-}
-
-.base-dropdown__panel--bottom-left {
-  top: 100%;
-  left: 0;
-  margin-top: var(--space-xs);
-}
-
-.base-dropdown__panel--bottom-right {
-  top: 100%;
-  right: 0;
-  margin-top: var(--space-xs);
-}
-
-.base-dropdown__panel--right {
-  top: 0;
-  left: 100%;
-  margin-left: var(--space-xs);
 }
 
 .dropdown-enter-active,
@@ -126,7 +109,7 @@ onUnmounted(() => {
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateX(var(--shift-x, 0px)) translateY(-4px);
+  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
