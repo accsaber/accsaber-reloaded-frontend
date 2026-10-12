@@ -222,7 +222,7 @@ const PATTERN_ROWS: WikiCompareRow[] = [
     </p>
     <p>
       A tower's lead-in is that hand's swing before it, at most 400ms earlier. In Standard Acc
-      the lead-in is also on the same row as the tower's top note and carries proper emphasis.
+      the lead-in must also be on the same row as the tower's top note and carries proper emphasis.
       An arc connecting the previous note and the tower's top note is mandatory.
     </p>
 
