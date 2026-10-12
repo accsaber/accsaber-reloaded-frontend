@@ -80,7 +80,7 @@ const RULE_GROUPS = [
     rules: [
       'A 135° roll comes 450ms to 1250ms after the swing before it',
       "After 1250ms, a 135° roll is fine when it lands on a down note in the hand's inner column, an up note in the top row, or an outward down diagonal in the hand's outer column on the bottom row",
-      'The swing before a 135° roll comes at least 225ms after its own previous swing',
+      'A 135° roll cannot be chained to another and cannot be the gimmick of a map due to spam',
       'An arc into a 135° roll is suggested',
     ],
   },
