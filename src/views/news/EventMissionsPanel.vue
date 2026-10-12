@@ -276,17 +276,19 @@ watch(
 
 .week-tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
+  gap: var(--space-md);
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: inset 0 -1px var(--bg-overlay);
 }
 
 .week-tab {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex-shrink: 0;
   padding: 0 0 var(--space-sm);
-  margin-bottom: -1px;
+  white-space: nowrap;
   border: none;
   border-bottom: 2px solid transparent;
   background: none;
