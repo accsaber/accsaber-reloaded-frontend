@@ -138,7 +138,7 @@ const NUMBER_ROWS = [
   { label: 'Max peak SPS (swings per second)', values: ['1.5 *', '6', '6'] },
   { label: 'Max average SPS', values: ['1.25 *', '4', '4'] },
   { label: 'Min gap between two swings', values: ['400ms *', '-', '-'] },
-  { label: 'Max notes in a single-hand burst', values: ['1 note', '4 notes', '6 notes'] },
+  { label: 'Max notes in a single-hand burst', values: ['-', '4 notes', '6 notes'] },
   { label: 'Min gap in a flick', values: ['-', '135ms', '135ms'] },
   { label: 'Min gap in a flick covering 3 columns and 3 rows', values: ['-', '200ms', '200ms'] },
   { label: 'Min gap in a horizontal flick', values: ['-', '200ms', '200ms'] },
