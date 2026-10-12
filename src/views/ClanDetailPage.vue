@@ -493,32 +493,34 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         </BaseDropdown>
       </div>
 
-      <ClanRosterTab
-        v-if="activeTab === 'roster'"
-        :members="members"
-        :locked-slots="lockedSlots"
-        :loading="rosterLoading && members.length === 0"
-        :viewer-role="viewerRole"
-        :viewer-id="auth.userId"
-        @change-role="changeRole"
-        @kick="askKick"
-        @transfer="askTransfer"
-        @claim="claimClan"
-      />
-      <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
-      <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :latest-war="latestWar" :season-running="seasonRunning" />
-      <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
-      <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
-      <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
-      <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" />
-      <ClanCosmeticsTab
-        v-else-if="activeTab === 'cosmetics'"
-        :clan="clan"
-        :can-customize="isFounder"
-        @changed="reload"
-      />
-      <ClanRequestsTab v-else-if="activeTab === 'requests'" :clan="clan" @changed="onMembershipChanged" />
-      <ClanAuditTab v-else-if="activeTab === 'audit'" :clan="clan" />
+      <div class="clan-page__panel">
+        <ClanRosterTab
+          v-if="activeTab === 'roster'"
+          :members="members"
+          :locked-slots="lockedSlots"
+          :loading="rosterLoading && members.length === 0"
+          :viewer-role="viewerRole"
+          :viewer-id="auth.userId"
+          @change-role="changeRole"
+          @kick="askKick"
+          @transfer="askTransfer"
+          @claim="claimClan"
+        />
+        <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
+        <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :latest-war="latestWar" :season-running="seasonRunning" />
+        <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
+        <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
+        <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
+        <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" />
+        <ClanCosmeticsTab
+          v-else-if="activeTab === 'cosmetics'"
+          :clan="clan"
+          :can-customize="isFounder"
+          @changed="reload"
+        />
+        <ClanRequestsTab v-else-if="activeTab === 'requests'" :clan="clan" @changed="onMembershipChanged" />
+        <ClanAuditTab v-else-if="activeTab === 'audit'" :clan="clan" />
+      </div>
 
       <DeclareWarModal
         v-if="viewerClanId && viewerInOtherClan"
@@ -567,6 +569,13 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
+}
+
+.clan-page__panel {
+  padding: var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .clan-page__tabs {

@@ -236,8 +236,10 @@ onUnmounted(() => observer?.disconnect())
   align-self: start;
   max-height: calc(100vh - var(--navbar-height) - var(--space-lg));
   overflow-y: auto;
-  padding-right: var(--space-lg);
-  border-right: 1px solid var(--bg-overlay);
+  padding: var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .wiki__main {
@@ -257,6 +259,10 @@ onUnmounted(() => observer?.disconnect())
   align-self: start;
   max-height: calc(100vh - var(--navbar-height) - var(--space-lg));
   overflow-y: auto;
+  padding: var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .wiki__back {
@@ -286,6 +292,10 @@ onUnmounted(() => observer?.disconnect())
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  padding: var(--space-xl);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .wiki__header {
@@ -358,8 +368,10 @@ onUnmounted(() => observer?.disconnect())
     grid-row: auto;
     max-height: none;
     overflow: visible;
-    padding-right: 0;
-    border-right: none;
+  }
+
+  .wiki__article {
+    padding: var(--space-md);
   }
 
   .wiki__aside {
