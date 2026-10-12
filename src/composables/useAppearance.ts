@@ -12,6 +12,7 @@ export interface AppearancePreferences {
   isScoreFieldVisible: (field: ScoreRowField) => boolean
   hideReloadedProfileFeatures: ComputedRef<boolean>
   showStatisticsChart: ComputedRef<boolean>
+  clanChatBubble: ComputedRef<boolean>
 }
 
 export function useAppearance(): AppearancePreferences {
@@ -44,5 +45,6 @@ export function useAppearance(): AppearancePreferences {
       () => appearance.value['appearance.hideReloadedProfileFeatures'],
     ),
     showStatisticsChart: computed(() => appearance.value['appearance.showStatisticsChart']),
+    clanChatBubble: computed(() => appearance.value['appearance.clanChatBubble']),
   }
 }

@@ -14,6 +14,7 @@ const props = defineProps<{
   mission: MissionResponse
   locked: boolean
   now: number
+  memberRow?: MissionResponse | null
 }>()
 
 const emit = defineEmits<{
@@ -32,12 +33,21 @@ const pct = computed(() =>
 )
 
 const yoursPct = computed(() =>
-  target.value > 0 ? Math.min(pct.value, (yours.value / target.value) * 100) : 0,
+  target.value > 0 && !props.memberRow ? Math.min(pct.value, (yours.value / target.value) * 100) : 0,
 )
 
-const progressLabel = computed(() =>
-  missionProgressLabel(props.mission.type, progress.value, target.value),
-)
+const progressLabel = computed(() => {
+  if (!props.memberRow) return missionProgressLabel(props.mission.type, progress.value, target.value)
+  const unit = target.value === 1 ? 'member' : 'members'
+  return `${formatMissionValue(progress.value)} / ${formatMissionValue(target.value)} ${unit}`
+})
+
+const memberProgress = computed(() => {
+  const row = props.memberRow
+  if (!row) return null
+  if (row.targetValue === undefined) return row.status === 'completed' ? 'done' : 'not yet'
+  return missionProgressLabel(row.type, row.progressValue ?? 0, row.targetValue)
+})
 
 const remainingMs = computed(() => {
   if (!props.mission.expiresAt) return null
@@ -71,7 +81,7 @@ const contributorsLabel = computed(() =>
 )
 
 const yourShare = computed(() =>
-  yours.value > 0 ? missionUnitLabel(props.mission.type, yours.value) : null,
+  yours.value > 0 && !props.memberRow ? missionUnitLabel(props.mission.type, yours.value) : null,
 )
 </script>
 
@@ -106,7 +116,8 @@ const yourShare = computed(() =>
       </button>
       <span v-else class="cm__empty">No contributions yet.</span>
 
-      <span v-if="yourShare" class="cm__yours-label">your share {{ yourShare }}</span>
+      <span v-if="memberProgress" class="cm__yours-label">Your progress: {{ memberProgress }}</span>
+      <span v-else-if="yourShare" class="cm__yours-label">your share {{ yourShare }}</span>
 
       <span v-if="state === 'completed'" class="cm__flag cm__flag--done">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"

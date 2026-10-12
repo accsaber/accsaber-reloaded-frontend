@@ -10,25 +10,41 @@ import { useEssenceStore } from '@/stores/essence'
 import { useRelationsStore } from '@/stores/relations'
 import { useSettingsStore } from '@/stores/settings'
 import { flushPendingScores } from '@/utils/practiceScores'
-import { isCreativesSubdomain } from '@/utils/subdomain'
+import { isCreativesSubdomain, isStaffSubdomain } from '@/utils/subdomain'
 import { computed, defineAsyncComponent, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 const PreviewControlBar = isCreativesSubdomain
   ? defineAsyncComponent(() => import('@/components/layout/PreviewControlBar.vue'))
   : null
 
 const MaintenancePage = defineAsyncComponent(() => import('@/views/offline/MaintenancePage.vue'))
+const ClanChatBubble = defineAsyncComponent(() => import('@/components/layout/ClanChatBubble.vue'))
 
 const authStore = useAuthStore()
 const backendStatus = useBackendStatusStore()
 const essenceStore = useEssenceStore()
 const relationsStore = useRelationsStore()
 const settingsStore = useSettingsStore()
+const route = useRoute()
 
 useBrandFavicon()
 useNotificationSocket()
 
 if (!backendStatus.offline) void flushPendingScores()
+
+const ownClan = computed(() => {
+  if (isStaffSubdomain || !settingsStore.appearanceLoaded) return null
+  if (!settingsStore.appearance['appearance.clanChatBubble']) return null
+  return authStore.userProfile?.clan ?? null
+})
+
+const showClanChatBubble = computed(() => {
+  const clan = ownClan.value
+  if (!clan) return false
+  const slugOrId = route.name === 'clan-detail' ? route.params.slugOrId : null
+  return slugOrId !== clan.slug && slugOrId !== clan.id
+})
 
 const showLegacyBanner = computed(() => authStore.legacyUserIdDetected !== null)
 
@@ -79,6 +95,7 @@ watch(
         </transition>
       </router-view>
     </main>
+    <ClanChatBubble v-if="showClanChatBubble && ownClan" :clan="ownClan" />
     <component :is="PreviewControlBar" v-if="PreviewControlBar" />
   </template>
 </template>

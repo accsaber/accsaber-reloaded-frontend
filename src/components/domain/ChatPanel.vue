@@ -25,6 +25,8 @@ const props = withDefaults(
     placeholder: string
     emptyText: string
     floating?: boolean
+    readonly?: boolean
+    closable?: boolean
     notices?: ChatNotice[]
     collapseEvents?: ChatEvent[]
     authorColor?: (userId: string) => string
@@ -32,7 +34,7 @@ const props = withDefaults(
   { notices: () => [], collapseEvents: () => [] },
 )
 
-const emit = defineEmits<{ typing: []; 'typing-stop': [] }>()
+const emit = defineEmits<{ typing: []; 'typing-stop': []; close: [] }>()
 
 const auth = useAuthStore()
 
@@ -131,6 +133,11 @@ async function toggle() {
   markSeen()
 }
 
+function close() {
+  if (props.floating) void toggle()
+  else emit('close')
+}
+
 const TOP_THRESHOLD = 64
 
 async function loadMoreAtTop() {
@@ -217,11 +224,11 @@ if (!props.floating) void props.chat.loadHistory()
       <header class="chat-panel__head">
         <h2 class="chat-panel__title">{{ title }}</h2>
         <button
-          v-if="floating"
+          v-if="floating || closable"
           type="button"
           class="chat-panel__close"
-          aria-label="Collapse chat"
-          @click="toggle"
+          aria-label="Close chat"
+          @click="close"
         >
           <svg
             width="16"
@@ -300,14 +307,14 @@ if (!props.floating) void props.chat.loadHistory()
         </template>
       </div>
 
-      <div class="chat-panel__composer">
+      <div v-if="!readonly || chat.error.value" class="chat-panel__composer">
         <p v-if="chat.error.value" class="chat-panel__error" role="alert">
           {{ chat.error.value }}
         </p>
         <p v-if="chat.contentError.value" class="chat-panel__error" role="alert">
           {{ chat.contentError.value }}
         </p>
-        <div class="chat-panel__input-row">
+        <div v-if="!readonly" class="chat-panel__input-row">
           <textarea
             v-model="draft"
             class="chat-panel__input"
@@ -438,7 +445,7 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: min(620px, 70vh);
+  height: var(--chat-panel-height, min(620px, 70vh));
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: 6px;

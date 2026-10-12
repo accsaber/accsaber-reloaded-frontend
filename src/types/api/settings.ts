@@ -32,6 +32,7 @@ export type SettingKey =
   | 'appearance.scoreRowFields'
   | 'appearance.hideReloadedProfileFeatures'
   | 'appearance.showStatisticsChart'
+  | 'appearance.clanChatBubble'
   | 'notifications.tradeOffer'
   | 'notifications.tradeResolved'
   | 'notifications.marketSold'
@@ -60,6 +61,7 @@ export interface AppearanceSettings extends SettingsBag {
   'appearance.scoreRowFields': ScoreRowField[]
   'appearance.hideReloadedProfileFeatures': boolean
   'appearance.showStatisticsChart': boolean
+  'appearance.clanChatBubble': boolean
 }
 
 export interface NotificationSettings extends SettingsBag {

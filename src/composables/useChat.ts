@@ -8,7 +8,7 @@ const PAGE_SIZE = 20
 
 export interface ChatChannelApi {
   load: (channelId: string, params: PaginationParams) => Promise<Page<ChatMessageResponse>>
-  send: (channelId: string, req: SendChatMessageRequest) => Promise<ChatMessageResponse>
+  send?: (channelId: string, req: SendChatMessageRequest) => Promise<ChatMessageResponse>
 }
 
 export function messageTimeMillis(createdAt: unknown): number {
@@ -128,7 +128,7 @@ export function useChat(channelId: Ref<string | null | undefined>, api: ChatChan
   async function send(content: string): Promise<boolean> {
     const id = currentId()
     const trimmed = content.trim()
-    if (!id || !trimmed || sending.value) return false
+    if (!api.send || !id || !trimmed || sending.value) return false
     sending.value = true
     contentError.value = null
     error.value = null

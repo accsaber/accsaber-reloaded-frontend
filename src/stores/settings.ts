@@ -28,6 +28,7 @@ const APPEARANCE_DEFAULTS: AppearanceSettings = {
   'appearance.scoreRowFields': [...DEFAULT_SCORE_ROW_FIELDS],
   'appearance.hideReloadedProfileFeatures': false,
   'appearance.showStatisticsChart': false,
+  'appearance.clanChatBubble': true,
 }
 
 export const useSettingsStore = defineStore('settings', () => {

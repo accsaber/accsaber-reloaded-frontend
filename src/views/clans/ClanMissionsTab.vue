@@ -2,7 +2,6 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import MissionCard from '@/components/domain/MissionCard.vue'
 import MissionContributorsModal from '@/components/domain/MissionContributorsModal.vue'
 import SharedMissionRow from '@/components/domain/SharedMissionRow.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -118,13 +117,15 @@ watch(() => [route.query.page, route.query.missions, props.isMember], fetchMissi
     />
 
     <div v-else class="clan-missions__list">
-      <div v-for="mission in missions" :key="mission.id" class="clan-missions__item">
-        <SharedMissionRow :mission="mission" :locked="false" :now="now" @contributors="openId = mission.id" />
-        <div v-if="ownByParent.get(mission.id)" class="clan-missions__own">
-          <span class="clan-missions__own-label">Your part</span>
-          <MissionCard :mission="ownByParent.get(mission.id)!" />
-        </div>
-      </div>
+      <SharedMissionRow
+        v-for="mission in missions"
+        :key="mission.id"
+        :mission="mission"
+        :locked="false"
+        :now="now"
+        :member-row="ownByParent.get(mission.id)"
+        @contributors="openId = mission.id"
+      />
     </div>
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
@@ -174,28 +175,5 @@ watch(() => [route.query.page, route.query.missions, props.isMember], fetchMissi
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.clan-missions__item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.clan-missions__own {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  margin-left: var(--space-lg);
-  padding-left: var(--space-md);
-  border-left: 1px solid var(--bg-overlay);
-}
-
-.clan-missions__own-label {
-  font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 </style>

@@ -7,6 +7,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
+import { useChat } from '@/composables/useChat'
 import type {
   ClanAllianceResponse,
   ClanItemResponse,
@@ -23,7 +24,8 @@ import type { PlayerRef } from '@/types/api/common'
 import type { MissionResponse } from '@/types/api/missions'
 import { formatStanding } from '@/utils/clans'
 import { formatFullDate } from '@/utils/formatters'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, toRef } from 'vue'
+import ClanChatTab from '@/views/clans/ClanChatTab.vue'
 import ClanAdminModerateModal from './ClanAdminModerateModal.vue'
 import ClanAdminSections from './ClanAdminSections.vue'
 
@@ -45,6 +47,10 @@ const emit = defineEmits<{
   back: []
   disbanded: []
 }>()
+
+const chat = useChat(toRef(props, 'clanId'), {
+  load: (id, params) => import('@/api/admin/clans').then((m) => m.getClanChatAsStaff(id, params)),
+})
 
 const clan = ref<ClanResponse | null>(null)
 const data = ref<DetailData | null>(null)
@@ -207,6 +213,8 @@ onMounted(load)
         :standing-loading="standingLoading"
         @update:season="setSeason"
       />
+
+      <ClanChatTab :chat="chat" readonly />
 
       <ClanAdminModerateModal :open="moderateOpen" :clan="clan" @close="moderateOpen = false" @saved="onModerated" />
 

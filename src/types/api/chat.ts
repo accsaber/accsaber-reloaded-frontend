@@ -15,6 +15,7 @@ export type ChatEvent =
   | 'war_hit'
   | 'war_break'
   | 'war_ended'
+  | 'missions_refreshed'
 
 export interface ChatMessageResponse {
   id: string

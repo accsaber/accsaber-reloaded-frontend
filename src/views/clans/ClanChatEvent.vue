@@ -20,9 +20,9 @@ interface Sentence {
 }
 
 const SENTENCES: Record<ChatEvent, Sentence> = {
-  member_joined: { first: 'subject', middle: 'joined the clan' },
-  member_left: { first: 'subject', middle: 'left the clan' },
-  member_kicked: { first: 'subject', middle: 'was kicked by', second: 'actor' },
+  member_joined: { first: 'actor', middle: 'joined the clan' },
+  member_left: { first: 'actor', middle: 'left the clan' },
+  member_kicked: { first: 'actor', middle: 'removed', second: 'subject' },
   alliance_formed: { before: 'Alliance formed with', first: 'clan' },
   alliance_ended: { before: 'Alliance ended with', first: 'clan' },
   rival_declared: { first: 'actor', middle: 'called', second: 'clan', after: 'a rival' },
@@ -33,9 +33,10 @@ const SENTENCES: Record<ChatEvent, Sentence> = {
   war_hit: { first: 'actor', middle: 'hit', second: 'subject' },
   war_break: { first: 'actor', middle: 'broke the guard of', second: 'subject' },
   war_ended: { before: 'The war with', first: 'clan', middle: 'has ended' },
+  missions_refreshed: { before: "This week's clan missions are in" },
 }
 
-const sentence = computed(() => SENTENCES[props.message.event!])
+const sentence = computed<Sentence | undefined>(() => SENTENCES[props.message.event!])
 
 const players = computed(() => ({
   actor: props.message.author,
@@ -44,7 +45,7 @@ const players = computed(() => ({
 </script>
 
 <template>
-  <span class="chat-event">
+  <span v-if="sentence" class="chat-event">
     <template v-if="count > 1">
       <span class="chat-event__count">{{ count }} hits</span>
       <span>, latest:</span>

@@ -196,6 +196,7 @@ const {
   scoreRowFields,
   hideReloadedProfileFeatures,
   showStatisticsChart,
+  clanChatBubble,
 } = useAppearance()
 
 const rawFallbackReplayService = computed(
@@ -371,6 +372,21 @@ watch(activeSection, (section) => {
               <SettingsPicker :model-value="showStatisticsChart" :options="ON_OFF_OPTIONS"
                 aria-label="Statistics chart on profile" :disabled="settingsStore.appearanceSaving"
                 @update:model-value="(v) => setAppearance('appearance.showStatisticsChart', v as boolean)" />
+            </div>
+          </section>
+
+          <section class="settings-card">
+            <header class="settings-card__header">
+              <h2 class="settings-card__title">Clans</h2>
+            </header>
+
+            <div class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">Clan chat bubble</span>
+              </div>
+              <SettingsPicker :model-value="clanChatBubble" :options="ON_OFF_OPTIONS"
+                aria-label="Clan chat bubble" :disabled="settingsStore.appearanceSaving"
+                @update:model-value="(v) => setAppearance('appearance.clanChatBubble', v as boolean)" />
             </div>
           </section>
 

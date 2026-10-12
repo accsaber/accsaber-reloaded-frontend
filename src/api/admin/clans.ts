@@ -1,3 +1,5 @@
+import type { ChatMessageResponse } from '@/types/api/chat'
+import type { Page, PaginationParams } from '@/types/pagination'
 import type {
   ClanCapacity,
   ClanCapacityRequest,
@@ -107,4 +109,11 @@ export function moderateClan(clanId: string, req: ModerateClanRequest): Promise<
 
 export function disbandClanByStaff(clanId: string, reason: string): Promise<void> {
   return del<void>(`/admin/clans/${clanId}${buildQuery({ reason })}`)
+}
+
+export function getClanChatAsStaff(
+  clanId: string,
+  params: PaginationParams,
+): Promise<Page<ChatMessageResponse>> {
+  return get<Page<ChatMessageResponse>>(`/admin/clans/${clanId}/chat${buildQuery(params)}`)
 }

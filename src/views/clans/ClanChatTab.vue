@@ -8,9 +8,14 @@ import type { PresenceNotice } from './useClanChat'
 
 defineProps<{
   chat: UseChatReturn
-  notices: PresenceNotice[]
-  status: ConnectionStatus
+  notices?: PresenceNotice[]
+  status?: ConnectionStatus
+  readonly?: boolean
+  closable?: boolean
+  clanSlug?: string
 }>()
+
+const emit = defineEmits<{ close: [] }>()
 </script>
 
 <template>
@@ -23,12 +28,22 @@ defineProps<{
       empty-text="Nothing said yet."
       :notices="notices"
       :collapse-events="['war_hit']"
+      :readonly="readonly"
+      :closable="closable"
+      @close="emit('close')"
     >
       <template #event="{ message, count }">
         <RouterLink
           v-if="message.war"
-          class="clan-chat__war-link"
+          class="clan-chat__event-link"
           :to="{ name: 'clan-war', params: { warId: message.war.id } }"
+        >
+          <ClanChatEvent :message="message" :count="count" />
+        </RouterLink>
+        <RouterLink
+          v-else-if="message.event === 'missions_refreshed' && clanSlug"
+          class="clan-chat__event-link"
+          :to="{ name: 'clan-detail', params: { slugOrId: clanSlug }, query: { tab: 'missions' } }"
         >
           <ClanChatEvent :message="message" :count="count" />
         </RouterLink>
@@ -57,13 +72,13 @@ defineProps<{
   color: var(--text-secondary);
 }
 
-.clan-chat__war-link {
+.clan-chat__event-link {
   color: inherit;
   text-decoration: none;
   border-bottom: 1px dotted var(--text-tertiary);
 }
 
-.clan-chat__war-link:hover {
+.clan-chat__event-link:hover {
   color: var(--page-accent, var(--accent));
   border-bottom-color: currentColor;
 }
