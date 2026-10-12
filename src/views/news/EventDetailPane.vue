@@ -283,7 +283,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
 
 .event-detail__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   gap: var(--space-3xl);
   align-items: start;
 }
