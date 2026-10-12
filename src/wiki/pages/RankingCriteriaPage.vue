@@ -13,7 +13,7 @@ const RULE_GROUPS = [
       'At least 115 notes',
       'At least 1.25 seconds before the first note, bomb or wall',
       'At least 1 second after the last one',
-      'No unnecessary silence added to the audio',
+      'At most 3 seconds of silence at the start and end of the audio',
     ],
   },
   {
@@ -21,24 +21,25 @@ const RULE_GROUPS = [
     title: 'Timing',
     rules: [
       'The BPM must match the song',
-      'The offset must be as close to perfect as possible',
-      'Songs with a changing BPM must be timed as closely as possible',
+      'The offset must be as close to perfect as possible (<5ms)',
+      'Songs with a changing BPM must be timed as closely as possible (<5ms)',
       'Every note must sit on a sound in the music',
-      'One sound cannot be mapped as more than one swing',
-      'No section can be much harder than the rest of the map unless the music backs it up',
     ],
   },
   {
     id: 'consistency',
     title: 'Consistency',
     rules: [
+      'One sound cannot be mapped as more than one swing',
       'The same sound is mapped the same way every time, so a double stays a double',
       'A sound left unmapped stays unmapped every time, or is mapped every time',
       'A silence left empty stays empty every time it comes back',
       'Repeated parts of the song play the same unless the music changes',
       'Vocals are mapped to their syllables, spaced the way they are sung',
-      'Stronger syllables should take priority over weaker ones in the respective language. If unclear, map consistently spaced notes, especially for faster sections.',
-      'A section keeps one approach to the vocals, like only the first syllable of each word, or only the beat',
+      'Stronger syllables take priority over weaker ones. If that is unclear, space the notes evenly, especially in fast sections',
+      'A section keeps one approach to musical representation, whether only vocals, only instruments or a mix of both if musical emphasis is clear',
+      'No section can be much harder than the rest of the map unless the music backs it up, like a chorus being harder than a verse',
+      "Even then, no 10 seconds can go above 2.5 times the map's average SPS",
     ],
   },
   {
@@ -46,18 +47,18 @@ const RULE_GROUPS = [
     title: 'Notes',
     rules: [
       'Each hand starts on a down swing, unless reset by bombs',
-      'No note can have an angle that is not a multiple of 45º',
-      'Dots count as the most direct straight swing from where the hand is',
+      'No note can have an angle that is not a multiple of 45°',
+      'Dots count as the most direct straight swing from where the hand is after hitting the last note',
       'Same-color notes in one swing lead into each other and share the same angle',
       'No pattern can change your swing speed partway through a swing',
-      'No note in the path of the other hand before it cuts.',
-      'No note in the follow-through of the other hand unless that saber has time to clear it',
-      'No patterns where the two hands cross swing paths after any of the two notes are hit',
+      "No note of the other hand in a swing's path within 60ms of it",
+      "The two hands' swing paths cannot cross within 60ms of each other",
       "A note in the other hand's columns that points back toward its own side needs a lead-in: the swing before it sits in that column or further across, at most 700ms earlier",
       'Every note sits inside the 4 by 3 grid',
       'No vision blocks within 400ms. A note in the middle row of column 2 hides columns 1 and 2 behind it, and one in column 3 hides columns 3 and 4',
       'A note in the outer column next to it is only half hidden for the first 150ms, so it can come up to 150ms after it, but not between 150ms and 400ms',
-      'Patterns where the hand goes fully palm-up are not allowed'
+      'Fully vertical palm-ups are not allowed: a straight up or down note that has to be hit palm-up',
+      'Shrado angles have at least 1400ms of spacing between the two notes',
     ],
   },
   {
@@ -70,7 +71,7 @@ const RULE_GROUPS = [
       'Flicks and bursts only exist because of musical emphasis',
       'Up-notes in a flick or burst stay in the two columns belonging to the hand, unless coming from an inner or outer-lane crossover',
       "Inner-lane crossover flicks cannot go from the opposite hand's inner column to its outer column",
-      'Palm-up flicks are not allowed'
+      'Palm-up flicks are not allowed',
     ],
   },
   {
@@ -80,7 +81,7 @@ const RULE_GROUPS = [
       'A 135° roll comes 450ms to 1250ms after the swing before it',
       "After 1250ms, a 135° roll is fine when it lands on a down note in the hand's inner column, an up note in the top row, or an outward down diagonal in the hand's outer column on the bottom row",
       'The swing before a 135° roll comes at least 225ms after its own previous swing',
-      'An arc into a 135° roll is strongly suggested',
+      'An arc into a 135° roll is suggested',
     ],
   },
   {
@@ -88,7 +89,7 @@ const RULE_GROUPS = [
     title: 'Walls and bombs',
     rules: [
       'No 3-wide dodge walls',
-      'No walls that force damage or push you into the outer lanes',
+      'No walls covering the whole 4 by 3 grid, and no invisible walls',
       'Walls outside the grid are allowed, but no wall can confuse you or make the map hard to read',
       'Walls spawned over and over right next to notes count as confusing',
       'No walls under the grid',
@@ -101,19 +102,22 @@ const RULE_GROUPS = [
       'Bombs follow the music, and no map can be covered in them',
       'At most one bomb for every two notes',
       'At least 150ms of space before a note after a bomb',
-      'No bombs in the path of a swing',
-      'No bombs that force a saber out of the grid',
+      "No bombs in a swing's path within 60ms of it",
       'No bombs or notes inside walls',
-      'No bombs on top of other objects',
     ],
   },
   {
     id: 'arcs',
     title: 'Arcs',
     rules: [
-      'An arc cannot mislead you about where to swing or where the swing ends',
+      'At least one end of an arc sits on a note of its color',
+      'An arc ends before or right as the next note of its color, never after',
       'The notes must still be rankable with the arc removed',
       'A maximum of 4 arcs can be used in a single swing',
+      'Arcs must follow the music and not be a gimmick',
+      'At most 1 in 10 arcs can share a swing with another arc',
+      'Arcs must be used consistently, so the same sound is always mapped with or without an arc',
+      'There can only be one arc for every 4 notes',
     ],
   },
   {
@@ -195,7 +199,7 @@ const PATTERN_ROWS: WikiCompareRow[] = [
     </table>
     <p class="footnote">* True Acc counts doubles as one swing.</p>
     <p class="footnote">
-      ** Only applies when the bomb affects the swing path of the notes around it.
+      ** Only applies when the bomb is in the swing path of the note before it.
     </p>
 
     <p>
@@ -217,9 +221,9 @@ const PATTERN_ROWS: WikiCompareRow[] = [
       the same way every time it appears.
     </p>
     <p>
-      Towers in Standard Acc are allowed only when their lead-in sits on
-      the same row as the tower's top note and carries proper emphasis. An arc
-      connecting the previous note and the tower's top note is mandatory.
+      A tower's lead-in is that hand's swing before it, at most 400ms earlier. In Standard Acc
+      the lead-in is also on the same row as the tower's top note and carries proper emphasis.
+      An arc connecting the previous note and the tower's top note is mandatory.
     </p>
 
     <WikiHeading id="enforcement">Who enforces this</WikiHeading>
