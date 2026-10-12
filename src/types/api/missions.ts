@@ -34,6 +34,7 @@ export interface MissionResponse {
   type: MissionType
   pool: MissionPool
   parentMissionId?: string | null
+  perMember?: boolean
 
   categoryId?: string
   categoryCode?: CategoryCode

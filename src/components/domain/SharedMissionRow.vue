@@ -28,23 +28,25 @@ const progress = computed(() => props.mission.progressValue ?? 0)
 const contributors = computed(() => props.mission.contributors ?? 0)
 const yours = computed(() => props.mission.yourContribution ?? 0)
 
+const perMember = computed(() => props.mission.perMember === true)
+
 const pct = computed(() =>
   target.value > 0 ? Math.min(100, (progress.value / target.value) * 100) : 0,
 )
 
 const yoursPct = computed(() =>
-  target.value > 0 && !props.memberRow ? Math.min(pct.value, (yours.value / target.value) * 100) : 0,
+  target.value > 0 && !perMember.value ? Math.min(pct.value, (yours.value / target.value) * 100) : 0,
 )
 
 const progressLabel = computed(() => {
-  if (!props.memberRow) return missionProgressLabel(props.mission.type, progress.value, target.value)
+  if (!perMember.value) return missionProgressLabel(props.mission.type, progress.value, target.value)
   const unit = target.value === 1 ? 'member' : 'members'
   return `${formatMissionValue(progress.value)} / ${formatMissionValue(target.value)} ${unit}`
 })
 
 const memberProgress = computed(() => {
   const row = props.memberRow
-  if (!row) return null
+  if (!row || !perMember.value) return null
   if (row.targetValue === undefined) return row.status === 'completed' ? 'done' : 'not yet'
   return missionProgressLabel(row.type, row.progressValue ?? 0, row.targetValue)
 })
@@ -81,7 +83,7 @@ const contributorsLabel = computed(() =>
 )
 
 const yourShare = computed(() =>
-  yours.value > 0 && !props.memberRow ? missionUnitLabel(props.mission.type, yours.value) : null,
+  yours.value > 0 && !perMember.value ? missionUnitLabel(props.mission.type, yours.value) : null,
 )
 </script>
 
@@ -116,7 +118,7 @@ const yourShare = computed(() =>
       </button>
       <span v-else class="cm__empty">No contributions yet.</span>
 
-      <span v-if="memberProgress" class="cm__yours-label">Your progress: {{ memberProgress }}</span>
+      <span v-if="memberProgress" class="cm__yours-label">Your goal: {{ memberProgress }}</span>
       <span v-else-if="yourShare" class="cm__yours-label">your share {{ yourShare }}</span>
 
       <span v-if="state === 'completed'" class="cm__flag cm__flag--done">
