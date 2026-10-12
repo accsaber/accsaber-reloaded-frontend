@@ -54,6 +54,8 @@ export interface MissionResponse {
   targetStreak?: number
 
   xpReward?: number
+  clanXpReward?: number
+  standingReward?: number
   itemReward?: ItemResponse
 
   status?: MissionStatus

@@ -96,7 +96,14 @@ const yourShare = computed(() =>
         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
       </svg>
       <h3 class="cm__name">{{ mission.name }}</h3>
-      <MissionRewards :xp-reward="mission.xpReward" :item-reward="mission.itemReward" :size="32" />
+      <MissionRewards
+        :xp-reward="mission.xpReward"
+        :clan-xp-reward="mission.clanXpReward"
+        :standing-reward="mission.standingReward"
+        :per-contributor="mission.pool === 'clan'"
+        :item-reward="mission.itemReward"
+        :size="32"
+      />
     </header>
 
     <p v-if="mission.description" class="cm__desc">{{ mission.description }}</p>
@@ -162,13 +169,14 @@ const yourShare = computed(() =>
 
 .cm__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
 }
 
 .cm__name {
   margin: 0;
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
   font-size: 1rem;
   font-weight: 600;

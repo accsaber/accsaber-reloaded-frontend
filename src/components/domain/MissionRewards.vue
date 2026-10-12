@@ -6,18 +6,31 @@ import { computed } from 'vue'
 const props = withDefaults(
   defineProps<{
     xpReward?: number | null
+    clanXpReward?: number | null
+    standingReward?: number | null
+    perContributor?: boolean
     itemReward?: ItemResponse | null
     size?: number
   }>(),
-  { xpReward: null, itemReward: null, size: 32 },
+  { xpReward: null, clanXpReward: null, standingReward: null, itemReward: null, size: 32 },
 )
 
-const hasXp = computed(() => props.xpReward != null && props.xpReward > 0)
+function plus(value: number | null, unit: string): string | null {
+  return value != null && value > 0 ? `+${Math.round(value).toLocaleString()} ${unit}` : null
+}
+
+const lines = computed(() =>
+  [
+    plus(props.clanXpReward, 'clan XP'),
+    plus(props.standingReward, 'Standing'),
+    plus(props.xpReward, props.perContributor ? 'XP per contributor' : 'XP'),
+  ].filter((line): line is string => line !== null),
+)
 </script>
 
 <template>
-  <div v-if="hasXp || itemReward" class="mission-rewards">
-    <span v-if="hasXp" class="mission-rewards__xp">+{{ xpReward?.toLocaleString() }} XP</span>
+  <div v-if="lines.length || itemReward" class="mission-rewards">
+    <span v-if="lines.length" class="mission-rewards__xp">{{ lines.join(' · ') }}</span>
     <RewardItemTile v-if="itemReward" :item="itemReward" :size="size" />
   </div>
 </template>
