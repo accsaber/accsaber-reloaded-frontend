@@ -53,7 +53,7 @@ const RULE_GROUPS = [
       'No pattern can change your swing speed partway through a swing',
       "No note of the other hand in a swing's path within 60ms of it",
       "The two hands' swing paths cannot cross within 60ms of each other",
-      "A note in the other hand's columns that points back toward its own side needs a lead-in: the swing before it sits in that column or further across, at most 700ms earlier",
+      "A note in the other hand's columns that points back toward its own side needs a lead-in: the swing before it sits in that column or further across, at most 550ms earlier",
       'Every note sits inside the 4 by 3 grid',
       'No vision blocks within 400ms. A note in the middle row of column 2 hides columns 1 and 2 behind it, and one in column 3 hides columns 3 and 4',
       'A note in the outer column next to it is only half hidden for the first 150ms, so it can come up to 150ms after it, but not between 150ms and 400ms',
