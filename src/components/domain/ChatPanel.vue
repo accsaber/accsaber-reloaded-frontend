@@ -4,7 +4,7 @@ import { messageTimeMillis, type UseChatReturn } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
 import type { ChatEvent, ChatMessageResponse } from '@/types/api/chat'
 import { formatRelativeDate } from '@/utils/formatters'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 export interface ChatNotice {
   id: string
@@ -179,6 +179,8 @@ watch(
     markSeen()
   },
 )
+
+onMounted(scrollToBottom)
 
 if (!props.floating) void props.chat.loadHistory()
 </script>
