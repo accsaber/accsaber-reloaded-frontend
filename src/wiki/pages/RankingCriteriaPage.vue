@@ -96,7 +96,7 @@ const RULE_GROUPS = [
       'Walls can be any height, inside or outside the grid, but they follow the music and are never a gimmick',
       'A wall in an inner column ends at least 400ms before a note behind it, in its own column or the outer column next to it',
       'A wall in an outer column ends at least 200ms before a note behind it',
-      'A 1-tall wall in the bottom row ends at least 500ms before a note behind it',
+      'A 1-tall wall in the bottom row ends at least 500ms before a note behind it. If the wall is in an inner column, that includes the outer column next to it',
       'Walls outside the grid cannot get in the way of notes jumping in',
       'A 1-tall wall spawns at least 175ms before or after any note touching it, including diagonally',
       'Bombs follow the music, and no map can be covered in them',
