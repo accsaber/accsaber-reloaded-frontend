@@ -63,12 +63,13 @@ const DAMAGE: WikiCompareRow[] = [
       </li>
     </ul>
     <p>
-      A player only has 100 guard, so a hit can't count for more than what they had left.
+      A player has 100 guard. A hit cannot count for more than what they had left.
       Breaking someone on your own works out to about 400 XP total.
     </p>
     <p>
-      If your side has fewer people, you get a bit less per hit, since you've got more people to
-      hit. Your clan also gets 23 clan XP for every break.
+      Your clan gets 23 clan XP for every break. In Berserker, a side with fewer people gets less
+      per hit, per break and in clan XP. They also have more people to hit. One player fighting a
+      clan of 50 gets about 2 clan XP per break.
     </p>
   </WikiProse>
 </template>

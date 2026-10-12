@@ -29,14 +29,14 @@ const UNLOCKS: WikiCompareRow[] = [
     <ul>
       <li>Every map a member plays gives 3.</li>
       <li>A finished clan mission gives 70.</li>
-      <li>Breaking someone in a war gives 23.</li>
+      <li>Breaking someone in a war gives 23. In Berserker the smaller side gets less per break.</li>
       <li>Your lent player breaking someone gives 6.</li>
       <li>Winning a war gives 345.</li>
     </ul>
 
     <WikiHeading id="big-clans">Big clans</WikiHeading>
     <p>
-      Bigger and stronger clans earn more XP per week, so their XP is scaled to keep every clan
+      Bigger and stronger clans earn more XP per week. Their XP is scaled to keep every clan
       levelling at the same pace. Your clan's Level tab shows its clan size scaling.
     </p>
 

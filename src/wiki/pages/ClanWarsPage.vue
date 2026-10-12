@@ -14,6 +14,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <p>Commanders and the Founder can declare war, but only during a season.</p>
     <ul>
       <li>You can only have one attack going at a time. You can be defending as many as you want.</li>
+      <li>After a war ends, you have to wait 7 days before attacking that same clan again.</li>
       <li>You cannot attack allies.</li>
       <li>Both clans need some standing.</li>
       <li>You cannot attack a clan with less than half your standing. If they are attacking you, you can hit back no matter what.</li>
@@ -32,7 +33,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <p>
       You can only lose <RouterLink to="/wiki/clan-standing#earned">earned standing</RouterLink>,
       the part you picked up this season. Your base standing comes from your members' skill and
-      a war can't touch it. So even if your whole side gets drained, the worst case is dropping
+      a war cannot touch it. So even if your whole side gets drained, the worst case is dropping
       back to your base.
     </p>
 

@@ -6,7 +6,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 const SHARED: WikiCompareRow[] = [
   { label: 'Clan scores', values: ['12 new scores'] },
   { label: 'Clan playtime', values: ['37 plays'] },
-  { label: 'Clan XP drive', values: ['7,400 XP from plays'] },
+  { label: 'Clan XP drive', values: ['15,000 XP'] },
   { label: 'Mission grind', values: ['15 of your own missions done'] },
   { label: 'True Acc push', values: ['2 True Acc scores'] },
   { label: 'Standard Acc push', values: ['5 Standard Acc scores'] },
@@ -28,6 +28,10 @@ const SHARED: WikiCompareRow[] = [
     </p>
     <WikiCompareTable :columns="['Target']" :rows="SHARED" />
     <p>Bigger clans get bigger targets. A clan of 10 needs double what a clan of 5 does.</p>
+    <p>
+      The XP drive counts XP from plays, milestones, campaigns and your own missions. XP from clan
+      missions and clan wars does not count.
+    </p>
 
     <WikiHeading id="everyone-sets-scores">Everyone sets scores</WikiHeading>
     <p>
@@ -43,9 +47,9 @@ const SHARED: WikiCompareRow[] = [
       Everyone who helped gets 150 XP. Some missions drop a crate too.
     </p>
     <p>
-      To count as helping on a shared one you need to do a little: 2 scores on Clan scores,
-      4 plays on Clan playtime, 740 XP on the XP drive, 2 missions on Mission grind,
-      or 1 score on a category push. The XP shows up as Clan XP on your profile.
+      To count as helping on a shared one you need 2 scores on Clan scores, 4 plays on Clan
+      playtime or 1,500 XP on the XP drive. Mission grind needs 2 of your missions and a category
+      push needs 1 score. The XP shows up as Clan XP on your profile.
     </p>
     <p>If you leave the clan you drop out of its missions.</p>
   </WikiProse>
