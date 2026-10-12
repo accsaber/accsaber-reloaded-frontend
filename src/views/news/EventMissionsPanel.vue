@@ -254,6 +254,10 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .missions__header {
