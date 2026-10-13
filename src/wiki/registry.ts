@@ -357,11 +357,12 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'vision block',
           'arcs',
           'chains',
+          'sliders',
           'walls',
           'lighting',
         ],
         related: ['how-maps-get-ranked', 'categories', 'complexity-and-reweights'],
-        updated: '2026-10-05',
+        updated: '2026-10-13',
         loader: () => import('@/wiki/pages/RankingCriteriaPage.vue'),
       },
       {
