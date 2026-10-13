@@ -35,8 +35,6 @@ const strokeColor = computed(() => {
   return props.accentColor
 })
 
-const opacity = computed(() => 1)
-
 const geom = computed(() => {
   const wdx = props.x2 - props.x1
   const wdy = props.y2 - props.y1
@@ -143,13 +141,12 @@ const readout = computed(() => {
       :stroke-width="thickness"
       stroke-linecap="round"
       :stroke-dasharray="state === 'locked' ? `${thickness * 0.2} ${thickness * 1.8}` : undefined"
-      :opacity="opacity"
     />
 
-    <circle :cx="x1" :cy="y1" :r="dotR" :fill="strokeColor" :opacity="opacity" />
-    <circle :cx="x2" :cy="y2" :r="dotR" :fill="strokeColor" :opacity="opacity" />
+    <circle :cx="x1" :cy="y1" :r="dotR" :fill="strokeColor" />
+    <circle :cx="x2" :cy="y2" :r="dotR" :fill="strokeColor" />
 
-    <g class="barrier-gate__readout" :opacity="opacity">
+    <g class="barrier-gate__readout">
       <rect
         class="barrier-gate__badge"
         :x="readout.cx - readout.w / 2"

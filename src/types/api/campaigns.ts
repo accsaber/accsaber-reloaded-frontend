@@ -17,6 +17,7 @@ import type {
   UserCampaignStatus,
 } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { ItemResponse } from './items'
 import type { MapChartStatsSource } from './maps'
 import type { ModifierResponse } from './modifiers'
 import type { PublicStaffUserResponse } from './staff'
@@ -67,6 +68,8 @@ export interface CampaignResponse {
   totalDownvotes: number
   voteScore: number
   myVote?: CampaignVoteDirection
+  myProgressStatus?: UserCampaignStatus | null
+  myCompletedDifficulties?: number | null
   totalXp: number | null
   totalRewardCount: number | null
   rewards: CampaignItemAwardResponse[] | null
@@ -86,6 +89,7 @@ export interface CampaignItemAwardResponse {
   itemId: string
   itemName: string
   quantity: number
+  item: ItemResponse | null
 }
 
 export interface CampaignPrerequisiteResponse {
@@ -279,6 +283,7 @@ export interface CampaignListParams extends PaginationParams {
   status?: CampaignStatus[]
   tagIds?: string[]
   creatorId?: string
+  memberId?: string
   search?: string
   official?: boolean
   loved?: boolean

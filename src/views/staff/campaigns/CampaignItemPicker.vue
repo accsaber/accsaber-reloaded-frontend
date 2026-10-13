@@ -76,8 +76,8 @@ const noun = computed(() => (props.unrestricted ? 'items' : 'crates'))
 
 const emptyMessage = computed(() =>
   pickableItems.value.length === 0
-    ? `Sorry, no ${noun.value} are currently available. Come back soon!`
-    : `No ${noun.value} match that search.`,
+    ? `No ${noun.value} available`
+    : `No ${noun.value} found`,
 )
 
 watch(debounced, () => { page.value = 1 })
@@ -212,7 +212,7 @@ function confirm() {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: border-color 120ms ease;
   flex-shrink: 0;
@@ -230,7 +230,7 @@ function confirm() {
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   flex-shrink: 0;
 }
 
@@ -353,7 +353,7 @@ function confirm() {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: color 120ms ease, border-color 120ms ease;
 }
@@ -386,7 +386,7 @@ function confirm() {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: border-color 120ms ease;
 }
@@ -411,7 +411,7 @@ function confirm() {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
 }

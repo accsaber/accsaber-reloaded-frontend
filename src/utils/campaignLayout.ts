@@ -249,6 +249,40 @@ export function hasValidBounds(value: number | null, valueMax: number | null): b
   return true
 }
 
+export interface MetricBounds {
+  min: number
+  max: number
+  step: number
+  unit: string
+}
+
+export const METRIC_BOUNDS: Record<string, MetricBounds> = {
+  acc: { min: 70, max: 100, step: 0.1, unit: '%' },
+  ap: { min: 0, max: 1200, step: 1, unit: 'AP' },
+  streak: { min: 0, max: 30, step: 1, unit: '' },
+  rank: { min: 1, max: 500, step: 1, unit: 'rank' },
+  combo: { min: 0, max: 2000, step: 1, unit: 'combo' },
+  bombs: { min: 0, max: 20, step: 1, unit: 'bombs' },
+  mistakes: { min: 0, max: 20, step: 1, unit: '' },
+  pauses: { min: 0, max: 10, step: 1, unit: '' },
+}
+
+export const METRIC_DEFAULT: Record<string, number> = {
+  ap: 500,
+  streak: 8,
+  rank: 50,
+  bombs: 0,
+  mistakes: 0,
+  pauses: 0,
+}
+
+export const METRIC_DEFAULT_MAX: Record<string, number> = { bombs: 3, mistakes: 5, pauses: 2 }
+
+export function cssToken(name: string): string {
+  if (typeof document === 'undefined') return ''
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 export interface BoundsReadout {
   label: string
   text: string

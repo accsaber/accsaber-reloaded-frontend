@@ -8,6 +8,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { getApiErrorMessage } from '@/api/client'
 import type {
   CampaignDetailResponse,
@@ -19,7 +20,7 @@ import type { CampaignLeaderboardBoard } from '@/types/enums'
 import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   campaign: CampaignDetailResponse
@@ -33,26 +34,15 @@ const emit = defineEmits<{
 }>()
 
 const PAGE_SIZE = 50
-const DESKTOP_QUERY = '(min-width: 861px)'
 
-const isDesktop = ref(true)
+const isDesktop = useMediaQuery('(min-width: 861px)')
 const open = ref(false)
 
-let mql: MediaQueryList | null = null
-
-function onViewportChange(e: MediaQueryListEvent) {
-  isDesktop.value = e.matches
-  if (!e.matches) open.value = false
-}
-
-onMounted(() => {
-  mql = window.matchMedia(DESKTOP_QUERY)
-  isDesktop.value = mql.matches
-  mql.addEventListener('change', onViewportChange)
+watch(isDesktop, (desktop) => {
+  if (!desktop) open.value = false
 })
 
 onUnmounted(() => {
-  mql?.removeEventListener('change', onViewportChange)
   document.body.style.overflow = ''
 })
 
@@ -77,6 +67,7 @@ const entries = ref<CampaignLeaderboardEntry[]>([])
 const nodeEntries = ref<CampaignNodeScoreEntry[]>([])
 
 let fetchSeq = 0
+let loadedKey = ''
 
 const drillNode = computed(() =>
   props.nodeId
@@ -96,6 +87,7 @@ const queryKey = computed(
 async function loadBoard() {
   if (!props.campaign.id) return
   const seq = ++fetchSeq
+  const key = queryKey.value
   loading.value = true
   error.value = null
   try {
@@ -119,6 +111,7 @@ async function loadBoard() {
       entries.value = result.content
       totalPages.value = result.totalPages || 1
     }
+    loadedKey = key
   } catch (err) {
     if (seq !== fetchSeq) return
     error.value = getApiErrorMessage(err, 'Failed to load the leaderboard')
@@ -132,9 +125,9 @@ watch([activeBoard, () => props.nodeId, appliedSearch], () => {
 })
 
 watch(
-  queryKey,
+  [queryKey, open],
   () => {
-    void loadBoard()
+    if ((open.value || props.nodeId) && queryKey.value !== loadedKey) void loadBoard()
   },
   { immediate: true },
 )
@@ -155,18 +148,6 @@ const emptyMessage = computed(() => {
   return 'No qualifying scores yet.'
 })
 
-const isEmpty = computed(() =>
-  props.nodeId ? nodeEntries.value.length === 0 : entries.value.length === 0,
-)
-
-function avatarUrlFor(player: CampaignLeaderboardPlayer): string {
-  return pickAvatarUrl(player)
-}
-
-function handleAvatarError(player: CampaignLeaderboardPlayer) {
-  return onAvatarError(pickAvatarFallback(player))
-}
-
 function pct(value?: number): string {
   return value != null ? `${(value * 100).toFixed(2)}%` : '-'
 }
@@ -175,10 +156,64 @@ function apText(value?: number): string {
   return value != null ? `${value.toFixed(2)} AP` : '-'
 }
 
-function progressPct(entry: CampaignLeaderboardEntry): number {
-  if (!entry.totalNodes) return 0
-  return Math.min(100, Math.round(((entry.completedNodes ?? 0) / entry.totalNodes) * 100))
+interface BoardRow {
+  player: CampaignLeaderboardPlayer
+  rank: number | null
+  sub: string | null
+  progress: { pct: number; count: string } | null
+  pill: { text: string; done: boolean } | null
+  stat: string | null
+  statTitle?: string
+  statDate?: boolean
+  secondary: string | null
 }
+
+function boardRow(entry: CampaignLeaderboardEntry): BoardRow {
+  const base = { player: entry.player, rank: entry.rank ?? null, sub: null, progress: null, pill: null, stat: null, secondary: null }
+  if (activeBoard.value === 'PROGRESS') {
+    const total = entry.totalNodes ?? 0
+    const done = entry.completedNodes ?? 0
+    return {
+      ...base,
+      progress: { pct: total ? Math.min(100, Math.round((done / total) * 100)) : 0, count: `${done}/${total}` },
+      pill: {
+        text: entry.progressStatus === 'COMPLETED' ? 'Completed' : 'In progress',
+        done: entry.progressStatus === 'COMPLETED',
+      },
+    }
+  }
+  if (activeBoard.value === 'COMPLETIONS') {
+    return {
+      ...base,
+      stat: entry.completedAt ? formatRelativeDate(entry.completedAt) : '-',
+      statTitle: entry.completedAt ? new Date(entry.completedAt).toLocaleString() : undefined,
+      statDate: true,
+    }
+  }
+  const acc = activeBoard.value === 'AVG_ACCURACY'
+  return {
+    ...base,
+    sub: entry.nodesCounted != null
+      ? `avg of ${entry.nodesCounted} ${entry.nodesCounted === 1 ? 'node' : 'nodes'}`
+      : null,
+    stat: acc ? pct(entry.averageAccuracy) : apText(entry.averageAp),
+    secondary: acc ? apText(entry.averageAp) : pct(entry.averageAccuracy),
+  }
+}
+
+const rows = computed<BoardRow[]>(() =>
+  props.nodeId
+    ? nodeEntries.value.map((entry) => ({
+      player: entry.player,
+      rank: entry.rank,
+      sub: `${apText(entry.ap)}${entry.score != null ? ` · ${entry.score.toLocaleString()}` : ''}`,
+      progress: null,
+      pill: null,
+      stat: pct(entry.accuracy),
+      secondary: null,
+    }))
+    : entries.value.map(boardRow),
+)
 
 function goBack() {
   emit('update:nodeId', null)
@@ -309,132 +344,52 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
           <BaseButton size="sm" @click="loadBoard">Retry</BaseButton>
         </div>
 
-        <EmptyState v-else-if="isEmpty" :message="emptyMessage" />
+        <EmptyState v-else-if="rows.length === 0" :message="emptyMessage" />
 
-        <template v-else-if="drillNode">
-          <button
-            v-for="entry in nodeEntries"
-            :key="entry.player.userId"
-            type="button"
-            class="lb__row"
-            :class="{ 'lb__row--active': isSpectating(entry.player) }"
-            :aria-current="isSpectating(entry.player) ? 'true' : undefined"
-            :title="`View ${entry.player.userName}'s run`"
-            @click="emit('spectate', entry.player)"
-          >
-            <span class="lb__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
-            <img
-              class="lb__avatar"
-              :src="avatarUrlFor(entry.player)"
-              :alt="entry.player.userName"
-              loading="lazy"
-              decoding="async"
-              @error="handleAvatarError(entry.player)($event)"
-            />
-            <span class="lb__who">
-              <span class="lb__name">
-                {{ entry.player.userName }}
-                <CountryFlag v-if="entry.player.country" :country="entry.player.country" />
-              </span>
-              <span class="lb__sub">
-                {{ apText(entry.ap) }}<template v-if="entry.score != null">
-                  · {{ entry.score.toLocaleString() }}</template>
-              </span>
+        <button
+          v-for="row in rows"
+          v-else
+          :key="row.player.userId"
+          type="button"
+          class="lb__row"
+          :class="{
+            'lb__row--tall': !!row.progress,
+            'lb__row--active': isSpectating(row.player),
+          }"
+          :aria-current="isSpectating(row.player) ? 'true' : undefined"
+          :title="`View ${row.player.userName}'s run`"
+          @click="emit('spectate', row.player)"
+        >
+          <span v-if="row.rank != null" class="lb__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
+          <img
+            class="lb__avatar"
+            :src="pickAvatarUrl(row.player)"
+            :alt="row.player.userName"
+            loading="lazy"
+            decoding="async"
+            @error="onAvatarError(pickAvatarFallback(row.player))($event)"
+          />
+          <span class="lb__who">
+            <span class="lb__name">
+              {{ row.player.userName }}
+              <CountryFlag v-if="row.player.country" :country="row.player.country" />
             </span>
-            <span class="lb__stat">{{ pct(entry.accuracy) }}</span>
-          </button>
-        </template>
-
-        <template v-else>
-          <button
-            v-for="entry in entries"
-            :key="entry.player.userId"
-            type="button"
-            class="lb__row"
-            :class="{
-              'lb__row--tall': activeBoard === 'PROGRESS',
-              'lb__row--active': isSpectating(entry.player),
-            }"
-            :aria-current="isSpectating(entry.player) ? 'true' : undefined"
-            :title="`View ${entry.player.userName}'s run`"
-            @click="emit('spectate', entry.player)"
-          >
-            <span
-              v-if="entry.rank != null"
-              class="lb__rank"
-              :class="getRankClass(entry.rank)"
-            >#{{ entry.rank }}</span>
-            <img
-              class="lb__avatar"
-              :src="avatarUrlFor(entry.player)"
-              :alt="entry.player.userName"
-              loading="lazy"
-              decoding="async"
-              @error="handleAvatarError(entry.player)($event)"
-            />
-
-            <template v-if="activeBoard === 'PROGRESS'">
-              <span class="lb__who">
-                <span class="lb__name">
-                  {{ entry.player.userName }}
-                  <CountryFlag v-if="entry.player.country" :country="entry.player.country" />
-                </span>
-                <span class="lb__progress">
-                  <span class="lb__progress-track" aria-hidden="true">
-                    <span
-                      class="lb__progress-fill"
-                      :style="{ transform: `scaleX(${progressPct(entry) / 100})` }"
-                    />
-                  </span>
-                  <span class="lb__progress-count">
-                    {{ entry.completedNodes ?? 0 }}/{{ entry.totalNodes ?? 0 }}
-                  </span>
-                </span>
+            <span v-if="row.sub" class="lb__sub">{{ row.sub }}</span>
+            <span v-if="row.progress" class="lb__progress">
+              <span class="lb__progress-track" aria-hidden="true">
+                <span class="lb__progress-fill" :style="{ transform: `scaleX(${row.progress.pct / 100})` }" />
               </span>
-              <span
-                class="lb__pill"
-                :class="{ 'lb__pill--done': entry.progressStatus === 'COMPLETED' }"
-              >
-                {{ entry.progressStatus === 'COMPLETED' ? 'Completed' : 'In progress' }}
-              </span>
-            </template>
-
-            <template v-else-if="activeBoard === 'COMPLETIONS'">
-              <span class="lb__who">
-                <span class="lb__name">
-                  {{ entry.player.userName }}
-                  <CountryFlag v-if="entry.player.country" :country="entry.player.country" />
-                </span>
-              </span>
-              <span
-                class="lb__stat lb__stat--date"
-                :title="entry.completedAt ? new Date(entry.completedAt).toLocaleString() : undefined"
-              >
-                {{ entry.completedAt ? formatRelativeDate(entry.completedAt) : '-' }}
-              </span>
-            </template>
-
-            <template v-else>
-              <span class="lb__who">
-                <span class="lb__name">
-                  {{ entry.player.userName }}
-                  <CountryFlag v-if="entry.player.country" :country="entry.player.country" />
-                </span>
-                <span v-if="entry.nodesCounted != null" class="lb__sub">
-                  avg of {{ entry.nodesCounted }} {{ entry.nodesCounted === 1 ? 'node' : 'nodes' }}
-                </span>
-              </span>
-              <span class="lb__stat-col">
-                <span class="lb__stat">
-                  {{ activeBoard === 'AVG_ACCURACY' ? pct(entry.averageAccuracy) : apText(entry.averageAp) }}
-                </span>
-                <span class="lb__stat-secondary">
-                  {{ activeBoard === 'AVG_ACCURACY' ? apText(entry.averageAp) : pct(entry.averageAccuracy) }}
-                </span>
-              </span>
-            </template>
-          </button>
-        </template>
+              <span class="lb__progress-count">{{ row.progress.count }}</span>
+            </span>
+          </span>
+          <span v-if="row.pill" class="lb__pill" :class="{ 'lb__pill--done': row.pill.done }">{{ row.pill.text }}</span>
+          <span v-else-if="row.secondary" class="lb__stat-col">
+            <span class="lb__stat">{{ row.stat }}</span>
+            <span class="lb__stat-secondary">{{ row.secondary }}</span>
+          </span>
+          <span v-else-if="row.stat" class="lb__stat" :class="{ 'lb__stat--date': row.statDate }"
+            :title="row.statTitle">{{ row.stat }}</span>
+        </button>
       </div>
 
       <footer v-if="!loading && !error && totalPages > 1" class="lb__foot">
@@ -466,7 +421,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -490,7 +445,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   width: min(340px, calc(100vw - var(--space-md) * 2));
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   pointer-events: auto;
   animation: lb-slide-in 200ms ease-out;
 }
@@ -521,7 +476,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   min-width: 0;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -549,7 +504,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   color: var(--text-tertiary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -593,7 +548,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
 
 .lb__list::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .lb__row {
@@ -606,7 +561,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   text-align: left;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   color: inherit;
   cursor: pointer;
   transition:
@@ -729,7 +684,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   max-width: 110px;
   height: 3px;
   background: var(--bg-overlay);
-  border-radius: 1px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
@@ -757,7 +712,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   text-transform: uppercase;
   color: var(--text-secondary);
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
 }
 
 .lb__pill--done {
@@ -815,7 +770,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
     z-index: 91;
     width: auto;
     height: min(75vh, 640px);
-    border-radius: 8px 8px 0 0;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
     border-bottom: none;
     background: var(--bg-elevated);
     animation: lb-sheet-in 200ms ease-out;

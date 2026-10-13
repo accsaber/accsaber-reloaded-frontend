@@ -45,7 +45,7 @@ const steps: TutorialStep[] = [
   {
     id: 'reward',
     title: 'Reward the clear',
-    body: 'Clearing a map can pay XP. Give your first map a reward.',
+    body: 'A cleared map can give XP. Set a reward for your first map.',
   },
   {
     id: 'barrier',
@@ -55,7 +55,7 @@ const steps: TutorialStep[] = [
   {
     id: 'finish',
     title: 'Make it yours',
-    body: 'That is the whole loop. The trays on the left of the editor hold everything else:',
+    body: 'Everything else is in the trays on the left of the editor.',
   },
 ]
 
@@ -564,7 +564,7 @@ onUnmounted(() => {
                       'tutorial__add-btn--armed': barrierPlacement,
                     }"
                     :disabled="!hasConnection"
-                    :title="!hasConnection ? 'Connect two nodes first, then drop a gate on the arrow' : ''"
+                    :title="!hasConnection ? 'Connect two nodes first' : ''"
                     @click="toggleBarrierPlacement"
                   >
                     <svg
@@ -806,21 +806,21 @@ onUnmounted(() => {
                   to remove it.
                 </p>
                 <p v-if="currentStep.id === 'goal'" class="tutorial__note">
-                  In the editor this lives in the Goal tray, on the left rail, whenever a node is
-                  selected. Goals can also be AP, score, rank, a 115 streak, or a full combo.
+                  In the editor this is the Goal tray on the left rail, shown when a node is
+                  selected. Goals can also be AP, score, rank, a 115 streak or a full combo.
                 </p>
                 <p v-if="currentStep.id === 'reward'" class="tutorial__note">
-                  In the editor this is the node's Rewards tray on the left rail. You can also
-                  attach inventory items there if you want. XP is enough for now.
+                  In the editor this is the node's Rewards tray on the left rail. Items can go there
+                  too. XP is enough for now.
                 </p>
                 <p v-if="currentStep.id === 'barrier'" class="tutorial__note">
-                  The gate opens once the maps it watches average the target accuracy, so it only
-                  ever watches maps before it. In the editor this lives in the gate's Condition and
-                  Affected trays on the left rail, with more condition types to pick from.
+                  The gate opens once the maps it watches average the target accuracy. It can only
+                  watch maps before it. In the editor this is the gate's Condition and Affected
+                  trays on the left rail, with more condition types to pick from.
                 </p>
                 <p v-if="currentStep.id === 'finish'" class="tutorial__note">
-                  Your campaign saves as a draft while you build. When you feel at home, look for
-                  text labels, milestones, and node shapes.
+                  Your campaign saves as a draft while you build. Later, try text labels, milestones
+                  and node shapes.
                 </p>
               </div>
             </Transition>
@@ -956,7 +956,7 @@ onUnmounted(() => {
 .tutorial__progress-seg {
   width: 26px;
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   background: var(--bg-overlay);
   transition: background-color 200ms ease;
 }
@@ -976,7 +976,7 @@ onUnmounted(() => {
   padding: 5px 8px;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;
@@ -1009,7 +1009,7 @@ onUnmounted(() => {
   padding: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   pointer-events: auto;
 }
 
@@ -1026,7 +1026,7 @@ onUnmounted(() => {
   color: var(--tutorial-accent);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     background 120ms ease,
@@ -1068,7 +1068,7 @@ onUnmounted(() => {
   padding: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   transition: border-color 120ms ease;
 }
 
@@ -1086,7 +1086,7 @@ onUnmounted(() => {
   color: var(--text-secondary);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -1195,7 +1195,7 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   color: transparent;
   transition:
     border-color 150ms ease,
@@ -1362,7 +1362,7 @@ onUnmounted(() => {
   color: var(--text-secondary);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .tutorial__tray-text {

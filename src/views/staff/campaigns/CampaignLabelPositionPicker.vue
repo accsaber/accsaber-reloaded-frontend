@@ -97,7 +97,7 @@ function pick(value: string) {
   color: var(--text-secondary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
 }

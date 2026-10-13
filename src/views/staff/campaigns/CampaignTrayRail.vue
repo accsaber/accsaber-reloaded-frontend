@@ -77,7 +77,7 @@ const emit = defineEmits<{
   padding: var(--space-sm);
   background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
   border: 1px solid var(--bg-overlay);
-  border-radius: 6px;
+  border-radius: var(--radius-modal);
   overflow-y: auto;
   overflow-x: hidden;
   pointer-events: auto;
@@ -90,7 +90,7 @@ const emit = defineEmits<{
 }
 .campaign-editor__tray-rail::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-editor__tray-group {
@@ -127,7 +127,7 @@ const emit = defineEmits<{
   padding: 8px 4px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   color: var(--text-secondary);
   cursor: pointer;
   transition:
@@ -188,7 +188,7 @@ const emit = defineEmits<{
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-overlay);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .campaign-editor__tray-empty {

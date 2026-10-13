@@ -60,7 +60,7 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   color: var(--text-secondary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -125,7 +125,7 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   height: 18px;
   padding: 2px;
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   transition: background 120ms ease;
 }
 
@@ -138,7 +138,7 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   width: 14px;
   height: 14px;
   background: var(--text-tertiary);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   transition:
     transform 150ms ease,
     background 120ms ease;

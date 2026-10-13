@@ -117,7 +117,7 @@ onMounted(() => {
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 @media (max-width: 640px) {

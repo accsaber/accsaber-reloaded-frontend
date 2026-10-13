@@ -203,7 +203,7 @@ function removeBound(key: BoundKey) {
   inset: 8px 0 auto;
   height: 2px;
   background: var(--bg-overlay);
-  border-radius: 1px;
+  border-radius: var(--radius-pill);
 }
 
 .bounds__fill {
@@ -211,7 +211,7 @@ function removeBound(key: BoundKey) {
   top: 8px;
   height: 2px;
   background: var(--page-accent);
-  border-radius: 1px;
+  border-radius: var(--radius-pill);
 }
 
 .bounds__thumb {
@@ -250,7 +250,7 @@ function removeBound(key: BoundKey) {
   appearance: none;
   width: 14px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   background: var(--bg-base);
   border: 2px solid var(--page-accent);
   cursor: grab;
@@ -260,7 +260,7 @@ function removeBound(key: BoundKey) {
 .bounds__thumb::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   background: var(--bg-base);
   border: 2px solid var(--page-accent);
   cursor: grab;
@@ -321,7 +321,7 @@ function removeBound(key: BoundKey) {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: border-color 120ms ease;
 }
@@ -341,7 +341,7 @@ function removeBound(key: BoundKey) {
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   color: var(--text-tertiary);
   cursor: pointer;
   transition:
@@ -372,7 +372,7 @@ function removeBound(key: BoundKey) {
   color: var(--text-secondary);
   background: transparent;
   border: 1px dashed var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,

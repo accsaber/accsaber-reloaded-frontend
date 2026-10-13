@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { useItemCatalog } from '@/composables/useItemCatalog'
-import type { CampaignItemAwardResponse } from '@/types/api/campaigns'
-import { computed, defineAsyncComponent, onUnmounted, nextTick, ref } from 'vue'
+import { computed, onUnmounted, nextTick, ref } from 'vue'
 
-const CampaignRewardItem = defineAsyncComponent(
-  () => import('@/components/domain/CampaignRewardItem.vue'),
-)
-
-const props = defineProps<{
-  rewards: CampaignItemAwardResponse[]
-  totalCount: number
+defineProps<{
+  label: string
+  title: string
 }>()
 
 const POPUP_WIDTH = 260
 const SCROLL_OPTS: AddEventListenerOptions = { capture: true, passive: true }
-
-const { itemsById, ensureLoaded } = useItemCatalog()
 
 type Mode = 'hidden' | 'hover' | 'locked'
 
@@ -28,8 +20,6 @@ const popupStyle = ref<Record<string, string>>({})
 
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 let hideTimer: ReturnType<typeof setTimeout> | null = null
-
-const label = computed(() => `${props.totalCount.toLocaleString()} item${props.totalCount === 1 ? '' : 's'}`)
 
 function updatePosition() {
   const el = triggerRef.value
@@ -90,7 +80,6 @@ function show(next: Mode) {
   updatePosition()
   mode.value = next
   attachListeners()
-  void ensureLoaded()
   void nextTick(updatePosition)
 }
 
@@ -142,13 +131,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <span ref="triggerRef" class="rewards-tip" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <span ref="triggerRef" class="card-popover" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <button
       type="button"
-      class="rewards-tip__btn"
-      :class="{ 'rewards-tip__btn--active': visible }"
+      class="card-popover__btn"
+      :class="{ 'card-popover__btn--active': visible }"
       :aria-expanded="visible"
-      aria-label="Show campaign rewards"
+      :aria-label="`Show ${title.toLowerCase()}`"
       @click.stop.prevent="onToggle"
       @keydown.escape="close"
     >
@@ -169,25 +158,25 @@ onUnmounted(() => {
     </button>
 
     <Teleport to="body">
-      <Transition name="rewards-tip">
+      <Transition name="card-popover">
         <div
           v-if="visible"
           ref="popupRef"
-          class="rewards-tip__popup"
+          class="card-popover__popup"
           :style="popupStyle"
           role="dialog"
-          aria-label="Campaign rewards"
+          :aria-label="title"
           @mouseenter="clearTimers"
           @mouseleave="scheduleHide"
         >
-          <div class="rewards-tip__head">
-            <span class="rewards-tip__title">Rewards</span>
-            <span class="rewards-tip__count">{{ label }}</span>
+          <div class="card-popover__head">
+            <span class="card-popover__title">{{ title }}</span>
+            <span class="card-popover__count">{{ label }}</span>
             <button
               v-if="locked"
               type="button"
-              class="rewards-tip__close"
-              aria-label="Close rewards"
+              class="card-popover__close"
+              :aria-label="`Close ${title.toLowerCase()}`"
               @click.stop.prevent="close"
             >
               <svg
@@ -205,15 +194,9 @@ onUnmounted(() => {
               </svg>
             </button>
           </div>
-          <ul class="rewards-tip__list">
-            <li v-for="r in rewards" :key="r.itemId" class="rewards-tip__row">
-              <CampaignRewardItem
-                :name="r.itemName"
-                :quantity="r.quantity"
-                :item="itemsById.get(r.itemId) ?? null"
-              />
-            </li>
-          </ul>
+          <div class="card-popover__body">
+            <slot />
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -221,13 +204,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.rewards-tip {
+.card-popover {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
-.rewards-tip__btn {
+.card-popover__btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -238,20 +221,20 @@ onUnmounted(() => {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,
     border-color 120ms ease;
 }
 
-.rewards-tip__btn:hover,
-.rewards-tip__btn--active {
+.card-popover__btn:hover,
+.card-popover__btn--active {
   color: var(--card-accent, var(--accent));
   border-color: var(--card-accent, var(--accent));
 }
 
-.rewards-tip__btn:focus-visible {
+.card-popover__btn:focus-visible {
   outline: none;
   border-color: var(--card-accent, var(--accent));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--card-accent, var(--accent)) 30%, transparent);
@@ -259,7 +242,7 @@ onUnmounted(() => {
 </style>
 
 <style>
-.rewards-tip__popup {
+.card-popover__popup {
   z-index: 10000;
   display: flex;
   flex-direction: column;
@@ -271,7 +254,7 @@ onUnmounted(() => {
   pointer-events: auto;
 }
 
-.rewards-tip__head {
+.card-popover__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -280,7 +263,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--bg-overlay);
 }
 
-.rewards-tip__title {
+.card-popover__title {
   font-family: var(--font-sans);
   font-size: 0.5625rem;
   font-weight: 700;
@@ -289,21 +272,21 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
-.rewards-tip__count {
+.card-popover__count {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-secondary);
   margin-left: auto;
 }
 
-.rewards-tip__close {
+.card-popover__close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 2px;
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   color: var(--text-tertiary);
   cursor: pointer;
   transition:
@@ -311,43 +294,38 @@ onUnmounted(() => {
     background 120ms ease;
 }
 
-.rewards-tip__close:hover {
+.card-popover__close:hover {
   color: var(--text-primary);
   background: var(--bg-overlay);
 }
 
-.rewards-tip__list {
-  margin: 0;
+.card-popover__body {
   padding: var(--space-sm);
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   max-height: 260px;
   overflow-y: auto;
 }
 
-.rewards-tip-enter-active {
+.card-popover-enter-active {
   transition:
     opacity 150ms ease-out,
     transform 150ms ease-out;
 }
 
-.rewards-tip-leave-active {
+.card-popover-leave-active {
   transition:
     opacity 100ms ease-in,
     transform 100ms ease-in;
 }
 
-.rewards-tip-enter-from,
-.rewards-tip-leave-to {
+.card-popover-enter-from,
+.card-popover-leave-to {
   opacity: 0;
   transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rewards-tip-enter-from,
-  .rewards-tip-leave-to {
+  .card-popover-enter-from,
+  .card-popover-leave-to {
     transform: none;
   }
 }

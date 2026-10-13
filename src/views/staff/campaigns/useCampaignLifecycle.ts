@@ -12,7 +12,7 @@ import {
 } from '@/api/campaigns'
 import { getApiErrorMessage } from '@/api/client'
 import type { CampaignAuditIssue } from '@/utils/campaignAudit'
-import type { CampaignDetailResponse } from '@/types/api/campaigns'
+import type { CampaignDetailResponse, CampaignResponse } from '@/types/api/campaigns'
 import { computed, ref, type Ref } from 'vue'
 
 interface LifecycleContext {
@@ -20,13 +20,28 @@ interface LifecycleContext {
   actionPending: Ref<boolean>
   actionError: Ref<string | null>
   load: () => Promise<void>
+  apply: (res: CampaignResponse) => void
   editedLiveCampaign: Ref<boolean>
   requirementDirtyIds: Ref<Set<string>>
   publishBlockers: Ref<CampaignAuditIssue[]>
 }
 
 export function useCampaignLifecycle(ctx: LifecycleContext) {
-  const { campaign, actionPending, actionError, load } = ctx
+  const { campaign, actionPending, actionError, load, apply } = ctx
+
+  async function run(action: () => Promise<CampaignResponse>, fallback: string): Promise<boolean> {
+    actionPending.value = true
+    actionError.value = null
+    try {
+      apply(await action())
+      return true
+    } catch (err) {
+      actionError.value = getApiErrorMessage(err, fallback)
+      return false
+    } finally {
+      actionPending.value = false
+    }
+  }
 
   const showRepublishWarning = ref(false)
   const publishConfirm = ref<'publish' | 'unpublish' | null>(null)
@@ -52,16 +67,8 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
     if (!campaign.value) return
     showRepublishWarning.value = false
     publishConfirm.value = null
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await publishPlayerCampaign(campaign.value.id)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to publish campaign')
-    } finally {
-      actionPending.value = false
-    }
+    const id = campaign.value.id
+    await run(() => publishPlayerCampaign(id), 'Failed to publish campaign')
   }
 
   function doPlayerUnpublish() {
@@ -72,16 +79,9 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
   async function performUnpublish() {
     if (!campaign.value) return
     publishConfirm.value = null
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await unpublishPlayerCampaign(campaign.value.id)
-      await load()
+    const id = campaign.value.id
+    if (await run(() => unpublishPlayerCampaign(id), 'Failed to unpublish campaign')) {
       ctx.editedLiveCampaign.value = true
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to unpublish campaign')
-    } finally {
-      actionPending.value = false
     }
   }
 
@@ -102,86 +102,38 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
 
   async function doPublish() {
     if (!campaign.value || reportPublishBlocked()) return
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await publishPlayerCampaign(campaign.value.id)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to publish campaign')
-    } finally {
-      actionPending.value = false
-    }
+    const id = campaign.value.id
+    await run(() => publishPlayerCampaign(id), 'Failed to publish campaign')
   }
 
   async function doReopen() {
     if (!campaign.value) return
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await reopenCampaignForEdit(campaign.value.id)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to reopen for editing')
-    } finally {
-      actionPending.value = false
-    }
+    const id = campaign.value.id
+    await run(() => reopenCampaignForEdit(id), 'Failed to reopen for editing')
   }
 
   async function doCurate() {
     if (!campaign.value || reportPublishBlocked()) return
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await curateCampaign(campaign.value.id)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to curate campaign')
-    } finally {
-      actionPending.value = false
-    }
+    const id = campaign.value.id
+    await run(() => curateCampaign(id), 'Failed to curate campaign')
   }
 
   async function doUncurate() {
     if (!campaign.value) return
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await uncurateCampaign(campaign.value.id)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to uncurate campaign')
-    } finally {
-      actionPending.value = false
-    }
+    const id = campaign.value.id
+    await run(() => uncurateCampaign(id), 'Failed to uncurate campaign')
   }
 
   async function doToggleLoved() {
     if (!campaign.value) return
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await setCampaignLoved(campaign.value.id, !campaign.value.loved)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to update loved status')
-    } finally {
-      actionPending.value = false
-    }
+    const { id, loved } = campaign.value
+    await run(() => setCampaignLoved(id, !loved), 'Failed to update loved status')
   }
 
   async function doToggleOfficial() {
     if (!campaign.value) return
-    actionPending.value = true
-    actionError.value = null
-    try {
-      await setCampaignOfficial(campaign.value.id, !campaign.value.official)
-      await load()
-    } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to update official status')
-    } finally {
-      actionPending.value = false
-    }
+    const { id, official } = campaign.value
+    await run(() => setCampaignOfficial(id, !official), 'Failed to update official status')
   }
 
   async function doDeactivate() {

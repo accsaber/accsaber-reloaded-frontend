@@ -26,7 +26,7 @@ defineEmits<{ select: [] }>()
   height: 36px;
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   color: var(--text-tertiary);
   cursor: pointer;
   transition:

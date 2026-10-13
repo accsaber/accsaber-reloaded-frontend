@@ -2,7 +2,7 @@
 import { useCategoryStore } from '@/stores/categories'
 import type { CampaignProgressFilter, CampaignTagResponse } from '@/types/api/campaigns'
 import type { CampaignFilterState, CampaignSortOption } from '@/utils/campaignFilters'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
   modelValue: CampaignFilterState
@@ -15,7 +15,6 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [CampaignFilterState] }>()
 
 const categoryStore = useCategoryStore()
-const tagsOpen = ref(false)
 
 const PROGRESS_OPTIONS: { key: CampaignProgressFilter; label: string }[] = [
   { key: 'IN_PROGRESS', label: 'In progress' },
@@ -33,10 +32,17 @@ function toggled<T>(list: T[], value: T): T[] {
   return Array.from(next)
 }
 
-const themeTags = computed(() => props.tags.filter((t) => t.kind === 'THEME'))
-const genreTags = computed(() => props.tags.filter((t) => t.kind === 'GENRE'))
-const categoryTags = computed(() => props.tags.filter((t) => t.kind === 'CATEGORY'))
-const difficultyTags = computed(() => props.tags.filter((t) => t.kind === 'DIFFICULTY'))
+const TAG_GROUPS = [
+  { kind: 'CATEGORY', label: 'Category' },
+  { kind: 'DIFFICULTY', label: 'Tier' },
+  { kind: 'THEME', label: 'Theme' },
+  { kind: 'GENRE', label: 'Genre' },
+] as const
+
+const tagGroups = computed(() =>
+  TAG_GROUPS.map((group) => ({ ...group, tags: props.tags.filter((t) => t.kind === group.kind) }))
+    .filter((group) => group.tags.length > 0),
+)
 
 function tagAccent(tag: CampaignTagResponse): string | null {
   if (tag.kind !== 'CATEGORY' || !tag.categoryId) return null
@@ -76,8 +82,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
 
       <button v-if="showCurated" type="button" class="campaign-filters__chip campaign-filters__chip--toggle"
         :class="{ 'campaign-filters__chip--active': modelValue.curated }"
-        @click="patch({ curated: !modelValue.curated })"
-        title="Curated means rewards-eligible: well laid out rewards and clear paths. It is not a quality verdict.">
+        @click="patch({ curated: !modelValue.curated })">
         Curated only
       </button>
 
@@ -87,8 +92,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
         Loved only
       </button>
 
-      <details class="campaign-filters__tags" :open="tagsOpen"
-        @toggle="tagsOpen = ($event.target as HTMLDetailsElement).open">
+      <details class="campaign-filters__tags">
         <summary>
           <span>Tags</span>
           <span v-if="modelValue.tagIds.length > 0" class="campaign-filters__tags-count">
@@ -96,36 +100,14 @@ function tagAccent(tag: CampaignTagResponse): string | null {
           </span>
         </summary>
         <div class="campaign-filters__tags-panel">
-          <div v-if="categoryTags.length > 0" class="campaign-filters__chip-group">
-            <span class="campaign-filters__chip-label">Category</span>
-            <button v-for="tag in categoryTags" :key="tag.id" type="button"
-              class="campaign-filters__chip campaign-filters__chip--category"
-              :class="{ 'campaign-filters__chip--active': modelValue.tagIds.includes(tag.id) }"
-              :style="{ '--chip-accent': tagAccent(tag) ?? 'var(--accent)' }"
-              @click="patch({ tagIds: toggled(modelValue.tagIds, tag.id) })">
-              {{ tag.name }}
-            </button>
-          </div>
-          <div v-if="difficultyTags.length > 0" class="campaign-filters__chip-group">
-            <span class="campaign-filters__chip-label">Tier</span>
-            <button v-for="tag in difficultyTags" :key="tag.id" type="button" class="campaign-filters__chip"
-              :class="{ 'campaign-filters__chip--active': modelValue.tagIds.includes(tag.id) }"
-              @click="patch({ tagIds: toggled(modelValue.tagIds, tag.id) })">
-              {{ tag.name }}
-            </button>
-          </div>
-          <div v-if="themeTags.length > 0" class="campaign-filters__chip-group">
-            <span class="campaign-filters__chip-label">Theme</span>
-            <button v-for="tag in themeTags" :key="tag.id" type="button" class="campaign-filters__chip"
-              :class="{ 'campaign-filters__chip--active': modelValue.tagIds.includes(tag.id) }"
-              @click="patch({ tagIds: toggled(modelValue.tagIds, tag.id) })">
-              {{ tag.name }}
-            </button>
-          </div>
-          <div v-if="genreTags.length > 0" class="campaign-filters__chip-group">
-            <span class="campaign-filters__chip-label">Genre</span>
-            <button v-for="tag in genreTags" :key="tag.id" type="button" class="campaign-filters__chip"
-              :class="{ 'campaign-filters__chip--active': modelValue.tagIds.includes(tag.id) }"
+          <div v-for="group in tagGroups" :key="group.kind" class="campaign-filters__chip-group">
+            <span class="campaign-filters__chip-label">{{ group.label }}</span>
+            <button v-for="tag in group.tags" :key="tag.id" type="button" class="campaign-filters__chip"
+              :class="{
+                'campaign-filters__chip--active': modelValue.tagIds.includes(tag.id),
+                'campaign-filters__chip--category': group.kind === 'CATEGORY',
+              }"
+              :style="group.kind === 'CATEGORY' ? { '--chip-accent': tagAccent(tag) ?? 'var(--accent)' } : undefined"
               @click="patch({ tagIds: toggled(modelValue.tagIds, tag.id) })">
               {{ tag.name }}
             </button>
@@ -161,14 +143,14 @@ function tagAccent(tag: CampaignTagResponse): string | null {
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-filters__sort-btn {
   padding: 4px 10px;
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -204,7 +186,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   list-style: none;
   transition: color 120ms ease, border-color 120ms ease;
@@ -246,7 +228,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
   padding: var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -271,7 +253,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
   padding: 3px 8px;
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;

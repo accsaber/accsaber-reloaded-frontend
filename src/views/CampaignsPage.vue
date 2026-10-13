@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
-import RulesButton from '@/components/domain/RulesButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -9,24 +8,18 @@ import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignFilterBar from '@/components/domain/CampaignFilterBar.vue'
 import CampaignRow from '@/components/domain/CampaignRow.vue'
+import RulesButton from '@/components/domain/RulesButton.vue'
 import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
 import { useCampaignTags } from '@/composables/useCampaignTags'
+import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
-import type {
-  CampaignCollaboratorResponse,
-  CampaignDetailResponse,
-  CampaignProgressSummary,
-  CampaignResponse,
-} from '@/types/api/campaigns'
+import type { CampaignCollaboratorResponse, CampaignListParams, CampaignResponse } from '@/types/api/campaigns'
 import type { Rule } from '@/types/display'
-import type { Page } from '@/types/pagination'
-import type { CampaignStatus } from '@/types/enums'
 import type { CampaignFilterState } from '@/utils/campaignFilters'
 import { BROWSE_SORT_OPTIONS } from '@/utils/campaignFilters'
 import { isCurationSubdomain, isCurationSurface } from '@/utils/subdomain'
-import { usePageMeta } from '@/composables/usePageMeta'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQuery } from 'vue-router'
 
 type Pane = 'all' | 'mine' | 'runs' | 'review' | 'drafts' | 'invites'
@@ -59,16 +52,20 @@ const pane = computed<Pane>(() => {
   return defaultPane.value
 })
 
-const SEARCHABLE_PANES = new Set<Pane>(['all', 'review', 'drafts'])
+const panes = computed(() => [
+  { key: 'all' as const, label: 'Browse', show: true },
+  { key: 'runs' as const, label: 'My Runs', show: auth.isLoggedIn },
+  { key: 'mine' as const, label: 'Mine', show: auth.isLoggedIn },
+  { key: 'invites' as const, label: 'Invites', show: auth.isLoggedIn },
+  { key: 'review' as const, label: 'Review', show: canReview.value },
+  { key: 'drafts' as const, label: 'Drafts', show: canSeeDrafts.value },
+].filter((p) => p.show))
 
-const searchablePane = computed(() => SEARCHABLE_PANES.has(pane.value))
-
+const searchablePane = computed(() => pane.value === 'all' || pane.value === 'review' || pane.value === 'drafts')
 const filterablePane = computed(() => pane.value === 'all' || pane.value === 'review')
 
 const curatedOnly = computed(() => route.query.curated === '1')
-
 const officialOnly = computed(() => route.query.official === '1')
-
 const lovedOnly = computed(() => route.query.loved === '1')
 
 const searchTerm = computed(() => {
@@ -84,6 +81,8 @@ const selectedTagIds = computed<string[]>(() => {
 })
 
 const { tags, load: loadTags } = useCampaignTags()
+void loadTags()
+
 const CAMPAIGN_RULES: Rule[] = [
   {
     title: 'No impersonation.',
@@ -115,21 +114,14 @@ const CAMPAIGN_RULES: Rule[] = [
   },
 ]
 
-function goToNewCampaign() {
-  router.push({ name: 'campaign-new' })
-}
-
 const items = ref<CampaignResponse[]>([])
 const totalPages = ref(1)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const progressMap = ref(new Map<string, CampaignProgressSummary>())
-
 const pendingInvites = ref<CampaignCollaboratorResponse[]>([])
 const invitesLoading = ref(false)
 const respondingId = ref<string | null>(null)
-const mineCollabs = ref<CampaignDetailResponse[]>([])
 
 const { currentPage, paginationParams, setPage, sortState } = usePageableRoute({
   defaultSort: 'publishedAt',
@@ -147,6 +139,13 @@ const browseFilters = computed<CampaignFilterState>(() => ({
   tagIds: selectedTagIds.value,
   progressStatus: [],
 }))
+
+const emptyMessage = computed(() => {
+  if (pane.value === 'mine') return auth.isLoggedIn ? 'No campaigns yet' : 'Sign in to see your campaigns'
+  if (pane.value === 'review') return 'Nothing to review'
+  if (pane.value === 'drafts') return 'No drafts'
+  return 'No campaigns found'
+})
 
 function setQueryFlag(query: LocationQuery, key: string, on: boolean) {
   if (on) query[key] = '1'
@@ -171,10 +170,57 @@ function applyBrowseFilters(next: CampaignFilterState) {
   router.replace({ query })
 }
 
-const statusFilter = computed<CampaignStatus[]>(() => {
-  if (pane.value === 'review') return ['PUBLISHED']
-  return curatedOnly.value ? ['CURATED'] : ['PUBLISHED', 'CURATED']
-})
+function listParams(): CampaignListParams | null {
+  const paging = { page: paginationParams.value.page, size: paginationParams.value.size }
+  const search = searchTerm.value || undefined
+  switch (pane.value) {
+    case 'mine':
+      return auth.userId ? { ...paging, sort: 'createdAt,desc', memberId: auth.userId } : null
+    case 'drafts':
+      return canSeeDrafts.value ? { ...paging, sort: 'createdAt,desc', status: ['DRAFT'], search } : null
+    case 'review':
+    case 'all':
+      if (pane.value === 'review' && !canReview.value) return null
+      return {
+        ...paging,
+        sort: paginationParams.value.sort,
+        tagIds: selectedTagIds.value.length > 0 ? selectedTagIds.value : undefined,
+        status: pane.value === 'review' ? ['PUBLISHED'] : curatedOnly.value ? ['CURATED'] : ['PUBLISHED', 'CURATED'],
+        search,
+        official: officialOnly.value || undefined,
+        loved: lovedOnly.value || undefined,
+      }
+    default:
+      return null
+  }
+}
+
+let campaignRequest = 0
+
+async function loadCampaigns() {
+  if (pane.value === 'runs' || pane.value === 'invites') return
+  const id = ++campaignRequest
+  const params = listParams()
+  if (!params) {
+    items.value = []
+    totalPages.value = 1
+    return
+  }
+  loading.value = true
+  error.value = null
+  try {
+    const { getCampaigns } = await import('@/api/campaigns')
+    const page = await getCampaigns(params)
+    if (id !== campaignRequest) return
+    items.value = page.content
+    totalPages.value = page.totalPages || 1
+  } catch (err) {
+    if (id !== campaignRequest) return
+    error.value = getApiErrorMessage(err, 'Failed to load campaigns')
+    items.value = []
+  }
+  loading.value = false
+}
 
 async function loadInvites() {
   if (!auth.isLoggedIn) {
@@ -184,8 +230,7 @@ async function loadInvites() {
   invitesLoading.value = true
   try {
     const { getMyCollaborations } = await import('@/api/campaigns')
-    const page = await getMyCollaborations({ status: 'PENDING', size: 50 })
-    pendingInvites.value = page.content
+    pendingInvites.value = (await getMyCollaborations({ status: 'PENDING', size: 50 })).content
   } catch {
     pendingInvites.value = []
   } finally {
@@ -207,112 +252,11 @@ async function respondToInvite(inv: CampaignCollaboratorResponse, accept: boolea
   }
 }
 
-const acceptInvite = (inv: CampaignCollaboratorResponse) => respondToInvite(inv, true)
-const declineInvite = (inv: CampaignCollaboratorResponse) => respondToInvite(inv, false)
-
-async function loadMineCollabs() {
-  if (!auth.isLoggedIn) {
-    mineCollabs.value = []
-    return
-  }
-  try {
-    const { getMyCollaborations, getCampaign } = await import('@/api/campaigns')
-    const page = await getMyCollaborations({ status: 'ACCEPTED', size: 50 })
-    const details = await Promise.all(
-      page.content.map((c) => getCampaign(c.campaignId).catch(() => null)),
-    )
-    mineCollabs.value = details.filter((c): c is CampaignDetailResponse => !!c)
-  } catch {
-    mineCollabs.value = []
-  }
-}
-
-async function loadCampaigns() {
-  if (pane.value === 'runs') return
-  if (pane.value === 'invites') {
-    void loadInvites()
-    return
-  }
-  loading.value = true
-  error.value = null
-  mineCollabs.value = []
-  try {
-    if (pane.value === 'mine') {
-      if (!auth.isLoggedIn || !auth.userId) {
-        items.value = []
-        totalPages.value = 1
-        return
-      }
-      const { getCampaigns: fetchCampaigns } = await import('@/api/campaigns')
-      const page: Page<CampaignResponse> = await fetchCampaigns({
-        page: paginationParams.value.page,
-        size: paginationParams.value.size,
-        sort: 'createdAt,desc',
-        creatorId: auth.userId,
-      })
-      items.value = page.content
-      totalPages.value = page.totalPages || 1
-      if (currentPage.value === 1) await loadMineCollabs()
-    } else if (pane.value === 'drafts') {
-      if (!canSeeDrafts.value) {
-        items.value = []
-        totalPages.value = 1
-        return
-      }
-      const { getCampaigns: fetchCampaigns } = await import('@/api/campaigns')
-      const page: Page<CampaignResponse> = await fetchCampaigns({
-        page: paginationParams.value.page,
-        size: paginationParams.value.size,
-        sort: 'createdAt,desc',
-        status: ['DRAFT'],
-        search: searchTerm.value || undefined,
-      })
-      items.value = page.content
-      totalPages.value = page.totalPages || 1
-    } else {
-      if (pane.value === 'review' && !canReview.value) {
-        items.value = []
-        totalPages.value = 1
-        return
-      }
-      const { getCampaigns: fetchCampaigns, getMyCampaignProgressBulk } = await import('@/api/campaigns')
-      const page: Page<CampaignResponse> = await fetchCampaigns({
-        page: paginationParams.value.page,
-        size: paginationParams.value.size,
-        sort: paginationParams.value.sort,
-        tagIds: selectedTagIds.value.length > 0 ? selectedTagIds.value : undefined,
-        status: statusFilter.value,
-        search: searchTerm.value || undefined,
-        official: officialOnly.value || undefined,
-        loved: lovedOnly.value || undefined,
-      })
-      items.value = page.content
-      totalPages.value = page.totalPages || 1
-
-      if (pane.value === 'all' && auth.isLoggedIn && items.value.length > 0) {
-        const ids = items.value.map((c) => c.id)
-        const progressList = await getMyCampaignProgressBulk(ids)
-        const nextMap = new Map(progressMap.value)
-        for (const p of progressList) nextMap.set(p.campaign.id, p)
-        progressMap.value = nextMap
-      }
-    }
-  } catch (err) {
-    error.value = getApiErrorMessage(err, 'Failed to load campaigns')
-    items.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
 function setPane(next: Pane) {
   if (next === pane.value) return
   const query = { ...route.query }
-  if (next === defaultPane.value) {
-    delete query.pane
-  } else {
-    query.pane = next
-  }
+  if (next === defaultPane.value) delete query.pane
+  else query.pane = next
   delete query.page
   router.replace({ query })
 }
@@ -326,37 +270,8 @@ function setSearch(value: string) {
   router.replace({ query })
 }
 
-onMounted(() => {
-  void loadTags()
-  void loadCampaigns()
-  void loadInvites()
-})
-
-watch(
-  () => [
-    pane.value,
-    curatedOnly.value,
-    officialOnly.value,
-    lovedOnly.value,
-    selectedTagIds.value.join(','),
-    searchTerm.value,
-    paginationParams.value.page,
-    String(paginationParams.value.sort),
-  ],
-  () => {
-    void loadCampaigns()
-  },
-)
-
-watch(
-  () => auth.isLoggedIn,
-  (next, prev) => {
-    if (next !== prev) {
-      void loadCampaigns()
-      void loadInvites()
-    }
-  },
-)
+watch(() => `${pane.value}|${JSON.stringify(listParams())}`, loadCampaigns, { immediate: true })
+watch(() => auth.isLoggedIn, loadInvites, { immediate: true })
 </script>
 
 <template>
@@ -365,32 +280,12 @@ watch(
 
     <div class="campaigns-page__bar">
       <nav class="campaigns-page__panes" aria-label="Campaign panes">
-        <button class="campaigns-page__pane" :class="{ 'campaigns-page__pane--active': pane === 'all' }"
-          @click="setPane('all')">
-          Browse
-        </button>
-        <button v-if="auth.isLoggedIn" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === 'runs' }" @click="setPane('runs')">
-          My Runs
-        </button>
-        <button v-if="auth.isLoggedIn" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === 'mine' }" @click="setPane('mine')">
-          Mine
-        </button>
-        <button v-if="auth.isLoggedIn" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === 'invites' }" @click="setPane('invites')">
-          Invites
-          <span v-if="pendingInvites.length > 0" class="campaigns-page__pane-badge">
+        <button v-for="p in panes" :key="p.key" class="campaigns-page__pane"
+          :class="{ 'campaigns-page__pane--active': pane === p.key }" @click="setPane(p.key)">
+          {{ p.label }}
+          <span v-if="p.key === 'invites' && pendingInvites.length > 0" class="campaigns-page__pane-badge">
             {{ pendingInvites.length }}
           </span>
-        </button>
-        <button v-if="canReview" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === 'review' }" @click="setPane('review')">
-          Review
-        </button>
-        <button v-if="canSeeDrafts" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === 'drafts' }" @click="setPane('drafts')">
-          Drafts
         </button>
       </nav>
 
@@ -403,16 +298,9 @@ watch(
           lead="Campaigns are player-made and public. Keep yours within these rules:"
           :rules="CAMPAIGN_RULES"
           note="By creating a campaign, you agree to these rules. Breaking them results in an automatic, indefinite suspension from every AccSaber feature."
-        >
-          <h3>What curation means</h3>
-          <p>
-            Unlike BeatSaver, curation here does not mean a campaign is objectively good. It means
-            rewards-eligible: the rewards are well laid out and the paths through the campaign are
-            clear rather than confusing. Only curated campaigns pay out XP and items.
-          </p>
-        </RulesButton>
+        />
         <button v-if="auth.isLoggedIn || isCurator" type="button" class="campaigns-page__new"
-          @click="goToNewCampaign">
+          @click="router.push({ name: 'campaign-new' })">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -430,12 +318,10 @@ watch(
     <div v-if="error" class="campaigns-page__error" role="alert">{{ error }}</div>
 
     <template v-if="pane === 'invites'">
-      <EmptyState v-if="!auth.isLoggedIn" message="Sign in to see your collaboration invites." />
-      <div v-else-if="invitesLoading" class="campaigns-page__list">
+      <div v-if="invitesLoading" class="campaigns-page__list">
         <SkeletonLoader v-for="i in 3" :key="i" variant="card" />
       </div>
-      <EmptyState v-else-if="pendingInvites.length === 0"
-        message="No pending invites. When someone invites you to collaborate, it lands here." />
+      <EmptyState v-else-if="pendingInvites.length === 0" message="No pending invites" />
       <ul v-else class="campaigns-page__invites">
         <li v-for="inv in pendingInvites" :key="inv.id" class="campaigns-page__invite">
           <router-link class="campaigns-page__invite-main"
@@ -445,10 +331,10 @@ watch(
           </router-link>
           <div class="campaigns-page__invite-actions">
             <BaseButton size="sm" variant="primary" :loading="respondingId === inv.id"
-              @click="acceptInvite(inv)">
+              @click="respondToInvite(inv, true)">
               Accept
             </BaseButton>
-            <BaseButton size="sm" :disabled="respondingId === inv.id" @click="declineInvite(inv)">
+            <BaseButton size="sm" :disabled="respondingId === inv.id" @click="respondToInvite(inv, false)">
               Decline
             </BaseButton>
           </div>
@@ -457,9 +343,8 @@ watch(
     </template>
 
     <template v-else-if="pane === 'runs'">
-      <EmptyState v-if="!auth.isLoggedIn" message="Sign in to track campaigns you've started." />
-      <UserCampaignsPanel v-else
-        empty-message="You haven't started any campaigns yet. Browse the catalogue to begin one." />
+      <EmptyState v-if="!auth.isLoggedIn" message="Sign in to see your runs" />
+      <UserCampaignsPanel v-else empty-message="No runs yet" />
     </template>
 
     <template v-else>
@@ -467,26 +352,11 @@ watch(
         <SkeletonLoader v-for="i in 4" :key="i" variant="card" />
       </div>
 
-      <EmptyState v-else-if="pane === 'mine' && !auth.isLoggedIn"
-        message="Sign in to see your created campaigns." />
-
-      <EmptyState v-else-if="pane === 'mine' && items.length === 0 && mineCollabs.length === 0"
-        message="You haven't drafted any campaigns yet. Use New campaign to start one." />
-
-      <EmptyState v-else-if="pane === 'review' && items.length === 0"
-        message="No published campaigns are waiting on curation right now." />
-
-      <EmptyState v-else-if="pane === 'drafts' && items.length === 0"
-        message="No draft campaigns match this search." />
-
-      <EmptyState v-else-if="pane !== 'mine' && items.length === 0"
-        message="No campaigns match these filters." />
+      <EmptyState v-else-if="items.length === 0" :message="emptyMessage" />
 
       <div v-else class="campaigns-page__list">
-        <CampaignRow v-for="c in (pane === 'mine' ? mineCollabs : [])" :key="`collab-${c.id}`"
-          :campaign="c" :editor-link="true" collab />
         <CampaignRow v-for="campaign in items" :key="campaign.id" :campaign="campaign"
-          :progress="progressMap.get(campaign.id) ?? null"
+          :collab="pane === 'mine' && campaign.creatorId !== auth.userId"
           :editor-link="pane === 'mine' || pane === 'review' || pane === 'drafts'" />
       </div>
 
@@ -520,7 +390,7 @@ watch(
   padding: 2px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   grid-column: 1;
   justify-self: start;
 }
@@ -538,7 +408,7 @@ watch(
   color: var(--page-accent);
   background: transparent;
   border: 1px solid var(--page-accent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease;
 }
@@ -554,7 +424,7 @@ watch(
   padding: 6px var(--space-md);
   background: none;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -578,7 +448,7 @@ watch(
   letter-spacing: 0;
   color: var(--page-accent);
   background: color-mix(in srgb, var(--page-accent) 16%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .campaigns-page__pane:hover {
@@ -628,7 +498,7 @@ watch(
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .campaigns-page__invites {
@@ -648,7 +518,7 @@ watch(
   padding: var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .campaigns-page__invite-main {

@@ -35,7 +35,7 @@ withDefaults(defineProps<{ tone?: 'warning' | 'error' }>(), { tone: 'warning' })
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   line-height: 1.45;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .editor-note svg {

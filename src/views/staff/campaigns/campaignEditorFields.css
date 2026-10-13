@@ -1,0 +1,206 @@
+.campaign-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campaign-editor__field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.campaign-editor__field > span > small {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.campaign-editor__field--disabled {
+  opacity: 0.55;
+}
+
+.campaign-editor__field input,
+.campaign-editor__field textarea,
+.campaign-editor__field select {
+  width: 100%;
+  padding: 8px 10px;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-input);
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.campaign-editor__field textarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.5;
+}
+
+.campaign-editor__field input:focus,
+.campaign-editor__field textarea:focus,
+.campaign-editor__field select:focus {
+  border-color: var(--page-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent) 20%, transparent);
+}
+
+.campaign-editor__field small {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+}
+
+.campaign-editor__slider-row {
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.campaign-editor__slider-row input[type='range'] {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  accent-color: var(--page-accent);
+}
+
+.campaign-editor__color-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.campaign-editor__color-row input[type='color'] {
+  width: 44px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-input);
+  background: var(--bg-base);
+  cursor: pointer;
+}
+
+.campaign-editor__color-text {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  font-family: var(--font-mono);
+}
+
+.campaign-editor__color-text[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.campaign-editor__field-error {
+  margin: 2px 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--error);
+  line-height: 1.4;
+}
+
+.campaign-editor__inline-btn {
+  padding: 6px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.campaign-editor__inline-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+.campaign-editor__hint {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.campaign-editor__reward-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campaign-editor__reward {
+  padding: 6px 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+}
+
+.campaign-editor__reward-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
+}
+
+.campaign-editor__reward-remove:hover {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+}
+
+.campaign-editor__add-reward {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.campaign-editor__add-reward:hover {
+  color: var(--page-accent);
+  border-color: var(--page-accent);
+}

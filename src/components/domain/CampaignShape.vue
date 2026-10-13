@@ -14,14 +14,12 @@ const props = withDefaults(defineProps<{
   accentColor?: string
   accentBand?: number
   innerBorder?: number
-  fillOpacity?: number
 }>(), {
   state: 'available',
   shape: 'hex',
   accentColor: 'var(--accent)',
   accentBand: 4,
   innerBorder: 2,
-  fillOpacity: 1,
 })
 
 const outerPoints = computed(() =>
@@ -34,37 +32,16 @@ const innerPoints = computed(() =>
 
 const outerRadius = computed(() => props.size + props.accentBand)
 
-const fillVar = computed(() => {
-  switch (props.state) {
-    case 'locked':
-      return 'var(--bg-base)'
-    case 'available':
-      return 'var(--bg-surface)'
-    case 'current':
-      return 'var(--bg-elevated)'
-    case 'cleared':
-      return 'var(--bg-elevated)'
-    default:
-      return 'var(--bg-surface)'
-  }
-})
+const FILLS: Record<ShapeState, string> = {
+  locked: 'var(--bg-base)',
+  available: 'var(--bg-surface)',
+  current: 'var(--bg-elevated)',
+  cleared: 'var(--bg-elevated)',
+}
 
-const fillOpacityFinal = computed(() => props.fillOpacity)
+const fillVar = computed(() => FILLS[props.state])
 
-const accentOpacity = computed(() => {
-  switch (props.state) {
-    case 'locked':
-      return 1
-    case 'available':
-      return 0.85
-    case 'current':
-      return 1
-    case 'cleared':
-      return 1
-    default:
-      return 0.85
-  }
-})
+const accentOpacity = computed(() => (props.state === 'available' ? 0.85 : 1))
 
 const accentFill = computed(() => {
   if (props.state === 'locked') {
@@ -74,9 +51,8 @@ const accentFill = computed(() => {
 })
 
 const bodyStroke = computed(() => {
-  if (props.state === 'cleared') return '#ffffff'
   if (props.state === 'locked') return 'var(--text-tertiary)'
-  return 'rgba(255,255,255,0.92)'
+  return 'var(--text-primary)'
 })
 </script>
 
@@ -97,7 +73,6 @@ const bodyStroke = computed(() => {
         :cy="cy"
         :r="size"
         :fill="fillVar"
-        :fill-opacity="fillOpacityFinal"
         :stroke="bodyStroke"
         :stroke-width="innerBorder"
       />
@@ -123,7 +98,6 @@ const bodyStroke = computed(() => {
         class="campaign-shape__body"
         :points="innerPoints"
         :fill="fillVar"
-        :fill-opacity="fillOpacityFinal"
         :stroke="bodyStroke"
         :stroke-width="innerBorder"
         stroke-linejoin="miter"
@@ -137,7 +111,6 @@ const bodyStroke = computed(() => {
         stroke-width="1.5"
       />
     </template>
-    <slot :cx="cx" :cy="cy" :size="size" />
   </g>
 </template>
 

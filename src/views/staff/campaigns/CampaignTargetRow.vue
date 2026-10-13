@@ -120,8 +120,7 @@ function onDragStart(event: DragEvent) {
     </p>
 
     <p v-if="row.invalid" class="target-row__invalid" role="alert">
-      This objective needs at least one bound, and the lower bound cannot exceed the upper one. It
-      will not save until you fix it.
+      Needs a bound. The lower one cannot exceed the upper. Not saved until fixed.
     </p>
   </li>
 </template>
@@ -134,7 +133,7 @@ function onDragStart(event: DragEvent) {
   padding: var(--space-sm);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .target-row--flagged {
@@ -161,7 +160,7 @@ function onDragStart(event: DragEvent) {
   color: var(--text-tertiary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: grab;
   transition:
     color 120ms ease,
@@ -199,7 +198,7 @@ function onDragStart(event: DragEvent) {
   color: var(--text-tertiary);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,

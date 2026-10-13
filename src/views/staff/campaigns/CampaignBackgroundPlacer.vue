@@ -238,19 +238,14 @@ function unpin() {
         </label>
       </div>
 
-      <p class="placer__hint">
-        Pinned to the map, so it stays put while you pan and while nodes move. Col and row are the
-        same grid cells nodes sit on, decimals included. 100% scale spans 20 columns.
-      </p>
+      <p class="placer__hint">Pinned to the map. 100% scale spans 20 columns.</p>
       <button type="button" class="placer__action" :disabled="disabled" @click="unpin">
         Unpin, fill the canvas again
       </button>
     </template>
 
     <template v-else>
-      <p class="placer__hint">
-        Fills the canvas and follows the view as you pan. Pin it to lock it to the map instead.
-      </p>
+      <p class="placer__hint">Fills the canvas and follows the view.</p>
       <button type="button" class="placer__action" :disabled="disabled" @click="pin">
         Pin placement
       </button>
@@ -280,7 +275,7 @@ function unpin() {
   min-height: 240px;
   background-color: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   overflow: hidden;
   touch-action: none;
 }
@@ -333,7 +328,7 @@ function unpin() {
   text-transform: uppercase;
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--bg-base) 78%, transparent);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   pointer-events: none;
 }
 
@@ -382,7 +377,7 @@ function unpin() {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: border-color 120ms ease;
 }
@@ -411,7 +406,7 @@ function unpin() {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,

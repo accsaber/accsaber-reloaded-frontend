@@ -90,8 +90,7 @@ function rowClick(entry: LeaderboardResponse) {
       />
 
       <p class="collab-picker__note">
-        Collaborators can edit this campaign while it's a draft. Only you can publish, delete, or
-        manage the roster.
+        Collaborators edit drafts. Only you publish, delete or manage the roster.
       </p>
 
       <p v-if="err" class="collab-picker__error" role="alert">{{ err }}</p>
@@ -100,7 +99,7 @@ function rowClick(entry: LeaderboardResponse) {
         <SkeletonLoader v-for="i in 6" :key="i" variant="table-row" />
       </div>
 
-      <p v-else-if="results.length === 0" class="collab-picker__empty">No players match that search.</p>
+      <p v-else-if="results.length === 0" class="collab-picker__empty">No players found</p>
 
       <ul v-else class="collab-picker__list">
         <li v-for="entry in results" :key="entry.userId">
@@ -146,7 +145,7 @@ function rowClick(entry: LeaderboardResponse) {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: border-color 120ms ease;
 }
@@ -171,7 +170,7 @@ function rowClick(entry: LeaderboardResponse) {
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .collab-picker__empty {
@@ -201,7 +200,7 @@ function rowClick(entry: LeaderboardResponse) {
 
 .collab-picker__list::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .collab-picker__list li {
@@ -217,7 +216,7 @@ function rowClick(entry: LeaderboardResponse) {
   padding: 8px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   text-align: left;
   color: inherit;

@@ -43,7 +43,7 @@ defineEmits<{ select: [id: string] }>()
   color: inherit;
   background: transparent;
   border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;

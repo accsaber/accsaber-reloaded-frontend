@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CampaignPresenceActionGlyph from '@/components/domain/CampaignPresenceActionGlyph.vue'
 import type { PresenceAction, PresenceKind } from '@/composables/useCampaignPresence'
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 
 const props = defineProps<{
   x: number
@@ -16,7 +16,7 @@ const props = defineProps<{
 
 const ARROW = 'M0 0 L0 17 L4.6 12.6 L7.2 18.2 L9.5 17.2 L6.9 11.7 L12.4 11.7 Z'
 
-const clipId = computed(() => `presence-av-${props.name}-${Math.round(props.x)}-${Math.round(props.y)}`)
+const clipId = `presence-av-${useId()}`
 
 const displayName = computed(() =>
   props.name.length > 18 ? props.name.slice(0, 17) + '…' : props.name,

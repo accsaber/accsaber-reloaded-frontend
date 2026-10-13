@@ -8,6 +8,8 @@ import CampaignRewardItem from '@/components/domain/CampaignRewardItem.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import CampaignBackgroundPlacer from './CampaignBackgroundPlacer.vue'
 import CampaignBoundsField from './CampaignBoundsField.vue'
+import CampaignColorField from './CampaignColorField.vue'
+import CampaignRewardsEditor from './CampaignRewardsEditor.vue'
 import CampaignEditorNote from './CampaignEditorNote.vue'
 import CampaignEditorTile from './CampaignEditorTile.vue'
 import CampaignEditorToggle from './CampaignEditorToggle.vue'
@@ -18,7 +20,7 @@ import CampaignTargetRow from './CampaignTargetRow.vue'
 import CampaignShapeGlyph from './CampaignShapeGlyph.vue'
 import CampaignLabelPositionPicker from './CampaignLabelPositionPicker.vue'
 import { useCampaignEditorContext } from './campaignEditorContext'
-import { resolveSize } from '@/utils/campaignLayout'
+import { cssToken, resolveSize } from '@/utils/campaignLayout'
 import { toCollaboratorUserRef } from '@/utils/mappers'
 import type { CampaignTargetMode } from '@/types/enums'
 import { computed, ref } from 'vue'
@@ -62,7 +64,6 @@ const {
   removeIcon,
   commitBackgroundPlacement,
   gridLock,
-  rewardItemsById,
   removeCompletionItem,
   openCampaignItemPicker,
   tagsByKind,
@@ -216,7 +217,7 @@ const otherEndings = computed(() => {
   return selfId && ids.has(selfId) ? ids.size - 1 : ids.size
 })
 
-const MARKDOWN_HINT = 'Markdown is supported here.'
+const MARKDOWN_HINT = 'Markdown supported.'
 
 const TARGET_MODES: Array<{ value: CampaignTargetMode; label: string }> = [
   { value: 'AND', label: 'All of' },
@@ -231,7 +232,7 @@ const beatLeaderOnlyNote = computed(() => {
   if (types.has('BOMB_HITS')) subjects.push('Bomb')
   if (types.has('PAUSES')) subjects.push('Pause')
   if (!subjects.length) return ''
-  return `${subjects.join(' and ')} counts come from BeatLeader only. A ScoreSaber-sourced score carries none and can never clear that objective.`
+  return `${subjects.join(' and ')} counts are BeatLeader only.`
 })
 
 const dragTargetIndex = ref<number | null>(null)
@@ -251,25 +252,19 @@ function onTargetDrop() {
 const barrierConditionHint = computed(() => {
   const meta = barrierMeta.value
   if (meta.noValue) {
-    const verb = formBarrier.value.conditionType === 'PASS' ? 'passed (no No-Fail)' : 'full-comboed'
-    return `Opens once every affected node has been ${verb}.`
+    const verb = formBarrier.value.conditionType === 'PASS' ? 'passed without No-Fail' : 'full-comboed'
+    return `Every affected node ${verb}.`
   }
-  if (meta.metric === 'count') {
-    return `Opens once the player has completed this many of the ${affectedNodeList.value.length} affected nodes, each cleared by its own requirement. The cap is the number of affected nodes.`
-  }
-  if (meta.metric === 'bombs') {
-    return 'Averaged over the affected nodes, and higher passes. For "at most N bombs", set the upper bound instead of the lower one.'
-  }
+  if (meta.metric === 'count') return `Out of ${affectedNodeList.value.length} affected nodes.`
+  if (meta.metric === 'bombs') return 'Averaged. Use the upper bound for "at most".'
   if (meta.metric === 'mistakes') {
-    return 'Bad cuts + misses, averaged over each affected node\'s fewest-mistakes run. For "at most N mistakes", set the upper bound instead of the lower one.'
+    return 'Bad cuts plus misses, averaged. Use the upper bound for "at most".'
   }
   if (meta.metric === 'pauses') {
-    return 'Averaged over the fewest-pauses run on each affected node, and BeatLeader-sourced only. For "at most N pauses", set the upper bound instead of the lower one.'
+    return 'Averaged, BeatLeader only. Use the upper bound for "at most".'
   }
-  if (meta.lowerBetter) {
-    return `Lower is better. Opens when the ${meta.agg} leaderboard rank across the affected nodes reaches this position or better.`
-  }
-  return `Aggregated over the affected nodes (${meta.agg}). Higher clears the gate.`
+  if (meta.lowerBetter) return `Lower is better (${meta.agg}).`
+  return `${meta.agg} across affected nodes.`
 })
 
 const AP_RANK_BARRIER_TYPES = ['AVERAGE_AP', 'AP_MAX', 'AVERAGE_RANK', 'MAX_RANK']
@@ -286,25 +281,12 @@ const barrierConditionOptionsFiltered = computed(() =>
     : barrierConditionOptions,
 )
 
-const defaultBarrierColor = computed(() => {
-  if (typeof document === 'undefined') return '#eab308'
-  const v = getComputedStyle(document.documentElement).getPropertyValue('--warning').trim()
-  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : '#eab308'
-})
+const defaultBarrierColor = computed(() => cssToken('--warning'))
 
-const HEX6 = /^#[0-9a-fA-F]{6}$/
-
-const backgroundSwatch = computed(() => {
-  const v = formMeta.value.backgroundColor.trim()
-  return HEX6.test(v) ? v : defaultColorHex.value
-})
-
-const connectionSwatch = computed(() => {
-  const v = formConnection.value.color.trim()
-  if (HEX6.test(v)) return v
-  if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`
-  return defaultColorHex.value
-})
+function resetTextColor() {
+  formText.value.color = ''
+  commitTextField('color')
+}
 </script>
 
 <template>
@@ -421,8 +403,7 @@ const connectionSwatch = computed(() => {
       </div>
 
       <CampaignEditorNote v-if="editingLiveCampaign">
-        This campaign is live and paying out. Edits apply immediately, and changing a requirement
-        re-settles player completions on that node and everything after it.
+        Live campaign. Edits apply right away. Changed requirements re-settle completions.
       </CampaignEditorNote>
 
       <section
@@ -501,7 +482,7 @@ const connectionSwatch = computed(() => {
               <CampaignRewardItem
                 :name="reward.itemName"
                 :quantity="reward.quantity"
-                :item="rewardItemsById.get(reward.itemId) ?? null"
+                :item="reward.item"
               />
             </li>
           </ul>
@@ -511,9 +492,7 @@ const connectionSwatch = computed(() => {
       </section>
     </header>
 
-    <p v-else class="campaign-editor__status-meaning">
-      New draft. Add a node or fill in any field to save it.
-    </p>
+    <p v-else class="campaign-editor__status-meaning">New draft. Saves on your first edit.</p>
   </template>
 
   <fieldset
@@ -533,10 +512,6 @@ const connectionSwatch = computed(() => {
         :placeholder="campaign.creatorName ?? 'Creator name'"
         @blur="commitMetaField('creatorAlias')"
       />
-      <small
-        >Shown as the campaign's author. Defaults to your name; change it to credit a
-        collaboration.</small
-      >
     </label>
     <label class="campaign-editor__field">
       <span>Slug</span>
@@ -563,12 +538,7 @@ const connectionSwatch = computed(() => {
     :disabled="!editable"
   >
     <div class="campaign-editor__field">
-      <span>
-        Completion mode
-        <CampaignFieldHint
-          text="Clear a flagged ending: the campaign is done once the player clears any node flagged as an ending. Clear every node: all of them, and the flags stop mattering."
-        />
-      </span>
+      <span>Completion mode</span>
       <BaseSelect
         :model-value="formMeta.completionMode"
         :options="completionModeOptions.map((o) => ({ value: o.value, label: o.label }))"
@@ -576,8 +546,7 @@ const connectionSwatch = computed(() => {
       />
     </div>
     <CampaignEditorNote v-if="completionModeBlocked" tone="error">
-      Nothing is flagged as an ending, so this campaign would become impossible to finish. Flag a
-      node in its Ending tray first, then switch.
+      No node is flagged as an ending. Flag one first.
     </CampaignEditorNote>
     <CampaignEditorToggle
       :model-value="formMeta.progressionAgnostic"
@@ -587,9 +556,7 @@ const connectionSwatch = computed(() => {
       :disabled="hasBarriers"
       @update:model-value="setMetaFlag('progressionAgnostic', $event)"
     />
-    <p v-if="hasBarriers" class="campaign-editor__hint">
-      Remove the campaign's barriers first. Gates only work in an ordered campaign.
-    </p>
+    <p v-if="hasBarriers" class="campaign-editor__hint">Remove the barriers first.</p>
     <CampaignEditorToggle
       :model-value="formMeta.playlistExportEnabled"
       label="Playlist export"
@@ -597,40 +564,16 @@ const connectionSwatch = computed(() => {
       off-text="No playlist download"
       @update:model-value="setMetaFlag('playlistExportEnabled', $event)"
     />
-    <label class="campaign-editor__field">
-      <span>
-        Background color
-        <CampaignFieldHint
-          text="Hex, named, or rgb/hsl. Tints the roadmap backdrop; leave empty for the default."
-        />
-      </span>
-      <div class="campaign-editor__color-row">
-        <input
-          type="color"
-          aria-label="Background color swatch"
-          :value="backgroundSwatch"
-          @input="formMeta.backgroundColor = ($event.target as HTMLInputElement).value"
-          @change="commitBackgroundColor"
-        />
-        <input
-          class="campaign-editor__color-text"
-          type="text"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="#a855f7 · rebeccapurple · rgb(…)"
-          :aria-invalid="!!fieldErrors.backgroundColor"
-          v-model="formMeta.backgroundColor"
-          @blur="commitBackgroundColor"
-          @keydown.enter.prevent="commitBackgroundColor"
-        />
-        <button type="button" class="campaign-editor__inline-btn" @click="resetBackgroundColor">
-          Auto
-        </button>
-      </div>
-      <p v-if="fieldErrors.backgroundColor" class="campaign-editor__field-error" role="alert">
-        {{ fieldErrors.backgroundColor }}
-      </p>
-    </label>
+    <CampaignColorField
+      v-model="formMeta.backgroundColor"
+      label="Background color"
+      text
+      placeholder="#f5b800 · gold · rgb(…)"
+      :fallback="defaultColorHex"
+      :error="fieldErrors.backgroundColor"
+      @commit="commitBackgroundColor"
+      @reset="resetBackgroundColor"
+    />
   </fieldset>
 
   <fieldset
@@ -675,94 +618,18 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <CampaignEditorNote v-if="campaign.status !== 'CURATED'">
-      Rewards are only handed out once the campaign is curated.
-    </CampaignEditorNote>
-    <label class="campaign-editor__field">
-      <span>
-        Completion XP
-        <CampaignFieldHint text="Awarded on completion, once the campaign is curated." />
-      </span>
-      <div class="campaign-editor__slider-row">
-        <input
-          type="range"
-          min="0"
-          max="50000"
-          step="500"
-          v-model.number="formMeta.completionXp"
-          @change="commitMetaField('completionXp')"
-        />
-        <input
-          type="number"
-          min="0"
-          step="100"
-          v-model.number="formMeta.completionXp"
-          @blur="commitMetaField('completionXp')"
-        />
-      </div>
-    </label>
-    <ul v-if="campaign.completionItems.length > 0" class="campaign-editor__reward-list">
-      <li
-        v-for="item in campaign.completionItems"
-        :key="item.itemId"
-        class="campaign-editor__reward"
-      >
-        <CampaignRewardItem
-          :name="item.itemName"
-          :quantity="item.quantity"
-          :item="rewardItemsById.get(item.itemId) ?? null"
-        >
-          <template v-if="editable" #action>
-            <button
-              type="button"
-              class="campaign-editor__reward-remove"
-              aria-label="Remove reward"
-              @click="removeCompletionItem(item.itemId)"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </template>
-        </CampaignRewardItem>
-      </li>
-    </ul>
-    <p v-else class="campaign-editor__hint">
-      No rewards yet. Players who complete the campaign get nothing extra.
-    </p>
-    <button
-      v-if="editable"
-      type="button"
-      class="campaign-editor__add-reward"
-      @click="openCampaignItemPicker"
-    >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-      Add reward
-    </button>
+    <CampaignRewardsEditor
+      v-model:xp="formMeta.completionXp"
+      xp-label="Completion XP"
+      :xp-max="50000"
+      :xp-step="500"
+      :items="campaign.completionItems"
+      :editable="editable"
+      :curated="campaign.status === 'CURATED'"
+      @commit-xp="commitMetaField('completionXp')"
+      @add="openCampaignItemPicker"
+      @remove="removeCompletionItem"
+    />
   </fieldset>
 
   <fieldset v-else-if="activeTray === 'collaborators' && campaign" class="campaign-editor__section">
@@ -796,28 +663,13 @@ const connectionSwatch = computed(() => {
           :aria-label="`Remove ${c.userName}`"
           @click="removeCollaborator(c.userId)"
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <CampaignTrayIcon name="x" :size="12" />
         </button>
       </li>
     </ul>
 
-    <p v-else-if="isCreator" class="campaign-editor__hint">
-      No collaborators yet. Invite a player to build this campaign together.
-    </p>
-    <p v-else class="campaign-editor__hint">You're helping edit this campaign.</p>
+    <p v-else-if="isCreator" class="campaign-editor__hint">No collaborators</p>
+    <p v-else class="campaign-editor__hint">You are a collaborator.</p>
 
     <button
       v-if="isCreator && canInviteMore"
@@ -825,24 +677,11 @@ const connectionSwatch = computed(() => {
       class="campaign-editor__add-reward"
       @click="openCollaboratorPicker"
     >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
+      <CampaignTrayIcon name="plus" :size="12" />
       Invite collaborator
     </button>
     <p v-else-if="isCreator" class="campaign-editor__hint">
-      Collaborator limit of {{ collaboratorLimit }} reached.
+      Limit of {{ collaboratorLimit }} reached.
     </p>
 
     <BaseButton
@@ -888,12 +727,7 @@ const connectionSwatch = computed(() => {
     :disabled="!editable"
   >
     <div v-if="isMultiTarget" class="campaign-editor__field">
-      <span>
-        Clears when
-        <CampaignFieldHint
-          text="All of: every objective must be met by one score. Any of: meeting a single objective clears the node."
-        />
-      </span>
+      <span>Clears when</span>
       <div
         class="campaign-editor__prereq-mode-toggle"
         role="radiogroup"
@@ -948,26 +782,12 @@ const connectionSwatch = computed(() => {
       class="campaign-editor__add-reward"
       @click="addTarget"
     >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
+      <CampaignTrayIcon name="plus" :size="12" />
       Add objective
     </button>
 
     <p v-if="selectedNodeApRankBlocked" class="campaign-editor__hint">
-      This map isn't ranked (imported campaign map, or still in the ranking queue). AP and
-      leaderboard-rank requirements are unavailable.
+      Unranked map. AP and rank goals are unavailable.
     </p>
     <CampaignEditorNote v-if="beatLeaderOnlyNote">
       {{ beatLeaderOnlyNote }}
@@ -976,9 +796,7 @@ const connectionSwatch = computed(() => {
     <div class="campaign-editor__field">
       <span>
         Modifiers <small>(optional)</small>
-        <CampaignFieldHint
-          text="Click to cycle unset, required, forbidden. A score only counts here if it used every required modifier and none of the forbidden ones. Anything unlisted is free."
-        />
+        <CampaignFieldHint text="Click to cycle required, forbidden, unset." />
       </span>
       <div class="campaign-editor__tag-chips">
         <button
@@ -1011,16 +829,11 @@ const connectionSwatch = computed(() => {
           v-if="selectedDifficulty.beatsaverCode"
           size="sm"
           :loading="actionPending"
-          title="Re-fetches the latest BeatSaver upload for this same map and repoints to its newest leaderboard IDs. Only this campaign's node changes."
           @click="refreshNodeVersion"
         >
           Refresh version
         </BaseButton>
-        <BaseButton
-          size="sm"
-          title="Pick a different map or version by hand. Only this campaign's node changes."
-          @click="openRepoint(selectedDifficulty.id)"
-        >
+        <BaseButton size="sm" @click="openRepoint(selectedDifficulty.id)">
           Change map / version
         </BaseButton>
       </div>
@@ -1044,15 +857,11 @@ const connectionSwatch = computed(() => {
       </template>
     </CampaignEditorToggle>
 
-    <p class="campaign-editor__hint">
-      A player only finishes here after clearing a full path of connections into this node.
-    </p>
     <p v-if="otherEndings > 0" class="campaign-editor__hint">
-      {{ otherEndings === 1 ? 'One other node' : `${otherEndings} other nodes` }} also
-      {{ otherEndings === 1 ? 'ends' : 'end' }} the campaign. Clearing any one of them is enough.
+      {{ otherEndings === 1 ? 'One other ending' : `${otherEndings} other endings` }}
     </p>
     <CampaignEditorNote v-if="lockedLastTerminal">
-      This is the only ending on a live campaign. Flag another node before turning this one off.
+      Only ending on a live campaign. Flag another first.
     </CampaignEditorNote>
   </fieldset>
 
@@ -1066,7 +875,6 @@ const connectionSwatch = computed(() => {
       label="Milestone"
       on-text="Shows as a landmark on the map"
       off-text="Plain node"
-      hint="Rewards pay only when a cleared prerequisite path exists."
       @update:model-value="setMilestone"
     >
       <template #glyph>
@@ -1102,24 +910,13 @@ const connectionSwatch = computed(() => {
         />
       </div>
       <div class="campaign-editor__field-row">
-        <label class="campaign-editor__field">
-          <span>Band color</span>
-          <div class="campaign-editor__color-row">
-            <input
-              type="color"
-              :value="formNode.checkpointColor || defaultColorHex"
-              @input="formNode.checkpointColor = ($event.target as HTMLInputElement).value"
-              @change="commitNodeField('checkpointColor')"
-            />
-            <button
-              type="button"
-              class="campaign-editor__inline-btn"
-              @click="resetNodeColor('checkpointColor')"
-            >
-              Auto
-            </button>
-          </div>
-        </label>
+        <CampaignColorField
+          v-model="formNode.checkpointColor"
+          label="Band color"
+          :fallback="defaultColorHex"
+          @commit="commitNodeField('checkpointColor')"
+          @reset="resetNodeColor('checkpointColor')"
+        />
         <label class="campaign-editor__field">
           <span>Band size: {{ resolveSize(formNode.checkpointSize, 30) }}px</span>
           <input
@@ -1178,24 +975,13 @@ const connectionSwatch = computed(() => {
         @change="commitNodeField('size')"
       />
     </div>
-    <label class="campaign-editor__field">
-      <span>Border color</span>
-      <div class="campaign-editor__color-row">
-        <input
-          type="color"
-          :value="formNode.borderColor || defaultColorHex"
-          @input="formNode.borderColor = ($event.target as HTMLInputElement).value"
-          @change="commitNodeField('borderColor')"
-        />
-        <button
-          type="button"
-          class="campaign-editor__inline-btn"
-          @click="resetNodeColor('borderColor')"
-        >
-          Auto
-        </button>
-      </div>
-    </label>
+    <CampaignColorField
+      v-model="formNode.borderColor"
+      label="Border color"
+      :fallback="defaultColorHex"
+      @commit="commitNodeField('borderColor')"
+      @reset="resetNodeColor('borderColor')"
+    />
     <div class="campaign-editor__avatar-upload">
       <ImageUploader
         label="Border art"
@@ -1208,12 +994,7 @@ const connectionSwatch = computed(() => {
       />
     </div>
     <div v-if="selectedDifficulty?.nodeBorderUrl" class="campaign-editor__field">
-      <span>
-        Border layer
-        <CampaignFieldHint
-          text="Over frames the node and its own transparency decides how much cover shows through. Behind turns it into a backplate that spills past the node edge."
-        />
-      </span>
+      <span>Border layer</span>
       <div class="campaign-editor__prereq-mode-toggle" role="radiogroup" aria-label="Border layer">
         <button
           type="button"
@@ -1248,9 +1029,7 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <p class="campaign-editor__hint">
-      {{ selectedCount }} nodes selected. Changes apply to all of them.
-    </p>
+    <p class="campaign-editor__hint">{{ selectedCount }} selected</p>
     <div class="campaign-editor__field">
       <span>Node size</span>
       <div class="campaign-editor__shape-row">
@@ -1329,94 +1108,20 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <CampaignEditorNote v-if="campaign && campaign.status !== 'CURATED'">
-      Rewards are only handed out once the campaign is curated.
-    </CampaignEditorNote>
-    <label class="campaign-editor__field">
-      <span>XP on clear</span>
-      <div class="campaign-editor__slider-row">
-        <input
-          type="range"
-          min="0"
-          max="5000"
-          step="50"
-          v-model.number="formNode.xp"
-          @change="commitNodeField('xp')"
-        />
-        <input
-          type="number"
-          min="0"
-          step="10"
-          v-model.number="formNode.xp"
-          @blur="commitNodeField('xp')"
-        />
-      </div>
-    </label>
-    <ul v-if="selectedDifficulty.items.length > 0" class="campaign-editor__reward-list">
-      <li
-        v-for="item in selectedDifficulty.items"
-        :key="item.itemId"
-        class="campaign-editor__reward"
-      >
-        <CampaignRewardItem
-          :name="item.itemName"
-          :quantity="item.quantity"
-          :item="rewardItemsById.get(item.itemId) ?? null"
-        >
-          <template v-if="editable" #action>
-            <button
-              type="button"
-              class="campaign-editor__reward-remove"
-              aria-label="Remove reward"
-              @click="removeNodeItem(item.itemId)"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </template>
-        </CampaignRewardItem>
-      </li>
-    </ul>
-    <p v-else class="campaign-editor__hint">
-      Players who clear this node only get the XP. Add items to make it sweeter.
-    </p>
-    <button
-      v-if="editable && canAddNodeReward"
-      type="button"
-      class="campaign-editor__add-reward"
-      @click="openNodeItemPicker"
-    >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-      Add reward
-    </button>
-    <p v-else-if="editable" class="campaign-editor__hint">
-      Limit of {{ nodeRewardLimit }} item rewards per node reached.
-    </p>
+    <CampaignRewardsEditor
+      v-model:xp="formNode.xp"
+      xp-label="XP on clear"
+      :xp-max="5000"
+      :xp-step="50"
+      :items="selectedDifficulty.items"
+      :editable="editable"
+      :curated="campaign?.status === 'CURATED'"
+      :can-add="canAddNodeReward"
+      :limit-text="`Limit of ${nodeRewardLimit} reached.`"
+      @commit-xp="commitNodeField('xp')"
+      @add="openNodeItemPicker"
+      @remove="removeNodeItem"
+    />
   </fieldset>
 
   <fieldset
@@ -1433,8 +1138,7 @@ const connectionSwatch = computed(() => {
       />
     </div>
     <p v-if="barrierAffectsApRankBlocked" class="campaign-editor__hint">
-      This gate affects a map that isn't ranked (campaign import or ranking queue), so AP and rank
-      based conditions are unavailable.
+      An affected map is unranked. AP and rank conditions are unavailable.
     </p>
     <div
       v-if="!barrierMeta.noValue"
@@ -1462,10 +1166,7 @@ const connectionSwatch = computed(() => {
       v-if="barrierMeta.metric === 'count' && affectedNodeList.length <= 1"
       class="campaign-editor__hint"
     >
-      This gate only measures
-      {{ affectedNodeList.length }}
-      {{ affectedNodeList.length === 1 ? 'node' : 'nodes' }}, so the target is locked at
-      {{ affectedNodeList.length || 1 }}. Add more affected nodes (Affected tab) to raise the cap.
+      Locked at {{ affectedNodeList.length || 1 }}. Add affected nodes to raise it.
     </p>
     <label class="campaign-editor__field">
       <span>
@@ -1489,7 +1190,6 @@ const connectionSwatch = computed(() => {
       type="button"
       class="campaign-editor__pick-toggle"
       :class="{ 'campaign-editor__pick-toggle--active': affectedPickMode }"
-      title="Pick the nodes this gate measures. Separate from its connections: a gate can sit across the whole path but score only a section."
       @click="toggleAffectedPickMode"
     >
       <span class="campaign-editor__pick-dot" aria-hidden="true" />
@@ -1505,34 +1205,13 @@ const connectionSwatch = computed(() => {
           :aria-label="`Remove ${n.name}`"
           @click="toggleAffected(n.id)"
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <CampaignTrayIcon name="x" :size="12" />
         </button>
       </li>
     </ul>
-    <p v-else class="campaign-editor__hint">
-      No nodes yet. The gate can't be evaluated until it measures at least one node.
-    </p>
+    <p v-else class="campaign-editor__hint">No affected nodes</p>
     <div class="campaign-editor__field">
-      <span>
-        Opens when
-        <CampaignFieldHint
-          v-if="barrierMeta.metric === 'count'"
-          text="This gates the connections feeding the gate, not the affected nodes above: a map-count gate always counts completions rather than aggregating a metric."
-        />
-      </span>
+      <span>Opens when</span>
       <div
         class="campaign-editor__prereq-mode-toggle"
         role="radiogroup"
@@ -1583,20 +1262,13 @@ const connectionSwatch = computed(() => {
         @change="commitBarrierField('size')"
       />
     </div>
-    <label class="campaign-editor__field">
-      <span>Gate color</span>
-      <div class="campaign-editor__color-row">
-        <input
-          type="color"
-          :value="formBarrier.borderColor || defaultBarrierColor"
-          @input="formBarrier.borderColor = ($event.target as HTMLInputElement).value"
-          @change="commitBarrierField('borderColor')"
-        />
-        <button type="button" class="campaign-editor__inline-btn" @click="resetBarrierColor">
-          Auto
-        </button>
-      </div>
-    </label>
+    <CampaignColorField
+      v-model="formBarrier.borderColor"
+      label="Gate color"
+      :fallback="defaultBarrierColor"
+      @commit="commitBarrierField('borderColor')"
+      @reset="resetBarrierColor"
+    />
     <label class="campaign-editor__field">
       <span>Label <small>(optional)</small></span>
       <input
@@ -1620,87 +1292,19 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <CampaignEditorNote v-if="campaign && campaign.status !== 'CURATED'">
-      Rewards are only handed out once the campaign is curated.
-    </CampaignEditorNote>
-    <label class="campaign-editor__field">
-      <span>XP on clear</span>
-      <div class="campaign-editor__slider-row">
-        <input
-          type="range"
-          min="0"
-          max="5000"
-          step="50"
-          v-model.number="formBarrier.xp"
-          @change="commitBarrierField('xp')"
-        />
-        <input
-          type="number"
-          min="0"
-          step="10"
-          v-model.number="formBarrier.xp"
-          @blur="commitBarrierField('xp')"
-        />
-      </div>
-    </label>
-    <ul v-if="selectedBarrier.items.length > 0" class="campaign-editor__reward-list">
-      <li v-for="item in selectedBarrier.items" :key="item.itemId" class="campaign-editor__reward">
-        <CampaignRewardItem
-          :name="item.itemName"
-          :quantity="item.quantity"
-          :item="rewardItemsById.get(item.itemId) ?? null"
-        >
-          <template v-if="editable" #action>
-            <button
-              type="button"
-              class="campaign-editor__reward-remove"
-              aria-label="Remove reward"
-              @click="removeBarrierItem(item.itemId)"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </template>
-        </CampaignRewardItem>
-      </li>
-    </ul>
-    <p v-else class="campaign-editor__hint">
-      Clearing this gate only grants the XP. Add items too.
-    </p>
-    <button
-      v-if="editable && canAddBarrierReward"
-      type="button"
-      class="campaign-editor__add-reward"
-      @click="openBarrierItemPicker"
-    >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-      Add reward
-    </button>
+    <CampaignRewardsEditor
+      v-model:xp="formBarrier.xp"
+      xp-label="XP on clear"
+      :xp-max="5000"
+      :xp-step="50"
+      :items="selectedBarrier.items"
+      :editable="editable"
+      :curated="campaign?.status === 'CURATED'"
+      :can-add="canAddBarrierReward"
+      @commit-xp="commitBarrierField('xp')"
+      @add="openBarrierItemPicker"
+      @remove="removeBarrierItem"
+    />
   </fieldset>
 
   <fieldset
@@ -1742,29 +1346,13 @@ const connectionSwatch = computed(() => {
         @change="commitTextField('scale')"
       />
     </label>
-    <label class="campaign-editor__field">
-      <span>Color</span>
-      <div class="campaign-editor__color-row">
-        <input
-          type="color"
-          :value="formText.color || defaultColorHex"
-          @input="formText.color = ($event.target as HTMLInputElement).value"
-          @change="commitTextField('color')"
-        />
-        <button
-          type="button"
-          class="campaign-editor__inline-btn"
-          @click="
-            () => {
-              formText.color = ''
-              commitTextField('color')
-            }
-          "
-        >
-          Auto
-        </button>
-      </div>
-    </label>
+    <CampaignColorField
+      v-model="formText.color"
+      label="Color"
+      :fallback="defaultColorHex"
+      @commit="commitTextField('color')"
+      @reset="resetTextColor"
+    />
     <div class="campaign-editor__field">
       <span>Effects</span>
       <div class="campaign-editor__tag-chips">
@@ -1787,41 +1375,21 @@ const connectionSwatch = computed(() => {
     class="campaign-editor__section"
     :disabled="!editable"
   >
-    <label class="campaign-editor__field">
-      <span>
-        Connection color
-        <CampaignFieldHint text="Hex or named color. Leave empty for the default arrow color." />
-      </span>
-      <div class="campaign-editor__color-row">
-        <input
-          type="color"
-          aria-label="Connection color swatch"
-          :value="connectionSwatch"
-          @input="formConnection.color = ($event.target as HTMLInputElement).value"
-          @change="commitConnectionColor"
-        />
-        <input
-          class="campaign-editor__color-text"
-          type="text"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="33"
-          placeholder="#f5b800 · gold"
-          :aria-invalid="!!connectionColorError"
-          v-model="formConnection.color"
-          @blur="commitConnectionColor"
-          @keydown.enter.prevent="commitConnectionColor"
-        />
-        <button type="button" class="campaign-editor__inline-btn" @click="resetConnectionColor">
-          Auto
-        </button>
-      </div>
-      <p v-if="connectionColorError" class="campaign-editor__field-error" role="alert">
-        {{ connectionColorError }}
-      </p>
-    </label>
+    <CampaignColorField
+      v-model="formConnection.color"
+      label="Connection color"
+      text
+      placeholder="#f5b800 · gold"
+      :maxlength="33"
+      :fallback="defaultColorHex"
+      :error="connectionColorError"
+      @commit="commitConnectionColor"
+      @reset="resetConnectionColor"
+    />
   </fieldset>
 </template>
+
+<style scoped src="./campaignEditorFields.css"></style>
 
 <style scoped>
 .campaign-editor__section {
@@ -1844,67 +1412,6 @@ const connectionSwatch = computed(() => {
   pointer-events: none;
 }
 
-.campaign-editor__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.campaign-editor__field > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.campaign-editor__field > span > small {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.campaign-editor__field--disabled {
-  opacity: 0.55;
-}
-
-.campaign-editor__field input,
-.campaign-editor__field textarea,
-.campaign-editor__field select {
-  width: 100%;
-  padding: 8px 10px;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-primary);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-  outline: none;
-  transition: border-color 120ms ease;
-}
-
-.campaign-editor__field textarea {
-  resize: vertical;
-  min-height: 60px;
-  line-height: 1.5;
-}
-
-.campaign-editor__field input:focus,
-.campaign-editor__field textarea:focus,
-.campaign-editor__field select:focus {
-  border-color: var(--page-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent) 20%, transparent);
-}
-
-.campaign-editor__field small {
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
-}
-
 .campaign-editor__field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1915,152 +1422,6 @@ const connectionSwatch = computed(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
-}
-
-.campaign-editor__slider-row {
-  display: grid;
-  grid-template-columns: 1fr 84px;
-  gap: var(--space-sm);
-  align-items: center;
-}
-
-.campaign-editor__slider-row input[type='range'] {
-  width: 100%;
-  padding: 0;
-  background: transparent;
-  border: none;
-  accent-color: var(--page-accent);
-}
-
-.campaign-editor__color-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.campaign-editor__color-row input[type='color'] {
-  width: 44px;
-  height: 32px;
-  flex-shrink: 0;
-  padding: 2px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-  background: var(--bg-base);
-  cursor: pointer;
-}
-
-.campaign-editor__color-text {
-  flex: 1;
-  min-width: 0;
-  width: auto;
-  font-family: var(--font-mono);
-}
-
-.campaign-editor__color-text[aria-invalid='true'] {
-  border-color: var(--error);
-}
-
-.campaign-editor__field-error {
-  margin: 2px 0 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--error);
-  line-height: 1.4;
-}
-
-.campaign-editor__inline-btn {
-  padding: 6px 10px;
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    border-color 120ms ease;
-}
-
-.campaign-editor__inline-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.campaign-editor__hint {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.campaign-editor__reward-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.campaign-editor__reward {
-  padding: 6px 8px;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-}
-
-.campaign-editor__reward-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 2px;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.campaign-editor__reward-remove:hover {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
-}
-
-.campaign-editor__add-reward {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    border-color 120ms ease;
-}
-
-.campaign-editor__add-reward:hover {
-  color: var(--page-accent);
-  border-color: var(--page-accent);
 }
 
 .campaign-editor__status {
@@ -2078,7 +1439,7 @@ const connectionSwatch = computed(() => {
 .campaign-editor__status-pill {
   display: inline-flex;
   padding: 4px 10px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -2233,7 +1594,7 @@ const connectionSwatch = computed(() => {
   padding: 3px 8px;
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -2264,7 +1625,7 @@ const connectionSwatch = computed(() => {
   color: var(--text-tertiary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -2340,7 +1701,7 @@ const connectionSwatch = computed(() => {
   padding: 2px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-editor__prereq-mode-btn {
@@ -2351,7 +1712,7 @@ const connectionSwatch = computed(() => {
   color: var(--text-secondary);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -2374,7 +1735,7 @@ const connectionSwatch = computed(() => {
   padding: 8px 10px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-editor__collab-owner-tag {
@@ -2421,7 +1782,7 @@ const connectionSwatch = computed(() => {
   padding: 6px 8px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-editor__collab-player {
@@ -2458,7 +1819,7 @@ const connectionSwatch = computed(() => {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -2480,7 +1841,7 @@ const connectionSwatch = computed(() => {
 .campaign-editor__pick-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: 50%;
   background: currentColor;
   opacity: 0.5;
 }
@@ -2523,7 +1884,7 @@ const connectionSwatch = computed(() => {
   padding: 5px 8px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-editor__affected-name {

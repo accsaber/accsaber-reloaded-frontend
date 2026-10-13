@@ -7,9 +7,7 @@ import {
   deletePlayerCampaignBarrier,
   deletePlayerCampaignDifficulty,
   deletePlayerCampaignText,
-  getCampaign,
   getCampaignByIdOrSlug,
-  getCampaignTags,
   importCampaignMap,
   movePlayerCampaignElements,
   updateCampaignDifficultyMap,
@@ -25,9 +23,10 @@ import { useCampaignRewards } from './useCampaignRewards'
 import { ApiError, getApiErrorMessage, parseApiError } from '@/api/client'
 import type { Crumb } from '@/components/common/Breadcrumbs.vue'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import { useItemCatalog } from '@/composables/useItemCatalog'
+import { useCampaignTags } from '@/composables/useCampaignTags'
 import { getCurve } from '@/api/curves'
 import { useAuthStore } from '@/stores/auth'
+import { useCampaignAccent } from '@/composables/useCampaignAccent'
 import { useCategoryStore } from '@/stores/categories'
 import { calculateAp, reverseApToAccuracyByComplexity } from '@/utils/curveEval'
 import { enumToBsDifficulty, fetchBeatSaverMap, fetchMapLeaderboardIndex } from '@/utils/beatsaver'
@@ -48,6 +47,7 @@ import type {
   CampaignDetailResponse,
   CampaignDifficultyResponse,
   CampaignPrerequisiteResponse,
+  CampaignResponse,
   CampaignTagResponse,
   CampaignTargetResponse,
   CampaignTextResponse,
@@ -67,10 +67,14 @@ import { useModifierStore } from '@/stores/modifiers'
 import {
   barrierConditionMeta,
   CONNECTION_COLOR_RE,
+  cssToken,
   formatScoreCompact,
   hasValidBounds,
   isMilestoneNode,
   MAX_PREREQUISITES_PER_NODE,
+  METRIC_BOUNDS,
+  METRIC_DEFAULT,
+  METRIC_DEFAULT_MAX,
   prereqIds,
   toPrerequisiteInputs,
   type BackgroundFrame,
@@ -125,11 +129,11 @@ export function useCampaignEditor() {
   const router = useRouter()
   const auth = useAuthStore()
   const categoryStore = useCategoryStore()
+  const { campaignAccent } = useCampaignAccent()
   const modifierStore = useModifierStore()
-  const { itemsById: rewardItemsById, ensureLoaded: ensureRewardItems } = useItemCatalog()
+  const { tags: allTags, load: loadTags } = useCampaignTags()
 
   const campaign = ref<CampaignDetailResponse | null>(null)
-  const allTags = ref<CampaignTagResponse[]>([])
   const loading = ref(true)
   const error = ref<string | null>(null)
   const actionPending = ref(false)
@@ -337,11 +341,9 @@ export function useCampaignEditor() {
         !auth.isLoggedIn && isCurator.value
           ? await createCampaign(req)
           : await createPlayerCampaign(req)
-      const detail = await getCampaign(created.id)
+      const detail: CampaignDetailResponse = { ...createPlaceholderCampaign(), ...created }
       campaign.value = detail
-      if (allTags.value.length === 0) {
-        allTags.value = await getCampaignTags()
-      }
+      void loadTags()
       suppressNextCampaignIdWatch = true
       await router.replace({
         name: 'campaign-editor',
@@ -360,13 +362,9 @@ export function useCampaignEditor() {
     requirementDirtyIds.value = new Set()
     editedLiveCampaign.value = false
     try {
-      const c = await getCampaignByIdOrSlug(campaignId.value)
+      const [c] = await Promise.all([getCampaignByIdOrSlug(campaignId.value), loadTags()])
       campaign.value = c
-      void ensureRewardItems()
       void loadCollaborators()
-      if (allTags.value.length === 0) {
-        allTags.value = await getCampaignTags()
-      }
       if (selectedIds.value.size === 0) {
         const restored = restoreSelection(c)
         if (restored.length > 0) setSelection(restored)
@@ -379,6 +377,13 @@ export function useCampaignEditor() {
     } finally {
       if (!silent) loading.value = false
     }
+  }
+
+  function applyCampaignResponse(res: CampaignResponse) {
+    if (!campaign.value) return
+    requirementDirtyIds.value = new Set()
+    editedLiveCampaign.value = false
+    campaign.value = { ...campaign.value, ...res }
   }
 
   let changeBroadcaster: (() => void) | null = null
@@ -416,10 +421,6 @@ export function useCampaignEditor() {
     }, 400)
   }
 
-  watch(campaign, () => {
-    scheduleBroadcast()
-  })
-
   onBeforeUnmount(() => {
     if (broadcastTimer) clearTimeout(broadcastTimer)
   })
@@ -428,11 +429,7 @@ export function useCampaignEditor() {
     void modifierStore.fetchModifiers()
     if (isNewMode.value) {
       campaign.value = createPlaceholderCampaign()
-      void getCampaignTags()
-        .then((t) => {
-          if (allTags.value.length === 0) allTags.value = t
-        })
-        .catch(() => {})
+      void loadTags()
       loading.value = false
       return
     }
@@ -512,35 +509,15 @@ export function useCampaignEditor() {
 
   const editingLiveCampaign = computed(() => editable.value && campaign.value?.status === 'CURATED')
 
-  const accent = computed(() => {
-    const cats = campaign.value?.tags.filter((t) => t.kind === 'CATEGORY') ?? []
-    if (cats.length !== 1 || !cats[0].categoryId) return 'var(--accent-overall)'
-    const code = categoryStore.getCategoryCode(cats[0].categoryId)
-    if (!code) return 'var(--accent-overall)'
-    return categoryStore.getCategoryInfo(code)?.accent ?? 'var(--accent-overall)'
-  })
+  const accent = computed(() => campaignAccent(campaign.value?.tags))
 
-  const nodeAccents = computed(() => {
-    const map = new Map<string, string>()
-    for (const d of campaign.value?.difficulties ?? []) {
-      const custom = d.checkpointColor || d.borderColor
-      if (custom) {
-        map.set(d.id, custom)
-        continue
-      }
-      if (!d.categoryId) continue
-      const code = categoryStore.getCategoryCode(d.categoryId)
-      if (!code) continue
-      const a = categoryStore.getCategoryInfo(code)?.accent
-      if (a) map.set(d.id, a)
-    }
-    return map
-  })
+  const difficultyById = computed(
+    () => new Map((campaign.value?.difficulties ?? []).map((d) => [d.id, d])),
+  )
 
-  const selectedDifficulty = computed<CampaignDifficultyResponse | null>(() => {
-    if (!selectedId.value) return null
-    return campaign.value?.difficulties.find((d) => d.id === selectedId.value) ?? null
-  })
+  const selectedDifficulty = computed<CampaignDifficultyResponse | null>(() =>
+    selectedId.value ? (difficultyById.value.get(selectedId.value) ?? null) : null,
+  )
 
   const barrierById = computed(() => {
     const map = new Map<string, CampaignBarrierResponse>()
@@ -609,10 +586,6 @@ export function useCampaignEditor() {
     },
     { immediate: true },
   )
-
-  watch(campaign, () => {
-    if (selectedEdge.value && !selectedEdgePrereq.value) selectedEdge.value = null
-  })
 
   function handleEdgeSelect(payload: { fromId: string; toId: string }) {
     if (!editable.value) return
@@ -684,23 +657,23 @@ export function useCampaignEditor() {
   }
 
   const statusMeaning: Record<string, string> = {
-    DRAFT: 'Hidden from the queue; players cannot start. Fully editable.',
-    PUBLISHED: 'Visible to players but no XP / items pay out. Waiting on curation.',
-    EDITING: 'Reopened for changes. Player progress is preserved while you edit.',
-    CURATED: 'Live with payouts. Curator edits apply immediately.',
+    DRAFT: 'Hidden. Players cannot start it.',
+    PUBLISHED: 'Playable. No XP or items until curated.',
+    EDITING: 'Reopened for changes. Progress is kept.',
+    CURATED: 'Live with rewards. Edits apply right away.',
   }
 
   const creatorStatusMeaning = computed<string | null>(() => {
     if (!campaign.value) return null
     switch (campaign.value.status) {
       case 'DRAFT':
-        return 'Draft, only you can see it. Publish to make it playable.'
+        return 'Only you can see it.'
       case 'PUBLISHED':
-        return 'Live and playable, and in front of the curators. Unpublish to make changes, then publish again.'
+        return 'Playable and waiting on curators. Unpublish to edit.'
       case 'EDITING':
-        return 'A curator has this open for review. Unpublish to take it back to a draft you can edit.'
+        return 'A curator is reviewing it. Unpublish to edit.'
       case 'CURATED':
-        return 'Curated and locked. Contact a curator if it needs changes.'
+        return 'Curated and locked. Ask a curator for changes.'
       default:
         return null
     }
@@ -737,13 +710,20 @@ export function useCampaignEditor() {
     }
   }
 
-  watch(campaign, syncFormFromCampaign, { immediate: true })
+  watch(
+    campaign,
+    () => {
+      syncFormFromCampaign()
+      if (selectedEdge.value && !selectedEdgePrereq.value) selectedEdge.value = null
+      scheduleBroadcast()
+    },
+    { immediate: true },
+  )
 
   const formNode = ref<{
     description: string
     checkpointLabel: string
     checkpointLabelPosition: string
-    checkpointAvatarUrl: string
     checkpointColor: string
     checkpointSize: number | null
     nodeBorderLayer: CampaignNodeBorderLayer
@@ -755,7 +735,6 @@ export function useCampaignEditor() {
     description: '',
     checkpointLabel: '',
     checkpointLabelPosition: '',
-    checkpointAvatarUrl: '',
     checkpointColor: '',
     checkpointSize: null,
     nodeBorderLayer: 'ABOVE',
@@ -772,7 +751,6 @@ export function useCampaignEditor() {
       description: d.description ?? '',
       checkpointLabel: d.checkpointLabel ?? '',
       checkpointLabelPosition: d.checkpointLabelPosition ?? '',
-      checkpointAvatarUrl: d.checkpointAvatarUrl ?? '',
       checkpointColor: d.checkpointColor ?? '',
       checkpointSize: d.checkpointSize,
       nodeBorderLayer: d.nodeBorderLayer,
@@ -828,9 +806,6 @@ export function useCampaignEditor() {
     description: string
     checkpointLabel: string
     checkpointLabelPosition: string
-    checkpointAvatarUrl: string
-    checkpointColor: string
-    checkpointSize: number | null
     borderColor: string
     size: number | null
     xp: number
@@ -841,9 +816,6 @@ export function useCampaignEditor() {
     description: '',
     checkpointLabel: '',
     checkpointLabelPosition: '',
-    checkpointAvatarUrl: '',
-    checkpointColor: '',
-    checkpointSize: null,
     borderColor: '',
     size: null,
     xp: 0,
@@ -859,9 +831,6 @@ export function useCampaignEditor() {
       description: b.description ?? '',
       checkpointLabel: b.checkpointLabel ?? '',
       checkpointLabelPosition: b.checkpointLabelPosition ?? '',
-      checkpointAvatarUrl: b.checkpointAvatarUrl ?? '',
-      checkpointColor: b.checkpointColor ?? '',
-      checkpointSize: b.checkpointSize,
       borderColor: b.borderColor ?? '',
       size: b.size,
       xp: b.xp ?? 0,
@@ -967,48 +936,51 @@ export function useCampaignEditor() {
     try {
       actionError.value = null
       const updated = await updatePlayerCampaignBarrier(id, patch)
-      if (campaign.value) {
-        campaign.value = {
-          ...campaign.value,
-          barriers: campaign.value.barriers.map((b) => (b.id === id ? updated : b)),
-        }
-      }
+      replaceRow('barriers', id, () => updated)
     } catch (err) {
       actionError.value = getApiErrorMessage(err, 'Failed to update barrier')
     }
   }
 
-  function vertexPosition(id: string): { x: number; y: number } | null {
-    const b = barrierById.value.get(id)
-    if (b) return { x: b.positionX, y: b.positionY }
-    const t = textById.value.get(id)
-    if (t) return { x: t.positionX, y: t.positionY }
-    const d = campaign.value?.difficulties.find((x) => x.id === id)
-    return d ? { x: d.positionX, y: d.positionY } : null
+  type RowKey = 'difficulties' | 'barriers' | 'texts'
+
+  function replaceRow<K extends RowKey>(
+    key: K,
+    id: string,
+    fn: (row: CampaignDetailResponse[K][number]) => CampaignDetailResponse[K][number],
+  ) {
+    if (!campaign.value) return
+    const rows = campaign.value[key] as CampaignDetailResponse[K][number][]
+    campaign.value = { ...campaign.value, [key]: rows.map((r) => (r.id === id ? fn(r) : r)) }
   }
 
-  function setVertexPositionLocal(id: string, positionX: number, positionY: number) {
+  function vertexPosition(id: string): { x: number; y: number } | null {
+    const v = barrierById.value.get(id) ?? textById.value.get(id) ?? difficultyById.value.get(id)
+    return v ? { x: v.positionX, y: v.positionY } : null
+  }
+
+  function setVertexPositionsLocal(positions: Map<string, { x: number; y: number }>) {
     if (!campaign.value) return
-    if (isBarrierId(id)) {
-      campaign.value = {
-        ...campaign.value,
-        barriers: campaign.value.barriers.map((b) =>
-          b.id === id ? { ...b, positionX, positionY } : b,
-        ),
-      }
-    } else if (isTextId(id)) {
-      campaign.value = {
-        ...campaign.value,
-        texts: campaign.value.texts.map((t) => (t.id === id ? { ...t, positionX, positionY } : t)),
-      }
-    } else {
-      campaign.value = {
-        ...campaign.value,
-        difficulties: campaign.value.difficulties.map((d) =>
-          d.id === id ? { ...d, positionX, positionY } : d,
-        ),
-      }
+    const place = <T extends { id: string; positionX: number; positionY: number }>(rows: T[]) => {
+      let hit = false
+      const next = rows.map((r) => {
+        const p = positions.get(r.id)
+        if (!p) return r
+        hit = true
+        return { ...r, positionX: p.x, positionY: p.y }
+      })
+      return hit ? next : rows
     }
+    campaign.value = {
+      ...campaign.value,
+      difficulties: place(campaign.value.difficulties),
+      barriers: place(campaign.value.barriers),
+      texts: place(campaign.value.texts),
+    }
+  }
+
+  function setVertexPositionLocal(id: string, x: number, y: number) {
+    setVertexPositionsLocal(new Map([[id, { x, y }]]))
   }
 
   function patchVertexPosition(id: string, positionX: number, positionY: number) {
@@ -1023,14 +995,31 @@ export function useCampaignEditor() {
 
   const CLEARABLE_META_TEXT_FIELDS = new Set<string>(['backgroundColor'])
 
+  const CLEARABLE_TEXT_FIELDS = new Set<string>([
+    'description',
+    'checkpointLabel',
+    'checkpointAvatarUrl',
+    'checkpointColor',
+    'borderColor',
+  ])
+
+  function fieldPatch(
+    form: object,
+    original: object,
+    field: string,
+    clearable: Set<string> | null,
+  ): Record<string, unknown> | null {
+    const value = (form as Record<string, unknown>)[field]
+    const prev = (original as Record<string, unknown>)[field]
+    if (value === prev) return null
+    if (typeof value === 'string' && prev == null && value === '') return null
+    return { [field]: value === '' && clearable && !clearable.has(field) ? null : value }
+  }
+
   function commitMetaField(field: keyof UpdateCampaignRequest) {
     if (!editable.value || !campaign.value) return
-    const value = formMeta.value[field as keyof typeof formMeta.value]
-    const original = (campaign.value as unknown as Record<string, unknown>)[field]
-    if (value === original) return
-    if (typeof value === 'string' && original == null && value === '') return
-    const send = value === '' && !CLEARABLE_META_TEXT_FIELDS.has(field) ? null : value
-    void applyCampaignPatch({ [field]: send } as UpdateCampaignRequest)
+    const patch = fieldPatch(formMeta.value, campaign.value, field, CLEARABLE_META_TEXT_FIELDS)
+    if (patch) void applyCampaignPatch(patch as UpdateCampaignRequest)
   }
 
   type MetaFlagField = 'progressionAgnostic' | 'playlistExportEnabled'
@@ -1050,31 +1039,15 @@ export function useCampaignEditor() {
     commitMetaField('backgroundColor')
   }
 
-  const CLEARABLE_TEXT_FIELDS = new Set<string>([
-    'description',
-    'checkpointLabel',
-    'checkpointAvatarUrl',
-    'checkpointColor',
-    'borderColor',
-  ])
-
   function commitNodeField(field: keyof UpdateCampaignDifficultyRequest) {
     const d = selectedDifficulty.value
     if (!editable.value || !d) return
-    const value = formNode.value[field as keyof typeof formNode.value]
-    const original = (d as unknown as Record<string, unknown>)[field]
-    if (value === original) return
-    if (typeof value === 'string' && original == null && value === '') return
-    const send = value === '' && !CLEARABLE_TEXT_FIELDS.has(field) ? null : value
-    void applyNodePatch(d.id, { [field]: send } as UpdateCampaignDifficultyRequest)
+    const patch = fieldPatch(formNode.value, d, field, CLEARABLE_TEXT_FIELDS)
+    if (patch) void applyNodePatch(d.id, patch as UpdateCampaignDifficultyRequest)
   }
 
   function mergeDifficulty(updated: CampaignDifficultyResponse) {
-    if (!campaign.value) return
-    campaign.value = {
-      ...campaign.value,
-      difficulties: campaign.value.difficulties.map((x) => (x.id === updated.id ? updated : x)),
-    }
+    replaceRow('difficulties', updated.id, () => updated)
   }
 
   async function uploadCheckpointAvatar(file: File) {
@@ -1146,14 +1119,15 @@ export function useCampaignEditor() {
     actionPending,
     actionError,
     load,
+    apply: applyCampaignResponse,
     editedLiveCampaign,
-    requirementDirtyIds,
     publishBlockers,
+    requirementDirtyIds,
   })
 
   const { uploadBackground, removeBackground, uploadIcon, removeIcon } = useCampaignAssets({
     campaign,
-    load,
+    apply: applyCampaignResponse,
   })
 
   function wouldCreateCycle(fromId: string, toId: string): boolean {
@@ -1185,15 +1159,12 @@ export function useCampaignEditor() {
   function nodeLabel(id: string): string {
     const b = barrierById.value.get(id)
     if (b) return b.checkpointLabel || 'gate'
-    const d = campaign.value?.difficulties.find((x) => x.id === id)
-    return d?.songName || 'node'
+    return difficultyById.value.get(id)?.songName || 'node'
   }
 
   function vertexPrereqs(id: string): CampaignPrerequisiteResponse[] | null {
-    const b = barrierById.value.get(id)
-    if (b) return b.prerequisites ?? []
-    const d = campaign.value?.difficulties.find((x) => x.id === id)
-    return d ? (d.prerequisites ?? []) : null
+    const v = barrierById.value.get(id) ?? difficultyById.value.get(id)
+    return v ? (v.prerequisites ?? []) : null
   }
 
   function setPrereqMode(mode: 'AND' | 'OR') {
@@ -1232,22 +1203,10 @@ export function useCampaignEditor() {
   }
 
   function setPrereqsLocal(toId: string, entries: CampaignPrerequisiteResponse[]) {
-    if (!campaign.value) return
-    if (isBarrierId(toId)) {
-      campaign.value = {
-        ...campaign.value,
-        barriers: campaign.value.barriers.map((b) =>
-          b.id === toId ? { ...b, prerequisites: entries } : b,
-        ),
-      }
-    } else {
-      campaign.value = {
-        ...campaign.value,
-        difficulties: campaign.value.difficulties.map((d) =>
-          d.id === toId ? { ...d, prerequisites: entries } : d,
-        ),
-      }
-    }
+    replaceRow(isBarrierId(toId) ? 'barriers' : 'difficulties', toId, (r) => ({
+      ...r,
+      prerequisites: entries,
+    }))
   }
 
   async function persistPrereqs(
@@ -1263,20 +1222,9 @@ export function useCampaignEditor() {
       const payload = { prerequisites: toPrerequisiteInputs(next) }
       if (barrier) {
         const updated = await updatePlayerCampaignBarrier(toId, payload)
-        if (campaign.value) {
-          campaign.value = {
-            ...campaign.value,
-            barriers: campaign.value.barriers.map((b) => (b.id === toId ? updated : b)),
-          }
-        }
+        replaceRow('barriers', toId, () => updated)
       } else {
-        const updated = await updatePlayerCampaignDifficulty(toId, payload)
-        if (campaign.value) {
-          campaign.value = {
-            ...campaign.value,
-            difficulties: campaign.value.difficulties.map((d) => (d.id === toId ? updated : d)),
-          }
-        }
+        mergeDifficulty(await updatePlayerCampaignDifficulty(toId, payload))
       }
     } catch (err) {
       actionError.value = getApiErrorMessage(err, 'Failed to update prerequisites')
@@ -1353,25 +1301,25 @@ export function useCampaignEditor() {
     showMapPicker.value = true
   }
 
-  function allocateCells(count: number): Array<{ x: number; y: number }> {
-    const occupied = new Set<string>()
-    const diffs = campaign.value?.difficulties ?? []
-    const barrs = campaign.value?.barriers ?? []
-    const txts = campaign.value?.texts ?? []
-    let baseY = 0
+  function occupancy(includeTexts: boolean) {
+    const c = campaign.value
+    const rows = [
+      ...(c?.difficulties ?? []),
+      ...(c?.barriers ?? []),
+      ...(includeTexts ? (c?.texts ?? []) : []),
+    ]
+    const cells = new Set<string>()
     let maxY = -Infinity
-    for (const d of diffs) {
-      occupied.add(`${d.positionX},${d.positionY}`)
-      if (d.positionY > maxY) maxY = d.positionY
+    for (const r of rows) {
+      cells.add(`${r.positionX},${r.positionY}`)
+      if (r.positionY > maxY) maxY = r.positionY
     }
-    for (const b of barrs) {
-      occupied.add(`${b.positionX},${b.positionY}`)
-      if (b.positionY > maxY) maxY = b.positionY
-    }
-    for (const t of txts) {
-      occupied.add(`${t.positionX},${t.positionY}`)
-      if (t.positionY > maxY) maxY = t.positionY
-    }
+    return { cells, maxY }
+  }
+
+  function allocateCells(count: number): Array<{ x: number; y: number }> {
+    const { cells: occupied, maxY } = occupancy(true)
+    let baseY = 0
 
     const cells: Array<{ x: number; y: number }> = []
     const claim = (x: number, y: number) => {
@@ -1419,21 +1367,33 @@ export function useCampaignEditor() {
         c = await ensureCampaign()
         if (!c) return []
       }
+      const campaignUuid = c.id
       const cells = allocateCells(mapDifficultyIds.length)
-      const createdIds: string[] = []
-      for (let i = 0; i < mapDifficultyIds.length; i++) {
-        const cell = cells[i] ?? { x: i, y: 0 }
-        const req: AddCampaignDifficultyRequest = {
-          mapDifficultyId: mapDifficultyIds[i],
-          requirementType: 'ACC',
-          requirementValue: 0.95,
-          positionX: cell.x,
-          positionY: cell.y,
-          xp: 0,
+      const results = await Promise.allSettled(
+        mapDifficultyIds.map((mapDifficultyId, i) => {
+          const cell = cells[i] ?? { x: i, y: 0 }
+          const req: AddCampaignDifficultyRequest = {
+            mapDifficultyId,
+            requirementType: 'ACC',
+            requirementValue: 0.95,
+            positionX: cell.x,
+            positionY: cell.y,
+            xp: 0,
+          }
+          return addPlayerCampaignDifficulty(campaignUuid, req)
+        }),
+      )
+      const created = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+      if (created.length > 0 && campaign.value) {
+        campaign.value = {
+          ...campaign.value,
+          difficulties: [...campaign.value.difficulties, ...created],
+          difficultyCount: campaign.value.difficultyCount + created.length,
         }
-        const created = await addPlayerCampaignDifficulty(c.id, req)
-        createdIds.push(created.id)
       }
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (failed) throw failed.reason
+      const createdIds = created.map((d) => d.id)
       if (!opts.keepOpen) {
         if (createdIds.length === 1) {
           selectOnly(createdIds[0])
@@ -1444,7 +1404,6 @@ export function useCampaignEditor() {
         }
         showMapPicker.value = false
       }
-      await load(true)
       return createdIds
     } catch (err) {
       actionError.value = getApiErrorMessage(err, 'Failed to add nodes')
@@ -1484,8 +1443,7 @@ export function useCampaignEditor() {
     actionPending.value = true
     actionError.value = null
     try {
-      await updateCampaignDifficultyMap(nodeId, ids)
-      await load(true)
+      mergeDifficulty(await updateCampaignDifficultyMap(nodeId, ids))
       closeRepoint()
       return { attached: false }
     } finally {
@@ -1553,8 +1511,7 @@ export function useCampaignEditor() {
         blLeaderboardId: bl,
         ssLeaderboardId: ss ?? undefined,
       }
-      await updateCampaignDifficultyMap(d.id, ids)
-      await load(true)
+      mergeDifficulty(await updateCampaignDifficultyMap(d.id, ids))
     } catch (err) {
       actionError.value = getApiErrorMessage(err, 'Failed to refresh version')
     } finally {
@@ -1614,7 +1571,7 @@ export function useCampaignEditor() {
       return prev && (prev.x !== p.positionX || prev.y !== p.positionY)
     })
     if (moves.length === 0) return
-    for (const m of moves) setVertexPositionLocal(m.id, m.positionX, m.positionY)
+    setVertexPositionsLocal(new Map(moves.map((m) => [m.id, { x: m.positionX, y: m.positionY }])))
     const persisted = moves.filter((m) => !isPendingText(m.id))
     if (persisted.length === 0) return
     try {
@@ -1622,10 +1579,7 @@ export function useCampaignEditor() {
       await movePlayerCampaignElements(campaign.value.id, persisted)
     } catch (err) {
       reportMoveError(err, 'Failed to move nodes')
-      for (const m of moves) {
-        const prev = prevById.get(m.id)
-        if (prev) setVertexPositionLocal(m.id, prev.x, prev.y)
-      }
+      setVertexPositionsLocal(prevById)
     }
   }
 
@@ -1643,8 +1597,7 @@ export function useCampaignEditor() {
     if (isTextId(id)) return 'text'
     if (current && NODE_TRAY_IDS.includes(current)) {
       if (current !== 'unlock') return current
-      const d = campaign.value?.difficulties.find((x) => x.id === id)
-      if ((d?.prerequisites ?? []).length >= 2) return current
+      if ((difficultyById.value.get(id)?.prerequisites ?? []).length >= 2) return current
     }
     return 'requirement'
   }
@@ -1736,28 +1689,11 @@ export function useCampaignEditor() {
   }
 
   function requirementBoundsFor(metric: RequirementMetric) {
-    switch (metric) {
-      case 'acc':
-        return { min: 70, max: 100, step: 0.1, unit: '%' }
-      case 'ap':
-        return { min: 400, max: 1200, step: 1, unit: 'AP' }
-      case 'streak':
-        return { min: 0, max: 30, step: 1, unit: '' }
-      case 'rank':
-        return { min: 1, max: 500, step: 1, unit: 'rank' }
-      case 'combo':
-        return { min: 0, max: comboCap.value, step: 1, unit: 'combo' }
-      case 'bombs':
-        return { min: 0, max: 20, step: 1, unit: 'bombs' }
-      case 'mistakes':
-        return { min: 0, max: 20, step: 1, unit: '' }
-      case 'pauses':
-        return { min: 0, max: 10, step: 1, unit: '' }
-      case 'flag':
-        return { min: 1, max: 1, step: 1, unit: '' }
-      default:
-        return { min: 0, max: scoreCap.value, step: 1000, unit: '' }
-    }
+    if (metric === 'flag') return { min: 1, max: 1, step: 1, unit: '' }
+    if (metric === 'score') return { min: 0, max: scoreCap.value, step: 1000, unit: '' }
+    if (metric === 'ap') return { ...METRIC_BOUNDS.ap, min: 400 }
+    if (metric === 'combo') return { ...METRIC_BOUNDS.combo, max: comboCap.value }
+    return METRIC_BOUNDS[metric]
   }
 
   function requirementNumberBoundsFor(
@@ -1773,26 +1709,11 @@ export function useCampaignEditor() {
   }
 
   function defaultRequirementValue(metric: RequirementMetric): number {
-    switch (metric) {
-      case 'acc':
-        return 0.95
-      case 'ap':
-        return 500
-      case 'streak':
-        return 8
-      case 'rank':
-        return 50
-      case 'combo':
-        return Math.round(comboCap.value * 0.8)
-      case 'bombs':
-      case 'mistakes':
-      case 'pauses':
-        return 0
-      case 'flag':
-        return 1
-      default:
-        return Math.round(scoreCap.value * 0.9)
-    }
+    if (metric === 'acc') return 0.95
+    if (metric === 'combo') return Math.round(comboCap.value * 0.8)
+    if (metric === 'flag') return 1
+    if (metric === 'score') return Math.round(scoreCap.value * 0.9)
+    return METRIC_DEFAULT[metric]
   }
 
   function toDisplayValue(metric: string, raw: number | null): number | null {
@@ -1980,13 +1901,7 @@ export function useCampaignEditor() {
     void applyNodePatch(d.id, { terminal: value })
   }
 
-  const FALLBACK_NODE_COLOR = '#f5b800'
-
-  const defaultColorHex = computed(() => {
-    if (typeof document === 'undefined') return FALLBACK_NODE_COLOR
-    const v = getComputedStyle(document.documentElement).getPropertyValue('--accent-overall').trim()
-    return /^#[0-9a-fA-F]{6}$/.test(v) ? v : FALLBACK_NODE_COLOR
-  })
+  const defaultColorHex = computed(() => cssToken('--accent-overall'))
 
   const shapeTiles = [
     { value: 'hex', label: 'Hex', path: 'hex' },
@@ -2044,19 +1959,13 @@ export function useCampaignEditor() {
     void applyNodePatch(d.id, { modifiers })
   }
 
-  const DEFAULT_REQUIREMENT_MAX: Partial<Record<RequirementMetric, number>> = {
-    bombs: 3,
-    mistakes: 5,
-    pauses: 2,
-  }
-
   function newTargetDraft(type: CampaignRequirementType): TargetDraft {
     const metric = REQUIREMENT_METRIC[type]
     return {
       key: `target-${++targetKeySeq}`,
       requirementType: type,
       requirementValue: defaultRequirementValue(metric),
-      requirementValueMax: DEFAULT_REQUIREMENT_MAX[metric] ?? null,
+      requirementValueMax: METRIC_DEFAULT_MAX[metric] ?? null,
     }
   }
 
@@ -2121,7 +2030,7 @@ export function useCampaignEditor() {
     const metric = REQUIREMENT_METRIC[next]
     target.requirementType = next
     target.requirementValue = defaultRequirementValue(metric)
-    target.requirementValueMax = DEFAULT_REQUIREMENT_MAX[metric] ?? null
+    target.requirementValueMax = METRIC_DEFAULT_MAX[metric] ?? null
     commitTargets()
   }
 
@@ -2138,15 +2047,15 @@ export function useCampaignEditor() {
   function requirementTypeHint(type: CampaignRequirementType): string {
     switch (type) {
       case 'RANK':
-        return "Lower is better. Cleared when the player's leaderboard rank on the map is this position or better."
+        return 'Lower is better.'
       case 'PASS':
-        return 'Cleared by any legitimate pass - a completion without the No-Fail modifier.'
+        return 'Any pass without No-Fail.'
       case 'COMBO':
-        return `An absolute note count, not a percentage. This map tops out at ${comboCap.value}.`
+        return `Note count. This map has ${comboCap.value}.`
       case 'MISTAKES':
-        return 'Bad cuts + misses, summed. For "at most N mistakes", set the upper bound instead of the lower one.'
+        return 'Bad cuts plus misses. Use the upper bound for "at most".'
       case 'PAUSES':
-        return 'Pauses taken during the run. For "at most N pauses", set the upper bound instead of the lower one.'
+        return 'Use the upper bound for "at most".'
       default:
         return ''
     }
@@ -2192,20 +2101,43 @@ export function useCampaignEditor() {
     commitNodeField('size')
   }
 
-  async function applyBulkSize(value: number) {
+  async function applyBulkPatch(
+    patch: UpdateCampaignDifficultyRequest & UpdateCampaignBarrierRequest,
+    includeBarriers: boolean,
+  ) {
     if (!editable.value) return
-    for (const id of selectedIdList.value) {
-      if (isBarrierId(id)) await applyBarrierPatch(id, { size: value })
-      else await applyNodePatch(id, { size: value })
+    const ids = selectedIdList.value.filter(
+      (id) => !isTextId(id) && (includeBarriers || !isBarrierId(id)),
+    )
+    actionError.value = null
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        isBarrierId(id)
+          ? updatePlayerCampaignBarrier(id, patch)
+          : updatePlayerCampaignDifficulty(id, patch),
+      ),
+    )
+    const updated = new Map<string, { id: string }>()
+    for (const r of results) if (r.status === 'fulfilled') updated.set(r.value.id, r.value)
+    if (campaign.value && updated.size > 0) {
+      const swap = <T extends { id: string }>(rows: T[]) =>
+        rows.map((r) => (updated.get(r.id) as T | undefined) ?? r)
+      campaign.value = {
+        ...campaign.value,
+        difficulties: swap(campaign.value.difficulties),
+        barriers: swap(campaign.value.barriers),
+      }
     }
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+    if (failed) actionError.value = getApiErrorMessage(failed.reason, 'Failed to update node')
   }
 
-  async function applyBulkShape(value: string) {
-    if (!editable.value) return
-    for (const id of selectedIdList.value) {
-      if (isBarrierId(id)) continue
-      await applyNodePatch(id, { borderShape: value })
-    }
+  function applyBulkSize(value: number) {
+    return applyBulkPatch({ size: value }, true)
+  }
+
+  function applyBulkShape(value: string) {
+    return applyBulkPatch({ borderShape: value }, false)
   }
 
   async function removeSelectedNodes() {
@@ -2249,15 +2181,8 @@ export function useCampaignEditor() {
     barrierPlacementMode.value = !barrierPlacementMode.value
   }
 
-  function occupiedCells(): Set<string> {
-    const set = new Set<string>()
-    for (const d of campaign.value?.difficulties ?? []) set.add(`${d.positionX},${d.positionY}`)
-    for (const b of campaign.value?.barriers ?? []) set.add(`${b.positionX},${b.positionY}`)
-    return set
-  }
-
   function findFreeCellNear(x: number, y: number): { x: number; y: number } {
-    const occ = occupiedCells()
+    const occ = occupancy(false).cells
     if (!occ.has(`${x},${y}`)) return { x, y }
     for (let r = 1; r <= 8; r++) {
       for (let dx = -r; dx <= r; dx++) {
@@ -2331,24 +2256,13 @@ export function useCampaignEditor() {
     }
   }
 
-  const BARRIER_CLEARABLE_TEXT = new Set<string>([
-    'description',
-    'checkpointLabel',
-    'checkpointAvatarUrl',
-    'checkpointColor',
-    'borderColor',
-  ])
-
   function commitBarrierField(field: keyof UpdateCampaignBarrierRequest) {
     const b = selectedBarrier.value
     if (!editable.value || !b) return
-    const value = formBarrier.value[field as keyof typeof formBarrier.value]
-    const original = (b as unknown as Record<string, unknown>)[field]
-    if (value === original) return
-    if (typeof value === 'string' && original == null && value === '') return
+    const patch = fieldPatch(formBarrier.value, b, field, CLEARABLE_TEXT_FIELDS)
+    if (!patch) return
     if (field === 'conditionType') requirementDirtyIds.value.add(b.id)
-    const send = value === '' && !BARRIER_CLEARABLE_TEXT.has(field) ? null : value
-    void applyBarrierPatch(b.id, { [field]: send } as UpdateCampaignBarrierRequest)
+    void applyBarrierPatch(b.id, patch as UpdateCampaignBarrierRequest)
   }
 
   function commitBarrierBounds() {
@@ -2426,50 +2340,17 @@ export function useCampaignEditor() {
   }
 
   const barrierValueBounds = computed(() => {
-    switch (barrierMeta.value.metric) {
-      case 'acc':
-        return { min: 70, max: 100, step: 0.1, unit: '%' }
-      case 'ap':
-        return { min: 0, max: 1200, step: 1, unit: 'AP' }
-      case 'streak':
-        return { min: 0, max: 30, step: 1, unit: '' }
-      case 'rank':
-        return { min: 1, max: 500, step: 1, unit: 'rank' }
-      case 'count':
-        return { min: 1, max: barrierCountMax.value, step: 1, unit: 'maps' }
-      case 'combo':
-        return { min: 0, max: 2000, step: 1, unit: 'combo' }
-      case 'bombs':
-        return { min: 0, max: 20, step: 1, unit: 'bombs' }
-      case 'mistakes':
-        return { min: 0, max: 20, step: 1, unit: '' }
-      case 'pauses':
-        return { min: 0, max: 10, step: 1, unit: '' }
-      default:
-        return { min: 0, max: 1, step: 1, unit: '' }
-    }
+    const metric = barrierMeta.value.metric
+    if (metric === 'count') return { min: 1, max: barrierCountMax.value, step: 1, unit: 'maps' }
+    return METRIC_BOUNDS[metric] ?? { min: 0, max: 1, step: 1, unit: '' }
   })
 
   function defaultBarrierValue(metric: string): number {
-    switch (metric) {
-      case 'acc':
-        return 0.9
-      case 'ap':
-        return 500
-      case 'streak':
-        return 8
-      case 'rank':
-        return 50
-      case 'count':
-        return barrierCountMax.value
-      case 'combo':
-        return 500
-      default:
-        return 0
-    }
+    if (metric === 'acc') return 0.9
+    if (metric === 'count') return barrierCountMax.value
+    if (metric === 'combo') return 500
+    return METRIC_DEFAULT[metric] ?? 0
   }
-
-  const DEFAULT_BARRIER_MAX: Record<string, number> = { bombs: 3, mistakes: 5, pauses: 2 }
 
   function onBarrierConditionTypeChange(value: string) {
     const next = value as BarrierConditionType
@@ -2486,7 +2367,7 @@ export function useCampaignEditor() {
       }
     } else if (prevMetric !== nextMeta.metric) {
       const nextValue = defaultBarrierValue(nextMeta.metric)
-      const nextMax = DEFAULT_BARRIER_MAX[nextMeta.metric] ?? null
+      const nextMax = METRIC_DEFAULT_MAX[nextMeta.metric] ?? null
       formBarrier.value.conditionValue = nextValue
       formBarrier.value.conditionValueMax = nextMax
       if (editable.value && b) {
@@ -2525,20 +2406,11 @@ export function useCampaignEditor() {
       formBarrier.value.conditionValue = next.length
       requirementDirtyIds.value.add(b.id)
     }
-    if (campaign.value) {
-      campaign.value = {
-        ...campaign.value,
-        barriers: campaign.value.barriers.map((row) =>
-          row.id === b.id
-            ? {
-                ...row,
-                affectedCampaignDifficultyIds: next,
-                conditionValue: patch.conditionValue ?? row.conditionValue,
-              }
-            : row,
-        ),
-      }
-    }
+    replaceRow('barriers', b.id, (row) => ({
+      ...row,
+      affectedCampaignDifficultyIds: next,
+      conditionValue: patch.conditionValue ?? row.conditionValue,
+    }))
     void applyBarrierPatch(b.id, patch)
   }
 
@@ -2570,14 +2442,7 @@ export function useCampaignEditor() {
     const t = textById.value.get(id)
     if (!t) return
     if (isPendingText(id)) {
-      if (campaign.value) {
-        campaign.value = {
-          ...campaign.value,
-          texts: campaign.value.texts.map((x) =>
-            x.id === id ? ({ ...x, ...partial } as CampaignTextResponse) : x,
-          ),
-        }
-      }
+      replaceRow('texts', id, (x) => ({ ...x, ...partial }) as CampaignTextResponse)
       return
     }
     const req: CampaignTextRequest = {
@@ -2588,14 +2453,9 @@ export function useCampaignEditor() {
     try {
       actionError.value = null
       const updated = await updatePlayerCampaignText(id, req)
-      if (campaign.value) {
-        const merged =
-          selectedId.value === id ? { ...updated, content: formText.value.content } : updated
-        campaign.value = {
-          ...campaign.value,
-          texts: campaign.value.texts.map((x) => (x.id === id ? merged : x)),
-        }
-      }
+      replaceRow('texts', id, () =>
+        selectedId.value === id ? { ...updated, content: formText.value.content } : updated,
+      )
     } catch (err) {
       actionError.value = getApiErrorMessage(err, 'Failed to update text')
     }
@@ -2604,11 +2464,8 @@ export function useCampaignEditor() {
   function commitTextField(field: 'content' | 'font' | 'scale' | 'color' | 'effects') {
     const t = selectedText.value
     if (!editable.value || !t) return
-    const value = formText.value[field]
-    const original = (t as unknown as Record<string, unknown>)[field]
-    if (value === original) return
-    if (typeof value === 'string' && original == null && value === '') return
-    void applyTextPatch(t.id, { [field]: value } as Partial<CampaignTextRequest>)
+    const patch = fieldPatch(formText.value, t, field, null)
+    if (patch) void applyTextPatch(t.id, patch as Partial<CampaignTextRequest>)
   }
 
   const TEXT_EFFECTS = ['glow', 'outline', 'shadow'] as const
@@ -2692,10 +2549,7 @@ export function useCampaignEditor() {
       color: local.color,
       effects: local.effects,
     }
-    campaign.value = {
-      ...campaign.value,
-      texts: campaign.value.texts.map((t) => (t.id === tempId ? merged : t)),
-    }
+    replaceRow('texts', tempId, () => merged)
     if (selectedId.value === tempId) {
       const tray = activeTray.value
       selectOnly(created.id)
@@ -2945,7 +2799,6 @@ export function useCampaignEditor() {
     setViewCenterProvider,
     canvasFrame,
     reloadFromRemote: () => guardedLoad(true),
-    rewardItemsById,
     campaign,
     loading,
     error,
@@ -2974,7 +2827,6 @@ export function useCampaignEditor() {
     editable,
     editingLiveCampaign,
     accent,
-    nodeAccents,
     selectedDifficulty,
     tagsByKind,
     campaignTagIds,

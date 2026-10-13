@@ -530,13 +530,9 @@ function resetFilters() {
         <SkeletonLoader v-for="i in 6" :key="i" variant="table-row" />
       </div>
 
-      <p v-else-if="!canSearch" class="gms__empty">
-        Type a search term to browse BeatSaver.
-      </p>
+      <p v-else-if="!canSearch" class="gms__empty">Search BeatSaver</p>
 
-      <p v-else-if="docs.length === 0" class="gms__empty">
-        No BeatSaver maps match that search.
-      </p>
+      <p v-else-if="docs.length === 0" class="gms__empty">No maps found</p>
 
       <ul v-else class="gms__list">
         <li v-for="map in docs" :key="map.id" class="gms__item">
@@ -670,7 +666,7 @@ function resetFilters() {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
   transition: border-color 120ms ease;
 }
@@ -693,7 +689,7 @@ function resetFilters() {
   padding: var(--space-md);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .gms__filter-row {
@@ -741,7 +737,7 @@ function resetFilters() {
   color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   outline: none;
 }
 
@@ -793,7 +789,7 @@ function resetFilters() {
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .gms__mapper {
@@ -808,7 +804,7 @@ function resetFilters() {
   font-size: var(--text-caption);
   color: var(--text-secondary);
   text-align: left;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   border: 1px solid var(--bg-overlay);
   background: var(--bg-base);
 }
@@ -874,7 +870,7 @@ function resetFilters() {
 
 .gms__item {
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .gms__row {
@@ -886,7 +882,7 @@ function resetFilters() {
   padding: 8px;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   text-align: left;
   color: inherit;
@@ -900,7 +896,7 @@ function resetFilters() {
 .gms__cover {
   width: 44px;
   height: 44px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   overflow: hidden;
   background: var(--bg-elevated);
   flex-shrink: 0;
@@ -957,7 +953,7 @@ function resetFilters() {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .gms__tag--ranked {
@@ -1012,7 +1008,7 @@ function resetFilters() {
   padding: 6px 8px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .gms__diff--disabled {

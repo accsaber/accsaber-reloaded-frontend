@@ -59,14 +59,28 @@ onMounted(() => {
       <div class="hero__banner">
         <NewsHighlightBanner />
       </div>
-      <ParticleCanvas
-        v-if="showParticles"
-        class="hero__particles"
-        :dark-mode="themeStore.resolvedBase === 'dark'"
-        :interactive="!authStore.isLoggedIn"
-      />
+      <div v-if="showParticles" class="hero__particles">
+        <ParticleCanvas
+          :dark-mode="themeStore.resolvedBase === 'dark'"
+          :interactive="!authStore.isLoggedIn"
+        />
+      </div>
       <HomeDashboard v-if="authStore.isLoggedIn" class="hero__content" />
       <HomeLanding v-else class="hero__content" />
+      <svg
+        v-if="authStore.isLoggedIn"
+        class="hero__scroll-hint"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <polyline points="7 13 12 18 17 13" />
+        <polyline points="7 6 12 11 17 6" />
+      </svg>
     </section>
 
     <section class="xp">
@@ -139,18 +153,18 @@ onMounted(() => {
 
 .hero {
   position: relative;
+  min-height: calc(100svh + var(--space-xl));
   margin-top: calc((var(--navbar-height) + var(--space-xl)) * -1);
   padding: calc(var(--navbar-height) + var(--space-2xl) + var(--space-xl)) var(--space-md) var(--space-xl);
 }
 
 .hero--landing {
-  min-height: calc(100svh + var(--space-xl));
   display: flex;
   align-items: center;
   justify-content: center;
   padding-top: calc(var(--navbar-height) + var(--space-md));
   padding-bottom: var(--space-3xl);
-  overflow: hidden;
+  overflow-y: clip;
 }
 
 .hero__banner {
@@ -170,8 +184,41 @@ onMounted(() => {
 
 .hero__particles {
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 calc(50% - 50vw);
+  width: 100vw;
+  overflow: hidden;
   z-index: 1;
+}
+
+.hero__scroll-hint {
+  position: absolute;
+  top: calc(100svh - var(--space-2xl));
+  left: 50%;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  color: var(--accent-overall);
+  pointer-events: none;
+  animation: scroll-float 2s ease-in-out infinite;
+}
+
+@keyframes scroll-float {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(8px);
+    opacity: 1;
+  }
+}
+
+@media (max-height: 720px) {
+  .hero__scroll-hint {
+    display: none;
+  }
 }
 
 .hero__content {
@@ -331,7 +378,8 @@ onMounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .xp__track {
+  .xp__track,
+  .hero__scroll-hint {
     animation: none;
   }
 }
@@ -340,6 +388,10 @@ onMounted(() => {
   .hero {
     margin-top: calc((var(--navbar-height) + var(--space-md)) * -1);
     padding: calc(var(--navbar-height) + var(--space-2xl)) var(--space-md) var(--space-2xl);
+  }
+
+  .hero__scroll-hint {
+    display: none;
   }
 }
 </style>

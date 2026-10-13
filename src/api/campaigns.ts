@@ -87,22 +87,12 @@ export function getMyCampaignProgress(campaignId: string): Promise<CampaignProgr
   return get<CampaignProgressResponse>(`/campaigns/${campaignId}/me/progress`)
 }
 
-const BULK_PROGRESS_CHUNK = 50
-
-export async function getMyCampaignProgressBulk(
-  ids: string[],
-): Promise<CampaignProgressResponse[]> {
-  if (ids.length === 0) return []
-  const chunks: string[][] = []
-  for (let i = 0; i < ids.length; i += BULK_PROGRESS_CHUNK) {
-    chunks.push(ids.slice(i, i + BULK_PROGRESS_CHUNK))
-  }
-  const results = await Promise.all(
-    chunks.map((chunk) =>
-      get<CampaignProgressResponse[]>(`/campaigns/me/progress${buildQuery({ ids: chunk })}`),
-    ),
-  )
-  return results.flat()
+export function getMyCampaignProgressByIdOrSlug(
+  value: string,
+  userId: string,
+): Promise<CampaignProgressResponse> {
+  if (isUuid(value)) return getMyCampaignProgress(value)
+  return get<CampaignProgressResponse>(`/campaigns/slug/${value}/users/${userId}/progress`)
 }
 
 export function getCampaignLeaderboard(

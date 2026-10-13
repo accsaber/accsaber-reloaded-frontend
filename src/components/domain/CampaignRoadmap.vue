@@ -3,7 +3,7 @@ import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import CampaignBarrierGate from '@/components/domain/CampaignBarrierGate.vue'
 import CampaignNode from '@/components/domain/CampaignNode.vue'
 import { useThemeStore } from '@/stores/theme'
-import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
+import { useCampaignAccent } from '@/composables/useCampaignAccent'
 import type {
   BarrierProgressResponse,
   CampaignBackgroundPlacement,
@@ -39,6 +39,7 @@ import {
   SQRT3,
   unionRect,
   type ContentRect,
+  type LabelPlacement,
   type NodeLayout,
 } from '@/utils/stageLayout'
 import { useStageInteraction, type StageGesture } from '@/composables/useStageInteraction'
@@ -53,7 +54,6 @@ const props = withDefaults(
     barrierProgress?: BarrierProgressResponse[]
     accentColor?: string
     barrierAccent?: string
-    nodeAccents?: Map<string, string>
     backgroundUrl?: string | null
     backgroundColor?: string | null
     backgroundPlacement?: CampaignBackgroundPlacement | null
@@ -83,7 +83,6 @@ const props = withDefaults(
     barrierProgress: undefined,
     accentColor: 'var(--accent)',
     barrierAccent: 'var(--warning)',
-    nodeAccents: () => new Map(),
     backgroundUrl: null,
     backgroundColor: null,
     backgroundPlacement: null,
@@ -109,9 +108,10 @@ const props = withDefaults(
 )
 
 const themeStore = useThemeStore()
+const { nodeAccent } = useCampaignAccent()
 
 function nodeAccentFor(id: string): string {
-  return props.nodeAccents.get(id) ?? props.accentColor
+  return nodeAccent(difficultyById.value.get(id)) ?? props.accentColor
 }
 
 const backgroundFill = computed(() => props.backgroundColor?.trim() || 'var(--accent-overall)')
@@ -119,7 +119,7 @@ const backgroundFill = computed(() => props.backgroundColor?.trim() || 'var(--ac
 const backgroundIsPinned = computed(() => !!props.backgroundUrl && !!props.backgroundPlacement)
 const showAmbience = computed(() => props.showStarfield || backgroundIsPinned.value)
 
-const themeBackdropActive = computed(() => readBackdropConfig(themeStore.activeTokens) !== null)
+const themeBackdropActive = computed(() => themeStore.backdropConfig !== null)
 const showOwnStarfield = computed(() => showAmbience.value && !themeBackdropActive.value)
 const transparentToThemeBackdrop = computed(() => showAmbience.value && themeBackdropActive.value)
 
@@ -290,8 +290,14 @@ const missingRewardIds = computed(() => {
   return set
 })
 
+const sizeById = computed(() => {
+  const map = new Map<string, number>()
+  for (const d of props.difficulties) map.set(d.id, resolveSize(d.size, props.unit))
+  return map
+})
+
 function nodeSizeFor(id: string): number {
-  return resolveSize(difficultyById.value.get(id)?.size, props.unit)
+  return sizeById.value.get(id) ?? props.unit
 }
 
 const barrierLayout = computed(() => layoutNodes(props.barriers, props.unit))
@@ -362,22 +368,12 @@ const textStaticById = computed(() => {
   return map
 })
 
-const EMPTY_TEXT_STATIC: TextStatic = {
-  html: '',
-  fontSize: 12,
-  color: 'var(--text-primary)',
-  fontFamily: 'var(--font-sans)',
-  effectClass: '',
-  width: 160,
-  height: 90,
-}
-
 const renderedTextEls = computed<TextRender[]>(() =>
   renderedTexts.value.map((n) => ({
     id: n.id,
     cx: n.cx,
     cy: n.cy,
-    ...(textStaticById.value.get(n.id) ?? EMPTY_TEXT_STATIC),
+    ...textStaticById.value.get(n.id)!,
   })),
 )
 
@@ -386,12 +382,6 @@ const vertexById = computed(() => {
   for (const n of renderedNodes.value) map.set(n.id, n)
   for (const b of renderedBarriers.value) map.set(b.id, b)
   for (const t of renderedTexts.value) map.set(t.id, t)
-  return map
-})
-
-const vertexPos = computed(() => {
-  const map = new Map<string, { cx: number; cy: number }>()
-  for (const v of vertexById.value.values()) map.set(v.id, { cx: v.cx, cy: v.cy })
   return map
 })
 
@@ -419,20 +409,26 @@ function onBarrierHover(id: string | null) {
   emit('hover', id)
 }
 
+const committedNodeById = computed(() => new Map(layout.value.nodes.map((n) => [n.id, n])))
+
 const labelLayout = computed(() =>
   computeLabelPlacements(
-    renderedNodes.value.map((n) => {
-      const d = difficultyById.value.get(n.id)
-      return {
-        id: n.id,
-        cx: n.cx,
-        cy: n.cy,
-        size: resolveSize(d?.size, props.unit),
-        text: d?.songName ?? '',
-      }
-    }),
+    layout.value.nodes.map((n) => ({
+      id: n.id,
+      cx: n.cx,
+      cy: n.cy,
+      size: nodeSizeFor(n.id),
+      text: difficultyById.value.get(n.id)?.songName ?? '',
+    })),
   ),
 )
+
+function labelPlacementFor(n: NodeLayout): LabelPlacement | null {
+  const base = labelLayout.value.get(n.id)
+  const committed = committedNodeById.value.get(n.id)
+  if (!base || !committed || (committed.cx === n.cx && committed.cy === n.cy)) return base ?? null
+  return { ...base, x: base.x + n.cx - committed.cx, y: base.y + n.cy - committed.cy }
+}
 
 interface Edge {
   fromId: string
@@ -448,6 +444,7 @@ interface Edge {
   locked: boolean
   toSize: number
   color: string | null
+  arrowPoints: string
 }
 
 interface CheckpointLabel {
@@ -458,6 +455,22 @@ interface CheckpointLabel {
   x: number
   y: number
   anchor: 'middle' | 'start' | 'end'
+}
+
+interface CheckpointFrame {
+  top: number
+  bottom: number
+  left: number
+  right: number
+  midX: number
+  midY: number
+}
+
+function placeCheckpoint(position: string, f: CheckpointFrame, fontSize: number) {
+  if (position === 'DOWN') return { x: f.midX, y: f.bottom, anchor: 'middle' as const }
+  if (position === 'LEFT') return { x: f.left, y: f.midY + fontSize * 0.34, anchor: 'end' as const }
+  if (position === 'RIGHT') return { x: f.right, y: f.midY + fontSize * 0.34, anchor: 'start' as const }
+  return { x: f.midX, y: f.top, anchor: 'middle' as const }
 }
 
 const checkpointLabels = computed<CheckpointLabel[]>(() => {
@@ -498,63 +511,46 @@ const checkpointLabels = computed<CheckpointLabel[]>(() => {
     if (g.position === 'NONE') continue
     const xs = g.nodes.map((n) => n.cx)
     const ys = g.nodes.map((n) => n.cy)
-    const minX = Math.min(...xs)
-    const maxX = Math.max(...xs)
-    const midX = (minX + maxX) / 2
-    const midY = (Math.min(...ys) + Math.max(...ys)) / 2
-    const sizeOf = (n: NodeLayout) => resolveSize(difficultyById.value.get(n.id)?.size, props.unit)
+    const sizeOf = (n: NodeLayout) => nodeSizeFor(n.id)
     const topNode = g.nodes.reduce((a, b) => (b.cy < a.cy ? b : a))
     const bottomNode = g.nodes.reduce((a, b) => (b.cy > a.cy ? b : a))
     const leftNode = g.nodes.reduce((a, b) => (b.cx < a.cx ? b : a))
     const rightNode = g.nodes.reduce((a, b) => (b.cx > a.cx ? b : a))
-    const color = g.color || 'var(--accent-overall)'
     const fontSize = resolveSize(g.size, Math.max(props.unit * 0.34, 14))
-    let x = midX
-    let y = topNode.cy - (sizeOf(topNode) * 1.3 + props.unit * 0.7)
-    let anchor: 'middle' | 'start' | 'end' = 'middle'
-    if (g.position === 'DOWN') {
-      y = bottomNode.cy + (sizeOf(bottomNode) * 1.3 + props.unit * 0.7)
-    } else if (g.position === 'LEFT') {
-      x = minX - (sizeOf(leftNode) * 1.15 + props.unit * 0.4)
-      y = midY + fontSize * 0.34
-      anchor = 'end'
-    } else if (g.position === 'RIGHT') {
-      x = maxX + (sizeOf(rightNode) * 1.15 + props.unit * 0.4)
-      y = midY + fontSize * 0.34
-      anchor = 'start'
+    const frame: CheckpointFrame = {
+      top: topNode.cy - (sizeOf(topNode) * 1.3 + props.unit * 0.7),
+      bottom: bottomNode.cy + (sizeOf(bottomNode) * 1.3 + props.unit * 0.7),
+      left: Math.min(...xs) - (sizeOf(leftNode) * 1.15 + props.unit * 0.4),
+      right: Math.max(...xs) + (sizeOf(rightNode) * 1.15 + props.unit * 0.4),
+      midX: (Math.min(...xs) + Math.max(...xs)) / 2,
+      midY: (Math.min(...ys) + Math.max(...ys)) / 2,
     }
-    out.push({ key, label: g.label, color, fontSize, x, y, anchor })
+    const color = g.color || 'var(--accent-overall)'
+    out.push({ key, label: g.label, color, fontSize, ...placeCheckpoint(g.position, frame, fontSize) })
   }
-  return out
-})
-
-const barrierCheckpointLabels = computed<CheckpointLabel[]>(() => {
-  const out: CheckpointLabel[] = []
   for (const b of props.barriers) {
     if (!b.checkpointLabel) continue
     const position = b.checkpointLabelPosition ?? ''
     if (position === 'NONE') continue
     const node = barrierById.value.get(b.id)
     if (!node) continue
-    const size = resolveSize(b.size, props.unit)
-    const color = b.checkpointColor || 'var(--warning)'
     const fontSize = resolveSize(b.checkpointSize, Math.max(props.unit * 0.3, 13))
-    const gap = size * 1.2 + props.unit * 0.5
-    let x = node.cx
-    let y = node.cy - gap
-    let anchor: 'middle' | 'start' | 'end' = 'middle'
-    if (position === 'DOWN') {
-      y = node.cy + gap
-    } else if (position === 'LEFT') {
-      x = node.cx - gap
-      y = node.cy + fontSize * 0.34
-      anchor = 'end'
-    } else if (position === 'RIGHT') {
-      x = node.cx + gap
-      y = node.cy + fontSize * 0.34
-      anchor = 'start'
+    const gap = resolveSize(b.size, props.unit) * 1.2 + props.unit * 0.5
+    const frame: CheckpointFrame = {
+      top: node.cy - gap,
+      bottom: node.cy + gap,
+      left: node.cx - gap,
+      right: node.cx + gap,
+      midX: node.cx,
+      midY: node.cy,
     }
-    out.push({ key: `barrier-${b.id}`, label: b.checkpointLabel, color, fontSize, x, y, anchor })
+    out.push({
+      key: `barrier-${b.id}`,
+      label: b.checkpointLabel,
+      color: b.checkpointColor || 'var(--warning)',
+      fontSize,
+      ...placeCheckpoint(position, frame, fontSize),
+    })
   }
   return out
 })
@@ -565,7 +561,7 @@ interface NodeFootprint {
 }
 
 function nodeFootprint(d: CampaignDifficultyResponse): NodeFootprint {
-  const size = resolveSize(d.size, props.unit)
+  const size = nodeSizeFor(d.id)
   const accentBand = Math.max(size * 0.07, 3)
   return {
     shape: resolveShape(d.borderShape),
@@ -595,35 +591,27 @@ function vertexUnlocked(id: string): boolean {
   return !!progressById.value.get(id)?.unlocked
 }
 
-interface EdgePrereq {
-  fromId: string
-  color: string | null
+function arrowPointsFor(fromX: number, fromY: number, toX: number, toY: number, toSize: number): string {
+  const len = Math.hypot(toX - fromX, toY - fromY) || 1
+  const ux = (toX - fromX) / len
+  const uy = (toY - fromY) / len
+  const head = Math.max(toSize * 0.22, 6)
+  const baseX = toX - ux * head
+  const baseY = toY - uy * head
+  const half = head * 0.5
+  return `${toX},${toY} ${baseX - uy * half},${baseY + ux * half} ${baseX + uy * half},${baseY - ux * half}`
 }
-
-const edgeTargets = computed<{ id: string; prereqs: EdgePrereq[] }[]>(() => {
-  const toEdgePrereqs = (list: { comesFromCampaignDifficultyId: string; color: string | null }[]) =>
-    list.map((p) => ({
-      fromId: p.comesFromCampaignDifficultyId,
-      color: resolveConnectionColor(p.color),
-    }))
-  const list: { id: string; prereqs: EdgePrereq[] }[] = []
-  for (const d of props.difficulties) {
-    list.push({ id: d.id, prereqs: toEdgePrereqs(d.prerequisites ?? []) })
-  }
-  for (const b of props.barriers) {
-    list.push({ id: b.id, prereqs: toEdgePrereqs(b.prerequisites ?? []) })
-  }
-  return list
-})
 
 const edges = computed<Edge[]>(() => {
   const out: Edge[] = []
-  for (const t of edgeTargets.value) {
-    const to = vertexPos.value.get(t.id)
+  for (const t of [...props.difficulties, ...props.barriers]) {
+    const to = vertexById.value.get(t.id)
     const toFp = vertexFootprint(t.id)
     if (!to || !toFp) continue
-    for (const { fromId, color } of t.prereqs) {
-      const from = vertexPos.value.get(fromId)
+    for (const p of t.prerequisites ?? []) {
+      const fromId = p.comesFromCampaignDifficultyId
+      const color = resolveConnectionColor(p.color)
+      const from = vertexById.value.get(fromId)
       const fromFp = vertexFootprint(fromId)
       if (!from || !fromFp) continue
       const a = edgePointOnShape(fromFp.shape, fromFp.outerSize, from.cx, from.cy, to.cx, to.cy)
@@ -647,6 +635,7 @@ const edges = computed<Edge[]>(() => {
         locked,
         toSize: toFp.outerSize,
         color,
+        arrowPoints: arrowPointsFor(a.x, a.y, b.x, b.y, toFp.outerSize),
       })
     }
   }
@@ -655,7 +644,7 @@ const edges = computed<Edge[]>(() => {
 
 function edgeStroke(e: Edge): string {
   if (e.color) return e.color
-  return e.cleared ? '#ffffff' : e.available ? 'var(--text-secondary)' : 'var(--text-tertiary)'
+  return e.cleared ? 'var(--text-primary)' : e.available ? 'var(--text-secondary)' : 'var(--text-tertiary)'
 }
 
 function isSelectedEdge(e: { fromId: string; toId: string }): boolean {
@@ -687,11 +676,11 @@ const barrierGeometry = computed<BarrierGeom[]>(() => {
     const center = barrierById.value.get(b.id)
     if (!center) continue
     const incoming = prereqIds(b.prerequisites)
-      .map((id) => vertexPos.value.get(id))
-      .filter((p): p is { cx: number; cy: number } => !!p)
+      .map((id) => vertexById.value.get(id))
+      .filter((p): p is NodeLayout => !!p)
     const outgoing = (dependentsByVertex.value.get(b.id) ?? [])
-      .map((id) => vertexPos.value.get(id))
-      .filter((p): p is { cx: number; cy: number } => !!p)
+      .map((id) => vertexById.value.get(id))
+      .filter((p): p is NodeLayout => !!p)
     let dx = 0
     let dy = 1
     if (incoming.length && outgoing.length) {
@@ -767,7 +756,7 @@ const affectedHighlight = computed(() => {
     .map((nid) => {
       const n = nodeById.value.get(nid)
       if (!n) return null
-      const size = resolveSize(difficultyById.value.get(nid)?.size, props.unit)
+      const size = nodeSizeFor(nid)
       return { id: n.id, cx: n.cx, cy: n.cy, r: size + Math.max(size * 0.07, 3) + 6 }
     })
     .filter((n): n is { id: string; cx: number; cy: number; r: number } => !!n)
@@ -845,12 +834,6 @@ function emitPresence(x: number, y: number) {
   })
 }
 
-function trackPresence(e: PointerEvent) {
-  if (!props.editable) return
-  const p = clientToContent(e.clientX, e.clientY)
-  emitPresence(p.x, p.y)
-}
-
 function onPointerLeave() {
   if (!props.editable) return
   lastPresence.has = false
@@ -902,30 +885,22 @@ function tickCursors() {
   }
   if (changed) cursorDisplay.value = new Map(disp)
 
-  const drag = new Map(remoteDragById.value)
-  let dragChanged = false
+  let drag: Map<string, { cx: number; cy: number; color: string }> | null = null
   for (const peer of props.presencePeers) {
     if (peer.action === 'drag' && peer.targetId && peer.x != null && peer.y != null) {
       const d = disp.get(peer.userId)
       if (!d) continue
-      const prev = drag.get(peer.targetId)
+      const prev = remoteDragById.value.get(peer.targetId)
       if (!prev || prev.cx !== d.x || prev.cy !== d.y) {
+        drag ??= new Map(remoteDragById.value)
         drag.set(peer.targetId, { cx: d.x, cy: d.y, color: peer.color })
-        dragChanged = true
       }
     }
   }
-  if (dragChanged) remoteDragById.value = drag
+  if (drag) remoteDragById.value = drag
 
-  cursorRaf = requestAnimationFrame(tickCursors)
+  cursorRaf = changed || drag ? requestAnimationFrame(tickCursors) : null
 }
-
-watch(
-  () => [props.difficulties, props.barriers, props.texts],
-  () => {
-    if (remoteDragById.value.size) remoteDragById.value = new Map()
-  },
-)
 
 function startCursorLoop() {
   if (cursorRaf == null) cursorRaf = requestAnimationFrame(tickCursors)
@@ -939,16 +914,16 @@ function stopCursorLoop() {
 }
 
 watch(
-  () => props.presencePeers.length,
-  (n) => {
-    if (n > 0) startCursorLoop()
+  () => props.presencePeers,
+  (peers) => {
+    if (peers.length > 0) startCursorLoop()
     else {
       stopCursorLoop()
       if (cursorDisplay.value.size) cursorDisplay.value = new Map()
       if (remoteDragById.value.size) remoteDragById.value = new Map()
     }
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 )
 
 onUnmounted(stopCursorLoop)
@@ -1008,9 +983,11 @@ function beginConnect(e: PointerEvent, nodeId: string | null): boolean {
 }
 
 function trackStagePointer(e: PointerEvent) {
-  trackPresence(e)
+  if (!props.editable && !connectFromId.value) return
+  const p = clientToContent(e.clientX, e.clientY)
+  emitPresence(p.x, p.y)
   if (!connectFromId.value) return
-  connectPoint.value = clientToContent(e.clientX, e.clientY)
+  connectPoint.value = p
   const hover = nodeIdAtPoint(e.clientX, e.clientY)
   connectHoverId.value = hover && hover !== connectFromId.value ? hover : null
 }
@@ -1095,6 +1072,7 @@ let knownVertexIds = new Set<string>()
 watch(
   () => [props.difficulties, props.barriers, props.texts] as const,
   ([diffs, barrs, txts]) => {
+    if (remoteDragById.value.size) remoteDragById.value = new Map()
     const nextIds = new Set<string>()
     for (const d of diffs) nextIds.add(d.id)
     for (const b of barrs) nextIds.add(b.id)
@@ -1204,7 +1182,7 @@ const snapTarget = computed<{
   if (!id || !snapEnabled.value) return null
   const overlay = dragOverlay.value.get(id)
   if (!overlay) return null
-  const diff = props.difficulties.find((d) => d.id === id)
+  const diff = difficultyById.value.get(id)
   const isBarrier = !diff && barrierMetaById.value.has(id)
   const isText = !diff && !isBarrier && textStaticById.value.has(id)
   if (!diff && !isBarrier && !isText) return null
@@ -1220,7 +1198,7 @@ const snapTarget = computed<{
     cx,
     cy,
     shape: resolveShape(diff.borderShape),
-    size: resolveSize(diff.size, props.unit),
+    size: nodeSizeFor(diff.id),
   }
 })
 
@@ -1230,28 +1208,19 @@ const snapShapePoints = computed(() => {
   return shapeCorners(t.shape, 0, 0, t.size * 1.04)
 })
 
-const arrowDecorations = computed(() =>
-  edges.value.map((e) => {
-    const dx = e.toX - e.fromX
-    const dy = e.toY - e.fromY
-    const len = Math.hypot(dx, dy) || 1
-    const ux = dx / len
-    const uy = dy / len
-    const headSize = Math.max(e.toSize * 0.22, 6)
-    const baseX = e.toX - ux * headSize
-    const baseY = e.toY - uy * headSize
-    const perpX = -uy
-    const perpY = ux
-    const leftX = baseX + perpX * headSize * 0.5
-    const leftY = baseY + perpY * headSize * 0.5
-    const rightX = baseX - perpX * headSize * 0.5
-    const rightY = baseY - perpY * headSize * 0.5
-    return {
-      ...e,
-      arrowPoints: `${e.toX},${e.toY} ${leftX},${leftY} ${rightX},${rightY}`,
-    }
-  }),
-)
+const controls = computed(() => [
+  { label: 'Zoom in', run: () => adjustZoom(1.2), d: 'M12 5v14M5 12h14', dot: false },
+  { label: 'Zoom out', run: () => adjustZoom(1 / 1.2), d: 'M5 12h14', dot: false },
+  { label: 'Fit roadmap', run: () => fitToContent(), d: 'M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4', dot: false },
+  ...(canRecenter.value
+    ? [{
+      label: 'Recenter on current progress',
+      run: recenter,
+      d: 'M5 12a7 7 0 1 0 14 0a7 7 0 1 0 -14 0M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3',
+      dot: true,
+    }]
+    : []),
+])
 </script>
 
 <template>
@@ -1361,7 +1330,7 @@ const arrowDecorations = computed(() =>
           }"
         >
           <g
-            v-for="e in arrowDecorations"
+            v-for="e in edges"
             :key="`edge-${e.fromId}-${e.toId}`"
             class="campaign-roadmap__edge-group"
             :class="{
@@ -1370,7 +1339,7 @@ const arrowDecorations = computed(() =>
               'campaign-roadmap__edge-group--placeable': barrierPlacement,
               'campaign-roadmap__edge-group--selected': isSelectedEdge(e),
             }"
-            :style="{ '--edge-hl': e.color ?? '#ffffff' }"
+            :style="{ '--edge-hl': e.color ?? 'var(--text-primary)' }"
           >
             <line
               class="campaign-roadmap__edge-hit"
@@ -1487,7 +1456,7 @@ const arrowDecorations = computed(() =>
             :selected="selectedSet.has(n.id)"
             :is-next="nextIds.has(n.id)"
             :show-terminal="showTerminal"
-            :label-placement="labelLayout.get(n.id) ?? null"
+            :label-placement="labelPlacementFor(n)"
             @select="emit('select', $event)"
           />
           <g
@@ -1496,7 +1465,7 @@ const arrowDecorations = computed(() =>
             :transform="`translate(${n.cx + nodeSizeFor(n.id) * 0.72}, ${n.cy - nodeSizeFor(n.id) * 0.72})`"
             aria-hidden="true"
           >
-            <title>This node has no rewards set - 0 XP and no items.</title>
+            <title>No rewards</title>
             <circle class="campaign-roadmap__reward-warn-bg" :r="Math.max(unit * 0.13, 7)" />
             <path
               class="campaign-roadmap__reward-warn-mark"
@@ -1603,19 +1572,7 @@ const arrowDecorations = computed(() =>
             :font-size="cp.fontSize"
             :text-anchor="cp.anchor"
             class="campaign-roadmap__checkpoint-text"
-            :style="{ fill: cp.color, '--checkpoint-color': cp.color }"
-          >
-            {{ cp.label }}
-          </text>
-          <text
-            v-for="cp in barrierCheckpointLabels"
-            :key="cp.key"
-            :x="cp.x"
-            :y="cp.y"
-            :font-size="cp.fontSize"
-            :text-anchor="cp.anchor"
-            class="campaign-roadmap__checkpoint-text"
-            :style="{ fill: cp.color, '--checkpoint-color': cp.color }"
+            :style="{ fill: cp.color }"
           >
             {{ cp.label }}
           </text>
@@ -1667,14 +1624,16 @@ const arrowDecorations = computed(() =>
 
     <div class="campaign-roadmap__bottom-stack">
       <p v-if="overlapMarkers.length > 0" class="campaign-roadmap__overlap-note" role="status">
-        {{ overlapMarkers.length }} elements are stacked on top of each other
+        {{ overlapMarkers.length }} stacked
       </p>
       <div class="campaign-roadmap__controls" aria-label="Roadmap controls">
         <button
+          v-for="c in controls"
+          :key="c.label"
           type="button"
           class="campaign-roadmap__btn"
-          aria-label="Zoom in"
-          @click="adjustZoom(1.2)"
+          :aria-label="c.label"
+          @click="c.run"
         >
           <svg
             width="14"
@@ -1687,77 +1646,8 @@ const arrowDecorations = computed(() =>
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="campaign-roadmap__btn"
-          aria-label="Zoom out"
-          @click="adjustZoom(1 / 1.2)"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="campaign-roadmap__btn"
-          aria-label="Fit roadmap"
-          @click="fitToContent"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="4 8 4 4 8 4" />
-            <polyline points="20 8 20 4 16 4" />
-            <polyline points="4 16 4 20 8 20" />
-            <polyline points="20 16 20 20 16 20" />
-          </svg>
-        </button>
-        <button
-          v-if="canRecenter"
-          type="button"
-          class="campaign-roadmap__btn"
-          aria-label="Recenter on current progress"
-          @click="recenter"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="7" />
-            <line x1="12" y1="1.5" x2="12" y2="4.5" />
-            <line x1="12" y1="19.5" x2="12" y2="22.5" />
-            <line x1="1.5" y1="12" x2="4.5" y2="12" />
-            <line x1="19.5" y1="12" x2="22.5" y2="12" />
-            <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+            <path :d="c.d" />
+            <circle v-if="c.dot" cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
           </svg>
         </button>
       </div>
@@ -1773,7 +1663,7 @@ const arrowDecorations = computed(() =>
   height: 100%;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   overflow: hidden;
   touch-action: none;
   cursor: grab;
@@ -1788,10 +1678,7 @@ const arrowDecorations = computed(() =>
   cursor: grabbing;
 }
 
-.campaign-roadmap--select {
-  cursor: crosshair;
-}
-
+.campaign-roadmap--select,
 .campaign-roadmap--select:active {
   cursor: crosshair;
 }
@@ -1855,56 +1742,33 @@ const arrowDecorations = computed(() =>
     opacity 120ms ease;
 }
 
-.campaign-roadmap__edge-group--highlight .campaign-roadmap__edge-line {
-  stroke: var(--edge-hl, #ffffff);
+.campaign-roadmap__edge-group--highlight .campaign-roadmap__edge-line,
+.campaign-roadmap__edges--interactive .campaign-roadmap__edge-group:hover .campaign-roadmap__edge-line,
+.campaign-roadmap__edge-group--selected .campaign-roadmap__edge-line {
+  stroke: var(--edge-hl);
   stroke-width: 2.5;
   opacity: 1;
 }
 
-.campaign-roadmap__edge-group--highlight .campaign-roadmap__edge-arrow {
-  fill: var(--edge-hl, #ffffff);
-  stroke: var(--edge-hl, #ffffff);
+.campaign-roadmap__edge-group--highlight .campaign-roadmap__edge-arrow,
+.campaign-roadmap__edges--interactive .campaign-roadmap__edge-group:hover .campaign-roadmap__edge-arrow,
+.campaign-roadmap__edge-group--selected .campaign-roadmap__edge-arrow {
+  fill: var(--edge-hl);
+  stroke: var(--edge-hl);
   opacity: 1;
 }
 
-.campaign-roadmap__edges--place .campaign-roadmap__edge-hit {
-  cursor: pointer;
+.campaign-roadmap__edge-group--selected .campaign-roadmap__edge-line {
+  stroke-width: 3;
 }
 
+.campaign-roadmap__edges--place .campaign-roadmap__edge-hit,
 .campaign-roadmap__edges--interactive .campaign-roadmap__edge-hit {
   cursor: pointer;
 }
 
-.campaign-roadmap__edges--interactive
-  .campaign-roadmap__edge-group:hover
-  .campaign-roadmap__edge-line {
-  stroke: var(--edge-hl, #ffffff);
-  stroke-width: 2.5;
-  opacity: 1;
-}
-
-.campaign-roadmap__edges--interactive
-  .campaign-roadmap__edge-group:hover
-  .campaign-roadmap__edge-arrow {
-  fill: var(--edge-hl, #ffffff);
-  stroke: var(--edge-hl, #ffffff);
-  opacity: 1;
-}
-
 .campaign-roadmap__edge-group--selected .campaign-roadmap__edge-hit {
   stroke: color-mix(in srgb, var(--page-accent, var(--accent)) 22%, transparent);
-}
-
-.campaign-roadmap__edge-group--selected .campaign-roadmap__edge-line {
-  stroke: var(--edge-hl, #ffffff);
-  stroke-width: 3;
-  opacity: 1;
-}
-
-.campaign-roadmap__edge-group--selected .campaign-roadmap__edge-arrow {
-  fill: var(--edge-hl, #ffffff);
-  stroke: var(--edge-hl, #ffffff);
-  opacity: 1;
 }
 
 .campaign-roadmap__edge-group--placeable .campaign-roadmap__edge-line {
@@ -2004,7 +1868,7 @@ const arrowDecorations = computed(() =>
 .campaign-roadmap__text--editable {
   cursor: grab;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   transition:
     background 120ms ease,
     outline-color 120ms ease;
@@ -2076,8 +1940,10 @@ const arrowDecorations = computed(() =>
   letter-spacing: 0.22em;
   text-transform: uppercase;
   pointer-events: none;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--checkpoint-color) 75%, transparent))
-    drop-shadow(0 0 14px color-mix(in srgb, var(--checkpoint-color) 45%, transparent));
+  paint-order: stroke;
+  stroke: var(--bg-base);
+  stroke-width: 4;
+  stroke-linejoin: round;
 }
 
 .campaign-roadmap__bg {
@@ -2155,7 +2021,7 @@ const arrowDecorations = computed(() =>
   padding: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .campaign-roadmap__btn {
@@ -2166,7 +2032,7 @@ const arrowDecorations = computed(() =>
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   color: var(--text-secondary);
   cursor: pointer;
   transition:
@@ -2189,7 +2055,7 @@ const arrowDecorations = computed(() =>
   color: var(--error);
   background: color-mix(in srgb, var(--error) 12%, var(--bg-surface));
   border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   pointer-events: none;
 }
 </style>

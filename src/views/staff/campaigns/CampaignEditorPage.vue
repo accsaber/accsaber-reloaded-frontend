@@ -22,18 +22,21 @@ import { useChat } from '@/composables/useChat'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useThemeStore } from '@/stores/theme'
-import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
-import { computed, onMounted, provide, ref, watch } from 'vue'
-import MapPickerModal from '@/components/domain/MapPickerModal.vue'
-import CampaignCollaboratorPicker from './CampaignCollaboratorPicker.vue'
-import CampaignItemPicker from './CampaignItemPicker.vue'
-import CampaignGlobalMapSearch from './CampaignGlobalMapSearch.vue'
+import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
+import CampaignTrayIcon from './CampaignTrayIcon.vue'
 import CampaignTrayRail from './CampaignTrayRail.vue'
 import CampaignTrays from './CampaignTrays.vue'
-import CampaignTutorialModal from './CampaignTutorialModal.vue'
 import { CAMPAIGN_EDITOR_KEY } from './campaignEditorContext'
 import { useCampaignEditor } from './useCampaignEditor'
 import { useCampaignTutorial } from './useCampaignTutorial'
+
+const MapPickerModal = defineAsyncComponent(() => import('@/components/domain/MapPickerModal.vue'))
+const CampaignCollaboratorPicker = defineAsyncComponent(() => import('./CampaignCollaboratorPicker.vue'))
+const CampaignItemPicker = defineAsyncComponent(() => import('./CampaignItemPicker.vue'))
+const CampaignGlobalMapSearch = defineAsyncComponent(() => import('./CampaignGlobalMapSearch.vue'))
+const CampaignTutorialModal = defineAsyncComponent(() => import('./CampaignTutorialModal.vue'))
+
+const CANVAS_MODES = ['drag', 'connect', 'select'] as const
 
 const editor = useCampaignEditor()
 provide(CAMPAIGN_EDITOR_KEY, editor)
@@ -75,7 +78,6 @@ const {
   publishConfirm,
   performUnpublish,
   accent,
-  nodeAccents,
   selectedDifficulty,
   breadcrumbs,
   handleMove,
@@ -145,9 +147,32 @@ onMounted(() => {
 })
 
 const themeStore = useThemeStore()
-const themeBackdropActive = computed(() => readBackdropConfig(themeStore.activeTokens) !== null)
 
 const selectedCover = computed(() => pickCoverUrl(selectedDifficulty.value))
+
+const trayHead = computed(() => {
+  const barrier = selectedBarrier.value
+  if (activeTrayIsBarrier.value && barrier) {
+    return { icon: 'gate', title: 'Barrier gate', grid: barrier, sub: '', action: 'Remove', run: removeSelectedBarrier }
+  }
+  const text = selectedText.value
+  if (activeTray.value === 'text' && text) {
+    return { icon: 'type', title: 'Text element', grid: text, sub: '', action: 'Remove', run: removeSelectedText }
+  }
+  const edge = selectedEdge.value
+  const ends = selectedEdgeEndpoints.value
+  if (activeTray.value === 'connection' && edge && ends) {
+    return {
+      icon: 'arrow',
+      title: 'Connection',
+      grid: null,
+      sub: `${ends.from} → ${ends.to}`,
+      action: 'Disconnect',
+      run: () => handleDisconnect(edge),
+    }
+  }
+  return null
+})
 
 const { showTutorial, openTutorial, closeTutorial, maybeAutoShow } = useCampaignTutorial()
 
@@ -269,7 +294,7 @@ function peerActivity(p: PresencePeer): string {
 <template>
   <div
     class="campaign-editor"
-    :class="{ 'campaign-editor--backdrop': themeBackdropActive }"
+    :class="{ 'campaign-editor--backdrop': themeStore.backdropConfig }"
     :style="{ '--page-accent': accent }"
   >
     <template v-if="loading">
@@ -280,18 +305,15 @@ function peerActivity(p: PresencePeer): string {
     </template>
 
     <template v-else-if="error || !campaign">
-      <EmptyState icon="!" :message="error ?? 'Campaign not found.'" />
+      <EmptyState :message="error ?? 'Campaign not found.'" />
     </template>
 
     <template v-else-if="!auth.isLoggedIn && !isCurator">
-      <EmptyState icon="🔒" message="Sign in to edit a campaign." />
+      <EmptyState message="Sign in to edit a campaign." />
     </template>
 
     <template v-else-if="!canAccess">
-      <EmptyState
-        icon="🔒"
-        message="You can only edit campaigns you created, or you'll need curator access."
-      />
+      <EmptyState message="You can only edit your own campaigns." />
     </template>
 
     <template v-else>
@@ -302,7 +324,6 @@ function peerActivity(p: PresencePeer): string {
           :barriers="campaign.barriers"
           :texts="campaign.texts"
           :accent-color="accent"
-          :node-accents="nodeAccents"
           :background-url="campaign.backgroundUrl"
           :background-color="campaign.backgroundColor"
           :background-placement="campaign.background"
@@ -339,20 +360,7 @@ function peerActivity(p: PresencePeer): string {
           <template #actions>
             <div v-if="editable" class="campaign-editor__add-cluster" aria-label="Add to roadmap">
               <button type="button" class="campaign-editor__add-btn" @click="openMapPicker">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
+                <CampaignTrayIcon name="plus" :size="14" />
                 Add node
               </button>
               <button
@@ -362,46 +370,18 @@ function peerActivity(p: PresencePeer): string {
                 :disabled="!canAddBarrier"
                 :title="
                   campaign.progressionAgnostic
-                    ? 'Barriers need an ordered campaign. Turn off progression-agnostic in Settings'
+                    ? 'Needs an ordered campaign'
                     : !hasConnections
-                      ? 'Connect two nodes first, then drop a gate on the arrow'
+                      ? 'Connect two nodes first'
                       : ''
                 "
                 @click="toggleBarrierPlacement"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="12" y1="3" x2="12" y2="21" />
-                  <line x1="7" y1="6" x2="17" y2="6" />
-                  <line x1="7" y1="18" x2="17" y2="18" />
-                </svg>
+                <CampaignTrayIcon name="gate" :size="14" />
                 {{ barrierPlacementMode ? 'Pick an arrow' : 'Add barrier' }}
               </button>
               <button type="button" class="campaign-editor__add-btn" @click="addText">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="4 7 4 4 20 4 20 7" />
-                  <line x1="9" y1="20" x2="15" y2="20" />
-                  <line x1="12" y1="4" x2="12" y2="20" />
-                </svg>
+                <CampaignTrayIcon name="type" :size="14" />
                 Add text
               </button>
             </div>
@@ -485,34 +465,16 @@ function peerActivity(p: PresencePeer): string {
         <div v-if="editable" class="campaign-editor__toolbar">
           <div class="campaign-editor__mode-toggle" role="radiogroup" aria-label="Canvas mode">
             <button
+              v-for="mode in CANVAS_MODES"
+              :key="mode"
               type="button"
               role="radio"
-              :aria-checked="canvasMode === 'drag'"
+              :aria-checked="canvasMode === mode"
               class="campaign-editor__mode-btn"
-              :class="{ 'campaign-editor__mode-btn--active': canvasMode === 'drag' }"
-              @click="canvasMode = 'drag'"
+              :class="{ 'campaign-editor__mode-btn--active': canvasMode === mode }"
+              @click="canvasMode = mode"
             >
-              Drag
-            </button>
-            <button
-              type="button"
-              role="radio"
-              :aria-checked="canvasMode === 'connect'"
-              class="campaign-editor__mode-btn"
-              :class="{ 'campaign-editor__mode-btn--active': canvasMode === 'connect' }"
-              @click="canvasMode = 'connect'"
-            >
-              Connect
-            </button>
-            <button
-              type="button"
-              role="radio"
-              :aria-checked="canvasMode === 'select'"
-              class="campaign-editor__mode-btn"
-              :class="{ 'campaign-editor__mode-btn--active': canvasMode === 'select' }"
-              @click="canvasMode = 'select'"
-            >
-              Select
+              {{ mode }}
             </button>
           </div>
 
@@ -522,9 +484,7 @@ function peerActivity(p: PresencePeer): string {
             :class="{ 'campaign-editor__grid-lock--off': !gridLock }"
             :aria-pressed="gridLock"
             :title="
-              gridLock
-                ? 'Elements snap to whole grid units. Hold Alt while dragging to place freely.'
-                : 'Free placement is on, so elements can overlap. Hold Alt while dragging to snap.'
+              gridLock ? 'Snaps to the grid. Hold Alt to place freely.' : 'Free placement. Hold Alt to snap.'
             "
             @click="toggleGridLock"
           >
@@ -552,7 +512,7 @@ function peerActivity(p: PresencePeer): string {
           floating
           title="Team chat"
           placeholder="Message your collaborators"
-          empty-text="No messages yet. Say hello to your collaborators."
+          empty-text="No messages yet"
           :author-color="colorForUser"
           :chat="chat"
           @typing="onSelfTyping"
@@ -572,20 +532,7 @@ function peerActivity(p: PresencePeer): string {
               aria-label="Close tray"
               @click="closeTray"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <CampaignTrayIcon name="x" :size="16" />
             </button>
           </header>
 
@@ -629,110 +576,30 @@ function peerActivity(p: PresencePeer): string {
             </BaseButton>
           </div>
 
-          <div v-if="activeTrayIsBarrier && selectedBarrier" class="campaign-editor__barrier-head">
-            <span class="campaign-editor__barrier-head-icon" aria-hidden="true">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="12" y1="3" x2="12" y2="21" />
-                <line x1="7" y1="6" x2="17" y2="6" />
-                <line x1="7" y1="18" x2="17" y2="18" />
-              </svg>
-            </span>
-            <div class="campaign-editor__barrier-head-meta">
-              <h3>Barrier gate</h3>
-              <p>
-                grid
-                <code>{{ selectedBarrier.positionX }},{{ selectedBarrier.positionY }}</code>
-              </p>
-            </div>
-            <BaseButton
-              v-if="editable"
-              size="sm"
-              variant="destructive"
-              :loading="actionPending"
-              @click="removeSelectedBarrier"
-            >
-              Remove
-            </BaseButton>
-          </div>
-
-          <div v-if="activeTray === 'text' && selectedText" class="campaign-editor__barrier-head">
+          <div v-if="trayHead" class="campaign-editor__barrier-head">
             <span
-              class="campaign-editor__barrier-head-icon campaign-editor__barrier-head-icon--text"
+              class="campaign-editor__barrier-head-icon"
+              :class="{ 'campaign-editor__barrier-head-icon--text': trayHead.icon === 'type' }"
               aria-hidden="true"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="4 7 4 4 20 4 20 7" />
-                <line x1="9" y1="20" x2="15" y2="20" />
-                <line x1="12" y1="4" x2="12" y2="20" />
-              </svg>
+              <CampaignTrayIcon :name="trayHead.icon" />
             </span>
             <div class="campaign-editor__barrier-head-meta">
-              <h3>Text element</h3>
-              <p>
+              <h3>{{ trayHead.title }}</h3>
+              <p v-if="trayHead.grid">
                 grid
-                <code>{{ selectedText.positionX }},{{ selectedText.positionY }}</code>
+                <code>{{ trayHead.grid.positionX }},{{ trayHead.grid.positionY }}</code>
               </p>
+              <p v-else>{{ trayHead.sub }}</p>
             </div>
             <BaseButton
               v-if="editable"
               size="sm"
               variant="destructive"
               :loading="actionPending"
-              @click="removeSelectedText"
+              @click="trayHead.run"
             >
-              Remove
-            </BaseButton>
-          </div>
-
-          <div
-            v-if="activeTray === 'connection' && selectedEdge && selectedEdgeEndpoints"
-            class="campaign-editor__barrier-head"
-          >
-            <span class="campaign-editor__barrier-head-icon" aria-hidden="true">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="5" y1="19" x2="16" y2="8" />
-                <polyline points="10 8 16 8 16 14" />
-              </svg>
-            </span>
-            <div class="campaign-editor__barrier-head-meta">
-              <h3>Connection</h3>
-              <p>{{ selectedEdgeEndpoints.from }} → {{ selectedEdgeEndpoints.to }}</p>
-            </div>
-            <BaseButton
-              v-if="editable"
-              size="sm"
-              variant="destructive"
-              :loading="actionPending"
-              @click="handleDisconnect(selectedEdge)"
-            >
-              Disconnect
+              {{ trayHead.action }}
             </BaseButton>
           </div>
 
@@ -746,7 +613,7 @@ function peerActivity(p: PresencePeer): string {
         v-if="showMapPicker"
         title="Add nodes"
         used-label="In campaign"
-        used-title="This difficulty is already a node in this campaign. You can still add it again."
+        used-title="Already a node here"
         :commit-label="(n) => `Add ${n} ${n === 1 ? 'node' : 'nodes'}`"
         :loading="actionPending"
         :global-submit="submitGlobalAdd"
@@ -794,33 +661,20 @@ function peerActivity(p: PresencePeer): string {
       >
         <div class="campaign-editor__warn">
           <template v-if="publishConfirm === 'publish'">
-            <p>
-              Publishing makes your campaign public. Any player will be able to find it and start
-              it.
-            </p>
-            <p>
-              Make sure everything is final before you go live: maps, goals, rewards, artwork, and
-              text.
-            </p>
+            <p>Any player will be able to find and start it.</p>
             <div v-if="unrankedNodes.length" class="campaign-editor__warn-unranked">
               <p>
-                Heads up: {{ unrankedNodes.length }}
-                {{ unrankedNodes.length === 1 ? 'map is' : 'maps are' }} not ranked (imported
-                campaign maps, or still in the ranking queue). You can publish, but this campaign
-                will be <strong>uncuratable</strong> (it can't become an official curated campaign)
-                while {{ unrankedNodes.length === 1 ? 'it stays' : 'they stay' }} unranked:
+                {{ unrankedNodes.length }} unranked
+                {{ unrankedNodes.length === 1 ? 'map' : 'maps' }}. It cannot be curated while
+                {{ unrankedNodes.length === 1 ? 'it stays' : 'they stay' }} unranked:
               </p>
               <ul>
                 <li v-for="n in unrankedNodes" :key="n.id">{{ n.songName }}</li>
               </ul>
-              <p>Are you OK to proceed?</p>
             </div>
           </template>
           <template v-else>
-            <p>
-              Unpublishing takes your campaign offline and resets every player's progress on it.
-            </p>
-            <p>Anyone who started or completed it will have to begin again when it returns.</p>
+            <p>It goes offline and every player's progress on it resets.</p>
           </template>
         </div>
         <template #footer>
@@ -852,19 +706,14 @@ function peerActivity(p: PresencePeer): string {
       >
         <div class="campaign-editor__warn">
           <p>
-            You changed the completion requirement on
-            {{ requirementDirtyIds.size }}
-            {{ requirementDirtyIds.size === 1 ? 'map' : 'maps' }}. Republishing recalculates player
-            progress on {{ requirementDirtyIds.size === 1 ? 'it' : 'them' }}:
+            You changed the requirement on {{ requirementDirtyIds.size }}
+            {{ requirementDirtyIds.size === 1 ? 'map' : 'maps' }}. Republishing recalculates:
           </p>
           <ul>
-            <li>
-              Players who cleared an affected map under the old requirement lose that completion.
-            </li>
-            <li>Anyone who no longer meets the new bar is moved back to in-progress.</li>
+            <li>Clears made under the old requirement are removed.</li>
+            <li>Players who no longer meet it go back to in-progress.</li>
             <li v-if="campaign && !campaign.progressionAgnostic">
-              Because this campaign is played in order, every map after a changed one is
-              recalculated too.
+              Every map after a changed one is recalculated too.
             </li>
           </ul>
         </div>
@@ -932,7 +781,7 @@ function peerActivity(p: PresencePeer): string {
   position: relative;
   width: 38px;
   height: 38px;
-  border-radius: 7px;
+  border-radius: var(--radius-avatar);
   border: 2px solid var(--peer-color);
   background: var(--bg-elevated);
   display: inline-flex;
@@ -951,7 +800,7 @@ function peerActivity(p: PresencePeer): string {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .campaign-editor__presence-avatar--typing {
@@ -970,7 +819,7 @@ function peerActivity(p: PresencePeer): string {
   padding: 0 4px;
   background: var(--peer-color);
   border: 1.5px solid var(--bg-base);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .campaign-editor__presence-glyph {
@@ -1029,7 +878,7 @@ function peerActivity(p: PresencePeer): string {
   white-space: nowrap;
   background: var(--bg-elevated);
   border: 1px solid var(--peer-color);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   z-index: 10;
 }
 
@@ -1103,7 +952,7 @@ function peerActivity(p: PresencePeer): string {
   padding: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   pointer-events: auto;
 }
 
@@ -1120,7 +969,7 @@ function peerActivity(p: PresencePeer): string {
   color: var(--page-accent);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     background 120ms ease,
@@ -1163,7 +1012,7 @@ function peerActivity(p: PresencePeer): string {
   padding: 2px;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .campaign-editor__grid-lock {
@@ -1179,7 +1028,7 @@ function peerActivity(p: PresencePeer): string {
   color: var(--text-secondary);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -1209,7 +1058,7 @@ function peerActivity(p: PresencePeer): string {
   color: var(--text-secondary);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -1236,7 +1085,7 @@ function peerActivity(p: PresencePeer): string {
   width: clamp(300px, 26vw, 360px);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 6px;
+  border-radius: var(--radius-modal);
   overflow: hidden;
   pointer-events: auto;
 }
@@ -1281,7 +1130,7 @@ function peerActivity(p: PresencePeer): string {
   color: var(--text-tertiary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -1312,7 +1161,7 @@ function peerActivity(p: PresencePeer): string {
 }
 .campaign-editor__tray-body::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .campaign-editor__node-song {
@@ -1325,7 +1174,7 @@ function peerActivity(p: PresencePeer): string {
 .campaign-editor__node-cover {
   width: 56px;
   height: 56px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   overflow: hidden;
   background: var(--bg-elevated);
 }
@@ -1362,9 +1211,9 @@ function peerActivity(p: PresencePeer): string {
   color: var(--text-secondary);
 }
 
-.campaign-editor__node-diff {
-  font-size: 0.6875rem !important;
-  color: var(--text-tertiary) !important;
+.campaign-editor__node-song-meta .campaign-editor__node-diff {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
 }
 
 .campaign-editor__node-grid {
@@ -1402,7 +1251,7 @@ function peerActivity(p: PresencePeer): string {
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .campaign-editor__barrier-head-icon--text {

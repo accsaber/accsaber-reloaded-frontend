@@ -1,3 +1,4 @@
+import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { applyThemeTokens, clearThemeTokens, type EffectLayer } from '@/utils/items'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -126,5 +127,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyThemeTokens(activeTokens.value)
   }
 
-  return { theme, activeTokens, activeEffects, resolvedBase, toggle, setTheme, resetToBuiltin, setThemeFromTokens, previewThemeTokens }
+  const backdropConfig = computed(() => readBackdropConfig(activeTokens.value))
+
+  return { theme, activeTokens, activeEffects, resolvedBase, backdropConfig, toggle, setTheme, resetToBuiltin, setThemeFromTokens, previewThemeTokens }
 })

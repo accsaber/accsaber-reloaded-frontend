@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import CampaignCardPopover from '@/components/domain/CampaignCardPopover.vue'
 import CampaignCategoryTags from '@/components/domain/CampaignCategoryTags.vue'
-import CampaignRewardsPopover from '@/components/domain/CampaignRewardsPopover.vue'
 import CampaignStatusBadge from '@/components/domain/CampaignStatusBadge.vue'
 import CampaignVoteControl from '@/components/domain/CampaignVoteControl.vue'
-import { useCategoryStore } from '@/stores/categories'
+import { useCampaignAccent } from '@/composables/useCampaignAccent'
 import type { CampaignProgressSummary, CampaignResponse } from '@/types/api/campaigns'
-import { campaignBadges } from '@/utils/campaignBadges'
 import {
   campaignDifficultyColor,
   campaignDifficultyGradient,
   campaignDifficultyLabel,
 } from '@/utils/campaignDifficulty'
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
+
+const CampaignRewardItem = defineAsyncComponent(() => import('@/components/domain/CampaignRewardItem.vue'))
 
 const props = defineProps<{
   campaign: CampaignResponse
@@ -21,6 +22,8 @@ const props = defineProps<{
   collab?: boolean
   viewingUserId?: string | null
 }>()
+
+const { campaignAccent } = useCampaignAccent()
 
 const cardTo = computed<RouteLocationRaw>(() => {
   const params = { campaignId: props.campaign.slug || props.campaign.id }
@@ -32,85 +35,45 @@ const cardTo = computed<RouteLocationRaw>(() => {
   }
 })
 
-const categoryStore = useCategoryStore()
-
-const difficultyLabel = computed<string | null>(() => campaignDifficultyLabel(props.campaign.tags))
-
-const themeTags = computed(() =>
-  props.campaign.tags.filter((t) => t.kind === 'THEME' || t.kind === 'GENRE').slice(0, 2),
-)
-
-const accent = computed(() => {
-  const cats = props.campaign.tags.filter((t) => t.kind === 'CATEGORY')
-  if (cats.length !== 1 || !cats[0].categoryId) return 'var(--accent-overall)'
-  const code = categoryStore.getCategoryCode(cats[0].categoryId)
-  if (code) return categoryStore.getCategoryInfo(code)?.accent ?? 'var(--accent-overall)'
-  return 'var(--accent-overall)'
-})
-
-const difficultyColor = computed(() =>
-  campaignDifficultyColor(props.campaign.tags, accent.value),
-)
-
+const difficultyLabel = computed(() => campaignDifficultyLabel(props.campaign.tags))
 const difficultyGradient = computed(() => campaignDifficultyGradient(props.campaign.tags))
+const extraTags = computed(() => props.campaign.tags.filter((t) => t.kind === 'THEME' || t.kind === 'GENRE'))
+
+const accent = computed(() => campaignAccent(props.campaign.tags))
+
+const difficultyColor = computed(() => campaignDifficultyColor(props.campaign.tags, accent.value))
 
 const totalNodes = computed(() => props.campaign.difficultyCount || 0)
 
-const progressPct = computed(() => {
-  if (!props.progress) return 0
-  if (totalNodes.value === 0) return 0
-  return Math.round((props.progress.completedDifficulties / totalNodes.value) * 100)
+const run = computed<CampaignProgressSummary | null>(() => {
+  if (props.progress) return props.progress
+  const status = props.campaign.myProgressStatus
+  if (status !== 'IN_PROGRESS' && status !== 'COMPLETED') return null
+  return { progressStatus: status, completedDifficulties: props.campaign.myCompletedDifficulties ?? 0 }
 })
 
-const statusLabel = computed(() => {
-  if (props.progress?.progressStatus === 'COMPLETED') return 'Completed'
-  if (props.progress?.progressStatus === 'IN_PROGRESS') return 'In progress'
+const progressPct = computed(() =>
+  run.value && totalNodes.value > 0 ? Math.round((run.value.completedDifficulties / totalNodes.value) * 100) : 0,
+)
+
+const draftLabel = computed(() => {
   if (props.campaign.status === 'DRAFT') return 'Draft'
   if (props.campaign.status === 'EDITING') return 'Editing'
-  if (props.campaign.status === 'CURATED') return 'Curated'
-  if (props.campaign.status === 'PUBLISHED') return 'Published'
-  return ''
+  return null
 })
 
-const statusTone = computed(() => {
-  if (props.progress?.progressStatus === 'COMPLETED') return 'success'
-  if (props.progress?.progressStatus === 'IN_PROGRESS') return 'accent'
-  if (props.campaign.status === 'DRAFT') return 'muted'
-  if (props.campaign.status === 'CURATED') return 'accent'
-  return 'muted'
-})
-
-const creator = computed(
-  () => props.campaign.creatorAlias || props.campaign.creatorName || 'AccSaber',
-)
-
-const completionLabel = computed(() =>
-  props.campaign.completionMode === 'ALL' ? 'Clear all' : 'Reach end',
-)
-
-const coverUrl = computed(
-  () => props.campaign.iconUrl || props.campaign.backgroundUrl || null,
-)
-
-const hasProgressLabel = computed(
-  () =>
-    props.progress?.progressStatus === 'COMPLETED' ||
-    props.progress?.progressStatus === 'IN_PROGRESS',
-)
-
-const showStatusBadge = computed(
-  () => !hasProgressLabel.value && campaignBadges(props.campaign).length > 0,
-)
-
-const hasCover = computed(() => !!coverUrl.value)
-
-const rewardXp = computed(() =>
-  props.campaign.totalXp ? `${props.campaign.totalXp.toLocaleString()} XP` : null,
-)
-
+const creator = computed(() => props.campaign.creatorAlias || props.campaign.creatorName || 'AccSaber')
+const coverUrl = computed(() => props.campaign.iconUrl || props.campaign.backgroundUrl || null)
+const rewardXp = computed(() => (props.campaign.totalXp ? `${props.campaign.totalXp.toLocaleString()} XP` : null))
 const rewardItems = computed(() => props.campaign.rewards ?? [])
 
-const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
+const itemsLabel = computed(() => {
+  const count = props.campaign.totalRewardCount ?? rewardItems.value.length
+  return `${count.toLocaleString()} item${count === 1 ? '' : 's'}`
+})
+
+const tagsLabel = computed(() => `${extraTags.value.length} tag${extraTags.value.length === 1 ? '' : 's'}`)
+const hasFootline = computed(() => !!rewardXp.value || rewardItems.value.length > 0 || extraTags.value.length > 0)
 </script>
 
 <template>
@@ -120,7 +83,7 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
     :style="{ '--card-accent': accent, '--card-diff': difficultyColor, '--card-diff-gradient': difficultyGradient ?? 'none' }"
   >
     <div class="campaign-card__cover" aria-hidden="true">
-      <img v-if="hasCover && coverUrl" :src="coverUrl" :alt="campaign.name" loading="lazy" />
+      <img v-if="coverUrl" :src="coverUrl" :alt="campaign.name" loading="lazy" />
       <div v-else class="campaign-card__fallback">
         <svg viewBox="-30 -30 60 60" width="64" height="64" aria-hidden="true">
           <polygon points="28,0 14,24.25 -14,24.25 -28,0 -14,-24.25 14,-24.25"
@@ -149,38 +112,36 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
 
       <div class="campaign-card__meta">
         <CampaignCategoryTags :tags="campaign.tags" collapse />
-        <span class="campaign-card__chip campaign-card__chip--mode">{{ completionLabel }}</span>
-        <span v-if="campaign.legacy" class="campaign-card__chip campaign-card__chip--legacy">
-          Retroactive
-        </span>
-        <span v-for="t in themeTags" :key="t.id" class="campaign-card__chip">{{ t.name }}</span>
+        <span v-if="campaign.legacy" class="campaign-card__chip">Retroactive</span>
       </div>
 
       <footer class="campaign-card__foot">
-        <p v-if="hasLoot" class="campaign-card__loot">
+        <p v-if="hasFootline" class="campaign-card__loot">
           <span v-if="rewardXp">{{ rewardXp }}</span>
-          <span v-if="rewardXp && rewardItems.length > 0" class="campaign-card__loot-sep" aria-hidden="true">·</span>
-          <CampaignRewardsPopover
-            v-if="rewardItems.length > 0"
-            :rewards="rewardItems"
-            :total-count="campaign.totalRewardCount ?? rewardItems.length"
-          />
+          <CampaignCardPopover v-if="rewardItems.length > 0" :label="itemsLabel" title="Rewards">
+            <ul class="campaign-card__popover-list">
+              <li v-for="r in rewardItems" :key="r.itemId">
+                <CampaignRewardItem :name="r.itemName" :quantity="r.quantity" :item="r.item" />
+              </li>
+            </ul>
+          </CampaignCardPopover>
+          <CampaignCardPopover v-if="extraTags.length > 0" :label="tagsLabel" title="Tags">
+            <ul class="campaign-card__popover-list campaign-card__popover-list--tags">
+              <li v-for="t in extraTags" :key="t.id">{{ t.name }}</li>
+            </ul>
+          </CampaignCardPopover>
         </p>
         <div class="campaign-card__foot-row">
-          <CampaignStatusBadge v-if="showStatusBadge" :campaign="campaign" size="sm" />
-          <span v-else class="campaign-card__status" :data-tone="statusTone">{{ statusLabel }}</span>
-          <span v-if="progress" class="campaign-card__progress">
+          <CampaignStatusBadge :campaign="campaign" size="sm" />
+          <span v-if="draftLabel" class="campaign-card__status">{{ draftLabel }}</span>
+          <span v-if="run" class="campaign-card__progress"
+            :class="{ 'campaign-card__progress--done': run.progressStatus === 'COMPLETED' }">
             <span class="campaign-card__progress-track" aria-hidden="true">
-              <span class="campaign-card__progress-fill"
-                :style="{ transform: `scaleX(${progressPct / 100})` }" />
+              <span class="campaign-card__progress-fill" :style="{ transform: `scaleX(${progressPct / 100})` }" />
             </span>
-            <span class="campaign-card__progress-text">
-              {{ progress.completedDifficulties }}/{{ totalNodes }}
-            </span>
+            <span class="campaign-card__progress-text">{{ run.completedDifficulties }}/{{ totalNodes }}</span>
           </span>
-          <span v-else class="campaign-card__count">
-            {{ totalNodes }} nodes
-          </span>
+          <span v-else class="campaign-card__count">{{ totalNodes }} nodes</span>
         </div>
         <CampaignVoteControl :campaign="campaign" size="sm" />
       </footer>
@@ -196,7 +157,7 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   color: inherit;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   overflow: hidden;
   transition: border-color 140ms ease, transform 140ms ease;
 }
@@ -229,11 +190,7 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   flex-direction: column;
   gap: var(--space-xs);
   color: var(--card-diff);
-  background:
-    radial-gradient(ellipse 70% 80% at 50% 50%,
-      color-mix(in srgb, var(--card-diff) 18%, transparent),
-      transparent 75%),
-    var(--bg-base);
+  background: var(--bg-base);
 }
 
 .campaign-card__fallback-count {
@@ -254,10 +211,9 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--card-diff);
-  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
+  background: var(--bg-base);
   border: 1px solid color-mix(in srgb, var(--card-diff) 40%, transparent);
-  border-radius: 3px;
-  backdrop-filter: blur(8px);
+  border-radius: var(--radius-pill);
 }
 
 .campaign-card__diff-pill-text {
@@ -340,11 +296,10 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   color: var(--text-tertiary);
 }
 
-.campaign-card__chip--mode,
-.campaign-card__chip--legacy {
+.campaign-card__chip {
   padding: 2px 6px;
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   color: var(--text-secondary);
 }
 
@@ -369,8 +324,32 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   color: var(--text-secondary);
 }
 
-.campaign-card__loot-sep {
+.campaign-card__loot > * + *::before {
+  content: '·';
+  margin-right: 5px;
   color: var(--text-tertiary);
+}
+
+.campaign-card__popover-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campaign-card__popover-list--tags {
+  flex-direction: row;
+  flex-wrap: wrap;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.campaign-card__popover-list--tags li {
+  padding: 2px 6px;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-pill);
 }
 
 .campaign-card__foot-row {
@@ -390,8 +369,11 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   color: var(--text-tertiary);
 }
 
-.campaign-card__status[data-tone="success"] { color: var(--success); }
-.campaign-card__status[data-tone="accent"] { color: var(--card-accent); }
+
+.campaign-card__progress,
+.campaign-card__count {
+  margin-left: auto;
+}
 
 .campaign-card__progress {
   display: inline-flex;
@@ -407,7 +389,7 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   width: 84px;
   height: 3px;
   background: var(--bg-overlay);
-  border-radius: 1px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
@@ -416,6 +398,10 @@ const hasLoot = computed(() => !!rewardXp.value || rewardItems.value.length > 0)
   inset: 0;
   background: var(--card-accent);
   transform-origin: left center;
+}
+
+.campaign-card__progress--done .campaign-card__progress-fill {
+  background: var(--success);
 }
 
 .campaign-card__count {
