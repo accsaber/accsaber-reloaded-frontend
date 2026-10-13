@@ -10,6 +10,8 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ItemFilterPanel from '@/components/domain/ItemFilterPanel.vue'
 import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
@@ -36,6 +38,8 @@ const router = useRouter()
 const authStore = useAuthStore()
 const essenceStore = useEssenceStore()
 const tradeStore = useTradeStore()
+const { setQuery, queryRef, queryListRef } = useQueryParams()
+const { currentPage, setPage } = usePageableRoute({ defaultSort: 'ending_soon', defaultSize: 30, secondarySort: null })
 
 const { typeGroups, modifierOptions, effectGroups, ungroupedEffects } = useItemFilterOptions({
   effects: true,
@@ -54,96 +58,36 @@ const KIND_OPTIONS: { value: MarketKind | ''; label: string }[] = [
   { value: 'shop', label: 'Buy now' },
 ]
 
-function queryList(key: string): string[] {
-  const value = route.query[key]
-  if (!value) return []
-  return (Array.isArray(value) ? value : [value]).filter((v): v is string => typeof v === 'string')
-}
-
-function replaceQuery(patch: Record<string, string | string[] | undefined>) {
-  const query: Record<string, string | string[]> = {}
-  for (const [key, value] of Object.entries(route.query)) {
-    if (value != null) query[key] = value as string | string[]
-  }
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined || (Array.isArray(value) && value.length === 0) || value === '') {
-      delete query[key]
-    } else {
-      query[key] = value
-    }
-  }
-  delete query.page
-  router.replace({ query })
-}
-
-const search = computed<string>({
-  get: () => (route.query.search as string) ?? '',
-  set: (value) => replaceQuery({ search: value.trim() || undefined }),
-})
-
-const rarities = computed<ItemRarity[]>({
-  get: () => queryList('rarity') as ItemRarity[],
-  set: (value) => replaceQuery({ rarity: value }),
-})
-
-const typeKeys = computed<string[]>({
-  get: () => queryList('type'),
-  set: (value) => replaceQuery({ type: value }),
-})
-
-const modifierKeys = computed<string[]>({
-  get: () => queryList('modifier'),
-  set: (value) => replaceQuery({ modifier: value }),
-})
-
-const effectKeys = computed<string[]>({
-  get: () => queryList('effect'),
-  set: (value) => replaceQuery({ effect: value }),
-})
+const search = queryRef('search')
+const rarities = queryListRef<ItemRarity>('rarity')
+const typeKeys = queryListRef('type')
+const modifierKeys = queryListRef('modifier')
+const effectKeys = queryListRef('effect')
+const kindParam = queryRef<MarketKind>('kind')
+const sortParam = queryRef<MarketSortOption>('sort')
 
 const kind = computed<MarketKind | ''>({
-  get: () => {
-    const value = route.query.kind
-    return value === 'auction' || value === 'shop' ? value : ''
-  },
-  set: (value) => replaceQuery({ kind: value || undefined }),
-})
-
-const minPrice = computed<number | null>({
-  get: () => {
-    const value = Number(route.query.min)
-    return Number.isSafeInteger(value) && value > 0 ? value : null
-  },
-  set: (value) => replaceQuery({ min: value != null ? String(value) : undefined }),
-})
-
-const maxPrice = computed<number | null>({
-  get: () => {
-    const value = Number(route.query.max)
-    return Number.isSafeInteger(value) && value > 0 ? value : null
-  },
-  set: (value) => replaceQuery({ max: value != null ? String(value) : undefined }),
+  get: () => (kindParam.value === 'auction' || kindParam.value === 'shop' ? kindParam.value : ''),
+  set: (value) => { kindParam.value = value },
 })
 
 const sortBy = computed<MarketSortOption>({
-  get: () => {
-    const value = route.query.sort
-    return SORT_OPTIONS.some((o) => o.value === value) ? (value as MarketSortOption) : 'ending_soon'
-  },
-  set: (value) => replaceQuery({ sort: value === 'ending_soon' ? undefined : value }),
+  get: () => (SORT_OPTIONS.some((o) => o.value === sortParam.value) ? (sortParam.value as MarketSortOption) : 'ending_soon'),
+  set: (value) => { sortParam.value = value === 'ending_soon' ? '' : value },
 })
 
-const currentPage = computed<number>(() => {
-  const page = Number(route.query.page)
-  return page > 0 ? page : 1
-})
-
-function setPage(page: number) {
-  const query = { ...route.query }
-  if (page <= 1) delete query.page
-  else query.page = String(page)
-  router.push({ query })
+function priceRef(key: string) {
+  return computed<number | null>({
+    get: () => {
+      const value = Number(route.query[key])
+      return Number.isSafeInteger(value) && value > 0 ? value : null
+    },
+    set: (value) => setQuery({ [key]: value != null ? String(value) : undefined }),
+  })
 }
+
+const minPrice = priceRef('min')
+const maxPrice = priceRef('max')
 
 const hasActiveFilters = computed(
   () =>
@@ -157,7 +101,7 @@ const hasActiveFilters = computed(
 )
 
 function clearFilters() {
-  replaceQuery({
+  setQuery({
     rarity: undefined,
     type: undefined,
     modifier: undefined,
@@ -168,6 +112,16 @@ function clearFilters() {
   })
 }
 
+const emptyState = computed(() => {
+  if (hasActiveFilters.value) return { message: 'No listings match your filters', action: 'Clear filters', run: clearFilters }
+  if (search.value) return { message: 'No listings found', action: undefined, run: undefined }
+  return {
+    message: 'No listings yet',
+    action: authStore.isLoggedIn ? 'List an item' : undefined,
+    run: () => router.push({ name: 'market-new' }),
+  }
+})
+
 const filtersOpen = ref(false)
 const listings = ref<MarketListingResponse[]>([])
 const totalPages = ref(0)
@@ -176,7 +130,7 @@ const loading = ref(true)
 let requestId = 0
 
 const browseParams = computed<MarketBrowseParams>(() => ({
-  search: search.value || undefined,
+  search: search.value.trim() || undefined,
   rarity: rarities.value.length > 0 ? rarities.value : undefined,
   typeKey: typeKeys.value.length > 0 ? typeKeys.value : undefined,
   modifierKey: modifierKeys.value.length > 0 ? modifierKeys.value : undefined,
@@ -311,22 +265,10 @@ watch(
     </div>
 
     <EmptyState
-      v-else-if="listings.length === 0 && hasActiveFilters"
-      message="No listings match your filters."
-      action-label="Clear filters"
-      @action="clearFilters"
-    />
-
-    <EmptyState
-      v-else-if="listings.length === 0 && search"
-      message="No listings match your search. Search covers listing titles and item names."
-    />
-
-    <EmptyState
       v-else-if="listings.length === 0"
-      message="Nothing is listed right now. Be the first to put something up."
-      :action-label="authStore.isLoggedIn ? 'List an item' : undefined"
-      @action="router.push({ name: 'market-new' })"
+      :message="emptyState.message"
+      :action-label="emptyState.action"
+      @action="emptyState.run?.()"
     />
 
     <template v-else>

@@ -107,14 +107,13 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 }
 
 .ipm__art {
-  --rarity-color: var(--text-tertiary);
-  --cell-accent: var(--rarity-color);
+  --cell-accent: var(--rarity-color, var(--text-tertiary));
   display: flex;
   align-items: center;
   justify-content: center;
   width: 172px;
   height: 172px;
-  border: 1px solid var(--rarity-color);
+  border: 1px solid var(--rarity-color, var(--text-tertiary));
   border-radius: var(--radius-card);
   background: var(--bg-base);
   overflow: hidden;
@@ -148,13 +147,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
   overflow: visible;
   text-overflow: clip;
 }
-
-.ipm__art.rarity--common { --rarity-color: var(--text-tertiary); }
-.ipm__art.rarity--uncommon { --rarity-color: var(--success); }
-.ipm__art.rarity--rare { --rarity-color: var(--info); }
-.ipm__art.rarity--epic { --rarity-color: var(--tier-apex); }
-.ipm__art.rarity--legendary { --rarity-color: var(--tier-gold); }
-.ipm__art.rarity--mythic { --rarity-color: var(--error); }
 
 .ipm__type {
   font-size: var(--text-caption);

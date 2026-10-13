@@ -79,21 +79,13 @@ const accentStyle = computed(() => (accent.value ? { '--cell-accent': accent.val
   width: 56px;
   height: 56px;
   background: var(--bg-surface);
-  border: 1px solid var(--cell-accent, var(--rarity-color));
+  border: 1px solid var(--cell-accent, var(--rarity-color, var(--text-tertiary)));
   border-radius: var(--radius-card);
   overflow: hidden;
   cursor: help;
   outline: none;
-  --rarity-color: var(--text-tertiary);
-  --cell-accent: var(--rarity-color);
+  --cell-accent: var(--rarity-color, var(--text-tertiary));
 }
-
-.trade-row-item__tile.rarity--common { --rarity-color: var(--text-tertiary); }
-.trade-row-item__tile.rarity--uncommon { --rarity-color: var(--success); }
-.trade-row-item__tile.rarity--rare { --rarity-color: var(--info); }
-.trade-row-item__tile.rarity--epic { --rarity-color: var(--tier-apex); }
-.trade-row-item__tile.rarity--legendary { --rarity-color: var(--tier-gold); }
-.trade-row-item__tile.rarity--mythic { --rarity-color: var(--error); }
 
 .trade-row-item__tile:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--cell-accent, var(--accent-overall)) 60%, transparent);
@@ -178,11 +170,5 @@ const accentStyle = computed(() => (accent.value ? { '--cell-accent': accent.val
   color: var(--text-tertiary);
 }
 
-.trade-row-item__tooltip-rarity { color: var(--rarity-color); }
-.trade-row-item__tooltip-rarity.rarity--common { --rarity-color: var(--text-tertiary); }
-.trade-row-item__tooltip-rarity.rarity--uncommon { --rarity-color: var(--success); }
-.trade-row-item__tooltip-rarity.rarity--rare { --rarity-color: var(--info); }
-.trade-row-item__tooltip-rarity.rarity--epic { --rarity-color: var(--tier-apex); }
-.trade-row-item__tooltip-rarity.rarity--legendary { --rarity-color: var(--tier-gold); }
-.trade-row-item__tooltip-rarity.rarity--mythic { --rarity-color: var(--error); }
+.trade-row-item__tooltip-rarity { color: var(--rarity-color, var(--text-tertiary)); }
 </style>

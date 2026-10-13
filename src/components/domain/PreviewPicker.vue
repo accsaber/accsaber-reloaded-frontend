@@ -245,13 +245,6 @@ function pick(value: string) {
   flex-shrink: 0;
 }
 
-.preview-picker__rarity.rarity--common { --rarity-color: var(--text-tertiary); }
-.preview-picker__rarity.rarity--uncommon { --rarity-color: var(--success); }
-.preview-picker__rarity.rarity--rare { --rarity-color: var(--info); }
-.preview-picker__rarity.rarity--epic { --rarity-color: var(--tier-apex); }
-.preview-picker__rarity.rarity--legendary { --rarity-color: var(--tier-gold); }
-.preview-picker__rarity.rarity--mythic { --rarity-color: var(--error); }
-
 .preview-picker__empty {
   padding: var(--space-md);
   text-align: center;

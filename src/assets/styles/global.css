@@ -171,3 +171,10 @@ body {
   --clan-accent: oklch(from var(--clan-primary, var(--accent-overall)) clamp(0.4, l, 0.54) min(c, 0.2) h);
   --clan-accent-2: oklch(from var(--clan-secondary, var(--clan-primary, var(--text-secondary))) clamp(0.38, l, 0.56) min(c, 0.18) h);
 }
+
+.rarity--common { --rarity-color: var(--text-tertiary); }
+.rarity--uncommon { --rarity-color: var(--success); }
+.rarity--rare { --rarity-color: var(--info); }
+.rarity--epic { --rarity-color: var(--tier-apex); }
+.rarity--legendary { --rarity-color: var(--tier-gold); }
+.rarity--mythic { --rarity-color: var(--error); }

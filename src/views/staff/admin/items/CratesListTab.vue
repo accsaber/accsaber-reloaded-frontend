@@ -209,30 +209,6 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.crates-list__rarity.rarity--common {
-  --rarity-color: var(--text-tertiary);
-}
-
-.crates-list__rarity.rarity--uncommon {
-  --rarity-color: var(--success);
-}
-
-.crates-list__rarity.rarity--rare {
-  --rarity-color: var(--info);
-}
-
-.crates-list__rarity.rarity--epic {
-  --rarity-color: var(--tier-apex);
-}
-
-.crates-list__rarity.rarity--legendary {
-  --rarity-color: var(--tier-gold);
-}
-
-.crates-list__rarity.rarity--mythic {
-  --rarity-color: var(--error);
-}
-
 .crates-list__status {
   display: inline-block;
   padding: 2px var(--space-sm);

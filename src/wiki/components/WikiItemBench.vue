@@ -184,13 +184,6 @@ function cycleItem() {
   color: var(--rarity-color, var(--text-tertiary));
 }
 
-.rarity--common { --rarity-color: var(--text-tertiary); }
-.rarity--uncommon { --rarity-color: var(--success); }
-.rarity--rare { --rarity-color: var(--info); }
-.rarity--epic { --rarity-color: var(--tier-apex); }
-.rarity--legendary { --rarity-color: var(--tier-gold); }
-.rarity--mythic { --rarity-color: var(--error); }
-
 .bench__controls {
   display: flex;
   flex-direction: column;

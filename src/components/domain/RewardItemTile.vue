@@ -65,8 +65,7 @@ const hoverTitle = computed(() => {
 
 <style scoped>
 .reward-tile {
-  --rarity-color: var(--text-tertiary);
-  --cell-accent: var(--rarity-color);
+  --cell-accent: var(--rarity-color, var(--text-tertiary));
   position: relative;
   display: flex;
   align-items: center;
@@ -76,7 +75,7 @@ const hoverTitle = computed(() => {
   padding: 0;
   flex-shrink: 0;
   background: var(--bg-base);
-  border: 1px solid var(--rarity-color);
+  border: 1px solid var(--rarity-color, var(--text-tertiary));
   border-radius: var(--radius-card);
   overflow: hidden;
   color: var(--text-secondary);
@@ -120,13 +119,6 @@ const hoverTitle = computed(() => {
   overflow: visible;
   text-overflow: clip;
 }
-
-.reward-tile.rarity--common { --rarity-color: var(--text-tertiary); }
-.reward-tile.rarity--uncommon { --rarity-color: var(--success); }
-.reward-tile.rarity--rare { --rarity-color: var(--info); }
-.reward-tile.rarity--epic { --rarity-color: var(--tier-apex); }
-.reward-tile.rarity--legendary { --rarity-color: var(--tier-gold); }
-.reward-tile.rarity--mythic { --rarity-color: var(--error); }
 
 .reward-tile__variant-count {
   position: absolute;

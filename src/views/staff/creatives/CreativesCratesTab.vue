@@ -225,27 +225,4 @@ onMounted(load)
   font-weight: 500;
 }
 
-.crate-card__rarity.rarity--common {
-  --rarity-color: var(--text-tertiary);
-}
-
-.crate-card__rarity.rarity--uncommon {
-  --rarity-color: var(--success);
-}
-
-.crate-card__rarity.rarity--rare {
-  --rarity-color: var(--info);
-}
-
-.crate-card__rarity.rarity--epic {
-  --rarity-color: var(--tier-apex);
-}
-
-.crate-card__rarity.rarity--legendary {
-  --rarity-color: var(--tier-gold);
-}
-
-.crate-card__rarity.rarity--mythic {
-  --rarity-color: var(--error);
-}
 </style>

@@ -69,11 +69,10 @@ const formError = ref<string | null>(null)
 const fieldErrors = ref<Record<string, string>>({})
 
 const activeSellingCount = ref<number | null>(null)
-const supporterTier = ref<string | null>(null)
 
 const CAP_MESSAGE = `You already have ${MAX_ACTIVE_LISTINGS} active listings. Supporters get unlimited listings.`
 
-const isSupporter = computed(() => supporterTier.value != null)
+const isSupporter = computed(() => authStore.authMe?.supporterTier != null)
 
 const disabledLinkIds = computed(() => {
   const ids = new Set<string>()
@@ -144,18 +143,6 @@ async function fetchSlots() {
   }
 }
 
-async function fetchSupporterStatus() {
-  const userId = authStore.userId
-  if (!userId) return
-  try {
-    const { getUser } = await import('@/api/users')
-    const me = await getUser(userId)
-    supporterTier.value = me.supporterTier ?? null
-  } catch {
-    supporterTier.value = null
-  }
-}
-
 function onSelect(item: UserItemResponse) {
   selected.value = item
   quantityInput.value = '1'
@@ -223,17 +210,17 @@ watch(
     if (!loggedIn) return
     fetchPickerItems()
     fetchSlots()
-    fetchSupporterStatus()
     essenceStore.fetchBalance()
     if (authStore.userId) inventoryStore.fetchEquipped(authStore.userId)
   },
   { immediate: true },
 )
 
-watch([pickerSearch, pickerPage], fetchPickerItems)
 watch(pickerSearch, () => {
-  pickerPage.value = 1
+  if (pickerPage.value === 1) fetchPickerItems()
+  else pickerPage.value = 1
 })
+watch(pickerPage, fetchPickerItems)
 
 const breadcrumbs: Crumb[] = [
   { label: 'Market Hub', to: { name: 'market' } },

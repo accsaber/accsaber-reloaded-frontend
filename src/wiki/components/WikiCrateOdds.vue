@@ -164,13 +164,6 @@ const formatRun = (count: number) => (opens.value ? `${(100 * count) / opens.val
   transition: width 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.rarity--common { --rarity-color: var(--text-tertiary); }
-.rarity--uncommon { --rarity-color: var(--success); }
-.rarity--rare { --rarity-color: var(--info); }
-.rarity--epic { --rarity-color: var(--tier-apex); }
-.rarity--legendary { --rarity-color: var(--tier-gold); }
-.rarity--mythic { --rarity-color: var(--error); }
-
 .odds__controls {
   display: flex;
   flex-wrap: wrap;

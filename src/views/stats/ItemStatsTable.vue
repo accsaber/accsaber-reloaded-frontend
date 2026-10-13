@@ -255,7 +255,6 @@ onMounted(() => {
 }
 
 .item-cell__frame {
-  --rarity-color: var(--text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -263,7 +262,7 @@ onMounted(() => {
   height: 34px;
   flex-shrink: 0;
   background: var(--bg-base);
-  border: 1px solid var(--rarity-color);
+  border: 1px solid var(--rarity-color, var(--text-tertiary));
   border-radius: var(--radius-card);
   overflow: hidden;
 }
@@ -272,13 +271,6 @@ onMounted(() => {
   width: 30px;
   height: 30px;
 }
-
-.item-cell__frame.rarity--common { --rarity-color: var(--text-tertiary); }
-.item-cell__frame.rarity--uncommon { --rarity-color: var(--success); }
-.item-cell__frame.rarity--rare { --rarity-color: var(--info); }
-.item-cell__frame.rarity--epic { --rarity-color: var(--tier-apex); }
-.item-cell__frame.rarity--legendary { --rarity-color: var(--tier-gold); }
-.item-cell__frame.rarity--mythic { --rarity-color: var(--error); }
 
 .item-cell__info {
   display: flex;
@@ -295,7 +287,7 @@ onMounted(() => {
 .item-cell__name {
   --rarity-color: var(--text-primary);
   font-weight: 500;
-  color: var(--rarity-color);
+  color: var(--rarity-color, var(--text-tertiary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

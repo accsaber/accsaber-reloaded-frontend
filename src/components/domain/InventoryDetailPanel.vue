@@ -133,7 +133,6 @@ const showComposition = computed(() =>
   props.canManage && (isBorderShapeItem.value || isBorderColorItem.value),
 )
 
-
 const modifiers = computed<ItemModifierRef[]>(() =>
   sortModifiersByKey(props.userItem?.modifiers ?? []),
 )
@@ -548,20 +547,12 @@ onUnmounted(() => {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   overflow: hidden;
-  --rarity-color: var(--text-tertiary);
 }
 
 .inv-detail__art--title-fx :deep(.item-preview) {
   position: relative;
   z-index: 1;
 }
-
-.inv-detail__art.rarity--common { --rarity-color: var(--text-tertiary); }
-.inv-detail__art.rarity--uncommon { --rarity-color: var(--success); }
-.inv-detail__art.rarity--rare { --rarity-color: var(--info); }
-.inv-detail__art.rarity--epic { --rarity-color: var(--tier-apex); }
-.inv-detail__art.rarity--legendary { --rarity-color: var(--tier-gold); }
-.inv-detail__art.rarity--mythic { --rarity-color: var(--error); }
 
 .inv-detail__art img {
   max-width: 75%;
@@ -594,14 +585,8 @@ onUnmounted(() => {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--rarity-color, var(--text-tertiary));
 }
-
-.inv-detail__rarity.rarity--uncommon { color: var(--success); }
-.inv-detail__rarity.rarity--rare { color: var(--info); }
-.inv-detail__rarity.rarity--epic { color: var(--tier-apex); }
-.inv-detail__rarity.rarity--legendary { color: var(--tier-gold); }
-.inv-detail__rarity.rarity--mythic { color: var(--error); }
 
 .inv-detail__description {
   margin: 0;

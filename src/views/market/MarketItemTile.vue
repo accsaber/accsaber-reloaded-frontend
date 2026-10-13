@@ -105,21 +105,13 @@ onMounted(() => {
   width: 100%;
   aspect-ratio: 1 / 1;
   background: var(--bg-surface);
-  border: 1px solid var(--cell-accent, var(--rarity-color));
+  border: 1px solid var(--cell-accent);
   border-radius: var(--radius-card);
   overflow: hidden;
   container-type: inline-size;
   container-name: inv-cell;
-  --rarity-color: var(--text-tertiary);
-  --cell-accent: var(--rarity-color);
+  --cell-accent: var(--rarity-color, var(--text-tertiary));
 }
-
-.market-item-tile.rarity--common { --rarity-color: var(--text-tertiary); }
-.market-item-tile.rarity--uncommon { --rarity-color: var(--success); }
-.market-item-tile.rarity--rare { --rarity-color: var(--info); }
-.market-item-tile.rarity--epic { --rarity-color: var(--tier-apex); }
-.market-item-tile.rarity--legendary { --rarity-color: var(--tier-gold); }
-.market-item-tile.rarity--mythic { --rarity-color: var(--error); }
 
 .market-item-tile__art {
   display: flex;

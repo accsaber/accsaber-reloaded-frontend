@@ -11,7 +11,7 @@ defineProps<{
 <template>
   <span
     class="market-wallet"
-    :title="reserved > 0 ? `${formatEssenceAmount(reserved)} essence held in your active bids` : 'Essence balance'"
+    title="Essence balance"
   >
     <EssenceAmount :amount="balance" class="market-wallet__balance" />
     <span v-if="reserved > 0" class="market-wallet__reserved">

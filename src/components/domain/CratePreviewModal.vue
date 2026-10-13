@@ -347,10 +347,9 @@ onUnmounted(() => {
   width: 100%;
   aspect-ratio: 1 / 1;
   background: var(--bg-base);
-  border: 1px solid color-mix(in srgb, var(--rarity-color) 35%, var(--bg-overlay));
+  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 35%, var(--bg-overlay));
   border-radius: var(--radius-card);
   overflow: hidden;
-  --rarity-color: var(--text-tertiary);
 }
 
 .crate-preview__art :deep(img) {
@@ -371,8 +370,7 @@ onUnmounted(() => {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--rarity-color);
-  --rarity-color: var(--text-tertiary);
+  color: var(--rarity-color, var(--text-tertiary));
 }
 
 .crate-preview__description {
@@ -498,7 +496,7 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--rarity-color);
+  color: var(--rarity-color, var(--text-tertiary));
 }
 
 .crate-preview__run-label-chance {
@@ -518,7 +516,6 @@ onUnmounted(() => {
   vertical-align: top;
   margin: 26px var(--space-sm) var(--space-sm) 0;
   padding-top: var(--space-xs);
-  --rarity-color: var(--text-tertiary);
   appearance: none;
   border: 0;
   background: none;
@@ -529,7 +526,7 @@ onUnmounted(() => {
 }
 
 .crate-preview__tile:hover .crate-preview__tile-art {
-  border-color: color-mix(in srgb, var(--rarity-color) 75%, var(--text-primary));
+  border-color: color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 75%, var(--text-primary));
 }
 
 .crate-preview__effect-btn {
@@ -552,7 +549,7 @@ onUnmounted(() => {
   left: 0;
   right: calc(-1 * var(--space-sm));
   height: 1px;
-  background: color-mix(in srgb, var(--rarity-color) 40%, var(--bg-overlay));
+  background: color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 40%, var(--bg-overlay));
 }
 
 .crate-preview__tile--run-end::before {
@@ -567,7 +564,7 @@ onUnmounted(() => {
   width: 100%;
   aspect-ratio: 1 / 1;
   background: var(--bg-base);
-  border: 1px solid color-mix(in srgb, var(--rarity-color) 35%, var(--bg-overlay));
+  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 35%, var(--bg-overlay));
   border-radius: var(--radius-input);
   overflow: hidden;
 }
@@ -637,25 +634,6 @@ onUnmounted(() => {
   padding: 0;
   list-style: none;
 }
-
-.crate-preview__art.rarity--common,
-.crate-preview__rarity.rarity--common,
-.crate-preview__tile.rarity--common { --rarity-color: var(--text-tertiary); }
-.crate-preview__art.rarity--uncommon,
-.crate-preview__rarity.rarity--uncommon,
-.crate-preview__tile.rarity--uncommon { --rarity-color: var(--success); }
-.crate-preview__art.rarity--rare,
-.crate-preview__rarity.rarity--rare,
-.crate-preview__tile.rarity--rare { --rarity-color: var(--info); }
-.crate-preview__art.rarity--epic,
-.crate-preview__rarity.rarity--epic,
-.crate-preview__tile.rarity--epic { --rarity-color: var(--tier-apex); }
-.crate-preview__art.rarity--legendary,
-.crate-preview__rarity.rarity--legendary,
-.crate-preview__tile.rarity--legendary { --rarity-color: var(--tier-gold); }
-.crate-preview__art.rarity--mythic,
-.crate-preview__rarity.rarity--mythic,
-.crate-preview__tile.rarity--mythic { --rarity-color: var(--error); }
 
 @media (max-width: 767px) {
   .crate-preview__identity,

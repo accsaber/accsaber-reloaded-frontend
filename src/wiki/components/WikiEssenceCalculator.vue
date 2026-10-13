@@ -104,13 +104,6 @@ function clear() {
   color: var(--text-secondary);
 }
 
-.rarity--common { --rarity-color: var(--text-tertiary); }
-.rarity--uncommon { --rarity-color: var(--success); }
-.rarity--rare { --rarity-color: var(--info); }
-.rarity--epic { --rarity-color: var(--tier-apex); }
-.rarity--legendary { --rarity-color: var(--tier-gold); }
-.rarity--mythic { --rarity-color: var(--error); }
-
 .grinder__stepper {
   display: inline-flex;
   align-items: center;

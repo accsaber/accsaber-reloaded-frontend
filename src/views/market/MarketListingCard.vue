@@ -197,13 +197,6 @@ const settledLabel = computed(() => {
   flex-shrink: 0;
 }
 
-.market-card__rarity.rarity--common { --rarity-color: var(--text-tertiary); }
-.market-card__rarity.rarity--uncommon { --rarity-color: var(--success); }
-.market-card__rarity.rarity--rare { --rarity-color: var(--info); }
-.market-card__rarity.rarity--epic { --rarity-color: var(--tier-apex); }
-.market-card__rarity.rarity--legendary { --rarity-color: var(--tier-gold); }
-.market-card__rarity.rarity--mythic { --rarity-color: var(--error); }
-
 .market-card__price {
   display: flex;
   align-items: baseline;

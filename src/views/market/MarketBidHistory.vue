@@ -202,14 +202,14 @@ const closingLine = computed(() => {
   padding: var(--space-xs) var(--space-md) var(--space-sm);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 10px;
-  border-bottom-left-radius: 3px;
+  border-radius: var(--radius-modal);
+  border-bottom-left-radius: var(--radius-btn);
   min-width: 0;
 }
 
 .bid-chat__msg--right .bid-chat__bubble {
-  border-radius: 10px;
-  border-bottom-right-radius: 3px;
+  border-radius: var(--radius-modal);
+  border-bottom-right-radius: var(--radius-btn);
   background: var(--bg-elevated);
 }
 

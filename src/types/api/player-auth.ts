@@ -21,6 +21,7 @@ export interface AuthMeResponse {
   cdnAvatarUrl?: string | null
   country: string | null
   clan?: PublicClanResponse | null
+  supporterTier?: string | null
   banned: boolean
   connections: AuthConnection[]
   staff: AuthMeStaff | null

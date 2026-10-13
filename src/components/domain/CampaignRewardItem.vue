@@ -48,8 +48,7 @@ const initial = computed(() => displayName.value.charAt(0).toUpperCase())
 }
 
 .reward-item__art {
-  --rarity-color: var(--text-tertiary);
-  --cell-accent: var(--rarity-color);
+  --cell-accent: var(--rarity-color, var(--text-tertiary));
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -57,17 +56,10 @@ const initial = computed(() => displayName.value.charAt(0).toUpperCase())
   width: 56px;
   height: 56px;
   background: var(--bg-base);
-  border: 1px solid var(--rarity-color);
+  border: 1px solid var(--rarity-color, var(--text-tertiary));
   border-radius: var(--radius-card);
   overflow: hidden;
 }
-
-.reward-item__art.rarity--common { --rarity-color: var(--text-tertiary); }
-.reward-item__art.rarity--uncommon { --rarity-color: var(--success); }
-.reward-item__art.rarity--rare { --rarity-color: var(--info); }
-.reward-item__art.rarity--epic { --rarity-color: var(--tier-apex); }
-.reward-item__art.rarity--legendary { --rarity-color: var(--tier-gold); }
-.reward-item__art.rarity--mythic { --rarity-color: var(--error); }
 
 .reward-item__initial {
   font-family: var(--font-sans);

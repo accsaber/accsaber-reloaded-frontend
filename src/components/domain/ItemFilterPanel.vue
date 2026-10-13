@@ -300,11 +300,6 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
 }
 
 .item-filters__option.rarity--common { --rarity-color: var(--text-secondary); }
-.item-filters__option.rarity--uncommon { --rarity-color: var(--success); }
-.item-filters__option.rarity--rare { --rarity-color: var(--info); }
-.item-filters__option.rarity--epic { --rarity-color: var(--tier-apex); }
-.item-filters__option.rarity--legendary { --rarity-color: var(--tier-gold); }
-.item-filters__option.rarity--mythic { --rarity-color: var(--error); }
 
 .item-filters__price-row {
   display: flex;

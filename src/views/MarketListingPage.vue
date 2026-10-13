@@ -66,6 +66,12 @@ const awaitingSettlement = computed(
     listing.value?.endsAt != null &&
     new Date(listing.value.endsAt).getTime() <= now.value,
 )
+const neutralBanner = computed(() => {
+  if (awaitingSettlement.value) return 'Ended, settling now'
+  if (listing.value?.status === 'expired') return 'Expired without a sale'
+  if (listing.value?.status === 'cancelled') return 'Cancelled by the seller'
+  return null
+})
 const auction = computed(() => (listing.value ? isAuction(listing.value) : false))
 const price = computed(() => (listing.value ? listingPrice(listing.value) : null))
 const isSeller = computed(() => isSameMarketUser(listing.value?.seller, viewerId.value))
@@ -138,6 +144,16 @@ const breadcrumbs = computed<Crumb[]>(() => [
   { label: listing.value?.title ?? 'Listing' },
 ])
 
+async function fetchBids() {
+  if (!listingId.value) return
+  try {
+    const { getMarketListingBids } = await import('@/api/market')
+    bids.value = await getMarketListingBids(listingId.value)
+  } catch {
+    return
+  }
+}
+
 async function fetchAll(background = false) {
   if (!listingId.value) return
   if (!background) loading.value = true
@@ -183,7 +199,7 @@ function onSocketEvent(event: MarketListingEvent) {
         ...bids.value,
       ]
     }
-    fetchAll(true)
+    fetchBids()
   } else if (event.type === 'sold') {
     current.winner = event.actor
     current.finalPrice = event.amount
@@ -209,12 +225,7 @@ async function handleBid(amount: number) {
   try {
     const { placeMarketBid } = await import('@/api/market')
     listing.value = await placeMarketBid(listing.value.id, amount)
-    const { getMarketListingBids } = await import('@/api/market')
-    const [history] = await Promise.all([
-      getMarketListingBids(listing.value.id),
-      essenceStore.fetchBalance(true),
-    ])
-    bids.value = history
+    await essenceStore.fetchBalance(true)
   } catch (e) {
     const parsed = parseApiError(e, 'Could not place that bid.')
     const field = parsed.fieldErrors.find((f) => f.field === 'amount')
@@ -407,8 +418,8 @@ onUnmounted(() => {
             <UserChip :user="listing.currentBidder" link />
           </p>
 
-          <div v-if="awaitingSettlement" class="listing-page__banner listing-page__banner--neutral">
-            This listing has ended and is being settled.
+          <div v-if="neutralBanner" class="listing-page__banner listing-page__banner--neutral">
+            {{ neutralBanner }}
           </div>
 
           <div v-else-if="listing.status === 'sold'" class="listing-page__banner listing-page__banner--sold">
@@ -425,13 +436,6 @@ onUnmounted(() => {
             </span>
           </div>
 
-          <div v-else-if="listing.status === 'expired'" class="listing-page__banner listing-page__banner--neutral">
-            This listing expired without a sale.
-          </div>
-
-          <div v-else-if="listing.status === 'cancelled'" class="listing-page__banner listing-page__banner--neutral">
-            This listing was cancelled by the seller.
-          </div>
 
           <MarketBidPanel
             v-if="active && !awaitingSettlement"
@@ -447,14 +451,9 @@ onUnmounted(() => {
             @buy="handleBuy"
           />
 
-          <template v-if="canCancel">
-            <BaseButton variant="destructive" size="sm" :loading="actionBusy" @click="handleCancel">
-              {{ cancelArmed ? 'Confirm cancellation' : 'Cancel listing' }}
-            </BaseButton>
-            <p class="listing-page__cancel-hint">
-              A listing can only be cancelled while it has no bids.
-            </p>
-          </template>
+          <BaseButton v-if="canCancel" variant="destructive" size="sm" :loading="actionBusy" @click="handleCancel">
+            {{ cancelArmed ? 'Confirm cancellation' : 'Cancel listing' }}
+          </BaseButton>
 
           <p v-if="formError && !active" class="listing-page__error" role="alert">{{ formError }}</p>
         </section>
@@ -549,13 +548,6 @@ onUnmounted(() => {
 .listing-page__rarity {
   color: var(--rarity-color, var(--text-tertiary));
 }
-
-.listing-page__rarity.rarity--common { --rarity-color: var(--text-tertiary); }
-.listing-page__rarity.rarity--uncommon { --rarity-color: var(--success); }
-.listing-page__rarity.rarity--rare { --rarity-color: var(--info); }
-.listing-page__rarity.rarity--epic { --rarity-color: var(--tier-apex); }
-.listing-page__rarity.rarity--legendary { --rarity-color: var(--tier-gold); }
-.listing-page__rarity.rarity--mythic { --rarity-color: var(--error); }
 
 .listing-page__type {
   color: var(--text-tertiary);
@@ -745,12 +737,6 @@ onUnmounted(() => {
 
 .listing-page__banner-time {
   margin-left: auto;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.listing-page__cancel-hint {
-  margin: 0;
   font-size: var(--text-caption);
   color: var(--text-tertiary);
 }

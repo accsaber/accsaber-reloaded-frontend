@@ -1451,30 +1451,6 @@ watch(crateId, refresh)
   font-weight: 500;
 }
 
-.crate-editor__rarity.rarity--common {
-  --rarity-color: var(--text-tertiary);
-}
-
-.crate-editor__rarity.rarity--uncommon {
-  --rarity-color: var(--success);
-}
-
-.crate-editor__rarity.rarity--rare {
-  --rarity-color: var(--info);
-}
-
-.crate-editor__rarity.rarity--epic {
-  --rarity-color: var(--tier-apex);
-}
-
-.crate-editor__rarity.rarity--legendary {
-  --rarity-color: var(--tier-gold);
-}
-
-.crate-editor__rarity.rarity--mythic {
-  --rarity-color: var(--error);
-}
-
 .crate-editor__pool-table {
   width: 100%;
   border-collapse: collapse;

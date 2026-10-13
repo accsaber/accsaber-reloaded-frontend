@@ -6,6 +6,7 @@ import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
@@ -13,7 +14,7 @@ import type { MarketListingResponse } from '@/types/api/market'
 import type { Tab } from '@/types/display'
 import { isSameMarketUser } from '@/utils/market'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import MarketListingCard, { type ListingCardTag } from './market/MarketListingCard.vue'
 import MarketWallet from './market/MarketWallet.vue'
 
@@ -22,31 +23,23 @@ usePageMeta({
   description: 'Track what you are selling, bidding on, and have won on the AccSaber market.',
 })
 
-const route = useRoute()
 const router = useRouter()
+const { queryRef } = useQueryParams()
 const authStore = useAuthStore()
 const essenceStore = useEssenceStore()
 
 type TabKey = 'selling' | 'bidding' | 'won'
 
 const involvement = ref<MarketListingResponse[]>([])
-const outbidListings = ref<MarketListingResponse[]>([])
 const loading = ref(true)
 let requestId = 0
 
 const viewerId = computed(() => authStore.userId)
 
+const tabParam = queryRef<TabKey>('tab')
 const activeTab = computed<TabKey>({
-  get: () => {
-    const tab = route.query.tab
-    return tab === 'bidding' || tab === 'won' ? tab : 'selling'
-  },
-  set: (value) => {
-    const query = { ...route.query }
-    if (value === 'selling') delete query.tab
-    else query.tab = value
-    router.replace({ query })
-  },
+  get: () => (tabParam.value === 'bidding' || tabParam.value === 'won' ? tabParam.value : 'selling'),
+  set: (value) => { tabParam.value = value === 'selling' ? '' : value },
 })
 
 const listingEndsMs = (l: MarketListingResponse) =>
@@ -77,6 +70,15 @@ const winning = computed(() =>
         isSameMarketUser(l.currentBidder, viewerId.value),
     )
     .sort(endsSoonestFirst),
+)
+
+const outbidListings = computed(() =>
+  involvement.value.filter(
+    (l) =>
+      !isSameMarketUser(l.seller, viewerId.value) &&
+      !isSameMarketUser(l.currentBidder, viewerId.value) &&
+      !isSameMarketUser(l.winner, viewerId.value),
+  ),
 )
 
 const outbid = computed(() =>
@@ -127,9 +129,9 @@ function tagFor(listing: MarketListingResponse): ListingCardTag | null {
 }
 
 const emptyMessage = computed(() => {
-  if (activeTab.value === 'bidding') return "You haven't bid on anything yet."
-  if (activeTab.value === 'won') return "Nothing won yet. Go outbid someone."
-  return "You're not selling anything right now."
+  if (activeTab.value === 'bidding') return 'No bids yet'
+  if (activeTab.value === 'won') return 'Nothing won yet'
+  return 'Nothing listed'
 })
 
 async function fetchActivity(background = false) {
@@ -137,28 +139,13 @@ async function fetchActivity(background = false) {
   const id = ++requestId
   if (!background) loading.value = true
   try {
-    const { getMyMarketListings, getMyMarketBids, getMarketListing } = await import('@/api/market')
-    const [involvedPage, bidsPage] = await Promise.all([
-      getMyMarketListings({ page: 0, size: 100, sort: 'endsAt,desc' }),
-      getMyMarketBids({ page: 0, size: 50 }),
-    ])
+    const { getMyMarketListings } = await import('@/api/market')
+    const page = await getMyMarketListings({ page: 0, size: 100, sort: 'endsAt,desc' })
     if (id !== requestId) return
-    involvement.value = involvedPage.content
-    const involvedIds = new Set(involvedPage.content.map((l) => l.id))
-    const missingIds = [...new Set(bidsPage.content.map((b) => b.listingId))].filter(
-      (listingId) => !involvedIds.has(listingId),
-    )
-    const extras = await Promise.all(
-      missingIds.map((listingId) => getMarketListing(listingId).catch(() => null)),
-    )
-    if (id !== requestId) return
-    outbidListings.value = extras.filter((l): l is MarketListingResponse => l !== null)
+    involvement.value = page.content
   } catch {
     if (id !== requestId) return
-    if (!background) {
-      involvement.value = []
-      outbidListings.value = []
-    }
+    if (!background) involvement.value = []
   }
   if (id === requestId && !background) loading.value = false
 }

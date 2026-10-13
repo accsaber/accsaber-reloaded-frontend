@@ -140,8 +140,7 @@ function submitBuy() {
       </p>
 
       <p v-if="willBuyout && !bidLocked && buyout != null" class="bid-panel__warning" role="alert">
-        This meets the buyout price. Submitting will buy the item immediately for
-        <EssenceAmount :amount="buyout" />.
+        Buys it now for <EssenceAmount :amount="buyout" />
       </p>
 
       <p v-else-if="overBalance" class="bid-panel__warning">

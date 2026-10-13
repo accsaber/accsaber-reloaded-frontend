@@ -203,15 +203,8 @@ onMounted(() => {
 }
 
 .inventory-cell-tooltip__rarity {
-  color: var(--rarity-color);
+  color: var(--rarity-color, var(--text-tertiary));
 }
-
-.inventory-cell-tooltip__rarity.rarity--common { --rarity-color: var(--text-tertiary); }
-.inventory-cell-tooltip__rarity.rarity--uncommon { --rarity-color: var(--success); }
-.inventory-cell-tooltip__rarity.rarity--rare { --rarity-color: var(--info); }
-.inventory-cell-tooltip__rarity.rarity--epic { --rarity-color: var(--tier-apex); }
-.inventory-cell-tooltip__rarity.rarity--legendary { --rarity-color: var(--tier-gold); }
-.inventory-cell-tooltip__rarity.rarity--mythic { --rarity-color: var(--error); }
 
 .inventory-cell {
   position: absolute;
@@ -225,21 +218,13 @@ onMounted(() => {
   padding: 0;
   box-sizing: border-box;
   background: var(--bg-surface);
-  border: 1px solid var(--cell-accent, var(--rarity-color));
+  border: 1px solid var(--cell-accent, var(--rarity-color, var(--text-tertiary)));
   border-radius: var(--radius-card);
   cursor: pointer;
   overflow: hidden;
   transition: border-color 120ms ease, transform 120ms ease;
-  --rarity-color: var(--text-tertiary);
-  --cell-accent: var(--rarity-color);
+  --cell-accent: var(--rarity-color, var(--text-tertiary));
 }
-
-.inventory-cell.rarity--common { --rarity-color: var(--text-tertiary); }
-.inventory-cell.rarity--uncommon { --rarity-color: var(--success); }
-.inventory-cell.rarity--rare { --rarity-color: var(--info); }
-.inventory-cell.rarity--epic { --rarity-color: var(--tier-apex); }
-.inventory-cell.rarity--legendary { --rarity-color: var(--tier-gold); }
-.inventory-cell.rarity--mythic { --rarity-color: var(--error); }
 
 .inventory-cell:hover {
   border-color: var(--cell-accent);

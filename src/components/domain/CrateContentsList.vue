@@ -164,18 +164,11 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
 }
 
 .crate-contents__group {
-  --rarity-color: var(--text-tertiary);
 }
 
 .crate-contents__group + .crate-contents__group {
   border-top: 1px solid var(--bg-overlay);
 }
-
-.crate-contents__group.rarity--uncommon { --rarity-color: var(--success); }
-.crate-contents__group.rarity--rare { --rarity-color: var(--info); }
-.crate-contents__group.rarity--epic { --rarity-color: var(--tier-apex); }
-.crate-contents__group.rarity--legendary { --rarity-color: var(--tier-gold); }
-.crate-contents__group.rarity--mythic { --rarity-color: var(--error); }
 
 .crate-contents__group-head {
   display: flex;
@@ -191,7 +184,7 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--rarity-color);
+  color: var(--rarity-color, var(--text-tertiary));
 }
 
 .crate-contents__group-chance {
@@ -228,7 +221,7 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   width: 36px;
   height: 36px;
   background: var(--bg-base);
-  border: 1px solid color-mix(in srgb, var(--rarity-color) 35%, var(--bg-overlay));
+  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 35%, var(--bg-overlay));
   border-radius: var(--radius-input);
   overflow: hidden;
 }

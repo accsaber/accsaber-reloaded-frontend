@@ -5,7 +5,7 @@ import type {
   MarketListingResponse,
   MyMarketListingsParams,
 } from '@/types/api/market'
-import type { Page, PaginationParams } from '@/types/pagination'
+import type { Page } from '@/types/pagination'
 import { del, get, post } from './client'
 import { buildQuery } from './utils'
 
@@ -41,6 +41,3 @@ export function getMyMarketListings(params?: MyMarketListingsParams): Promise<Pa
   return get<Page<MarketListingResponse>>(`/market/me/listings${buildQuery(params)}`)
 }
 
-export function getMyMarketBids(params?: PaginationParams): Promise<Page<MarketBidResponse>> {
-  return get<Page<MarketBidResponse>>(`/market/me/bids${buildQuery(params)}`)
-}
