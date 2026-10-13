@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import EmptyState from '@/components/common/EmptyState.vue'
-import { useNow } from '@/composables/useNow'
 import type { MissionResponse } from '@/types/api/missions'
 import MissionContributorsModal from '@/components/domain/MissionContributorsModal.vue'
 import SharedMissionRow from '@/components/domain/SharedMissionRow.vue'
@@ -23,11 +22,11 @@ const props = defineProps<{
   begun: boolean | null
   live: boolean
   joinPrompt: boolean
+  now: number
 }>()
 
 type Tab = number | 'all'
 
-const now = useNow()
 const activeTab = ref<Tab>(1)
 const openId = ref<string | null>(null)
 
@@ -205,37 +204,36 @@ watch(
 
     <EmptyState v-if="!visibleRows.length && !visibleCommunity.length"
       message="No missions unlocked for this week yet." />
-    <div v-else class="missions__scroll" :class="{ 'missions__scroll--more': showScrollCue }">
-      <div ref="listRef" class="missions__list" @scroll.passive="measureScroll">
-        <div v-if="visibleRows.length" class="group">
-          <div v-if="showGroupLabels" class="group__head">
-            <span class="group__label">Personal</span>
-          </div>
-          <EventMissionRow
-            v-for="row in visibleRows"
-            :key="row.mission.id"
-            :mission="row.mission"
-            :lock="row.lock"
-          />
+    <div v-else ref="listRef" class="missions__list" :class="{ 'missions__list--more': showScrollCue }"
+      @scroll.passive="measureScroll">
+      <div v-if="visibleRows.length" class="group">
+        <div v-if="showGroupLabels" class="group__head">
+          <span class="group__label">Personal</span>
         </div>
+        <EventMissionRow
+          v-for="row in visibleRows"
+          :key="row.mission.id"
+          :mission="row.mission"
+          :lock="row.lock"
+        />
+      </div>
 
-        <div v-if="visibleCommunity.length" class="group">
-          <div v-if="showGroupLabels || joinPrompt" class="group__head">
-            <span v-if="showGroupLabels" class="group__label">Community</span>
-            <span v-if="showGroupLabels" class="group__note">
-              Optional
-            </span>
-            <span v-if="joinPrompt" class="group__join">Join the event to contribute.</span>
-          </div>
-          <SharedMissionRow
-            v-for="mission in visibleCommunity"
-            :key="mission.id"
-            :mission="mission"
-            :locked="communityLocked(mission)"
-            :now="now"
-            @contributors="openId = mission.id"
-          />
+      <div v-if="visibleCommunity.length" class="group">
+        <div v-if="showGroupLabels || joinPrompt" class="group__head">
+          <span v-if="showGroupLabels" class="group__label">Community</span>
+          <span v-if="showGroupLabels" class="group__note">
+            Optional
+          </span>
+          <span v-if="joinPrompt" class="group__join">Join the event to contribute.</span>
         </div>
+        <SharedMissionRow
+          v-for="mission in visibleCommunity"
+          :key="mission.id"
+          :mission="mission"
+          :locked="communityLocked(mission)"
+          :now="now"
+          @contributors="openId = mission.id"
+        />
       </div>
     </div>
 
@@ -373,28 +371,9 @@ watch(
   color: var(--text-tertiary);
 }
 
-.missions__scroll {
+.missions__list {
   --mission-row-h: 117px;
   --mission-scrollbar-w: 5px;
-  position: relative;
-}
-
-.missions__scroll::after {
-  content: '';
-  position: absolute;
-  inset: auto var(--mission-scrollbar-w) 0 0;
-  height: 52px;
-  background: linear-gradient(to top, var(--bg-base), transparent);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 150ms ease-out;
-}
-
-.missions__scroll--more::after {
-  opacity: 1;
-}
-
-.missions__list {
   display: flex;
   flex-direction: column;
   max-height: min(calc(var(--mission-row-h) * 5), 62vh);
@@ -405,6 +384,10 @@ watch(
   scrollbar-color: var(--bg-overlay) transparent;
 }
 
+.missions__list--more {
+  mask-image: linear-gradient(to bottom, black calc(100% - 52px), transparent);
+}
+
 .missions__list::-webkit-scrollbar {
   width: var(--mission-scrollbar-w);
 }
@@ -412,11 +395,5 @@ watch(
 .missions__list::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
   border-radius: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .missions__scroll::after {
-    transition: none;
-  }
 }
 </style>

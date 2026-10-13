@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import NewsLinkedResource from '@/components/domain/NewsLinkedResource.vue'
 import NewsTypeBadge from '@/components/domain/NewsTypeBadge.vue'
-import { useColorExtract } from '@/composables/useColorExtract'
-import { useThemeStore } from '@/stores/theme'
 import type { PublicNewsResponse } from '@/types/api/news'
 import { NEWS_TYPE_ACCENT } from '@/utils/constants'
 import { formatFullDate } from '@/utils/formatters'
@@ -13,33 +11,12 @@ const props = defineProps<{
   news: PublicNewsResponse
 }>()
 
-const themeStore = useThemeStore()
-
 const renderedBody = computed(() => renderMarkdown(props.news.content))
 const accent = computed(() => NEWS_TYPE_ACCENT[props.news.type])
-
-const imageUrlRef = computed(() => props.news.imageUrl ?? '')
-const { dominantColor } = useColorExtract(imageUrlRef)
-
-const detailAccent = computed(() => {
-  const color = dominantColor.value
-  if (!color) return accent.value
-  if (themeStore.resolvedBase === 'dark') {
-    const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
-    if (match) {
-      const r = Math.min(255, Number(match[1]) + 60)
-      const g = Math.min(255, Number(match[2]) + 60)
-      const b = Math.min(255, Number(match[3]) + 60)
-      return `rgb(${r}, ${g}, ${b})`
-    }
-  }
-  return color
-})
-
 </script>
 
 <template>
-  <article class="news-article" :style="{ '--detail-accent': detailAccent }">
+  <article class="news-article" :style="{ '--detail-accent': accent }">
     <div v-if="news.imageUrl" class="news-article__hero">
       <img :src="news.imageUrl" :alt="news.title" fetchpriority="high" decoding="async" />
     </div>

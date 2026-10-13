@@ -87,14 +87,14 @@ import type { EventState } from '@/types/api/events'
 export const EVENT_STATE_LABELS: Record<EventState, string> = {
   live: 'Live',
   upcoming: 'Upcoming',
-  past: 'Past',
+  past: 'Ended',
 }
 
 export const EVENT_STATE_ORDER: EventState[] = ['live', 'upcoming', 'past']
 
 export const EVENT_STATE_ACCENT: Record<EventState, string> = {
   live: 'var(--success)',
-  upcoming: 'var(--accent-overall)',
+  upcoming: 'var(--info)',
   past: 'var(--text-tertiary)',
 }
 

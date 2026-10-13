@@ -2,19 +2,15 @@
 import { EVENT_STATUS_COLOR, type EventStatus } from '@/utils/events'
 import { computed } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    status: EventStatus
-    size?: 'sm' | 'lg'
-  }>(),
-  { size: 'sm' },
-)
+const props = defineProps<{
+  status: EventStatus
+}>()
 
 const accent = computed(() => EVENT_STATUS_COLOR[props.status])
 </script>
 
 <template>
-  <div class="glyph" :class="`glyph--${size}`" :style="{ '--glyph-accent': accent }" aria-hidden="true">
+  <div class="glyph" :style="{ '--glyph-accent': accent }" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
       stroke-linejoin="round">
       <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
@@ -40,10 +36,5 @@ const accent = computed(() => EVENT_STATUS_COLOR[props.status])
 .glyph svg {
   width: 22px;
   height: 22px;
-}
-
-.glyph--lg svg {
-  width: 52px;
-  height: 52px;
 }
 </style>

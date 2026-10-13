@@ -5,7 +5,6 @@ withDefaults(
     imageUrl?: string | null
     meta?: string | null
     badge?: string | null
-    badgeAccent?: string
     accent?: string
     active?: boolean
     pinned?: boolean
@@ -14,7 +13,6 @@ withDefaults(
     imageUrl: null,
     meta: null,
     badge: null,
-    badgeAccent: 'var(--accent)',
     accent: 'var(--accent)',
     active: false,
     pinned: false,
@@ -42,7 +40,7 @@ const emit = defineEmits<{
 
     <div class="rail-card__body">
       <div class="rail-card__meta">
-        <span v-if="badge" class="rail-card__badge" :style="{ '--badge-accent': badgeAccent }">{{ badge }}</span>
+        <span v-if="badge" class="rail-card__badge">{{ badge }}</span>
         <span v-if="pinned" class="rail-card__pin" aria-label="Pinned">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
@@ -66,7 +64,6 @@ const emit = defineEmits<{
   text-align: left;
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
   color: inherit;
   cursor: pointer;
@@ -79,8 +76,7 @@ const emit = defineEmits<{
 }
 
 .rail-card--active {
-  border-color: var(--text-tertiary);
-  border-left-color: var(--text-secondary);
+  border-color: var(--text-secondary);
   background: var(--bg-elevated);
 }
 
@@ -121,7 +117,7 @@ const emit = defineEmits<{
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--badge-accent);
+  color: var(--card-accent);
   white-space: nowrap;
 }
 

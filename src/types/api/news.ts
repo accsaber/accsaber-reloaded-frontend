@@ -59,6 +59,7 @@ export type UpdateNewsRequest = Partial<CreateNewsRequest>
 
 export interface NewsListParams extends PaginationParams {
   type?: NewsType
+  search?: string
 }
 
 export interface StaffNewsListParams extends NewsListParams {

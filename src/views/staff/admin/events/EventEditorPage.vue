@@ -25,10 +25,9 @@ import type {
   MissionTemplateResponse,
 } from '@/types/api/events'
 import type { ItemResponse } from '@/types/api/items'
+import { EVENT_STATE_ACCENT, EVENT_STATE_LABELS } from '@/utils/constants'
 import {
-  EVENT_TIMING_COLOR,
-  EVENT_TIMING_LABEL,
-  eventTiming,
+  eventState,
   isoToLocalInput,
   localInputToIso,
   slugify,
@@ -74,7 +73,7 @@ const form = ref({
 
 const slugError = ref('')
 
-const timing = computed(() => (event.value ? eventTiming(event.value, now.value) : 'upcoming'))
+const timing = computed(() => (event.value ? eventState(event.value, now.value) : 'upcoming'))
 
 const slugPreview = computed(() => slugify(form.value.slug))
 const slugChanged = computed(() => !!event.value && slugPreview.value !== event.value.slug)
@@ -270,8 +269,8 @@ function missionXp(m: MissionTemplateResponse): string {
       <div class="event-editor__spacer" />
       <div v-if="event" class="event-editor__status-group">
         <span class="event-editor__badge"
-          :style="{ color: EVENT_TIMING_COLOR[timing], borderColor: EVENT_TIMING_COLOR[timing] }">
-          {{ EVENT_TIMING_LABEL[timing] }}
+          :style="{ color: EVENT_STATE_ACCENT[timing], borderColor: EVENT_STATE_ACCENT[timing] }">
+          {{ EVENT_STATE_LABELS[timing] }}
         </span>
         <span class="event-editor__badge"
           :style="event.active ? { color: 'var(--success)', borderColor: 'var(--success)' } : { color: 'var(--text-tertiary)' }">

@@ -1,4 +1,4 @@
-import type { EventMissionProgressResponse, EventResponse } from '@/types/api/events'
+import type { EventMissionProgressResponse, EventResponse, EventState } from '@/types/api/events'
 import type { ItemResponse } from '@/types/api/items'
 import type { MissionResponse, MissionType } from '@/types/api/missions'
 
@@ -153,26 +153,12 @@ export function eventCountdown(event: EventResponse, now: number): string {
   return diff <= 0 ? 'Ending now' : `Ending in ${formatDuration(diff)}`
 }
 
-export type EventTiming = 'live' | 'upcoming' | 'past'
-
-export function eventTiming(event: EventResponse, now: number): EventTiming {
+export function eventState(event: EventResponse, now: number): EventState {
   const start = new Date(event.startsAt).getTime()
   const end = new Date(event.endsAt).getTime()
   if (now < start) return 'upcoming'
   if (now >= end) return 'past'
   return 'live'
-}
-
-export const EVENT_TIMING_LABEL: Record<EventTiming, string> = {
-  live: 'Live',
-  upcoming: 'Upcoming',
-  past: 'Ended',
-}
-
-export const EVENT_TIMING_COLOR: Record<EventTiming, string> = {
-  live: 'var(--success)',
-  upcoming: 'var(--info)',
-  past: 'var(--text-tertiary)',
 }
 
 function pad(n: number): string {

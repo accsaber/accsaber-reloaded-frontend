@@ -3,19 +3,15 @@ import type { NewsType } from '@/types/enums'
 import { NEWS_TYPE_ACCENT } from '@/utils/constants'
 import { computed } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    type: NewsType
-    size?: 'sm' | 'lg'
-  }>(),
-  { size: 'sm' },
-)
+const props = defineProps<{
+  type: NewsType
+}>()
 
 const accent = computed(() => NEWS_TYPE_ACCENT[props.type])
 </script>
 
 <template>
-  <div class="glyph" :class="`glyph--${size}`" :style="{ '--glyph-accent': accent }" aria-hidden="true">
+  <div class="glyph" :style="{ '--glyph-accent': accent }" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
       stroke-linejoin="round">
       <template v-if="type === 'BATCH'">
@@ -67,10 +63,5 @@ const accent = computed(() => NEWS_TYPE_ACCENT[props.type])
 .glyph svg {
   width: 22px;
   height: 22px;
-}
-
-.glyph--lg svg {
-  width: 48px;
-  height: 48px;
 }
 </style>

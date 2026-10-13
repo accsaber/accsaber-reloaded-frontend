@@ -3,7 +3,6 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
-import { useNow } from '@/composables/useNow'
 import EventMissionsPanel from '@/views/news/EventMissionsPanel.vue'
 import EventProgressBar from '@/views/news/EventProgressBar.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
@@ -18,14 +17,14 @@ import {
   missionViewFromProgress,
   type EventMissionView,
 } from '@/utils/events'
+import { formatFullDate } from '@/utils/formatters'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   eventId: string
   loggedIn: boolean
+  now: number
 }>()
-
-const now = useNow()
 
 const event = ref<EventResponse | null>(null)
 const missions = ref<EventMissionView[]>([])
@@ -40,9 +39,9 @@ const beginBusy = ref(false)
 const beginError = ref<string | null>(null)
 const loginOpen = ref(false)
 
-const status = computed(() => (event.value ? eventStatus(event.value, now.value) : 'past'))
+const status = computed(() => (event.value ? eventStatus(event.value, props.now) : 'past'))
 const statusColor = computed(() => EVENT_STATUS_COLOR[status.value])
-const countdown = computed(() => (event.value ? eventCountdown(event.value, now.value) : null))
+const countdown = computed(() => (event.value ? eventCountdown(event.value, props.now) : null))
 
 const enrolled = computed(() => props.loggedIn && begun.value && profile.value !== null)
 const showBegin = computed(() => !!event.value?.live && !enrolled.value)
@@ -52,20 +51,16 @@ const timing = computed(() => {
   const e = event.value
   if (!e) return ''
   const parts: string[] = []
-  if (status.value === 'past') return `Ran ${formatDate(e.startsAt)} to ${formatDate(e.endsAt)}`
+  if (status.value === 'past') return `Ran ${formatFullDate(e.startsAt)} to ${formatFullDate(e.endsAt)}`
   if (status.value === 'upcoming') {
-    parts.push(`Begins ${formatDate(e.startsAt)}`)
+    parts.push(`Begins ${formatFullDate(e.startsAt)}`)
     if (e.totalWeeks > 1) parts.push(`${e.totalWeeks} weeks`)
     return parts.join(' · ')
   }
   if (!enrolled.value && e.currentWeek) parts.push(`Week ${e.currentWeek} of ${e.totalWeeks}`)
-  parts.push(`Ends ${formatDate(e.endsAt)}`)
+  parts.push(`Ends ${formatFullDate(e.endsAt)}`)
   return parts.join(' · ')
 })
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
 
 function isCommunity(mission: MissionResponse): boolean {
   return mission.pool === 'community'
@@ -198,12 +193,9 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
 
           <div v-if="showBegin" class="event-detail__begin">
             <BaseButton variant="primary" size="lg" :loading="beginBusy" @click="onBegin">
-              Begin Event
+              {{ loggedIn ? 'Begin Event' : 'Log in to begin' }}
             </BaseButton>
             <p v-if="beginError" class="event-detail__begin-error">{{ beginError }}</p>
-            <p v-else-if="!loggedIn" class="event-detail__begin-note">
-              Log in to begin and track your mission progress.
-            </p>
           </div>
 
           <p v-if="event.description" class="event-detail__description">{{ event.description }}</p>
@@ -244,6 +236,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
           :unlocked-week="profile?.unlockedWeek ?? null"
           :begun="panelBegun"
           :live="event.live"
+          :now="now"
         />
       </div>
     </template>
@@ -328,12 +321,6 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-sm);
-}
-
-.event-detail__begin-note {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 
 .event-detail__begin-error {

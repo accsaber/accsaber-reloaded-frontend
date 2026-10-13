@@ -4,8 +4,9 @@ import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import { useNow } from '@/composables/useNow'
-import type { EventResponse } from '@/types/api/events'
-import { EVENT_TIMING_COLOR, EVENT_TIMING_LABEL, eventTiming, type EventTiming } from '@/utils/events'
+import type { EventResponse, EventState } from '@/types/api/events'
+import { EVENT_STATE_ACCENT, EVENT_STATE_LABELS } from '@/utils/constants'
+import { eventState } from '@/utils/events'
 import EventCreateModal from '@/views/staff/admin/events/EventCreateModal.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -19,7 +20,7 @@ const errorMessage = ref('')
 const showCreate = ref(false)
 const actionLoading = ref<Record<string, boolean>>({})
 
-const timingFilter = ref<EventTiming | ''>('')
+const timingFilter = ref<EventState | ''>('')
 const activeFilter = ref<'active' | 'inactive' | ''>('')
 
 const TIMING_OPTIONS = [
@@ -37,7 +38,7 @@ const ACTIVE_OPTIONS = [
 
 const rows = computed(() => {
   return events.value
-    .map((e) => ({ event: e, timing: eventTiming(e, now.value) }))
+    .map((e) => ({ event: e, timing: eventState(e, now.value) }))
     .filter(({ event, timing }) => {
       if (timingFilter.value && timing !== timingFilter.value) return false
       if (activeFilter.value === 'active' && !event.active) return false
@@ -152,8 +153,8 @@ function bonusSummary(event: EventResponse): string {
         </td>
         <td>
           <span class="events-mgmt__badge"
-            :style="{ color: EVENT_TIMING_COLOR[item.timing], borderColor: EVENT_TIMING_COLOR[item.timing] }">
-            {{ EVENT_TIMING_LABEL[item.timing] }}
+            :style="{ color: EVENT_STATE_ACCENT[item.timing], borderColor: EVENT_STATE_ACCENT[item.timing] }">
+            {{ EVENT_STATE_LABELS[item.timing] }}
           </span>
         </td>
         <td>
