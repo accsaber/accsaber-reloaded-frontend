@@ -46,10 +46,6 @@ export function getDifficultyScores(
   return get<Page<ScoreResponse>>(`/maps/difficulties/${difficultyId}/scores${buildQuery(params)}`)
 }
 
-export function getDifficultyStatistics(difficultyId: string): Promise<MapDifficultyStatisticsResponse> {
-  return get<MapDifficultyStatisticsResponse>(`/maps/difficulties/${difficultyId}/statistics`)
-}
-
 export function getDifficultyStatisticsHistoric(
   difficultyId: string,
   params: { amount: number; unit: string },

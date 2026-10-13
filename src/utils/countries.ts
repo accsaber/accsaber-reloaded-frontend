@@ -3,120 +3,27 @@ export interface CountryOption {
   label: string
 }
 
-export const COUNTRIES: CountryOption[] = [
-  { value: 'AF', label: 'Afghanistan' },
-  { value: 'AL', label: 'Albania' },
-  { value: 'DZ', label: 'Algeria' },
-  { value: 'AR', label: 'Argentina' },
-  { value: 'AM', label: 'Armenia' },
-  { value: 'AU', label: 'Australia' },
-  { value: 'AT', label: 'Austria' },
-  { value: 'AZ', label: 'Azerbaijan' },
-  { value: 'BH', label: 'Bahrain' },
-  { value: 'BD', label: 'Bangladesh' },
-  { value: 'BY', label: 'Belarus' },
-  { value: 'BE', label: 'Belgium' },
-  { value: 'BO', label: 'Bolivia' },
-  { value: 'BA', label: 'Bosnia and Herzegovina' },
-  { value: 'BR', label: 'Brazil' },
-  { value: 'BG', label: 'Bulgaria' },
-  { value: 'KH', label: 'Cambodia' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'CL', label: 'Chile' },
-  { value: 'CN', label: 'China' },
-  { value: 'CO', label: 'Colombia' },
-  { value: 'CR', label: 'Costa Rica' },
-  { value: 'HR', label: 'Croatia' },
-  { value: 'CY', label: 'Cyprus' },
-  { value: 'CZ', label: 'Czech Republic' },
-  { value: 'DK', label: 'Denmark' },
-  { value: 'DO', label: 'Dominican Republic' },
-  { value: 'EC', label: 'Ecuador' },
-  { value: 'EG', label: 'Egypt' },
-  { value: 'SV', label: 'El Salvador' },
-  { value: 'EE', label: 'Estonia' },
-  { value: 'FI', label: 'Finland' },
-  { value: 'FR', label: 'France' },
-  { value: 'GE', label: 'Georgia' },
-  { value: 'DE', label: 'Germany' },
-  { value: 'GH', label: 'Ghana' },
-  { value: 'GR', label: 'Greece' },
-  { value: 'GT', label: 'Guatemala' },
-  { value: 'HN', label: 'Honduras' },
-  { value: 'HK', label: 'Hong Kong' },
-  { value: 'HU', label: 'Hungary' },
-  { value: 'IS', label: 'Iceland' },
-  { value: 'IN', label: 'India' },
-  { value: 'ID', label: 'Indonesia' },
-  { value: 'IE', label: 'Ireland' },
-  { value: 'IL', label: 'Israel' },
-  { value: 'IT', label: 'Italy' },
-  { value: 'JP', label: 'Japan' },
-  { value: 'JO', label: 'Jordan' },
-  { value: 'KZ', label: 'Kazakhstan' },
-  { value: 'KE', label: 'Kenya' },
-  { value: 'KW', label: 'Kuwait' },
-  { value: 'KG', label: 'Kyrgyzstan' },
-  { value: 'LA', label: 'Laos' },
-  { value: 'LV', label: 'Latvia' },
-  { value: 'LB', label: 'Lebanon' },
-  { value: 'LT', label: 'Lithuania' },
-  { value: 'LU', label: 'Luxembourg' },
-  { value: 'MO', label: 'Macao' },
-  { value: 'MY', label: 'Malaysia' },
-  { value: 'MT', label: 'Malta' },
-  { value: 'MX', label: 'Mexico' },
-  { value: 'MD', label: 'Moldova' },
-  { value: 'MN', label: 'Mongolia' },
-  { value: 'ME', label: 'Montenegro' },
-  { value: 'MA', label: 'Morocco' },
-  { value: 'MM', label: 'Myanmar' },
-  { value: 'NP', label: 'Nepal' },
-  { value: 'NL', label: 'Netherlands' },
-  { value: 'NZ', label: 'New Zealand' },
-  { value: 'NI', label: 'Nicaragua' },
-  { value: 'NG', label: 'Nigeria' },
-  { value: 'MK', label: 'North Macedonia' },
-  { value: 'NO', label: 'Norway' },
-  { value: 'OM', label: 'Oman' },
-  { value: 'PK', label: 'Pakistan' },
-  { value: 'PA', label: 'Panama' },
-  { value: 'PY', label: 'Paraguay' },
-  { value: 'PE', label: 'Peru' },
-  { value: 'PH', label: 'Philippines' },
-  { value: 'PL', label: 'Poland' },
-  { value: 'PT', label: 'Portugal' },
-  { value: 'PR', label: 'Puerto Rico' },
-  { value: 'QA', label: 'Qatar' },
-  { value: 'RO', label: 'Romania' },
-  { value: 'RU', label: 'Russia' },
-  { value: 'SA', label: 'Saudi Arabia' },
-  { value: 'RS', label: 'Serbia' },
-  { value: 'SG', label: 'Singapore' },
-  { value: 'SK', label: 'Slovakia' },
-  { value: 'SI', label: 'Slovenia' },
-  { value: 'ZA', label: 'South Africa' },
-  { value: 'KR', label: 'South Korea' },
-  { value: 'ES', label: 'Spain' },
-  { value: 'LK', label: 'Sri Lanka' },
-  { value: 'SE', label: 'Sweden' },
-  { value: 'CH', label: 'Switzerland' },
-  { value: 'TW', label: 'Taiwan' },
-  { value: 'TJ', label: 'Tajikistan' },
-  { value: 'TH', label: 'Thailand' },
-  { value: 'TN', label: 'Tunisia' },
-  { value: 'TR', label: 'Turkey' },
-  { value: 'TM', label: 'Turkmenistan' },
-  { value: 'UA', label: 'Ukraine' },
-  { value: 'AE', label: 'United Arab Emirates' },
-  { value: 'GB', label: 'United Kingdom' },
-  { value: 'US', label: 'United States' },
-  { value: 'UY', label: 'Uruguay' },
-  { value: 'UZ', label: 'Uzbekistan' },
-  { value: 'VE', label: 'Venezuela' },
-  { value: 'VN', label: 'Vietnam' },
-  { value: 'YE', label: 'Yemen' },
-]
+const COUNTRY_CODES = `
+  AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE
+  BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD
+  CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM
+  DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF
+  GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU
+  ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN
+  KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME
+  MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA
+  NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM
+  PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI
+  SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK
+  TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI
+  VN VU WF WS XK YE YT ZA ZM ZW
+`.trim().split(/\s+/)
+
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
+
+export const COUNTRIES: CountryOption[] = COUNTRY_CODES
+  .map((value) => ({ value, label: regionNames.of(value) ?? value }))
+  .sort((a, b) => a.label.localeCompare(b.label))
 
 const COUNTRY_MAP = new Map(COUNTRIES.map((c) => [c.value, c.label]))
 
@@ -128,3 +35,9 @@ export const COUNTRY_OPTIONS: CountryOption[] = [
   { value: '', label: 'All Countries' },
   ...COUNTRIES,
 ]
+
+export function countryOptionsFor(userCountry: string | null | undefined): CountryOption[] {
+  const userOption = userCountry && COUNTRIES.find((o) => o.value === userCountry)
+  if (!userOption) return COUNTRY_OPTIONS
+  return [COUNTRY_OPTIONS[0], userOption, ...COUNTRIES.filter((o) => o.value !== userCountry)]
+}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
+import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
@@ -12,7 +13,7 @@ import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
-import type { MapDifficultyStatisticsResponse, PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
+import type { PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
 import type { DifficultyScoreDisplay } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { DIFFICULTY_ORDER } from '@/utils/constants'
@@ -30,7 +31,6 @@ const categoryStore = useCategoryStore()
 
 const map = ref<PublicMapResponse | null>(null)
 const activeDifficultyId = ref<string>('')
-const diffStats = ref<MapDifficultyStatisticsResponse | null>(null)
 const topScoresFirstPage = ref<DifficultyScoreDisplay[]>([])
 
 const routeParam = computed(() => route.params.mapId as string)
@@ -42,6 +42,7 @@ const loading = ref(true)
 const error = ref(false)
 
 const activeTab = ref('leaderboard')
+const statsVisited = ref(false)
 const scoresTableWidth = ref(0)
 const contentTabs = [
   { key: 'leaderboard', label: 'Leaderboard' },
@@ -81,6 +82,8 @@ const activeDifficulty = computed(() =>
   map.value?.difficulties.find((d) => d.id === activeDifficultyId.value) ?? null
 )
 
+const diffStats = computed(() => activeDifficulty.value?.statistics ?? null)
+
 const isActiveDifficultyRanked = computed(() => activeDifficulty.value?.status === 'RANKED')
 
 const showApStats = computed(() => {
@@ -116,18 +119,10 @@ let bsrCopiedTimer: ReturnType<typeof setTimeout> | null = null
 
 async function copyBsr() {
   if (!map.value?.beatsaverCode) return
-  const text = `!bsr ${map.value.beatsaverCode}`
   try {
-    await navigator.clipboard.writeText(text)
+    await navigator.clipboard.writeText(`!bsr ${map.value.beatsaverCode}`)
   } catch {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
+    return
   }
   bsrCopied.value = true
   if (bsrCopiedTimer) clearTimeout(bsrCopiedTimer)
@@ -154,7 +149,7 @@ const metaTitle = computed(() => {
 usePageMeta({ title: metaTitle })
 
 function goToPlayer(userId: string) {
-  window.open(router.resolve({ name: 'player-profile', params: { userId } }).href, '_self')
+  router.push({ name: 'player-profile', params: { userId } })
 }
 
 function resolveQueryDifficulty(
@@ -195,17 +190,8 @@ async function fetchMap() {
     }
 
     const all = map.value.difficulties
-    const ranked = all
-      .filter((d) => d.status === 'RANKED')
-      .sort((a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty))
-    const matched = resolveQueryDifficulty(all)
-    if (matched) {
-      activeDifficultyId.value = matched.id
-    } else if (ranked.length > 0) {
-      activeDifficultyId.value = ranked[0].id
-    } else if (all.length > 0) {
-      activeDifficultyId.value = all[0].id
-    }
+    const fallback = resolveQueryDifficulty(all) ?? rankedDifficulties.value[0] ?? all[0]
+    if (fallback) activeDifficultyId.value = fallback.id
   } catch {
     error.value = true
   }
@@ -224,22 +210,11 @@ watch(() => [route.query.difficultyId, route.query.difficulty, route.query.chara
   if (!isUuid(routeParam.value)) fetchMap()
 })
 
-async function fetchDifficultyStats() {
-  if (!activeDifficultyId.value) return
-  try {
-    const { getDifficultyStatistics } = await import('@/api/maps')
-    diffStats.value = await getDifficultyStatistics(activeDifficultyId.value)
-  } catch {
-    diffStats.value = null
-  }
-}
-
 watch(routeParam, () => fetchMap(), { immediate: true })
 
 watch(activeDifficultyId, (newId) => {
   if (!newId || !map.value) return
   topScoresFirstPage.value = []
-  fetchDifficultyStats()
 
   const diff = map.value.difficulties.find((d) => d.id === newId)
   if (!diff) return
@@ -255,6 +230,10 @@ watch(activeDifficultyId, (newId) => {
   if (target.path !== route.path || !sameQuery(target.query, route.query)) {
     router.replace(target)
   }
+})
+
+watch(activeTab, (tab) => {
+  if (tab === 'statistics') statsVisited.value = true
 })
 
 function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boolean {
@@ -283,15 +262,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
     </template>
 
     <template v-else>
-      <nav class="map-detail__breadcrumbs" aria-label="Breadcrumb">
-        <span class="map-detail__breadcrumbs-pill">
-          <router-link v-for="(crumb, i) in breadcrumbs" :key="i" :to="crumb.to ?? ''" class="map-detail__crumb"
-            :class="{ 'map-detail__crumb--link': !!crumb.to }">
-            {{ crumb.label }}
-            <span v-if="i < breadcrumbs.length - 1" class="map-detail__crumb-sep">/</span>
-          </router-link>
-        </span>
-      </nav>
+      <Breadcrumbs :crumbs="breadcrumbs" />
 
       <div class="map-detail__bg">
         <div class="map-detail__bg-image" :style="{ backgroundImage: `url(${coverUrl})` }" />
@@ -325,7 +296,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
             <BaseButton v-if="map.beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${map.beatsaverCode}`"
               aria-label="View on BeatSaver">
               <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
-                style="border-radius: 3px;" decoding="async" />
+                class="map-detail__site-icon" decoding="async" />
             </BaseButton>
             <BaseButton v-if="map.beatsaverCode" size="sm" aria-label="Copy BSR" title="Copy BSR"
               class="map-detail__bsr-btn" @click="copyBsr">
@@ -340,13 +311,13 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
               :href="`https://www.beatleader.com/leaderboard/global/${activeDifficulty.blLeaderboardId}`"
               aria-label="View on BeatLeader">
               <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                style="border-radius: 3px;" decoding="async" />
+                class="map-detail__site-icon" decoding="async" />
             </BaseButton>
             <BaseButton v-if="activeDifficulty?.ssLeaderboardId" size="sm"
               :href="`https://scoresaber.com/leaderboard/${activeDifficulty.ssLeaderboardId}`"
               aria-label="View on ScoreSaber">
               <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                style="border-radius: 3px;" decoding="async" />
+                class="map-detail__site-icon" decoding="async" />
             </BaseButton>
             <BaseButton v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" size="sm" aria-label="AP Tweaker"
               @click="toggleMapTweaker($event)">
@@ -399,7 +370,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
             @width-change="scoresTableWidth = $event" />
         </div>
 
-        <MapStatisticsSection v-if="activeTab === 'statistics' && activeDifficultyId"
+        <MapStatisticsSection v-if="statsVisited && activeDifficultyId" v-show="activeTab === 'statistics'"
           :difficulty-id="activeDifficultyId" :map-id="map.id" :accent-color="resolvedAccent"
           :top-scores-first-page="topScoresFirstPage" @navigate-player="goToPlayer" />
       </div>
@@ -449,40 +420,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   background-repeat: no-repeat;
   filter: blur(40px);
   opacity: 0.3;
-}
-
-.map-detail__breadcrumbs {
-  display: flex;
-}
-
-.map-detail__breadcrumbs-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-pill);
-}
-
-.map-detail__crumb {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.map-detail__crumb--link {
-  color: var(--text-primary);
-  transition: color 120ms ease;
-}
-
-.map-detail__crumb--link:hover {
-  color: var(--accent);
-}
-
-.map-detail__crumb-sep {
-  margin-left: var(--space-xs);
-  color: var(--text-secondary);
 }
 
 .map-detail__hero {
@@ -556,6 +493,10 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 .map-detail__links {
   display: flex;
   gap: var(--space-sm);
+}
+
+.map-detail__site-icon {
+  border-radius: var(--radius-btn);
 }
 
 .map-detail__bsr-label {

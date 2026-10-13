@@ -9,6 +9,7 @@ import RelationFilter from '@/components/domain/RelationFilter.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
@@ -17,7 +18,7 @@ import type { UserRelationType } from '@/types/api/relations'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { COUNTRY_OPTIONS } from '@/utils/countries'
+import { countryOptionsFor } from '@/utils/countries'
 import { toPlayerDisplay, toXpPlayerDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
@@ -59,16 +60,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   secondarySort: computed(() => isXpMode.value ? null : 'ap,desc'),
 })
 
-function queryRef<T extends string>(key: string) {
-  return computed<T | ''>({
-    get: () => (route.query[key] as T) || '',
-    set: (value) => {
-      const query = { ...route.query, [key]: value || undefined }
-      delete query.page
-      router.replace({ query })
-    },
-  })
-}
+const { queryRef } = useQueryParams()
 
 const countryFilter = queryRef('country')
 const relationFilter = queryRef<UserRelationType>('relation')
@@ -126,16 +118,7 @@ const columns = computed<TableColumn[]>(() => [
   ...(isXpMode.value ? XP_COLUMNS : AP_COLUMNS),
 ])
 
-const countryOptions = computed(() => {
-  const userCountry = authStore.userProfile?.country
-  const userOption = userCountry && COUNTRY_OPTIONS.find((o) => o.value === userCountry)
-  if (!userOption) return COUNTRY_OPTIONS
-  return [
-    { value: '', label: 'All Countries' },
-    userOption,
-    ...COUNTRY_OPTIONS.filter((o) => o.value !== '' && o.value !== userCountry),
-  ]
-})
+const countryOptions = computed(() => countryOptionsFor(authStore.userProfile?.country))
 
 const request = computed(() => ({
   xp: isXpMode.value,

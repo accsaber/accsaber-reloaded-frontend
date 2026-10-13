@@ -11,7 +11,7 @@ import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { COUNTRY_OPTIONS } from '@/utils/countries'
+import { countryOptionsFor } from '@/utils/countries'
 import { toScoreDisplay, toUserRef, type FlatUserRef } from '@/utils/mappers'
 import { loadStoredCountry, storeCountry } from '@/utils/statsCountry'
 import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
@@ -114,17 +114,7 @@ onMounted(() => {
   }
 })
 
-const countryOptions = computed(() => {
-  const userCountry = authStore.userProfile?.country
-  if (!userCountry) return COUNTRY_OPTIONS
-  const userOption = COUNTRY_OPTIONS.find((o) => o.value === userCountry)
-  if (!userOption) return COUNTRY_OPTIONS
-  return [
-    { value: '', label: 'All Countries' },
-    userOption,
-    ...COUNTRY_OPTIONS.filter((o) => o.value !== '' && o.value !== userCountry),
-  ]
-})
+const countryOptions = computed(() => countryOptionsFor(authStore.userProfile?.country))
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: computed(() => DEFAULT_SORTS[activeTab.value] ?? 'streak115'),

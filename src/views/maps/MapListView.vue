@@ -5,15 +5,16 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { useCategoryStore } from '@/stores/categories'
-import type { TableColumn } from '@/types/display'
+import type { MapDisplay, SortState, TableColumn } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
+import { computed } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
-defineProps<{
-  rows: Record<string, unknown>[]
+const props = defineProps<{
+  maps: MapDisplay[]
   loading: boolean
-  sortState: { key: string; direction: 'asc' | 'desc' }
-  rowTo: (row: Record<string, unknown>) => RouteLocationRaw
+  sortState: SortState
+  mapRouteTo: (map: MapDisplay) => RouteLocationRaw
 }>()
 
 const emit = defineEmits<{ sort: [key: string] }>()
@@ -22,15 +23,25 @@ const categoryStore = useCategoryStore()
 
 const listColumns: TableColumn[] = [
   { key: 'cover', label: '', width: '76px' },
-  { key: 'songName', label: 'Name', sortable: true, align: 'left' },
+  { key: 'name', label: 'Name', sortable: true, align: 'left' },
   { key: 'artistName', label: 'Artist', align: 'left' },
   { key: 'mapperName', label: 'Mapper', align: 'left' },
   { key: 'category', label: 'Category', sortable: true, align: 'center', width: '112px' },
   { key: 'difficulty', label: 'Difficulty', align: 'center', width: '104px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '124px' },
   { key: 'totalScores', label: 'Scores', sortable: true, align: 'right', mono: true, width: '96px' },
-  { key: 'rankedAt', label: 'Released', sortable: true, align: 'right', width: '112px' },
+  { key: 'releaseDate', label: 'Released', sortable: true, align: 'right', width: '112px' },
 ]
+
+const rows = computed<Record<string, unknown>[]>(() => props.maps.map((m) => ({ ...m })))
+
+function categoryLabel(code: string): string {
+  return (categoryStore.getCategoryInfo(code)?.name ?? code).replace(/ Acc$/, '')
+}
+
+function rowTo(row: Record<string, unknown>): RouteLocationRaw {
+  return props.mapRouteTo(row as unknown as MapDisplay)
+}
 </script>
 
 <template>
@@ -38,10 +49,10 @@ const listColumns: TableColumn[] = [
     :row-to="rowTo" row-key="difficultyId" empty-message="No maps found matching your filters."
     @sort="emit('sort', $event)">
     <template #cell-cover="{ row }">
-      <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="44"
-        :fallback-src="(row.coverFallback as string | null | undefined) ?? null" />
+      <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="44"
+        :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
     </template>
-    <template #cell-songName="{ row }">
+    <template #cell-name="{ row }">
       <div class="name-cell">
         <SongTitle class="name" :name="(row.songName as string)"
           :sub-name="(row.songSubName as string | null)" />
@@ -50,7 +61,7 @@ const listColumns: TableColumn[] = [
     </template>
     <template #cell-category="{ row }">
       <span class="category" :style="{ '--cat-accent': categoryStore.getAccent(row.categoryCode as string) }">
-        {{ row.category }}
+        {{ categoryLabel(row.categoryCode as string) }}
       </span>
     </template>
     <template #cell-difficulty="{ row }">
@@ -59,17 +70,17 @@ const listColumns: TableColumn[] = [
     <template #cell-complexity="{ row }">
       <ComplexityBadge :complexity="row.complexity as number" />
     </template>
-    <template #cell-totalScores="{ value }">
-      <span class="mono">{{ (value as number).toLocaleString() }}</span>
+    <template #cell-totalScores="{ row }">
+      <span class="mono">{{ ((row.totalScores as number | undefined) ?? 0).toLocaleString() }}</span>
     </template>
-    <template #cell-rankedAt="{ value }">
-      <span v-if="value" class="date">{{ formatRelativeDate(value as string) }}</span>
+    <template #cell-releaseDate="{ row }">
+      <span v-if="row.rankedAt" class="date">{{ formatRelativeDate(row.rankedAt as string) }}</span>
     </template>
 
     <template #mobile-card="{ row }">
       <router-link :to="rowTo(row)" class="list-card">
-        <GlowImage v-if="row.cover" :src="(row.cover as string)" :alt="(row.songName as string)" :size="48"
-          class="list-card-cover" :fallback-src="(row.coverFallback as string | null | undefined) ?? null" />
+        <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="48"
+          class="list-card-cover" :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
         <div v-else class="list-card-cover-placeholder" />
         <div class="list-card-info">
           <SongTitle class="name" :name="(row.songName as string)"
@@ -127,7 +138,6 @@ const listColumns: TableColumn[] = [
   padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
@@ -137,7 +147,7 @@ const listColumns: TableColumn[] = [
 }
 
 .list-card:hover {
-  border-left-color: var(--text-tertiary);
+  border-color: var(--text-tertiary);
 }
 
 .list-card-cover {

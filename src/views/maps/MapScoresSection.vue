@@ -12,7 +12,7 @@ import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRowField } from '@/types/api/settings'
 import type { UserRelationType } from '@/types/api/relations'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn, UserRefDisplay } from '@/types/display'
-import { COUNTRY_OPTIONS } from '@/utils/countries'
+import { countryOptionsFor } from '@/utils/countries'
 import { formatPlayCount, formatRelativeDate } from '@/utils/formatters'
 import { toDifficultyScoreDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
@@ -20,7 +20,6 @@ import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
 import { buildScoreColumns } from '@/utils/scoreRowFields'
 import { tableNaturalWidth } from '@/utils/tableLayout'
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   difficultyId: string
@@ -42,7 +41,6 @@ const emit = defineEmits<{
   'width-change': [width: number]
 }>()
 
-const router = useRouter()
 const authStore = useAuthStore()
 const modifierStore = useModifierStore()
 
@@ -165,17 +163,7 @@ const rows = computed(() => {
   })
 })
 
-const countryOptions = computed(() => {
-  const userCountry = authStore.userProfile?.country
-  if (!userCountry) return COUNTRY_OPTIONS
-  const userOption = COUNTRY_OPTIONS.find((o) => o.value === userCountry)
-  if (!userOption) return COUNTRY_OPTIONS
-  return [
-    { value: '', label: 'All Countries' },
-    userOption,
-    ...COUNTRY_OPTIONS.filter((o) => o.value !== '' && o.value !== userCountry),
-  ]
-})
+const countryOptions = computed(() => countryOptionsFor(authStore.userProfile?.country))
 
 function scoreRowClass(row: Record<string, unknown>): Record<string, boolean> | undefined {
   if (!authStore.userId) return undefined
@@ -184,10 +172,6 @@ function scoreRowClass(row: Record<string, unknown>): Record<string, boolean> | 
 
 function playerRowTo(row: Record<string, unknown>) {
   return { name: 'player-profile', params: { userId: row._userId as string } }
-}
-
-function handleRowClick(row: Record<string, unknown>) {
-  router.push(playerRowTo(row))
 }
 
 function openDetail(userId: string, event: Event) {
@@ -235,17 +219,27 @@ function openDetail(userId: string, event: Event) {
   detailOpen.value = true
 }
 
+const scoresRequest = computed(() => ({
+  difficultyId: props.difficultyId,
+  params: {
+    ...paginationParams.value,
+    search: searchQuery.value.trim() || undefined,
+    country: countryFilter.value || undefined,
+    relation: relationFilter.value || undefined,
+  },
+}))
+
+let requestId = 0
+let awaitingPageReset = false
+
 async function fetchScores() {
+  const { difficultyId, params } = scoresRequest.value
+  const id = ++requestId
   loading.value = true
   try {
     const { getDifficultyScores } = await import('@/api/maps')
-    const params = {
-      ...paginationParams.value,
-      search: searchQuery.value.trim() || undefined,
-      country: countryFilter.value || undefined,
-      relation: relationFilter.value || undefined,
-    }
-    const res = await getDifficultyScores(props.difficultyId, params)
+    const res = await getDifficultyScores(difficultyId, params)
+    if (id !== requestId) return
     scores.value = res.content.map((s) =>
       toDifficultyScoreDisplay(s, modifierStore.resolveModifierCodes(s.modifierIds))
     )
@@ -262,21 +256,24 @@ async function fetchScores() {
       emit('top-scores-loaded', scores.value)
     }
   } catch {
+    if (id !== requestId) return
     scores.value = []
     totalPages.value = 0
   }
   loading.value = false
 }
 
-watch(searchQuery, () => { resetPage() })
-watch(countryFilter, () => { resetPage() })
-watch(relationFilter, () => { resetPage() })
+watch([searchQuery, countryFilter, relationFilter], () => {
+  if (currentPage.value === 1) return
+  awaitingPageReset = true
+  resetPage()
+})
 
-watch(
-  [() => props.difficultyId, paginationParams, searchQuery, countryFilter, relationFilter],
-  () => fetchScores(),
-  { immediate: true, deep: true },
-)
+watch(() => JSON.stringify(scoresRequest.value), () => {
+  if (awaitingPageReset && currentPage.value !== 1) return
+  awaitingPageReset = false
+  void fetchScores()
+}, { immediate: true })
 </script>
 
 <template>
@@ -291,7 +288,7 @@ watch(
     <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
       :page="currentPage" :total-pages="totalPages" medal-ranks row-clickable :row-to="playerRowTo"
       row-key="_userId" :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort"
-      @row-click="handleRowClick" @update:page="setPage">
+      @update:page="setPage">
       <template #cell-rank="{ value, row }">
         <span class="map-scores__rank" :class="getRankClass(value as number)">
           #{{ value }}
@@ -326,7 +323,7 @@ watch(
           <a v-if="rowReplay(row)" class="map-scores__detail-btn"
             :href="rowReplay(row)!.url" target="_blank" rel="noopener noreferrer"
             :aria-label="rowReplay(row)!.label" :title="rowReplay(row)!.label" @click.stop>
-            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" style="border-radius: 2px;" loading="lazy" decoding="async" />
+            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" class="map-scores__replay-icon" loading="lazy" decoding="async" />
           </a>
           <button class="map-scores__detail-btn" aria-label="View score details"
             @click="openDetail(row._userId as string, $event)">
@@ -366,7 +363,7 @@ watch(
           <a v-if="rowReplay(row)" class="ms-card__detail-btn"
             :href="rowReplay(row)!.url" target="_blank" rel="noopener noreferrer"
             :aria-label="rowReplay(row)!.label" :title="rowReplay(row)!.label" @click.stop>
-            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" style="border-radius: 2px;" loading="lazy" decoding="async" />
+            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" class="map-scores__replay-icon" loading="lazy" decoding="async" />
           </a>
           <button class="ms-card__detail-btn" aria-label="View score details"
             @click.stop="openDetail(row._userId as string, $event)">
@@ -451,9 +448,12 @@ watch(
   border-color: var(--text-tertiary);
 }
 
-:deep(.data-table__row--self-highlight) {
+.map-scores__replay-icon {
+  border-radius: var(--radius-pill);
+}
+
+.map-scores :deep(.data-table__row.data-table__row--self-highlight) {
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
-  border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .ms-card {
@@ -463,7 +463,6 @@ watch(
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
@@ -473,7 +472,7 @@ watch(
 }
 
 .ms-card:hover {
-  border-left-color: var(--accent, var(--text-tertiary));
+  border-color: var(--text-tertiary);
 }
 
 .ms-card__rank {
@@ -504,10 +503,6 @@ watch(
 .ms-card__streak-cell {
   font-size: var(--text-caption);
   color: var(--text-secondary);
-}
-
-.ms-card__sep {
-  color: var(--text-tertiary);
 }
 
 .ms-card__date {
@@ -566,6 +561,5 @@ watch(
 
 .ms-card--self-highlight {
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
-  border-left-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 </style>

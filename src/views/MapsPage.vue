@@ -9,6 +9,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MapCard from '@/components/domain/MapCard.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
@@ -18,7 +19,7 @@ import type { Page } from '@/types/pagination'
 import { toMapDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
+import { useRoute, type RouteLocationRaw } from 'vue-router'
 import BatchListView from './maps/BatchListView.vue'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
 import MapListView from './maps/MapListView.vue'
@@ -26,9 +27,9 @@ import PlaylistDropdown from './maps/PlaylistDropdown.vue'
 import ViewToggle from './maps/ViewToggle.vue'
 
 const route = useRoute()
-const router = useRouter()
 const categoryStore = useCategoryStore()
 const authStore = useAuthStore()
+const { setQuery, queryRef } = useQueryParams()
 
 usePageMeta({
   title: 'Maps | AccSaber',
@@ -38,84 +39,61 @@ usePageMeta({
 type ViewMode = 'grid' | 'list' | 'batch'
 
 const MAPS_VIEW_KEY = 'accsaber:maps-view'
+const MAX_COMPLEXITY = 20
 
-const viewMode = computed<ViewMode>({
-  get() {
-    const v = route.query.view as string
-    if (v === 'grid' || v === 'list' || v === 'batch') return v
-    const stored = localStorage.getItem(MAPS_VIEW_KEY) as ViewMode | null
-    if (stored === 'list' || stored === 'batch') return stored
+function storedView(): ViewMode {
+  try {
+    const stored = localStorage.getItem(MAPS_VIEW_KEY)
+    return stored === 'list' || stored === 'batch' ? stored : 'grid'
+  } catch {
     return 'grid'
-  },
-  set(val) {
-    localStorage.setItem(MAPS_VIEW_KEY, val)
-    const query = { ...route.query }
-    query.view = val
-    delete query.page
-    router.replace({ query })
+  }
+}
+
+const viewParam = queryRef<ViewMode>('view')
+const viewMode = computed<ViewMode>({
+  get: () => viewParam.value || storedView(),
+  set: (value) => {
+    try {
+      localStorage.setItem(MAPS_VIEW_KEY, value)
+    } catch {
+    }
+    viewParam.value = value
   },
 })
 
 const filtersOpen = ref(false)
-const searchQuery = ref('')
-
-const unplayedOnly = computed<boolean>({
-  get() { return route.query.unplayed === 'true' },
-  set(val) {
-    const query = { ...route.query }
-    if (val) {
-      query.unplayed = 'true'
-    } else {
-      delete query.unplayed
-    }
-    delete query.page
-    router.replace({ query })
-  },
-})
+const searchQuery = queryRef('q')
+const categoryParam = queryRef('category')
+const unplayedParam = queryRef('unplayed')
+const batchSortParam = queryRef('batchSort')
 
 const selectedCategory = computed<string | null>({
-  get() {
-    const c = route.query.category
-    const first = Array.isArray(c) ? c[0] : c
-    return typeof first === 'string' && first ? first : null
-  },
-  set(val) {
-    const query = { ...route.query }
-    if (val) {
-      query.category = val
-    } else {
-      delete query.category
-    }
-    delete query.page
-    router.replace({ query })
-  },
+  get: () => categoryParam.value || null,
+  set: (value) => { categoryParam.value = value ?? '' },
+})
+
+const unplayedOnly = computed<boolean>({
+  get: () => unplayedParam.value === 'true',
+  set: (value) => { unplayedParam.value = value ? 'true' : '' },
+})
+
+const batchSortKey = computed<string>({
+  get: () => batchSortParam.value || 'releasedAt',
+  set: (value) => { batchSortParam.value = value === 'releasedAt' ? '' : value },
 })
 
 const complexityRange = computed<[number, number]>({
-  get() {
-    const min = Number(route.query.complexityMin) || 0
-    const max = Number(route.query.complexityMax) || 20
-    return [min, max]
-  },
-  set(val) {
-    const query = { ...route.query }
-    if (val[0] <= 0) {
-      delete query.complexityMin
-    } else {
-      query.complexityMin = String(val[0])
-    }
-    if (val[1] >= 20) {
-      delete query.complexityMax
-    } else {
-      query.complexityMax = String(val[1])
-    }
-    delete query.page
-    router.replace({ query })
-  },
+  get: (): [number, number] => [Number(route.query.complexityMin) || 0, Number(route.query.complexityMax) || MAX_COMPLEXITY],
+  set: ([min, max]) => setQuery({
+    complexityMin: min > 0 ? String(min) : undefined,
+    complexityMax: max < MAX_COMPLEXITY ? String(max) : undefined,
+  }),
 })
 
 const hasActiveFilters = computed(() =>
-  selectedCategory.value !== null || complexityRange.value[0] > 0 || complexityRange.value[1] < 20 || unplayedOnly.value
+  selectedCategory.value !== null || complexityRange.value[0] > 0
+  || complexityRange.value[1] < MAX_COMPLEXITY || unplayedOnly.value,
 )
 
 const sortOptions = [
@@ -128,22 +106,6 @@ const batchSortOptions = [
   { value: 'releasedAt', label: 'Release Date' },
   { value: 'difficultyCount', label: 'Difficulty Count' },
 ]
-
-const batchSortKey = computed<string>({
-  get() {
-    return (route.query.batchSort as string) || 'releasedAt'
-  },
-  set(val) {
-    const query = { ...route.query }
-    if (val === 'releasedAt') {
-      delete query.batchSort
-    } else {
-      query.batchSort = val
-    }
-    delete query.page
-    router.replace({ query })
-  },
-})
 
 const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
   defaultSort: 'releaseDate',
@@ -165,82 +127,61 @@ const batches = ref<PublicBatchResponse[]>([])
 const batchTotalPages = ref(0)
 const batchLoading = ref(true)
 
+const isBatchView = computed(() => viewMode.value === 'batch')
+const pageCount = computed(() => (isBatchView.value ? batchTotalPages.value : totalPages.value))
+
 const mapDisplays = computed<MapDisplay[]>(() =>
-  difficulties.value.map((d) => toMapDisplay(d, (id) => categoryStore.getCategoryCode(id)))
+  difficulties.value.map((d) => toMapDisplay(d, (id) => categoryStore.getCategoryCode(id))),
 )
 
-const listRows = computed(() =>
-  mapDisplays.value.map((m) => ({
-    id: m.id,
-    difficultyId: m.difficultyId,
-    cover: m.coverUrl,
-    coverFallback: m.coverFallbackUrl,
-    songName: m.songName,
-    songSubName: m.songSubName,
-    difficultyLabel: m.difficultyLabel,
-    difficulty: m.difficulty,
-    artistName: m.artistName,
-    mapperName: m.mapperName,
-    category: (categoryStore.getCategoryInfo(m.categoryCode)?.name ?? m.categoryCode).replace(/ Acc$/, ''),
-    categoryCode: m.categoryCode,
-    complexity: m.complexity,
-    totalScores: m.totalScores ?? 0,
-    rankedAt: m.rankedAt ?? '',
-    beatsaverCode: m.beatsaverCode,
-    characteristic: m.characteristic,
-  }))
-)
-
-const listSortFieldMap: Record<string, string> = {
-  songName: 'name',
-  rankedAt: 'releaseDate',
-}
-
-function handleListSort(key: string) {
-  setSort(listSortFieldMap[key] ?? key)
-}
-
-const listSortState = computed(() => {
-  const reverseMap: Record<string, string> = {
-    name: 'songName',
-    releaseDate: 'rankedAt',
-  }
+const difficultyRequest = computed(() => {
+  if (isBatchView.value) return null
+  const [min, max] = complexityRange.value
   return {
-    key: reverseMap[sortState.value.key] ?? sortState.value.key,
-    direction: sortState.value.direction,
+    unplayedFor: unplayedOnly.value ? authStore.userId : null,
+    params: {
+      ...paginationParams.value,
+      status: 'RANKED',
+      categoryId: selectedCategory.value ?? undefined,
+      complexityMin: min > 0 ? min : undefined,
+      complexityMax: max < MAX_COMPLEXITY ? max : undefined,
+      search: searchQuery.value.trim() || undefined,
+    },
   }
 })
 
-const isBatchView = computed(() => viewMode.value === 'batch')
+const batchRequest = computed(() =>
+  isBatchView.value
+    ? {
+      page: currentPage.value - 1,
+      size: 10,
+      sort: batchSortKey.value === 'difficultyCount' ? 'difficultyCount,desc' : 'releasedAt,desc',
+    }
+    : null,
+)
+
+let difficultyRequestId = 0
 
 async function fetchDifficulties() {
+  const request = difficultyRequest.value
+  if (!request) return
+  const id = ++difficultyRequestId
   loading.value = true
   try {
-    const params: Record<string, unknown> = { ...paginationParams.value, status: 'RANKED' }
-    if (selectedCategory.value) {
-      params.categoryId = selectedCategory.value
-    }
-    if (complexityRange.value[0] > 0) {
-      params.complexityMin = complexityRange.value[0]
-    }
-    if (complexityRange.value[1] < 20) {
-      params.complexityMax = complexityRange.value[1]
-    }
-    if (searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim()
-    }
     let res: Page<PublicMapDifficultyResponse>
-    if (unplayedOnly.value && authStore.userId) {
+    if (request.unplayedFor) {
       const { getUserMissingMaps } = await import('@/api/users')
-      res = await getUserMissingMaps(authStore.userId, params as never)
+      res = await getUserMissingMaps(request.unplayedFor, request.params as never)
     } else {
       const { getDifficulties } = await import('@/api/maps')
-      res = await getDifficulties(params as never)
+      res = await getDifficulties(request.params as never)
     }
+    if (id !== difficultyRequestId) return
     difficulties.value = res.content
     totalPages.value = res.totalPages
     totalElements.value = res.totalElements
   } catch {
+    if (id !== difficultyRequestId) return
     difficulties.value = []
     totalPages.value = 0
     totalElements.value = 0
@@ -248,21 +189,21 @@ async function fetchDifficulties() {
   loading.value = false
 }
 
+let batchRequestId = 0
+
 async function fetchBatches() {
+  const request = batchRequest.value
+  if (!request) return
+  const id = ++batchRequestId
   batchLoading.value = true
   try {
     const { getBatches } = await import('@/api/batches')
-    const sortParam = batchSortKey.value === 'difficultyCount'
-      ? 'difficultyCount,desc'
-      : 'releasedAt,desc'
-    const res = await getBatches({
-      page: currentPage.value - 1,
-      size: 10,
-      sort: sortParam,
-    })
+    const res = await getBatches(request)
+    if (id !== batchRequestId) return
     batches.value = res.content
     batchTotalPages.value = res.totalPages
   } catch {
+    if (id !== batchRequestId) return
     batches.value = []
     batchTotalPages.value = 0
   }
@@ -279,35 +220,8 @@ function mapRouteTo(m: Pick<MapDisplay, 'id' | 'difficultyId' | 'difficulty' | '
   })
 }
 
-function listRowTo(row: Record<string, unknown>): RouteLocationRaw {
-  return mapRouteTo({
-    id: row.id as string,
-    difficultyId: row.difficultyId as string,
-    difficulty: row.difficulty as string,
-    characteristic: row.characteristic as string | undefined,
-    beatsaverCode: row.beatsaverCode as string | undefined,
-  })
-}
-
-watch(searchQuery, () => {
-  const query = { ...route.query }
-  delete query.page
-  router.replace({ query })
-})
-
-watch(
-  [paginationParams, selectedCategory, complexityRange, searchQuery, unplayedOnly],
-  () => { if (!isBatchView.value) fetchDifficulties() },
-  { immediate: true, deep: true },
-)
-
-watch(
-  [() => viewMode.value, currentPage, batchSortKey],
-  () => {
-    if (isBatchView.value) fetchBatches()
-  },
-  { immediate: true },
-)
+watch(() => JSON.stringify(difficultyRequest.value), fetchDifficulties, { immediate: true })
+watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true })
 </script>
 
 <template>
@@ -326,21 +240,18 @@ watch(
         <PlaylistDropdown />
         <BaseSelect v-if="viewMode === 'grid'" :options="sortOptions" :model-value="sortState.key"
           @update:model-value="setSort($event)" />
-        <BaseSelect v-if="isBatchView" :options="batchSortOptions" :model-value="batchSortKey"
-          @update:model-value="batchSortKey = $event" />
+        <BaseSelect v-if="isBatchView" v-model="batchSortKey" :options="batchSortOptions" />
         <SearchBox v-if="!isBatchView" v-model="searchQuery" placeholder="Search by song, artist, or mapper..." />
       </div>
       <div class="maps-page__controls-right">
         <ViewToggle v-model="viewMode" />
 
-        <FilterPopover v-if="!isBatchView" :open="filtersOpen" @update:open="filtersOpen = $event">
+        <FilterPopover v-if="!isBatchView" v-model:open="filtersOpen">
           <template #trigger>
             <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
           </template>
-          <MapFilterSidebar :selected-category="selectedCategory" :complexity-range="complexityRange"
-            :unplayed-only="unplayedOnly" :show-unplayed="authStore.isLoggedIn"
-            @update:selected-category="selectedCategory = $event"
-            @update:complexity-range="complexityRange = $event" @update:unplayed-only="unplayedOnly = $event" />
+          <MapFilterSidebar v-model:selected-category="selectedCategory" v-model:complexity-range="complexityRange"
+            v-model:unplayed-only="unplayedOnly" :show-unplayed="authStore.isLoggedIn" />
         </FilterPopover>
       </div>
     </div>
@@ -356,16 +267,13 @@ watch(
         </div>
       </template>
 
-      <MapListView v-else-if="viewMode === 'list'" :rows="listRows" :loading="loading" :sort-state="listSortState"
-        :row-to="listRowTo" @sort="handleListSort" />
+      <MapListView v-else-if="viewMode === 'list'" :maps="mapDisplays" :loading="loading" :sort-state="sortState"
+        :map-route-to="mapRouteTo" @sort="setSort" />
 
       <BatchListView v-else-if="viewMode === 'batch'" :batches="batches" :loading="batchLoading"
         :map-route-to="mapRouteTo" />
 
-      <PaginationControls v-if="!isBatchView && totalPages > 1" :page="currentPage" :total-pages="totalPages"
-        @update:page="setPage($event)" />
-      <PaginationControls v-if="isBatchView && batchTotalPages > 1" :page="currentPage" :total-pages="batchTotalPages"
-        @update:page="setPage($event)" />
+      <PaginationControls v-if="pageCount > 1" :page="currentPage" :total-pages="pageCount" @update:page="setPage" />
     </div>
   </div>
 </template>
