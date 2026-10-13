@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import type { ClanResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse } from '@/types/api/clans'
-import { hasClanRole } from '@/utils/clans'
+import { hasClanRole, isPacifist } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DeclareWarModal from './war/DeclareWarModal.vue'
@@ -21,14 +21,18 @@ const openAttack = ref<ClanWarResponse | null>(null)
 const declareOpen = ref(false)
 
 const canDeclare = computed(
-  () => props.seasonRunning && hasClanRole(props.viewerRole, 'commander') && openAttack.value === null,
+  () =>
+    props.seasonRunning &&
+    hasClanRole(props.viewerRole, 'commander') &&
+    openAttack.value === null &&
+    !isPacifist(props.clan),
 )
 
 async function fetchOpenAttack() {
   try {
     const { getClanWars } = await import('@/api/clans')
     const page = await getClanWars({ clanId: props.clan.clan.id, open: true, page: 0, size: OPEN_SIZE })
-    openAttack.value = page.content.find((w) => w.attacker.clan.id === props.clan.clan.id) ?? null
+    openAttack.value = page.content.find((w) => w.attack.lead.id === props.clan.clan.id) ?? null
   } catch {
     openAttack.value = null
   }
@@ -42,7 +46,7 @@ function onDeclared(detail: ClanWarDetailResponse) {
 watch(
   () => props.latestWar,
   (war) => {
-    if (!war || war.attacker.clan.id !== props.clan.clan.id) return
+    if (!war || war.attack.lead.id !== props.clan.clan.id) return
     openAttack.value = war.status === 'ended' ? null : war
   },
 )

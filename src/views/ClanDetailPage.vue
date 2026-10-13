@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { ClanLevelStepResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
-import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, lockedRankSlots } from '@/utils/clans'
+import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, isPacifist, lockedRankSlots } from '@/utils/clans'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -76,6 +76,7 @@ const {
   viewerRole,
   viewerClanId,
   ownRole,
+  ownPacifist,
   setOnline,
   pendingRequest,
   load,
@@ -175,6 +176,9 @@ watch(chatClanId, loadRecentWar, { immediate: true })
 
 const declareOpen = ref(false)
 const { running: seasonRunning } = useCurrentClanSeason()
+const canDeclare = computed(
+  () => seasonRunning.value && !!clan.value && !isPacifist(clan.value) && !ownPacifist.value,
+)
 
 function onDeclared(detail: ClanWarDetailResponse) {
   declareOpen.value = false
@@ -385,6 +389,19 @@ async function saveProfile(request: UpdateClanRequest) {
   }
 }
 
+async function setPacifism(enabled: boolean) {
+  busy.value = true
+  editError.value = null
+  try {
+    const { updateClanPacifism } = await import('@/api/clans')
+    clan.value = await updateClanPacifism(clan.value!.clan.id, { enabled })
+  } catch (err) {
+    editError.value = parseApiError(err, 'Could not change pacifism.').message
+  } finally {
+    busy.value = false
+  }
+}
+
 async function uploadIcon(file: File) {
   const { uploadClanIcon } = await import('@/api/cdn')
   clan.value = await uploadClanIcon(clan.value!.clan.id, file)
@@ -439,7 +456,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
             :accepting-requests="clan.acceptingRequests"
             :pending-request="pendingRequest"
             :busy="busy"
-            :season-running="seasonRunning"
+            :can-declare="canDeclare"
             :error="actionError"
             @request="requestJoin"
             @resolve="resolveRequest"
@@ -540,6 +557,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         :upload-icon="uploadIcon"
         :remove-icon="removeIcon"
         @save="saveProfile"
+        @pacifism="setPacifism"
         @close="editOpen = false"
       />
 

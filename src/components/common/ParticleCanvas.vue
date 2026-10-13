@@ -6,10 +6,23 @@ import { onMounted, onUnmounted, ref, watchEffect } from 'vue'
 
 const props = defineProps<{
   particleCount?: number
-  proximityRadius?: number
   darkMode?: boolean
   interactive?: boolean
 }>()
+
+interface Star {
+  x: number
+  y: number
+  opacity: number
+  size: number
+  speed: number
+  phase: number
+  depth: number
+  warm: boolean
+}
+
+const RADIUS = 120
+const count = props.particleCount ?? 170
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const reduced = useReducedMotion()
@@ -21,168 +34,57 @@ let startTime = 0
 let logicalW = 0
 let logicalH = 0
 
-interface Star {
-  x: number
-  y: number
-  baseOpacity: number
-  size: number
-  twinkleSpeed: number  
-  twinklePhase: number
-  twinkleDepth: number
-  warm: boolean
-  bright: boolean
-}
-
-const count = props.particleCount ?? 170
-const radius = props.proximityRadius ?? 120
-
 function tracksCursor(): boolean {
   return props.interactive !== false && !mobile.value && !reduced.value
 }
 
 function initParticles(w: number, h: number) {
-  particles = []
-  for (let i = 0; i < count; i++) {
+  particles = Array.from({ length: count }, () => {
     const y = Math.random() * h
-    const yRatio = 1 - y / h
-    const isBright = Math.random() < 0.32
-    const isWarm = Math.random() < (yRatio * 0.6)
-
-    particles.push({
+    const bright = Math.random() < 0.32
+    return {
       x: Math.random() * w,
       y,
-      baseOpacity: isBright
-        ? 0.6 + Math.random() * 0.4
-        : 0.18 + Math.random() * 0.18,
-      size: isBright
-        ? 2 + Math.random() * 1.5
-        : 1 + Math.random() * 1.5,
-      twinkleSpeed: 0.5 + Math.random() * 2.5,
-      twinklePhase: Math.random() * Math.PI * 2,
-      twinkleDepth: isBright
-        ? 0.6 + Math.random() * 0.4
-        : 0.3 + Math.random() * 0.4,
-      warm: isWarm,
-      bright: isBright,
-    })
-  }
+      opacity: bright ? 0.6 + Math.random() * 0.4 : 0.18 + Math.random() * 0.18,
+      size: bright ? 2 + Math.random() * 1.5 : 1 + Math.random() * 1.5,
+      speed: 0.5 + Math.random() * 2.5,
+      phase: Math.random() * Math.PI * 2,
+      depth: bright ? 0.6 + Math.random() * 0.4 : 0.3 + Math.random() * 0.4,
+      warm: Math.random() < (1 - y / h) * 0.6,
+    }
+  })
 }
 
-function drawCrossSpike(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  opacity: number,
-  warm: boolean,
-) {
-  const dark = props.darkMode !== false
-  const r = dark ? (warm ? 255 : 232) : (warm ? 80 : 40)
-  const g = dark ? (warm ? 220 : 232) : (warm ? 60 : 40)
-  const b = dark ? (warm ? 150 : 240) : (warm ? 20 : 60)
-  const spikeLen = size * 3.5
-
-  const hGrad = ctx.createLinearGradient(x - spikeLen, y, x + spikeLen, y)
-  hGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`)
-  hGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${opacity * 0.3})`)
-  hGrad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${opacity * 0.7})`)
-  hGrad.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${opacity * 0.3})`)
-  hGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
-
-  ctx.beginPath()
-  ctx.moveTo(x - spikeLen, y)
-  ctx.lineTo(x, y - 0.5)
-  ctx.lineTo(x + spikeLen, y)
-  ctx.lineTo(x, y + 0.5)
-  ctx.closePath()
-  ctx.fillStyle = hGrad
-  ctx.fill()
-
-  const vGrad = ctx.createLinearGradient(x, y - spikeLen, x, y + spikeLen)
-  vGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`)
-  vGrad.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${opacity * 0.3})`)
-  vGrad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${opacity * 0.7})`)
-  vGrad.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${opacity * 0.3})`)
-  vGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
-
-  ctx.beginPath()
-  ctx.moveTo(x, y - spikeLen)
-  ctx.lineTo(x - 0.5, y)
-  ctx.lineTo(x, y + spikeLen)
-  ctx.lineTo(x + 0.5, y)
-  ctx.closePath()
-  ctx.fillStyle = vGrad
-  ctx.fill()
+function starColor(warm: boolean, dark: boolean): [number, number, number] {
+  if (dark) return warm ? [255, 220, 150] : [232, 232, 240]
+  return warm ? [80, 60, 20] : [40, 40, 60]
 }
 
 function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
   ctx.clearRect(0, 0, w, h)
-
-  const still = reduced.value
+  const elapsed = (time - startTime) / 1000
   const cursor = tracksCursor()
   const dark = props.darkMode !== false
-  const elapsed = (time - startTime) / 1000
+  const [cr, cg, cb] = dark ? [255, 215, 120] : [60, 50, 10]
 
   for (const p of particles) {
-    let twinkle = 1
-    if (!still) {
-      const wave = Math.sin(elapsed * p.twinkleSpeed + p.twinklePhase)
-      twinkle = 1 - p.twinkleDepth * 0.5 * (1 - wave)
-    }
-
-    let opacity = p.baseOpacity * twinkle
+    const twinkle = reduced.value ? 1 : 1 - p.depth * 0.5 * (1 - Math.sin(elapsed * p.speed + p.phase))
+    let opacity = p.opacity * twinkle
     let size = p.size
-
-    let proximityFactor = 0
+    let near = 0
     if (cursor) {
-      const dx = p.x - mouseX
-      const dy = p.y - mouseY
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist < radius) {
-        proximityFactor = 1 - dist / radius
-        proximityFactor = proximityFactor * proximityFactor * (3 - 2 * proximityFactor)
-        opacity = opacity + (0.7 - opacity) * proximityFactor
-        size = size + (4.5 - size) * proximityFactor
+      const dist = Math.hypot(p.x - mouseX, p.y - mouseY)
+      if (dist < RADIUS) {
+        near = 1 - dist / RADIUS
+        near = near * near * (3 - 2 * near)
+        opacity += (0.9 - opacity) * near
+        size += (4.5 - size) * near
       }
     }
-
-    const baseR = dark ? (p.warm ? 255 : 232) : (p.warm ? 80 : 40)
-    const baseG = dark ? (p.warm ? 220 : 232) : (p.warm ? 60 : 40)
-    const baseB = dark ? (p.warm ? 150 : 240) : (p.warm ? 20 : 60)
-    const cursorR = dark ? 255 : 60
-    const cursorG = dark ? 215 : 50
-    const cursorB = dark ? 120 : 10
-    const r = Math.round(baseR + (cursorR - baseR) * proximityFactor)
-    const g = Math.round(baseG + (cursorG - baseG) * proximityFactor)
-    const b = Math.round(baseB + (cursorB - baseB) * proximityFactor)
-
-    const showGlow = (p.bright && opacity > 0.15) || proximityFactor > 0.3
-    if (showGlow) {
-      const glowSize = size * (proximityFactor > 0.3 ? 5 : 4)
-      const glowOpacity = proximityFactor > 0.3
-        ? opacity * (0.15 + 0.2 * proximityFactor)
-        : opacity * 0.25
-      const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowSize)
-      grd.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${glowOpacity})`)
-      grd.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${glowOpacity * 0.25})`)
-      grd.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, glowSize, 0, Math.PI * 2)
-      ctx.fillStyle = grd
-      ctx.fill()
-    }
-
-    const showSpike = (p.bright && twinkle > 0.85) || proximityFactor > 0.6
-    if (showSpike) {
-      const spikeIntensity = proximityFactor > 0.6
-        ? opacity * proximityFactor * 0.8
-        : opacity * (twinkle - 0.85) / 0.15
-      drawCrossSpike(ctx, p.x, p.y, size, spikeIntensity, proximityFactor > 0.3 || p.warm)
-    }
-
+    const [r, g, b] = starColor(p.warm, dark)
     ctx.beginPath()
     ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`
+    ctx.fillStyle = `rgba(${Math.round(r + (cr - r) * near)}, ${Math.round(g + (cg - g) * near)}, ${Math.round(b + (cb - b) * near)}, ${opacity})`
     ctx.fill()
   }
 }
@@ -200,7 +102,7 @@ function onMouseMove(e: MouseEvent) {
   const rect = canvasRef.value.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
-  if (x >= -radius && x <= rect.width + radius && y >= -radius && y <= rect.height + radius) {
+  if (x >= -RADIUS && x <= rect.width + RADIUS && y >= -RADIUS && y <= rect.height + RADIUS) {
     mouseX = x
     mouseY = y
   } else {

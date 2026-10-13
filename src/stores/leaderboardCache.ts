@@ -1,13 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
 
-interface CachedPage {
-  data: unknown
-  fetchedAt: number
-}
+const MAX_ENTRIES = 30
 
 export const useLeaderboardCacheStore = defineStore('leaderboardCache', () => {
-  const cache = ref<Map<string, CachedPage>>(new Map())
+  const cache = new Map<string, unknown>()
 
   function buildKey(params: Record<string, unknown>): string {
     return Object.keys(params)
@@ -17,24 +13,15 @@ export const useLeaderboardCacheStore = defineStore('leaderboardCache', () => {
   }
 
   function getCached<T>(params: Record<string, unknown>): T | null {
-    const entry = cache.value.get(buildKey(params))
-    return entry ? (entry.data as T) : null
+    return (cache.get(buildKey(params)) as T | undefined) ?? null
   }
 
   function setCache(params: Record<string, unknown>, data: unknown) {
     const key = buildKey(params)
-    cache.value.set(key, { data, fetchedAt: Date.now() })
-    if (cache.value.size > 30) {
-      const oldest = [...cache.value.entries()].sort(
-        (a, b) => a[1].fetchedAt - b[1].fetchedAt,
-      )
-      cache.value.delete(oldest[0][0])
-    }
+    cache.delete(key)
+    cache.set(key, data)
+    if (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value!)
   }
 
-  function clear() {
-    cache.value.clear()
-  }
-
-  return { getCached, setCache, clear }
+  return { getCached, setCache }
 })

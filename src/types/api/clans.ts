@@ -22,13 +22,11 @@ export type ClanAuditAction =
   | 'alliance_ended'
   | 'disbanded'
 
-export type ClanXpSource = 'play' | 'mission' | 'war_break' | 'war_win' | 'war_loan'
+export type ClanXpSource = 'play' | 'mission' | 'war_break' | 'war_win'
 
 export type ClanCapacity =
   | 'member_slots'
   | 'ally_slots'
-  | 'lend_slots'
-  | 'receive_slots'
   | 'officer_slots'
   | 'commander_slots'
 
@@ -54,7 +52,11 @@ export type ClanWarOutcome =
   | 'forfeited'
   | 'season_ended'
 
-export type ClanWarLoanStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'ended'
+export type ClanWarTeam = 'attack' | 'defend'
+
+export type ClanWarAidDirection = 'request' | 'offer'
+
+export type ClanWarAidStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
 
 export type ClanWarPoolSource = 'pick' | 'replacement' | 'random'
 
@@ -81,6 +83,7 @@ export interface ClanResponse {
   memberCount: number
   memberCap: number
   founder: PlayerRef | null
+  pacifistFrom: string | null
   createdAt: string
 }
 
@@ -187,12 +190,6 @@ export interface ClanStandingEventResponse {
   createdAt: string
 }
 
-export interface ClanTrustResponse {
-  level: number
-  loanCap: number
-  contribution: number
-}
-
 export interface ClanAllianceResponse {
   id: string
   ally: PublicClanResponse
@@ -200,7 +197,7 @@ export interface ClanAllianceResponse {
   incoming: boolean
   proposedBy: PlayerRef | null
   endedBy: PlayerRef | null
-  trust: ClanTrustResponse | null
+  warsFoughtTogether: number
   createdAt: string
   acceptedAt: string | null
   endedAt: string | null
@@ -224,11 +221,22 @@ export interface ClanArenaSpec {
 
 export interface ClanWarSideResponse {
   clan: PublicClanResponse
+  team: ClanWarTeam
   lead: PlayerRef | null
   stake: number
   stakeRemaining: number
   standingAtDeclare: number
   picksSubmittedAt: string | null
+  joinedAt: string
+  leftAt: string | null
+  fallen: boolean
+}
+
+export interface ClanWarTeamResponse {
+  lead: PublicClanResponse
+  stake: number
+  stakeRemaining: number
+  sides: ClanWarSideResponse[]
 }
 
 export interface ClanWarResponse {
@@ -239,8 +247,8 @@ export interface ClanWarResponse {
   status: ClanWarStatus
   outcome: ClanWarOutcome | null
   declaredBy: PlayerRef | null
-  attacker: ClanWarSideResponse
-  defender: ClanWarSideResponse
+  attack: ClanWarTeamResponse
+  defend: ClanWarTeamResponse
   declaredAt: string
   picksDueAt: string | null
   startsAt: string | null
@@ -262,18 +270,19 @@ export interface ClanWarPoolEntryResponse {
   viewerScore: MyScoreSummary | null
 }
 
-export interface ClanWarTimelineHitResponse {
+export interface ClanWarTimelinePointResponse {
   at: string
   clanId: string
   damage: number
-  broke: boolean
+  hits: number
+  breaks: number
   standingMoved: number
 }
 
 export interface ClanWarDetailResponse {
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
-  timeline: ClanWarTimelineHitResponse[]
+  timeline: ClanWarTimelinePointResponse[]
 }
 
 export type ClanFeedFrame =
@@ -283,7 +292,9 @@ export type ClanFeedFrame =
 export interface ClanWarParticipantResponse {
   player: PlayerRef
   clan: PublicClanResponse
-  duelTarget: PlayerRef | null
+  target: PlayerRef | null
+  skill: number
+  inBand: boolean | null
   standingWeight: number
   guard: number
   guardCycle: number
@@ -300,6 +311,7 @@ export interface ClanWarHitResponse {
   victimCycle: number
   difficulty: PublicMapDifficultyResponse
   missingScore: boolean
+  chip: boolean
   damage: number
   guardAfter: number
   broke: boolean
@@ -308,17 +320,17 @@ export interface ClanWarHitResponse {
   createdAt: string
 }
 
-export interface ClanWarLoanResponse {
+export interface ClanWarAidResponse {
   id: string
   war: ClanWarRefResponse
-  player: PlayerRef
-  lendingClan: PublicClanResponse
   clan: PublicClanResponse
-  status: ClanWarLoanStatus
-  offeredBy: PlayerRef
+  lead: PublicClanResponse
+  team: ClanWarTeam
+  direction: ClanWarAidDirection
+  status: ClanWarAidStatus
+  requestedBy: PlayerRef
   createdAt: string
   resolvedAt: string | null
-  endedAt: string | null
 }
 
 export interface ClanWarRewardItemResponse {
@@ -347,8 +359,10 @@ export interface ClanListParams extends PaginationParams {
   search?: string
 }
 
-export interface ClanWarLoanListParams extends PaginationParams {
-  status?: ClanWarLoanStatus
+export interface ClanWarAidListParams extends PaginationParams {
+  warId?: string
+  clanId?: string
+  status?: ClanWarAidStatus
 }
 
 export interface ClanWarListParams extends PaginationParams {
@@ -437,19 +451,35 @@ export interface DeclareClanWarRequest {
 
 export interface SubmitClanWarPicksRequest {
   mapDifficultyIds: string[]
+  berserker?: boolean
 }
 
 export interface UpdateClanWarRequest {
   status: ClanWarStatus
 }
 
-export interface OfferClanWarLoanRequest {
-  userId: string
+export interface RequestClanWarAidRequest {
   clanId: string
 }
 
-export interface ResolveClanWarLoanRequest {
-  status: ClanWarLoanStatus
+export interface OfferClanWarAidRequest {
+  team: ClanWarTeam
+}
+
+export interface ResolveClanWarAidRequest {
+  status: ClanWarAidStatus
+}
+
+export interface UpdateClanWarSideRequest {
+  left: boolean
+}
+
+export interface ChooseClanWarTargetRequest {
+  userId: string | null
+}
+
+export interface UpdateClanPacifismRequest {
+  enabled: boolean
 }
 
 export interface ClanCapacityRequest {

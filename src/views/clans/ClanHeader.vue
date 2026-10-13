@@ -5,9 +5,10 @@ import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import type { ClanResponse, ClanStandingResponse } from '@/types/api/clans'
-import { formatStanding } from '@/utils/clans'
+import { formatStanding, isPacifist } from '@/utils/clans'
 import { annotateEffectLayerStacks, pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue, readClanEquipped, valueFxLayers } from '@/utils/items'
 import { computed } from 'vue'
+import ClanPacifistBadge from './ClanPacifistBadge.vue'
 
 const props = defineProps<{
   clan: ClanResponse
@@ -79,6 +80,7 @@ const founded = computed(() =>
         <h1 class="clan-header__title">
           <ClanTag :clan="clan.clan" size="lg" effects class="clan-header__tag" />
           <ClanName class="clan-header__name" :clan="clan.clan" />
+          <ClanPacifistBadge v-if="isPacifist(clan)" />
         </h1>
         <p v-if="clan.description" class="clan-header__description">{{ clan.description }}</p>
       </div>

@@ -7,7 +7,7 @@ import UserChip from '@/components/domain/UserChip.vue'
 import { pickCoverUrl } from '@/composables/useAvatarFallback'
 import type { ClanWarHitResponse, ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
-import { formatStanding, warSideStyles } from '@/utils/clans'
+import { formatStanding, warSideStyles, warTeamOf } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
@@ -35,7 +35,8 @@ const playerOptions = computed(() => [
 ])
 
 function rowStyle(hit: ClanWarHitResponse) {
-  return sideOf.value.get(hit.attacker.id) === props.war.defender.clan.id ? styles.value.defender : styles.value.attacker
+  const clanId = sideOf.value.get(hit.attacker.id) ?? hit.attacker.clan?.id
+  return styles.value[(clanId && warTeamOf(props.war, clanId)) || 'attack']
 }
 
 function breakTitle(hit: ClanWarHitResponse): string {
@@ -106,7 +107,7 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
         v-for="hit in hits.content"
         :key="hit.id"
         class="war-hits__row clan-colors"
-        :class="{ 'war-hits__row--break': hit.broke }"
+        :class="{ 'war-hits__row--break': hit.broke, 'war-hits__row--chip': hit.chip && !hit.broke }"
         :style="rowStyle(hit)"
       >
         <span class="war-hits__who">
@@ -117,6 +118,7 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
         <RouterLink class="war-hits__map" :to="{ name: 'map-detail', params: { mapId: hit.difficulty.mapId } }">
           <img class="war-hits__cover" :src="pickCoverUrl(hit.difficulty)" alt="" loading="lazy" decoding="async" />
           <span class="war-hits__song">{{ hit.difficulty.songName }}</span>
+          <span v-if="hit.chip && !hit.broke" class="war-hits__flag">chip</span>
           <span v-if="hit.missingScore" class="war-hits__flag">no score</span>
         </RouterLink>
         <span class="war-hits__damage">-{{ hit.damage.toFixed(1) }}</span>
@@ -274,6 +276,16 @@ watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate:
 }
 
 .war-hits__when {
+  color: var(--text-tertiary);
+}
+
+.war-hits__row--chip .war-hits__who,
+.war-hits__row--chip .war-hits__song {
+  opacity: 0.6;
+}
+
+.war-hits__row--chip .war-hits__damage {
+  font-weight: 400;
   color: var(--text-tertiary);
 }
 

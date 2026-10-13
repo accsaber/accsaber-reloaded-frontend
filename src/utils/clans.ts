@@ -5,16 +5,19 @@ import type {
   ClanCapacity,
   ClanItemSource,
   ClanLevelStepResponse,
+  ClanResponse,
   ClanRole,
   ClanRuleset,
   ClanSeasonResponse,
   ClanStandingSource,
   ClanUnlocksResponse,
-  ClanWarLoanStatus,
   ClanWarOutcome,
   ClanWarPoolSource,
+  ClanWarRefResponse,
   ClanWarResponse,
   ClanWarStatus,
+  ClanWarTeam,
+  ClanWarTeamResponse,
   ClanXpGrantResponse,
   ClanXpSource,
   PublicClanResponse,
@@ -61,8 +64,6 @@ export const CLAN_ROLE_PLURAL: Record<ClanRole, string> = {
 export const CLAN_CAPACITY_LABEL: Record<ClanCapacity, string> = {
   member_slots: 'member slots',
   ally_slots: 'ally slots',
-  lend_slots: 'lend slots',
-  receive_slots: 'borrow slots',
   officer_slots: 'officer slots',
   commander_slots: 'commander slots',
 }
@@ -101,12 +102,36 @@ export const CLAN_WAR_POOL_SOURCE_LABEL: Record<ClanWarPoolSource, string> = {
   random: 'Random',
 }
 
-export const CLAN_LOAN_STATUS_LABEL: Record<ClanWarLoanStatus, string> = {
-  pending: 'Pending',
-  accepted: 'Fighting',
-  declined: 'Declined',
-  cancelled: 'Cancelled',
-  ended: 'Ended',
+export const CLAN_WAR_TEAM_LABEL: Record<ClanWarTeam, string> = {
+  attack: 'Attack',
+  defend: 'Defend',
+}
+
+export const OPPOSING_TEAM: Record<ClanWarTeam, ClanWarTeam> = {
+  attack: 'defend',
+  defend: 'attack',
+}
+
+export const WAR_TEAMS: ClanWarTeam[] = ['attack', 'defend']
+
+export function warTeamOf(war: ClanWarResponse, clanId: string): ClanWarTeam | null {
+  return WAR_TEAMS.find((team) => war[team].sides.some((side) => side.clan.id === clanId)) ?? null
+}
+
+export function warLeadSide(team: ClanWarTeamResponse) {
+  return team.sides.find((side) => side.clan.id === team.lead.id) ?? null
+}
+
+export function warLeadFallen(team: ClanWarTeamResponse): boolean {
+  return !!warLeadSide(team)?.fallen
+}
+
+export function warOpponent(war: ClanWarResponse, clanId: string): PublicClanResponse {
+  return war[OPPOSING_TEAM[warTeamOf(war, clanId) ?? 'defend']].lead
+}
+
+export function isPacifist(clan: ClanResponse, now = Date.now()): boolean {
+  return !!clan.pacifistFrom && new Date(clan.pacifistFrom).getTime() <= now
 }
 
 export const WAR_POOL_SIZE = 10
@@ -123,12 +148,15 @@ export function attackerPickCount(attackerStanding: number, defenderStanding: nu
 export function warResultFor(war: ClanWarResponse, clanId: string): string {
   const outcome = war.outcome
   if (!outcome) return CLAN_WAR_STATUS_LABEL[war.status]
-  const attacking = war.attacker.clan.id === clanId
+  const attacking = warTeamOf(war, clanId) === 'attack'
   if (outcome === 'attacker_won') return attacking ? 'Won' : 'Lost'
   if (outcome === 'defender_won') return attacking ? 'Lost' : 'Won'
   if (outcome === 'retreated') return attacking ? 'Retreated' : 'Enemy retreated'
   return CLAN_WAR_OUTCOME_LABEL[outcome]
 }
+
+const DAY_MS = 86400000
+const WAR_MAX_MS = 28 * DAY_MS
 
 export interface WarClock {
   label: string
@@ -143,7 +171,7 @@ export function warClock(war: ClanWarResponse, now: number): WarClock {
     return { label: 'Starts in', value: formatCountdown(new Date(war.startsAt).getTime() - now) }
   }
   if (war.status === 'active' && war.startsAt) {
-    return { label: 'Running for', value: formatCountdown(now - new Date(war.startsAt).getTime()) }
+    return { label: 'Ends in', value: formatCountdown(new Date(war.startsAt).getTime() + WAR_MAX_MS - now) }
   }
   if (war.endedAt) {
     return { label: war.outcome ? CLAN_WAR_OUTCOME_LABEL[war.outcome] : 'Ended', value: formatRelativeDate(war.endedAt, now) }
@@ -156,10 +184,8 @@ export const CLAN_XP_SOURCE_LABEL: Record<ClanXpSource, string> = {
   mission: 'Mission',
   war_break: 'War break',
   war_win: 'War win',
-  war_loan: 'War loan',
 }
 
-const DAY_MS = 86400000
 
 export function formatClanXp(xp: number): string {
   return xp.toLocaleString(undefined, { maximumFractionDigits: 1 })
@@ -351,35 +377,42 @@ function similarColors(a: string | null, b: string | null): boolean {
   return hueGap < 30 && Math.abs(la - lb) < 0.2
 }
 
-export interface WarSideStyles {
-  attacker: Record<string, string>
-  defender: Record<string, string>
-}
+export type WarSideStyles = Record<ClanWarTeam, Record<string, string>>
 
 function clashSide(clan: PublicClanResponse): string {
   return clan.secondaryColor ? 'var(--clan-accent-2)' : 'oklch(from var(--clan-accent) l c calc(h + 150))'
 }
 
 export function warSideStyles(war: ClanWarResponse): WarSideStyles {
-  const attacker = war.attacker.clan
-  const defender = war.defender.clan
-  const clash = similarColors(attacker.primaryColor ?? attacker.tagColor, defender.primaryColor ?? defender.tagColor)
+  const attack = war.attack.lead
+  const defend = war.defend.lead
+  const clash = similarColors(attack.primaryColor ?? attack.tagColor, defend.primaryColor ?? defend.tagColor)
   return {
-    attacker: { ...clanColorVars(attacker), '--war-side': 'var(--clan-accent)' },
-    defender: { ...clanColorVars(defender), '--war-side': clash ? clashSide(defender) : 'var(--clan-accent)' },
+    attack: { ...clanColorVars(attack), '--war-side': 'var(--clan-accent)' },
+    defend: { ...clanColorVars(defend), '--war-side': clash ? clashSide(defend) : 'var(--clan-accent)' },
   }
 }
 
 export function warHeadline(war: ClanWarResponse): string | null {
   if (!war.outcome) return null
-  if (war.outcome === 'attacker_won') return `${war.attacker.clan.tag} wins`
-  if (war.outcome === 'defender_won') return `${war.defender.clan.tag} wins`
-  if (war.outcome === 'retreated') return `${war.attacker.clan.tag} retreated`
+  if (war.outcome === 'attacker_won') return `${war.attack.lead.tag} wins`
+  if (war.outcome === 'defender_won') return `${war.defend.lead.tag} wins`
+  if (war.outcome === 'retreated') return `${war.attack.lead.tag} retreated`
   return CLAN_WAR_OUTCOME_LABEL[war.outcome]
 }
 
+type WarRuleset = Pick<ClanWarRefResponse, 'status' | 'ruleset'>
+
+export function isBerserkerOffer(war: WarRuleset): boolean {
+  return war.status === 'picking' && war.ruleset === 'berserker'
+}
+
+export function warRulesetLabel(war: WarRuleset): string {
+  return isBerserkerOffer(war) ? 'Berserker offered' : CLAN_RULESET_LABEL[war.ruleset]
+}
+
 export function warModeLine(war: ClanWarResponse): string {
-  return `${CLAN_ARENA_LABEL[war.arena]}, ${CLAN_RULESET_LABEL[war.ruleset]}`
+  return `${CLAN_ARENA_LABEL[war.arena]}, ${warRulesetLabel(war)}`
 }
 
 export const CLAN_RULES_LEAD = 'Clans are public. Keep yours within these rules:'

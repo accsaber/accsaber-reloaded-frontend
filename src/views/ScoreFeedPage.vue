@@ -6,6 +6,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { useScoreWebSocket } from '@/composables/useScoreWebSocket'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreDisplay, ScoreFeedEntry } from '@/types/display'
+import { feedEntryToScoreDisplay } from '@/utils/mappers'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const categoryStore = useCategoryStore()
@@ -37,42 +38,8 @@ const modalOpen = ref(false)
 const modalScore = ref<ScoreDisplay | null>(null)
 const modalUserId = ref('')
 
-function toScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
-  return {
-    scoreId: entry.key,
-    mapId: entry.mapId,
-    mapDifficultyId: entry.mapDifficultyId,
-    beatsaverCode: entry.beatsaverCode,
-    characteristic: entry.characteristic,
-    rawDifficulty: entry.rawDifficulty,
-    mapName: entry.mapName,
-    mapSubName: entry.mapSubName,
-    artistName: entry.artistName,
-    difficulty: entry.difficulty,
-    categoryCode: entry.categoryCode,
-    coverUrl: entry.coverUrl,
-    coverFallbackUrl: entry.coverFallbackUrl,
-    leaderboardRank: entry.rank,
-    score: entry.score,
-    accuracy: entry.accuracy,
-    ap: entry.ap,
-    weightedAp: entry.weightedAp,
-    complexity: null,
-    modifiers: entry.modifiers,
-    date: entry.timeSet,
-    misses: entry.misses,
-    badCuts: entry.badCuts,
-    wallHits: entry.wallHits,
-    bombHits: entry.bombHits,
-    streak115: entry.streak115,
-    blScoreId: entry.blScoreId,
-    userName: entry.player.name,
-    mapAuthor: entry.mapAuthor,
-  }
-}
-
 function onSelectScore(entry: ScoreFeedEntry) {
-  modalScore.value = toScoreDisplay(entry)
+  modalScore.value = feedEntryToScoreDisplay(entry)
   modalUserId.value = entry.userId
   modalOpen.value = true
 }

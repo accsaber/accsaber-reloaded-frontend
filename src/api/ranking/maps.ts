@@ -29,6 +29,10 @@ export function getLeaderboardPreview(
   )
 }
 
+export function setMapWarBanned(mapId: string, banned: boolean): Promise<MapResponse> {
+  return patch<MapResponse>(`/ranking/maps/${mapId}/war-banned${buildQuery({ banned })}`)
+}
+
 export function getRankingMaps(params?: MapListParams): Promise<Page<MapResponse>> {
   return get<Page<MapResponse>>(`/ranking/maps${buildQuery(params)}`)
 }

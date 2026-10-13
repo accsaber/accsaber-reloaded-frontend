@@ -3,7 +3,7 @@ import ClanBar from './ClanBar.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { ClanWarResponse } from '@/types/api/clans'
 import type { LevelResponse } from '@/types/api/users'
-import { warResultFor } from '@/utils/clans'
+import { warOpponent, warResultFor } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed } from 'vue'
 import WarScorebug from './war/WarScorebug.vue'
@@ -19,9 +19,7 @@ const props = defineProps<{
 const openWar = computed(() => (props.war && props.war.status !== 'ended' ? props.war : null))
 const lastWar = computed(() => (props.war?.status === 'ended' ? props.war : null))
 const enemy = computed(() => {
-  const war = lastWar.value
-  if (!war) return null
-  return war.attacker.clan.id === props.clanId ? war.defender.clan : war.attacker.clan
+  return lastWar.value ? warOpponent(lastWar.value, props.clanId) : null
 })
 const progress = computed(() => Math.max(0, Math.min(100, props.level.progressPercent)))
 const xpLeft = computed(() => Math.max(0, Math.round(props.level.xpForNextLevel - props.level.xpForCurrentLevel)))

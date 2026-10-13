@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ClanWarResponse, ClanWarTimelineHitResponse } from '@/types/api/clans'
-import { formatStanding, warSideStyles } from '@/utils/clans'
+import type { ClanWarResponse, ClanWarTeam, ClanWarTimelinePointResponse } from '@/types/api/clans'
+import { formatStanding, OPPOSING_TEAM, WAR_TEAMS, warSideStyles } from '@/utils/clans'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
   war: ClanWarResponse
-  hits: ClanWarTimelineHitResponse[]
+  points: ClanWarTimelinePointResponse[]
 }>()
 
 const LEFT = 20
@@ -18,14 +18,21 @@ interface Marker {
   x: number
   y: number
   r: number
-  hit: ClanWarTimelineHitResponse
-  attacking: boolean
+  point: ClanWarTimelinePointResponse
+  team: ClanWarTeam
 }
 
 const styles = computed(() => warSideStyles(props.war))
+const clans = computed(
+  () => new Map(WAR_TEAMS.flatMap((team) => props.war[team].sides.map((s) => [s.clan.id, { clan: s.clan, team }] as const))),
+)
+
+function teamOf(point: ClanWarTimelinePointResponse): ClanWarTeam {
+  return clans.value.get(point.clanId)?.team ?? 'attack'
+}
 const start = computed(() => new Date(props.war.startsAt ?? props.war.declaredAt).getTime())
 const end = computed(() => {
-  const last = props.hits.length ? new Date(props.hits[props.hits.length - 1].at).getTime() : start.value
+  const last = props.points.length ? new Date(props.points[props.points.length - 1].at).getTime() : start.value
   const close = props.war.endedAt ? new Date(props.war.endedAt).getTime() : last
   return Math.max(close, last, start.value + HOUR)
 })
@@ -36,33 +43,42 @@ function x(at: string | number): number {
 }
 
 const markers = computed<Marker[]>(() => {
-  const maxDamage = Math.max(1, ...props.hits.map((h) => h.damage))
-  return props.hits.map((hit) => {
-    const attacking = hit.clanId === props.war.attacker.clan.id
-    const r = 3 + 5 * Math.sqrt(hit.damage / maxDamage) + (hit.broke ? 3 : 0)
-    return { x: x(hit.at), y: attacking ? AXIS - 4 - r : AXIS + 4 + r, r, hit, attacking }
+  const maxDamage = Math.max(1, ...props.points.map((h) => h.damage))
+  return props.points.map((point) => {
+    const team = teamOf(point)
+    const r = 3 + 5 * Math.sqrt(point.damage / maxDamage) + (point.breaks > 0 ? 3 : 0)
+    return { x: x(point.at), y: team === 'attack' ? AXIS - 4 - r : AXIS + 4 + r, r, point, team }
   })
 })
 
-function stakePath(role: 'attacker' | 'defender'): string {
-  const stake = props.war[role].stake
-  const enemy = role === 'attacker' ? props.war.defender.clan.id : props.war.attacker.clan.id
-  const y = (left: number) => {
-    const share = stake > 0 ? Math.max(0, left) / stake : 0
-    return role === 'attacker' ? AXIS - 10 - share * BAND : AXIS + 10 + share * BAND
-  }
-  let left = stake
-  let path = `M${LEFT},${y(left)}`
-  for (const hit of props.hits) {
-    if (!hit.broke || hit.clanId !== enemy) continue
-    left -= hit.standingMoved
-    path += ` H${x(hit.at)} V${y(left)}`
-  }
-  return `${path} H${LEFT + WIDTH}`
+function stakeY(team: ClanWarTeam, left: number): number {
+  const stake = props.war[team].stake
+  const share = stake > 0 ? Math.max(0, left) / stake : 0
+  return team === 'attack' ? AXIS - 10 - share * BAND : AXIS + 10 + share * BAND
 }
 
-const attackerPath = computed(() => stakePath('attacker'))
-const defenderPath = computed(() => stakePath('defender'))
+function stakePath(team: ClanWarTeam): string {
+  const { stake, stakeRemaining } = props.war[team]
+  const drains = props.points.filter((p) => p.breaks && teamOf(p) === OPPOSING_TEAM[team])
+  const moved = drains.reduce((sum, p) => sum + p.standingMoved, 0)
+  const scale = moved > 0 ? (stake - stakeRemaining) / moved : 0
+  let left = stake
+  let path = `M${LEFT},${stakeY(team, left)}`
+  for (const point of drains) {
+    left -= point.standingMoved * scale
+    path += ` H${x(point.at)} V${stakeY(team, left)}`
+  }
+  return `${path} H${LEFT + WIDTH} V${stakeY(team, stakeRemaining)}`
+}
+
+const paths = computed(() =>
+  WAR_TEAMS.map((team) => ({
+    team,
+    d: stakePath(team),
+    y: stakeY(team, props.war[team].stakeRemaining),
+    label: formatStanding(props.war[team].stakeRemaining),
+  })),
+)
 
 const hovered = ref<Marker | null>(null)
 const tooltipStyle = computed(() =>
@@ -78,44 +94,51 @@ function stamp(at: string | number): string {
   return new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-function tooltipLine(marker: Marker): string {
-  const tag = marker.attacking ? props.war.attacker.clan.tag : props.war.defender.clan.tag
-  const kind = marker.hit.broke ? 'break' : 'hit'
-  const moved = marker.hit.broke ? `, ${formatStanding(marker.hit.standingMoved)} Standing` : ''
-  return `${tag} ${kind}, -${marker.hit.damage.toFixed(1)}${moved}`
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? '' : 's'}`
 }
 
-const summary = computed(() => {
-  const attacks = markers.value.filter((m) => m.attacking).length
-  return `${attacks} hits by ${props.war.attacker.clan.tag}, ${markers.value.length - attacks} by ${props.war.defender.clan.tag}`
-})
+function tooltipLine(marker: Marker): string {
+  const { point } = marker
+  const tag = clans.value.get(point.clanId)?.clan.tag ?? props.war[marker.team].lead.tag
+  const breaks = point.breaks ? `, ${plural(point.breaks, 'break')}` : ''
+  const moved = point.breaks ? `, ${formatStanding(point.standingMoved)} Standing` : ''
+  return `${tag} ${plural(point.hits, 'hit')}${breaks}, -${point.damage.toFixed(1)}${moved}`
+}
+
+const summary = computed(() =>
+  WAR_TEAMS.map((team) => {
+    const hits = markers.value.filter((m) => m.team === team).reduce((sum, m) => sum + m.point.hits, 0)
+    return `${plural(hits, 'hit')} by ${props.war[team].lead.tag}`
+  }).join(', '),
+)
 </script>
 
 <template>
   <section class="timeline">
     <h2 class="timeline__title">Timeline</h2>
-    <p v-if="!hits.length" class="timeline__empty">No hits yet.</p>
+    <p v-if="!points.length" class="timeline__empty">No hits yet.</p>
     <div v-else class="timeline__frame">
       <svg class="timeline__chart" viewBox="0 0 1000 240" role="img" :aria-label="summary">
         <line :x1="LEFT" :x2="LEFT + WIDTH" :y1="AXIS" :y2="AXIS" class="timeline__axis" />
-        <g class="clan-colors" :style="styles.attacker">
-          <path :d="attackerPath" class="timeline__stake" />
-        </g>
-        <g class="clan-colors" :style="styles.defender">
-          <path :d="defenderPath" class="timeline__stake" />
+        <g v-for="path in paths" :key="path.team" class="clan-colors" :style="styles[path.team]">
+          <path :d="path.d" class="timeline__stake" />
+          <text :x="LEFT + WIDTH" :y="path.y + (path.team === 'attack' ? -6 : 14)" class="timeline__left" text-anchor="end">
+            {{ path.label }}
+          </text>
         </g>
         <g
           v-for="(marker, i) in markers"
           :key="i"
           class="clan-colors"
-          :style="marker.attacking ? styles.attacker : styles.defender"
+          :style="styles[marker.team]"
         >
           <circle
             :cx="marker.x"
             :cy="marker.y"
             :r="marker.r"
             class="timeline__hit"
-            :class="{ 'timeline__hit--break': marker.hit.broke }"
+            :class="{ 'timeline__hit--break': marker.point.breaks > 0 }"
             @pointerenter="hovered = marker"
             @pointerleave="hovered = null"
           />
@@ -123,7 +146,7 @@ const summary = computed(() => {
       </svg>
       <div v-if="hovered" class="timeline__tooltip" :style="tooltipStyle" role="status">
         <span>{{ tooltipLine(hovered) }}</span>
-        <span class="timeline__tooltip-time">{{ stamp(hovered.hit.at) }}</span>
+        <span class="timeline__tooltip-time">{{ stamp(hovered.point.at) }}</span>
       </div>
       <div class="timeline__ends">
         <span>{{ stamp(start) }}</span>
@@ -176,6 +199,12 @@ const summary = computed(() => {
   stroke: var(--war-side);
   stroke-width: 2;
   opacity: 0.6;
+}
+
+.timeline__left {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  fill: var(--war-side);
 }
 
 .timeline__hit {

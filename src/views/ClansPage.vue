@@ -17,21 +17,31 @@ import type {
   ClanJoinRequestResponse,
   ClanJoinStatus,
   ClanResponse,
-  ClanWarLoanResponse,
-  ClanWarLoanStatus,
+  ClanWarAidResponse,
+  ClanWarAidStatus,
   PublicClanResponse,
 } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { CLAN_RULES, CLAN_RULES_LEAD, CLAN_RULES_NOTE, formatCountdown, formatStanding } from '@/utils/clans'
+import {
+  CLAN_RULES,
+  CLAN_RULES_LEAD,
+  CLAN_RULES_NOTE,
+  formatCountdown,
+  formatStanding,
+  hasClanRole,
+  isPacifist,
+} from '@/utils/clans'
 import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
-import ClanLoanList from './clans/ClanLoanList.vue'
+import ClanAidList from './clans/ClanAidList.vue'
+import ClanPacifistBadge from './clans/ClanPacifistBadge.vue'
 import ClanPodium, { type PodiumEntry } from './clans/ClanPodium.vue'
 import ClanRequestList from './clans/ClanRequestList.vue'
 import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
+import { useOwnClan } from './clans/useOwnClan'
 
 const PAGE_SIZE = 25
 
@@ -91,6 +101,7 @@ interface ClanRow extends Record<string, unknown> {
   members: string
   standing: string
   founder: PlayerRef | null
+  pacifist: boolean
 }
 
 const allRows = computed<ClanRow[]>(() => {
@@ -103,12 +114,13 @@ const allRows = computed<ClanRow[]>(() => {
     members: `${entry.memberCount}/${entry.memberCap}`,
     standing: formatStanding(entry.standing),
     founder: entry.founder,
+    pacifist: isPacifist(entry),
   }))
 })
 
 const podium = computed<PodiumEntry[]>(() =>
   podiumEligible.value
-    ? allRows.value.slice(0, 3).map((r) => ({ rank: r.rank, clan: r.clan, value: r.standing }))
+    ? allRows.value.slice(0, 3).map((r) => ({ rank: r.rank, clan: r.clan, value: r.standing, pacifist: r.pacifist }))
     : [],
 )
 
@@ -174,42 +186,46 @@ async function resolveMyRequest(request: ClanJoinRequestResponse, status: ClanJo
   }
 }
 
-const myLoans = ref<ClanWarLoanResponse[]>([])
-const loanBusyId = ref<string | null>(null)
-const loanError = ref<string | null>(null)
+const own = useOwnClan()
+const myAid = ref<ClanWarAidResponse[]>([])
+const aidBusyId = ref<string | null>(null)
+const aidError = ref<string | null>(null)
+const canAnswerAid = computed(() => hasClanRole(own.role.value, 'commander'))
 
-async function fetchMyLoans() {
-  if (!auth.isLoggedIn) {
-    myLoans.value = []
+async function fetchMyAid() {
+  const clanId = myClan.value?.id
+  if (!clanId) {
+    myAid.value = []
     return
   }
   try {
-    const { getMyClanWarLoans } = await import('@/api/clans')
-    myLoans.value = (await getMyClanWarLoans({ page: 0, size: 50, status: 'pending' })).content
+    const { getClanWarAid } = await import('@/api/clans')
+    myAid.value = (await getClanWarAid({ clanId, status: 'pending', page: 0, size: 50 })).content
   } catch {
-    myLoans.value = []
+    myAid.value = []
   }
 }
 
-async function resolveMyLoan(loan: ClanWarLoanResponse, status: ClanWarLoanStatus) {
-  loanBusyId.value = loan.id
-  loanError.value = null
+async function resolveMyAid(aid: ClanWarAidResponse, status: ClanWarAidStatus) {
+  aidBusyId.value = aid.id
+  aidError.value = null
   try {
-    const { resolveClanWarLoan } = await import('@/api/clans')
-    await resolveClanWarLoan(loan.id, { status })
+    const { resolveClanWarAid } = await import('@/api/clans')
+    await resolveClanWarAid(aid.id, { status })
     if (status === 'accepted') {
-      await router.push({ name: 'clan-war', params: { warId: loan.war.id } })
+      await router.push({ name: 'clan-war', params: { warId: aid.war.id } })
       return
     }
-    await fetchMyLoans()
+    await fetchMyAid()
   } catch (err) {
-    loanError.value = parseApiError(err, 'Could not answer that loan.').message
+    aidError.value = parseApiError(err, 'Could not answer that.').message
   } finally {
-    loanBusyId.value = null
+    aidBusyId.value = null
   }
 }
 
-watch(() => auth.isLoggedIn, () => Promise.all([fetchMyRequests(), fetchMyLoans()]), { immediate: true })
+watch(() => auth.isLoggedIn, fetchMyRequests, { immediate: true })
+watch(() => myClan.value?.id, fetchMyAid, { immediate: true })
 
 watch(searchQuery, (value) => {
   const query: LocationQueryRaw = { ...route.query, search: value.trim() || undefined }
@@ -240,16 +256,16 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
       />
     </section>
 
-    <section v-if="myLoans.length" class="clans__requests">
-      <h2 class="clans__section-title">Loans</h2>
-      <p v-if="loanError" class="clans__error" role="alert">{{ loanError }}</p>
-      <ClanLoanList
-        :loans="myLoans"
-        :busy-id="loanBusyId"
-        :viewer-id="auth.userId"
-        :can-cancel="() => false"
+    <section v-if="myAid.length" class="clans__requests">
+      <h2 class="clans__section-title">War help</h2>
+      <p v-if="aidError" class="clans__error" role="alert">{{ aidError }}</p>
+      <ClanAidList
+        :aids="myAid"
+        :busy-id="aidBusyId"
+        :own-clan-id="myClan?.id ?? null"
+        :can-act="canAnswerAid"
         show-war
-        @resolve="resolveMyLoan"
+        @resolve="resolveMyAid"
       />
     </section>
 
@@ -296,6 +312,7 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
           <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
           <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
           <ClanName class="clans__name" :clan="(row.clan as PublicClanResponse)" />
+          <ClanPacifistBadge v-if="row.pacifist" />
         </span>
       </template>
 
@@ -314,6 +331,7 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
             <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
           <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
             <ClanName class="clans__name" :clan="(row.clan as PublicClanResponse)" />
+            <ClanPacifistBadge v-if="row.pacifist" />
             <span class="clan-card__meta">Lv {{ row.level }} · {{ row.members }}</span>
           </span>
           <span class="clans__standing">{{ row.standing }}</span>

@@ -11,23 +11,22 @@ import type {
   ClanWarHitResponse,
   ClanWarParticipantResponse,
   ClanWarResponse,
-  ClanWarTimelineHitResponse,
+  ClanWarTimelinePointResponse,
 } from '@/types/api/clans'
-import { hasClanRole } from '@/utils/clans'
+import { hasClanRole, WAR_TEAMS, warLeadSide } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useClanFeed } from './clans/useClanFeed'
 import { useOwnClan } from './clans/useOwnClan'
+import ClanWarAid from './clans/war/ClanWarAid.vue'
 import ClanWarFighters from './clans/war/ClanWarFighters.vue'
 import ClanWarHits from './clans/war/ClanWarHits.vue'
 import ClanWarHud from './clans/war/ClanWarHud.vue'
-import ClanWarLoans from './clans/war/ClanWarLoans.vue'
 import ClanWarPool from './clans/war/ClanWarPool.vue'
 import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
 import WarPicksModal from './clans/war/WarPicksModal.vue'
 
-const ALLIANCE_SIZE = 50
 const FIGHTERS_SIZE = 100
 
 const route = useRoute()
@@ -43,8 +42,9 @@ const reloadKey = ref(0)
 const lastHit = ref<ClanWarHitResponse | null>(null)
 const participants = ref<ClanWarParticipantResponse[] | null>(null)
 const participantsError = ref<string | null>(null)
-const liveHits = ref<ClanWarTimelineHitResponse[]>([])
-const alliedSides = ref<('attacker' | 'defender')[]>([])
+const livePoints = ref<ClanWarTimelinePointResponse[]>([])
+const picking = ref(false)
+const pickError = ref<string | null>(null)
 const picksOpen = ref(false)
 const retreatOpen = ref(false)
 const retreating = ref(false)
@@ -52,39 +52,32 @@ const retreatError = ref<string | null>(null)
 
 const war = computed(() => detail.value?.war ?? null)
 const fighting = computed(() => war.value?.status === 'active' || war.value?.status === 'ended')
-const timeline = computed(() => [...(detail.value?.timeline ?? []), ...liveHits.value])
-const viewerSide = computed<'attacker' | 'defender' | null>(() => {
-  const ownId = own.clan.value?.id
-  if (!ownId || !war.value) return null
-  if (war.value.attacker.clan.id === ownId) return 'attacker'
-  if (war.value.defender.clan.id === ownId) return 'defender'
-  return null
-})
+const timeline = computed(() => [...(detail.value?.timeline ?? []), ...livePoints.value])
+const ownClanId = computed(() => own.clan.value?.id ?? null)
+
 const canSubmitPicks = computed(
   () =>
-    viewerSide.value === 'defender' &&
-    war.value?.status === 'picking' &&
-    !war.value.defender.picksSubmittedAt &&
+    war.value?.defend.lead.id === ownClanId.value &&
+    war.value.status === 'picking' &&
+    !warLeadSide(war.value.defend)?.picksSubmittedAt &&
     hasClanRole(own.role.value, 'officer'),
 )
 const canRetreat = computed(
   () =>
-    viewerSide.value === 'attacker' &&
-    war.value?.status !== 'ended' &&
-    (war.value?.attacker.lead?.id === auth.userId || own.role.value === 'founder'),
+    war.value?.attack.lead.id === ownClanId.value &&
+    war.value.status !== 'ended' &&
+    (warLeadSide(war.value.attack)?.lead?.id === auth.userId || own.role.value === 'founder'),
 )
-const canLend = computed(() => viewerSide.value === null && !!own.clan.value && hasClanRole(own.role.value, 'commander'))
-const attackerClanId = computed(() => war.value?.attacker.clan.id ?? null)
+const attackLeadId = computed(() => war.value?.attack.lead.id ?? null)
+const matchup = computed(() => (war.value ? `${war.value.attack.lead.tag} vs ${war.value.defend.lead.tag}` : null))
 const breadcrumbs = computed<Crumb[]>(() => [
   { label: 'Clans', to: { name: 'clans' } },
   { label: 'Wars', to: { name: 'clan-wars' } },
-  { label: war.value ? `${war.value.attacker.clan.tag} vs ${war.value.defender.clan.tag}` : 'War' },
+  { label: matchup.value ?? 'War' },
 ])
 
 usePageMeta({
-  title: computed(() =>
-    war.value ? `${war.value.attacker.clan.tag} vs ${war.value.defender.clan.tag} | AccSaber` : 'Clan war | AccSaber',
-  ),
+  title: computed(() => (matchup.value ? `${matchup.value} | AccSaber` : 'Clan war | AccSaber')),
   description: 'A clan war on AccSaber.',
 })
 
@@ -120,46 +113,40 @@ function applyHit(hit: ClanWarHitResponse) {
     victim.guard = hit.guardAfter
     if (hit.broke) victim.breaksSuffered += 1
   }
-  const current = war.value
-  if (!current) return
-  const victimClan = victim?.clan.id ?? hit.victim.clan?.id
-  const clanId = victimClan === current.attacker.clan.id ? current.defender.clan.id : current.attacker.clan.id
-  liveHits.value = [
-    ...liveHits.value,
-    { at: hit.createdAt, clanId, damage: hit.damage, broke: hit.broke, standingMoved: hit.standingMoved },
+  const clanId = participants.value?.find((p) => p.player.id === hit.attacker.id)?.clan.id ?? hit.attacker.clan?.id
+  if (!clanId) return
+  livePoints.value = [
+    ...livePoints.value,
+    {
+      at: hit.createdAt,
+      clanId,
+      damage: hit.damage,
+      hits: 1,
+      breaks: hit.broke ? 1 : 0,
+      standingMoved: hit.standingMoved,
+    },
   ]
 }
 
-async function loadAlliedSides() {
-  const ownId = own.clan.value?.id
-  if (!ownId || !war.value || viewerSide.value !== null) {
-    alliedSides.value = []
-    return
-  }
-  try {
-    const { getClanAlliances } = await import('@/api/clans')
-    const allies = (await getClanAlliances(ownId, { page: 0, size: ALLIANCE_SIZE })).content
-      .filter((a) => a.status === 'active')
-      .map((a) => a.ally.id)
-    alliedSides.value = (['attacker', 'defender'] as const).filter((role) => allies.includes(war.value![role].clan.id))
-  } catch {
-    alliedSides.value = []
-  }
+function rosterKey(current: ClanWarResponse): string {
+  return WAR_TEAMS.flatMap((team) => current[team].sides.map((s) => `${s.clan.id}${s.leftAt ? ':left' : ''}`)).join()
 }
 
 function applyWar(next: ClanWarResponse) {
   if (!detail.value || next.id !== detail.value.war.id) return
   const statusChanged = next.status !== detail.value.war.status
+  const rosterChanged = rosterKey(next) !== rosterKey(detail.value.war)
   detail.value.war = next
+  if (!statusChanged && !rosterChanged) return
+  reloadKey.value += 1
+  void loadParticipants()
   if (statusChanged) {
-    reloadKey.value += 1
-    liveHits.value = []
+    livePoints.value = []
     void load()
-    void loadParticipants()
   }
 }
 
-useClanFeed(attackerClanId, {
+useClanFeed(attackLeadId, {
   onWar: applyWar,
   onHit: (id, hit) => {
     if (id === warId.value) applyHit(hit)
@@ -169,8 +156,23 @@ useClanFeed(attackerClanId, {
 function onPicksSubmitted(next: ClanWarDetailResponse) {
   picksOpen.value = false
   detail.value = next
-  liveHits.value = []
+  livePoints.value = []
   reloadKey.value += 1
+}
+
+async function pickTarget(userId: string | null) {
+  picking.value = true
+  pickError.value = null
+  try {
+    const { chooseClanWarTarget } = await import('@/api/clans')
+    const chosen = await chooseClanWarTarget(warId.value, { userId })
+    const self = participants.value?.find((p) => p.player.id === chosen.player.id)
+    if (self) self.target = chosen.target
+  } catch (err) {
+    pickError.value = parseApiError(err, 'Could not pick that target.').message
+  } finally {
+    picking.value = false
+  }
 }
 
 async function retreat() {
@@ -194,14 +196,13 @@ watch(
     detail.value = null
     lastHit.value = null
     participants.value = null
-    liveHits.value = []
-    await Promise.all([load(), loadParticipants(), own.load()])
-    await loadAlliedSides()
+    livePoints.value = []
+    await Promise.all([load(), loadParticipants()])
   },
   { immediate: true },
 )
 
-watch(() => auth.userId, () => own.load().then(loadAlliedSides))
+watch(() => auth.userId, loadParticipants)
 </script>
 
 <template>
@@ -226,8 +227,15 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
       />
 
       <template v-if="fighting">
-        <ClanWarFighters :war="war" :participants="participants" :error="participantsError" />
-        <ClanWarTimeline :war="war" :hits="timeline" />
+        <ClanWarFighters
+          :war="war"
+          :participants="participants"
+          :error="participantsError ?? pickError"
+          :viewer-id="auth.userId"
+          :picking="picking"
+          @pick="pickTarget"
+        />
+        <ClanWarTimeline :war="war" :points="timeline" />
         <ClanWarHits
           :war="war"
           :participants="participants"
@@ -237,13 +245,13 @@ watch(() => auth.userId, () => own.load().then(loadAlliedSides))
         />
       </template>
 
-      <ClanWarLoans
+      <ClanWarAid
         :war="war"
-        :viewer-id="auth.userId"
-        :own-clan-id="own.clan.value?.id ?? null"
-        :can-lend="canLend"
-        :allied-sides="alliedSides"
+        :own-clan-id="ownClanId"
+        :can-act="hasClanRole(own.role.value, 'commander')"
+        :own-pacifist="own.pacifist.value"
         :reload-key="reloadKey"
+        @war="applyWar"
       />
 
       <WarPicksModal :open="picksOpen" :war="war" @close="picksOpen = false" @submitted="onPicksSubmitted" />

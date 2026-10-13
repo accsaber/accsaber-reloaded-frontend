@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router'
 const props = defineProps<{
   entry: ScoreFeedEntry
   tick: number
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,7 +47,8 @@ function goToPlayer() {
 </script>
 
 <template>
-  <div class="feed-card" :style="{ '--card-accent': accent }" @click="handleClick">
+  <div class="feed-card" :class="{ 'feed-card--compact': compact }" :style="{ '--card-accent': accent }"
+    @click="handleClick">
     <div class="feed-card__player-tab" @click.stop="goToPlayer">
       <UserChip :user="entry.player" size="xs" tooltip class="feed-card__player" />
     </div>
@@ -55,7 +57,7 @@ function goToPlayer() {
       <span class="feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
 
       <div class="feed-card__cover">
-        <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48"
+        <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="compact ? 36 : 48"
           :fallback-src="entry.coverFallbackUrl ?? null" />
       </div>
 
@@ -78,7 +80,7 @@ function goToPlayer() {
           <span class="feed-card__accuracy">{{ (entry.accuracy * 100).toFixed(2) }}%</span>
           <span class="feed-card__ap">{{ entry.ap.toFixed(2) }} <span class="feed-card__ap-label">AP</span></span>
         </div>
-        <div class="feed-card__stats-mid">
+        <div v-if="!compact" class="feed-card__stats-mid">
           <span class="feed-card__score">{{ entry.score.toLocaleString() }}</span>
         </div>
         <div class="feed-card__stats-bottom">
@@ -157,6 +159,14 @@ function goToPlayer() {
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
+}
+
+@media (min-width: 768px) {
+  .feed-card--compact .feed-card__body {
+    grid-template-columns: 32px 36px 1fr auto;
+    gap: 0 var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+  }
 }
 
 .feed-card__rank {

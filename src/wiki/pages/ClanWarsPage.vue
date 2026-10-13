@@ -6,8 +6,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 <template>
   <WikiProse>
     <p>
-      A war is one clan attacking another on 10 maps. Both sides put standing on the line.
-      Whoever drains the other side's stake first wins.
+      A war is one clan attacking another on 10 maps. Both teams put standing on the line.
+      Whichever team drains the other's stake first wins. Duels can also have
+      <RouterLink to="/wiki/coalitions">allies</RouterLink> on each team.
     </p>
 
     <WikiHeading id="declaring">Declaring</WikiHeading>
@@ -15,25 +16,25 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <ul>
       <li>You can only have one attack going at a time. You can be defending as many as you want.</li>
       <li>After a war ends, you have to wait 7 days before attacking that same clan again.</li>
-      <li>You cannot attack allies.</li>
+      <li>You cannot attack allies or pacifist clans.</li>
       <li>Both clans need some standing.</li>
       <li>You cannot attack a clan with less than half your standing. If they are attacking you, you can hit back no matter what.</li>
     </ul>
 
     <WikiHeading id="stake">The stake</WikiHeading>
     <p>
-      Both sides put up the same amount, equal to the standing of whichever clan has less. You
-      can see each side's bar on the war page. The stake is how much the war can move, not how
+      Both teams put up the same amount. It comes from whichever team has less standing at stake.
+      You can see each clan's bar on the war page. The stake is how much the war can move, not how
       much you can lose.
     </p>
     <p>
-      Each side's bar only ever goes down. Standing you take by breaking someone goes to your clan, 
-      not back into your bar.
+      Hits only make your bar go down. It grows when an ally joins either team. Standing you take
+      by breaking someone goes to your clan, not back into your bar.
     </p>
     <p>
       You can only lose <RouterLink to="/wiki/clan-standing#earned">earned standing</RouterLink>,
       the part you picked up this season. Your base standing comes from your members' skill and
-      a war cannot touch it. So even if your whole side gets drained, the worst case is dropping
+      a war cannot touch it. So even if your whole bar gets drained, the worst case is dropping
       back to your base.
     </p>
 
@@ -65,13 +66,15 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
       After picking, both sides get 48 hours to prepare before the war goes active. Random pools
-      skip picking. Once picking is done you can download all 10 maps as a playlist. The fighting
+      skip picking unless the attacker offered Berserker. Once picking is done you can download all 10 maps as a playlist. The fighting
       itself is on <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
     </p>
 
     <WikiHeading id="endings">Endings</WikiHeading>
     <p>
-      If one side's stake hits 0, the other side wins. If a clan disbands mid-war, the other clan
+      If one team's stake hits 0, the other team wins. If the attacking or defending clan falls,
+      its allies keep fighting on their own and no new help can join. If the attacking or defending clan disbands
+      mid-war, the other team wins. After 28 days the team that drained more of the other's stake
       wins. A war with no hits for 7 days ends in a draw. Retreating or the season ending also
       ends it with no winner.
     </p>
@@ -80,10 +83,23 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       Defenders cannot.
     </p>
 
+    <WikiHeading id="pacifism">Pacifism</WikiHeading>
+    <p>
+      The Founder can make the clan pacifist. Pacifist clans cannot declare war, get attacked or
+      help in one. You have to be out of every war first. Outside a season it starts right away.
+      During a season it starts 7 days later. Your clan can still be attacked until then.
+      Turning it off is instant and cancels the countdown. Turning it back on starts the 7 days
+      over.
+    </p>
+
     <WikiHeading id="rewards">Rewards</WikiHeading>
     <p>
-      The winning clan gets 345 clan XP. Everyone who fought gets XP from the damage they did. Some
-      wars also give items to the top fighters on the winning side.
+      The winning team gets 345 clan XP, split between its clans. Everyone who fought gets XP from
+      the damage they did. Some wars also give items to the top fighters on the winning team.
+    </p>
+    <p>
+      If barely anyone on the losing team has played since two weeks before the war started, the
+      win is worth a lot less.
     </p>
   </WikiProse>
 </template>

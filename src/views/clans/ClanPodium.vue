@@ -6,11 +6,13 @@ import ClanTag from '@/components/domain/ClanTag.vue'
 import type { PublicClanResponse } from '@/types/api/clans'
 import { getRankClass } from '@/utils/ranking'
 import { computed } from 'vue'
+import ClanPacifistBadge from './ClanPacifistBadge.vue'
 
 export interface PodiumEntry {
   rank: number
   clan: PublicClanResponse
   value: string
+  pacifist?: boolean
 }
 
 const props = defineProps<{
@@ -38,6 +40,7 @@ const ordered = computed(() => [...props.entries].sort((a, b) => a.rank - b.rank
       <ClanIcon :clan="entry.clan" :size="entry.rank === 1 ? 88 : 64" class="podium__icon" />
       <ClanTag :clan="entry.clan" effects class="podium__tag" />
       <ClanName class="podium__name" :clan="entry.clan" />
+      <ClanPacifistBadge v-if="entry.pacifist" />
       <span class="podium__value">{{ entry.value }}</span>
     </RouterLink>
   </div>

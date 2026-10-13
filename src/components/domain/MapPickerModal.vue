@@ -38,6 +38,7 @@ const props = withDefaults(
     usedLabel?: string
     usedTitle?: string
     disableUsed?: boolean
+    blockedLabel?: (diff: PublicMapDifficultyResponse) => string | null
     initialMulti?: boolean
     modeToggle?: boolean
     rankedOnly?: boolean
@@ -161,6 +162,7 @@ function setMulti(value: boolean) {
 function rowDisabled(diff: PublicMapDifficultyResponse): boolean {
   if (props.loading) return true
   if (props.disableUsed && usedIds.value.has(diff.id)) return true
+  if (props.blockedLabel?.(diff)) return true
   return multi.value && atLimit.value && !stagedIds.value.has(diff.id)
 }
 
@@ -317,7 +319,8 @@ function commit() {
                 </span>
                 <span class="map-picker__trailing">
                   <span class="map-picker__diff">
-                    <span v-if="usedIds.has(diff.id)" class="map-picker__used" :title="usedTitle">
+                    <span v-if="blockedLabel?.(diff)" class="map-picker__used">{{ blockedLabel(diff) }}</span>
+                    <span v-else-if="usedIds.has(diff.id)" class="map-picker__used" :title="usedTitle">
                       {{ usedLabel }}
                     </span>
                     <DifficultyBadge :difficulty="diff.difficulty" />

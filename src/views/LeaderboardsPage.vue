@@ -20,8 +20,10 @@ import type { Page } from '@/types/pagination'
 import { COUNTRY_OPTIONS } from '@/utils/countries'
 import { toPlayerDisplay, toXpPlayerDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+type LeaderboardPage = Page<LeaderboardResponse> | Page<XpLeaderboardResponse>
 
 const route = useRoute()
 const router = useRouter()
@@ -42,19 +44,14 @@ const activeCategory = computed<CategoryCode>({
 })
 
 const isXpMode = computed(() => activeCategory.value === 'xp')
-
-const metaTitle = computed(() => {
-  const info = categoryStore.getCategoryInfo(activeCategory.value)
-  const name = info?.name ?? 'Overall'
-  return `${name} Leaderboard | AccSaber`
-})
+const categoryName = computed(() => categoryStore.getCategoryInfo(activeCategory.value)?.name ?? 'Overall')
 
 usePageMeta({
-  title: metaTitle,
+  title: computed(() => `${categoryName.value} Leaderboard | AccSaber`),
   description: 'AccSaber accuracy leaderboards - compete across True Acc, Standard Acc, Tech Acc, and more.',
 })
 
-const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
+const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
   defaultSort: computed(() => isXpMode.value ? 'totalXp' : 'ap'),
   defaultOrder: 'desc',
   defaultSize: 50,
@@ -62,130 +59,76 @@ const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } 
   secondarySort: computed(() => isXpMode.value ? null : 'ap,desc'),
 })
 
-const accent = computed(() => categoryStore.getAccent(activeCategory.value))
-const categoryName = computed(() =>
-  categoryStore.getCategoryInfo(activeCategory.value)?.name ?? 'Leaderboards',
-)
+function queryRef<T extends string>(key: string) {
+  return computed<T | ''>({
+    get: () => (route.query[key] as T) || '',
+    set: (value) => {
+      const query = { ...route.query, [key]: value || undefined }
+      delete query.page
+      router.replace({ query })
+    },
+  })
+}
 
-const countryFilter = computed<string>({
-  get: () => (route.query.country as string) || '',
-  set: (country) => {
-    const query = { ...route.query }
-    if (country) {
-      query.country = country
-    } else {
-      delete query.country
-    }
-    delete query.page
-    router.replace({ query })
-  },
-})
-
-const relationFilter = computed<UserRelationType | ''>({
-  get: () => (route.query.relation as UserRelationType | '') || '',
-  set: (relation) => {
-    const query = { ...route.query }
-    if (relation) {
-      query.relation = relation
-    } else {
-      delete query.relation
-    }
-    delete query.page
-    router.replace({ query })
-  },
-})
-
-const searchQuery = ref('')
+const countryFilter = queryRef('country')
+const relationFilter = queryRef<UserRelationType>('relation')
+const searchQuery = queryRef('search')
 const showInactive = ref(true)
-const loading = ref(false)
-const apPageData = ref<Page<LeaderboardResponse> | null>(null)
-const xpPageData = ref<Page<XpLeaderboardResponse> | null>(null)
+const loading = ref(true)
+const pageData = shallowRef<LeaderboardPage | null>(null)
 const highlightedUserId = ref<string | null>(null)
 
-interface RankResolution {
-  globalRank: number
-  countryRank: number | undefined
-  positionalRank: number
-}
-
-interface RankFilters {
-  filteringCountry: boolean
-  filteringRelation: boolean
-  inactiveHidden: boolean
-}
-
-function resolveDisplayRank(r: RankResolution, f: RankFilters): { rank: number; parenRank: number | null } {
-  if (f.filteringRelation) {
-    return { rank: r.positionalRank, parenRank: r.globalRank }
-  }
-  if (f.filteringCountry) {
-    return {
-      rank: f.inactiveHidden || !r.countryRank ? r.positionalRank : r.countryRank,
-      parenRank: r.globalRank,
-    }
-  }
-  if (f.inactiveHidden) {
-    return { rank: r.positionalRank, parenRank: r.globalRank }
-  }
-  return { rank: r.globalRank, parenRank: null }
-}
+const accent = computed(() => categoryStore.getAccent(activeCategory.value))
+const totalPages = computed(() => pageData.value?.totalPages ?? 0)
+const totalPlayers = computed(() => pageData.value?.totalElements ?? 0)
+const filtered = computed(() => !showInactive.value || !!countryFilter.value || !!relationFilter.value)
 
 const rows = computed<Record<string, unknown>[]>(() => {
-  const pageSize = paginationParams.value.size ?? 50
-  const pageOffset = (currentPage.value - 1) * pageSize
-  const filters: RankFilters = {
-    inactiveHidden: !showInactive.value,
-    filteringCountry: !!countryFilter.value,
-    filteringRelation: !!relationFilter.value,
-  }
-
-  const source = isXpMode.value ? xpPageData.value : apPageData.value
+  const source = pageData.value
   if (!source) return []
+  const offset = (currentPage.value - 1) * (paginationParams.value.size ?? 50)
+  const useCountryRank = !!countryFilter.value && !relationFilter.value && showInactive.value
 
   return source.content.map((entry, i) => {
     const p = isXpMode.value
       ? toXpPlayerDisplay(entry as XpLeaderboardResponse)
       : toPlayerDisplay(entry as LeaderboardResponse)
-    const { rank, parenRank } = resolveDisplayRank(
-      { globalRank: p.rank, countryRank: p.countryRank, positionalRank: pageOffset + i + 1 },
-      filters,
-    )
-    return { ...p, rank, parenRank }
+    const ownRank = useCountryRank && p.countryRank ? p.countryRank : offset + i + 1
+    const level = 'level' in p ? p.level : null
+    return {
+      ...p,
+      rank: filtered.value ? ownRank : p.rank,
+      parenRank: filtered.value ? p.rank : null,
+      tierColor: levelStore.getTierColorForLevel(level),
+      tierTitle: level == null ? undefined : levelStore.getTitleForLevel(level) ?? undefined,
+    }
   })
 })
 
-const pageData = computed(() => isXpMode.value ? xpPageData.value : apPageData.value)
-const totalPages = computed(() => pageData.value?.totalPages ?? 0)
-const totalPlayers = computed(() => pageData.value?.totalElements ?? 0)
+const RANK_CHANGE_COLUMN: TableColumn = { key: 'rankChange', label: '', align: 'center', width: '90px' }
 
-const rankChangeColumn: TableColumn = { key: 'rankChange', label: '', align: 'center', width: '90px' }
-
-const showsParenRank = computed(() => !showInactive.value || !!countryFilter.value || !!relationFilter.value)
-const rankColumn = computed<TableColumn>(() => ({
-  key: 'rank', label: 'Rank', align: 'right', mono: true, width: showsParenRank.value ? '150px' : '80px',
-}))
-
-const apColumns: TableColumn[] = [
-  { key: 'player', label: 'Player', align: 'left' },
+const AP_COLUMNS: TableColumn[] = [
   { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '120px' },
   { key: 'avgAccuracy', label: 'Avg Acc', sortable: true, align: 'right', mono: true, width: '120px' },
   { key: 'rankedPlays', label: 'Plays', sortable: true, align: 'right', mono: true, width: '100px' },
-  rankChangeColumn,
+  RANK_CHANGE_COLUMN,
 ]
 
-const xpColumns: TableColumn[] = [
-  { key: 'player', label: 'Player', align: 'left' },
+const XP_COLUMNS: TableColumn[] = [
   { key: 'level', label: 'Level', sortable: true, align: 'right', mono: true, width: '100px' },
   { key: 'totalXp', label: 'Total XP', sortable: true, align: 'right', mono: true, width: '140px' },
-  rankChangeColumn,
+  RANK_CHANGE_COLUMN,
 ]
 
-const columns = computed(() => [rankColumn.value, ...(isXpMode.value ? xpColumns : apColumns)])
+const columns = computed<TableColumn[]>(() => [
+  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: filtered.value ? '150px' : '80px' },
+  { key: 'player', label: 'Player', align: 'left' },
+  ...(isXpMode.value ? XP_COLUMNS : AP_COLUMNS),
+])
 
 const countryOptions = computed(() => {
   const userCountry = authStore.userProfile?.country
-  if (!userCountry) return COUNTRY_OPTIONS
-  const userOption = COUNTRY_OPTIONS.find((o) => o.value === userCountry)
+  const userOption = userCountry && COUNTRY_OPTIONS.find((o) => o.value === userCountry)
   if (!userOption) return COUNTRY_OPTIONS
   return [
     { value: '', label: 'All Countries' },
@@ -194,160 +137,80 @@ const countryOptions = computed(() => {
   ]
 })
 
-function buildCacheKey(): Record<string, unknown> {
-  const inactiveUsers = showInactive.value
-  const relation = relationFilter.value || undefined
-  if (isXpMode.value) {
-    return {
-      _type: 'xp',
-      ...paginationParams.value,
-      search: searchQuery.value.trim() || undefined,
-      country: countryFilter.value || undefined,
-      inactiveUsers,
-      relation,
-    }
-  }
-  return {
-    _type: 'ap',
-    category: activeCategory.value,
+const request = computed(() => ({
+  xp: isXpMode.value,
+  categoryId: isXpMode.value ? undefined : categoryStore.getCategoryId(activeCategory.value),
+  params: {
     ...paginationParams.value,
     search: searchQuery.value.trim() || undefined,
     country: countryFilter.value || undefined,
-    inactiveUsers,
-    relation,
-  }
-}
+    inactiveUsers: showInactive.value,
+    relation: relationFilter.value || undefined,
+  },
+}))
+const requestKey = computed(() => JSON.stringify(request.value))
+
+let requestId = 0
 
 async function fetchData() {
-  const cacheKey = buildCacheKey()
-  const cached = lbCache.getCached<Page<LeaderboardResponse> | Page<XpLeaderboardResponse>>(cacheKey)
-
-  if (cached) {
-    if (isXpMode.value) {
-      xpPageData.value = cached as Page<XpLeaderboardResponse>
-    } else {
-      apPageData.value = cached as Page<LeaderboardResponse>
-    }
-    loading.value = false
-    try {
-      await fetchFromApi(cacheKey)
-    } catch { }
-    await handleHighlight()
-    return
-  }
-
-  loading.value = true
+  const { xp, categoryId, params } = request.value
+  if (!xp && !categoryId) return
+  const id = ++requestId
+  const cacheKey = { key: requestKey.value }
+  const cached = lbCache.getCached<LeaderboardPage>(cacheKey)
+  if (cached) pageData.value = cached
+  loading.value = !cached
   try {
-    await fetchFromApi(cacheKey)
+    const { getLeaderboard, getXpLeaderboard } = await import('@/api/leaderboards')
+    const res = xp ? await getXpLeaderboard(params) : await getLeaderboard(categoryId!, params)
+    lbCache.setCache(cacheKey, res)
+    if (id !== requestId) return
+    pageData.value = res
   } catch {
-    if (isXpMode.value) {
-      xpPageData.value = null
-    } else {
-      apPageData.value = null
-    }
+    if (id !== requestId) return
+    if (!cached) pageData.value = null
   }
   loading.value = false
   await handleHighlight()
 }
 
-async function fetchFromApi(cacheKey: Record<string, unknown>) {
-  const inactiveUsers = showInactive.value
-  const relation = relationFilter.value || undefined
-  if (isXpMode.value) {
-    const { getXpLeaderboard } = await import('@/api/leaderboards')
-    const params = {
-      ...paginationParams.value,
-      search: searchQuery.value.trim() || undefined,
-      country: countryFilter.value || undefined,
-      inactiveUsers,
-      relation,
-    }
-    const res = await getXpLeaderboard(params)
-    xpPageData.value = res
-    lbCache.setCache(cacheKey, res)
-  } else {
-    const categoryId = categoryStore.getCategoryId(activeCategory.value)
-    if (!categoryId) return
-    const { getLeaderboard } = await import('@/api/leaderboards')
-    const params = {
-      ...paginationParams.value,
-      search: searchQuery.value.trim() || undefined,
-      country: countryFilter.value || undefined,
-      inactiveUsers,
-      relation,
-    }
-    const res: Page<LeaderboardResponse> = await getLeaderboard(categoryId, params)
-    apPageData.value = res
-    lbCache.setCache(cacheKey, res)
-  }
-}
-
 async function handleHighlight() {
   const highlightId = route.query.highlight as string | undefined
-  if (highlightId) {
-    highlightedUserId.value = highlightId
-    router.replace({ query: { ...route.query, highlight: undefined } })
-    await nextTick()
-    const row = document.querySelector(`[data-user-id="${highlightId}"]`)
-    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setTimeout(() => { highlightedUserId.value = null }, 2000)
-  }
+  if (!highlightId) return
+  highlightedUserId.value = highlightId
+  router.replace({ query: { ...route.query, highlight: undefined } })
+  await nextTick()
+  document.querySelector(`[data-user-id="${highlightId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  setTimeout(() => { highlightedUserId.value = null }, 2000)
 }
 
 function rowClass(row: Record<string, unknown>): Record<string, boolean> {
   return {
-    'data-table__row--highlighted': row.userId === highlightedUserId.value,
-    'data-table__row--self-highlight': !!authStore.userId && row.userId === authStore.userId,
-    'data-table__row--inactive': !!row.playerInactive,
+    'lb-row--highlighted': row.userId === highlightedUserId.value,
+    'lb-row--self': !!authStore.userId && row.userId === authStore.userId,
   }
 }
 
 function playerRowTo(row: Record<string, unknown>) {
-  const query: Record<string, string> = {}
-  if (activeCategory.value && activeCategory.value !== 'overall' && activeCategory.value !== 'xp') {
-    query.category = activeCategory.value
-  }
+  const code = activeCategory.value
+  const query = code !== 'overall' && code !== 'xp' ? { category: code } : {}
   return { name: 'player-profile', params: { userId: row.userId as string }, query }
 }
 
-function handleRowClick(row: Record<string, unknown>) {
-  router.push(playerRowTo(row))
-}
-
-function handleCategoryChange(code: CategoryCode) {
-  activeCategory.value = code
-}
-
-function handleCountryChange(country: string) {
-  countryFilter.value = country
-}
-
-watch(searchQuery, () => { resetPage() })
-
-watch(
-  [activeCategory, paginationParams, countryFilter, searchQuery, showInactive, relationFilter],
-  () => { fetchData() },
-  { immediate: true },
-)
-
-watch(() => categoryStore.loaded, (loaded) => {
-  if (loaded) fetchData()
-})
+watch(requestKey, fetchData, { immediate: true })
 </script>
 
 <template>
   <div class="leaderboards" :style="{ '--page-accent': accent }">
     <header class="leaderboards__header">
-      <div class="leaderboards__header-content">
-        <h1 class="leaderboards__title">{{ categoryName }}</h1>
-        <p v-if="totalPlayers > 0" class="leaderboards__subtitle">
-          {{ totalPlayers.toLocaleString() }} players ranked
-        </p>
-      </div>
+      <h1 class="leaderboards__title">{{ categoryName }}</h1>
+      <p v-if="totalPlayers > 0" class="leaderboards__subtitle">
+        {{ totalPlayers.toLocaleString() }} players ranked
+      </p>
     </header>
 
     <div class="leaderboards__controls">
-      <CategoryTabs :model-value="activeCategory" @update:model-value="handleCategoryChange" />
+      <CategoryTabs v-model="activeCategory" />
       <div class="leaderboards__filter">
         <button class="leaderboards__inactive-toggle" :class="{ 'leaderboards__inactive-toggle--active': showInactive }"
           :aria-pressed="showInactive" aria-label="Show inactive players" @click="showInactive = !showInactive">
@@ -357,8 +220,7 @@ watch(() => categoryStore.loaded, (loaded) => {
           <span class="leaderboards__inactive-label">Inactive</span>
         </button>
         <SearchBox v-model="searchQuery" placeholder="Search players..." />
-        <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
-          @update:model-value="handleCountryChange" />
+        <BaseSelect v-model="countryFilter" :options="countryOptions" placeholder="All Countries" searchable />
         <RelationFilter v-model="relationFilter" />
       </div>
     </div>
@@ -367,8 +229,8 @@ watch(() => categoryStore.loaded, (loaded) => {
 
     <div class="leaderboards__table">
       <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
-        :row-class="rowClass" row-clickable :row-to="playerRowTo" row-key="userId" empty-message="No players found"
-        @sort="setSort" @row-click="handleRowClick">
+        :row-class="rowClass" :row-to="playerRowTo" row-key="userId" empty-message="No players found"
+        @sort="setSort">
         <template #cell-rank="{ value, row }">
           <span class="rank-cell" :class="getRankClass(value as number)">
             #{{ value }}
@@ -389,36 +251,28 @@ watch(() => categoryStore.loaded, (loaded) => {
         </template>
 
         <template #cell-avgAccuracy="{ value }">
-          <template v-if="value != null">
-            {{ ((value as number) * 100).toFixed(2) }}%
-          </template>
+          <template v-if="value != null">{{ ((value as number) * 100).toFixed(2) }}%</template>
           <template v-else>-</template>
         </template>
 
         <template #cell-totalXp="{ value, row }">
-          <span class="xp-cell" :style="{ color: levelStore.getTierColorForLevel(row.level as number) }"
-            :title="levelStore.getTitleForLevel(row.level as number) ?? undefined">
+          <span class="xp-cell" :style="{ color: row.tierColor as string }" :title="(row.tierTitle as string | undefined)">
             {{ Math.round(value as number).toLocaleString() }}
           </span>
         </template>
 
         <template #mobile-card="{ row }">
-          <router-link :to="playerRowTo(row)" class="lb-card" :class="[
-            { 'lb-card--highlighted': row.userId === highlightedUserId },
-            { 'lb-card--self-highlight': !!authStore.userId && row.userId === authStore.userId },
-            { 'lb-card--inactive': !!row.playerInactive },
-          ]" :data-user-id="row.userId">
+          <router-link :to="playerRowTo(row)" class="lb-card" :class="rowClass(row)" :data-user-id="row.userId">
             <span class="lb-card__rank rank-cell" :class="getRankClass(row.rank as number)">
               #{{ row.rank }}
               <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
             </span>
             <UserChip :user="(row.player as UserRefDisplay)" size="sm" class="lb-card__player" />
-            <RankChange :value="(row.rankChange as number) ?? 0" class="lb-card__change" />
+            <RankChange :value="(row.rankChange as number) ?? 0" />
             <template v-if="isXpMode">
               <span class="lb-card__level">Lv. {{ row.level }}</span>
-              <span class="lb-card__ap xp-cell"
-                :style="{ color: levelStore.getTierColorForLevel(row.level as number) }"
-                :title="levelStore.getTitleForLevel(row.level as number) ?? undefined">
+              <span class="lb-card__ap xp-cell" :style="{ color: row.tierColor as string }"
+                :title="(row.tierTitle as string | undefined)">
                 {{ Math.round(row.totalXp as number).toLocaleString() }} XP
               </span>
             </template>
@@ -443,13 +297,8 @@ watch(() => categoryStore.loaded, (loaded) => {
 }
 
 .leaderboards__header {
-  position: relative;
   text-align: center;
   padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.leaderboards__header-content {
-  position: relative;
 }
 
 .leaderboards__title {
@@ -473,7 +322,6 @@ watch(() => categoryStore.loaded, (loaded) => {
   justify-content: center;
   gap: var(--space-md);
   flex-wrap: wrap;
-  row-gap: var(--space-md);
 }
 
 .leaderboards__inactive-toggle {
@@ -528,7 +376,7 @@ watch(() => categoryStore.loaded, (loaded) => {
 
 .leaderboards__filter {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   gap: var(--space-sm);
   flex-shrink: 0;
@@ -567,26 +415,19 @@ watch(() => categoryStore.loaded, (loaded) => {
   margin-left: 2px;
 }
 
-:deep(.data-table__row--highlighted) {
+.leaderboards__table :deep(.data-table__row.lb-row--self),
+.lb-card.lb-row--self {
+  background: color-mix(in srgb, var(--page-accent) 8%, var(--bg-surface));
+}
+
+.leaderboards__table :deep(.lb-row--highlighted),
+.lb-card.lb-row--highlighted {
   animation: row-highlight 2s ease-out;
 }
 
-:deep(.data-table__row--self-highlight) {
-  background: color-mix(in srgb, var(--page-accent) 8%, var(--bg-surface));
-  border-left: 2px solid color-mix(in srgb, var(--page-accent) 40%, transparent);
-}
-
-:deep(.data-table__row--inactive) {}
-
 @keyframes row-highlight {
-  0% {
+  from {
     background: color-mix(in srgb, var(--page-accent) 25%, var(--bg-surface));
-    border-left-color: var(--page-accent);
-  }
-
-  100% {
-    background: transparent;
-    border-left-color: transparent;
   }
 }
 
@@ -597,7 +438,6 @@ watch(() => categoryStore.loaded, (loaded) => {
 
 .xp-cell {
   font-weight: 600;
-  transition: color 120ms ease;
 }
 
 .lb-card {
@@ -607,9 +447,7 @@ watch(() => categoryStore.loaded, (loaded) => {
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
-  cursor: pointer;
   min-height: 48px;
   transition: border-color 120ms ease;
   text-decoration: none;
@@ -617,7 +455,7 @@ watch(() => categoryStore.loaded, (loaded) => {
 }
 
 .lb-card:hover {
-  border-left-color: var(--page-accent);
+  border-color: var(--text-tertiary);
 }
 
 .lb-card__rank {
@@ -641,28 +479,12 @@ watch(() => categoryStore.loaded, (loaded) => {
   font-size: var(--text-caption);
   font-weight: 600;
   flex-shrink: 0;
-  transition: color 120ms ease;
 }
-
-.lb-card--highlighted {
-  animation: row-highlight 2s ease-out;
-}
-
-.lb-card--self-highlight {
-  background: color-mix(in srgb, var(--page-accent) 8%, var(--bg-surface));
-  border-left-color: color-mix(in srgb, var(--page-accent) 40%, transparent);
-}
-
-.lb-card--inactive {}
 
 @media (max-width: 767px) {
   .leaderboards__controls {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .leaderboards__filter {
-    min-width: unset;
   }
 
   .leaderboards__header {

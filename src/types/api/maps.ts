@@ -36,6 +36,7 @@ export interface MapResponse {
   beatsaverCode: string
   coverUrl: string
   cdnCoverUrl?: string | null
+  warBanned: boolean
   difficulties: MapDifficultyResponse[]
   createdAt: string
 }
@@ -100,6 +101,7 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   criteriaDownvotes: number
   headCriteriaVote: VoteType | null
   statistics: MapDifficultyStatisticsResponse | null
+  warBanned: boolean
 }
 
 export interface PublicMapDifficultyResponse extends MapChartStatsSource {
@@ -128,6 +130,7 @@ export interface PublicMapDifficultyResponse extends MapChartStatsSource {
   rankDownvotes: number | null
   rankNeutrals: number | null
   statistics: MapDifficultyStatisticsResponse | null
+  warBanned: boolean
 }
 
 export interface TopScoreSnapshot {
@@ -205,6 +208,7 @@ export interface MapListParams extends PaginationParams {
   categoryId?: string
   status?: MapDifficultyStatus
   search?: string
+  warBanned?: boolean
 }
 
 export interface DifficultyListParams extends PaginationParams {

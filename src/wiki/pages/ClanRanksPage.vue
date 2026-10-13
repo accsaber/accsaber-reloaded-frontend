@@ -14,9 +14,10 @@ const PERMISSIONS: WikiCompareRow[] = [
   { label: 'Make someone an Officer', values: [false, false, true, true] },
   { label: 'Call rivals', values: [false, false, true, true] },
   { label: 'Declare war', values: [false, false, true, true] },
-  { label: 'Lend players', values: [false, false, true, true] },
+  { label: 'Call in allies or help one', values: [false, false, true, true] },
   { label: 'Make someone a Commander', values: [false, false, false, true] },
   { label: 'Make alliances', values: [false, false, false, true] },
+  { label: 'Make the clan pacifist', values: [false, false, false, true] },
   { label: 'Edit the clan and its cosmetics', values: [false, false, false, true] },
   { label: 'Disband', values: [false, false, false, true] },
 ]

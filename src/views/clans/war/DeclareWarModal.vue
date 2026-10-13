@@ -240,6 +240,7 @@ watch(arena, () => {
             @click="ruleset = option"
           >
             <span>{{ CLAN_RULESET_LABEL[option] }}</span>
+            <span v-if="option === 'berserker'" class="declare__lock">Offer, the defender has to accept</span>
             <span v-if="!unlocked.rulesets.includes(option)" class="declare__lock">
               {{ unlockLevel('rulesets', option) === null ? 'Locked' : `Level ${unlockLevel('rulesets', option)}` }}
             </span>

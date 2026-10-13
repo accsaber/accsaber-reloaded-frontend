@@ -27,6 +27,7 @@ import {
   formatStanding,
   unlockLines,
   warModeLine,
+  warOpponent,
   warResultFor,
 } from '@/utils/clans'
 import { formatFullDate, formatRelativeDate } from '@/utils/formatters'
@@ -59,10 +60,6 @@ const seasonOptions = computed(() => [
 ])
 
 const unlocks = computed(() => unlockLines(props.level.unlocked))
-
-function opponent(war: ClanWarResponse) {
-  return war.attacker.clan.id === props.clanId ? war.defender.clan : war.attacker.clan
-}
 
 function lastSeen(member: PlayerRef): string {
   const m = member.membership
@@ -170,7 +167,7 @@ function missionProgress(mission: MissionResponse): string {
         <template #default="{ item: war }">
           <td>
             <RouterLink class="sections__link" :to="{ name: 'clan-war', params: { warId: war.id } }">
-              <ClanTag :clan="opponent(war)" size="sm" /> {{ opponent(war).name }}
+              <ClanTag :clan="warOpponent(war, clanId)" size="sm" /> {{ warOpponent(war, clanId).name }}
             </RouterLink>
           </td>
           <td>{{ warModeLine(war) }}</td>
@@ -210,7 +207,7 @@ function missionProgress(mission: MissionResponse): string {
           <li v-for="alliance in alliances" :key="alliance.id">
             <span><ClanTag :clan="alliance.ally" size="sm" /> {{ alliance.ally.name }}</span>
             <span class="sections__sub">
-              {{ alliance.status }}<template v-if="alliance.trust">, trust {{ alliance.trust.level }}</template>
+              {{ alliance.status }}, {{ alliance.warsFoughtTogether }} wars together
             </span>
           </li>
         </ul>

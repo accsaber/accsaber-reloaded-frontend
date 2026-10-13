@@ -26,8 +26,12 @@ const fixedFilters = computed<FixedMapFilters>(() => ({
   complexityMax: props.complexityMax,
 }))
 
+function bannedLabel(diff: PublicMapDifficultyResponse): string | null {
+  return diff.warBanned ? 'Not allowed in wars' : null
+}
+
 function legal(diff: PublicMapDifficultyResponse): boolean {
-  if (diff.status !== 'RANKED') return false
+  if (diff.status !== 'RANKED' || diff.warBanned) return false
   if (props.categoryId && diff.categoryId !== props.categoryId) return false
   const complexity = diff.complexity ?? 0
   if (props.complexityMin != null && complexity < props.complexityMin) return false
@@ -65,7 +69,7 @@ function remove(id: string) {
     <ul v-if="picks.length" class="map-picks__list">
       <li v-for="diff in picks" :key="diff.id" class="map-picks__row" :class="{ 'map-picks__row--illegal': !legal(diff) }">
         <WarMapRow :difficulty="diff">
-          <span v-if="!legal(diff)" class="map-picks__flag">Not legal here</span>
+          <span v-if="!legal(diff)" class="map-picks__flag">{{ bannedLabel(diff) ?? 'Not legal here' }}</span>
           <BaseButton size="sm" :disabled="disabled" @click="remove(diff.id)">Remove</BaseButton>
         </WarMapRow>
       </li>
@@ -83,6 +87,7 @@ function remove(id: string) {
       :used-difficulty-ids="pickedIds"
       used-label="Picked"
       disable-used
+      :blocked-label="bannedLabel"
       :commit-label="(n) => `Add ${n} ${n === 1 ? 'map' : 'maps'}`"
       @close="pickerOpen = false"
       @pick="add"

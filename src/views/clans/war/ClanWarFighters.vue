@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import type { ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
-import { WAR_GUARD_MAX, warSideStyles } from '@/utils/clans'
+import type { ClanWarParticipantResponse, ClanWarResponse, ClanWarTeam } from '@/types/api/clans'
+import { CLAN_WAR_TEAM_LABEL, WAR_GUARD_MAX, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
 
@@ -11,38 +12,38 @@ const props = defineProps<{
   war: ClanWarResponse
   participants: ClanWarParticipantResponse[] | null
   error: string | null
+  viewerId: string | null
+  picking: boolean
 }>()
 
-type Fighter = ClanWarParticipantResponse | null
+const emit = defineEmits<{
+  pick: [userId: string | null]
+}>()
 
 const styles = computed(() => warSideStyles(props.war))
+const viewer = computed(() => props.participants?.find((p) => p.player.id === props.viewerId && !p.leftAt) ?? null)
+const viewerTeam = computed(() => (viewer.value ? warTeamOf(props.war, viewer.value.clan.id) : null))
+const canPick = computed(() => !!viewer.value && props.war.ruleset === 'duel' && props.war.status !== 'ended')
 
-function side(clanId: string): ClanWarParticipantResponse[] {
+function fightersOf(clanId: string): ClanWarParticipantResponse[] {
   return (props.participants ?? [])
     .filter((p) => p.clan.id === clanId)
     .sort((a, b) => b.standingWeight - a.standingWeight)
 }
 
-function duelColumns(left: ClanWarParticipantResponse[], right: ClanWarParticipantResponse[]): [Fighter[], Fighter[]] {
-  const unpaired = new Set(right)
-  const targets = left.map((p) => {
-    const target = right.find((r) => r.player.id === p.duelTarget?.id) ?? null
-    if (target) unpaired.delete(target)
-    return target
-  })
-  return [[...left, ...[...unpaired].map(() => null)], [...targets, ...unpaired]]
+const teams = computed(() =>
+  WAR_TEAMS.map((team) => ({
+    team,
+    style: styles.value[team],
+    clans: props.war[team].sides
+      .map((side) => ({ clan: side.clan, fighters: fightersOf(side.clan.id) }))
+      .filter((group) => group.fighters.length),
+  })),
+)
+
+function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boolean {
+  return canPick.value && team !== viewerTeam.value && fighter.inBand === true && !fighter.leftAt
 }
-
-const columns = computed<[Fighter[], Fighter[]]>(() => {
-  const left = side(props.war.attacker.clan.id)
-  const right = side(props.war.defender.clan.id)
-  return props.war.ruleset === 'duel' ? duelColumns(left, right) : [left, right]
-})
-
-const sides = computed(() => [
-  { clan: props.war.attacker.clan, style: styles.value.attacker, fighters: columns.value[0] },
-  { clan: props.war.defender.clan, style: styles.value.defender, fighters: columns.value[1] },
-])
 </script>
 
 <template>
@@ -59,32 +60,52 @@ const sides = computed(() => [
       {{ war.status === 'active' || war.status === 'ended' ? 'Nobody enrolled.' : 'Fighters enrol when the war starts.' }}
     </p>
     <div v-else class="fighters__sides">
-      <div v-for="s in sides" :key="s.clan.id" class="fighters__side clan-colors" :style="s.style">
+      <div v-for="t in teams" :key="t.team" class="fighters__side clan-colors" :style="t.style">
         <div class="fighters__head">
-          <ClanTag class="fighters__clan" :clan="s.clan" size="sm" />
+          <span class="fighters__team">{{ CLAN_WAR_TEAM_LABEL[t.team] }}</span>
+          <span class="fighters__col fighters__col--num">Skill</span>
           <span class="fighters__col">Guard</span>
           <span class="fighters__col fighters__col--num">Damage</span>
         </div>
-        <ul class="fighters__list">
-          <li
-            v-for="(fighter, i) in s.fighters"
-            :key="fighter?.player.id ?? `empty-${i}`"
-            class="fighters__row"
-            :class="{ 'fighters__row--broken': fighter && fighter.guard <= 0, 'fighters__row--out': fighter?.leftAt }"
-          >
-            <template v-if="fighter">
+        <template v-for="group in t.clans" :key="group.clan.id">
+          <div class="fighters__clan"><ClanTag :clan="group.clan" size="sm" /></div>
+          <ul class="fighters__list">
+            <li
+              v-for="fighter in group.fighters"
+              :key="fighter.player.id"
+              class="fighters__row"
+              :class="{ 'fighters__row--broken': fighter.guard <= 0, 'fighters__row--out': fighter.leftAt }"
+            >
               <span class="fighters__who">
-                <UserChip :user="fighter.player" size="sm" link tooltip :hide-clan="fighter.player.clan?.id === s.clan.id" />
+                <UserChip :user="fighter.player" size="sm" link tooltip :hide-clan="fighter.player.clan?.id === group.clan.id" />
                 <span v-if="fighter.leftAt" class="fighters__left">left</span>
+                <span v-if="fighter.target" class="fighters__target">
+                  <span aria-hidden="true">→</span>
+                  <UserChip :user="fighter.target" size="xs" compact hide-clan />
+                </span>
+                <span v-if="viewer?.target?.id === fighter.player.id" class="fighters__pick">
+                  <span class="fighters__picked">Your pick</span>
+                  <BaseButton size="sm" :disabled="picking" @click="emit('pick', null)">Clear</BaseButton>
+                </span>
+                <BaseButton
+                  v-else-if="pickable(fighter, t.team)"
+                  class="fighters__pick"
+                  size="sm"
+                  :disabled="picking"
+                  @click="emit('pick', fighter.player.id)"
+                >
+                  Pick
+                </BaseButton>
               </span>
+              <span class="fighters__num">{{ fighter.skill.toFixed(1) }}</span>
               <span class="fighters__guard">
                 <ClanBar :value="fighter.guard" :max="WAR_GUARD_MAX" :broken="fighter.guard <= 0" />
                 <span class="fighters__guard-value">{{ Math.round(fighter.guard) }}</span>
               </span>
               <span class="fighters__num">{{ Math.round(fighter.contribution) }}</span>
-            </template>
-          </li>
-        </ul>
+            </li>
+          </ul>
+        </template>
       </div>
     </div>
   </section>
@@ -132,7 +153,7 @@ const sides = computed(() => [
 .fighters__head,
 .fighters__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 56px;
+  grid-template-columns: minmax(0, 1fr) 6ch 96px 56px;
   align-items: center;
   gap: var(--space-md);
   padding: 0 var(--space-md);
@@ -143,8 +164,41 @@ const sides = computed(() => [
   border-bottom: 1px solid var(--bg-overlay);
 }
 
+.fighters__team {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--war-side);
+}
+
 .fighters__clan {
-  justify-self: start;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--space-md);
+  border-bottom: 1px solid var(--bg-overlay);
+}
+
+.fighters__target {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  font-size: var(--text-caption);
+  color: var(--text-tertiary);
+}
+
+.fighters__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.fighters__picked {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--war-side);
 }
 
 .fighters__col {

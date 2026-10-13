@@ -7,7 +7,7 @@ import type { UserRelationResponse } from '@/types/api/relations'
 import type { CampaignCollaboratorResponse } from '@/types/api/campaigns'
 import type { SupporterTier } from '@/types/api/supporters'
 import type { LeaderboardResponse, ScoreResponse, UserMilestoneProgressResponse, XpLeaderboardResponse } from '@/types/api/users'
-import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, UserRefDisplay, XpPlayerDisplay } from '@/types/display'
+import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, ScoreFeedEntry, UserRefDisplay, XpPlayerDisplay } from '@/types/display'
 import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 
 export function formatDifficulty(diff: string): string {
@@ -159,6 +159,79 @@ export function toScoreDisplay(
     partial: score.partial,
     supersedesReason: score.supersedesReason,
     supporterTier: score.supporterTier ?? null,
+  }
+}
+
+export function toScoreFeedEntry(
+  raw: ScoreResponse,
+  modifierNames: string[],
+  categoryCode?: CategoryCode,
+  key: string = raw.id,
+): ScoreFeedEntry {
+  return {
+    key,
+    userId: raw.userId,
+    player: toUserRef(raw),
+    mapId: raw.mapId,
+    mapDifficultyId: raw.mapDifficultyId,
+    beatsaverCode: raw.beatsaverCode ?? null,
+    characteristic: raw.characteristic,
+    rawDifficulty: raw.difficulty,
+    mapName: raw.songName ?? 'Unknown Map',
+    mapSubName: raw.songSubName ?? null,
+    artistName: raw.songAuthor ?? '',
+    mapAuthor: raw.mapAuthor ?? '',
+    coverUrl: pickCoverUrl(raw),
+    coverFallbackUrl: pickCoverFallback(raw),
+    difficulty: formatDifficulty(raw.difficulty),
+    categoryCode: categoryCode ?? 'overall',
+    rank: raw.rank,
+    score: raw.score,
+    accuracy: raw.accuracy,
+    ap: raw.ap,
+    weightedAp: raw.weightedAp,
+    modifiers: modifierNames,
+    misses: raw.misses ?? 0,
+    badCuts: raw.badCuts ?? 0,
+    wallHits: raw.wallHits ?? 0,
+    bombHits: raw.bombHits ?? 0,
+    streak115: raw.streak115 ?? 0,
+    timeSet: raw.timeSet ?? raw.createdAt,
+    blScoreId: raw.blScoreId ?? undefined,
+  }
+}
+
+export function feedEntryToScoreDisplay(entry: ScoreFeedEntry): ScoreDisplay {
+  return {
+    scoreId: entry.key,
+    mapId: entry.mapId,
+    mapDifficultyId: entry.mapDifficultyId,
+    beatsaverCode: entry.beatsaverCode,
+    characteristic: entry.characteristic,
+    rawDifficulty: entry.rawDifficulty,
+    mapName: entry.mapName,
+    mapSubName: entry.mapSubName,
+    artistName: entry.artistName,
+    difficulty: entry.difficulty,
+    categoryCode: entry.categoryCode,
+    coverUrl: entry.coverUrl,
+    coverFallbackUrl: entry.coverFallbackUrl,
+    leaderboardRank: entry.rank,
+    score: entry.score,
+    accuracy: entry.accuracy,
+    ap: entry.ap,
+    weightedAp: entry.weightedAp,
+    complexity: null,
+    modifiers: entry.modifiers,
+    date: entry.timeSet,
+    misses: entry.misses,
+    badCuts: entry.badCuts,
+    wallHits: entry.wallHits,
+    bombHits: entry.bombHits,
+    streak115: entry.streak115,
+    blScoreId: entry.blScoreId,
+    userName: entry.player.name,
+    mapAuthor: entry.mapAuthor,
   }
 }
 

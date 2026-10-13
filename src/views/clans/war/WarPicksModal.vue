@@ -2,8 +2,10 @@
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import type { ClanWarDetailResponse, ClanWarResponse } from '@/types/api/clans'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
+import { CLAN_RULESET_LABEL, isBerserkerOffer } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import WarMapPicker from './WarMapPicker.vue'
 
@@ -17,12 +19,16 @@ const emit = defineEmits<{
   submitted: [detail: ClanWarDetailResponse]
 }>()
 
+const CHOICES = (['duel', 'berserker'] as const).map((key) => ({ key, label: CLAN_RULESET_LABEL[key] }))
+
 const picks = ref<PublicMapDifficultyResponse[]>([])
+const berserker = ref(false)
 const saving = ref(false)
 const error = ref<string | null>(null)
 
 const count = computed(() => props.war.arenaSpec.defenderPicks)
 const ready = computed(() => picks.value.length === count.value)
+const offer = computed(() => isBerserkerOffer(props.war))
 
 async function submit() {
   if (!ready.value || saving.value) return
@@ -30,7 +36,10 @@ async function submit() {
   error.value = null
   try {
     const { submitClanWarPicks } = await import('@/api/clans')
-    emit('submitted', await submitClanWarPicks(props.war.id, { mapDifficultyIds: picks.value.map((d) => d.id) }))
+    emit('submitted', await submitClanWarPicks(props.war.id, {
+        mapDifficultyIds: picks.value.map((d) => d.id),
+        berserker: berserker.value,
+      }))
   } catch (err) {
     error.value = parseApiError(err, 'Could not submit those picks.').message
   } finally {
@@ -43,6 +52,7 @@ watch(
   (open) => {
     if (open) {
       picks.value = []
+      berserker.value = false
       error.value = null
     }
   },
@@ -50,10 +60,20 @@ watch(
 </script>
 
 <template>
-  <BaseModal :open="open" title="Submit picks" max-width="640px" @close="emit('close')">
+  <BaseModal :open="open" :title="count ? 'Submit picks' : 'Answer offer'" max-width="640px" @close="emit('close')">
     <div class="picks">
-      <p class="picks__hint">Pick {{ count }} maps.</p>
+      <template v-if="offer">
+        <p class="picks__hint">Berserker offered. Accept it or fight it as a Duel.</p>
+        <ChartToggleGroup
+          :toggles="CHOICES"
+          :active="[berserker ? 'berserker' : 'duel']"
+          label="Ruleset"
+          @select="berserker = $event === 'berserker'"
+        />
+      </template>
+      <p v-if="count" class="picks__hint">Pick {{ count }} maps.</p>
       <WarMapPicker
+        v-if="count"
         v-model="picks"
         :count="count"
         :category-id="war.arenaSpec.categoryId ?? null"
@@ -66,7 +86,9 @@ watch(
 
     <template #footer>
       <BaseButton :disabled="saving" @click="emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" :loading="saving" :disabled="!ready" @click="submit">Lock picks</BaseButton>
+      <BaseButton variant="primary" :loading="saving" :disabled="!ready" @click="submit">
+        {{ count ? 'Lock picks' : 'Send answer' }}
+      </BaseButton>
     </template>
   </BaseModal>
 </template>

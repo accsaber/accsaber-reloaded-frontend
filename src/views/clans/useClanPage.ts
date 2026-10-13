@@ -84,7 +84,6 @@ export function useClanPage(slugOrId: Ref<string>) {
         getClanStanding(fetched.clan.id).catch(() => null),
         loadRoster(fetched.clan.id),
         loadMyRequests(),
-        own.load(),
       ])
       standing.value = rank
       return fetched
@@ -118,6 +117,7 @@ export function useClanPage(slugOrId: Ref<string>) {
     viewerRole,
     viewerClanId,
     ownRole,
+    ownPacifist: own.pacifist,
     setOnline,
     pendingRequest,
     load,

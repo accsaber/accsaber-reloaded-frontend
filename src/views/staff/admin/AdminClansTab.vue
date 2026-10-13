@@ -3,8 +3,8 @@ import BaseTabs from '@/components/common/BaseTabs.vue'
 import { computed, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-type ClansSubTab = 'clans' | 'seasons' | 'rewards' | 'levels'
-const VALID: ClansSubTab[] = ['clans', 'seasons', 'rewards', 'levels']
+type ClansSubTab = 'clans' | 'seasons' | 'rewards' | 'banned' | 'levels'
+const VALID: ClansSubTab[] = ['clans', 'seasons', 'rewards', 'banned', 'levels']
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +13,7 @@ const tabs = [
   { key: 'clans', label: 'Clans' },
   { key: 'seasons', label: 'Seasons' },
   { key: 'rewards', label: 'War rewards' },
+  { key: 'banned', label: 'Banned maps' },
   { key: 'levels', label: 'Levels' },
 ]
 
@@ -31,6 +32,7 @@ const subComponents: Record<ClansSubTab, ReturnType<typeof defineAsyncComponent>
   clans: defineAsyncComponent(() => import('./clans/ClanBrowserTab.vue')),
   seasons: defineAsyncComponent(() => import('./clans/ClanSeasonsTab.vue')),
   rewards: defineAsyncComponent(() => import('./clans/ClanWarRewardsTab.vue')),
+  banned: defineAsyncComponent(() => import('./clans/ClanWarBannedMapsTab.vue')),
   levels: defineAsyncComponent(() => import('./clans/ClanLevelsTab.vue')),
 }
 

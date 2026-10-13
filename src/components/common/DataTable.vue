@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useMediaQuery } from '@/composables/useMediaQuery';
 import type { SortState, TableColumn } from '@/types/display';
 import { tableNaturalWidth } from '@/utils/tableLayout';
 import { computed, useSlots } from 'vue';
@@ -31,6 +32,8 @@ const slots = useSlots()
 const skeletonCount = computed(() => props.loadingRows ?? 5)
 const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
+const mobile = useMediaQuery('(max-width: 767px)')
+const rowHrefs = computed(() => props.rows.map(resolveRowHref))
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
   if (!props.rowKey) return index
@@ -69,7 +72,7 @@ function sortIcon(col: TableColumn): string {
 
 <template>
   <div class="data-table-wrapper">
-    <div class="data-table-scroll">
+    <div v-if="!mobile" class="data-table-scroll">
       <table class="data-table" :class="{ 'data-table--dense': dense }" :style="{ minWidth }">
         <thead>
           <tr>
@@ -113,9 +116,9 @@ function sortIcon(col: TableColumn): string {
               <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
                 'data-table__td--mono': col.mono,
                 [`data-table__td--${col.align ?? 'left'}`]: true,
-                'data-table__td--linked': !!resolveRowHref(row) && !col.noLink,
+                'data-table__td--linked': !!rowHrefs[index] && !col.noLink,
               }">
-                <a v-if="resolveRowHref(row) && !col.noLink" :href="resolveRowHref(row)" class="data-table__cell-link" tabindex="-1">
+                <a v-if="rowHrefs[index] && !col.noLink" :href="rowHrefs[index]" class="data-table__cell-link" tabindex="-1">
                   <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="index">
                     {{ row[col.key] }}
                   </slot>
@@ -130,7 +133,7 @@ function sortIcon(col: TableColumn): string {
       </table>
     </div>
 
-    <div class="data-table-cards">
+    <div v-else class="data-table-cards">
       <template v-if="loading">
         <SkeletonLoader v-for="i in skeletonCount" :key="'skel-card-' + i" variant="card" />
       </template>
@@ -311,18 +314,8 @@ function sortIcon(col: TableColumn): string {
 }
 
 .data-table-cards {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-@media (max-width: 767px) {
-  .data-table-scroll {
-    display: none;
-  }
-
-  .data-table-cards {
-    display: flex;
-  }
 }
 </style>

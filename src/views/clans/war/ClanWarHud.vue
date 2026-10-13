@@ -1,13 +1,24 @@
 <script setup lang="ts">
+import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import UserChip from '@/components/domain/UserChip.vue'
 import type { ClanWarResponse } from '@/types/api/clans'
-import { CLAN_WAR_STATUS_LABEL, formatStanding, warClock, warHeadline, warModeLine, warSideStyles } from '@/utils/clans'
+import {
+  CLAN_WAR_STATUS_LABEL,
+  CLAN_WAR_TEAM_LABEL,
+  formatStanding,
+  WAR_TEAMS,
+  warClock,
+  warLeadFallen,
+  warHeadline,
+  warModeLine,
+  warSideStyles,
+} from '@/utils/clans'
 import { computed, ref } from 'vue'
 import ClanBar from '../ClanBar.vue'
+import ClanWarSideRow from './ClanWarSideRow.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -23,10 +34,9 @@ const menuOpen = ref(false)
 const styles = computed(() => warSideStyles(props.war))
 const clock = computed(() => warClock(props.war, props.now))
 const headline = computed(() => warHeadline(props.war))
-const sides = computed(() => [
-  { role: 'attacker' as const, label: 'Attacker', side: props.war.attacker, style: styles.value.attacker },
-  { role: 'defender' as const, label: 'Defender', side: props.war.defender, style: styles.value.defender },
-])
+const teams = computed(() =>
+  WAR_TEAMS.map((team) => ({ team, label: CLAN_WAR_TEAM_LABEL[team], data: props.war[team], style: styles.value[team] })),
+)
 
 function retreat() {
   menuOpen.value = false
@@ -37,44 +47,42 @@ function retreat() {
 <template>
   <header class="hud">
     <section
-      v-for="entry in sides"
-      :key="entry.role"
+      v-for="entry in teams"
+      :key="entry.team"
       class="hud__side clan-colors"
-      :class="`hud__side--${entry.role}`"
+      :class="`hud__side--${entry.team}`"
       :style="entry.style"
     >
       <ClanBar
         class="hud__bar"
         size="lg"
-        :value="entry.side.stakeRemaining"
-        :max="entry.side.stake"
-        :mirror="entry.role === 'defender'"
+        :value="entry.data.stakeRemaining"
+        :max="entry.data.stake"
+        :mirror="entry.team === 'defend'"
       />
       <div class="hud__score">
-        <span class="hud__remaining">{{ formatStanding(entry.side.stakeRemaining) }}</span>
-        <span class="hud__total">/ {{ formatStanding(entry.side.stake) }}</span>
+        <span class="hud__remaining">{{ formatStanding(entry.data.stakeRemaining) }}</span>
+        <span class="hud__total">/ {{ formatStanding(entry.data.stake) }}</span>
       </div>
-      <RouterLink class="hud__identity" :to="{ name: 'clan-detail', params: { slugOrId: entry.side.clan.slug } }">
-        <ClanIcon :clan="entry.side.clan" :size="64" />
+      <RouterLink class="hud__identity" :to="{ name: 'clan-detail', params: { slugOrId: entry.data.lead.slug } }">
+        <ClanIcon :clan="entry.data.lead" :size="64" />
         <span class="hud__titles">
           <span class="hud__role">{{ entry.label }}</span>
-          <ClanTag :clan="entry.side.clan" effects class="hud__tag" />
-          <ClanName class="hud__name" :clan="entry.side.clan" />
+          <ClanTag :clan="entry.data.lead" effects class="hud__tag" />
+          <ClanName class="hud__name" :clan="entry.data.lead" />
         </span>
       </RouterLink>
-      <dl class="hud__facts">
-        <div class="hud__fact">
-          <dt>Lead</dt>
-          <dd>
-            <UserChip v-if="entry.side.lead" :user="entry.side.lead" size="sm" link tooltip />
-            <span v-else class="hud__none">Nobody yet</span>
-          </dd>
-        </div>
-        <div class="hud__fact">
-          <dt>Standing at declare</dt>
-          <dd class="hud__mono">{{ formatStanding(entry.side.standingAtDeclare) }}</dd>
-        </div>
-      </dl>
+      <BaseBanner
+        v-if="war.status !== 'ended' && warLeadFallen(entry.data)"
+        class="hud__fallen"
+        variant="warning"
+        :dismissible="false"
+      >
+        {{ entry.data.lead.name }} has fallen. Its allies are fighting on alone and no more help can join.
+      </BaseBanner>
+      <ul v-if="entry.data.sides.length > 1" class="hud__sides">
+        <ClanWarSideRow v-for="side in entry.data.sides" :key="side.clan.id" :side="side" :now="now" />
+      </ul>
     </section>
 
     <div class="hud__middle" :class="`hud__middle--${war.status}`">
@@ -112,7 +120,7 @@ function retreat() {
 .hud {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr);
-  grid-template-areas: 'attacker middle defender';
+  grid-template-areas: 'attack middle defend';
   column-gap: var(--space-md);
   padding: var(--space-lg);
   background: var(--bg-surface);
@@ -128,12 +136,12 @@ function retreat() {
   min-width: 0;
 }
 
-.hud__side--attacker {
-  grid-area: attacker;
+.hud__side--attack {
+  grid-area: attack;
 }
 
-.hud__side--defender {
-  grid-area: defender;
+.hud__side--defend {
+  grid-area: defend;
   align-items: flex-end;
   text-align: right;
 }
@@ -162,6 +170,8 @@ function retreat() {
 }
 
 .hud__identity {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -170,7 +180,7 @@ function retreat() {
   text-decoration: none;
 }
 
-.hud__side--defender .hud__identity {
+.hud__side--defend .hud__identity {
   flex-direction: row-reverse;
 }
 
@@ -182,7 +192,7 @@ function retreat() {
   min-width: 0;
 }
 
-.hud__side--defender .hud__titles {
+.hud__side--defend .hud__titles {
   align-items: flex-end;
 }
 
@@ -197,46 +207,20 @@ function retreat() {
 
 .hud__name {
   max-width: 100%;
-  overflow: hidden;
   font-size: var(--text-section-heading);
   font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
-.hud__facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-lg);
+.hud__fallen {
+  align-self: stretch;
+  text-align: left;
+}
+
+.hud__sides {
+  align-self: stretch;
   margin: 0;
-}
-
-.hud__side--defender .hud__facts {
-  flex-direction: row-reverse;
-}
-
-.hud__fact {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.hud__fact dt {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.hud__fact dd {
-  margin: 0;
-}
-
-.hud__mono {
-  font-family: var(--font-mono);
-}
-
-.hud__none {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  padding: 0;
+  list-style: none;
 }
 
 .hud__middle {
@@ -339,7 +323,7 @@ function retreat() {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
       'middle middle'
-      'attacker defender';
+      'attack defend';
     row-gap: var(--space-lg);
     padding: var(--space-md);
   }
@@ -350,7 +334,7 @@ function retreat() {
     gap: var(--space-sm);
   }
 
-  .hud__side--defender .hud__identity {
+  .hud__side--defend .hud__identity {
     flex-direction: column;
     align-items: flex-end;
   }

@@ -13,7 +13,7 @@ const props = defineProps<{
   acceptingRequests: boolean
   pendingRequest: ClanJoinRequestResponse | null
   busy: boolean
-  seasonRunning: boolean
+  canDeclare: boolean
   error: string | null
 }>()
 
@@ -107,7 +107,7 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
           Call rival
         </button>
         <button
-          v-if="seasonRunning"
+          v-if="canDeclare"
           type="button"
           class="clan-actions__item clan-actions__item--danger"
           role="menuitem"

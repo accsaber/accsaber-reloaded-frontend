@@ -16,11 +16,12 @@ import type {
   ClanStandingEventResponse,
   ClanStandingParams,
   ClanStandingResponse,
+  ChooseClanWarTargetRequest,
+  ClanWarAidListParams,
+  ClanWarAidResponse,
   ClanWarDetailResponse,
   ClanWarHitResponse,
   ClanWarListParams,
-  ClanWarLoanListParams,
-  ClanWarLoanResponse,
   ClanWarParticipantResponse,
   ClanWarResponse,
   ClanXpGrantResponse,
@@ -30,15 +31,18 @@ import type {
   CreateClanRivalRequest,
   DeclareClanWarRequest,
   EquipClanItemRequest,
-  OfferClanWarLoanRequest,
+  OfferClanWarAidRequest,
   ResolveClanAllianceRequest,
   ResolveClanJoinRequest,
-  ResolveClanWarLoanRequest,
+  RequestClanWarAidRequest,
+  ResolveClanWarAidRequest,
   SubmitClanWarPicksRequest,
   TransferClanFounderRequest,
   UpdateClanMemberRequest,
   UpdateClanRequest,
+  UpdateClanPacifismRequest,
   UpdateClanWarRequest,
+  UpdateClanWarSideRequest,
 } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { ItemResponse } from '@/types/api/items'
@@ -61,6 +65,10 @@ export function getClan(slugOrId: string): Promise<ClanResponse> {
 
 export function updateClan(clanId: string, req: UpdateClanRequest): Promise<ClanResponse> {
   return patch<ClanResponse>(`/clans/${clanId}`, req)
+}
+
+export function updateClanPacifism(clanId: string, req: UpdateClanPacifismRequest): Promise<ClanResponse> {
+  return patch<ClanResponse>(`/clans/${clanId}/pacifism`, req)
 }
 
 export function disbandClan(clanId: string): Promise<void> {
@@ -311,29 +319,35 @@ export function getClanWarHits(
   return get<Page<ClanWarHitResponse>>(`/clans/wars/${warId}/hits${buildQuery(params)}`)
 }
 
-export function offerClanWarLoan(
+export function requestClanWarAid(warId: string, req: RequestClanWarAidRequest): Promise<ClanWarAidResponse> {
+  return post<ClanWarAidResponse>(`/clans/wars/${warId}/aid-requests`, req)
+}
+
+export function offerClanWarAid(warId: string, req: OfferClanWarAidRequest): Promise<ClanWarAidResponse> {
+  return post<ClanWarAidResponse>(`/clans/wars/${warId}/aid-offers`, req)
+}
+
+export function resolveClanWarAid(aidId: string, req: ResolveClanWarAidRequest): Promise<ClanWarAidResponse> {
+  return patch<ClanWarAidResponse>(`/clans/wars/aid/${aidId}`, req)
+}
+
+export function getClanWarAid(params?: ClanWarAidListParams): Promise<Page<ClanWarAidResponse>> {
+  return get<Page<ClanWarAidResponse>>(`/clans/wars/aid${buildQuery(params)}`)
+}
+
+export function updateClanWarSide(
   warId: string,
-  req: OfferClanWarLoanRequest,
-): Promise<ClanWarLoanResponse> {
-  return post<ClanWarLoanResponse>(`/clans/wars/${warId}/loans`, req)
+  clanId: string,
+  req: UpdateClanWarSideRequest,
+): Promise<ClanWarResponse> {
+  return patch<ClanWarResponse>(`/clans/wars/${warId}/sides/${clanId}`, req)
 }
 
-export function resolveClanWarLoan(
-  loanId: string,
-  req: ResolveClanWarLoanRequest,
-): Promise<ClanWarLoanResponse> {
-  return patch<ClanWarLoanResponse>(`/clans/wars/loans/${loanId}`, req)
-}
-
-export function getClanWarLoans(
+export function chooseClanWarTarget(
   warId: string,
-  params?: ClanWarLoanListParams,
-): Promise<Page<ClanWarLoanResponse>> {
-  return get<Page<ClanWarLoanResponse>>(`/clans/wars/${warId}/loans${buildQuery(params)}`)
-}
-
-export function getMyClanWarLoans(params?: ClanWarLoanListParams): Promise<Page<ClanWarLoanResponse>> {
-  return get<Page<ClanWarLoanResponse>>(`/clans/wars/loans${buildQuery(params)}`)
+  req: ChooseClanWarTargetRequest,
+): Promise<ClanWarParticipantResponse> {
+  return put<ClanWarParticipantResponse>(`/clans/wars/${warId}/target`, req)
 }
 
 export function downloadClanWarPlaylist(warId: string): Promise<DownloadedFile> {

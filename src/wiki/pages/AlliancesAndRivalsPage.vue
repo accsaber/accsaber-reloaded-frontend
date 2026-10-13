@@ -13,10 +13,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <p>Being allies means:</p>
     <ul>
       <li>You cannot declare war on each other.</li>
-      <li>You can <RouterLink to="/wiki/war-loans">lend players</RouterLink> to each other's wars.</li>
+      <li>You can <RouterLink to="/wiki/coalitions">fight in each other's wars</RouterLink>.</li>
       <li>Allies that fought a war this season add to your base standing.</li>
     </ul>
-    <p>Either Founder can end it whenever.</p>
+    <p>The Diplomacy tab shows how many wars you have fought together. Either Founder can end it whenever.</p>
 
     <WikiHeading id="rivals">Rivals</WikiHeading>
     <p>

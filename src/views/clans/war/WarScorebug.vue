@@ -3,7 +3,7 @@ import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { ClanWarResponse } from '@/types/api/clans'
-import { formatStanding, warClock, warHeadline, warModeLine, warSideStyles } from '@/utils/clans'
+import { formatStanding, WAR_TEAMS, warClock, warHeadline, warModeLine, warSideStyles } from '@/utils/clans'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
 
@@ -15,31 +15,31 @@ const props = defineProps<{
 const styles = computed(() => warSideStyles(props.war))
 const clock = computed(() => warClock(props.war, props.now))
 const headline = computed(() => warHeadline(props.war))
-const sides = computed(() => [
-  { role: 'attacker' as const, side: props.war.attacker, style: styles.value.attacker },
-  { role: 'defender' as const, side: props.war.defender, style: styles.value.defender },
-])
+const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[team], style: styles.value[team] })))
 </script>
 
 <template>
   <RouterLink class="scorebug" :to="{ name: 'clan-war', params: { warId: war.id } }">
     <span
-      v-for="entry in sides"
-      :key="entry.role"
+      v-for="entry in teams"
+      :key="entry.team"
       class="scorebug__side clan-colors"
-      :class="`scorebug__side--${entry.role}`"
+      :class="`scorebug__side--${entry.team}`"
       :style="entry.style"
     >
       <span class="scorebug__identity">
-        <ClanIcon :clan="entry.side.clan" :size="40" />
+        <ClanIcon :clan="entry.data.lead" :size="40" />
         <span class="scorebug__titles">
-          <ClanTag :clan="entry.side.clan" size="sm" effects />
-          <ClanName class="scorebug__name" :clan="entry.side.clan" />
+          <ClanTag :clan="entry.data.lead" size="sm" effects />
+          <ClanName class="scorebug__name" :clan="entry.data.lead" />
+          <span v-if="entry.data.sides.length > 1" class="scorebug__allies">
+            +{{ entry.data.sides.length - 1 }} {{ entry.data.sides.length === 2 ? 'ally' : 'allies' }}
+          </span>
         </span>
       </span>
-      <ClanBar :value="entry.side.stakeRemaining" :max="entry.side.stake" :mirror="entry.role === 'defender'" />
+      <ClanBar :value="entry.data.stakeRemaining" :max="entry.data.stake" :mirror="entry.team === 'defend'" />
       <span class="scorebug__stake">
-        {{ formatStanding(entry.side.stakeRemaining) }}<span class="scorebug__total"> / {{ formatStanding(entry.side.stake) }}</span>
+        {{ formatStanding(entry.data.stakeRemaining) }}<span class="scorebug__total"> / {{ formatStanding(entry.data.stake) }}</span>
       </span>
     </span>
 
@@ -61,7 +61,7 @@ const sides = computed(() => [
 .scorebug {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 168px minmax(0, 1fr);
-  grid-template-areas: 'attacker middle defender';
+  grid-template-areas: 'attack middle defend';
   align-items: center;
   gap: var(--space-lg);
   padding: var(--space-md) var(--space-lg);
@@ -90,12 +90,12 @@ const sides = computed(() => [
   min-width: 0;
 }
 
-.scorebug__side--attacker {
-  grid-area: attacker;
+.scorebug__side--attack {
+  grid-area: attack;
 }
 
-.scorebug__side--defender {
-  grid-area: defender;
+.scorebug__side--defend {
+  grid-area: defend;
   align-items: flex-end;
   text-align: right;
 }
@@ -107,7 +107,7 @@ const sides = computed(() => [
   min-width: 0;
 }
 
-.scorebug__side--defender .scorebug__identity {
+.scorebug__side--defend .scorebug__identity {
   flex-direction: row-reverse;
 }
 
@@ -120,7 +120,7 @@ const sides = computed(() => [
   min-width: 0;
 }
 
-.scorebug__side--defender .scorebug__titles {
+.scorebug__side--defend .scorebug__titles {
   align-items: flex-end;
 }
 
@@ -138,6 +138,11 @@ const sides = computed(() => [
 .scorebug__total {
   font-weight: 400;
   color: var(--text-tertiary);
+}
+
+.scorebug__allies {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .scorebug__middle {
@@ -173,7 +178,7 @@ const sides = computed(() => [
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
       'middle middle'
-      'attacker defender';
+      'attack defend';
     gap: var(--space-md);
     padding: var(--space-md);
   }

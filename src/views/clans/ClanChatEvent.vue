@@ -34,6 +34,8 @@ const SENTENCES: Record<ChatEvent, Sentence> = {
   war_break: { first: 'actor', middle: 'broke the guard of', second: 'subject' },
   war_ended: { before: 'The war with', first: 'clan', middle: 'has ended' },
   missions_refreshed: { before: "This week's clan missions are in" },
+  war_ally_joined: { first: 'clan', middle: 'joined the war' },
+  war_ally_left: { first: 'clan', middle: 'left the war' },
 }
 
 const sentence = computed<Sentence | undefined>(() => SENTENCES[props.message.event!])

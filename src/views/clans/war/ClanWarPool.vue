@@ -30,7 +30,7 @@ async function download() {
   try {
     const { downloadClanWarPlaylist } = await import('@/api/clans')
     const file = await downloadClanWarPlaylist(props.war.id)
-    saveBlob(file.blob, file.filename ?? `accsaber-war-${props.war.attacker.clan.tag}-vs-${props.war.defender.clan.tag}.json`)
+    saveBlob(file.blob, file.filename ?? `accsaber-war-${props.war.attack.lead.tag}-vs-${props.war.defend.lead.tag}.json`)
   } catch (err) {
     downloadError.value = parseApiError(err, 'Could not download the playlist.').message
   } finally {
@@ -47,7 +47,9 @@ async function download() {
         <span class="war-pool__count">{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : `${pool.length} maps` }}</span>
       </h2>
       <span class="war-pool__actions">
-        <BaseButton v-if="canSubmitPicks" variant="primary" size="sm" @click="emit('submit-picks')">Submit picks</BaseButton>
+        <BaseButton v-if="canSubmitPicks" variant="primary" size="sm" @click="emit('submit-picks')">
+          {{ war.arenaSpec.defenderPicks ? 'Submit picks' : 'Answer offer' }}
+        </BaseButton>
         <BaseButton v-if="!picking" size="sm" :loading="downloading" @click="download">Download playlist</BaseButton>
       </span>
     </header>

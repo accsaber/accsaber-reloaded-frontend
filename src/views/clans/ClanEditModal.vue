@@ -2,9 +2,9 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { ClanResponse, UpdateClanRequest } from '@/types/api/clans'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
-import { clanDraftFrom, emptyClanDraft, type ClanProfileDraft } from '@/utils/clans'
+import { clanDraftFrom, emptyClanDraft, formatCountdown, isPacifist, type ClanProfileDraft } from '@/utils/clans'
 
 const props = defineProps<{
   open: boolean
@@ -18,8 +18,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [request: UpdateClanRequest]
+  pacifism: [enabled: boolean]
   close: []
 }>()
+
+const pacifismState = computed(() => {
+  const from = props.clan.pacifistFrom
+  if (!from) return 'Off'
+  if (isPacifist(props.clan)) return 'On'
+  return `Turns on in ${formatCountdown(new Date(from).getTime() - Date.now())}`
+})
 
 const draft = ref<ClanProfileDraft>(emptyClanDraft())
 const acceptingRequests = ref(true)
@@ -64,6 +72,16 @@ function save() {
       <span>Take join requests</span>
     </label>
 
+    <div class="clan-edit__pacifism">
+      <span class="clan-edit__pacifism-state">Pacifism: {{ pacifismState }}</span>
+      <BaseButton size="sm" :disabled="saving" @click="emit('pacifism', !clan.pacifistFrom)">
+        {{ clan.pacifistFrom ? 'Turn off' : 'Turn on' }}
+      </BaseButton>
+      <p v-if="!clan.pacifistFrom" class="clan-edit__hint">
+        Needs no open wars. During a season it takes 7 days to turn on.
+      </p>
+    </div>
+
     <p v-if="error" class="clan-edit__error" role="alert">{{ error }}</p>
 
     <template #footer>
@@ -86,6 +104,29 @@ function save() {
 
 .clan-edit__toggle input {
   accent-color: var(--page-accent, var(--accent));
+}
+
+.clan-edit__pacifism {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--bg-overlay);
+}
+
+.clan-edit__pacifism-state {
+  font-size: var(--text-body);
+  color: var(--text-primary);
+}
+
+.clan-edit__hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .clan-edit__error {

@@ -22,8 +22,6 @@ const CAPACITIES: ClanCapacity[] = [
   'officer_slots',
   'commander_slots',
   'ally_slots',
-  'lend_slots',
-  'receive_slots',
 ]
 const ARENAS = Object.keys(CLAN_ARENA_LABEL) as ClanArena[]
 const RULESETS = Object.keys(CLAN_RULESET_LABEL) as ClanRuleset[]

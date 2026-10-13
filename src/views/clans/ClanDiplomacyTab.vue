@@ -205,8 +205,7 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
             <span class="diplomacy__name">{{ alliance.ally.name }}</span>
           </RouterLink>
           <span class="diplomacy__meta">
-            <template v-if="alliance.trust">Trust {{ alliance.trust.level }} · {{ alliance.trust.loanCap }} loans · </template>
-            since {{ formatFullDate(alliance.acceptedAt ?? alliance.createdAt) }}
+            {{ alliance.warsFoughtTogether }} {{ alliance.warsFoughtTogether === 1 ? 'war' : 'wars' }} together · since {{ formatFullDate(alliance.acceptedAt ?? alliance.createdAt) }}
           </span>
           <span class="diplomacy__actions">
             <BaseButton
