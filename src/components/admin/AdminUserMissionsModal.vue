@@ -29,7 +29,7 @@ function loadHistory(): Promise<MissionResponse[]> {
   <BaseModal :open="open" :title="userName ? `Missions - ${userName}` : 'Missions'" max-width="680px"
     @close="emit('close')">
     <div class="admin-missions-modal">
-      <MissionsPanel v-if="userId" :key="userId" :active="open" :load-active="loadActive" :load-history="loadHistory"
+      <MissionsPanel v-if="userId" :key="userId" :load-active="loadActive" :load-history="loadHistory"
         hide-title />
     </div>
   </BaseModal>

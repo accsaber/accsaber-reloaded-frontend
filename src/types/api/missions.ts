@@ -1,6 +1,7 @@
 import type { PlayerRef } from './common'
 import type { CategoryCode } from '@/types/display'
 import type { ItemResponse } from './items'
+import type { PublicMapDifficultyResponse } from './maps'
 
 export type MissionType =
   | 'PLAY_N_MAPS'
@@ -40,7 +41,7 @@ export interface MissionResponse {
   categoryCode?: CategoryCode
 
   targetMapDifficultyId?: string
-  targetMapSongName?: string
+  targetMap?: PublicMapDifficultyResponse
 
   targetPlayerId?: string
   targetPlayerName?: string

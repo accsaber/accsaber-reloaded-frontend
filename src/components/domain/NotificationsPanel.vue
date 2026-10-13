@@ -14,7 +14,6 @@ defineProps<{
 defineEmits<{
   select: [notification: NotificationResponse]
   markAll: []
-  navigate: []
 }>()
 </script>
 
@@ -38,14 +37,14 @@ defineEmits<{
           <SkeletonLoader variant="text" :lines="2" />
         </div>
       </template>
-      <EmptyState v-else-if="notifications.length === 0" message="You're all caught up. Nothing new here." />
+      <EmptyState v-else-if="notifications.length === 0" message="All caught up" />
       <template v-else>
         <NotificationRow v-for="notification in notifications" :key="notification.id"
           :notification="notification" @select="$emit('select', $event)" />
       </template>
     </div>
 
-    <router-link to="/notifications" class="notifications-panel__footer" @click="$emit('navigate')">
+    <router-link to="/notifications" class="notifications-panel__footer">
       View all notifications
     </router-link>
   </div>

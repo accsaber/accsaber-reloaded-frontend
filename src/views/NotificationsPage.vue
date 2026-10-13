@@ -13,7 +13,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 import type { NotificationResponse } from '@/types/api/notifications'
 import type { Tab } from '@/types/display'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 usePageMeta({
@@ -59,8 +59,8 @@ const canClear = computed(
 
 const emptyMessage = computed(() =>
   filter.value === 'unread'
-    ? 'No unread notifications.'
-    : 'Nothing here yet. Trades, market activity, drops, and announcements will show up as they happen.',
+    ? 'No unread notifications'
+    : 'No notifications',
 )
 
 async function fetchPage() {
@@ -130,9 +130,7 @@ async function confirmClear() {
   else error.value = "Couldn't clear notifications. Try again in a moment."
 }
 
-onMounted(fetchPage)
-
-watch([filter, currentPage, () => authStore.isLoggedIn], fetchPage)
+watch([filter, currentPage, () => authStore.isLoggedIn], fetchPage, { immediate: true })
 </script>
 
 <template>

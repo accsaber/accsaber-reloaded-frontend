@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ApiError, getApiErrorMessage } from '@/api/client'
-import { getDifficulty } from '@/api/maps'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MissionCard from '@/components/domain/MissionCard.vue'
+import { useNow } from '@/composables/useNow'
 import type { MissionPool, MissionResponse } from '@/types/api/missions'
 import {
   BAND_RANK,
@@ -12,19 +12,14 @@ import {
   POOL_LABEL,
   POOL_ORDER,
 } from '@/utils/missions'
-import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue'
+import { computed, nextTick, ref, useId, watch } from 'vue'
 
 const props = defineProps<{
-  active: boolean
   loadActive: () => Promise<MissionResponse[]>
   loadHistory: () => Promise<MissionResponse[]>
   hideTitle?: boolean
   selfView?: boolean
   hideEventPool?: boolean
-}>()
-
-const emit = defineEmits<{
-  navigate: []
 }>()
 
 const uid = useId()
@@ -45,17 +40,7 @@ const loadedHistory = ref(false)
 const activeError = ref<string | null>(null)
 const historyError = ref<string | null>(null)
 
-interface MissionMapLink {
-  mapId: string
-  beatsaverCode: string | null
-  difficulty: string
-  characteristic: string
-}
-
-const mapLinkByDifficulty = ref(new Map<string, MissionMapLink>())
-
-const now = ref(Date.now())
-let nowTimer: number | null = null
+const now = useNow(30_000)
 
 const errorMessage = computed(() => activeError.value ?? historyError.value)
 
@@ -153,38 +138,12 @@ function mergeMissions(list: MissionResponse[]) {
   missionsById.value = next
 }
 
-async function resolveMapIds(missions: MissionResponse[]) {
-  const pending = new Set<string>()
-  for (const m of missions) {
-    const diffId = m.targetMapDifficultyId
-    if (diffId && !mapLinkByDifficulty.value.has(diffId)) pending.add(diffId)
-  }
-  if (pending.size === 0) return
-  const results = await Promise.allSettled(
-    Array.from(pending).map((id) =>
-      getDifficulty(id).then((d) => [id, {
-        mapId: d.mapId,
-        beatsaverCode: d.beatsaverCode,
-        difficulty: d.difficulty,
-        characteristic: d.characteristic,
-      }] as const),
-    ),
-  )
-  const next = new Map(mapLinkByDifficulty.value)
-  for (const r of results) {
-    if (r.status === 'fulfilled') next.set(r.value[0], r.value[1])
-  }
-  mapLinkByDifficulty.value = next
-}
-
 async function runLoadActive() {
   if (loadingActive.value) return
   loadingActive.value = true
   activeError.value = null
   try {
-    const missions = await props.loadActive()
-    mergeMissions(missions)
-    void resolveMapIds(missions)
+    mergeMissions(await props.loadActive())
   } catch (err) {
     if (!isMissionsUnavailable(err)) {
       activeError.value = getApiErrorMessage(err, 'Failed to load missions')
@@ -200,9 +159,7 @@ async function runLoadHistory() {
   loadingHistory.value = true
   historyError.value = null
   try {
-    const missions = await props.loadHistory()
-    mergeMissions(missions)
-    void resolveMapIds(missions)
+    mergeMissions(await props.loadHistory())
   } catch (err) {
     if (!isMissionsUnavailable(err)) {
       historyError.value = getApiErrorMessage(err, 'Failed to load history')
@@ -211,25 +168,6 @@ async function runLoadHistory() {
     loadingHistory.value = false
     loadedHistory.value = true
   }
-}
-
-function startTicker() {
-  if (nowTimer !== null) return
-  now.value = Date.now()
-  nowTimer = window.setInterval(() => {
-    now.value = Date.now()
-  }, 30_000)
-}
-
-function stopTicker() {
-  if (nowTimer !== null) {
-    window.clearInterval(nowTimer)
-    nowTimer = null
-  }
-}
-
-function handleNavigate() {
-  emit('navigate')
 }
 
 function focusTab(value: 'active' | 'history') {
@@ -248,36 +186,8 @@ function onTabKeydown(e: KeyboardEvent) {
   void nextTick(() => focusTab(next))
 }
 
-function onVisibilityChange() {
-  if (document.hidden) {
-    stopTicker()
-  } else if (props.active) {
-    startTicker()
-  }
-}
-
-watch(
-  () => props.active,
-  (value) => {
-    if (value) {
-      if (!document.hidden) startTicker()
-      void runLoadActive()
-      void runLoadHistory()
-    } else {
-      stopTicker()
-    }
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
-  document.addEventListener('visibilitychange', onVisibilityChange)
-})
-
-onUnmounted(() => {
-  stopTicker()
-  document.removeEventListener('visibilitychange', onVisibilityChange)
-})
+void runLoadActive()
+void runLoadHistory()
 </script>
 
 <template>
@@ -320,8 +230,7 @@ onUnmounted(() => {
               </p>
             </div>
           </div>
-          <EmptyState v-if="!hasActive && !showInactiveNotice && !errorMessage" icon="🎆"
-            message="No active missions right now. Check back at the next rollover." />
+          <EmptyState v-if="!hasActive && !showInactiveNotice && !errorMessage" message="No active missions" />
           <div v-else-if="hasActive" class="missions-panel__groups">
             <section v-for="group in grouped" :key="group.pool" class="missions-panel__group">
               <header class="missions-panel__group-head">
@@ -329,9 +238,7 @@ onUnmounted(() => {
                 <span class="missions-panel__group-meta">resets in {{ groupCountdown(group.missions) }}</span>
               </header>
               <div class="missions-panel__stack">
-                <MissionCard v-for="mission in group.missions" :key="mission.id" :mission="mission"
-                  :map-link="mission.targetMapDifficultyId ? mapLinkByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
-                  @navigate="handleNavigate" />
+                <MissionCard v-for="mission in group.missions" :key="mission.id" :mission="mission" />
               </div>
             </section>
           </div>
@@ -344,13 +251,11 @@ onUnmounted(() => {
           <SkeletonLoader variant="card" />
           <SkeletonLoader variant="card" />
         </div>
-        <EmptyState v-else-if="!loadingActive && !loadingHistory && !hasHistory && !errorMessage" icon="🏁"
-          message="Completed missions will show up here." />
+        <EmptyState v-else-if="!loadingActive && !loadingHistory && !hasHistory && !errorMessage"
+          message="No completed missions" />
         <template v-else>
           <div class="missions-panel__stack">
-            <MissionCard v-for="mission in pagedHistory" :key="mission.id" :mission="mission"
-              :map-link="mission.targetMapDifficultyId ? mapLinkByDifficulty.get(mission.targetMapDifficultyId) ?? null : null"
-              @navigate="handleNavigate" />
+            <MissionCard v-for="mission in pagedHistory" :key="mission.id" :mission="mission" />
           </div>
           <div v-if="historyTotalPages > 1" class="missions-panel__pagination">
             <PaginationControls :page="historyPage" :total-pages="historyTotalPages"

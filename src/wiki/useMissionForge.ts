@@ -396,7 +396,9 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       xpReward: input.xp,
       categoryCode: (input.categoryCode ?? undefined) as MissionResponse['categoryCode'],
       targetPlayerName: input.targetPlayerName ?? undefined,
-      targetMapSongName: input.targetMapSongName ?? undefined,
+      targetMap: input.targetMapSongName
+        ? ({ songName: input.targetMapSongName } as PublicMapDifficultyResponse)
+        : undefined,
       targetAcc: input.targetAcc,
       targetAp: input.targetAp,
       targetCount: input.targetCount,
