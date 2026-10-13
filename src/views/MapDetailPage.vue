@@ -210,7 +210,11 @@ watch(() => [route.query.difficultyId, route.query.difficulty, route.query.chara
   if (!isUuid(routeParam.value)) fetchMap()
 })
 
-watch(routeParam, () => fetchMap(), { immediate: true })
+watch(routeParam, (param) => {
+  const current = map.value
+  if (current && (param === current.id || param === current.beatsaverCode)) return
+  void fetchMap()
+}, { immediate: true })
 
 watch(activeDifficultyId, (newId) => {
   if (!newId || !map.value) return
