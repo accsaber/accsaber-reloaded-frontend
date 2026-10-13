@@ -3,6 +3,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
+import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
@@ -14,7 +15,7 @@ import type { Page } from '@/types/pagination'
 import { countryOptionsFor } from '@/utils/countries'
 import { toScoreDisplay, toUserRef, type FlatUserRef } from '@/utils/mappers'
 import { loadStoredCountry, storeCountry } from '@/utils/statsCountry'
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LeaderboardPicker from './stats/LeaderboardPicker.vue'
 import LeaderboardTable from './stats/LeaderboardTable.vue'
@@ -40,14 +41,14 @@ usePageMeta({
 
 type LeaderboardTab = 'streaks' | 'max-ap' | 'avg-ap' | 'most-retried' | 'grinders' | 'dedication' | 'collectors'
 
-const leaderboardOptions: { key: LeaderboardTab; label: string; icon: string; description: string }[] = [
-  { key: 'streaks', label: 'Longest Streaks', icon: 'streak', description: 'Highest 115 streaks' },
-  { key: 'max-ap', label: 'Highest AP', icon: 'star', description: 'Top single-score AP' },
-  { key: 'avg-ap', label: 'Most Worth Maps', icon: 'mountain', description: 'Highest average AP' },
-  { key: 'most-retried', label: 'Most Grinded Maps', icon: 'repeat', description: 'Most superseded scores' },
-  { key: 'grinders', label: 'Top Grinders', icon: 'trending', description: 'Most improvements overall' },
-  { key: 'dedication', label: 'Map Dedication', icon: 'target', description: 'Most improvements on one map' },
-  { key: 'collectors', label: 'Milestone Collectors', icon: 'trophy', description: 'Most milestones earned' },
+const leaderboardOptions: { key: LeaderboardTab; label: string; icon: string }[] = [
+  { key: 'streaks', label: 'Longest Streaks', icon: 'streak' },
+  { key: 'max-ap', label: 'Highest AP', icon: 'star' },
+  { key: 'avg-ap', label: 'Most Worth Maps', icon: 'mountain' },
+  { key: 'most-retried', label: 'Most Grinded Maps', icon: 'repeat' },
+  { key: 'grinders', label: 'Top Grinders', icon: 'trending' },
+  { key: 'dedication', label: 'Map Dedication', icon: 'target' },
+  { key: 'collectors', label: 'Milestone Collectors', icon: 'trophy' },
 ]
 
 const TABS_WITH_CATEGORY = new Set<LeaderboardTab>([
@@ -105,14 +106,13 @@ const countryFilter = computed<string>({
   },
 })
 
-onMounted(() => {
-  if (!route.query.country) {
-    const persisted = loadStoredCountry()
-    if (persisted) {
-      router.replace({ query: { ...route.query, country: persisted } })
-    }
-  }
-})
+const storedCountry = route.query.country ? '' : loadStoredCountry()
+const countryReady = ref(!storedCountry)
+if (storedCountry) {
+  router.replace({ query: { ...route.query, country: storedCountry } }).finally(() => {
+    countryReady.value = true
+  })
+}
 
 const countryOptions = computed(() => countryOptionsFor(authStore.userProfile?.country))
 
@@ -201,44 +201,52 @@ function openScoreDetail(scoreId: string) {
   detailOpen.value = true
 }
 
-function addRank(item: Record<string, unknown>, index: number) {
-  const player = item.userId ? toUserRef(item as unknown as FlatUserRef) : undefined
-  const cdnCover = item.cdnCoverUrl as string | null | undefined
-  const upstreamCover = item.coverUrl as string | null | undefined
-  const resolvedCover = cdnCover ?? upstreamCover ?? ''
-  const fallbackCover = cdnCover && upstreamCover && cdnCover !== upstreamCover ? upstreamCover : null
-  return {
-    ...item,
-    player,
-    coverUrl: resolvedCover,
-    coverFallbackUrl: fallbackCover,
-    rank: pageData.value!.number * pageData.value!.size + index + 1,
-  }
-}
-
 const rows = computed<Record<string, unknown>[]>(() => {
-  if (!pageData.value) return []
-  return pageData.value.content.map((item, i) => addRank(item as Record<string, unknown>, i))
+  const page = pageData.value
+  if (!page) return []
+  const offset = page.number * page.size
+  return page.content.map((raw, index) => {
+    const item = raw as Record<string, unknown>
+    return {
+      ...item,
+      player: item.userId ? toUserRef(item as unknown as FlatUserRef) : undefined,
+      coverUrl: pickCoverUrl(item),
+      coverFallbackUrl: pickCoverFallback(item),
+      rank: offset + index + 1,
+    }
+  })
 })
 
 const hasSupersededRows = computed(() => isScoreTab.value && rows.value.some((r) => r.active === false))
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalElements = computed(() => pageData.value?.totalElements ?? 0)
 
+const leaderboardRequest = computed(() => {
+  if (activeSection.value !== 'leaderboards' || !countryReady.value) return null
+  const needsCategory = TABS_WITH_CATEGORY.has(activeTab.value) && activeCategory.value !== 'overall'
+  const categoryId = needsCategory ? categoryStore.getCategoryId(activeCategory.value) : undefined
+  if (needsCategory && !categoryId) return null
+  return {
+    tab: activeTab.value,
+    categoryId,
+    country: countryFilter.value || undefined,
+    params: paginationParams.value,
+  }
+})
+
 let lbRequestId = 0
 
 async function fetchLeaderboardData() {
+  const request = leaderboardRequest.value
+  if (!request) return
+  const { tab, categoryId, country, params } = request
   const requestId = ++lbRequestId
   loading.value = true
   try {
-    const categoryId = TABS_WITH_CATEGORY.has(activeTab.value) && activeCategory.value !== 'overall'
-      ? categoryStore.getCategoryId(activeCategory.value) : undefined
-    const country = countryFilter.value || undefined
-    const params = paginationParams.value
     const api = await import('@/api/statistics')
     let result: Page<unknown>
 
-    switch (activeTab.value) {
+    switch (tab) {
       case 'streaks': result = await api.getStreakLeaderboard(params, categoryId, country); break
       case 'max-ap': result = await api.getMaxApLeaderboard(params, categoryId, country); break
       case 'avg-ap': result = await api.getHighestAvgApMaps(params, categoryId, undefined, country); break
@@ -250,35 +258,25 @@ async function fetchLeaderboardData() {
     }
 
     if (requestId !== lbRequestId) return
-    if (isScoreTab.value) scoreResponses.value = result.content as ScoreResponse[]
+    if (tab === 'streaks' || tab === 'max-ap') scoreResponses.value = result.content as ScoreResponse[]
     pageData.value = result
-  } catch (error) {
+  } catch {
     if (requestId !== lbRequestId) return
-    console.error('Failed to fetch leaderboard:', error)
     pageData.value = null
   }
   loading.value = false
 }
 
-watch(
-  [activeTab, activeCategory, countryFilter, paginationParams],
-  () => { if (activeSection.value === 'leaderboards') fetchLeaderboardData() },
-  { immediate: true },
-)
-watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
-  if (loaded && !wasLoaded && activeSection.value === 'leaderboards') fetchLeaderboardData()
-})
+watch(() => JSON.stringify(leaderboardRequest.value), fetchLeaderboardData, { immediate: true })
 </script>
 
 <template>
   <div class="stats" :style="{ '--page-accent': accent }">
     <header class="stats__header">
-      <div class="stats__header-content">
-        <h1 class="stats__title">{{ sectionTitle }}</h1>
-        <p v-if="activeSection === 'leaderboards' && totalElements > 0" class="stats__subtitle">
-          {{ totalElements.toLocaleString() }} records
-        </p>
-      </div>
+      <h1 class="stats__title">{{ sectionTitle }}</h1>
+      <p v-if="activeSection === 'leaderboards' && totalElements > 0" class="stats__subtitle">
+        {{ totalElements.toLocaleString() }} records
+      </p>
     </header>
 
     <SectionToggle v-model="activeSection" />
@@ -341,10 +339,6 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
   padding: var(--space-2xl) 0 var(--space-lg);
 }
 
-.stats__header-content {
-  position: relative;
-}
-
 .stats__title {
   font-size: var(--text-page-title);
   font-weight: 700;
@@ -377,7 +371,7 @@ watch(() => categoryStore.loaded, (loaded, wasLoaded) => {
   align-items: flex-start;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   background: var(--bg-elevated);
   color: var(--text-secondary);
   font-size: 0.75rem;

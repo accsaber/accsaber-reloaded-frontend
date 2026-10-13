@@ -7,6 +7,7 @@ import type { MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { TIME_RANGE_PARAMS } from '@/utils/constants'
 import { countryName } from '@/utils/countries'
 import { onMounted, ref } from 'vue'
+import { toChartPoints } from './statsFormat'
 
 defineProps<{ accent: string }>()
 
@@ -32,18 +33,15 @@ const hmdData = ref<DistributionEntryResponse[]>([])
 const countryData = ref<DistributionEntryResponse[]>([])
 const categoryData = ref<DistributionEntryResponse[]>([])
 const distributionsLoaded = ref(false)
-const chartCache = ref<Record<string, TimeSeriesPointResponse[]>>({})
+const chartCache: Record<string, TimeSeriesPointResponse[]> = {}
 
 let chartRequestId = 0
 
-function toChartPoints(data: TimeSeriesPointResponse[]): TimeSeriesPoint[] {
-  return data.map((d) => ({ timestamp: new Date(d.date).getTime(), value: d.value }))
-}
-
 async function fetchChart(metric: MetricType, range: TimeRange) {
   const key = `${metric}:${range}`
-  if (chartCache.value[key]) {
-    growthChartData.value = toChartPoints(chartCache.value[key])
+  const cached = chartCache[key]
+  if (cached) {
+    growthChartData.value = toChartPoints(cached)
     growthLoading.value = false
     return
   }
@@ -56,11 +54,10 @@ async function fetchChart(metric: MetricType, range: TimeRange) {
     if (!endpoint) { growthChartData.value = []; return }
     const data = await api[endpoint](TIME_RANGE_PARAMS[range])
     if (requestId !== chartRequestId) return
-    chartCache.value[key] = data
+    chartCache[key] = data
     growthChartData.value = toChartPoints(data)
-  } catch (error) {
+  } catch {
     if (requestId !== chartRequestId) return
-    console.error('Failed to fetch chart:', error)
     growthChartData.value = []
   }
   growthLoading.value = false
@@ -77,8 +74,8 @@ async function fetchDistributions() {
     countryData.value = country.map((c) => ({ ...c, label: countryName(c.label) }))
     categoryData.value = category
     distributionsLoaded.value = true
-  } catch (error) {
-    console.error('Failed to fetch distributions:', error)
+  } catch {
+    return
   }
 }
 

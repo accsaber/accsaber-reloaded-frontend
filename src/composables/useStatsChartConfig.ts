@@ -1,4 +1,5 @@
 import type { MetricType, TimeRange } from '@/types/display'
+import { TIME_RANGE_PARAMS } from '@/utils/constants'
 import { ref, watch } from 'vue'
 
 const METRICS_KEY = 'profile:stats:metrics'
@@ -16,18 +17,8 @@ export const STATS_CHART_METRICS: {
   { key: 'rank', label: 'Rank', colorVar: '--tier-gold', invertY: true },
 ]
 
-export const STATS_CHART_RANGE_PARAMS: Record<TimeRange, { amount: number; unit: 'h' | 'd' | 'mo' }> = {
-  '24h': { amount: 24, unit: 'h' },
-  '7d': { amount: 7, unit: 'd' },
-  '14d': { amount: 14, unit: 'd' },
-  '30d': { amount: 30, unit: 'd' },
-  '90d': { amount: 90, unit: 'd' },
-  '1y': { amount: 12, unit: 'mo' },
-  'all': { amount: 120, unit: 'mo' },
-}
-
 const METRIC_KEYS = STATS_CHART_METRICS.map((m) => m.key)
-const RANGE_KEYS = Object.keys(STATS_CHART_RANGE_PARAMS) as TimeRange[]
+const RANGE_KEYS = Object.keys(TIME_RANGE_PARAMS) as TimeRange[]
 
 function readStored<T>(key: string, parse: (raw: unknown) => T | null, fallback: T): T {
   try {
@@ -79,15 +70,10 @@ function toggleMetric(metric: MetricType): void {
   selectedMetrics.value = METRIC_KEYS.filter((k) => active.has(k))
 }
 
-/**
- * One remembered chart configuration shared by every mount point. State lives at
- * module scope so simultaneously mounted charts stay in sync live, not just on
- * the next mount.
- */
 export function useStatsChartConfig() {
   return {
     availableMetrics: STATS_CHART_METRICS,
-    rangeParams: STATS_CHART_RANGE_PARAMS,
+    rangeParams: TIME_RANGE_PARAMS,
     selectedMetrics,
     selectedRange,
     toggleMetric,

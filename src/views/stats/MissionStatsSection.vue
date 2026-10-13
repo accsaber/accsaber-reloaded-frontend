@@ -6,22 +6,14 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import DistributionRanking from '@/components/domain/DistributionRanking.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { STATS_CHART_RANGE_PARAMS } from '@/composables/useStatsChartConfig'
-import { useStatsQueryState } from '@/composables/useStatsQueryState'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useCategoryStore } from '@/stores/categories'
 import type { MissionBand, MissionPool, MissionType } from '@/types/api/missions'
-import type {
-  DistributionEntryResponse,
-  MissionStatsParams,
-  MissionTier,
-  TimeSeriesPointResponse,
-} from '@/types/api/statistics'
+import type { DistributionEntryResponse, MissionStatsParams, MissionTier } from '@/types/api/statistics'
 import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
-import { toUserRef, type FlatUserRef } from '@/utils/mappers'
-import type { Page, PaginationParams } from '@/types/pagination'
-import { computed, ref, watch } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
-import { useRouter } from 'vue-router'
+import { TIME_RANGE_PARAMS } from '@/utils/constants'
+import { storeCountry } from '@/utils/statsCountry'
+import { computed, ref, watch, type WritableComputedRef } from 'vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
 import MissionCalibrationDetail from './MissionCalibrationDetail.vue'
 import StatsFilterChips from './StatsFilterChips.vue'
@@ -33,10 +25,13 @@ import {
   fmtDecimal,
   fmtFraction,
   fmtInt,
+  fmtPercentPoint,
   labelCase,
   plural,
   rateClass,
+  toChartPoints,
 } from './statsFormat'
+import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
 
 defineProps<{
   accent: string
@@ -45,17 +40,9 @@ defineProps<{
 
 type MissionBoard = 'calibration' | 'xp' | 'trends' | 'most-completed' | 'most-mission-xp'
 type MissionFilterKey = 'pool' | 'type' | 'band' | 'category' | 'tier' | 'skillRange' | 'minAssigned' | 'range'
-type StatsApi = typeof import('@/api/statistics')
 
-interface MissionBoardDef {
-  key: MissionBoard
-  label: string
-  icon: string
-  description: string
-  columns: TableColumn[]
+interface MissionBoardDef extends StatsBoardDef<MissionBoard, MissionStatsParams> {
   filters: MissionFilterKey[]
-  players?: boolean
-  fetch?: (api: StatsApi, params: PaginationParams, filters: MissionStatsParams) => Promise<Page<unknown>>
 }
 
 const POOLS: MissionPool[] = ['daily', 'weekly', 'event', 'community']
@@ -76,7 +63,6 @@ const BOARDS: MissionBoardDef[] = [
     key: 'calibration',
     label: 'Calibration',
     icon: 'gauge',
-    description: 'Handed out vs finished',
     filters: ['pool', 'type', 'band', 'category', 'tier', 'skillRange', 'minAssigned'],
     columns: [
       templateCol,
@@ -93,7 +79,6 @@ const BOARDS: MissionBoardDef[] = [
     key: 'xp',
     label: 'XP Payouts',
     icon: 'gem',
-    description: 'What each mission pays',
     filters: ['pool', 'type', 'band', 'category', 'tier', 'skillRange'],
     columns: [
       templateCol,
@@ -111,7 +96,6 @@ const BOARDS: MissionBoardDef[] = [
     key: 'trends',
     label: 'Trends',
     icon: 'trending',
-    description: 'Completion over time',
     filters: ['pool', 'type', 'band', 'tier', 'range'],
     columns: [],
   },
@@ -119,7 +103,6 @@ const BOARDS: MissionBoardDef[] = [
     key: 'most-completed',
     label: 'Most Completed',
     icon: 'trophy',
-    description: 'Top mission finishers',
     filters: ['pool', 'type', 'tier'],
     players: true,
     columns: [
@@ -133,7 +116,6 @@ const BOARDS: MissionBoardDef[] = [
     key: 'most-mission-xp',
     label: 'Most Mission XP',
     icon: 'star',
-    description: 'Lifetime mission XP',
     filters: [],
     players: true,
     columns: [
@@ -145,48 +127,78 @@ const BOARDS: MissionBoardDef[] = [
   },
 ]
 
-const BOARD_MAP = new Map<MissionBoard, MissionBoardDef>(BOARDS.map((b) => [b.key, b]))
-const pickerOptions = BOARDS.map((b) => ({ key: b.key, label: b.label, icon: b.icon, description: b.description }))
-
-const RANGE_KEYS = Object.keys(STATS_CHART_RANGE_PARAMS) as TimeRange[]
-
-const router = useRouter()
 const categoryStore = useCategoryStore()
-const { currentPage, param, multiParam, numberParam, patch, setParam, toggleMulti, setPage } = useStatsQueryState()
+const { setQuery, queryRef, queryListRef } = useQueryParams()
 
-const activeBoard = computed<MissionBoard>(() => {
-  const board = param('board') as MissionBoard
-  return BOARD_MAP.has(board) ? board : 'calibration'
-})
-const boardDef = computed(() => BOARD_MAP.get(activeBoard.value) as MissionBoardDef)
+const poolFilter = queryListRef<MissionPool>('pool')
+const bandFilter = queryListRef<MissionBand>('band')
+const tierFilter = queryListRef<MissionTier>('tier')
+const typeFilter = queryRef<MissionType>('type')
+const categoryFilter = queryRef('category')
+const countryFilter = queryRef('country')
+const openTemplate = queryRef('template')
+const skillModeParam = queryRef('skillMode')
+const skillMinParam = queryRef('skillMin')
+const skillMaxParam = queryRef('skillMax')
+const minAssignedParam = queryRef('minAssigned')
+const rangeParam = queryRef<TimeRange>('range')
+const metricParam = queryRef<MetricType>('metric')
+
+function toNumber(raw: string): number | undefined {
+  const value = Number(raw)
+  return raw && Number.isFinite(value) ? value : undefined
+}
+
+const skillMode = computed<'tier' | 'range'>(() => (skillModeParam.value === 'range' ? 'range' : 'tier'))
+const skillMin = computed(() => toNumber(skillMinParam.value))
+const skillMax = computed(() => toNumber(skillMaxParam.value))
+const minAssigned = computed(() => toNumber(minAssignedParam.value) ?? 1)
+
+function boardFilters(def: MissionBoardDef): MissionStatsParams {
+  const has = (filter: MissionFilterKey) => def.filters.includes(filter)
+  const useTiers = skillMode.value === 'tier'
+  return {
+    pool: has('pool') ? poolFilter.value : undefined,
+    type: has('type') && typeFilter.value ? [typeFilter.value] : undefined,
+    band: has('band') ? bandFilter.value : undefined,
+    categoryId: has('category') && categoryFilter.value ? [categoryFilter.value] : undefined,
+    tier: has('tier') && useTiers ? tierFilter.value : undefined,
+    skillMin: has('skillRange') && !useTiers ? skillMin.value : undefined,
+    skillMax: has('skillRange') && !useTiers ? skillMax.value : undefined,
+    country: countryFilter.value || undefined,
+    minAssigned: has('minAssigned') ? minAssigned.value : undefined,
+  }
+}
+
+const {
+  activeBoard, boardDef, pickerOptions, selectBoard, rowTo, pushPlayer,
+  currentPage, setPage, loading, rows, totalPages, totalElements,
+} = useStatsBoard(BOARDS, { size: 20, filters: boardFilters })
+
 const shows = (filter: MissionFilterKey) => boardDef.value.filters.includes(filter)
+const filters = computed(() => boardFilters(boardDef.value))
 
-const poolFilter = computed(() => multiParam('pool'))
-const bandFilter = computed(() => multiParam('band'))
-const tierFilter = computed(() => multiParam('tier'))
-const typeFilter = computed(() => param('type'))
-const categoryFilter = computed(() => param('category'))
-const countryFilter = computed(() => param('country'))
-const openTemplate = computed(() => param('template'))
-const skillMode = computed<'tier' | 'range'>(() => (param('skillMode') === 'range' ? 'range' : 'tier'))
-const skillMin = computed(() => numberParam('skillMin'))
-const skillMax = computed(() => numberParam('skillMax'))
-const minAssigned = computed(() => numberParam('minAssigned') ?? 1)
+const detailFilters = computed<MissionStatsParams>(() => ({
+  pool: poolFilter.value,
+  band: bandFilter.value,
+  categoryId: categoryFilter.value ? [categoryFilter.value] : undefined,
+  tier: skillMode.value === 'tier' ? tierFilter.value : undefined,
+  skillMin: skillMode.value === 'range' ? skillMin.value : undefined,
+  skillMax: skillMode.value === 'range' ? skillMax.value : undefined,
+  country: countryFilter.value || undefined,
+}))
 
-const chartRange = computed<TimeRange>(() => {
-  const range = param('range') as TimeRange
-  return RANGE_KEYS.includes(range) ? range : '30d'
-})
+const chartRange = computed<TimeRange>(() => (rangeParam.value in TIME_RANGE_PARAMS ? rangeParam.value as TimeRange : '30d'))
 
 const categoryOptions = computed(() => [
   { value: '', label: 'All Categories' },
   ...categoryStore.categories.map((c) => ({ value: c.id, label: c.name })),
 ])
 
-const typeOptions = computed(() => [
+const typeOptions = [
   { value: '', label: 'All Types' },
   ...MISSION_TYPES.map((t) => ({ value: t, label: labelCase(t) })),
-])
+]
 
 const poolChips = POOLS.map((p) => ({ key: p, label: labelCase(p) }))
 const bandChips = BANDS.map((b) => ({ key: b, label: labelCase(b) }))
@@ -196,44 +208,20 @@ const tierChips = MISSION_TIER_ORDER.map((t) => ({
   hint: MISSION_TIER_HINTS[t],
 }))
 
-/**
- * Only the filters the active board's endpoint accepts are sent. The skill
- * range and the tier chips both cut on the same threshold, so exactly one of
- * them is offered at a time and only that one reaches the request.
- */
-const filters = computed<MissionStatsParams>(() => {
-  const def = boardDef.value
-  const useTiers = skillMode.value === 'tier'
-  return {
-    pool: def.filters.includes('pool') ? (poolFilter.value as MissionPool[]) : undefined,
-    type: def.filters.includes('type') && typeFilter.value ? [typeFilter.value as MissionType] : undefined,
-    band: def.filters.includes('band') ? (bandFilter.value as MissionBand[]) : undefined,
-    categoryId: def.filters.includes('category') && categoryFilter.value ? [categoryFilter.value] : undefined,
-    tier: def.filters.includes('tier') && useTiers ? (tierFilter.value as MissionTier[]) : undefined,
-    skillMin: def.filters.includes('skillRange') && !useTiers ? skillMin.value : undefined,
-    skillMax: def.filters.includes('skillRange') && !useTiers ? skillMax.value : undefined,
-    country: countryFilter.value || undefined,
-    minAssigned: def.filters.includes('minAssigned') ? minAssigned.value : undefined,
-  }
-})
+function setCountry(country: string) {
+  storeCountry(country)
+  countryFilter.value = country
+}
 
-/** The by-tier and shortfall endpoints take no pool-independent extras of their own. */
-const detailFilters = computed<MissionStatsParams>(() => ({
-  pool: poolFilter.value as MissionPool[],
-  band: bandFilter.value as MissionBand[],
-  categoryId: categoryFilter.value ? [categoryFilter.value] : undefined,
-  tier: skillMode.value === 'tier' ? (tierFilter.value as MissionTier[]) : undefined,
-  skillMin: skillMode.value === 'range' ? skillMin.value : undefined,
-  skillMax: skillMode.value === 'range' ? skillMax.value : undefined,
-  country: countryFilter.value || undefined,
-}))
+const chipLists = { pool: poolFilter, band: bandFilter, tier: tierFilter } as Record<string, WritableComputedRef<string[]>>
 
-function selectBoard(board: MissionBoard) {
-  patch({ board: board === 'calibration' ? undefined : board, template: undefined })
+function toggleChip(key: 'pool' | 'band' | 'tier', value: string) {
+  const list = chipLists[key]!
+  list.value = list.value.includes(value) ? list.value.filter((v) => v !== value) : [...list.value, value]
 }
 
 function setSkillMode(mode: 'tier' | 'range') {
-  patch({
+  setQuery({
     skillMode: mode === 'tier' ? undefined : mode,
     tier: undefined,
     skillMin: undefined,
@@ -241,105 +229,30 @@ function setSkillMode(mode: 'tier' | 'range') {
   })
 }
 
-function setNumberParam(key: string, raw: string) {
-  patch({ [key]: raw.trim() || undefined })
-}
-
-function playerRoute(row: Record<string, unknown>): RouteLocationRaw | undefined {
-  const userId = row.userId as string | undefined
-  return userId ? { name: 'player-profile', params: { userId } } : undefined
-}
-
-const rowTo = computed(() => (boardDef.value.players ? playerRoute : undefined))
-
-function onRowClick(row: Record<string, unknown>) {
-  const target = playerRoute(row)
-  if (boardDef.value.players) {
-    if (target) router.push(target)
-    return
-  }
+function onRowClick(row: StatsRow) {
+  if (pushPlayer(row)) return
   const templateId = row.templateId as string | undefined
-  if (templateId) patch({ template: templateId }, true)
+  if (templateId) setQuery({ template: templateId }, { keepPage: true })
 }
 
-const loading = ref(false)
-const pageData = ref<Page<unknown> | null>(null)
-const pageBoard = ref<MissionBoard | null>(null)
-
-const currentPageData = computed(() => (pageBoard.value === activeBoard.value ? pageData.value : null))
-
-const totalPages = computed(() => currentPageData.value?.totalPages ?? 0)
-const totalElements = computed(() => currentPageData.value?.totalElements ?? 0)
-
-const rows = computed<Record<string, unknown>[]>(() => {
-  if (!currentPageData.value) return []
-  const offset = currentPageData.value.number * currentPageData.value.size
-  return currentPageData.value.content.map((raw, index) => {
-    const item = raw as Record<string, unknown>
-    return {
-      ...item,
-      rank: offset + index + 1,
-      player: toUserRef(item as unknown as FlatUserRef),
-    }
-  })
-})
-
-/**
- * Expired missions have only been retained since this release, so the rate
- * columns read thin at first. Say so instead of letting it look like a bug.
- */
 const stillAccruing = computed(() => {
   if (activeBoard.value !== 'calibration' || !rows.value.length) return false
   return rows.value.every((row) => Number(row.expired ?? 0) === 0)
 })
-
-let requestId = 0
-
-async function fetchBoard() {
-  const def = boardDef.value
-  if (!def.fetch) return
-  const id = ++requestId
-  loading.value = true
-  try {
-    const params: PaginationParams = { page: currentPage.value - 1, size: 20 }
-    const api = await import('@/api/statistics')
-    const result = await def.fetch(api, params, filters.value)
-    if (id !== requestId) return
-    pageData.value = result
-    pageBoard.value = def.key
-  } catch (error) {
-    if (id !== requestId) return
-    console.error('Failed to fetch mission stats:', error)
-    pageData.value = null
-    pageBoard.value = def.key
-  }
-  loading.value = false
-}
 
 const TREND_METRICS: { key: MetricType; label: string }[] = [
   { key: 'missionCompletionRate', label: 'Completion Rate' },
   { key: 'missionCompletions', label: 'Missions Completed' },
 ]
 
-const chartMetric = computed<MetricType>(() => {
-  const metric = param('metric') as MetricType
-  return TREND_METRICS.some((m) => m.key === metric) ? metric : 'missionCompletionRate'
-})
+const chartMetric = computed<MetricType>(() =>
+  (TREND_METRICS.some((m) => m.key === metricParam.value) ? metricParam.value as MetricType : 'missionCompletionRate'))
 
 const isRateMetric = computed(() => chartMetric.value === 'missionCompletionRate')
 
 const chartLoading = ref(false)
 const chartPoints = ref<TimeSeriesPoint[]>([])
 const byType = ref<DistributionEntryResponse[]>([])
-
-function toChartPoints(data: TimeSeriesPointResponse[]): TimeSeriesPoint[] {
-  return data.map((d) => ({ timestamp: new Date(d.date).getTime(), value: d.value }))
-}
-
-/** The completion-rate endpoint returns whole percentages, not a 0..1 fraction. */
-function formatRatePoint(value: number): string {
-  return value.toFixed(1) + '%'
-}
 
 let chartRequestId = 0
 
@@ -348,7 +261,7 @@ async function fetchTrends() {
   chartLoading.value = true
   try {
     const api = await import('@/api/statistics')
-    const range = STATS_CHART_RANGE_PARAMS[chartRange.value]
+    const range = TIME_RANGE_PARAMS[chartRange.value]
     const scope = filters.value
     const series = isRateMetric.value
       ? api.getMissionCompletionRate(range, scope)
@@ -362,9 +275,8 @@ async function fetchTrends() {
     if (id !== chartRequestId) return
     chartPoints.value = toChartPoints(points)
     byType.value = types.map((entry) => ({ ...entry, label: labelCase(entry.label) }))
-  } catch (error) {
+  } catch {
     if (id !== chartRequestId) return
-    console.error('Failed to fetch mission trends:', error)
     chartPoints.value = []
     byType.value = []
   }
@@ -372,15 +284,11 @@ async function fetchTrends() {
 }
 
 watch(
-  [activeBoard, filters, currentPage, chartRange, chartMetric],
-  () => {
-    if (activeBoard.value === 'trends') {
-      fetchTrends()
-    } else {
-      fetchBoard()
-    }
-  },
-  { immediate: true, deep: true },
+  () => activeBoard.value === 'trends'
+    ? JSON.stringify([filters.value, chartRange.value, chartMetric.value])
+    : null,
+  (key) => { if (key) fetchTrends() },
+  { immediate: true },
 )
 </script>
 
@@ -389,23 +297,23 @@ watch(
     <div class="mission-stats__filters">
       <div class="mission-stats__row">
         <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
-          @update:model-value="setParam('country', $event)" />
+          @update:model-value="setCountry" />
         <BaseSelect v-if="shows('type')" :model-value="typeFilter" :options="typeOptions" placeholder="All Types"
-          searchable @update:model-value="setParam('type', $event)" />
+          searchable @update:model-value="typeFilter = $event as MissionType" />
         <BaseSelect v-if="shows('category')" :model-value="categoryFilter" :options="categoryOptions"
-          placeholder="All Categories" @update:model-value="setParam('category', $event)" />
+          placeholder="All Categories" @update:model-value="categoryFilter = $event" />
         <label v-if="shows('minAssigned')" class="mission-stats__number">
           <span>Min assigned</span>
           <input type="number" min="1" inputmode="numeric" :value="minAssigned"
-            @change="setNumberParam('minAssigned', ($event.target as HTMLInputElement).value)" />
+            @change="minAssignedParam = ($event.target as HTMLInputElement).value.trim()" />
         </label>
       </div>
 
       <StatsFilterChips v-if="shows('pool')" label="Pool" :options="poolChips" :selected="poolFilter"
-        empty-label="All pools" @toggle="toggleMulti('pool', $event)" @clear="patch({ pool: undefined })" />
+        empty-label="All pools" @toggle="toggleChip('pool', $event)" @clear="poolFilter = []" />
 
       <StatsFilterChips v-if="shows('band')" label="Band" :options="bandChips" :selected="bandFilter"
-        empty-label="All bands" @toggle="toggleMulti('band', $event)" @clear="patch({ band: undefined })" />
+        empty-label="All bands" @toggle="toggleChip('band', $event)" @clear="bandFilter = []" />
 
       <div v-if="shows('tier')" class="mission-stats__skill">
         <div v-if="shows('skillRange')" class="mission-stats__mode">
@@ -420,42 +328,41 @@ watch(
         </div>
 
         <StatsFilterChips v-if="skillMode === 'tier'" label="Tier" :options="tierChips" :selected="tierFilter"
-          empty-label="All tiers" @toggle="toggleMulti('tier', $event)" @clear="patch({ tier: undefined })" />
+          empty-label="All tiers" @toggle="toggleChip('tier', $event)" @clear="tierFilter = []" />
 
         <div v-else class="mission-stats__range">
           <label class="mission-stats__number">
             <span>Skill min</span>
             <input type="number" inputmode="numeric" :value="skillMin ?? ''"
-              @change="setNumberParam('skillMin', ($event.target as HTMLInputElement).value)" />
+              @change="skillMinParam = ($event.target as HTMLInputElement).value.trim()" />
           </label>
           <label class="mission-stats__number">
             <span>Skill max</span>
             <input type="number" inputmode="numeric" :value="skillMax ?? ''"
-              @change="setNumberParam('skillMax', ($event.target as HTMLInputElement).value)" />
+              @change="skillMaxParam = ($event.target as HTMLInputElement).value.trim()" />
           </label>
         </div>
       </div>
     </div>
 
     <LeaderboardPicker :model-value="activeBoard" :options="pickerOptions"
-      @update:model-value="selectBoard($event as MissionBoard)" />
+      @update:model-value="selectBoard($event, { template: undefined })" />
 
     <template v-if="activeBoard === 'trends'">
       <div class="mission-stats__chart">
         <TimeSeriesChart :data="chartPoints" :accent-color="accent" :available-metrics="TREND_METRICS"
           :selected-metric="chartMetric" :selected-range="chartRange"
           :metric-label="isRateMetric ? 'Completion Rate' : 'Missions Completed'"
-          :format-value="isRateMetric ? formatRatePoint : undefined"
+          :format-value="isRateMetric ? fmtPercentPoint : undefined"
           empty-message="Nothing recorded in this range yet."
-          @update:selected-metric="setParam('metric', $event)"
-          @update:selected-range="setParam('range', $event)" />
+          @update:selected-metric="metricParam = $event"
+          @update:selected-range="rangeParam = $event" />
         <div v-if="chartLoading" class="mission-stats__chart-skeleton">
           <SkeletonLoader variant="card" height="300px" />
         </div>
       </div>
 
       <DistributionRanking title="Completions by Type" :entries="byType" :accent-color="accent" :max-entries="10" />
-
     </template>
 
     <template v-else>
@@ -503,10 +410,7 @@ watch(
         </template>
 
         <template #cell-progressed="{ row }">
-          <span v-if="row.progressed == null" class="mission-stats__dim"
-            title="One-shot mission: it banks no partial progress, so there is nothing to count.">
-            {{ NO_VALUE }}
-          </span>
+          <span v-if="row.progressed == null" class="mission-stats__dim">{{ NO_VALUE }}</span>
           <span v-else>{{ fmtInt(row.progressed) }}</span>
         </template>
 
@@ -518,11 +422,7 @@ watch(
         <template #cell-averageXp="{ value }">{{ fmtDecimal(value) }}</template>
         <template #cell-medianXp="{ value }">{{ fmtDecimal(value) }}</template>
         <template #cell-p90Xp="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-shareOfMissionXp="{ value }">
-          <span title="Share of mission XP within the current filters, not of all mission XP ever.">
-            {{ fmtFraction(value) }}
-          </span>
-        </template>
+        <template #cell-shareOfMissionXp="{ value }">{{ fmtFraction(value) }}</template>
         <template #cell-missionsCompleted="{ value }">
           <span class="mission-stats__strong">{{ fmtInt(value) }}</span>
         </template>
@@ -532,7 +432,7 @@ watch(
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
 
       <MissionCalibrationDetail v-if="openTemplate && activeBoard === 'calibration'" :template-id="openTemplate"
-        :filters="detailFilters" @close="patch({ template: undefined }, true)" />
+        :filters="detailFilters" @close="setQuery({ template: undefined }, { keepPage: true })" />
     </template>
   </div>
 </template>
@@ -738,13 +638,6 @@ watch(
   background: currentColor;
 }
 
-.rate--critical { color: var(--error); }
-.rate--low { color: var(--xp-score); }
-.rate--mid { color: var(--warning); }
-.rate--high { color: var(--tier-platinum); }
-.rate--top { color: var(--success); }
-.rate--none { color: var(--text-tertiary); }
-
 @media (max-width: 767px) {
   .mission-stats__row {
     flex-direction: column;
@@ -757,3 +650,5 @@ watch(
   }
 }
 </style>
+
+<style scoped src="./statsRates.css"></style>

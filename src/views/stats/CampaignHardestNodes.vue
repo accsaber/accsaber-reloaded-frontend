@@ -6,6 +6,7 @@ import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback
 import type { CampaignNodeDifficultyResponse } from '@/types/api/statistics'
 import { formatUserValue, requirementLabel } from '@/utils/campaignLayout'
 import { computed, ref, watch } from 'vue'
+import StatsCloseButton from './StatsCloseButton.vue'
 import { fmtDecimal, fmtFraction, fmtInt, rateClass } from './statsFormat'
 
 const props = defineProps<{
@@ -38,9 +39,8 @@ async function fetchNodes(campaignId: string, country: string) {
     const result = await getCampaignHardestNodes(campaignId, country || undefined)
     if (id !== requestId) return
     nodes.value = result
-  } catch (error) {
+  } catch {
     if (id !== requestId) return
-    console.error('Failed to fetch campaign nodes:', error)
     nodes.value = []
     failed.value = true
   }
@@ -60,13 +60,7 @@ watch(
       <div>
         <h3 class="nodes__title">{{ campaignName || 'Campaign' }}</h3>
       </div>
-      <button type="button" class="nodes__close" aria-label="Close campaign nodes" @click="emit('close')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+      <StatsCloseButton label="Close campaign nodes" @click="emit('close')" />
     </header>
 
     <div v-if="loading" class="nodes__list">
@@ -158,23 +152,6 @@ watch(
   font-size: var(--text-card-title);
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.nodes__close {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: var(--space-xs);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.nodes__close:hover {
-  color: var(--text-primary);
-  border-color: var(--bg-overlay);
 }
 
 .nodes__empty {
@@ -333,13 +310,6 @@ watch(
   background: currentColor;
 }
 
-.rate--critical { color: var(--error); }
-.rate--low { color: var(--xp-score); }
-.rate--mid { color: var(--warning); }
-.rate--high { color: var(--tier-platinum); }
-.rate--top { color: var(--success); }
-.rate--none { color: var(--text-tertiary); }
-
 @media (max-width: 900px) {
   .node {
     grid-template-columns: 44px minmax(0, 1fr);
@@ -362,3 +332,5 @@ watch(
   }
 }
 </style>
+
+<style scoped src="./statsRates.css"></style>

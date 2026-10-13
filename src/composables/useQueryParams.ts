@@ -7,13 +7,13 @@ export function useQueryParams() {
   const route = useRoute()
   const router = useRouter()
 
-  function setQuery(patch: Record<string, QueryValue>) {
+  function setQuery(patch: Record<string, QueryValue>, { keepPage = false } = {}) {
     const query = { ...route.query }
     for (const [key, value] of Object.entries(patch)) {
       if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) delete query[key]
       else query[key] = value
     }
-    delete query.page
+    if (!keepPage) delete query.page
     router.replace({ query })
   }
 

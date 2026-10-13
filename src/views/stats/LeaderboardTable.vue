@@ -262,7 +262,6 @@ function pushRow(row: Record<string, unknown>) {
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
@@ -272,7 +271,7 @@ function pushRow(row: Record<string, unknown>) {
 }
 
 .stats-card:hover {
-  border-left-color: var(--page-accent);
+  border-color: var(--page-accent);
 }
 
 .stats-card__rank {

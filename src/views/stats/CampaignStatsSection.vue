@@ -6,23 +6,17 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { STATS_CHART_RANGE_PARAMS } from '@/composables/useStatsChartConfig'
-import { useStatsQueryState } from '@/composables/useStatsQueryState'
-import type {
-  CampaignStatsParams,
-  CampaignStatsStatus,
-  TimeSeriesPointResponse,
-} from '@/types/api/statistics'
+import { useQueryParams } from '@/composables/useQueryParams'
+import type { CampaignStatsParams, CampaignStatsStatus } from '@/types/api/statistics'
 import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
-import { toUserRef, type FlatUserRef } from '@/utils/mappers'
-import type { Page, PaginationParams } from '@/types/pagination'
+import { TIME_RANGE_PARAMS } from '@/utils/constants'
+import { storeCountry } from '@/utils/statsCountry'
 import { computed, ref, watch } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
-import { useRouter } from 'vue-router'
 import CampaignHardestNodes from './CampaignHardestNodes.vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
 import StatsFilterChips from './StatsFilterChips.vue'
-import { fmtDecimal, fmtFraction, fmtInt, labelCase, plural, rateClass } from './statsFormat'
+import { fmtDecimal, fmtFraction, fmtInt, labelCase, plural, rateClass, toChartPoints } from './statsFormat'
+import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
 
 defineProps<{
   accent: string
@@ -30,26 +24,18 @@ defineProps<{
 }>()
 
 type CampaignBoard = 'funnel' | 'trends' | 'most-completed' | 'top-creators'
-type StatsApi = typeof import('@/api/statistics')
 
-interface CampaignBoardDef {
-  key: CampaignBoard
-  label: string
-  icon: string
-  description: string
-  columns: TableColumn[]
+interface CampaignBoardDef extends StatsBoardDef<CampaignBoard, CampaignStatsParams> {
   minParticipants: boolean
   creatorCountry: boolean
-  players?: boolean
-  fetch?: (api: StatsApi, params: PaginationParams, filters: CampaignStatsParams) => Promise<Page<unknown>>
 }
 
-const STATUS_CHIPS: { key: CampaignStatsStatus; label: string; hint: string }[] = [
-  { key: 'published', label: 'Published', hint: 'Live and playable' },
-  { key: 'editing', label: 'Editing', hint: 'Still a draft' },
-  { key: 'curated', label: 'Curated', hint: 'Rewards-eligible' },
-  { key: 'official', label: 'Official', hint: 'Curator flag, not a lifecycle state' },
-  { key: 'loved', label: 'Loved', hint: 'Curator flag, not a lifecycle state' },
+const STATUS_CHIPS: { key: CampaignStatsStatus; label: string }[] = [
+  { key: 'published', label: 'Published' },
+  { key: 'editing', label: 'Editing' },
+  { key: 'curated', label: 'Curated' },
+  { key: 'official', label: 'Official' },
+  { key: 'loved', label: 'Loved' },
 ]
 
 const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
@@ -60,7 +46,6 @@ const BOARDS: CampaignBoardDef[] = [
     key: 'funnel',
     label: 'Funnel',
     icon: 'gauge',
-    description: 'Started to finished',
     minParticipants: true,
     creatorCountry: false,
     columns: [
@@ -78,7 +63,6 @@ const BOARDS: CampaignBoardDef[] = [
     key: 'trends',
     label: 'Trends',
     icon: 'trending',
-    description: 'Starts and finishes',
     minParticipants: false,
     creatorCountry: false,
     columns: [],
@@ -87,7 +71,6 @@ const BOARDS: CampaignBoardDef[] = [
     key: 'most-completed',
     label: 'Most Completed',
     icon: 'trophy',
-    description: 'Top campaign finishers',
     minParticipants: false,
     creatorCountry: false,
     players: true,
@@ -104,7 +87,6 @@ const BOARDS: CampaignBoardDef[] = [
     key: 'top-creators',
     label: 'Top Creators',
     icon: 'award',
-    description: 'Builders by reach',
     minParticipants: false,
     creatorCountry: true,
     players: true,
@@ -121,108 +103,61 @@ const BOARDS: CampaignBoardDef[] = [
   },
 ]
 
-const BOARD_MAP = new Map<CampaignBoard, CampaignBoardDef>(BOARDS.map((b) => [b.key, b]))
-const pickerOptions = BOARDS.map((b) => ({ key: b.key, label: b.label, icon: b.icon, description: b.description }))
-const RANGE_KEYS = Object.keys(STATS_CHART_RANGE_PARAMS) as TimeRange[]
+const { setQuery, queryRef, queryListRef } = useQueryParams()
 
-const router = useRouter()
-const { currentPage, param, multiParam, numberParam, patch, setParam, toggleMulti, setPage } = useStatsQueryState()
+const statusFilter = queryListRef<CampaignStatsStatus>('status')
+const countryFilter = queryRef('country')
+const minParticipantsParam = queryRef('minParticipants')
+const openCampaign = queryRef('campaign')
+const rangeParam = queryRef<TimeRange>('range')
+const metricParam = queryRef<MetricType>('metric')
 
-const activeBoard = computed<CampaignBoard>(() => {
-  const board = param('board') as CampaignBoard
-  return BOARD_MAP.has(board) ? board : 'funnel'
+const minParticipants = computed(() => {
+  const value = Number(minParticipantsParam.value)
+  return minParticipantsParam.value && Number.isFinite(value) ? value : 3
 })
-const boardDef = computed(() => BOARD_MAP.get(activeBoard.value) as CampaignBoardDef)
 
-const statusFilter = computed(() => multiParam('status'))
-const countryFilter = computed(() => param('country'))
-const minParticipants = computed(() => numberParam('minParticipants') ?? 3)
-const openCampaign = computed(() => param('campaign'))
+function boardFilters(def: CampaignBoardDef): CampaignStatsParams {
+  return {
+    status: statusFilter.value,
+    country: countryFilter.value || undefined,
+    minParticipants: def.minParticipants ? minParticipants.value : undefined,
+  }
+}
+
+const {
+  activeBoard, boardDef, pickerOptions, selectBoard, rowTo, pushPlayer,
+  currentPage, setPage, loading, rows, totalPages, totalElements,
+} = useStatsBoard(BOARDS, { size: 20, filters: boardFilters })
+
+const filters = computed(() => boardFilters(boardDef.value))
+
 const openCampaignName = computed(
   () => (rows.value.find((r) => r.campaignId === openCampaign.value)?.name as string) ?? '',
 )
 
-const chartRange = computed<TimeRange>(() => {
-  const range = param('range') as TimeRange
-  return RANGE_KEYS.includes(range) ? range : '30d'
-})
+const chartRange = computed<TimeRange>(() => (rangeParam.value in TIME_RANGE_PARAMS ? rangeParam.value as TimeRange : '30d'))
 
-const filters = computed<CampaignStatsParams>(() => ({
-  status: statusFilter.value as CampaignStatsStatus[],
-  country: countryFilter.value || undefined,
-  minParticipants: boardDef.value.minParticipants ? minParticipants.value : undefined,
-}))
-
-function selectBoard(board: CampaignBoard) {
-  patch({ board: board === 'funnel' ? undefined : board, campaign: undefined })
+function setCountry(country: string) {
+  storeCountry(country)
+  countryFilter.value = country
 }
 
-function playerRoute(row: Record<string, unknown>): RouteLocationRaw | undefined {
-  const userId = row.userId as string | undefined
-  return userId ? { name: 'player-profile', params: { userId } } : undefined
+function toggleStatus(status: CampaignStatsStatus) {
+  const active = statusFilter.value
+  statusFilter.value = active.includes(status) ? active.filter((v) => v !== status) : [...active, status]
 }
 
-const rowTo = computed(() => (boardDef.value.players ? playerRoute : undefined))
-
-function onRowClick(row: Record<string, unknown>) {
-  const target = playerRoute(row)
-  if (boardDef.value.players) {
-    if (target) router.push(target)
-    return
-  }
+function onRowClick(row: StatsRow) {
+  if (pushPlayer(row)) return
   const campaignId = row.campaignId as string | undefined
-  if (campaignId) patch({ campaign: campaignId }, true)
+  if (campaignId) setQuery({ campaign: campaignId }, { keepPage: true })
 }
 
-const loading = ref(false)
-const pageData = ref<Page<unknown> | null>(null)
-const pageBoard = ref<CampaignBoard | null>(null)
-
-const currentPageData = computed(() => (pageBoard.value === activeBoard.value ? pageData.value : null))
-
-const totalPages = computed(() => currentPageData.value?.totalPages ?? 0)
-const totalElements = computed(() => currentPageData.value?.totalElements ?? 0)
-
-const rows = computed<Record<string, unknown>[]>(() => {
-  if (!currentPageData.value) return []
-  const offset = currentPageData.value.number * currentPageData.value.size
-  return currentPageData.value.content.map((raw, index) => {
-    const item = raw as Record<string, unknown>
-    return {
-      ...item,
-      rank: offset + index + 1,
-      player: toUserRef(item as unknown as FlatUserRef),
-    }
-  })
-})
-
-function segment(row: Record<string, unknown>, key: string): string {
+function segment(row: StatsRow, key: string): string {
   const total = Number(row.participants ?? 0)
   if (total <= 0) return '0%'
   return `${(Number(row[key] ?? 0) / total) * 100}%`
-}
-
-let requestId = 0
-
-async function fetchBoard() {
-  const def = boardDef.value
-  if (!def.fetch) return
-  const id = ++requestId
-  loading.value = true
-  try {
-    const params: PaginationParams = { page: currentPage.value - 1, size: 20 }
-    const api = await import('@/api/statistics')
-    const result = await def.fetch(api, params, filters.value)
-    if (id !== requestId) return
-    pageData.value = result
-    pageBoard.value = def.key
-  } catch (error) {
-    if (id !== requestId) return
-    console.error('Failed to fetch campaign stats:', error)
-    pageData.value = null
-    pageBoard.value = def.key
-  }
-  loading.value = false
 }
 
 const TREND_METRICS: { key: MetricType; label: string }[] = [
@@ -230,17 +165,11 @@ const TREND_METRICS: { key: MetricType; label: string }[] = [
   { key: 'campaignCompletions', label: 'Campaigns Finished' },
 ]
 
-const chartMetric = computed<MetricType>(() => {
-  const metric = param('metric') as MetricType
-  return TREND_METRICS.some((m) => m.key === metric) ? metric : 'campaignStarts'
-})
+const chartMetric = computed<MetricType>(() =>
+  (TREND_METRICS.some((m) => m.key === metricParam.value) ? metricParam.value as MetricType : 'campaignStarts'))
 
 const chartLoading = ref(false)
 const chartPoints = ref<TimeSeriesPoint[]>([])
-
-function toChartPoints(data: TimeSeriesPointResponse[]): TimeSeriesPoint[] {
-  return data.map((d) => ({ timestamp: new Date(d.date).getTime(), value: d.value }))
-}
 
 let chartRequestId = 0
 
@@ -249,30 +178,25 @@ async function fetchTrends() {
   chartLoading.value = true
   try {
     const api = await import('@/api/statistics')
-    const range = STATS_CHART_RANGE_PARAMS[chartRange.value]
+    const range = TIME_RANGE_PARAMS[chartRange.value]
     const points = chartMetric.value === 'campaignStarts'
       ? await api.getCampaignStartsPerDay(range, filters.value)
       : await api.getCampaignCompletionsPerDay(range, filters.value)
     if (id !== chartRequestId) return
     chartPoints.value = toChartPoints(points)
-  } catch (error) {
+  } catch {
     if (id !== chartRequestId) return
-    console.error('Failed to fetch campaign trends:', error)
     chartPoints.value = []
   }
   chartLoading.value = false
 }
 
 watch(
-  [activeBoard, filters, currentPage, chartRange, chartMetric],
-  () => {
-    if (activeBoard.value === 'trends') {
-      fetchTrends()
-    } else {
-      fetchBoard()
-    }
-  },
-  { immediate: true, deep: true },
+  () => activeBoard.value === 'trends'
+    ? JSON.stringify([filters.value, chartRange.value, chartMetric.value])
+    : null,
+  (key) => { if (key) fetchTrends() },
+  { immediate: true },
 )
 </script>
 
@@ -281,20 +205,20 @@ watch(
     <div class="campaign-stats__filters">
       <div class="campaign-stats__row">
         <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
-          @update:model-value="setParam('country', $event)" />
+          @update:model-value="setCountry" />
         <label v-if="boardDef.minParticipants" class="campaign-stats__number">
           <span>Min participants</span>
           <input type="number" min="0" inputmode="numeric" :value="minParticipants"
-            @change="patch({ minParticipants: ($event.target as HTMLInputElement).value.trim() || undefined })" />
+            @change="minParticipantsParam = ($event.target as HTMLInputElement).value.trim()" />
         </label>
       </div>
 
       <StatsFilterChips label="Status" :options="STATUS_CHIPS" :selected="statusFilter" empty-label="All campaigns"
-        @toggle="toggleMulti('status', $event)" @clear="patch({ status: undefined })" />
+        @toggle="toggleStatus" @clear="statusFilter = []" />
     </div>
 
     <LeaderboardPicker :model-value="activeBoard" :options="pickerOptions"
-      @update:model-value="selectBoard($event as CampaignBoard)" />
+      @update:model-value="selectBoard($event, { campaign: undefined })" />
 
     <template v-if="activeBoard === 'trends'">
       <div class="campaign-stats__chart">
@@ -302,8 +226,8 @@ watch(
           :selected-metric="chartMetric" :selected-range="chartRange"
           :metric-label="chartMetric === 'campaignStarts' ? 'Campaigns Started' : 'Campaigns Finished'"
           empty-message="Nothing recorded in this range yet."
-          @update:selected-metric="setParam('metric', $event)"
-          @update:selected-range="setParam('range', $event)" />
+          @update:selected-metric="metricParam = $event"
+          @update:selected-range="rangeParam = $event" />
         <div v-if="chartLoading" class="campaign-stats__chart-skeleton">
           <SkeletonLoader variant="card" height="300px" />
         </div>
@@ -313,11 +237,10 @@ watch(
     <template v-else>
       <p v-if="totalElements > 0" class="campaign-stats__count">{{ plural(totalElements, 'row') }}</p>
 
-
       <DataTable :columns="boardDef.columns" :rows="rows" :loading="loading" :loading-rows="10" row-key="rank"
         :row-clickable="activeBoard === 'funnel' || !!boardDef.players" :row-to="rowTo"
         :empty-message="activeBoard === 'funnel'
-          ? 'No campaigns match these filters. Try lowering the minimum participants.'
+          ? 'No campaigns match these filters.'
           : 'No records found.'"
         @row-click="onRowClick">
         <template #cell-rank="{ value }">
@@ -370,7 +293,8 @@ watch(
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
 
       <CampaignHardestNodes v-if="openCampaign && activeBoard === 'funnel'" :campaign-id="openCampaign"
-        :campaign-name="openCampaignName" :country="countryFilter" @close="patch({ campaign: undefined }, true)" />
+        :campaign-name="openCampaignName" :country="countryFilter"
+        @close="setQuery({ campaign: undefined }, { keepPage: true })" />
     </template>
   </div>
 </template>
@@ -520,3 +444,5 @@ watch(
   }
 }
 </style>
+
+<style scoped src="./statsRates.css"></style>

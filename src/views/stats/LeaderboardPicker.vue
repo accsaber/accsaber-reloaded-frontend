@@ -5,7 +5,6 @@ interface PickerOption {
   key: T
   label: string
   icon: string
-  description: string
 }
 
 defineProps<{ modelValue: T; options: PickerOption[] }>()
@@ -20,7 +19,6 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
         <LeaderboardPickerIcon :icon="opt.icon" />
       </span>
       <span class="lb-picker__label">{{ opt.label }}</span>
-      <span class="lb-picker__desc">{{ opt.description }}</span>
     </button>
   </div>
 </template>
@@ -44,10 +42,10 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
   padding: var(--space-md) var(--space-sm);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   text-align: center;
-  transition: all 150ms ease;
+  transition: border-color 150ms ease, background 150ms ease;
 }
 
 .lb-picker__card:hover {
@@ -74,7 +72,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
   border: 1px solid var(--bg-overlay);
   background: var(--bg-base);
   color: var(--text-tertiary);
-  transition: all 150ms ease;
+  transition: color 150ms ease, border-color 150ms ease;
 }
 
 .lb-picker__card:hover .lb-picker__icon {
@@ -92,11 +90,5 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;
-}
-
-.lb-picker__desc {
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
-  line-height: 1.3;
 }
 </style>

@@ -1,6 +1,6 @@
 import type { PublicClanResponse } from './clans'
 import type { CampaignRequirementType, Difficulty } from '../enums'
-import type { ItemRarity, ItemTypeKey } from './items'
+import type { ItemResponse } from './items'
 import type { MissionBand, MissionPool, MissionType } from './missions'
 
 export interface MapAvgApResponse {
@@ -128,10 +128,7 @@ export interface UserTraderResponse extends ItemStatsPlayerRef {
 export interface RarestUnboxedResponse extends ItemStatsPlayerRef {
   linkId: string
   itemId: string
-  itemName: string
-  iconUrl?: string | null
-  rarity: ItemRarity
-  typeKey: ItemTypeKey
+  item: ItemResponse | null
   serialNumber: number | null
   modifierCount: number
   modifiers: string[]
@@ -141,19 +138,13 @@ export interface RarestUnboxedResponse extends ItemStatsPlayerRef {
 export interface FirstEditionHolderResponse extends ItemStatsPlayerRef {
   linkId: string
   itemId: string
-  itemName: string
-  iconUrl?: string | null
-  rarity: ItemRarity
-  typeKey: ItemTypeKey
+  item: ItemResponse | null
   serialNumber: number | null
 }
 
 export interface ItemScarcityResponse {
   itemId: string
-  itemName: string
-  iconUrl: string | null
-  rarity: ItemRarity
-  typeKey: ItemTypeKey
+  item: ItemResponse | null
   ownerCount: number
   instanceCount: number
 }

@@ -1,83 +1,39 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
 import ItemHoldersTooltip from '@/components/domain/ItemHoldersTooltip.vue'
-import ItemPreview from '@/components/domain/ItemPreview.vue'
-import ModifierChip from '@/components/domain/ModifierChip.vue'
-import { useItemModifierStore } from '@/stores/itemModifiers'
-import { useItemTypeStore } from '@/stores/itemTypes'
-import type { ItemRarity, ItemResponse, ItemTypeKey } from '@/types/api/items'
-import type { TableColumn, UserRefDisplay } from '@/types/display'
-import { rarityClass, resolveModifierRefs } from '@/utils/items'
-import { getRankClass } from '@/utils/ranking'
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import UserChip from '@/components/domain/UserChip.vue'
+import type { ItemResponse } from '@/types/api/items'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
+import { rarityClass } from '@/utils/items'
+import { getRankClass } from '@/utils/ranking'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import ItemStatsItemCell from './ItemStatsItemCell.vue'
+import ItemStatsModifiers from './ItemStatsModifiers.vue'
+import { fmtEssence, fmtInt, fmtPercentPoint } from './statsFormat'
+import { playerRoute, type StatsRow } from './useStatsBoard'
 
 const props = defineProps<{
   columns: TableColumn[]
-  rows: Record<string, unknown>[]
+  rows: StatsRow[]
   loading: boolean
   board: string
 }>()
 
 const router = useRouter()
-const modifierStore = useItemModifierStore()
 
 const isScarcity = computed(() => props.board === 'rarest-items')
 const hasOwner = computed(() => props.board === 'rarest-unboxed' || props.board === 'first-edition-holders')
 const isItemBoard = computed(() => isScarcity.value || hasOwner.value)
+const rowTo = computed(() => (isScarcity.value ? undefined : playerRoute))
 
-function rowTo(row: Record<string, unknown>) {
-  if (isScarcity.value) return undefined
-  const userId = (hasOwner.value ? row.ownerUserId : row.userId) as string | undefined
-  if (userId) return { name: 'player-profile', params: { userId } }
-  return undefined
-}
-
-function pushRow(row: Record<string, unknown>) {
-  const target = rowTo(row)
+function pushRow(row: StatsRow) {
+  const target = rowTo.value?.(row)
   if (target) router.push(target)
 }
 
-function fmtInt(value: unknown): string {
-  return Number(value ?? 0).toLocaleString()
-}
-
-function fmtEssence(value: unknown): string {
-  return `✦ ${Number(value ?? 0).toLocaleString()}`
-}
-
-function fmtPercent(value: unknown): string {
-  const raw = Number(value ?? 0)
-  const pct = raw <= 1 ? raw * 100 : raw
-  return `${pct.toFixed(1)}%`
-}
-
-function syntheticItem(row: Record<string, unknown>): ItemResponse {
-  return {
-    id: row.itemId as string,
-    typeId: (row.itemTypeId as string | undefined) ?? '',
-    typeKey: row.typeKey as ItemTypeKey,
-    name: row.itemName as string,
-    description: null,
-    iconUrl: (row.iconUrl as string | null) ?? null,
-    value: (row.itemValue as ItemResponse['value'] | undefined) ?? null,
-    rarity: row.rarity as ItemRarity,
-    downloadable: false,
-    serialized: false,
-    tradeable: false,
-    visible: true,
-    active: true,
-    deprecated: false,
-    stackable: false,
-    welcomeGrant: false,
-    missionPoolable: false,
-    unlockLevel: null,
-    worth: null,
-    requirement: null,
-    obtainableUntil: null,
-    createdAt: '',
-  }
+function itemOf(row: StatsRow): ItemResponse | null {
+  return (row.item as ItemResponse | null | undefined) ?? null
 }
 
 const PRIMARY_STAT: Record<string, { key: string; fmt: (v: unknown) => string; cls: string }> = {
@@ -85,30 +41,16 @@ const PRIMARY_STAT: Record<string, { key: string; fmt: (v: unknown) => string; c
   'most-crates-opened': { key: 'crateCount', fmt: fmtInt, cls: 'stat-accent' },
   'most-valuable-inventory': { key: 'totalValue', fmt: fmtEssence, cls: 'stat-essence' },
   'first-editions': { key: 'firstEditionCount', fmt: fmtInt, cls: 'stat-accent' },
-  'most-complete-collection': { key: 'completionPercent', fmt: fmtPercent, cls: 'stat-accent' },
+  'most-complete-collection': { key: 'completionPercent', fmt: fmtPercentPoint, cls: 'stat-accent' },
   'biggest-traders': { key: 'tradeCount', fmt: fmtInt, cls: 'stat-accent' },
 }
 
 const primaryStat = computed(() => PRIMARY_STAT[props.board])
-
-function resolveModifiers(keys: unknown) {
-  return resolveModifierRefs(keys, modifierStore.byKey)
-}
-
-const itemTypeStore = useItemTypeStore()
-
-function typeLabel(typeKey: unknown): string {
-  return itemTypeStore.typeLabel(String(typeKey ?? ''))
-}
-
-onMounted(() => {
-  if (props.board === 'rarest-unboxed') modifierStore.fetchModifiers()
-})
 </script>
 
 <template>
   <DataTable :columns="columns" :rows="rows" :loading="loading" :loading-rows="10" :row-clickable="!isScarcity"
-    :row-to="isScarcity ? undefined : rowTo" row-key="rank" empty-message="No records found">
+    :row-to="rowTo" row-key="rank" empty-message="No records found">
 
     <template #cell-rank="{ value }">
       <span class="rank-cell" :class="getRankClass(value as number)">#{{ value }}</span>
@@ -119,34 +61,19 @@ onMounted(() => {
     </template>
 
     <template #cell-owner="{ row }">
-      <UserChip :user="(row.owner as UserRefDisplay)" tooltip />
+      <UserChip :user="(row.player as UserRefDisplay)" tooltip />
     </template>
 
     <template #cell-item="{ row }">
       <div class="item-cell">
-        <span class="item-cell__frame" :class="rarityClass(row.rarity as ItemRarity)">
-          <ItemPreview :item="syntheticItem(row)" icon />
-        </span>
-        <div class="item-cell__info">
-          <span class="item-cell__name" :class="rarityClass(row.rarity as ItemRarity)">{{ row.itemName }}</span>
-          <span class="item-cell__meta">
-            <span class="item-cell__type">{{ typeLabel(row.typeKey) }}</span>
-            <span v-if="row.serialNumber != null" class="item-cell__serial">#{{ row.serialNumber }}</span>
-          </span>
-        </div>
+        <ItemStatsItemCell :item="itemOf(row)" :serial="(row.serialNumber as number | null | undefined)" />
         <ItemHoldersTooltip v-if="isScarcity" class="item-cell__owners" :item-id="(row.itemId as string)"
-          :item-name="(row.itemName as string)" :owner-count="(row.ownerCount as number)" />
+          :item-name="itemOf(row)?.name ?? ''" :owner-count="(row.ownerCount as number)" />
       </div>
     </template>
 
     <template #cell-modifiers="{ row }">
-      <div class="modifiers-cell">
-        <template v-if="resolveModifiers(row.modifiers).length || row.unusualEffect">
-          <ModifierChip v-for="mod in resolveModifiers(row.modifiers)" :key="mod.id" :modifier="mod" />
-          <span v-if="row.unusualEffect" class="modifiers-cell__unusual">{{ row.unusualEffect }}</span>
-        </template>
-        <span v-else class="modifiers-cell__none">None</span>
-      </div>
+      <ItemStatsModifiers :modifiers="row.modifiers" :unusual-effect="(row.unusualEffect as string | null)" />
     </template>
 
     <template #cell-itemCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
@@ -156,7 +83,7 @@ onMounted(() => {
     <template #cell-itemsTraded="{ value }">{{ fmtInt(value) }}</template>
     <template #cell-ownedCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
     <template #cell-catalogTotal="{ value }">{{ fmtInt(value) }}</template>
-    <template #cell-completionPercent="{ value }"><span class="stat-accent">{{ fmtPercent(value) }}</span></template>
+    <template #cell-completionPercent="{ value }"><span class="stat-accent">{{ fmtPercentPoint(value) }}</span></template>
     <template #cell-ownerCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
     <template #cell-instanceCount="{ value }">{{ fmtInt(value) }}</template>
     <template #cell-itemsValue="{ value }">{{ fmtEssence(value) }}</template>
@@ -168,37 +95,22 @@ onMounted(() => {
         @click="pushRow(row)">
         <div class="stats-card__head">
           <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-          <span class="item-cell__frame item-cell__frame--sm" :class="rarityClass(row.rarity as ItemRarity)">
-            <ItemPreview :item="syntheticItem(row)" icon />
-          </span>
-          <div class="item-cell__info">
-            <span class="item-cell__name" :class="rarityClass(row.rarity as ItemRarity)">{{ row.itemName }}</span>
-            <span class="item-cell__meta">
-              <span class="item-cell__type">{{ typeLabel(row.typeKey) }}</span>
-              <span v-if="row.serialNumber != null" class="item-cell__serial">#{{ row.serialNumber }}</span>
-            </span>
-          </div>
-          <span v-if="hasOwner" class="stats-card__badge item-cell__name" :class="rarityClass(row.rarity as ItemRarity)">
-            {{ row.rarity }}
+          <ItemStatsItemCell :item="itemOf(row)" :serial="(row.serialNumber as number | null | undefined)" small />
+          <span v-if="hasOwner && itemOf(row)" class="stats-card__badge" :class="rarityClass(itemOf(row)!.rarity)">
+            {{ itemOf(row)!.rarity }}
           </span>
           <ItemHoldersTooltip v-if="isScarcity" :item-id="(row.itemId as string)"
-            :item-name="(row.itemName as string)" :owner-count="(row.ownerCount as number)" />
+            :item-name="itemOf(row)?.name ?? ''" :owner-count="(row.ownerCount as number)" />
         </div>
 
         <div class="stats-card__details">
           <div v-if="hasOwner" class="stats-card__detail">
             <span class="stats-card__label">{{ board === 'first-edition-holders' ? 'Holder' : 'Owner' }}</span>
-            <UserChip :user="(row.owner as UserRefDisplay)" size="sm" tooltip />
+            <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip />
           </div>
           <div v-if="board === 'rarest-unboxed'" class="stats-card__detail stats-card__detail--stacked">
             <span class="stats-card__label">Modifiers</span>
-            <div class="modifiers-cell">
-              <template v-if="resolveModifiers(row.modifiers).length || row.unusualEffect">
-                <ModifierChip v-for="mod in resolveModifiers(row.modifiers)" :key="mod.id" :modifier="mod" />
-                <span v-if="row.unusualEffect" class="modifiers-cell__unusual">{{ row.unusualEffect }}</span>
-              </template>
-              <span v-else class="modifiers-cell__none">None</span>
-            </div>
+            <ItemStatsModifiers :modifiers="row.modifiers" :unusual-effect="(row.unusualEffect as string | null)" />
           </div>
           <div v-if="isScarcity" class="stats-card__counts">
             <span class="stats-card__count">
@@ -254,91 +166,9 @@ onMounted(() => {
   min-width: 0;
 }
 
-.item-cell__frame {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  background: var(--bg-base);
-  border: 1px solid var(--rarity-color, var(--text-tertiary));
-  border-radius: var(--radius-card);
-  overflow: hidden;
-}
-
-.item-cell__frame--sm {
-  width: 30px;
-  height: 30px;
-}
-
-.item-cell__info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 1px;
-}
-
 .item-cell__owners {
   flex-shrink: 0;
   margin-left: var(--space-xs);
-}
-
-.item-cell__name {
-  --rarity-color: var(--text-primary);
-  font-weight: 500;
-  color: var(--rarity-color, var(--text-tertiary));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.item-cell__name.rarity--common { --rarity-color: var(--text-primary); }
-.item-cell__name.rarity--uncommon { --rarity-color: var(--success); }
-.item-cell__name.rarity--rare { --rarity-color: var(--info); }
-.item-cell__name.rarity--epic { --rarity-color: var(--tier-apex); }
-.item-cell__name.rarity--legendary { --rarity-color: var(--tier-gold); }
-.item-cell__name.rarity--mythic { --rarity-color: var(--error); }
-
-.item-cell__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.item-cell__type {
-  text-transform: capitalize;
-}
-
-.item-cell__serial {
-  font-family: var(--font-mono);
-}
-
-.modifiers-cell {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.modifiers-cell__unusual {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  border: 1px solid color-mix(in srgb, var(--tier-gold) 50%, transparent);
-  background: color-mix(in srgb, var(--tier-gold) 10%, transparent);
-  color: var(--tier-gold);
-}
-
-.modifiers-cell__none {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 
 .stats-card {
@@ -348,7 +178,6 @@ onMounted(() => {
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
@@ -356,7 +185,7 @@ onMounted(() => {
 }
 
 .stats-card:hover {
-  border-left-color: var(--page-accent);
+  border-color: var(--page-accent);
 }
 
 .stats-card--static {
@@ -364,7 +193,7 @@ onMounted(() => {
 }
 
 .stats-card--static:hover {
-  border-left-color: transparent;
+  border-color: var(--bg-overlay);
 }
 
 .stats-card__rank {
@@ -396,12 +225,9 @@ onMounted(() => {
   min-width: 0;
 }
 
-.stats-card__head .item-cell__info {
-  flex: 1;
-}
-
 .stats-card__badge {
   flex-shrink: 0;
+  color: var(--rarity-color, var(--text-primary));
   font-size: var(--text-caption);
   font-weight: 600;
   text-transform: capitalize;

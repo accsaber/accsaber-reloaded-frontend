@@ -3,11 +3,13 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import GlowImage from '@/components/common/GlowImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import { useStatsQueryState } from '@/composables/useStatsQueryState'
+import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import type { EventResponse } from '@/types/api/events'
 import type { EventParticipationResponse } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
+import { storeCountry } from '@/utils/statsCountry'
 import { computed, onMounted, ref, watch } from 'vue'
 import EventSummaryPanel from './EventSummaryPanel.vue'
 import StatsFilterChips from './StatsFilterChips.vue'
@@ -28,13 +30,29 @@ const COLUMNS: TableColumn[] = [
   { key: 'averageMissionsPerParticipant', label: 'Avg / player', align: 'right', mono: true, width: '140px' },
 ]
 
-const { currentPage, param, multiParam, numberParam, patch, setParam, toggleMulti, setPage } = useStatsQueryState()
+const { setQuery, queryRef, queryListRef } = useQueryParams()
+const { currentPage, setPage } = usePageableRoute({ defaultSort: '', secondarySort: null })
 
-const eventFilter = computed(() => multiParam('event'))
-const countryFilter = computed(() => param('country'))
-const openEvent = computed(() => param('detail'))
-const selectedWeek = computed(() => numberParam('week'))
-const openTemplate = computed(() => param('template'))
+const eventFilter = queryListRef('event')
+const countryFilter = queryRef('country')
+const openEvent = queryRef('detail')
+const weekParam = queryRef('week')
+const openTemplate = queryRef('template')
+const selectedWeek = computed(() => (Number.isFinite(Number(weekParam.value)) && weekParam.value ? Number(weekParam.value) : undefined))
+
+function setCountry(country: string) {
+  storeCountry(country)
+  countryFilter.value = country
+}
+
+function toggleEvent(slug: string) {
+  const active = eventFilter.value
+  eventFilter.value = active.includes(slug) ? active.filter((v) => v !== slug) : [...active, slug]
+}
+
+function patchDetail(patch: Record<string, string | undefined>) {
+  setQuery(patch, { keepPage: true })
+}
 
 const events = ref<EventResponse[]>([])
 
@@ -57,15 +75,15 @@ function formatWindow(row: Record<string, unknown>): string {
 
 function openSummary(row: Record<string, unknown>) {
   const slug = (row.slug as string) || (row.eventId as string)
-  if (slug) patch({ detail: slug, week: undefined, template: undefined }, true)
+  if (slug) patchDetail({ detail: slug, week: undefined, template: undefined })
 }
 
 async function fetchEvents() {
   try {
     const { getEvents } = await import('@/api/events')
     events.value = await getEvents()
-  } catch (error) {
-    console.error('Failed to fetch events:', error)
+  } catch {
+    return
   }
 }
 
@@ -83,9 +101,8 @@ async function fetchParticipation() {
     )
     if (id !== requestId) return
     pageData.value = result
-  } catch (error) {
+  } catch {
     if (id !== requestId) return
-    console.error('Failed to fetch event participation:', error)
     pageData.value = null
   }
   loading.value = false
@@ -94,9 +111,9 @@ async function fetchParticipation() {
 onMounted(fetchEvents)
 
 watch(
-  [eventFilter, countryFilter, currentPage],
-  () => fetchParticipation(),
-  { immediate: true, deep: true },
+  () => JSON.stringify([eventFilter.value, countryFilter.value, currentPage.value]),
+  fetchParticipation,
+  { immediate: true },
 )
 </script>
 
@@ -104,9 +121,9 @@ watch(
   <div class="event-stats" :style="{ '--accent': accent }">
     <div class="event-stats__filters">
       <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
-        @update:model-value="setParam('country', $event)" />
+        @update:model-value="setCountry" />
       <StatsFilterChips v-if="eventChips.length" label="Events" :options="eventChips" :selected="eventFilter"
-        empty-label="All events" @toggle="toggleMulti('event', $event)" @clear="patch({ event: undefined })" />
+        empty-label="All events" @toggle="toggleEvent" @clear="eventFilter = []" />
     </div>
 
     <p v-if="totalElements > 0" class="event-stats__count">{{ plural(totalElements, 'event') }}</p>
@@ -135,9 +152,9 @@ watch(
 
     <EventSummaryPanel v-if="openEvent" :event-key="openEvent" :country="countryFilter" :week="selectedWeek"
       :template-id="openTemplate"
-      @close="patch({ detail: undefined, week: undefined, template: undefined }, true)"
-      @update:week="patch({ week: $event === undefined ? undefined : String($event) }, true)"
-      @update:template-id="patch({ template: $event || undefined }, true)" />
+      @close="patchDetail({ detail: undefined, week: undefined, template: undefined })"
+      @update:week="patchDetail({ week: $event === undefined ? undefined : String($event) })"
+      @update:template-id="patchDetail({ template: $event || undefined })" />
   </div>
 </template>
 
@@ -188,11 +205,6 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.rate--critical { color: var(--error); }
-.rate--low { color: var(--xp-score); }
-.rate--mid { color: var(--warning); }
-.rate--high { color: var(--tier-platinum); }
-.rate--top { color: var(--success); }
-.rate--none { color: var(--text-tertiary); }
 </style>
+
+<style scoped src="./statsRates.css"></style>

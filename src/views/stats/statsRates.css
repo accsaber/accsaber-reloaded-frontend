@@ -1,0 +1,6 @@
+.rate--critical { color: var(--error); }
+.rate--low { color: var(--xp-score); }
+.rate--mid { color: var(--warning); }
+.rate--high { color: var(--tier-platinum); }
+.rate--top { color: var(--success); }
+.rate--none { color: var(--text-tertiary); }

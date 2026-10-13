@@ -9,6 +9,7 @@ import type {
 import type { TableColumn } from '@/types/display'
 import { computed, ref, watch } from 'vue'
 import EventMissionLeaderboard from './EventMissionLeaderboard.vue'
+import StatsCloseButton from './StatsCloseButton.vue'
 import StatsHistogram from './StatsHistogram.vue'
 import { fmtDecimal, fmtFraction, fmtInt, labelCase, rateClass } from './statsFormat'
 
@@ -46,17 +47,12 @@ const weekOptions = computed(() => (summary.value?.weeks ?? []).map((w) => w.wee
 const missionColumns = computed(() =>
   (weekOptions.value.length ? [WEEK_COLUMN, ...BASE_COLUMNS] : BASE_COLUMNS))
 
-/**
- * Every mission carries its own week, so the week picker cuts the list that
- * already arrived instead of asking the backend again.
- */
 const missionRows = computed<Record<string, unknown>[]>(() => {
   const missions: EventMissionStatsResponse[] = summary.value?.missions ?? []
   const scoped = props.week === undefined ? missions : missions.filter((m) => m.week === props.week)
   return scoped.map((m) => ({ ...m }))
 })
 
-/** participantsReached per week is the retention curve; the gaps between bars are the drop-off. */
 const retention = computed<DistributionEntryResponse[]>(() =>
   (summary.value?.weeks ?? []).map((w) => ({ label: `Week ${w.week}`, count: w.participantsReached })))
 
@@ -86,9 +82,8 @@ async function fetchSummary(eventKey: string, country: string) {
     const result = await getEventSummary(eventKey, undefined, country || undefined)
     if (id !== requestId) return
     summary.value = result
-  } catch (error) {
+  } catch {
     if (id !== requestId) return
-    console.error('Failed to fetch event summary:', error)
     summary.value = null
     failed.value = true
   }
@@ -116,13 +111,7 @@ watch(weekOptions, (options) => {
           <span v-if="summary?.daysRan">({{ fmtInt(summary.daysRan) }} days)</span>
         </p>
       </div>
-      <button type="button" class="event-summary__close" aria-label="Close event summary" @click="emit('close')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+      <StatsCloseButton label="Close event summary" @click="emit('close')" />
     </header>
 
     <div v-if="loading" class="event-summary__body">
@@ -240,23 +229,6 @@ watch(weekOptions, (options) => {
   margin: 2px 0 0;
   font-size: var(--text-caption);
   color: var(--text-tertiary);
-}
-
-.event-summary__close {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: var(--space-xs);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.event-summary__close:hover {
-  color: var(--text-primary);
-  border-color: var(--bg-overlay);
 }
 
 .event-summary__empty {
@@ -379,11 +351,6 @@ watch(weekOptions, (options) => {
   letter-spacing: 0.04em;
   color: var(--text-secondary);
 }
-
-.rate--critical { color: var(--error); }
-.rate--low { color: var(--xp-score); }
-.rate--mid { color: var(--warning); }
-.rate--high { color: var(--tier-platinum); }
-.rate--top { color: var(--success); }
-.rate--none { color: var(--text-tertiary); }
 </style>
+
+<style scoped src="./statsRates.css"></style>

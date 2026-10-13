@@ -1,4 +1,5 @@
-import type { MissionTier } from '@/types/api/statistics'
+import type { MissionTier, TimeSeriesPointResponse } from '@/types/api/statistics'
+import type { TimeSeriesPoint } from '@/types/display'
 
 export const NO_VALUE = '-'
 
@@ -36,15 +37,22 @@ export function fmtDecimal(value: unknown, digits = 1): string {
   return Number(value).toLocaleString(undefined, { maximumFractionDigits: digits })
 }
 
-/** Backend rate fields are fractions of 1. */
 export function fmtFraction(value: unknown, digits = 1): string {
   if (value === null || value === undefined) return NO_VALUE
   return `${(Number(value) * 100).toFixed(digits)}%`
 }
 
-/** The completion-rate chart already arrives as a whole percentage. */
-export function fmtPercentPoint(value: number): string {
-  return `${value.toFixed(1)}%`
+export function fmtPercentPoint(value: unknown): string {
+  if (value === null || value === undefined) return NO_VALUE
+  return `${Number(value).toFixed(1)}%`
+}
+
+export function fmtEssence(value: unknown): string {
+  return `✦ ${fmtInt(value)}`
+}
+
+export function toChartPoints(data: TimeSeriesPointResponse[]): TimeSeriesPoint[] {
+  return data.map((d) => ({ timestamp: new Date(d.date).getTime(), value: d.value }))
 }
 
 export function rateClass(rate: number | null | undefined): string {

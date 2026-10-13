@@ -6,6 +6,7 @@ import type {
   MissionStatsParams,
 } from '@/types/api/statistics'
 import { computed, ref, watch } from 'vue'
+import StatsCloseButton from './StatsCloseButton.vue'
 import StatsHistogram from './StatsHistogram.vue'
 import {
   MISSION_TIER_LABELS,
@@ -35,7 +36,8 @@ const maxAssigned = computed(() => Math.max(...tiers.value.map((t) => t.assigned
 
 let requestId = 0
 
-async function fetchDetail(templateId: string, filters: MissionStatsParams) {
+async function fetchDetail() {
+  const { templateId, filters } = props
   const id = ++requestId
   loading.value = true
   failed.value = false
@@ -48,9 +50,8 @@ async function fetchDetail(templateId: string, filters: MissionStatsParams) {
     if (id !== requestId) return
     tiers.value = byTier
     shortfall.value = shortfallRows
-  } catch (error) {
+  } catch {
     if (id !== requestId) return
-    console.error('Failed to fetch mission calibration detail:', error)
     tiers.value = []
     shortfall.value = []
     failed.value = true
@@ -58,11 +59,7 @@ async function fetchDetail(templateId: string, filters: MissionStatsParams) {
   loading.value = false
 }
 
-watch(
-  () => [props.templateId, props.filters] as const,
-  ([templateId, filters]) => fetchDetail(templateId, filters),
-  { immediate: true, deep: true },
-)
+watch(() => JSON.stringify([props.templateId, props.filters]), fetchDetail, { immediate: true })
 </script>
 
 <template>
@@ -75,13 +72,7 @@ watch(
           <span v-if="missionType">{{ labelCase(missionType) }}</span>
         </p>
       </div>
-      <button type="button" class="calib-detail__close" aria-label="Close template breakdown" @click="emit('close')">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+      <StatsCloseButton label="Close template breakdown" @click="emit('close')" />
     </header>
 
     <div v-if="loading" class="calib-detail__panels">
@@ -178,23 +169,6 @@ watch(
   color: var(--text-secondary);
 }
 
-.calib-detail__close {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: var(--space-xs);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.calib-detail__close:hover {
-  color: var(--text-primary);
-  border-color: var(--bg-overlay);
-}
-
 .calib-detail__note {
   margin: 0;
   font-size: var(--text-body);
@@ -267,13 +241,6 @@ watch(
   white-space: nowrap;
 }
 
-.rate--critical { color: var(--error); }
-.rate--low { color: var(--xp-score); }
-.rate--mid { color: var(--warning); }
-.rate--high { color: var(--tier-platinum); }
-.rate--top { color: var(--success); }
-.rate--none { color: var(--text-tertiary); }
-
 .shortfall {
   display: flex;
   flex-direction: column;
@@ -326,3 +293,5 @@ watch(
   }
 }
 </style>
+
+<style scoped src="./statsRates.css"></style>

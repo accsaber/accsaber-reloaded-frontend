@@ -7,9 +7,10 @@ import type { TableColumn, UserRefDisplay } from '@/types/display'
 import { toUserRef } from '@/utils/mappers'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
 import { useRouter } from 'vue-router'
+import StatsCloseButton from './StatsCloseButton.vue'
 import { NO_VALUE, fmtInt } from './statsFormat'
+import { playerRoute } from './useStatsBoard'
 
 const props = defineProps<{
   eventKey: string
@@ -30,11 +31,6 @@ const COLUMNS: TableColumn[] = [
 ]
 
 const router = useRouter()
-
-function playerRoute(row: Record<string, unknown>): RouteLocationRaw | undefined {
-  const userId = row.userId as string | undefined
-  return userId ? { name: 'player-profile', params: { userId } } : undefined
-}
 
 function onRowClick(row: Record<string, unknown>) {
   const target = playerRoute(row)
@@ -73,33 +69,27 @@ async function fetchLeaderboard() {
     )
     if (id !== requestId) return
     pageData.value = result
-  } catch (error) {
+  } catch {
     if (id !== requestId) return
-    console.error('Failed to fetch event mission leaderboard:', error)
     pageData.value = null
   }
   loading.value = false
 }
 
-watch(() => [props.eventKey, props.templateId, props.country] as const, () => {
+watch(() => [props.eventKey, props.templateId, props.country].join('|'), () => {
   page.value = 1
-  fetchLeaderboard()
-}, { immediate: true })
+})
 
-watch(page, () => fetchLeaderboard())
+watch(() => [props.eventKey, props.templateId, props.country, page.value].join('|'), fetchLeaderboard, {
+  immediate: true,
+})
 </script>
 
 <template>
   <section class="mission-lb">
     <header class="mission-lb__head">
       <h4 class="mission-lb__title">{{ missionName || 'Mission' }}</h4>
-      <button type="button" class="mission-lb__close" aria-label="Close mission leaderboard" @click="emit('close')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+      <StatsCloseButton label="Close mission leaderboard" @click="emit('close')" />
     </header>
 
     <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="5" row-key="rank" row-clickable
@@ -145,23 +135,6 @@ watch(page, () => fetchLeaderboard())
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-secondary);
-}
-
-.mission-lb__close {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: 2px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.mission-lb__close:hover {
-  color: var(--text-primary);
-  border-color: var(--bg-overlay);
 }
 
 .mission-lb__rank {

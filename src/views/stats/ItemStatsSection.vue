@@ -3,15 +3,14 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useItemTypeStore } from '@/stores/itemTypes'
+import { useQueryParams } from '@/composables/useQueryParams'
 import type { ItemResponse } from '@/types/api/items'
-import type { ItemStatsPlayerRef } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
-import { toUserRef } from '@/utils/mappers'
-import type { Page, PaginationParams } from '@/types/pagination'
-import { useStatsQueryState } from '@/composables/useStatsQueryState'
+import { storeCountry } from '@/utils/statsCountry'
 import { computed, onMounted, ref, watch } from 'vue'
 import ItemStatsTable from './ItemStatsTable.vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
+import { useStatsBoard, type StatsBoardDef } from './useStatsBoard'
 
 defineProps<{
   accent: string
@@ -31,8 +30,6 @@ type ItemStatsBoard =
 
 type BoardFilter = 'type' | 'modifier' | 'crate'
 
-type StatsApi = typeof import('@/api/statistics')
-
 interface BoardQuery {
   country?: string
   type?: string
@@ -40,16 +37,9 @@ interface BoardQuery {
   crate?: string
 }
 
-interface BoardDef {
-  key: ItemStatsBoard
-  label: string
-  icon: string
-  description: string
-  columns: TableColumn[]
-  sort?: string
+interface BoardDef extends StatsBoardDef<ItemStatsBoard, BoardQuery> {
   country: boolean
   filters: BoardFilter[]
-  fetch: (api: StatsApi, params: PaginationParams, q: BoardQuery) => Promise<Page<unknown>>
 }
 
 const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
@@ -58,19 +48,19 @@ const itemCol: TableColumn = { key: 'item', label: 'Item', align: 'left' }
 
 const BOARDS: BoardDef[] = [
   {
-    key: 'most-items', label: 'Most Items', icon: 'package', description: 'Largest collections',
+    key: 'most-items', label: 'Most Items', icon: 'package',
     columns: [rankCol, playerCol, { key: 'itemCount', label: 'Items', align: 'right', mono: true, width: '120px' }],
     sort: 'itemCount,desc', country: true, filters: ['type', 'modifier'],
     fetch: (api, params, q) => api.getMostItems(params, q.type, q.modifier, q.country),
   },
   {
-    key: 'most-crates-opened', label: 'Most Crates Opened', icon: 'crate', description: 'Most crates unboxed',
+    key: 'most-crates-opened', label: 'Most Crates Opened', icon: 'crate',
     columns: [rankCol, playerCol, { key: 'crateCount', label: 'Crates', align: 'right', mono: true, width: '120px' }],
     sort: 'crateCount,desc', country: true, filters: ['crate'],
     fetch: (api, params, q) => api.getMostCratesOpened(params, q.crate, q.country),
   },
   {
-    key: 'most-valuable-inventory', label: 'Most Valuable Inventory', icon: 'gem', description: 'Richest inventories',
+    key: 'most-valuable-inventory', label: 'Most Valuable Inventory', icon: 'gem',
     columns: [
       rankCol, playerCol,
       { key: 'itemsValue', label: 'Items', align: 'right', mono: true, width: '110px' },
@@ -81,13 +71,13 @@ const BOARDS: BoardDef[] = [
     fetch: (api, params, q) => api.getMostValuableInventory(params, q.country),
   },
   {
-    key: 'first-editions', label: 'First Editions', icon: 'award', description: 'Most #1 serials',
+    key: 'first-editions', label: 'First Editions', icon: 'award',
     columns: [rankCol, playerCol, { key: 'firstEditionCount', label: 'First Editions', align: 'right', mono: true, width: '150px' }],
     sort: 'firstEditionCount,desc', country: true, filters: [],
     fetch: (api, params, q) => api.getFirstEditions(params, q.country),
   },
   {
-    key: 'most-complete-collection', label: 'Most Complete Collection', icon: 'layers', description: 'Closest to complete',
+    key: 'most-complete-collection', label: 'Most Complete Collection', icon: 'layers',
     columns: [
       rankCol, playerCol,
       { key: 'ownedCount', label: 'Owned', align: 'right', mono: true, width: '100px' },
@@ -98,7 +88,7 @@ const BOARDS: BoardDef[] = [
     fetch: (api, params, q) => api.getMostCompleteCollection(params, q.country),
   },
   {
-    key: 'biggest-traders', label: 'Biggest Traders', icon: 'swap', description: 'Most active traders',
+    key: 'biggest-traders', label: 'Biggest Traders', icon: 'swap',
     columns: [
       rankCol, playerCol,
       { key: 'tradeCount', label: 'Trades', align: 'right', mono: true, width: '110px' },
@@ -108,7 +98,7 @@ const BOARDS: BoardDef[] = [
     fetch: (api, params, q) => api.getBiggestTraders(params, q.country),
   },
   {
-    key: 'rarest-unboxed', label: 'Rarest Items Unboxed', icon: 'gift', description: 'Rarest pulls',
+    key: 'rarest-unboxed', label: 'Rarest Items Unboxed', icon: 'gift',
     columns: [
       rankCol, itemCol,
       { key: 'modifiers', label: 'Modifiers', align: 'left' },
@@ -118,13 +108,13 @@ const BOARDS: BoardDef[] = [
     fetch: (api, params, q) => api.getRarestUnboxed(params, q.country),
   },
   {
-    key: 'first-edition-holders', label: 'First Edition Holders', icon: 'medal', description: 'Who holds serial #1',
+    key: 'first-edition-holders', label: 'First Edition Holders', icon: 'medal',
     columns: [rankCol, itemCol, { key: 'owner', label: 'Holder', align: 'left', width: '220px' }],
     country: true, filters: [],
     fetch: (api, params, q) => api.getFirstEditionHolders(params, q.country),
   },
   {
-    key: 'rarest-items', label: 'Item Scarcity', icon: 'gauge', description: 'Fewest copies',
+    key: 'rarest-items', label: 'Item Scarcity', icon: 'gauge',
     columns: [
       rankCol, itemCol,
       { key: 'ownerCount', label: 'Owners', align: 'right', mono: true, width: '110px' },
@@ -135,27 +125,31 @@ const BOARDS: BoardDef[] = [
   },
 ]
 
-const BOARD_MAP = new Map<ItemStatsBoard, BoardDef>(BOARDS.map((b) => [b.key, b]))
-
-const pickerOptions = BOARDS.map((b) => ({ key: b.key, label: b.label, icon: b.icon, description: b.description }))
-
 const itemTypeStore = useItemTypeStore()
 const modifierStore = useItemModifierStore()
-const { currentPage, param, patch, setParam: setQueryParam, setPage } = useStatsQueryState()
+const { queryRef } = useQueryParams()
 
-const activeBoard = computed<ItemStatsBoard>(() => {
-  const board = param('board') as ItemStatsBoard
-  return BOARD_MAP.has(board) ? board : 'most-items'
-})
-const boardDef = computed(() => BOARD_MAP.get(activeBoard.value) as BoardDef)
+const countryFilter = queryRef('country')
+const typeFilter = queryRef('type')
+const modifierFilter = queryRef('modifier')
+const crateFilter = queryRef('crate')
 
-const countryFilter = computed<string>(() => param('country'))
-const typeFilter = computed<string>(() => param('type'))
-const modifierFilter = computed<string>(() => param('modifier'))
-const crateFilter = computed<string>(() => param('crate'))
+function boardFilters(def: BoardDef): BoardQuery {
+  return {
+    country: def.country ? countryFilter.value || undefined : undefined,
+    type: typeFilter.value || undefined,
+    modifier: modifierFilter.value || undefined,
+    crate: crateFilter.value || undefined,
+  }
+}
 
-function selectBoard(board: ItemStatsBoard) {
-  patch({ board, type: undefined, modifier: undefined, crate: undefined })
+const {
+  activeBoard, boardDef, pickerOptions, selectBoard, currentPage, setPage, loading, rows, totalPages, totalElements,
+} = useStatsBoard(BOARDS, { size: 50, filters: boardFilters })
+
+function setCountry(country: string) {
+  storeCountry(country)
+  countryFilter.value = country
 }
 
 onMounted(() => {
@@ -188,125 +182,30 @@ async function fetchCrates() {
     const { getItems } = await import('@/api/items')
     crates.value = await getItems({ typeId: crateTypeId })
   } catch {
+    return
   }
-}
-
-const itemCatalog = ref<Map<string, ItemResponse>>(new Map())
-let catalogRequested = false
-
-async function fetchItemCatalog() {
-  if (catalogRequested) return
-  catalogRequested = true
-  try {
-    const { getItems } = await import('@/api/items')
-    const all = await getItems()
-    itemCatalog.value = new Map(all.map((item) => [item.id, item]))
-  } catch {
-    catalogRequested = false
-  }
-}
-
-const loading = ref(false)
-const pageData = ref<Page<unknown> | null>(null)
-const pageBoard = ref<ItemStatsBoard | null>(null)
-
-const currentPageData = computed(() => (pageBoard.value === activeBoard.value ? pageData.value : null))
-
-const totalPages = computed(() => currentPageData.value?.totalPages ?? 0)
-const totalElements = computed(() => currentPageData.value?.totalElements ?? 0)
-
-function withRank(item: Record<string, unknown>, index: number): Record<string, unknown> {
-  const page = currentPageData.value!
-  return { ...item, rank: page.number * page.size + index + 1 }
-}
-
-function enrichItem(item: Record<string, unknown>): Record<string, unknown> {
-  const catalogItem = itemCatalog.value.get(item.itemId as string)
-  if (!catalogItem) return item
-  return {
-    ...item,
-    itemValue: catalogItem.value,
-    itemTypeId: catalogItem.typeId,
-    iconUrl: item.iconUrl ?? catalogItem.iconUrl,
-  }
-}
-
-const rows = computed<Record<string, unknown>[]>(() => {
-  if (!currentPageData.value) return []
-  return currentPageData.value.content.map((raw, i) => {
-    const item = raw as Record<string, unknown>
-    if (activeBoard.value === 'rarest-items') {
-      return withRank(enrichItem(item), i)
-    }
-    if (activeBoard.value === 'rarest-unboxed' || activeBoard.value === 'first-edition-holders') {
-      const owner = item as unknown as ItemStatsPlayerRef
-      return withRank(enrichItem({
-        ...item,
-        ownerUserId: owner.userId,
-        owner: toUserRef(owner),
-      }), i)
-    }
-    const player = item as unknown as ItemStatsPlayerRef
-    return withRank({ ...item, player: toUserRef(player) }, i)
-  })
-})
-
-let requestId = 0
-
-async function fetchData() {
-  const def = boardDef.value
-  const id = ++requestId
-  loading.value = true
-  try {
-    const params: PaginationParams = { page: currentPage.value - 1, size: 50, sort: def.sort }
-    const query: BoardQuery = {
-      country: def.country ? countryFilter.value || undefined : undefined,
-      type: typeFilter.value || undefined,
-      modifier: modifierFilter.value || undefined,
-      crate: crateFilter.value || undefined,
-    }
-    const api = await import('@/api/statistics')
-    const result = await def.fetch(api, params, query)
-
-    if (id !== requestId) return
-    pageData.value = result
-    pageBoard.value = def.key
-  } catch (error) {
-    if (id !== requestId) return
-    console.error('Failed to fetch item stats:', error)
-    pageData.value = null
-    pageBoard.value = def.key
-  }
-  loading.value = false
 }
 
 watch(activeBoard, (board) => {
   if (board === 'most-crates-opened') fetchCrates()
-  if (board === 'rarest-items' || board === 'rarest-unboxed') fetchItemCatalog()
 }, { immediate: true })
-
-watch(
-  [activeBoard, countryFilter, typeFilter, modifierFilter, crateFilter, currentPage],
-  () => fetchData(),
-  { immediate: true },
-)
 </script>
 
 <template>
   <div class="item-stats" :style="{ '--accent': accent }">
     <div class="item-stats__filters">
       <BaseSelect v-if="boardDef.country" :model-value="countryFilter" :options="countryOptions"
-        placeholder="All Countries" searchable @update:model-value="setQueryParam('country', $event)" />
+        placeholder="All Countries" searchable @update:model-value="setCountry" />
       <BaseSelect v-if="boardDef.filters.includes('type')" :model-value="typeFilter" :options="typeOptions"
-        placeholder="All Types" searchable @update:model-value="setQueryParam('type', $event)" />
+        placeholder="All Types" searchable @update:model-value="typeFilter = $event" />
       <BaseSelect v-if="boardDef.filters.includes('modifier')" :model-value="modifierFilter" :options="modifierOptions"
-        placeholder="All Modifiers" searchable @update:model-value="setQueryParam('modifier', $event)" />
+        placeholder="All Modifiers" searchable @update:model-value="modifierFilter = $event" />
       <BaseSelect v-if="boardDef.filters.includes('crate')" :model-value="crateFilter" :options="crateOptions"
-        placeholder="All Crates" searchable @update:model-value="setQueryParam('crate', $event)" />
+        placeholder="All Crates" searchable @update:model-value="crateFilter = $event" />
     </div>
 
     <LeaderboardPicker :model-value="activeBoard" :options="pickerOptions"
-      @update:model-value="selectBoard($event as ItemStatsBoard)" />
+      @update:model-value="selectBoard($event, { type: undefined, modifier: undefined, crate: undefined })" />
 
     <p v-if="totalElements > 0" class="item-stats__count">{{ totalElements.toLocaleString() }} records</p>
 

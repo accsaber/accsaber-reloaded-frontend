@@ -1,6 +1,6 @@
 import type { MetricType, TimeRange } from '@/types/display';
 
-export const TIME_RANGE_PARAMS: Record<TimeRange, { amount: number; unit: 'h' | 'd' | 'w' | 'mo' }> = {
+export const TIME_RANGE_PARAMS: Record<TimeRange, { amount: number; unit: 'h' | 'd' | 'mo' }> = {
   '24h': { amount: 24, unit: 'h' },
   '7d': { amount: 7, unit: 'd' },
   '14d': { amount: 14, unit: 'd' },
