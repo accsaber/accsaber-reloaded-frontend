@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers'
 
 const CRAWLER_PATTERN =
-  /discordbot|twitterbot|facebookexternalhit|slackbot|telegrambot|whatsapp|linkedinbot|redditbot|embedly|pinterest|vkshare|skypeuripreview|googlebot/i
+  /discordbot|twitterbot|facebookexternalhit|slackbot|telegrambot|whatsapp|linkedinbot|redditbot|embedly|pinterest|vkshare|skypeuripreview/i
 
 const OG_PATH_PATTERN = /^\/(players|maps|campaigns)\/([^/]+)$/
 
@@ -13,6 +13,8 @@ const INDEXABLE_HOSTS = new Set(['accsaber.com', 'www.accsaber.com'])
 
 const ROBOTS_ALLOW = `User-agent: *
 Allow: /
+Disallow: /v1/
+Disallow: /proxy/
 
 Sitemap: https://accsaber.com/sitemap.xml
 `

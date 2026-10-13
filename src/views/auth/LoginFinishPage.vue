@@ -10,6 +10,7 @@ const router = useRouter()
 usePageMeta({
   title: 'Link Your Account | AccSaber',
   description: 'Finish linking your account to AccSaber.',
+  noindex: true,
 })
 const pendingLinkToken = ref<string | null>(null)
 

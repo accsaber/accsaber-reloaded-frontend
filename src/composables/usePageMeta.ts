@@ -6,6 +6,7 @@ interface PageMeta {
   image?: Ref<string | undefined> | string
   url?: Ref<string | undefined> | string
   type?: Ref<string | undefined> | string
+  noindex?: boolean
 }
 
 function toRef(val: Ref<string | undefined> | string | undefined): Ref<string | undefined> {
@@ -40,6 +41,11 @@ function setNameMeta(name: string, content: string) {
   el.setAttribute('content', content)
 }
 
+function setRobots(noindex: boolean) {
+  if (noindex) setNameMeta('robots', 'noindex')
+  else document.querySelector('meta[name="robots"]')?.remove()
+}
+
 function setCanonical(href: string) {
   let el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null
   if (!el) {
@@ -57,6 +63,8 @@ function applyMeta(meta: {
   url: string
   canonical: string
   type: string
+  largeImage: boolean
+  noindex: boolean
 }) {
   document.title = meta.title
 
@@ -67,12 +75,13 @@ function applyMeta(meta: {
   setMeta('og:type', meta.type)
 
   setNameMeta('description', meta.description)
-  setNameMeta('twitter:card', 'summary_large_image')
+  setNameMeta('twitter:card', meta.largeImage ? 'summary_large_image' : 'summary')
   setNameMeta('twitter:title', meta.title)
   setNameMeta('twitter:description', meta.description)
   setNameMeta('twitter:image', meta.image)
 
   setCanonical(meta.canonical)
+  setRobots(meta.noindex)
 }
 
 function defaultCanonical(): string {
@@ -98,6 +107,8 @@ export function usePageMeta(meta: PageMeta) {
       url: urlRef.value ?? window.location.href,
       canonical: urlRef.value ?? defaultCanonical(),
       type: typeRef.value ?? 'website',
+      largeImage: !!imageRef.value,
+      noindex: meta.noindex ?? false,
     })
   }
 
@@ -114,6 +125,8 @@ export function usePageMeta(meta: PageMeta) {
       url: SITE_URL,
       canonical: SITE_URL,
       type: 'website',
+      largeImage: false,
+      noindex: false,
     })
   })
 }

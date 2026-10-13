@@ -11,6 +11,7 @@ const authStore = useAuthStore()
 usePageMeta({
   title: 'Signing In | AccSaber',
   description: 'Completing your sign-in to AccSaber.',
+  noindex: true,
 })
 
 const errorCode = ref<string | null>(null)

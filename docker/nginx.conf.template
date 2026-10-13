@@ -35,7 +35,7 @@ http {
 
     map $http_user_agent $is_crawler {
         default 0;
-        ~*(discordbot|twitterbot|facebookexternalhit|slackbot|telegrambot|whatsapp|linkedinbot|redditbot|embedly|pinterest|vkshare|skypeuripreview|googlebot) 1;
+        ~*(discordbot|twitterbot|facebookexternalhit|slackbot|telegrambot|whatsapp|linkedinbot|redditbot|embedly|pinterest|vkshare|skypeuripreview) 1;
     }
 
     resolver ${OG_RESOLVER} valid=300s ipv6=off;
@@ -136,7 +136,7 @@ http {
         }
 
         location / {
-            try_files $uri $uri/ /index.html;
+            try_files $uri $uri.html $uri/ /index.html;
             expires 5m;
             add_header Cache-Control "no-cache";
             include /etc/nginx/security-headers.conf;
