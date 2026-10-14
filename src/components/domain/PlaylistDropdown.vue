@@ -5,18 +5,20 @@ import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
 
+const props = defineProps<{
+  queued?: boolean
+}>()
+
 const authStore = useAuthStore()
 const open = ref(false)
 const unplayedOnly = ref(false)
-const { playlistCategories, downloadPlaylist: dlPlaylist, downloadMissingPlaylist: dlMissingPlaylist } =
+const { playlistCategories, downloadPlaylist, downloadUnrankedPlaylist, downloadMissingPlaylist } =
   usePlaylistDownload()
 
 function download(categoryCode: string) {
-  if (unplayedOnly.value && authStore.userId) {
-    dlMissingPlaylist(authStore.userId, categoryCode)
-  } else {
-    dlPlaylist(categoryCode)
-  }
+  if (props.queued) downloadUnrankedPlaylist(categoryCode)
+  else if (unplayedOnly.value && authStore.userId) downloadMissingPlaylist(authStore.userId, categoryCode)
+  else downloadPlaylist(categoryCode)
   open.value = false
 }
 </script>
@@ -24,14 +26,15 @@ function download(categoryCode: string) {
 <template>
   <BaseDropdown :open="open" @update:open="open = $event">
     <template #trigger>
-      <button class="playlist-btn" :class="{ 'playlist-btn--active': open }" aria-label="Download playlists">
+      <button class="playlist-btn" :class="{ 'playlist-btn--active': open }"
+        :aria-label="queued ? 'Download queued playlists' : 'Download playlists'">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
-        <span>Playlists</span>
+        <span>{{ queued ? 'Queued Playlists' : 'Playlists' }}</span>
         <svg class="playlist-chevron" :class="{ 'playlist-chevron--open': open }" width="12" height="12"
           viewBox="0 0 12 12" fill="none">
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
@@ -40,8 +43,8 @@ function download(categoryCode: string) {
       </button>
     </template>
     <div class="playlist-menu">
-      <span class="playlist-title">Download playlists...</span>
-      <label v-if="authStore.isLoggedIn" class="playlist-toggle">
+      <span class="playlist-title">{{ queued ? 'Download queued playlists...' : 'Download playlists...' }}</span>
+      <label v-if="!queued && authStore.isLoggedIn" class="playlist-toggle">
         <input v-model="unplayedOnly" type="checkbox" class="playlist-checkbox" />
         <span>Only your unplayed maps</span>
       </label>
@@ -70,7 +73,7 @@ function download(categoryCode: string) {
   cursor: pointer;
   min-width: 140px;
   white-space: nowrap;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  transition: background 120ms ease;
 }
 
 .playlist-btn:hover,

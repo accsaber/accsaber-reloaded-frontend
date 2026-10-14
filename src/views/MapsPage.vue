@@ -23,7 +23,7 @@ import { useRoute, type RouteLocationRaw } from 'vue-router'
 import BatchListView from './maps/BatchListView.vue'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
 import MapListView from './maps/MapListView.vue'
-import PlaylistDropdown from './maps/PlaylistDropdown.vue'
+import PlaylistDropdown from '@/components/domain/PlaylistDropdown.vue'
 import ViewToggle from './maps/ViewToggle.vue'
 
 const route = useRoute()

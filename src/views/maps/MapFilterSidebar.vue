@@ -5,11 +5,12 @@ import { computed, ref, useId, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   selectedCategory: string | null
-  complexityRange: [number, number]
+  complexityRange?: [number, number]
   unplayedOnly?: boolean
   showUnplayed?: boolean
   showComplexity?: boolean
 }>(), {
+  complexityRange: () => [0, 20],
   showComplexity: true,
 })
 

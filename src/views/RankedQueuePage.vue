@@ -7,29 +7,25 @@ import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import QueuedPlaylistsButton from '@/components/domain/QueuedPlaylistsButton.vue'
+import PlaylistDropdown from '@/components/domain/PlaylistDropdown.vue'
 import RankedQueueRow from '@/components/domain/RankedQueueRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
-import { MAP_STATUS_ACCENT, QUEUE_STATUSES } from '@/utils/constants'
-import { buildMapRoute } from '@/utils/mapRoute'
+import { QUEUE_STATUSES } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import MapFilterSidebar from './maps/MapFilterSidebar.vue'
 
-const route = useRoute()
-const router = useRouter()
 const queueCache = useLeaderboardCacheStore()
+const { queryRef } = useQueryParams()
 
 usePageMeta({
   title: 'Ranking Queue | AccSaber',
   description: 'Maps awaiting ranking review on AccSaber. See community votes and criteria status.',
 })
-
-const accent = MAP_STATUS_ACCENT.QUEUE ?? 'var(--accent-overall)'
 
 const sortOptions = [
   { value: 'rating', label: 'Rating' },
@@ -46,28 +42,14 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   secondarySort: null,
 })
 
+const searchQuery = queryRef('q')
+const categoryParam = queryRef('category')
 const selectedCategory = computed<string | null>({
-  get() {
-    const c = route.query.category
-    const first = Array.isArray(c) ? c[0] : c
-    return typeof first === 'string' && first ? first : null
-  },
-  set(val) {
-    const query = { ...route.query }
-    if (val) {
-      query.category = val
-    } else {
-      delete query.category
-    }
-    delete query.page
-    router.replace({ query })
-  },
+  get: () => categoryParam.value || null,
+  set: (value) => { categoryParam.value = value ?? '' },
 })
 
 const filtersOpen = ref(false)
-const searchQuery = ref('')
-
-const hasActiveFilters = computed(() => selectedCategory.value !== null)
 
 const difficulties = ref<PublicMapDifficultyResponse[]>([])
 const totalPages = ref(0)
@@ -81,15 +63,12 @@ const subtitle = computed(() => {
   return `${totalElements.value} ${noun} in the ranking queue`
 })
 
-function buildCacheKey(): Record<string, unknown> {
-  return {
-    _type: 'ranked-queue',
-    ...paginationParams.value,
-    status: QUEUE_STATUSES.join(','),
-    categoryId: selectedCategory.value ?? undefined,
-    search: searchQuery.value.trim() || undefined,
-  }
-}
+const request = computed(() => ({
+  ...paginationParams.value,
+  status: QUEUE_STATUSES,
+  categoryId: selectedCategory.value ?? undefined,
+  search: searchQuery.value.trim() || undefined,
+}))
 
 function applyPage(res: Page<PublicMapDifficultyResponse>) {
   difficulties.value = res.content
@@ -97,101 +76,59 @@ function applyPage(res: Page<PublicMapDifficultyResponse>) {
   totalElements.value = res.totalElements
 }
 
-async function fetchFromApi(cacheKey: Record<string, unknown>) {
-  const params: Record<string, unknown> = {
-    ...paginationParams.value,
-    status: QUEUE_STATUSES,
-  }
-  if (selectedCategory.value) {
-    params.categoryId = selectedCategory.value
-  }
-  if (searchQuery.value.trim()) {
-    params.search = searchQuery.value.trim()
-  }
-  const { getDifficulties } = await import('@/api/maps')
-  const res = await getDifficulties(params as never)
-  applyPage(res)
-  queueCache.setCache(cacheKey, res)
-}
+let requestId = 0
 
 async function fetchDifficulties() {
-  const cacheKey = buildCacheKey()
+  const params = request.value
+  const cacheKey = { _type: 'ranked-queue', ...params, status: QUEUE_STATUSES.join(',') }
+  const id = ++requestId
   const cached = queueCache.getCached<Page<PublicMapDifficultyResponse>>(cacheKey)
-
-  if (cached) {
-    applyPage(cached)
-    loading.value = false
-    try {
-      await fetchFromApi(cacheKey)
-    } catch { }
-    return
-  }
-
-  loading.value = true
+  if (cached) applyPage(cached)
+  loading.value = !cached
   try {
-    await fetchFromApi(cacheKey)
+    const { getDifficulties } = await import('@/api/maps')
+    const res = await getDifficulties(params as never)
+    queueCache.setCache(cacheKey, res)
+    if (id === requestId) applyPage(res)
   } catch {
-    difficulties.value = []
-    totalPages.value = 0
-    totalElements.value = 0
+    if (id === requestId && !cached) {
+      difficulties.value = []
+      totalPages.value = 0
+      totalElements.value = 0
+    }
   }
-  loading.value = false
+  if (id === requestId) loading.value = false
 }
 
-watch(searchQuery, () => {
-  const query = { ...route.query }
-  delete query.page
-  router.replace({ query })
-})
+watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true })
 
-watch(
-  [selectedCategory, paginationParams, searchQuery],
-  fetchDifficulties,
-  { immediate: true, deep: true },
-)
-
-function navigateToMap(entry: PublicMapDifficultyResponse) {
-  router.push(buildMapRoute({
-    beatsaverCode: entry.beatsaverCode,
-    mapId: entry.mapId,
-    difficulty: entry.difficulty,
-    difficultyId: entry.id,
-    characteristic: entry.characteristic,
-  }))
-}
-
-const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'
+const emptyMessage = computed(() => (request.value.search || request.value.categoryId ? 'No matches' : 'No maps in the queue'))
 </script>
 
 <template>
-  <div class="queue-page" :style="{ '--page-accent': accent, '--accent': accent }">
+  <div class="queue-page">
     <PageHeaderBleed title="Ranking Queue" :subtitle="subtitle" />
 
     <div class="queue-page__controls">
-      <div class="queue-page__filters">
-        <QueuedPlaylistsButton />
-        <BaseSelect :options="sortOptions" :model-value="sortState.key" @update:model-value="setSort($event)" />
-        <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..."
-          class="queue-page__search" />
-        <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
-          <template #trigger>
-            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
-          </template>
-          <MapFilterSidebar :selected-category="selectedCategory" :complexity-range="[0, 20]"
-            :show-complexity="false" @update:selected-category="selectedCategory = $event" />
-        </FilterPopover>
-      </div>
+      <PlaylistDropdown queued />
+      <BaseSelect :options="sortOptions" :model-value="sortState.key" @update:model-value="setSort($event)" />
+      <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..."
+        class="queue-page__search" />
+      <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
+        <template #trigger>
+          <FilterButton :active="filtersOpen || selectedCategory !== null" :has-indicator="selectedCategory !== null" />
+        </template>
+        <MapFilterSidebar v-model:selected-category="selectedCategory" :show-complexity="false" />
+      </FilterPopover>
     </div>
 
     <div class="queue-page__list">
       <template v-if="loading">
         <SkeletonLoader v-for="i in 8" :key="'skel-' + i" variant="card" height="88px" />
       </template>
-      <template v-else-if="difficulties.length === 0">
-        <EmptyState :message="emptyMessage" />
-      </template>
+      <EmptyState v-else-if="difficulties.length === 0" :message="emptyMessage" />
       <template v-else>
-        <RankedQueueRow v-for="entry in difficulties" :key="entry.id" :entry="entry" @click="navigateToMap(entry)" />
+        <RankedQueueRow v-for="entry in difficulties" :key="entry.id" :entry="entry" />
       </template>
     </div>
 
@@ -212,17 +149,9 @@ const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'
 
 .queue-page__controls {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.queue-page__filters {
-  display: flex;
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
-  flex: 1;
 }
 
 .queue-page__search {
@@ -237,18 +166,7 @@ const emptyMessage = 'No maps currently in the ranking queue. Check back soon.'
 }
 
 @media (max-width: 767px) {
-  .queue-page__controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .queue-page__filters {
-    flex-direction: row;
-    align-items: stretch;
-  }
-
   .queue-page__search {
-    flex: 1;
     min-width: 0;
   }
 }

@@ -13,7 +13,7 @@ import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import ComplexityPin from '@/views/staff/ranking/complexity/ComplexityPin.vue'
 import ScenarioCell from '@/views/staff/ranking/complexity/ScenarioCell.vue'
-import QueuedPlaylistsButton from '@/components/domain/QueuedPlaylistsButton.vue'
+import PlaylistDropdown from '@/components/domain/PlaylistDropdown.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
@@ -378,7 +378,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
     <div class="ranking-dashboard__controls">
       <BaseTabs :tabs="statusTabs" :model-value="activeStatus" @update:model-value="activeStatus = $event as MapDifficultyStatus" />
       <div class="ranking-dashboard__filters">
-        <QueuedPlaylistsButton />
+        <PlaylistDropdown queued />
         <SearchBox v-model="searchQuery" placeholder="Search by song, artist, or mapper..." style="flex: 1; min-width: 240px;" />
         <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>
