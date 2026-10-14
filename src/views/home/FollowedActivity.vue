@@ -18,7 +18,8 @@ import type { ScoreDisplay, ScoreFeedEntry, Tab, TableColumn, UserRefDisplay } f
 import type { Page } from '@/types/pagination'
 import { feedEntryToScoreDisplay, toPlayerDisplay, toScoreFeedEntry } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useNow } from '@/composables/useNow'
+import { computed, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 const RANKING_SIZE = 8
@@ -37,10 +38,7 @@ const scoreMode = ref<ScoreRelationType>('follower')
 const filterCategoryId = ref<string | undefined>(undefined)
 const filtersOpen = ref(false)
 
-const tick = ref(0)
-let tickInterval: ReturnType<typeof setInterval>
-onMounted(() => { tickInterval = setInterval(() => tick.value++, 60_000) })
-onUnmounted(() => clearInterval(tickInterval))
+const now = useNow()
 
 const scoreTabs: Tab[] = [
   { key: 'follower', label: 'Following' },
@@ -229,7 +227,7 @@ watch([scoreMode, scorePage, filterCategoryId], fetchScores, { immediate: true }
           v-for="entry in scoreFeedEntries"
           :key="entry.key"
           :entry="entry"
-          :tick="tick"
+          :now="now"
           compact
           @select="onSelectScore"
         />

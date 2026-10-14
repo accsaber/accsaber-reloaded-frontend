@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import BaseTabs from '@/components/common/BaseTabs.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
+import { useNow } from '@/composables/useNow'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useScoreWebSocket } from '@/composables/useScoreWebSocket'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreDisplay, ScoreFeedEntry } from '@/types/display'
 import { feedEntryToScoreDisplay } from '@/utils/mappers'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const categoryStore = useCategoryStore()
-const { scores, status, connect } = useScoreWebSocket()
+const { scores, status } = useScoreWebSocket()
+const now = useNow()
 const activeTab = ref('all')
 
 usePageMeta({
@@ -18,20 +22,21 @@ usePageMeta({
   description: 'Live score feed showing real-time score submissions across AccSaber.',
 })
 
-const tabs = computed(() => {
-  const categoryTabs = categoryStore.categoryInfoList
+const tabs = computed(() => [
+  { key: 'all', label: 'All' },
+  ...categoryStore.categoryInfoList
     .filter((c) => c.code !== 'overall' && c.code !== 'xp')
-    .map((c) => ({
-      key: c.code,
-      label: c.name,
-      accentColor: c.accent,
-    }))
-  return [{ key: 'all', label: 'All' }, ...categoryTabs]
-})
+    .map((c) => ({ key: c.code, label: c.name, accentColor: c.accent })),
+])
 
-const filteredScores = computed(() => {
-  if (activeTab.value === 'all') return scores.value
-  return scores.value.filter((s) => s.categoryCode === activeTab.value)
+const filteredScores = computed(() =>
+  activeTab.value === 'all' ? scores.value : scores.value.filter((s) => s.categoryCode === activeTab.value),
+)
+
+const statusNote = computed(() => {
+  if (status.value === 'reconnecting') return 'Reconnecting...'
+  if (status.value === 'disconnected') return 'Disconnected'
+  return ''
 })
 
 const modalOpen = ref(false)
@@ -43,104 +48,31 @@ function onSelectScore(entry: ScoreFeedEntry) {
   modalUserId.value = entry.userId
   modalOpen.value = true
 }
-
-const tick = ref(0)
-let tickInterval: ReturnType<typeof setInterval>
-
-onMounted(() => {
-  connect()
-  tickInterval = setInterval(() => tick.value++, 60_000)
-})
-onUnmounted(() => clearInterval(tickInterval))
 </script>
 
 <template>
   <div class="score-feed-page">
-    <div class="score-feed-page__header">
-      <h1 class="score-feed-page__title">Score Feed</h1>
-      <div class="score-feed-page__status" :class="`score-feed-page__status--${status}`">
-        <span class="score-feed-page__status-dot" />
-        <span v-if="status === 'connected'">Live</span>
-        <span v-else-if="status === 'reconnecting'">Reconnecting...</span>
-        <span v-else>Disconnected</span>
-      </div>
-    </div>
+    <PageHeaderBleed title="Score Feed" :subtitle="statusNote" />
 
-    <BaseTabs :tabs="tabs" v-model="activeTab" />
+    <BaseTabs v-model="activeTab" :tabs="tabs" />
 
     <div class="score-feed-page__list">
       <TransitionGroup name="feed">
-        <ScoreFeedCard
-          v-for="entry in filteredScores"
-          :key="entry.key"
-          :entry="entry"
-          :tick="tick"
-          @select="onSelectScore"
-        />
+        <ScoreFeedCard v-for="entry in filteredScores" :key="entry.key" :entry="entry" :now="now"
+          @select="onSelectScore" />
       </TransitionGroup>
 
-      <div v-if="filteredScores.length === 0" class="score-feed-page__empty">
-        <span class="score-feed-page__empty-dot" aria-hidden="true" />
-        <span class="score-feed-page__empty-text">Waiting for scores...</span>
-      </div>
+      <EmptyState v-if="filteredScores.length === 0" message="Waiting for scores..." />
     </div>
 
-    <ScoreDetailModal
-      :open="modalOpen"
-      :score="modalScore"
-      :user-id="modalUserId"
-      @close="modalOpen = false"
-    />
+    <ScoreDetailModal :open="modalOpen" :score="modalScore" :user-id="modalUserId" @close="modalOpen = false" />
   </div>
 </template>
 
 <style scoped>
 .score-feed-page {
-  padding: var(--space-xl);
   max-width: 900px;
   margin: 0 auto;
-}
-
-.score-feed-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-lg);
-}
-
-.score-feed-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.score-feed-page__status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.score-feed-page__status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.score-feed-page__status--connected .score-feed-page__status-dot {
-  background: var(--success);
-  animation: pulse-dot 3s ease-in-out infinite;
-}
-
-.score-feed-page__status--reconnecting .score-feed-page__status-dot {
-  background: var(--warning);
-  animation: pulse-dot 1s ease-in-out infinite;
-}
-
-.score-feed-page__status--disconnected .score-feed-page__status-dot {
-  background: var(--error);
 }
 
 .score-feed-page__list {
@@ -148,28 +80,6 @@ onUnmounted(() => clearInterval(tickInterval))
   flex-direction: column;
   gap: var(--space-sm);
   margin-top: var(--space-lg);
-}
-
-.score-feed-page__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  padding: var(--space-3xl) 0;
-}
-
-.score-feed-page__empty-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  animation: pulse-dot 1.6s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-.score-feed-page__empty-text {
-  font-size: var(--text-body);
-  color: var(--text-tertiary);
 }
 
 .feed-enter-active {
@@ -194,27 +104,11 @@ onUnmounted(() => clearInterval(tickInterval))
   transition: transform 200ms ease-out;
 }
 
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .feed-enter-active,
   .feed-leave-active,
   .feed-move {
     transition: none;
-  }
-
-  .score-feed-page__status-dot,
-  .score-feed-page__empty-dot {
-    animation: none;
-  }
-}
-
-@media (max-width: 767px) {
-  .score-feed-page {
-    padding: var(--space-md);
   }
 }
 </style>

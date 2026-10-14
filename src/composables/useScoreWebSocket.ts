@@ -9,14 +9,7 @@ import { ref, type Ref } from 'vue'
 const MAX_ENTRIES = 50
 const HEARTBEAT_MS = 30000
 
-interface UseScoreWebSocketReturn {
-  scores: Ref<ScoreFeedEntry[]>
-  status: Ref<ConnectionStatus>
-  connect: () => void
-  disconnect: () => void
-}
-
-export function useScoreWebSocket(): UseScoreWebSocketReturn {
+export function useScoreWebSocket(): { scores: Ref<ScoreFeedEntry[]>; status: Ref<ConnectionStatus> } {
   const scores = ref<ScoreFeedEntry[]>([])
 
   const categoryStore = useCategoryStore()
@@ -33,14 +26,13 @@ export function useScoreWebSocket(): UseScoreWebSocketReturn {
     )
   }
 
-  const { status, connect, disconnect } = useSocket<ScoreResponse>({
+  const { status } = useSocket<ScoreResponse>({
     path: '/ws/scores',
-    autoConnect: false,
     heartbeatMs: HEARTBEAT_MS,
     onMessage: (raw) => {
       scores.value = [toFeedEntry(raw), ...scores.value].slice(0, MAX_ENTRIES)
     },
   })
 
-  return { scores, status, connect, disconnect }
+  return { scores, status }
 }

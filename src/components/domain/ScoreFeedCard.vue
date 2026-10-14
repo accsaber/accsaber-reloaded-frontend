@@ -7,11 +7,10 @@ import type { ScoreFeedEntry } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
 import { getRankClass } from '@/utils/ranking'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   entry: ScoreFeedEntry
-  tick: number
+  now: number
   compact?: boolean
 }>()
 
@@ -19,7 +18,6 @@ const emit = defineEmits<{
   select: [entry: ScoreFeedEntry]
 }>()
 
-const router = useRouter()
 const categoryStore = useCategoryStore()
 
 const accent = computed(() => categoryStore.getAccent(props.entry.categoryCode))
@@ -27,7 +25,7 @@ const categoryName = computed(() =>
   categoryStore.getCategoryInfo(props.entry.categoryCode)?.name ?? props.entry.categoryCode,
 )
 const relativeTime = computed(() => {
-  void props.tick
+  void props.now
   return formatRelativeDate(props.entry.timeSet)
 })
 
@@ -40,16 +38,12 @@ function handleClick() {
   emit('select', props.entry)
 }
 
-function goToPlayer() {
-  router.push(`/players/${props.entry.userId}`)
-}
-
 </script>
 
 <template>
   <div class="feed-card" :class="{ 'feed-card--compact': compact }" :style="{ '--card-accent': accent }"
     @click="handleClick">
-    <div class="feed-card__player-tab" @click.stop="goToPlayer">
+    <div class="feed-card__player-tab" @click.stop>
       <UserChip :user="entry.player" size="xs" tooltip class="feed-card__player" />
     </div>
 
@@ -117,13 +111,11 @@ function goToPlayer() {
   border-radius: var(--radius-card);
   overflow: visible;
   cursor: pointer;
-  transition: border-color 120ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition: border-color 120ms ease;
 }
 
 .feed-card:hover {
   border-color: var(--text-tertiary);
-  transform: scale(1.005);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .feed-card:has(.feed-card__player-tab:hover) {
