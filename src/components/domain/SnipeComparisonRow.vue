@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import GlowImage from '@/components/common/GlowImage.vue'
+import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
 import type { ScoreResponse } from '@/types/api/users'
 import { formatRelativeDate } from '@/utils/formatters'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import CategoryBadge from './CategoryBadge.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
 import DifficultyBadge from './DifficultyBadge.vue'
@@ -14,15 +14,12 @@ import SongTitle from './SongTitle.vue'
 
 const props = defineProps<{
   comparison: SnipeComparisonResponse
-  sniperName: string
-  targetName: string
 }>()
 
 const emit = defineEmits<{
   'open-detail': [score: ScoreResponse]
 }>()
 
-const router = useRouter()
 const categoryStore = useCategoryStore()
 
 const map = computed(() => props.comparison.mapDifficulty)
@@ -43,16 +40,9 @@ const tugFillPercent = computed(() => {
   return Math.max(0, Math.min(100, ((sniper.value?.accuracy ?? 0) / t) * 100))
 })
 
-interface SnipeSide {
-  kind: 'sniper' | 'target'
-  score: ScoreResponse | null
-  name: string
-  roleLabel: string
-}
-
-const sides = computed<SnipeSide[]>(() => [
-  { kind: 'sniper', score: sniper.value, name: props.sniperName, roleLabel: 'You' },
-  { kind: 'target', score: target.value, name: props.targetName, roleLabel: 'Target' },
+const sides = computed<{ kind: 'sniper' | 'target'; score: ScoreResponse | null; role: string }[]>(() => [
+  { kind: 'sniper', score: sniper.value, role: 'You' },
+  { kind: 'target', score: target.value, role: 'Target' },
 ])
 
 const mapTarget = computed(() => buildMapRoute({
@@ -63,20 +53,12 @@ const mapTarget = computed(() => buildMapRoute({
   characteristic: map.value.characteristic,
 }))
 
-const mapHref = computed(() => router.resolve(mapTarget.value).href)
-
-function navigateToMap(e: MouseEvent) {
-  if (e.ctrlKey || e.metaKey || e.button === 1) return
-  e.preventDefault()
-  router.push(mapTarget.value)
-}
 </script>
 
 <template>
   <article class="snipe-row" :style="{ '--row-accent': categoryAccent }">
-    <a class="snipe-row__quadrant snipe-row__map" :href="mapHref" @click="navigateToMap">
-      <GlowImage :src="map.cdnCoverUrl ?? map.coverUrl" :alt="map.songName" :size="88"
-        :fallback-src="map.cdnCoverUrl && map.coverUrl && map.cdnCoverUrl !== map.coverUrl ? map.coverUrl : null" />
+    <RouterLink class="snipe-row__quadrant snipe-row__map" :to="mapTarget">
+      <GlowImage :src="pickCoverUrl(map)" :alt="map.songName" :size="88" :fallback-src="pickCoverFallback(map)" />
       <div class="snipe-row__map-info">
         <CategoryBadge v-if="categoryCode" :category="categoryCode" size="sm" class="snipe-row__category-eyebrow" />
         <SongTitle class="snipe-row__song" layout="stacked" :name="map.songName"
@@ -90,16 +72,13 @@ function navigateToMap(e: MouseEvent) {
         <span class="snipe-row__artist">{{ map.songAuthor }}</span>
         <span class="snipe-row__mapper">{{ map.mapAuthor }}</span>
       </div>
-    </a>
+    </RouterLink>
 
     <div class="snipe-row__scores">
       <button v-for="side in sides" :key="side.kind" type="button"
         class="snipe-row__quadrant snipe-row__score" :class="`snipe-row__score--${side.kind}`"
         :disabled="!side.score" @click="side.score && emit('open-detail', side.score)">
-        <span class="snipe-row__score-label">
-          <span class="snipe-row__player-name">{{ side.name }}</span>
-          <span class="snipe-row__role-pill" :class="`snipe-row__role-pill--${side.kind}`">{{ side.roleLabel }}</span>
-        </span>
+        <span class="snipe-row__role" :class="`snipe-row__role--${side.kind}`">{{ side.role }}</span>
         <template v-if="side.score">
           <span class="snipe-row__accuracy">{{ (side.score.accuracy * 100).toFixed(2) }}<span class="snipe-row__pct">%</span></span>
           <span class="snipe-row__points">{{ side.score.score.toLocaleString() }} pts</span>
@@ -262,39 +241,16 @@ function navigateToMap(e: MouseEvent) {
   flex-direction: row-reverse;
 }
 
-.snipe-row__score-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.snipe-row__role-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px var(--space-xs);
-  border-radius: var(--radius-pill);
-  font-size: 0.65rem;
+.snipe-row__role {
+  font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  border: 1px solid currentColor;
-}
-
-.snipe-row__role-pill--sniper {
   color: var(--text-tertiary);
 }
 
-.snipe-row__role-pill--target {
+.snipe-row__role--target {
   color: var(--row-accent);
-}
-
-.snipe-row__player-name {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 140px;
 }
 
 .snipe-row__accuracy {

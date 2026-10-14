@@ -1,48 +1,27 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import CountryFlag from './CountryFlag.vue'
 
 const props = defineProps<{
-  sniperName: string
-  sniperCountry?: string
   sniperWins: number
-  targetName: string
-  targetCountry?: string
   targetWins: number
   unplayed: number
   loading?: boolean
 }>()
 
-const total = computed(() =>
-  Math.max(0, props.sniperWins) + Math.max(0, props.targetWins) + Math.max(0, props.unplayed),
-)
+const total = computed(() => props.sniperWins + props.targetWins + props.unplayed)
 
-const sniperFlex = computed(() => Math.max(0, props.sniperWins))
-const targetFlex = computed(() => Math.max(0, props.targetWins))
-const unplayedFlex = computed(() => Math.max(0, props.unplayed))
-
-const sniperPct = computed(() =>
-  total.value > 0 ? (props.sniperWins / total.value) * 100 : 0,
-)
-const targetPct = computed(() =>
-  total.value > 0 ? (props.targetWins / total.value) * 100 : 0,
-)
-const unplayedPct = computed(() =>
-  total.value > 0 ? (props.unplayed / total.value) * 100 : 0,
-)
+function pct(value: number): string {
+  return total.value > 0 ? `${((value / total.value) * 100).toFixed(0)}%` : ''
+}
 </script>
 
 <template>
   <section class="tug" aria-label="Map win standings">
     <header class="tug__header">
       <div class="tug__side tug__side--sniper">
-        <span class="tug__name">
-          <CountryFlag v-if="sniperCountry" :country="sniperCountry" />
-          <span class="tug__name-text">{{ sniperName }}</span>
-        </span>
         <span class="tug__count tug__count--sniper">
           <span class="tug__count-value">{{ loading ? '...' : sniperWins.toLocaleString() }}</span>
-          <span class="tug__count-pct">{{ loading ? '' : `${sniperPct.toFixed(0)}%` }}</span>
+          <span class="tug__count-pct">{{ loading ? '' : pct(sniperWins) }}</span>
         </span>
         <span class="tug__sub">maps ahead</span>
       </div>
@@ -50,38 +29,22 @@ const unplayedPct = computed(() =>
       <div class="tug__middle">
         <span class="tug__unplayed-value">{{ loading ? '...' : unplayed.toLocaleString() }}</span>
         <span class="tug__unplayed-label">unplayed</span>
-        <span class="tug__unplayed-pct">{{ loading ? '' : `${unplayedPct.toFixed(0)}%` }}</span>
+        <span class="tug__unplayed-pct">{{ loading ? '' : pct(unplayed) }}</span>
       </div>
 
       <div class="tug__side tug__side--target">
-        <span class="tug__name">
-          <span class="tug__name-text">{{ targetName }}</span>
-          <CountryFlag v-if="targetCountry" :country="targetCountry" />
-        </span>
         <span class="tug__count tug__count--target">
           <span class="tug__count-value">{{ loading ? '...' : targetWins.toLocaleString() }}</span>
-          <span class="tug__count-pct">{{ loading ? '' : `${targetPct.toFixed(0)}%` }}</span>
+          <span class="tug__count-pct">{{ loading ? '' : pct(targetWins) }}</span>
         </span>
         <span class="tug__sub">maps ahead</span>
       </div>
     </header>
 
-    <div class="tug__rail" :class="{ 'tug__rail--loading': loading }">
-      <div
-        class="tug__seg tug__seg--sniper"
-        :style="{ flexGrow: sniperFlex }"
-        :aria-hidden="true"
-      />
-      <div
-        class="tug__seg tug__seg--gap"
-        :style="{ flexGrow: unplayedFlex }"
-        :aria-hidden="true"
-      />
-      <div
-        class="tug__seg tug__seg--target"
-        :style="{ flexGrow: targetFlex }"
-        :aria-hidden="true"
-      />
+    <div class="tug__rail" :class="{ 'tug__rail--loading': loading }" aria-hidden="true">
+      <div class="tug__seg tug__seg--sniper" :style="{ flexGrow: sniperWins }" />
+      <div class="tug__seg tug__seg--gap" :style="{ flexGrow: unplayed }" />
+      <div class="tug__seg tug__seg--target" :style="{ flexGrow: targetWins }" />
     </div>
   </section>
 </template>
@@ -121,25 +84,6 @@ const unplayedPct = computed(() =>
   text-align: right;
 }
 
-.tug__name {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  min-width: 0;
-}
-
-.tug__name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 180px;
-}
-
 .tug__count {
   display: inline-flex;
   align-items: baseline;
@@ -165,7 +109,7 @@ const unplayedPct = computed(() =>
 }
 
 .tug__count--target .tug__count-value {
-  color: var(--accent);
+  color: var(--page-accent, var(--accent));
 }
 
 .tug__sub {
@@ -250,8 +194,8 @@ const unplayedPct = computed(() =>
 .tug__seg--target {
   background: linear-gradient(
     90deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 55%, transparent)
+    var(--page-accent, var(--accent)),
+    color-mix(in srgb, var(--page-accent, var(--accent)) 55%, transparent)
   );
 }
 
@@ -275,10 +219,6 @@ const unplayedPct = computed(() =>
 
   .tug__count-value {
     font-size: 1.375rem;
-  }
-
-  .tug__name-text {
-    max-width: 100px;
   }
 }
 

@@ -1,46 +1,46 @@
 <script setup lang="ts">
+import { buildSnipePlaylistUrl } from '@/api/snipe'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import StatBlock from '@/components/common/StatBlock.vue'
-import LevelBadge from '@/components/domain/LevelBadge.vue'
+import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
+import LevelBadge from '@/components/domain/LevelBadge.vue'
+import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
-import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
 import UserChip from '@/components/domain/UserChip.vue'
+import { pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { useColorExtract } from '@/composables/useColorExtract'
+import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { usePageMeta } from '@/composables/usePageMeta'
-import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
-import { buildSnipePlaylistUrl } from '@/api/snipe'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
+import { useInventoryStore } from '@/stores/inventory'
 import { useModifierStore } from '@/stores/modifiers'
 import { useThemeStore } from '@/stores/theme'
 import type { EquippedItemsResponse } from '@/types/api/items'
 import type { SnipeComparisonResponse, SnipeSort, SnipeUnplayed } from '@/types/api/snipe'
-import type {
-  LevelResponse,
-  ScoreResponse,
-  UserAllStatisticsResponse,
-  UserResponse,
-} from '@/types/api/users'
-import type { ScoreDisplay, SortDirection } from '@/types/display'
+import type { LevelResponse, ScoreResponse, UserAllStatisticsResponse } from '@/types/api/users'
+import type { ScoreDisplay, SortDirection, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { brightenRgb } from '@/utils/color'
-import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { toScoreDisplay } from '@/utils/mappers'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
+const inventoryStore = useInventoryStore()
 const modifierStore = useModifierStore()
 const themeStore = useThemeStore()
+const { setQuery } = useQueryParams()
 
 const SIZE_VALUES = [10, 20, 50, 100] as const
 const DEFAULT_SIZE = 20
@@ -67,164 +67,79 @@ const UNPLAYED_OPTIONS: { value: SnipeUnplayed; label: string }[] = [
 const DEFAULT_UNPLAYED: SnipeUnplayed = 'EXCLUDE'
 
 const snipeCategoryCodes = computed(() =>
-  categoryStore.categoryInfoList
-    .filter((c) => c.code !== 'xp' && c.code !== 'overall')
-    .map((c) => c.code),
+  categoryStore.categoryInfoList.filter((c) => c.code !== 'xp' && c.code !== 'overall').map((c) => c.code),
 )
 
 const categoryOptions = computed(() => [
   { value: '', label: 'All categories' },
-  ...snipeCategoryCodes.value.map((code) => ({
-    value: code,
-    label: categoryStore.getCategoryInfo(code)?.name ?? code,
-  })),
+  ...snipeCategoryCodes.value.map((code) => ({ value: code, label: categoryStore.getCategoryInfo(code)?.name ?? code })),
 ])
 
 const targetId = computed(() => route.params.userId as string)
 const sniperId = computed(() => authStore.userId)
+const isValidPair = computed(() => !!sniperId.value && sniperId.value !== targetId.value)
 
-const currentPage = computed<number>(() => {
-  const p = Number(route.query.page)
-  return p > 0 ? p : 1
-})
+const currentPage = computed(() => Math.max(1, Number(route.query.page) || 1))
 
 const currentSize = computed<number | 'all'>(() => {
-  const raw = route.query.size
-  if (raw === 'all') return 'all'
-  const n = Number(raw)
+  if (route.query.size === 'all') return 'all'
+  const n = Number(route.query.size)
   return (SIZE_VALUES as readonly number[]).includes(n) ? n : DEFAULT_SIZE
 })
 
-const listSize = computed(() =>
-  currentSize.value === 'all' ? ALL_SIZE_FOR_LIST : currentSize.value,
-)
-
-const sizeSelectValue = computed(() =>
-  currentSize.value === 'all' ? 'all' : String(currentSize.value),
-)
-
-const currentCategory = computed<string>(() => {
+const currentCategory = computed(() => {
   const c = route.query.category
-  if (typeof c !== 'string' || !c) return ''
-  return snipeCategoryCodes.value.includes(c) ? c : ''
+  return typeof c === 'string' && snipeCategoryCodes.value.includes(c) ? c : ''
 })
 
 const currentSort = computed<SnipeSort>(() => {
-  const raw = route.query.sort
-  if (typeof raw !== 'string') return DEFAULT_SORT
-  const match = SORT_OPTIONS.find((o) => o.value === raw.toUpperCase())
-  return match?.value ?? DEFAULT_SORT
+  const raw = String(route.query.sort ?? '').toUpperCase()
+  return SORT_OPTIONS.find((o) => o.value === raw)?.value ?? DEFAULT_SORT
 })
 
-const defaultDirection = computed<SortDirection>(
-  () => SORT_OPTIONS.find((o) => o.value === currentSort.value)?.defaultDirection ?? 'asc',
-)
+const defaultDirection = computed(() => SORT_OPTIONS.find((o) => o.value === currentSort.value)?.defaultDirection ?? 'asc')
 
 const currentDirection = computed<SortDirection>(() =>
   route.query.dir === 'asc' || route.query.dir === 'desc' ? route.query.dir : defaultDirection.value,
 )
 
 const currentUnplayed = computed<SnipeUnplayed>(() => {
-  const raw = route.query.unplayed
-  if (typeof raw !== 'string') return DEFAULT_UNPLAYED
-  return UNPLAYED_OPTIONS.find((o) => o.value === raw.toUpperCase())?.value ?? DEFAULT_UNPLAYED
+  const raw = String(route.query.unplayed ?? '').toUpperCase()
+  return UNPLAYED_OPTIONS.find((o) => o.value === raw)?.value ?? DEFAULT_UNPLAYED
 })
 
-const unplayedParam = computed(() =>
-  currentUnplayed.value === DEFAULT_UNPLAYED ? undefined : currentUnplayed.value,
-)
+const unplayedParam = computed(() => (currentUnplayed.value === DEFAULT_UNPLAYED ? undefined : currentUnplayed.value))
 
 function setPage(page: number) {
-  const query = { ...route.query }
-  if (page <= 1) delete query.page
-  else query.page = String(page)
-  router.replace({ query })
-}
-
-function setSize(value: string) {
-  const query = { ...route.query }
-  delete query.page
-  if (value === String(DEFAULT_SIZE)) delete query.size
-  else query.size = value
-  router.replace({ query })
-}
-
-function setCategory(value: string) {
-  const query = { ...route.query }
-  delete query.page
-  if (!value) delete query.category
-  else query.category = value
-  router.replace({ query })
-}
-
-function setSort(value: string) {
-  const query = { ...route.query }
-  delete query.page
-  delete query.dir
-  if (value === DEFAULT_SORT) delete query.sort
-  else query.sort = value.toLowerCase()
-  router.replace({ query })
-}
-
-function setUnplayed(value: string) {
-  const query = { ...route.query }
-  delete query.page
-  if (value === DEFAULT_UNPLAYED) delete query.unplayed
-  else query.unplayed = value.toLowerCase()
-  router.replace({ query })
+  setQuery({ page: page > 1 ? String(page) : undefined }, { keepPage: true })
 }
 
 function toggleDirection() {
   const next: SortDirection = currentDirection.value === 'asc' ? 'desc' : 'asc'
-  const query = { ...route.query }
-  delete query.page
-  if (next === defaultDirection.value) delete query.dir
-  else query.dir = next
-  router.replace({ query })
+  setQuery({ dir: next === defaultDirection.value ? undefined : next })
 }
 
-const target = ref<UserResponse | null>(null)
-const sniper = ref<UserResponse | null>(null)
+const target = ref<UserRefDisplay | null>(null)
 const targetLevel = ref<LevelResponse | null>(null)
 const sniperLevel = ref<LevelResponse | null>(null)
-const sniperEquipped = ref<EquippedItemsResponse>({})
 const targetEquipped = ref<EquippedItemsResponse>({})
 
-const {
-  titleValue: sniperTitle,
-  borderShapeValue: sniperBorderShape,
-  borderColorValue: sniperBorderColor,
-  titleEffects: sniperTitleEffects,
-  borderEffects: sniperBorderEffects,
-  thumbnailValue: sniperThumb,
-  thumbnailEffects: sniperThumbEffects,
-} = useEquippedRenderProps(sniperEquipped)
+const sniper = computed<UserRefDisplay | null>(() => {
+  const me = authStore.authMe
+  return me
+    ? { id: me.userId, name: me.name, avatarUrl: me.avatarUrl, cdnAvatarUrl: me.cdnAvatarUrl, country: me.country, clan: me.clan }
+    : null
+})
 
-const {
-  titleValue: targetTitle,
-  borderShapeValue: targetBorderShape,
-  borderColorValue: targetBorderColor,
-  titleEffects: targetTitleEffects,
-  borderEffects: targetBorderEffects,
-  thumbnailValue: targetThumb,
-  thumbnailEffects: targetThumbEffects,
-} = useEquippedRenderProps(targetEquipped)
-const data = ref<Page<SnipeComparisonResponse> | null>(null)
-const loading = ref(false)
+const sniperRender = reactive(useEquippedRenderProps(() => inventoryStore.equipped))
+const targetRender = reactive(useEquippedRenderProps(targetEquipped))
 
-const sniperAllStats = ref<UserAllStatisticsResponse | null>(null)
-const targetAllStats = ref<UserAllStatisticsResponse | null>(null)
-const rankedTotals = ref<Map<string, number>>(new Map())
-const forwardSnipeCount = ref<number | null>(null)
-const reverseSnipeCount = ref<number | null>(null)
-const tugLoading = ref(false)
+const players = computed(() => [
+  { key: 'sniper', role: 'You', user: sniper.value, level: sniperLevel.value, render: sniperRender },
+  { key: 'target', role: 'Target', user: target.value, level: targetLevel.value, render: targetRender },
+])
 
-const detailOpen = ref(false)
-const detailScore = ref<ScoreDisplay | null>(null)
-const detailUserId = ref<string>('')
-
-const targetAvatar = computed(() => target.value?.cdnAvatarUrl ?? target.value?.avatarUrl ?? '')
-const sniperAvatar = computed(() => sniper.value?.cdnAvatarUrl ?? sniper.value?.avatarUrl ?? '')
+const targetAvatar = computed(() => pickAvatarUrl(target.value))
 const { dominantColor } = useColorExtract(targetAvatar)
 
 const heroAccent = computed(() => {
@@ -233,370 +148,247 @@ const heroAccent = computed(() => {
   return themeStore.resolvedBase === 'dark' ? brightenRgb(raw, 60) : raw
 })
 
+const breadcrumbs = computed<Crumb[]>(() => [
+  { label: 'Leaderboards', to: '/leaderboards' },
+  ...(target.value ? [{ label: target.value.name, to: `/players/${targetId.value}` }] : []),
+  { label: 'Snipe' },
+])
+
+usePageMeta({ title: computed(() => (target.value ? `Snipe ${target.value.name} | AccSaber` : undefined)) })
+
+const data = ref<Page<SnipeComparisonResponse> | null>(null)
+const loading = ref(false)
 const rows = computed(() => data.value?.content ?? [])
-const totalPages = computed(() => data.value?.totalPages ?? 0)
 
-const closestGapPct = computed(() => {
-  if (rows.value.length === 0) return 0
-  const gaps = rows.value.map((r) => r.targetScore.accuracy - (r.sniperScore?.accuracy ?? 0))
-  return Math.min(...gaps) * 100
-})
+const sniperAllStats = ref<UserAllStatisticsResponse | null>(null)
+const targetAllStats = ref<UserAllStatisticsResponse | null>(null)
+const rankedTotals = ref<Map<string, number>>(new Map())
+const reverseSnipeCount = ref<number | null>(null)
+const filteredForwardCount = ref<number | null>(null)
 
-const totalPointsToGain = computed(() =>
-  rows.value.reduce((sum, r) => sum + r.scoreDelta, 0),
-)
-
-const totalApAtStake = computed(() =>
-  rows.value.reduce((sum, r) => sum + (r.targetScore.ap - (r.sniperScore?.ap ?? 0)), 0),
-)
-
-const emptyMessage = computed(() =>
-  currentUnplayed.value === 'ONLY'
-    ? 'No unplayed maps. You already have a score on every map this player has played.'
-    : "No close scores. You've already beaten this player on every overlapping map, or you have no scores in common.",
-)
+const detailOpen = ref(false)
+const detailScore = ref<ScoreDisplay | null>(null)
+const detailUserId = ref('')
 
 const playlistUrl = computed(() =>
   sniperId.value
     ? buildSnipePlaylistUrl(sniperId.value, targetId.value, {
-        size: currentSize.value === 'all' ? undefined : currentSize.value,
-        category: currentCategory.value || undefined,
-        sort: currentSort.value,
-        direction: currentDirection.value,
-        unplayed: unplayedParam.value,
-      })
-    : '',
-)
-
-const downloadLabel = computed(() => {
-  const categoryName = currentCategory.value
-    ? categoryStore.getCategoryInfo(currentCategory.value)?.name ?? currentCategory.value
-    : null
-  if (currentSize.value === 'all') {
-    return categoryName ? `Download all ${categoryName} snipes` : 'Download all snipes'
-  }
-  return categoryName
-    ? `Download top ${currentSize.value} ${categoryName} snipes`
-    : `Download top ${currentSize.value} snipes`
-})
-
-const metaTitle = computed(() => {
-  if (!target.value) return undefined
-  return `Snipe ${target.value.name} | AccSaber`
-})
-
-usePageMeta({ title: metaTitle })
-
-const filterCategoryId = computed(() => {
-  if (!currentCategory.value) return null
-  return categoryStore.getCategoryId(currentCategory.value) ?? null
-})
-
-const totalsKey = computed(() => filterCategoryId.value ?? 'all')
-
-const snipeableCategoryIds = computed(() => {
-  return snipeCategoryCodes.value
-    .map((code) => categoryStore.getCategoryId(code))
-    .filter((id): id is string => !!id)
-})
-
-function sumPlaysForScope(stats: UserAllStatisticsResponse | null): number {
-  if (!stats) return 0
-  if (filterCategoryId.value) {
-    return stats.categories.find((c) => c.categoryId === filterCategoryId.value)?.rankedPlays ?? 0
-  }
-  const allowed = new Set(snipeableCategoryIds.value)
-  return stats.categories
-    .filter((c) => allowed.has(c.categoryId))
-    .reduce((sum, c) => sum + c.rankedPlays, 0)
-}
-
-const sniperPlaysInScope = computed(() => sumPlaysForScope(sniperAllStats.value))
-const targetPlaysInScope = computed(() => sumPlaysForScope(targetAllStats.value))
-
-const totalMapsInScope = computed(() => rankedTotals.value.get(totalsKey.value) ?? 0)
-
-const sniperWinsCount = computed(() =>
-  Math.max(0, sniperPlaysInScope.value - (forwardSnipeCount.value ?? 0)),
-)
-const targetWinsCount = computed(() =>
-  Math.max(0, targetPlaysInScope.value - (reverseSnipeCount.value ?? 0)),
-)
-const unplayedCount = computed(() =>
-  Math.max(0, totalMapsInScope.value - sniperWinsCount.value - targetWinsCount.value),
-)
-
-const tugReady = computed(
-  () =>
-    !!sniperAllStats.value &&
-    !!targetAllStats.value &&
-    forwardSnipeCount.value != null &&
-    reverseSnipeCount.value != null &&
-    totalMapsInScope.value > 0,
-)
-
-async function fetchUsers() {
-  if (!sniperId.value) return
-  const [{ getUser, getUserLevel }, { getUserEquippedItems }] = await Promise.all([
-    import('@/api/users'),
-    import('@/api/items'),
-  ])
-  const [t, s, tl, sl, te, se] = await Promise.allSettled([
-    getUser(targetId.value),
-    getUser(sniperId.value),
-    getUserLevel(targetId.value),
-    getUserLevel(sniperId.value),
-    getUserEquippedItems(targetId.value),
-    getUserEquippedItems(sniperId.value),
-  ])
-  if (t.status === 'fulfilled') target.value = t.value
-  if (s.status === 'fulfilled') sniper.value = s.value
-  if (tl.status === 'fulfilled') targetLevel.value = tl.value
-  if (sl.status === 'fulfilled') sniperLevel.value = sl.value
-  targetEquipped.value = te.status === 'fulfilled' ? te.value : {}
-  sniperEquipped.value = se.status === 'fulfilled' ? se.value : {}
-}
-
-async function fetchComparisons() {
-  if (!sniperId.value) return
-  loading.value = true
-  try {
-    const { getClosestScores } = await import('@/api/snipe')
-    data.value = await getClosestScores(sniperId.value, targetId.value, {
-      page: currentPage.value - 1,
-      size: listSize.value,
+      size: currentSize.value === 'all' ? undefined : currentSize.value,
       category: currentCategory.value || undefined,
       sort: currentSort.value,
       direction: currentDirection.value,
       unplayed: unplayedParam.value,
     })
-  } catch {
-    data.value = null
-  }
-  loading.value = false
+    : '',
+)
+
+const filterCategoryId = computed(() => (currentCategory.value ? categoryStore.getCategoryId(currentCategory.value) ?? null : null))
+const totalsKey = computed(() => filterCategoryId.value ?? 'all')
+
+function playsInScope(stats: UserAllStatisticsResponse | null): number {
+  if (!stats) return 0
+  const allowed = filterCategoryId.value
+    ? new Set([filterCategoryId.value])
+    : new Set(snipeCategoryCodes.value.map((code) => categoryStore.getCategoryId(code)))
+  return stats.categories.filter((c) => allowed.has(c.categoryId)).reduce((sum, c) => sum + c.rankedPlays, 0)
 }
 
-async function fetchAllStats() {
+const forwardSnipeCount = computed(() => {
+  if (currentUnplayed.value !== DEFAULT_UNPLAYED) return filteredForwardCount.value
+  return loading.value ? null : data.value?.totalElements ?? 0
+})
+
+const totalMapsInScope = computed(() => rankedTotals.value.get(totalsKey.value) ?? 0)
+const sniperWins = computed(() => Math.max(0, playsInScope(sniperAllStats.value) - (forwardSnipeCount.value ?? 0)))
+const targetWins = computed(() => Math.max(0, playsInScope(targetAllStats.value) - (reverseSnipeCount.value ?? 0)))
+const unplayedCount = computed(() => Math.max(0, totalMapsInScope.value - sniperWins.value - targetWins.value))
+
+const tugReady = computed(
+  () =>
+    !!sniperAllStats.value && !!targetAllStats.value
+    && forwardSnipeCount.value != null && reverseSnipeCount.value != null
+    && totalMapsInScope.value > 0,
+)
+
+async function fetchPlayers() {
   if (!sniperId.value) return
-  const { getUserAllStatistics } = await import('@/api/users')
-  const [s, t] = await Promise.allSettled([
+  const [{ getUser, getUserLevel, getUserAllStatistics }, { getUserEquippedItems }] = await Promise.all([
+    import('@/api/users'),
+    import('@/api/items'),
+  ])
+  inventoryStore.fetchEquipped(sniperId.value)
+  sniperAllStats.value = null
+  targetAllStats.value = null
+  const [t, tl, sl, te, ss, ts] = await Promise.allSettled([
+    getUser(targetId.value),
+    getUserLevel(targetId.value),
+    getUserLevel(sniperId.value),
+    getUserEquippedItems(targetId.value),
     getUserAllStatistics(sniperId.value),
     getUserAllStatistics(targetId.value),
   ])
-  if (s.status === 'fulfilled') sniperAllStats.value = s.value
-  if (t.status === 'fulfilled') targetAllStats.value = t.value
+  target.value = t.status === 'fulfilled' ? t.value : null
+  targetLevel.value = tl.status === 'fulfilled' ? tl.value : null
+  sniperLevel.value = sl.status === 'fulfilled' ? sl.value : null
+  targetEquipped.value = te.status === 'fulfilled' ? te.value : {}
+  if (ss.status === 'fulfilled') sniperAllStats.value = ss.value
+  if (ts.status === 'fulfilled') targetAllStats.value = ts.value
 }
 
-async function fetchTotalForCurrentScope() {
+let listRequest = 0
+
+async function fetchComparisons() {
+  if (!sniperId.value) return
+  const id = ++listRequest
+  loading.value = true
+  try {
+    const { getClosestScores } = await import('@/api/snipe')
+    const page = await getClosestScores(sniperId.value, targetId.value, {
+      page: currentPage.value - 1,
+      size: currentSize.value === 'all' ? ALL_SIZE_FOR_LIST : currentSize.value,
+      category: currentCategory.value || undefined,
+      sort: currentSort.value,
+      direction: currentDirection.value,
+      unplayed: unplayedParam.value,
+    })
+    if (id === listRequest) data.value = page
+  } catch {
+    if (id === listRequest) data.value = null
+  }
+  if (id === listRequest) loading.value = false
+}
+
+async function fetchRankedTotal() {
   const key = totalsKey.value
   if (rankedTotals.value.has(key)) return
-  const { getDifficulties } = await import('@/api/maps')
   try {
-    const page = await getDifficulties({
-      status: 'RANKED',
-      size: 1,
-      categoryId: filterCategoryId.value ?? undefined,
-    })
-    const next = new Map(rankedTotals.value)
-    next.set(key, page.totalElements ?? 0)
-    rankedTotals.value = next
+    const { getDifficulties } = await import('@/api/maps')
+    const page = await getDifficulties({ status: 'RANKED', size: 1, categoryId: filterCategoryId.value ?? undefined })
+    rankedTotals.value = new Map(rankedTotals.value).set(key, page.totalElements ?? 0)
   } catch {
-    /* swallow */
   }
 }
 
-async function fetchSnipeCounts() {
-  if (!sniperId.value) return
-  forwardSnipeCount.value = null
-  reverseSnipeCount.value = null
+async function countSnipes(from: string, to: string): Promise<number> {
   const { getClosestScores } = await import('@/api/snipe')
-  const params = { page: 0, size: 1, category: currentCategory.value || undefined }
-  const [forward, reverse] = await Promise.allSettled([
-    getClosestScores(sniperId.value, targetId.value, params),
-    getClosestScores(targetId.value, sniperId.value, params),
-  ])
-  forwardSnipeCount.value = forward.status === 'fulfilled' ? forward.value.totalElements ?? 0 : 0
-  reverseSnipeCount.value = reverse.status === 'fulfilled' ? reverse.value.totalElements ?? 0 : 0
+  const page = await getClosestScores(from, to, { page: 0, size: 1, category: currentCategory.value || undefined })
+  return page.totalElements ?? 0
 }
 
-async function refreshTugData() {
-  tugLoading.value = true
-  await Promise.allSettled([fetchTotalForCurrentScope(), fetchSnipeCounts()])
-  tugLoading.value = false
+async function fetchReverseCount() {
+  if (!sniperId.value) return
+  reverseSnipeCount.value = null
+  reverseSnipeCount.value = await countSnipes(targetId.value, sniperId.value).catch(() => 0)
+}
+
+async function fetchFilteredForwardCount() {
+  filteredForwardCount.value = null
+  if (!sniperId.value || currentUnplayed.value === DEFAULT_UNPLAYED) return
+  filteredForwardCount.value = await countSnipes(sniperId.value, targetId.value).catch(() => 0)
 }
 
 function openDetail(score: ScoreResponse) {
-  const categoryCode = categoryStore.getCategoryCode(score.categoryId)
   detailScore.value = toScoreDisplay(
     score,
     modifierStore.resolveModifierCodes(score.modifierIds),
-    categoryCode,
+    categoryStore.getCategoryCode(score.categoryId),
   )
   detailUserId.value = score.userId
   detailOpen.value = true
 }
 
-const isValidPair = computed(
-  () => !!sniperId.value && sniperId.value !== targetId.value,
-)
+watch([sniperId, targetId], () => {
+  if (!isValidPair.value) {
+    router.replace({ name: 'player-profile', params: { userId: targetId.value } })
+    return
+  }
+  fetchPlayers()
+}, { immediate: true })
 
 watch(
-  () => [sniperId.value, targetId.value] as const,
-  () => {
-    if (!isValidPair.value) {
-      router.replace({ name: 'player-profile', params: { userId: targetId.value } })
-      return
-    }
-    fetchUsers()
-    sniperAllStats.value = null
-    targetAllStats.value = null
-    fetchAllStats()
-  },
+  () => [sniperId.value, targetId.value, currentPage.value, currentSize.value, currentCategory.value,
+    currentSort.value, currentDirection.value, currentUnplayed.value],
+  () => { if (isValidPair.value) fetchComparisons() },
   { immediate: true },
 )
 
-watch(
-  () =>
-    [
-      sniperId.value,
-      targetId.value,
-      currentPage.value,
-      currentSize.value,
-      currentCategory.value,
-      currentSort.value,
-      currentDirection.value,
-      currentUnplayed.value,
-    ] as const,
-  () => {
-    if (isValidPair.value) fetchComparisons()
-  },
-  { immediate: true },
-)
+watch([sniperId, targetId, currentCategory], () => {
+  if (!isValidPair.value) return
+  fetchRankedTotal()
+  fetchReverseCount()
+}, { immediate: true })
 
-watch(
-  () => [sniperId.value, targetId.value, currentCategory.value] as const,
-  () => {
-    if (isValidPair.value) refreshTugData()
-  },
-  { immediate: true },
-)
+watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
+  if (isValidPair.value) fetchFilteredForwardCount()
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="snipe-page" :style="{ '--page-accent': heroAccent, '--accent': heroAccent }">
-    <nav class="snipe-page__breadcrumbs" aria-label="Breadcrumb">
-      <span class="snipe-page__breadcrumbs-pill">
-        <router-link to="/leaderboards" class="snipe-page__crumb snipe-page__crumb--link">
-          Leaderboards
-          <span class="snipe-page__crumb-sep">/</span>
-        </router-link>
-        <router-link v-if="target" :to="`/players/${targetId}`" class="snipe-page__crumb snipe-page__crumb--link">
-          {{ target.name }}
-          <span class="snipe-page__crumb-sep">/</span>
-        </router-link>
-        <span class="snipe-page__crumb">Snipe</span>
-      </span>
-    </nav>
+  <div class="snipe-page" :style="{ '--page-accent': heroAccent }">
+    <Breadcrumbs :crumbs="breadcrumbs" />
 
     <header class="snipe-hero">
-      <ThumbnailBackdrop class="snipe-hero__thumb snipe-hero__thumb--sniper" :value="sniperThumb" :effects="sniperThumbEffects" />
-      <ThumbnailBackdrop class="snipe-hero__thumb snipe-hero__thumb--target" :value="targetThumb" :effects="targetThumbEffects" />
-      <div class="snipe-hero__player snipe-hero__player--sniper">
-        <LevelBadge v-if="sniper" :level="sniperLevel?.level ?? 0"
-          :current-xp="sniperLevel?.xpForCurrentLevel ?? 0" :required-xp="sniperLevel?.xpForNextLevel ?? 1"
-          :avatar-url="sniperAvatar" :fallback-title="sniperLevel?.title" hide-progress
-          :equipped-title="sniperTitle"
-          :equipped-border-shape="sniperBorderShape"
-          :equipped-border-color="sniperBorderColor"
-          :title-effects="sniperTitleEffects"
-          :border-effects="sniperBorderEffects" />
-        <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
-        <div class="snipe-hero__player-info">
-          <span class="snipe-hero__role">You</span>
-          <UserChip v-if="sniper" :user="sniper" size="lg" hide-avatar class="snipe-hero__player-name" />
-          <span v-else class="snipe-hero__player-name">...</span>
-        </div>
-      </div>
+      <ThumbnailBackdrop v-for="p in players" :key="`thumb-${p.key}`" class="snipe-hero__thumb"
+        :class="`snipe-hero__thumb--${p.key}`" :value="p.render.thumbnailValue" :effects="p.render.thumbnailEffects" />
 
-      <div class="snipe-hero__vs" aria-hidden="true">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9" />
-          <circle cx="12" cy="12" r="3" />
-          <line x1="12" y1="2" x2="12" y2="6" />
-          <line x1="12" y1="18" x2="12" y2="22" />
-          <line x1="2" y1="12" x2="6" y2="12" />
-          <line x1="18" y1="12" x2="22" y2="12" />
-        </svg>
-        <span class="snipe-hero__vs-label">Sniping</span>
-      </div>
-
-      <div class="snipe-hero__player snipe-hero__player--target">
-        <LevelBadge v-if="target" :level="targetLevel?.level ?? 0"
-          :current-xp="targetLevel?.xpForCurrentLevel ?? 0" :required-xp="targetLevel?.xpForNextLevel ?? 1"
-          :avatar-url="targetAvatar" :fallback-title="targetLevel?.title" hide-progress
-          :equipped-title="targetTitle"
-          :equipped-border-shape="targetBorderShape"
-          :equipped-border-color="targetBorderColor"
-          :title-effects="targetTitleEffects"
-          :border-effects="targetBorderEffects" />
-        <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
-        <div class="snipe-hero__player-info">
-          <span class="snipe-hero__role snipe-hero__role--target">Target</span>
-          <UserChip v-if="target" :user="target" size="lg" hide-avatar class="snipe-hero__player-name" />
-          <span v-else class="snipe-hero__player-name">...</span>
+      <template v-for="(p, i) in players" :key="p.key">
+        <div v-if="i === 1" class="snipe-hero__vs" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <circle cx="12" cy="12" r="3" />
+            <line x1="12" y1="2" x2="12" y2="6" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="6" y2="12" />
+            <line x1="18" y1="12" x2="22" y2="12" />
+          </svg>
+          <span class="snipe-hero__vs-label">Sniping</span>
         </div>
-      </div>
+
+        <div class="snipe-hero__player" :class="`snipe-hero__player--${p.key}`">
+          <LevelBadge v-if="p.user" :level="p.level?.level ?? 0" :current-xp="p.level?.xpForCurrentLevel ?? 0"
+            :required-xp="p.level?.xpForNextLevel ?? 1" :avatar-url="pickAvatarUrl(p.user)"
+            :fallback-title="p.level?.title" hide-progress :equipped-title="p.render.titleValue"
+            :equipped-border-shape="p.render.borderShapeValue" :equipped-border-color="p.render.borderColorValue"
+            :title-effects="p.render.titleEffects" :border-effects="p.render.borderEffects" />
+          <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
+          <div class="snipe-hero__player-info">
+            <span class="snipe-hero__role" :class="`snipe-hero__role--${p.key}`">{{ p.role }}</span>
+            <UserChip v-if="p.user" :user="p.user" size="lg" hide-avatar class="snipe-hero__player-name" />
+            <span v-else class="snipe-hero__player-name">...</span>
+          </div>
+        </div>
+      </template>
     </header>
 
-    <SnipeTugOfWar
-      v-if="tugReady || tugLoading"
-      :sniper-name="sniper?.name ?? 'You'"
-      :sniper-country="sniper?.country"
-      :sniper-wins="sniperWinsCount"
-      :target-name="target?.name ?? 'Target'"
-      :target-country="target?.country"
-      :target-wins="targetWinsCount"
-      :unplayed="unplayedCount"
-      :loading="!tugReady && tugLoading"
-    />
-
-    <section class="snipe-page__summary">
-      <header class="snipe-page__summary-caption">
-        Based on {{ rows.length }} visible {{ rows.length === 1 ? 'map' : 'maps' }}:
-      </header>
-      <div class="snipe-page__summary-grid">
-        <StatBlock label="Closest Gap" :value="`+${closestGapPct.toFixed(2)}%`" :accent-color="heroAccent" />
-        <StatBlock label="Points to Gain" :value="totalPointsToGain" :decimals="0" />
-        <StatBlock label="AP at Stake" :value="totalApAtStake" :decimals="2" />
-      </div>
-    </section>
+    <SnipeTugOfWar :sniper-wins="sniperWins" :target-wins="targetWins" :unplayed="unplayedCount" :loading="!tugReady" />
 
     <section class="snipe-page__controls">
       <div class="snipe-page__filters">
         <BaseSelect :model-value="currentCategory" :options="categoryOptions" label="Category"
-          @update:model-value="setCategory" />
-        <BaseSelect :model-value="sizeSelectValue" :options="SIZE_OPTIONS" label="Page size"
-          @update:model-value="setSize" />
+          @update:model-value="setQuery({ category: $event || undefined })" />
+        <BaseSelect :model-value="currentSize === 'all' ? 'all' : String(currentSize)" :options="SIZE_OPTIONS"
+          label="Page size" @update:model-value="setQuery({ size: $event === String(DEFAULT_SIZE) ? undefined : $event })" />
         <BaseSelect :model-value="currentUnplayed" :options="UNPLAYED_OPTIONS" label="Unplayed maps"
-          @update:model-value="setUnplayed" />
+          @update:model-value="setQuery({ unplayed: $event === DEFAULT_UNPLAYED ? undefined : $event.toLowerCase() })" />
         <div class="snipe-page__sort">
           <span class="snipe-page__sort-label">Sort</span>
           <div class="snipe-page__sort-row">
-            <BaseSelect :model-value="currentSort" :options="SORT_OPTIONS" @update:model-value="setSort" />
+            <BaseSelect :model-value="currentSort" :options="SORT_OPTIONS"
+              @update:model-value="setQuery({ sort: $event === DEFAULT_SORT ? undefined : $event.toLowerCase(), dir: undefined })" />
             <SortDirectionToggle :direction="currentDirection" @toggle="toggleDirection" />
           </div>
         </div>
       </div>
       <BaseButton class="snipe-page__download" variant="primary" size="lg" :href="playlistUrl"
-        :disabled="!playlistUrl || rows.length === 0" aria-label="Download Beat Saber playlist">
+        :disabled="!playlistUrl || rows.length === 0">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3v12" />
           <path d="m7 10 5 5 5-5" />
           <path d="M5 21h14" />
         </svg>
-        <span>{{ downloadLabel }}</span>
+        <span>Download playlist</span>
       </BaseButton>
     </section>
 
@@ -604,78 +396,32 @@ watch(
       <template v-if="loading">
         <SkeletonLoader v-for="i in 5" :key="i" variant="card" height="160px" />
       </template>
-
-      <template v-else-if="rows.length === 0">
-        <EmptyState :message="emptyMessage" />
-      </template>
-
+      <EmptyState v-else-if="rows.length === 0"
+        :message="currentUnplayed === 'ONLY' ? 'No unplayed maps.' : 'No close scores.'" />
       <template v-else>
         <SnipeComparisonRow v-for="comp in rows" :key="comp.mapDifficulty.id" :comparison="comp"
-          :sniper-name="sniper?.name ?? 'You'" :target-name="target?.name ?? 'Target'"
           @open-detail="openDetail" />
       </template>
     </section>
 
-    <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
+    <PaginationControls v-if="(data?.totalPages ?? 0) > 1" :page="currentPage" :total-pages="data?.totalPages ?? 0"
       @update:page="setPage" />
 
-    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId"
-      @close="detailOpen = false" />
+    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" @close="detailOpen = false" />
   </div>
 </template>
 
 <style scoped>
 .snipe-page {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-lg);
-  --accent: var(--page-accent, var(--accent-overall));
 }
 
 .snipe-page > * {
   width: 100%;
   max-width: 1080px;
-  position: relative;
-  z-index: 1;
-}
-
-.snipe-page__breadcrumbs {
-  display: flex;
-  align-items: center;
-}
-
-.snipe-page__breadcrumbs-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-}
-
-.snipe-page__crumb {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.snipe-page__crumb--link {
-  color: var(--text-secondary);
-  transition: color 120ms ease;
-}
-
-.snipe-page__crumb--link:hover {
-  color: var(--accent);
-}
-
-.snipe-page__crumb-sep {
-  color: var(--text-tertiary);
 }
 
 .snipe-hero {
@@ -737,7 +483,7 @@ watch(
 }
 
 .snipe-hero__role--target {
-  color: var(--accent);
+  color: var(--page-accent);
 }
 
 .snipe-hero__player-name {
@@ -757,7 +503,7 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: var(--space-xs);
-  color: var(--accent);
+  color: var(--page-accent);
 }
 
 .snipe-hero__vs-label {
@@ -765,31 +511,6 @@ watch(
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-}
-
-.snipe-page__summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  padding: var(--space-sm) var(--space-md);
-}
-
-.snipe-page__summary-caption {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-align: center;
-}
-
-.snipe-page__summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-md);
-  justify-items: center;
 }
 
 .snipe-page__controls {
@@ -830,10 +551,6 @@ watch(
   min-width: 170px;
 }
 
-.snipe-page__download {
-  --accent: var(--accent-overall);
-}
-
 .snipe-page__list {
   display: flex;
   flex-direction: column;
@@ -850,10 +567,6 @@ watch(
   .snipe-hero__player--target {
     flex-direction: column;
     text-align: center;
-  }
-
-  .snipe-page__summary-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 
   .snipe-page__controls {

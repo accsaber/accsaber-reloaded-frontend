@@ -120,15 +120,6 @@ onMounted(async () => {
       the address bar. You can share the link with the exact view you were looking at.
     </p>
 
-    <WikiHeading id="numbers">The three numbers on top</WikiHeading>
-    <p>
-      Closest Gap is the accuracy you need to find on the single nearest map. Points to Gain
-      adds up the raw score you would have to make up across the maps in front of you. AP at
-      Stake is what all of it is worth if you took every one of them. All three only count the
-      maps currently loaded. They cover everything once you switch the page size to All
-      snipes.
-    </p>
-
     <WikiHeading id="playlist">The playlist</WikiHeading>
     <p>
       The filters and sort all carry into the file. A playlist you built on Most AP to gain

@@ -3,7 +3,6 @@ import { buildSnipePlaylistUrl, getClosestScores } from '@/api/snipe'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import StatBlock from '@/components/common/StatBlock.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -92,20 +91,6 @@ function openDetail(score: ScoreResponse) {
   detailOpen.value = true
 }
 
-const closestGap = computed(() => {
-  const first = comparisons.value[0]
-  if (!first) return 0
-  return (first.targetScore.accuracy - (first.sniperScore?.accuracy ?? 0)) * 100
-})
-
-const pointsToGain = computed(() =>
-  comparisons.value.reduce((sum, c) => sum + c.scoreDelta, 0),
-)
-
-const apAtStake = computed(() =>
-  comparisons.value.reduce((sum, c) => sum + (c.targetScore.ap - (c.sniperScore?.ap ?? 0)), 0),
-)
-
 const playlistUrl = computed(() =>
   buildSnipePlaylistUrl(props.sniperId, activeTargetId.value, { size: props.rows }),
 )
@@ -166,19 +151,11 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
     />
 
     <template v-else>
-      <div class="board__stats">
-        <StatBlock label="Closest Gap" :value="`+${closestGap.toFixed(2)}%`" />
-        <StatBlock label="Points to Gain" :value="pointsToGain" :decimals="0" />
-        <StatBlock label="AP at Stake" :value="apAtStake" :decimals="2" />
-      </div>
-
       <div class="board__rows">
         <SnipeComparisonRow
           v-for="comparison in comparisons"
           :key="comparison.mapDifficulty.id"
           :comparison="comparison"
-          :sniper-name="sniperName"
-          :target-name="activeTargetName"
           @open-detail="openDetail"
         />
       </div>
@@ -255,12 +232,6 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
 .board__picker {
   flex: 1;
   max-width: 320px;
-}
-
-.board__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-md);
 }
 
 .board__rows {
