@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { MilestoneSort } from '@/api/milestones'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MilestoneCanvas from '@/components/domain/MilestoneCanvas.vue'
 import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
 import MilestoneRewards from '@/components/domain/MilestoneRewards.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { getApiErrorMessage } from '@/api/client'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useSetGroups } from '@/composables/useSetGroups'
 import { useSupporter } from '@/composables/useSupporter'
@@ -13,35 +14,30 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type {
   MilestoneCompletionResponse,
-  MilestoneResponse,
   MilestoneSetResponse,
   PrerequisiteLinkResponse,
 } from '@/types/api/milestones'
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import type { MilestoneDisplay } from '@/types/display'
-import { toMilestoneDisplayFromCatalog } from '@/utils/mappers'
+import { toMilestoneDisplay } from '@/utils/mappers'
 import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import type { MilestoneSetGroup } from '@/utils/milestoneLayout'
-import { loadMilestoneCatalog } from '@/composables/useMilestoneCatalog'
-import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 
 const loading = ref(true)
 const sets = ref<MilestoneSetResponse[]>([])
-const catalog = ref<MilestoneResponse[]>([])
 const milestones = ref<MilestoneCompletionResponse[]>([])
 const prerequisites = ref<PrerequisiteLinkResponse[]>([])
-const milestoneSort = ref<MilestoneSort>('tier')
-const isMobile = ref(false)
+const isMobile = useMediaQuery('(max-width: 767px)')
 const viewMode = ref<'map' | 'list'>('map')
 const selectedId = ref<string | null>(null)
 const selectedSetId = ref<string | null>(null)
 const focusedSetId = ref<string | null>(null)
 
-const { resolvedGroups, standaloneSets, fetchGroups, resetGroups } = useSetGroups(sets)
+const { resolvedGroups, standaloneSets, fetchGroups } = useSetGroups(sets)
 
 usePageMeta({
   title: 'Milestones | AccSaber',
@@ -76,42 +72,17 @@ function focusSet(setId: string | null) {
   selectedSetId.value = setId
 }
 
-const completionById = computed(() => {
-  const map = new Map<string, MilestoneCompletionResponse>()
-  for (const m of milestones.value) map.set(m.milestoneId, m)
-  return map
-})
-
 const nodes = computed<MilestoneDisplay[]>(() =>
-  catalog.value.map((m) =>
-    toMilestoneDisplayFromCatalog(
-      m,
-      m.categoryId ? categoryStore.getCategoryCode(m.categoryId) : undefined,
-      completionById.value.get(m.id),
-    ),
+  milestones.value.map((m) =>
+    toMilestoneDisplay(m, m.categoryId ? categoryStore.getCategoryCode(m.categoryId) : undefined),
   ),
 )
 
-const totalMilestones = computed(() => catalog.value.length)
-
-const totalCompleted = computed(
-  () => milestones.value.filter((m) => m.userCompleted).length,
-)
+const totalCompleted = computed(() => milestones.value.filter((m) => m.userCompleted).length)
 
 const selectedMilestone = computed(() =>
-  selectedId.value ? (completionById.value.get(selectedId.value) ?? null) : null,
+  selectedId.value ? (milestones.value.find((m) => m.milestoneId === selectedId.value) ?? null) : null,
 )
-
-const selectedCatalogEntry = computed(() =>
-  selectedId.value ? (catalog.value.find((m) => m.id === selectedId.value) ?? null) : null,
-)
-
-const selectedRewards = computed(() => selectedCatalogEntry.value?.rewards ?? [])
-
-const selectedGlyph = computed(() => {
-  const entry = selectedCatalogEntry.value
-  return entry ? resolveMilestoneGlyph(entry.iconGroup, entry.querySpec) : undefined
-})
 
 const selectedSet = computed(() =>
   selectedSetId.value ? (sets.value.find((s) => s.id === selectedSetId.value) ?? null) : null,
@@ -120,9 +91,8 @@ const selectedSet = computed(() =>
 const selectedSetStats = computed(() => {
   const set = selectedSet.value
   if (!set) return null
-  const items = catalog.value.filter((m) => m.setId === set.id)
-  const done = items.filter((m) => completionById.value.get(m.id)?.userCompleted).length
-  return { total: items.length, completed: done }
+  const items = milestones.value.filter((m) => m.setId === set.id)
+  return { total: items.length, completed: items.filter((m) => m.userCompleted).length }
 })
 
 const { isSupporter } = useSupporter(() => authStore.userId)
@@ -132,6 +102,7 @@ const pinSlotLimit = computed(() => (isSupporter.value ? SUPPORTER_PIN_SLOTS : S
 const pinned = ref<UserMilestoneProgressResponse[]>([])
 const pinSupported = ref(true)
 const pinPending = ref(false)
+const pinError = ref<string | null>(null)
 
 const pinnedIds = computed(() => new Set(pinned.value.map((p) => p.milestoneId)))
 
@@ -156,77 +127,65 @@ const pinFullNotice = computed(() => {
     : `All ${STANDARD_PIN_SLOTS} pinned slots are full. Supporters get ${SUPPORTER_PIN_SLOTS}.`
 })
 
-async function fetchPinned() {
-  if (!authStore.userId || !pinSupported.value) return
-  try {
-    const { getUserPinnedMilestones } = await import('@/api/users')
-    pinned.value = await getUserPinnedMilestones(authStore.userId)
-  } catch {
-    pinned.value = []
+async function fetchPinned(userId: string | null) {
+  if (!userId || !pinSupported.value) return []
+  const { getUserPinnedMilestones } = await import('@/api/users')
+  return getUserPinnedMilestones(userId).catch(() => {
     pinSupported.value = false
-  }
+    return []
+  })
 }
 
 async function togglePin() {
   if (!selectedId.value || pinPending.value || !canPin.value) return
   const id = selectedId.value
-  const nextIds = selectedIsPinned.value
+  const unpinning = selectedIsPinned.value
+  const nextIds = unpinning
     ? pinned.value.map((p) => p.milestoneId).filter((p) => p !== id)
     : [...pinned.value.map((p) => p.milestoneId), id]
 
   pinPending.value = true
+  pinError.value = null
   try {
     const { updateMyProfile } = await import('@/api/users')
     await updateMyProfile({
       pinnedMilestones: nextIds.map((milestoneId, displayOrder) => ({ milestoneId, displayOrder })),
     })
-    await fetchPinned()
-  } catch {
+    if (unpinning) pinned.value = pinned.value.filter((p) => p.milestoneId !== id)
+    else pinned.value = await fetchPinned(authStore.userId)
+  } catch (err) {
+    pinError.value = getApiErrorMessage(err, 'Could not update pins')
   } finally {
     pinPending.value = false
   }
 }
 
+let userRequest = 0
+
+async function fetchUserData() {
+  const id = ++userRequest
+  const userId = authStore.userId
+  const { getMilestoneCompletionStats } = await import('@/api/milestones')
+  const [completion, pins] = await Promise.all([
+    getMilestoneCompletionStats(userId ?? undefined).catch(() => []),
+    fetchPinned(userId),
+  ])
+  if (id !== userRequest) return
+  milestones.value = completion
+  pinned.value = pins
+}
+
 async function fetchData() {
-  loading.value = true
-  try {
-    const { getMilestoneSets, getMilestoneCompletionStats } = await import('@/api/milestones')
-    const [catalogRes, setsRes, completionRes] = await Promise.all([
-      loadMilestoneCatalog(),
-      getMilestoneSets({ userId: authStore.userId ?? undefined, size: 100 }),
-      getMilestoneCompletionStats(authStore.userId ?? undefined, milestoneSort.value),
-    ])
-    catalog.value = catalogRes
-    sets.value = setsRes.content
-    milestones.value = completionRes
-
-    await fetchGroups()
-    await fetchPrerequisites(setsRes.content)
-    await fetchPinned()
-  } catch {
-    catalog.value = []
-    sets.value = []
-    milestones.value = []
-    prerequisites.value = []
-    resetGroups()
-  }
+  const { getMilestoneSets, getPrerequisites } = await import('@/api/milestones')
+  const [setsRes, prereqs] = await Promise.all([
+    getMilestoneSets({ size: 100 }).catch(() => null),
+    getPrerequisites().catch(() => []),
+    fetchGroups(),
+    fetchUserData(),
+  ])
+  sets.value = setsRes?.content ?? []
+  prerequisites.value = prereqs
   loading.value = false
-}
-
-async function fetchPrerequisites(allSets: MilestoneSetResponse[]) {
-  const { getSetPrerequisites } = await import('@/api/milestones')
-  const results = await Promise.allSettled(allSets.map((s) => getSetPrerequisites(s.id)))
-  prerequisites.value = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
-}
-
-async function handleSortChange(sort: MilestoneSort) {
-  milestoneSort.value = sort
-  try {
-    const { getMilestoneCompletionStats } = await import('@/api/milestones')
-    milestones.value = await getMilestoneCompletionStats(authStore.userId ?? undefined, sort)
-  } catch {
-    milestones.value = []
-  }
 }
 
 function selectMilestone(id: string | null) {
@@ -239,21 +198,9 @@ function selectSet(setId: string) {
   selectedId.value = null
 }
 
-function handleResize() {
-  isMobile.value = window.innerWidth < 768
-}
+onMounted(fetchData)
 
-onMounted(() => {
-  handleResize()
-  window.addEventListener('resize', handleResize)
-  fetchData()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
-
-watch(() => authStore.userId, fetchData)
+watch(() => authStore.userId, fetchUserData)
 </script>
 
 <template>
@@ -263,10 +210,10 @@ watch(() => authStore.userId, fetchData)
       <div class="milestones-page__controls">
         <p v-if="!loading" class="milestones-page__summary">
           <template v-if="authStore.isLoggedIn">
-            {{ totalCompleted }} of {{ totalMilestones }} complete across {{ sets.length }} sets.
+            {{ totalCompleted }} of {{ milestones.length }} complete across {{ sets.length }} sets.
           </template>
           <template v-else>
-            {{ totalMilestones }} milestones across {{ sets.length }} sets.
+            {{ milestones.length }} milestones across {{ sets.length }} sets.
           </template>
         </p>
         <div v-if="!isMobile" class="milestones-page__view-toggle">
@@ -310,12 +257,11 @@ watch(() => authStore.userId, fetchData)
       />
 
       <aside class="milestones-page__inspector" aria-label="Milestone details">
-        <Transition name="inspector" mode="out-in" :duration="{ enter: 300, leave: 100 }">
+        <Transition name="inspector" mode="out-in">
           <div :key="selectedId ?? selectedSetId ?? 'hint'" class="milestones-page__inspector-content">
             <template v-if="selectedMilestone">
-              <MilestoneDetail :milestone="selectedMilestone" :logged-in="authStore.isLoggedIn"
-                :glyph="selectedGlyph" />
-              <MilestoneRewards :rewards="selectedRewards" />
+              <MilestoneDetail :milestone="selectedMilestone" :logged-in="authStore.isLoggedIn" />
+              <MilestoneRewards :rewards="selectedMilestone.rewards ?? []" />
 
               <div v-if="authStore.isLoggedIn && selectedMilestone.userCompleted" class="milestones-page__pin">
                 <BaseButton size="sm" :disabled="!canPin || pinPending" @click="togglePin">
@@ -323,6 +269,9 @@ watch(() => authStore.userId, fetchData)
                 </BaseButton>
                 <span class="milestones-page__pin-count">{{ pinned.length }} / {{ pinSlotLimit }} pinned</span>
                 <p v-if="pinFullNotice" class="milestones-page__pin-notice">{{ pinFullNotice }}</p>
+                <p v-if="pinError" class="milestones-page__pin-notice milestones-page__pin-notice--error">
+                  {{ pinError }}
+                </p>
               </div>
             </template>
 
@@ -347,9 +296,7 @@ watch(() => authStore.userId, fetchData)
               />
             </template>
 
-            <p v-else class="milestones-page__hint">
-              Pick a milestone.
-            </p>
+            <p v-else class="milestones-page__hint">Pick a milestone.</p>
           </div>
         </Transition>
       </aside>
@@ -359,11 +306,9 @@ watch(() => authStore.userId, fetchData)
       v-else
       :milestones="milestones"
       :sets="sets"
-      :sort="milestoneSort"
       :logged-in="authStore.isLoggedIn"
       :groups="resolvedGroups"
       :standalone-sets="standaloneSets"
-      @update:sort="handleSortChange"
     />
   </div>
 </template>
@@ -459,38 +404,18 @@ watch(() => authStore.userId, fetchData)
   gap: var(--space-md);
 }
 
-.inspector-enter-active > * {
-  animation: inspector-in 200ms cubic-bezier(0.25, 1, 0.5, 1) both;
-}
-
-.inspector-enter-active > :nth-child(2) {
-  animation-delay: 50ms;
-}
-
-.inspector-enter-active > :nth-child(3) {
-  animation-delay: 100ms;
-}
-
+.inspector-enter-active,
 .inspector-leave-active {
-  transition: opacity 100ms ease-in;
+  transition: opacity 150ms ease-out;
 }
 
+.inspector-enter-from,
 .inspector-leave-to {
   opacity: 0;
 }
 
-@keyframes inspector-in {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .inspector-enter-active > * {
-    animation: none;
-  }
-
+  .inspector-enter-active,
   .inspector-leave-active {
     transition: none;
   }
@@ -547,14 +472,14 @@ watch(() => authStore.userId, fetchData)
   color: var(--text-secondary);
 }
 
+.milestones-page__pin-notice--error {
+  color: var(--error);
+}
+
 .milestones-page__hint {
   margin: 0;
-  padding: var(--space-md);
-  border: 1px dashed var(--bg-overlay);
-  border-radius: var(--radius-card);
   font-size: var(--text-body);
   color: var(--text-tertiary);
-  line-height: 1.5;
 }
 
 @media (max-width: 1023px) {

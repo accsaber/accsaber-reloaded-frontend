@@ -386,6 +386,7 @@ watch(() => auth.isLoggedIn, loadInvites, { immediate: true })
 
 .campaigns-page__panes {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   padding: 2px;
   background: var(--bg-base);
@@ -421,6 +422,7 @@ watch(() => auth.isLoggedIn, loadInvites, { immediate: true })
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
   padding: 6px var(--space-md);
   background: none;
   border: none;

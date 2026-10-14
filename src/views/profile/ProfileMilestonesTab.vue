@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
-import type { MilestoneSort } from '@/api/milestones'
 import { useSetGroups } from '@/composables/useSetGroups'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import { ref, watch } from 'vue'
@@ -18,28 +17,22 @@ const emit = defineEmits<{ 'pin-toggle': [milestoneId: string] }>()
 const loading = ref(false)
 const milestones = ref<MilestoneCompletionResponse[]>([])
 const sets = ref<MilestoneSetResponse[]>([])
-const sort = ref<MilestoneSort>('tier')
 
-const { resolvedGroups, standaloneSets, fetchGroups, resetGroups } = useSetGroups(sets)
+const { resolvedGroups, standaloneSets, fetchGroups } = useSetGroups(sets)
 
 let requestId = 0
 
 async function fetchCompletion() {
   const id = ++requestId
   const { getMilestoneCompletionStats } = await import('@/api/milestones')
-  const result = await getMilestoneCompletionStats(props.userId, sort.value).catch(() => [])
+  const result = await getMilestoneCompletionStats(props.userId).catch(() => [])
   if (id === requestId) milestones.value = result
 }
 
 async function fetchSets() {
-  try {
-    const { getMilestoneSets } = await import('@/api/milestones')
-    sets.value = (await getMilestoneSets({ size: 100 })).content
-    await fetchGroups()
-  } catch {
-    sets.value = []
-    resetGroups()
-  }
+  const { getMilestoneSets } = await import('@/api/milestones')
+  const [setRes] = await Promise.all([getMilestoneSets({ size: 100 }).catch(() => null), fetchGroups()])
+  sets.value = setRes?.content ?? []
 }
 
 async function load() {
@@ -48,17 +41,12 @@ async function load() {
   loading.value = false
 }
 
-function handleSortChange(newSort: MilestoneSort) {
-  sort.value = newSort
-  fetchCompletion()
-}
-
 watch(() => props.userId, load, { immediate: true })
 </script>
 
 <template>
-  <MilestoneListView :milestones="milestones" :sets="sets" :sort="sort" :loading="loading" logged-in
+  <MilestoneListView :milestones="milestones" :sets="sets" :loading="loading" logged-in
     :groups="resolvedGroups" :standalone-sets="standaloneSets"
     :pinnable="isSelfProfile" :pinned-ids="pinnedIds" :can-pin-more="canPinMore" :pin-pending="pinPending"
-    @update:sort="handleSortChange" @pin-toggle="emit('pin-toggle', $event)" />
+    @pin-toggle="emit('pin-toggle', $event)" />
 </template>

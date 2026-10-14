@@ -11,7 +11,6 @@ const props = withDefaults(
     tier: string
     size?: number
     completed?: boolean
-    dim?: boolean
   }>(),
   { size: 40 },
 )
@@ -33,7 +32,7 @@ const glyphTransform = computed(() => {
 <template>
   <svg
     class="ms-badge ms-surface"
-    :class="{ 'ms-badge--completed': completed, 'ms-badge--dim': dim }"
+    :class="{ 'ms-badge--completed': completed }"
     :style="{ '--ms-tier': `var(--tier-${tier})`, width: `${size}px`, height: `${size}px` }"
     viewBox="0 0 100 100"
     aria-hidden="true"
@@ -64,10 +63,6 @@ const glyphTransform = computed(() => {
 
 .ms-badge--completed .ms-badge__glyph {
   color: var(--ms-ink-done);
-}
-
-.ms-badge--dim {
-  opacity: 0.5;
 }
 
 </style>

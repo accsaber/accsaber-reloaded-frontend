@@ -173,7 +173,6 @@ export interface CreateMilestoneRequest {
   querySpec: Record<string, unknown>
   targetValue: number
   comparison: string
-  blExclusive?: boolean
   mapDifficultyIds?: string[]
   awardsItemId?: string
   rewards?: MilestoneRewardRequest[]

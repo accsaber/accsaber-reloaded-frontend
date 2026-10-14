@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue';
 import UserChip from '@/components/domain/UserChip.vue';
 import type { MilestoneHolderResponse } from '@/types/api/milestones';
+import { formatRelativeDate } from '@/utils/formatters';
 import { toUserRef } from '@/utils/mappers';
 import { nextTick, onUnmounted, ref } from 'vue';
 
@@ -67,22 +69,6 @@ onUnmounted(() => {
   if (hoverTimer) clearTimeout(hoverTimer)
   if (leaveTimer) clearTimeout(leaveTimer)
 })
-
-function formatRelative(dateStr: string): string {
-  const now = Date.now()
-  const then = new Date(dateStr).getTime()
-  const diff = now - then
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  return `${Math.floor(months / 12)}y ago`
-}
 </script>
 
 <template>
@@ -106,19 +92,18 @@ function formatRelative(dateStr: string): string {
               <span class="holder-popup__count">{{ completions }}</span>
             </div>
 
-            <div v-if="loading" class="holder-popup__loading">
-              <div v-for="i in Math.min(completions, 5)" :key="i" class="holder-popup__shimmer" />
-            </div>
+            <SkeletonLoader v-if="loading" class="holder-popup__loading" variant="text"
+              :lines="Math.min(completions, 5)" />
 
             <div v-else-if="holders.length === 0" class="holder-popup__empty">
-              No holders found
+              Couldn't load holders
             </div>
 
             <div v-else class="holder-popup__list">
               <router-link v-for="h in holders" :key="h.userId"
                 :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
                 <UserChip :user="toUserRef(h)" size="sm" class="holder-popup__player" />
-                <span class="holder-popup__time">{{ formatRelative(h.completedAt) }}</span>
+                <span class="holder-popup__time">{{ formatRelativeDate(h.completedAt) }}</span>
               </router-link>
             </div>
           </div>
@@ -225,37 +210,13 @@ function formatRelative(dateStr: string): string {
 
 .holder-popup__time {
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .holder-popup__loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
-}
-
-.holder-popup__shimmer {
-  height: 24px;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-btn);
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    opacity: 0.5;
-  }
-
-  50% {
-    opacity: 0.8;
-  }
-
-  100% {
-    opacity: 0.5;
-  }
 }
 
 .holder-popup__empty {

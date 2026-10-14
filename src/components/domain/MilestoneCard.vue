@@ -1,59 +1,25 @@
 <script setup lang="ts">
-import { useCategoryStore } from '@/stores/categories';
-import type { MilestoneDisplay } from '@/types/display';
-import { tierColor as getTierColor, formatPercent } from '@/utils/constants';
-import MilestoneBadge from '@/components/domain/MilestoneBadge.vue';
-import { computed } from 'vue';
+import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
+import type { MilestoneResponse } from '@/types/api/milestones'
+import { tierColor, formatPercent } from '@/utils/constants'
+import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 
-const props = defineProps<{
-  milestone: MilestoneDisplay
-  loggedIn?: boolean
-}>()
-
-const categoryStore = useCategoryStore()
-
-const tierColor = computed(() => getTierColor(props.milestone.tier))
-const isApex = computed(() => props.milestone.tier?.toUpperCase() === 'APEX')
-
-const accentColor = computed(() =>
-  props.milestone.categoryCode ? categoryStore.getAccent(props.milestone.categoryCode) : undefined,
-)
-
-const completionText = computed(() => `${formatPercent(props.milestone.completionPercent)}% of players`)
-
-const showProgress = computed(() => !!props.loggedIn)
-
-const progressBarWidth = computed(() => {
-  if (props.milestone.isCompleted) return 100
-  return Math.min(100, (props.milestone.normalizedProgress ?? 0) * 100)
-})
+defineProps<{ milestone: MilestoneResponse }>()
 </script>
 
 <template>
-  <div class="milestone-card" :class="{
-    'milestone-card--completed': milestone.isCompleted,
-    'milestone-card--dim': loggedIn && !milestone.isCompleted,
-    'milestone-card--apex': isApex,
-  }" :style="accentColor ? { '--ms-accent': accentColor, '--tier-color': tierColor } : { '--tier-color': tierColor }">
+  <div class="milestone-card" :class="{ 'milestone-card--apex': milestone.tier === 'APEX' }"
+    :style="{ '--tier-color': tierColor(milestone.tier) }">
     <div class="milestone-card__header">
-      <MilestoneBadge class="milestone-card__badge" :glyph="milestone.glyph" :tier="milestone.tier"
-      :size="44" :completed="milestone.isCompleted" :dim="loggedIn && !milestone.isCompleted" />
-      <div class="milestone-card__header-text">
-        <span class="milestone-card__tier">{{ milestone.tier }}</span>
-        <span v-if="milestone.isCompleted === true" class="milestone-card__check" aria-label="Completed">
-          &#10003;
-        </span>
-      </div>
+      <MilestoneBadge :glyph="resolveMilestoneGlyph(milestone.iconGroup, milestone.querySpec)" :tier="milestone.tier"
+        :size="44" />
+      <span class="milestone-card__tier">{{ milestone.tier }}</span>
     </div>
     <h3 class="milestone-card__title">{{ milestone.title }}</h3>
     <p class="milestone-card__desc">{{ milestone.description }}</p>
     <div class="milestone-card__footer">
       <span class="milestone-card__xp">{{ milestone.xp }} XP</span>
-      <span class="milestone-card__completion">{{ completionText }}</span>
-    </div>
-    <div v-if="showProgress" class="milestone-card__progress">
-      <div class="milestone-card__progress-bar" :style="{ '--progress': progressBarWidth / 100 }" />
-      <span class="milestone-card__progress-text">{{ formatPercent(progressBarWidth) }}%</span>
+      <span class="milestone-card__completion">{{ formatPercent(milestone.completionPercentage) }}% of players</span>
     </div>
   </div>
 </template>
@@ -63,15 +29,10 @@ const progressBarWidth = computed(() => {
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  padding: var(--space-lg) var(--space-lg);
+  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  transition: border-color 150ms ease;
-}
-
-.milestone-card--completed {
-  border-color: var(--ms-accent, var(--accent));
 }
 
 .milestone-card__header {
@@ -80,49 +41,24 @@ const progressBarWidth = computed(() => {
   gap: var(--space-md);
 }
 
-
-
-
-.milestone-card--dim {
-  opacity: 0.5;
-}
-
 .milestone-card--apex {
   border-color: color-mix(in srgb, var(--tier-color) 30%, var(--bg-overlay));
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--tier-color) 5%, var(--bg-surface)) 0%,
-    var(--bg-surface) 100%
-  );
+  background: color-mix(in srgb, var(--tier-color) 5%, var(--bg-surface));
 }
-
-
 
 .milestone-card--apex .milestone-card__title {
   font-size: var(--text-section-heading);
   color: var(--tier-color);
 }
 
-
-.milestone-card__header-text {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding-top: var(--space-xs);
-}
-
 .milestone-card__tier {
+  padding-top: var(--space-xs);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--tier-color);
-}
-
-.milestone-card__check {
-  color: var(--success);
-  font-size: 1rem;
 }
 
 .milestone-card__title {
@@ -163,37 +99,6 @@ const progressBarWidth = computed(() => {
   color: var(--text-tertiary);
 }
 
-.milestone-card__progress {
-  position: relative;
-  height: 4px;
-  background: var(--bg-overlay);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.milestone-card__progress-bar {
-  width: 100%;
-  height: 100%;
-  background: var(--tier-color);
-  border-radius: 2px;
-  transform-origin: left;
-  transform: scaleX(var(--progress, 0));
-  transition: transform 300ms ease-out;
-}
-
-.milestone-card--completed .milestone-card__progress-bar {
-  background: var(--ms-accent, var(--accent));
-}
-
-.milestone-card__progress-text {
-  position: absolute;
-  top: calc(100% + 2px);
-  right: 0;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
-}
-
 @media (max-width: 767px) {
   .milestone-card {
     padding: var(--space-md);
@@ -206,10 +111,7 @@ const progressBarWidth = computed(() => {
   }
 
   .milestone-card__xp,
-  .milestone-card__completion {
-    font-size: var(--text-body);
-  }
-
+  .milestone-card__completion,
   .milestone-card__tier {
     font-size: var(--text-body);
   }

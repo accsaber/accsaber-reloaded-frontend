@@ -121,7 +121,6 @@ const milestoneForm = ref<MilestoneCreateForm>({
   querySpec: {},
   targetValue: 1,
   comparison: 'GTE',
-  blExclusive: false,
   positionX: 0,
   positionY: 0,
   progressModel: 'LINEAR',
@@ -215,7 +214,6 @@ function openCreateMilestone() {
     querySpec: {},
     targetValue: 1,
     comparison: 'GTE',
-    blExclusive: false,
     positionX: 0,
     positionY: 0,
     progressModel: 'LINEAR',
@@ -590,7 +588,6 @@ const STATUS_OPTIONS = [
                     {{ m.status }}
                   </span>
                   <span class="milestone-card__type">{{ m.type }}</span>
-                  <span v-if="m.blExclusive" class="milestone-card__bl">BL</span>
                   <span class="milestone-card__xp">+{{ m.xp }} XP</span>
                 </div>
                 <p v-if="m.description" class="milestone-card__desc">{{ m.description }}</p>
@@ -660,13 +657,6 @@ const STATUS_OPTIONS = [
             :options="TIERS.map((t) => ({ value: t, label: t.charAt(0) + t.slice(1).toLowerCase() }))" />
         </div>
         <BaseInput v-model.number="milestoneForm.xp" label="XP" type="number" style="width: 100px" />
-        <div class="form-field">
-          <label class="form-label">BL Exclusive</label>
-          <label class="form-checkbox">
-            <input type="checkbox" v-model="milestoneForm.blExclusive" />
-            Requires BeatLeader
-          </label>
-        </div>
       </div>
       <div class="milestone-form__row">
         <div class="form-field" style="flex: 1">
@@ -1320,24 +1310,6 @@ const STATUS_OPTIONS = [
   margin: 0;
 }
 
-.milestone-card__bl {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--info) 15%, transparent);
-  color: var(--info);
-}
-
-.form-checkbox {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
 
 .prereq-loading {
   display: flex;

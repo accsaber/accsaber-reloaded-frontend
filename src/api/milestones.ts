@@ -5,7 +5,6 @@ import type {
   MilestoneResponse,
   MilestoneSetResponse,
   PrerequisiteLinkResponse,
-  SetGroupLinkResponse,
   SetGroupResponse,
 } from '@/types/api/milestones'
 import type { Page, PaginationParams } from '@/types/pagination'
@@ -16,10 +15,12 @@ export function getMilestones(params?: MilestoneListParams): Promise<Page<Milest
   return get<Page<MilestoneResponse>>(`/milestones${buildQuery(params)}`)
 }
 
-export function getMilestoneSets(
-  params?: PaginationParams & { userId?: string },
-): Promise<Page<MilestoneSetResponse>> {
+export function getMilestoneSets(params?: PaginationParams): Promise<Page<MilestoneSetResponse>> {
   return get<Page<MilestoneSetResponse>>(`/milestones/sets${buildQuery(params)}`)
+}
+
+export function getMilestoneSet(setId: string): Promise<MilestoneSetResponse> {
+  return get<MilestoneSetResponse>(`/milestones/sets/${setId}`)
 }
 
 export function getMilestone(id: string): Promise<MilestoneResponse> {
@@ -30,8 +31,8 @@ export function getMilestonesBySet(setId: string): Promise<MilestoneResponse[]> 
   return get<MilestoneResponse[]>(`/milestones/sets/${setId}/milestones`)
 }
 
-export function getSetPrerequisites(setId: string): Promise<PrerequisiteLinkResponse[]> {
-  return get<PrerequisiteLinkResponse[]>(`/milestones/sets/${setId}/prerequisites`)
+export function getPrerequisites(): Promise<PrerequisiteLinkResponse[]> {
+  return get<PrerequisiteLinkResponse[]>('/milestones/prerequisites')
 }
 
 export function getMilestoneHolders(milestoneId: string): Promise<Page<MilestoneHolderResponse>> {
@@ -42,18 +43,8 @@ export function getSetGroups(): Promise<SetGroupResponse[]> {
   return get<SetGroupResponse[]>('/milestones/set-groups')
 }
 
-export function getSetGroupLinks(groupId: string): Promise<SetGroupLinkResponse[]> {
-  return get<SetGroupLinkResponse[]>(`/milestones/set-groups/${groupId}/links`)
-}
-
 export type MilestoneSort = 'tier' | 'completions' | 'completedAt' | 'progress'
 
-export function getMilestoneCompletionStats(
-  userId?: string,
-  sort?: MilestoneSort,
-): Promise<MilestoneCompletionResponse[]> {
-  const params: Record<string, string> = {}
-  if (userId) params.userId = userId
-  if (sort && sort !== 'tier') params.sort = sort
-  return get<MilestoneCompletionResponse[]>(`/milestones/completion-stats${buildQuery(params)}`)
+export function getMilestoneCompletionStats(userId?: string): Promise<MilestoneCompletionResponse[]> {
+  return get<MilestoneCompletionResponse[]>(`/milestones/completion-stats${buildQuery({ userId })}`)
 }

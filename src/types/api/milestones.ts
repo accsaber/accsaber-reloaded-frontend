@@ -49,7 +49,6 @@ export interface MilestoneResponse {
   comparison: MilestoneComparison
   status: MilestoneStatus
   completionPercentage: number
-  blExclusive: boolean
   completions: number
   totalPlayers: number
   awardsItemId: string | null
@@ -86,11 +85,9 @@ export interface MilestoneCompletionResponse {
   comparison: MilestoneComparison
   setId: string
   categoryId: string | null
-  blExclusive: boolean
   completions: number
   totalPlayers: number
   completionPercentage: number
-  awardsItemId?: string | null
   rewards?: MilestoneRewardResponse[] | null
   positionX?: number
   positionY?: number
@@ -147,6 +144,7 @@ export interface SetGroupResponse {
   name: string
   description: string
   createdAt: string
+  links?: SetGroupLinkResponse[]
 }
 
 export interface SetGroupLinkResponse {

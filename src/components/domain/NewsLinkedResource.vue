@@ -9,13 +9,12 @@ import type { CampaignDetailResponse } from '@/types/api/campaigns'
 import type { CurveResponse } from '@/types/api/categories'
 import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { PublicNewsResponse } from '@/types/api/news'
-import type { MilestoneDisplay } from '@/types/display'
 import { groupBatchByCategory } from '@/utils/batches'
 import { campaignBadges } from '@/utils/campaignBadges'
 import { campaignDifficultyLabel } from '@/utils/campaignDifficulty'
 import { requirementGoalText } from '@/utils/campaignLayout'
 import { formatRelativeDate } from '@/utils/formatters'
-import { formatDifficulty, toMilestoneDisplayFromCatalog } from '@/utils/mappers'
+import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 
@@ -53,16 +52,6 @@ const batchGroups = computed(() => {
   )
 })
 
-const milestoneDisplays = computed<MilestoneDisplay[]>(() => {
-  if (resource.value?.kind !== 'milestoneSet') return []
-  return resource.value.data.milestones.map((m) =>
-    toMilestoneDisplayFromCatalog(
-      m,
-      m.categoryId ? categoryStore.getCategoryCode(m.categoryId) : undefined,
-    ),
-  )
-})
-
 async function loadBatch(id: string) {
   const { getBatch } = await import('@/api/batches')
   resource.value = { kind: 'batch', data: await getBatch(id) }
@@ -74,13 +63,8 @@ async function loadCampaign(id: string) {
 }
 
 async function loadMilestoneSet(id: string) {
-  const { getMilestoneSets, getMilestonesBySet } = await import('@/api/milestones')
-  const [setsRes, milestones] = await Promise.all([
-    getMilestoneSets({ size: 200 }),
-    getMilestonesBySet(id),
-  ])
-  const set = setsRes.content.find((s) => s.id === id)
-  if (!set) throw new Error('Set not found')
+  const { getMilestoneSet, getMilestonesBySet } = await import('@/api/milestones')
+  const [set, milestones] = await Promise.all([getMilestoneSet(id), getMilestonesBySet(id)])
   resource.value = { kind: 'milestoneSet', data: { set, milestones } }
 }
 
@@ -249,7 +233,7 @@ const sectionTitle = computed(() => {
       </header>
 
       <div class="milestone-grid">
-        <MilestoneCard v-for="m in milestoneDisplays" :key="m.id" :milestone="m" />
+        <MilestoneCard v-for="m in resource.data.milestones" :key="m.id" :milestone="m" />
       </div>
     </template>
 

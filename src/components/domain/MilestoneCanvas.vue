@@ -8,6 +8,7 @@ import type { MilestoneDisplay } from '@/types/display'
 import {
   buildMilestoneMap,
   nearestNodeInDirection,
+  nodeStateLabel,
   GROUP_LABEL_UNITS,
   MILESTONE_UNIT,
   type MilestoneNode,
@@ -100,7 +101,6 @@ const {
   transformStyle,
   measure,
   clampPan,
-  fitToContent,
   adjustZoom,
   revealPoint,
   onWheel,
@@ -158,50 +158,27 @@ function applyCamera(s: number, tx: number, ty: number, animate: boolean) {
   cameraRaf = requestAnimationFrame(step)
 }
 
-function fitRegion() {
+function fitBox(readable: boolean) {
   measure()
-  const rect = map.value.focusedRect ?? contentBounds.value
-  if (rect.width <= 0 || rect.height <= 0 || stageWidth.value <= 0) return
-  const pad = 36
-  const s = Math.max(
-    minScale.value,
-    Math.min(
-      MAX_SCALE,
-      Math.min(
-        (stageWidth.value - pad * 2) / rect.width,
-        (stageHeight.value - pad * 2) / rect.height,
-      ),
-    ),
-  )
-  applyCamera(
-    s,
-    stageWidth.value / 2 - (rect.x + rect.width / 2) * s,
-    stageHeight.value / 2 - (rect.y + rect.height / 2) * s,
-    true,
-  )
+  const box = map.value.focusedRect ?? contentBounds.value
+  if (box.width <= 0 || box.height <= 0 || stageWidth.value <= 0 || stageHeight.value <= 0) return
+
+  const pad = readable ? 24 : 36
+  const fitH = (stageHeight.value - pad * 2) / box.height
+  const fitW = (readable ? stageWidth.value * 0.66 : stageWidth.value - pad * 2) / box.width
+  const floor = readable ? Math.max(MIN_SCALE, Math.min(TARGET_SCALE, Math.max(fitH, fitW))) : minScale.value
+  const s = Math.min(MAX_SCALE, Math.max(floor, Math.min(fitH, fitW)))
+
+  const anchorTop = readable && box.height * s > stageHeight.value - pad * 2
+  const tx = stageWidth.value / 2 - (box.x + box.width / 2) * s
+  const ty = anchorTop ? pad - box.y * s : stageHeight.value / 2 - (box.y + box.height / 2) * s
+
+  applyCamera(s, tx, ty, !readable || framedOnce)
+  if (readable) framedOnce = true
 }
 
 function frameFocused() {
-  measure()
-  const b = contentBounds.value
-  const target = map.value.focusedRect
-  if (b.height <= 0 || stageHeight.value <= 0) return
-
-  const pad = 24
-  const box = target ?? b
-  const fitH = (stageHeight.value - pad * 2) / box.height
-  const fitW = (stageWidth.value * 0.66) / box.width
-  const readable = Math.min(TARGET_SCALE, Math.max(fitH, fitW))
-  const s = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.max(Math.min(fitH, fitW), readable)))
-
-  const overflows = box.height * s > stageHeight.value - pad * 2
-  const tx = stageWidth.value / 2 - (box.x + box.width / 2) * s
-  const ty = overflows
-    ? pad - box.y * s
-    : stageHeight.value / 2 - (box.y + box.height / 2) * s
-
-  applyCamera(s, tx, ty, framedOnce)
-  framedOnce = true
+  fitBox(true)
 }
 
 const focusedId = ref<string | null>(null)
@@ -254,15 +231,7 @@ const focusedSummary = computed(() => {
   const node = focusedNode.value
   if (!node) return ''
   const m = node.milestone
-  const state =
-    node.state === 'completed'
-      ? 'completed'
-      : node.state === 'locked'
-        ? 'locked'
-        : node.state === 'progress'
-          ? `${Math.round((m.normalizedProgress ?? 0) * 100)}% complete`
-          : 'not started'
-  return `${m.title}. ${m.tier} tier, ${state}. ${m.description}`
+  return `${m.title}. ${m.tier} tier, ${nodeStateLabel(node)}. ${m.description}`
 })
 
 const hoverId = ref<string | null>(null)
@@ -389,8 +358,6 @@ onUnmounted(() => {
   cancelCameraTween()
   window.clearTimeout(closeTimer)
 })
-
-defineExpose({ fitToContent, frameFocused, fitRegion })
 </script>
 
 <template>
@@ -505,7 +472,7 @@ defineExpose({ fitToContent, frameFocused, fitRegion })
     <div class="ms-canvas__zoom">
       <button type="button" aria-label="Zoom in" @click="zoomBy(1.25)">+</button>
       <button type="button" aria-label="Zoom out" @click="zoomBy(1 / 1.25)">−</button>
-      <button type="button" aria-label="Fit set to view" @click="fitRegion">Fit</button>
+      <button type="button" aria-label="Fit set to view" @click="fitBox(false)">Fit</button>
     </div>
   </div>
 </template>

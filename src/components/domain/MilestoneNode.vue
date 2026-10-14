@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MilestoneNode } from '@/utils/milestoneLayout'
+import { nodeStateLabel, type MilestoneNode } from '@/utils/milestoneLayout'
 import { glyphSymbolId } from '@/utils/milestoneIcons'
 import { frameFor, frameSymbolId, markSymbolId, resolveFrameTier } from '@/utils/milestoneTiers'
 import { computed } from 'vue'
@@ -44,18 +44,9 @@ const categoryDot = computed(() => {
   return { cx: -at, cy: at, r: props.node.radius * 0.14 }
 })
 
-const ariaLabel = computed(() => {
-  const m = props.node.milestone
-  const state =
-    props.node.state === 'completed'
-      ? 'completed'
-      : props.node.state === 'locked'
-        ? 'locked'
-        : props.node.state === 'progress'
-          ? `${Math.round(progressPercent.value)} percent complete`
-          : 'not started'
-  return `${m.title}, ${m.tier} tier, ${state}`
-})
+const ariaLabel = computed(
+  () => `${props.node.milestone.title}, ${props.node.milestone.tier} tier, ${nodeStateLabel(props.node)}`,
+)
 </script>
 
 <template>

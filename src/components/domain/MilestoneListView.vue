@@ -7,28 +7,22 @@ import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { Tab } from '@/types/display'
 import type { ResolvedSetGroup } from '@/types/milestones'
-import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   milestones: MilestoneCompletionResponse[]
   sets: MilestoneSetResponse[]
-  sort?: MilestoneSort
   loading?: boolean
   loggedIn?: boolean
   groups?: ResolvedSetGroup[]
   standaloneSets?: MilestoneSetResponse[]
-  defaultExpanded?: boolean
   pinnable?: boolean
   pinnedIds?: Set<string>
   canPinMore?: boolean
   pinPending?: Set<string>
 }>()
 
-const emit = defineEmits<{
-  'update:sort': [sort: MilestoneSort]
-  'pin-toggle': [milestoneId: string]
-}>()
+const emit = defineEmits<{ 'pin-toggle': [milestoneId: string] }>()
 
 function isPinned(id: string): boolean {
   return props.pinnedIds?.has(id) ?? false
@@ -40,11 +34,7 @@ function pinDisabled(id: string): boolean {
 
 const expandedSets = ref<Set<string>>(new Set())
 const viewMode = ref('all')
-const activeSort = computed(() => props.sort ?? 'tier')
-
-function onSortChange(value: string) {
-  emit('update:sort', value as MilestoneSort)
-}
+const activeSort = ref<MilestoneSort>('tier')
 
 const sortOptions = computed(() => {
   const options = [
@@ -76,17 +66,17 @@ const completedMilestones = computed(() =>
   props.milestones.filter((m) => m.userCompleted === true),
 )
 
+const SORTS: Record<Exclude<MilestoneSort, 'tier'>, (a: MilestoneCompletionResponse, b: MilestoneCompletionResponse) => number> = {
+  completions: (a, b) => b.completions - a.completions,
+  completedAt: (a, b) => (b.userCompletedAt ?? '').localeCompare(a.userCompletedAt ?? ''),
+  progress: (a, b) =>
+    Number(!!a.userCompleted) - Number(!!b.userCompleted) ||
+    (b.userNormalizedProgress ?? 0) - (a.userNormalizedProgress ?? 0),
+}
+
 const activeMilestones = computed(() => {
   const base = viewMode.value === 'completed' ? completedMilestones.value : props.milestones
-  if (activeSort.value === 'progress') {
-    return [...base].sort((a, b) => {
-      const aCompleted = a.userCompleted ? 1 : 0
-      const bCompleted = b.userCompleted ? 1 : 0
-      if (aCompleted !== bCompleted) return aCompleted - bCompleted
-      return (b.userNormalizedProgress ?? 0) - (a.userNormalizedProgress ?? 0)
-    })
-  }
-  return base
+  return activeSort.value === 'tier' ? base : [...base].sort(SORTS[activeSort.value])
 })
 
 const isFlatSort = computed(() => activeSort.value !== 'tier')
@@ -144,10 +134,6 @@ const displayGroups = computed<DisplayGroup[]>(() => {
   ].filter((dg) => dg.sets.length > 0)
 })
 
-const allSets = computed<MilestoneGroup[]>(() =>
-  displayGroups.value.flatMap((dg) => dg.sets),
-)
-
 function toggleSet(setId: string) {
   if (expandedSets.value.has(setId)) {
     expandedSets.value.delete(setId)
@@ -155,19 +141,14 @@ function toggleSet(setId: string) {
     expandedSets.value.add(setId)
   }
 }
-
-if (props.defaultExpanded) {
-  watch(allSets, (sets) => {
-    for (const s of sets) expandedSets.value.add(s.setId)
-  }, { immediate: true })
-}
 </script>
 
 <template>
   <div class="milestone-list-view">
     <div class="milestone-list-view__controls">
       <BaseTabs :tabs="viewTabs" :model-value="viewMode" @update:model-value="viewMode = $event" />
-      <BaseSelect :model-value="activeSort" :options="sortOptions" @update:model-value="onSortChange" />
+      <BaseSelect :model-value="activeSort" :options="sortOptions"
+        @update:model-value="activeSort = $event as MilestoneSort" />
     </div>
 
     <template v-if="loading">
@@ -183,14 +164,14 @@ if (props.defaultExpanded) {
       <p>Log in to track milestone progress</p>
     </div>
 
-    <p v-else-if="allSets.length === 0" class="milestone-list-view__empty">
+    <p v-else-if="displayGroups.length === 0" class="milestone-list-view__empty">
       {{ viewMode === 'completed' ? 'No completed milestones yet' : 'No milestone progress found' }}
     </p>
 
     <template v-else-if="isFlatSort">
       <div class="milestone-set__rows milestone-set__rows--flat">
         <MilestoneDetail v-for="m in activeMilestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-          :glyph="resolveMilestoneGlyph(m.iconGroup, m.querySpec)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+          :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
           :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
           compact @pin-toggle="emit('pin-toggle', $event)" />
       </div>
@@ -216,16 +197,18 @@ if (props.defaultExpanded) {
               <span v-if="ms.setBonusXp > 0" class="milestone-set__bonus">
                 +{{ ms.setBonusXp }} XP bonus
               </span>
-              <span class="milestone-set__chevron"
-                :class="{ 'milestone-set__chevron--open': expandedSets.has(ms.setId) }">
-                &#9660;
-              </span>
+              <svg class="milestone-set__chevron"
+                :class="{ 'milestone-set__chevron--open': expandedSets.has(ms.setId) }" viewBox="0 0 20 20"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <polyline points="6 8 10 12 14 8" />
+              </svg>
             </div>
           </button>
 
           <div v-if="expandedSets.has(ms.setId)" class="milestone-set__rows">
             <MilestoneDetail v-for="m in ms.milestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-              :glyph="resolveMilestoneGlyph(m.iconGroup, m.querySpec)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+              :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
               :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
               compact @pin-toggle="emit('pin-toggle', $event)" />
           </div>
@@ -353,7 +336,8 @@ if (props.defaultExpanded) {
 }
 
 .milestone-set__chevron {
-  font-size: 0.6rem;
+  width: 16px;
+  height: 16px;
   color: var(--text-tertiary);
   transition: transform 150ms ease;
 }
@@ -391,10 +375,6 @@ if (props.defaultExpanded) {
   .milestone-set__rows {
     padding: var(--space-xs) var(--space-sm) var(--space-md);
     gap: var(--space-sm);
-  }
-
-  .milestone-set__bonus {
-    font-size: 0.625rem;
   }
 }
 </style>

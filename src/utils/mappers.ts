@@ -1,5 +1,5 @@
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import type { MilestoneCompletionResponse, MilestoneResponse } from '@/types/api/milestones'
+import type { MilestoneCompletionResponse } from '@/types/api/milestones'
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import type { PublicStaffUserResponse } from '@/types/api/staff'
 import type { PublicClanResponse } from '@/types/api/clans'
@@ -294,10 +294,7 @@ export function toDifficultyScoreDisplay(
   }
 }
 
-export function toMilestoneDisplay(
-  m: UserMilestoneProgressResponse,
-  categoryCode?: CategoryCode,
-): MilestoneDisplay {
+export function toMilestoneDisplay(m: MilestoneCompletionResponse, categoryCode?: CategoryCode): MilestoneDisplay {
   return {
     id: m.milestoneId,
     setId: m.setId,
@@ -305,41 +302,14 @@ export function toMilestoneDisplay(
     description: m.description,
     type: m.type,
     tier: m.tier,
-    glyph: resolveMilestoneGlyph(m.iconGroup),
+    glyph: resolveMilestoneGlyph(m.iconGroup, m.querySpec),
     xp: m.xp,
     targetValue: m.targetValue,
-    userProgress: m.progress,
-    normalizedProgress: m.normalizedProgress,
+    userProgress: m.userProgress,
+    normalizedProgress: m.userNormalizedProgress ?? null,
     completionPercent: m.completionPercentage,
-    isCompleted: m.completed,
-    completedAt: m.completedAt,
-    categoryCode,
-    positionX: m.positionX ?? 0,
-    positionY: m.positionY ?? 0,
-    rewards: m.rewards ?? [],
-  }
-}
-
-export function toMilestoneDisplayFromCatalog(
-  m: MilestoneResponse,
-  categoryCode?: CategoryCode,
-  progress?: MilestoneCompletionResponse,
-): MilestoneDisplay {
-  return {
-    id: m.id,
-    setId: m.setId,
-    title: m.title,
-    description: m.description,
-    type: m.type,
-    tier: m.tier,
-    glyph: resolveMilestoneGlyph(m.iconGroup ?? progress?.iconGroup, m.querySpec),
-    xp: m.xp,
-    targetValue: m.targetValue,
-    userProgress: progress?.userProgress,
-    normalizedProgress: progress?.userNormalizedProgress ?? null,
-    completionPercent: progress?.completionPercentage ?? m.completionPercentage,
-    isCompleted: progress?.userCompleted,
-    completedAt: progress?.userCompletedAt ?? null,
+    isCompleted: m.userCompleted,
+    completedAt: m.userCompletedAt ?? null,
     categoryCode,
     positionX: m.positionX ?? 0,
     positionY: m.positionY ?? 0,
@@ -361,7 +331,6 @@ export function toMilestoneCompletion(
     comparison: 'GTE',
     setId: m.setId,
     categoryId: m.categoryId,
-    blExclusive: false,
     completions: 0,
     totalPlayers: 0,
     completionPercentage: m.completionPercentage,

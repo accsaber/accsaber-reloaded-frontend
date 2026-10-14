@@ -441,6 +441,11 @@ export function buildMilestoneMap(input: MilestoneMapInput): MilestoneMap {
   }
 }
 
+export function nodeStateLabel(node: MilestoneNode): string {
+  if (node.state === 'progress') return `${Math.round((node.milestone.normalizedProgress ?? 0) * 100)}% complete`
+  return node.state === 'available' ? 'not started' : node.state
+}
+
 export function nearestNodeInDirection(
   nodes: MilestoneNode[],
   from: MilestoneNode,
