@@ -11,19 +11,15 @@ export const useInventoryStore = defineStore('inventory', () => {
   const equipped = ref<EquippedItemsResponse>({})
   const equippedUserId = ref<string | null>(null)
   const equippedLoaded = ref(false)
-  const equippedLoading = ref(false)
 
   async function fetchEquipped(userId: string, force = false): Promise<void> {
     if (!force && equippedLoaded.value && equippedUserId.value === userId) return
-    equippedLoading.value = true
     try {
       equipped.value = await getUserEquippedItems(userId)
       equippedUserId.value = userId
       equippedLoaded.value = true
     } catch {
       equipped.value = {}
-    } finally {
-      equippedLoading.value = false
     }
   }
 
@@ -45,7 +41,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     equipped,
     equippedUserId,
     equippedLoaded,
-    equippedLoading,
     fetchEquipped,
     equip,
     reset,

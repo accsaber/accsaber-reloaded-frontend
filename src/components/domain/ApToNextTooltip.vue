@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { SkillCategory, SkillResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
@@ -230,10 +231,7 @@ onUnmounted(() => {
             <span class="ap-next-tip__title">Next AP point</span>
           </div>
 
-          <div v-if="loading" class="ap-next-tip__body">
-            <div class="ap-next-tip__skeleton" />
-            <div class="ap-next-tip__skeleton" />
-          </div>
+          <SkeletonLoader v-if="loading" variant="text" :lines="2" />
 
           <div v-else-if="failed" class="ap-next-tip__empty">
             Couldn't load skill data.
@@ -340,28 +338,6 @@ onUnmounted(() => {
   color: var(--text-tertiary);
 }
 
-.ap-next-tip__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.ap-next-tip__skeleton {
-  height: 14px;
-  border-radius: 3px;
-  background: var(--bg-overlay);
-  animation: ap-next-tip-shimmer 1.5s ease-in-out infinite;
-}
-
-.ap-next-tip__skeleton:nth-child(2) {
-  width: 70%;
-}
-
-@keyframes ap-next-tip-shimmer {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.85; }
-}
-
 .ap-next-tip-enter-active {
   transition: opacity 150ms ease-out, transform 150ms ease-out;
 }
@@ -377,10 +353,6 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ap-next-tip__skeleton {
-    animation: none;
-  }
-
   .ap-next-tip-enter-from,
   .ap-next-tip-leave-to {
     transform: none;

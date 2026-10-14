@@ -1903,6 +1903,8 @@ export interface UserItemResponse {
   variantKey?: string | null
 }
 
+export type InventoryEntry = Omit<UserItemResponse, 'linkId'> & { linkId: string | null }
+
 export type EquippedItemsResponse = Partial<Record<ItemTypeKey, UserItemResponse | null>>
 
 export interface DisintegrateEntryRequest {

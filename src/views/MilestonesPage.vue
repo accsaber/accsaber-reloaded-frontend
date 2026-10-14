@@ -22,7 +22,8 @@ import type { MilestoneDisplay } from '@/types/display'
 import { toMilestoneDisplayFromCatalog } from '@/utils/mappers'
 import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import type { MilestoneSetGroup } from '@/utils/milestoneLayout'
-import { glyphMapOf, loadMilestoneCatalog } from '@/composables/useMilestoneCatalog'
+import { loadMilestoneCatalog } from '@/composables/useMilestoneCatalog'
+import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const authStore = useAuthStore()
@@ -107,11 +108,10 @@ const selectedCatalogEntry = computed(() =>
 
 const selectedRewards = computed(() => selectedCatalogEntry.value?.rewards ?? [])
 
-const glyphs = computed(() => glyphMapOf(catalog.value))
-
-const selectedGlyph = computed(() =>
-  selectedId.value ? glyphs.value.get(selectedId.value) : undefined,
-)
+const selectedGlyph = computed(() => {
+  const entry = selectedCatalogEntry.value
+  return entry ? resolveMilestoneGlyph(entry.iconGroup, entry.querySpec) : undefined
+})
 
 const selectedSet = computed(() =>
   selectedSetId.value ? (sets.value.find((s) => s.id === selectedSetId.value) ?? null) : null,
@@ -363,7 +363,6 @@ watch(() => authStore.userId, fetchData)
       :logged-in="authStore.isLoggedIn"
       :groups="resolvedGroups"
       :standalone-sets="standaloneSets"
-      :glyphs="glyphs"
       @update:sort="handleSortChange"
     />
   </div>

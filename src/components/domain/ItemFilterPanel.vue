@@ -30,7 +30,7 @@ export interface ItemFilterCollectionOption {
   iconUrl: string | null
 }
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     rarities: ItemRarity[]
     typeKeys: string[]
@@ -70,28 +70,8 @@ const emit = defineEmits<{
   clear: []
 }>()
 
-function toggled(list: string[], key: string): string[] {
+function toggled<T extends string>(list: T[], key: T): T[] {
   return list.includes(key) ? list.filter((k) => k !== key) : [...list, key]
-}
-
-function toggleRarity(rarity: ItemRarity) {
-  emit('update:rarities', toggled(props.rarities, rarity) as ItemRarity[])
-}
-
-function toggleType(key: string) {
-  emit('update:typeKeys', toggled(props.typeKeys, key))
-}
-
-function toggleModifier(key: string) {
-  emit('update:modifierKeys', toggled(props.modifierKeys, key))
-}
-
-function toggleEffect(key: string) {
-  emit('update:effectKeys', toggled(props.effectKeys, key))
-}
-
-function toggleCollection(id: string) {
-  emit('update:collectionIds', toggled(props.collectionIds, id))
 }
 
 function commitPrice(edge: 'min' | 'max', event: Event) {
@@ -112,7 +92,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
         class="item-filters__option"
         :class="`rarity--${rarity}`"
       >
-        <input type="checkbox" :checked="rarities.includes(rarity)" @change="toggleRarity(rarity)" />
+        <input type="checkbox" :checked="rarities.includes(rarity)" @change="emit('update:rarities', toggled(rarities, rarity))" />
         <span class="item-filters__option-label">{{ rarity }}</span>
       </label>
     </fieldset>
@@ -130,7 +110,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
           <input
             type="checkbox"
             :checked="typeKeys.includes(option.key)"
-            @change="toggleType(option.key)"
+            @change="emit('update:typeKeys', toggled(typeKeys, option.key))"
           />
           <span class="item-filters__option-label item-filters__option-label--plain">
             {{ option.label }}
@@ -146,7 +126,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
           <input
             type="checkbox"
             :checked="modifierKeys.includes(option.key)"
-            @change="toggleModifier(option.key)"
+            @change="emit('update:modifierKeys', toggled(modifierKeys, option.key))"
           />
           <span
             class="item-filters__option-label item-filters__option-label--plain"
@@ -167,7 +147,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
         :groups="effectGroups"
         :ungrouped="ungroupedEffects"
         :selected="effectKeys"
-        @toggle="toggleEffect"
+        @toggle="emit('update:effectKeys', toggled(effectKeys, $event))"
       />
     </fieldset>
 
@@ -177,7 +157,7 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
         <input
           type="checkbox"
           :checked="collectionIds.includes(option.id)"
-          @change="toggleCollection(option.id)"
+          @change="emit('update:collectionIds', toggled(collectionIds, option.id))"
         />
         <img
           v-if="option.iconUrl"

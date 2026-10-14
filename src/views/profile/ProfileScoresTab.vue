@@ -2,7 +2,7 @@
 import GlowImage from '@/components/common/GlowImage.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
-import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
+import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { useAppearance } from '@/composables/useAppearance'
@@ -20,6 +20,7 @@ import { getRankClass } from '@/utils/ranking'
 import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
 import { buildScoreColumns } from '@/utils/scoreRowFields'
 import { tableNaturalWidth } from '@/utils/tableLayout'
+import ScoreRowActions from '@/views/profile/ScoreRowActions.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -31,6 +32,7 @@ const props = withDefaults(defineProps<{
   pinnedScoreIds?: Set<string>
   canPinMore?: boolean
   pinPending?: Set<string>
+  player?: ScoreDetailPlayer | null
 }>(), {
   search: '',
   isSelfProfile: false,
@@ -88,28 +90,31 @@ const detailScore = ref<ScoreDisplay | null>(null)
 const tweakerOpenId = ref<string | null>(null)
 const tweakerAnchor = ref<HTMLElement | null>(null)
 
-function toggleTweaker(diffId: string, event: Event) {
-  event.preventDefault()
-  event.stopPropagation()
-  if (tweakerOpenId.value === diffId) {
-    tweakerOpenId.value = null
-    tweakerAnchor.value = null
-  } else {
-    tweakerOpenId.value = diffId
-    tweakerAnchor.value = event.currentTarget as HTMLElement
-  }
-}
-
 function getScoreCurveId(categoryCode: string): string | undefined {
   return categoryStore.byCode.get(categoryCode)?.scoreCurve?.id
 }
 
-function getSiblingAps(categoryCode: string): number[] {
-  return scores.value
-    .filter((s) => s.categoryCode === categoryCode)
-    .map((s) => s.ap)
-    .sort((a, b) => b - a)
+function toggleTweaker(diffId: string, event: Event) {
+  const open = tweakerOpenId.value !== diffId
+  tweakerOpenId.value = open ? diffId : null
+  tweakerAnchor.value = open ? event.currentTarget as HTMLElement : null
 }
+
+function closeTweaker(open: boolean) {
+  if (open) return
+  tweakerOpenId.value = null
+  tweakerAnchor.value = null
+}
+
+const tweakerScore = computed(() => {
+  const score = scores.value.find((s) => s.mapDifficultyId === tweakerOpenId.value)
+  const curveId = score && getScoreCurveId(score.categoryCode)
+  if (!score || !curveId) return null
+  const siblingAps = scores.value
+    .filter((s) => s.categoryCode === score.categoryCode)
+    .map((s) => s.ap)
+  return { score, curveId, siblingAps }
+})
 
 const scores = computed<ScoreDisplay[]>(() => {
   if (!scoreData.value) return []
@@ -125,30 +130,11 @@ const scores = computed<ScoreDisplay[]>(() => {
 
 const rows = computed(() =>
   scores.value.map((s) => ({
-    scoreId: s.scoreId,
-    mapDifficultyId: s.mapDifficultyId,
-    mapId: s.mapId,
+    ...s,
     beatsaverCode: s.beatsaverCode ?? null,
-    rawDifficulty: s.rawDifficulty,
-    characteristic: s.characteristic,
-    coverUrl: s.coverUrl,
-    coverFallbackUrl: s.coverFallbackUrl,
-    mapName: s.mapName,
-    mapSubName: s.mapSubName,
-    difficulty: s.difficulty,
     category: (categoryStore.getCategoryInfo(s.categoryCode)?.name ?? s.categoryCode).replace(/ Acc$/, ''),
-    categoryCode: s.categoryCode,
-    ap: s.ap,
-    accuracy: s.accuracy,
     weighted: s.weightedAp,
-    complexity: s.complexity,
-    streak115: s.streak115,
-    maxStreak115: s.maxStreak115,
-    pauses: s.pauses,
-    playCount: s.playCount,
     lastPlayedAt: s.lastPlayedAt ?? null,
-    date: s.date,
-    leaderboardRank: s.leaderboardRank,
     replay: resolveReplay(
       { blScoreId: s.blScoreId, ssScoreId: s.ssScoreId },
       primaryReplayService.value,
@@ -161,30 +147,19 @@ function isPinned(scoreId: string): boolean {
   return props.pinnedScoreIds?.has(scoreId) ?? false
 }
 
-function isPinPending(scoreId: string): boolean {
-  return props.pinPending?.has(scoreId) ?? false
-}
-
-function pinDisabled(scoreId: string): boolean {
-  return !isPinned(scoreId) && !props.canPinMore
-}
-
-function pinTitle(scoreId: string): string {
-  if (isPinned(scoreId)) return 'Unpin score'
-  if (pinDisabled(scoreId)) return 'Unpin a score to free a slot first'
-  return 'Pin score'
-}
-
-function onPinClick(scoreId: string, event: Event) {
-  event.preventDefault()
-  event.stopPropagation()
-  if (pinDisabled(scoreId) || isPinPending(scoreId)) return
-  emit('pin-toggle', scoreId)
+function rowActions(row: Record<string, unknown>) {
+  const scoreId = row.scoreId as string
+  const pinned = isPinned(scoreId)
+  return {
+    showPin: props.isSelfProfile,
+    pinned,
+    pinDisabled: !pinned && !props.canPinMore,
+    pinPending: props.pinPending?.has(scoreId) ?? false,
+    replay: rowReplay(row),
+  }
 }
 
 const totalPages = computed(() => scoreData.value?.totalPages ?? 0)
-
-const accent = computed(() => categoryStore.getAccent(props.category))
 
 const showStreak115 = computed(() =>
   sortState.value.key === 'streak115' || scores.value.some((s) => s.streak115 != null),
@@ -240,15 +215,19 @@ const scoreParams = computed<UserScoresParams>(() => ({
   search: props.search.trim() || undefined,
 }))
 
+let requestId = 0
+
 async function fetchScores() {
+  const id = ++requestId
   loading.value = true
   try {
     const { getUserScores } = await import('@/api/users')
-    scoreData.value = await getUserScores(props.userId, scoreParams.value)
+    const page = await getUserScores(props.userId, scoreParams.value)
+    if (id === requestId) scoreData.value = page
   } catch {
-    scoreData.value = null
+    if (id === requestId) scoreData.value = null
   }
-  loading.value = false
+  if (id === requestId) loading.value = false
 }
 
 function scoreRowTo(row: Record<string, unknown>) {
@@ -267,9 +246,7 @@ function handleRowClick(row: Record<string, unknown>) {
   if (to) router.push(to)
 }
 
-function openDetail(diffId: string, event: Event) {
-  event.preventDefault()
-  event.stopPropagation()
+function openDetail(diffId: string) {
   detailScore.value = scores.value.find((s) => s.mapDifficultyId === diffId) ?? null
   detailOpen.value = true
 }
@@ -283,8 +260,8 @@ watch(
 watch(() => props.search, () => { resetPage() })
 
 watch(
-  [() => props.userId, scoreParams],
-  () => { fetchScores() },
+  () => JSON.stringify([props.userId, scoreParams.value]),
+  fetchScores,
   { immediate: true },
 )
 </script>
@@ -310,7 +287,7 @@ watch(
         <span class="scores-tab__ap-cell" @click.stop.prevent>
           <span class="scores-tab__ap-value">{{ (row.ap as number).toFixed(2) }}</span>
           <button class="scores-tab__tweak-btn" aria-label="Tweak AP"
-            @click.stop.prevent="toggleTweaker(row.mapDifficultyId as string, $event)">
+            @click="toggleTweaker(row.mapDifficultyId as string, $event)">
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
               <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"
                 stroke-linecap="round" stroke-linejoin="round" />
@@ -319,11 +296,6 @@ watch(
                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
-          <ApTweaker v-if="getScoreCurveId(row.categoryCode as string)" :open="tweakerOpenId === row.mapDifficultyId"
-            :accuracy="(row.accuracy as number)" :ap="(row.ap as number)" :weighted-ap="(row.weighted as number)"
-            :curve-id="getScoreCurveId(row.categoryCode as string)!" :anchor-el="tweakerAnchor"
-            :sibling-aps="getSiblingAps(row.categoryCode as string)"
-            @update:open="(val: boolean) => { tweakerOpenId = val ? (row.mapDifficultyId as string) : null; if (!val) tweakerAnchor = null }" />
         </span>
       </template>
 
@@ -362,39 +334,8 @@ watch(
       </template>
 
       <template #cell-actions="{ row }">
-        <div class="scores-tab__actions">
-          <button v-if="isSelfProfile" class="scores-tab__icon-btn"
-            :class="{
-              'scores-tab__icon-btn--active': isPinned(row.scoreId as string),
-              'scores-tab__icon-btn--disabled': pinDisabled(row.scoreId as string),
-            }"
-            :aria-label="pinTitle(row.scoreId as string)" :title="pinTitle(row.scoreId as string)"
-            :aria-pressed="isPinned(row.scoreId as string)"
-            :disabled="isPinPending(row.scoreId as string)"
-            @click="onPinClick(row.scoreId as string, $event)">
-            <svg v-if="isPinned(row.scoreId as string)" width="14" height="14" viewBox="0 0 24 24"
-              fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
-              <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
-            </svg>
-            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
-            </svg>
-          </button>
-          <a v-if="rowReplay(row)" class="scores-tab__icon-btn"
-            :href="rowReplay(row)!.url" target="_blank" rel="noopener noreferrer"
-            :aria-label="rowReplay(row)!.label" :title="rowReplay(row)!.label" @click.stop>
-            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" style="border-radius: 2px;" loading="lazy" decoding="async" />
-          </a>
-          <button class="scores-tab__icon-btn" aria-label="View score details"
-            @click="openDetail(row.mapDifficultyId as string, $event)">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
+        <ScoreRowActions v-bind="rowActions(row)" @pin="emit('pin-toggle', row.scoreId as string)"
+          @detail="openDetail(row.mapDifficultyId as string)" />
       </template>
 
       <template #mobile-card="{ row }">
@@ -439,44 +380,17 @@ watch(
               / {{ (row.weighted as number).toFixed(2) }}
             </span>
           </div>
-          <div class="ps-card__actions">
-            <button v-if="isSelfProfile" class="ps-card__action-btn"
-              :class="{
-                'ps-card__action-btn--active': isPinned(row.scoreId as string),
-                'ps-card__action-btn--disabled': pinDisabled(row.scoreId as string),
-              }"
-              :aria-label="pinTitle(row.scoreId as string)" :title="pinTitle(row.scoreId as string)"
-              :aria-pressed="isPinned(row.scoreId as string)"
-              :disabled="isPinPending(row.scoreId as string)"
-              @click.stop="onPinClick(row.scoreId as string, $event)">
-              <svg v-if="isPinned(row.scoreId as string)" width="14" height="14" viewBox="0 0 24 24"
-                fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
-                <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
-              </svg>
-              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 4h6l-1 5 4 3v3h-5v6l-1 1-1-1v-6H6v-3l4-3-1-5z" />
-              </svg>
-            </button>
-            <a v-if="rowReplay(row)" class="ps-card__action-btn"
-              :href="rowReplay(row)!.url" target="_blank" rel="noopener noreferrer"
-              :aria-label="rowReplay(row)!.label" :title="rowReplay(row)!.label" @click.stop>
-              <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" style="border-radius: 2px;" loading="lazy" decoding="async" />
-            </a>
-            <button class="ps-card__action-btn" aria-label="View score details"
-              @click.stop="openDetail(row.mapDifficultyId as string, $event)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-                <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-              </svg>
-            </button>
-          </div>
+          <ScoreRowActions v-bind="rowActions(row)" stacked @pin="emit('pin-toggle', row.scoreId as string)"
+            @detail="openDetail(row.mapDifficultyId as string)" />
         </div>
       </template>
     </ScoreTable>
 
-    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="userId" :accent-color="accent"
+    <ApTweaker v-if="tweakerScore" :open="true" :accuracy="tweakerScore.score.accuracy" :ap="tweakerScore.score.ap"
+      :weighted-ap="tweakerScore.score.weightedAp" :curve-id="tweakerScore.curveId" :anchor-el="tweakerAnchor"
+      :sibling-aps="tweakerScore.siblingAps" @update:open="closeTweaker" />
+
+    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="userId" :player="player"
       @close="detailOpen = false" />
   </div>
 </template>
@@ -540,54 +454,6 @@ watch(
   color: var(--accent, var(--text-primary));
 }
 
-.scores-tab__actions {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.scores-tab__icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
-}
-
-.scores-tab__icon-btn:hover:not(:disabled):not(.scores-tab__icon-btn--disabled) {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.scores-tab__icon-btn--active {
-  color: var(--accent, var(--accent-overall));
-  border-color: color-mix(in srgb, var(--accent, var(--accent-overall)) 50%, var(--bg-overlay));
-  background: color-mix(in srgb, var(--accent, var(--accent-overall)) 10%, transparent);
-}
-
-.scores-tab__icon-btn--active:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent, var(--accent-overall)) 18%, transparent);
-}
-
-.scores-tab__icon-btn--disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.scores-tab__icon-btn:disabled {
-  cursor: progress;
-  opacity: 0.6;
-}
-
 .ps-card {
   display: flex;
   align-items: center;
@@ -595,7 +461,6 @@ watch(
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
@@ -603,7 +468,7 @@ watch(
 }
 
 .ps-card:hover {
-  border-left-color: var(--accent, var(--text-tertiary));
+  border-color: var(--text-tertiary);
 }
 
 .ps-card__cover-placeholder {
@@ -722,48 +587,5 @@ watch(
   color: var(--text-tertiary);
   justify-self: end;
   white-space: nowrap;
-}
-
-.ps-card__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.ps-card__action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
-}
-
-.ps-card__action-btn:hover:not(:disabled):not(.ps-card__action-btn--disabled) {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.ps-card__action-btn--active {
-  color: var(--accent, var(--accent-overall));
-  border-color: color-mix(in srgb, var(--accent, var(--accent-overall)) 50%, var(--bg-overlay));
-  background: color-mix(in srgb, var(--accent, var(--accent-overall)) 10%, transparent);
-}
-
-.ps-card__action-btn--disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.ps-card__action-btn:disabled {
-  cursor: progress;
-  opacity: 0.6;
 }
 </style>

@@ -172,6 +172,63 @@ body {
   --clan-accent-2: oklch(from var(--clan-secondary, var(--clan-primary, var(--text-secondary))) clamp(0.38, l, 0.56) min(c, 0.18) h);
 }
 
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.switch__track {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--bg-overlay);
+  border: 1px solid var(--text-tertiary);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.switch[aria-pressed='true'] .switch__track {
+  background: color-mix(in srgb, var(--page-accent, var(--accent)) 40%, transparent);
+  border-color: var(--page-accent, var(--accent));
+}
+
+.switch[aria-pressed='true'] .switch__thumb {
+  transform: translateX(12px);
+  background: var(--page-accent, var(--accent));
+}
+
+.switch__label {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch__track,
+  .switch__thumb {
+    transition: none;
+  }
+}
+
 .rarity--common { --rarity-color: var(--text-tertiary); }
 .rarity--uncommon { --rarity-color: var(--success); }
 .rarity--rare { --rarity-color: var(--info); }

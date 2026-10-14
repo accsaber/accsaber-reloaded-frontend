@@ -4,6 +4,7 @@ import type {
   EquipItemRequest,
   EquippedItemsResponse,
   EssenceBalance,
+  InventoryEntry,
   InventoryListParams,
   ItemHolderListParams,
   ItemHolderResponse,
@@ -64,9 +65,14 @@ export function getUserEquippedItems(userId: string): Promise<EquippedItemsRespo
 
 export function getUserInventory(
   userId: string,
-  params?: InventoryListParams,
-): Promise<Page<UserItemResponse>> {
-  return get<Page<UserItemResponse>>(`/users/${userId}/inventory${buildQuery(params)}`)
+  params: InventoryListParams & { includeUnowned: boolean },
+): Promise<Page<InventoryEntry>>
+export function getUserInventory(userId: string, params?: InventoryListParams): Promise<Page<UserItemResponse>>
+export function getUserInventory(
+  userId: string,
+  params?: InventoryListParams & { includeUnowned?: boolean },
+): Promise<Page<InventoryEntry>> {
+  return get<Page<InventoryEntry>>(`/users/${userId}/inventory${buildQuery(params)}`)
 }
 
 export function getUserInventoryCrates(userId: string): Promise<ItemResponse[]> {

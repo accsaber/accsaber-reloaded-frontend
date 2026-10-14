@@ -6,17 +6,21 @@ const props = defineProps<{
   statsDiff: StatsDiffResponse | null
 }>()
 
-const totalXpDiff = computed(() => {
-  const d = props.statsDiff
-  if (!d) return 0
-  return (d.scoreXpDiff ?? 0)
-    + (d.milestoneXpDiff ?? 0)
-    + (d.milestoneSetBonusXpDiff ?? 0)
-    + (d.missionXpDiff ?? 0)
-    + (d.campaignXpDiff ?? 0)
-    + (d.eventXpDiff ?? 0)
-    + (d.clanXpDiff ?? 0)
-})
+const SOURCES = [
+  { key: 'scoreXpDiff', label: 'Score XP', mod: 'score' },
+  { key: 'milestoneXpDiff', label: 'Milestone XP', mod: 'milestone' },
+  { key: 'milestoneSetBonusXpDiff', label: 'Set Bonus XP', mod: 'set-bonus' },
+  { key: 'missionXpDiff', label: 'Mission XP', mod: 'mission' },
+  { key: 'campaignXpDiff', label: 'Campaign XP', mod: 'campaign' },
+  { key: 'eventXpDiff', label: 'Event XP', mod: 'event' },
+  { key: 'clanXpDiff', label: 'Clan XP', mod: 'clan' },
+] as const
+
+const rows = computed(() =>
+  SOURCES.map((s) => ({ ...s, value: props.statsDiff?.[s.key] ?? 0 })),
+)
+
+const totalXpDiff = computed(() => rows.value.reduce((sum, r) => sum + r.value, 0))
 
 const direction = computed<'up' | 'down' | null>(() => {
   if (!totalXpDiff.value) return null
@@ -41,33 +45,9 @@ function withSign(value: number | null | undefined): string {
         <line x1="12" y1="17" x2="12.01" y2="17" />
       </svg>
       <span class="xp-trend__tooltip" role="tooltip">
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Score XP</span>
-          <span class="xp-trend__value xp-trend__value--score">{{ withSign(statsDiff?.scoreXpDiff) }}</span>
-        </span>
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Milestone XP</span>
-          <span class="xp-trend__value xp-trend__value--milestone">{{ withSign(statsDiff?.milestoneXpDiff) }}</span>
-        </span>
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Set Bonus XP</span>
-          <span class="xp-trend__value xp-trend__value--set-bonus">{{ withSign(statsDiff?.milestoneSetBonusXpDiff) }}</span>
-        </span>
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Mission XP</span>
-          <span class="xp-trend__value xp-trend__value--mission">{{ withSign(statsDiff?.missionXpDiff) }}</span>
-        </span>
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Campaign XP</span>
-          <span class="xp-trend__value xp-trend__value--campaign">{{ withSign(statsDiff?.campaignXpDiff) }}</span>
-        </span>
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Event XP</span>
-          <span class="xp-trend__value xp-trend__value--event">{{ withSign(statsDiff?.eventXpDiff) }}</span>
-        </span>
-        <span class="xp-trend__row">
-          <span class="xp-trend__label">Clan XP</span>
-          <span class="xp-trend__value xp-trend__value--clan">{{ withSign(statsDiff?.clanXpDiff) }}</span>
+        <span v-for="row in rows" :key="row.key" class="xp-trend__row">
+          <span class="xp-trend__label">{{ row.label }}</span>
+          <span class="xp-trend__value" :class="`xp-trend__value--${row.mod}`">{{ withSign(row.value) }}</span>
         </span>
       </span>
     </span>

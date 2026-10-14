@@ -274,10 +274,10 @@ onMounted(() => {
 @keyframes inventory-cell-flash {
   0%,
   100% {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--cell-accent) 35%, transparent);
+    border-color: var(--cell-accent);
   }
   40% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--cell-accent) 70%, transparent);
+    border-color: var(--text-primary);
   }
 }
 

@@ -1,5 +1,10 @@
+<script lang="ts">
+export const INVENTORY_NARROW_QUERY = '(max-width: 1023px)'
+</script>
+
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 
 defineProps<{
   detailOpen: boolean
@@ -7,6 +12,8 @@ defineProps<{
 }>()
 
 defineEmits<{ closeDetail: [] }>()
+
+const narrow = useMediaQuery(INVENTORY_NARROW_QUERY)
 </script>
 
 <template>
@@ -19,13 +26,12 @@ defineEmits<{ closeDetail: [] }>()
       <slot name="footer" />
     </div>
 
-    <aside class="inv-layout__detail">
-      <slot name="detail" />
-    </aside>
-
-    <BaseModal :open="detailOpen" :title="detailTitle" @close="$emit('closeDetail')">
+    <BaseModal v-if="narrow" :open="detailOpen" :title="detailTitle" @close="$emit('closeDetail')">
       <slot name="detail" />
     </BaseModal>
+    <aside v-else class="inv-layout__detail">
+      <slot name="detail" />
+    </aside>
   </div>
 </template>
 
@@ -62,10 +68,6 @@ defineEmits<{ closeDetail: [] }>()
 
   .inv-layout__grid {
     grid-template-columns: repeat(4, 1fr);
-  }
-
-  .inv-layout__detail {
-    display: none;
   }
 }
 

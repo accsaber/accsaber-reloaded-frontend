@@ -2,8 +2,6 @@
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
 import type { MilestoneSort } from '@/api/milestones'
 import { useSetGroups } from '@/composables/useSetGroups'
-import { loadMilestoneGlyphs } from '@/composables/useMilestoneCatalog'
-import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import { ref, watch } from 'vue'
 
@@ -21,48 +19,46 @@ const loading = ref(false)
 const milestones = ref<MilestoneCompletionResponse[]>([])
 const sets = ref<MilestoneSetResponse[]>([])
 const sort = ref<MilestoneSort>('tier')
-const glyphs = ref<Map<string, MilestoneGlyphKey>>(new Map())
 
 const { resolvedGroups, standaloneSets, fetchGroups, resetGroups } = useSetGroups(sets)
 
-async function fetchMilestones(sortBy?: MilestoneSort) {
-  loading.value = true
-  try {
-    const { getMilestoneSets, getMilestoneCompletionStats } = await import('@/api/milestones')
-    const [completionRes, setRes, glyphRes] = await Promise.all([
-      getMilestoneCompletionStats(props.userId, sortBy ?? sort.value),
-      getMilestoneSets({ size: 100 }),
-      loadMilestoneGlyphs(),
-    ])
-    milestones.value = completionRes
-    sets.value = setRes.content
-    glyphs.value = glyphRes
+let requestId = 0
 
+async function fetchCompletion() {
+  const id = ++requestId
+  const { getMilestoneCompletionStats } = await import('@/api/milestones')
+  const result = await getMilestoneCompletionStats(props.userId, sort.value).catch(() => [])
+  if (id === requestId) milestones.value = result
+}
+
+async function fetchSets() {
+  try {
+    const { getMilestoneSets } = await import('@/api/milestones')
+    sets.value = (await getMilestoneSets({ size: 100 })).content
     await fetchGroups()
   } catch {
-    milestones.value = []
     sets.value = []
     resetGroups()
   }
+}
+
+async function load() {
+  loading.value = true
+  await Promise.all([fetchCompletion(), sets.value.length ? null : fetchSets()])
   loading.value = false
 }
 
-async function handleSortChange(newSort: MilestoneSort) {
+function handleSortChange(newSort: MilestoneSort) {
   sort.value = newSort
-  try {
-    const { getMilestoneCompletionStats } = await import('@/api/milestones')
-    milestones.value = await getMilestoneCompletionStats(props.userId, newSort)
-  } catch {
-    milestones.value = []
-  }
+  fetchCompletion()
 }
 
-watch(() => props.userId, () => { fetchMilestones() }, { immediate: true })
+watch(() => props.userId, load, { immediate: true })
 </script>
 
 <template>
   <MilestoneListView :milestones="milestones" :sets="sets" :sort="sort" :loading="loading" logged-in
-    :groups="resolvedGroups" :standalone-sets="standaloneSets" :glyphs="glyphs"
+    :groups="resolvedGroups" :standalone-sets="standaloneSets"
     :pinnable="isSelfProfile" :pinned-ids="pinnedIds" :can-pin-more="canPinMore" :pin-pending="pinPending"
     @update:sort="handleSortChange" @pin-toggle="emit('pin-toggle', $event)" />
 </template>

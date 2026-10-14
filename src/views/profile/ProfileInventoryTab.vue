@@ -12,7 +12,7 @@ import CrateOpeningOverlay from '@/components/domain/CrateOpeningOverlay.vue'
 import DisintegrateDialog from '@/components/domain/DisintegrateDialog.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
-import InventoryLayout from '@/components/domain/InventoryLayout.vue'
+import InventoryLayout, { INVENTORY_NARROW_QUERY } from '@/components/domain/InventoryLayout.vue'
 import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
 import ItemFilterPanel, {
   type ItemFilterCollectionOption,
@@ -23,15 +23,15 @@ import { useCrateUnusualEffects } from '@/composables/useCrateUnusualEffects'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { useItemDownload } from '@/composables/useItemDownload'
 import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useOwnedItemIds } from '@/composables/useOwnedItemIds'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import {
   disintegrateItems,
-  getItems,
   getUserInventory,
   getUserInventoryCrates,
-  getUserItems,
 } from '@/api/items'
 import { parseApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -39,12 +39,12 @@ import { useEssenceStore } from '@/stores/essence'
 import { useInventoryStore } from '@/stores/inventory'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useThemeStore } from '@/stores/theme'
-import type { CrateOpenResponse, DisintegrateEntryRequest, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
+import type { CrateOpenResponse, DisintegrateEntryRequest, InventoryEntry, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
 import type { Page } from '@/types/pagination'
 import { ESSENCE_GLYPH, formatEssence, formatEssenceAmount } from '@/utils/essence'
-import { RARITY_ORDER, asUserItem, buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 
 const props = defineProps<{
   userId: string
@@ -58,8 +58,9 @@ const itemModifierStore = useItemModifierStore()
 const themeStore = useThemeStore()
 
 const route = useRoute()
-const router = useRouter()
+const { queryRef } = useQueryParams()
 const reducedMotion = useReducedMotion()
+const narrow = useMediaQuery(INVENTORY_NARROW_QUERY)
 
 const isOwnProfile = computed(() => authStore.isLoggedIn && authStore.userId === props.userId)
 const canOfferTrade = computed(() => authStore.isLoggedIn && !!authStore.userId && authStore.userId !== props.userId)
@@ -69,7 +70,6 @@ const rarities = ref<ItemRarity[]>([])
 const modifierKeys = ref<string[]>([])
 const collectionIds = ref<string[]>([])
 const search = ref('')
-const CATALOG_PAGE_SIZE = 20
 
 const hasActiveFilters = computed(
   () =>
@@ -86,14 +86,11 @@ function clearFilters() {
   collectionIds.value = []
 }
 
+const unownedParam = queryRef<'1'>('unowned')
 const showUnowned = computed<boolean>({
-  get: () => route.query.unowned === '1',
-  set: (val) => {
-    const query = { ...route.query }
-    if (val) query.unowned = '1'
-    else delete query.unowned
-    delete query.page
-    router.replace({ query })
+  get: () => unownedParam.value === '1',
+  set: (on) => {
+    unownedParam.value = on ? '1' : ''
   },
 })
 
@@ -146,7 +143,7 @@ async function fetchCollections() {
   }
 }
 
-const data = ref<Page<UserItemResponse> | null>(null)
+const data = ref<Page<InventoryEntry> | null>(null)
 const loading = ref(false)
 const selectedLinkId = ref<string | null>(null)
 const pendingHighlightId = ref(
@@ -165,113 +162,39 @@ const disintegrateError = ref<string | null>(null)
 const feedback = ref<{ variant: 'success' | 'error'; message: string } | null>(null)
 let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 
-const catalogAllItems = ref<ItemResponse[]>([])
-const catalogOwnedItems = ref<UserItemResponse[]>([])
-const catalogLoading = ref(false)
+const unownedKeys = computed(
+  () => new Set((data.value?.content ?? []).filter((u) => u.linkId === null).map((u) => u.item.id)),
+)
 
-function isLockedLink(linkId: string | null | undefined): boolean {
-  return !!linkId && linkId.startsWith('locked:')
+function isUnowned(userItem: UserItemResponse): boolean {
+  return unownedKeys.value.has(userItem.linkId)
 }
 
-function compareCatalog(a: UserItemResponse, b: UserItemResponse, key: string): number {
-  switch (key) {
-    case 'name':
-      return a.item.name.localeCompare(b.item.name)
-    case 'type':
-      return a.item.typeKey.localeCompare(b.item.typeKey)
-    case 'rarity':
-      return RARITY_ORDER.indexOf(a.item.rarity) - RARITY_ORDER.indexOf(b.item.rarity)
-    case 'quantity':
-      return (a.quantity ?? 0) - (b.quantity ?? 0)
-    case 'crate': {
-      const an = a.crate?.name ?? ''
-      const bn = b.crate?.name ?? ''
-      if (!an && !bn) return 0
-      if (!an) return 1
-      if (!bn) return -1
-      return an.localeCompare(bn)
-    }
-    case 'date':
-    default: {
-      if (!a.awardedAt && !b.awardedAt) return 0
-      if (!a.awardedAt) return -1
-      if (!b.awardedAt) return 1
-      return a.awardedAt.localeCompare(b.awardedAt)
-    }
-  }
-}
+const items = computed<UserItemResponse[]>(() =>
+  (data.value?.content ?? []).map((u) => ({ ...u, linkId: u.linkId ?? u.item.id })),
+)
 
-const catalogMerged = computed<UserItemResponse[]>(() => {
-  if (!showUnowned.value) return []
-  const ownedIds = new Set(catalogOwnedItems.value.map((u) => u.item.id))
-  const locked: UserItemResponse[] = []
-  for (const it of catalogAllItems.value) {
-    if (!it.visible || !it.active) continue
-    if (ownedIds.has(it.id)) continue
-    locked.push(asUserItem(it, { linkId: `locked:${it.id}`, quantity: 0 }))
-  }
-  return [...catalogOwnedItems.value, ...locked]
-})
+const totalPages = computed(() => data.value?.totalPages ?? 0)
 
-const catalogFiltered = computed<UserItemResponse[]>(() => {
-  if (!showUnowned.value) return []
-  const q = search.value.trim().toLowerCase()
-  return catalogMerged.value.filter((u) => {
-    if (typeKeys.value.length > 0 && !typeKeys.value.includes(u.item.typeKey)) return false
-    if (rarities.value.length > 0 && !rarities.value.includes(u.item.rarity)) return false
-    if (modifierKeys.value.length > 0) {
-      if (isLockedLink(u.linkId)) return false
-      if (!u.modifiers.some((m) => modifierKeys.value.includes(m.key))) return false
-    }
-    if (collectionIds.value.length > 0) {
-      if (!u.crate || !collectionIds.value.includes(u.crate.id)) return false
-    }
-    if (q && !u.item.name.toLowerCase().includes(q)) return false
-    return true
-  })
-})
+const selectedItem = computed<UserItemResponse | null>(
+  () => items.value.find((u) => u.linkId === selectedLinkId.value) ?? null,
+)
 
-const catalogSorted = computed<UserItemResponse[]>(() => {
-  if (!showUnowned.value) return []
-  const arr = [...catalogFiltered.value]
-  const dir = sortState.value.direction === 'asc' ? 1 : -1
-  arr.sort((a, b) => dir * compareCatalog(a, b, sortState.value.key))
-  return arr
-})
-
-const items = computed<UserItemResponse[]>(() => {
-  if (showUnowned.value) {
-    const start = (currentPage.value - 1) * CATALOG_PAGE_SIZE
-    return catalogSorted.value.slice(start, start + CATALOG_PAGE_SIZE)
-  }
-  return data.value?.content ?? []
-})
-
-const totalPages = computed(() => {
-  if (showUnowned.value) {
-    return Math.max(1, Math.ceil(catalogSorted.value.length / CATALOG_PAGE_SIZE))
-  }
-  return data.value?.totalPages ?? 0
-})
-
-const selectedItem = computed<UserItemResponse | null>(() => {
-  if (!selectedLinkId.value) return null
-  if (showUnowned.value) {
-    return catalogMerged.value.find((u) => u.linkId === selectedLinkId.value) ?? null
-  }
-  return items.value.find((u) => u.linkId === selectedLinkId.value) ?? null
-})
-
-const crateOpening = ref<{
+interface CrateOpening {
   userItem: UserItemResponse
   result: CrateOpenResponse | null
   error: string | null
   busy: boolean
   equipBusy: boolean
   equippedLinkId: string | null
-} | null>(null)
+}
 
+const crateOpening = ref<CrateOpening | null>(null)
 const crateRefreshed = ref(false)
+
+function patchOpening(patch: Partial<CrateOpening>) {
+  if (crateOpening.value) Object.assign(crateOpening.value, patch)
+}
 
 const crateItem = computed(
   () => crateOpening.value?.userItem.item ?? selectedItem.value?.item ?? null,
@@ -292,17 +215,13 @@ const {
 const isCrateSelected = computed(() => selectedItem.value?.item.typeKey === 'crate')
 const { ownedIds } = useOwnedItemIds(() => props.userId, isCrateSelected)
 
-const isSelectedLocked = computed(() => isLockedLink(selectedLinkId.value))
+const isSelectedLocked = computed(() => !!selectedItem.value && isUnowned(selectedItem.value))
 
-const isSelectedEquipped = computed(() => {
-  const it = selectedItem.value
-  return !!it && isEquipped(it)
-})
+const isSelectedEquipped = computed(() => !!selectedItem.value && isEquipped(selectedItem.value))
 
 const selectedEquippedVariantKey = computed<string | null>(() => {
-  if (!isSelectedEquipped.value) return null
   const it = selectedItem.value?.item
-  if (!it) return null
+  if (!isSelectedEquipped.value || !it) return null
   return inventoryStore.equipped[it.typeKey]?.variantKey ?? null
 })
 
@@ -310,8 +229,7 @@ const { borderShapeValue: equippedBorderShape, borderColorValue: equippedBorderC
   = useEquippedRenderProps(() => inventoryStore.equipped)
 
 function isEquipped(userItem: UserItemResponse): boolean {
-  if (!isOwnProfile.value) return false
-  if (isLockedLink(userItem.linkId)) return false
+  if (!isOwnProfile.value || isUnowned(userItem)) return false
   const slot = inventoryStore.equipped[userItem.item.typeKey]
   return !!slot && slot.linkId === userItem.linkId
 }
@@ -320,7 +238,7 @@ function applyPendingHighlight() {
   const linkId = pendingHighlightId.value
   if (!linkId) return
   pendingHighlightId.value = null
-  if (!data.value?.content.some((u) => u.linkId === linkId)) return
+  if (!items.value.some((u) => u.linkId === linkId)) return
   selectedLinkId.value = linkId
   flashLinkId.value = linkId
   void nextTick(() => {
@@ -334,68 +252,48 @@ function applyPendingHighlight() {
   }, 1600)
 }
 
+const request = computed(() => ({
+  userId: props.userId,
+  params: {
+    ...paginationParams.value,
+    typeKey: typeKeys.value.length > 0 ? (typeKeys.value as ItemTypeKey[]) : undefined,
+    rarity: rarities.value.length > 0 ? rarities.value : undefined,
+    modifierKey: modifierKeys.value.length > 0 ? modifierKeys.value : undefined,
+    crateItemId: collectionIds.value.length > 0 ? collectionIds.value : undefined,
+    search: search.value.trim() || undefined,
+    includeUnowned: showUnowned.value,
+  },
+}))
+
+let requestId = 0
+
 async function fetchInventory(silent = false) {
+  const id = ++requestId
+  const { userId, params } = request.value
   if (!silent) loading.value = true
   try {
-    const params = {
-      ...paginationParams.value,
-      typeKey: typeKeys.value.length > 0 ? (typeKeys.value as ItemTypeKey[]) : undefined,
-      rarity: rarities.value.length > 0 ? rarities.value : undefined,
-      modifierKey: modifierKeys.value.length > 0 ? modifierKeys.value : undefined,
-      crateItemId: collectionIds.value.length > 0 ? collectionIds.value : undefined,
-      search: search.value.trim() || undefined,
-    }
-    data.value = await getUserInventory(props.userId, params)
-    if (selectedLinkId.value && !data.value.content.some((u) => u.linkId === selectedLinkId.value)) {
-      selectedLinkId.value = data.value.content[0]?.linkId ?? null
-    } else if (!selectedLinkId.value && data.value.content.length > 0) {
-      selectedLinkId.value = data.value.content[0].linkId
+    const page = await getUserInventory(userId, params)
+    if (id !== requestId) return
+    data.value = page
+    if (!items.value.some((u) => u.linkId === selectedLinkId.value)) {
+      selectedLinkId.value = items.value[0]?.linkId ?? null
     }
     applyPendingHighlight()
   } catch {
-    data.value = null
+    if (id === requestId) data.value = null
   } finally {
-    loading.value = false
-  }
-}
-
-async function fetchCatalog() {
-  catalogLoading.value = true
-  try {
-    const [all, owned] = await Promise.all([
-      getItems(),
-      getUserItems(props.userId),
-    ])
-    catalogAllItems.value = all
-    catalogOwnedItems.value = owned
-  } catch {
-    catalogAllItems.value = []
-    catalogOwnedItems.value = []
-  } finally {
-    catalogLoading.value = false
-  }
-}
-
-function toggleShowUnowned() {
-  showUnowned.value = !showUnowned.value
-  selectedLinkId.value = null
-  if (showUnowned.value && catalogAllItems.value.length === 0) {
-    fetchCatalog()
+    if (id === requestId) loading.value = false
   }
 }
 
 function selectItem(linkId: string) {
   selectedLinkId.value = linkId
-  if (window.matchMedia('(max-width: 1023px)').matches) {
-    mobileDetailOpen.value = true
-  }
+  if (narrow.value) mobileDetailOpen.value = true
 }
 
 function isDisintegratable(userItem: UserItemResponse): boolean {
-  if (!isOwnProfile.value) return false
-  if (isLockedLink(userItem.linkId)) return false
-  if (!userItem.item.tradeable) return false
-  if ((userItem.item.worth ?? 0) <= 0) return false
+  if (!isOwnProfile.value || isUnowned(userItem)) return false
+  if (!userItem.item.tradeable || (userItem.item.worth ?? 0) <= 0) return false
   return !isEquipped(userItem)
 }
 
@@ -426,9 +324,9 @@ function toggleSelectMode() {
   selection.value = []
 }
 
-function findLink(linkId: string): UserItemResponse | null {
-  if (selectedItem.value?.linkId === linkId) return selectedItem.value
-  return items.value.find((u) => u.linkId === linkId) ?? null
+function findOwnedLink(linkId: string): UserItemResponse | null {
+  const target = items.value.find((u) => u.linkId === linkId)
+  return target && !isUnowned(target) ? target : null
 }
 
 function reportActionError(err: unknown, fallback: string) {
@@ -436,70 +334,47 @@ function reportActionError(err: unknown, fallback: string) {
   showFeedback('error', parsed.fieldErrors[0]?.message ?? parsed.message)
 }
 
-async function handleEquip(linkId: string) {
-  if (isLockedLink(linkId)) return
-  const target = findLink(linkId)
-  if (!target) return
-  actionBusy.value = true
-  try {
-    await inventoryStore.equip(target.linkId, props.userId)
-    if (target.item.typeKey === 'theme') {
-      const theme = readThemeValue(target.item.value)
-      if (theme) {
-        themeStore.setThemeFromTokens(
-          `item:${target.item.id}`,
-          theme.tokens,
-          buildEffectLayers(target.modifiers, target.unusualEffect),
-        )
-      }
-    }
-  } catch (err) {
-    reportActionError(err, 'Could not equip item.')
-  } finally {
-    actionBusy.value = false
-  }
+function applyTheme(userItem: UserItemResponse, tokens: Record<string, string> | null | undefined) {
+  if (!tokens) return
+  themeStore.setThemeFromTokens(
+    `item:${userItem.item.id}`,
+    tokens,
+    buildEffectLayers(userItem.modifiers, userItem.unusualEffect),
+  )
 }
 
-async function handleSelectVariant(linkId: string, variantKey: string) {
-  const target = findLink(linkId)
+async function equipLink(userItem: UserItemResponse, variantKey?: string) {
+  await inventoryStore.equip(userItem.linkId, props.userId, variantKey)
+  if (userItem.item.typeKey !== 'theme') return
+  const value = variantKey
+    ? resolveItemVariant(userItem.item.value as { variants?: ItemVariant[] }, variantKey)
+    : userItem.item.value
+  applyTheme(userItem, readThemeValue(value)?.tokens)
+}
+
+async function handleEquip(linkId: string, variantKey?: string) {
+  const target = findOwnedLink(linkId)
   if (!target) return
   actionBusy.value = true
   try {
-    await inventoryStore.equip(target.linkId, props.userId, variantKey)
-    if (target.item.typeKey === 'theme') {
-      const theme = readThemeValue(resolveItemVariant(target.item.value as { variants?: ItemVariant[] }, variantKey))
-      if (theme) {
-        themeStore.setThemeFromTokens(
-          `item:${target.item.id}`,
-          theme.tokens,
-          buildEffectLayers(target.modifiers, target.unusualEffect),
-        )
-      }
-    }
+    await equipLink(target, variantKey)
   } catch (err) {
-    reportActionError(err, 'Could not switch variant.')
+    reportActionError(err, variantKey ? 'Could not switch variant.' : 'Could not equip item.')
   } finally {
     actionBusy.value = false
   }
 }
 
 async function handleApplyThemeMode(linkId: string, alt: boolean) {
-  if (isLockedLink(linkId)) return
-  const target = findLink(linkId)
+  const target = findOwnedLink(linkId)
   if (!target) return
   const theme = readThemeValue(target.item.value)
   const tokens = alt ? theme?.altTokens : theme?.tokens
   if (!tokens) return
   actionBusy.value = true
   try {
-    if (!isEquipped(target)) {
-      await inventoryStore.equip(target.linkId, props.userId)
-    }
-    themeStore.setThemeFromTokens(
-      `item:${target.item.id}`,
-      tokens,
-      buildEffectLayers(target.modifiers, target.unusualEffect),
-    )
+    if (!isEquipped(target)) await inventoryStore.equip(target.linkId, props.userId)
+    applyTheme(target, tokens)
   } catch (err) {
     reportActionError(err, 'Could not apply theme.')
   } finally {
@@ -510,8 +385,8 @@ async function handleApplyThemeMode(linkId: string, alt: boolean) {
 const { downloadingLinkId, download } = useItemDownload()
 
 async function handleDownload(linkId: string) {
-  if (isLockedLink(linkId) || downloadingLinkId.value) return
-  const target = findLink(linkId)
+  if (downloadingLinkId.value) return
+  const target = findOwnedLink(linkId)
   if (!target) return
   try {
     const filename = await download(target)
@@ -530,26 +405,23 @@ function showFeedback(variant: 'success' | 'error', message: string) {
 }
 
 function mutateLink(linkId: string, nextQuantity: number | null) {
-  const removed = nextQuantity === null
-  const apply = (list: UserItemResponse[]): UserItemResponse[] =>
+  const apply = <T extends { linkId: string | null; quantity: number }>(list: T[]): T[] =>
     nextQuantity === null
       ? list.filter((u) => u.linkId !== linkId)
       : list.map((u) => (u.linkId === linkId ? { ...u, quantity: nextQuantity } : u))
 
-  catalogOwnedItems.value = apply(catalogOwnedItems.value)
   selection.value = apply(selection.value)
 
   if (data.value) {
-    const inPage = data.value.content.some((u) => u.linkId === linkId)
+    const removed = nextQuantity === null && data.value.content.some((u) => u.linkId === linkId)
     data.value = {
       ...data.value,
       content: apply(data.value.content),
-      totalElements:
-        removed && inPage ? Math.max(0, data.value.totalElements - 1) : data.value.totalElements,
+      totalElements: removed ? Math.max(0, data.value.totalElements - 1) : data.value.totalElements,
     }
   }
 
-  if (removed && selectedLinkId.value === linkId) {
+  if (nextQuantity === null && selectedLinkId.value === linkId) {
     selectedLinkId.value = items.value[0]?.linkId ?? null
   }
 }
@@ -561,8 +433,7 @@ function openDisintegrateDialog(targets: UserItemResponse[]) {
 }
 
 function handleDisintegrateRequest(linkId: string) {
-  if (isLockedLink(linkId)) return
-  const target = findLink(linkId)
+  const target = findOwnedLink(linkId)
   if (target) openDisintegrateDialog([target])
 }
 
@@ -580,14 +451,12 @@ function handleDisintegrateRemove(linkId: string) {
 }
 
 function findOwnedCrateLink(itemId: string): UserItemResponse | null {
-  const source = showUnowned.value ? catalogOwnedItems.value : (data.value?.content ?? [])
-  return source.find((u) => u.item.id === itemId && !isLockedLink(u.linkId)) ?? null
+  return items.value.find((u) => u.item.id === itemId && !isUnowned(u)) ?? null
 }
 
 const canOpenAnother = computed(() => {
   const current = crateOpening.value
-  if (!current) return false
-  return findOwnedCrateLink(current.userItem.item.id) !== null
+  return !!current && findOwnedCrateLink(current.userItem.item.id) !== null
 })
 
 async function requestCrateOpen(target: UserItemResponse) {
@@ -595,26 +464,15 @@ async function requestCrateOpen(target: UserItemResponse) {
     const { openCrate } = await import('@/api/crates')
     const res = await openCrate(target.linkId)
     mutateLink(res.consumedLinkId, null)
-    if (crateOpening.value) crateOpening.value = { ...crateOpening.value, result: res, busy: false }
+    patchOpening({ result: res, busy: false })
   } catch (err) {
     const parsed = parseApiError(err, 'Could not open crate.')
     if (parsed.status === 404) mutateLink(target.linkId, null)
-    if (crateOpening.value) {
-      crateOpening.value = {
-        ...crateOpening.value,
-        error: parsed.fieldErrors[0]?.message ?? parsed.message,
-        busy: false,
-      }
-    }
+    patchOpening({ error: parsed.fieldErrors[0]?.message ?? parsed.message, busy: false })
   }
 }
 
-function handleOpenCrate(linkId: string) {
-  if (isLockedLink(linkId)) return
-  const target = findLink(linkId)
-  if (!target || target.item.typeKey !== 'crate') return
-  if (crateContentsLoading.value || crateContents.value.length === 0) return
-  mobileDetailOpen.value = false
+function startOpening(target: UserItemResponse) {
   crateRefreshed.value = false
   crateOpening.value = {
     userItem: target,
@@ -624,59 +482,39 @@ function handleOpenCrate(linkId: string) {
     equipBusy: false,
     equippedLinkId: null,
   }
-  void nextTick(loadCrateEffects)
   requestCrateOpen(target)
+}
+
+function handleOpenCrate(linkId: string) {
+  const target = findOwnedLink(linkId)
+  if (!target || target.item.typeKey !== 'crate') return
+  if (crateContentsLoading.value || crateContents.value.length === 0) return
+  mobileDetailOpen.value = false
+  startOpening(target)
+  void nextTick(loadCrateEffects)
 }
 
 function handleOpenAnother() {
   const current = crateOpening.value
   if (!current || current.busy) return
   const next = findOwnedCrateLink(current.userItem.item.id)
-  if (!next) return
-  crateRefreshed.value = false
-  crateOpening.value = {
-    userItem: next,
-    result: null,
-    error: null,
-    busy: true,
-    equipBusy: false,
-    equippedLinkId: null,
-  }
-  requestCrateOpen(next)
+  if (next) startOpening(next)
 }
 
 async function handleCrateEquip(reward: UserItemResponse) {
-  const current = crateOpening.value
-  if (!current || current.equipBusy) return
-  crateOpening.value = { ...current, equipBusy: true }
+  if (!crateOpening.value || crateOpening.value.equipBusy) return
+  patchOpening({ equipBusy: true })
   try {
-    await inventoryStore.equip(reward.linkId, props.userId)
-    if (reward.item.typeKey === 'theme') {
-      const theme = readThemeValue(reward.item.value)
-      if (theme) {
-        themeStore.setThemeFromTokens(
-          `item:${reward.item.id}`,
-          theme.tokens,
-          buildEffectLayers(reward.modifiers, reward.unusualEffect),
-        )
-      }
-    }
-    if (crateOpening.value) {
-      crateOpening.value = { ...crateOpening.value, equipBusy: false, equippedLinkId: reward.linkId }
-    }
+    await equipLink(reward)
+    patchOpening({ equipBusy: false, equippedLinkId: reward.linkId })
   } catch {
-    if (crateOpening.value) crateOpening.value = { ...crateOpening.value, equipBusy: false }
+    patchOpening({ equipBusy: false })
   }
-}
-
-function refreshInventory(silent = false) {
-  if (showUnowned.value) fetchCatalog()
-  else fetchInventory(silent)
 }
 
 function handleCrateOpened() {
   crateRefreshed.value = true
-  refreshInventory()
+  fetchInventory()
 }
 
 function handleCrateOverlayClose() {
@@ -685,7 +523,7 @@ function handleCrateOverlayClose() {
   crateOpening.value = null
   crateRefreshed.value = false
   if (rewardLinkId) selectedLinkId.value = rewardLinkId
-  if (!refreshed) refreshInventory()
+  if (!refreshed) fetchInventory()
 }
 
 async function handleDisintegrateConfirm(entries: DisintegrateEntryRequest[]) {
@@ -701,54 +539,27 @@ async function handleDisintegrateConfirm(entries: DisintegrateEntryRequest[]) {
     selection.value = []
     selectMode.value = false
     mobileDetailOpen.value = false
-    refreshInventory(true)
+    fetchInventory(true)
   } catch (err) {
     const parsed = parseApiError(err, 'Could not disintegrate.')
     disintegrateError.value = parsed.fieldErrors[0]?.message ?? parsed.message
     if (parsed.status === 409 && isOwnProfile.value && authStore.userId) {
       await inventoryStore.fetchEquipped(authStore.userId, true)
     }
-    if (parsed.status === 404) refreshInventory(true)
+    if (parsed.status === 404) fetchInventory(true)
   } finally {
     actionBusy.value = false
   }
 }
 
-watch([typeKeys, rarities, modifierKeys, collectionIds, search], () => {
-  resetPage()
-  selectedLinkId.value = null
-})
+watch([typeKeys, rarities, modifierKeys, collectionIds, search], () => resetPage())
 
-watch(
-  [() => props.userId, paginationParams, typeKeys, rarities, modifierKeys, collectionIds, search],
-  () => {
-    if (!showUnowned.value) fetchInventory()
-  },
-  { immediate: true },
-)
+watch(() => JSON.stringify(request.value), () => fetchInventory(), { immediate: true })
 
-watch(() => props.userId, () => {
-  if (showUnowned.value) fetchCatalog()
-})
-
-watch(showUnowned, (on) => {
+watch(showUnowned, () => {
   selectMode.value = false
   selection.value = []
-  if (on) {
-    if (catalogAllItems.value.length === 0) fetchCatalog()
-  } else {
-    fetchInventory()
-  }
 })
-
-watch(
-  [showUnowned, catalogSorted, currentPage],
-  () => {
-    if (!showUnowned.value) return
-    if (selectedLinkId.value && catalogSorted.value.some((u) => u.linkId === selectedLinkId.value)) return
-    selectedLinkId.value = items.value[0]?.linkId ?? null
-  },
-)
 
 watch(() => props.userId, (id) => {
   if (!id) return
@@ -760,14 +571,10 @@ watch(() => props.userId, (id) => {
 }, { immediate: true })
 
 watch([totalPages, currentPage], () => {
-  if (loading.value || catalogLoading.value) return
+  if (loading.value) return
   if (totalPages.value >= 1 && currentPage.value > totalPages.value) {
     setPage(totalPages.value)
   }
-})
-
-onMounted(() => {
-  if (showUnowned.value && catalogAllItems.value.length === 0) fetchCatalog()
 })
 
 onUnmounted(() => {
@@ -842,16 +649,13 @@ onUnmounted(() => {
         <div class="inv-tab__actions-left">
           <button
             type="button"
-            class="inv-tab__unowned-toggle"
-            :class="{ 'inv-tab__unowned-toggle--active': showUnowned }"
+            class="switch"
             :aria-pressed="showUnowned"
             aria-label="Show unowned items"
-            @click="toggleShowUnowned"
+            @click="showUnowned = !showUnowned"
           >
-            <span class="inv-tab__unowned-track">
-              <span class="inv-tab__unowned-thumb" />
-            </span>
-            <span class="inv-tab__unowned-label">Unowned</span>
+            <span class="switch__track"><span class="switch__thumb" /></span>
+            <span class="switch__label">Unowned</span>
           </button>
 
           <BaseButton v-if="isOwnProfile && !showUnowned" size="sm" @click="toggleSelectMode">
@@ -917,7 +721,7 @@ onUnmounted(() => {
       :detail-title="selectedItem?.item.name"
       @close-detail="mobileDetailOpen = false"
     >
-      <template v-if="loading || (showUnowned && catalogLoading)">
+      <template v-if="loading">
         <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
       </template>
       <template v-else>
@@ -929,7 +733,7 @@ onUnmounted(() => {
           :selected="userItem.linkId === selectedLinkId"
           :highlighted="userItem.linkId === flashLinkId"
           :equipped="isEquipped(userItem)"
-          :locked="isLockedLink(userItem.linkId)"
+          :locked="isUnowned(userItem)"
           :select-mode="selectMode"
           :checked="selectedLinkIds.has(userItem.linkId)"
           :selectable="isDisintegratable(userItem)"
@@ -938,7 +742,7 @@ onUnmounted(() => {
         />
       </template>
 
-      <template v-if="!loading && !(showUnowned && catalogLoading) && items.length === 0" #empty>
+      <template v-if="!loading && items.length === 0" #empty>
         <EmptyState message="No items found." />
       </template>
 
@@ -973,7 +777,7 @@ onUnmounted(() => {
           @load-crate-effects="loadCrateEffects"
           @equip="handleEquip"
           @apply-theme-mode="handleApplyThemeMode"
-          @select-variant="handleSelectVariant"
+          @select-variant="handleEquip"
           @disintegrate="handleDisintegrateRequest"
           @open-crate="handleOpenCrate"
           @download="handleDownload"
@@ -1116,60 +920,10 @@ onUnmounted(() => {
   gap: var(--space-sm);
 }
 
-.inv-tab__unowned-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-}
-
-.inv-tab__unowned-track {
-  position: relative;
-  width: 28px;
-  height: 16px;
-  border-radius: 8px;
-  background: var(--bg-overlay);
-  border: 1px solid var(--text-tertiary);
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.inv-tab__unowned-toggle--active .inv-tab__unowned-track {
-  background: color-mix(in srgb, var(--accent) 40%, transparent);
-  border-color: var(--accent);
-}
-
-.inv-tab__unowned-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  transition: transform 120ms ease, background 120ms ease;
-}
-
-.inv-tab__unowned-toggle--active .inv-tab__unowned-thumb {
-  transform: translateX(12px);
-  background: var(--accent);
-}
-
-.inv-tab__unowned-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  user-select: none;
-}
-
 .inv-tab__wallet {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   flex-shrink: 0;
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--bg-overlay);
@@ -1212,7 +966,7 @@ onUnmounted(() => {
 .inv-tab__selection-essence {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-secondary);

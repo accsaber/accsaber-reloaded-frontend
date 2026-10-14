@@ -328,11 +328,7 @@ function buildChart(): ChartConfiguration<'line'> {
 }
 
 async function loadChart() {
-  isLoading.value = true
-  try {
-    await render(buildChart)
-  } catch {
-  }
+  await render(buildChart).catch(() => undefined)
   isLoading.value = false
 }
 

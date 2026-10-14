@@ -72,12 +72,11 @@ function onConfirm(): void {
     <div class="disintegrate">
       <p class="disintegrate__lead">
         <template v-if="rows.length === 1">
-          Disintegrate <strong>{{ rows[0].name }}</strong
-          >? This is permanent and cannot be undone.
+          Disintegrate <strong>{{ rows[0].name }}</strong>? This can't be undone.
         </template>
         <template v-else>
-          Disintegrate <strong>{{ rows.length }} items</strong> ({{ totalUnits }} in total)? This is
-          permanent and cannot be undone.
+          Disintegrate <strong>{{ rows.length }} items</strong> ({{ totalUnits }} in total)? This
+          can't be undone.
         </template>
       </p>
 
@@ -138,11 +137,11 @@ function onConfirm(): void {
       </ul>
 
       <p v-if="error" class="disintegrate__error">
-        {{ error }} Nothing was destroyed - adjust the selection and try again.
+        {{ error }}
       </p>
 
       <p class="disintegrate__yield">
-        You will receive <strong>{{ formatEssence(totalEssence) }}</strong> essence.
+        You get <strong>{{ formatEssence(totalEssence) }}</strong> essence.
       </p>
     </div>
 

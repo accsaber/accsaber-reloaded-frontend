@@ -14,6 +14,8 @@ import type {
   UserCategoryStatisticsResponse,
 } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
+import { TIME_RANGE_PARAMS } from '@/utils/constants'
+import { dedupeRequest } from '@/utils/dedupe'
 import { formatFullDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 
@@ -43,24 +45,18 @@ const allTimeData = ref<UserCategoryStatisticsResponse[]>([])
 const skill = ref<SkillResponse | null>(null)
 const skillLoading = ref(false)
 
+function bestRank(ranks: number[]): number | null {
+  const valid = ranks.filter((r) => r > 0)
+  return valid.length ? Math.min(...valid) : null
+}
+
 const peakStats = computed(() => {
   const data = allTimeData.value
   if (data.length === 0) return null
-
-  let peakRank = Infinity
-  let peakCountryRank = Infinity
-  let peakAp = -Infinity
-
-  for (const s of data) {
-    if (s.ranking > 0 && s.ranking < peakRank) peakRank = s.ranking
-    if (s.countryRanking > 0 && s.countryRanking < peakCountryRank) peakCountryRank = s.countryRanking
-    if (s.ap > peakAp) peakAp = s.ap
-  }
-
   return {
-    peakRank: peakRank === Infinity ? null : peakRank,
-    peakCountryRank: peakCountryRank === Infinity ? null : peakCountryRank,
-    peakAp: peakAp === -Infinity ? null : peakAp,
+    peakRank: bestRank(data.map((s) => s.ranking)),
+    peakCountryRank: bestRank(data.map((s) => s.countryRanking)),
+    peakAp: Math.max(...data.map((s) => s.ap)),
   }
 })
 
@@ -80,29 +76,26 @@ const xpSources = computed(() => {
   ]
 })
 
+let historyRequest = 0
+let skillRequest = 0
+
 async function fetchAllTimeData() {
-  try {
-    const { getUserHistoricStatistics } = await import('@/api/users')
-    allTimeData.value = await getUserHistoricStatistics(props.userId, {
-      category: props.category,
-      amount: 120,
-      unit: 'mo',
-    })
-  } catch {
-    allTimeData.value = []
-  }
+  const id = ++historyRequest
+  const { getUserHistoricStatistics } = await import('@/api/users')
+  const data = await dedupeRequest(`stats|${props.userId}|${props.category}|all`, () =>
+    getUserHistoricStatistics(props.userId, { category: props.category, ...TIME_RANGE_PARAMS.all }),
+  ).catch(() => [])
+  if (id === historyRequest) allTimeData.value = data
 }
 
 async function fetchSkill() {
+  const id = ++skillRequest
   skillLoading.value = true
-  try {
-    const { getUserSkill } = await import('@/api/users')
-    skill.value = await getUserSkill(props.userId)
-  } catch {
-    skill.value = null
-  } finally {
-    skillLoading.value = false
-  }
+  const { getUserSkill } = await import('@/api/users')
+  const data = await getUserSkill(props.userId).catch(() => null)
+  if (id !== skillRequest) return
+  skill.value = data
+  skillLoading.value = false
 }
 
 watch(
@@ -151,9 +144,6 @@ watch(
           <span class="clan-record__name">{{ clanStats.clan.name }}</span>
           <span class="clan-record__role">{{ clanRoleLine }}</span>
         </div>
-        <p v-else class="clan-record__note">
-          Not in a clan.
-        </p>
         <div class="clan-record__grid">
           <StatBlock label="Wars Fought" :value="clanStats.warsFought" :decimals="0" />
           <StatBlock label="Wars Won" :value="clanStats.warsWon" :decimals="0" />
@@ -278,13 +268,6 @@ watch(
   font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;
-}
-
-.clan-record__note {
-  margin: 0 0 var(--space-md);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-align: center;
 }
 
 .clan-record__grid {

@@ -9,7 +9,6 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import { useModifierColor } from '@/composables/useModifierColor'
-import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
 import type { BorderColorValue, BorderShapeValue, CrateContentResponse, CrateModifierResponse, ItemModifierRef, ItemResponse, ItemVariant, UnusualEffectResponse, UserItemResponse } from '@/types/api/items'
@@ -31,7 +30,7 @@ import {
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   userItem: UserItemResponse | null
@@ -68,7 +67,6 @@ const emit = defineEmits<{
 }>()
 
 const itemTypeStore = useItemTypeStore()
-const modifierStore = useItemModifierStore()
 const themeStore = useThemeStore()
 
 const item = computed(() => props.userItem?.item ?? null)
@@ -183,23 +181,46 @@ function openPreview() {
   emit('loadCrateEffects')
 }
 
-const CRATE_UNLOCK_MS = Date.UTC(2026, 6, 17, 15, 0, 0)
-const CRATE_UNLOCK_MESSAGE = 'Crate opening unlocks Friday, July 17 at 3:00 PM UTC.'
-const CRATE_EMPTY_MESSAGE = 'Crates without revealed content cannot be opened.'
-const crateLocked = ref(Date.now() < CRATE_UNLOCK_MS)
-const crateEmpty = computed(
-  () => isCrate.value && !props.crateContentsLoading && !(props.crateContents ?? []).length,
-)
 const crateReady = computed(
   () => !props.crateContentsLoading && (props.crateContents ?? []).length > 0,
 )
-const crateOpenNote = computed(() => {
-  if (!showOpenCrate.value) return null
-  if (crateLocked.value) return CRATE_UNLOCK_MESSAGE
-  if (crateEmpty.value) return CRATE_EMPTY_MESSAGE
-  return null
+const showCrateEmptyNote = computed(
+  () => showOpenCrate.value && !props.crateContentsLoading && !crateReady.value,
+)
+
+interface ChoiceGroup {
+  label: string
+  options: { key: string; label: string; active: boolean; pick: () => void }[]
+}
+
+const choiceGroups = computed<ChoiceGroup[]>(() => {
+  const linkId = props.userItem?.linkId
+  if (!linkId || props.locked) return []
+  const groups: ChoiceGroup[] = []
+  if (itemVariants.value && showEquipActions.value) {
+    groups.push({
+      label: 'Variant',
+      options: itemVariants.value.map((variant) => ({
+        key: variant.key,
+        label: variant.label,
+        active: activeVariantKey.value === variant.key,
+        pick: () => emit('selectVariant', linkId, variant.key),
+      })),
+    })
+  }
+  if (themeModes.value) {
+    groups.push({
+      label: 'Theme mode',
+      options: themeModes.value.map((mode) => ({
+        key: mode.label,
+        label: mode.label,
+        active: activeThemeMode.value === mode.alt,
+        pick: () => emit('applyThemeMode', linkId, mode.alt),
+      })),
+    })
+  }
+  return groups
 })
-let crateUnlockTimer: ReturnType<typeof setTimeout> | undefined
 const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || untradeable.value)
 const obtainableSentence = computed(() =>
   item.value ? obtainableUntilSentence(item.value) : null,
@@ -225,18 +246,6 @@ const sourceLabel = computed(() => {
   }
 })
 
-onMounted(() => {
-  modifierStore.fetchModifiers()
-  if (crateLocked.value) {
-    const delay = CRATE_UNLOCK_MS - Date.now()
-    if (delay <= 0) crateLocked.value = false
-    else crateUnlockTimer = setTimeout(() => { crateLocked.value = false }, delay)
-  }
-})
-
-onUnmounted(() => {
-  if (crateUnlockTimer) clearTimeout(crateUnlockTimer)
-})
 </script>
 
 <template>
@@ -288,7 +297,7 @@ onUnmounted(() => {
         variant="primary"
         size="md"
         :loading="busy"
-        :disabled="crateLocked || !crateReady"
+        :disabled="!crateReady"
         @click="$emit('openCrate', userItem.linkId)"
       >
         Open crate
@@ -297,7 +306,7 @@ onUnmounted(() => {
       <BaseButton size="md" @click="openPreview">Preview</BaseButton>
     </div>
 
-    <p v-if="crateOpenNote" class="inv-detail__crate-open-note">{{ crateOpenNote }}</p>
+    <p v-if="showCrateEmptyNote" class="inv-detail__crate-open-note">Crates without revealed content cannot be opened.</p>
 
     <CrateContentsList
       v-if="isCrate"
@@ -328,112 +337,103 @@ onUnmounted(() => {
     />
 
     <div
-      v-if="!locked && itemVariants && showEquipActions"
-      class="inv-detail__theme-modes"
+      v-for="group in choiceGroups"
+      :key="group.label"
+      class="inv-detail__choices"
       role="group"
-      aria-label="Variant"
+      :aria-label="group.label"
     >
       <button
-        v-for="variant in itemVariants"
-        :key="variant.key"
+        v-for="option in group.options"
+        :key="option.key"
         type="button"
-        class="inv-detail__theme-mode"
-        :class="{ 'inv-detail__theme-mode--active': activeVariantKey === variant.key }"
+        class="inv-detail__choice"
+        :class="{ 'inv-detail__choice--active': option.active }"
         :disabled="busy"
-        @click="$emit('selectVariant', userItem.linkId, variant.key)"
+        @click="option.pick"
       >
-        {{ variant.label }}
-      </button>
-    </div>
-
-    <div v-if="!locked && themeModes" class="inv-detail__theme-modes" role="group" aria-label="Theme mode">
-      <button
-        v-for="mode in themeModes"
-        :key="mode.label"
-        type="button"
-        class="inv-detail__theme-mode"
-        :class="{ 'inv-detail__theme-mode--active': activeThemeMode === mode.alt }"
-        :disabled="busy"
-        @click="$emit('applyThemeMode', userItem.linkId, mode.alt)"
-      >
-        {{ mode.label }}
+        {{ option.label }}
       </button>
     </div>
 
     <dl v-if="hasMetaRows" class="inv-detail__meta">
-      <div v-if="!locked" class="inv-detail__row">
-        <dt>{{ modifiers.length > 1 ? 'Modifiers' : 'Modifier' }}</dt>
-        <dd>
-          <div v-if="modifiers.length" class="inv-detail__chips">
-            <ModifierChip v-for="m in modifiers" :key="m.id" :modifier="m" />
-          </div>
-          <span v-else>-</span>
-        </dd>
-      </div>
-      <div v-if="!locked && pbCount != null" class="inv-detail__row">
-        <dt>PB Counter</dt>
-        <dd class="inv-detail__mono">{{ pbCount }}</dd>
-      </div>
-      <div v-if="!locked && unusualEffect" class="inv-detail__row">
-        <dt>Effect</dt>
-        <dd>{{ unusualEffect.name || unusualEffect.key }}</dd>
-      </div>
-      <div v-if="!locked && quantity > 1" class="inv-detail__row">
-        <dt>Quantity</dt>
-        <dd class="inv-detail__mono">x{{ quantity }}</dd>
-      </div>
-      <div v-if="!locked && userItem.serialNumber != null" class="inv-detail__row">
-        <dt>Serial</dt>
-        <dd class="inv-detail__mono">#{{ userItem.serialNumber }}</dd>
-      </div>
-      <div v-if="!locked && untradeable" class="inv-detail__row">
-        <dt>Source</dt>
-        <dd>{{ sourceLabel }}</dd>
-      </div>
-      <div v-if="!locked && userItem.crate" class="inv-detail__row">
-        <dt>Collection</dt>
-        <dd>
-          <button
-            type="button"
-            class="inv-detail__collection"
-            :aria-label="`Preview ${userItem.crate.name}`"
-            @click="emit('previewCrate', userItem.crate)"
-          >
-            <img
-              v-if="userItem.crate.iconUrl"
-              class="inv-detail__collection-icon"
-              :src="userItem.crate.iconUrl"
-              alt=""
-              loading="lazy"
-              decoding="async"
-            />
-            {{ userItem.crate.name }}
-          </button>
-        </dd>
-      </div>
-      <div v-if="!locked" class="inv-detail__row">
-        <dt>Awarded</dt>
-        <dd>{{ formatRelativeDate(userItem.awardedAt) }}</dd>
-      </div>
-      <div v-if="!locked && userItem.reason" class="inv-detail__row">
-        <dt>Reason</dt>
-        <dd>{{ userItem.reason }}</dd>
-      </div>
-      <div v-if="locked && item.unlockLevel != null" class="inv-detail__row">
-        <dt>Unlock</dt>
-        <dd class="inv-detail__mono">Level {{ item.unlockLevel }}</dd>
-      </div>
-      <div v-if="locked && item.requirement" class="inv-detail__row">
-        <dt>Requirement</dt>
-        <dd>{{ item.requirement }}</dd>
-      </div>
+      <template v-if="locked">
+        <div v-if="item.unlockLevel != null" class="inv-detail__row">
+          <dt>Unlock</dt>
+          <dd class="inv-detail__mono">Level {{ item.unlockLevel }}</dd>
+        </div>
+        <div v-if="item.requirement" class="inv-detail__row">
+          <dt>Requirement</dt>
+          <dd>{{ item.requirement }}</dd>
+        </div>
+      </template>
+      <template v-else>
+        <div class="inv-detail__row">
+          <dt>{{ modifiers.length > 1 ? 'Modifiers' : 'Modifier' }}</dt>
+          <dd>
+            <div v-if="modifiers.length" class="inv-detail__chips">
+              <ModifierChip v-for="m in modifiers" :key="m.id" :modifier="m" />
+            </div>
+            <span v-else>-</span>
+          </dd>
+        </div>
+        <div v-if="pbCount != null" class="inv-detail__row">
+          <dt>PB Counter</dt>
+          <dd class="inv-detail__mono">{{ pbCount }}</dd>
+        </div>
+        <div v-if="unusualEffect" class="inv-detail__row">
+          <dt>Effect</dt>
+          <dd>{{ unusualEffect.name || unusualEffect.key }}</dd>
+        </div>
+        <div v-if="quantity > 1" class="inv-detail__row">
+          <dt>Quantity</dt>
+          <dd class="inv-detail__mono">x{{ quantity }}</dd>
+        </div>
+        <div v-if="userItem.serialNumber != null" class="inv-detail__row">
+          <dt>Serial</dt>
+          <dd class="inv-detail__mono">#{{ userItem.serialNumber }}</dd>
+        </div>
+        <div v-if="untradeable" class="inv-detail__row">
+          <dt>Source</dt>
+          <dd>{{ sourceLabel }}</dd>
+        </div>
+        <div v-if="userItem.crate" class="inv-detail__row">
+          <dt>Collection</dt>
+          <dd>
+            <button
+              type="button"
+              class="inv-detail__collection"
+              :aria-label="`Preview ${userItem.crate.name}`"
+              @click="emit('previewCrate', userItem.crate)"
+            >
+              <img
+                v-if="userItem.crate.iconUrl"
+                class="inv-detail__collection-icon"
+                :src="userItem.crate.iconUrl"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+              {{ userItem.crate.name }}
+            </button>
+          </dd>
+        </div>
+        <div class="inv-detail__row">
+          <dt>Awarded</dt>
+          <dd>{{ formatRelativeDate(userItem.awardedAt) }}</dd>
+        </div>
+        <div v-if="userItem.reason" class="inv-detail__row">
+          <dt>Reason</dt>
+          <dd>{{ userItem.reason }}</dd>
+        </div>
+      </template>
       <div v-if="obtainableSentence" class="inv-detail__row">
         <dt>Availability</dt>
         <dd>{{ obtainableSentence }}</dd>
       </div>
     </dl>
 
-    <div v-if="locked" class="inv-detail__locked">
+    <div v-if="locked" class="inv-detail__pill">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
@@ -479,7 +479,7 @@ onUnmounted(() => {
         >
           Unequip
         </BaseButton>
-        <span v-else-if="showEquipActions" class="inv-detail__equipped">
+        <span v-else-if="showEquipActions" class="inv-detail__pill inv-detail__pill--accent">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
@@ -498,7 +498,7 @@ onUnmounted(() => {
           <span class="inv-detail__essence-yield">· +{{ formatEssence(disintegrateEssence) }}</span>
         </BaseButton>
 
-        <span v-if="untradeable" class="inv-detail__no-trade" aria-label="Untradeable">
+        <span v-if="untradeable" class="inv-detail__pill" aria-label="Untradeable">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
@@ -661,14 +661,14 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-.inv-detail__theme-modes {
+.inv-detail__choices {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
   min-width: 0;
 }
 
-.inv-detail__theme-mode {
+.inv-detail__choice {
   flex: 1 1 auto;
   max-width: 100%;
   overflow: hidden;
@@ -686,12 +686,12 @@ onUnmounted(() => {
   transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
 }
 
-.inv-detail__theme-mode:hover:not(:disabled) {
+.inv-detail__choice:hover:not(:disabled) {
   color: var(--text-primary);
   border-color: var(--text-tertiary);
 }
 
-.inv-detail__theme-mode--active {
+.inv-detail__choice--active {
   color: var(--accent);
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
@@ -729,27 +729,13 @@ onUnmounted(() => {
 
 .inv-detail__crate-open-note {
   margin-top: var(--space-xs);
-  font-size: 0.75rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
 .inv-detail__essence-yield {
   font-variant-numeric: tabular-nums;
   opacity: 0.85;
-}
-
-.inv-detail__equipped {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .inv-detail__name-lock {
@@ -760,11 +746,11 @@ onUnmounted(() => {
   vertical-align: -2px;
 }
 
-.inv-detail__locked {
+.inv-detail__pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
   align-self: flex-start;
+  gap: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
@@ -775,17 +761,10 @@ onUnmounted(() => {
   background: color-mix(in srgb, var(--bg-base) 60%, transparent);
 }
 
-.inv-detail__no-trade {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
+.inv-detail__pill--accent {
+  font-weight: 600;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 </style>

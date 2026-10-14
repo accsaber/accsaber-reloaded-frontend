@@ -195,12 +195,10 @@ watch(requestKey, fetchData, { immediate: true })
     <div class="leaderboards__controls">
       <CategoryTabs v-model="activeCategory" />
       <div class="leaderboards__filter">
-        <button class="leaderboards__inactive-toggle" :class="{ 'leaderboards__inactive-toggle--active': showInactive }"
-          :aria-pressed="showInactive" aria-label="Show inactive players" @click="showInactive = !showInactive">
-          <span class="leaderboards__inactive-track">
-            <span class="leaderboards__inactive-thumb" />
-          </span>
-          <span class="leaderboards__inactive-label">Inactive</span>
+        <button type="button" class="switch" :aria-pressed="showInactive" aria-label="Show inactive players"
+          @click="showInactive = !showInactive">
+          <span class="switch__track"><span class="switch__thumb" /></span>
+          <span class="switch__label">Inactive</span>
         </button>
         <SearchBox v-model="searchQuery" placeholder="Search players..." />
         <BaseSelect v-model="countryFilter" :options="countryOptions" placeholder="All Countries" searchable />
@@ -305,56 +303,6 @@ watch(requestKey, fetchData, { immediate: true })
   justify-content: center;
   gap: var(--space-md);
   flex-wrap: wrap;
-}
-
-.leaderboards__inactive-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-}
-
-.leaderboards__inactive-track {
-  position: relative;
-  width: 28px;
-  height: 16px;
-  border-radius: 8px;
-  background: var(--bg-overlay);
-  border: 1px solid var(--text-tertiary);
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.leaderboards__inactive-toggle--active .leaderboards__inactive-track {
-  background: color-mix(in srgb, var(--page-accent) 40%, transparent);
-  border-color: var(--page-accent);
-}
-
-.leaderboards__inactive-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  transition: transform 120ms ease, background 120ms ease;
-}
-
-.leaderboards__inactive-toggle--active .leaderboards__inactive-thumb {
-  transform: translateX(12px);
-  background: var(--page-accent);
-}
-
-.leaderboards__inactive-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  user-select: none;
 }
 
 .leaderboards__filter {

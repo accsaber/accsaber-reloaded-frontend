@@ -6,7 +6,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
-import InventoryLayout from '@/components/domain/InventoryLayout.vue'
+import InventoryLayout, { INVENTORY_NARROW_QUERY } from '@/components/domain/InventoryLayout.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanItemResponse, ClanResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
@@ -65,7 +65,7 @@ async function fetchItems() {
 
 function selectItem(itemId: string) {
   selectedId.value = itemId
-  if (window.matchMedia('(max-width: 1023px)').matches) mobileDetailOpen.value = true
+  if (window.matchMedia(INVENTORY_NARROW_QUERY).matches) mobileDetailOpen.value = true
 }
 
 async function run(action: (clanId: string) => Promise<void>) {

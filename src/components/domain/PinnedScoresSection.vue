@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PinnedScoreCard from '@/components/domain/PinnedScoreCard.vue'
-import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
+import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
@@ -8,15 +8,16 @@ import type { PinnedScoreResponse, ScoreResponse } from '@/types/api/users'
 import type { ScoreDisplay } from '@/types/display'
 import { toScoreDisplay } from '@/utils/mappers'
 import { STANDARD_PIN_SLOTS } from '@/utils/constants'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     userId: string
     pinned: PinnedScoreResponse[]
     loading: boolean
     isSelfProfile: boolean
     maxSlots?: number
+    player?: ScoreDetailPlayer | null
   }>(),
   { maxSlots: STANDARD_PIN_SLOTS },
 )
@@ -34,23 +35,6 @@ const modifierStore = useModifierStore()
 const detailOpen = ref(false)
 const detailScore = ref<ScoreDisplay | null>(null)
 const detailUserId = ref('')
-
-const complexities = ref<Map<string, number | null>>(new Map())
-
-watch(() => props.pinned, async (next) => {
-  const missing = next
-    .map((p) => p.score.mapDifficultyId)
-    .filter((id) => !complexities.value.has(id))
-  if (missing.length === 0) return
-  const { getDifficulty } = await import('@/api/maps')
-  const results = await Promise.allSettled(missing.map((id) => getDifficulty(id)))
-  const updated = new Map(complexities.value)
-  results.forEach((res, i) => {
-    const id = missing[i]
-    updated.set(id, res.status === 'fulfilled' ? res.value.complexity : null)
-  })
-  complexities.value = updated
-}, { immediate: true, deep: true })
 
 function onOpenDetail(score: ScoreResponse) {
   detailScore.value = toScoreDisplay(
@@ -91,11 +75,11 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
     <div v-else class="pinned__grid">
       <PinnedScoreCard v-for="pin in pinned" :key="pin.score.id" :score="pin.score" :comment="pin.comment"
         :editable="isSelfProfile" :can-unpin="isSelfProfile"
-        :complexity="complexities.get(pin.score.mapDifficultyId) ?? null"
         @unpin="onUnpin" @open-detail="onOpenDetail" @save-comment="onCommentSave" />
     </div>
 
-    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" @close="detailOpen = false" />
+    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" :player="player"
+      @close="detailOpen = false" />
   </section>
 </template>
 

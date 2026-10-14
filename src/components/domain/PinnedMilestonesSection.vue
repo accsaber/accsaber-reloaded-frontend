@@ -2,7 +2,7 @@
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
-import { resolveMilestoneGlyph, type MilestoneGlyphKey } from '@/utils/milestoneIcons'
+import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import { formatPercent, STANDARD_PIN_SLOTS } from '@/utils/constants'
 import { computed } from 'vue'
 
@@ -12,7 +12,6 @@ const props = withDefaults(
     loading: boolean
     isSelfProfile: boolean
     maxSlots?: number
-    glyphs?: Map<string, MilestoneGlyphKey>
   }>(),
   { maxSlots: STANDARD_PIN_SLOTS },
 )
@@ -24,7 +23,7 @@ const STANDARD_SLOTS = STANDARD_PIN_SLOTS
 const cards = computed(() =>
   props.pinned.map((pin) => ({
     pin,
-    glyph: props.glyphs?.get(pin.milestoneId) ?? resolveMilestoneGlyph(pin.iconGroup),
+    glyph: resolveMilestoneGlyph(pin.iconGroup, pin.querySpec),
     rarity: `${formatPercent(pin.completionPercentage ?? 0)}% of players`,
     completedOn: pin.completedAt
       ? new Date(pin.completedAt).toLocaleDateString(undefined, {

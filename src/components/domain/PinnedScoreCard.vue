@@ -21,7 +21,6 @@ const props = defineProps<{
   canUnpin: boolean
   comment?: string | null
   editable?: boolean
-  complexity?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -196,7 +195,7 @@ function onReplayClick(e: MouseEvent) {
         <h3 class="pin-card__song" :title="score.songName">{{ score.songName }}</h3>
         <div class="pin-card__badges">
           <DifficultyBadge :difficulty="score.difficulty" />
-          <ComplexityBadge v-if="complexity != null" :complexity="complexity" />
+          <ComplexityBadge v-if="score.complexity != null" :complexity="score.complexity" />
         </div>
       </div>
       <dl class="pin-card__stats">

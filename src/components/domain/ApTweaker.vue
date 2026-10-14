@@ -2,7 +2,7 @@
 import { useClickOutside } from '@/composables/useClickOutside'
 import type { CurveResponse } from '@/types/api/categories'
 import { calculateAp, reverseApToAccuracy, reverseApToAccuracyByComplexity, tweakRawAp } from '@/utils/curveEval'
-import { computed, nextTick, ref, toRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, toRef, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   open: boolean
@@ -181,7 +181,7 @@ function close() {
 
 useClickOutside(panelRef, toRef(props, 'open'), close, { ignoreRefs: [anchorRef] })
 
-watch(() => props.open, async (isOpen) => {
+watch([() => props.open, () => props.anchorEl], async ([isOpen]) => {
   if (isOpen) {
     initAccuracy(isScoreMode.value ? props.accuracy! : props.defaultAccuracy)
     editingAcc.value = false
@@ -204,7 +204,9 @@ watch(() => props.open, async (isOpen) => {
   } else {
     document.removeEventListener('scroll', updatePosition, true)
   }
-})
+}, { immediate: true })
+
+onUnmounted(() => document.removeEventListener('scroll', updatePosition, true))
 
 const tweakedRawAp = computed(() => {
   if (!curve.value) return 0

@@ -370,7 +370,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
             :cover-url="coverUrl" :cover-fallback-url="coverFallbackUrl" :category-code="categoryCode"
             :difficulty="activeDifficulty ? formatDifficulty(activeDifficulty.difficulty) : undefined"
             :complexity="activeDifficulty?.complexity ?? null"
-            :accent-color="resolvedAccent" @top-scores-loaded="onTopScoresLoaded"
+            @top-scores-loaded="onTopScoresLoaded"
             @width-change="scoresTableWidth = $event" />
         </div>
 

@@ -145,34 +145,27 @@ async function fetchReweights() {
   }
 }
 
+let chartRequest = 0
+let rankRequest = 0
+
 async function fetchChartData() {
+  const id = ++chartRequest
   const range = selectedRange.value
-  try {
-    const { getUserHistoricStatistics } = await import('@/api/users')
-    chartData.value = await dedupeRequest(`stats|${props.userId}|${props.category}|${range}`, () =>
-      getUserHistoricStatistics(props.userId, {
-        category: props.category,
-        ...rangeParams[range],
-      }),
-    )
-  } catch {
-    chartData.value = []
-  }
+  const { getUserHistoricStatistics } = await import('@/api/users')
+  const data = await dedupeRequest(`stats|${props.userId}|${props.category}|${range}`, () =>
+    getUserHistoricStatistics(props.userId, { category: props.category, ...rangeParams[range] }),
+  ).catch(() => [])
+  if (id === chartRequest) chartData.value = data
 }
 
 async function fetchRankHistory() {
+  const id = ++rankRequest
   const range = selectedRange.value
-  try {
-    const { getUserRankingHistory } = await import('@/api/users')
-    rankHistoryData.value = await dedupeRequest(`rank|${props.userId}|${props.category}|${range}`, () =>
-      getUserRankingHistory(props.userId, {
-        category: props.category,
-        ...rangeParams[range],
-      }),
-    )
-  } catch {
-    rankHistoryData.value = []
-  }
+  const { getUserRankingHistory } = await import('@/api/users')
+  const data = await dedupeRequest(`rank|${props.userId}|${props.category}|${range}`, () =>
+    getUserRankingHistory(props.userId, { category: props.category, ...rangeParams[range] }),
+  ).catch(() => [])
+  if (id === rankRequest) rankHistoryData.value = data
 }
 
 watch(

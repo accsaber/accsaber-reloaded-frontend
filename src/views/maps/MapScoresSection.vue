@@ -32,7 +32,6 @@ const props = defineProps<{
   categoryCode?: CategoryCode
   difficulty?: string
   complexity?: number | null
-  accentColor?: string
   mapAuthor?: string
 }>()
 
@@ -377,8 +376,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
       </template>
     </ScoreTable>
 
-    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" :accent-color="accentColor"
-      @close="detailOpen = false" />
+    <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" @close="detailOpen = false" />
   </div>
 </template>
 

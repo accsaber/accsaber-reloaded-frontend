@@ -19,7 +19,6 @@ const CENTER = SIZE / 2
 const RINGS = 4
 const ANGLE_OFFSET = -Math.PI / 2
 
-const radarId = `radar-${Math.random().toString(36).slice(2, 8)}`
 const hoveredIndex = ref<number | null>(null)
 const pinnedIndex = ref<number | null>(null)
 
@@ -31,11 +30,11 @@ function infoFor(code: string): CategoryInfo | undefined {
 }
 
 function tierFor(level: number): { label: string; color: string } {
-  if (level >= 95) return { label: 'Apex', color: '#b9f2ff' }
-  if (level >= 80) return { label: 'Elite', color: '#4dd9e0' }
-  if (level >= 60) return { label: 'Strong', color: '#ffd700' }
-  if (level >= 40) return { label: 'Solid', color: '#c0c0c0' }
-  if (level >= 20) return { label: 'Novice', color: '#cd7f32' }
+  if (level >= 95) return { label: 'Apex', color: 'var(--tier-diamond)' }
+  if (level >= 80) return { label: 'Elite', color: 'var(--tier-platinum)' }
+  if (level >= 60) return { label: 'Strong', color: 'var(--tier-gold)' }
+  if (level >= 40) return { label: 'Solid', color: 'var(--tier-silver)' }
+  if (level >= 20) return { label: 'Novice', color: 'var(--tier-bronze)' }
   return { label: 'Beginner', color: 'var(--text-tertiary)' }
 }
 
@@ -105,16 +104,6 @@ const spokes = computed(() => {
 
 const dataPolygon = computed(() =>
   radarAxes.value.map((a) => `${a.x},${a.y}`).join(' '),
-)
-
-const gradients = computed(() =>
-  radarAxes.value.map((axis, i) => ({
-    id: `${radarId}-grad-${i}`,
-    cx: axis.x,
-    cy: axis.y,
-    r: RADIUS * (0.35 + 0.65 * axis.normalized),
-    color: axis.accent,
-  })),
 )
 
 function textAnchor(labelX: number): string {
@@ -189,24 +178,6 @@ const tooltipStyle = computed(() => {
 
       <div v-else-if="radarAxes.length >= 3" class="skill-panel__radar">
         <svg :viewBox="`0 0 ${SIZE} ${SIZE}`" class="skill-panel__svg">
-          <defs>
-            <clipPath :id="`${radarId}-clip`">
-              <polygon :points="dataPolygon" />
-            </clipPath>
-            <radialGradient
-              v-for="grad in gradients"
-              :key="grad.id"
-              :id="grad.id"
-              gradientUnits="userSpaceOnUse"
-              :cx="grad.cx"
-              :cy="grad.cy"
-              :r="grad.r"
-            >
-              <stop offset="0%" :stop-color="grad.color" stop-opacity="0.55" />
-              <stop offset="100%" :stop-color="grad.color" stop-opacity="0" />
-            </radialGradient>
-          </defs>
-
           <polygon
             v-for="(ring, i) in gridRings"
             :key="'r' + i"
@@ -223,18 +194,6 @@ const tooltipStyle = computed(() => {
             :y2="pt.y"
             class="skill-panel__spoke"
           />
-
-          <g :clip-path="`url(#${radarId}-clip)`">
-            <rect
-              v-for="grad in gradients"
-              :key="grad.id"
-              x="0"
-              y="0"
-              :width="SIZE"
-              :height="SIZE"
-              :fill="`url(#${grad.id})`"
-            />
-          </g>
 
           <polygon :points="dataPolygon" class="skill-panel__data-stroke" />
 
@@ -401,7 +360,7 @@ const tooltipStyle = computed(() => {
   color: var(--text-secondary);
   font-size: var(--text-body);
   border: 1px dashed var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .skill-panel__radar {
@@ -425,14 +384,13 @@ const tooltipStyle = computed(() => {
 }
 
 .skill-panel__data-stroke {
-  fill: none;
+  fill: color-mix(in srgb, var(--page-accent, var(--accent)) 14%, transparent);
   stroke: color-mix(in srgb, var(--text-primary) 30%, transparent);
   stroke-width: 1;
   stroke-linejoin: round;
 }
 
 .skill-panel__dot {
-  filter: drop-shadow(0 0 3px currentColor);
   transition: r 120ms ease-out;
 }
 
@@ -474,7 +432,7 @@ const tooltipStyle = computed(() => {
   padding-top: var(--space-lg);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;

@@ -2,6 +2,7 @@
 import { getApiErrorMessage } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
+import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
@@ -26,6 +27,7 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useInventoryStore } from '@/stores/inventory'
@@ -33,12 +35,11 @@ import { useRelationsStore } from '@/stores/relations'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
 import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserMilestoneProgressResponse, UserResponse, UserScoresParams } from '@/types/api/users'
 import type { CategoryCode, UserRefDisplay } from '@/types/display'
-import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { getRankClass } from '@/utils/ranking'
 import { pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
 import ProfileInventoryTab from './profile/ProfileInventoryTab.vue'
 import ProfileMilestonesTab from './profile/ProfileMilestonesTab.vue'
@@ -58,14 +59,6 @@ const { hideReloadedProfileFeatures, showStatisticsChart } = useAppearance()
 const userId = computed(() => route.params.userId as string)
 
 const isBlockedByMe = computed(() => relationsStore.hasRelation(userId.value, 'blocked'))
-
-const canSnipe = computed(
-  () =>
-    authStore.isLoggedIn
-    && !!authStore.userId
-    && authStore.userId !== userId.value
-    && !isBlockedByMe.value,
-)
 
 const user = ref<UserResponse | null>(null)
 const userAvatarUrl = computed(() => pickAvatarUrl(user.value))
@@ -90,7 +83,9 @@ const isSelfProfile = computed(
   () => authStore.isLoggedIn && authStore.userId !== null && authStore.userId === userId.value,
 )
 
-const { state: supporterState } = useSupporter(() => userId.value)
+const { state: supporterState } = useSupporter(() =>
+  isSelfProfile.value || user.value?.supporterTier ? userId.value : null,
+)
 
 const profileOwnerTier = computed(
   () => user.value?.supporterTier ?? supporterState.value?.currentTier ?? null,
@@ -123,30 +118,43 @@ const {
 
 const heroThumbValue = computed(() => (hideReloadedProfileFeatures.value ? null : equippedThumbnailValue.value))
 
+const scorePlayer = computed(() => ({ user: user.value, level: level.value, equipped: equipped.value }))
+
 const equippedBackgroundFitClass = computed(() =>
   equippedBackgroundValue.value?.fit ? `profile-page__bg-equipped--${equippedBackgroundValue.value.fit}` : '',
 )
 
-const activeTab = ref(route.query.inventoryHighlight ? 'inventory' : 'scores')
+const { setQuery, queryRef } = useQueryParams()
 
-const TAB_QUERY_KEYS = ['sort', 'order', 'page', 'unowned', 'inventoryHighlight']
+const profileTabs = [
+  { key: 'scores', label: 'Scores' },
+  { key: 'statistics', label: 'Statistics' },
+  { key: 'milestones', label: 'Milestones' },
+  { key: 'inventory', label: 'Inventory' },
+  { key: 'campaigns', label: 'Campaigns' },
+]
 
-async function setTab(tab: string) {
+const tabParam = queryRef('tab')
+const activeTab = computed(() => {
+  if (profileTabs.some((t) => t.key === tabParam.value)) return tabParam.value
+  return route.query.inventoryHighlight ? 'inventory' : 'scores'
+})
+
+function setTab(tab: string) {
   if (tab === activeTab.value) return
-  const query = { ...route.query }
-  for (const key of TAB_QUERY_KEYS) delete query[key]
-  await router.replace({ query })
-  activeTab.value = tab
+  setQuery({
+    tab: tab === 'scores' ? undefined : tab,
+    sort: undefined,
+    order: undefined,
+    unowned: undefined,
+    inventoryHighlight: undefined,
+  })
 }
-const initialCategory = (route.query.category as CategoryCode) || 'overall'
-const activeCategory = ref<CategoryCode>(initialCategory === 'xp' ? 'overall' : initialCategory)
 
-watch(() => route.query.category, (newQueryCategory) => {
-  const newCategory = (newQueryCategory as CategoryCode) || 'overall'
-  const resolvedCategory = newCategory === 'xp' ? 'overall' : newCategory
-  if (activeCategory.value !== resolvedCategory) {
-    activeCategory.value = resolvedCategory
-  }
+const categoryParam = queryRef<CategoryCode>('category')
+const activeCategory = computed<CategoryCode>({
+  get: () => (!categoryParam.value || categoryParam.value === 'xp' ? 'overall' : categoryParam.value),
+  set: (value) => { categoryParam.value = value === 'overall' ? '' : value },
 })
 
 const scoreSearch = ref('')
@@ -270,7 +278,8 @@ async function onPinToggle(scoreId: string) {
   try {
     const { updateMyProfile } = await import('@/api/users')
     await updateMyProfile({ pinnedScores: buildPinnedPayload(nextIds) })
-    await fetchPinnedScores()
+    if (isCurrentlyPinned) pinnedScores.value = pinnedScores.value.filter((p) => p.score.id !== scoreId)
+    else await fetchPinnedScores()
   } catch {
   } finally {
     const next = new Set(pinPending.value)
@@ -279,15 +288,9 @@ async function onPinToggle(scoreId: string) {
   }
 }
 
-async function onUnpinFromCard(scoreId: string) {
-  await onPinToggle(scoreId)
-}
-
 const pinnedMilestones = ref<UserMilestoneProgressResponse[]>([])
 const pinnedMilestonesLoading = ref(false)
 const pinnedMilestoneIds = ref<Set<string>>(new Set())
-
-const milestoneGlyphs = ref<Map<string, MilestoneGlyphKey>>(new Map())
 
 async function fetchPinnedMilestones() {
   pinnedMilestonesLoading.value = true
@@ -298,10 +301,6 @@ async function fetchPinnedMilestones() {
     pinnedMilestones.value = []
   }
   pinnedMilestoneIds.value = new Set(pinnedMilestones.value.map((p) => p.milestoneId))
-  if (pinnedMilestones.value.length > 0 && milestoneGlyphs.value.size === 0) {
-    const { loadMilestoneGlyphs } = await import('@/composables/useMilestoneCatalog')
-    milestoneGlyphs.value = await loadMilestoneGlyphs()
-  }
   pinnedMilestonesLoading.value = false
 }
 
@@ -327,7 +326,8 @@ async function onMilestonePinToggle(milestoneId: string) {
     await updateMyProfile({
       pinnedMilestones: nextIds.map((id, displayOrder) => ({ milestoneId: id, displayOrder })),
     })
-    await fetchPinnedMilestones()
+    if (isPinned) pinnedMilestones.value = pinnedMilestones.value.filter((p) => p.milestoneId !== milestoneId)
+    else await fetchPinnedMilestones()
   } catch {
     pinnedMilestoneIds.value = new Set(currentIds)
   } finally {
@@ -346,18 +346,12 @@ async function onUpdateComment(payload: { scoreId: string, comment: string | nul
     await updateMyProfile({
       pinnedScores: buildPinnedPayload(currentIds, payload),
     })
-    await fetchPinnedScores()
+    pinnedScores.value = pinnedScores.value.map((p) =>
+      p.score.id === payload.scoreId ? { ...p, comment: payload.comment } : p,
+    )
   } catch {
   }
 }
-
-const profileTabs = [
-  { key: 'scores', label: 'Scores' },
-  { key: 'statistics', label: 'Statistics' },
-  { key: 'milestones', label: 'Milestones' },
-  { key: 'inventory', label: 'Inventory' },
-  { key: 'campaigns', label: 'Campaigns' },
-]
 
 const categoryAwareTabs = new Set(['scores', 'statistics'])
 
@@ -405,12 +399,16 @@ const activeStats = computed(() => {
 
 const accent = computed(() => categoryStore.getAccent(activeCategory.value))
 
+let statsDiffRequest = 0
+
 async function fetchStatsDiff() {
+  const request = ++statsDiffRequest
   try {
     const { getUserStatsDiff } = await import('@/api/users')
-    statsDiff.value = await getUserStatsDiff(userId.value, activeCategory.value)
+    const diff = await getUserStatsDiff(userId.value, activeCategory.value)
+    if (request === statsDiffRequest) statsDiff.value = diff
   } catch {
-    statsDiff.value = null
+    if (request === statsDiffRequest) statsDiff.value = null
   }
 }
 
@@ -426,35 +424,33 @@ const metaTitle = computed(() => {
 
 usePageMeta({ title: metaTitle })
 
-const globalRankRoute = computed(() => {
-  const ranking = activeStats.value?.ranking
+function rankRoute(ranking: number | null | undefined, country?: string | null) {
   if (!ranking) return null
-  const page = Math.ceil(ranking / 50)
   return {
     name: 'leaderboards-category',
     params: { categoryCode: activeCategory.value },
-    query: { page: String(page), highlight: userId.value },
+    query: { ...(country ? { country } : {}), page: String(Math.ceil(ranking / 50)), highlight: userId.value },
   }
-})
-
-const countryRankRoute = computed(() => {
-  const ranking = activeStats.value?.countryRanking
-  if (!ranking || !user.value) return null
-  const page = Math.ceil(ranking / 50)
-  return {
-    name: 'leaderboards-category',
-    params: { categoryCode: activeCategory.value },
-    query: { country: user.value.country, page: String(page), highlight: userId.value },
-  }
-})
-
-function navigateToGlobalRank() {
-  if (globalRankRoute.value) router.push(globalRankRoute.value)
 }
 
-function navigateToCountryRank() {
-  if (countryRankRoute.value) router.push(countryRankRoute.value)
-}
+const rankCells = computed(() => {
+  const s = activeStats.value
+  const d = statsDiff.value
+  return [
+    {
+      label: 'Global Rank',
+      value: s?.ranking ?? 0,
+      trend: d?.rankingDiff ? -d.rankingDiff : undefined,
+      to: rankRoute(s?.ranking),
+    },
+    {
+      label: 'Country Rank',
+      value: s?.countryRanking ?? 0,
+      trend: d?.countryRankingDiff ? -d.countryRankingDiff : undefined,
+      to: user.value?.country ? rankRoute(s?.countryRanking, user.value.country) : null,
+    },
+  ]
+})
 
 async function redirectToCanonicalProfile(canonicalId: string): Promise<boolean> {
   try {
@@ -470,9 +466,7 @@ async function redirectToCanonicalProfile(canonicalId: string): Promise<boolean>
   }
 }
 
-async function fetchProfile() {
-  loading.value = true
-  error.value = false
+function resetProfile() {
   user.value = null
   level.value = null
   stats.value = []
@@ -484,9 +478,18 @@ async function fetchProfile() {
   pinnedMilestoneIds.value = new Set()
   pinPending.value = new Set()
   milestonePinPending.value = new Set()
+}
+
+async function fetchProfile() {
+  loading.value = true
+  error.value = false
+  resetProfile()
 
   try {
-    const { getUser, getUserLevel, getUserAllStatistics } = await import('@/api/users')
+    const [{ getUser, getUserLevel, getUserAllStatistics }, itemsApi] = await Promise.all([
+      import('@/api/users'),
+      import('@/api/items'),
+    ])
 
     const userRes = await getUser(userId.value)
     if (userRes.id !== userId.value && (await redirectToCanonicalProfile(userRes.id))) return
@@ -497,7 +500,6 @@ async function fetchProfile() {
       return
     }
 
-    const itemsApi = await import('@/api/items')
     const equippedPromise = isSelfProfile.value
       ? inventoryStore.fetchEquipped(userId.value, true)
       : itemsApi.getUserEquippedItems(userId.value)
@@ -527,52 +529,19 @@ async function fetchProfile() {
     fetchPinnedMilestones()
   } catch {
     error.value = true
-    user.value = null
-    level.value = null
-    stats.value = []
-    xpStats.value = null
-    localEquipped.value = {}
-    ownedBadges.value = []
-    pinnedScores.value = []
-    pinnedMilestones.value = []
+    resetProfile()
   }
   loading.value = false
 }
 
 watch(userId, () => { fetchProfile() }, { immediate: true })
 
-watch(
-  () => isSelfProfile.value && inventoryStore.equippedUserId === userId.value
-    ? inventoryStore.equipped
-    : null,
-  async () => {
-    if (!isSelfProfile.value || !user.value) return
-    try {
-      const { getUserItems } = await import('@/api/items')
-      ownedBadges.value = await getUserItems(userId.value, { typeKey: 'badge' })
-    } catch {
-    }
-  },
-  { deep: true },
-)
 watch(isBlockedByMe, (blocked, wasBlocked) => {
   if (blocked === wasBlocked) return
   fetchProfile()
 })
-watch(activeCategory, (newCategory) => {
+watch(activeCategory, () => {
   if (user.value) fetchStatsDiff()
-
-  const queryCategory = (route.query.category as CategoryCode) || 'overall'
-  if (queryCategory === newCategory) return
-
-  const query = { ...route.query }
-  if (newCategory === 'overall') {
-    delete query.category
-  } else {
-    query.category = newCategory
-  }
-  delete query.page
-  router.replace({ query })
 })
 </script>
 
@@ -595,15 +564,7 @@ watch(activeCategory, (newCategory) => {
     </template>
 
     <template v-else>
-      <nav class="profile-page__breadcrumbs" aria-label="Breadcrumb">
-        <span class="profile-page__breadcrumbs-pill">
-          <router-link v-for="(crumb, i) in breadcrumbs" :key="i" :to="crumb.to ?? ''" class="profile-page__crumb"
-            :class="{ 'profile-page__crumb--link': !!crumb.to }">
-            {{ crumb.label }}
-            <span v-if="i < breadcrumbs.length - 1" class="profile-page__crumb-sep">/</span>
-          </router-link>
-        </span>
-      </nav>
+      <Breadcrumbs :crumbs="breadcrumbs" />
 
       <div class="profile-page__bg">
         <video
@@ -669,12 +630,7 @@ watch(activeCategory, (newCategory) => {
                     @change="setSyncName(($event.target as HTMLInputElement).checked)" />
                   <span class="profile-hero__sync-label">Sync display name from BeatLeader / ScoreSaber</span>
                 </label>
-                <p class="profile-hero__sync-help">
-                  When off, your custom name stays put. When on, your platform name overwrites it once a day.
-                </p>
-                <p v-if="syncResyncQueued" class="profile-hero__sync-notice">
-                  Will resync on next refresh (4 AM daily).
-                </p>
+                <p v-if="syncResyncQueued" class="profile-hero__sync-notice">Resyncs at 4 AM.</p>
               </div>
               <ProfileBadgesRow
                 v-if="ownedBadges.length"
@@ -712,28 +668,14 @@ watch(activeCategory, (newCategory) => {
                 <BaseButton size="sm" :href="`https://www.beatleader.com/u/${user.blId ?? user.id}`"
                   aria-label="View on BeatLeader">
                   <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                    style="border-radius: 3px;" decoding="async" />
+                    class="profile-hero__platform-icon" decoding="async" />
                 </BaseButton>
                 <BaseButton size="sm" :href="`https://scoresaber.com/u/${user.ssId ?? user.id}`"
                   aria-label="View on ScoreSaber">
                   <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                    style="border-radius: 3px;" decoding="async" />
+                    class="profile-hero__platform-icon" decoding="async" />
                 </BaseButton>
-                <BaseButton v-if="canSnipe" size="sm" variant="primary"
-                  aria-label="Snipe this player" title="Snipe this player"
-                  @click="router.push({ name: 'player-snipe', params: { userId: userId } })">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="9" />
-                    <circle cx="12" cy="12" r="3" />
-                    <line x1="12" y1="2" x2="12" y2="6" />
-                    <line x1="12" y1="18" x2="12" y2="22" />
-                    <line x1="2" y1="12" x2="6" y2="12" />
-                    <line x1="18" y1="12" x2="22" y2="12" />
-                  </svg>
-                  <span>Snipe</span>
-                </BaseButton>
-                <RelationActions :target-user-id="userId" :target-name="user.name" />
+                <RelationActions :target-user-id="userId" :target-name="user.name" show-snipe />
               </div>
             </div>
           </div>
@@ -753,7 +695,7 @@ watch(activeCategory, (newCategory) => {
               <circle cx="12" cy="12" r="10" />
               <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
             </svg>
-            <span>You have blocked this user. Their stats and scores are hidden.</span>
+            <span>You blocked this player.</span>
           </div>
 
           <template v-else>
@@ -768,27 +710,12 @@ watch(activeCategory, (newCategory) => {
                   <ApToNextTooltip :user-id="userId" :category="activeCategory" />
                 </template>
               </StatBlock>
-              <div class="profile-hero__rank-block profile-hero__rank-block--clickable" role="button" tabindex="0"
-                aria-label="View on global leaderboard" @click="navigateToGlobalRank"
-                @keydown.enter="navigateToGlobalRank">
-                <router-link v-if="globalRankRoute" :to="globalRankRoute" class="profile-hero__rank-link" tabindex="-1"
-                  aria-hidden="true" />
-                <StatBlock label="Global Rank" :value="activeStats?.ranking ?? 0" :decimals="0"
-                  :trend="statsDiff?.rankingDiff ? -statsDiff.rankingDiff : undefined" />
-                <span v-if="activeStats?.ranking && activeStats.ranking <= 3" class="profile-hero__rank-badge"
-                  :class="getRankClass(activeStats.ranking)">#{{ activeStats.ranking }}</span>
-              </div>
-              <div class="profile-hero__rank-block profile-hero__rank-block--clickable" role="button" tabindex="0"
-                aria-label="View on country leaderboard" @click="navigateToCountryRank"
-                @keydown.enter="navigateToCountryRank">
-                <router-link v-if="countryRankRoute" :to="countryRankRoute" class="profile-hero__rank-link"
-                  tabindex="-1" aria-hidden="true" />
-                <StatBlock label="Country Rank" :value="activeStats?.countryRanking ?? 0" :decimals="0"
-                  :trend="statsDiff?.countryRankingDiff ? -statsDiff.countryRankingDiff : undefined" />
-                <span v-if="activeStats?.countryRanking && activeStats.countryRanking <= 3"
-                  class="profile-hero__rank-badge" :class="getRankClass(activeStats.countryRanking)">#{{
-                    activeStats.countryRanking }}</span>
-              </div>
+              <component :is="cell.to ? RouterLink : 'div'" v-for="cell in rankCells" :key="cell.label"
+                v-bind="cell.to ? { to: cell.to } : {}" class="profile-hero__rank-block">
+                <StatBlock :label="cell.label" :value="cell.value" :decimals="0" :trend="cell.trend" />
+                <span v-if="cell.value && cell.value <= 3" class="profile-hero__rank-badge"
+                  :class="getRankClass(cell.value)">#{{ cell.value }}</span>
+              </component>
               <StatBlock label="Ranked Plays" :value="activeStats?.rankedPlays ?? 0" :decimals="0"
                 :trend="statsDiff?.rankedPlaysDiff" />
             </div>
@@ -817,11 +744,11 @@ watch(activeCategory, (newCategory) => {
 
         <PinnedScoresSection v-if="!hideReloadedProfileFeatures" :user-id="userId" :pinned="pinnedScores"
           :loading="pinnedLoading" :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
-          @unpin="onUnpinFromCard" @update-comment="onUpdateComment" />
+          :player="scorePlayer" @unpin="onPinToggle" @update-comment="onUpdateComment" />
 
         <PinnedMilestonesSection v-if="!hideReloadedProfileFeatures" :pinned="pinnedMilestones"
           :loading="pinnedMilestonesLoading" :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
-          :glyphs="milestoneGlyphs" @unpin="onMilestonePinToggle" />
+          @unpin="onMilestonePinToggle" />
 
         <div class="profile-page__tabs-row" :class="{ 'profile-page__wide': activeTab === 'scores' }">
           <BaseTabs :tabs="profileTabs" :model-value="activeTab" @update:model-value="setTab" />
@@ -834,6 +761,7 @@ watch(activeCategory, (newCategory) => {
         <div class="profile-page__content" :class="{ 'profile-page__wide': activeTab === 'scores' }">
           <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
             :search="scoreSearch" :is-self-profile="isSelfProfile" :pinned-score-ids="pinnedScoreIds"
+            :player="scorePlayer"
             :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle"
             @params-change="scorePlaylistParams = $event" @width-change="scoresTableWidth = $event" />
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
@@ -1172,13 +1100,6 @@ watch(activeCategory, (newCategory) => {
   font-weight: 500;
 }
 
-.profile-hero__sync-help {
-  margin: 0;
-  padding-left: 22px;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
 .profile-hero__sync-notice {
   margin: 0;
   padding-left: 22px;
@@ -1261,27 +1182,22 @@ watch(activeCategory, (newCategory) => {
 
 .profile-hero__rank-block {
   position: relative;
-}
-
-.profile-hero__rank-block--clickable {
-  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
   transition: background-color 120ms ease;
 }
 
-.profile-hero__rank-link {
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-.profile-hero__rank-block--clickable:hover {
+a.profile-hero__rank-block:hover {
   background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
-.profile-hero__rank-block--clickable:focus-visible {
+a.profile-hero__rank-block:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: -1px;
+}
+
+.profile-hero__platform-icon {
+  border-radius: var(--radius-btn);
 }
 
 .profile-hero__rank-badge {
@@ -1294,21 +1210,6 @@ watch(activeCategory, (newCategory) => {
   padding: 1px 5px;
   border-radius: var(--radius-pill);
   letter-spacing: 0.02em;
-}
-
-.profile-hero__rank--gold {
-  background: color-mix(in srgb, var(--tier-gold) 20%, transparent);
-  color: var(--tier-gold);
-}
-
-.profile-hero__rank--silver {
-  background: color-mix(in srgb, var(--tier-silver) 20%, transparent);
-  color: var(--tier-silver);
-}
-
-.profile-hero__rank--bronze {
-  background: color-mix(in srgb, var(--tier-bronze) 20%, transparent);
-  color: var(--tier-bronze);
 }
 
 .profile-page__bio {
@@ -1390,7 +1291,7 @@ watch(activeCategory, (newCategory) => {
   font-family: var(--font-mono);
   font-size: 0.9em;
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   background: var(--bg-elevated);
   color: var(--accent);
 }
@@ -1452,37 +1353,6 @@ watch(activeCategory, (newCategory) => {
   min-height: 400px;
 }
 
-.profile-page__breadcrumbs {
-  display: flex;
-}
-
-.profile-page__breadcrumbs-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: 0;
-}
-
-.profile-page__crumb {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.profile-page__crumb--link {
-  color: var(--text-primary);
-  transition: color 120ms ease;
-}
-
-.profile-page__crumb--link:hover {
-  color: var(--accent);
-}
-
-.profile-page__crumb-sep {
-  margin-left: var(--space-xs);
-  color: var(--text-secondary);
-}
-
 .profile-page__error {
   text-align: center;
   color: var(--text-secondary);
@@ -1510,11 +1380,7 @@ watch(activeCategory, (newCategory) => {
     justify-items: center;
     text-align: center;
     gap: var(--space-md);
-    padding: var(--space-lg) 0 var(--space-md);
-  }
-
-  .profile-hero {
-    padding-top: calc(var(--space-xl) + 36px);
+    padding: calc(var(--space-xl) + 36px) 0 var(--space-md);
   }
 
   .profile-hero > .profile-hero__details {
@@ -1559,6 +1425,7 @@ watch(activeCategory, (newCategory) => {
 
   .profile-hero__name-col {
     width: 100%;
+    align-items: center;
   }
 
   .profile-hero__name-row {
@@ -1568,10 +1435,6 @@ watch(activeCategory, (newCategory) => {
   .profile-hero__supporter {
     align-self: center;
     justify-content: center;
-  }
-
-  .profile-hero__name-col {
-    align-items: center;
   }
 
   .profile-hero__badges {

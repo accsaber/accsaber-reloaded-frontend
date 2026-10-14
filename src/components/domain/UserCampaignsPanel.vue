@@ -44,15 +44,12 @@ const filters = computed<CampaignFilterState>(() => ({
 
 const { tags, load: loadTags } = useCampaignTags()
 
-const { runs, loading, error, page, totalPages, reload } = useUserCampaigns(
+const { runs, loading, error, page, totalPages } = useUserCampaigns(
   () => props.userId,
   filters,
 )
 
-onMounted(() => {
-  void loadTags()
-  void reload()
-})
+onMounted(loadTags)
 </script>
 
 <template>

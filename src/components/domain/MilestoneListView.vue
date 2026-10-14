@@ -7,7 +7,7 @@ import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { Tab } from '@/types/display'
 import type { ResolvedSetGroup } from '@/types/milestones'
-import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
+import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -19,7 +19,6 @@ const props = defineProps<{
   groups?: ResolvedSetGroup[]
   standaloneSets?: MilestoneSetResponse[]
   defaultExpanded?: boolean
-  glyphs?: Map<string, MilestoneGlyphKey>
   pinnable?: boolean
   pinnedIds?: Set<string>
   canPinMore?: boolean
@@ -41,12 +40,9 @@ function pinDisabled(id: string): boolean {
 
 const expandedSets = ref<Set<string>>(new Set())
 const viewMode = ref('all')
-const activeSort = ref<string>(props.sort ?? 'tier')
-
-watch(() => props.sort, (v) => { if (v) activeSort.value = v })
+const activeSort = computed(() => props.sort ?? 'tier')
 
 function onSortChange(value: string) {
-  activeSort.value = value
   emit('update:sort', value as MilestoneSort)
 }
 
@@ -62,17 +58,10 @@ const sortOptions = computed(() => {
   return options
 })
 
-const viewTabs = computed<Tab[]>(() => {
-  const tabs: Tab[] = [
-    { key: 'all', label: 'All Progress' },
-  ]
-  if (props.loggedIn) {
-    tabs.push({ key: 'completed', label: `Completed (${completedMilestones.value.length})` })
-  } else {
-    tabs.push({ key: 'completed', label: 'Completed' })
-  }
-  return tabs
-})
+const viewTabs = computed<Tab[]>(() => [
+  { key: 'all', label: 'All Progress' },
+  { key: 'completed', label: props.loggedIn ? `Completed (${completedMilestones.value.length})` : 'Completed' },
+])
 
 interface MilestoneGroup {
   setId: string
@@ -117,17 +106,14 @@ const milestonesBySetId = computed(() => {
   const map = new Map<string, MilestoneCompletionResponse[]>()
   for (const m of activeMilestones.value) {
     const key = m.setId || 'uncategorized'
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(m)
+    const list = map.get(key)
+    if (list) list.push(m)
+    else map.set(key, [m])
   }
   return map
 })
 
-const setMap = computed(() => {
-  const map = new Map<string, MilestoneSetResponse>()
-  for (const s of props.sets) map.set(s.id, s)
-  return map
-})
+const setMap = computed(() => new Map(props.sets.map((s) => [s.id, s])))
 
 interface DisplayGroup {
   groupId: string
@@ -136,7 +122,7 @@ interface DisplayGroup {
   sets: MilestoneGroup[]
 }
 
-function buildDisplayGroupFromSets(groupId: string, groupName: string, groupDescription: string, groupSets: MilestoneSetResponse[]): DisplayGroup {
+function buildDisplayGroup(groupId: string, groupName: string, groupDescription: string, groupSets: MilestoneSetResponse[]): DisplayGroup {
   return {
     groupId,
     groupName,
@@ -148,30 +134,14 @@ function buildDisplayGroupFromSets(groupId: string, groupName: string, groupDesc
 }
 
 const displayGroups = computed<DisplayGroup[]>(() => {
-  const hasGroups = (props.groups?.length ?? 0) > 0
-
-  if (!hasGroups) {
-    const allSets: MilestoneGroup[] = []
-    for (const [setId, items] of milestonesBySetId.value) {
-      allSets.push(buildMilestoneGroup(setId, setMap.value.get(setId), items))
-    }
-    if (allSets.length === 0) return []
-    return [{ groupId: 'all', groupName: '', groupDescription: '', sets: allSets }]
+  if (!props.groups?.length) {
+    const sets = [...milestonesBySetId.value].map(([setId, items]) => buildMilestoneGroup(setId, setMap.value.get(setId), items))
+    return sets.length ? [{ groupId: 'all', groupName: '', groupDescription: '', sets }] : []
   }
-
-  const result: DisplayGroup[] = props.groups!.map((rg) =>
-    buildDisplayGroupFromSets(rg.group.id, rg.group.name, rg.group.description, rg.sets),
-  ).filter((dg) => dg.sets.length > 0)
-
-  const standalone = props.standaloneSets ?? []
-  if (standalone.length > 0) {
-    const standaloneGroup = buildDisplayGroupFromSets('standalone', 'Other', '', standalone)
-    if (standaloneGroup.sets.length > 0) {
-      result.push(standaloneGroup)
-    }
-  }
-
-  return result
+  return [
+    ...props.groups.map((rg) => buildDisplayGroup(rg.group.id, rg.group.name, rg.group.description, rg.sets)),
+    buildDisplayGroup('standalone', 'Other', '', props.standaloneSets ?? []),
+  ].filter((dg) => dg.sets.length > 0)
 })
 
 const allSets = computed<MilestoneGroup[]>(() =>
@@ -191,8 +161,6 @@ if (props.defaultExpanded) {
     for (const s of sets) expandedSets.value.add(s.setId)
   }, { immediate: true })
 }
-
-
 </script>
 
 <template>
@@ -212,7 +180,7 @@ if (props.defaultExpanded) {
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
       </svg>
-      <p>Log in with your Steam ID to track your milestone progress</p>
+      <p>Log in to track milestone progress</p>
     </div>
 
     <p v-else-if="allSets.length === 0" class="milestone-list-view__empty">
@@ -222,7 +190,7 @@ if (props.defaultExpanded) {
     <template v-else-if="isFlatSort">
       <div class="milestone-set__rows milestone-set__rows--flat">
         <MilestoneDetail v-for="m in activeMilestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-          :glyph="glyphs?.get(m.milestoneId)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+          :glyph="resolveMilestoneGlyph(m.iconGroup, m.querySpec)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
           :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
           compact @pin-toggle="emit('pin-toggle', $event)" />
       </div>
@@ -240,11 +208,8 @@ if (props.defaultExpanded) {
             @click="toggleSet(ms.setId)">
             <div class="milestone-set__info">
               <h3 class="milestone-set__title">{{ ms.setTitle }}</h3>
-              <span v-if="loggedIn" class="milestone-set__count">
-                {{ ms.completedCount }}/{{ ms.totalCount }} completed
-              </span>
-              <span v-else class="milestone-set__count">
-                {{ ms.totalCount }} milestones
+              <span class="milestone-set__count">
+                {{ loggedIn ? `${ms.completedCount}/${ms.totalCount} completed` : `${ms.totalCount} milestones` }}
               </span>
             </div>
             <div class="milestone-set__meta">
@@ -260,9 +225,9 @@ if (props.defaultExpanded) {
 
           <div v-if="expandedSets.has(ms.setId)" class="milestone-set__rows">
             <MilestoneDetail v-for="m in ms.milestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-              :glyph="glyphs?.get(m.milestoneId)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
-          :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
-          compact @pin-toggle="emit('pin-toggle', $event)" />
+              :glyph="resolveMilestoneGlyph(m.iconGroup, m.querySpec)" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+              :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
+              compact @pin-toggle="emit('pin-toggle', $event)" />
           </div>
         </div>
       </div>

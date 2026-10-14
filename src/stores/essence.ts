@@ -5,20 +5,17 @@ import { ref } from 'vue'
 export const useEssenceStore = defineStore('essence', () => {
   const balance = ref<number | null>(null)
   const reserved = ref<number | null>(null)
-  const loading = ref(false)
   const loaded = ref(false)
 
   async function fetchBalance(force = false): Promise<void> {
     if (!force && loaded.value) return
-    loading.value = true
     try {
       const res = await getEssenceBalance()
       balance.value = res.balance
       reserved.value = res.reserved ?? 0
       loaded.value = true
     } catch {
-    } finally {
-      loading.value = false
+      return
     }
   }
 
@@ -33,5 +30,5 @@ export const useEssenceStore = defineStore('essence', () => {
     loaded.value = false
   }
 
-  return { balance, reserved, loading, loaded, fetchBalance, setBalance, reset }
+  return { balance, reserved, loaded, fetchBalance, setBalance, reset }
 })

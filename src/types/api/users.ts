@@ -205,6 +205,7 @@ export interface UserMilestoneProgressResponse {
   type: MilestoneType
   tier: MilestoneTier
   iconGroup?: MilestoneIconGroup | null
+  querySpec?: Record<string, unknown> | null
   xp: number
   targetValue: number
   progress: number

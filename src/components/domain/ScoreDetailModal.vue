@@ -31,10 +31,17 @@ import { resolveReplayChain } from '@/utils/replay'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+export interface ScoreDetailPlayer {
+  user: UserResponse | null
+  level: LevelResponse | null
+  equipped: EquippedItemsResponse
+}
+
 const props = defineProps<{
   open: boolean
   score: ScoreDisplay | null
   userId: string
+  player?: ScoreDetailPlayer | null
 }>()
 
 const emit = defineEmits<{
@@ -69,9 +76,11 @@ const historicData = ref<ScoreResponse[]>([])
 const selectedMetric = ref<ScoreMetric>('accuracy')
 const selectedRange = ref<TimeRange>('30d')
 
-const player = ref<UserResponse | null>(null)
-const playerLevel = ref<LevelResponse | null>(null)
-const equipped = ref<EquippedItemsResponse>({})
+const fetchedPlayer = ref<ScoreDetailPlayer | null>(null)
+const resolvedPlayer = computed(() => props.player ?? fetchedPlayer.value)
+const playerUser = computed(() => resolvedPlayer.value?.user ?? null)
+const playerLevel = computed(() => resolvedPlayer.value?.level ?? null)
+const equipped = computed<EquippedItemsResponse>(() => resolvedPlayer.value?.equipped ?? {})
 const mapDifficulty = ref<PublicMapDifficultyResponse | null>(null)
 
 let lastFetchedUserId: string | null = null
@@ -89,12 +98,12 @@ const {
 
 const playerRef = computed<UserRefDisplay>(() => ({
   id: props.userId,
-  name: player.value?.name ?? props.score?.userName ?? '',
-  country: player.value?.country ?? null,
-  supporterTier: player.value?.supporterTier ?? props.score?.supporterTier ?? null,
-  clan: player.value?.clan ?? null,
+  name: playerUser.value?.name ?? props.score?.userName ?? '',
+  country: playerUser.value?.country ?? null,
+  supporterTier: playerUser.value?.supporterTier ?? props.score?.supporterTier ?? null,
+  clan: playerUser.value?.clan ?? null,
 }))
-const playerAvatar = computed(() => player.value?.cdnAvatarUrl ?? player.value?.avatarUrl ?? '')
+const playerAvatar = computed(() => playerUser.value?.cdnAvatarUrl ?? playerUser.value?.avatarUrl ?? '')
 const handleScoreCoverError = (e: Event) => {
   const img = e.currentTarget as HTMLImageElement
   const fb = props.score?.coverFallbackUrl
@@ -103,31 +112,16 @@ const handleScoreCoverError = (e: Event) => {
     img.src = fb
   }
 }
-const complexity = computed(() => mapDifficulty.value?.complexity ?? null)
-const difficultyRaw = computed(() => mapDifficulty.value?.difficulty ?? null)
-const characteristic = computed(() => mapDifficulty.value?.characteristic ?? null)
+const complexity = computed(() => props.score?.complexity ?? mapDifficulty.value?.complexity ?? null)
+const difficultyRaw = computed(() => props.score?.rawDifficulty ?? mapDifficulty.value?.difficulty ?? null)
+const characteristic = computed(() => props.score?.characteristic ?? mapDifficulty.value?.characteristic ?? null)
 const songSubName = computed(
   () => props.score?.mapSubName ?? mapDifficulty.value?.songSubName ?? null,
 )
 
 const isFc = computed(() => {
   const s = props.score
-  if (!s) return false
-  return (
-    (s.misses ?? 0) === 0
-    && (s.badCuts ?? 0) === 0
-    && (s.wallHits ?? 0) === 0
-    && (s.bombHits ?? 0) === 0
-  )
-})
-
-const hasPrecisionFlaws = computed(() => {
-  const s = props.score
-  if (!s || isFc.value) return false
-  return (s.misses ?? 0) > 0
-    || (s.badCuts ?? 0) > 0
-    || (s.wallHits ?? 0) > 0
-    || (s.bombHits ?? 0) > 0
+  return !!s && !s.misses && !s.badCuts && !s.wallHits && !s.bombHits
 })
 
 const detailParts = computed<string[]>(() => {
@@ -148,14 +142,11 @@ const showNoMods = computed(() => {
   return s.scoreNoMods !== s.score
 })
 
-const totalMapXp = computed(() =>
-  historicData.value.reduce((sum, s) => sum + (s.xpGained ?? 0), 0),
-)
-const totalBaseXp = computed(() =>
-  historicData.value.reduce((sum, s) => sum + (s.baseXp ?? 0), 0),
-)
-const totalBonusXp = computed(() =>
-  historicData.value.reduce((sum, s) => sum + (s.bonusXp ?? 0), 0),
+const xpTotals = computed(() =>
+  historicData.value.reduce(
+    (t, s) => ({ total: t.total + (s.xpGained ?? 0), base: t.base + (s.baseXp ?? 0), bonus: t.bonus + (s.bonusXp ?? 0) }),
+    { total: 0, base: 0, bonus: 0 },
+  ),
 )
 
 function scoreTypeLabel(s: ScoreResponse): string {
@@ -191,36 +182,27 @@ function buildTooltipLines(s: ScoreResponse, prev: ScoreResponse | null): string
   return lines
 }
 
+const METRIC_VALUE: Record<ScoreMetric, (s: ScoreResponse, cumulativeXp: number) => number> = {
+  accuracy: (s) => s.accuracy * 100,
+  ap: (s) => s.ap,
+  xpCumulative: (_, cumulativeXp) => cumulativeXp,
+  xpPerAttempt: (s) => s.xpGained ?? 0,
+}
+
 const chartPoints = computed<TimeSeriesPoint[]>(() => {
   const sorted = [...historicData.value].sort(
     (a, b) => new Date(a.timeSet).getTime() - new Date(b.timeSet).getTime(),
   )
-
-  if (selectedMetric.value === 'xpCumulative') {
-    let cumulative = 0
-    return sorted.map((s, i) => {
-      cumulative += s.xpGained ?? 0
-      return {
-        timestamp: new Date(s.timeSet).getTime(),
-        value: cumulative,
-        tooltipLines: buildTooltipLines(s, i > 0 ? sorted[i - 1] : null),
-      }
-    })
-  }
-
-  if (selectedMetric.value === 'xpPerAttempt') {
-    return sorted.map((s, i) => ({
+  const valueOf = METRIC_VALUE[selectedMetric.value]
+  let cumulativeXp = 0
+  return sorted.map((s, i) => {
+    cumulativeXp += s.xpGained ?? 0
+    return {
       timestamp: new Date(s.timeSet).getTime(),
-      value: s.xpGained ?? 0,
+      value: valueOf(s, cumulativeXp),
       tooltipLines: buildTooltipLines(s, i > 0 ? sorted[i - 1] : null),
-    }))
-  }
-
-  return sorted.map((s, i) => ({
-    timestamp: new Date(s.timeSet).getTime(),
-    value: selectedMetric.value === 'accuracy' ? s.accuracy * 100 : s.ap,
-    tooltipLines: buildTooltipLines(s, i > 0 ? sorted[i - 1] : null),
-  }))
+    }
+  })
 })
 
 const chartFormatValue = computed(() => {
@@ -253,11 +235,9 @@ async function fetchHistoric() {
   if (!props.score) return
   try {
     const { getUserScoresHistoric } = await import('@/api/users')
-    const params = TIME_RANGE_PARAMS[selectedRange.value]
     historicData.value = await getUserScoresHistoric(props.userId, {
       mapDifficultyId: props.score.mapDifficultyId,
-      amount: params.amount,
-      unit: params.unit,
+      ...TIME_RANGE_PARAMS[selectedRange.value],
     })
   } catch {
     historicData.value = []
@@ -265,29 +245,21 @@ async function fetchHistoric() {
 }
 
 async function fetchPlayer() {
-  if (!props.userId || props.userId === lastFetchedUserId) return
+  if (props.player || !props.userId || props.userId === lastFetchedUserId) return
   lastFetchedUserId = props.userId
-  try {
-    const usersApi = await import('@/api/users')
-    const itemsApi = await import('@/api/items')
-    const [u, lvl, eq] = await Promise.all([
-      usersApi.getUser(props.userId).catch(() => null),
-      usersApi.getUserLevel(props.userId).catch(() => null),
-      itemsApi.getUserEquippedItems(props.userId).catch(() => ({} as EquippedItemsResponse)),
-    ])
-    player.value = u
-    playerLevel.value = lvl
-    equipped.value = eq ?? {}
-  } catch {
-    player.value = null
-    playerLevel.value = null
-    equipped.value = {}
-  }
+  fetchedPlayer.value = null
+  const [usersApi, itemsApi] = await Promise.all([import('@/api/users'), import('@/api/items')])
+  const [user, level, equipped] = await Promise.all([
+    usersApi.getUser(props.userId).catch(() => null),
+    usersApi.getUserLevel(props.userId).catch(() => null),
+    itemsApi.getUserEquippedItems(props.userId).catch(() => ({} as EquippedItemsResponse)),
+  ])
+  fetchedPlayer.value = { user, level, equipped: equipped ?? {} }
 }
 
 async function fetchMapDifficulty() {
   const id = props.score?.mapDifficultyId
-  if (!id || id === lastFetchedDifficultyId) return
+  if (!id || props.score?.complexity != null || id === lastFetchedDifficultyId) return
   lastFetchedDifficultyId = id
   try {
     const { getDifficulty } = await import('@/api/maps')
@@ -306,17 +278,11 @@ watch(
 )
 
 watch(
-  [() => props.open, () => props.userId],
+  [() => props.open, () => props.userId, () => props.score?.mapDifficultyId],
   ([open]) => {
-    if (open) fetchPlayer()
-  },
-  { immediate: true },
-)
-
-watch(
-  [() => props.open, () => props.score?.mapDifficultyId],
-  ([open]) => {
-    if (open) fetchMapDifficulty()
+    if (!open) return
+    fetchPlayer()
+    fetchMapDifficulty()
   },
   { immediate: true },
 )
@@ -423,17 +389,17 @@ watch(
           <span class="score-detail__meta-sep">·</span>
           <span class="score-detail__meta-text">{{ part }}</span>
         </template>
-        <template v-if="hasPrecisionFlaws">
+        <template v-if="!isFc">
           <span class="score-detail__meta-sep">·</span>
           <span v-if="(score.misses ?? 0) > 0" class="score-detail__meta-bad">{{ score.misses }} {{ score.misses === 1 ? 'miss' : 'misses' }}</span>
           <span v-if="(score.badCuts ?? 0) > 0" class="score-detail__meta-bad">{{ score.badCuts }} bad</span>
           <span v-if="(score.wallHits ?? 0) > 0" class="score-detail__meta-bad">{{ score.wallHits }} {{ score.wallHits === 1 ? 'wall' : 'walls' }}</span>
           <span v-if="(score.bombHits ?? 0) > 0" class="score-detail__meta-bad">{{ score.bombHits }} {{ score.bombHits === 1 ? 'bomb' : 'bombs' }}</span>
         </template>
-        <span v-if="totalMapXp > 0" class="score-detail__xp" tabindex="0" aria-label="XP breakdown">
+        <span v-if="xpTotals.total > 0" class="score-detail__xp" tabindex="0" aria-label="XP breakdown">
           <span class="score-detail__xp-label">XP</span>
-          <span class="score-detail__xp-value">{{ totalMapXp.toFixed(1) }}</span>
-          <span class="score-detail__xp-breakdown">{{ totalBaseXp.toFixed(0) }}+<span class="score-detail__xp-bonus">{{ totalBonusXp.toFixed(1) }}</span></span>
+          <span class="score-detail__xp-value">{{ xpTotals.total.toFixed(1) }}</span>
+          <span class="score-detail__xp-breakdown">{{ xpTotals.base.toFixed(0) }}+<span class="score-detail__xp-bonus">{{ xpTotals.bonus.toFixed(1) }}</span></span>
           <svg class="score-detail__xp-help" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
@@ -443,18 +409,16 @@ watch(
           <span class="score-detail__xp-tooltip" role="tooltip">
             <span class="score-detail__xp-tooltip-row">
               <span class="score-detail__xp-tooltip-key">Base</span>
-              <span class="score-detail__xp-tooltip-val">{{ totalBaseXp.toFixed(1) }}</span>
+              <span class="score-detail__xp-tooltip-val">{{ xpTotals.base.toFixed(1) }}</span>
             </span>
-            <span class="score-detail__xp-tooltip-desc">Earned every attempt, scaled by accuracy.</span>
             <span class="score-detail__xp-tooltip-row">
               <span class="score-detail__xp-tooltip-key">Bonus</span>
-              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--bonus">{{ totalBonusXp.toFixed(1) }}</span>
+              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--bonus">{{ xpTotals.bonus.toFixed(1) }}</span>
             </span>
-            <span class="score-detail__xp-tooltip-desc">Awarded once when you set a new PB.</span>
             <span class="score-detail__xp-tooltip-divider" />
             <span class="score-detail__xp-tooltip-row">
               <span class="score-detail__xp-tooltip-key score-detail__xp-tooltip-key--total">Total</span>
-              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--total">{{ totalMapXp.toFixed(1) }}</span>
+              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--total">{{ xpTotals.total.toFixed(1) }}</span>
             </span>
           </span>
         </span>
@@ -528,7 +492,7 @@ watch(
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-btn);
   transition: color 120ms ease, background-color 120ms ease;
   z-index: 3;
 }
@@ -732,7 +696,7 @@ watch(
   color: var(--text-secondary);
   padding: 2px 6px;
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-btn);
   letter-spacing: 0.02em;
 }
 
@@ -869,7 +833,7 @@ watch(
   padding: 2px 8px;
   background: color-mix(in srgb, var(--detail-accent) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--detail-accent) 30%, var(--bg-overlay));
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-btn);
   cursor: help;
   outline: none;
 }
@@ -898,7 +862,7 @@ watch(
   min-width: 240px;
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;
@@ -961,13 +925,6 @@ watch(
 
 .score-detail__xp-tooltip-val--total {
   font-weight: 700;
-}
-
-.score-detail__xp-tooltip-desc {
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-  line-height: 1.4;
-  margin-bottom: 4px;
 }
 
 .score-detail__xp-tooltip-divider {

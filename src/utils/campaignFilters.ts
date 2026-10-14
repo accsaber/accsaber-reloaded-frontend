@@ -18,8 +18,6 @@ export interface CampaignFilterState {
   progressStatus: CampaignProgressFilter[]
 }
 
-export const PROGRESS_SORT_KEY = 'progress'
-
 export const BROWSE_SORT_OPTIONS: readonly CampaignSortOption[] = [
   { key: 'publishedAt', order: 'desc', label: 'Newest' },
   { key: 'voteScore', order: 'desc', label: 'Top rated' },
@@ -30,7 +28,7 @@ export const BROWSE_SORT_OPTIONS: readonly CampaignSortOption[] = [
 ]
 
 export const USER_CAMPAIGN_SORT_OPTIONS: readonly CampaignSortOption[] = [
-  { key: PROGRESS_SORT_KEY, order: 'desc', label: 'Progress' },
+  { key: 'progress', order: 'desc', label: 'Progress' },
   { key: 'publishedAt', order: 'desc', label: 'Newest' },
   { key: 'totalXp', order: 'desc', label: 'Most XP' },
   { key: 'totalRewardCount', order: 'desc', label: 'Most loot' },
@@ -41,7 +39,7 @@ export const USER_CAMPAIGN_SORT_OPTIONS: readonly CampaignSortOption[] = [
 export function createCampaignFilterState(): CampaignFilterState {
   return {
     search: '',
-    sort: PROGRESS_SORT_KEY,
+    sort: 'progress',
     order: 'desc',
     official: false,
     curated: false,
@@ -59,6 +57,6 @@ export function toUserCampaignParams(state: CampaignFilterState): UserCampaignLi
     loved: state.loved || undefined,
     status: state.curated ? ['CURATED'] : undefined,
     progressStatus: state.progressStatus.length > 0 ? state.progressStatus : undefined,
-    sort: state.sort === PROGRESS_SORT_KEY ? undefined : `${state.sort},${state.order}`,
+    sort: `${state.sort},${state.order}`,
   }
 }
