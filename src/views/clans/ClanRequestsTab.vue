@@ -34,7 +34,7 @@ const error = ref<string | null>(null)
 const inviteUserId = ref<string | null>(null)
 const inviting = ref(false)
 
-const pending = computed(() => (pageData.value?.content ?? []).filter((r) => r.status === 'pending'))
+const pending = computed(() => pageData.value?.content ?? [])
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 
 async function fetchRequests() {

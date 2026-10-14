@@ -3,11 +3,11 @@ import MissionRewards from '@/components/domain/MissionRewards.vue'
 import type { MissionResponse } from '@/types/api/missions'
 import { formatUnlockDate } from '@/utils/events'
 import {
-  formatMissionCountdown,
   formatMissionValue,
   missionProgressLabel,
   missionUnitLabel,
 } from '@/utils/missions'
+import { formatCountdown } from '@/utils/clans'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -71,7 +71,7 @@ const unlockLabel = computed(() =>
 
 const deadline = computed(() => {
   if (state.value !== 'active' || !props.mission.endsWithWeek || !props.mission.expiresAt) return null
-  return formatMissionCountdown(props.mission.expiresAt, props.now)
+  return formatCountdown(new Date(props.mission.expiresAt).getTime() - props.now, 'expired')
 })
 
 const urgent = computed(() =>

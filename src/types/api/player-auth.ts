@@ -1,4 +1,4 @@
-import type { PublicClanResponse } from './clans'
+import type { ClanRole, PublicClanResponse } from './clans'
 export type OAuthProvider = 'discord' | 'beatleader' | 'steam'
 
 export interface AuthConnection {
@@ -21,6 +21,7 @@ export interface AuthMeResponse {
   cdnAvatarUrl?: string | null
   country: string | null
   clan?: PublicClanResponse | null
+  clanRole?: ClanRole | null
   supporterTier?: string | null
   banned: boolean
   connections: AuthConnection[]

@@ -238,6 +238,15 @@ export function lockedRankSlots(steps: ClanLevelStepResponse[], level: number): 
   return slots
 }
 
+export function hasUnlocks(unlocks: ClanUnlocksResponse): boolean {
+  return (
+    unlocks.cosmetics.length > 0 ||
+    unlocks.arenas.length > 0 ||
+    unlocks.rulesets.length > 0 ||
+    Object.values(unlocks.capacities).some(Boolean)
+  )
+}
+
 export function unlockLines(unlocks: ClanUnlocksResponse): string[] {
   const lines: string[] = []
   for (const [capacity, amount] of Object.entries(unlocks.capacities) as [ClanCapacity, number][]) {
@@ -262,8 +271,8 @@ export function formatSignedStanding(value: number): string {
   return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString()}`
 }
 
-export function formatCountdown(ms: number): string {
-  if (ms <= 0) return 'now'
+export function formatCountdown(ms: number, zeroLabel = 'now'): string {
+  if (ms <= 0) return zeroLabel
   const totalMinutes = Math.floor(ms / 60000)
   const days = Math.floor(totalMinutes / 1440)
   const hours = Math.floor((totalMinutes % 1440) / 60)

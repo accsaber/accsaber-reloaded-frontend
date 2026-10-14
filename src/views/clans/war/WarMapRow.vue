@@ -10,7 +10,6 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   difficulty: PublicMapDifficultyResponse
-  muted?: boolean
 }>()
 
 const categoryStore = useCategoryStore()
@@ -18,7 +17,7 @@ const categoryCode = computed(() => categoryStore.getCategoryCode(props.difficul
 </script>
 
 <template>
-  <div class="war-map" :class="{ 'war-map--muted': muted }">
+  <div class="war-map">
     <img class="war-map__cover" :src="pickCoverUrl(difficulty)" alt="" loading="lazy" decoding="async" />
     <div class="war-map__body">
       <RouterLink class="war-map__title" :to="{ name: 'map-detail', params: { mapId: difficulty.mapId } }">
@@ -42,10 +41,6 @@ const categoryCode = computed(() => categoryStore.getCategoryCode(props.difficul
   align-items: center;
   gap: var(--space-md);
   min-width: 0;
-}
-
-.war-map--muted {
-  opacity: 0.55;
 }
 
 .war-map__cover {

@@ -6,9 +6,9 @@ import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { useNow } from '@/composables/useNow'
 import { useAuthStore } from '@/stores/auth'
 import type { ClanLevelStepResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
+import type { ItemResponse } from '@/types/api/items'
 import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
 import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, isPacifist, lockedRankSlots } from '@/utils/clans'
@@ -75,7 +75,9 @@ const {
   error,
   viewerRole,
   viewerClanId,
+  viewerInOtherClan,
   ownRole,
+  ownClan,
   ownPacifist,
   setOnline,
   pendingRequest,
@@ -140,7 +142,6 @@ const breadcrumbs = computed<Crumb[]>(() => [
   { label: 'Clans', to: { name: 'clans' } },
   { label: clan.value?.clan.name ?? 'Clan' },
 ])
-const viewerInOtherClan = computed(() => !!viewerClanId.value && viewerClanId.value !== clan.value?.clan.id)
 
 const chatClanId = computed(() => clan.value?.clan.id ?? null)
 const isMember = computed(() => viewerRole.value !== null)
@@ -151,12 +152,9 @@ const { chat, notices, status: chatStatus } = useClanChat(chatClanId, isMember, 
   },
 })
 
-const now = useNow(1000)
-const latestWar = ref<ClanWarResponse | null>(null)
 const recentWar = ref<ClanWarResponse | null>(null)
 useClanFeed(chatClanId, {
   onWar: (war) => {
-    latestWar.value = war
     recentWar.value = war
   },
 })
@@ -331,7 +329,7 @@ function askTransfer(member: PlayerRef) {
     run: async () => {
       const { transferClanFounder } = await import('@/api/clans')
       await transferClanFounder(id, { userId: member.id })
-      await reload()
+      await Promise.all([reload(), refreshViewer()])
     },
   })
 }
@@ -365,7 +363,7 @@ function claimClan() {
   return runAction(async () => {
     const { transferClanFounder } = await import('@/api/clans')
     await transferClanFounder(id, { userId: auth.userId! })
-    await reload()
+    await Promise.all([reload(), refreshViewer()])
   }, 'Could not claim the clan.')
 }
 
@@ -375,9 +373,11 @@ async function saveProfile(request: UpdateClanRequest) {
   editFieldErrors.value = {}
   try {
     const { updateClan } = await import('@/api/clans')
-    await updateClan(clan.value!.clan.id, request)
+    clan.value = await updateClan(clan.value!.clan.id, request)
     editOpen.value = false
-    await reload()
+    if (clan.value.clan.slug !== slugOrId.value) {
+      await router.replace({ params: { slugOrId: clan.value.clan.slug }, query: route.query })
+    }
   } catch (err) {
     const parsed = parseApiError(err, 'Could not save the clan.')
     const errors: Record<string, string> = {}
@@ -410,6 +410,10 @@ async function uploadIcon(file: File) {
 async function removeIcon() {
   const { deleteClanIcon } = await import('@/api/cdn')
   clan.value = await deleteClanIcon(clan.value!.clan.id)
+}
+
+function onEquipped(items: ItemResponse[]) {
+  if (clan.value) clan.value.clan.equipped = items
 }
 
 async function onMembershipChanged() {
@@ -471,7 +475,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         </template>
       </ClanHeader>
 
-      <ClanNowStrip :clan-id="clan.clan.id" :war="recentWar" :level="clan.level" :now="now" :show-level="activeTab !== 'level'" />
+      <ClanNowStrip :clan-id="clan.clan.id" :war="recentWar" :level="clan.level" :show-level="activeTab !== 'level'" />
 
       <div class="clan-page__tabs">
         <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="setTab" />
@@ -524,7 +528,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           @claim="claimClan"
         />
         <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
-        <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :latest-war="latestWar" :season-running="seasonRunning" />
+        <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" />
         <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
         <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
         <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
@@ -533,17 +537,17 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           v-else-if="activeTab === 'cosmetics'"
           :clan="clan"
           :can-customize="isFounder"
-          @changed="reload"
+          @equipped="onEquipped"
         />
         <ClanRequestsTab v-else-if="activeTab === 'requests'" :clan="clan" @changed="onMembershipChanged" />
         <ClanAuditTab v-else-if="activeTab === 'audit'" :clan="clan" />
       </div>
 
       <DeclareWarModal
-        v-if="viewerClanId && viewerInOtherClan"
+        v-if="ownClan && viewerInOtherClan"
         :open="declareOpen"
-        :own-clan-id="viewerClanId"
-        :preselected="clan.clan"
+        :own-clan="ownClan"
+        :preselected="clan"
         @close="declareOpen = false"
         @declared="onDeclared"
       />

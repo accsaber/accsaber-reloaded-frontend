@@ -77,9 +77,6 @@ function save() {
       <BaseButton size="sm" :disabled="saving" @click="emit('pacifism', !clan.pacifistFrom)">
         {{ clan.pacifistFrom ? 'Turn off' : 'Turn on' }}
       </BaseButton>
-      <p v-if="!clan.pacifistFrom" class="clan-edit__hint">
-        Needs no open wars. During a season it takes 7 days to turn on.
-      </p>
     </div>
 
     <p v-if="error" class="clan-edit__error" role="alert">{{ error }}</p>
@@ -120,13 +117,6 @@ function save() {
 .clan-edit__pacifism-state {
   font-size: var(--text-body);
   color: var(--text-primary);
-}
-
-.clan-edit__hint {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .clan-edit__error {

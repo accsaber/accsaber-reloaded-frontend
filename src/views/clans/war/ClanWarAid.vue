@@ -5,10 +5,10 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type {
   ClanWarAidResponse,
+  ClanResponse,
   ClanWarAidStatus,
   ClanWarResponse,
   ClanWarTeam,
-  PublicClanResponse,
 } from '@/types/api/clans'
 import { CLAN_WAR_TEAM_LABEL, WAR_TEAMS, warLeadFallen } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
@@ -60,6 +60,11 @@ const canOffer = computed(
 const warClanIds = computed(() => WAR_TEAMS.flatMap((team) => props.war[team].sides.map((s) => s.clan.id)))
 
 async function fetchAids() {
+  if (!open.value) {
+    aids.value = []
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = null
   try {
@@ -85,10 +90,10 @@ async function run(id: string, action: () => Promise<unknown>, fallback: string)
   }
 }
 
-function ask(clan: PublicClanResponse) {
+function ask(clan: ClanResponse) {
   return run('ask', async () => {
     const { requestClanWarAid } = await import('@/api/clans')
-    await requestClanWarAid(props.war.id, { clanId: clan.id })
+    await requestClanWarAid(props.war.id, { clanId: clan.clan.id })
     asking.value = false
   }, 'Could not ask that clan.')
 }

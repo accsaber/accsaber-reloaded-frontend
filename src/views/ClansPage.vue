@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
-import DataTable from '@/components/common/DataTable.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import ClanIcon from '@/components/domain/ClanIcon.vue'
-import ClanName from '@/components/domain/ClanName.vue'
-import ClanTag from '@/components/domain/ClanTag.vue'
 import RulesButton from '@/components/domain/RulesButton.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -19,7 +14,6 @@ import type {
   ClanResponse,
   ClanWarAidResponse,
   ClanWarAidStatus,
-  PublicClanResponse,
 } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { TableColumn } from '@/types/display'
@@ -33,13 +27,11 @@ import {
   hasClanRole,
   isPacifist,
 } from '@/utils/clans'
-import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import ClanAidList from './clans/ClanAidList.vue'
-import ClanPacifistBadge from './clans/ClanPacifistBadge.vue'
-import ClanPodium, { type PodiumEntry } from './clans/ClanPodium.vue'
 import ClanRequestList from './clans/ClanRequestList.vue'
+import ClanStandingsTable, { type StandingsRow } from './clans/ClanStandingsTable.vue'
 import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
 import { useOwnClan } from './clans/useOwnClan'
 
@@ -50,7 +42,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const { season, upcoming } = useCurrentClanSeason()
-const now = useNow(1000)
+const now = useNow()
 const title = computed(() => {
   if (season.value) return `Clans: ${season.value.name}`
   if (upcoming.value) {
@@ -94,17 +86,7 @@ const podiumEligible = computed(
     searchQuery.value.trim() === '',
 )
 
-interface ClanRow extends Record<string, unknown> {
-  rank: number
-  clan: PublicClanResponse
-  level: number
-  members: string
-  standing: string
-  founder: PlayerRef | null
-  pacifist: boolean
-}
-
-const allRows = computed<ClanRow[]>(() => {
+const rows = computed<StandingsRow[]>(() => {
   const content = pageData.value?.content ?? []
   const offset = (currentPage.value - 1) * PAGE_SIZE
   return content.map((entry, i) => ({
@@ -115,23 +97,12 @@ const allRows = computed<ClanRow[]>(() => {
     standing: formatStanding(entry.standing),
     founder: entry.founder,
     pacifist: isPacifist(entry),
+    meta: `Lv ${entry.level.level} · ${entry.memberCount}/${entry.memberCap}`,
   }))
 })
 
-const podium = computed<PodiumEntry[]>(() =>
-  podiumEligible.value
-    ? allRows.value.slice(0, 3).map((r) => ({ rank: r.rank, clan: r.clan, value: r.standing, pacifist: r.pacifist }))
-    : [],
-)
-
-const rows = computed<ClanRow[]>(() => (podiumEligible.value ? allRows.value.slice(3) : allRows.value))
-const showTable = computed(() => loading.value || rows.value.length > 0 || podium.value.length === 0)
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalClans = computed(() => pageData.value?.totalElements ?? 0)
-
-function rowTo(row: Record<string, unknown>) {
-  return { name: 'clan-detail', params: { slugOrId: (row.clan as PublicClanResponse).slug } }
-}
 
 async function fetchClans() {
   loading.value = true
@@ -161,7 +132,7 @@ async function fetchMyRequests() {
   try {
     const { getMyClanJoinRequests } = await import('@/api/clans')
     const page = await getMyClanJoinRequests({ page: 0, size: 50 })
-    myRequests.value = page.content.filter((r) => r.status === 'pending')
+    myRequests.value = page.content
   } catch {
     myRequests.value = []
   }
@@ -287,59 +258,22 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
       <SearchBox v-model="searchQuery" placeholder="Search clans..." />
     </div>
 
-    <ClanPodium v-if="podiumEligible && (loading || podium.length)" :entries="podium" :loading="loading" />
-
-    <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
-
-    <DataTable
-      v-if="showTable"
+    <ClanStandingsTable
       :columns="columns"
       :rows="rows"
-      :sort-state="sortState"
       :loading="loading"
-      :loading-rows="8"
-      :row-to="rowTo"
-      row-key="rank"
+      :podium="podiumEligible"
+      :page="currentPage"
+      :total-pages="totalPages"
+      :sort-state="sortState"
       empty-message="No clans found"
+      @page="setPage"
       @sort="setSort"
     >
-      <template #cell-rank="{ value }">
-        <span class="rank-cell" :class="getRankClass(value as number)">#{{ value }}</span>
-      </template>
-
-      <template #cell-clan="{ row }">
-        <span class="clans__identity">
-          <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
-          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
-          <ClanName class="clans__name" :clan="(row.clan as PublicClanResponse)" />
-          <ClanPacifistBadge v-if="row.pacifist" />
-        </span>
-      </template>
-
-      <template #cell-standing="{ value }">
-        <span class="clans__standing">{{ value }}</span>
-      </template>
-
       <template #cell-founder="{ row }">
         <UserChip v-if="row.founder" :user="(row.founder as PlayerRef)" size="sm" />
       </template>
-
-      <template #mobile-card="{ row }">
-        <RouterLink :to="rowTo(row)" class="clan-card">
-          <span class="rank-cell clan-card__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-          <span class="clan-card__identity">
-            <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
-          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
-            <ClanName class="clans__name" :clan="(row.clan as PublicClanResponse)" />
-            <ClanPacifistBadge v-if="row.pacifist" />
-            <span class="clan-card__meta">Lv {{ row.level }} · {{ row.members }}</span>
-          </span>
-          <span class="clans__standing">{{ row.standing }}</span>
-        </RouterLink>
-      </template>
-    </DataTable>
-
-    <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+    </ClanStandingsTable>
   </div>
 </template>
 
@@ -401,75 +335,4 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
   color: var(--error);
 }
 
-.clans__identity {
-  font-size: var(--text-card-title);
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.clans__name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.clans__standing {
-  font-weight: 600;
-  color: var(--page-accent, var(--accent));
-}
-
-.rank-cell {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.rank-cell.rank--gold {
-  color: var(--tier-gold);
-  font-weight: 700;
-}
-
-.rank-cell.rank--silver {
-  color: var(--tier-silver);
-  font-weight: 700;
-}
-
-.rank-cell.rank--bronze {
-  color: var(--tier-bronze);
-  font-weight: 700;
-}
-
-.clan-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-height: 56px;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  color: inherit;
-  text-decoration: none;
-}
-
-.clan-card__rank {
-  min-width: 36px;
-}
-
-.clan-card__identity {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs) var(--space-sm);
-  min-width: 0;
-}
-
-.clan-card__meta {
-  width: 100%;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
 </style>

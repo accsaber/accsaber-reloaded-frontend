@@ -17,7 +17,6 @@ const props = defineProps<{
   war: ClanWarResponse
   participants: ClanWarParticipantResponse[] | null
   incoming: ClanWarHitResponse | null
-  reloadKey: number
   now: number
 }>()
 
@@ -80,7 +79,7 @@ watch(player, () => {
   else page.value = 1
 })
 
-watch([page, () => props.reloadKey, () => props.war.id], fetchHits, { immediate: true })
+watch([page, () => props.war.id], fetchHits, { immediate: true })
 </script>
 
 <template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
-import BaseDropdown from '@/components/common/BaseDropdown.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
@@ -10,15 +10,13 @@ import {
   CLAN_WAR_TEAM_LABEL,
   formatStanding,
   WAR_TEAMS,
-  warClock,
   warLeadFallen,
-  warHeadline,
-  warModeLine,
   warSideStyles,
 } from '@/utils/clans'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
 import ClanWarSideRow from './ClanWarSideRow.vue'
+import WarClock from './WarClock.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -30,18 +28,10 @@ const emit = defineEmits<{
   retreat: []
 }>()
 
-const menuOpen = ref(false)
 const styles = computed(() => warSideStyles(props.war))
-const clock = computed(() => warClock(props.war, props.now))
-const headline = computed(() => warHeadline(props.war))
 const teams = computed(() =>
   WAR_TEAMS.map((team) => ({ team, label: CLAN_WAR_TEAM_LABEL[team], data: props.war[team], style: styles.value[team] })),
 )
-
-function retreat() {
-  menuOpen.value = false
-  emit('retreat')
-}
 </script>
 
 <template>
@@ -78,7 +68,7 @@ function retreat() {
         variant="warning"
         :dismissible="false"
       >
-        {{ entry.data.lead.name }} has fallen. Its allies are fighting on alone and no more help can join.
+        {{ entry.data.lead.name }} has fallen.
       </BaseBanner>
       <ul v-if="entry.data.sides.length > 1" class="hud__sides">
         <ClanWarSideRow v-for="side in entry.data.sides" :key="side.clan.id" :side="side" :now="now" />
@@ -87,31 +77,10 @@ function retreat() {
 
     <div class="hud__middle" :class="`hud__middle--${war.status}`">
       <span class="hud__status">{{ CLAN_WAR_STATUS_LABEL[war.status] }}</span>
-      <template v-if="headline">
-        <strong class="hud__headline">{{ headline }}</strong>
-        <span class="hud__clock-label">{{ clock.value }}</span>
-      </template>
-      <template v-else>
-        <span v-if="clock.value" class="hud__clock">{{ clock.value }}</span>
-        <span class="hud__clock-label">{{ clock.label }}</span>
-      </template>
-      <span class="hud__mode">{{ warModeLine(war) }}</span>
-
-      <BaseDropdown v-if="canRetreat" :open="menuOpen" position="bottom-right" @update:open="menuOpen = $event">
-        <template #trigger>
-          <button type="button" class="hud__menu-btn" aria-label="War menu" :aria-expanded="menuOpen">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="5" r="1" />
-              <circle cx="12" cy="12" r="1" />
-              <circle cx="12" cy="19" r="1" />
-            </svg>
-          </button>
-        </template>
-        <div class="hud__menu" role="menu">
-          <button type="button" class="hud__item" role="menuitem" @click="retreat">Retreat</button>
-        </div>
-      </BaseDropdown>
+      <WarClock :war="war" :now="now" large />
+      <BaseButton v-if="canRetreat" class="hud__retreat" variant="destructive" size="sm" @click="emit('retreat')">
+        Retreat
+      </BaseButton>
     </div>
   </header>
 </template>
@@ -252,70 +221,8 @@ function retreat() {
   border-color: var(--warning);
 }
 
-.hud__clock {
-  font-family: var(--font-mono);
-  font-size: calc(var(--text-page-title) * 1.25);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.hud__headline {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.hud__clock-label,
-.hud__mode {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.hud__menu-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+.hud__retreat {
   margin-top: var(--space-sm);
-  padding: 0;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.hud__menu-btn:hover,
-.hud__menu-btn[aria-expanded='true'] {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-  background: var(--bg-elevated);
-}
-
-.hud__menu {
-  display: flex;
-  flex-direction: column;
-  min-width: 160px;
-  padding: var(--space-xs);
-}
-
-.hud__item {
-  padding: var(--space-sm) var(--space-md);
-  font: inherit;
-  font-size: var(--text-body);
-  text-align: left;
-  color: var(--error);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.hud__item:hover {
-  background: color-mix(in srgb, var(--error) 12%, transparent);
 }
 
 @media (max-width: 720px) {
@@ -339,8 +246,7 @@ function retreat() {
     align-items: flex-end;
   }
 
-  .hud__remaining,
-  .hud__clock {
+  .hud__remaining {
     font-size: var(--text-page-title);
   }
 }

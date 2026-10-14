@@ -3,8 +3,6 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import ClanIcon from '@/components/domain/ClanIcon.vue'
-import ClanTag from '@/components/domain/ClanTag.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type {
   ClanAllianceResponse,
@@ -19,6 +17,7 @@ import { hasClanRole } from '@/utils/clans'
 import { formatFullDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import ClanLink from './ClanLink.vue'
 import ClanPicker from './ClanPicker.vue'
 
 const PAGE_SIZE = 20
@@ -42,14 +41,15 @@ const proposals = ref<ClanAllianceResponse[]>([])
 const called = ref<ClanRivalResponse[]>([])
 const calledBy = ref<ClanRivalResponse[]>([])
 const allySlots = ref<number | null>(null)
-const loading = ref(true)
+const pending = ref(0)
+const loading = computed(() => pending.value > 0)
 const busyId = ref<string | null>(null)
 const error = ref<string | null>(null)
 
 const isFounder = computed(() => hasClanRole(props.viewerRole, 'founder'))
 const isCommander = computed(() => hasClanRole(props.viewerRole, 'commander'))
 const clanId = computed(() => props.clan.clan.id)
-const activeAlliances = computed(() => (alliances.value?.content ?? []).filter((a) => a.status === 'active'))
+const activeAlliances = computed(() => alliances.value?.content ?? [])
 const totalPages = computed(() => alliances.value?.totalPages ?? 0)
 const takenIds = computed(() => [
   clanId.value,
@@ -58,37 +58,51 @@ const takenIds = computed(() => [
   ...called.value.map((r) => r.clan.id),
 ])
 
-async function fetchAll() {
-  loading.value = true
+async function fetchAlliances() {
+  const api = await import('@/api/clans')
+  const [allies, pending] = await Promise.all([
+    api.getClanAlliances(clanId.value, { page: paginationParams.value.page, size: PAGE_SIZE }),
+    isFounder.value
+      ? api.getClanAllianceProposals(clanId.value, { page: 0, size: 50 }).catch(() => null)
+      : Promise.resolve(null),
+  ])
+  alliances.value = allies
+  proposals.value = pending?.content ?? []
+}
+
+async function fetchRivals() {
+  const api = await import('@/api/clans')
+  const [outgoing, incoming] = await Promise.all([
+    api.getClanRivals(clanId.value, { page: 0, size: 50 }),
+    api.getClanRivals(clanId.value, { page: 0, size: 50, incoming: true }),
+  ])
+  called.value = outgoing.content
+  calledBy.value = incoming.content
+}
+
+async function fetchAllySlots() {
+  const { getClanLevel } = await import('@/api/clans')
+  const level = await getClanLevel(clanId.value).catch(() => null)
+  allySlots.value = level?.unlocked.capacities.ally_slots ?? 0
+}
+
+async function load(task: Promise<void>) {
+  pending.value += 1
   try {
-    const api = await import('@/api/clans')
-    const [allies, outgoing, incoming, level, pending] = await Promise.all([
-      api.getClanAlliances(clanId.value, { page: paginationParams.value.page, size: PAGE_SIZE }),
-      api.getClanRivals(clanId.value, { page: 0, size: 50 }),
-      api.getClanRivals(clanId.value, { page: 0, size: 50, incoming: true }),
-      api.getClanLevel(clanId.value).catch(() => null),
-      isFounder.value
-        ? api.getClanAllianceProposals(clanId.value, { page: 0, size: 50 }).catch(() => null)
-        : Promise.resolve(null),
-    ])
-    alliances.value = allies
-    called.value = outgoing.content
-    calledBy.value = incoming.content
-    allySlots.value = level?.unlocked.capacities.ally_slots ?? 0
-    proposals.value = (pending?.content ?? []).filter((a) => a.status === 'pending')
+    await task
   } catch (err) {
     error.value = parseApiError(err, 'Could not load diplomacy.').message
   } finally {
-    loading.value = false
+    pending.value -= 1
   }
 }
 
-async function run(id: string, action: () => Promise<unknown>, fallback: string) {
+async function run(id: string, action: () => Promise<unknown>, refresh: () => Promise<void>, fallback: string) {
   busyId.value = id
   error.value = null
   try {
     await action()
-    await fetchAll()
+    await refresh()
   } catch (err) {
     error.value = parseApiError(err, fallback).message
   } finally {
@@ -100,6 +114,7 @@ function resolveAlliance(alliance: ClanAllianceResponse, status: ClanAllianceSta
   return run(
     alliance.id,
     async () => (await import('@/api/clans')).resolveClanAlliance(alliance.id, { status }),
+    fetchAlliances,
     'Could not update that alliance.',
   )
 }
@@ -108,6 +123,7 @@ function propose(target: PublicClanResponse) {
   return run(
     'propose',
     async () => (await import('@/api/clans')).proposeClanAlliance(clanId.value, { clanId: target.id }),
+    fetchAlliances,
     'Could not propose that alliance.',
   )
 }
@@ -116,6 +132,7 @@ function callRival(target: PublicClanResponse) {
   return run(
     'rival',
     async () => (await import('@/api/clans')).declareClanRival(clanId.value, { clanId: target.id }),
+    fetchRivals,
     'Could not call that rival.',
   )
 }
@@ -150,11 +167,13 @@ function dropRival(rival: ClanRivalResponse) {
   return run(
     rival.clan.id,
     async () => (await import('@/api/clans')).dropClanRival(clanId.value, rival.clan.id),
+    fetchRivals,
     'Could not drop that rival.',
   )
 }
 
-watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
+load(Promise.all([fetchRivals(), fetchAllySlots()]).then(() => undefined))
+watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), { immediate: true })
 </script>
 
 <template>
@@ -165,14 +184,14 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
       <header class="diplomacy__head">
         <h2 class="diplomacy__title">
           Alliances
-          <span v-if="allySlots !== null" class="diplomacy__slots">{{ activeAlliances.length }}/{{ allySlots }}</span>
+          <span v-if="allySlots !== null" class="diplomacy__slots">{{ alliances?.totalElements ?? 0 }}/{{ allySlots }}</span>
         </h2>
         <ClanPicker
           v-if="isFounder"
           :exclude-ids="takenIds"
           :disabled="busyId === 'propose'"
           placeholder="Propose an alliance..."
-          @select="propose"
+          @select="propose($event.clan)"
         />
       </header>
 
@@ -183,11 +202,7 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
 
       <ul v-else class="diplomacy__list">
         <li v-for="proposal in proposals" :key="proposal.id" class="diplomacy__row diplomacy__row--pending">
-          <RouterLink class="diplomacy__clan" :to="{ name: 'clan-detail', params: { slugOrId: proposal.ally.slug } }">
-            <ClanIcon :clan="proposal.ally" :size="32" />
-            <ClanTag :clan="proposal.ally" size="md" effects />
-            <span class="diplomacy__name">{{ proposal.ally.name }}</span>
-          </RouterLink>
+          <ClanLink :clan="proposal.ally" />
           <span class="diplomacy__meta">{{ proposal.incoming ? 'Proposed to you' : 'Proposal sent' }}</span>
           <span class="diplomacy__actions">
             <template v-if="proposal.incoming">
@@ -199,11 +214,7 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
         </li>
 
         <li v-for="alliance in activeAlliances" :key="alliance.id" class="diplomacy__row">
-          <RouterLink class="diplomacy__clan" :to="{ name: 'clan-detail', params: { slugOrId: alliance.ally.slug } }">
-            <ClanIcon :clan="alliance.ally" :size="32" />
-            <ClanTag :clan="alliance.ally" size="md" effects />
-            <span class="diplomacy__name">{{ alliance.ally.name }}</span>
-          </RouterLink>
+          <ClanLink :clan="alliance.ally" />
           <span class="diplomacy__meta">
             {{ alliance.warsFoughtTogether }} {{ alliance.warsFoughtTogether === 1 ? 'war' : 'wars' }} together · since {{ formatFullDate(alliance.acceptedAt ?? alliance.createdAt) }}
           </span>
@@ -232,7 +243,7 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
           :exclude-ids="takenIds"
           :disabled="busyId === 'rival'"
           placeholder="Call a rival..."
-          @select="callRival"
+          @select="callRival($event.clan)"
         />
       </header>
 
@@ -240,11 +251,7 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
 
       <ul v-if="rivals.length" class="diplomacy__list">
         <li v-for="rival in rivals" :key="rival.clan.id" class="diplomacy__row">
-          <RouterLink class="diplomacy__clan" :to="{ name: 'clan-detail', params: { slugOrId: rival.clan.slug } }">
-            <ClanIcon :clan="rival.clan" :size="32" />
-            <ClanTag :clan="rival.clan" size="md" effects />
-            <span class="diplomacy__name">{{ rival.clan.name }}</span>
-          </RouterLink>
+          <ClanLink :clan="rival.clan" />
           <span class="diplomacy__meta">{{ rivalLine(rival) }}</span>
           <span class="diplomacy__actions">
             <BaseButton
@@ -344,28 +351,6 @@ watch(() => [route.query.page, props.viewerRole], fetchAll, { immediate: true })
 
 .diplomacy__row--pending {
   background: var(--bg-elevated);
-}
-
-.diplomacy__clan {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-  font-size: var(--text-card-title);
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
-.diplomacy__name {
-  font-size: var(--text-body);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.diplomacy__clan:hover .diplomacy__name {
-  color: var(--page-accent, var(--accent));
 }
 
 .diplomacy__meta {

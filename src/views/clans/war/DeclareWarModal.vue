@@ -15,7 +15,6 @@ import type {
   ClanRuleset,
   ClanUnlocksResponse,
   ClanWarDetailResponse,
-  PublicClanResponse,
 } from '@/types/api/clans'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import { attackerPickCount, CLAN_ARENA_LABEL, CLAN_RULESET_LABEL } from '@/utils/clans'
@@ -30,8 +29,8 @@ const RULESETS: ClanRuleset[] = ['duel', 'berserker']
 
 const props = defineProps<{
   open: boolean
-  ownClanId: string
-  preselected?: PublicClanResponse | null
+  ownClan: ClanResponse
+  preselected?: ClanResponse | null
 }>()
 
 const emit = defineEmits<{
@@ -41,11 +40,9 @@ const emit = defineEmits<{
 
 const categoryStore = useCategoryStore()
 
-const own = ref<ClanResponse | null>(null)
 const unlocked = ref<ClanUnlocksResponse | null>(null)
 const steps = ref<ClanLevelStepResponse[]>([])
-const target = ref<PublicClanResponse | null>(null)
-const targetStanding = ref<number | null>(null)
+const target = ref<ClanResponse | null>(null)
 const arena = ref<ClanArena>('mixed')
 const ruleset = ref<ClanRuleset>('duel')
 const categoryId = ref('')
@@ -61,8 +58,8 @@ const categoryOptions = computed(() =>
 )
 
 const pickCount = computed(() => {
-  if (arena.value === 'random' || !own.value || targetStanding.value === null) return 0
-  return attackerPickCount(own.value.standing, targetStanding.value)
+  if (arena.value === 'random' || !target.value) return 0
+  return attackerPickCount(props.ownClan.standing, target.value.standing)
 })
 
 const turfCategoryId = computed(() => (arena.value === 'category_turf' ? categoryId.value || null : null))
@@ -77,9 +74,9 @@ const ready = computed(() => {
   return arena.value === 'random' || picks.value.length === pickCount.value
 })
 
-function unlockLevel(axis: 'arenas' | 'rulesets', mode: string): number | null {
+function lockLabel(axis: 'arenas' | 'rulesets', mode: string): string {
   const step = steps.value.find((s) => (s.unlocks[axis] as string[]).includes(mode))
-  return step ? step.level : null
+  return step ? `Level ${step.level}` : 'Locked'
 }
 
 async function load() {
@@ -87,12 +84,7 @@ async function load() {
   error.value = null
   try {
     const api = await import('@/api/clans')
-    const [clan, level, table] = await Promise.all([
-      api.getClan(props.ownClanId),
-      api.getClanLevel(props.ownClanId),
-      loadClanLevels(),
-    ])
-    own.value = clan
+    const [level, table] = await Promise.all([api.getClanLevel(props.ownClan.clan.id), loadClanLevels()])
     unlocked.value = level.unlocked
     steps.value = table
     arena.value = level.unlocked.arenas.includes('mixed') ? 'mixed' : (level.unlocked.arenas[0] ?? 'mixed')
@@ -104,18 +96,6 @@ async function load() {
   }
 }
 
-async function selectTarget(clan: PublicClanResponse | null) {
-  target.value = clan
-  targetStanding.value = null
-  if (!clan) return
-  try {
-    const { getClan } = await import('@/api/clans')
-    targetStanding.value = (await getClan(clan.id)).standing
-  } catch {
-    targetStanding.value = 0
-  }
-}
-
 async function submit() {
   if (!ready.value || saving.value || !target.value) return
   saving.value = true
@@ -123,8 +103,8 @@ async function submit() {
   fieldErrors.value = {}
   try {
     const { declareClanWar } = await import('@/api/clans')
-    const detail = await declareClanWar(props.ownClanId, {
-      clanId: target.value.id,
+    const detail = await declareClanWar(props.ownClan.clan.id, {
+      clanId: target.value.clan.id,
       arena: arena.value,
       ruleset: ruleset.value,
       categoryId: turfCategoryId.value ?? undefined,
@@ -152,7 +132,7 @@ watch(
     categoryId.value = ''
     complexity.value = [0, COMPLEXITY_MAX]
     fieldErrors.value = {}
-    void selectTarget(props.preselected ?? null)
+    target.value = props.preselected ?? null
     void load()
   },
   { immediate: true },
@@ -170,16 +150,21 @@ watch(arena, () => {
       <SkeletonLoader variant="card" height="120px" />
     </div>
 
-    <div v-else-if="own && unlocked" class="declare">
+    <div v-else-if="unlocked" class="declare">
       <section class="declare__step">
         <h3 class="declare__label">Target</h3>
         <div v-if="target" class="declare__target">
-          <ClanIcon :clan="target" :size="32" />
-          <ClanTag :clan="target" size="md" />
-          <span class="declare__target-name">{{ target.name }}</span>
-          <BaseButton size="sm" :disabled="saving" @click="selectTarget(null)">Change</BaseButton>
+          <ClanIcon :clan="target.clan" :size="32" />
+          <ClanTag :clan="target.clan" size="md" />
+          <span class="declare__target-name">{{ target.clan.name }}</span>
+          <BaseButton size="sm" :disabled="saving" @click="target = null">Change</BaseButton>
         </div>
-        <ClanPicker v-else :exclude-ids="[ownClanId]" placeholder="Search a clan to attack..." @select="selectTarget" />
+        <ClanPicker
+          v-else
+          :exclude-ids="[ownClan.clan.id]"
+          placeholder="Search a clan to attack..."
+          @select="target = $event"
+        />
         <p v-if="fieldErrors.clanId" class="declare__error" role="alert">{{ fieldErrors.clanId }}</p>
       </section>
 
@@ -198,9 +183,7 @@ watch(arena, () => {
             @click="arena = option"
           >
             <span>{{ CLAN_ARENA_LABEL[option] }}</span>
-            <span v-if="!unlocked.arenas.includes(option)" class="declare__lock">
-              {{ unlockLevel('arenas', option) === null ? 'Locked' : `Level ${unlockLevel('arenas', option)}` }}
-            </span>
+            <span v-if="!unlocked.arenas.includes(option)" class="declare__lock">{{ lockLabel('arenas', option) }}</span>
           </button>
         </div>
         <p v-if="fieldErrors.arena" class="declare__error" role="alert">{{ fieldErrors.arena }}</p>
@@ -240,10 +223,7 @@ watch(arena, () => {
             @click="ruleset = option"
           >
             <span>{{ CLAN_RULESET_LABEL[option] }}</span>
-            <span v-if="option === 'berserker'" class="declare__lock">Offer, the defender has to accept</span>
-            <span v-if="!unlocked.rulesets.includes(option)" class="declare__lock">
-              {{ unlockLevel('rulesets', option) === null ? 'Locked' : `Level ${unlockLevel('rulesets', option)}` }}
-            </span>
+            <span v-if="!unlocked.rulesets.includes(option)" class="declare__lock">{{ lockLabel('rulesets', option) }}</span>
           </button>
         </div>
       </section>
@@ -251,7 +231,6 @@ watch(arena, () => {
       <section v-if="arena !== 'random'" class="declare__step">
         <h3 class="declare__label">Your picks</h3>
         <p v-if="!target" class="declare__hint">Pick a target first.</p>
-        <p v-else-if="targetStanding === null" class="declare__hint">Working out the pick count...</p>
         <WarMapPicker
           v-else
           v-model="picks"

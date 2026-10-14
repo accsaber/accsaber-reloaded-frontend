@@ -2,11 +2,13 @@
 import ChatPanel from '@/components/domain/ChatPanel.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { UseChatReturn } from '@/composables/useChat'
+import type { ChatMessageResponse } from '@/types/api/chat'
 import type { ConnectionStatus } from '@/types/display'
 import ClanChatEvent from './ClanChatEvent.vue'
+import type { RouteLocationRaw } from 'vue-router'
 import type { PresenceNotice } from './useClanChat'
 
-defineProps<{
+const props = defineProps<{
   chat: UseChatReturn
   notices?: PresenceNotice[]
   status?: ConnectionStatus
@@ -16,6 +18,14 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+function eventTo(message: ChatMessageResponse): RouteLocationRaw | null {
+  if (message.war) return { name: 'clan-war', params: { warId: message.war.id } }
+  if (message.event === 'missions_refreshed' && props.clanSlug) {
+    return { name: 'clan-detail', params: { slugOrId: props.clanSlug }, query: { tab: 'missions' } }
+  }
+  return null
+}
 </script>
 
 <template>
@@ -33,18 +43,7 @@ const emit = defineEmits<{ close: [] }>()
       @close="emit('close')"
     >
       <template #event="{ message, count }">
-        <RouterLink
-          v-if="message.war"
-          class="clan-chat__event-link"
-          :to="{ name: 'clan-war', params: { warId: message.war.id } }"
-        >
-          <ClanChatEvent :message="message" :count="count" />
-        </RouterLink>
-        <RouterLink
-          v-else-if="message.event === 'missions_refreshed' && clanSlug"
-          class="clan-chat__event-link"
-          :to="{ name: 'clan-detail', params: { slugOrId: clanSlug }, query: { tab: 'missions' } }"
-        >
+        <RouterLink v-if="eventTo(message)" class="clan-chat__event-link" :to="eventTo(message)!">
           <ClanChatEvent :message="message" :count="count" />
         </RouterLink>
         <ClanChatEvent v-else :message="message" :count="count" />

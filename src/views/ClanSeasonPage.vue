@@ -1,31 +1,25 @@
 <script setup lang="ts">
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
-import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import ClanIcon from '@/components/domain/ClanIcon.vue'
-import ClanName from '@/components/domain/ClanName.vue'
-import ClanTag from '@/components/domain/ClanTag.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useNow } from '@/composables/useNow'
-import type { ClanSeasonResponse, ClanStandingResponse, PublicClanResponse } from '@/types/api/clans'
+import type { ClanSeasonResponse, ClanStandingResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { formatCountdown, formatSignedStanding, formatStanding, isSeasonRunning } from '@/utils/clans'
 import { formatFullDate } from '@/utils/formatters'
 import { isUuid } from '@/utils/mapRoute'
-import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ClanPodium, { type PodiumEntry } from './clans/ClanPodium.vue'
+import ClanStandingsTable, { type StandingsRow } from './clans/ClanStandingsTable.vue'
 
 const PAGE_SIZE = 25
 
 const route = useRoute()
 const router = useRouter()
-const now = useNow(1000)
+const now = useNow()
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'rank',
@@ -68,7 +62,7 @@ const columns: TableColumn[] = [
   { key: 'standing', label: 'Standing', align: 'right', mono: true, width: '140px' },
 ]
 
-const allRows = computed(() =>
+const rows = computed<StandingsRow[]>(() =>
   (pageData.value?.content ?? []).map((entry) => ({
     rank: entry.rank,
     clan: entry.clan,
@@ -77,19 +71,7 @@ const allRows = computed(() =>
     standing: formatStanding(entry.standing),
   })),
 )
-const podiumEligible = computed(() => currentPage.value === 1)
-const podium = computed<PodiumEntry[]>(() =>
-  podiumEligible.value
-    ? allRows.value.slice(0, 3).map((r) => ({ rank: r.rank, clan: r.clan, value: r.standing }))
-    : [],
-)
-const rows = computed(() => (podiumEligible.value ? allRows.value.slice(3) : allRows.value))
-const showTable = computed(() => loading.value || rows.value.length > 0 || podium.value.length === 0)
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
-
-function rowTo(row: Record<string, unknown>) {
-  return { name: 'clan-detail', params: { slugOrId: (row.clan as PublicClanResponse).slug } }
-}
 
 async function loadSeason(key: string) {
   seasonLoading.value = true
@@ -151,49 +133,17 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
 
     <EmptyState v-if="error" :message="error" />
 
-    <template v-else>
-      <ClanPodium v-if="podiumEligible && (loading || podium.length)" :entries="podium" :loading="loading" />
-
-      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
-
-      <DataTable
-        v-if="showTable"
-        :columns="columns"
-        :rows="rows"
-        :loading="loading"
-        :loading-rows="8"
-        :row-to="rowTo"
-        row-key="rank"
-        empty-message="No clans placed this season"
-      >
-        <template #cell-rank="{ value }">
-          <span class="rank-cell" :class="getRankClass(value as number)">#{{ value }}</span>
-        </template>
-        <template #cell-clan="{ row }">
-          <span class="season__identity">
-            <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
-          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
-            <ClanName class="season__name" :clan="(row.clan as PublicClanResponse)" />
-          </span>
-        </template>
-        <template #cell-standing="{ value }">
-          <span class="season__standing">{{ value }}</span>
-        </template>
-        <template #mobile-card="{ row }">
-          <RouterLink :to="rowTo(row)" class="season-row">
-            <span class="rank-cell season-row__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
-            <span class="season__identity season-row__identity">
-              <ClanIcon :clan="(row.clan as PublicClanResponse)" :size="32" />
-          <ClanTag :clan="(row.clan as PublicClanResponse)" size="md" effects />
-              <ClanName class="season__name" :clan="(row.clan as PublicClanResponse)" />
-            </span>
-            <span class="season__standing">{{ row.standing }}</span>
-          </RouterLink>
-        </template>
-      </DataTable>
-
-      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
-    </template>
+    <ClanStandingsTable
+      v-else
+      :columns="columns"
+      :rows="rows"
+      :loading="loading"
+      :podium="currentPage === 1"
+      :page="currentPage"
+      :total-pages="totalPages"
+      empty-message="No clans placed this season"
+      @page="setPage"
+    />
   </div>
 </template>
 
@@ -241,63 +191,4 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
   color: var(--text-tertiary);
 }
 
-.season__identity {
-  font-size: var(--text-card-title);
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.season__name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.season__standing {
-  font-weight: 600;
-  color: var(--page-accent, var(--accent));
-}
-
-.rank-cell {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.rank-cell.rank--gold {
-  color: var(--tier-gold);
-  font-weight: 700;
-}
-
-.rank-cell.rank--silver {
-  color: var(--tier-silver);
-  font-weight: 700;
-}
-
-.rank-cell.rank--bronze {
-  color: var(--tier-bronze);
-  font-weight: 700;
-}
-
-.season-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-height: 56px;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  color: inherit;
-  text-decoration: none;
-}
-
-.season-row__rank {
-  min-width: 36px;
-}
-
-.season-row__identity {
-  flex: 1;
-}
 </style>

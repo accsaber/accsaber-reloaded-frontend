@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
-const now = useNow(1000)
+const now = useNow()
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'declaredAt',

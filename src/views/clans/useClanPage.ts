@@ -19,26 +19,26 @@ export function useClanPage(slugOrId: Ref<string>) {
   const standing = ref<ClanStandingResponse | null>(null)
   const members = ref<PlayerRef[]>([])
   const myRequests = ref<ClanJoinRequestResponse[]>([])
-  const own = useOwnClan()
   const loading = ref(true)
   const rosterLoading = ref(true)
   const error = ref<string | null>(null)
 
-  const viewerRole = computed<ClanRole | null>(() => {
-    const id = auth.userId
-    if (!id) return null
-    return members.value.find((m) => m.id === id)?.membership?.role ?? null
+  const viewerInOtherClan = computed(() => {
+    const ownId = auth.userProfile?.clan?.id
+    return !!ownId && !!clan.value && ownId !== clan.value.clan.id
   })
+  const own = useOwnClan(() => viewerInOtherClan.value)
 
   const viewerClanId = computed(() => own.clan.value?.id ?? null)
-  const ownRole = computed<ClanRole | null>(() =>
-    viewerClanId.value && viewerClanId.value !== clan.value?.clan.id ? own.role.value : null,
+  const viewerRole = computed<ClanRole | null>(() =>
+    viewerClanId.value && viewerClanId.value === clan.value?.clan.id ? own.role.value : null,
   )
+  const ownRole = computed<ClanRole | null>(() => (viewerInOtherClan.value ? own.role.value : null))
 
   const pendingRequest = computed<ClanJoinRequestResponse | null>(() => {
     const id = clan.value?.clan.id
     if (!id) return null
-    return myRequests.value.find((r) => r.clan.id === id && r.status === 'pending') ?? null
+    return myRequests.value.find((r) => r.clan.id === id) ?? null
   })
 
   async function loadRoster(clanId: string) {
@@ -116,7 +116,9 @@ export function useClanPage(slugOrId: Ref<string>) {
     error,
     viewerRole,
     viewerClanId,
+    viewerInOtherClan,
     ownRole,
+    ownClan: own.profile,
     ownPacifist: own.pacifist,
     setOnline,
     pendingRequest,

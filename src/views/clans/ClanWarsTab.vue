@@ -2,56 +2,38 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import type { ClanResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse } from '@/types/api/clans'
 import { hasClanRole, isPacifist } from '@/utils/clans'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DeclareWarModal from './war/DeclareWarModal.vue'
 import ClanWarList from './war/ClanWarList.vue'
 
-const OPEN_SIZE = 50
-
 const props = defineProps<{
   clan: ClanResponse
   viewerRole: ClanRole | null
-  latestWar: ClanWarResponse | null
+  recentWar: ClanWarResponse | null
   seasonRunning: boolean
 }>()
 
 const router = useRouter()
-const openAttack = ref<ClanWarResponse | null>(null)
 const declareOpen = ref(false)
+
+const openAttack = computed(() => {
+  const war = props.recentWar
+  return !!war && war.status !== 'ended' && war.attack.lead.id === props.clan.clan.id
+})
 
 const canDeclare = computed(
   () =>
     props.seasonRunning &&
     hasClanRole(props.viewerRole, 'commander') &&
-    openAttack.value === null &&
+    !openAttack.value &&
     !isPacifist(props.clan),
 )
-
-async function fetchOpenAttack() {
-  try {
-    const { getClanWars } = await import('@/api/clans')
-    const page = await getClanWars({ clanId: props.clan.clan.id, open: true, page: 0, size: OPEN_SIZE })
-    openAttack.value = page.content.find((w) => w.attack.lead.id === props.clan.clan.id) ?? null
-  } catch {
-    openAttack.value = null
-  }
-}
 
 function onDeclared(detail: ClanWarDetailResponse) {
   declareOpen.value = false
   router.push({ name: 'clan-war', params: { warId: detail.war.id } })
 }
-
-watch(
-  () => props.latestWar,
-  (war) => {
-    if (!war || war.attack.lead.id !== props.clan.clan.id) return
-    openAttack.value = war.status === 'ended' ? null : war
-  },
-)
-
-watch(() => props.clan.clan.id, fetchOpenAttack, { immediate: true })
 </script>
 
 <template>
@@ -59,8 +41,8 @@ watch(() => props.clan.clan.id, fetchOpenAttack, { immediate: true })
     <div v-if="canDeclare" class="clan-wars__actions">
       <BaseButton variant="destructive" size="sm" @click="declareOpen = true">Declare war</BaseButton>
     </div>
-    <ClanWarList :clan-id="clan.clan.id" :latest-war="latestWar" :season-running="seasonRunning" />
-    <DeclareWarModal :open="declareOpen" :own-clan-id="clan.clan.id" @close="declareOpen = false" @declared="onDeclared" />
+    <ClanWarList :clan-id="clan.clan.id" :latest-war="recentWar" :season-running="seasonRunning" />
+    <DeclareWarModal :open="declareOpen" :own-clan="clan" @close="declareOpen = false" @declared="onDeclared" />
   </section>
 </template>
 

@@ -18,7 +18,7 @@ import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import ClanLeaderTile from './ClanLeaderTile.vue'
 import ClanLockedSlot from './ClanLockedSlot.vue'
-import ClanMemberMenu, { type MemberActions } from './ClanMemberMenu.vue'
+import ClanMemberMenu, { type MemberActions, type MemberPick } from './ClanMemberMenu.vue'
 
 const props = defineProps<{
   members: PlayerRef[]
@@ -54,7 +54,7 @@ const COLUMNS: TableColumn[] = [
 
 const FOUNDER_INACTIVITY_MS = 365 * 24 * 60 * 60 * 1000
 
-const now = useNow(1000)
+const now = useNow()
 
 const canClaim = computed(() => {
   if (props.viewerRole !== 'commander') return false
@@ -136,6 +136,22 @@ function actionsFor(member: PlayerRef): MemberActions | null {
   return actions.roles.length || actions.kick || actions.transfer || actions.claim ? actions : null
 }
 
+const memberActions = computed(() => {
+  const map = new Map<string, MemberActions>()
+  for (const member of props.members) {
+    const actions = actionsFor(member)
+    if (actions) map.set(member.id, actions)
+  }
+  return map
+})
+
+function onPick(member: PlayerRef, action: MemberPick) {
+  if (action === 'kick') emit('kick', member)
+  else if (action === 'transfer') emit('transfer', member)
+  else if (action === 'claim') emit('claim')
+  else emit('change-role', member, action)
+}
+
 function lastPlayed(member: PlayerRef): string {
   const at = member.membership?.lastPlayedAt
   return at ? formatRelativeDate(at, now.value) : 'never'
@@ -172,13 +188,10 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
               :self="member.id === viewerId"
             >
               <ClanMemberMenu
-                v-if="actionsFor(member)"
+                v-if="memberActions.has(member.id)"
                 :member="member"
-                :actions="actionsFor(member)!"
-                @change-role="emit('change-role', member, $event)"
-                @kick="emit('kick', member)"
-                @transfer="emit('transfer', member)"
-                @claim="emit('claim')"
+                :actions="memberActions.get(member.id)!"
+                @pick="onPick(member, $event)"
               />
             </ClanLeaderTile>
             <ClanLockedSlot
@@ -216,13 +229,10 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
           <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
           <template #cell-actions="{ row }">
             <ClanMemberMenu
-              v-if="actionsFor(asPlayer(row))"
+              v-if="memberActions.has(asPlayer(row).id)"
               :member="asPlayer(row)"
-              :actions="actionsFor(asPlayer(row))!"
-              @change-role="emit('change-role', asPlayer(row), $event)"
-              @kick="emit('kick', asPlayer(row))"
-              @transfer="emit('transfer', asPlayer(row))"
-              @claim="emit('claim')"
+              :actions="memberActions.get(asPlayer(row).id)!"
+              @pick="onPick(asPlayer(row), $event)"
             />
           </template>
           <template #mobile-card="{ row }">
@@ -239,13 +249,10 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
                 </span>
               </div>
               <ClanMemberMenu
-                v-if="actionsFor(asPlayer(row))"
+                v-if="memberActions.has(asPlayer(row).id)"
                 :member="asPlayer(row)"
-                :actions="actionsFor(asPlayer(row))!"
-                @change-role="emit('change-role', asPlayer(row), $event)"
-                @kick="emit('kick', asPlayer(row))"
-                @transfer="emit('transfer', asPlayer(row))"
-                @claim="emit('claim')"
+                :actions="memberActions.get(asPlayer(row).id)!"
+                @pick="onPick(asPlayer(row), $event)"
               />
             </div>
           </template>

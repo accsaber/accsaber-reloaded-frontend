@@ -3,9 +3,10 @@ import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { ClanWarResponse } from '@/types/api/clans'
-import { formatStanding, WAR_TEAMS, warClock, warHeadline, warModeLine, warSideStyles } from '@/utils/clans'
+import { formatStanding, WAR_TEAMS, warSideStyles } from '@/utils/clans'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
+import WarClock from './WarClock.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -13,8 +14,6 @@ const props = defineProps<{
 }>()
 
 const styles = computed(() => warSideStyles(props.war))
-const clock = computed(() => warClock(props.war, props.now))
-const headline = computed(() => warHeadline(props.war))
 const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[team], style: styles.value[team] })))
 </script>
 
@@ -43,17 +42,7 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
       </span>
     </span>
 
-    <span class="scorebug__middle">
-      <template v-if="headline">
-        <span class="scorebug__headline">{{ headline }}</span>
-        <span class="scorebug__label">{{ clock.value }}</span>
-      </template>
-      <template v-else>
-        <span class="scorebug__label">{{ clock.label }}</span>
-        <span v-if="clock.value" class="scorebug__clock">{{ clock.value }}</span>
-      </template>
-      <span class="scorebug__mode">{{ warModeLine(war) }}</span>
-    </span>
+    <WarClock class="scorebug__middle" :war="war" :now="now" />
   </RouterLink>
 </template>
 
@@ -147,30 +136,6 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
 
 .scorebug__middle {
   grid-area: middle;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  text-align: center;
-}
-
-.scorebug__headline {
-  font-size: var(--text-card-title);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.scorebug__label,
-.scorebug__mode {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.scorebug__clock {
-  font-family: var(--font-mono);
-  font-size: var(--text-card-title);
-  font-weight: 600;
 }
 
 @media (max-width: 640px) {

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { ClanLevelStepResponse } from '@/types/api/clans'
+import { hasUnlocks } from '@/utils/clans'
 import { computed, ref } from 'vue'
 import ClanLevelReward from './ClanLevelReward.vue'
 
 const props = defineProps<{
   steps: ClanLevelStepResponse[]
+  maxLevel: number
   currentLevel: number
   totalXp: number
 }>()
@@ -16,24 +18,20 @@ interface TrailStop {
 }
 
 const byLevel = computed(() => new Map(props.steps.map((step) => [step.level, step])))
-const maxLevel = computed(() => Math.max(0, ...props.steps.map((s) => s.level)))
 
 const stops = computed<TrailStop[]>(() =>
-  Array.from({ length: maxLevel.value + 1 }, (_, level) => ({
-    level,
-    step: rewarding(byLevel.value.get(level)) ? byLevel.value.get(level)! : null,
-    state: level === props.currentLevel ? 'current' : level < props.currentLevel ? 'reached' : 'locked',
-  })),
+  Array.from({ length: props.maxLevel + 1 }, (_, level) => {
+    const step = byLevel.value.get(level)
+    return {
+      level,
+      step: step && hasUnlocks(step.unlocks) ? step : null,
+      state: level === props.currentLevel ? 'current' : level < props.currentLevel ? 'reached' : 'locked',
+    }
+  }),
 )
 
 const selectedLevel = ref<number | null>(null)
 const selected = computed(() => (selectedLevel.value === null ? null : byLevel.value.get(selectedLevel.value) ?? null))
-
-function rewarding(step: ClanLevelStepResponse | undefined): boolean {
-  if (!step) return false
-  const u = step.unlocks
-  return u.cosmetics.length > 0 || u.arenas.length > 0 || u.rulesets.length > 0 || Object.values(u.capacities).some(Boolean)
-}
 
 function toggle(level: number) {
   selectedLevel.value = selectedLevel.value === level ? null : level

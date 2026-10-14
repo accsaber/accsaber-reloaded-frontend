@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import HintTooltip from '@/components/common/HintTooltip.vue'
 import ClanBar from './ClanBar.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -9,7 +8,7 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanLevelResponse, ClanLevelStepResponse, ClanResponse, ClanXpGrantResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { clanXpGrantLabel, clanXpGrantWhen, formatClanXp, unlockLines } from '@/utils/clans'
+import { clanXpGrantLabel, clanXpGrantWhen, formatClanXp, hasUnlocks } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { loadClanLevels } from './clanLevels'
@@ -49,11 +48,9 @@ const scaling = computed(() => {
   const factor = level.value?.rosterFactor ?? 1
   return factor > 1 ? `×${factor.toFixed(1)}` : null
 })
-const SCALING_HINT =
-  "Bigger and stronger clans earn more XP per week, so it's scaled to keep every clan levelling at the same pace."
 const nextRewards = computed(() =>
   steps.value
-    .filter((s) => s.level > progress.value.level && (unlockLines(s.unlocks).length || s.unlocks.cosmetics.length))
+    .filter((s) => s.level > progress.value.level && hasUnlocks(s.unlocks))
     .sort((a, b) => a.level - b.level)
     .slice(0, 2),
 )
@@ -122,7 +119,6 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
       <ClanBar v-if="!atMax" class="level-tab__bar" :value="percent" :max="100" />
       <p v-if="scaling" class="level-tab__scaling">
         Clan size scaling {{ scaling }}
-        <HintTooltip :text="SCALING_HINT" label="clan size scaling" />
       </p>
     </div>
 
@@ -140,7 +136,7 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     </div>
 
     <SkeletonLoader v-if="loading" variant="text" height="48px" />
-    <ClanLevelTrail v-else-if="steps.length" :steps="steps" :current-level="progress.level" :total-xp="progress.totalXp" />
+    <ClanLevelTrail v-else-if="steps.length" :steps="steps" :max-level="maxLevel" :current-level="progress.level" :total-xp="progress.totalXp" />
 
     <div class="level-tab__xp">
       <h2 class="level-tab__heading">XP this season</h2>

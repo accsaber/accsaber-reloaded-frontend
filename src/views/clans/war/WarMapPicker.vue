@@ -39,7 +39,9 @@ function legal(diff: PublicMapDifficultyResponse): boolean {
   return true
 }
 
-const illegalCount = computed(() => picks.value.filter((d) => !legal(d)).length)
+const rows = computed(() =>
+  picks.value.map((diff) => ({ diff, flag: legal(diff) ? null : (bannedLabel(diff) ?? 'Not legal here') })),
+)
 
 function add(picked: PublicMapDifficultyResponse[]) {
   pickerOpen.value = false
@@ -58,19 +60,16 @@ function remove(id: string) {
       <span class="map-picks__count" :class="{ 'map-picks__count--full': full }">
         {{ picks.length }}/{{ count }} picked
       </span>
-      <p v-if="illegalCount" class="map-picks__warn" role="alert">
-        {{ illegalCount }} of your picks are not legal in this arena.
-      </p>
       <BaseButton v-if="!full" size="sm" :disabled="disabled" @click="pickerOpen = true">
         {{ picks.length ? 'Add more' : 'Pick maps' }}
       </BaseButton>
     </div>
 
     <ul v-if="picks.length" class="map-picks__list">
-      <li v-for="diff in picks" :key="diff.id" class="map-picks__row" :class="{ 'map-picks__row--illegal': !legal(diff) }">
-        <WarMapRow :difficulty="diff">
-          <span v-if="!legal(diff)" class="map-picks__flag">{{ bannedLabel(diff) ?? 'Not legal here' }}</span>
-          <BaseButton size="sm" :disabled="disabled" @click="remove(diff.id)">Remove</BaseButton>
+      <li v-for="row in rows" :key="row.diff.id" class="map-picks__row">
+        <WarMapRow :difficulty="row.diff">
+          <span v-if="row.flag" class="map-picks__flag" role="alert">{{ row.flag }}</span>
+          <BaseButton size="sm" :disabled="disabled" @click="remove(row.diff.id)">Remove</BaseButton>
         </WarMapRow>
       </li>
     </ul>
@@ -121,12 +120,6 @@ function remove(id: string) {
   color: var(--success);
 }
 
-.map-picks__warn {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--error);
-}
-
 .map-picks__list {
   display: flex;
   flex-direction: column;
@@ -149,10 +142,6 @@ function remove(id: string) {
 
 .map-picks__row:nth-child(even) {
   background: var(--bg-elevated);
-}
-
-.map-picks__row--illegal {
-  border-left: 2px solid var(--error);
 }
 
 .map-picks__flag {

@@ -14,7 +14,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const now = useNow(1000)
+const now = useNow()
 
 const breadcrumbs: Crumb[] = [{ label: 'Clans', to: { name: 'clans' } }, { label: 'Seasons' }]
 

@@ -5,6 +5,7 @@ import type { ClanWarResponse } from '@/types/api/clans'
 import type { LevelResponse } from '@/types/api/users'
 import { warOpponent, warResultFor } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
+import { useNow } from '@/composables/useNow'
 import { computed } from 'vue'
 import WarScorebug from './war/WarScorebug.vue'
 
@@ -12,10 +13,10 @@ const props = defineProps<{
   clanId: string
   war: ClanWarResponse | null
   level: LevelResponse
-  now: number
   showLevel: boolean
 }>()
 
+const now = useNow()
 const openWar = computed(() => (props.war && props.war.status !== 'ended' ? props.war : null))
 const lastWar = computed(() => (props.war?.status === 'ended' ? props.war : null))
 const enemy = computed(() => {

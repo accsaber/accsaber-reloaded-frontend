@@ -12,23 +12,20 @@ export interface MemberActions {
   claim: boolean
 }
 
+export type MemberPick = ClanRole | 'kick' | 'transfer' | 'claim'
+
 const props = defineProps<{
   member: PlayerRef
   actions: MemberActions
 }>()
 
-const emit = defineEmits<{
-  'change-role': [role: ClanRole]
-  kick: []
-  transfer: []
-  claim: []
-}>()
+const emit = defineEmits<{ pick: [action: MemberPick] }>()
 
 const open = ref(false)
 
-function run(action: () => void) {
+function pick(action: MemberPick) {
   open.value = false
-  action()
+  emit('pick', action)
 }
 </script>
 
@@ -51,14 +48,14 @@ function run(action: () => void) {
         type="button"
         class="member-menu__item"
         role="menuitem"
-        @click="run(() => emit('change-role', role))"
+        @click="pick(role)"
       >
         Make {{ CLAN_ROLE_LABEL[role].toLowerCase() }}
       </button>
-      <button v-if="actions.transfer" type="button" class="member-menu__item" role="menuitem" @click="run(() => emit('transfer'))">
+      <button v-if="actions.transfer" type="button" class="member-menu__item" role="menuitem" @click="pick('transfer')">
         Transfer founder
       </button>
-      <button v-if="actions.claim" type="button" class="member-menu__item" role="menuitem" @click="run(() => emit('claim'))">
+      <button v-if="actions.claim" type="button" class="member-menu__item" role="menuitem" @click="pick('claim')">
         Claim clan
       </button>
       <button
@@ -66,7 +63,7 @@ function run(action: () => void) {
         type="button"
         class="member-menu__item member-menu__item--danger"
         role="menuitem"
-        @click="run(() => emit('kick'))"
+        @click="pick('kick')"
       >
         Kick
       </button>

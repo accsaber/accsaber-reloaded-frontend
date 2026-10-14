@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -8,11 +9,16 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useNow } from '@/composables/useNow'
 import type { ClanResponse } from '@/types/api/clans'
 import type { MissionResponse } from '@/types/api/missions'
+import type { ChartToggle } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 
 const PAGE_SIZE = 20
+const VIEW_TOGGLES: ChartToggle[] = [
+  { key: 'active', label: 'Active' },
+  { key: 'history', label: 'History' },
+]
 
 const props = defineProps<{
   clan: ClanResponse
@@ -21,7 +27,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
-const now = useNow(1000)
+const now = useNow()
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'createdAt',
@@ -45,8 +51,8 @@ const ownByParent = computed(() => {
   return map
 })
 
-function setView(history: boolean) {
-  const query: LocationQueryRaw = { ...route.query, missions: history ? 'history' : undefined }
+function setView(key: string) {
+  const query: LocationQueryRaw = { ...route.query, missions: key === 'history' ? 'history' : undefined }
   delete query.page
   router.replace({ query })
 }
@@ -59,53 +65,32 @@ async function fetchMissions() {
   loading.value = true
   try {
     const { getClanMissions } = await import('@/api/clans')
-    const [page, own] = await Promise.all([
-      getClanMissions(props.clan.clan.id, {
-        current: !showHistory.value,
-        page: paginationParams.value.page,
-        size: PAGE_SIZE,
-      }),
-      props.isMember && !showHistory.value
-        ? import('@/api/missions').then((m) => m.getMyMissions({ pool: 'clan' })).catch(() => [])
-        : Promise.resolve([]),
-    ])
-    pageData.value = page
-    ownRows.value = own
+    pageData.value = await getClanMissions(props.clan.clan.id, {
+      current: !showHistory.value,
+      page: paginationParams.value.page,
+      size: PAGE_SIZE,
+    })
   } catch {
     pageData.value = null
-    ownRows.value = []
   } finally {
     loading.value = false
   }
 }
 
-watch(() => [route.query.page, route.query.missions, props.isMember], fetchMissions, { immediate: true })
+async function fetchOwnRows(member: boolean) {
+  ownRows.value = member
+    ? await import('@/api/missions').then((m) => m.getMyMissions({ pool: 'clan' })).catch(() => [])
+    : []
+}
+
+watch(() => [route.query.page, route.query.missions], fetchMissions, { immediate: true })
+watch(() => props.isMember, fetchOwnRows, { immediate: true })
 </script>
 
 <template>
   <section class="clan-missions">
-    <div class="clan-missions__toggle" role="tablist">
-      <button
-        type="button"
-        role="tab"
-        class="clan-missions__tab"
-        :class="{ 'clan-missions__tab--active': !showHistory }"
-        :aria-selected="!showHistory"
-        @click="setView(false)"
-      >
-        Active
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="clan-missions__tab"
-        :class="{ 'clan-missions__tab--active': showHistory }"
-        :aria-selected="showHistory"
-        @click="setView(true)"
-      >
-        History
-      </button>
-    </div>
+    <ChartToggleGroup :toggles="VIEW_TOGGLES" :active="[showHistory ? 'history' : 'active']" label="Missions"
+      @select="setView" />
 
     <div v-if="loading && missions.length === 0" class="clan-missions__list">
       <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="96px" />
@@ -145,30 +130,6 @@ watch(() => [route.query.page, route.query.missions, props.isMember], fetchMissi
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-}
-
-.clan-missions__toggle {
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.clan-missions__tab {
-  padding: var(--space-xs) var(--space-md);
-  font: inherit;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.clan-missions__tab--active {
-  color: var(--page-accent, var(--accent));
-  border-color: var(--page-accent, var(--accent));
 }
 
 .clan-missions__list {

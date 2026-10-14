@@ -11,7 +11,6 @@ import type {
   ClanWarHitResponse,
   ClanWarParticipantResponse,
   ClanWarResponse,
-  ClanWarTimelinePointResponse,
 } from '@/types/api/clans'
 import { hasClanRole, WAR_TEAMS, warLeadSide } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
@@ -31,8 +30,8 @@ const FIGHTERS_SIZE = 100
 
 const route = useRoute()
 const auth = useAuthStore()
-const now = useNow(1000)
-const own = useOwnClan()
+const now = useNow()
+const own = useOwnClan(() => true)
 
 const warId = computed(() => String(route.params.warId ?? ''))
 const detail = ref<ClanWarDetailResponse | null>(null)
@@ -42,7 +41,6 @@ const reloadKey = ref(0)
 const lastHit = ref<ClanWarHitResponse | null>(null)
 const participants = ref<ClanWarParticipantResponse[] | null>(null)
 const participantsError = ref<string | null>(null)
-const livePoints = ref<ClanWarTimelinePointResponse[]>([])
 const picking = ref(false)
 const pickError = ref<string | null>(null)
 const picksOpen = ref(false)
@@ -52,7 +50,6 @@ const retreatError = ref<string | null>(null)
 
 const war = computed(() => detail.value?.war ?? null)
 const fighting = computed(() => war.value?.status === 'active' || war.value?.status === 'ended')
-const timeline = computed(() => [...(detail.value?.timeline ?? []), ...livePoints.value])
 const ownClanId = computed(() => own.clan.value?.id ?? null)
 
 const canSubmitPicks = computed(
@@ -115,17 +112,14 @@ function applyHit(hit: ClanWarHitResponse) {
   }
   const clanId = participants.value?.find((p) => p.player.id === hit.attacker.id)?.clan.id ?? hit.attacker.clan?.id
   if (!clanId) return
-  livePoints.value = [
-    ...livePoints.value,
-    {
-      at: hit.createdAt,
-      clanId,
-      damage: hit.damage,
-      hits: 1,
-      breaks: hit.broke ? 1 : 0,
-      standingMoved: hit.standingMoved,
-    },
-  ]
+  detail.value?.timeline.push({
+    at: hit.createdAt,
+    clanId,
+    damage: hit.damage,
+    hits: 1,
+    breaks: hit.broke ? 1 : 0,
+    standingMoved: hit.standingMoved,
+  })
 }
 
 function rosterKey(current: ClanWarResponse): string {
@@ -140,10 +134,7 @@ function applyWar(next: ClanWarResponse) {
   if (!statusChanged && !rosterChanged) return
   reloadKey.value += 1
   void loadParticipants()
-  if (statusChanged) {
-    livePoints.value = []
-    void load()
-  }
+  if (statusChanged) void load()
 }
 
 useClanFeed(attackLeadId, {
@@ -156,7 +147,6 @@ useClanFeed(attackLeadId, {
 function onPicksSubmitted(next: ClanWarDetailResponse) {
   picksOpen.value = false
   detail.value = next
-  livePoints.value = []
   reloadKey.value += 1
 }
 
@@ -196,7 +186,6 @@ watch(
     detail.value = null
     lastHit.value = null
     participants.value = null
-    livePoints.value = []
     await Promise.all([load(), loadParticipants()])
   },
   { immediate: true },
@@ -235,12 +224,11 @@ watch(() => auth.userId, loadParticipants)
           :picking="picking"
           @pick="pickTarget"
         />
-        <ClanWarTimeline :war="war" :points="timeline" />
+        <ClanWarTimeline :war="war" :points="detail.timeline" />
         <ClanWarHits
           :war="war"
           :participants="participants"
           :incoming="lastHit"
-          :reload-key="reloadKey"
           :now="now"
         />
       </template>

@@ -13,6 +13,8 @@ const WIDTH = 960
 const AXIS = 120
 const BAND = 96
 const HOUR = 3_600_000
+const VIEW_W = LEFT * 2 + WIDTH
+const VIEW_H = AXIS * 2
 
 interface Marker {
   x: number
@@ -43,7 +45,7 @@ function x(at: string | number): number {
 }
 
 const markers = computed<Marker[]>(() => {
-  const maxDamage = Math.max(1, ...props.points.map((h) => h.damage))
+  const maxDamage = props.points.reduce((max, h) => Math.max(max, h.damage), 1)
   return props.points.map((point) => {
     const team = teamOf(point)
     const r = 3 + 5 * Math.sqrt(point.damage / maxDamage) + (point.breaks > 0 ? 3 : 0)
@@ -71,6 +73,10 @@ function stakePath(team: ClanWarTeam): string {
   return `${path} H${LEFT + WIDTH} V${stakeY(team, stakeRemaining)}`
 }
 
+const markerGroups = computed(() =>
+  WAR_TEAMS.map((team) => ({ team, markers: markers.value.filter((m) => m.team === team) })),
+)
+
 const paths = computed(() =>
   WAR_TEAMS.map((team) => ({
     team,
@@ -84,8 +90,8 @@ const hovered = ref<Marker | null>(null)
 const tooltipStyle = computed(() =>
   hovered.value
     ? {
-        left: `${Math.min(88, Math.max(12, (hovered.value.x / 1000) * 100))}%`,
-        top: `${(hovered.value.y / 240) * 100}%`,
+        left: `${Math.min(88, Math.max(12, (hovered.value.x / VIEW_W) * 100))}%`,
+        top: `${(hovered.value.y / VIEW_H) * 100}%`,
       }
     : undefined,
 )
@@ -107,10 +113,12 @@ function tooltipLine(marker: Marker): string {
 }
 
 const summary = computed(() =>
-  WAR_TEAMS.map((team) => {
-    const hits = markers.value.filter((m) => m.team === team).reduce((sum, m) => sum + m.point.hits, 0)
-    return `${plural(hits, 'hit')} by ${props.war[team].lead.tag}`
-  }).join(', '),
+  markerGroups.value
+    .map(({ team, markers: group }) => {
+      const hits = group.reduce((sum, m) => sum + m.point.hits, 0)
+      return `${plural(hits, 'hit')} by ${props.war[team].lead.tag}`
+    })
+    .join(', '),
 )
 </script>
 
@@ -119,7 +127,7 @@ const summary = computed(() =>
     <h2 class="timeline__title">Timeline</h2>
     <p v-if="!points.length" class="timeline__empty">No hits yet.</p>
     <div v-else class="timeline__frame">
-      <svg class="timeline__chart" viewBox="0 0 1000 240" role="img" :aria-label="summary">
+      <svg class="timeline__chart" :viewBox="`0 0 ${VIEW_W} ${VIEW_H}`" role="img" :aria-label="summary">
         <line :x1="LEFT" :x2="LEFT + WIDTH" :y1="AXIS" :y2="AXIS" class="timeline__axis" />
         <g v-for="path in paths" :key="path.team" class="clan-colors" :style="styles[path.team]">
           <path :d="path.d" class="timeline__stake" />
@@ -127,13 +135,10 @@ const summary = computed(() =>
             {{ path.label }}
           </text>
         </g>
-        <g
-          v-for="(marker, i) in markers"
-          :key="i"
-          class="clan-colors"
-          :style="styles[marker.team]"
-        >
+        <g v-for="group in markerGroups" :key="group.team" class="clan-colors" :style="styles[group.team]">
           <circle
+            v-for="(marker, i) in group.markers"
+            :key="i"
             :cx="marker.x"
             :cy="marker.y"
             :r="marker.r"

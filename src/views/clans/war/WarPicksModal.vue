@@ -63,7 +63,6 @@ watch(
   <BaseModal :open="open" :title="count ? 'Submit picks' : 'Answer offer'" max-width="640px" @close="emit('close')">
     <div class="picks">
       <template v-if="offer">
-        <p class="picks__hint">Berserker offered. Accept it or fight it as a Duel.</p>
         <ChartToggleGroup
           :toggles="CHOICES"
           :active="[berserker ? 'berserker' : 'duel']"
@@ -71,7 +70,6 @@ watch(
           @select="berserker = $event === 'berserker'"
         />
       </template>
-      <p v-if="count" class="picks__hint">Pick {{ count }} maps.</p>
       <WarMapPicker
         v-if="count"
         v-model="picks"
@@ -98,12 +96,6 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.picks__hint {
-  margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-secondary);
 }
 
 .picks__error {

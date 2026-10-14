@@ -57,7 +57,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
       </div>
     </div>
     <p v-else-if="!participants.length" class="fighters__empty">
-      {{ war.status === 'active' || war.status === 'ended' ? 'Nobody enrolled.' : 'Fighters enrol when the war starts.' }}
+      Nobody enrolled.
     </p>
     <div v-else class="fighters__sides">
       <div v-for="t in teams" :key="t.team" class="fighters__side clan-colors" :style="t.style">

@@ -2,7 +2,7 @@
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import type { PublicClanResponse } from '@/types/api/clans'
+import type { ClanResponse } from '@/types/api/clans'
 import { ref, watch } from 'vue'
 
 const MIN_CHARS = 2
@@ -15,12 +15,12 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  select: [clan: PublicClanResponse]
+  select: [clan: ClanResponse]
 }>()
 
 const search = ref('')
 const debounced = useDebouncedRef(search, 250)
-const results = ref<PublicClanResponse[]>([])
+const results = ref<ClanResponse[]>([])
 const loading = ref(false)
 let requestId = 0
 
@@ -32,7 +32,7 @@ async function runSearch(query: string) {
     const page = await getClans({ page: 0, size: PAGE_SIZE, sort: 'name,asc', search: query })
     if (id !== requestId) return
     const excluded = new Set(props.excludeIds ?? [])
-    results.value = page.content.map((c) => c.clan).filter((c) => !excluded.has(c.id))
+    results.value = page.content.filter((c) => !excluded.has(c.clan.id))
   } catch {
     if (id === requestId) results.value = []
   } finally {
@@ -40,7 +40,7 @@ async function runSearch(query: string) {
   }
 }
 
-function pick(clan: PublicClanResponse) {
+function pick(clan: ClanResponse) {
   search.value = ''
   results.value = []
   emit('select', clan)
@@ -70,11 +70,11 @@ watch(debounced, (value) => {
     <ul v-if="search.trim().length >= MIN_CHARS" class="clan-picker__results">
       <li v-if="loading" class="clan-picker__status">Searching...</li>
       <li v-else-if="results.length === 0" class="clan-picker__status">No clans found</li>
-      <li v-for="clan in results" v-else :key="clan.id">
-        <button type="button" class="clan-picker__option" :disabled="disabled" @click="pick(clan)">
-          <ClanIcon :clan="clan" :size="24" />
-          <ClanTag :clan="clan" size="md" />
-          <span class="clan-picker__name">{{ clan.name }}</span>
+      <li v-for="result in results" v-else :key="result.clan.id">
+        <button type="button" class="clan-picker__option" :disabled="disabled" @click="pick(result)">
+          <ClanIcon :clan="result.clan" :size="24" />
+          <ClanTag :clan="result.clan" size="md" />
+          <span class="clan-picker__name">{{ result.clan.name }}</span>
         </button>
       </li>
     </ul>

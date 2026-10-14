@@ -2,7 +2,6 @@
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanResponse, ClanSeasonResponse, ClanStandingEventResponse, ClanStandingResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
@@ -24,20 +23,22 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
   secondarySort: null,
 })
 
-const seasons = ref<ClanSeasonResponse[]>([])
+const seasons = ref<ClanSeasonResponse[] | null>(null)
 const standing = ref<ClanStandingResponse | null>(null)
-const standingLoading = ref(true)
 const events = ref<Page<ClanStandingEventResponse> | null>(null)
 const eventsLoading = ref(true)
 
+const runningSlug = computed(() => seasons.value?.find((s) => isSeasonRunning(s))?.slug ?? '')
 const selectedSeason = computed(() => {
   const requested = route.query.season
   if (typeof requested === 'string' && requested) return requested
-  return seasons.value.find((s) => isSeasonRunning(s))?.slug ?? seasons.value[0]?.slug ?? ''
+  return runningSlug.value || seasons.value?.[0]?.slug || ''
 })
+const pastSeason = computed(() => (selectedSeason.value !== runningSlug.value ? selectedSeason.value : ''))
+const closedSeason = computed(() => seasons.value?.find((s) => s.slug === pastSeason.value && s.closedAt)?.slug ?? '')
 
 const seasonOptions = computed(() =>
-  seasons.value.map((s) => ({ value: s.slug, label: isSeasonRunning(s) ? `${s.name} (running)` : s.name })),
+  (seasons.value ?? []).map((s) => ({ value: s.slug, label: s.slug === runningSlug.value ? `${s.name} (running)` : s.name })),
 )
 
 const columns: TableColumn[] = [
@@ -63,6 +64,33 @@ function setSeason(slug: string) {
   router.replace({ query })
 }
 
+async function fetchStanding(season: string) {
+  standing.value = null
+  if (!season) return
+  try {
+    const { getClanStanding } = await import('@/api/clans')
+    standing.value = await getClanStanding(props.clan.clan.id, { season })
+  } catch {
+    standing.value = null
+  }
+}
+
+async function fetchEvents() {
+  eventsLoading.value = true
+  try {
+    const { getClanStandingEvents } = await import('@/api/clans')
+    events.value = await getClanStandingEvents(props.clan.clan.id, {
+      page: paginationParams.value.page,
+      size: 25,
+      season: pastSeason.value || undefined,
+    })
+  } catch {
+    events.value = null
+  } finally {
+    eventsLoading.value = false
+  }
+}
+
 async function fetchSeasons() {
   try {
     const { getClanSeasons } = await import('@/api/clans')
@@ -72,41 +100,11 @@ async function fetchSeasons() {
   }
 }
 
-async function fetchStanding(season: string) {
-  standingLoading.value = true
-  try {
-    const { getClanStanding } = await import('@/api/clans')
-    standing.value = await getClanStanding(props.clan.clan.id, season ? { season } : undefined)
-  } catch {
-    standing.value = null
-  } finally {
-    standingLoading.value = false
-  }
-}
-
-async function fetchEvents(season: string) {
-  eventsLoading.value = true
-  try {
-    const { getClanStandingEvents } = await import('@/api/clans')
-    events.value = await getClanStandingEvents(props.clan.clan.id, {
-      page: paginationParams.value.page,
-      size: 25,
-      season: season || undefined,
-    })
-  } catch {
-    events.value = null
-  } finally {
-    eventsLoading.value = false
-  }
-}
+const seasonKey = computed(() => (seasons.value ? pastSeason.value : null))
 
 fetchSeasons()
-watch(selectedSeason, (season) => { fetchStanding(season) }, { immediate: true })
-watch(
-  () => [selectedSeason.value, route.query.page],
-  () => { fetchEvents(selectedSeason.value) },
-  { immediate: true },
-)
+watch(closedSeason, fetchStanding)
+watch(() => [seasonKey.value, route.query.page], () => { if (seasonKey.value !== null) fetchEvents() })
 </script>
 
 <template>
@@ -121,25 +119,10 @@ watch(
       />
     </div>
 
-    <SkeletonLoader v-if="standingLoading" variant="stat-block" height="120px" />
-    <dl v-else-if="standing" class="standing-tab__summary">
-      <div class="standing-tab__stat standing-tab__stat--total">
-        <dt>Standing</dt>
-        <dd>{{ formatStanding(standing.standing) }}</dd>
-      </div>
-      <div class="standing-tab__stat">
-        <dt>Rank</dt>
-        <dd>#{{ standing.rank }}</dd>
-      </div>
-      <div class="standing-tab__stat">
-        <dt>Base</dt>
-        <dd>{{ formatStanding(standing.baseStanding) }}</dd>
-      </div>
-      <div class="standing-tab__stat">
-        <dt>Earned</dt>
-        <dd>{{ formatSignedStanding(standing.earned) }}</dd>
-      </div>
-    </dl>
+    <p v-if="standing" class="standing-tab__past">
+      Finished #{{ standing.rank }} with {{ formatStanding(standing.standing) }} Standing,
+      {{ formatStanding(standing.baseStanding) }} base and {{ formatSignedStanding(standing.earned) }} earned.
+    </p>
 
     <DataTable
       :columns="columns"
@@ -171,42 +154,9 @@ watch(
   min-height: 0;
 }
 
-.standing-tab__summary {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: var(--space-md);
+.standing-tab__past {
   margin: 0;
-  padding: var(--space-lg);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
-}
-
-.standing-tab__stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.standing-tab__stat dt {
-  font-size: var(--text-caption);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--text-secondary);
-}
-
-.standing-tab__stat dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  line-height: 1;
-  color: var(--text-primary);
-}
-
-.standing-tab__stat--total dd {
-  font-size: calc(var(--text-page-title) * 1.5);
-  color: var(--page-accent, var(--accent));
 }
 
 .standing-tab__amount {
@@ -216,15 +166,5 @@ watch(
 
 .standing-tab__amount--down {
   color: var(--error);
-}
-
-@media (max-width: 767px) {
-  .standing-tab__summary {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .standing-tab__stat--total {
-    grid-column: 1 / -1;
-  }
 }
 </style>

@@ -8,10 +8,10 @@ import { useNow } from '@/composables/useNow'
 import type { MissionPool, MissionResponse } from '@/types/api/missions'
 import {
   BAND_RANK,
-  formatMissionCountdown,
   POOL_LABEL,
   POOL_ORDER,
 } from '@/utils/missions'
+import { formatCountdown } from '@/utils/clans'
 import { computed, nextTick, ref, useId, watch } from 'vue'
 
 const props = defineProps<{
@@ -125,7 +125,7 @@ function groupCountdown(missions: MissionResponse[]): string {
     .filter((t) => Number.isFinite(t))
     .reduce((min, t) => (t < min ? t : min), Number.POSITIVE_INFINITY)
   if (!Number.isFinite(earliest)) return ''
-  return formatMissionCountdown(new Date(earliest).toISOString(), now.value)
+  return formatCountdown(earliest - now.value, 'expired')
 }
 
 function isMissionsUnavailable(err: unknown): boolean {
