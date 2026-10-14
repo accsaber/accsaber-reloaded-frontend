@@ -55,7 +55,7 @@ export interface NameHistoryEntry {
 }
 
 export interface SyncSettings {
-  'sync.name': boolean
+  'sync.name'?: boolean
   'sync.avatar'?: boolean
 }
 

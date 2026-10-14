@@ -5,26 +5,26 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
-import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
+import { useAppearance } from '@/composables/useAppearance'
+import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { useQueryParams } from '@/composables/useQueryParams'
+import { useSyncSetting } from '@/composables/useSyncSetting'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   AppearanceSettings,
-  ComplexityNumberStyle,
   PrivacySettings,
   ReplayService,
   ScoreRowField,
   Visibility,
 } from '@/types/api/settings'
-import { useAppearance } from '@/composables/useAppearance'
-import ScoreFieldEditor from './settings/ScoreFieldEditor.vue'
 import { isRankingSubdomain } from '@/utils/subdomain'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import BlockedUsersSection from './settings/BlockedUsersSection.vue'
 import ConnectionsSection from './settings/ConnectionsSection.vue'
 import NotificationSettingsSection from './settings/NotificationSettingsSection.vue'
+import ScoreFieldEditor from './settings/ScoreFieldEditor.vue'
 import SettingsPicker from './settings/SettingsPicker.vue'
 import ThemeCatalog from './settings/ThemeCatalog.vue'
 
@@ -35,14 +35,9 @@ usePageMeta({
 
 type SectionKey = 'appearance' | 'notifications' | 'privacy' | 'account'
 
-interface SectionDef {
-  key: SectionKey
-  label: string
-  requiresLogin: boolean
-}
-
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
+const { queryRef } = useQueryParams()
 
 const VISIBILITY_OPTIONS = [
   { value: 'public' as const, label: 'Public', description: 'Anyone can see this list and count.' },
@@ -51,25 +46,14 @@ const VISIBILITY_OPTIONS = [
 ]
 
 const PRIVACY_CONTROLS: { key: keyof PrivacySettings; title: string }[] = [
-  {
-    key: 'privacy.followingVisibility',
-    title: 'Following list',
-  },
-  {
-    key: 'privacy.rivalsVisibility',
-    title: 'Rivals list',
-  },
+  { key: 'privacy.followingVisibility', title: 'Following list' },
+  { key: 'privacy.rivalsVisibility', title: 'Rivals list' },
 ]
 
 const REPLAY_SERVICE_OPTIONS = [
-  { value: 'beatleader' as const, label: 'BeatLeader', description: 'Open replays in BeatLeader.' },
-  { value: 'arcviewer' as const, label: 'ArcViewer', description: 'Open replays in ArcViewer.' },
-  { value: 'chroviewer' as const, label: 'ChroViewer', description: 'Open replays in ChroViewer.' },
-]
-
-const COMPLEXITY_STYLE_OPTIONS = [
-  { value: 'colored' as const, label: 'Colored', description: 'Tint the number by complexity tier.' },
-  { value: 'plain' as const, label: 'Plain', description: 'Render the number in body text.' },
+  { value: 'beatleader' as const, label: 'BeatLeader' },
+  { value: 'arcviewer' as const, label: 'ArcViewer' },
+  { value: 'chroviewer' as const, label: 'ChroViewer' },
 ]
 
 const ON_OFF_OPTIONS = [
@@ -77,94 +61,42 @@ const ON_OFF_OPTIONS = [
   { value: false, label: 'Off' },
 ]
 
-const NAME_SYNC_OPTIONS = ON_OFF_OPTIONS
-
 const me = computed(() => authStore.authMe)
 const meAvatarUrl = computed(() => pickAvatarUrl(me.value))
-const meAvatarFallback = computed(() => pickAvatarFallback(me.value))
-const handleMeAvatarError = (e: Event) => onAvatarError(meAvatarFallback.value)(e)
+const handleMeAvatarError = (e: Event) => onAvatarError(pickAvatarFallback(me.value))(e)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
-const canAccessAccount = computed(
-  () => isLoggedIn.value || (isRankingSubdomain && authStore.isStaffAuthorized),
-)
-const activeSection = ref<SectionKey>('appearance')
+const canAccessAccount = computed(() => isLoggedIn.value || (isRankingSubdomain && authStore.isStaffAuthorized))
+
+const sections = computed(() => [
+  { key: 'appearance' as const, label: 'Appearance', requiresLogin: false },
+  { key: 'notifications' as const, label: 'Notifications', requiresLogin: !isLoggedIn.value },
+  { key: 'privacy' as const, label: 'Privacy', requiresLogin: !isLoggedIn.value },
+  { key: 'account' as const, label: 'Account', requiresLogin: !canAccessAccount.value },
+])
+
+const sectionParam = queryRef<SectionKey>('section')
+const activeSection = computed<SectionKey>(() => {
+  const found = sections.value.find((s) => s.key === sectionParam.value)
+  return found && !found.requiresLogin ? found.key : 'appearance'
+})
+
 const logoutConfirm = ref(false)
 const loginModalOpen = ref(false)
 
-const {
-  enabled: syncEnabled,
-  saving: syncSaving,
-  resyncQueued: syncResyncQueued,
-  fetch: fetchSyncRaw,
-  set: setSyncName,
-} = useNameSyncSetting()
+const nameSync = reactive(useSyncSetting('sync.name'))
+const avatarSync = reactive(useSyncSetting('sync.avatar'))
 
-const avatarSyncEnabled = ref<boolean | null>(null)
-const avatarSyncSaving = ref(false)
-const avatarResyncQueued = ref(false)
-let avatarResyncTimer: ReturnType<typeof setTimeout> | null = null
-
-async function fetchAvatarSyncSetting() {
-  if (!isLoggedIn.value) {
-    avatarSyncEnabled.value = null
-    return
-  }
-  try {
-    const { getMySyncSettings } = await import('@/api/users')
-    const res = await getMySyncSettings()
-    avatarSyncEnabled.value = res['sync.avatar'] ?? true
-  } catch {
-    avatarSyncEnabled.value = null
-  }
-}
-
-async function setSyncAvatar(next: boolean) {
-  if (
-    avatarSyncSaving.value
-    || avatarSyncEnabled.value === null
-    || avatarSyncEnabled.value === next
-  ) return
-  avatarSyncSaving.value = true
-  const wasOff = avatarSyncEnabled.value === false
-  try {
-    const { putMySyncSettings } = await import('@/api/users')
-    await putMySyncSettings({
-      'sync.name': syncEnabled.value ?? true,
-      'sync.avatar': next,
-    })
-    avatarSyncEnabled.value = next
-    if (wasOff && next) {
-      avatarResyncQueued.value = true
-      if (avatarResyncTimer) clearTimeout(avatarResyncTimer)
-      avatarResyncTimer = setTimeout(() => { avatarResyncQueued.value = false }, 6000)
-    }
-  } catch {
-  } finally {
-    avatarSyncSaving.value = false
-  }
+function fetchSyncSettings() {
+  if (!isLoggedIn.value || activeSection.value !== 'account') return
+  nameSync.fetch()
+  avatarSync.fetch()
 }
 
 async function uploadAvatar(file: File) {
   const { uploadMyAvatar } = await import('@/api/cdn')
   await uploadMyAvatar(file)
-  await Promise.all([authStore.fetchAuthMe(), fetchAvatarSyncSetting()])
+  await Promise.all([authStore.fetchAuthMe(), avatarSync.fetch()])
 }
-
-async function fetchSyncSetting() {
-  if (!isLoggedIn.value) {
-    syncEnabled.value = null
-    avatarSyncEnabled.value = null
-    return
-  }
-  await Promise.all([fetchSyncRaw(), fetchAvatarSyncSetting()])
-}
-
-const sections = computed<SectionDef[]>(() => [
-  { key: 'appearance', label: 'Appearance', requiresLogin: false },
-  { key: 'notifications', label: 'Notifications', requiresLogin: !isLoggedIn.value },
-  { key: 'privacy', label: 'Privacy', requiresLogin: !isLoggedIn.value },
-  { key: 'account', label: 'Account', requiresLogin: !canAccessAccount.value },
-])
 
 async function confirmLogout() {
   logoutConfirm.value = false
@@ -173,15 +105,15 @@ async function confirmLogout() {
   } else {
     await authStore.logout()
   }
-  activeSection.value = 'appearance'
+  sectionParam.value = ''
 }
 
-function selectSection(section: SectionDef) {
+function selectSection(section: { key: SectionKey; requiresLogin: boolean }) {
   if (section.requiresLogin && !isLoggedIn.value) {
     loginModalOpen.value = true
     return
   }
-  activeSection.value = section.key
+  sectionParam.value = section.key === 'appearance' ? '' : section.key
 }
 
 async function setVisibility(key: keyof PrivacySettings, value: Visibility) {
@@ -199,19 +131,45 @@ const {
   clanChatBubble,
 } = useAppearance()
 
-const rawFallbackReplayService = computed(
-  () => settingsStore.appearance['appearance.fallbackReplayService'],
-)
+const rawFallbackReplayService = computed(() => settingsStore.appearance['appearance.fallbackReplayService'])
 
 const fallbackReplayOptions = computed(() => [
-  { value: '' as const, label: 'None', description: 'Do not retry with another viewer.' },
+  { value: '' as const, label: 'None' },
   ...REPLAY_SERVICE_OPTIONS.filter((o) => o.value !== primaryReplayService.value),
 ])
 
-async function setAppearance<K extends keyof AppearanceSettings>(
-  key: K,
-  value: AppearanceSettings[K],
-) {
+const appearanceCards = computed(() => [
+  {
+    title: 'Complexity',
+    rows: [
+      {
+        key: 'appearance.complexityNumberStyle' as const,
+        title: 'Number style',
+        value: complexityNumberStyle.value,
+        options: [
+          { value: 'colored', label: 'Colored', description: 'Tint the number by complexity tier.' },
+          { value: 'plain', label: 'Plain', description: 'Render the number in body text.' },
+        ],
+      },
+      { key: 'appearance.complexityBar' as const, title: 'Complexity bar', value: complexityBar.value, options: ON_OFF_OPTIONS },
+    ],
+  },
+  {
+    title: 'Profiles',
+    rows: [
+      { key: 'appearance.hideReloadedProfileFeatures' as const, title: 'Hide profile extras', value: hideReloadedProfileFeatures.value, options: ON_OFF_OPTIONS },
+      { key: 'appearance.showStatisticsChart' as const, title: 'Statistics chart on profile', value: showStatisticsChart.value, options: ON_OFF_OPTIONS },
+    ],
+  },
+  {
+    title: 'Clans',
+    rows: [
+      { key: 'appearance.clanChatBubble' as const, title: 'Clan chat bubble', value: clanChatBubble.value, options: ON_OFF_OPTIONS },
+    ],
+  },
+])
+
+async function setAppearance<K extends keyof AppearanceSettings>(key: K, value: AppearanceSettings[K]) {
   if (!isLoggedIn.value) {
     loginModalOpen.value = true
     return
@@ -227,38 +185,15 @@ async function setReplayService(value: ReplayService) {
   await setAppearance('appearance.primaryReplayService', value)
 }
 
-async function setFallbackReplayService(value: ReplayService | '') {
-  await setAppearance('appearance.fallbackReplayService', value === '' ? null : value)
-}
-
-async function setScoreRowFields(value: ScoreRowField[]) {
-  if (!isLoggedIn.value) {
-    loginModalOpen.value = true
-    return
-  }
-  await settingsStore.updateAppearance('appearance.scoreRowFields', value)
-}
-
 onMounted(() => {
-  if (isLoggedIn.value && !settingsStore.privacyLoaded) {
-    void settingsStore.fetchPrivacy()
-  }
-  if (isLoggedIn.value && !settingsStore.appearanceLoaded) {
-    void settingsStore.fetchAppearance()
-  }
-  void fetchSyncSetting()
+  if (isLoggedIn.value && !settingsStore.privacyLoaded) void settingsStore.fetchPrivacy()
 })
 
 watch(() => authStore.userId, () => {
-  void fetchSyncSetting()
-  if (isLoggedIn.value && !settingsStore.appearanceLoaded) {
-    void settingsStore.fetchAppearance()
-  }
-})
+  if (isLoggedIn.value && !settingsStore.appearanceLoaded) void settingsStore.fetchAppearance()
+}, { immediate: true })
 
-watch(activeSection, (section) => {
-  if (section === 'account') void fetchSyncSetting()
-})
+watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: true })
 </script>
 
 <template>
@@ -310,7 +245,7 @@ watch(activeSection, (section) => {
               </div>
               <SettingsPicker :model-value="rawFallbackReplayService ?? ''" :options="fallbackReplayOptions"
                 aria-label="Fallback replay service" :disabled="settingsStore.appearanceSaving"
-                @update:model-value="(v) => setFallbackReplayService(v as ReplayService | '')" />
+                @update:model-value="(v) => setAppearance('appearance.fallbackReplayService', v === '' ? null : v as ReplayService)" />
             </div>
 
             <p v-if="settingsStore.appearanceError" class="settings-card__error">
@@ -320,73 +255,25 @@ watch(activeSection, (section) => {
 
           <section class="settings-card">
             <header class="settings-card__header">
-              <h2 class="settings-card__title">Complexity</h2>
-            </header>
-
-            <div class="settings-row">
-              <div class="settings-row__label">
-                <span class="settings-row__title">Number style</span>
-              </div>
-              <SettingsPicker :model-value="complexityNumberStyle" :options="COMPLEXITY_STYLE_OPTIONS"
-                aria-label="Complexity number style" :disabled="settingsStore.appearanceSaving"
-                @update:model-value="(v) => setAppearance('appearance.complexityNumberStyle', v as ComplexityNumberStyle)" />
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-row__label">
-                <span class="settings-row__title">Complexity bar</span>
-              </div>
-              <SettingsPicker :model-value="complexityBar" :options="ON_OFF_OPTIONS"
-                aria-label="Complexity bar" :disabled="settingsStore.appearanceSaving"
-                @update:model-value="(v) => setAppearance('appearance.complexityBar', v as boolean)" />
-            </div>
-          </section>
-
-          <section class="settings-card">
-            <header class="settings-card__header">
               <h2 class="settings-card__title">Score rows</h2>
             </header>
 
             <ScoreFieldEditor :model-value="scoreRowFields" :disabled="settingsStore.appearanceSaving"
-              @update:model-value="setScoreRowFields" />
+              @update:model-value="(v: ScoreRowField[]) => setAppearance('appearance.scoreRowFields', v)" />
           </section>
 
-          <section class="settings-card">
+          <section v-for="card in appearanceCards" :key="card.title" class="settings-card">
             <header class="settings-card__header">
-              <h2 class="settings-card__title">Profiles</h2>
+              <h2 class="settings-card__title">{{ card.title }}</h2>
             </header>
 
-            <div class="settings-row">
+            <div v-for="row in card.rows" :key="row.key" class="settings-row">
               <div class="settings-row__label">
-                <span class="settings-row__title">Hide profile extras</span>
+                <span class="settings-row__title">{{ row.title }}</span>
               </div>
-              <SettingsPicker :model-value="hideReloadedProfileFeatures" :options="ON_OFF_OPTIONS"
-                aria-label="Hide profile extras" :disabled="settingsStore.appearanceSaving"
-                @update:model-value="(v) => setAppearance('appearance.hideReloadedProfileFeatures', v as boolean)" />
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-row__label">
-                <span class="settings-row__title">Statistics chart on profile</span>
-              </div>
-              <SettingsPicker :model-value="showStatisticsChart" :options="ON_OFF_OPTIONS"
-                aria-label="Statistics chart on profile" :disabled="settingsStore.appearanceSaving"
-                @update:model-value="(v) => setAppearance('appearance.showStatisticsChart', v as boolean)" />
-            </div>
-          </section>
-
-          <section class="settings-card">
-            <header class="settings-card__header">
-              <h2 class="settings-card__title">Clans</h2>
-            </header>
-
-            <div class="settings-row">
-              <div class="settings-row__label">
-                <span class="settings-row__title">Clan chat bubble</span>
-              </div>
-              <SettingsPicker :model-value="clanChatBubble" :options="ON_OFF_OPTIONS"
-                aria-label="Clan chat bubble" :disabled="settingsStore.appearanceSaving"
-                @update:model-value="(v) => setAppearance('appearance.clanChatBubble', v as boolean)" />
+              <SettingsPicker :model-value="row.value" :options="row.options" :aria-label="row.title"
+                :disabled="settingsStore.appearanceSaving"
+                @update:model-value="(v) => setAppearance(row.key, v as never)" />
             </div>
           </section>
 
@@ -448,26 +335,25 @@ watch(activeSection, (section) => {
             <div v-if="isLoggedIn" class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sync display name from BeatLeader / ScoreSaber</span>
-                <span v-if="syncResyncQueued" class="settings-row__notice">
+                <span v-if="nameSync.resyncQueued" class="settings-row__notice">
                   Will resync on the next refresh.
                 </span>
               </div>
-              <SettingsPicker :model-value="syncEnabled" :options="NAME_SYNC_OPTIONS" aria-label="Name sync"
-                :disabled="syncSaving || syncEnabled === null"
-                @update:model-value="(v) => setSyncName(v as boolean)" />
+              <SettingsPicker :model-value="nameSync.enabled" :options="ON_OFF_OPTIONS" aria-label="Name sync"
+                :disabled="nameSync.saving || nameSync.enabled === null"
+                @update:model-value="(v) => nameSync.set(v as boolean)" />
             </div>
 
             <div v-if="isLoggedIn" class="settings-row">
               <div class="settings-row__label">
                 <span class="settings-row__title">Sync avatar from BeatLeader / ScoreSaber</span>
-                <span v-if="avatarResyncQueued" class="settings-row__notice">
+                <span v-if="avatarSync.resyncQueued" class="settings-row__notice">
                   Will resync on the next refresh.
                 </span>
               </div>
-              <SettingsPicker :model-value="avatarSyncEnabled" :options="NAME_SYNC_OPTIONS"
-                aria-label="Avatar sync"
-                :disabled="avatarSyncSaving || avatarSyncEnabled === null"
-                @update:model-value="(v) => setSyncAvatar(v as boolean)" />
+              <SettingsPicker :model-value="avatarSync.enabled" :options="ON_OFF_OPTIONS" aria-label="Avatar sync"
+                :disabled="avatarSync.saving || avatarSync.enabled === null"
+                @update:model-value="(v) => avatarSync.set(v as boolean)" />
             </div>
           </section>
 

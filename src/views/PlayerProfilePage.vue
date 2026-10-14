@@ -25,7 +25,7 @@ import { useSupporter } from '@/composables/useSupporter'
 import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { useAppearance } from '@/composables/useAppearance'
-import { useNameSyncSetting } from '@/composables/useNameSyncSetting'
+import { useSyncSetting } from '@/composables/useSyncSetting'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
@@ -173,7 +173,7 @@ const {
   fetch: fetchSyncSetting,
   set: setSyncName,
   reset: resetSyncNotice,
-} = useNameSyncSetting()
+} = useSyncSetting('sync.name')
 
 function enterEditMode() {
   if (!user.value) return

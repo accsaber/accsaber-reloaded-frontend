@@ -8,171 +8,133 @@ import type { ItemResponse, UserItemResponse } from '@/types/api/items'
 import { buildEffectLayers, filterThemableTokens, readItemVariants, readThemeValue, resolveItemVariant } from '@/utils/items'
 import { computed, onMounted, ref, watch } from 'vue'
 
+interface ThemeOption {
+  key: string
+  label: string | null
+  tokens: Record<string, string> | null
+  variantKey: string | null
+}
+
 interface ThemeCard {
   id: string
   themeKey: string
   name: string
-  description: string | null
-  requirement: string | null
+  hint: string
   builtin: boolean
   owned: boolean
-  itemId: string | null
-  tokens: Record<string, string> | null
-  altTokens: Record<string, string> | null
-  variantKey: string | null
-  variantLabel: string | null
+  options: ThemeOption[]
 }
 
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const itemTypeStore = useItemTypeStore()
 
-const BUILTIN_THEMES: ThemeCard[] = [
-  { id: 'builtin-dark', themeKey: 'dark', name: 'Dark', description: 'Default dark mode.', requirement: null, builtin: true, owned: true, itemId: null, tokens: null, altTokens: null, variantKey: null, variantLabel: null },
-  { id: 'builtin-light', themeKey: 'light', name: 'Light', description: 'Default light mode.', requirement: null, builtin: true, owned: true, itemId: null, tokens: null, altTokens: null, variantKey: null, variantLabel: null },
-]
-
 const BUILTIN_PREVIEW_TOKENS: Record<string, Record<string, string>> = {
   dark: { 'bg-base': '#08080d', 'bg-surface': '#11111c', 'bg-elevated': '#1a1929', 'accent': '#f5b800' },
   light: { 'bg-base': '#f3f2f7', 'bg-surface': '#fdfcff', 'bg-elevated': '#ebe9f1', 'accent': '#f5b800' },
 }
 
-const BUILTIN_NAMES = new Set(BUILTIN_THEMES.map((t) => t.name.toLowerCase()))
+const BUILTIN_THEMES: ThemeCard[] = ['Dark', 'Light'].map((name) => ({
+  id: `builtin-${name.toLowerCase()}`,
+  themeKey: name.toLowerCase(),
+  name,
+  hint: 'Default theme',
+  builtin: true,
+  owned: true,
+  options: [{ key: 'default', label: null, tokens: BUILTIN_PREVIEW_TOKENS[name.toLowerCase()], variantKey: null }],
+}))
 
 const themeCatalog = ref<ItemResponse[]>([])
 const ownedThemes = ref<UserItemResponse[]>([])
 const themeBusy = ref<string | null>(null)
 
-const ownedThemeItemIds = computed(() => new Set(ownedThemes.value.map((u) => u.item.id)))
-const ownedThemeByItemId = computed(() => {
-  const map = new Map<string, UserItemResponse>()
-  for (const u of ownedThemes.value) map.set(u.item.id, u)
-  return map
-})
+const ownedThemeByItemId = computed(() => new Map(ownedThemes.value.map((u) => [u.item.id, u])))
+const activeTokensJson = computed(() => JSON.stringify(themeStore.activeTokens))
 
-function itemCards(i: ItemResponse): ThemeCard[] {
-  const base = {
+function modeLabel(tokens: Record<string, string>): string {
+  return tokens.base === 'light' ? 'Light' : 'Dark'
+}
+
+function itemOptions(i: ItemResponse): ThemeOption[] {
+  const variants = readItemVariants(i.value)
+  if (variants) {
+    return variants.map((v) => ({
+      key: v.key,
+      label: v.label,
+      tokens: readThemeValue(resolveItemVariant(i.value as { variants?: typeof variants }, v.key))?.tokens ?? null,
+      variantKey: v.key,
+    }))
+  }
+  const theme = readThemeValue(i.value)
+  if (!theme?.tokens) return []
+  const modes = theme.altTokens ? [theme.tokens, theme.altTokens] : [theme.tokens]
+  return modes.map((tokens, n) => ({
+    key: String(n),
+    label: modes.length > 1 ? modeLabel(tokens) : null,
+    tokens,
+    variantKey: null,
+  }))
+}
+
+function itemCard(i: ItemResponse): ThemeCard {
+  const owned = ownedThemeByItemId.value.has(i.id)
+  return {
     id: i.id,
     themeKey: `item:${i.id}`,
     name: i.name,
-    description: i.description,
-    requirement: i.requirement,
+    hint: owned ? i.description ?? 'Owned' : i.requirement ?? i.description ?? 'Locked theme.',
     builtin: false,
-    owned: ownedThemeItemIds.value.has(i.id),
-    itemId: i.id,
+    owned,
+    options: itemOptions(i).filter((o) => o.tokens != null),
   }
-  const variants = readItemVariants(i.value)
-  if (!variants) {
-    const themeValue = readThemeValue(i.value)
-    return [{ ...base, tokens: themeValue?.tokens ?? null, altTokens: themeValue?.altTokens ?? null, variantKey: null, variantLabel: null }]
-  }
-  return variants.map((v) => {
-    const themeValue = readThemeValue(resolveItemVariant(i.value as { variants?: typeof variants }, v.key))
-    return { ...base, id: `${i.id}:${v.key}`, tokens: themeValue?.tokens ?? null, altTokens: null, variantKey: v.key, variantLabel: v.label }
-  })
 }
 
-const inventoryThemeCards = computed<ThemeCard[]>(() =>
-  themeCatalog.value
-    .filter((i) => i.active && !i.deprecated)
-    .flatMap(itemCards)
-    .filter((c) => c.tokens != null),
-)
-
 const themeCards = computed<ThemeCard[]>(() => {
-  const ownedBuiltinByName = new Map<string, ThemeCard>()
-  const extras: ThemeCard[] = []
-  for (const card of inventoryThemeCards.value) {
-    const nameLower = card.name.toLowerCase()
-    if (BUILTIN_NAMES.has(nameLower)) {
-      if (card.owned) ownedBuiltinByName.set(nameLower, card)
-    } else {
-      extras.push(card)
-    }
-  }
-  const builtins = BUILTIN_THEMES.map((b) => ownedBuiltinByName.get(b.name.toLowerCase()) ?? b)
-  return [...builtins, ...extras]
+  const cards = themeCatalog.value.filter((i) => i.active && !i.deprecated).map(itemCard).filter((c) => c.options.length > 0)
+  const builtinNames = new Set(BUILTIN_THEMES.map((b) => b.name.toLowerCase()))
+  const builtins = BUILTIN_THEMES.map((b) => cards.find((c) => c.owned && c.name.toLowerCase() === b.name.toLowerCase()) ?? b)
+  return [...builtins, ...cards.filter((c) => !builtinNames.has(c.name.toLowerCase()))]
 })
 
-function tokensToPreviewVars(tokens: Record<string, string>): Record<string, string> {
+function previewVars(tokens: Record<string, string> | null): Record<string, string> {
+  const t = tokens ? filterThemableTokens(tokens) : {}
   const out: Record<string, string> = {}
-  if (tokens['bg-base']) out['--preview-base'] = tokens['bg-base']
-  if (tokens['bg-surface']) out['--preview-surface'] = tokens['bg-surface']
-  if (tokens['bg-elevated']) out['--preview-elevated'] = tokens['bg-elevated']
-  const accent = tokens['accent'] ?? tokens['accent-overall']
+  if (t['bg-base']) out['--preview-base'] = t['bg-base']
+  if (t['bg-surface']) out['--preview-surface'] = t['bg-surface']
+  if (t['bg-elevated']) out['--preview-elevated'] = t['bg-elevated']
+  const accent = t['accent'] ?? t['accent-overall']
   if (accent) out['--preview-accent'] = accent
   return out
 }
 
-function previewVars(card: ThemeCard): Record<string, string> {
-  const tokens = card.builtin ? BUILTIN_PREVIEW_TOKENS[card.themeKey] : (card.tokens ? filterThemableTokens(card.tokens) : {})
-  return tokensToPreviewVars(tokens)
-}
-
-function variantLabel(tokens: Record<string, string>): string {
-  return tokens.base === 'light' ? 'Light' : 'Dark'
-}
-
-function isVariantActive(card: ThemeCard, alt: boolean): boolean {
-  if (themeStore.theme !== card.themeKey || !themeStore.activeTokens) return false
-  const variant = alt ? card.altTokens : card.tokens
-  if (!variant) return false
-  return JSON.stringify(themeStore.activeTokens) === JSON.stringify(variant)
-}
-
-function isCardActive(card: ThemeCard): boolean {
+function isActive(card: ThemeCard, option: ThemeOption): boolean {
   if (themeStore.theme !== card.themeKey) return false
-  if (!card.variantKey || !card.tokens || !themeStore.activeTokens) return true
-  return JSON.stringify(themeStore.activeTokens) === JSON.stringify(card.tokens)
-}
-
-function lockedHint(card: ThemeCard): string {
-  return card.requirement ?? card.description ?? 'Locked theme.'
+  return card.options.length === 1 || activeTokensJson.value === JSON.stringify(option.tokens)
 }
 
 async function loadThemes() {
   await itemTypeStore.fetchItemTypes()
   const themeTypeId = itemTypeStore.byKey.get('theme')?.id
-  if (!themeTypeId) {
-    themeCatalog.value = []
-    return
-  }
-  try {
-    themeCatalog.value = await getItems({ typeId: themeTypeId })
-  } catch {
-    themeCatalog.value = []
-  }
-
-  if (!authStore.userId) {
-    ownedThemes.value = []
-    return
-  }
-  try {
-    ownedThemes.value = await getUserItems(authStore.userId, { typeKey: 'theme' })
-  } catch {
-    ownedThemes.value = []
-  }
+  const [catalog, owned] = await Promise.all([
+    themeTypeId ? getItems({ typeId: themeTypeId }).catch(() => []) : [],
+    authStore.userId ? getUserItems(authStore.userId, { typeKey: 'theme' }).catch(() => []) : [],
+  ])
+  themeCatalog.value = catalog
+  ownedThemes.value = owned
 }
 
-async function pickTheme(card: ThemeCard, alt = false) {
+async function pickTheme(card: ThemeCard, option: ThemeOption) {
   if (!card.owned || themeBusy.value) return
   themeBusy.value = card.id
   try {
-    const owned = card.itemId ? ownedThemeByItemId.value.get(card.itemId) : undefined
-    if (!card.builtin && card.itemId) {
-      if (!owned) return
-      await equipItem(card.variantKey ? { linkId: owned.linkId, variantKey: card.variantKey } : { linkId: owned.linkId })
-    }
-    const tokens = alt ? card.altTokens : card.tokens
     if (card.builtin) {
       themeStore.setTheme(card.themeKey)
-    } else if (tokens) {
-      themeStore.setThemeFromTokens(
-        card.themeKey,
-        tokens,
-        owned ? buildEffectLayers(owned.modifiers, owned.unusualEffect) : undefined,
-      )
+      return
     }
+    const owned = ownedThemeByItemId.value.get(card.id)
+    if (!owned || !option.tokens) return
+    await equipItem(option.variantKey ? { linkId: owned.linkId, variantKey: option.variantKey } : { linkId: owned.linkId })
+    themeStore.setThemeFromTokens(card.themeKey, option.tokens, buildEffectLayers(owned.modifiers, owned.unusualEffect))
   } catch {
   } finally {
     themeBusy.value = null
@@ -185,59 +147,29 @@ watch(() => authStore.userId, loadThemes)
 
 <template>
   <div class="theme-grid" role="radiogroup" aria-label="Theme">
-    <template v-for="card in themeCards" :key="card.id">
-    <div
-      v-if="card.altTokens && card.tokens && card.owned"
-      class="theme-card theme-card--dual"
-      :class="{ 'theme-card--active': themeStore.theme === card.themeKey }"
-    >
-      <button
-        v-for="alt in [false, true]"
-        :key="String(alt)"
-        type="button"
-        class="theme-card__half"
-        :class="{ 'theme-card__half--active': isVariantActive(card, alt) }"
-        role="radio"
-        :aria-checked="isVariantActive(card, alt)"
-        :disabled="themeBusy === card.id"
-        @click="pickTheme(card, alt)"
-      >
-        <div class="theme-card__preview" :style="tokensToPreviewVars((alt ? card.altTokens : card.tokens)!)">
-          <ThemeBackdropPreview :tokens="(alt ? card.altTokens : card.tokens)!" />
+    <div v-for="card in themeCards" :key="card.id" class="theme-card" :class="{
+      'theme-card--active': card.options.some((o) => isActive(card, o)),
+      'theme-card--locked': !card.owned,
+      'theme-card--multi': card.options.length > 1,
+      'theme-card--wide': card.options.length > 2,
+    }" :title="!card.owned ? card.hint : undefined">
+      <button v-for="option in card.options" :key="option.key" type="button" class="theme-card__option"
+        :class="{ 'theme-card__option--active': card.options.length > 1 && isActive(card, option) }" role="radio"
+        :aria-checked="isActive(card, option)" :aria-label="option.label ? `${card.name} ${option.label}` : card.name"
+        :disabled="!card.owned || themeBusy === card.id" @click="pickTheme(card, option)">
+        <span class="theme-card__preview" :style="previewVars(option.tokens)">
+          <ThemeBackdropPreview v-if="!card.builtin" :tokens="option.tokens" />
           <span class="theme-card__swatch theme-card__swatch--bg" />
           <span class="theme-card__swatch theme-card__swatch--surface" />
           <span class="theme-card__swatch theme-card__swatch--accent" />
-        </div>
-        <div class="theme-card__body">
-          <span class="theme-card__name">{{ card.name }}</span>
-          <span class="theme-card__hint">{{ variantLabel((alt ? card.altTokens : card.tokens)!) }}</span>
-        </div>
-        <span v-if="isVariantActive(card, alt)" class="theme-card__active-tag">Active</span>
+        </span>
+        <span v-if="card.options.length > 1" class="theme-card__option-label">{{ option.label }}</span>
       </button>
-    </div>
-    <button v-else type="button" class="theme-card" :class="{
-      'theme-card--active': isCardActive(card),
-      'theme-card--locked': !card.owned,
-      'theme-card--builtin': card.builtin,
-    }" role="radio" :aria-checked="isCardActive(card)"
-      :disabled="!card.owned || themeBusy === card.id" :title="!card.owned ? lockedHint(card) : undefined"
-      @click="pickTheme(card)">
-      <div class="theme-card__preview" :style="previewVars(card)">
-        <ThemeBackdropPreview :tokens="card.tokens" />
-        <span class="theme-card__swatch theme-card__swatch--bg" />
-        <span class="theme-card__swatch theme-card__swatch--surface" />
-        <span class="theme-card__swatch theme-card__swatch--accent" />
-      </div>
       <div class="theme-card__body">
         <span class="theme-card__name">{{ card.name }}</span>
-        <span class="theme-card__hint">
-          <template v-if="card.builtin">Default theme</template>
-          <template v-else-if="card.variantLabel">{{ card.variantLabel }}</template>
-          <template v-else-if="card.owned">{{ card.description ?? 'Owned' }}</template>
-          <template v-else>{{ lockedHint(card) }}</template>
-        </span>
+        <span class="theme-card__hint">{{ card.hint }}</span>
       </div>
-      <span v-if="isCardActive(card)" class="theme-card__active-tag">Active</span>
+      <span v-if="card.options.some((o) => isActive(card, o))" class="theme-card__active-tag">Active</span>
       <span v-else-if="!card.owned" class="theme-card__lock-tag" aria-label="Locked">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
@@ -245,8 +177,7 @@ watch(() => authStore.userId, loadThemes)
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </span>
-    </button>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -260,20 +191,17 @@ watch(() => authStore.userId, loadThemes)
 .theme-card {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm) var(--space-md);
   padding: var(--space-md);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  text-align: left;
-  cursor: pointer;
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
-.theme-card:hover:not(:disabled) {
+.theme-card:hover:not(.theme-card--locked) {
   border-color: var(--text-tertiary);
 }
 
@@ -283,44 +211,56 @@ watch(() => authStore.userId, loadThemes)
 }
 
 .theme-card--locked {
-  cursor: not-allowed;
   opacity: 0.55;
 }
 
-.theme-card--dual {
-  padding: 0;
-  overflow: hidden;
-  align-items: stretch;
-  gap: 0;
+.theme-card--multi .theme-card__body {
+  order: -1;
+  flex-basis: 100%;
+  padding-right: var(--space-xl);
 }
 
-.theme-card__half {
-  position: relative;
+.theme-card--wide {
+  grid-column: span 2;
+}
+
+.theme-card__option {
   display: flex;
-  flex: 1;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-  padding: var(--space-md) var(--space-sm);
-  background: transparent;
+  gap: var(--space-xs);
+  padding: 0;
+  background: none;
   border: none;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-family: var(--font-sans);
-  text-align: left;
+  font-size: var(--text-caption);
   cursor: pointer;
-  transition: background-color 120ms ease;
 }
 
-.theme-card__half + .theme-card__half {
-  border-left: 1px solid var(--bg-overlay);
+.theme-card:not(.theme-card--multi) .theme-card__option::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 
-.theme-card__half:hover:not(:disabled) {
+.theme-card__option:disabled {
+  cursor: not-allowed;
+}
+
+.theme-card--multi .theme-card__option {
+  padding: var(--space-xs);
+  border: 1px solid transparent;
+  border-radius: var(--radius-btn);
+}
+
+.theme-card--multi .theme-card__option:hover:not(:disabled) {
   background: var(--bg-elevated);
 }
 
-.theme-card__half--active {
-  background: color-mix(in srgb, var(--page-accent) 8%, transparent);
+.theme-card__option--active {
+  border-color: var(--page-accent) !important;
+  color: var(--page-accent);
 }
 
 .theme-card__preview {
@@ -354,6 +294,7 @@ watch(() => authStore.userId, loadThemes)
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -385,8 +326,12 @@ watch(() => authStore.userId, loadThemes)
   top: var(--space-xs);
   right: var(--space-xs);
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   color: var(--text-tertiary);
+}
+
+@media (max-width: 520px) {
+  .theme-card--wide {
+    grid-column: auto;
+  }
 }
 </style>
