@@ -189,7 +189,7 @@ watch(plotted, () => {
       <div v-else-if="!hasData" class="ap-curve__empty">
         No ranked scores to plot.
       </div>
-      <canvas v-show="!loading && hasData" ref="canvasRef" />
+      <canvas ref="canvasRef" :class="{ 'ap-curve__canvas--hidden': loading || !hasData }" />
     </div>
   </div>
 </template>
@@ -217,6 +217,10 @@ watch(plotted, () => {
 .ap-curve__canvas-wrap canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+.ap-curve__canvas-wrap .ap-curve__canvas--hidden {
+  display: none !important;
 }
 
 .ap-curve__empty {

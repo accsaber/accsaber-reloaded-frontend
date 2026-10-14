@@ -66,13 +66,13 @@ const xpSources = computed(() => {
   const stats = props.xpStats
   if (!stats) return []
   return [
-    { label: 'Score XP', value: stats.totalScoreXp },
-    { label: 'Milestone XP', value: stats.totalMilestoneXp },
-    { label: 'Set Bonus XP', value: stats.totalMilestoneSetBonusXp },
-    { label: 'Mission XP', value: stats.totalMissionXp },
-    { label: 'Campaign XP', value: stats.totalCampaignXp },
-    { label: 'Event XP', value: stats.totalEventXp },
-    { label: 'Clan XP', value: stats.totalClanXp },
+    { label: 'Score', value: stats.totalScoreXp },
+    { label: 'Milestone', value: stats.totalMilestoneXp },
+    { label: 'Set Bonus', value: stats.totalMilestoneSetBonusXp },
+    { label: 'Mission', value: stats.totalMissionXp },
+    { label: 'Campaign', value: stats.totalCampaignXp },
+    { label: 'Event', value: stats.totalEventXp },
+    { label: 'Clan', value: stats.totalClanXp },
   ]
 })
 
@@ -125,7 +125,7 @@ watch(
       </section>
     </div>
 
-    <div v-if="peakStats || xpStats || clanStats" class="statistics-tab__split">
+    <div v-if="peakStats || xpStats" class="statistics-tab__split">
       <section v-if="peakStats" class="statistics-tab__peaks">
         <h3 class="statistics-tab__section-title">Peak Stats</h3>
         <div class="statistics-tab__peaks-grid">
@@ -136,6 +136,20 @@ watch(
           <StatBlock v-if="peakStats.peakAp != null" label="Peak AP" :value="peakStats.peakAp" />
         </div>
       </section>
+
+
+      <section v-if="xpStats" class="xp-breakdown">
+        <h3 class="statistics-tab__section-title">XP Breakdown</h3>
+        <StatBlock label="Total XP" :value="xpStats.totalXp" :decimals="0" :accent-color="xpAccent" />
+        <div class="xp-breakdown__tree" :style="{ '--source-count': xpSources.length }">
+          <div v-for="source in xpSources" :key="source.label" class="xp-breakdown__drop" />
+        </div>
+        <div class="xp-breakdown__sources" :style="{ '--source-count': xpSources.length }">
+          <StatBlock v-for="source in xpSources" :key="source.label" :label="source.label" :value="source.value"
+            :decimals="0" />
+        </div>
+      </section>
+    </div>
 
       <section v-if="clanStats" class="clan-record">
         <h3 class="statistics-tab__section-title">Clan</h3>
@@ -155,19 +169,6 @@ watch(
           <StatBlock label="War XP" :value="clanStats.warXp" :decimals="0" />
         </div>
       </section>
-
-      <section v-if="xpStats" class="xp-breakdown">
-        <h3 class="statistics-tab__section-title">XP Breakdown</h3>
-        <StatBlock label="Total XP" :value="xpStats.totalXp" :decimals="0" :accent-color="xpAccent" />
-        <div class="xp-breakdown__tree" :style="{ '--source-count': xpSources.length }">
-          <div v-for="source in xpSources" :key="source.label" class="xp-breakdown__drop" />
-        </div>
-        <div class="xp-breakdown__sources" :style="{ '--source-count': xpSources.length }">
-          <StatBlock v-for="source in xpSources" :key="source.label" :label="source.label" :value="source.value"
-            :decimals="0" />
-        </div>
-      </section>
-    </div>
 
     <section class="statistics-tab__ap-curve">
       <h3 class="statistics-tab__section-title">AP Curve</h3>
@@ -373,9 +374,13 @@ watch(
     justify-content: center;
   }
 
-  .statistics-tab__split .statistics-tab__peaks,
-  .statistics-tab__split .xp-breakdown {
+  .statistics-tab__split .statistics-tab__peaks {
     flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .statistics-tab__split .xp-breakdown {
+    flex: 2 1 0;
     min-width: 0;
   }
 }

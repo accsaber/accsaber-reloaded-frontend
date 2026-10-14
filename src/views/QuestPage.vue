@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getApiErrorMessage, parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
+import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import PageSection from '@/components/layout/PageSection.vue'
@@ -39,8 +40,7 @@ const listError = ref<string | null>(null)
 const generatingTag = ref<string | null>(null)
 const feedback = ref<{ variant: 'error' | 'success'; text: string } | null>(null)
 
-const signedIn = computed(() => authStore.isLoggedIn)
-const unlocked = computed(() => (signedIn.value ? STEPS.length - 1 : 0))
+const unlocked = computed(() => (authStore.isLoggedIn ? STEPS.length - 1 : 0))
 
 const user = computed<UserRefDisplay | null>(() => {
   const me = authStore.authMe
@@ -94,6 +94,7 @@ onMounted(loadReleases)
 
 <template>
   <div class="quest" :style="{ '--page-accent': 'var(--accent-overall)' }">
+    <Breadcrumbs :crumbs="[{ label: 'Download', to: '/download' }, { label: 'Quest' }]" />
     <PageHeaderBleed title="AccSaber on Quest" />
 
     <QuestStepper :steps="STEPS" :current="step" :unlocked="unlocked" @select="goTo" />
@@ -102,8 +103,7 @@ onMounted(loadReleases)
       <QuestSignInStep v-if="step === 0" :user="user" @sign-in="loginOpen = true" />
 
       <QuestReleasesStep v-else-if="step === 1" :releases="releases" :loading="loading"
-        :list-error="listError" :feedback="feedback" :signed-in="signedIn"
-        :generating-tag="generatingTag" @generate="generate" @sign-in="loginOpen = true" />
+        :list-error="listError" :feedback="feedback" :generating-tag="generatingTag" @generate="generate" />
 
       <QuestInstallStep v-else />
     </PageSection>
@@ -123,7 +123,7 @@ onMounted(loadReleases)
 .quest {
   max-width: 880px;
   margin: 0 auto;
-  padding: 0 var(--space-lg) var(--space-2xl);
+  padding: var(--space-lg) var(--space-lg) var(--space-2xl);
 }
 
 .quest__nav {
@@ -136,7 +136,7 @@ onMounted(loadReleases)
 
 @media (max-width: 767px) {
   .quest {
-    padding: 0 var(--space-md) var(--space-xl);
+    padding: var(--space-md) var(--space-md) var(--space-xl);
   }
 }
 </style>

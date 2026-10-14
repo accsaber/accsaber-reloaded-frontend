@@ -6,20 +6,17 @@ import BadgePill from '@/components/domain/BadgePill.vue'
 import type { QuestReleaseResponse } from '@/types/api/quest'
 import type { TableColumn } from '@/types/display'
 import { formatFullDate, formatRelativeDate } from '@/utils/formatters'
-import { computed } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   releases: QuestReleaseResponse[]
   loading: boolean
   listError: string | null
   feedback: { variant: 'error' | 'success'; text: string } | null
-  signedIn: boolean
   generatingTag: string | null
 }>()
 
 defineEmits<{
   generate: [tag: string]
-  'sign-in': []
 }>()
 
 const COLUMNS: TableColumn[] = [
@@ -29,7 +26,6 @@ const COLUMNS: TableColumn[] = [
   { key: 'action', label: '', align: 'right' },
 ]
 
-const rows = computed<Record<string, unknown>[]>(() => props.releases.map((r) => ({ ...r })))
 
 function rowClass(row: Record<string, unknown>) {
   return row.prerelease ? 'quest-releases__row--pre' : undefined
@@ -51,13 +47,6 @@ function rowClass(row: Record<string, unknown>) {
       submit scores as you.
     </BaseBanner>
 
-    <BaseBanner v-if="!signedIn" variant="info" :dismissible="false">
-      Sign in to generate a download.
-      <template #actions>
-        <BaseButton size="sm" @click="$emit('sign-in')">Sign in</BaseButton>
-      </template>
-    </BaseBanner>
-
     <BaseBanner v-if="listError" variant="error" role="alert" :dismissible="false">
       {{ listError }}
     </BaseBanner>
@@ -67,7 +56,7 @@ function rowClass(row: Record<string, unknown>) {
       {{ feedback.text }}
     </BaseBanner>
 
-    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="3" row-key="tag"
+    <DataTable :columns="COLUMNS" :rows="(releases as unknown as Record<string, unknown>[])" :loading="loading" :loading-rows="3" row-key="tag"
       :row-class="rowClass" empty-message="No releases published yet - the Quest mod is coming soon.">
       <template #cell-tag="{ row }">
         <span class="quest-releases__tag">
@@ -88,7 +77,7 @@ function rowClass(row: Record<string, unknown>) {
       </template>
 
       <template #cell-action="{ row }">
-        <BaseButton size="sm" variant="primary" :disabled="!signedIn || generatingTag !== null"
+        <BaseButton size="sm" variant="primary" :disabled="generatingTag !== null"
           :loading="generatingTag === row.tag" @click="$emit('generate', row.tag as string)">
           Generate
         </BaseButton>

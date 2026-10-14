@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
 
 const props = defineProps<{
   variant?: 'default' | 'primary' | 'destructive'
@@ -13,14 +14,18 @@ defineEmits<{
   click: [e: MouseEvent]
 }>()
 
-const tag = computed(() => (props.href ? 'a' : 'button'))
+const isInternalPath = computed(() => !!props.href && props.href.startsWith('/') && !props.href.startsWith('//'))
+
+const tag = computed(() => (isInternalPath.value ? RouterLink : props.href ? 'a' : 'button'))
 
 const isExternalUrl = computed(() =>
   props.href?.startsWith('http://') || props.href?.startsWith('https://'),
 )
 
 const linkAttrs = computed(() =>
-  props.href
+  isInternalPath.value
+    ? { to: props.href }
+    : props.href
     ? {
       href: props.href,
       ...(isExternalUrl.value ? { target: '_blank', rel: 'noopener noreferrer' } : {}),

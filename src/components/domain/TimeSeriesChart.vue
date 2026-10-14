@@ -358,7 +358,7 @@ watch([
       <div v-else-if="!hasData" class="chart-container__empty">
         {{ emptyMessage ?? 'No scores could be found with the timeframe selected.' }}
       </div>
-      <canvas v-show="!isLoading && hasData" ref="canvasRef" />
+      <canvas ref="canvasRef" :class="{ 'chart-container__canvas--hidden': isLoading || !hasData }" />
     </div>
   </div>
 </template>
@@ -383,6 +383,10 @@ watch([
 .chart-container__canvas-wrap canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+.chart-container__canvas-wrap .chart-container__canvas--hidden {
+  display: none !important;
 }
 
 .chart-container__empty {

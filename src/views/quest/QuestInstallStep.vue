@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 </script>
 
@@ -28,11 +27,6 @@ import BaseButton from '@/components/common/BaseButton.vue'
     </ol>
 
     <BaseButton href="https://mbf.bsquest.xyz" variant="primary">Open ModsBeforeFriday</BaseButton>
-
-    <BaseBanner variant="error" role="alert" :dismissible="false">
-      Still do not share the <code>.qmod</code> file - it carries your private AccSaber session.
-      Need a clean one? Come back here and generate again.
-    </BaseBanner>
   </div>
 </template>
 
@@ -69,10 +63,5 @@ code {
   color: var(--text-primary);
   padding: 1px 6px;
   border-radius: var(--radius-btn);
-}
-
-.quest-install :deep(.banner) {
-  max-width: none;
-  margin: 0;
 }
 </style>

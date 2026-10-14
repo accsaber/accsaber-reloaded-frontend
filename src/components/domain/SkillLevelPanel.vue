@@ -3,7 +3,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { SkillCategory, SkillResponse } from '@/types/api/users'
 import type { CategoryInfo } from '@/types/display'
-import { computed, ref } from 'vue'
+import { computed, ref, useId } from 'vue'
 
 const props = defineProps<{
   skill: SkillResponse | null
@@ -19,6 +19,7 @@ const CENTER = SIZE / 2
 const RINGS = 4
 const ANGLE_OFFSET = -Math.PI / 2
 
+const gradientId = useId()
 const hoveredIndex = ref<number | null>(null)
 const pinnedIndex = ref<number | null>(null)
 
@@ -104,6 +105,16 @@ const spokes = computed(() => {
 
 const dataPolygon = computed(() =>
   radarAxes.value.map((a) => `${a.x},${a.y}`).join(' '),
+)
+
+const gradients = computed(() =>
+  radarAxes.value.map((axis, i) => ({
+    id: `${gradientId}-${i}`,
+    cx: axis.x,
+    cy: axis.y,
+    r: RADIUS * (0.35 + 0.65 * axis.normalized),
+    color: axis.accent,
+  })),
 )
 
 function textAnchor(labelX: number): string {
@@ -195,6 +206,14 @@ const tooltipStyle = computed(() => {
             class="skill-panel__spoke"
           />
 
+          <defs>
+            <radialGradient v-for="grad in gradients" :id="grad.id" :key="grad.id" gradientUnits="userSpaceOnUse"
+              :cx="grad.cx" :cy="grad.cy" :r="grad.r">
+              <stop offset="0%" :stop-color="grad.color" stop-opacity="0.55" />
+              <stop offset="100%" :stop-color="grad.color" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+          <polygon v-for="grad in gradients" :key="'f' + grad.id" :points="dataPolygon" :fill="`url(#${grad.id})`" />
           <polygon :points="dataPolygon" class="skill-panel__data-stroke" />
 
           <g v-for="(axis, i) in radarAxes" :key="'l' + i">
@@ -384,7 +403,7 @@ const tooltipStyle = computed(() => {
 }
 
 .skill-panel__data-stroke {
-  fill: color-mix(in srgb, var(--page-accent, var(--accent)) 14%, transparent);
+  fill: none;
   stroke: color-mix(in srgb, var(--text-primary) 30%, transparent);
   stroke-width: 1;
   stroke-linejoin: round;

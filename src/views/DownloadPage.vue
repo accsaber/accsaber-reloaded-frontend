@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
+import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 
 const PLUGIN_RELEASES_URL = 'https://github.com/not-dexter/accsaber-reloaded-plugin/releases'
@@ -11,18 +13,8 @@ usePageMeta({
 
 <template>
   <div class="download">
-    <RouterLink to="/getting-started" class="download__back">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <line x1="19" y1="12" x2="5" y2="12" />
-        <polyline points="12 19 5 12 12 5" />
-      </svg>
-      Getting Started
-    </RouterLink>
-
-    <header class="download__header">
-      <h1 class="download__title">Download</h1>
-    </header>
+    <Breadcrumbs :crumbs="[{ label: 'Getting Started', to: '/getting-started' }, { label: 'Download' }]" />
+    <PageHeaderBleed title="Download" />
 
     <div class="download__options">
       <a class="option" :href="PLUGIN_RELEASES_URL" target="_blank" rel="noopener noreferrer">
@@ -53,40 +45,10 @@ usePageMeta({
 
 <style scoped>
 .download {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
-  padding: var(--space-3xl) var(--space-lg);
-}
-
-.download__back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  align-self: flex-start;
-  color: var(--text-tertiary);
-  text-decoration: none;
-  font-size: var(--text-caption);
-  transition: color 120ms ease;
-}
-
-.download__back:hover {
-  color: var(--text-secondary);
-}
-
-.download__header {
-  text-align: center;
-  margin: var(--space-2xl) 0;
-}
-
-.download__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 var(--space-sm);
+  padding: var(--space-lg) var(--space-lg) var(--space-3xl);
 }
 
 .download__options {
@@ -134,7 +96,7 @@ usePageMeta({
 
 @media (max-width: 767px) {
   .download {
-    padding: var(--space-2xl) var(--space-md);
+    padding: var(--space-md) var(--space-md) var(--space-2xl);
   }
 
   .download__options {
