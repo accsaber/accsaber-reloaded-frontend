@@ -36,106 +36,60 @@ async function load() {
 
 onMounted(load)
 
-const TIER_ORDER: SupporterTier[] = ['gold', 'silver', 'bronze']
+type GroupKey = SupporterTier | 'past'
 
-interface TierGroup {
-  tier: SupporterTier
-  rows: SupporterCreditEntry[]
-}
+const GROUP_ORDER: GroupKey[] = ['gold', 'silver', 'bronze', 'past']
 
-const activeByTier = computed<TierGroup[]>(() => {
-  const buckets: Record<SupporterTier, SupporterCreditEntry[]> = {
-    gold: [],
-    silver: [],
-    bronze: [],
-  }
-  for (const row of supporters.value) {
-    if (row.currentTier) buckets[row.currentTier].push(row)
-  }
-  return TIER_ORDER
-    .map((tier) => ({
-      tier,
-      rows: buckets[tier].sort((a, b) => b.lifetimeSupportedCents - a.lifetimeSupportedCents),
-    }))
-    .filter((g) => g.rows.length > 0)
+const groups = computed(() => {
+  const buckets: Record<GroupKey, SupporterCreditEntry[]> = { gold: [], silver: [], bronze: [], past: [] }
+  const sorted = [...supporters.value].sort((a, b) => b.lifetimeSupportedCents - a.lifetimeSupportedCents)
+  for (const row of sorted) buckets[row.currentTier ?? 'past'].push(row)
+  return GROUP_ORDER.filter((key) => buckets[key].length > 0).map((key) => ({
+    key,
+    label: key === 'past' ? 'Past supporters' : SUPPORTER_TIER_DISPLAY[key],
+    color: key === 'past' ? undefined : SUPPORTER_TIER_PALETTE[key].base,
+    rows: buckets[key],
+  }))
 })
-
-const pastSupporters = computed(() =>
-  [...supporters.value]
-    .filter((s) => s.currentTier == null)
-    .sort((a, b) => b.lifetimeSupportedCents - a.lifetimeSupportedCents),
-)
-
-const activeTotal = computed(() => activeByTier.value.reduce((n, g) => n + g.rows.length, 0))
-
-const showAnything = computed(() => activeTotal.value > 0 || pastSupporters.value.length > 0)
-
-function tierColor(tier: SupporterTier): string {
-  return SUPPORTER_TIER_PALETTE[tier].base
-}
-
-function tierLabel(tier: SupporterTier): string {
-  return SUPPORTER_TIER_DISPLAY[tier]
-}
 </script>
 
 <template>
   <div class="credits">
-    <header class="credits__header">
-      <p class="credits__eyebrow">Credits</p>
-      <h1 class="credits__title">The supporters of AccSaber</h1>
-    </header>
+    <h1 class="credits__title">The supporters of AccSaber</h1>
 
     <div v-if="loading" class="credits__loading" aria-busy="true">
       <SkeletonLoader v-for="i in 5" :key="i" variant="text" />
     </div>
 
-    <div v-else-if="error" class="credits__notice credits__notice--error" role="alert">
+    <div v-else-if="error" class="credits__error" role="alert">
       <span>{{ error }}</span>
       <BaseButton size="sm" @click="load">Retry</BaseButton>
     </div>
 
     <template v-else>
-      <div v-for="group in activeByTier" :key="group.tier" class="credits__tier">
-        <h2 class="credits__tier-heading" :style="{ color: tierColor(group.tier) }">
-          {{ tierLabel(group.tier) }}
-          <span class="credits__tier-count">{{ group.rows.length }}</span>
+      <section v-for="group in groups" :key="group.key" class="credits__group">
+        <h2 class="credits__group-heading" :style="{ color: group.color }">
+          {{ group.label }}
+          <span class="credits__group-count">{{ group.rows.length }}</span>
         </h2>
         <ul class="credits__rows">
-          <li v-for="row in group.rows" :key="row.userId" class="credits__row">
-            <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <UserChip :user="toUserRef(row)" class="credits__player" />
-              <span class="credits__meta">{{ formatCents(row.lifetimeSupportedCents) }}</span>
+          <li v-for="row in group.rows" :key="row.userId">
+            <router-link :to="`/players/${row.userId}`" class="credits__row">
+              <UserChip :user="toUserRef(row)" />
+              <span class="credits__amount">{{ formatCents(row.lifetimeSupportedCents) }}</span>
             </router-link>
           </li>
         </ul>
-      </div>
+      </section>
 
-      <details v-if="pastSupporters.length" class="credits__past">
-        <summary class="credits__past-summary">
-          Tippers &amp; Past Supporters ({{ pastSupporters.length }})
-        </summary>
-        <ul class="credits__rows credits__rows--past">
-          <li v-for="row in pastSupporters" :key="row.userId" class="credits__row">
-            <router-link :to="`/players/${row.userId}`" class="credits__row-link">
-              <UserChip :user="toUserRef(row)" class="credits__player" />
-              <span class="credits__meta">{{ formatCents(row.lifetimeSupportedCents) }}</span>
-            </router-link>
-          </li>
-        </ul>
-      </details>
+      <p v-if="groups.length === 0" class="credits__empty">No supporters yet.</p>
 
-      <p v-if="!showAnything" class="credits__empty">
-        Nobody's here yet. Want to be the first?
-        <a :href="KOFI_URL" target="_blank" rel="noopener" class="credits__empty-link">Support on Ko-fi.</a>
-      </p>
+      <footer class="credits__footer">
+        Recurring tips on
+        <a :href="KOFI_URL" target="_blank" rel="noopener">Ko-fi</a>
+        keep AccSaber online.
+      </footer>
     </template>
-
-    <footer v-if="!loading && !error" class="credits__footer">
-      Recurring tips on
-      <a :href="KOFI_URL" target="_blank" rel="noopener" class="credits__footer-link">Ko-fi</a>
-      keep AccSaber online.
-    </footer>
   </div>
 </template>
 
@@ -143,31 +97,14 @@ function tierLabel(tier: SupporterTier): string {
 .credits {
   max-width: 680px;
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-md) var(--space-3xl);
-}
-
-.credits__header {
-  margin-bottom: var(--space-2xl);
-}
-
-.credits__eyebrow {
-  margin: 0 0 var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  padding: var(--space-2xl) 0 var(--space-3xl);
 }
 
 .credits__title {
-  margin: 0 0 var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: 1.75rem;
+  margin: 0 0 var(--space-2xl);
+  font-size: var(--text-page-title);
   font-weight: 700;
-  line-height: 1.2;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
 }
 
 .credits__loading {
@@ -176,164 +113,83 @@ function tierLabel(tier: SupporterTier): string {
   gap: var(--space-md);
 }
 
-.credits__notice {
-  padding: var(--space-lg);
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  border-top: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.credits__notice--error {
+.credits__error {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
+  padding: var(--space-lg) 0;
   color: var(--text-primary);
+  border-block: 1px solid var(--bg-overlay);
 }
 
-.credits__tier {
+.credits__group {
   margin-bottom: var(--space-2xl);
 }
 
-.credits__tier:last-of-type {
-  margin-bottom: var(--space-xl);
-}
-
-.credits__tier-heading {
+.credits__group-heading {
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
   margin: 0 0 var(--space-md);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  padding-bottom: var(--space-xs);
+  font-size: var(--text-caption);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  padding-bottom: var(--space-xs);
+  color: var(--text-tertiary);
   border-bottom: 1px solid currentColor;
 }
 
-.credits__tier-count {
+.credits__group-count,
+.credits__amount {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
   color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
 }
 
 .credits__rows {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.credits__rows li + li {
+  border-top: 1px solid var(--bg-overlay);
+}
+
+.credits__row {
   display: flex;
-  flex-direction: column;
-}
-
-.credits__row + .credits__row {
-  border-top: 1px solid color-mix(in srgb, var(--bg-overlay) 50%, transparent);
-}
-
-.credits__row-link {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-xs);
   color: inherit;
   text-decoration: none;
-  border-radius: 3px;
-  transition: background-color 140ms ease-out;
+  border-radius: var(--radius-btn);
 }
 
-.credits__row-link:hover {
-  background: color-mix(in srgb, var(--bg-elevated) 60%, transparent);
+.credits__row:hover {
+  background: var(--bg-elevated);
 }
 
-.credits__row-link:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent, var(--text-primary)) 60%, transparent);
-  outline-offset: -2px;
-}
-
-.credits__player {
-  font-size: 0.9375rem;
-}
-
-.credits__meta {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
-}
-
-.credits__past {
-  margin-top: var(--space-lg);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
-}
-
-.credits__past-summary {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  list-style: none;
-  padding: var(--space-xs) 0;
-  user-select: none;
-}
-
-.credits__past-summary::-webkit-details-marker {
-  display: none;
-}
-
-.credits__past-summary::before {
-  content: '+ ';
-  font-family: var(--font-mono);
-  margin-right: 4px;
-}
-
-.credits__past[open] .credits__past-summary::before {
-  content: '− ';
-}
-
-.credits__rows--past {
-  margin-top: var(--space-sm);
+.credits__amount {
+  font-size: var(--text-caption);
 }
 
 .credits__empty {
   padding: var(--space-2xl) 0;
   text-align: center;
-  font-size: 0.9375rem;
   color: var(--text-secondary);
-}
-
-.credits__empty-link {
-  color: var(--text-primary);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
 }
 
 .credits__footer {
-  margin-top: var(--space-3xl);
   padding-top: var(--space-md);
   border-top: 1px solid var(--bg-overlay);
-  font-size: 0.8125rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
-.credits__footer-link {
+.credits__footer a {
   color: var(--text-secondary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-thickness: 1px;
-}
-
-.credits__footer-link:hover {
-  color: var(--text-primary);
 }
 </style>

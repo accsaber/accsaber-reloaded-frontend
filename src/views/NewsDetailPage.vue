@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import NewsArticle from '@/components/domain/NewsArticle.vue'
@@ -37,23 +38,24 @@ async function load(slugVal: string) {
   }
 }
 
+const breadcrumbs = computed<Crumb[]>(() => [
+  { label: 'News', to: '/news' },
+  { label: news.value?.title ?? 'Article' },
+])
+
 watch(slug, (s) => load(s), { immediate: true })
 </script>
 
 <template>
   <div class="news-detail">
-    <div v-if="loading" class="news-detail__loading">
-      <SkeletonLoader variant="card" style="height: 240px" />
-      <SkeletonLoader variant="text" style="margin-top: var(--space-lg); height: 32px" />
-      <SkeletonLoader variant="text" style="margin-top: var(--space-md); height: 200px" />
-    </div>
+    <Breadcrumbs :crumbs="breadcrumbs" />
 
-    <EmptyState
-      v-else-if="notFound || !news"
-      message="This news article wasn't found or isn't published."
-      action-label="Back to News"
-      @action="$router.push('/news')"
-    />
+    <template v-if="loading">
+      <SkeletonLoader variant="card" height="240px" />
+      <SkeletonLoader variant="text" :lines="6" />
+    </template>
+
+    <EmptyState v-else-if="notFound || !news" message="This news article wasn't found or isn't published." />
 
     <NewsArticle v-else :news="news" />
   </div>
@@ -63,20 +65,8 @@ watch(slug, (s) => load(s), { immediate: true })
 .news-detail {
   max-width: 760px;
   margin: 0 auto;
-  padding: var(--space-xl);
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-}
-
-.news-detail__loading {
-  display: flex;
-  flex-direction: column;
-}
-
-@media (max-width: 767px) {
-  .news-detail {
-    padding: var(--space-md);
-  }
 }
 </style>
