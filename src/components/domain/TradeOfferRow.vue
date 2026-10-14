@@ -3,12 +3,11 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import EssenceAmount from '@/components/domain/EssenceAmount.vue'
 import TradeOfferRowItem from '@/components/domain/TradeOfferRowItem.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { TradeItemRef, TradeResponse } from '@/types/api/trades'
 import type { UserRefDisplay } from '@/types/display'
 import { formatEssenceAmount, formatEssenceNet } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
   trade: TradeResponse
@@ -23,8 +22,6 @@ defineEmits<{
   cancel: [tradeId: string]
 }>()
 
-const modifierStore = useItemModifierStore()
-
 const counterpartUserId = computed(() =>
   props.perspective === 'incoming' ? props.trade.fromUserId : props.trade.toUserId,
 )
@@ -34,19 +31,16 @@ const counterpart = computed<UserRefDisplay>(() => {
   return ref ?? { id: counterpartUserId.value, name: counterpartUserId.value }
 })
 
-const yourSide = computed<TradeItemRef[]>(() =>
-  props.perspective === 'incoming' ? props.trade.requestedItems : props.trade.offeredItems,
-)
-const theirSide = computed<TradeItemRef[]>(() =>
-  props.perspective === 'incoming' ? props.trade.offeredItems : props.trade.requestedItems,
-)
+const incoming = computed(() => props.perspective === 'incoming')
 
-const yourEssence = computed(() =>
-  props.perspective === 'incoming' ? props.trade.requestedEssence : props.trade.offeredEssence,
-)
-const theirEssence = computed(() =>
-  props.perspective === 'incoming' ? props.trade.offeredEssence : props.trade.requestedEssence,
-)
+const sides = computed<{ label: string; items: TradeItemRef[]; essence: number }[]>(() => {
+  const t = props.trade
+  const offered = { items: t.offeredItems, essence: t.offeredEssence }
+  const requested = { items: t.requestedItems, essence: t.requestedEssence }
+  return incoming.value
+    ? [{ label: 'You give', ...requested }, { label: 'You receive', ...offered }]
+    : [{ label: 'You offered', ...offered }, { label: 'They give', ...requested }]
+})
 
 const acceptCost = computed(() =>
   props.perspective === 'incoming' && props.trade.status === 'pending'
@@ -69,9 +63,6 @@ const cannotAffordAccept = computed(
 
 const showActions = computed(() => props.trade.status === 'pending')
 
-onMounted(() => {
-  modifierStore.fetchModifiers()
-})
 </script>
 
 <template>
@@ -90,53 +81,31 @@ onMounted(() => {
     <p v-if="trade.message" class="trade-row__message">{{ trade.message }}</p>
 
     <div class="trade-row__sides">
-      <section class="trade-row__side">
-        <span class="trade-row__side-label">
-          {{ perspective === 'incoming' ? 'You give' : 'You offered' }}
-          <span class="trade-row__count">({{ yourSide.length }})</span>
-        </span>
-        <div v-if="yourEssence > 0" class="trade-row__essence">
-          <EssenceAmount :amount="yourEssence" />
-          <span class="trade-row__essence-word">essence</span>
+      <template v-for="(side, i) in sides" :key="side.label">
+        <div v-if="i === 1" class="trade-row__swap" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9" />
+            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+            <polyline points="7 23 3 19 7 15" />
+            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+          </svg>
         </div>
-        <div v-if="yourSide.length === 0 && yourEssence === 0" class="trade-row__side-empty">Nothing</div>
-        <div v-else-if="yourSide.length > 0" class="trade-row__side-items">
-          <TradeOfferRowItem
-            v-for="ref in yourSide"
-            :key="ref.linkId"
-            :item-ref="ref"
-          />
-        </div>
-      </section>
-
-      <div class="trade-row__swap" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="17 1 21 5 17 9" />
-          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-          <polyline points="7 23 3 19 7 15" />
-          <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-        </svg>
-      </div>
-
-      <section class="trade-row__side">
-        <span class="trade-row__side-label">
-          {{ perspective === 'incoming' ? 'You receive' : 'They give' }}
-          <span class="trade-row__count">({{ theirSide.length }})</span>
-        </span>
-        <div v-if="theirEssence > 0" class="trade-row__essence">
-          <EssenceAmount :amount="theirEssence" />
-          <span class="trade-row__essence-word">essence</span>
-        </div>
-        <div v-if="theirSide.length === 0 && theirEssence === 0" class="trade-row__side-empty">Nothing</div>
-        <div v-else-if="theirSide.length > 0" class="trade-row__side-items">
-          <TradeOfferRowItem
-            v-for="ref in theirSide"
-            :key="ref.linkId"
-            :item-ref="ref"
-          />
-        </div>
-      </section>
+        <section class="trade-row__side">
+          <span class="trade-row__side-label">
+            {{ side.label }}
+            <span class="trade-row__count">({{ side.items.length }})</span>
+          </span>
+          <div v-if="side.essence > 0" class="trade-row__essence">
+            <EssenceAmount :amount="side.essence" />
+            <span class="trade-row__essence-word">essence</span>
+          </div>
+          <div v-if="side.items.length === 0 && side.essence === 0" class="trade-row__side-empty">Nothing</div>
+          <div v-else-if="side.items.length > 0" class="trade-row__side-items">
+            <TradeOfferRowItem v-for="ref in side.items" :key="ref.linkId" :item-ref="ref" />
+          </div>
+        </section>
+      </template>
     </div>
 
     <footer class="trade-row__foot">

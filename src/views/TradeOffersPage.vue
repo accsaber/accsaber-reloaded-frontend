@@ -9,12 +9,14 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import TradeOfferRow from '@/components/domain/TradeOfferRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
+import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
+import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useTradeStore } from '@/stores/trades'
-import type { TradeListParams, TradeStatus } from '@/types/api/trades'
+import type { TradeResponse, TradeStatus } from '@/types/api/trades'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 
 usePageMeta({
   title: 'Trade Offers | AccSaber',
@@ -24,215 +26,143 @@ usePageMeta({
 const authStore = useAuthStore()
 const essenceStore = useEssenceStore()
 const tradeStore = useTradeStore()
-const router = useRouter()
+const { queryRef } = useQueryParams()
 
-type SectionKey = 'incoming-pending' | 'incoming-history' | 'sent-pending' | 'sent-history'
+type SectionKey = 'incoming' | 'incoming-history' | 'sent' | 'sent-history'
+type TradeAction = 'accept' | 'decline' | 'cancel'
 
-interface SectionConfig {
+const HISTORY: TradeStatus[] = ['accepted', 'declined', 'cancelled', 'expired']
+
+const SECTIONS: Record<SectionKey, {
+  label: string
   direction: 'incoming' | 'outgoing'
   statuses: TradeStatus[]
-  perspective: 'incoming' | 'outgoing'
+  sub?: boolean
   emptyMessage: string
+}> = {
+  incoming: { label: 'Incoming Offers', direction: 'incoming', statuses: ['pending'], emptyMessage: 'You have no incoming trade offers.' },
+  'incoming-history': { label: 'Incoming Offer History', direction: 'incoming', statuses: HISTORY, sub: true, emptyMessage: 'No incoming offer history yet.' },
+  sent: { label: 'Sent Offers', direction: 'outgoing', statuses: ['pending'], emptyMessage: 'You have no outgoing trade offers.' },
+  'sent-history': { label: 'Sent Offer History', direction: 'outgoing', statuses: HISTORY, sub: true, emptyMessage: 'No sent offer history yet.' },
 }
 
-const SECTIONS: Record<SectionKey, SectionConfig> = {
-  'incoming-pending': {
-    direction: 'incoming',
-    statuses: ['pending'],
-    perspective: 'incoming',
-    emptyMessage: 'You have no incoming trade offers.',
-  },
-  'incoming-history': {
-    direction: 'incoming',
-    statuses: ['accepted', 'declined', 'cancelled', 'expired'],
-    perspective: 'incoming',
-    emptyMessage: 'No incoming offer history yet.',
-  },
-  'sent-pending': {
-    direction: 'outgoing',
-    statuses: ['pending'],
-    perspective: 'outgoing',
-    emptyMessage: 'You have no outgoing trade offers.',
-  },
-  'sent-history': {
-    direction: 'outgoing',
-    statuses: ['accepted', 'declined', 'cancelled', 'expired'],
-    perspective: 'outgoing',
-    emptyMessage: 'No sent offer history yet.',
-  },
-}
+const breadcrumbs: Crumb[] = [
+  { label: 'Market Hub', to: { name: 'market' } },
+  { label: 'Trade Offers' },
+]
 
-const PAGE_SIZE = 20
+const sectionParam = queryRef<SectionKey>('section')
+const activeKey = computed<SectionKey>(() => (sectionParam.value && sectionParam.value in SECTIONS ? sectionParam.value : 'incoming'))
+const section = computed(() => SECTIONS[activeKey.value])
 
-const activeKey = ref<SectionKey>('incoming-pending')
-const currentPage = ref(1)
+const { currentPage, paginationParams, setPage } = usePageableRoute({
+  defaultSort: 'createdAt',
+  defaultOrder: 'desc',
+  defaultSize: 20,
+  secondarySort: null,
+})
+
+const trades = ref<TradeResponse[]>([])
+const totalPages = ref(0)
+const loading = ref(true)
 const actionBusy = ref<string | null>(null)
 const actionError = ref<string | null>(null)
 
-const isLoggedIn = computed(() => authStore.isLoggedIn)
-
-const breadcrumbs = computed<Crumb[]>(() => [
-  { label: 'Market Hub', to: { name: 'market' } },
-  { label: 'Trade Offers' },
-])
-
-const totalPages = computed(() => tradeStore.tradesPage?.totalPages ?? 0)
-const trades = computed(() => tradeStore.tradesPage?.content ?? [])
+let requestId = 0
 
 async function fetchActive() {
-  const cfg = SECTIONS[activeKey.value]
-  const params: TradeListParams = {
-    direction: cfg.direction,
-    status: cfg.statuses,
-    page: currentPage.value - 1,
-    size: PAGE_SIZE,
-    sort: 'createdAt,desc',
+  if (!authStore.isLoggedIn) return
+  const id = ++requestId
+  const key = activeKey.value
+  loading.value = true
+  try {
+    const { getTrades } = await import('@/api/trades')
+    const page = await getTrades({ direction: section.value.direction, status: section.value.statuses, ...paginationParams.value })
+    if (id !== requestId) return
+    trades.value = page.content
+    totalPages.value = page.totalPages
+    if (key === 'incoming') tradeStore.pendingIncomingCount = page.totalElements
+  } catch {
+    if (id === requestId) trades.value = []
   }
-  await tradeStore.fetchTrades(params)
+  if (id === requestId) loading.value = false
 }
 
-function setSection(key: SectionKey) {
-  activeKey.value = key
-  currentPage.value = 1
+function resolve(tradeId: string) {
+  trades.value = trades.value.filter((t) => t.id !== tradeId)
+  if (activeKey.value === 'incoming') tradeStore.pendingIncomingCount = Math.max(0, tradeStore.pendingIncomingCount - 1)
+  if (trades.value.length === 0) fetchActive()
 }
 
-async function refreshAll() {
-  await Promise.all([tradeStore.refreshIncomingCount(), fetchActive()])
-}
-
-async function handleAccept(tradeId: string) {
+async function runAction(tradeId: string, action: TradeAction) {
   actionBusy.value = tradeId
   actionError.value = null
   try {
-    await tradeStore.acceptTrade(tradeId)
-    await Promise.all([fetchActive(), essenceStore.fetchBalance(true)])
+    const api = await import('@/api/trades')
+    const calls = { accept: api.acceptTrade, decline: api.declineTrade, cancel: api.cancelTrade }
+    await calls[action](tradeId)
+    resolve(tradeId)
   } catch (e) {
-    actionError.value = parseApiError(e, 'Could not accept this trade.').message
-    essenceStore.fetchBalance(true)
+    actionError.value = parseApiError(e, `Could not ${action} this trade.`).message
   } finally {
     actionBusy.value = null
   }
+  if (action === 'accept') essenceStore.fetchBalance(true)
 }
 
-async function handleDecline(tradeId: string) {
-  actionBusy.value = tradeId
-  try {
-    await tradeStore.declineTrade(tradeId)
-    await fetchActive()
-  } finally {
-    actionBusy.value = null
-  }
+function selectSection(key: SectionKey) {
+  sectionParam.value = key === 'incoming' ? '' : key
 }
 
-async function handleCancel(tradeId: string) {
-  actionBusy.value = tradeId
-  try {
-    await tradeStore.cancelTrade(tradeId)
-    await fetchActive()
-  } finally {
-    actionBusy.value = null
-  }
-}
-
-watch([activeKey, currentPage], fetchActive)
+watch(() => JSON.stringify([activeKey.value, paginationParams.value]), fetchActive, { immediate: true })
 
 onMounted(() => {
-  if (!isLoggedIn.value) return
-  refreshAll()
+  if (!authStore.isLoggedIn) return
+  useItemModifierStore().fetchModifiers()
   essenceStore.fetchBalance()
+  if (activeKey.value !== 'incoming') tradeStore.refreshIncomingCount()
 })
-
-const incomingPendingLabel = computed(() => `(${tradeStore.pendingIncomingCount} Pending)`)
 </script>
 
 <template>
   <div class="trades-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
-    <Breadcrumbs class="trades-page__breadcrumbs" :crumbs="breadcrumbs" />
-
+    <Breadcrumbs :crumbs="breadcrumbs" />
     <PageHeaderBleed title="Trade Offers" />
 
-    <div v-if="!isLoggedIn" class="trades-page__gate">
-      <EmptyState message="Sign in to view your trade offers." />
-    </div>
+    <EmptyState v-if="!authStore.isLoggedIn" message="Sign in to view your trade offers." />
 
     <div v-else class="trades-page__layout">
       <main class="trades-page__main">
-        <BaseBanner
-          v-if="actionError"
-          variant="error"
-          role="alert"
-          @close="actionError = null"
-        >{{ actionError }}</BaseBanner>
+        <BaseBanner v-if="actionError" variant="error" role="alert" @close="actionError = null">
+          {{ actionError }}
+        </BaseBanner>
 
-        <template v-if="tradeStore.loading">
-          <div v-for="i in 4" :key="i" class="trades-page__skeleton">
-            <SkeletonLoader variant="card" />
-          </div>
+        <template v-if="loading && trades.length === 0">
+          <SkeletonLoader v-for="i in 4" :key="i" variant="card" height="96px" />
         </template>
 
-        <EmptyState
-          v-else-if="trades.length === 0"
-          :message="SECTIONS[activeKey].emptyMessage"
-        />
+        <EmptyState v-else-if="trades.length === 0" :message="section.emptyMessage" />
 
         <template v-else>
-          <TradeOfferRow
-            v-for="t in trades"
-            :key="t.id"
-            :trade="t"
-            :perspective="SECTIONS[activeKey].perspective"
-            :busy="actionBusy === t.id"
-            :spendable-balance="essenceStore.balance"
-            @accept="handleAccept"
-            @decline="handleDecline"
-            @cancel="handleCancel"
-          />
+          <TradeOfferRow v-for="t in trades" :key="t.id" :trade="t" :perspective="section.direction"
+            :busy="actionBusy === t.id" :spendable-balance="essenceStore.balance"
+            @accept="runAction($event, 'accept')" @decline="runAction($event, 'decline')"
+            @cancel="runAction($event, 'cancel')" />
 
-          <PaginationControls
-            v-if="totalPages > 1"
-            :page="currentPage"
-            :total-pages="totalPages"
-            @update:page="(p) => currentPage = p"
-          />
+          <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
+            @update:page="setPage($event)" />
         </template>
       </main>
 
       <aside class="trades-page__sidebar">
-        <BaseButton
-          variant="primary"
-          size="lg"
-          @click="router.push({ name: 'trade-new' })"
-        >New Trade Offer</BaseButton>
+        <BaseButton variant="primary" size="lg" href="/trade-offers/new">New Trade Offer</BaseButton>
 
         <nav class="trades-page__nav">
-          <button
-            class="trades-page__nav-btn"
-            :class="{ 'trades-page__nav-btn--active': activeKey === 'incoming-pending' }"
-            @click="setSection('incoming-pending')"
-          >
-            <span class="trades-page__nav-label">Incoming Offers</span>
-            <span class="trades-page__nav-count">{{ incomingPendingLabel }}</span>
-          </button>
-          <button
-            class="trades-page__nav-btn trades-page__nav-btn--sub"
-            :class="{ 'trades-page__nav-btn--active': activeKey === 'incoming-history' }"
-            @click="setSection('incoming-history')"
-          >
-            <span class="trades-page__nav-label">Incoming Offer History</span>
-          </button>
-          <button
-            class="trades-page__nav-btn"
-            :class="{ 'trades-page__nav-btn--active': activeKey === 'sent-pending' }"
-            @click="setSection('sent-pending')"
-          >
-            <span class="trades-page__nav-label">Sent Offers</span>
-          </button>
-          <button
-            class="trades-page__nav-btn trades-page__nav-btn--sub"
-            :class="{ 'trades-page__nav-btn--active': activeKey === 'sent-history' }"
-            @click="setSection('sent-history')"
-          >
-            <span class="trades-page__nav-label">Sent Offer History</span>
+          <button v-for="(cfg, key) in SECTIONS" :key="key" class="trades-page__nav-btn"
+            :class="{ 'trades-page__nav-btn--active': activeKey === key, 'trades-page__nav-btn--sub': cfg.sub }"
+            @click="selectSection(key)">
+            <span class="trades-page__nav-label">{{ cfg.label }}</span>
+            <span v-if="key === 'incoming'" class="trades-page__nav-count">({{ tradeStore.pendingIncomingCount }} Pending)</span>
           </button>
         </nav>
       </aside>
@@ -242,7 +172,6 @@ const incomingPendingLabel = computed(() => `(${tradeStore.pendingIncomingCount}
 
 <style scoped>
 .trades-page {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
@@ -263,10 +192,6 @@ const incomingPendingLabel = computed(() => `(${tradeStore.pendingIncomingCount}
   flex-direction: column;
   gap: var(--space-md);
   min-width: 0;
-}
-
-.trades-page__skeleton {
-  height: 96px;
 }
 
 .trades-page__sidebar {
@@ -331,17 +256,6 @@ const incomingPendingLabel = computed(() => `(${tradeStore.pendingIncomingCount}
 
 .trades-page__nav-btn--active .trades-page__nav-count {
   color: var(--page-accent);
-}
-
-.trades-page__gate {
-  padding: var(--space-2xl) 0;
-}
-
-.trades-page__breadcrumbs {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
 }
 
 @media (max-width: 1023px) {

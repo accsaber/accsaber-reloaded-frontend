@@ -1901,6 +1901,7 @@ export interface UserItemResponse {
   reason: string | null
   awardedAt: string
   variantKey?: string | null
+  pendingTrade?: boolean
 }
 
 export type InventoryEntry = Omit<UserItemResponse, 'linkId'> & { linkId: string | null }
