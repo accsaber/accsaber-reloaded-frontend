@@ -4,7 +4,7 @@ import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import { useAuthStore } from '@/stores/auth'
 import type {
   ClanWarDetailResponse,
@@ -31,7 +31,7 @@ const FIGHTERS_SIZE = 100
 
 const route = useRoute()
 const auth = useAuthStore()
-const now = useSharedNow()
+const now = useNow(1000)
 const own = useOwnClan()
 
 const warId = computed(() => String(route.params.warId ?? ''))

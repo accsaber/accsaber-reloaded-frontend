@@ -193,16 +193,16 @@ watch(
           :balance="essenceStore.balance"
           :reserved="essenceStore.reserved ?? 0"
         />
-        <BaseButton v-if="authStore.isLoggedIn" @click="router.push({ name: 'trade-offers' })">
+        <BaseButton v-if="authStore.isLoggedIn" href="/trade-offers">
           Trade offers{{ tradeStore.pendingIncomingCount > 0 ? ` (${tradeStore.pendingIncomingCount})` : '' }}
         </BaseButton>
-        <BaseButton v-if="authStore.isLoggedIn" @click="router.push({ name: 'market-activity' })">
+        <BaseButton v-if="authStore.isLoggedIn" href="/market/me">
           My activity
         </BaseButton>
         <BaseButton
           v-if="authStore.isLoggedIn"
           variant="primary"
-          @click="router.push({ name: 'market-new' })"
+          href="/market/new"
         >
           List an item
         </BaseButton>

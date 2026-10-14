@@ -18,14 +18,6 @@ interface ChatMessage {
   right: boolean
   mine: boolean
   latest: boolean
-  drift: number
-  text: string
-}
-
-function drift(id: string): number {
-  let hash = 5381
-  for (let i = 0; i < id.length; i++) hash = (hash * 33) ^ id.charCodeAt(i)
-  return Math.abs(hash) % 44
 }
 
 const leaderId = computed(() => {
@@ -40,18 +32,7 @@ const messages = computed<ChatMessage[]>(() => {
     right: leaderId.value !== null && bid.bidder.id === leaderId.value,
     mine: isSameMarketUser(bid.bidder, props.viewerId),
     latest: index === chronological.length - 1 && props.listing.status === 'active',
-    drift: drift(bid.id),
-    text: bid.buyout ? 'Buyout!' : index === 0 ? 'Opens at' : 'Raise to',
   }))
-})
-
-const closingLine = computed(() => {
-  if (props.listing.status === 'sold' && props.listing.winner) {
-    return { text: `Sold to ${props.listing.winner.name} for`, amount: props.listing.finalPrice }
-  }
-  if (props.listing.status === 'expired') return { text: 'Expired without a sale', amount: null }
-  if (props.listing.status === 'cancelled') return { text: 'Cancelled by the seller', amount: null }
-  return null
 })
 </script>
 
@@ -59,9 +40,7 @@ const closingLine = computed(() => {
   <div class="bid-chat">
     <h2 class="bid-chat__heading">Bid history</h2>
 
-    <p v-if="bids.length === 0 && !closingLine" class="bid-chat__empty">
-      No bids yet. The floor is quiet.
-    </p>
+    <p v-if="bids.length === 0" class="bid-chat__empty">No bids yet.</p>
 
     <ol v-else class="bid-chat__feed">
       <li v-if="listing.startingBid != null" class="bid-chat__system">
@@ -77,7 +56,6 @@ const closingLine = computed(() => {
           'bid-chat__msg--buyout': msg.bid.buyout,
           'bid-chat__msg--latest': msg.latest,
         }"
-        :style="{ '--drift': `${msg.drift}px` }"
       >
         <img
           v-if="pickAvatarUrl(msg.bid.bidder)"
@@ -102,15 +80,10 @@ const closingLine = computed(() => {
             </time>
           </header>
           <p class="bid-chat__text">
-            {{ msg.text }}
-            <span class="bid-chat__amount"><EssenceAmount :amount="msg.bid.amount" /></span><template v-if="!msg.bid.buyout && messages[0] !== msg">!</template>
+            {{ msg.bid.buyout ? 'Buyout' : 'Bid' }}
+            <EssenceAmount :amount="msg.bid.amount" class="bid-chat__amount" />
           </p>
         </div>
-      </li>
-
-      <li v-if="closingLine" class="bid-chat__system bid-chat__system--closing">
-        {{ closingLine.text }}
-        <EssenceAmount v-if="closingLine.amount != null" :amount="closingLine.amount" />
       </li>
     </ol>
   </div>
@@ -152,28 +125,17 @@ const closingLine = computed(() => {
   color: var(--text-tertiary);
 }
 
-.bid-chat__system--closing {
-  color: var(--text-secondary);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  padding: var(--space-xs) var(--space-md);
-  margin-top: var(--space-xs);
-}
-
 .bid-chat__msg {
   display: flex;
   align-items: flex-end;
   gap: var(--space-sm);
   max-width: 72%;
   align-self: flex-start;
-  margin-left: var(--drift, 0px);
 }
 
 .bid-chat__msg--right {
   align-self: flex-end;
   flex-direction: row-reverse;
-  margin-left: 0;
-  margin-right: var(--drift, 0px);
 }
 
 .bid-chat__avatar {
@@ -258,14 +220,7 @@ const closingLine = computed(() => {
 }
 
 .bid-chat__amount {
-  display: inline-flex;
-  padding: 0 6px;
-  margin: 0 1px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--tier-gold) 12%, transparent);
   color: var(--text-primary);
-  font-size: var(--text-body);
-  vertical-align: baseline;
 }
 
 .bid-chat__msg--buyout .bid-chat__text {
@@ -276,11 +231,6 @@ const closingLine = computed(() => {
 @media (max-width: 640px) {
   .bid-chat__msg {
     max-width: 92%;
-  }
-
-  .bid-chat__msg,
-  .bid-chat__msg--right {
-    --drift: 0px;
   }
 }
 </style>

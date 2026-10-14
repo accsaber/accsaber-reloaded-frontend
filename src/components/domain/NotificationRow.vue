@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import NotificationTypeIcon from '@/components/domain/NotificationTypeIcon.vue'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import type { NotificationResponse } from '@/types/api/notifications'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed } from 'vue'
@@ -18,7 +18,7 @@ const emit = defineEmits<{
   select: [notification: NotificationResponse]
 }>()
 
-const now = useSharedNow()
+const now = useNow(1000)
 
 const timestamp = computed(() => formatRelativeDate(props.notification.createdAt, now.value))
 

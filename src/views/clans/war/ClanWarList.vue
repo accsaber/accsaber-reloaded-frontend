@@ -5,7 +5,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import type { ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
-const now = useSharedNow()
+const now = useNow(1000)
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'declaredAt',

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
@@ -10,7 +9,7 @@ import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
-import type { MarketListingResponse } from '@/types/api/market'
+import type { MarketListingResponse, MarketListingStatus } from '@/types/api/market'
 import type { Tab } from '@/types/display'
 import { isSameMarketUser } from '@/utils/market'
 import { computed, ref, watch } from 'vue'
@@ -42,97 +41,60 @@ const activeTab = computed<TabKey>({
   set: (value) => { tabParam.value = value === 'selling' ? '' : value },
 })
 
-const listingEndsMs = (l: MarketListingResponse) =>
-  l.endsAt ? new Date(l.endsAt).getTime() : Number.POSITIVE_INFINITY
-
-const settledMs = (l: MarketListingResponse) =>
-  new Date(l.settledAt ?? l.endsAt ?? l.createdAt).getTime()
-
-const endsSoonestFirst = (a: MarketListingResponse, b: MarketListingResponse) =>
-  listingEndsMs(a) - listingEndsMs(b)
-
-const settledLatestFirst = (a: MarketListingResponse, b: MarketListingResponse) =>
-  settledMs(b) - settledMs(a)
-
-const selling = computed(() => {
-  const mine = involvement.value.filter((l) => isSameMarketUser(l.seller, viewerId.value))
-  const open = mine.filter((l) => l.status === 'active').sort(endsSoonestFirst)
-  const closed = mine.filter((l) => l.status !== 'active').sort(settledLatestFirst)
-  return [...open, ...closed]
-})
-
-const winning = computed(() =>
-  involvement.value
-    .filter(
-      (l) =>
-        l.status === 'active' &&
-        !isSameMarketUser(l.seller, viewerId.value) &&
-        isSameMarketUser(l.currentBidder, viewerId.value),
-    )
-    .sort(endsSoonestFirst),
-)
-
-const outbidListings = computed(() =>
-  involvement.value.filter(
-    (l) =>
-      !isSameMarketUser(l.seller, viewerId.value) &&
-      !isSameMarketUser(l.currentBidder, viewerId.value) &&
-      !isSameMarketUser(l.winner, viewerId.value),
-  ),
-)
-
-const outbid = computed(() =>
-  outbidListings.value.filter((l) => l.status === 'active').sort(endsSoonestFirst),
-)
-
-const lost = computed(() =>
-  outbidListings.value.filter((l) => l.status !== 'active').sort(settledLatestFirst),
-)
-
-const bidding = computed(() => [...outbid.value, ...winning.value, ...lost.value])
-
-const won = computed(() =>
-  involvement.value
-    .filter(
-      (l) =>
-        l.status === 'sold' &&
-        isSameMarketUser(l.winner, viewerId.value) &&
-        !isSameMarketUser(l.seller, viewerId.value),
-    )
-    .sort(settledLatestFirst),
-)
-
-const tabs = computed<Tab[]>(() => [
-  { key: 'selling', label: `Selling (${selling.value.length})` },
-  { key: 'bidding', label: `Bidding (${bidding.value.length})` },
-  { key: 'won', label: `Won (${won.value.length})` },
-])
-
-const visibleListings = computed(() => {
-  if (activeTab.value === 'bidding') return bidding.value
-  if (activeTab.value === 'won') return won.value
-  return selling.value
-})
-
-function tagFor(listing: MarketListingResponse): ListingCardTag | null {
-  if (activeTab.value === 'selling') {
-    if (listing.status === 'sold') return { label: 'Sold', tone: 'success' }
-    if (listing.status === 'expired') return { label: 'Expired', tone: 'neutral' }
-    if (listing.status === 'cancelled') return { label: 'Cancelled', tone: 'neutral' }
-    return null
-  }
-  if (activeTab.value === 'won') return { label: 'Won', tone: 'gold' }
-  if (listing.status !== 'active') return { label: 'Lost', tone: 'neutral' }
-  return isSameMarketUser(listing.currentBidder, viewerId.value)
-    ? { label: 'Winning', tone: 'success' }
-    : { label: 'Outbid', tone: 'error' }
+const WON: ListingCardTag = { label: 'Won', tone: 'gold' }
+const LOST: ListingCardTag = { label: 'Lost', tone: 'neutral' }
+const WINNING: ListingCardTag = { label: 'Winning', tone: 'success' }
+const OUTBID: ListingCardTag = { label: 'Outbid', tone: 'error' }
+const CLOSED_TAG: Partial<Record<MarketListingStatus, ListingCardTag>> = {
+  sold: { label: 'Sold', tone: 'success' },
+  expired: { label: 'Expired', tone: 'neutral' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' },
 }
 
-const emptyMessage = computed(() => {
-  if (activeTab.value === 'bidding') return 'No bids yet'
-  if (activeTab.value === 'won') return 'Nothing won yet'
-  return 'Nothing listed'
+interface Entry {
+  listing: MarketListingResponse
+  tag: ListingCardTag | null
+  rank: number
+  order: number
+}
+
+function placeOf(l: MarketListingResponse): { tab: TabKey; tag: ListingCardTag | null; rank: number } | null {
+  const me = viewerId.value
+  const open = l.status === 'active'
+  if (isSameMarketUser(l.seller, me)) return { tab: 'selling', tag: CLOSED_TAG[l.status] ?? null, rank: open ? 0 : 1 }
+  if (open) return isSameMarketUser(l.currentBidder, me)
+    ? { tab: 'bidding', tag: WINNING, rank: 1 }
+    : { tab: 'bidding', tag: OUTBID, rank: 0 }
+  if (isSameMarketUser(l.winner, me)) return l.status === 'sold' ? { tab: 'won', tag: WON, rank: 0 } : null
+  return { tab: 'bidding', tag: LOST, rank: 2 }
+}
+
+function sortOrder(l: MarketListingResponse): number {
+  if (l.status === 'active') return l.endsAt ? new Date(l.endsAt).getTime() : Number.POSITIVE_INFINITY
+  return -new Date(l.settledAt ?? l.endsAt ?? l.createdAt).getTime()
+}
+
+const byTab = computed(() => {
+  const out: Record<TabKey, Entry[]> = { selling: [], bidding: [], won: [] }
+  for (const listing of involvement.value) {
+    const place = placeOf(listing)
+    if (place) out[place.tab].push({ listing, tag: place.tag, rank: place.rank, order: sortOrder(listing) })
+  }
+  for (const list of Object.values(out)) list.sort((a, b) => a.rank - b.rank || a.order - b.order)
+  return out
 })
+
+const tabs = computed<Tab[]>(() => [
+  { key: 'selling', label: `Selling (${byTab.value.selling.length})` },
+  { key: 'bidding', label: `Bidding (${byTab.value.bidding.length})` },
+  { key: 'won', label: `Won (${byTab.value.won.length})` },
+])
+
+const EMPTY_MESSAGE: Record<TabKey, string> = {
+  selling: 'Nothing listed',
+  bidding: 'No bids yet',
+  won: 'Nothing won yet',
+}
 
 async function fetchActivity(background = false) {
   if (!authStore.isLoggedIn) return
@@ -140,7 +102,7 @@ async function fetchActivity(background = false) {
   if (!background) loading.value = true
   try {
     const { getMyMarketListings } = await import('@/api/market')
-    const page = await getMyMarketListings({ page: 0, size: 100, sort: 'endsAt,desc' })
+    const page = await getMyMarketListings({ page: 0, size: 100 })
     if (id !== requestId) return
     involvement.value = page.content
   } catch {
@@ -183,7 +145,7 @@ const breadcrumbs: Crumb[] = [
           :balance="essenceStore.balance"
           :reserved="essenceStore.reserved ?? 0"
         />
-        <BaseButton variant="primary" @click="router.push({ name: 'market-new' })">
+        <BaseButton variant="primary" href="/market/new">
           List an item
         </BaseButton>
       </div>
@@ -192,16 +154,6 @@ const breadcrumbs: Crumb[] = [
     <EmptyState v-if="!authStore.isLoggedIn" message="Sign in to see your market activity." />
 
     <template v-else>
-      <BaseBanner
-        v-if="!loading && outbid.length > 0"
-        variant="error"
-        role="alert"
-        :dismissible="false"
-      >
-        You've been outbid on {{ outbid.length }}
-        {{ outbid.length === 1 ? 'auction' : 'auctions' }}.
-      </BaseBanner>
-
       <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="activeTab = $event as TabKey" />
 
       <div v-if="loading" class="activity-page__grid">
@@ -209,8 +161,8 @@ const breadcrumbs: Crumb[] = [
       </div>
 
       <EmptyState
-        v-else-if="visibleListings.length === 0"
-        :message="emptyMessage"
+        v-else-if="byTab[activeTab].length === 0"
+        :message="EMPTY_MESSAGE[activeTab]"
         :action-label="activeTab === 'selling' ? 'List an item' : 'Browse the market'"
         @action="
           router.push({ name: activeTab === 'selling' ? 'market-new' : 'market' })
@@ -219,10 +171,10 @@ const breadcrumbs: Crumb[] = [
 
       <div v-else class="activity-page__grid">
         <MarketListingCard
-          v-for="listing in visibleListings"
-          :key="listing.id"
-          :listing="listing"
-          :tag="tagFor(listing)"
+          v-for="entry in byTab[activeTab]"
+          :key="entry.listing.id"
+          :listing="entry.listing"
+          :tag="entry.tag"
         />
       </div>
     </template>

@@ -5,7 +5,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MissionContributorsModal from '@/components/domain/MissionContributorsModal.vue'
 import SharedMissionRow from '@/components/domain/SharedMissionRow.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import type { ClanResponse } from '@/types/api/clans'
 import type { MissionResponse } from '@/types/api/missions'
 import type { Page, PaginationParams } from '@/types/pagination'
@@ -21,7 +21,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const router = useRouter()
-const now = useSharedNow()
+const now = useNow(1000)
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'createdAt',

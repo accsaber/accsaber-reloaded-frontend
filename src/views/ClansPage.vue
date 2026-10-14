@@ -11,7 +11,7 @@ import RulesButton from '@/components/domain/RulesButton.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import { useAuthStore } from '@/stores/auth'
 import type {
   ClanJoinRequestResponse,
@@ -50,7 +50,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const { season, upcoming } = useCurrentClanSeason()
-const now = useSharedNow()
+const now = useNow(1000)
 const title = computed(() => {
   if (season.value) return `Clans: ${season.value.name}`
   if (upcoming.value) {

@@ -3,7 +3,7 @@ import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import type { ClanRole } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import type { SortState, TableColumn } from '@/types/display'
@@ -54,7 +54,7 @@ const COLUMNS: TableColumn[] = [
 
 const FOUNDER_INACTIVITY_MS = 365 * 24 * 60 * 60 * 1000
 
-const now = useSharedNow()
+const now = useNow(1000)
 
 const canClaim = computed(() => {
   if (props.viewerRole !== 'commander') return false

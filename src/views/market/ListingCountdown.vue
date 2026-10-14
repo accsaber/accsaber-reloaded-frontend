@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import { formatCountdown } from '@/utils/market'
 import { computed, onUnmounted, ref, watch } from 'vue'
 
@@ -8,7 +8,7 @@ const props = defineProps<{
   size?: 'sm' | 'lg'
 }>()
 
-const now = useSharedNow()
+const now = useNow(1000)
 
 const endsAtMs = computed(() => new Date(props.endsAt).getTime())
 const remaining = computed(() => endsAtMs.value - now.value)

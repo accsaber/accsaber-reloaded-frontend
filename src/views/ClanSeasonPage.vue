@@ -9,7 +9,7 @@ import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import type { ClanSeasonResponse, ClanStandingResponse, PublicClanResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -25,7 +25,7 @@ const PAGE_SIZE = 25
 
 const route = useRoute()
 const router = useRouter()
-const now = useSharedNow()
+const now = useNow(1000)
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'rank',

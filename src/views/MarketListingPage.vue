@@ -7,7 +7,7 @@ import ModifierChip from '@/components/domain/ModifierChip.vue'
 import { parseApiError } from '@/api/client'
 import { useMarketListingSocket } from '@/composables/useMarketListingSocket'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import { useItemTypeStore } from '@/stores/itemTypes'
@@ -21,7 +21,6 @@ import type {
 import { formatRelativeDate } from '@/utils/formatters'
 import {
   displayItemName,
-  isBorderTypeKey,
   itemVariantPreviews,
   rarityClass,
   sortModifiersByKey,
@@ -29,7 +28,7 @@ import {
 } from '@/utils/items'
 import { formatEssence } from '@/utils/essence'
 import { isAuction, isSameMarketUser, listingPrice } from '@/utils/market'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import EssenceAmount from '@/components/domain/EssenceAmount.vue'
 import ListingCountdown from './market/ListingCountdown.vue'
@@ -53,10 +52,8 @@ const actionBusy = ref(false)
 const amountError = ref<string | null>(null)
 const formError = ref<string | null>(null)
 const cancelArmed = ref(false)
-let cancelArmTimer: ReturnType<typeof setTimeout> | null = null
-let syntheticBidCounter = 0
 
-const now = useSharedNow()
+const now = useNow(1000)
 
 const viewerId = computed(() => authStore.userId)
 const active = computed(() => listing.value?.status === 'active')
@@ -100,30 +97,16 @@ const avatarUrl = computed(() => authStore.userProfile?.avatarUrl ?? null)
 const variantPreviews = computed(() =>
   listing.value ? itemVariantPreviews(listing.value.item.item) : null,
 )
-const activeVariantKey = ref<string | null>(null)
+const pickedVariantKey = ref<string | null>(null)
 
-watch(
-  () => [listing.value?.id, variantPreviews.value] as const,
-  () => {
-    const previews = variantPreviews.value
-    if (!previews) {
-      activeVariantKey.value = null
-      return
-    }
-    const preferred = listing.value?.item.variantKey
-    activeVariantKey.value =
-      preferred && previews.some((v) => v.key === preferred) ? preferred : previews[0].key
-  },
-  { immediate: true },
-)
-
-const previewItem = computed(() => {
+const activeVariant = computed(() => {
   const previews = variantPreviews.value
   if (!previews) return null
-  return (previews.find((v) => v.key === activeVariantKey.value) ?? previews[0]).item
+  const key = pickedVariantKey.value ?? listing.value?.item.variantKey
+  return previews.find((v) => v.key === key) ?? previews[0]
 })
 
-const composedBorder = computed(() => isBorderTypeKey(listing.value?.item.item.typeKey))
+const previewItem = computed(() => activeVariant.value?.item ?? null)
 
 const metaTitle = computed(() =>
   listing.value ? `${listing.value.title} | Market | AccSaber` : 'Market | AccSaber',
@@ -185,20 +168,6 @@ function onSocketEvent(event: MarketListingEvent) {
     current.currentBidder = event.actor
     current.minimumNextBid = event.amount + current.minIncrement
     current.bidCount += 1
-    const actorId = event.actor?.id ?? null
-    if (event.actor && !bids.value.some((b) => b.amount === event.amount && b.bidder.id === actorId)) {
-      bids.value = [
-        {
-          id: `live-${current.id}-${++syntheticBidCounter}`,
-          listingId: current.id,
-          bidder: event.actor,
-          amount: event.amount,
-          buyout: false,
-          createdAt: new Date().toISOString(),
-        },
-        ...bids.value,
-      ]
-    }
     fetchBids()
   } else if (event.type === 'sold') {
     current.winner = event.actor
@@ -242,13 +211,9 @@ async function handleBuy() {
   amountError.value = null
   formError.value = null
   try {
-    const { buyMarketListing, getMarketListingBids } = await import('@/api/market')
+    const { buyMarketListing } = await import('@/api/market')
     listing.value = await buyMarketListing(listing.value.id)
-    const [history] = await Promise.all([
-      getMarketListingBids(listing.value.id),
-      essenceStore.fetchBalance(true),
-    ])
-    bids.value = history
+    await Promise.all([fetchBids(), essenceStore.fetchBalance(true)])
   } catch (e) {
     const parsed = parseApiError(e, 'Could not complete the purchase.')
     formError.value = parsed.fieldErrors[0]?.message ?? parsed.message
@@ -261,10 +226,6 @@ async function handleCancel() {
   if (!listing.value || actionBusy.value) return
   if (!cancelArmed.value) {
     cancelArmed.value = true
-    if (cancelArmTimer) clearTimeout(cancelArmTimer)
-    cancelArmTimer = setTimeout(() => {
-      cancelArmed.value = false
-    }, 4000)
     return
   }
   cancelArmed.value = false
@@ -281,7 +242,11 @@ async function handleCancel() {
   }
 }
 
-watch(listingId, () => fetchAll(), { immediate: true })
+watch(listingId, () => {
+  pickedVariantKey.value = null
+  cancelArmed.value = false
+  fetchAll()
+}, { immediate: true })
 
 watch(
   () => authStore.isLoggedIn,
@@ -292,10 +257,6 @@ watch(
 )
 
 itemTypeStore.fetchItemTypes()
-
-onUnmounted(() => {
-  if (cancelArmTimer) clearTimeout(cancelArmTimer)
-})
 </script>
 
 <template>
@@ -334,16 +295,12 @@ onUnmounted(() => {
               :key="variant.key"
               type="button"
               class="listing-page__variant"
-              :class="{ 'listing-page__variant--active': variant.key === activeVariantKey }"
-              @click="activeVariantKey = variant.key"
+              :class="{ 'listing-page__variant--active': variant.key === activeVariant?.key }"
+              @click="pickedVariantKey = variant.key"
             >
               {{ variant.label }}
             </button>
           </div>
-
-          <p v-if="composedBorder && !avatarUrl" class="listing-page__preview-note">
-            Log in to preview this on your profile picture.
-          </p>
 
           <div class="listing-page__item-meta">
             <p class="listing-page__item-kind">
@@ -408,7 +365,7 @@ onUnmounted(() => {
                 <span class="listing-page__infinity" aria-hidden="true">∞</span> No time limit
               </span>
               <span v-if="socketStatus === 'reconnecting'" class="listing-page__stale">
-                Live updates paused, reconnecting
+                Reconnecting...
               </span>
             </div>
           </div>
@@ -435,7 +392,6 @@ onUnmounted(() => {
               {{ formatRelativeDate(listing.settledAt) }}
             </span>
           </div>
-
 
           <MarketBidPanel
             v-if="active && !awaitingSettlement"
@@ -520,12 +476,6 @@ onUnmounted(() => {
   border-color: var(--page-accent, var(--accent));
   color: var(--text-primary);
   background: color-mix(in srgb, var(--page-accent, var(--accent)) 12%, transparent);
-}
-
-.listing-page__preview-note {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 
 .listing-page__item-meta {

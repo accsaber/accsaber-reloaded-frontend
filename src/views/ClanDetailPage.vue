@@ -6,7 +6,7 @@ import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { useSharedNow } from '@/composables/useSharedNow'
+import { useNow } from '@/composables/useNow'
 import { useAuthStore } from '@/stores/auth'
 import type { ClanLevelStepResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
@@ -151,7 +151,7 @@ const { chat, notices, status: chatStatus } = useClanChat(chatClanId, isMember, 
   },
 })
 
-const now = useSharedNow()
+const now = useNow(1000)
 const latestWar = ref<ClanWarResponse | null>(null)
 const recentWar = ref<ClanWarResponse | null>(null)
 useClanFeed(chatClanId, {

@@ -2,6 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
+import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { parseApiError } from '@/api/client'
@@ -15,7 +16,6 @@ import { KOFI_URL } from '@/utils/constants'
 import { displayItemName } from '@/utils/items'
 import { digitsOnly } from '@/utils/formatters'
 import {
-  isSameMarketUser,
   LISTING_DURATION_PRESETS,
   MAX_ACTIVE_LISTINGS,
   sanitizeEssenceInput,
@@ -37,11 +37,13 @@ const inventoryStore = useInventoryStore()
 
 type ListingMode = 'auction' | 'shop' | 'auction_buyout'
 
-const MODE_OPTIONS: { value: ListingMode; label: string }[] = [
-  { value: 'auction', label: 'Auction' },
-  { value: 'shop', label: 'Buy now' },
-  { value: 'auction_buyout', label: 'Auction + buyout' },
+const MODE_TOGGLES: { key: ListingMode; label: string }[] = [
+  { key: 'auction', label: 'Auction' },
+  { key: 'shop', label: 'Buy now' },
+  { key: 'auction_buyout', label: 'Auction + buyout' },
 ]
+
+const NO_LIMIT = 'none'
 
 const pickerItems = ref<UserItemResponse[]>([])
 const pickerLoading = ref(true)
@@ -103,6 +105,15 @@ const showKofi = computed(
   () => slotsFull.value || /supporters get unlimited/i.test(formError.value ?? ''),
 )
 
+const durationToggles = computed(() => [
+  ...LISTING_DURATION_PRESETS.map((p) => ({ key: String(p.minutes), label: p.label })),
+  ...(mode.value === 'shop' ? [{ key: NO_LIMIT, label: '∞ No time limit' }] : []),
+])
+
+function setDuration(key: string) {
+  durationMinutes.value = key === NO_LIMIT ? null : Number(key)
+}
+
 const selectedName = computed(() =>
   selected.value ? displayItemName(selected.value.modifiers, selected.value.item.name) : '',
 )
@@ -133,11 +144,11 @@ async function fetchPickerItems() {
 
 async function fetchSlots() {
   const userId = authStore.userId
-  if (!userId) return
+  if (!userId || isSupporter.value) return
   try {
-    const { getMyMarketListings } = await import('@/api/market')
-    const page = await getMyMarketListings({ status: ['active'], page: 0, size: 100 })
-    activeSellingCount.value = page.content.filter((l) => isSameMarketUser(l.seller, userId)).length
+    const { getMarketListings } = await import('@/api/market')
+    const page = await getMarketListings({ sellerId: userId, status: 'active', size: 1 })
+    activeSellingCount.value = page.totalElements
   } catch {
     activeSellingCount.value = null
   }
@@ -308,18 +319,8 @@ const breadcrumbs: Crumb[] = [
 
         <div class="create-page__field">
           <span class="create-page__label">Sale type</span>
-          <div class="create-page__modes" role="group" aria-label="Sale type">
-            <button
-              v-for="option in MODE_OPTIONS"
-              :key="option.value"
-              type="button"
-              class="create-page__mode-btn"
-              :class="{ 'create-page__mode-btn--active': mode === option.value }"
-              @click="mode = option.value"
-            >
-              {{ option.label }}
-            </button>
-          </div>
+          <ChartToggleGroup :toggles="MODE_TOGGLES" :active="[mode]" label="Sale type"
+            @select="mode = $event as ListingMode" />
         </div>
 
         <div class="create-page__prices">
@@ -354,27 +355,8 @@ const breadcrumbs: Crumb[] = [
 
         <div class="create-page__field">
           <span class="create-page__label">Duration</span>
-          <div class="create-page__durations" role="group" aria-label="Duration">
-            <button
-              v-for="preset in LISTING_DURATION_PRESETS"
-              :key="preset.minutes"
-              type="button"
-              class="create-page__mode-btn"
-              :class="{ 'create-page__mode-btn--active': durationMinutes === preset.minutes }"
-              @click="durationMinutes = preset.minutes"
-            >
-              {{ preset.label }}
-            </button>
-            <button
-              v-if="mode === 'shop'"
-              type="button"
-              class="create-page__mode-btn"
-              :class="{ 'create-page__mode-btn--active': durationMinutes === null }"
-              @click="durationMinutes = null"
-            >
-              <span aria-hidden="true">∞</span> No time limit
-            </button>
-          </div>
+          <ChartToggleGroup :toggles="durationToggles" :active="[String(durationMinutes ?? NO_LIMIT)]"
+            label="Duration" @select="setDuration" />
           <p v-if="fieldErrors.durationMinutes" class="create-page__field-error">
             {{ fieldErrors.durationMinutes }}
           </p>
@@ -486,37 +468,6 @@ const breadcrumbs: Crumb[] = [
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-secondary);
-}
-
-.create-page__modes,
-.create-page__durations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.create-page__mode-btn {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.create-page__mode-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.create-page__mode-btn--active {
-  background: color-mix(in srgb, var(--page-accent) 12%, var(--bg-surface));
-  border-color: color-mix(in srgb, var(--page-accent) 40%, transparent);
-  color: var(--page-accent);
-  font-weight: 600;
 }
 
 .create-page__hint {
