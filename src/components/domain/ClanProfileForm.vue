@@ -23,6 +23,9 @@ const props = defineProps<{
   iconUrl?: string | null
   uploadIcon?: (file: File) => Promise<void>
   removeIcon?: () => Promise<void>
+  bannerUrl?: string | null
+  uploadBanner?: (file: File) => Promise<void>
+  removeBanner?: () => Promise<void>
   equipped?: ItemResponse[]
   disabled?: boolean
 }>()
@@ -47,6 +50,16 @@ function setTag(value: string | number) {
 
 <template>
   <div class="clan-form">
+    <ImageUploader
+      v-if="uploadBanner"
+      label="Banner"
+      aspect-ratio="4 / 1"
+      crop
+      :image-url="bannerUrl ?? null"
+      :disabled="disabled"
+      :upload-handler="uploadBanner"
+      :remove-handler="removeBanner"
+    />
     <ImageUploader
       v-if="uploadIcon"
       class="clan-form__icon"

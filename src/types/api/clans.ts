@@ -75,6 +75,7 @@ export interface PublicClanResponse {
 export interface ClanResponse {
   clan: PublicClanResponse
   description: string | null
+  bannerUrl: string | null
   acceptingRequests: boolean
   level: LevelResponse
   standing: number
@@ -509,8 +510,10 @@ export interface ClanWarRewardItemRequest {
   active?: boolean
 }
 
+export type ClanMediaKind = 'icon' | 'banner'
+
 export interface ModerateClanRequest {
   changes: UpdateClanRequest
-  removeIcon?: boolean
+  removeMedia?: ClanMediaKind[]
   reason: string
 }

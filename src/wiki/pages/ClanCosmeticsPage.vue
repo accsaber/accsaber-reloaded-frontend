@@ -5,12 +5,11 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
 <template>
   <WikiProse>
-    <p>Clans have four cosmetic slots:</p>
+    <p>Clans have three cosmetic slots:</p>
     <ul>
       <li>Tag card, the card behind the tag next to everyone's name.</li>
       <li>Title effect, how the clan name looks on clan pages.</li>
       <li>Border, the frame around the clan icon.</li>
-      <li>Banner, the art at the top of the clan page.</li>
     </ul>
     <p>
       Tag cards take your tag color, while borders take the primary color you picked for the

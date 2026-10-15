@@ -41,7 +41,6 @@ export type KnownItemTypeKey =
   | 'perk'
   | 'saber'
   | 'item_pedestal'
-  | 'clan_banner'
   | 'clan_title_effect'
   | 'clan_tag_card'
 

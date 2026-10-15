@@ -2,7 +2,7 @@
 import { getCdnLimits, type CdnLimits } from '@/api/cdn'
 import { parseApiError } from '@/api/client'
 import ImageCropModal from '@/components/common/ImageCropModal.vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
   imageUrl: string | null
@@ -24,6 +24,10 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
 const err = ref<string | null>(null)
 const cropping = ref<File | null>(null)
+const cropAspect = computed(() => {
+  const [w, h = 1] = props.aspectRatio.split('/').map(Number)
+  return w / h || 1
+})
 
 onMounted(async () => {
   try {
@@ -146,7 +150,7 @@ const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
     <input ref="fileInput" type="file" class="image-uploader__file"
       :accept="acceptList" @change="onPick" />
 
-    <ImageCropModal v-if="crop" :file="cropping" @confirm="upload" @close="cropping = null" />
+    <ImageCropModal v-if="crop" :file="cropping" :aspect="cropAspect" @confirm="upload" @close="cropping = null" />
   </div>
 </template>
 

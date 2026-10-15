@@ -22,8 +22,8 @@ usePageMeta({
 })
 
 const draft = ref<ClanProfileDraft>(emptyClanDraft())
-const iconFile = ref<File | null>(null)
-const iconPreview = ref<string | null>(null)
+const { file: iconFile, preview: iconPreview, stage: stageIcon } = stagedImage()
+const { file: bannerFile, preview: bannerPreview, stage: stageBanner } = stagedImage()
 const saving = ref(false)
 const error = ref<string | null>(null)
 const fieldErrors = ref<Record<string, string>>({})
@@ -31,13 +31,17 @@ const fieldErrors = ref<Record<string, string>>({})
 const currentClan = computed(() => auth.userProfile?.clan ?? null)
 const ready = computed(() => draft.value.name.trim().length >= 3 && draft.value.tag.length >= 2)
 
-async function stageIcon(file: File | null) {
-  if (iconPreview.value) URL.revokeObjectURL(iconPreview.value)
-  iconFile.value = file
-  iconPreview.value = file ? URL.createObjectURL(file) : null
+function stagedImage() {
+  const file = ref<File | null>(null)
+  const preview = ref<string | null>(null)
+  async function stage(next: File | null) {
+    if (preview.value) URL.revokeObjectURL(preview.value)
+    file.value = next
+    preview.value = next ? URL.createObjectURL(next) : null
+  }
+  onUnmounted(() => stage(null))
+  return { file, preview, stage }
 }
-
-onUnmounted(() => stageIcon(null))
 
 async function submit() {
   if (!ready.value || saving.value) return
@@ -54,9 +58,12 @@ async function submit() {
       primaryColor: draft.value.primaryColor || undefined,
       secondaryColor: draft.value.secondaryColor || undefined,
     })
-    if (iconFile.value) {
-      const { uploadClanIcon } = await import('@/api/cdn')
-      await uploadClanIcon(created.clan.id, iconFile.value).catch(() => null)
+    if (iconFile.value || bannerFile.value) {
+      const { uploadClanIcon, uploadClanBanner } = await import('@/api/cdn')
+      await Promise.all([
+        iconFile.value && uploadClanIcon(created.clan.id, iconFile.value).catch(() => null),
+        bannerFile.value && uploadClanBanner(created.clan.id, bannerFile.value).catch(() => null),
+      ])
     }
     await auth.fetchAuthMe()
     await router.push({ name: 'clan-detail', params: { slugOrId: created.clan.slug } })
@@ -95,6 +102,9 @@ async function submit() {
         :icon-url="iconPreview"
         :upload-icon="stageIcon"
         :remove-icon="() => stageIcon(null)"
+        :banner-url="bannerPreview"
+        :upload-banner="stageBanner"
+        :remove-banner="() => stageBanner(null)"
         :disabled="saving"
       />
       <p v-if="error" class="clan-create__error" role="alert">{{ error }}</p>

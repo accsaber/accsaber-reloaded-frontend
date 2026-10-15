@@ -4,7 +4,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
-import type { ClanResponse } from '@/types/api/clans'
+import type { ClanMediaKind, ClanResponse } from '@/types/api/clans'
 import { clanDraftFrom, type ClanProfileDraft } from '@/utils/clans'
 import { ref, watch } from 'vue'
 
@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const draft = ref<ClanProfileDraft>(clanDraftFrom(props.clan.clan, props.clan.description))
-const removeIcon = ref(false)
+const removeMedia = ref<ClanMediaKind[]>([])
 const reason = ref('')
 const busy = ref(false)
 const error = ref<string | null>(null)
@@ -30,7 +30,7 @@ watch(
   (open) => {
     if (!open) return
     draft.value = clanDraftFrom(props.clan.clan, props.clan.description)
-    removeIcon.value = false
+    removeMedia.value = []
     reason.value = ''
     error.value = null
     fieldErrors.value = {}
@@ -53,7 +53,7 @@ async function save() {
         primaryColor: draft.value.primaryColor,
         secondaryColor: draft.value.secondaryColor,
       },
-      removeIcon: removeIcon.value,
+      removeMedia: removeMedia.value,
       reason: reason.value.trim(),
     })
     emit('saved', saved)
@@ -74,8 +74,12 @@ async function save() {
     <div class="moderate">
       <ClanProfileForm v-model="draft" :field-errors="fieldErrors" :equipped="clan.clan.equipped" :disabled="busy" />
       <label v-if="clan.clan.iconUrl" class="moderate__toggle">
-        <input v-model="removeIcon" type="checkbox" :disabled="busy" />
+        <input v-model="removeMedia" type="checkbox" value="icon" :disabled="busy" />
         <span>Remove the icon</span>
+      </label>
+      <label v-if="clan.bannerUrl" class="moderate__toggle">
+        <input v-model="removeMedia" type="checkbox" value="banner" :disabled="busy" />
+        <span>Remove the banner</span>
       </label>
       <BaseInput
         v-model="reason"

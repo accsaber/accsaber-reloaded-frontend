@@ -412,6 +412,16 @@ async function removeIcon() {
   clan.value = await deleteClanIcon(clan.value!.clan.id)
 }
 
+async function uploadBanner(file: File) {
+  const { uploadClanBanner } = await import('@/api/cdn')
+  clan.value = await uploadClanBanner(clan.value!.clan.id, file)
+}
+
+async function removeBanner() {
+  const { deleteClanBanner } = await import('@/api/cdn')
+  clan.value = await deleteClanBanner(clan.value!.clan.id)
+}
+
 function onEquipped(items: ItemResponse[]) {
   if (clan.value) clan.value.clan.equipped = items
 }
@@ -560,6 +570,8 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         :field-errors="editFieldErrors"
         :upload-icon="uploadIcon"
         :remove-icon="removeIcon"
+        :upload-banner="uploadBanner"
+        :remove-banner="removeBanner"
         @save="saveProfile"
         @pacifism="setPacifism"
         @close="editOpen = false"

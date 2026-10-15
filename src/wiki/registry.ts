@@ -664,14 +664,12 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'clan-cosmetics',
         title: 'Clan Cosmetics',
-        summary: 'Four slots that change how your clan looks to everyone.',
+        summary: 'Three slots that change how your clan looks to everyone.',
         keywords: [
           'clan cosmetics',
           'tag card',
           'title effect',
           'clan border',
-          'banner',
-          'clan banner',
           'sovereign',
           'equip',
           'variants',
@@ -679,7 +677,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'clan items',
         ],
         related: ['clan-levels', 'clan-seasons', 'items-and-inventory'],
-        updated: '2026-10-08',
+        updated: '2026-10-15',
         loader: () => import('@/wiki/pages/ClanCosmeticsPage.vue'),
       },
       {

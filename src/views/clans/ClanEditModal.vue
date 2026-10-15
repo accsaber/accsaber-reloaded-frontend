@@ -15,6 +15,8 @@ const props = defineProps<{
   fieldErrors: Record<string, string>
   uploadIcon: (file: File) => Promise<void>
   removeIcon: () => Promise<void>
+  uploadBanner: (file: File) => Promise<void>
+  removeBanner: () => Promise<void>
 }>()
 
 const emit = defineEmits<{
@@ -64,6 +66,9 @@ function save() {
       :icon-url="clan.clan.iconUrl"
       :upload-icon="uploadIcon"
       :remove-icon="removeIcon"
+      :banner-url="clan.bannerUrl"
+      :upload-banner="uploadBanner"
+      :remove-banner="removeBanner"
       :equipped="clan.clan.equipped"
       :disabled="saving"
     />

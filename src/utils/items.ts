@@ -29,7 +29,6 @@ const EQUIPPABLE_TYPE_KEYS = new Set<ItemTypeKey>([
   'profile_thumbnail_background',
   'clan_tag_card',
   'clan_title_effect',
-  'clan_banner',
   'clan_border',
 ])
 

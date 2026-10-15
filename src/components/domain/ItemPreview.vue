@@ -109,7 +109,7 @@ const pedestalBeamId = `ip-beam-${Math.random().toString(36).slice(2, 9)}`
 
 const isBadge = computed(() => typeKey.value === 'badge')
 const isTitle = computed(() => typeKey.value === 'title' || typeKey.value === 'clan_title_effect')
-const isBackground = computed(() => typeKey.value === 'profile_background' || typeKey.value === 'clan_banner')
+const isBackground = computed(() => typeKey.value === 'profile_background')
 
 const badgeValue = computed(() => (isBadge.value ? readBadgeValue(props.item.value) : null))
 const badgeUrl = computed(() => pickAssetUrl(badgeValue.value?.asset) ?? props.item.iconUrl)

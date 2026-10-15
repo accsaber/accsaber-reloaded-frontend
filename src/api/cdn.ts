@@ -107,3 +107,11 @@ export function uploadClanIcon(clanId: string, file: File): Promise<ClanResponse
 export function deleteClanIcon(clanId: string): Promise<ClanResponse> {
   return del<ClanResponse>(`/clans/${clanId}/icon`)
 }
+
+export function uploadClanBanner(clanId: string, file: File): Promise<ClanResponse> {
+  return postMultipart<ClanResponse>(`/clans/${clanId}/banner`, multipartFile(file))
+}
+
+export function deleteClanBanner(clanId: string): Promise<ClanResponse> {
+  return del<ClanResponse>(`/clans/${clanId}/banner`)
+}

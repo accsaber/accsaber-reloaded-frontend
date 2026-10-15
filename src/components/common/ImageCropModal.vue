@@ -7,9 +7,12 @@ import { clamp } from '@/utils/math'
 const OUTPUT_PX = 512
 const MAX_ZOOM = 4
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   file: File | null
-}>()
+  aspect?: number
+}>(), {
+  aspect: 1,
+})
 
 const emit = defineEmits<{
   confirm: [file: File]
@@ -24,21 +27,24 @@ const offset = ref({ x: 0, y: 0 })
 const failed = ref(false)
 let drag: { pointerId: number; x: number; y: number } | null = null
 
-function stageSize(): number {
-  return stage.value?.clientWidth ?? 0
+function stageSize(): { w: number; h: number } {
+  const w = stage.value?.clientWidth ?? 0
+  return { w, h: w / props.aspect }
 }
 
 function scale(): number {
   const img = image.value
   if (!img) return 1
-  return (stageSize() / Math.min(img.naturalWidth, img.naturalHeight)) * zoom.value
+  const { w, h } = stageSize()
+  return Math.max(w / img.naturalWidth, h / img.naturalHeight) * zoom.value
 }
 
 function clampOffset(next: { x: number; y: number }) {
   const img = image.value
   if (!img) return next
-  const limitX = Math.max(0, (img.naturalWidth * scale() - stageSize()) / 2)
-  const limitY = Math.max(0, (img.naturalHeight * scale() - stageSize()) / 2)
+  const { w, h } = stageSize()
+  const limitX = Math.max(0, (img.naturalWidth * scale() - w) / 2)
+  const limitY = Math.max(0, (img.naturalHeight * scale() - h) / 2)
   return {
     x: clamp(next.x, -limitX, limitX),
     y: clamp(next.y, -limitY, limitY),
@@ -108,20 +114,20 @@ function onWheel(e: WheelEvent) {
 
 function confirm() {
   const img = image.value
-  const size = stageSize()
-  if (!img || !props.file || size === 0) return
+  const { w } = stageSize()
+  if (!img || !props.file || w === 0) return
   const canvas = document.createElement('canvas')
-  canvas.width = OUTPUT_PX
-  canvas.height = OUTPUT_PX
+  canvas.width = Math.round(OUTPUT_PX * Math.max(1, props.aspect))
+  canvas.height = Math.round(canvas.width / props.aspect)
   const ctx = canvas.getContext('2d')
   if (!ctx) return
-  const ratio = OUTPUT_PX / size
+  const ratio = canvas.width / w
   const width = img.naturalWidth * scale() * ratio
   const height = img.naturalHeight * scale() * ratio
   ctx.drawImage(
     img,
-    OUTPUT_PX / 2 + offset.value.x * ratio - width / 2,
-    OUTPUT_PX / 2 + offset.value.y * ratio - height / 2,
+    canvas.width / 2 + offset.value.x * ratio - width / 2,
+    canvas.height / 2 + offset.value.y * ratio - height / 2,
     width,
     height,
   )
@@ -135,11 +141,12 @@ onUnmounted(release)
 </script>
 
 <template>
-  <BaseModal :open="file !== null" title="Crop image" max-width="400px" @close="emit('close')">
+  <BaseModal :open="file !== null" title="Crop image" :max-width="aspect > 1 ? '640px' : '400px'" @close="emit('close')">
     <div class="crop">
       <div
         ref="stage"
         class="crop__stage"
+        :style="{ aspectRatio: aspect }"
         @pointerdown.prevent="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
@@ -178,7 +185,6 @@ onUnmounted(release)
 .crop__stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
   overflow: hidden;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);

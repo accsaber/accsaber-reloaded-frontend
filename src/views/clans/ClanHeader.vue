@@ -1,14 +1,10 @@
 <script setup lang="ts">
-import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import type { ClanResponse, ClanStandingResponse } from '@/types/api/clans'
 import { formatStanding, isPacifist } from '@/utils/clans'
-import { annotateEffectLayerStacks, valueFxLayers } from '@/utils/cosmetics/effectLayers'
-import { pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue } from '@/utils/cosmetics/readers'
-import { readClanEquipped } from '@/utils/items'
 import { computed } from 'vue'
 import ClanPacifistBadge from './ClanPacifistBadge.vue'
 
@@ -17,21 +13,6 @@ const props = defineProps<{
   standing: ClanStandingResponse | null
 }>()
 
-const banner = computed(() => readClanEquipped(props.clan.clan.equipped, 'clan_banner', readBackgroundValue))
-const bannerUrl = computed(() => pickVideoOrAssetUrl(banner.value?.asset))
-const bannerIsVideo = computed(() => !!banner.value?.asset.video)
-const bannerImageUrl = computed(() => pickAssetUrl(banner.value?.asset))
-const bannerStyle = computed<Record<string, string> | undefined>(() => {
-  const value = banner.value
-  if (!value) return undefined
-  const style: Record<string, string> = {}
-  if (value.opacity != null) style.opacity = String(value.opacity)
-  if (value.blendMode) style.mixBlendMode = value.blendMode
-  return style
-})
-const bannerFx = computed(() => annotateEffectLayerStacks(valueFxLayers(banner.value)))
-const bannerFitClass = computed(() => (banner.value?.fit ? `clan-header__banner--${banner.value.fit}` : ''))
-
 const founded = computed(() =>
   new Date(props.clan.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
 )
@@ -39,38 +20,13 @@ const founded = computed(() =>
 
 <template>
   <header class="clan-header">
-    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !bannerUrl }">
-      <template v-if="bannerUrl">
-        <video
-          v-if="bannerIsVideo"
-          class="clan-header__banner"
-          :class="bannerFitClass"
-          :src="bannerUrl"
-          :style="bannerStyle"
-          autoplay
-          loop
-          muted
-          playsinline
-          aria-hidden="true"
-        />
-        <div
-          v-else-if="bannerImageUrl"
-          class="clan-header__banner"
-          :class="bannerFitClass"
-          :style="{ ...bannerStyle, backgroundImage: `url(${bannerImageUrl})` }"
-          aria-hidden="true"
-        />
-        <span v-if="bannerFx.length" class="clan-header__fx" aria-hidden="true">
-          <ModifierCompositions
-            v-for="layer in bannerFx"
-            :key="layer.key"
-            :spec="layer.spec"
-            type-key="clan_banner"
-            :stack-index="layer.stackIndex"
-            hide-stat-counters
-          />
-        </span>
-      </template>
+    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !clan.bannerUrl }">
+      <div
+        v-if="clan.bannerUrl"
+        class="clan-header__banner"
+        :style="{ backgroundImage: `url(${clan.bannerUrl})` }"
+        aria-hidden="true"
+      />
       <div class="clan-header__top">
         <slot name="top" />
       </div>
@@ -115,12 +71,6 @@ const founded = computed(() =>
   overflow: hidden;
 }
 
-.clan-header__fx {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
 .clan-header__band--plain {
   height: 140px;
 }
@@ -128,29 +78,10 @@ const founded = computed(() =>
 .clan-header__banner {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
-  object-fit: cover;
   -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
   mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
-}
-
-.clan-header__banner--contain {
-  background-size: contain;
-  object-fit: contain;
-}
-
-.clan-header__banner--tile {
-  background-size: auto;
-  background-repeat: repeat;
-}
-
-.clan-header__banner--center {
-  background-size: auto;
-  object-fit: none;
 }
 
 .clan-header__top {
