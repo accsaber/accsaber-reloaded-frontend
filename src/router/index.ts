@@ -188,11 +188,6 @@ const router = createRouter({
         name: 'news',
         component: () => import('@/views/NewsEventsPage.vue'),
       },
-      {
-        path: '/news/:slug',
-        name: 'news-detail',
-        component: () => import('@/views/NewsDetailPage.vue'),
-      },
     ] : []),
     {
       path: '/wiki/:slug?',

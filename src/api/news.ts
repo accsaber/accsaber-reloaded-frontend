@@ -47,7 +47,6 @@ function dedupe<T>(map: Map<string, CacheEntry<T>>, key: string, fetcher: () => 
 
 function rememberDetail(news: PublicNewsResponse) {
   const entry = { value: news, fetchedAt: Date.now() }
-  detailCache.set(`id:${news.id}`, entry)
   detailCache.set(`slug:${news.slug}`, entry)
 }
 
@@ -56,13 +55,6 @@ export function getNews(params?: NewsListParams): Promise<Page<PublicNewsRespons
   const cached = readFresh(listCache, key)
   if (cached) return Promise.resolve(cached)
   return dedupe(listCache, key, () => get<Page<PublicNewsResponse>>(`/news${buildQuery(params)}`))
-}
-
-export function getNewsById(id: string): Promise<PublicNewsResponse> {
-  const cached = readFresh(detailCache, `id:${id}`)
-  if (cached) return Promise.resolve(cached)
-  return dedupe(detailCache, `id:${id}`, () => get<PublicNewsResponse>(`/news/${id}`))
-    .then((news) => { rememberDetail(news); return news })
 }
 
 export function getNewsBySlug(slug: string): Promise<PublicNewsResponse> {

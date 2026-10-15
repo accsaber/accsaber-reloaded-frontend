@@ -21,7 +21,7 @@ function isRecent(iso: string | null): boolean {
 }
 
 const accent = computed(() => (news.value ? NEWS_TYPE_ACCENT[news.value.type] : 'var(--accent)'))
-const target = computed(() => (news.value ? `/news/${news.value.slug}` : '/news'))
+const target = computed(() => (news.value ? { path: '/news', query: { post: news.value.slug } } : '/news'))
 const visible = computed(() => news.value !== null && !dismissed.value)
 
 function dismiss() {
