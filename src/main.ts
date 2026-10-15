@@ -31,5 +31,4 @@ void Promise.all([
 const booting = authStore.bootstrap()
 app.use(router)
 installRoutePrefetch(router)
-await Promise.all([booting, router.isReady().catch(() => {})])
-app.mount('#app')
+void Promise.all([booting, router.isReady().catch(() => {})]).then(() => app.mount('#app'))
