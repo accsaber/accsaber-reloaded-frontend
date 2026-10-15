@@ -423,7 +423,7 @@ if (!props.floating) void props.chat.loadHistory()
   color: var(--bg-base);
   background: var(--page-accent, var(--accent));
   border: 2px solid var(--bg-base);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   transform-origin: center;
   animation: chat-badge-pop 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -560,13 +560,7 @@ if (!props.floating) void props.chat.loadHistory()
   border: 2px solid var(--bg-overlay);
   border-top-color: var(--page-accent, var(--accent));
   border-radius: 50%;
-  animation: chat-spin 700ms linear infinite;
-}
-
-@keyframes chat-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: spin 700ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

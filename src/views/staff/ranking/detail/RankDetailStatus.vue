@@ -218,11 +218,7 @@ async function runAutoCriteria() {
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--text-tertiary) 40%, transparent);
   border-top-color: var(--text-primary);
-  animation: auto-badge-spin 700ms linear infinite;
-}
-
-@keyframes auto-badge-spin {
-  to { transform: rotate(360deg); }
+  animation: spin 700ms linear infinite;
 }
 
 .auto-error {

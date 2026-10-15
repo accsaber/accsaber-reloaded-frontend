@@ -406,7 +406,7 @@ function diffColor(val: number): string {
   height: 4px;
   appearance: none;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   outline: none;
   cursor: pointer;
 }

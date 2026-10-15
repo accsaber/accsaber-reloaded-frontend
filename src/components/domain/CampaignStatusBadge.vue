@@ -75,7 +75,7 @@ function badgeTitle(badge: CampaignBadge): string {
   text-transform: uppercase;
   white-space: nowrap;
   border: 1px solid;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .campaign-badge--sm {

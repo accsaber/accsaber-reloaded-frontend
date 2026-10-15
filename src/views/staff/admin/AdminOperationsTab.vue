@@ -218,7 +218,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="op-card__title">Player Stats</span>
           <span class="scope scope--targeted">targeted</span>
         </div>
-        <p class="op-card__desc">Recalculate statistics for a specific player in one category.</p>
+        <p class="caption">Recalculate statistics for a specific player in one category.</p>
         <ResourcePicker v-model="statsUserId" :search="userSource.search" :resolve="userSource.resolve"
           :placeholder="userSource.placeholder" />
         <div class="cat-row">
@@ -240,7 +240,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="op-card__title">Remove Score</span>
           <span class="scope scope--targeted">targeted</span>
         </div>
-        <p class="op-card__desc">Remove a wrongly-attributed score. User will be re-fetched afterwards.</p>
+        <p class="caption">Remove a wrongly-attributed score. User will be re-fetched afterwards.</p>
         <ResourcePicker v-model="removeScoreUserId" :search="userSource.search" :resolve="userSource.resolve"
           :placeholder="userSource.placeholder" />
         <ResourcePicker v-model="removeScoreDiffId" :search="difficultySource.search"
@@ -259,7 +259,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="op-card__title">Player Refresh</span>
           <span class="scope scope--targeted">targeted</span>
         </div>
-        <p class="op-card__desc">Re-fetch player data from external sources.</p>
+        <p class="caption">Re-fetch player data from external sources.</p>
         <ResourcePicker v-model="refreshUserId" :search="userSource.search" :resolve="userSource.resolve"
           :placeholder="userSource.placeholder" />
         <div class="op-card__foot">
@@ -310,7 +310,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="op-card__title">Unclaimed Queue</span>
           <span class="scope scope--targeted">unmatched</span>
         </div>
-        <p class="op-card__desc">
+        <p class="caption">
           Ko-fi payments no email or Discord role could attach to a player. Pick who they belong to.
         </p>
         <SupporterQueue :events="queue" :loading="queueLoading" :claiming="claiming"
@@ -322,7 +322,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
           <span class="op-card__title">Player</span>
           <span class="scope scope--targeted">targeted</span>
         </div>
-        <p class="op-card__desc">Supporter state, Ko-fi history and manual grants for one player.</p>
+        <p class="caption">Supporter state, Ko-fi history and manual grants for one player.</p>
         <ResourcePicker v-model="panelUserId" :search="userSource.search" :resolve="userSource.resolve"
           :placeholder="userSource.placeholder" />
 
@@ -363,7 +363,6 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
 
 .op-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
 .op-card__title { font-size: var(--text-body); font-weight: 600; color: var(--text-primary); }
-.op-card__desc { font-size: var(--text-caption); color: var(--text-secondary); margin: 0; line-height: 1.5; }
 .op-card__foot { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-top: auto; }
 
 .scope {

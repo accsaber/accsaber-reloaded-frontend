@@ -133,7 +133,7 @@ async function handleLogin() {
           <ProviderButton provider="steam" @click="startProvider('steam')">Steam</ProviderButton>
         </div>
 
-        <p v-if="deniedNote && auth.isLoggedIn && !granted" class="staff-login__note">{{ deniedNote }}</p>
+        <p v-if="deniedNote && auth.isLoggedIn && !granted" class="caption">{{ deniedNote }}</p>
 
         <template v-if="hasPasswordFallback">
           <div class="staff-login__divider"><span>or</span></div>
@@ -306,12 +306,6 @@ async function handleLogin() {
   font-size: var(--text-caption);
 }
 
-.staff-login__note {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.5;
-}
 
 .staff-login__link,
 :slotted(.staff-login__link) {

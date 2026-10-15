@@ -707,7 +707,7 @@ function toggleCollapse(index: number) {
   appearance: none;
   -webkit-appearance: none;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
 }
 

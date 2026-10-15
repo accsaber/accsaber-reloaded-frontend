@@ -62,7 +62,7 @@ defineEmits<{ select: [key: string] }>()
 .chart-toggles__swatch {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--toggle-color);
   background: transparent;
   transition: background-color 120ms ease;

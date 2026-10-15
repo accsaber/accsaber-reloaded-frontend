@@ -229,11 +229,7 @@ const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
   border: 2px solid var(--bg-overlay);
   border-top-color: var(--page-accent, var(--accent));
   border-radius: 50%;
-  animation: image-uploader-spin 800ms linear infinite;
-}
-
-@keyframes image-uploader-spin {
-  to { transform: rotate(360deg); }
+  animation: spin 800ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

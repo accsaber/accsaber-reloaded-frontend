@@ -100,7 +100,7 @@ function confirm() {
           <input v-model="capped" type="checkbox" />
           Limit how far a map moves
         </label>
-        <p class="apply-script__hint">
+        <p class="caption">
           <template v-if="capped">
             No map moves more than {{ formatFixed(maxStep, CX_DECIMALS) }} complexity this round, so
             a map whose leaderboard keeps grinding settles over several rounds.
@@ -182,12 +182,6 @@ function confirm() {
   cursor: pointer;
 }
 
-.apply-script__hint {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
 
 .apply-script__error {
   margin: 0;

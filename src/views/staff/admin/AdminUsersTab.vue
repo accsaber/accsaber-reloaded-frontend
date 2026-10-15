@@ -227,7 +227,7 @@ async function clearCountry() {
 
   <BaseModal :open="countryModalOpen" :title="`Country Override - ${countryTarget?.userName ?? ''}`" @close="countryModalOpen = false">
     <div class="country-modal">
-      <p class="country-modal__hint">Set a manual country override (ISO 3166-1 alpha-2). Clearing restores the provider-reported country.</p>
+      <p class="caption">Set a manual country override (ISO 3166-1 alpha-2). Clearing restores the provider-reported country.</p>
       <BaseInput v-model="countryInput" label="Country code" placeholder="e.g. US" maxlength="2" />
       <p v-if="countryError" class="country-modal__error">{{ countryError }}</p>
     </div>
@@ -291,6 +291,5 @@ async function clearCountry() {
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
 
 .country-modal { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-sm) 0; }
-.country-modal__hint { font-size: var(--text-caption); color: var(--text-secondary); margin: 0; line-height: 1.5; }
 .country-modal__error { font-size: var(--text-caption); color: var(--error); margin: 0; }
 </style>

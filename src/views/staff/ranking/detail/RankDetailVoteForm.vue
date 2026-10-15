@@ -118,7 +118,7 @@ async function submit() {
       <div class="vote-form__complexity">
         <BaseInput v-model.number="suggestedComplexity" type="number"
           label="Suggested Complexity" placeholder="e.g. 8.5" />
-        <p v-if="voteAction === 'REWEIGHT' && difficulty.scriptComplexity != null" class="vote-form__note">
+        <p v-if="voteAction === 'REWEIGHT' && difficulty.scriptComplexity != null" class="caption">
           The script suggests {{ difficulty.scriptComplexity.toFixed(1) }} on
           <span class="vote-form__script-version">{{ difficulty.scriptVersion }}</span>.
         </p>
@@ -209,12 +209,6 @@ async function submit() {
   gap: var(--space-xs);
 }
 
-.vote-form__note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
 
 .vote-form__script-version {
   color: var(--text-tertiary);

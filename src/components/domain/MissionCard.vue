@@ -143,7 +143,7 @@ function handleLinkClick() {
       <MissionRewards :xp-reward="mission.xpReward" :item-reward="mission.itemReward" :size="28" />
     </header>
 
-    <p class="mission-row__desc">
+    <p class="caption">
       <template v-for="(seg, i) in segments" :key="i">
         <router-link
           v-if="seg.kind === 'link'"
@@ -249,7 +249,7 @@ function handleLinkClick() {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   border: 1px solid;
   flex-shrink: 0;
 }
@@ -274,12 +274,6 @@ function handleLinkClick() {
   background: color-mix(in srgb, var(--tier-gold) 14%, transparent);
 }
 
-.mission-row__desc {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
 
 .mission-row__link {
   color: var(--text-primary);
@@ -305,7 +299,7 @@ function handleLinkClick() {
   flex: 1;
   height: 4px;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
@@ -313,7 +307,7 @@ function handleLinkClick() {
   width: 100%;
   height: 100%;
   background: var(--accent);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transform-origin: left center;
   transition: transform 320ms cubic-bezier(0.25, 1, 0.5, 1);
   will-change: transform;

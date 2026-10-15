@@ -191,7 +191,7 @@ function toggle(level: number) {
   width: 8px;
   height: 8px;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .trail__stop--reached .trail__tick,

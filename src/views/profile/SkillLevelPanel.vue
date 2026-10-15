@@ -472,7 +472,7 @@ const tooltipStyle = computed(() => {
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: color 120ms ease, background-color 120ms ease;
 }
 
@@ -526,7 +526,7 @@ const tooltipStyle = computed(() => {
 .skill-panel__bar-track {
   height: 4px;
   background: var(--bg-base);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 

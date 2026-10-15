@@ -107,6 +107,6 @@ function onPin() {
 }
 
 .row-actions__replay {
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 </style>

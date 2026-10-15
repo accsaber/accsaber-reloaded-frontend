@@ -133,7 +133,7 @@ function onKeydown(e: KeyboardEvent) {
   padding: var(--space-xs) var(--space-sm);
   font-size: 0.6875rem;
   font-weight: 600;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   transition: color 120ms ease, background 120ms ease;

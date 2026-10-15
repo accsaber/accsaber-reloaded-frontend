@@ -280,7 +280,7 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
   position: absolute;
   top: 5px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   opacity: 0.9;
 }
 

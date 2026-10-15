@@ -69,7 +69,7 @@ function onMaxInput(e: Event) {
   right: 0;
   height: 4px;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transform: translateY(-50%);
 }
 
@@ -78,7 +78,7 @@ function onMaxInput(e: Event) {
   top: 0;
   height: 100%;
   background: var(--accent);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .range-slider__input {

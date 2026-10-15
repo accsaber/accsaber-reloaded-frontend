@@ -286,7 +286,7 @@ watch(() => authStore.userId, loadThemes)
   z-index: 1;
   display: block;
   height: 6px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .theme-card__swatch--bg { background: var(--preview-surface, var(--bg-elevated)); }

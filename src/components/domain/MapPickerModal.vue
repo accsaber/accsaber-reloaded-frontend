@@ -513,7 +513,7 @@ function commit() {
   color: var(--text-secondary);
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -610,7 +610,7 @@ function commit() {
   font-size: 0.6875rem;
   color: var(--page-accent, var(--accent));
   background: color-mix(in srgb, var(--page-accent, var(--accent)) 14%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .map-picker__pane-hint {
@@ -806,7 +806,7 @@ function commit() {
   white-space: nowrap;
   color: var(--text-secondary);
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   cursor: help;
 }
 

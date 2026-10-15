@@ -204,7 +204,7 @@ watch(
     @close="handleClose"
   >
     <div class="icon-export">
-      <p class="icon-export__intro">
+      <p class="caption">
         Renders each item's live preview to a transparent PNG and uploads it as that item's icon,
         replacing any icon it already has. Border shapes and colours export as frames with an empty
         centre so a profile picture fits inside.
@@ -354,12 +354,6 @@ watch(
   gap: var(--space-md);
 }
 
-.icon-export__intro {
-  margin: 0;
-  font-size: var(--text-caption);
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
 
 .icon-export__filters {
   display: grid;
@@ -512,7 +506,7 @@ watch(
 
 .icon-export__bar {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--bg-overlay);
   overflow: hidden;
 }

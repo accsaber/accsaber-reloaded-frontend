@@ -510,7 +510,7 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   z-index: 1;
   display: block;
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .item-preview__theme-bg { background: var(--color-surface, var(--bg-surface)); width: 100%; }

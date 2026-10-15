@@ -218,13 +218,7 @@ function goMainSite() {
   border: 2px solid var(--bg-overlay);
   border-top-color: var(--accent, var(--text-primary));
   border-radius: 50%;
-  animation: auth-spin 700ms linear infinite;
-}
-
-@keyframes auth-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: spin 700ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

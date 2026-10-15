@@ -501,7 +501,7 @@ function toggleExpand() {
   position: relative;
   height: 4px;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
@@ -513,7 +513,7 @@ function toggleExpand() {
   width: 100%;
   height: 100%;
   background: var(--tier-color);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transform-origin: left;
   transform: scaleX(var(--progress, 0));
   transition: transform 300ms ease-out;

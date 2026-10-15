@@ -64,14 +64,14 @@ async function save() {
   <BaseModal :open="open" title="Set Complexity" max-width="400px" @close="emit('close')">
     <div class="complexity-form">
       <BaseInput v-model.number="value" type="number" label="Complexity" placeholder="e.g. 8.5" />
-      <p v-if="scriptSetThis" class="note">
+      <p v-if="scriptSetThis" class="caption">
         The complexity script suggested this value at import.
       </p>
-      <p v-if="difficulty.status === 'RANKED'" class="note">
+      <p v-if="difficulty.status === 'RANKED'" class="caption">
         Saving runs a full reweight, and scores, statistics, rankings, milestones, XP and skills
         adjust in the background.
       </p>
-      <p class="note">
+      <p class="caption">
         Saving pins this map and the script's apply leaves it alone.
       </p>
       <div v-if="difficulty.scriptComplexity != null" class="script">
@@ -102,12 +102,6 @@ async function save() {
   gap: var(--space-md);
 }
 
-.note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
 
 .script {
   display: flex;

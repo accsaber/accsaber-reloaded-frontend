@@ -58,7 +58,7 @@ const styles = computed(() => ({
   position: relative;
   overflow: hidden;
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background-image: var(--complexity-gradient-ghost);
 }
 

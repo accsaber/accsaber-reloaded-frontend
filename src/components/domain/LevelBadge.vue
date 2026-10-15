@@ -139,7 +139,7 @@ const fallbackTitleStyle = computed(() => {
 .level-badge__bar {
   height: 4px;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
   width: 100%;
 }
@@ -147,7 +147,7 @@ const fallbackTitleStyle = computed(() => {
 .level-badge__fill {
   width: 100%;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transform-origin: left;
   transform: scaleX(var(--progress, 0));
   transition: transform 300ms ease-out;

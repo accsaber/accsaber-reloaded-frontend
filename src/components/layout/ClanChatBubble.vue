@@ -187,7 +187,7 @@ const label = computed(() =>
   color: var(--bg-base);
   background: var(--accent);
   border: 2px solid var(--bg-base);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .bubble-panel {

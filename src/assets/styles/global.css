@@ -46,6 +46,19 @@ h1 {
   color: var(--text-primary);
 }
 
+.caption {
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .fx-canvas {
   position: absolute;
   inset: 0;

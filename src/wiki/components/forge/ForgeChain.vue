@@ -128,7 +128,7 @@ function delta(index: number): number | null {
 .chain__track {
   height: 3px;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 

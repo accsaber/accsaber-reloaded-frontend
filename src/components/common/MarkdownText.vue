@@ -81,7 +81,7 @@ const html = computed(() => renderMarkdown(props.content))
   font-size: 0.9em;
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .markdown-text :deep(pre) {

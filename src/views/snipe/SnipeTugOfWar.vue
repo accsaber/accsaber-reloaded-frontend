@@ -154,7 +154,7 @@ function pct(value: number): string {
   align-items: stretch;
   width: 100%;
   height: 16px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);

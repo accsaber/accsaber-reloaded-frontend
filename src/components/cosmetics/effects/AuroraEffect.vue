@@ -296,7 +296,7 @@ const lines = computed<AuroraLine[]>(() => {
   position: absolute;
   mix-blend-mode: var(--fx-blend, screen);
   filter: blur(1.5px);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   animation: comp-fx-aurora-shine var(--adur, 4.3s) ease-in-out infinite;
   animation-delay: var(--adelay, 0s);
 }

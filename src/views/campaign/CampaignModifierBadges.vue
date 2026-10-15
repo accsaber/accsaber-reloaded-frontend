@@ -46,7 +46,7 @@ const badges = computed(() =>
   font-weight: 600;
   color: var(--success);
   border: 1px solid color-mix(in srgb, var(--success) 50%, transparent);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .mod-badges__item--forbidden {

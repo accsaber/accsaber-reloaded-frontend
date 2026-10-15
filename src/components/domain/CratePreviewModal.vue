@@ -189,7 +189,7 @@ onUnmounted(() => {
         <span class="crate-preview__rarity" :class="rarityClass(crate.rarity)">
           {{ crate.rarity }}
         </span>
-        <p v-if="crate.description" class="crate-preview__description">{{ crate.description }}</p>
+        <p v-if="crate.description" class="caption">{{ crate.description }}</p>
         <p v-if="obtainableSentence" class="crate-preview__obtainable">{{ obtainableSentence }}</p>
       </aside>
 
@@ -366,12 +366,6 @@ onUnmounted(() => {
   color: var(--rarity-color, var(--text-tertiary));
 }
 
-.crate-preview__description {
-  margin: 0;
-  font-size: var(--text-caption);
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
 
 .crate-preview__obtainable {
   margin: 0;

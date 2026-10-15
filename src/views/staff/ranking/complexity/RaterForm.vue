@@ -101,7 +101,7 @@ function setWorstShare(value: number) {
       <header class="rater-form__head">
         <div class="rater-form__intro">
           <h3 class="rater-form__title">Constants</h3>
-          <p class="rater-form__note">
+          <p class="caption">
             Editing these reweights the whole pool below. Nothing here is saved.
           </p>
         </div>
@@ -138,7 +138,7 @@ function setWorstShare(value: number) {
       <section class="rater-form__section">
         <div class="rater-form__section-head">
           <h4 class="rater-form__group-title field-label">{{ BOARD_LINE.title }}</h4>
-          <span class="rater-form__note">{{ BOARD_LINE.hint }}</span>
+          <span class="caption">{{ BOARD_LINE.hint }}</span>
         </div>
 
         <div class="rater-form__lines">
@@ -160,7 +160,7 @@ function setWorstShare(value: number) {
         @toggle="syncChartOpen">
         <summary class="rater-form__section-head rater-form__fold-head">
           <h4 class="rater-form__group-title field-label">{{ CHART_LINE.title }}</h4>
-          <span class="rater-form__note">{{ CHART_LINE.hint }}</span>
+          <span class="caption">{{ CHART_LINE.hint }}</span>
           <span class="rater-form__fold-toggle" aria-hidden="true"></span>
         </summary>
 
@@ -215,12 +215,6 @@ function setWorstShare(value: number) {
   font-weight: 600;
 }
 
-.rater-form__note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
 
 .rater-form__head-actions {
   display: flex;

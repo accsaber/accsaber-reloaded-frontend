@@ -39,7 +39,7 @@ const scale = computed(() => (props.max <= 0 ? 0 : clamp01(props.value / props.m
   height: 6px;
   overflow: hidden;
   background: var(--bg-overlay);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .clan-bar--lg {

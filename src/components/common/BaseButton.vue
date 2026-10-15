@@ -135,12 +135,6 @@ const linkAttrs = computed(() =>
   animation: spin 600ms linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .base-button__spinner {
     animation: none;

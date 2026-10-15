@@ -837,7 +837,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   height: 26px;
   padding: 0 7px;
   border: none;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-primary);
   font-family: inherit;
@@ -1054,7 +1054,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 .poster__line {
   display: block;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--bg-overlay);
 }
 

@@ -124,6 +124,7 @@
   --page-width-wide: 1500px;
 
   /* --- Border Radius --- */
+  --radius-xs: 2px;
   --radius-btn: 3px;
   --radius-input: 3px;
   --radius-card: 4px;

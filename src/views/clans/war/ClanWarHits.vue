@@ -233,7 +233,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
   width: 20px;
   height: 20px;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .war-hits__song {
