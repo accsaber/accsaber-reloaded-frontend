@@ -3,7 +3,7 @@ import { getPlaylistExportUrl } from '@/api/campaigns'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignCategoryTags from '@/components/domain/CampaignCategoryTags.vue'
-import CampaignCurationCredits from '@/components/domain/CampaignCurationCredits.vue'
+import CampaignCurationCredits from '@/views/campaign/CampaignCurationCredits.vue'
 import CampaignStatusBadge from '@/components/domain/CampaignStatusBadge.vue'
 import CampaignVoteControl from '@/components/domain/CampaignVoteControl.vue'
 import type { CampaignDetailResponse } from '@/types/api/campaigns'
@@ -253,11 +253,8 @@ const modeSentence = computed(() => {
 }
 
 .campaign-detail__title {
-  margin: 0;
   font-family: var(--font-sans);
   font-size: 1.625rem;
-  font-weight: 700;
-  color: var(--text-primary);
   line-height: 1.15;
   letter-spacing: -0.005em;
 }
@@ -275,7 +272,7 @@ const modeSentence = computed(() => {
 }
 
 .campaign-detail__badge-row {
-  margin: 8px 0 0;
+  margin: var(--space-sm) 0 0;
 }
 
 .campaign-detail__taxonomy,
@@ -365,7 +362,7 @@ const modeSentence = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: var(--space-sm) 12px;
   font-family: var(--font-sans);
   font-size: var(--text-body);
   font-weight: 600;
@@ -401,7 +398,7 @@ const modeSentence = computed(() => {
 
 .campaign-detail__error {
   margin: 0;
-  padding: 8px 12px;
+  padding: var(--space-sm) 12px;
   font-size: var(--text-caption);
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
@@ -473,7 +470,7 @@ const modeSentence = computed(() => {
 .campaign-detail__progress-count {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--space-xs);
   font-family: var(--font-mono);
   color: var(--text-primary);
 }

@@ -178,7 +178,7 @@ const TYPE_OPTIONS = [
 <template>
   <div class="tab">
     <div class="tab__header">
-      <h2 class="tab__title">Curves</h2>
+      <h2 class="section-title">Curves</h2>
       <BaseButton @click="openCreate">New Curve</BaseButton>
     </div>
 
@@ -205,7 +205,7 @@ const TYPE_OPTIONS = [
 
       <div v-if="selected" class="curve-editor">
         <div class="curve-editor__header">
-          <h3 class="curve-editor__name">{{ selected.name }}</h3>
+          <h3 class="card-title">{{ selected.name }}</h3>
           <span class="curve-editor__type">{{ selected.type }}</span>
         </div>
 
@@ -216,47 +216,47 @@ const TYPE_OPTIONS = [
 
         <div class="curve-form">
           <div class="form-field">
-            <label class="form-label">Name</label>
+            <label class="field-label">Name</label>
             <BaseInput v-model="editForm.name" />
           </div>
 
           <div v-if="selected.type === 'FORMULA'" class="form-field">
-            <label class="form-label">Formula</label>
+            <label class="field-label">Formula</label>
             <input v-model="editForm.formula" class="code-input" placeholder="e.g. x^2 * scale + shift" spellcheck="false" />
           </div>
 
           <div class="curve-form__params">
             <div class="form-field">
-              <label class="form-label">Scale</label>
+              <label class="field-label">Scale</label>
               <BaseInput v-model.number="editForm.scale" type="number" step="any" />
             </div>
             <div class="form-field">
-              <label class="form-label">Shift</label>
+              <label class="field-label">Shift</label>
               <BaseInput v-model.number="editForm.shift" type="number" step="any" />
             </div>
             <template v-if="selected.type === 'FORMULA'">
               <div class="form-field">
-                <label class="form-label">X param name</label>
+                <label class="field-label">X param name</label>
                 <BaseInput v-model="editForm.xParameterName" />
               </div>
               <div class="form-field">
-                <label class="form-label">X param value</label>
+                <label class="field-label">X param value</label>
                 <BaseInput v-model.number="editForm.xParameterValue" type="number" step="any" />
               </div>
               <div class="form-field">
-                <label class="form-label">Y param name</label>
+                <label class="field-label">Y param name</label>
                 <BaseInput v-model="editForm.yParameterName" />
               </div>
               <div class="form-field">
-                <label class="form-label">Y param value</label>
+                <label class="field-label">Y param value</label>
                 <BaseInput v-model.number="editForm.yParameterValue" type="number" step="any" />
               </div>
               <div class="form-field">
-                <label class="form-label">Z param name</label>
+                <label class="field-label">Z param name</label>
                 <BaseInput v-model="editForm.zParameterName" />
               </div>
               <div class="form-field">
-                <label class="form-label">Z param value</label>
+                <label class="field-label">Z param value</label>
                 <BaseInput v-model.number="editForm.zParameterValue" type="number" step="any" />
               </div>
             </template>
@@ -277,7 +277,7 @@ const TYPE_OPTIONS = [
     <div class="modal-form">
       <BaseInput v-model="createForm.name" label="Name" required />
       <div class="form-field">
-        <label class="form-label">Type</label>
+        <label class="field-label">Type</label>
         <BaseSelect v-model="createForm.type" :options="TYPE_OPTIONS" />
       </div>
       <BaseInput v-model="createForm.formula" label="Formula (optional)" />
@@ -293,7 +293,6 @@ const TYPE_OPTIONS = [
 <style scoped>
 .tab { display: flex; flex-direction: column; gap: var(--space-lg); }
 .tab__header { display: flex; align-items: center; justify-content: space-between; }
-.tab__title { font-size: var(--text-section-heading); font-weight: 600; color: var(--text-primary); margin: 0; }
 
 .layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-lg); align-items: start; }
 
@@ -337,7 +336,6 @@ const TYPE_OPTIONS = [
   gap: var(--space-lg);
 }
 .curve-editor__header { display: flex; align-items: center; gap: var(--space-sm); }
-.curve-editor__name { font-size: var(--text-card-title); font-weight: 600; color: var(--text-primary); margin: 0; }
 .curve-editor__type { font-size: var(--text-caption); font-family: var(--font-mono); color: var(--text-secondary); }
 
 .chart-area { position: relative; height: 260px; }
@@ -348,7 +346,6 @@ const TYPE_OPTIONS = [
 .curve-form__actions { display: flex; align-items: center; gap: var(--space-md); }
 
 .form-field { display: flex; flex-direction: column; gap: var(--space-xs); }
-.form-label { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
 
 .code-input {
   padding: var(--space-sm);

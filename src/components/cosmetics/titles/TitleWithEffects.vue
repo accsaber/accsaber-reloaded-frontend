@@ -2,9 +2,9 @@
 import ContentEffects from '@/components/cosmetics/effects/ContentEffects.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
-import type { TitleValue } from '@/types/api/items'
+import type { TitleValue } from '@/types/cosmetics/title'
 import type { EffectHostContext } from '@/utils/cosmetics/effects'
-import { annotateEffectLayerStacks, type EffectLayer } from '@/utils/items'
+import { annotateEffectLayerStacks, type EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = defineProps<{

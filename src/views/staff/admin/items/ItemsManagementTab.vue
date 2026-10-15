@@ -496,14 +496,14 @@ onMounted(async () => {
           searchable
         />
         <div v-else class="items-mgmt__readonly">
-          <span class="items-mgmt__readonly-label">Type</span>
+          <span class="field-label">Type</span>
           <span class="items-mgmt__readonly-value">{{ selectedTypeLabel }}</span>
         </div>
 
         <BaseInput v-model="form.name" label="Name" :error="nameError ?? undefined" />
 
         <div class="items-mgmt__field">
-          <label class="items-mgmt__field-label">Description</label>
+          <label class="field-label">Description</label>
           <textarea
             v-model="form.description"
             class="items-mgmt__textarea"
@@ -529,7 +529,7 @@ onMounted(async () => {
         />
 
         <div v-if="selectedTypeSchema" class="items-mgmt__value">
-          <label class="items-mgmt__field-label">Value</label>
+          <label class="field-label">Value</label>
           <SchemaValueForm
             :key="form.typeId"
             v-model="valueModel"
@@ -684,14 +684,6 @@ onMounted(async () => {
   gap: var(--space-xs);
 }
 
-.items-mgmt__field-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
-
 .items-mgmt__textarea {
   width: 100%;
   padding: var(--space-sm) var(--space-md);
@@ -713,14 +705,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.items-mgmt__readonly-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .items-mgmt__readonly-value {

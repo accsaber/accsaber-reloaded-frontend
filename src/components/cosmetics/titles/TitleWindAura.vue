@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleWindAuraSpec } from '@/types/api/items'
+import type { TitleWindAuraSpec } from '@/types/cosmetics/title'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'

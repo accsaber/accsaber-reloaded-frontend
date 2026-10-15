@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import StatBlock from '@/components/common/StatBlock.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import SkillLevelPanel from '@/components/domain/SkillLevelPanel.vue'
+import SkillLevelPanel from '@/views/profile/SkillLevelPanel.vue'
 import ProfileApCurveChart from '@/views/profile/ProfileApCurveChart.vue'
 import ProfileStatsChart from '@/views/profile/ProfileStatsChart.vue'
 import { useAppearance } from '@/composables/useAppearance'

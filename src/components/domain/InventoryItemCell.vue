@@ -5,12 +5,11 @@ import ModifierCompositions from '@/components/cosmetics/effects/ModifierComposi
 import { useModifierColor } from '@/composables/useModifierColor'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemModifierRef, UserItemResponse } from '@/types/api/items'
+import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
 import {
-  buildEffectLayers,
   displayItemName,
   isBorderTypeKey,
   rarityClass,
-  readFragmentSpec,
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
@@ -258,7 +257,7 @@ onMounted(() => {
   color: var(--bg-base);
   background: var(--bg-base);
   border: 1px solid var(--text-tertiary);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   pointer-events: none;
 }
 

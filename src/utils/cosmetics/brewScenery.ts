@@ -1,4 +1,4 @@
-import type { BrewIngredientKind } from '@/types/api/items'
+import type { BrewIngredientKind } from '@/types/cosmetics/title'
 import { darken, lerpHex, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'

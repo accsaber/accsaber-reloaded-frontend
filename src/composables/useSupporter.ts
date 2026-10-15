@@ -1,4 +1,3 @@
-import { useAuthStore } from '@/stores/auth'
 import { useSupporterStore } from '@/stores/supporters'
 import type { SupporterStateResponse, SupporterTier } from '@/types/api/supporters'
 import { SUPPORTER_TIER_RANK } from '@/types/api/supporters'
@@ -50,9 +49,4 @@ export function useSupporter(userId: () => string | null) {
       return Promise.resolve(null)
     },
   }
-}
-
-export function useMySupporter() {
-  const auth = useAuthStore()
-  return useSupporter(() => (auth.isLoggedIn ? auth.userId : null))
 }

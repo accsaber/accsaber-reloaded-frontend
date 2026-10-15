@@ -1,5 +1,5 @@
-import type { CreateCampaignRequest, CreateCampaignTagRequest } from '@/types/api/admin'
-import type { CampaignResponse, CampaignTagResponse } from '@/types/api/campaigns'
+import type { CreateCampaignRequest } from '@/types/api/admin'
+import type { CampaignResponse } from '@/types/api/campaigns'
 import { patch, post } from '../client'
 import { buildQuery } from '../utils'
 
@@ -25,8 +25,4 @@ export function setCampaignOfficial(campaignId: string, value: boolean): Promise
 
 export function setCampaignLoved(campaignId: string, loved: boolean): Promise<CampaignResponse> {
   return patch<CampaignResponse>(`/admin/campaigns/${campaignId}/loved${buildQuery({ loved })}`)
-}
-
-export function createCampaignTag(req: CreateCampaignTagRequest): Promise<CampaignTagResponse> {
-  return post<CampaignTagResponse>('/admin/campaigns/tags', req)
 }

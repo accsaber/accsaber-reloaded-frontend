@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { buildOAuthStartUrl, getDefaultCallbackUrl } from '@/api/auth'
-import ProviderIcon from '@/components/domain/ProviderIcon.vue'
+import { parseApiError } from '@/api/client'
+import ProviderButton from '@/components/domain/ProviderButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { AuthMeResponse } from '@/types/api/player-auth'
 import type { OAuthProvider } from '@/types/api/player-auth'
@@ -39,7 +40,7 @@ async function disconnect(provider: OAuthProvider) {
   try {
     await authStore.removeConnection(provider)
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Could not remove connection'
+    const msg = parseApiError(e, 'Could not remove connection').message
     connectionError.value = msg.includes('last') ? 'You must keep at least one linked account.' : msg
   }
 }
@@ -52,10 +53,8 @@ async function disconnect(provider: OAuthProvider) {
     </header>
 
     <ul class="connections">
-      <li v-for="c in me.connections" :key="c.provider" class="connection" :data-provider="c.provider">
-        <span class="connection__icon" :data-provider="c.provider">
-          <ProviderIcon :provider="c.provider" :size="20" />
-        </span>
+      <li v-for="c in me.connections" :key="c.provider" class="connection">
+        <ProviderButton :provider="c.provider" variant="chip" />
         <div class="connection__info">
           <span class="connection__provider">{{ providerLabels[c.provider] }}</span>
           <span v-if="c.providerUsername" class="connection__username">
@@ -77,13 +76,10 @@ async function disconnect(provider: OAuthProvider) {
     </header>
 
     <div class="provider-grid">
-      <button v-for="provider in availableLinkProviders" :key="provider" class="provider" :data-provider="provider"
+      <ProviderButton v-for="provider in availableLinkProviders" :key="provider" :provider="provider"
         :aria-label="`Continue with ${providerLabels[provider]}`" @click="startLogin(provider)">
-        <span class="provider__icon" aria-hidden="true">
-          <ProviderIcon :provider="provider" />
-        </span>
-        <span class="provider__label">{{ providerLabels[provider] }}</span>
-      </button>
+        {{ providerLabels[provider] }}
+      </ProviderButton>
     </div>
   </section>
 </template>
@@ -106,36 +102,6 @@ async function disconnect(provider: OAuthProvider) {
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
-}
-
-.connection__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-btn);
-  flex-shrink: 0;
-}
-
-.connection[data-provider="discord"] .connection__icon {
-  background: color-mix(in srgb, #5865f2 18%, transparent);
-  color: #5865f2;
-}
-
-.connection[data-provider="beatleader"] .connection__icon {
-  background: color-mix(in srgb, #a855f7 18%, transparent);
-  color: #a855f7;
-}
-
-.connection[data-provider="steam"] .connection__icon {
-  background: color-mix(in srgb, #1b2838 30%, transparent);
-  color: var(--text-primary);
-}
-
-[data-theme="light"] .connection[data-provider="steam"] .connection__icon {
-  background: color-mix(in srgb, #1b2838 14%, transparent);
-  color: #1b2838;
 }
 
 .connection__info {
@@ -187,52 +153,5 @@ async function disconnect(provider: OAuthProvider) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--space-sm);
-}
-
-.provider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  height: 44px;
-  padding: 0 var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
-}
-
-.provider[data-provider="discord"] {
-  --provider-accent: #5865f2;
-}
-
-.provider[data-provider="beatleader"] {
-  --provider-accent: #a855f7;
-}
-
-.provider[data-provider="steam"] {
-  --provider-accent: #4b6a8c;
-}
-
-[data-theme="light"] .provider[data-provider="steam"] {
-  --provider-accent: #1b2838;
-}
-
-.provider:hover {
-  color: var(--provider-accent);
-  border-color: var(--provider-accent);
-  background: color-mix(in srgb, var(--provider-accent) 10%, var(--bg-surface));
-}
-
-.provider__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--provider-accent);
 }
 </style>

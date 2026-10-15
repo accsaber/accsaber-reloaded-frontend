@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import CoverImage from '@/components/common/CoverImage.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MapCardCompact from '@/components/domain/MapCardCompact.vue'
 import MilestoneCard from '@/components/domain/MilestoneCard.vue'
-import { onAvatarError, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
 import type { CampaignDetailResponse } from '@/types/api/campaigns'
@@ -115,8 +115,8 @@ const campaignNodes = computed(() => {
     songName: d.songName,
     songAuthor: d.songAuthor,
     mapAuthor: d.mapAuthor,
-    coverUrl: pickCoverUrl(d),
-    coverFallbackUrl: pickCoverFallback(d),
+    coverUrl: d.coverUrl,
+    cdnCoverUrl: d.cdnCoverUrl,
     difficultyLabel: formatDifficulty(d.difficulty),
     goal: d.targets
       .map((t) => requirementGoalText(t.requirementType, t.requirementValue, t.requirementValueMax))
@@ -172,7 +172,7 @@ const sectionTitle = computed(() => {
       <div v-for="group in batchGroups" :key="group.categoryCode" class="batch-category">
         <div class="batch-category__header">
           <span class="batch-category__dot" :style="{ background: group.accent }" />
-          <span class="batch-category__name">{{ group.name }}</span>
+          <span class="field-label">{{ group.name }}</span>
         </div>
         <div class="batch-category__cards">
           <MapCardCompact
@@ -207,8 +207,7 @@ const sectionTitle = computed(() => {
           :to="campaignMeta!.to"
           class="campaign-row"
         >
-          <img :src="node.coverUrl" class="campaign-row__cover" :alt="node.songName"
-            loading="lazy" decoding="async" @error="onAvatarError(node.coverFallbackUrl)($event)" />
+          <CoverImage :source="node" :alt="node.songName" :size="36" />
           <div class="campaign-row__info">
             <span class="campaign-row__song">{{ node.songName }}</span>
             <span class="campaign-row__sub">{{ node.songAuthor }} · {{ node.mapAuthor }}</span>
@@ -247,19 +246,19 @@ const sectionTitle = computed(() => {
 
       <div class="curve-info">
         <div v-if="resource.data.formula" class="curve-info__row">
-          <span class="curve-info__label">Formula</span>
+          <span class="curve-info__label field-label">Formula</span>
           <code class="curve-info__value">{{ resource.data.formula }}</code>
         </div>
         <div v-if="resource.data.scale != null" class="curve-info__row">
-          <span class="curve-info__label">Scale</span>
+          <span class="curve-info__label field-label">Scale</span>
           <span class="curve-info__value">{{ resource.data.scale }}</span>
         </div>
         <div v-if="resource.data.shift != null" class="curve-info__row">
-          <span class="curve-info__label">Shift</span>
+          <span class="curve-info__label field-label">Shift</span>
           <span class="curve-info__value">{{ resource.data.shift }}</span>
         </div>
         <div v-if="resource.data.points?.length" class="curve-info__row">
-          <span class="curve-info__label">Points</span>
+          <span class="curve-info__label field-label">Points</span>
           <span class="curve-info__value">{{ resource.data.points.length }} samples</span>
         </div>
       </div>
@@ -313,7 +312,7 @@ const sectionTitle = computed(() => {
 }
 
 .linked-resource__desc {
-  margin: 4px 0 0;
+  margin: var(--space-xs) 0 0;
   color: var(--text-secondary);
   font-size: var(--text-body);
 }
@@ -340,14 +339,6 @@ const sectionTitle = computed(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-}
-
-.batch-category__name {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
 }
 
 .batch-category__cards {
@@ -378,14 +369,6 @@ const sectionTitle = computed(() => {
 .campaign-row:hover {
   border-color: var(--text-tertiary);
   background: var(--bg-elevated);
-}
-
-.campaign-row__cover {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-btn);
-  object-fit: cover;
-  flex-shrink: 0;
 }
 
 .campaign-row__info {
@@ -447,10 +430,6 @@ const sectionTitle = computed(() => {
 }
 
 .curve-info__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   min-width: 80px;
 }
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { formatAccuracy, formatCount } from '@/utils/formatters'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import DistributionRanking from '@/components/domain/DistributionRanking.vue'
+import DistributionRanking from '@/views/stats/DistributionRanking.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useQueryParams } from '@/composables/useQueryParams'
@@ -23,8 +24,6 @@ import {
   MISSION_TIER_ORDER,
   NO_VALUE,
   fmtDecimal,
-  fmtFraction,
-  fmtInt,
   fmtPercentPoint,
   labelCase,
   plural,
@@ -302,7 +301,7 @@ watch(
           searchable @update:model-value="typeFilter = $event as MissionType" />
         <BaseSelect v-if="shows('category')" :model-value="categoryFilter" :options="categoryOptions"
           placeholder="All Categories" @update:model-value="categoryFilter = $event" />
-        <label v-if="shows('minAssigned')" class="mission-stats__number">
+        <label v-if="shows('minAssigned')" class="mission-stats__number field-label">
           <span>Min assigned</span>
           <input type="number" min="1" inputmode="numeric" :value="minAssigned"
             @change="minAssignedParam = ($event.target as HTMLInputElement).value.trim()" />
@@ -331,12 +330,12 @@ watch(
           empty-label="All tiers" @toggle="toggleChip('tier', $event)" @clear="tierFilter = []" />
 
         <div v-else class="mission-stats__range">
-          <label class="mission-stats__number">
+          <label class="mission-stats__number field-label">
             <span>Skill min</span>
             <input type="number" inputmode="numeric" :value="skillMin ?? ''"
               @change="skillMinParam = ($event.target as HTMLInputElement).value.trim()" />
           </label>
-          <label class="mission-stats__number">
+          <label class="mission-stats__number field-label">
             <span>Skill max</span>
             <input type="number" inputmode="numeric" :value="skillMax ?? ''"
               @change="skillMaxParam = ($event.target as HTMLInputElement).value.trim()" />
@@ -405,26 +404,26 @@ watch(
               <span class="mission-stats__rate-fill"
                 :style="{ '--fill': (((row.completionRate as number | null) ?? 0) * 100) + '%' }" />
             </span>
-            {{ fmtFraction(row.completionRate) }}
+            {{ formatAccuracy(row.completionRate as number | null, 1) }}
           </span>
         </template>
 
         <template #cell-progressed="{ row }">
           <span v-if="row.progressed == null" class="mission-stats__dim">{{ NO_VALUE }}</span>
-          <span v-else>{{ fmtInt(row.progressed) }}</span>
+          <span v-else>{{ formatCount(row.progressed as number) }}</span>
         </template>
 
-        <template #cell-assigned="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-completed="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-itemsAwarded="{ value }">{{ fmtInt(value) }}</template>
+        <template #cell-assigned="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-completed="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-itemsAwarded="{ value }">{{ formatCount(value as number | null) }}</template>
         <template #cell-averageXpReward="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-xpPaid="{ value }"><span class="mission-stats__strong">{{ fmtInt(value) }}</span></template>
+        <template #cell-xpPaid="{ value }"><span class="mission-stats__strong">{{ formatCount(value as number | null) }}</span></template>
         <template #cell-averageXp="{ value }">{{ fmtDecimal(value) }}</template>
         <template #cell-medianXp="{ value }">{{ fmtDecimal(value) }}</template>
         <template #cell-p90Xp="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-shareOfMissionXp="{ value }">{{ fmtFraction(value) }}</template>
+        <template #cell-shareOfMissionXp="{ value }">{{ formatAccuracy(value as number | null, 1) }}</template>
         <template #cell-missionsCompleted="{ value }">
-          <span class="mission-stats__strong">{{ fmtInt(value) }}</span>
+          <span class="mission-stats__strong">{{ formatCount(value as number | null) }}</span>
         </template>
         <template #cell-missionXp="{ value }">{{ fmtDecimal(value, 0) }}</template>
       </DataTable>
@@ -465,11 +464,6 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
 }
 
 .mission-stats__number input {
@@ -503,7 +497,7 @@ watch(
 }
 
 .mission-stats__mode-btn {
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);

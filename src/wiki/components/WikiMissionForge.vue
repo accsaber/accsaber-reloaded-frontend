@@ -4,7 +4,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
 import MissionCard from '@/components/domain/MissionCard.vue'
 import { useReducedMotion } from '@/composables/useReducedMotion'
-import { BAND_WEIGHTS, TEMPLATES, type ForgeMissionType } from '@/wiki/missionSim'
+import { BAND_WEIGHTS, TEMPLATES, weightedPick, type ForgeMissionType } from '@/wiki/missionSim'
 import ForgeBars from '@/wiki/components/forge/ForgeBars.vue'
 import ForgeBoard from '@/wiki/components/forge/ForgeBoard.vue'
 import ForgeChain from '@/wiki/components/forge/ForgeChain.vue'
@@ -146,13 +146,7 @@ function goTo(next: number, keepPlaying = false) {
 
 function rollWeightedType(): ForgeMissionType {
   const pool = TEMPLATES.filter((t) => t.pool === 'daily')
-  const total = pool.reduce((sum, t) => sum + t.weight, 0)
-  let roll = Math.random() * total
-  for (const template of pool) {
-    roll -= template.weight
-    if (roll <= 0) return template.type
-  }
-  return pool[0].type
+  return (weightedPick(pool, Math.random())?.item ?? pool[0]).type
 }
 
 async function forge() {
@@ -804,7 +798,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 4px;
+  gap: var(--space-xs);
   margin: 0 var(--space-md) var(--space-md);
 }
 
@@ -888,7 +882,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  padding: 4px var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   font-size: var(--text-caption);
@@ -1072,7 +1066,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 .poster__bars {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  gap: var(--space-xs);
   height: 56px;
 }
 

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { useReducedMotion } from '@/composables/useReducedMotion'
-import type { BorderOverlayHost, BorderThermalOverlaySpec, ThermalPalette } from '@/types/api/items'
+import type {
+  BorderOverlayHost,
+  BorderThermalOverlaySpec,
+  ThermalPalette,
+} from '@/types/cosmetics/border'
 import { primaryFillHex } from '@/utils/cosmetics/overlayCanvas'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 

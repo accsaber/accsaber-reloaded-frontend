@@ -1,4 +1,4 @@
-import type { EclipseCreatureKind } from '@/types/api/items'
+import type { EclipseCreatureKind } from '@/types/cosmetics/border'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 

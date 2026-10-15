@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/math'
 import {
   computed,
   onMounted,
@@ -136,8 +137,8 @@ export function useStageInteraction(
     const maxTx = stageWidth.value - b.x * scale.value - pad
     const minTy = -(b.y + b.height) * scale.value + pad
     const maxTy = stageHeight.value - b.y * scale.value - pad
-    translateX.value = Math.min(Math.max(translateX.value, minTx), maxTx)
-    translateY.value = Math.min(Math.max(translateY.value, minTy), maxTy)
+    translateX.value = clamp(translateX.value, minTx, maxTx)
+    translateY.value = clamp(translateY.value, minTy, maxTy)
   }
 
   function fitToContent() {

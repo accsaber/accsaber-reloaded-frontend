@@ -13,7 +13,7 @@ const number = registry ? formatSectionNumber(registry.register({ id: props.id, 
 
 <template>
   <section :id="id" class="legal-section">
-    <h2 class="legal-section__heading">
+    <h2 class="legal-section__heading section-title">
       <span v-if="number" class="legal-section__number" aria-hidden="true">{{ number }}</span>
       {{ title }}
     </h2>
@@ -32,9 +32,6 @@ const number = registry ? formatSectionNumber(registry.register({ id: props.id, 
   align-items: baseline;
   gap: var(--space-sm);
   margin: 0 0 var(--space-md);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .legal-section__number {

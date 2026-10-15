@@ -58,7 +58,7 @@ function select(value: string) {
 
 <template>
   <div ref="containerRef" class="base-select">
-    <label v-if="label" class="base-select__label">{{ label }}</label>
+    <label v-if="label" class="field-label">{{ label }}</label>
     <button ref="triggerRef" class="base-select__trigger" :class="{ 'base-select__trigger--open': isOpen }"
       @click="toggle">
       <span class="base-select__value">{{ selectedLabel }}</span>
@@ -94,14 +94,6 @@ function select(value: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.base-select__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .base-select__trigger {

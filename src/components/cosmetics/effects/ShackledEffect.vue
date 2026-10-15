@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asColor, asNumber, clampNumber, easeIn, easeOut, geometryMemo, polyBounds, ringSpan, type ContentBox, type EffectFrame, type EffectMeasure, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed, watch } from 'vue'
+import { clamp, clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -63,7 +64,7 @@ const linkLen = computed(() => {
   if (isTitle.value) return Math.max(2.5, box.h * 0.22)
   if (isTag.value) return Math.max(3, box.h * 0.3)
   const minD = Math.min(box.w, box.h)
-  return field.value ? Math.max(5, Math.min(20, minD * 0.03)) : Math.max(4, Math.min(12, minD * 0.055))
+  return field.value ? clamp(minD * 0.03, 5, 20) : clamp(minD * 0.055, 4, 12)
 })
 
 const pad = computed(() =>
@@ -146,9 +147,9 @@ function drawChain(g: Ctx, ch: Chain, local: number, link: number, reduced: bool
       drew = true
       return
     }
-    const a = Math.max(0, Math.min(1, (local - i * ch.buildDt) / 0.2))
+    const a = clamp01((local - i * ch.buildDt) / 0.2)
     if (a <= 0) return
-    const f = Math.max(0, Math.min(1, (local - (ch.fadeStart + i * ch.fadeDt)) / 0.3))
+    const f = clamp01((local - (ch.fadeStart + i * ch.fadeDt)) / 0.3)
     if (f >= 1) return
     const dropY = (1 - easeOut(a)) * -link * 1.4 + easeIn(f) * link * 0.8
     drawLink(g, l, link, a * (1 - f), dropY)

@@ -1,4 +1,3 @@
-import type { PublicClanResponse } from './clans'
 import type {
   BarrierConditionType,
   CampaignCollaboratorStatus,
@@ -17,6 +16,7 @@ import type {
   UserCampaignStatus,
 } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { PlayerRef } from './common'
 import type { ItemResponse } from './items'
 import type { MapChartStatsSource } from './maps'
 import type { ModifierResponse } from './modifiers'
@@ -260,14 +260,9 @@ export interface CampaignCollaboratorResponse {
   campaignId: string
   campaignName: string
   campaignSlug: string
-  userId: string
-  userName: string
-  userAvatarUrl: string | null
-  userCdnAvatarUrl: string | null
-  userCountry: string | null
-  userClan?: PublicClanResponse | null
+  user: PlayerRef
   status: CampaignCollaboratorStatus
-  invitedById: string
+  invitedBy: PlayerRef
   createdAt: string
 }
 
@@ -299,18 +294,9 @@ export interface CampaignTagListParams {
   kind?: CampaignTagKind
 }
 
-export interface CampaignLeaderboardPlayer {
-  userId: string
-  userName: string
-  country?: string
-  avatarUrl?: string
-  cdnAvatarUrl?: string
-  clan?: PublicClanResponse | null
-}
-
 export interface CampaignLeaderboardEntry {
   rank?: number
-  player: CampaignLeaderboardPlayer
+  player: PlayerRef
   completedAt?: string
   averageAccuracy?: number
   averageAp?: number
@@ -322,7 +308,7 @@ export interface CampaignLeaderboardEntry {
 
 export interface CampaignNodeScoreEntry {
   rank: number
-  player: CampaignLeaderboardPlayer
+  player: PlayerRef
   score?: number
   accuracy?: number
   ap?: number

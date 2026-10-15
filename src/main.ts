@@ -28,8 +28,8 @@ void Promise.all([
     levelStore.fetchThresholds(),
 ])
 
-await authStore.bootstrap()
-
+const booting = authStore.bootstrap()
 app.use(router)
 installRoutePrefetch(router)
+await Promise.all([booting, router.isReady().catch(() => {})])
 app.mount('#app')

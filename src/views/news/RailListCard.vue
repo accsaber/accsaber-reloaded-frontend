@@ -101,7 +101,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 

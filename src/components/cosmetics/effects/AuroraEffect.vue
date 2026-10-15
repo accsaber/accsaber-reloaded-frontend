@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -29,14 +30,14 @@ interface AuroraConfig {
 function readAurora(c: Composition): AuroraConfig {
   return {
     underline: c.underline !== false,
-    count: Math.max(6, Math.min(28, Math.round(asNumber(c.count) ?? 16))),
+    count: clamp(Math.round(asNumber(c.count) ?? 16), 6, 28),
     hueBase: asNumber(c.hueBase) ?? 190,
-    innerPct: Math.max(0, Math.min(45, asNumber(c.innerPct) ?? 26)),
-    lengthPct: Math.max(10, Math.min(60, asNumber(c.lengthPct) ?? 30)),
-    widthPct: Math.max(2, Math.min(20, asNumber(c.widthPct) ?? 8)),
+    innerPct: clamp(asNumber(c.innerPct) ?? 26, 0, 45),
+    lengthPct: clamp(asNumber(c.lengthPct) ?? 30, 10, 60),
+    widthPct: clamp(asNumber(c.widthPct) ?? 8, 2, 20),
     blurPx: Math.max(0, asNumber(c.blurPx) ?? 3.5),
     shimmerMs: Math.max(800, asNumber(c.shimmerMs) ?? 3400),
-    intensity: Math.max(0.2, Math.min(1, asNumber(c.intensity) ?? 1)),
+    intensity: clamp(asNumber(c.intensity) ?? 1, 0.2, 1),
   }
 }
 
@@ -128,7 +129,7 @@ function auroraSpike(cfg: AuroraConfig, stack: number, i: number, petal: boolean
   const maxD = Math.max(b.w, b.h)
   const lenBasis = minD + 0.2 * (maxD - minD)
   const radius = auroraRadius(cfg, b)
-  const blurScale = Math.max(0.8, Math.min(1, lenBasis / 140))
+  const blurScale = clamp(lenBasis / 140, 0.8, 1)
   const s = i + stack * 101 + (petal ? 57 : 0)
   const step = 1 / count
   const sFrac = (((i + 0.5) * step
@@ -180,7 +181,7 @@ const spikes = computed<AuroraSpike[]>(() => {
   const perimeter = 4 * halfL + 2 * Math.PI * radius
   const ratio = radius > 0 ? perimeter / (2 * Math.PI * radius) : 1
   const elongated = Math.max(b.w, b.h) / minD >= 1.5
-  const count = Math.round(cfg.count * Math.max(1, Math.min(1.6, ratio)) * (elongated ? 0.55 : 1))
+  const count = Math.round(cfg.count * clamp(ratio, 1, 1.6) * (elongated ? 0.55 : 1))
   const out: AuroraSpike[] = []
   for (let i = 0; i < count; i++) out.push(auroraSpike(cfg, stack, i, false, count, b))
   const petals = Math.round(count * 1.4)

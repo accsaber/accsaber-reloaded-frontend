@@ -93,7 +93,7 @@ onMounted(load)
   <div class="war-rewards">
     <div class="war-rewards__header">
       <div>
-        <h2 class="war-rewards__title">War rewards</h2>
+        <h2 class="section-title">War rewards</h2>
         <p class="war-rewards__meta">Paid to the winning side when a war ends. Leave top contributors empty to pay everyone who contributed on the winning side.</p>
       </div>
     </div>
@@ -151,13 +151,6 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-}
-
-.war-rewards__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .war-rewards__meta {

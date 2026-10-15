@@ -18,7 +18,7 @@ defineEmits<{
 
 <template>
   <div class="base-textarea" :class="{ 'base-textarea--error': error }">
-    <label v-if="label" class="base-textarea__label">{{ label }}</label>
+    <label v-if="label" class="field-label">{{ label }}</label>
     <textarea
       class="base-textarea__field"
       v-bind="$attrs"
@@ -41,14 +41,6 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.base-textarea__label {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .base-textarea__field {

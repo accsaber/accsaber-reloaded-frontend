@@ -11,9 +11,9 @@ import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdr
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import SnipeComparisonRow from '@/components/domain/SnipeComparisonRow.vue'
-import SnipeTugOfWar from '@/components/domain/SnipeTugOfWar.vue'
+import SnipeTugOfWar from '@/views/snipe/SnipeTugOfWar.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { pickAvatarUrl } from '@/utils/media'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -124,12 +124,7 @@ const targetLevel = ref<LevelResponse | null>(null)
 const sniperLevel = ref<LevelResponse | null>(null)
 const targetEquipped = ref<EquippedItemsResponse>({})
 
-const sniper = computed<UserRefDisplay | null>(() => {
-  const me = authStore.authMe
-  return me
-    ? { id: me.userId, name: me.name, avatarUrl: me.avatarUrl, cdnAvatarUrl: me.cdnAvatarUrl, country: me.country, clan: me.clan }
-    : null
-})
+const sniper = computed<UserRefDisplay | null>(() => authStore.authMe?.player ?? null)
 
 const sniperRender = reactive(useEquippedRenderProps(() => inventoryStore.equipped))
 const targetRender = reactive(useEquippedRenderProps(targetEquipped))
@@ -342,7 +337,7 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
             <line x1="2" y1="12" x2="6" y2="12" />
             <line x1="18" y1="12" x2="22" y2="12" />
           </svg>
-          <span class="snipe-hero__vs-label">Sniping</span>
+          <span class="field-label">Sniping</span>
         </div>
 
         <div class="snipe-hero__player" :class="`snipe-hero__player--${p.key}`">
@@ -354,8 +349,8 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
           <SkeletonLoader v-else variant="avatar" width="64px" height="64px" />
           <div class="snipe-hero__player-info">
             <span class="snipe-hero__role" :class="`snipe-hero__role--${p.key}`">{{ p.role }}</span>
-            <UserChip v-if="p.user" :user="p.user" size="lg" hide-avatar class="snipe-hero__player-name" />
-            <span v-else class="snipe-hero__player-name">...</span>
+            <UserChip v-if="p.user" :user="p.user" size="lg" hide-avatar class="snipe-hero__player-name section-title" />
+            <span v-else class="snipe-hero__player-name section-title">...</span>
           </div>
         </div>
       </template>
@@ -372,7 +367,7 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
         <BaseSelect :model-value="currentUnplayed" :options="UNPLAYED_OPTIONS" label="Unplayed maps"
           @update:model-value="setQuery({ unplayed: $event === DEFAULT_UNPLAYED ? undefined : $event.toLowerCase() })" />
         <div class="snipe-page__sort">
-          <span class="snipe-page__sort-label">Sort</span>
+          <span class="field-label">Sort</span>
           <div class="snipe-page__sort-row">
             <BaseSelect :model-value="currentSort" :options="SORT_OPTIONS"
               @update:model-value="setQuery({ sort: $event === DEFAULT_SORT ? undefined : $event.toLowerCase(), dir: undefined })" />
@@ -487,9 +482,6 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
 }
 
 .snipe-hero__player-name {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
@@ -504,13 +496,6 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
   align-items: center;
   gap: var(--space-xs);
   color: var(--page-accent);
-}
-
-.snipe-hero__vs-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .snipe-page__controls {
@@ -531,14 +516,6 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.snipe-page__sort-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .snipe-page__sort-row {

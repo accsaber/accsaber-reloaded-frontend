@@ -1,29 +1,20 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import {
-  countWikiEntries,
-  prefetchWikiEntry,
-  sectionContainsSlug,
-  WIKI_NAVIGATE_KEY,
-} from '@/wiki/registry'
+import { prefetchWikiEntry, WIKI_NAVIGATE_KEY } from '@/wiki/registry'
 import type { WikiSection } from '@/wiki/types'
 
 const props = defineProps<{
   section: WikiSection
   activeSlug: string | null
   searching: boolean
-  depth: number
-  inheritedAccent?: string
 }>()
-
-const accent = computed(() => props.section.accent ?? props.inheritedAccent)
 
 const navigate = inject(WIKI_NAVIGATE_KEY, () => {})
 
 const open = ref(true)
 
 const containsActive = computed(
-  () => !!props.activeSlug && sectionContainsSlug(props.section, props.activeSlug),
+  () => props.section.entries.some((entry) => entry.slug === props.activeSlug),
 )
 
 watch(containsActive, (value) => {
@@ -31,11 +22,10 @@ watch(containsActive, (value) => {
 }, { immediate: true })
 
 const expanded = computed(() => open.value || props.searching)
-const count = computed(() => countWikiEntries(props.section))
 </script>
 
 <template>
-  <section class="rs" :style="{ '--rail-depth': depth, '--section-accent': accent }">
+  <section class="rs" :style="{ '--section-accent': section.accent }">
     <button
       type="button"
       class="rs__header"
@@ -58,7 +48,7 @@ const count = computed(() => countWikiEntries(props.section))
         <polyline points="9 18 15 12 9 6" />
       </svg>
       <span class="rs__title">{{ section.title }}</span>
-      <span class="rs__count">{{ count }}</span>
+      <span class="rs__count">{{ section.entries.length }}</span>
     </button>
 
     <div v-if="expanded" class="rs__body">
@@ -73,16 +63,6 @@ const count = computed(() => countWikiEntries(props.section))
       >
         {{ entry.title }}
       </RouterLink>
-
-      <WikiRailSection
-        v-for="sub in section.subsections"
-        :key="sub.key"
-        :section="sub"
-        :active-slug="activeSlug"
-        :searching="searching"
-        :depth="depth + 1"
-        :inherited-accent="accent"
-      />
     </div>
   </section>
 </template>
@@ -99,7 +79,6 @@ const count = computed(() => countWikiEntries(props.section))
   gap: var(--space-sm);
   width: 100%;
   padding: var(--space-sm) 0;
-  padding-left: calc(var(--rail-depth) * var(--space-md));
   border: none;
   background: transparent;
   color: var(--text-primary);
@@ -139,7 +118,7 @@ const count = computed(() => countWikiEntries(props.section))
 
 .rs__entry {
   padding: 6px var(--space-sm);
-  margin-left: calc(var(--rail-depth) * var(--space-md) + var(--space-md));
+  margin-left: var(--space-md);
   border-left: 1px solid var(--bg-overlay);
   color: var(--text-secondary);
   font-size: var(--text-body);

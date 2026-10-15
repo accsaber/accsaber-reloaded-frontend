@@ -47,7 +47,7 @@ function deltaOf(play: ComplexityPlayerPlay, metric: PlayMetric): number | null 
 }
 
 const accessors: Record<string, (play: ComplexityPlayerPlay) => number | string | null> = {
-  song: (play) => play.difficulty.songName.toLowerCase(),
+  song: (play) => play.difficulty.map.songName.toLowerCase(),
   accuracy: (play) => play.accuracy,
 }
 
@@ -100,7 +100,7 @@ const tableRows = computed(() =>
     }
     return {
       ...cells,
-      id: play.difficulty.mapDifficultyId,
+      id: play.difficulty.map.id,
       difficulty: play.difficulty,
       accuracy: play.accuracy,
     }

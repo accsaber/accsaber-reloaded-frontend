@@ -1,4 +1,4 @@
-import type { PublicClanResponse } from './clans'
+import type { PlayerRef } from './common'
 export type SupporterTier = 'bronze' | 'silver' | 'gold'
 
 export interface SupporterStateResponse {
@@ -14,12 +14,7 @@ export interface SupporterStateResponse {
 }
 
 export interface SupporterCreditEntry {
-  userId: string
-  name: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   currentTier: SupporterTier | null
   currentTierDisplayName: string | null
   lifetimeSupportedCents: number
@@ -98,10 +93,7 @@ export interface KofiEventResponse {
   subscription: boolean
   firstSubscription: boolean
   receivedAt: string
-  claimedUserId: string | null
-  claimedUserName: string | null
-  claimedUserAvatarUrl: string | null
-  claimedUserCdnAvatarUrl: string | null
+  claimedUser?: PlayerRef
   claimedAt: string | null
   claimSource: KofiClaimSource | null
 }

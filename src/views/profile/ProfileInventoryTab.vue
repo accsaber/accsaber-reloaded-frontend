@@ -2,14 +2,15 @@
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CrateOpeningOverlay from '@/components/domain/CrateOpeningOverlay.vue'
-import DisintegrateDialog from '@/components/domain/DisintegrateDialog.vue'
+import CrateOpeningOverlay from '@/views/profile/CrateOpeningOverlay.vue'
+import DisintegrateDialog from '@/views/profile/DisintegrateDialog.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import InventoryLayout, { INVENTORY_NARROW_QUERY } from '@/components/domain/InventoryLayout.vue'
@@ -39,10 +40,21 @@ import { useEssenceStore } from '@/stores/essence'
 import { useInventoryStore } from '@/stores/inventory'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useThemeStore } from '@/stores/theme'
-import type { CrateOpenResponse, DisintegrateEntryRequest, InventoryEntry, ItemRarity, ItemResponse, ItemTypeKey, ItemVariant, UserItemResponse } from '@/types/api/items'
+import type {
+  CrateOpenResponse,
+  DisintegrateEntryRequest,
+  InventoryEntry,
+  ItemRarity,
+  ItemResponse,
+  ItemTypeKey,
+  UserItemResponse,
+} from '@/types/api/items'
+import type { ItemVariant } from '@/types/cosmetics/common'
 import type { Page } from '@/types/pagination'
 import { ESSENCE_GLYPH, formatEssence, formatEssenceAmount } from '@/utils/essence'
-import { buildEffectLayers, readThemeValue, resolveItemVariant } from '@/utils/items'
+import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
+import { readThemeValue } from '@/utils/cosmetics/readers'
+import { resolveItemVariant } from '@/utils/items'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
@@ -392,7 +404,7 @@ async function handleDownload(linkId: string) {
     const filename = await download(target)
     showFeedback('success', `Saved ${filename}`)
   } catch (err) {
-    showFeedback('error', err instanceof Error ? err.message : 'Download failed - try again.')
+    showFeedback('error', parseApiError(err, 'Download failed - try again.').message)
   }
 }
 
@@ -647,16 +659,7 @@ onUnmounted(() => {
 
       <div class="inv-tab__actions-bar">
         <div class="inv-tab__actions-left">
-          <button
-            type="button"
-            class="switch"
-            :aria-pressed="showUnowned"
-            aria-label="Show unowned items"
-            @click="showUnowned = !showUnowned"
-          >
-            <span class="switch__track"><span class="switch__thumb" /></span>
-            <span class="switch__label">Unowned</span>
-          </button>
+          <BaseSwitch v-model="showUnowned" label="Unowned" aria-label="Show unowned items" />
 
           <BaseButton v-if="isOwnProfile && !showUnowned" size="sm" @click="toggleSelectMode">
             {{ selectMode ? 'Done' : 'Select' }}

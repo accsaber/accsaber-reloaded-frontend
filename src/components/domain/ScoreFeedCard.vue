@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { ScoreFeedEntry } from '@/types/display'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatRelativeDate, formatAccuracy } from '@/utils/formatters'
 import { getRankClass } from '@/utils/ranking'
 import { computed } from 'vue'
 
@@ -51,7 +51,7 @@ function handleClick() {
       <span class="feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
 
       <div class="feed-card__cover">
-        <GlowImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="compact ? 36 : 48"
+        <CoverImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="compact ? 36 : 48"
           :fallback-src="entry.coverFallbackUrl ?? null" />
       </div>
 
@@ -71,7 +71,7 @@ function handleClick() {
 
       <div class="feed-card__stats">
         <div class="feed-card__stats-top">
-          <span class="feed-card__accuracy">{{ (entry.accuracy * 100).toFixed(2) }}%</span>
+          <span class="feed-card__accuracy">{{ formatAccuracy(entry.accuracy) }}</span>
           <span class="feed-card__ap">{{ entry.ap.toFixed(2) }} <span class="feed-card__ap-label">AP</span></span>
         </div>
         <div v-if="!compact" class="feed-card__stats-mid">
@@ -105,7 +105,7 @@ function handleClick() {
 <style scoped>
 .feed-card {
   position: relative;
-  margin-top: 24px;
+  margin-top: var(--space-lg);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);

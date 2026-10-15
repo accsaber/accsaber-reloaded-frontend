@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ThumbnailScene } from '@/types/api/items'
+import type { ThumbnailScene } from '@/types/cosmetics/background'
 import type { Component } from 'vue'
 import TorchlitScene from '@/components/cosmetics/thumbnails/TorchlitScene.vue'
 import HallwayScene from '@/components/cosmetics/thumbnails/HallwayScene.vue'

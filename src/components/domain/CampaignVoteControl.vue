@@ -124,7 +124,7 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
 .vote__btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -233,7 +233,7 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
   right: 0;
   z-index: 10;
   margin: 0;
-  padding: 4px 8px;
+  padding: var(--space-xs) var(--space-sm);
   max-width: 220px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
@@ -241,7 +241,7 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
   color: var(--error);
   background: var(--bg-elevated);
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   white-space: normal;
 }
 

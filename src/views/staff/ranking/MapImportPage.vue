@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ApiError } from '@/api/client'
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -129,15 +129,6 @@ async function handleFetch() {
   }
 }
 
-function extractApiErrorMessage(raw: string): string | null {
-  try {
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed.message === 'string') return parsed.message
-  } catch {
-  }
-  return null
-}
-
 async function handleSubmit() {
   if (!bsMap.value) return
 
@@ -166,11 +157,7 @@ async function handleSubmit() {
       } catch {
       }
     } catch (e) {
-      if (e instanceof ApiError) {
-        diff.importError = extractApiErrorMessage(e.message) ?? `Import failed (${e.status}).`
-      } else {
-        diff.importError = e instanceof Error ? e.message : 'Import failed'
-      }
+      diff.importError = parseApiError(e, 'Import failed').message
     } finally {
       diff.importing = false
     }
@@ -204,7 +191,7 @@ function goToDetail(difficultyId: string) {
 
     <div v-if="bsMap" class="map-import__preview" :style="pageAccent ? { '--page-accent': pageAccent } : {}">
       <div class="map-import__hero">
-        <GlowImage :src="coverUrl" alt="" :size="96" />
+        <CoverImage :src="coverUrl" alt="" :size="96" />
         <div class="map-import__hero-info">
           <h2 class="map-import__song-name">
             <SongTitle layout="stacked" :name="bsMap.metadata.songName"
@@ -220,7 +207,7 @@ function goToDetail(difficultyId: string) {
       </div>
 
       <div class="map-import__diffs">
-        <h3 class="map-import__section-title">Difficulties</h3>
+        <h3 class="map-import__section-title field-label">Difficulties</h3>
 
         <div class="map-import__diff-list">
           <div class="map-import__diff-header">
@@ -294,10 +281,6 @@ function goToDetail(difficultyId: string) {
 
 .map-import__title {
   margin-bottom: var(--space-xl);
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .map-import__input-row {
@@ -371,11 +354,6 @@ function goToDetail(difficultyId: string) {
 }
 
 .map-import__section-title {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   margin: 0 0 var(--space-md);
 }
 

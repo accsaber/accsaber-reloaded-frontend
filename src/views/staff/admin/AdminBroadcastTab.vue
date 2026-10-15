@@ -130,7 +130,7 @@ async function send() {
         </div>
 
         <div class="broadcast__preview">
-          <span class="broadcast__preview-label">Preview</span>
+          <span class="field-label">Preview</span>
           <div class="broadcast__preview-frame">
             <NotificationRow :notification="previewNotification" :interactive="false" />
           </div>
@@ -261,14 +261,6 @@ async function send() {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.broadcast__preview-label {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .broadcast__preview-frame {

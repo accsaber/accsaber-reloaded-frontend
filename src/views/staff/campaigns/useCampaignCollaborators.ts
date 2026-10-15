@@ -1,4 +1,3 @@
-import { getApiErrorMessage } from '@/api/client'
 import {
   getCampaignCollaborators,
   inviteCampaignCollaborator,
@@ -7,6 +6,7 @@ import {
 import type { useAuthStore } from '@/stores/auth'
 import type { CampaignCollaboratorResponse, CampaignDetailResponse } from '@/types/api/campaigns'
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
+import { parseApiError } from '@/api/client'
 
 const MAX_COLLABORATORS = 15
 
@@ -49,7 +49,7 @@ export function useCampaignCollaborators(ctx: CollaboratorsContext) {
   const isCollaborator = computed(() => {
     if (!auth.userId) return false
     return collaborators.value.some(
-      (c) => c.status === 'ACCEPTED' && c.userId === auth.userId,
+      (c) => c.status === 'ACCEPTED' && c.user.id === auth.userId,
     )
   })
 
@@ -58,7 +58,7 @@ export function useCampaignCollaborators(ctx: CollaboratorsContext) {
   const existingCollaboratorIds = computed(() => {
     const ids = new Set<string>()
     if (campaign.value?.creatorId) ids.add(campaign.value.creatorId)
-    for (const c of activeCollaborators.value) ids.add(c.userId)
+    for (const c of activeCollaborators.value) ids.add(c.user.id)
     return ids
   })
 
@@ -77,7 +77,7 @@ export function useCampaignCollaborators(ctx: CollaboratorsContext) {
       await loadCollaborators()
       showCollaboratorPicker.value = false
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to invite collaborator')
+      actionError.value = parseApiError(err, 'Failed to invite collaborator').message
     } finally {
       actionPending.value = false
     }
@@ -86,15 +86,15 @@ export function useCampaignCollaborators(ctx: CollaboratorsContext) {
   async function removeCollaborator(userId: string) {
     const c = campaign.value
     if (!isCreator.value || !c) return
-    const row = collaborators.value.find((x) => x.userId === userId)
-    if (!window.confirm(`Remove ${row?.userName ?? 'this collaborator'} from this campaign?`)) return
+    const row = collaborators.value.find((x) => x.user.id === userId)
+    if (!window.confirm(`Remove ${row?.user.name ?? 'this collaborator'} from this campaign?`)) return
     actionPending.value = true
     actionError.value = null
     try {
       await removeCampaignCollaborator(c.id, userId)
       await loadCollaborators()
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to remove collaborator')
+      actionError.value = parseApiError(err, 'Failed to remove collaborator').message
     } finally {
       actionPending.value = false
     }
@@ -110,7 +110,7 @@ export function useCampaignCollaborators(ctx: CollaboratorsContext) {
       await removeCampaignCollaborator(c.id, auth.userId)
       window.location.assign('/campaigns')
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to leave campaign')
+      actionError.value = parseApiError(err, 'Failed to leave campaign').message
       actionPending.value = false
     }
   }

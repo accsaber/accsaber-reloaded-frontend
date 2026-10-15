@@ -1,3 +1,5 @@
+import { clamp01 } from '@/utils/math'
+
 export const ECLIPSE_PERIOD = 18
 export const ECLIPSE_DAY_END = 5
 export const ECLIPSE_PARTIAL_END = 8
@@ -19,10 +21,6 @@ export interface EclipsePhase {
 function eclipseSunX(c: number, forward: boolean): number {
   const u = c / ECLIPSE_PERIOD
   return forward ? 22 + 56 * u : 78 - 56 * u
-}
-
-function clamp01(u: number): number {
-  return Math.min(1, Math.max(0, u))
 }
 
 export function eclipsePhase(t: number): EclipsePhase {

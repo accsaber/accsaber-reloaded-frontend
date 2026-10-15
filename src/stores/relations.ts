@@ -1,13 +1,10 @@
-import {
-  createRelation as apiCreate,
-  deleteRelation as apiDelete,
-  getMyRelations,
-} from '@/api/relations'
 import { ApiError } from '@/api/client'
 import type { UserRelationResponse, UserRelationType } from '@/types/api/relations'
 import { useAuthStore } from '@/stores/auth'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+
+const api = () => import('@/api/relations')
 
 export class RelationBlockedError extends Error {
   constructor() {
@@ -61,7 +58,7 @@ export const useRelationsStore = defineStore('relations', () => {
         const collected: UserRelationResponse[] = []
         let page = 0
         while (true) {
-          const res = await getMyRelations({ page, size: 100 })
+          const res = await (await api()).getMyRelations({ page, size: 100 })
           collected.push(...res.content)
           if (res.last || res.empty) break
           page += 1
@@ -93,7 +90,7 @@ export const useRelationsStore = defineStore('relations', () => {
 
   async function add(targetUserId: string, type: UserRelationType): Promise<UserRelationResponse> {
     try {
-      const res = await apiCreate({ targetUserId, type })
+      const res = await (await api()).createRelation({ targetUserId, type })
       if (type === 'blocked') {
         removeLocal((r) => r.targetUserId === targetUserId && r.type !== 'blocked')
       }
@@ -115,7 +112,7 @@ export const useRelationsStore = defineStore('relations', () => {
   async function remove(targetUserId: string, type: UserRelationType): Promise<void> {
     const existing = getRelation(targetUserId, type)
     if (!existing) return
-    await apiDelete(existing.id)
+    await (await api()).deleteRelation(existing.id)
     removeLocal((r) => r.id === existing.id)
   }
 

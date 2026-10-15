@@ -395,7 +395,7 @@ onUnmounted(() => {
 .chip__ghost {
   display: block;
   visibility: hidden;
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   font-size: var(--text-caption);
   font-weight: 600;
 }

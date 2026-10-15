@@ -4,11 +4,10 @@ import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
 import type { PublicStaffUserResponse } from '@/types/api/staff'
 import type { PublicClanResponse } from '@/types/api/clans'
 import type { UserRelationResponse } from '@/types/api/relations'
-import type { CampaignCollaboratorResponse } from '@/types/api/campaigns'
 import type { SupporterTier } from '@/types/api/supporters'
-import type { LeaderboardResponse, ScoreResponse, UserMilestoneProgressResponse, XpLeaderboardResponse } from '@/types/api/users'
+import type { LeaderboardResponse, ScoreResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, DifficultyScoreDisplay, MapDisplay, MilestoneDisplay, PlayerDisplay, ScoreDisplay, ScoreFeedEntry, UserRefDisplay, XpPlayerDisplay } from '@/types/display'
-import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
 
 export function formatDifficulty(diff: string): string {
   switch (diff) {
@@ -64,21 +63,10 @@ export function toRelationUserRef(item: UserRelationResponse): UserRefDisplay {
   }
 }
 
-export function toCollaboratorUserRef(item: CampaignCollaboratorResponse): UserRefDisplay {
-  return {
-    id: item.userId,
-    name: item.userName,
-    avatarUrl: item.userAvatarUrl,
-    cdnAvatarUrl: item.userCdnAvatarUrl,
-    country: item.userCountry,
-    clan: item.userClan ?? null,
-  }
-}
-
 export function toStaffUserDisplay(staff: PublicStaffUserResponse): UserRefDisplay {
   return {
-    id: staff.userId,
-    name: staff.username,
+    id: staff.userId ?? '',
+    name: staff.username ?? '',
     avatarUrl: staff.avatarUrl,
     cdnAvatarUrl: staff.cdnAvatarUrl,
   }
@@ -100,8 +88,8 @@ export function toPlayerDisplay(entry: LeaderboardResponse): PlayerDisplay {
 
 export function toXpPlayerDisplay(entry: XpLeaderboardResponse): XpPlayerDisplay {
   return {
-    userId: entry.userId,
-    player: toUserRef(entry),
+    userId: entry.player.id,
+    player: { ...entry.player, supporterTier: entry.supporterTier },
     rank: entry.ranking,
     countryRank: entry.countryRanking,
     rankChange: entry.rankingLastWeek != null ? entry.rankingLastWeek - entry.ranking : null,
@@ -314,27 +302,5 @@ export function toMilestoneDisplay(m: MilestoneCompletionResponse, categoryCode?
     positionX: m.positionX ?? 0,
     positionY: m.positionY ?? 0,
     rewards: m.rewards ?? [],
-  }
-}
-
-export function toMilestoneCompletion(
-  m: UserMilestoneProgressResponse,
-): MilestoneCompletionResponse {
-  return {
-    milestoneId: m.milestoneId,
-    title: m.title,
-    description: m.description,
-    type: m.type,
-    tier: m.tier,
-    xp: m.xp,
-    targetValue: m.targetValue,
-    comparison: 'GTE',
-    setId: m.setId,
-    categoryId: m.categoryId,
-    completions: 0,
-    totalPlayers: 0,
-    completionPercentage: m.completionPercentage,
-    userCompleted: m.completed,
-    userCompletedAt: m.completedAt ?? undefined,
   }
 }

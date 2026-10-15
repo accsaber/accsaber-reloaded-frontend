@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { formatAccuracy } from '@/utils/formatters'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import RankChange from '@/components/common/RankChange.vue'
+import RankChange from '@/views/leaderboards/RankChange.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
@@ -195,11 +197,7 @@ watch(requestKey, fetchData, { immediate: true })
     <div class="leaderboards__controls">
       <CategoryTabs v-model="activeCategory" />
       <div class="leaderboards__filter">
-        <button type="button" class="switch" :aria-pressed="showInactive" aria-label="Show inactive players"
-          @click="showInactive = !showInactive">
-          <span class="switch__track"><span class="switch__thumb" /></span>
-          <span class="switch__label">Inactive</span>
-        </button>
+        <BaseSwitch v-model="showInactive" label="Inactive" aria-label="Show inactive players" />
         <SearchBox v-model="searchQuery" placeholder="Search players..." />
         <BaseSelect v-model="countryFilter" :options="countryOptions" placeholder="All Countries" searchable />
         <RelationFilter v-model="relationFilter" />
@@ -232,7 +230,7 @@ watch(requestKey, fetchData, { immediate: true })
         </template>
 
         <template #cell-avgAccuracy="{ value }">
-          <template v-if="value != null">{{ ((value as number) * 100).toFixed(2) }}%</template>
+          <template v-if="value != null">{{ formatAccuracy(value as number) }}</template>
           <template v-else>-</template>
         </template>
 
@@ -280,13 +278,6 @@ watch(requestKey, fetchData, { immediate: true })
 .leaderboards__header {
   text-align: center;
   padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.leaderboards__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .leaderboards__subtitle {

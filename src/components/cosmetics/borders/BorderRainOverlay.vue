@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderOverlayHost, BorderRainOverlaySpec } from '@/types/api/items'
+import type { BorderOverlayHost, BorderRainOverlaySpec } from '@/types/cosmetics/border'
 import { frameDelta, overlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef, watch } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderRainOverlaySpec }>()
 
@@ -123,7 +124,7 @@ useElementCanvas(canvasRef, {
         d.y += d.speed * dt
         d.x += d.speed * dt * SLANT
         if (d.y > SURFACE) {
-          const lx = Math.min(Math.max(d.x, 2), 98)
+          const lx = clamp(d.x, 2, 98)
           if (props.overlay.splash !== false) splashes.push({ x: lx, bornAt: now })
           if (props.overlay.puddle === true) ripples.push({ x: lx, y: rand(99, 105), bornAt: now })
           resetDrop(d)

@@ -1,17 +1,11 @@
 import type { EventResponse } from '@/types/api/events'
-import { formatDuration } from '@/utils/events'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-
-const TICK_MS = 30_000
-
-function formatCountdown(ms: number): string {
-  return ms <= 0 ? 'ending' : formatDuration(ms)
-}
+import { useNow } from '@/composables/useNow'
+import { formatDuration } from '@/utils/formatters'
+import { computed, onMounted, ref } from 'vue'
 
 export function useCurrentEvent() {
   const event = ref<EventResponse | null>(null)
-  const now = ref(Date.now())
-  let timer: ReturnType<typeof setInterval> | null = null
+  const now = useNow(30_000)
 
   const phase = computed<{ verb: string; at: number } | null>(() => {
     if (!event.value) return null
@@ -25,7 +19,7 @@ export function useCurrentEvent() {
   const visible = computed(() => phase.value !== null)
   const verb = computed(() => phase.value?.verb ?? '')
   const countdown = computed(() =>
-    phase.value ? formatCountdown(phase.value.at - now.value) : '',
+    phase.value ? formatDuration(phase.value.at - now.value, { zero: 'ending' }) : '',
   )
 
   onMounted(async () => {
@@ -35,13 +29,6 @@ export function useCurrentEvent() {
     } catch {
       event.value = null
     }
-    timer = setInterval(() => {
-      now.value = Date.now()
-    }, TICK_MS)
-  })
-
-  onUnmounted(() => {
-    if (timer) clearInterval(timer)
   })
 
   return { event, visible, verb, countdown }

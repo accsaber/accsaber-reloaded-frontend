@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/math'
 export interface StarfieldBackdropConfig {
   type: 'starfield'
   opacity: number
@@ -161,7 +162,7 @@ function readHexList(tokens: Record<string, string>, key: string, fallback: stri
 
 function readOpacity(tokens: Record<string, string>): number {
   const v = readNumber(tokens, 'fx-backdrop-opacity', 1)
-  return Math.min(1, Math.max(0.05, v))
+  return clamp(v, 0.05, 1)
 }
 
 function parseStarfield(tokens: Record<string, string>): StarfieldBackdropConfig {

@@ -10,10 +10,10 @@ import {
   publishPlayerCampaign,
   unpublishPlayerCampaign,
 } from '@/api/campaigns'
-import { getApiErrorMessage } from '@/api/client'
 import type { CampaignAuditIssue } from '@/utils/campaignAudit'
 import type { CampaignDetailResponse, CampaignResponse } from '@/types/api/campaigns'
 import { computed, ref, type Ref } from 'vue'
+import { parseApiError } from '@/api/client'
 
 interface LifecycleContext {
   campaign: Ref<CampaignDetailResponse | null>
@@ -36,7 +36,7 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
       apply(await action())
       return true
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, fallback)
+      actionError.value = parseApiError(err, fallback).message
       return false
     } finally {
       actionPending.value = false
@@ -94,7 +94,7 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
       await deletePlayerCampaign(campaign.value.id)
       window.location.assign('/campaigns')
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to delete draft')
+      actionError.value = parseApiError(err, 'Failed to delete draft').message
     } finally {
       actionPending.value = false
     }
@@ -148,7 +148,7 @@ export function useCampaignLifecycle(ctx: LifecycleContext) {
       await deletePlayerCampaign(campaign.value.id)
       await load()
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to deactivate campaign')
+      actionError.value = parseApiError(err, 'Failed to deactivate campaign').message
     } finally {
       actionPending.value = false
     }

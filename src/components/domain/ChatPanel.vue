@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import { messageTimeMillis, type UseChatReturn } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
 import type { ChatEvent, ChatMessageResponse } from '@/types/api/chat'
@@ -292,7 +292,7 @@ if (!props.floating) void props.chat.loadHistory()
               :src="pickAvatarUrl(entry.message.author)"
               :alt="entry.message.author.name"
               loading="lazy"
-              @error="onAvatarError(pickAvatarFallback(entry.message.author))($event)"
+              @error="onImageError(pickAvatarFallback(entry.message.author))($event)"
             />
             <span v-else class="chat-panel__avatar-initial">{{ entry.message.author.name.charAt(0) }}</span>
           </span>
@@ -379,8 +379,8 @@ if (!props.floating) void props.chat.loadHistory()
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 14px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -389,7 +389,7 @@ if (!props.floating) void props.chat.loadHistory()
   color: var(--text-secondary);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -450,7 +450,7 @@ if (!props.floating) void props.chat.loadHistory()
   height: var(--chat-panel-height, min(620px, 70vh));
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: 6px;
+  border-radius: var(--radius-modal);
   overflow: hidden;
   pointer-events: auto;
 }
@@ -494,7 +494,7 @@ if (!props.floating) void props.chat.loadHistory()
   color: var(--text-tertiary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -524,7 +524,7 @@ if (!props.floating) void props.chat.loadHistory()
 
 .chat-panel__log::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .chat-panel__spacer {
@@ -544,8 +544,8 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 2px 0 4px;
+  gap: var(--space-sm);
+  padding: 2px 0 var(--space-xs);
   font-family: var(--font-sans);
   font-size: 0.625rem;
   font-weight: 600;
@@ -592,7 +592,7 @@ if (!props.floating) void props.chat.loadHistory()
   box-sizing: border-box;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-avatar);
   border: 2px solid var(--author-color, var(--bg-overlay));
   overflow: hidden;
   background: var(--bg-elevated);
@@ -625,7 +625,7 @@ if (!props.floating) void props.chat.loadHistory()
   padding: 6px 10px;
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .chat-panel__msg--self .chat-panel__bubble {
@@ -693,13 +693,13 @@ if (!props.floating) void props.chat.loadHistory()
   width: 100%;
   min-height: 34px;
   max-height: 110px;
-  padding: 8px 10px;
+  padding: var(--space-sm) 10px;
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-input);
   outline: none;
   resize: none;
   line-height: 1.4;
@@ -724,7 +724,7 @@ if (!props.floating) void props.chat.loadHistory()
   color: var(--page-accent, var(--accent));
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,

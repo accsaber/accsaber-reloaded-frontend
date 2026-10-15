@@ -1,5 +1,6 @@
 import type { NewsStatus, NewsType } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { PublicStaffUserResponse } from './staff'
 
 export interface PublicNewsResponse {
   id: string
@@ -20,8 +21,7 @@ export interface PublicNewsResponse {
 
 export interface NewsResponse {
   id: string
-  staffUserId: string
-  staffUsername: string | null
+  author: PublicStaffUserResponse
   title: string
   slug: string
   description: string | null

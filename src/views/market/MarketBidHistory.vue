@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import EssenceAmount from '@/components/domain/EssenceAmount.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import type { MarketBidResponse, MarketListingResponse } from '@/types/api/market'
 import { formatRelativeDate } from '@/utils/formatters'
 import { isSameMarketUser } from '@/utils/market'
@@ -38,7 +38,7 @@ const messages = computed<ChatMessage[]>(() => {
 
 <template>
   <div class="bid-chat">
-    <h2 class="bid-chat__heading">Bid history</h2>
+    <h2 class="bid-chat__heading section-title">Bid history</h2>
 
     <p v-if="bids.length === 0" class="bid-chat__empty">No bids yet.</p>
 
@@ -64,7 +64,7 @@ const messages = computed<ChatMessage[]>(() => {
           :alt="`${msg.bid.bidder.name} avatar`"
           loading="lazy"
           decoding="async"
-          @error="onAvatarError(pickAvatarFallback(msg.bid.bidder))($event)"
+          @error="onImageError(pickAvatarFallback(msg.bid.bidder))($event)"
         />
         <span v-else class="bid-chat__avatar bid-chat__avatar--initial" aria-hidden="true">
           {{ msg.bid.bidder.name.slice(0, 1).toUpperCase() }}
@@ -92,9 +92,6 @@ const messages = computed<ChatMessage[]>(() => {
 <style scoped>
 .bid-chat__heading {
   margin: 0 0 var(--space-md);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .bid-chat__empty {

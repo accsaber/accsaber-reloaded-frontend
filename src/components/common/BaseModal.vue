@@ -7,6 +7,7 @@ const props = defineProps<{
   open: boolean
   title?: string
   maxWidth?: string
+  persistent?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -18,14 +19,16 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function onBackdropClick() {
-  emit('close')
+  if (!props.persistent) emit('close')
 }
 
 watch(
   () => props.open,
-  (open) => {
-    document.body.style.overflow = open ? 'hidden' : ''
+  (open, wasOpen) => {
+    if (open) document.body.style.overflow = 'hidden'
+    else if (wasOpen) document.body.style.overflow = ''
   },
+  { immediate: true },
 )
 
 onMounted(() => {
@@ -44,7 +47,7 @@ onUnmounted(() => {
       <div v-if="open" class="modal-backdrop" @click.self="onBackdropClick">
         <div class="modal" :style="{ maxWidth: maxWidth ?? '560px' }" role="dialog" aria-modal="true">
           <div v-if="title" class="modal__header">
-            <h2 class="modal__title">{{ title }}</h2>
+            <h2 class="section-title">{{ title }}</h2>
             <button class="modal__close" aria-label="Close" @click="emit('close')">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -93,13 +96,6 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: var(--space-lg);
   border-bottom: 1px solid var(--bg-overlay);
-}
-
-.modal__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .modal__close {

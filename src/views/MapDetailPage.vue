@@ -19,6 +19,7 @@ import { brightenRgb } from '@/utils/color'
 import { DIFFICULTY_ORDER } from '@/utils/constants'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
+import { onImageError, pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MapScoresSection from './maps/MapScoresSection.vue'
@@ -49,21 +50,10 @@ const contentTabs = [
   { key: 'statistics', label: 'Statistics' },
 ]
 
-const coverUrl = computed(() => map.value?.cdnCoverUrl ?? map.value?.coverUrl ?? '')
-const coverFallbackUrl = computed(() => {
-  const m = map.value
-  if (!m) return null
-  return m.cdnCoverUrl && m.coverUrl && m.cdnCoverUrl !== m.coverUrl ? m.coverUrl : null
-})
+const coverUrl = computed(() => pickCoverUrl(map.value))
+const coverFallbackUrl = computed(() => pickCoverFallback(map.value))
 const { dominantColor } = useColorExtract(coverUrl)
-const handleMapCoverError = (e: Event) => {
-  const img = e.currentTarget as HTMLImageElement
-  const fb = coverFallbackUrl.value
-  if (fb && img.src !== fb && img.dataset.fellBack !== '1') {
-    img.dataset.fellBack = '1'
-    img.src = fb
-  }
-}
+const handleMapCoverError = (e: Event) => onImageError(coverFallbackUrl.value)(e)
 
 const resolvedAccent = computed(() => {
   const raw = dominantColor.value
@@ -170,15 +160,19 @@ function resolveQueryDifficulty(
   )
 }
 
+let mapRequest = 0
+
 async function fetchMap() {
+  const request = ++mapRequest
   loading.value = true
   error.value = false
   map.value = null
 
   try {
     const { getMap, getMapByCode } = await import('@/api/maps')
+    let fetched
     if (isUuid(routeParam.value)) {
-      map.value = await getMap(routeParam.value)
+      fetched = await getMap(routeParam.value)
     } else {
       const qDifficulty = route.query.difficulty as string | undefined
       const byCodeParams: { difficulty?: string; characteristic?: string } = {}
@@ -186,13 +180,16 @@ async function fetchMap() {
         byCodeParams.difficulty = slugToDifficulty(qDifficulty)
         byCodeParams.characteristic = (route.query.characteristic as string | undefined) ?? 'Standard'
       }
-      map.value = await getMapByCode(routeParam.value, byCodeParams)
+      fetched = await getMapByCode(routeParam.value, byCodeParams)
     }
+    if (request !== mapRequest) return
+    map.value = fetched
 
-    const all = map.value.difficulties
+    const all = fetched.difficulties
     const fallback = resolveQueryDifficulty(all) ?? rankedDifficulties.value[0] ?? all[0]
     if (fallback) activeDifficultyId.value = fallback.id
   } catch {
+    if (request !== mapRequest) return
     error.value = true
   }
   loading.value = false
@@ -470,11 +467,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 }
 
 .map-detail__song {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
   text-align: center;
-  margin: 0;
 }
 
 .map-detail__artist {
@@ -540,9 +533,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 }
 
 .map-detail__error-title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
   text-align: center;
 }
 

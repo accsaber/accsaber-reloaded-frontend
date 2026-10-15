@@ -1,7 +1,7 @@
 import { usePreviewStore } from '@/stores/preview'
 import type { EquippedItemsResponse } from '@/types/api/items'
+import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
 import {
-  buildEffectLayers,
   pickAssetUrl,
   pickVideoOrAssetUrl,
   readBackgroundValue,
@@ -9,8 +9,8 @@ import {
   readBorderShapeValue,
   readThumbnailBackgroundValue,
   readTitleValue,
-  resolveEquippedVariant,
-} from '@/utils/items'
+} from '@/utils/cosmetics/readers'
+import { resolveEquippedVariant } from '@/utils/items'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 

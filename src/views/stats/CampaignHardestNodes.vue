@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { formatAccuracy, formatCount } from '@/utils/formatters'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
-import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import CoverImage from '@/components/common/CoverImage.vue'
 import type { CampaignNodeDifficultyResponse } from '@/types/api/statistics'
 import { formatUserValue, requirementLabel } from '@/utils/campaignLayout'
 import { computed, ref, watch } from 'vue'
 import StatsCloseButton from './StatsCloseButton.vue'
-import { fmtDecimal, fmtFraction, fmtInt, rateClass } from './statsFormat'
+import { fmtDecimal, rateClass } from './statsFormat'
 
 const props = defineProps<{
   campaignId: string
@@ -58,7 +58,7 @@ watch(
   <section class="nodes">
     <header class="nodes__head">
       <div>
-        <h3 class="nodes__title">{{ campaignName || 'Campaign' }}</h3>
+        <h3 class="card-title">{{ campaignName || 'Campaign' }}</h3>
       </div>
       <StatsCloseButton label="Close campaign nodes" @click="emit('close')" />
     </header>
@@ -75,17 +75,17 @@ watch(
 
     <ol v-else class="nodes__list">
       <li v-for="node in nodes" :key="node.campaignDifficultyId" class="node">
-        <GlowImage :src="pickCoverUrl(node)" :fallback-src="pickCoverFallback(node)" :alt="node.songName" :size="44" />
+        <CoverImage :source="node.map" :alt="node.map.songName" :size="44" />
 
         <div class="node__identity">
           <span class="node__song">
-            {{ node.songName }}
-            <span v-if="node.songSubName" class="node__subname">{{ node.songSubName }}</span>
+            {{ node.map.songName }}
+            <span v-if="node.map.songSubName" class="node__subname">{{ node.map.songSubName }}</span>
           </span>
           <span class="node__meta">
-            <DifficultyBadge :difficulty="node.difficulty" />
-            <span class="node__author">{{ node.songAuthor }}</span>
-            <span class="node__mapper">{{ node.mapAuthor }}</span>
+            <DifficultyBadge :difficulty="node.map.difficulty" />
+            <span class="node__author">{{ node.map.songAuthor }}</span>
+            <span class="node__mapper">{{ node.map.mapAuthor }}</span>
           </span>
         </div>
 
@@ -95,22 +95,22 @@ watch(
           <span class="node__flags">
             <span v-if="node.barrier" class="node__flag node__flag--barrier">Gate</span>
             <span v-if="node.terminal" class="node__flag">Final</span>
-            <span class="node__xp">{{ fmtInt(node.xp) }} XP</span>
+            <span class="node__xp">{{ formatCount(node.xp) }} XP</span>
           </span>
         </div>
 
         <div class="node__numbers">
           <span class="node__stat">
             <span class="node__label">Unlocked</span>
-            <span class="node__value">{{ fmtInt(node.unlocked) }}</span>
+            <span class="node__value">{{ formatCount(node.unlocked) }}</span>
           </span>
           <span class="node__stat">
             <span class="node__label">Cleared</span>
-            <span class="node__value">{{ fmtInt(node.cleared) }}</span>
+            <span class="node__value">{{ formatCount(node.cleared) }}</span>
           </span>
           <span class="node__stat">
             <span class="node__label">Clear rate</span>
-            <span class="node__value" :class="rateClass(node.clearRate)">{{ fmtFraction(node.clearRate) }}</span>
+            <span class="node__value" :class="rateClass(node.clearRate)">{{ formatAccuracy(node.clearRate, 1) }}</span>
           </span>
           <span class="node__stat">
             <span class="node__label">Median days</span>
@@ -118,7 +118,7 @@ watch(
           </span>
         </div>
 
-        <span class="node__track" :title="fmtInt(node.cleared) + ' cleared of ' + fmtInt(node.unlocked) + ' unlocked'">
+        <span class="node__track" :title="formatCount(node.cleared) + ' cleared of ' + formatCount(node.unlocked) + ' unlocked'">
           <span class="node__reach" :style="{ '--reach': ((node.unlocked / maxUnlocked) * 100) + '%' }">
             <span class="node__clear" :class="rateClass(node.clearRate)"
               :style="{ '--fill': ((node.clearRate ?? 0) * 100) + '%' }" />
@@ -145,13 +145,6 @@ watch(
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.nodes__title {
-  margin: 0;
-  font-size: var(--text-card-title);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .nodes__empty {

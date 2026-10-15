@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CratePreview from '@/components/domain/CratePreview.vue'
+import CratePreview from '@/views/staff/creatives/CratePreview.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -118,13 +118,6 @@ onMounted(load)
   justify-content: space-between;
   gap: var(--space-lg);
   flex-wrap: wrap;
-}
-
-.creatives-crates__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .creatives-crates__meta {

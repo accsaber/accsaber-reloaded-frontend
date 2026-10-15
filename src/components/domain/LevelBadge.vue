@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import BorderComposition from '@/components/domain/BorderComposition.vue'
 import TitleWithEffects from '@/components/cosmetics/titles/TitleWithEffects.vue'
-import type { BorderColorValue, BorderShapeValue, TitleValue } from '@/types/api/items'
-import { fillToCss, type EffectLayer } from '@/utils/items'
+import type { BorderColorValue, BorderShapeValue } from '@/types/cosmetics/border'
+import type { TitleValue } from '@/types/cosmetics/title'
+import { fillToCss } from '@/utils/cosmetics/interpolate'
+import { type EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = defineProps<{

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { activeEvents, asColor, asNumber, boxRing, easeOut, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { lerpHex } from '@/utils/color'
 import { stainPath } from '@/utils/cosmetics/splat'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -132,7 +133,7 @@ interface SplatLook {
 }
 
 function splatLook(tau: number): SplatLook {
-  const dry = Math.max(0, Math.min(1, (tau - 1.6) / 1.4))
+  const dry = clamp01((tau - 1.6) / 1.4)
   const tone = dryRamp.value[Math.round(dry * DRY_STEPS)] ?? dryRamp.value[0]
   return {
     base: tone?.base ?? cfg.value.splat,

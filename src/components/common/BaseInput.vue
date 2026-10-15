@@ -17,7 +17,7 @@ defineEmits<{
 
 <template>
   <div class="base-input" :class="{ 'base-input--error': error, 'base-input--disabled': disabled }">
-    <label v-if="label" class="base-input__label">{{ label }}</label>
+    <label v-if="label" class="field-label">{{ label }}</label>
     <input class="base-input__field" v-bind="$attrs" :type="type ?? 'text'" :value="modelValue"
       :placeholder="placeholder" :disabled="disabled"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
@@ -30,14 +30,6 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.base-input__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .base-input__field {

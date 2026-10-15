@@ -454,8 +454,8 @@ async function loadLeaderboard() {
     }
     const rater = drillRater()
     const result = rater
-      ? await api.previewComplexityLeaderboard(row.mapDifficultyId, rater, window)
-      : await api.getComplexityLeaderboard(row.mapDifficultyId, window)
+      ? await api.previewComplexityLeaderboard(row.map.id, rater, window)
+      : await api.getComplexityLeaderboard(row.map.id, window)
     if (token !== leaderboardToken) return
     leaderboard.value = result
   } catch (err) {
@@ -844,13 +844,6 @@ watch(previewKey, () => {
   gap: var(--space-lg);
   flex-wrap: wrap;
   padding-top: var(--space-lg);
-}
-
-.script-page__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--text-page-title);
-  font-weight: 700;
 }
 
 .script-page__subtitle {

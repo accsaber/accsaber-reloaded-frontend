@@ -1127,15 +1127,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
   },
 ]
 
-function collectEntries(sections: WikiSection[], acc: WikiEntry[]): WikiEntry[] {
-  for (const section of sections) {
-    acc.push(...section.entries)
-    if (section.subsections) collectEntries(section.subsections, acc)
-  }
-  return acc
-}
-
-export const WIKI_ENTRIES: WikiEntry[] = collectEntries(WIKI_SECTIONS, [])
+export const WIKI_ENTRIES: WikiEntry[] = WIKI_SECTIONS.flatMap((section) => section.entries)
 
 const entriesBySlug = new Map(WIKI_ENTRIES.map((entry) => [entry.slug, entry]))
 
@@ -1159,27 +1151,9 @@ export function matchesWikiQuery(entry: WikiEntry, query: string): boolean {
 
 export function filterWikiSections(sections: WikiSection[], query: string): WikiSection[] {
   if (!query) return sections
-  const filtered: WikiSection[] = []
-  for (const section of sections) {
-    const entries = section.entries.filter((entry) => matchesWikiQuery(entry, query))
-    const subsections = section.subsections
-      ? filterWikiSections(section.subsections, query)
-      : undefined
-    if (entries.length || subsections?.length) {
-      filtered.push({ ...section, entries, subsections })
-    }
-  }
-  return filtered
-}
-
-export function countWikiEntries(section: WikiSection): number {
-  const nested = section.subsections?.reduce((sum, sub) => sum + countWikiEntries(sub), 0) ?? 0
-  return section.entries.length + nested
-}
-
-export function sectionContainsSlug(section: WikiSection, slug: string): boolean {
-  if (section.entries.some((entry) => entry.slug === slug)) return true
-  return section.subsections?.some((sub) => sectionContainsSlug(sub, slug)) ?? false
+  return sections
+    .map((section) => ({ ...section, entries: section.entries.filter((entry) => matchesWikiQuery(entry, query)) }))
+    .filter((section) => section.entries.length > 0)
 }
 
 export interface WikiSectionBadge {
@@ -1188,12 +1162,8 @@ export interface WikiSectionBadge {
 }
 
 export function wikiSectionBadgeFor(slug: string): WikiSectionBadge | null {
-  for (const section of WIKI_SECTIONS) {
-    if (sectionContainsSlug(section, slug)) {
-      return { title: section.title, accent: section.accent ?? null }
-    }
-  }
-  return null
+  const section = WIKI_SECTIONS.find((s) => s.entries.some((entry) => entry.slug === slug))
+  return section ? { title: section.title, accent: section.accent ?? null } : null
 }
 
 const prefetched = new Set<string>()

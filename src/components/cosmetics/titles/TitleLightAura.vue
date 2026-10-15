@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleLightAuraSpec } from '@/types/api/items'
+import type { TitleLightAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'

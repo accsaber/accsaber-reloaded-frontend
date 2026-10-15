@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import { provideCategoryContext } from '@/composables/useCategoryContext'
 import { useCategoryStore } from '@/stores/categories'
 import type { CategoryCode } from '@/types/display'
 import { computed } from 'vue'
@@ -34,7 +33,6 @@ const tabs = computed(() => {
   }))
 })
 
-provideCategoryContext(computed(() => props.modelValue))
 </script>
 
 <template>

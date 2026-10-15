@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -262,7 +263,7 @@ async function saveBatch() {
 
     await fetchBatch()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to save batch.'
+    error.value = parseApiError(e, 'Failed to save batch.').message
   } finally {
     saving.value = false
   }
@@ -503,10 +504,6 @@ async function saveComplexity(diffId: string, complexity: number) {
 }
 
 .batch-builder__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
   flex: 1;
 }
 

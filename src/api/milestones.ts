@@ -43,8 +43,6 @@ export function getSetGroups(): Promise<SetGroupResponse[]> {
   return get<SetGroupResponse[]>('/milestones/set-groups')
 }
 
-export type MilestoneSort = 'tier' | 'completions' | 'completedAt' | 'progress'
-
 export function getMilestoneCompletionStats(userId?: string): Promise<MilestoneCompletionResponse[]> {
   return get<MilestoneCompletionResponse[]>(`/milestones/completion-stats${buildQuery({ userId })}`)
 }

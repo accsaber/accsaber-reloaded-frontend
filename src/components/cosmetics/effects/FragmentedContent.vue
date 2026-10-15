@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { FragmentSpec } from '@/utils/items'
+import type { FragmentSpec } from '@/utils/cosmetics/effectLayers'
 import { makeRng } from '@/utils/random'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = withDefaults(
   defineProps<{
@@ -122,8 +123,8 @@ function buildCorner(b: Box): Shard[] {
         clip: `polygon(${pts.join(', ')})`,
         transform: `translate(${((lx / len) * push).toFixed(2)}px, ${((-ly / len) * push).toFixed(2)}px) rotate(${(rnd() * 22 - 11).toFixed(1)}deg)`,
         origin: `${cx.toFixed(1)}% ${cy.toFixed(1)}%`,
-        filter: charRedFilter(Math.max(0, Math.min(1, (t - 0.26) / 0.4))),
-        coverA: Math.max(0, Math.min(1, 1 - (t - 0.48) / 0.4)),
+        filter: charRedFilter(clamp01((t - 0.26) / 0.4)),
+        coverA: clamp01(1 - (t - 0.48) / 0.4),
       })
     }
   }
@@ -170,8 +171,8 @@ function buildLeftBand(b: Box): Shard[] {
         clip,
         transform: `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) rotate(${rot.toFixed(1)}deg)`,
         origin: `${X(cx)}% ${Y(cy)}%`,
-        filter: titleFilter(Math.max(0, Math.min(1, (t - 0.02) / 0.55))),
-        coverA: t < 0.08 ? Math.max(0, Math.min(1, 0.6 + t * 5)) : 1,
+        filter: titleFilter(clamp01((t - 0.02) / 0.55)),
+        coverA: t < 0.08 ? clamp01(0.6 + t * 5) : 1,
       })
     }
   }

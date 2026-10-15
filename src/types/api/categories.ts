@@ -1,4 +1,5 @@
-import type { CurveType, Difficulty } from '../enums'
+import type { CurveType } from '../enums'
+import type { MapDifficultyRef } from './common'
 
 export interface CategoryResponse {
   id: string
@@ -11,10 +12,7 @@ export interface CategoryResponse {
 }
 
 export interface ReweightRoundMapChange {
-  mapId: string
-  mapDifficultyId: string
-  songName: string
-  difficulty: Difficulty
+  map: MapDifficultyRef
   from: number
   to: number
 }

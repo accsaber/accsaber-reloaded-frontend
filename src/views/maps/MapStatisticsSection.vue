@@ -4,7 +4,7 @@ import UserChip from '@/components/domain/UserChip.vue'
 import type { MapComplexityHistoryResponse, MapDifficultyStatisticsResponse, TopScoreSnapshot } from '@/types/api/maps'
 import type { ChartMarker, DifficultyScoreDisplay, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { MAP_STATS_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatAccuracy, formatRelativeDate, formatShortDate } from '@/utils/formatters'
 import { toUserRef } from '@/utils/mappers'
 import { computed, ref, watch } from 'vue'
 
@@ -159,35 +159,39 @@ const topHistoryItems = computed<TopHistoryItem[]>(() => {
   return items.filter((item) => item.kind === 'score' || new Date(item.change.date).getTime() > oldest)
 })
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-}
+let historicRequest = 0
+let complexityRequest = 0
 
 async function fetchHistoricStats() {
+  const request = ++historicRequest
   if (!props.difficultyId) {
     historicStats.value = []
     return
   }
+  let next: typeof historicStats.value = []
   try {
     const { getDifficultyStatisticsHistoric } = await import('@/api/maps')
-    const params = TIME_RANGE_PARAMS[selectedRange.value]
-    historicStats.value = await getDifficultyStatisticsHistoric(props.difficultyId, params)
+    next = await getDifficultyStatisticsHistoric(props.difficultyId, TIME_RANGE_PARAMS[selectedRange.value])
   } catch {
-    historicStats.value = []
+    next = []
   }
+  if (request === historicRequest) historicStats.value = next
 }
 
 async function fetchComplexityHistory() {
+  const request = ++complexityRequest
   if (!props.mapId) {
     complexityHistory.value = []
     return
   }
+  let next: typeof complexityHistory.value = []
   try {
     const { getComplexityHistory } = await import('@/api/maps')
-    complexityHistory.value = await getComplexityHistory(props.mapId)
+    next = await getComplexityHistory(props.mapId)
   } catch {
-    complexityHistory.value = []
+    next = []
   }
+  if (request === complexityRequest) complexityHistory.value = next
 }
 
 watch(() => props.difficultyId, fetchHistoricStats, { immediate: true })
@@ -206,7 +210,7 @@ watch(selectedRange, fetchHistoricStats)
             @click="emit('navigate-player', item.entry.userId)"
             @keydown.enter="emit('navigate-player', item.entry.userId)">
             <UserChip :user="toUserRef(item.entry)" class="map-stats__top-player" />
-            <span class="map-stats__top-acc">{{ (item.entry.accuracy * 100).toFixed(2) }}%</span>
+            <span class="map-stats__top-acc">{{ formatAccuracy(item.entry.accuracy) }}</span>
             <span class="map-stats__top-ap">{{ item.entry.ap.toFixed(2) }} AP</span>
             <span class="map-stats__top-date">{{ formatRelativeDate(item.entry.timeSet) }}</span>
           </div>
@@ -214,7 +218,7 @@ watch(selectedRange, fetchHistoricStats)
             :class="item.change.type === 'BUFF' ? 'map-stats__break--buff' : 'map-stats__break--nerf'">
             <span class="map-stats__break-tag">{{ item.change.type === 'BUFF' ? '↑ BUFF' : '↓ NERF' }}</span>
             <span class="map-stats__break-val">{{ item.change.from.toFixed(1) }} → {{ item.change.to.toFixed(1) }}</span>
-            <span class="map-stats__break-date">{{ formatDate(item.change.date) }}</span>
+            <span class="map-stats__break-date">{{ formatShortDate(item.change.date) }}</span>
           </div>
         </template>
       </div>
@@ -224,7 +228,7 @@ watch(selectedRange, fetchHistoricStats)
       <h2 class="map-stats__heading">Complexity History</h2>
       <div class="map-stats__complexity-list">
         <div v-for="(change, i) in complexityChanges" :key="i" class="map-stats__complexity-entry">
-          <span class="map-stats__complexity-date">{{ formatDate(change.date) }}</span>
+          <span class="map-stats__complexity-date">{{ formatShortDate(change.date) }}</span>
           <template v-if="change.type === 'INITIAL'">
             <span class="map-stats__complexity-val">{{ change.to.toFixed(1) }}</span>
             <span class="map-stats__complexity-tag map-stats__complexity-tag--initial">INITIAL</span>

@@ -93,7 +93,7 @@ function selectId(id: string) {
 
 <template>
   <div class="resource-selector">
-    <label class="resource-selector__label">Type</label>
+    <label class="field-label">Type</label>
     <div class="resource-selector__chips" role="radiogroup">
       <button
         v-for="choice in choices"
@@ -133,14 +133,6 @@ function selectId(id: string) {
   gap: var(--space-sm);
 }
 
-.resource-selector__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
-
 .resource-selector__chips {
   display: flex;
   flex-wrap: wrap;
@@ -148,7 +140,7 @@ function selectId(id: string) {
 }
 
 .resource-selector__chip {
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);
   background: transparent;

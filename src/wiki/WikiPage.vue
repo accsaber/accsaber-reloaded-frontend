@@ -307,10 +307,6 @@ onUnmounted(() => observer?.disconnect())
 }
 
 .wiki__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
   line-height: 1.2;
 }
 

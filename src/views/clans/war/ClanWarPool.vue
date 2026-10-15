@@ -42,7 +42,7 @@ async function download() {
 <template>
   <section class="war-pool">
     <header class="war-pool__head">
-      <h2 class="war-pool__title">
+      <h2 class="war-pool__title section-title">
         Pool
         <span class="war-pool__count">{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : `${pool.length} maps` }}</span>
       </h2>
@@ -92,10 +92,6 @@ async function download() {
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .war-pool__count {

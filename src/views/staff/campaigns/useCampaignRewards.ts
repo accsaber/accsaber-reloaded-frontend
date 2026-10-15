@@ -4,13 +4,13 @@ import {
   removeCampaignCompletionItem,
   removeCampaignDifficultyItem,
 } from '@/api/campaigns'
-import { getApiErrorMessage } from '@/api/client'
 import type {
   CampaignBarrierResponse,
   CampaignDetailResponse,
   CampaignDifficultyResponse,
 } from '@/types/api/campaigns'
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
+import { parseApiError } from '@/api/client'
 
 const NODE_REWARD_LIMIT = 3
 
@@ -78,7 +78,7 @@ export function useCampaignRewards(ctx: RewardsContext) {
         campaign.value = { ...campaign.value, completionItems: updated }
       }
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to add reward')
+      actionError.value = parseApiError(err, 'Failed to add reward').message
     } finally {
       actionPending.value = false
     }
@@ -99,7 +99,7 @@ export function useCampaignRewards(ctx: RewardsContext) {
         campaign.value = { ...campaign.value, completionItems: updated }
       }
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to remove reward')
+      actionError.value = parseApiError(err, 'Failed to remove reward').message
       if (campaign.value) {
         campaign.value = { ...campaign.value, completionItems: prev }
       }
@@ -123,7 +123,7 @@ export function useCampaignRewards(ctx: RewardsContext) {
         }
       }
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to add reward')
+      actionError.value = parseApiError(err, 'Failed to add reward').message
     } finally {
       actionPending.value = false
     }
@@ -152,7 +152,7 @@ export function useCampaignRewards(ctx: RewardsContext) {
         }
       }
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to remove reward')
+      actionError.value = parseApiError(err, 'Failed to remove reward').message
       if (campaign.value) {
         campaign.value = {
           ...campaign.value,
@@ -181,7 +181,7 @@ export function useCampaignRewards(ctx: RewardsContext) {
         }
       }
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to add reward')
+      actionError.value = parseApiError(err, 'Failed to add reward').message
     } finally {
       actionPending.value = false
     }
@@ -210,7 +210,7 @@ export function useCampaignRewards(ctx: RewardsContext) {
         }
       }
     } catch (err) {
-      actionError.value = getApiErrorMessage(err, 'Failed to remove reward')
+      actionError.value = parseApiError(err, 'Failed to remove reward').message
       if (campaign.value) {
         campaign.value = {
           ...campaign.value,

@@ -6,7 +6,7 @@ import ImageUploader from '@/components/common/ImageUploader.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAppearance } from '@/composables/useAppearance'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useSyncSetting } from '@/composables/useSyncSetting'
@@ -61,9 +61,9 @@ const ON_OFF_OPTIONS = [
   { value: false, label: 'Off' },
 ]
 
-const me = computed(() => authStore.authMe)
+const me = computed(() => authStore.authMe?.player ?? null)
 const meAvatarUrl = computed(() => pickAvatarUrl(me.value))
-const handleMeAvatarError = (e: Event) => onAvatarError(pickAvatarFallback(me.value))(e)
+const handleMeAvatarError = (e: Event) => onImageError(pickAvatarFallback(me.value))(e)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const canAccessAccount = computed(() => isLoggedIn.value || (isRankingSubdomain && authStore.isStaffAuthorized))
 
@@ -357,7 +357,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
             </div>
           </section>
 
-          <ConnectionsSection v-if="isLoggedIn && me" :me="me" />
+          <ConnectionsSection v-if="isLoggedIn && authStore.authMe" :me="authStore.authMe" />
 
           <section class="settings-card">
             <div class="settings-row">

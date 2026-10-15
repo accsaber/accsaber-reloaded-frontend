@@ -1,4 +1,6 @@
 import { onUnmounted, ref } from 'vue'
+import { readStoredString, writeStoredString } from '@/utils/storage'
+import { clamp } from '@/utils/math'
 
 const MUTE_KEY = 'crate:muted'
 const TICK_MIN_GAP_MS = 24
@@ -84,7 +86,7 @@ function sharedNoiseBuffer(ac: AudioContext): AudioBuffer {
 }
 
 export function useCrateSounds() {
-  const muted = ref(localStorage.getItem(MUTE_KEY) === '1')
+  const muted = ref(readStoredString(MUTE_KEY) === '1')
 
   let bus: GainNode | null = null
   let tickBus: GainNode | null = null
@@ -266,7 +268,7 @@ export function useCrateSounds() {
   function reveal(rarityIndex: number) {
     const dest = out()
     if (!dest) return
-    const tier = Math.max(0, Math.min(5, rarityIndex))
+    const tier = clamp(rarityIndex, 0, 5)
     const notes = tier >= 4 ? [659.26, 880, 1318.5] : tier >= 2 ? [659.26, 880] : [880]
     const decay = 0.5 + tier * 0.12
     notes.forEach((freq, i) => {
@@ -288,7 +290,7 @@ export function useCrateSounds() {
 
   function toggleMute() {
     muted.value = !muted.value
-    localStorage.setItem(MUTE_KEY, muted.value ? '1' : '0')
+    writeStoredString(MUTE_KEY, muted.value ? '1' : '0')
     if (muted.value) reset()
   }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
@@ -7,12 +8,17 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useNow } from '@/composables/useNow'
 import type { ClanWarResponse } from '@/types/api/clans'
+import type { Tab } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import WarScorebug from './WarScorebug.vue'
 
 const PAGE_SIZE = 20
+const FILTER_TABS: Tab[] = [
+  { key: 'all', label: 'All' },
+  { key: 'open', label: 'Open' },
+]
 
 const props = defineProps<{
   clanId?: string
@@ -89,28 +95,12 @@ watch(() => [route.query.page, route.query.open, route.query.search, props.clanI
 <template>
   <section class="war-list">
     <div class="war-list__controls">
-      <div class="war-list__toggle" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          class="war-list__tab"
-          :class="{ 'war-list__tab--active': !openOnly }"
-          :aria-selected="!openOnly"
-          @click="setOpenOnly(false)"
-        >
-          All
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="war-list__tab"
-          :class="{ 'war-list__tab--active': openOnly }"
-          :aria-selected="openOnly"
-          @click="setOpenOnly(true)"
-        >
-          Open
-        </button>
-      </div>
+      <BaseTabs
+        variant="segmented"
+        :tabs="FILTER_TABS"
+        :model-value="openOnly ? 'open' : 'all'"
+        @update:model-value="setOpenOnly($event === 'open')"
+      />
       <SearchBox v-if="!clanId" v-model="search" placeholder="Search clans at war..." />
     </div>
 
@@ -141,30 +131,6 @@ watch(() => [route.query.page, route.query.open, route.query.search, props.clanI
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-}
-
-.war-list__toggle {
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.war-list__tab {
-  padding: var(--space-xs) var(--space-md);
-  font: inherit;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.war-list__tab--active {
-  color: var(--page-accent, var(--accent));
-  border-color: var(--page-accent, var(--accent));
 }
 
 .war-list__rows {

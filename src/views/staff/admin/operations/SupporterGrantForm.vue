@@ -2,7 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import type { SupporterGrantInput } from '@/composables/useSupporterAdmin'
+import type { SupporterGrantInput } from '@/views/staff/admin/operations/useSupporterAdmin'
 import type { KofiEventType, SupporterTierResponse } from '@/types/api/supporters'
 import { KOFI_EVENT_TYPES, KOFI_EVENT_TYPE_DISPLAY } from '@/types/api/supporters'
 import { formatCents } from '@/utils/formatters'

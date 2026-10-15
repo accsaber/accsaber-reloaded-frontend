@@ -8,7 +8,11 @@ import BorderDryBonesOverlay from '@/components/cosmetics/borders/BorderDryBones
 import BorderRainOverlay from '@/components/cosmetics/borders/BorderRainOverlay.vue'
 import BorderThermalOverlay from '@/components/cosmetics/borders/BorderThermalOverlay.vue'
 import BorderUmbraOverlay from '@/components/cosmetics/borders/BorderUmbraOverlay.vue'
-import type { BorderOverlayHost, BorderOverlaySpec, BorderOverlayType } from '@/types/api/items'
+import type {
+  BorderOverlayHost,
+  BorderOverlaySpec,
+  BorderOverlayType,
+} from '@/types/cosmetics/border'
 import type { Component } from 'vue'
 
 const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {

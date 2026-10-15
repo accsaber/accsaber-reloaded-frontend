@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import { getItems } from '@/api/items'
-import { getApiErrorMessage } from '@/api/client'
 import BaseModal from '@/components/common/BaseModal.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { useItemSearch } from '@/composables/useItemSearch'
 import { useItemTypeStore } from '@/stores/itemTypes'
-import type { ItemResponse } from '@/types/api/items'
-import { asUserItem, isItemObtainable, rarityClass } from '@/utils/items'
-import { computed, onMounted, ref, watch } from 'vue'
+import type { ItemResponse, UserItemResponse } from '@/types/api/items'
+import { isItemObtainable, rarityClass } from '@/utils/items'
+import ItemPickerGrid from '@/components/domain/ItemPickerGrid.vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{ loading?: boolean; unrestricted?: boolean }>()
 
@@ -19,100 +16,34 @@ const emit = defineEmits<{
   pick: [payload: { itemId: string; quantity: number }]
 }>()
 
-const PAGE_SIZE = 20
-
 const itemTypeStore = useItemTypeStore()
-
-const items = ref<ItemResponse[]>([])
-const fetching = ref(false)
-const err = ref<string | null>(null)
-
-const query = ref('')
-const debounced = useDebouncedRef(query, 180)
-const page = ref(1)
 
 const selectedItem = ref<ItemResponse | null>(null)
 const quantity = ref(1)
 
-const rarityRank: Record<string, number> = {
-  common: 0,
-  uncommon: 1,
-  rare: 2,
-  epic: 3,
-  legendary: 4,
-  mythic: 5,
+async function loadItems() {
+  if (props.unrestricted) return getItems()
+  await itemTypeStore.fetchItemTypes()
+  const crateTypeId = itemTypeStore.byKey.get('crate')?.id ?? null
+  return getItems(crateTypeId ? { typeId: crateTypeId } : undefined)
 }
 
-const pickableItems = computed(() =>
-  items.value.filter(
-    (i) =>
-      i.active &&
-      !i.deprecated &&
-      isItemObtainable(i) &&
-      (props.unrestricted || i.typeKey === 'crate'),
-  ),
+const { pickable, fetching, error, search, page, totalPages, paged } = useItemSearch(
+  loadItems,
+  (i) => i.active && !i.deprecated && isItemObtainable(i) && (props.unrestricted || i.typeKey === 'crate'),
 )
-
-const filtered = computed(() => {
-  const q = debounced.value.trim().toLowerCase()
-  const matched = q
-    ? pickableItems.value.filter((i) => i.name.toLowerCase().includes(q))
-    : pickableItems.value
-  return matched.slice().sort((a, b) => {
-    const r = (rarityRank[a.rarity] ?? 0) - (rarityRank[b.rarity] ?? 0)
-    if (r !== 0) return r
-    return a.name.localeCompare(b.name)
-  })
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
-
-const paged = computed(() => {
-  const start = (page.value - 1) * PAGE_SIZE
-  return filtered.value.slice(start, start + PAGE_SIZE)
-})
 
 const noun = computed(() => (props.unrestricted ? 'items' : 'crates'))
 
 const emptyMessage = computed(() =>
-  pickableItems.value.length === 0
+  pickable.value.length === 0
     ? `No ${noun.value} available`
     : `No ${noun.value} found`,
 )
 
-watch(debounced, () => { page.value = 1 })
-watch(totalPages, (n) => {
-  if (page.value > n) page.value = n
-})
-
-async function load() {
-  fetching.value = true
-  err.value = null
-  try {
-    if (props.unrestricted) {
-      items.value = await getItems()
-    } else {
-      await itemTypeStore.fetchItemTypes()
-      const crateTypeId = itemTypeStore.byKey.get('crate')?.id ?? null
-      items.value = await getItems(crateTypeId ? { typeId: crateTypeId } : undefined)
-    }
-  } catch (e) {
-    err.value = getApiErrorMessage(e, 'Failed to load items')
-  } finally {
-    fetching.value = false
-  }
-}
-
-onMounted(load)
-
-function selectItem(item: ItemResponse) {
-  selectedItem.value = item
+function selectItem(userItem: UserItemResponse) {
+  selectedItem.value = userItem.item
   quantity.value = 1
-}
-
-function selectByLinkId(linkId: string) {
-  const item = items.value.find((i) => i.id === linkId)
-  if (item) selectItem(item)
 }
 
 function clearSelection() {
@@ -131,33 +62,18 @@ function confirm() {
 <template>
   <BaseModal :open="true" title="Add reward" @close="emit('close')">
     <div class="item-picker">
-      <template v-if="!selectedItem">
-        <input class="item-picker__search" v-model="query" type="search" autofocus
-          :placeholder="`Search ${noun} by name`" />
-
-        <p v-if="err" class="item-picker__error" role="alert">{{ err }}</p>
-
-        <div v-if="fetching" class="item-picker__grid">
-          <div v-for="i in PAGE_SIZE" :key="i" class="item-picker__skeleton">
-            <SkeletonLoader variant="card" />
-          </div>
-        </div>
-
-        <p v-else-if="paged.length === 0" class="item-picker__empty">
-          {{ emptyMessage }}
-        </p>
-
-        <div v-else class="item-picker__grid">
-          <InventoryItemCell v-for="item in paged" :key="item.id"
-            :user-item="asUserItem(item)"
-            @select="selectByLinkId" />
-        </div>
-
-        <div v-if="!fetching && totalPages > 1" class="item-picker__pagination">
-          <PaginationControls :page="page" :total-pages="totalPages"
-            @update:page="page = $event" />
-        </div>
-      </template>
+      <ItemPickerGrid
+        v-if="!selectedItem"
+        v-model:search="search"
+        v-model:page="page"
+        :items="paged"
+        :loading="fetching"
+        :total-pages="totalPages"
+        :error="error"
+        :empty-message="emptyMessage"
+        :placeholder="`Search ${noun} by name`"
+        @select="selectItem"
+      />
 
       <template v-else>
         <div class="item-picker__selected">
@@ -202,76 +118,6 @@ function confirm() {
   gap: var(--space-md);
   width: min(680px, 100%);
   min-height: 0;
-}
-
-.item-picker__search {
-  width: 100%;
-  padding: 10px 12px;
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  outline: none;
-  transition: border-color 120ms ease;
-  flex-shrink: 0;
-}
-
-.item-picker__search:focus {
-  border-color: var(--page-accent, var(--accent));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent, var(--accent)) 20%, transparent);
-}
-
-.item-picker__error {
-  margin: 0;
-  padding: 8px 10px;
-  font-size: var(--text-caption);
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
-  border-radius: var(--radius-btn);
-  flex-shrink: 0;
-}
-
-.item-picker__empty {
-  margin: 0;
-  padding: var(--space-md);
-  text-align: center;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.item-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: var(--space-sm);
-  padding: 2px;
-  overflow-y: auto;
-  min-height: 0;
-  flex: 1 1 auto;
-}
-
-@media (max-width: 600px) {
-  .item-picker__grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 420px) {
-  .item-picker__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.item-picker__skeleton {
-  aspect-ratio: 1 / 1;
-}
-
-.item-picker__pagination {
-  display: flex;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .item-picker__name {
@@ -327,12 +173,12 @@ function confirm() {
 .item-picker__selected-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
 .item-picker__change {
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -352,7 +198,7 @@ function confirm() {
 .item-picker__field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .item-picker__field > span {
@@ -366,7 +212,7 @@ function confirm() {
 
 .item-picker__field input[type="number"] {
   width: 100px;
-  padding: 8px 10px;
+  padding: var(--space-sm) 10px;
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-primary);
@@ -391,7 +237,7 @@ function confirm() {
 
 .item-picker__cancel,
 .item-picker__confirm {
-  padding: 8px 16px;
+  padding: var(--space-sm) var(--space-md);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 700;

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, type ContentBox, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
+import { subscribeWindowPointer } from '@/utils/windowPointer'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const props = defineProps<{
@@ -61,29 +62,15 @@ const fieldHoverEnabled =
 
 const GLOSS_SIZE = 320
 const glossEl = ref<HTMLElement | null>(null)
-let fieldRaf = 0
-let fieldX = 0
-let fieldY = 0
-let fieldIdleTimer: ReturnType<typeof setTimeout> | undefined
+let stopFieldPointer: (() => void) | null = null
 
-function applyFieldPointer() {
-  fieldRaf = 0
+function applyFieldPointer(r: DOMRect, x: number, y: number) {
   const gloss = glossEl.value
-  const el = root.value
-  if (!gloss || !el || !window.innerWidth || !window.innerHeight) return
-  const r = el.getBoundingClientRect()
-  gloss.style.transform = `translate(${fieldX - r.left - GLOSS_SIZE / 2}px, ${fieldY - r.top - GLOSS_SIZE / 2}px)`
-  const tilt = (fieldX / window.innerWidth - 0.5) * 70 + (fieldY / window.innerHeight - 0.5) * 40
+  if (!gloss || !window.innerWidth || !window.innerHeight) return
+  gloss.style.transform = `translate(${x - r.left - GLOSS_SIZE / 2}px, ${y - r.top - GLOSS_SIZE / 2}px)`
+  const tilt = (x / window.innerWidth - 0.5) * 70 + (y / window.innerHeight - 0.5) * 40
   gloss.style.setProperty('--holo-angle', `${(angleDeg.value + tilt).toFixed(1)}deg`)
   gloss.classList.add('is-on')
-  if (fieldIdleTimer) clearTimeout(fieldIdleTimer)
-  fieldIdleTimer = setTimeout(() => glossEl.value?.classList.remove('is-on'), 150)
-}
-
-function onFieldMove(e: PointerEvent) {
-  fieldX = e.clientX
-  fieldY = e.clientY
-  if (!fieldRaf) fieldRaf = requestAnimationFrame(applyFieldPointer)
 }
 
 const titleStyle = computed<Record<string, string>>(() => {
@@ -156,7 +143,11 @@ function onLeave() {
 onMounted(() => {
   if (isField.value) {
     if (fieldHoverEnabled) {
-      window.addEventListener('pointermove', onFieldMove, { passive: true })
+      stopFieldPointer = subscribeWindowPointer({
+        measure: () => root.value?.getBoundingClientRect() ?? null,
+        apply: applyFieldPointer,
+        idle: () => glossEl.value?.classList.remove('is-on'),
+      })
     }
     return
   }
@@ -198,12 +189,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (raf) cancelAnimationFrame(raf)
-  if (fieldRaf) cancelAnimationFrame(fieldRaf)
-  if (fieldIdleTimer) clearTimeout(fieldIdleTimer)
   if (settleTimer) clearTimeout(settleTimer)
   ro?.disconnect()
   if (overlay && isTitle.value) overlay.style.zIndex = ''
-  window.removeEventListener('pointermove', onFieldMove)
+  stopFieldPointer?.()
   if (host) {
     host.removeEventListener('pointerenter', onEnter)
     host.removeEventListener('pointerleave', onLeave)

@@ -1,4 +1,7 @@
+import type { Composition } from '@/types/cosmetics/effects'
+import { asNumber, asString } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
+import { clamp } from '@/utils/math'
 
 export interface WearSpec {
   chips: number
@@ -11,6 +14,23 @@ export interface HauntSpec {
   color: string
   opacity: number
   cycleS: number
+}
+
+export function readWearSpec(c: Composition): WearSpec {
+  return {
+    chips: clamp(Math.round(asNumber(c.chips) ?? 5), 1, 10),
+    cracks: clamp(Math.round(asNumber(c.cracks) ?? 3), 0, 12),
+    dark: asString(c.dark) ?? '#2a1a0e',
+    flakes: c.flakes !== false,
+  }
+}
+
+export function readHauntSpec(c: Composition): HauntSpec {
+  return {
+    color: asString(c.color) ?? '#38f3ab',
+    opacity: clamp(asNumber(c.opacity) ?? 0.7, 0.2, 1),
+    cycleS: Math.max(4, asNumber(c.cycleS) ?? 8),
+  }
 }
 
 export interface WearBite {

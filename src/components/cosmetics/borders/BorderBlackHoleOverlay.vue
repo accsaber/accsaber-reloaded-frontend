@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderBlackHoleOverlaySpec, BorderOverlayHost } from '@/types/api/items'
+import type { BorderBlackHoleOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { darken, lerpHex } from '@/utils/color'
 import { fillMeanLuminance, frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'

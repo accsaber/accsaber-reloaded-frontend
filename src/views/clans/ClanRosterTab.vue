@@ -205,7 +205,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
       </div>
 
       <section v-if="rows.length" class="roster__members">
-        <h2 class="roster__title">
+        <h2 class="section-title">
           Members <span class="roster__count">{{ rows.length }}</span>
         </h2>
         <DataTable
@@ -291,13 +291,6 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.roster__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .roster__count {

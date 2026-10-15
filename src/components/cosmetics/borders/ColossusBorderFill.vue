@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { ColossusFill } from '@/types/api/items'
+import type { ColossusFill } from '@/types/cosmetics/border'
 import { cyc, win } from '@/utils/cosmetics/canvasShapes'
 import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
@@ -129,17 +129,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="colossus-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.colossus-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

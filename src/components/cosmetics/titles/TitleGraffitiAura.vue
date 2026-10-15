@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleBoilSpec, TitleGraffitiAuraSpec } from '@/types/api/items'
+import type { TitleBoilSpec, TitleGraffitiAuraSpec } from '@/types/cosmetics/title'
 import { dripPath } from '@/utils/cosmetics/splat'
 import { boilOffsetEm, boilStep } from '@/utils/cosmetics/titleBoil'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'

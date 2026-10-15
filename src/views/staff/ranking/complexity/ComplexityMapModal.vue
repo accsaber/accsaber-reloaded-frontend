@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
-import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import type {
   ComparisonScenario,
   ComplexityDifficultyRow,
@@ -57,7 +57,7 @@ const emit = defineEmits<{
 
 const inputsOpen = ref(false)
 
-watch(() => props.row?.mapDifficultyId, () => {
+watch(() => props.row?.map.id, () => {
   inputsOpen.value = false
 })
 
@@ -65,7 +65,7 @@ const difficulty = computed(() => props.leaderboard?.difficulty ?? props.row)
 
 const title = computed(() => {
   const source = difficulty.value
-  return source ? `${source.songAuthor} - ${source.songName}` : 'Map calibration'
+  return source ? `${source.map.songAuthor} - ${source.map.songName}` : 'Map calibration'
 })
 
 const scoreRows = computed<ComplexityScoreRow[]>(() => props.leaderboard?.rows ?? [])
@@ -117,12 +117,12 @@ const columns = computed<TableColumn[]>(() => {
 
 const tableRows = computed(() =>
   scoreRows.value.map((row) => ({
-    id: row.userId,
-    userId: row.userId,
-    name: row.name,
-    country: row.country,
-    avatarUrl: pickAvatarUrl(row),
-    avatarFallbackUrl: pickAvatarFallback(row),
+    id: row.player.id,
+    userId: row.player.id,
+    name: row.player.name,
+    country: row.player.country,
+    avatarUrl: pickAvatarUrl(row.player),
+    avatarFallbackUrl: pickAvatarFallback(row.player),
     rank: row.scenarios.CURRENT?.rank ?? null,
     accuracy: row.accuracy,
     apCurrent: apOf(row, 'CURRENT'),
@@ -148,8 +148,8 @@ const complexities = computed(() => {
   ]
 })
 
-const coverUrl = computed(() => pickCoverUrl(difficulty.value))
-const coverFallback = computed(() => pickCoverFallback(difficulty.value))
+const coverUrl = computed(() => pickCoverUrl(difficulty.value?.map))
+const coverFallback = computed(() => pickCoverFallback(difficulty.value?.map))
 
 function selectPlayer(row: Record<string, unknown>) {
   emit('selectPlayer', row.userId as string)
@@ -160,15 +160,15 @@ function selectPlayer(row: Record<string, unknown>) {
   <BaseModal :open="open" :title="title" max-width="1320px" @close="emit('close')">
     <div v-if="difficulty" class="map-modal">
       <header class="map-modal__head">
-        <GlowImage :src="coverUrl" alt="" :size="64" :fallback-src="coverFallback" />
+        <CoverImage :src="coverUrl" alt="" :size="64" :fallback-src="coverFallback" />
         <div class="map-modal__identity">
           <div class="map-modal__badges">
             <CategoryBadge :category="(difficulty.categoryCode as CategoryCode)" />
-            <DifficultyBadge :difficulty="difficulty.difficulty" />
+            <DifficultyBadge :difficulty="difficulty.map.difficulty" />
             <span v-if="difficulty.status !== 'RANKED'" class="status-pill"
               :class="`status-pill--${difficulty.status.toLowerCase()}`">{{ difficulty.status }}</span>
           </div>
-          <span class="map-modal__mapper">{{ difficulty.mapAuthor }}</span>
+          <span class="map-modal__mapper">{{ difficulty.map.mapAuthor }}</span>
           <span class="map-modal__scores">{{ formatCount(difficulty.scores) }} active scores</span>
         </div>
         <div class="map-modal__complexities">
@@ -211,7 +211,7 @@ function selectPlayer(row: Record<string, unknown>) {
       >
         <template #cell-player="{ row }">
           <div class="map-modal__player">
-            <GlowImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="28"
+            <CoverImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="28"
               :fallback-src="(row.avatarFallbackUrl as string | null)" />
             <span class="map-modal__player-name">{{ row.name }}</span>
           </div>

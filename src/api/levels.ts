@@ -1,12 +1,6 @@
+import type { LevelThresholdResponse } from '@/types/api/level-thresholds'
 import { get } from './client'
 
-export interface LevelThreshold {
-  level: number
-  title: string
-  createdAt: string
-  updatedAt: string
-}
-
-export function getLevelThresholds(): Promise<LevelThreshold[]> {
-  return get<LevelThreshold[]>('/levels')
+export function getLevelThresholds(): Promise<LevelThresholdResponse[]> {
+  return get<LevelThresholdResponse[]>('/levels')
 }

@@ -299,13 +299,6 @@ watch(
   flex-wrap: wrap;
 }
 
-.market-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .market-page__subtitle {
   font-size: var(--text-caption);
   color: var(--text-secondary);

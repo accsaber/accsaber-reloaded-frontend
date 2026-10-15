@@ -1,22 +1,10 @@
-import type { PublicClanResponse } from './clans'
-import type { CampaignRequirementType, Difficulty } from '../enums'
+import type { CampaignRequirementType } from '../enums'
+import type { MapDifficultyRef, PlayerRef } from './common'
 import type { ItemResponse } from './items'
 import type { MissionBand, MissionPool, MissionType } from './missions'
 
 export interface MapAvgApResponse {
-  mapDifficultyId: string
-  mapId: string
-  songName: string
-  songSubName: string | null
-  songAuthor: string
-  mapAuthor: string
-  coverUrl: string
-  cdnCoverUrl?: string | null
-  difficulty: string
-  characteristic?: string
-  beatsaverCode?: string | null
-  categoryId: string
-  categoryName: string
+  map: MapDifficultyRef
   averageWeightedAp: number
   scoreCount: number
   latestScoreId: string
@@ -24,108 +12,69 @@ export interface MapAvgApResponse {
 }
 
 export interface MapRetryResponse {
-  mapDifficultyId: string
-  mapId: string
-  songName: string
-  songSubName: string | null
-  songAuthor: string
-  mapAuthor: string
-  coverUrl: string
-  cdnCoverUrl?: string | null
-  difficulty: string
-  characteristic?: string
-  beatsaverCode?: string | null
-  categoryId: string
-  categoryName: string
+  map: MapDifficultyRef
   supersededCount: number
   latestScoreId: string
   latestScoreTimeSet: string
 }
 
 export interface UserImprovementsResponse {
-  userId: string
-  userName: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   improvementCount: number
   latestScoreId: string
   latestScoreTimeSet: string
 }
 
 export interface UserMapImprovementsResponse {
-  userId: string
-  userName: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
-  mapDifficultyId: string
-  mapId: string
-  songName: string
-  songSubName: string | null
-  songAuthor: string
-  mapAuthor: string
-  coverUrl: string
-  cdnCoverUrl?: string | null
-  difficulty: string
-  categoryId: string
-  categoryName: string
+  player: PlayerRef
+  map: MapDifficultyRef
   improvementCount: number
   latestScoreId: string
   latestScoreTimeSet: string
 }
 
 export interface MilestoneCollectorResponse {
-  userId: string
-  userName: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   milestoneCount: number
 }
 
-export interface ItemStatsPlayerRef {
-  userId: string
-  userName: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
-}
-
-export interface UserItemCountResponse extends ItemStatsPlayerRef {
+export interface UserItemCountResponse {
+  player: PlayerRef
   itemCount: number
 }
 
-export interface UserCrateCountResponse extends ItemStatsPlayerRef {
+export interface UserCrateCountResponse {
+  player: PlayerRef
   crateCount: number
 }
 
-export interface UserInventoryValueResponse extends ItemStatsPlayerRef {
+export interface UserInventoryValueResponse {
+  player: PlayerRef
   itemsValue: number
   essenceBalance: number
   totalValue: number
 }
 
-export interface UserFirstEditionResponse extends ItemStatsPlayerRef {
+export interface UserFirstEditionResponse {
+  player: PlayerRef
   firstEditionCount: number
 }
 
-export interface UserCollectionResponse extends ItemStatsPlayerRef {
+export interface UserCollectionResponse {
+  player: PlayerRef
   ownedCount: number
   catalogTotal: number
   completionPercent: number
 }
 
-export interface UserTraderResponse extends ItemStatsPlayerRef {
+export interface UserTraderResponse {
+  player: PlayerRef
   tradeCount: number
   itemsTraded: number
 }
 
-export interface RarestUnboxedResponse extends ItemStatsPlayerRef {
+export interface RarestUnboxedResponse {
+  player: PlayerRef
   linkId: string
   itemId: string
   item: ItemResponse | null
@@ -135,7 +84,8 @@ export interface RarestUnboxedResponse extends ItemStatsPlayerRef {
   unusualEffect?: string | null
 }
 
-export interface FirstEditionHolderResponse extends ItemStatsPlayerRef {
+export interface FirstEditionHolderResponse {
+  player: PlayerRef
   linkId: string
   itemId: string
   item: ItemResponse | null
@@ -214,12 +164,7 @@ export interface MissionShortfallResponse {
 }
 
 export interface MissionCompletorResponse {
-  userId: string
-  userName: string
-  avatarUrl: string | null
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   missionsCompleted: number
   missionXp: number
 }
@@ -244,14 +189,7 @@ export interface CampaignFunnelResponse {
 
 export interface CampaignNodeDifficultyResponse {
   campaignDifficultyId: string
-  mapDifficultyId: string
-  songName: string
-  songSubName: string | null
-  songAuthor: string
-  mapAuthor: string
-  coverUrl: string | null
-  cdnCoverUrl?: string | null
-  difficulty: Difficulty
+  map: MapDifficultyRef
   barrier: boolean
   terminal: boolean
   requirementType: CampaignRequirementType | null
@@ -264,12 +202,7 @@ export interface CampaignNodeDifficultyResponse {
 }
 
 export interface CampaignCompletorResponse {
-  userId: string
-  userName: string
-  avatarUrl: string | null
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   completed: number
   inProgress: number
   nodesCleared: number
@@ -277,12 +210,7 @@ export interface CampaignCompletorResponse {
 }
 
 export interface CampaignCreatorResponse {
-  userId: string
-  userName: string
-  avatarUrl: string | null
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   campaigns: number
   curatedCampaigns: number
   participants: number
@@ -322,12 +250,7 @@ export interface EventMissionStatsResponse {
 
 export interface EventMissionLeaderboardResponse {
   rank: number
-  userId: string
-  userName: string
-  avatarUrl: string | null
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   completions: number
   xpEarned: number
   itemsAwarded: number

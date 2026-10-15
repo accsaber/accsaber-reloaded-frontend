@@ -1,4 +1,5 @@
 import type { ComplexityScenario, EstimateScenario } from '@/types/api/complexity'
+import { clamp } from '@/utils/math'
 
 const STOPS = [
   { at: 0, token: '--complexity-0' },
@@ -26,7 +27,7 @@ export const COMPLEXITY_GRADIENT = gradient()
 export const COMPLEXITY_GRADIENT_GHOST = gradient(16)
 
 export function complexityColor(complexity: number): string {
-  const value = clamp(complexity)
+  const value = clampComplexity(complexity)
   for (let i = STOPS.length - 1; i > 0; i--) {
     const lower = STOPS[i - 1]
     const upper = STOPS[i]
@@ -38,12 +39,12 @@ export function complexityColor(complexity: number): string {
 }
 
 export function complexityPercent(complexity: number): number {
-  return (clamp(complexity) / COMPLEXITY_MAX) * 100
+  return (clampComplexity(complexity) / COMPLEXITY_MAX) * 100
 }
 
-function clamp(complexity: number): number {
+function clampComplexity(complexity: number): number {
   if (!Number.isFinite(complexity)) return 0
-  return Math.min(Math.max(complexity, 0), COMPLEXITY_MAX)
+  return clamp(complexity, 0, COMPLEXITY_MAX)
 }
 
 export const SCENARIO_LABELS: Record<ComplexityScenario, string> = {

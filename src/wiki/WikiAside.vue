@@ -12,7 +12,7 @@ defineProps<{
 <template>
   <aside class="wiki-aside">
     <nav v-if="toc.length" class="wiki-aside__toc" aria-label="On this page">
-      <span class="wiki-aside__label">On this page</span>
+      <span class="wiki-aside__label field-label">On this page</span>
       <a
         v-for="item in toc"
         :key="item.id"
@@ -28,7 +28,7 @@ defineProps<{
     </nav>
 
     <nav v-if="related.length" class="wiki-aside__related" aria-label="Related documents">
-      <span class="wiki-aside__label">Related</span>
+      <span class="wiki-aside__label field-label">Related</span>
       <WikiDocCard v-for="entry in related" :key="entry.slug" :entry="entry" class="wiki-aside__doc" />
     </nav>
   </aside>
@@ -44,16 +44,11 @@ defineProps<{
 .wiki-aside__label {
   display: block;
   margin-bottom: var(--space-sm);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .wiki-aside__anchor {
   display: block;
-  padding: 4px var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
   border-left: 1px solid var(--bg-overlay);
   color: var(--text-secondary);
   font-size: var(--text-caption);

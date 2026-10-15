@@ -309,7 +309,7 @@ itemTypeStore.fetchItemTypes()
               </span>
               <span class="listing-page__type">{{ typeLabel }}</span>
             </p>
-            <h2 class="listing-page__item-name" :style="itemNameStyle">{{ itemName }}</h2>
+            <h2 class="section-title" :style="itemNameStyle">{{ itemName }}</h2>
             <p v-if="listing.item.item.description" class="listing-page__item-desc">
               {{ listing.item.item.description }}
             </p>
@@ -455,7 +455,7 @@ itemTypeStore.fetchItemTypes()
 }
 
 .listing-page__variant {
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);
   background: transparent;
@@ -504,13 +504,6 @@ itemTypeStore.fetchItemTypes()
   text-transform: capitalize;
 }
 
-.listing-page__item-name {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .listing-page__item-desc {
   margin: 0;
   font-size: var(--text-body);
@@ -530,7 +523,7 @@ itemTypeStore.fetchItemTypes()
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   color: var(--tier-gold);
   border: 1px solid color-mix(in srgb, var(--tier-gold) 45%, transparent);
@@ -565,10 +558,6 @@ itemTypeStore.fetchItemTypes()
 }
 
 .listing-page__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 

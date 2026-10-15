@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getCdnLimits, type CdnLimits } from '@/api/cdn'
+import { parseApiError } from '@/api/client'
 import ImageCropModal from '@/components/common/ImageCropModal.vue'
 import { onMounted, ref } from 'vue'
 
@@ -83,7 +84,7 @@ async function upload(file: File) {
   try {
     await props.uploadHandler(file)
   } catch (e) {
-    err.value = (e as Error).message || 'Upload failed.'
+    err.value = parseApiError(e, 'Upload failed.').message
   } finally {
     busy.value = false
   }
@@ -96,7 +97,7 @@ async function onRemove() {
   try {
     await props.removeHandler()
   } catch (e) {
-    err.value = (e as Error).message || 'Failed to remove image.'
+    err.value = parseApiError(e, 'Failed to remove image.').message
   } finally {
     busy.value = false
   }
@@ -188,7 +189,7 @@ const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
   width: 100%;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   overflow: hidden;
   color: var(--text-tertiary);
 }
@@ -256,7 +257,7 @@ const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
   color: var(--text-primary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: color 120ms ease, border-color 120ms ease;
 }
@@ -285,12 +286,12 @@ const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
 
 .image-uploader__error {
   margin: 0;
-  padding: 6px 8px;
+  padding: 6px var(--space-sm);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 </style>

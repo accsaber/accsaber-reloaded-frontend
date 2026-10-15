@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { ApiError, getApiErrorMessage } from '@/api/client'
+import { ApiError, parseApiError } from '@/api/client'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MissionCard from '@/components/domain/MissionCard.vue'
 import { useNow } from '@/composables/useNow'
 import type { MissionPool, MissionResponse } from '@/types/api/missions'
+import type { Tab } from '@/types/display'
 import {
   BAND_RANK,
   POOL_LABEL,
   POOL_ORDER,
 } from '@/utils/missions'
-import { formatCountdown } from '@/utils/clans'
-import { computed, nextTick, ref, useId, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
+import { formatDuration } from '@/utils/formatters'
 
 const props = defineProps<{
   loadActive: () => Promise<MissionResponse[]>
@@ -23,14 +25,13 @@ const props = defineProps<{
 }>()
 
 const uid = useId()
-const activeTabId = `${uid}-tab-active`
-const historyTabId = `${uid}-tab-history`
-const activePanelId = `${uid}-panel-active`
-const historyPanelId = `${uid}-panel-history`
 
-const tab = ref<'active' | 'history'>('active')
-const activeTabRef = ref<HTMLButtonElement | null>(null)
-const historyTabRef = ref<HTMLButtonElement | null>(null)
+const TABS: Tab[] = [
+  { key: 'active', label: 'Active' },
+  { key: 'history', label: 'History' },
+]
+
+const tab = ref('active')
 
 const missionsById = ref(new Map<string, MissionResponse>())
 const loadingActive = ref(false)
@@ -125,7 +126,7 @@ function groupCountdown(missions: MissionResponse[]): string {
     .filter((t) => Number.isFinite(t))
     .reduce((min, t) => (t < min ? t : min), Number.POSITIVE_INFINITY)
   if (!Number.isFinite(earliest)) return ''
-  return formatCountdown(earliest - now.value, 'expired')
+  return formatDuration(earliest - now.value, { zero: 'expired' })
 }
 
 function isMissionsUnavailable(err: unknown): boolean {
@@ -146,7 +147,7 @@ async function runLoadActive() {
     mergeMissions(await props.loadActive())
   } catch (err) {
     if (!isMissionsUnavailable(err)) {
-      activeError.value = getApiErrorMessage(err, 'Failed to load missions')
+      activeError.value = parseApiError(err, 'Failed to load missions').message
     }
   } finally {
     loadingActive.value = false
@@ -162,28 +163,12 @@ async function runLoadHistory() {
     mergeMissions(await props.loadHistory())
   } catch (err) {
     if (!isMissionsUnavailable(err)) {
-      historyError.value = getApiErrorMessage(err, 'Failed to load history')
+      historyError.value = parseApiError(err, 'Failed to load history').message
     }
   } finally {
     loadingHistory.value = false
     loadedHistory.value = true
   }
-}
-
-function focusTab(value: 'active' | 'history') {
-  const target = value === 'active' ? activeTabRef.value : historyTabRef.value
-  target?.focus()
-}
-
-function onTabKeydown(e: KeyboardEvent) {
-  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return
-  e.preventDefault()
-  const next: 'active' | 'history' =
-    e.key === 'Home' ? 'active'
-      : e.key === 'End' ? 'history'
-        : tab.value === 'active' ? 'history' : 'active'
-  tab.value = next
-  void nextTick(() => focusTab(next))
 }
 
 void runLoadActive()
@@ -193,23 +178,15 @@ void runLoadHistory()
 <template>
   <div class="missions-panel">
     <header class="missions-panel__head" :class="{ 'missions-panel__head--headless': hideTitle }">
-      <h2 v-if="!hideTitle" class="missions-panel__title">Missions</h2>
-      <div class="missions-panel__tabs" role="tablist" aria-label="Missions" @keydown="onTabKeydown">
-        <button :id="activeTabId" ref="activeTabRef" type="button" role="tab" class="missions-panel__tab"
-          :class="{ 'missions-panel__tab--active': tab === 'active' }" :aria-selected="tab === 'active'"
-          :aria-controls="activePanelId" :tabindex="tab === 'active' ? 0 : -1"
-          @click="tab = 'active'">Active</button>
-        <button :id="historyTabId" ref="historyTabRef" type="button" role="tab" class="missions-panel__tab"
-          :class="{ 'missions-panel__tab--active': tab === 'history' }" :aria-selected="tab === 'history'"
-          :aria-controls="historyPanelId" :tabindex="tab === 'history' ? 0 : -1"
-          @click="tab = 'history'">History</button>
-      </div>
+      <h2 v-if="!hideTitle" class="missions-panel__title card-title">Missions</h2>
+      <BaseTabs v-model="tab" :tabs="TABS" variant="segmented" label="Missions" :id-prefix="uid" />
     </header>
 
     <div class="missions-panel__body">
       <div v-if="errorMessage" class="missions-panel__error" role="alert">{{ errorMessage }}</div>
 
-      <section v-show="tab === 'active'" :id="activePanelId" role="tabpanel" :aria-labelledby="activeTabId"
+      <section v-show="tab === 'active'" :id="`${uid}-panel-active`" role="tabpanel"
+        :aria-labelledby="`${uid}-tab-active`"
         tabindex="0" class="missions-panel__tabpanel">
         <div v-if="(loadingActive || loadingHistory) && !hasActive" class="missions-panel__skeletons">
           <SkeletonLoader variant="card" />
@@ -245,7 +222,8 @@ void runLoadHistory()
         </template>
       </section>
 
-      <section v-show="tab === 'history'" :id="historyPanelId" role="tabpanel" :aria-labelledby="historyTabId"
+      <section v-show="tab === 'history'" :id="`${uid}-panel-history`" role="tabpanel"
+        :aria-labelledby="`${uid}-tab-history`"
         tabindex="0" class="missions-panel__tabpanel">
         <div v-if="(loadingActive || loadingHistory) && !hasHistory" class="missions-panel__skeletons">
           <SkeletonLoader variant="card" />
@@ -293,44 +271,7 @@ void runLoadHistory()
 }
 
 .missions-panel__title {
-  margin: 0;
   font-family: var(--font-sans);
-  font-size: var(--text-card-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.missions-panel__tabs {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-}
-
-.missions-panel__tab {
-  padding: 4px var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.missions-panel__tab:hover {
-  color: var(--text-primary);
-}
-
-.missions-panel__tab--active {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
 }
 
 .missions-panel__body {
@@ -415,7 +356,7 @@ void runLoadHistory()
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md) 4px;
+  padding: var(--space-sm) var(--space-md) var(--space-xs);
 }
 
 .missions-panel__group-label {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
@@ -13,7 +13,7 @@ import type { ScoreRowField } from '@/types/api/settings'
 import type { ScoreResponse, UserScoresParams } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatPlayCount, formatRelativeDate } from '@/utils/formatters'
+import { formatAccuracy, formatPlayCount, formatRelativeDate } from '@/utils/formatters'
 import { toScoreDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
@@ -73,7 +73,7 @@ function streakSummary(row: Record<string, unknown>): string | null {
   return parts.length ? parts.join(' · ') : null
 }
 
-const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } = usePageableRoute({
+const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
   defaultSort: 'weighted',
   defaultOrder: 'desc',
   defaultSize: 20,
@@ -257,11 +257,9 @@ watch(
   { immediate: true },
 )
 
-watch(() => props.search, () => { resetPage() })
-
 watch(
   () => JSON.stringify([props.userId, scoreParams.value]),
-  fetchScores,
+  () => { void fetchScores() },
   { immediate: true },
 )
 </script>
@@ -274,7 +272,7 @@ watch(
       :empty-message="props.search ? `No maps matching &quot;${props.search}&quot;` : 'No scores found'" @sort="setSort"
       @row-click="handleRowClick" @update:page="setPage">
       <template #cell-cover="{ row }">
-        <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)"
+        <CoverImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)"
           :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
       </template>
 
@@ -340,7 +338,7 @@ watch(
 
       <template #mobile-card="{ row }">
         <div class="ps-card" @click="handleRowClick(row)">
-          <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="40"
+          <CoverImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.mapName as string)" :size="40"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div v-else class="ps-card__cover-placeholder" />
           <div class="ps-card__grid">
@@ -351,7 +349,7 @@ watch(
               <span v-if="isScoreFieldVisible('difficulty')" class="ps-card__diff">{{ row.difficulty }}</span>
             </span>
             <span v-if="isScoreFieldVisible('accuracy')" class="ps-card__acc">
-              {{ ((row.accuracy as number) * 100).toFixed(2) }}%
+              {{ formatAccuracy(row.accuracy as number) }}
             </span>
 
             <span class="ps-card__meta-cell">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { EclipseCreatureKind, EclipseFill } from '@/types/api/items'
+import type { EclipseCreatureKind, EclipseFill } from '@/types/cosmetics/border'
 import { darken, lerpHex, lighten } from '@/utils/color'
 import { drawCreature, type CreaturePalette } from '@/utils/cosmetics/eclipseCreatures'
 import { ECLIPSE_DAY_END, ECLIPSE_PARTIAL_END, ECLIPSE_SUN, ECLIPSE_SUN_R, ECLIPSE_PERIOD, ECLIPSE_TOTAL_END, eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
@@ -9,6 +9,7 @@ import { blitSceneLayer, paintSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import { hash01 } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   fill: EclipseFill
@@ -160,7 +161,7 @@ function drawFlock(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase): void {
   for (let i = 0; i < FLOCK; i++) {
     const side = i % 2 ? 1 : -1
     const lag = i * 0.06
-    const p = Math.max(0, Math.min(1, u - lag))
+    const p = clamp01(u - lag)
     const q = flee >= 0 ? p : 1 - p
     const along = q < 0.5 ? q * 2 : 1
     const down = q < 0.5 ? 0 : (q - 0.5) * 2
@@ -387,17 +388,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="eclipse-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.eclipse-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

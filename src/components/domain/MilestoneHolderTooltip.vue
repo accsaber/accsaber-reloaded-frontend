@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue';
+import { useFloatingPanel } from '@/composables/useFloatingPanel';
 import UserChip from '@/components/domain/UserChip.vue';
 import type { MilestoneHolderResponse } from '@/types/api/milestones';
 import { formatRelativeDate } from '@/utils/formatters';
-import { toUserRef } from '@/utils/mappers';
-import { nextTick, onUnmounted, ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
   milestoneId: string
@@ -14,44 +14,18 @@ const props = defineProps<{
 const holders = ref<MilestoneHolderResponse[]>([])
 const loading = ref(true)
 const fetched = ref(false)
-const showTooltip = ref(false)
-const triggerEl = ref<HTMLElement | null>(null)
-const popupPos = ref({ bottom: '0px', right: '0px' })
-let hoverTimer: ReturnType<typeof setTimeout> | null = null
-let leaveTimer: ReturnType<typeof setTimeout> | null = null
+const { isOpen, triggerRef, panelRef, panelStyle, onTriggerEnter, onTriggerLeave, onPanelEnter, onPanelLeave } =
+  useFloatingPanel({
+    width: 'auto',
+    side: 'above',
+    align: 'end',
+    gap: 8,
+    hover: { openDelay: 600, closeDelay: 150 },
+  })
 
-function updatePosition() {
-  if (!triggerEl.value) return
-  const rect = triggerEl.value.getBoundingClientRect()
-  popupPos.value = {
-    bottom: `${window.innerHeight - rect.top}px`,
-    right: `${window.innerWidth - rect.right}px`,
-  }
-}
-
-async function onMouseEnter() {
-  if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null }
-  if (showTooltip.value) return
-  hoverTimer = setTimeout(async () => {
-    updatePosition()
-    showTooltip.value = true
-    await nextTick()
-    if (!fetched.value) fetchHolders()
-  }, 600)
-}
-
-function onMouseLeave() {
-  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null }
-  leaveTimer = setTimeout(() => { showTooltip.value = false }, 150)
-}
-
-function onPopupEnter() {
-  if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null }
-}
-
-function onPopupLeave() {
-  leaveTimer = setTimeout(() => { showTooltip.value = false }, 150)
-}
+watch(isOpen, (value) => {
+  if (value && !fetched.value) fetchHolders()
+})
 
 async function fetchHolders() {
   fetched.value = true
@@ -64,15 +38,10 @@ async function fetchHolders() {
   }
   loading.value = false
 }
-
-onUnmounted(() => {
-  if (hoverTimer) clearTimeout(hoverTimer)
-  if (leaveTimer) clearTimeout(leaveTimer)
-})
 </script>
 
 <template>
-  <span ref="triggerEl" class="holder-trigger" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <span ref="triggerRef" class="holder-trigger" @mouseenter="onTriggerEnter" @mouseleave="onTriggerLeave">
     <span class="holder-trigger__pill">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -83,12 +52,11 @@ onUnmounted(() => {
 
     <Teleport to="body">
       <Transition name="holder-tooltip">
-        <div v-if="showTooltip" class="holder-popup" :style="{ bottom: popupPos.bottom, right: popupPos.right }"
-          @mouseenter="onPopupEnter" @mouseleave="onPopupLeave">
-          <div class="holder-popup__bridge" />
+        <div v-if="isOpen" ref="panelRef" class="holder-popup" :style="panelStyle"
+          @mouseenter="onPanelEnter" @mouseleave="onPanelLeave">
           <div class="holder-popup__card">
             <div class="holder-popup__header">
-              <span class="holder-popup__title">Completed by</span>
+              <span class="field-label">Completed by</span>
               <span class="holder-popup__count">{{ completions }}</span>
             </div>
 
@@ -100,9 +68,9 @@ onUnmounted(() => {
             </div>
 
             <div v-else class="holder-popup__list">
-              <router-link v-for="h in holders" :key="h.userId"
-                :to="{ name: 'player-profile', params: { userId: h.userId } }" class="holder-popup__row">
-                <UserChip :user="toUserRef(h)" size="sm" class="holder-popup__player" />
+              <router-link v-for="h in holders" :key="h.player.id"
+                :to="{ name: 'player-profile', params: { userId: h.player.id } }" class="holder-popup__row">
+                <UserChip :user="h.player" size="sm" class="holder-popup__player" />
                 <span class="holder-popup__time">{{ formatRelativeDate(h.completedAt) }}</span>
               </router-link>
             </div>
@@ -141,17 +109,7 @@ onUnmounted(() => {
 }
 
 .holder-popup {
-  position: fixed;
   z-index: 10000;
-  padding-bottom: 8px;
-}
-
-.holder-popup__bridge {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 12px;
 }
 
 .holder-popup__card {
@@ -169,13 +127,6 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
-}
-
-.holder-popup__title {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .holder-popup__count {

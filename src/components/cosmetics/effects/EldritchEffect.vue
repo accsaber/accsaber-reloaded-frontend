@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asColor, asNumber, boxRing, clampNumber, easeIn, easeOut, geometryMemo, hostMatches, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'

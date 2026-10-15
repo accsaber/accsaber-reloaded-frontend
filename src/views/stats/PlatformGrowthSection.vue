@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import DistributionRanking from '@/components/domain/DistributionRanking.vue'
+import DistributionRanking from '@/views/stats/DistributionRanking.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import type { DistributionEntryResponse, TimeSeriesPointResponse } from '@/types/api/statistics'
 import type { MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'

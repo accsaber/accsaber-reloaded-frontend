@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
 import type { MilestoneResponse } from '@/types/api/milestones'
-import { tierColor, formatPercent } from '@/utils/constants'
+import { tierColor } from '@/utils/constants'
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
+import { formatPercent } from '@/utils/formatters'
 
 defineProps<{ milestone: MilestoneResponse }>()
 </script>
@@ -15,7 +16,7 @@ defineProps<{ milestone: MilestoneResponse }>()
         :size="44" />
       <span class="milestone-card__tier">{{ milestone.tier }}</span>
     </div>
-    <h3 class="milestone-card__title">{{ milestone.title }}</h3>
+    <h3 class="milestone-card__title card-title">{{ milestone.title }}</h3>
     <p class="milestone-card__desc">{{ milestone.description }}</p>
     <div class="milestone-card__footer">
       <span class="milestone-card__xp">{{ milestone.xp }} XP</span>
@@ -59,13 +60,6 @@ defineProps<{ milestone: MilestoneResponse }>()
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--tier-color);
-}
-
-.milestone-card__title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .milestone-card__desc {

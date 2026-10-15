@@ -51,7 +51,3 @@ export function reweightBatch(
 ): Promise<void> {
   return post<void>(`/ranking/batches/${batchId}/reweight`, req)
 }
-
-export function recalculateBatch(batchId: string): Promise<void> {
-  return post<void>(`/ranking/batches/${batchId}/recalculate`)
-}

@@ -17,7 +17,7 @@ const emit = defineEmits<{ toggle: [value: T]; clear: [] }>()
 
 <template>
   <div class="chips">
-    <span class="chips__label">{{ label }}</span>
+    <span class="chips__label field-label">{{ label }}</span>
     <div class="chips__row">
       <button type="button" class="chips__chip" :class="{ 'chips__chip--active': selected.length === 0 }"
         @click="emit('clear')">
@@ -42,11 +42,6 @@ const emit = defineEmits<{ toggle: [value: T]; clear: [] }>()
 
 .chips__label {
   flex-shrink: 0;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
 }
 
 .chips__row {
@@ -57,7 +52,7 @@ const emit = defineEmits<{ toggle: [value: T]; clear: [] }>()
 }
 
 .chips__chip {
-  padding: 3px 8px;
+  padding: 3px var(--space-sm);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);

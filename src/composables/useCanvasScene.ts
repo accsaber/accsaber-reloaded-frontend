@@ -103,7 +103,6 @@ function useSceneCanvas(
 
   onMounted(() => {
     layout()
-    window.addEventListener('resize', scheduleLayout)
     if (canvasRef.value && sizing.observe) {
       stopObserving = sizing.observe(canvasRef.value, scheduleLayout)
     }
@@ -115,7 +114,6 @@ function useSceneCanvas(
     loop.stop()
     if (pendingLayout) cancelAnimationFrame(pendingLayout)
     pendingLayout = 0
-    window.removeEventListener('resize', scheduleLayout)
     stopObserving?.()
     stopObserving = null
     visibility?.disconnect()

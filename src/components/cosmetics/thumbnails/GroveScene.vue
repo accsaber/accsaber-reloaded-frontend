@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { GroveScene } from '@/types/api/items'
+import type { GroveScene } from '@/types/cosmetics/background'
 import { cyc, win } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{ scene: GroveScene }>()
 
@@ -35,7 +36,7 @@ useElementCanvas(canvasRef, {
       const g = ctx.createRadialGradient(x, y, 0, x, y, pr)
       g.addColorStop(0, color)
       g.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.globalAlpha = Math.max(0, Math.min(1, a * gm))
+      ctx.globalAlpha = clamp01(a * gm)
       ctx.fillStyle = g
       ctx.beginPath()
       ctx.arc(x, y, pr, 0, Math.PI * 2)

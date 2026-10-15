@@ -1,9 +1,12 @@
 import type { Router } from 'vue-router'
 
 const prefetched = new Set<string>()
+const seenHrefs = new Set<string>()
 let installed = false
 
 function triggerLoad(router: Router, href: string) {
+  if (seenHrefs.has(href)) return
+  seenHrefs.add(href)
   try {
     const url = new URL(href, window.location.origin)
     if (url.origin !== window.location.origin) return
@@ -16,6 +19,7 @@ function triggerLoad(router: Router, href: string) {
       if (typeof comp === 'function') {
         (comp as () => Promise<unknown>)().catch(() => {
           prefetched.delete(key)
+          seenHrefs.delete(href)
         })
       }
     }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import GlowImage from '@/components/common/GlowImage.vue';
+import CoverImage from '@/components/common/CoverImage.vue';
 import type { MapDisplay } from '@/types/display';
 import { isRankingSubdomain } from '@/utils/subdomain';
 import { computed } from 'vue';
@@ -26,7 +26,7 @@ function handleClick(event: MouseEvent) {
 
 <template>
   <a class="map-card-compact" :href="href" @click="handleClick">
-    <GlowImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover"
+    <CoverImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover"
       :fallback-src="map.coverFallbackUrl ?? null" />
     <div class="map-card-compact__info">
       <SongTitle class="map-card-compact__song" layout="stacked" :name="map.songName"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
-import type { ProfileThumbnailBackgroundValue } from '@/types/api/items'
-import { pickAssetUrl, themeCompositionLayers, type EffectLayer } from '@/utils/items'
+import type { ProfileThumbnailBackgroundValue } from '@/types/cosmetics/background'
+import { pickAssetUrl } from '@/utils/cosmetics/readers'
+import { type EffectLayer, themeCompositionLayers } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = defineProps<{

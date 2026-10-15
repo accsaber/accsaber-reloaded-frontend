@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CrateIconLayer, CrateIconPath, CrateIconValue } from '@/types/api/items'
+import type { CrateIconLayer, CrateIconPath, CrateIconValue } from '@/types/cosmetics/crate'
 import { computed } from 'vue'
 
 const props = defineProps<{

@@ -22,7 +22,7 @@ import ClanHeaderActions from './clans/ClanHeaderActions.vue'
 import ClanNowStrip from './clans/ClanNowStrip.vue'
 import ClanRosterTab from './clans/ClanRosterTab.vue'
 import { loadClanLevels } from './clans/clanLevels'
-import { useClanChat } from './clans/useClanChat'
+import { useClanChat } from '@/composables/useClanChat'
 import { useClanFeed } from './clans/useClanFeed'
 import { useClanPage } from './clans/useClanPage'
 import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
@@ -44,7 +44,7 @@ const ClanStandingTab = defineAsyncComponent(() => import('./clans/ClanStandingT
 const ClanCosmeticsTab = defineAsyncComponent(() => import('./clans/ClanCosmeticsTab.vue'))
 const ClanRequestsTab = defineAsyncComponent(() => import('./clans/ClanRequestsTab.vue'))
 const ClanAuditTab = defineAsyncComponent(() => import('./clans/ClanAuditTab.vue'))
-const ClanChatTab = defineAsyncComponent(() => import('./clans/ClanChatTab.vue'))
+const ClanChatTab = defineAsyncComponent(() => import('@/components/domain/ClanChatTab.vue'))
 const ClanDiplomacyTab = defineAsyncComponent(() => import('./clans/ClanDiplomacyTab.vue'))
 const ClanMissionsTab = defineAsyncComponent(() => import('./clans/ClanMissionsTab.vue'))
 const ClanWarsTab = defineAsyncComponent(() => import('./clans/ClanWarsTab.vue'))
@@ -204,7 +204,7 @@ function setTab(tab: string) {
 async function reload() {
   const fetched = await load()
   if (!fetched) {
-    await router.push({ name: 'clans' })
+    if (error.value) await router.push({ name: 'clans' })
     return
   }
   if (fetched.clan.slug !== slugOrId.value) {

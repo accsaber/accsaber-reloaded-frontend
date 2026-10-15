@@ -185,7 +185,7 @@ onUnmounted(() => {
         <div class="crate-preview__art" :class="rarityClass(crate.rarity)">
           <ItemPreview :item="crate" />
         </div>
-        <h3 class="crate-preview__name">{{ crate.name }}</h3>
+        <h3 class="card-title">{{ crate.name }}</h3>
         <span class="crate-preview__rarity" :class="rarityClass(crate.rarity)">
           {{ crate.rarity }}
         </span>
@@ -195,7 +195,7 @@ onUnmounted(() => {
 
       <aside ref="modifiersRef" class="crate-preview__modifiers" aria-label="Possible modifiers">
         <div class="crate-preview__section-head">
-          <span class="crate-preview__section-title">Modifiers</span>
+          <span class="field-label">Modifiers</span>
         </div>
 
         <div v-if="modifiersLoading" class="crate-preview__modifiers-body">
@@ -221,7 +221,7 @@ onUnmounted(() => {
 
       <section class="crate-preview__items" aria-label="Possible items">
         <div class="crate-preview__section-head">
-          <span class="crate-preview__section-title">Items</span>
+          <span class="field-label">Items</span>
           <span v-if="!contentsLoading && contents.length" class="crate-preview__section-count">
             {{ contents.length }} {{ contents.length === 1 ? 'item' : 'items' }}
           </span>
@@ -283,7 +283,7 @@ onUnmounted(() => {
         aria-label="Possible unusual effects"
       >
         <div class="crate-preview__section-head">
-          <span class="crate-preview__section-title">Unusual Effects</span>
+          <span class="field-label">Unusual Effects</span>
           <span v-if="!effectsLoading && effects.length" class="crate-preview__section-count">
             On an Unusual roll you get one of these, equal chance.
           </span>
@@ -356,13 +356,6 @@ onUnmounted(() => {
   max-width: 75%;
   max-height: 75%;
   object-fit: contain;
-}
-
-.crate-preview__name {
-  margin: 0;
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .crate-preview__rarity {
@@ -458,13 +451,6 @@ onUnmounted(() => {
   gap: var(--space-sm);
 }
 
-.crate-preview__section-title {
-  font-size: var(--text-caption);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .crate-preview__section-count {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
@@ -510,7 +496,7 @@ onUnmounted(() => {
   position: relative;
   display: inline-flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   width: 116px;
   min-width: 0;
   vertical-align: top;

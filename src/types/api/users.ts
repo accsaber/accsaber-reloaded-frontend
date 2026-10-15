@@ -3,6 +3,7 @@ import type { ClanStatsResponse } from './clans'
 import type { MilestoneTier, MilestoneType, SupersedesReason } from '../enums'
 import type { MilestoneIconGroup, MilestoneRewardResponse } from './milestones'
 import type { PaginationParams } from '../pagination'
+import type { PlayerRef } from './common'
 import type { UserRelationCounts } from './relations'
 import type { SupporterTier } from './supporters'
 
@@ -42,6 +43,12 @@ export interface ProfileUpdateRequest {
   bio?: string
   pinnedScores?: PinnedScoreInput[]
   pinnedMilestones?: PinnedMilestoneInput[]
+}
+
+export interface ApCurveResponse {
+  categoryId: string
+  categoryCode: string
+  ap: number[]
 }
 
 export interface PinnedScoreResponse {
@@ -149,16 +156,11 @@ export interface XpLeaderboardResponse {
   ranking: number
   countryRanking: number
   rankingLastWeek: number | null
-  userId: string
-  userName: string
-  country: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
+  player: PlayerRef
   totalXp: number
   level: number
   playerInactive: boolean
   supporterTier?: SupporterTier | null
-  clan?: PublicClanResponse | null
 }
 
 export interface UserAllStatisticsResponse {
@@ -283,10 +285,4 @@ export interface SkillCategory {
 export interface SkillResponse {
   userId: string
   skills: SkillCategory[]
-}
-
-export interface ApToNextResponse {
-  userId: string
-  categoryCode: string
-  rawApForOneGain: number
 }

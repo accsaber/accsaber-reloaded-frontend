@@ -25,7 +25,7 @@ import type { MissionResponse } from '@/types/api/missions'
 import { formatStanding } from '@/utils/clans'
 import { formatFullDate } from '@/utils/formatters'
 import { onMounted, ref, toRef } from 'vue'
-import ClanChatTab from '@/views/clans/ClanChatTab.vue'
+import ClanChatTab from '@/components/domain/ClanChatTab.vue'
 import ClanAdminModerateModal from './ClanAdminModerateModal.vue'
 import ClanAdminSections from './ClanAdminSections.vue'
 
@@ -186,7 +186,7 @@ onMounted(load)
         <div class="detail__identity">
           <ClanIcon :clan="clan.clan" :size="48" />
           <ClanTag :clan="clan.clan" />
-          <h2 class="detail__name">{{ clan.clan.name }}</h2>
+          <h2 class="section-title">{{ clan.clan.name }}</h2>
         </div>
         <div class="detail__actions">
           <BaseButton size="sm" @click="moderateOpen = true">Moderate</BaseButton>
@@ -274,13 +274,6 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: var(--space-md);
-}
-
-.detail__name {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .detail__actions {

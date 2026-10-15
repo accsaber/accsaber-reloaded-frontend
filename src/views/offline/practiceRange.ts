@@ -1,4 +1,5 @@
 import type { CanvasScene } from '@/composables/useCanvasScene'
+import { clamp } from '@/utils/math'
 import {
   applyGravity,
   drawSparks,
@@ -120,10 +121,6 @@ const ARROW_CHANCE = 0.55
 
 function readToken(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
 }
 
 function pickArrowDir(): Vec {

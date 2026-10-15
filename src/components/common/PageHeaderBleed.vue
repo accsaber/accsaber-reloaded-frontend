@@ -8,7 +8,7 @@ defineProps<{
 <template>
   <header class="page-header-bleed">
     <div class="page-header-bleed__content">
-      <h1 class="page-header-bleed__title">{{ title }}</h1>
+      <h1>{{ title }}</h1>
       <p class="page-header-bleed__subtitle">{{ subtitle ?? '\u00A0' }}</p>
     </div>
   </header>
@@ -23,13 +23,6 @@ defineProps<{
 
 .page-header-bleed__content {
   position: relative;
-}
-
-.page-header-bleed__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .page-header-bleed__subtitle {

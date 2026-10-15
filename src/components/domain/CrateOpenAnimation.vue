@@ -15,15 +15,17 @@ import type {
   UnusualEffectRef,
 } from '@/types/api/items'
 import {
-  RARITY_ORDER,
-  annotateEffectLayerStacks,
-  buildEffectLayers,
   displayItemName,
   isBorderTypeKey,
+  RARITY_ORDER,
   rarityClass,
-  readFragmentSpec,
   userItemTokenContext,
 } from '@/utils/items'
+import {
+  annotateEffectLayerStacks,
+  buildEffectLayers,
+  readFragmentSpec,
+} from '@/utils/cosmetics/effectLayers'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { computed, ref, toRef, watch } from 'vue'
 
@@ -329,7 +331,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
           measure-selector=".title-renderer, .item-preview > *"
         />
       </div>
-      <div class="crate-anim__reveal-name">{{ revealName }}</div>
+      <div class="crate-anim__reveal-name card-title">{{ revealName }}</div>
       <div v-if="typeName" class="crate-anim__reveal-type">{{ typeName }}</div>
       <div class="crate-anim__reveal-rarity">{{ result.rarity }}</div>
       <div v-if="resultModifiers.length" class="crate-anim__reveal-chips">
@@ -645,9 +647,6 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 }
 
 .crate-anim__reveal-name {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
   text-align: center;
 }
 
@@ -715,7 +714,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 4px var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
   background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);

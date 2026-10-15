@@ -8,8 +8,8 @@ import { useNow } from '@/composables/useNow'
 import type { ClanSeasonResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatCountdown, isSeasonRunning } from '@/utils/clans'
-import { formatFullDate } from '@/utils/formatters'
+import { isSeasonRunning } from '@/utils/clans'
+import { formatDuration, formatFullDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -53,7 +53,7 @@ const rows = computed(() => {
         endsAt: formatFullDate(season.endsAt),
         running,
         status: running
-          ? `ends in ${formatCountdown(new Date(season.endsAt).getTime() - now.value)}`
+          ? `ends in ${formatDuration(new Date(season.endsAt).getTime() - now.value, { zero: 'now' })}`
           : season.closedAt ? 'Closed' : 'Upcoming',
       }
     })
@@ -127,13 +127,6 @@ watch(() => route.query.page, fetchSeasons, { immediate: true })
 .seasons__header {
   text-align: center;
   padding: var(--space-lg) 0 var(--space-lg);
-}
-
-.seasons__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .seasons__name {

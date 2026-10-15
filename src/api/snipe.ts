@@ -1,15 +1,7 @@
-import type { SnipeComparisonResponse, SnipeSort, SnipeUnplayed } from '@/types/api/snipe'
-import type { SortDirection } from '@/types/display'
-import type { Page, PaginationParams } from '@/types/pagination'
+import type { SnipeComparisonResponse, SnipeListParams } from '@/types/api/snipe'
+import type { Page } from '@/types/pagination'
 import { get } from './client'
 import { buildQuery } from './utils'
-
-export interface SnipeListParams extends Pick<PaginationParams, 'page' | 'size'> {
-  category?: string
-  sort?: SnipeSort
-  direction?: SortDirection
-  unplayed?: SnipeUnplayed
-}
 
 export function getClosestScores(
   sniperId: string,
@@ -24,13 +16,7 @@ export function getClosestScores(
 export function buildSnipePlaylistUrl(
   sniperId: string,
   targetId: string,
-  options: {
-    size?: number
-    category?: string
-    sort?: SnipeSort
-    direction?: SortDirection
-    unplayed?: SnipeUnplayed
-  } = {},
+  options: Omit<SnipeListParams, 'page'> = {},
 ): string {
   const base = import.meta.env.VITE_API_BASE
   const root = `${base}/playlists/snipe/${sniperId}/${targetId}`

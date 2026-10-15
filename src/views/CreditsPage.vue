@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { getApiErrorMessage } from '@/api/client'
 import { getSupporterCredits } from '@/api/supporters'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -9,8 +8,8 @@ import type { SupporterCreditEntry, SupporterTier } from '@/types/api/supporters
 import { SUPPORTER_TIER_DISPLAY, SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import { KOFI_URL } from '@/utils/constants'
 import { formatCents } from '@/utils/formatters'
-import { toUserRef } from '@/utils/mappers'
 import { computed, onMounted, ref } from 'vue'
+import { parseApiError } from '@/api/client'
 
 usePageMeta({
   title: 'Credits | AccSaber',
@@ -28,7 +27,7 @@ async function load() {
     const res = await getSupporterCredits({ status: 'all', size: 100 })
     supporters.value = res.content
   } catch (e) {
-    error.value = getApiErrorMessage(e, 'Failed to load credits')
+    error.value = parseApiError(e, 'Failed to load credits').message
   } finally {
     loading.value = false
   }
@@ -73,9 +72,9 @@ const groups = computed(() => {
           <span class="credits__group-count">{{ group.rows.length }}</span>
         </h2>
         <ul class="credits__rows">
-          <li v-for="row in group.rows" :key="row.userId">
-            <router-link :to="`/players/${row.userId}`" class="credits__row">
-              <UserChip :user="toUserRef(row)" />
+          <li v-for="row in group.rows" :key="row.player.id">
+            <router-link :to="`/players/${row.player.id}`" class="credits__row">
+              <UserChip :user="row.player" />
               <span class="credits__amount">{{ formatCents(row.lifetimeSupportedCents) }}</span>
             </router-link>
           </li>
@@ -102,9 +101,6 @@ const groups = computed(() => {
 
 .credits__title {
   margin: 0 0 var(--space-2xl);
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .credits__loading {

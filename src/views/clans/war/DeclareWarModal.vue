@@ -152,7 +152,7 @@ watch(arena, () => {
 
     <div v-else-if="unlocked" class="declare">
       <section class="declare__step">
-        <h3 class="declare__label">Target</h3>
+        <h3 class="declare__label field-label">Target</h3>
         <div v-if="target" class="declare__target">
           <ClanIcon :clan="target.clan" :size="32" />
           <ClanTag :clan="target.clan" size="md" />
@@ -169,7 +169,7 @@ watch(arena, () => {
       </section>
 
       <section class="declare__step">
-        <h3 class="declare__label">Arena</h3>
+        <h3 class="declare__label field-label">Arena</h3>
         <div class="declare__tiles" role="radiogroup">
           <button
             v-for="option in ARENAS"
@@ -209,7 +209,7 @@ watch(arena, () => {
       </section>
 
       <section class="declare__step">
-        <h3 class="declare__label">Ruleset</h3>
+        <h3 class="declare__label field-label">Ruleset</h3>
         <div class="declare__tiles" role="radiogroup">
           <button
             v-for="option in RULESETS"
@@ -229,7 +229,7 @@ watch(arena, () => {
       </section>
 
       <section v-if="arena !== 'random'" class="declare__step">
-        <h3 class="declare__label">Your picks</h3>
+        <h3 class="declare__label field-label">Your picks</h3>
         <p v-if="!target" class="declare__hint">Pick a target first.</p>
         <WarMapPicker
           v-else
@@ -271,11 +271,6 @@ watch(arena, () => {
 
 .declare__label {
   margin: 0;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .declare__target {

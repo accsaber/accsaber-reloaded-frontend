@@ -10,6 +10,7 @@ import {
 } from '@/utils/cosmetics/sceneLayer'
 import type { StarfieldBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   config: StarfieldBackdropConfig
@@ -96,7 +97,7 @@ function makeNebulaSprite(color: RGB, alpha: number): HTMLCanvasElement {
 }
 
 function initStars(w: number, h: number) {
-  const count = Math.max(80, Math.min(380, Math.round(((w * h) / 9000) * props.config.starDensity)))
+  const count = clamp(Math.round(((w * h) / 9000) * props.config.starDensity), 80, 380)
   const sprites = new Map<number, StarSprite>()
   stars = []
   for (let i = 0; i < count; i++) {

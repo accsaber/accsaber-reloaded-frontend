@@ -77,7 +77,7 @@ function missionProgress(mission: MissionResponse): string {
 <template>
   <div class="sections">
     <section class="sections__block">
-      <h3 class="sections__heading">Members</h3>
+      <h3 class="card-title">Members</h3>
       <AdminTable :items="members" empty-message="No members">
         <template #head>
           <th>Player</th>
@@ -103,7 +103,7 @@ function missionProgress(mission: MissionResponse): string {
     </section>
 
     <section class="sections__block">
-      <h3 class="sections__heading">Level and XP</h3>
+      <h3 class="card-title">Level and XP</h3>
       <p class="sections__line">
         Level {{ level.progress.level }}, {{ Math.round(level.progress.totalXp).toLocaleString() }} XP total,
         {{ Math.round(level.progress.progressPercent) }}% to the next level.
@@ -130,7 +130,7 @@ function missionProgress(mission: MissionResponse): string {
 
     <section class="sections__block">
       <div class="sections__row">
-        <h3 class="sections__heading">Standing</h3>
+        <h3 class="card-title">Standing</h3>
         <BaseSelect :model-value="season" :options="seasonOptions" @update:model-value="emit('update:season', $event)" />
       </div>
       <p v-if="standingLoading" class="sections__empty">Loading...</p>
@@ -156,7 +156,7 @@ function missionProgress(mission: MissionResponse): string {
     </section>
 
     <section class="sections__block">
-      <h3 class="sections__heading">Wars</h3>
+      <h3 class="card-title">Wars</h3>
       <AdminTable :items="wars" empty-message="No wars">
         <template #head>
           <th>Against</th>
@@ -179,7 +179,7 @@ function missionProgress(mission: MissionResponse): string {
 
     <div class="sections__grid">
       <section class="sections__block">
-        <h3 class="sections__heading">Missions</h3>
+        <h3 class="card-title">Missions</h3>
         <p v-if="!missions.length" class="sections__empty">No missions this week.</p>
         <ul v-else class="sections__list">
           <li v-for="mission in missions" :key="mission.id">
@@ -190,7 +190,7 @@ function missionProgress(mission: MissionResponse): string {
       </section>
 
       <section class="sections__block">
-        <h3 class="sections__heading">Items</h3>
+        <h3 class="card-title">Items</h3>
         <p v-if="!items.length" class="sections__empty">No items.</p>
         <ul v-else class="sections__list">
           <li v-for="owned in items" :key="owned.item.id">
@@ -201,7 +201,7 @@ function missionProgress(mission: MissionResponse): string {
       </section>
 
       <section class="sections__block">
-        <h3 class="sections__heading">Alliances</h3>
+        <h3 class="card-title">Alliances</h3>
         <p v-if="!alliances.length" class="sections__empty">No alliances.</p>
         <ul v-else class="sections__list">
           <li v-for="alliance in alliances" :key="alliance.id">
@@ -214,7 +214,7 @@ function missionProgress(mission: MissionResponse): string {
       </section>
 
       <section class="sections__block">
-        <h3 class="sections__heading">Rivals</h3>
+        <h3 class="card-title">Rivals</h3>
         <p v-if="!rivals.length" class="sections__empty">No rivals.</p>
         <ul v-else class="sections__list">
           <li v-for="rival in rivals" :key="rival.clan.id">
@@ -250,13 +250,6 @@ function missionProgress(mission: MissionResponse): string {
 
 .sections__row :deep(.base-select) {
   width: 200px;
-}
-
-.sections__heading {
-  margin: 0;
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .sections__line {

@@ -73,5 +73,3 @@ const emit = defineEmits<{ commitXp: []; add: []; remove: [itemId: string] }>()
   </button>
   <p v-else-if="editable && limitText" class="campaign-editor__hint">{{ limitText }}</p>
 </template>
-
-<style scoped src="./campaignEditorFields.css"></style>

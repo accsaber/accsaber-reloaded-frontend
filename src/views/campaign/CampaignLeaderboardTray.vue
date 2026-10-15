@@ -7,20 +7,20 @@ import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import { useMediaQuery } from '@/composables/useMediaQuery'
-import { getApiErrorMessage } from '@/api/client'
 import type {
   CampaignDetailResponse,
   CampaignLeaderboardEntry,
-  CampaignLeaderboardPlayer,
   CampaignNodeScoreEntry,
 } from '@/types/api/campaigns'
+import type { PlayerRef } from '@/types/api/common'
 import type { CampaignLeaderboardBoard } from '@/types/enums'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatAccuracy, formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { parseApiError } from '@/api/client'
 
 const props = defineProps<{
   campaign: CampaignDetailResponse
@@ -30,7 +30,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:nodeId': [id: string | null]
-  spectate: [player: CampaignLeaderboardPlayer]
+  spectate: [player: PlayerRef]
 }>()
 
 const PAGE_SIZE = 50
@@ -114,7 +114,7 @@ async function loadBoard() {
     loadedKey = key
   } catch (err) {
     if (seq !== fetchSeq) return
-    error.value = getApiErrorMessage(err, 'Failed to load the leaderboard')
+    error.value = parseApiError(err, 'Failed to load the leaderboard').message
   } finally {
     if (seq === fetchSeq) loading.value = false
   }
@@ -149,7 +149,7 @@ const emptyMessage = computed(() => {
 })
 
 function pct(value?: number): string {
-  return value != null ? `${(value * 100).toFixed(2)}%` : '-'
+  return value != null ? formatAccuracy(value) : '-'
 }
 
 function apText(value?: number): string {
@@ -157,7 +157,7 @@ function apText(value?: number): string {
 }
 
 interface BoardRow {
-  player: CampaignLeaderboardPlayer
+  player: PlayerRef
   rank: number | null
   sub: string | null
   progress: { pct: number; count: string } | null
@@ -219,8 +219,8 @@ function goBack() {
   emit('update:nodeId', null)
 }
 
-function isSpectating(player: CampaignLeaderboardPlayer): boolean {
-  return !!props.spectatingUserId && props.spectatingUserId === player.userId
+function isSpectating(player: PlayerRef): boolean {
+  return !!props.spectatingUserId && props.spectatingUserId === player.id
 }
 </script>
 
@@ -349,7 +349,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
         <button
           v-for="row in rows"
           v-else
-          :key="row.player.userId"
+          :key="row.player.id"
           type="button"
           class="lb__row"
           :class="{
@@ -357,21 +357,21 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
             'lb__row--active': isSpectating(row.player),
           }"
           :aria-current="isSpectating(row.player) ? 'true' : undefined"
-          :title="`View ${row.player.userName}'s run`"
+          :title="`View ${row.player.name}'s run`"
           @click="emit('spectate', row.player)"
         >
           <span v-if="row.rank != null" class="lb__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
           <img
             class="lb__avatar"
             :src="pickAvatarUrl(row.player)"
-            :alt="row.player.userName"
+            :alt="row.player.name"
             loading="lazy"
             decoding="async"
-            @error="onAvatarError(pickAvatarFallback(row.player))($event)"
+            @error="onImageError(pickAvatarFallback(row.player))($event)"
           />
           <span class="lb__who">
             <span class="lb__name">
-              {{ row.player.userName }}
+              {{ row.player.name }}
               <CountryFlag v-if="row.player.country" :country="row.player.country" />
             </span>
             <span v-if="row.sub" class="lb__sub">{{ row.sub }}</span>
@@ -412,7 +412,7 @@ function isSpectating(player: CampaignLeaderboardPlayer): boolean {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: var(--space-sm) 12px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 700;

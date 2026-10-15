@@ -124,13 +124,6 @@ async function submit() {
   text-align: center;
 }
 
-.clan-create__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .clan-create__form {
   display: flex;
   flex-direction: column;

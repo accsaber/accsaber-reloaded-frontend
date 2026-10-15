@@ -18,7 +18,7 @@ const emit = defineEmits<{
   select: [notification: NotificationResponse]
 }>()
 
-const now = useNow(1000)
+const now = useNow()
 
 const timestamp = computed(() => formatRelativeDate(props.notification.createdAt, now.value))
 

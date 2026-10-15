@@ -135,7 +135,7 @@ async function handleImageRemove() {
       <BaseInput v-model="description" label="Description (optional)" placeholder="One-line summary" />
 
       <div class="news-form__field">
-        <label class="news-form__label">Content (Markdown)</label>
+        <label class="field-label">Content (Markdown)</label>
         <textarea v-model="content" class="news-form__textarea" rows="10" placeholder="Body of the article…" />
       </div>
 
@@ -152,7 +152,7 @@ async function handleImageRemove() {
 
       <div class="news-form__row">
         <div class="news-form__field">
-          <label class="news-form__label">Status</label>
+          <label class="field-label">Status</label>
           <select v-model="status" class="news-form__native-select">
             <option v-for="s in STATUS_OPTIONS" :key="s" :value="s">{{ s }}</option>
           </select>
@@ -194,14 +194,6 @@ async function handleImageRemove() {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.news-form__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .news-form__textarea {

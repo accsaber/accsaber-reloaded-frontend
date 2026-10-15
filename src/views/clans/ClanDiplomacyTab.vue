@@ -182,7 +182,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
 
     <div class="diplomacy__block">
       <header class="diplomacy__head">
-        <h2 class="diplomacy__title">
+        <h2 class="diplomacy__title section-title">
           Alliances
           <span v-if="allySlots !== null" class="diplomacy__slots">{{ alliances?.totalElements ?? 0 }}/{{ allySlots }}</span>
         </h2>
@@ -237,7 +237,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
 
     <div class="diplomacy__block">
       <header class="diplomacy__head">
-        <h2 class="diplomacy__title">Rivals</h2>
+        <h2 class="diplomacy__title section-title">Rivals</h2>
         <ClanPicker
           v-if="isCommander"
           :exclude-ids="takenIds"
@@ -294,10 +294,6 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .diplomacy__slots {

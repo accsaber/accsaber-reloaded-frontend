@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import CampaignRoadmap from '@/components/domain/CampaignRoadmap.vue'
 import type {
   CampaignBarrierResponse,
   CampaignDifficultyResponse,
 } from '@/types/api/campaigns'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
+import { clamp } from '@/utils/math'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import MapPickerModal from '@/components/domain/MapPickerModal.vue'
+import CampaignRoadmapToolLayer from './CampaignRoadmapToolLayer.vue'
 import CampaignTrayIcon from './CampaignTrayIcon.vue'
+import { useCampaignRoadmapTools } from './useCampaignRoadmapTools'
 
 withDefaults(defineProps<{ accent?: string }>(), {
   accent: 'var(--accent)',
@@ -177,7 +181,7 @@ const goalPct = computed({
   set: (v: number) => {
     const node = firstNode.value
     if (!node) return
-    const clamped = Math.min(100, Math.max(70, Number(v) || 70))
+    const clamped = clamp(Number(v) || 70, 70, 100)
     node.requirementValue = Math.round(clamped * 10) / 1000
   },
 })
@@ -366,7 +370,7 @@ const barrierPct = computed({
   set: (v: number) => {
     const barrier = firstBarrier.value
     if (!barrier) return
-    const clamped = Math.min(100, Math.max(70, Number(v) || 70))
+    const clamped = clamp(Number(v) || 70, 70, 100)
     barrier.conditionValue = Math.round(clamped * 10) / 1000
   },
 })
@@ -439,488 +443,459 @@ function finish() {
   emit('close', 'done')
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Escape') return
+function onModalClose() {
   if (pickerOpen.value) return
   skipAll()
 }
 
+const roadmapTools = useCampaignRoadmapTools({
+  editable: () => true,
+  mode: () => sandboxMode.value,
+  barrierPlacement: () => barrierPlacement.value,
+  selectedId: () => selectedId.value,
+  onConnect: handleConnect,
+  onDisconnect: handleDisconnect,
+  onPlaceBarrier: handlePlaceBarrier,
+})
+
 const dialogEl = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  document.addEventListener('keydown', onKeydown)
-  document.body.style.overflow = 'hidden'
   dialogEl.value?.focus()
 })
 
-onUnmounted(() => {
-  document.removeEventListener('keydown', onKeydown)
-  document.body.style.overflow = ''
-  clearAdvanceTimer()
-})
+onUnmounted(clearAdvanceTimer)
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="tutorial-backdrop">
-      <div
-        ref="dialogEl"
-        class="tutorial"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Campaign editor tutorial"
-        tabindex="-1"
-        :style="{ '--tutorial-accent': accent }"
-      >
-        <header class="tutorial__head">
-          <h2 class="tutorial__title">Build your first campaign</h2>
-          <div class="tutorial__progress" aria-label="Tutorial progress">
-            <span class="tutorial__progress-count">{{ stepIndex + 1 }} / {{ steps.length }}</span>
-            <span
-              v-for="(s, i) in steps"
-              :key="s.id"
-              class="tutorial__progress-seg"
-              :class="{
-                'tutorial__progress-seg--done': stepDone[i] || i < stepIndex,
-                'tutorial__progress-seg--current': i === stepIndex,
-              }"
-            />
-          </div>
-          <button
-            v-if="nodes.length > 0 || barriers.length > 0 || stepIndex > 0"
-            type="button"
-            class="tutorial__reset"
-            @click="resetTutorial"
+  <BaseModal :open="true" max-width="1180px" persistent @close="onModalClose">
+    <div
+      ref="dialogEl"
+      class="tutorial"
+      role="region"
+      aria-label="Campaign editor tutorial"
+      tabindex="-1"
+      :style="{ '--tutorial-accent': accent }"
+    >
+      <header class="tutorial__head">
+        <h2 class="tutorial__title">Build your first campaign</h2>
+        <div class="tutorial__progress" aria-label="Tutorial progress">
+          <span class="tutorial__progress-count">{{ stepIndex + 1 }} / {{ steps.length }}</span>
+          <span
+            v-for="(s, i) in steps"
+            :key="s.id"
+            class="tutorial__progress-seg"
+            :class="{
+              'tutorial__progress-seg--done': stepDone[i] || i < stepIndex,
+              'tutorial__progress-seg--current': i === stepIndex,
+            }"
+          />
+        </div>
+        <button
+          v-if="nodes.length > 0 || barriers.length > 0 || stepIndex > 0"
+          type="button"
+          class="tutorial__reset"
+          @click="resetTutorial"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-            </svg>
-            Start over
-          </button>
-          <BaseButton size="sm" @click="skipAll">Skip tutorial</BaseButton>
-        </header>
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+          </svg>
+          Start over
+        </button>
+        <BaseButton size="sm" @click="skipAll">Skip tutorial</BaseButton>
+      </header>
 
-        <div class="tutorial__body">
-          <div class="tutorial__stage">
-            <CampaignRoadmap
-              :difficulties="nodes"
-              :barriers="barriers"
-              :accent-color="accent"
-              :show-starfield="true"
-              :default-scale="1"
-              :follow-focus="false"
-              :selected-id="selectedId"
-              :barrier-placement="barrierPlacement"
-              :editable="true"
-              :mode="sandboxMode"
-              @select="selectedId = $event"
-              @deselect="selectedId = null"
-              @empty-click="handleEmptyClick"
-              @move="handleMove"
-              @connect="handleConnect"
-              @disconnect="handleDisconnect"
-              @place-barrier="handlePlaceBarrier"
-            >
-              <template #actions>
-                <div class="tutorial__add-cluster">
-                  <button
-                    type="button"
-                    class="tutorial__add-btn"
-                    :class="{ 'tutorial__add-btn--attn': wantsAdd }"
-                    @click="pickerOpen = true"
+      <div class="tutorial__body">
+        <div class="tutorial__stage">
+          <CampaignRoadmap
+            :difficulties="nodes"
+            :barriers="barriers"
+            :accent-color="accent"
+            :show-starfield="true"
+            :default-scale="1"
+            :follow-focus="false"
+            :selected-id="selectedId"
+            :barrier-placement="barrierPlacement"
+            :editable="true"
+            :mode="sandboxMode"
+            :tools="roadmapTools"
+            @select="selectedId = $event"
+            @deselect="selectedId = null"
+            @empty-click="handleEmptyClick"
+            @move="handleMove"
+          >
+            <template #tools="{ layer, edge }">
+              <CampaignRoadmapToolLayer :tools="roadmapTools" :layer="layer" :edge="edge" />
+            </template>
+            <template #actions>
+              <div class="tutorial__add-cluster">
+                <button
+                  type="button"
+                  class="tutorial__add-btn"
+                  :class="{ 'tutorial__add-btn--attn': wantsAdd }"
+                  @click="pickerOpen = true"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Add node
-                  </button>
-                  <button
-                    type="button"
-                    class="tutorial__add-btn"
-                    :class="{
-                      'tutorial__add-btn--attn': wantsBarrier,
-                      'tutorial__add-btn--armed': barrierPlacement,
-                    }"
-                    :disabled="!hasConnection"
-                    :title="!hasConnection ? 'Connect two nodes first' : ''"
-                    @click="toggleBarrierPlacement"
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Add node
+                </button>
+                <button
+                  type="button"
+                  class="tutorial__add-btn"
+                  :class="{
+                    'tutorial__add-btn--attn': wantsBarrier,
+                    'tutorial__add-btn--armed': barrierPlacement,
+                  }"
+                  :disabled="!hasConnection"
+                  :title="!hasConnection ? 'Connect two nodes first' : ''"
+                  @click="toggleBarrierPlacement"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <line x1="12" y1="3" x2="12" y2="21" />
-                      <line x1="7" y1="6" x2="17" y2="6" />
-                      <line x1="7" y1="18" x2="17" y2="18" />
-                    </svg>
-                    {{ barrierPlacement ? 'Pick an arrow' : 'Add barrier' }}
-                  </button>
-                </div>
-              </template>
-            </CampaignRoadmap>
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                    <line x1="7" y1="6" x2="17" y2="6" />
+                    <line x1="7" y1="18" x2="17" y2="18" />
+                  </svg>
+                  {{ barrierPlacement ? 'Pick an arrow' : 'Add barrier' }}
+                </button>
+              </div>
+            </template>
+          </CampaignRoadmap>
 
-            <div class="tutorial__mode" role="radiogroup" aria-label="Canvas mode">
-              <button
-                type="button"
-                role="radio"
-                :aria-checked="sandboxMode === 'drag'"
-                class="tutorial__mode-btn"
-                :class="{ 'tutorial__mode-btn--active': sandboxMode === 'drag' }"
-                @click="sandboxMode = 'drag'"
-              >
-                Drag
-              </button>
-              <button
-                type="button"
-                role="radio"
-                :aria-checked="sandboxMode === 'connect'"
-                class="tutorial__mode-btn"
-                :class="{
-                  'tutorial__mode-btn--active': sandboxMode === 'connect',
-                  'tutorial__mode-btn--attn': wantsConnectMode,
-                }"
-                @click="sandboxMode = 'connect'"
-              >
-                Connect
-              </button>
-              <button
-                type="button"
-                role="radio"
-                :aria-checked="sandboxMode === 'select'"
-                class="tutorial__mode-btn"
-                :class="{ 'tutorial__mode-btn--active': sandboxMode === 'select' }"
-                @click="sandboxMode = 'select'"
-              >
-                Select
-              </button>
-            </div>
-
-            <p class="tutorial__sandbox-tag">Practice canvas. Nothing here is saved.</p>
+          <div class="tutorial__mode" role="radiogroup" aria-label="Canvas mode">
+            <button
+              type="button"
+              role="radio"
+              :aria-checked="sandboxMode === 'drag'"
+              class="tutorial__mode-btn"
+              :class="{ 'tutorial__mode-btn--active': sandboxMode === 'drag' }"
+              @click="sandboxMode = 'drag'"
+            >
+              Drag
+            </button>
+            <button
+              type="button"
+              role="radio"
+              :aria-checked="sandboxMode === 'connect'"
+              class="tutorial__mode-btn"
+              :class="{
+                'tutorial__mode-btn--active': sandboxMode === 'connect',
+                'tutorial__mode-btn--attn': wantsConnectMode,
+              }"
+              @click="sandboxMode = 'connect'"
+            >
+              Connect
+            </button>
+            <button
+              type="button"
+              role="radio"
+              :aria-checked="sandboxMode === 'select'"
+              class="tutorial__mode-btn"
+              :class="{ 'tutorial__mode-btn--active': sandboxMode === 'select' }"
+              @click="sandboxMode = 'select'"
+            >
+              Select
+            </button>
           </div>
 
-          <aside class="tutorial__panel">
-            <Transition :name="direction === 'fwd' ? 'tutorial-step-fwd' : 'tutorial-step-back'" mode="out-in">
-              <div :key="currentStep.id" class="tutorial__step" aria-live="polite">
-                <p class="tutorial__step-count">Step {{ stepIndex + 1 }}</p>
-                <h3 class="tutorial__step-title">{{ currentStep.title }}</h3>
-                <p class="tutorial__step-body">{{ currentStep.body }}</p>
+          <p class="tutorial__sandbox-tag">Practice canvas. Nothing here is saved.</p>
+        </div>
 
-                <ul v-if="currentStep.id === 'connect'" class="tutorial__checklist">
-                  <li :class="{ 'tutorial__check--on': nodes.length >= 2 }">
+        <aside class="tutorial__panel">
+          <Transition :name="direction === 'fwd' ? 'tutorial-step-fwd' : 'tutorial-step-back'" mode="out-in">
+            <div :key="currentStep.id" class="tutorial__step" aria-live="polite">
+              <p class="tutorial__step-count">Step {{ stepIndex + 1 }}</p>
+              <h3 class="tutorial__step-title">{{ currentStep.title }}</h3>
+              <p class="tutorial__step-body">{{ currentStep.body }}</p>
+
+              <ul v-if="currentStep.id === 'connect'" class="tutorial__checklist">
+                <li :class="{ 'tutorial__check--on': nodes.length >= 2 }">
+                  <span class="tutorial__check-box" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  Two maps on the canvas
+                </li>
+                <li :class="{ 'tutorial__check--on': hasConnection }">
+                  <span class="tutorial__check-box" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  An arrow between them
+                </li>
+              </ul>
+
+              <div v-if="currentStep.id === 'goal'" class="tutorial__control">
+                <template v-if="firstNode">
+                  <label class="tutorial__field">
+                    <span>Target (%)</span>
+                    <div class="tutorial__slider-row">
+                      <input
+                        v-model.number="goalPct"
+                        type="range"
+                        min="70"
+                        max="100"
+                        step="0.1"
+                        @change="commitGoal"
+                      />
+                      <input
+                        v-model.number.lazy="goalPct"
+                        type="number"
+                        min="70"
+                        max="100"
+                        step="0.1"
+                        @change="commitGoal"
+                      />
+                    </div>
+                  </label>
+                </template>
+                <p v-else class="tutorial__note">Add a map to the canvas to try this.</p>
+              </div>
+
+              <div v-if="currentStep.id === 'reward'" class="tutorial__control">
+                <template v-if="firstNode">
+                  <label class="tutorial__field">
+                    <span>XP</span>
+                    <div class="tutorial__xp-row">
+                      <button
+                        v-for="preset in [25, 50, 100]"
+                        :key="preset"
+                        type="button"
+                        class="tutorial__xp-preset"
+                        :class="{ 'tutorial__xp-preset--active': xpValue === preset }"
+                        @click="setXpPreset(preset)"
+                      >
+                        {{ preset }}
+                      </button>
+                      <input v-model.number.lazy="xpValue" type="number" min="0" step="5" @change="commitXp" />
+                    </div>
+                  </label>
+                </template>
+                <p v-else class="tutorial__note">Add a map to the canvas to try this.</p>
+              </div>
+
+              <template v-if="currentStep.id === 'barrier'">
+                <ul class="tutorial__checklist">
+                  <li :class="{ 'tutorial__check--on': thirdMapConnected }">
                     <span class="tutorial__check-box" aria-hidden="true">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </span>
-                    Two maps on the canvas
+                    One more map, connected in
                   </li>
-                  <li :class="{ 'tutorial__check--on': hasConnection }">
+                  <li :class="{ 'tutorial__check--on': barriers.length >= 1 }">
                     <span class="tutorial__check-box" aria-hidden="true">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </span>
-                    An arrow between them
+                    A gate on the new arrow
+                  </li>
+                  <li :class="{ 'tutorial__check--on': barrierTouched }">
+                    <span class="tutorial__check-box" aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                    A requirement set
+                  </li>
+                  <li :class="{ 'tutorial__check--on': watchesMapsBefore }">
+                    <span class="tutorial__check-box" aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                    It watches the maps before it
                   </li>
                 </ul>
 
-                <div v-if="currentStep.id === 'goal'" class="tutorial__control">
-                  <template v-if="firstNode">
-                    <label class="tutorial__field">
-                      <span>Target (%)</span>
-                      <div class="tutorial__slider-row">
-                        <input
-                          v-model.number="goalPct"
-                          type="range"
-                          min="70"
-                          max="100"
-                          step="0.1"
-                          @change="commitGoal"
-                        />
-                        <input
-                          v-model.number.lazy="goalPct"
-                          type="number"
-                          min="70"
-                          max="100"
-                          step="0.1"
-                          @change="commitGoal"
-                        />
-                      </div>
-                    </label>
-                  </template>
-                  <p v-else class="tutorial__note">Add a map to the canvas to try this.</p>
-                </div>
+                <p v-if="!hasConnection" class="tutorial__note">
+                  You need two connected maps first. Go back a few steps, or add and connect them
+                  right here.
+                </p>
 
-                <div v-if="currentStep.id === 'reward'" class="tutorial__control">
-                  <template v-if="firstNode">
-                    <label class="tutorial__field">
-                      <span>XP</span>
-                      <div class="tutorial__xp-row">
-                        <button
-                          v-for="preset in [25, 50, 100]"
-                          :key="preset"
-                          type="button"
-                          class="tutorial__xp-preset"
-                          :class="{ 'tutorial__xp-preset--active': xpValue === preset }"
-                          @click="setXpPreset(preset)"
-                        >
-                          {{ preset }}
-                        </button>
-                        <input v-model.number.lazy="xpValue" type="number" min="0" step="5" @change="commitXp" />
-                      </div>
-                    </label>
-                  </template>
-                  <p v-else class="tutorial__note">Add a map to the canvas to try this.</p>
-                </div>
-
-                <template v-if="currentStep.id === 'barrier'">
-                  <ul class="tutorial__checklist">
-                    <li :class="{ 'tutorial__check--on': thirdMapConnected }">
-                      <span class="tutorial__check-box" aria-hidden="true">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                      One more map, connected in
-                    </li>
-                    <li :class="{ 'tutorial__check--on': barriers.length >= 1 }">
-                      <span class="tutorial__check-box" aria-hidden="true">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                      A gate on the new arrow
-                    </li>
-                    <li :class="{ 'tutorial__check--on': barrierTouched }">
-                      <span class="tutorial__check-box" aria-hidden="true">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                      A requirement set
-                    </li>
-                    <li :class="{ 'tutorial__check--on': watchesMapsBefore }">
-                      <span class="tutorial__check-box" aria-hidden="true">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                      It watches the maps before it
-                    </li>
-                  </ul>
-
-                  <p v-if="!hasConnection" class="tutorial__note">
-                    You need two connected maps first. Go back a few steps, or add and connect them
-                    right here.
-                  </p>
-
-                  <div v-if="firstBarrier" class="tutorial__control">
-                    <label class="tutorial__field">
-                      <span>Requirement: average acc (%)</span>
-                      <div class="tutorial__slider-row">
-                        <input
-                          v-model.number="barrierPct"
-                          type="range"
-                          min="70"
-                          max="100"
-                          step="0.5"
-                          @change="commitBarrierValue"
-                        />
-                        <input
-                          v-model.number.lazy="barrierPct"
-                          type="number"
-                          min="70"
-                          max="100"
-                          step="0.5"
-                          @change="commitBarrierValue"
-                        />
-                      </div>
-                    </label>
-                    <div class="tutorial__field tutorial__field--gap">
-                      <span>Maps the gate watches</span>
-                      <div class="tutorial__watch-row">
-                        <button
-                          v-for="n in nodesBeforeGate"
-                          :key="n.id"
-                          type="button"
-                          class="tutorial__watch-chip"
-                          :class="{
-                            'tutorial__watch-chip--active':
-                              firstBarrier.affectedCampaignDifficultyIds.includes(n.id),
-                          }"
-                          :aria-pressed="firstBarrier.affectedCampaignDifficultyIds.includes(n.id)"
-                          @click="toggleWatched(n.id)"
-                        >
-                          {{ n.songName }}
-                        </button>
-                      </div>
+                <div v-if="firstBarrier" class="tutorial__control">
+                  <label class="tutorial__field">
+                    <span>Requirement: average acc (%)</span>
+                    <div class="tutorial__slider-row">
+                      <input
+                        v-model.number="barrierPct"
+                        type="range"
+                        min="70"
+                        max="100"
+                        step="0.5"
+                        @change="commitBarrierValue"
+                      />
+                      <input
+                        v-model.number.lazy="barrierPct"
+                        type="number"
+                        min="70"
+                        max="100"
+                        step="0.5"
+                        @change="commitBarrierValue"
+                      />
+                    </div>
+                  </label>
+                  <div class="tutorial__field tutorial__field--gap">
+                    <span>Maps the gate watches</span>
+                    <div class="tutorial__watch-row">
+                      <button
+                        v-for="n in nodesBeforeGate"
+                        :key="n.id"
+                        type="button"
+                        class="tutorial__watch-chip"
+                        :class="{
+                          'tutorial__watch-chip--active':
+                            firstBarrier.affectedCampaignDifficultyIds.includes(n.id),
+                        }"
+                        :aria-pressed="firstBarrier.affectedCampaignDifficultyIds.includes(n.id)"
+                        @click="toggleWatched(n.id)"
+                      >
+                        {{ n.songName }}
+                      </button>
                     </div>
                   </div>
-                </template>
+                </div>
+              </template>
 
-                <ul v-if="currentStep.id === 'finish'" class="tutorial__trays">
-                  <li v-for="t in finishTrays" :key="t.icon">
-                    <span class="tutorial__tray-icon" aria-hidden="true">
-                      <CampaignTrayIcon :name="t.icon" :size="15" />
-                    </span>
-                    <span class="tutorial__tray-text">
-                      <strong>{{ t.name }}</strong> {{ t.text }}
-                    </span>
-                  </li>
-                </ul>
+              <ul v-if="currentStep.id === 'finish'" class="tutorial__trays">
+                <li v-for="t in finishTrays" :key="t.icon">
+                  <span class="tutorial__tray-icon" aria-hidden="true">
+                    <CampaignTrayIcon :name="t.icon" :size="15" />
+                  </span>
+                  <span class="tutorial__tray-text">
+                    <strong>{{ t.name }}</strong> {{ t.text }}
+                  </span>
+                </li>
+              </ul>
 
-                <p v-if="currentStep.id === 'add'" class="tutorial__note">
-                  The picker only lists ranked maps.
-                </p>
-                <p v-if="currentStep.id === 'connect'" class="tutorial__note">
-                  Arrows set the order players clear maps in. Click the x in the middle of an arrow
-                  to remove it.
-                </p>
-                <p v-if="currentStep.id === 'goal'" class="tutorial__note">
-                  In the editor this is the Goal tray on the left rail, shown when a node is
-                  selected. Goals can also be AP, score, rank, a 115 streak or a full combo.
-                </p>
-                <p v-if="currentStep.id === 'reward'" class="tutorial__note">
-                  In the editor this is the node's Rewards tray on the left rail. Items can go there
-                  too. XP is enough for now.
-                </p>
-                <p v-if="currentStep.id === 'barrier'" class="tutorial__note">
-                  The gate opens once the maps it watches average the target accuracy. It can only
-                  watch maps before it. In the editor this is the gate's Condition and Affected
-                  trays on the left rail, with more condition types to pick from.
-                </p>
-                <p v-if="currentStep.id === 'finish'" class="tutorial__note">
-                  Your campaign saves as a draft while you build. Later, try text labels, milestones
-                  and node shapes.
-                </p>
-              </div>
-            </Transition>
+              <p v-if="currentStep.id === 'add'" class="tutorial__note">
+                The picker only lists ranked maps.
+              </p>
+              <p v-if="currentStep.id === 'connect'" class="tutorial__note">
+                Arrows set the order players clear maps in. Click the x in the middle of an arrow
+                to remove it.
+              </p>
+              <p v-if="currentStep.id === 'goal'" class="tutorial__note">
+                In the editor this is the Goal tray on the left rail, shown when a node is
+                selected. Goals can also be AP, score, rank, a 115 streak or a full combo.
+              </p>
+              <p v-if="currentStep.id === 'reward'" class="tutorial__note">
+                In the editor this is the node's Rewards tray on the left rail. Items can go there
+                too. XP is enough for now.
+              </p>
+              <p v-if="currentStep.id === 'barrier'" class="tutorial__note">
+                The gate opens once the maps it watches average the target accuracy. It can only
+                watch maps before it. In the editor this is the gate's Condition and Affected
+                trays on the left rail, with more condition types to pick from.
+              </p>
+              <p v-if="currentStep.id === 'finish'" class="tutorial__note">
+                Your campaign saves as a draft while you build. Later, try text labels, milestones
+                and node shapes.
+              </p>
+            </div>
+          </Transition>
 
-            <Transition name="tutorial-status">
-              <div v-if="celebrating" class="tutorial__done" role="status">
-                <svg
-                  class="tutorial__done-check"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Done
-              </div>
-            </Transition>
-
-            <footer class="tutorial__foot">
-              <BaseButton size="sm" :disabled="stepIndex === 0" @click="goBack">Back</BaseButton>
-              <span class="tutorial__foot-gap" />
-              <button
-                v-if="currentStep.id !== 'finish' && !stepDone[stepIndex]"
-                type="button"
-                class="tutorial__skip-step"
-                @click="skipStep"
+          <Transition name="tutorial-status">
+            <div v-if="celebrating" class="tutorial__done" role="status">
+              <svg
+                class="tutorial__done-check"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-                Skip step
-              </button>
-              <BaseButton
-                v-if="currentStep.id !== 'finish'"
-                size="sm"
-                variant="primary"
-                :disabled="!stepDone[stepIndex]"
-                @click="goNext"
-              >
-                Next
-              </BaseButton>
-              <BaseButton v-else size="sm" variant="primary" @click="finish">Finish</BaseButton>
-            </footer>
-          </aside>
-        </div>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Done
+            </div>
+          </Transition>
+
+          <footer class="tutorial__foot">
+            <BaseButton size="sm" :disabled="stepIndex === 0" @click="goBack">Back</BaseButton>
+            <span class="tutorial__foot-gap" />
+            <button
+              v-if="currentStep.id !== 'finish' && !stepDone[stepIndex]"
+              type="button"
+              class="tutorial__skip-step"
+              @click="skipStep"
+            >
+              Skip step
+            </button>
+            <BaseButton
+              v-if="currentStep.id !== 'finish'"
+              size="sm"
+              variant="primary"
+              :disabled="!stepDone[stepIndex]"
+              @click="goNext"
+            >
+              Next
+            </BaseButton>
+            <BaseButton v-else size="sm" variant="primary" @click="finish">Finish</BaseButton>
+          </footer>
+        </aside>
       </div>
-
-      <MapPickerModal
-        v-if="pickerOpen"
-        title="Add nodes"
-        used-label="In campaign"
-        :commit-label="(n) => `Add ${n} ${n === 1 ? 'node' : 'nodes'}`"
-        @close="pickerOpen = false"
-        @pick="handlePicked"
-      />
     </div>
-  </Teleport>
+
+    <MapPickerModal
+      v-if="pickerOpen"
+      title="Add nodes"
+      used-label="In campaign"
+      :commit-label="(n) => `Add ${n} ${n === 1 ? 'node' : 'nodes'}`"
+      @close="pickerOpen = false"
+      @pick="handlePicked"
+    />
+  </BaseModal>
 </template>
 
 <style scoped>
-.tutorial-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg);
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  animation: tutorial-fade-in 150ms ease-out;
-}
-
 .tutorial {
   display: flex;
   flex-direction: column;
-  width: min(1180px, 100%);
-  height: min(760px, 100%);
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
+  height: min(760px, calc(100vh - var(--space-xl) * 2));
+  margin: calc(var(--space-lg) * -1);
   overflow: hidden;
   outline: none;
-  animation: tutorial-scale-in 200ms ease-out;
-}
-
-@keyframes tutorial-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes tutorial-scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
 }
 
 .tutorial__head {
@@ -973,7 +948,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 5px var(--space-sm);
   background: transparent;
   border: none;
   border-radius: var(--radius-btn);
@@ -1249,7 +1224,7 @@ onUnmounted(() => {
 .tutorial__slider-row input[type='number'],
 .tutorial__xp-row input[type='number'] {
   width: 72px;
-  padding: 5px 8px;
+  padding: 5px var(--space-sm);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
@@ -1422,7 +1397,7 @@ onUnmounted(() => {
 }
 
 .tutorial__skip-step {
-  padding: 5px 8px;
+  padding: 5px var(--space-sm);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;
@@ -1491,14 +1466,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 860px) {
-  .tutorial-backdrop {
-    padding: var(--space-sm);
-  }
-
-  .tutorial {
-    height: 100%;
-  }
-
   .tutorial__head {
     flex-wrap: wrap;
     gap: var(--space-sm);
@@ -1533,8 +1500,6 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tutorial-backdrop,
-  .tutorial,
   .tutorial__done-check polyline,
   .tutorial__add-btn--attn,
   .tutorial__mode-btn--attn {

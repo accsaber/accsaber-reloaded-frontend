@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
@@ -119,7 +120,7 @@ async function submit() {
     unusualEffectId.value = ''
     quantity.value = 1
   } catch (e) {
-    status.value = { kind: 'error', message: (e as Error).message || 'Award failed' }
+    status.value = { kind: 'error', message: parseApiError(e, 'Award failed').message }
   } finally {
     submitting.value = false
   }
@@ -151,7 +152,7 @@ onMounted(async () => {
   <div class="award-tab">
     <div class="award-tab__form">
       <div class="award-tab__field">
-        <label class="award-tab__label">User</label>
+        <label class="field-label">User</label>
         <UserPicker v-model="userId" />
       </div>
 
@@ -169,7 +170,7 @@ onMounted(async () => {
       />
 
       <div class="award-tab__field">
-        <label class="award-tab__label">Modifiers (leave empty to auto-resolve)</label>
+        <label class="field-label">Modifiers (leave empty to auto-resolve)</label>
         <div class="award-tab__modifier-chips">
           <button
             v-for="m in activeModifiers"
@@ -181,9 +182,6 @@ onMounted(async () => {
             @click="toggleModifier(m.key)"
           >{{ m.name }}</button>
         </div>
-        <p v-if="!modifierKeys.length" class="award-tab__hint">
-          Non-stackable items auto-resolve to founders/seasonal/normal. Stackable items default to "normal".
-        </p>
       </div>
 
       <div v-if="unusualSelected" class="award-tab__field">
@@ -193,14 +191,10 @@ onMounted(async () => {
           label="Unusual effect"
           searchable
         />
-        <p class="award-tab__hint">
-          Choose which unusual effect this item receives. Pick "None" to leave it on the
-          default sparkle.
-        </p>
       </div>
 
       <div class="award-tab__field">
-        <label class="award-tab__label">Quantity</label>
+        <label class="field-label">Quantity</label>
         <input
           v-model.number="quantity"
           type="number"
@@ -208,9 +202,6 @@ onMounted(async () => {
           class="award-tab__qty-input"
           :disabled="!isStackable"
         />
-        <p v-if="!isStackable && selectedItem" class="award-tab__hint">
-          This item is not stackable. Quantity is forced to 1.
-        </p>
       </div>
 
       <BaseInput v-model="reason" label="Reason (optional)" />
@@ -259,14 +250,6 @@ onMounted(async () => {
   gap: var(--space-xs);
 }
 
-.award-tab__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
-
 .award-tab__actions {
   display: flex;
   justify-content: flex-end;
@@ -312,7 +295,7 @@ onMounted(async () => {
 }
 
 .award-tab__modifier-chip {
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 500;

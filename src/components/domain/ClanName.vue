@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import TitleWithEffects from '@/components/cosmetics/titles/TitleWithEffects.vue'
 import type { PublicClanResponse } from '@/types/api/clans'
-import { readClanTitle, valueFxLayers } from '@/utils/items'
+import { readClanTitle } from '@/utils/items'
+import { valueFxLayers } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = defineProps<{

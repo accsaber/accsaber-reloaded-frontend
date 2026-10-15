@@ -27,15 +27,17 @@ async function load(slugVal: string) {
   if (!slugVal) return
   loading.value = true
   notFound.value = false
+  let next: typeof news.value = null
   try {
     const { getNewsBySlug, getNewsById } = await import('@/api/news')
-    news.value = isUuid(slugVal) ? await getNewsById(slugVal) : await getNewsBySlug(slugVal)
+    next = isUuid(slugVal) ? await getNewsById(slugVal) : await getNewsBySlug(slugVal)
   } catch {
-    news.value = null
-    notFound.value = true
-  } finally {
-    loading.value = false
+    next = null
   }
+  if (slugVal !== slug.value) return
+  news.value = next
+  notFound.value = next === null
+  loading.value = false
 }
 
 const breadcrumbs = computed<Crumb[]>(() => [

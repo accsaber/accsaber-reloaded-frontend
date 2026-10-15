@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import SlotPassthrough from '@/components/common/SlotPassthrough.vue'
 import FragmentedContent from '@/components/cosmetics/effects/FragmentedContent.vue'
 import HauntedContent from '@/components/cosmetics/effects/HauntedContent.vue'
 import WornContent from '@/components/cosmetics/effects/WornContent.vue'
-import { readFragmentFromLayers, readHauntFromLayers, readWearFromLayers, type EffectLayer } from '@/utils/items'
-import { computed } from 'vue'
+import {
+  type EffectLayer,
+  readFragmentFromLayers,
+  readHauntFromLayers,
+  readWearFromLayers,
+} from '@/utils/cosmetics/effectLayers'
+import { computed, type FunctionalComponent } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -16,6 +20,8 @@ const props = withDefaults(
   }>(),
   { fill: true, subtle: false, seed: '' },
 )
+
+const Passthrough: FunctionalComponent = (_, { slots }) => slots.default?.()
 
 const fragment = computed(() => readFragmentFromLayers(props.layers))
 const wear = computed(() => readWearFromLayers(props.layers))
@@ -37,7 +43,7 @@ const fragmentProps = computed(() =>
 </script>
 
 <template>
-  <component :is="fragment ? FragmentedContent : SlotPassthrough" v-bind="fragmentProps">
+  <component :is="fragment ? FragmentedContent : Passthrough" v-bind="fragmentProps">
     <WornContent :spec="wear?.spec ?? null" :seed="wearSeed" :fill="fill">
       <HauntedContent :spec="haunt?.spec ?? null" :fill="fill">
         <slot />

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import BorderComposition from '@/components/domain/BorderComposition.vue'
 import type { PublicClanResponse } from '@/types/api/clans'
-import type { BorderColorValue } from '@/types/api/items'
+import type { BorderColorValue } from '@/types/cosmetics/border'
 import { clanColorVars } from '@/utils/clans'
-import { readBorderShapeValue, readClanEquipped, valueFxLayers } from '@/utils/items'
+import { readBorderShapeValue } from '@/utils/cosmetics/readers'
+import { readClanEquipped } from '@/utils/items'
+import { valueFxLayers } from '@/utils/cosmetics/effectLayers'
 import { computed, ref, watch } from 'vue'
 
 const props = withDefaults(

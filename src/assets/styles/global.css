@@ -17,6 +17,45 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+h1 {
+  margin: 0;
+  font-size: var(--text-page-title);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.field-label {
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.section-title {
+  margin: 0;
+  font-size: var(--text-section-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-title {
+  margin: 0;
+  font-size: var(--text-card-title);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  pointer-events: none;
+}
+
 .rank--gold {
   color: var(--tier-gold);
   font-weight: 700;
@@ -106,37 +145,6 @@ body {
   opacity: 0.75;
 }
 
-/* --- Difficulty Badge (reusable) --- */
-.diff-badge {
-  font-size: 0.65rem;
-  padding: 1px 5px;
-  border-radius: var(--radius-pill);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.diff-badge--easy {
-  background: color-mix(in srgb, var(--diff-easy) 20%, transparent);
-  color: var(--diff-easy);
-}
-.diff-badge--normal {
-  background: color-mix(in srgb, var(--diff-normal) 20%, transparent);
-  color: var(--diff-normal);
-}
-.diff-badge--hard {
-  background: color-mix(in srgb, var(--diff-hard) 20%, transparent);
-  color: var(--diff-hard);
-}
-.diff-badge--expert {
-  background: color-mix(in srgb, var(--diff-expert) 20%, transparent);
-  color: var(--diff-expert);
-}
-.diff-badge--expert_plus {
-  background: color-mix(in srgb, var(--diff-expert-plus) 20%, transparent);
-  color: var(--diff-expert-plus);
-}
-
 /* Rich-text effect classes (campaign text + user bio, whole-element or per-run spans) */
 .glow {
   text-shadow:
@@ -170,63 +178,6 @@ body {
 [data-theme='light'] .clan-colors {
   --clan-accent: oklch(from var(--clan-primary, var(--accent-overall)) clamp(0.4, l, 0.54) min(c, 0.2) h);
   --clan-accent-2: oklch(from var(--clan-secondary, var(--clan-primary, var(--text-secondary))) clamp(0.38, l, 0.56) min(c, 0.18) h);
-}
-
-.switch {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-  padding: 0;
-  background: none;
-  border: none;
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.switch__track {
-  position: relative;
-  width: 28px;
-  height: 16px;
-  border-radius: 8px;
-  background: var(--bg-overlay);
-  border: 1px solid var(--text-tertiary);
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.switch__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  transition: transform 120ms ease, background 120ms ease;
-}
-
-.switch[aria-pressed='true'] .switch__track {
-  background: color-mix(in srgb, var(--page-accent, var(--accent)) 40%, transparent);
-  border-color: var(--page-accent, var(--accent));
-}
-
-.switch[aria-pressed='true'] .switch__thumb {
-  transform: translateX(12px);
-  background: var(--page-accent, var(--accent));
-}
-
-.switch__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  user-select: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .switch__track,
-  .switch__thumb {
-    transition: none;
-  }
 }
 
 .rarity--common { --rarity-color: var(--text-tertiary); }

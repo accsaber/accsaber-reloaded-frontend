@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { CandleFill } from '@/types/api/items'
+import type { CandleFill } from '@/types/cosmetics/border'
 import { lighten, parseHex } from '@/utils/color'
 import { flickerNoise, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { framePoint, overlaySpace, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
@@ -118,17 +118,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="candle-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.candle-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

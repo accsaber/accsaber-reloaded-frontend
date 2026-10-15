@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { formatAccuracy, formatCount } from '@/utils/formatters'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
@@ -15,7 +16,7 @@ import { computed, ref, watch } from 'vue'
 import CampaignHardestNodes from './CampaignHardestNodes.vue'
 import LeaderboardPicker from './LeaderboardPicker.vue'
 import StatsFilterChips from './StatsFilterChips.vue'
-import { fmtDecimal, fmtFraction, fmtInt, labelCase, plural, rateClass, toChartPoints } from './statsFormat'
+import { fmtDecimal, labelCase, plural, rateClass, toChartPoints } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
 
 defineProps<{
@@ -206,7 +207,7 @@ watch(
       <div class="campaign-stats__row">
         <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
           @update:model-value="setCountry" />
-        <label v-if="boardDef.minParticipants" class="campaign-stats__number">
+        <label v-if="boardDef.minParticipants" class="campaign-stats__number field-label">
           <span>Min participants</span>
           <input type="number" min="0" inputmode="numeric" :value="minParticipants"
             @change="minParticipantsParam = ($event.target as HTMLInputElement).value.trim()" />
@@ -253,7 +254,7 @@ watch(
 
         <template #cell-campaign="{ row }">
           <span class="campaign-cell">
-            <GlowImage v-if="row.iconUrl" :src="(row.iconUrl as string)" alt="" :size="28" hide-on-error />
+            <CoverImage v-if="row.iconUrl" :src="(row.iconUrl as string)" alt="" :size="28" hide-on-error />
             <span class="campaign-cell__text">
               <span class="campaign-cell__name">{{ row.name }}</span>
               <span class="campaign-cell__flags">
@@ -267,27 +268,27 @@ watch(
 
         <template #cell-split="{ row }">
           <span class="split"
-            :title="fmtInt(row.completed) + ' finished, ' + fmtInt(row.inProgress) + ' playing, ' + fmtInt(row.abandoned) + ' abandoned'">
+            :title="formatCount(row.completed as number) + ' finished, ' + formatCount(row.inProgress as number) + ' playing, ' + formatCount(row.abandoned as number) + ' abandoned'">
             <span class="split__seg split__seg--done" :style="{ width: segment(row, 'completed') }" />
             <span class="split__seg split__seg--playing" :style="{ width: segment(row, 'inProgress') }" />
             <span class="split__seg split__seg--gone" :style="{ width: segment(row, 'abandoned') }" />
           </span>
         </template>
 
-        <template #cell-participants="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-nodeCount="{ value }">{{ fmtInt(value) }}</template>
+        <template #cell-participants="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-nodeCount="{ value }">{{ formatCount(value as number | null) }}</template>
         <template #cell-completionRate="{ value }">
-          <span :class="rateClass(value as number | null)">{{ fmtFraction(value) }}</span>
+          <span :class="rateClass(value as number | null)">{{ formatAccuracy(value as number | null, 1) }}</span>
         </template>
-        <template #cell-abandonRate="{ value }">{{ fmtFraction(value) }}</template>
+        <template #cell-abandonRate="{ value }">{{ formatAccuracy(value as number | null, 1) }}</template>
         <template #cell-medianDaysToComplete="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-completed="{ value }"><span class="campaign-stats__strong">{{ fmtInt(value) }}</span></template>
-        <template #cell-inProgress="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-nodesCleared="{ value }">{{ fmtInt(value) }}</template>
+        <template #cell-completed="{ value }"><span class="campaign-stats__strong">{{ formatCount(value as number | null) }}</span></template>
+        <template #cell-inProgress="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-nodesCleared="{ value }">{{ formatCount(value as number | null) }}</template>
         <template #cell-campaignXp="{ value }">{{ fmtDecimal(value, 0) }}</template>
-        <template #cell-campaigns="{ value }"><span class="campaign-stats__strong">{{ fmtInt(value) }}</span></template>
-        <template #cell-curatedCampaigns="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-completions="{ value }">{{ fmtInt(value) }}</template>
+        <template #cell-campaigns="{ value }"><span class="campaign-stats__strong">{{ formatCount(value as number | null) }}</span></template>
+        <template #cell-curatedCampaigns="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-completions="{ value }">{{ formatCount(value as number | null) }}</template>
       </DataTable>
 
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
@@ -327,11 +328,6 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
 }
 
 .campaign-stats__number input {

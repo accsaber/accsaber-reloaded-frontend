@@ -6,8 +6,6 @@ import type {
 } from '@/types/api/items'
 import { del, get, put } from '../client'
 
-export type { CrateContentResponse, CrateModifierResponse }
-
 export function getAdminCrates(): Promise<ItemResponse[]> {
   return get<ItemResponse[]>('/admin/crates')
 }

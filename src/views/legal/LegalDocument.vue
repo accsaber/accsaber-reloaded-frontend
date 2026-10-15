@@ -54,13 +54,6 @@ provide(legalSectionsKey, {
   border-bottom: 1px solid var(--bg-overlay);
 }
 
-.legal__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .legal__updated {
   margin: var(--space-xs) 0 0;
   font-size: var(--text-caption);

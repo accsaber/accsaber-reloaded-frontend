@@ -7,6 +7,8 @@ import type {
 import type { CampaignPrerequisiteInput } from '@/types/api/admin'
 import type { BarrierConditionType, CampaignRequirementType } from '@/types/enums'
 import { hexProjection, roundToPrecision, SQRT3, type ContentRect } from '@/utils/stageLayout'
+import { formatAccuracy } from '@/utils/formatters'
+import { clamp } from '@/utils/math'
 
 export const MAX_PREREQUISITES_PER_NODE = 25
 
@@ -81,11 +83,11 @@ export function backgroundReferenceSpan(unit: number): number {
 }
 
 export function clampBackgroundSize(value: number): number {
-  return roundToPrecision(Math.min(MAX_BACKGROUND_PERCENT, Math.max(1, value)))
+  return roundToPrecision(clamp(value, 1, MAX_BACKGROUND_PERCENT))
 }
 
 export function clampBackgroundOffset(value: number): number {
-  return roundToPrecision(Math.min(MAX_BACKGROUND_CELLS, Math.max(-MAX_BACKGROUND_CELLS, value)))
+  return roundToPrecision(clamp(value, -MAX_BACKGROUND_CELLS, MAX_BACKGROUND_CELLS))
 }
 
 export function pinnedBackgroundRect(
@@ -219,7 +221,7 @@ interface RequirementDisplay {
 }
 
 const REQUIREMENT_DISPLAY: Record<CampaignRequirementType, RequirementDisplay> = {
-  ACC: { label: 'Accuracy', format: (v) => `${(v * 100).toFixed(2)}%` },
+  ACC: { label: 'Accuracy', format: formatAccuracy },
   AP: { label: 'AP', format: (v) => `${Math.round(v)}` },
   SCORE: { label: 'Score', format: formatScoreCompact },
   STREAK_115: { label: '115 streak', format: (v) => `${Math.round(v)}` },
@@ -457,7 +459,7 @@ export function barrierConditionLabel(type: BarrierConditionType): string {
 
 export function barrierPairValue(type: BarrierConditionType, value: number | null): string {
   if (value == null) return '-'
-  if (BARRIER_CONDITION_META[type].metric === 'acc') return `${(value * 100).toFixed(2)}%`
+  if (BARRIER_CONDITION_META[type].metric === 'acc') return formatAccuracy(value)
   if (BARRIER_CONDITION_META[type].metric === 'fc') return ''
   return `${Math.round(value)}`
 }
@@ -494,4 +496,9 @@ export function barrierReadout(
     text: `Rank ${readout.text}`,
     inline: `Rank ${readout.inline}`,
   }
+}
+
+export function nodeApRankBlocked(d: CampaignDifficultyResponse): boolean {
+  if (d.status != null) return d.status !== 'RANKED'
+  return d.categoryId == null
 }

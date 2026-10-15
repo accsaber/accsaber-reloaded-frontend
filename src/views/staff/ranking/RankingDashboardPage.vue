@@ -5,11 +5,12 @@ import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import ComplexityPin from '@/views/staff/ranking/complexity/ComplexityPin.vue'
 import ScenarioCell from '@/views/staff/ranking/complexity/ScenarioCell.vue'
@@ -18,7 +19,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
 import { useRankingQueueStore } from '@/stores/rankingQueue'
-import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
+import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
 
 import type { BatchResponse } from '@/types/api/batches'
 import type { MapDifficultyResponse } from '@/types/api/maps'
@@ -26,7 +27,7 @@ import type { Tab, TableColumn } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
 import { MAP_STATUS_ACCENT } from '@/utils/constants'
 import { formatRelativeDate, truncate } from '@/utils/formatters'
-import { formatDifficulty } from '@/utils/mappers'
+import { pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -203,8 +204,8 @@ const rows = computed(() =>
     return {
       id: d.id,
       mapId: d.mapId,
-      coverUrl: d.cdnCoverUrl ?? d.coverUrl,
-      coverFallbackUrl: d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null,
+      coverUrl: pickCoverUrl(d),
+      coverFallbackUrl: pickCoverFallback(d),
       songName: truncate(d.songName, 44),
       songSubName: d.songSubName,
       songAuthor: truncate(d.songAuthor, 40),
@@ -231,8 +232,8 @@ const rows = computed(() =>
         : d.rankUpvotes - d.rankDownvotes,
       commentCount: d.commentCount,
       createdAt: d.createdAt,
-      createdByUsername: d.createdByUsername,
-      createdByAvatarUrl: d.createdByAvatarUrl,
+      createdByUsername: d.createdBy?.username,
+      createdByAvatarUrl: pickAvatarUrl(d.createdBy),
       difficulty: d.difficulty,
       characteristic: d.characteristic,
     }
@@ -409,7 +410,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
       @row-click="navigateToDetail"
     >
       <template #cell-cover="{ row }">
-        <GlowImage :src="row.coverUrl as string" alt="" :size="40"
+        <CoverImage :src="row.coverUrl as string" alt="" :size="40"
           :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
       </template>
 
@@ -419,9 +420,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
             :sub-name="(row.songSubName as string | null)" />
           <span class="ranking-dashboard__song-meta">
             {{ row.songAuthor }}
-            <span class="diff-badge" :class="'diff-badge--' + (row.difficulty as string).toLowerCase()">
-              {{ formatDifficulty(row.difficulty as string) }}
-            </span>
+            <DifficultyBadge :difficulty="(row.difficulty as string)" />
           </span>
         </div>
       </template>
@@ -501,7 +500,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
 
       <template #mobile-card="{ row }">
         <div class="ranking-dashboard__mobile-card" @click="navigateToDetail(row)">
-          <GlowImage :src="row.coverUrl as string" alt="" :size="48"
+          <CoverImage :src="row.coverUrl as string" alt="" :size="48"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div class="ranking-dashboard__mobile-info">
             <SongTitle class="ranking-dashboard__song-name" :name="(row.songName as string)"
@@ -685,7 +684,7 @@ function criteriaClassName(row: Record<string, unknown>): string {
 .ranking-dashboard__submitted-avatar {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   object-fit: cover;
 }
 

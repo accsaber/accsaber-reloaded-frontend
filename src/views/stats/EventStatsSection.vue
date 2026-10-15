@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { formatAccuracy, formatCount, formatShortDate } from '@/utils/formatters'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
@@ -13,7 +14,7 @@ import { storeCountry } from '@/utils/statsCountry'
 import { computed, onMounted, ref, watch } from 'vue'
 import EventSummaryPanel from './EventSummaryPanel.vue'
 import StatsFilterChips from './StatsFilterChips.vue'
-import { fmtDecimal, fmtFraction, fmtInt, plural, rateClass } from './statsFormat'
+import { fmtDecimal, plural, rateClass } from './statsFormat'
 
 defineProps<{
   accent: string
@@ -69,8 +70,7 @@ const rows = computed<Record<string, unknown>[]>(() =>
   (pageData.value?.content ?? []).map((item) => ({ ...item })))
 
 function formatWindow(row: Record<string, unknown>): string {
-  const format = (iso: unknown) => new Date(String(iso)).toLocaleDateString(undefined, { dateStyle: 'medium' })
-  return `${format(row.startsAt)} to ${format(row.endsAt)}`
+  return `${formatShortDate(String(row.startsAt))} to ${formatShortDate(String(row.endsAt))}`
 }
 
 function openSummary(row: Record<string, unknown>) {
@@ -132,19 +132,19 @@ watch(
       empty-message="No events match this filter yet." @row-click="openSummary">
       <template #cell-event="{ row }">
         <span class="event-cell">
-          <GlowImage v-if="row.iconUrl" :src="(row.iconUrl as string)" alt="" :size="28" hide-on-error />
+          <CoverImage v-if="row.iconUrl" :src="(row.iconUrl as string)" alt="" :size="28" hide-on-error />
           <span class="event-cell__title">{{ row.title }}</span>
         </span>
       </template>
       <template #cell-window="{ row }">
         <span class="event-stats__dim">{{ formatWindow(row) }}</span>
       </template>
-      <template #cell-participants="{ value }"><span class="event-stats__strong">{{ fmtInt(value) }}</span></template>
-      <template #cell-finishers="{ value }">{{ fmtInt(value) }}</template>
+      <template #cell-participants="{ value }"><span class="event-stats__strong">{{ formatCount(value as number | null) }}</span></template>
+      <template #cell-finishers="{ value }">{{ formatCount(value as number | null) }}</template>
       <template #cell-finishRate="{ value }">
-        <span :class="rateClass(value as number | null)">{{ fmtFraction(value) }}</span>
+        <span :class="rateClass(value as number | null)">{{ formatAccuracy(value as number | null, 1) }}</span>
       </template>
-      <template #cell-missionsCompleted="{ value }">{{ fmtInt(value) }}</template>
+      <template #cell-missionsCompleted="{ value }">{{ formatCount(value as number | null) }}</template>
       <template #cell-averageMissionsPerParticipant="{ value }">{{ fmtDecimal(value) }}</template>
     </DataTable>
 

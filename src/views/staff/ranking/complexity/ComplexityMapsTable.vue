@@ -129,9 +129,9 @@ const tableRows = computed(() =>
     )
     return {
       ...complexities,
-      id: row.mapDifficultyId,
+      id: row.map.id,
       source: row,
-      mapper: row.mapAuthor,
+      mapper: row.map.mapAuthor,
       scores: row.scores,
       pinned: row.complexityPinned,
       cxCurrent: row.scenarios.CURRENT?.complexity ?? null,

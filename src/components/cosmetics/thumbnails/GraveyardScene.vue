@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { GraveyardScene } from '@/types/api/items'
+import type { GraveyardScene } from '@/types/cosmetics/background'
 import { type Ctx, flickerNoise } from '@/utils/cosmetics/canvasShapes'
 import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
 import {

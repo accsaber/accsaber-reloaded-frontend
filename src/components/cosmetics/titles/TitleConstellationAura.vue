@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleConstellationAuraSpec } from '@/types/api/items'
+import type { TitleConstellationAuraSpec } from '@/types/cosmetics/title'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
 import { computed, onBeforeUnmount, useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   aura: TitleConstellationAuraSpec
@@ -252,7 +253,7 @@ function stepLetters(dt: number, fs: number): void {
   }
   letters.forEach((l, i) => {
     const mean = count[i] ? err[i] / count[i] : 0
-    const want = Math.max(0, Math.min(1, 1 - (mean - fs * 0.05) / (fs * 0.22)))
+    const want = clamp01(1 - (mean - fs * 0.05) / (fs * 0.22))
     l.align += (want - l.align) * Math.min(1, dt * 8)
   })
 }
@@ -269,7 +270,7 @@ function drawEdges(g: Ctx, fs: number): void {
   g.lineWidth = Math.max(0.5, fs * 0.03)
   g.strokeStyle = palette.value.accent
   for (const [a, b, inner] of edges) {
-    const fade = Math.max(0, Math.min(1, 2.4 - dist(stars[a].p, stars[b].p) / fs))
+    const fade = clamp01(2.4 - dist(stars[a].p, stars[b].p) / fs)
     if (fade <= 0) continue
     g.globalAlpha = (inner ? 0.7 : 0.4) * fade
     g.beginPath()

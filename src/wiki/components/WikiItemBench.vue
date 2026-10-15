@@ -72,13 +72,13 @@ function cycleItem() {
       <div class="bench__cell">
         <InventoryItemCell :key="item.id" :user-item="userItem" @select="cycleItem" />
       </div>
-      <span class="bench__name">{{ fullName }}</span>
+      <span class="bench__name card-title">{{ fullName }}</span>
       <span class="bench__rarity" :class="`rarity--${item.rarity}`">{{ item.rarity }}</span>
     </div>
 
     <div class="bench__controls">
       <div class="bench__group">
-        <span class="bench__label" id="bench-items">Item</span>
+        <span class="field-label" id="bench-items">Item</span>
         <div class="bench__row" role="group" aria-labelledby="bench-items">
           <button
             v-for="option in items"
@@ -95,7 +95,7 @@ function cycleItem() {
       </div>
 
       <div class="bench__group">
-        <span class="bench__label" id="bench-mods">Modifiers</span>
+        <span class="field-label" id="bench-mods">Modifiers</span>
         <div class="bench__row" role="group" aria-labelledby="bench-mods">
           <button
             v-for="modifier in toggleable"
@@ -119,7 +119,7 @@ function cycleItem() {
       </div>
 
       <label class="bench__group bench__serial">
-        <span class="bench__label">Serial</span>
+        <span class="field-label">Serial</span>
         <span class="bench__serial-body">
           <input v-model.number="serial" type="range" min="1" :max="maxSerial" step="1" />
           <span class="bench__serial-value">#{{ serial }}</span>
@@ -170,10 +170,7 @@ function cycleItem() {
 
 .bench__name {
   margin-top: var(--space-sm);
-  font-size: var(--text-card-title);
-  font-weight: 600;
   line-height: 1.3;
-  color: var(--text-primary);
 }
 
 .bench__rarity {
@@ -195,14 +192,6 @@ function cycleItem() {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.bench__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .bench__row {

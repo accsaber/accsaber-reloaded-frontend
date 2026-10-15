@@ -22,7 +22,6 @@ import {
   CLAN_RULES,
   CLAN_RULES_LEAD,
   CLAN_RULES_NOTE,
-  formatCountdown,
   formatStanding,
   hasClanRole,
   isPacifist,
@@ -34,6 +33,7 @@ import ClanRequestList from './clans/ClanRequestList.vue'
 import ClanStandingsTable, { type StandingsRow } from './clans/ClanStandingsTable.vue'
 import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
 import { useOwnClan } from './clans/useOwnClan'
+import { formatDuration } from '@/utils/formatters'
 
 const PAGE_SIZE = 25
 
@@ -46,7 +46,7 @@ const now = useNow()
 const title = computed(() => {
   if (season.value) return `Clans: ${season.value.name}`
   if (upcoming.value) {
-    return `Clans: ${upcoming.value.name} Starting in ${formatCountdown(new Date(upcoming.value.startsAt).getTime() - now.value)}`
+    return `Clans: ${upcoming.value.name} Starting in ${formatDuration(new Date(upcoming.value.startsAt).getTime() - now.value, { zero: 'now' })}`
   }
   return 'Clans'
 })
@@ -104,19 +104,24 @@ const rows = computed<StandingsRow[]>(() => {
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalClans = computed(() => pageData.value?.totalElements ?? 0)
 
+let clansRequest = 0
+
 async function fetchClans() {
+  const request = ++clansRequest
   loading.value = true
+  let next: typeof pageData.value = null
   try {
     const { getClans } = await import('@/api/clans')
-    pageData.value = await getClans({
+    next = await getClans({
       ...paginationParams.value,
       search: searchQuery.value.trim() || undefined,
     })
   } catch {
-    pageData.value = null
-  } finally {
-    loading.value = false
+    next = null
   }
+  if (request !== clansRequest) return
+  pageData.value = next
+  loading.value = false
 }
 
 const myClan = computed(() => auth.userProfile?.clan ?? null)
@@ -290,13 +295,6 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
 .clans__header {
   text-align: center;
   padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.clans__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .clans__subtitle {

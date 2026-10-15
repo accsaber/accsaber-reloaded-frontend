@@ -1,4 +1,5 @@
 import { isAdminSubdomain, isStagingHost } from './subdomain'
+import { readStoredString, writeStoredString } from '@/utils/storage'
 
 const COOKIE_PREFIX = isStagingHost ? 'staging_' : ''
 const COOKIE_ACCESS = `${COOKIE_PREFIX}playerAccessToken`
@@ -91,10 +92,10 @@ export function clearPlayerSession() {
 export function migrateLegacyPlayerSession() {
   if (isAdminSubdomain) return
   if (readCookie(COOKIE_ACCESS)) return
-  const access = localStorage.getItem(COOKIE_ACCESS)
-  const refresh = localStorage.getItem(COOKIE_REFRESH)
-  const expires = localStorage.getItem(COOKIE_EXPIRES)
-  const userId = localStorage.getItem(COOKIE_USER_ID)
+  const access = readStoredString(COOKIE_ACCESS)
+  const refresh = readStoredString(COOKIE_REFRESH)
+  const expires = readStoredString(COOKIE_EXPIRES)
+  const userId = readStoredString(COOKIE_USER_ID)
   if (!access || !refresh || !userId) return
   writePlayerSession({
     accessToken: access,
@@ -102,5 +103,5 @@ export function migrateLegacyPlayerSession() {
     expiresAt: Number(expires) || 0,
     userId,
   })
-  for (const key of COOKIE_KEYS) localStorage.removeItem(key)
+  for (const key of COOKIE_KEYS) writeStoredString(key, null)
 }

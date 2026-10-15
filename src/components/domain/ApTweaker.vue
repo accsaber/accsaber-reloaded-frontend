@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { useClickOutside } from '@/composables/useClickOutside'
+import { useFloatingPanel } from '@/composables/useFloatingPanel'
 import type { CurveResponse } from '@/types/api/categories'
 import { calculateAp, reverseApToAccuracy, reverseApToAccuracyByComplexity, tweakRawAp } from '@/utils/curveEval'
-import { computed, nextTick, onUnmounted, ref, toRef, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { clamp, clamp01 } from '@/utils/math'
 
 const props = withDefaults(defineProps<{
   open: boolean
@@ -26,14 +27,22 @@ const emit = defineEmits<{
   'update:open': [value: boolean]
 }>()
 
-const panelRef = ref<HTMLElement | null>(null)
-const anchorRef = toRef(props, 'anchorEl')
 const curve = ref<CurveResponse | null>(null)
 const curveLoading = ref(false)
 const editingAcc = ref(false)
 const editingAp = ref(false)
 const editInput = ref('')
-const panelStyle = ref<Record<string, string>>({})
+
+const openModel = computed({
+  get: () => props.open,
+  set: (value: boolean) => {
+    if (value || (!editingAcc.value && !editingAp.value)) emit('update:open', value)
+  },
+})
+
+const { triggerRef, panelRef, panelStyle } = useFloatingPanel({ model: openModel, width: 260, gap: 4, align: 'center' })
+
+watch(() => props.anchorEl, (el) => { triggerRef.value = el }, { immediate: true })
 
 const wholeValue = ref(0)
 const decimalValue = ref(0)
@@ -57,14 +66,14 @@ function segmentFor(pick: (stop: { at: number, value: number }) => number, targe
 }
 
 function trackToWhole(pos: number): number {
-  const t = Math.max(0, Math.min(1, pos / WHOLE_TRACK))
+  const t = clamp01(pos / WHOLE_TRACK)
   const { a, b } = segmentFor((s) => s.at, t)
   const frac = b.at > a.at ? (t - a.at) / (b.at - a.at) : 0
   return Math.round(a.value + (b.value - a.value) * frac)
 }
 
 function wholeToTrack(whole: number): number {
-  const v = Math.max(0, Math.min(100, whole))
+  const v = clamp(whole, 0, 100)
   const { a, b } = segmentFor((s) => s.value, v)
   const frac = b.value > a.value ? (v - a.value) / (b.value - a.value) : 0
   return Math.round((a.at + (b.at - a.at) * frac) * WHOLE_TRACK)
@@ -106,24 +115,6 @@ watch(() => wholeValue.value, (val) => {
   }
 })
 
-function updatePosition() {
-  if (!props.anchorEl) return
-  const rect = props.anchorEl.getBoundingClientRect()
-  const panelHeight = panelRef.value?.offsetHeight ?? 200
-  const spaceBelow = window.innerHeight - rect.bottom
-  const fitsBelow = spaceBelow >= panelHeight + 8
-
-  panelStyle.value = {
-    position: 'fixed',
-    left: `${rect.left + rect.width / 2}px`,
-    transform: 'translateX(-50%)',
-    zIndex: '300',
-    ...(fitsBelow
-      ? { top: `${rect.bottom + 4}px` }
-      : { bottom: `${window.innerHeight - rect.top + 4}px` }),
-  }
-}
-
 function startEditingAcc() {
   editingAcc.value = true
   editInput.value = `${wholeValue.value}.${decimalValue.value.toString().padStart(2, '0')}`
@@ -137,7 +128,7 @@ function commitAccEdit() {
   editingAcc.value = false
   const parsed = parseFloat(editInput.value)
   if (isNaN(parsed)) return
-  splitAccuracy(Math.max(0, Math.min(1, parsed / 100)))
+  splitAccuracy(clamp01(parsed / 100))
 }
 
 function startEditingAp() {
@@ -161,7 +152,7 @@ function commitApEdit() {
     acc = reverseApToAccuracyByComplexity(curve.value, targetAp, props.complexity)
   }
 
-  if (acc != null) splitAccuracy(Math.max(0, Math.min(1, acc)))
+  if (acc != null) splitAccuracy(clamp01(acc))
 }
 
 function handleEditKeydown(e: KeyboardEvent) {
@@ -174,12 +165,6 @@ function handleEditKeydown(e: KeyboardEvent) {
     editingAp.value = false
   }
 }
-
-function close() {
-  if (!editingAcc.value && !editingAp.value) emit('update:open', false)
-}
-
-useClickOutside(panelRef, toRef(props, 'open'), close, { ignoreRefs: [anchorRef] })
 
 watch([() => props.open, () => props.anchorEl], async ([isOpen]) => {
   if (isOpen) {
@@ -197,16 +182,8 @@ watch([() => props.open, () => props.anchorEl], async ([isOpen]) => {
       }
       curveLoading.value = false
     }
-
-    await nextTick()
-    updatePosition()
-    document.addEventListener('scroll', updatePosition, true)
-  } else {
-    document.removeEventListener('scroll', updatePosition, true)
   }
 }, { immediate: true })
-
-onUnmounted(() => document.removeEventListener('scroll', updatePosition, true))
 
 const tweakedRawAp = computed(() => {
   if (!curve.value) return 0
@@ -263,7 +240,7 @@ function diffColor(val: number): string {
     <Transition name="tweaker">
       <div v-if="open" ref="panelRef" class="ap-tweaker" :style="panelStyle" @mousedown.stop @click.stop>
         <div class="ap-tweaker__header">
-          <span class="ap-tweaker__title">AP Tweaker</span>
+          <span class="field-label">AP Tweaker</span>
           <button class="ap-tweaker__close" aria-label="Close AP tweaker" @click="emit('update:open', false)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
@@ -328,7 +305,7 @@ function diffColor(val: number): string {
 
 <style scoped>
 .ap-tweaker {
-  width: 260px;
+  z-index: 300;
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
@@ -343,14 +320,6 @@ function diffColor(val: number): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.ap-tweaker__title {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .ap-tweaker__close {
@@ -390,7 +359,7 @@ function diffColor(val: number): string {
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-input);
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   cursor: pointer;
   transition: border-color 120ms ease;
 }
@@ -407,7 +376,7 @@ function diffColor(val: number): string {
   background: var(--bg-base);
   border: 1px solid var(--accent, var(--bg-overlay));
   border-radius: var(--radius-input);
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   width: 100px;
   text-align: center;
   outline: none;
@@ -557,7 +526,7 @@ function diffColor(val: number): string {
 .tweaker-enter-from,
 .tweaker-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {

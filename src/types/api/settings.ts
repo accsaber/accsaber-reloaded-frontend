@@ -20,30 +20,6 @@ export type ScoreRowField =
   | 'last_played_at'
   | 'date'
 
-export type SettingKey =
-  | 'privacy.followingVisibility'
-  | 'privacy.rivalsVisibility'
-  | 'appearance.theme'
-  | 'appearance.colorScheme'
-  | 'appearance.primaryReplayService'
-  | 'appearance.fallbackReplayService'
-  | 'appearance.complexityNumberStyle'
-  | 'appearance.complexityBar'
-  | 'appearance.scoreRowFields'
-  | 'appearance.hideReloadedProfileFeatures'
-  | 'appearance.showStatisticsChart'
-  | 'appearance.clanChatBubble'
-  | 'notifications.tradeOffer'
-  | 'notifications.tradeResolved'
-  | 'notifications.marketSold'
-  | 'notifications.marketBid'
-  | 'notifications.marketOutbid'
-  | 'notifications.itemEarned'
-  | 'notifications.server'
-  | 'notifications.clanMembership'
-  | 'notifications.clanAlliance'
-  | 'notifications.clanWar'
-
 export type SettingsBag = Record<string, unknown>
 
 export interface PrivacySettings extends SettingsBag {

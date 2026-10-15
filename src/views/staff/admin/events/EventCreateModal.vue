@@ -125,7 +125,7 @@ async function submit() {
       </div>
 
       <div class="event-create__field">
-        <label class="event-create__label">Description (optional)</label>
+        <label class="field-label">Description (optional)</label>
         <textarea v-model="description" class="event-create__textarea" rows="3"
           placeholder="Short summary shown on the event card" />
       </div>
@@ -163,14 +163,6 @@ async function submit() {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.event-create__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .event-create__textarea {

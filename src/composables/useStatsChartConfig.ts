@@ -1,6 +1,7 @@
 import type { MetricType, TimeRange } from '@/types/display'
 import { TIME_RANGE_PARAMS } from '@/utils/constants'
 import { ref, watch } from 'vue'
+import { readStored, writeStored } from '@/utils/storage'
 
 const METRICS_KEY = 'profile:stats:metrics'
 const RANGE_KEY = 'profile:stats:range'
@@ -19,22 +20,6 @@ export const STATS_CHART_METRICS: {
 
 const METRIC_KEYS = STATS_CHART_METRICS.map((m) => m.key)
 const RANGE_KEYS = Object.keys(TIME_RANGE_PARAMS) as TimeRange[]
-
-function readStored<T>(key: string, parse: (raw: unknown) => T | null, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw === null ? fallback : parse(JSON.parse(raw)) ?? fallback
-  } catch {
-    return fallback
-  }
-}
-
-function writeStored(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-  }
-}
 
 const selectedMetrics = ref<MetricType[]>(
   readStored<MetricType[]>(

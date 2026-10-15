@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ClanTag from '@/components/domain/ClanTag.vue'
-import { onAvatarError } from '@/composables/useAvatarFallback'
+import { onImageError } from '@/utils/media'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useOwnProfileLink } from '@/composables/useOwnProfileLink'
 import { useAuthStore } from '@/stores/auth'
@@ -47,7 +47,7 @@ function onAvatarImgError(event: Event) {
   const fallback = authStore.userProfile?.avatarFallbackUrl ?? null
   const img = event.currentTarget as HTMLImageElement
   if (fallback && img.dataset.fellBack !== '1') {
-    onAvatarError(fallback)(event)
+    onImageError(fallback)(event)
     return
   }
   avatarFailed.value = true

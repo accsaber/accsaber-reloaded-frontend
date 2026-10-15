@@ -79,12 +79,47 @@ export function formatSigned(
   return value < 0 ? `-${rounded}` : rounded
 }
 
-export function formatAccuracy(value: number | null | undefined): string {
+export function formatAccuracy(value: number | null | undefined, digits = 2): string {
   if (value == null || !Number.isFinite(value)) return EN_DASH
-  return `${(value * 100).toFixed(2)}%`
+  return `${(value * 100).toFixed(digits)}%`
 }
 
 export function formatCount(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return EN_DASH
   return value.toLocaleString()
+}
+
+export function formatPercent(value: number, decimals = 1): string {
+  if (value >= 100) return '100'
+  if (value <= 0) return '0'
+  const formatted = value.toFixed(decimals)
+  if (formatted === (100).toFixed(decimals)) {
+    return (100 - Math.pow(10, -decimals)).toFixed(decimals)
+  }
+  if (formatted === (0).toFixed(decimals)) {
+    for (let d = decimals + 1; d <= 10; d++) {
+      const attempt = value.toFixed(d)
+      if (parseFloat(attempt) > 0) return attempt
+    }
+  }
+  return formatted
+}
+
+export function formatShortDate(value: string | null | undefined, fallback = EN_DASH): string {
+  if (!value) return fallback
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+export function formatDuration(ms: number, opts: { seconds?: boolean; zero?: string } = {}): string {
+  if (ms <= 0 && opts.zero) return opts.zero
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const days = Math.floor(total / 86400)
+  const hours = Math.floor((total % 86400) / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (!opts.seconds) return `${minutes}m`
+  return minutes > 0 ? `${minutes}m ${total % 60}s` : `${total % 60}s`
 }

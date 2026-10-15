@@ -2,8 +2,8 @@
 import { buildOAuthStartUrl, getDefaultCallbackUrl } from '@/api/auth'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import ProviderIcon from '@/components/domain/ProviderIcon.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import ProviderButton from '@/components/domain/ProviderButton.vue'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import { useAuthStore } from '@/stores/auth'
 import type { OAuthProvider } from '@/types/api/player-auth'
 import { computed } from 'vue'
@@ -22,10 +22,10 @@ const route = useRoute()
 const router = useRouter()
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
-const me = computed(() => authStore.authMe)
+const me = computed(() => authStore.authMe?.player ?? null)
 const meAvatarUrl = computed(() => pickAvatarUrl(me.value))
 const meAvatarFallback = computed(() => pickAvatarFallback(me.value))
-const handleMeAvatarError = (e: Event) => onAvatarError(meAvatarFallback.value)(e)
+const handleMeAvatarError = (e: Event) => onImageError(meAvatarFallback.value)(e)
 
 const providerLabels: Record<OAuthProvider, string> = {
   discord: 'Discord',
@@ -60,7 +60,7 @@ function goToSettings() {
             decoding="async" @error="handleMeAvatarError" />
           <div class="auth-modal__profile-text">
             <span class="auth-modal__name">{{ me.name }}</span>
-            <span v-if="me.country" class="auth-modal__country">{{ me.country }}</span>
+            <span v-if="me.country" class="field-label">{{ me.country }}</span>
           </div>
         </div>
 
@@ -73,25 +73,19 @@ function goToSettings() {
 
       <template v-else>
 
-        <button class="provider provider--discord provider--primary" @click="startLogin('discord')">
-          <span class="provider__icon" aria-hidden="true">
-            <ProviderIcon provider="discord" :size="20" />
-          </span>
-          <span class="provider__label">Continue with Discord</span>
-        </button>
+        <ProviderButton provider="discord" variant="primary" @click="startLogin('discord')">
+          Continue with Discord
+        </ProviderButton>
 
         <div class="auth-modal__divider">
           <span>or</span>
         </div>
 
         <div class="auth-modal__provider-row">
-          <button v-for="provider in secondaryProviders" :key="provider" class="provider" :data-provider="provider"
+          <ProviderButton v-for="provider in secondaryProviders" :key="provider" :provider="provider"
             @click="startLogin(provider)">
-            <span class="provider__icon" aria-hidden="true">
-              <ProviderIcon :provider="provider" />
-            </span>
-            <span class="provider__label">{{ providerLabels[provider] }}</span>
-          </button>
+            {{ providerLabels[provider] }}
+          </ProviderButton>
         </div>
       </template>
     </div>
@@ -134,91 +128,16 @@ function goToSettings() {
   font-size: var(--text-body);
 }
 
-.auth-modal__country {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 .auth-modal__actions {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
 }
 
-.provider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  height: 44px;
-  padding: 0 var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
-}
-
-.provider:hover {
-  border-color: var(--provider-accent, var(--text-tertiary));
-  background: color-mix(in srgb, var(--provider-accent, var(--bg-elevated)) 10%, var(--bg-surface));
-}
-
-.provider__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--provider-accent, var(--text-primary));
-}
-
-.provider--primary {
-  background: var(--provider-accent);
-  border-color: var(--provider-accent);
-  color: #ffffff;
-  font-weight: 600;
-  height: 48px;
-}
-
-.provider--primary:hover {
-  background: color-mix(in srgb, var(--provider-accent) 88%, #000 12%);
-  border-color: color-mix(in srgb, var(--provider-accent) 88%, #000 12%);
-  color: #ffffff;
-}
-
-.provider--primary .provider__icon {
-  color: #ffffff;
-}
-
-.provider--discord {
-  --provider-accent: #5865f2;
-}
-
-.provider[data-provider="beatleader"] {
-  --provider-accent: #a855f7;
-}
-
-.provider[data-provider="steam"] {
-  --provider-accent: #4b6a8c;
-}
-
-[data-theme="light"] .provider[data-provider="steam"] {
-  --provider-accent: #1b2838;
-}
-
 .auth-modal__provider-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
-}
-
-.auth-modal__provider-row .provider {
-  padding: 0 var(--space-md);
 }
 
 .auth-modal__divider {

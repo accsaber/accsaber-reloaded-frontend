@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ABOVE_CONTENT_TYPES, BLEED_TYPES, EFFECT_REGISTRY } from '@/components/cosmetics/effects/registry'
 import { useOverlayMeasure } from '@/composables/useOverlayMeasure'
-import type { Composition, ItemTypeKey, ModifierEffectSpec } from '@/types/api/items'
+import type { Composition, ModifierEffectSpec } from '@/types/cosmetics/effects'
+import type { ItemTypeKey } from '@/types/api/items'
 import type { ContentBox, EffectHostContext, EffectMeasure } from '@/utils/cosmetics/effects'
 import type { ShapeMask } from '@/utils/shapeSilhouette'
 import type { TokenContext } from '@/utils/items'
 import { computed, ref, watchEffect, type Component } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   spec: ModifierEffectSpec | null | undefined
@@ -24,7 +26,7 @@ const ctx = computed<TokenContext>(() => props.context ?? {})
 const overlayEl = ref<HTMLElement | null>(null)
 const { overlayBox, box } = useOverlayMeasure(overlayEl, () => props.measureSelector)
 
-const stack = computed(() => Math.max(0, Math.min(3, Math.round(props.stackIndex ?? 0))))
+const stack = computed(() => clamp(Math.round(props.stackIndex ?? 0), 0, 3))
 const bleeds = computed(() => compositions.value.some((c) => BLEED_TYPES.has(c.type)))
 const above = computed(() => compositions.value.some((c) => ABOVE_CONTENT_TYPES.has(c.type)))
 

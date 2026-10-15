@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import { useStackPointer } from '@/composables/useStackPointer'
-import type { BorderDryBonesOverlaySpec, BorderOverlayHost, DryBonesPart, DryBonesPathKind } from '@/types/api/items'
+import type {
+  BorderDryBonesOverlaySpec,
+  BorderOverlayHost,
+  DryBonesPart,
+  DryBonesPathKind,
+} from '@/types/cosmetics/border'
 import { frameDelta, overlaySpace, primaryFillHex, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderDryBonesOverlaySpec }>()
 
@@ -202,7 +208,7 @@ function stepRollIn(b: Bone, u: number): void {
 
 function stepFlyBack(b: Bone): void {
   const total = b.roll ? ROLL_IN_S + REBUILD_S : REBUILD_S
-  const u = Math.min(1, Math.max(0, (clock - b.start) / total))
+  const u = clamp01((clock - b.start) / total)
   if (b.roll) {
     stepRollIn(b, u)
     return
@@ -239,7 +245,7 @@ function readPointer(): void {
     insideSince = -1
     return
   }
-  dread = Math.max(0, Math.min(1, (1.3 - Math.max(p.nx, p.ny)) / 0.8))
+  dread = clamp01((1.3 - Math.max(p.nx, p.ny)) / 0.8)
   if (p.nx >= 0.5 || p.ny >= 0.5) insideSince = -1
   else if (insideSince < 0) insideSince = clock
 }

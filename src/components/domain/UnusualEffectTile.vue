@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import ItemPreview from '@/components/domain/ItemPreview.vue'
-import type { ItemResponse, ModifierEffectSpec } from '@/types/api/items'
-import type { EffectLayer } from '@/utils/items'
+import type { ItemResponse } from '@/types/api/items'
+import type { ModifierEffectSpec } from '@/types/cosmetics/effects'
+import type { EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = withDefaults(
@@ -56,7 +57,7 @@ const SAMPLE_ITEM: ItemResponse = {
 .ue-tile {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   width: var(--ue-tile-size);
   margin: 0;
 }

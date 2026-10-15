@@ -24,7 +24,7 @@ defineProps<{
 
 <style scoped>
 .provider-icon__img {
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   display: block;
 }
 </style>

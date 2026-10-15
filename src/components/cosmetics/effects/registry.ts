@@ -1,51 +1,31 @@
-import type { Component } from 'vue'
-import AuroraEffect from '@/components/cosmetics/effects/AuroraEffect.vue'
-import BorderOutlineEffect from '@/components/cosmetics/effects/BorderOutlineEffect.vue'
-import BramblesEffect from '@/components/cosmetics/effects/BramblesEffect.vue'
-import ClawedEffect from '@/components/cosmetics/effects/ClawedEffect.vue'
-import EldritchEffect from '@/components/cosmetics/effects/EldritchEffect.vue'
-import EntityEffect from '@/components/cosmetics/effects/EntityEffect.vue'
-import FilterEffect from '@/components/cosmetics/effects/FilterEffect.vue'
-import FirefliesEffect from '@/components/cosmetics/effects/FirefliesEffect.vue'
-import FireworksEffect from '@/components/cosmetics/effects/FireworksEffect.vue'
-import GlowEffect from '@/components/cosmetics/effects/GlowEffect.vue'
-import HauntEffect from '@/components/cosmetics/effects/HauntEffect.vue'
-import HolographicEffect from '@/components/cosmetics/effects/HolographicEffect.vue'
-import LabelOverlayEffect from '@/components/cosmetics/effects/LabelOverlayEffect.vue'
-import MagicalOrbEffect from '@/components/cosmetics/effects/MagicalOrbEffect.vue'
-import MistEffect from '@/components/cosmetics/effects/MistEffect.vue'
-import NightSkyEffect from '@/components/cosmetics/effects/NightSkyEffect.vue'
-import ParticleFieldEffect from '@/components/cosmetics/effects/ParticleFieldEffect.vue'
-import PumpkinBashEffect from '@/components/cosmetics/effects/PumpkinBashEffect.vue'
-import RaysEffect from '@/components/cosmetics/effects/RaysEffect.vue'
-import ShackledEffect from '@/components/cosmetics/effects/ShackledEffect.vue'
-import SnowfallEffect from '@/components/cosmetics/effects/SnowfallEffect.vue'
-import WearEffect from '@/components/cosmetics/effects/WearEffect.vue'
+import { defineAsyncComponent, type Component } from 'vue'
+
+const LabelOverlayEffect = defineAsyncComponent(() => import('@/components/cosmetics/effects/LabelOverlayEffect.vue'))
 
 export const EFFECT_REGISTRY: Record<string, Component> = {
-  border_outline: BorderOutlineEffect,
+  border_outline: defineAsyncComponent(() => import('@/components/cosmetics/effects/BorderOutlineEffect.vue')),
   label_overlay: LabelOverlayEffect,
   stat_counter: LabelOverlayEffect,
-  filter: FilterEffect,
-  glow: GlowEffect,
-  holographic: HolographicEffect,
-  particles: ParticleFieldEffect,
-  rays: RaysEffect,
-  aurora: AuroraEffect,
-  entity: EntityEffect,
-  fireflies: FirefliesEffect,
-  fireworks: FireworksEffect,
-  snowfall: SnowfallEffect,
-  night_sky: NightSkyEffect,
-  wear: WearEffect,
-  haunt: HauntEffect,
-  mist: MistEffect,
-  pumpkin_bash: PumpkinBashEffect,
-  eldritch: EldritchEffect,
-  clawed: ClawedEffect,
-  shackled: ShackledEffect,
-  brambles: BramblesEffect,
-  magical_orb: MagicalOrbEffect,
+  filter: defineAsyncComponent(() => import('@/components/cosmetics/effects/FilterEffect.vue')),
+  glow: defineAsyncComponent(() => import('@/components/cosmetics/effects/GlowEffect.vue')),
+  holographic: defineAsyncComponent(() => import('@/components/cosmetics/effects/HolographicEffect.vue')),
+  particles: defineAsyncComponent(() => import('@/components/cosmetics/effects/ParticleFieldEffect.vue')),
+  rays: defineAsyncComponent(() => import('@/components/cosmetics/effects/RaysEffect.vue')),
+  aurora: defineAsyncComponent(() => import('@/components/cosmetics/effects/AuroraEffect.vue')),
+  entity: defineAsyncComponent(() => import('@/components/cosmetics/effects/EntityEffect.vue')),
+  fireflies: defineAsyncComponent(() => import('@/components/cosmetics/effects/FirefliesEffect.vue')),
+  fireworks: defineAsyncComponent(() => import('@/components/cosmetics/effects/FireworksEffect.vue')),
+  snowfall: defineAsyncComponent(() => import('@/components/cosmetics/effects/SnowfallEffect.vue')),
+  night_sky: defineAsyncComponent(() => import('@/components/cosmetics/effects/NightSkyEffect.vue')),
+  wear: defineAsyncComponent(() => import('@/components/cosmetics/effects/WearEffect.vue')),
+  haunt: defineAsyncComponent(() => import('@/components/cosmetics/effects/HauntEffect.vue')),
+  mist: defineAsyncComponent(() => import('@/components/cosmetics/effects/MistEffect.vue')),
+  pumpkin_bash: defineAsyncComponent(() => import('@/components/cosmetics/effects/PumpkinBashEffect.vue')),
+  eldritch: defineAsyncComponent(() => import('@/components/cosmetics/effects/EldritchEffect.vue')),
+  clawed: defineAsyncComponent(() => import('@/components/cosmetics/effects/ClawedEffect.vue')),
+  shackled: defineAsyncComponent(() => import('@/components/cosmetics/effects/ShackledEffect.vue')),
+  brambles: defineAsyncComponent(() => import('@/components/cosmetics/effects/BramblesEffect.vue')),
+  magical_orb: defineAsyncComponent(() => import('@/components/cosmetics/effects/MagicalOrbEffect.vue')),
 }
 
 export const ABOVE_CONTENT_TYPES = new Set(['shackled'])

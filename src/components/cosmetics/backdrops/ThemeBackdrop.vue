@@ -2,12 +2,13 @@
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import { BACKDROP_RENDERERS, LANDSCAPE_BACKDROPS } from '@/components/cosmetics/backdrops/backdropRenderers'
 import { useThemeStore } from '@/stores/theme'
-import { themeCompositionLayers } from '@/utils/items'
+import { themeCompositionLayers } from '@/utils/cosmetics/effectLayers'
+import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { computed } from 'vue'
 
 const themeStore = useThemeStore()
 
-const config = computed(() => themeStore.backdropConfig)
+const config = computed(() => readBackdropConfig(themeStore.activeTokens))
 const configKey = computed(() => (config.value ? JSON.stringify(config.value) : ''))
 const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffects))
 const fxHost = computed(() => ({ backdropType: config.value?.type, viewport: true }))

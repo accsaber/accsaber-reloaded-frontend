@@ -199,7 +199,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   </div>
 
   <div v-else-if="kind === 'color'" class="schema-node__field">
-    <label class="schema-node__label">{{ label }}<span v-if="required"> *</span></label>
+    <label class="schema-node__label field-label">{{ label }}<span v-if="required"> *</span></label>
     <div class="schema-node__color-row">
       <input
         type="color"
@@ -218,7 +218,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   </div>
 
   <div v-else-if="kind === 'number'" class="schema-node__field">
-    <label class="schema-node__label">
+    <label class="schema-node__label field-label">
       {{ label }}<span v-if="required"> *</span>
       <span v-if="isUnitRange(schema)" class="schema-node__readout">{{
         typeof modelValue === 'number' ? modelValue : '-'
@@ -248,7 +248,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
 
   <div v-else-if="kind === 'string'" class="schema-node__field">
     <template v-if="multiline">
-      <label class="schema-node__label">{{ label }}<span v-if="required"> *</span></label>
+      <label class="schema-node__label field-label">{{ label }}<span v-if="required"> *</span></label>
       <textarea
         class="schema-node__textarea"
         rows="2"
@@ -266,7 +266,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   </div>
 
   <fieldset v-else-if="kind === 'map'" class="schema-node__group">
-    <legend class="schema-node__legend">{{ label }}<span v-if="required"> *</span></legend>
+    <legend class="schema-node__legend field-label">{{ label }}<span v-if="required"> *</span></legend>
     <p class="schema-node__map-note">
       This is the one place you enter keys directly (e.g. a CSS variable like
       <code>--accent</code>). The value is a colour.
@@ -299,7 +299,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   </fieldset>
 
   <fieldset v-else-if="kind === 'array'" class="schema-node__group">
-    <legend class="schema-node__legend">
+    <legend class="schema-node__legend field-label">
       {{ label }}<span v-if="required"> *</span>
       <span v-if="schema.minItems" class="schema-node__hint">(min {{ schema.minItems }})</span>
     </legend>
@@ -325,7 +325,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   </fieldset>
 
   <fieldset v-else-if="kind === 'union'" class="schema-node__group">
-    <legend v-if="label" class="schema-node__legend">{{ label }}<span v-if="required"> *</span></legend>
+    <legend v-if="label" class="schema-node__legend field-label">{{ label }}<span v-if="required"> *</span></legend>
     <BaseSelect
       :model-value="activeConst"
       :options="variantOptions"
@@ -347,7 +347,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   </fieldset>
 
   <fieldset v-else-if="kind === 'object'" class="schema-node__group" :class="{ 'schema-node__group--root': depth === 0 }">
-    <legend v-if="label" class="schema-node__legend">{{ label }}<span v-if="required"> *</span></legend>
+    <legend v-if="label" class="schema-node__legend field-label">{{ label }}<span v-if="required"> *</span></legend>
     <SchemaNode
       v-for="entry in entries"
       :key="entry.key"
@@ -372,11 +372,6 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .schema-node__readout {
@@ -469,11 +464,6 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
 
 .schema-node__legend {
   padding: 0 var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
 }
 
 .schema-node__hint {

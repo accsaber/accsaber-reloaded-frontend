@@ -1,6 +1,5 @@
 import type {
   TitleAscentSpec,
-  TitleScalesSpec,
   TitleExcavateSpec,
   TitleHammerSpec,
   TitleMetronomeSpec,
@@ -8,22 +7,20 @@ import type {
   TitleQuestSpec,
   TitleReelSpec,
   TitleRestartSpec,
+  TitleScalesSpec,
   TitleScrawlSpec,
   TitleSliceSpec,
   TitleSproutSpec,
   TitleTickSpec,
-} from '@/types/api/items'
+} from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { hash01 } from '@/utils/random'
+import { clamp, clamp01 } from '@/utils/math'
 
 type Style = Record<string, string>
 
 function pick(light: boolean, lightValue: string | undefined, value: string | undefined, fallback: string): string {
   return (light ? lightValue : undefined) ?? value ?? fallback
-}
-
-function clamp01(u: number): number {
-  return Math.min(1, Math.max(0, u))
 }
 
 function easeOut(u: number): number {
@@ -368,7 +365,7 @@ export interface QuestMarker {
 }
 
 function questVictims(cycle: number, n: number): number[] {
-  const count = Math.min(3, Math.max(1, Math.floor(n / 4)))
+  const count = clamp(Math.floor(n / 4), 1, 3)
   const out: number[] = []
   for (let k = 0; k < count; k++) {
     const v = Math.floor(hash01(cycle * 41 + k * 13) * n)

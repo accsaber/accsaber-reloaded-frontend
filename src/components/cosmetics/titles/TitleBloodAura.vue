@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleBleedSpec, TitleBloodAuraSpec } from '@/types/api/items'
+import type { TitleBleedSpec, TitleBloodAuraSpec } from '@/types/cosmetics/title'
 import { lighten } from '@/utils/color'
 import { drawCreature } from '@/utils/cosmetics/eclipseCreatures'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'

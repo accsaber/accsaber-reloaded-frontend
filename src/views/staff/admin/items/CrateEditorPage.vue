@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccuracy } from '@/utils/formatters'
 import {
   deleteAdminCrateContent,
   deleteAdminCrateModifier,
@@ -9,8 +10,6 @@ import {
   putAdminCrateContent,
   putAdminCrateModifier,
   putAdminCrateUnusualEffect,
-  type CrateContentResponse,
-  type CrateModifierResponse,
 } from '@/api/admin/crates'
 import { getAdminUnusualEffects } from '@/api/admin/unusual-effects'
 import {
@@ -22,7 +21,7 @@ import {
   uploadItemIcon,
 } from '@/api/admin/items'
 import { getItemModifiers } from '@/api/items'
-import { ApiError, getApiErrorMessage, parseApiError } from '@/api/client'
+import { ApiError, parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
@@ -33,6 +32,8 @@ import CrateOpenAnimation from '@/components/domain/CrateOpenAnimation.vue'
 import CratePreviewModal from '@/components/domain/CratePreviewModal.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import type {
+  CrateContentResponse,
+  CrateModifierResponse,
   ItemModifierResponse,
   ItemRarity,
   ItemResponse,
@@ -152,7 +153,7 @@ async function refresh() {
     allEffects.value = effects
     syncFormFromCrate()
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to load crate')
+    errorMsg.value = parseApiError(e, 'Failed to load crate').message
   } finally {
     loading.value = false
   }
@@ -190,7 +191,7 @@ async function saveMetadata() {
     crate.value = await updateItem(crate.value.id, req)
     syncFormFromCrate()
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to save metadata')
+    errorMsg.value = parseApiError(e, 'Failed to save metadata').message
   } finally {
     metaSaving.value = false
   }
@@ -231,7 +232,7 @@ async function togglePublish() {
     crate.value = await setItemActive(crate.value.id, target)
     syncFormFromCrate()
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to change crate status')
+    errorMsg.value = parseApiError(e, 'Failed to change crate status').message
   } finally {
     statusBusy.value = false
   }
@@ -255,7 +256,7 @@ async function addReward(item: ItemResponse, weight = 100) {
     contents.value = contents.value.filter((c) => c.rewardItem.id !== item.id)
     errorMsg.value =
       e instanceof ApiError
-        ? getApiErrorMessage(e, 'Cannot add reward')
+        ? parseApiError(e, 'Cannot add reward').message
         : 'Cannot add reward'
   } finally {
     delete rowBusy.value[item.id]
@@ -290,7 +291,7 @@ async function addSelected() {
     contents.value = await getAdminCrateContents(crateId.value)
     selectedIds.value = new Set()
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to add selected rewards')
+    errorMsg.value = parseApiError(e, 'Failed to add selected rewards').message
     contents.value = await getAdminCrateContents(crateId.value)
   } finally {
     bulkBusy.value = false
@@ -309,60 +310,31 @@ async function removeReward(rewardId: string) {
       contents.value = await getAdminCrateContents(crateId.value)
     } else {
       contents.value = snapshot
-      errorMsg.value = getApiErrorMessage(e, 'Failed to remove reward')
+      errorMsg.value = parseApiError(e, 'Failed to remove reward').message
     }
   } finally {
     delete rowBusy.value[rewardId]
   }
 }
 
-const weightDrafts = ref<Record<string, string>>({})
-const weightTimers: Record<string, ReturnType<typeof setTimeout>> = {}
 const weightErrors = ref<Record<string, string>>({})
 
-function onWeightInput(rewardId: string, value: string) {
-  weightDrafts.value[rewardId] = value
-  const trimmed = value.trim()
-  const parsed = Number.parseInt(trimmed, 10)
-  if (!trimmed || !Number.isFinite(parsed) || parsed < 1) {
+async function commitWeight(rewardId: string, value: string | number) {
+  const weight = Number.parseInt(String(value).trim(), 10)
+  if (!Number.isFinite(weight) || weight < 1) {
     weightErrors.value[rewardId] = 'Min 1'
     return
   }
   delete weightErrors.value[rewardId]
-  if (weightTimers[rewardId]) clearTimeout(weightTimers[rewardId])
-  weightTimers[rewardId] = setTimeout(() => {
-    commitWeight(rewardId, parsed)
-  }, 400)
-}
-
-async function commitWeight(rewardId: string, weight: number) {
   rowBusy.value[rewardId] = true
   try {
     await putAdminCrateContent(crateId.value, rewardId, weight)
     contents.value = await getAdminCrateContents(crateId.value)
-    delete weightDrafts.value[rewardId]
   } catch (e) {
-    weightErrors.value[rewardId] = getApiErrorMessage(e, 'Failed to update weight')
+    weightErrors.value[rewardId] = parseApiError(e, 'Failed to update weight').message
   } finally {
     delete rowBusy.value[rewardId]
   }
-}
-
-function applyPreset(rewardId: string, preset: number) {
-  weightDrafts.value[rewardId] = String(preset)
-  if (weightTimers[rewardId]) clearTimeout(weightTimers[rewardId])
-  commitWeight(rewardId, preset)
-}
-
-function rollOnce(pool: CrateContentResponse[]): ItemResponse | null {
-  const total = pool.reduce((s, c) => s + c.dropWeight, 0)
-  if (total <= 0) return null
-  let pick = Math.floor(Math.random() * total)
-  for (const c of pool) {
-    if (pick < c.dropWeight) return c.rewardItem
-    pick -= c.dropWeight
-  }
-  return null
 }
 
 const lastRoll = ref<CrateRoll | null>(null)
@@ -380,63 +352,11 @@ function doOpenOnce() {
   rollToken.value++
 }
 
-interface SimRow {
-  item: ItemResponse
-  expected: number
-  simulated: number
-  delta: number
-  outOfRange: boolean
-}
-
-const simRows = ref<SimRow[] | null>(null)
-const simRunning = ref(false)
-const simSampleSize = ref(0)
-
-async function runSimulation(n: number) {
-  if (contents.value.length === 0) return
-  simRunning.value = true
-  simSampleSize.value = n
-  await new Promise((r) => setTimeout(r, 16))
-  const counts = new Map<string, number>()
-  for (let i = 0; i < n; i++) {
-    const item = rollOnce(contents.value)
-    if (!item) continue
-    counts.set(item.id, (counts.get(item.id) ?? 0) + 1)
-  }
-  const rows: SimRow[] = contents.value.map((c) => {
-    const expectedFrac = c.dropChance
-    const observed = (counts.get(c.rewardItem.id) ?? 0) / n
-    const variance = expectedFrac * (1 - expectedFrac) / n
-    const sigma = Math.sqrt(variance)
-    const delta = observed - expectedFrac
-    const outOfRange = sigma > 0 ? Math.abs(delta) > 1.5 * sigma : false
-    return {
-      item: c.rewardItem,
-      expected: expectedFrac,
-      simulated: observed,
-      delta,
-      outOfRange,
-    }
-  })
-  rows.sort((a, b) => b.expected - a.expected)
-  simRows.value = rows
-  simRunning.value = false
-}
-
 const dropChanceFor = (id: string) => {
   const c = contents.value.find((x) => x.rewardItem.id === id)
   return c ? c.dropChance : 0
 }
 
-function formatPct(v: number, digits = 2) {
-  return `${(v * 100).toFixed(digits)}%`
-}
-
-function formatSignedPct(v: number, digits = 2) {
-  const pct = v * 100
-  const sign = pct >= 0 ? '+' : ''
-  return `${sign}${pct.toFixed(digits)}%`
-}
 
 const modifierById = computed(() => {
   const map = new Map<string, ItemModifierResponse>()
@@ -468,20 +388,13 @@ const newChancePct = ref('25')
 const attachBusy = ref(false)
 const modifierError = ref<string | null>(null)
 
-const selectedModifier = computed(() =>
-  newModifierId.value ? modifierById.value.get(newModifierId.value) ?? null : null,
-)
-
-function isSeasonalModifier(mod: ItemModifierResponse | null | undefined): boolean {
-  return !!mod && (mod.globalDropChance != null || !!mod.seasonStart || !!mod.seasonEnd)
-}
-
 function modifierDescription(id: string): string | null {
   return modifierById.value.get(id)?.description ?? null
 }
 
 function isSeasonalById(id: string): boolean {
-  return isSeasonalModifier(modifierById.value.get(id))
+  const mod = modifierById.value.get(id)
+  return !!mod && (mod.globalDropChance != null || !!mod.seasonStart || !!mod.seasonEnd)
 }
 
 function parseChancePct(value: string | number): number | null {
@@ -513,28 +426,19 @@ async function attachModifier() {
 }
 
 const modRowBusy = ref<Record<string, boolean>>({})
-const modChanceDrafts = ref<Record<string, string>>({})
 const modChanceErrors = ref<Record<string, string>>({})
-const modChanceTimers: Record<string, ReturnType<typeof setTimeout>> = {}
 
-function onModChanceInput(modId: string, value: string) {
-  modChanceDrafts.value[modId] = value
+async function commitModChance(modId: string, value: string) {
   const decimal = parseChancePct(value)
   if (decimal == null) {
     modChanceErrors.value[modId] = '0-100, exclusive of 0'
     return
   }
   delete modChanceErrors.value[modId]
-  if (modChanceTimers[modId]) clearTimeout(modChanceTimers[modId])
-  modChanceTimers[modId] = setTimeout(() => commitModChance(modId, decimal), 400)
-}
-
-async function commitModChance(modId: string, decimal: number) {
   modRowBusy.value[modId] = true
   try {
     await putAdminCrateModifier(crateId.value, modId, decimal)
     attachedModifiers.value = await getAdminCrateModifiers(crateId.value)
-    delete modChanceDrafts.value[modId]
   } catch (e) {
     modChanceErrors.value[modId] = parseApiError(e, 'Failed to update chance').message
   } finally {
@@ -554,7 +458,7 @@ async function detachModifier(modId: string) {
       attachedModifiers.value = await getAdminCrateModifiers(crateId.value)
     } else {
       attachedModifiers.value = snapshot
-      errorMsg.value = getApiErrorMessage(e, 'Failed to remove modifier')
+      errorMsg.value = parseApiError(e, 'Failed to remove modifier').message
     }
   } finally {
     delete modRowBusy.value[modId]
@@ -612,7 +516,7 @@ async function detachEffect(effectId: string) {
       attachedEffects.value = await getAdminCrateUnusualEffects(crateId.value)
     } else {
       attachedEffects.value = snapshot
-      errorMsg.value = getApiErrorMessage(e, 'Failed to remove effect')
+      errorMsg.value = parseApiError(e, 'Failed to remove effect').message
     }
   } finally {
     delete effectRowBusy.value[effectId]
@@ -766,7 +670,7 @@ watch(crateId, refresh)
 
           <div class="crate-editor__pane crate-editor__pane--pool">
             <header class="crate-editor__pane-header">
-              <div class="crate-editor__pane-title">Current pool</div>
+              <div class="field-label">Current pool</div>
             </header>
             <div v-if="contents.length === 0" class="crate-editor__pool-empty">
               <EmptyState message="Pick rewards from the left to get started" />
@@ -799,13 +703,13 @@ watch(crateId, refresh)
                   </td>
                   <td class="crate-editor__pool-weight">
                     <input type="number" min="1" step="1" class="crate-editor__weight-input"
-                      :value="weightDrafts[c.rewardItem.id] ?? String(c.dropWeight)"
+                      :value="String(c.dropWeight)"
                       :disabled="rowBusy[c.rewardItem.id]"
-                      @input="onWeightInput(c.rewardItem.id, ($event.target as HTMLInputElement).value)" />
+                      @change="commitWeight(c.rewardItem.id, ($event.target as HTMLInputElement).value)" />
                     <div class="crate-editor__preset-row">
                       <button v-for="p in [1, 10, 100, 1000]" :key="p" type="button" class="crate-editor__preset"
                         :class="{ 'crate-editor__preset--active': c.dropWeight === p }"
-                        @click="applyPreset(c.rewardItem.id, p)">
+                        @click="commitWeight(c.rewardItem.id, p)">
                         {{ p }}
                       </button>
                     </div>
@@ -813,7 +717,7 @@ watch(crateId, refresh)
                       {{ weightErrors[c.rewardItem.id] }}
                     </div>
                   </td>
-                  <td class="right mono">{{ formatPct(c.dropChance) }}</td>
+                  <td class="right mono">{{ formatAccuracy(c.dropChance) }}</td>
                   <td class="right">
                     <button type="button" class="crate-editor__remove" :disabled="rowBusy[c.rewardItem.id]"
                       @click="removeReward(c.rewardItem.id)" aria-label="Remove">
@@ -838,11 +742,6 @@ watch(crateId, refresh)
             Attached: <span class="mono">{{ attachedModifiers.length }}</span>
           </div>
         </header>
-        <p class="crate-editor__hint">
-          Each attached modifier rolls independently on every open - several can hit at once
-          and stack on the reward. A chance is a standalone probability, not a share of a pie.
-          100% is guaranteed; 0% is rejected.
-        </p>
 
         <div class="crate-editor__mod-attach">
           <div class="crate-editor__mod-attach-picker">
@@ -854,7 +753,7 @@ watch(crateId, refresh)
             />
           </div>
           <label class="crate-editor__mod-chance-field">
-            <span class="crate-editor__mod-chance-label">Chance (%)</span>
+            <span class="field-label">Chance (%)</span>
             <input
               v-model="newChancePct"
               type="number"
@@ -874,13 +773,6 @@ watch(crateId, refresh)
             Attach
           </BaseButton>
         </div>
-        <p
-          v-if="selectedModifier && isSeasonalModifier(selectedModifier)"
-          class="crate-editor__mod-season-hint"
-        >
-          Attached here &rarr; uses this chance and drops year-round on this crate, overriding
-          its season window.
-        </p>
         <p v-if="modifierError" class="crate-editor__weight-err">{{ modifierError }}</p>
 
         <div v-if="attachedModifiers.length === 0" class="crate-editor__pool-empty">
@@ -910,7 +802,7 @@ watch(crateId, refresh)
                   {{ modifierDescription(m.modifier.id) ?? m.modifier.key }}
                 </div>
                 <div v-if="isSeasonalById(m.modifier.id)" class="crate-editor__mod-season-tag">
-                  Seasonal &rarr; overrides season, drops year-round here
+                  Seasonal
                 </div>
               </td>
               <td class="crate-editor__pool-weight">
@@ -921,9 +813,9 @@ watch(crateId, refresh)
                     max="100"
                     step="any"
                     class="crate-editor__weight-input"
-                    :value="modChanceDrafts[m.modifier.id] ?? String(decimalToPercent(m.dropChance))"
+                    :value="String(decimalToPercent(m.dropChance))"
                     :disabled="modRowBusy[m.modifier.id]"
-                    @input="onModChanceInput(m.modifier.id, ($event.target as HTMLInputElement).value)"
+                    @change="commitModChance(m.modifier.id, ($event.target as HTMLInputElement).value)"
                   />
                   <span class="crate-editor__mod-pct">%</span>
                 </div>
@@ -954,15 +846,11 @@ watch(crateId, refresh)
             Attached: <span class="mono">{{ attachedEffects.length }}</span>
           </div>
         </header>
-        <p class="crate-editor__hint">
-          On an Unusual roll, one of these is chosen at equal chance. Add the Unusual modifier
-          above to give this crate a chance to roll one.
-        </p>
         <p
           v-if="attachedEffects.length && !crateRollsUnusual"
           class="crate-editor__mod-season-hint"
         >
-          This crate has no Unusual modifier attached, so these effects will never roll here.
+          No Unusual modifier attached.
         </p>
 
         <div class="crate-editor__mod-attach">
@@ -1020,19 +908,9 @@ watch(crateId, refresh)
 
       <section class="crate-editor__panel">
         <h2 class="crate-editor__panel-title">Test</h2>
-        <p class="crate-editor__hint">
-          Playground for testing the contents and animation.
-        </p>
         <div class="crate-editor__test-actions">
           <BaseButton size="sm" :disabled="contents.length === 0" @click="doOpenOnce">
             Open once
-          </BaseButton>
-          <BaseButton size="sm" :disabled="contents.length === 0 || simRunning" @click="runSimulation(1000)">
-            Run 1,000
-          </BaseButton>
-          <BaseButton size="sm" :disabled="contents.length === 0 || simRunning"
-            :loading="simRunning && simSampleSize === 100000" @click="runSimulation(100000)">
-            Run 100,000
           </BaseButton>
         </div>
 
@@ -1049,29 +927,9 @@ watch(crateId, refresh)
         />
         <div v-if="lastRoll && rollToken > 0" class="crate-editor__roll-chance">
           Drop chance:
-          <span class="mono">{{ formatPct(dropChanceFor(lastRoll.item.id)) }}</span>
+          <span class="mono">{{ formatAccuracy(dropChanceFor(lastRoll.item.id)) }}</span>
         </div>
 
-        <table v-if="simRows && simRows.length" class="crate-editor__sim-table">
-          <thead>
-            <tr>
-              <th>Reward</th>
-              <th class="right">Expected</th>
-              <th class="right">Simulated</th>
-              <th class="right">&Delta;</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in simRows" :key="row.item.id">
-              <td>{{ row.item.name }}</td>
-              <td class="right mono">{{ formatPct(row.expected) }}</td>
-              <td class="right mono">{{ formatPct(row.simulated) }}</td>
-              <td class="right mono" :class="{ 'crate-editor__sim-out': row.outOfRange }">
-                {{ formatSignedPct(row.delta) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </section>
 
       <CratePreviewModal
@@ -1328,14 +1186,6 @@ watch(crateId, refresh)
   min-width: 160px;
 }
 
-.crate-editor__pane-title {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 .crate-editor__picker-list {
   flex: 1;
   overflow-y: auto;
@@ -1572,12 +1422,6 @@ watch(crateId, refresh)
   border-top: 1px solid var(--bg-overlay);
 }
 
-.crate-editor__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .crate-editor__test-actions {
   display: flex;
   gap: var(--space-sm);
@@ -1587,40 +1431,6 @@ watch(crateId, refresh)
 .crate-editor__roll-chance {
   font-size: var(--text-caption);
   color: var(--text-secondary);
-}
-
-.crate-editor__sim-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-body);
-}
-
-.crate-editor__sim-table th {
-  text-align: left;
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.crate-editor__sim-table th.right,
-.crate-editor__sim-table td.right {
-  text-align: right;
-}
-
-.crate-editor__sim-table td {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.crate-editor__sim-table tr:last-child td {
-  border-bottom: none;
-}
-
-.crate-editor__sim-out {
-  color: var(--error);
 }
 
 .crate-editor__mod-attach {
@@ -1639,14 +1449,6 @@ watch(crateId, refresh)
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.crate-editor__mod-chance-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .crate-editor__mod-season-hint {

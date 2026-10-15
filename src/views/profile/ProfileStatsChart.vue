@@ -119,7 +119,7 @@ const chartSeries = computed<ChartSeries[]>(() => {
 function roundLines(round: ReweightRoundResponse): string[] {
   if (!round.maps) return [`Reweight: ${round.mapCount} maps (${round.buffs} up, ${round.nerfs} down)`]
   return round.maps.map((m) =>
-    `Reweight: ${m.songName} ${formatDifficulty(m.difficulty)} ${m.from.toFixed(1)} → ${m.to.toFixed(1)}`)
+    `Reweight: ${m.map.songName} ${formatDifficulty(m.map.difficulty)} ${m.from.toFixed(1)} → ${m.to.toFixed(1)}`)
 }
 
 function roundTone(round: ReweightRoundResponse): ChartMarker['tone'] {

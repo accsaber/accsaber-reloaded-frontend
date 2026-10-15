@@ -31,15 +31,6 @@ export function formatChancePercent(
   return `${decimalToPercent(decimal).toFixed(digits).replace(/\.?0+$/, '')}%`
 }
 
-export function isValidMonthDay(value: string): boolean {
-  const m = /^(\d{2})-(\d{2})$/.exec(value)
-  if (!m) return false
-  const month = Number(m[1])
-  const day = Number(m[2])
-  if (month < 1 || month > 12) return false
-  return day >= 1 && day <= maxDayForMonth(month)
-}
-
 export function toMonthDay(month: number, day: number): string {
   return `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }

@@ -14,21 +14,20 @@ import type {
   CampaignTextResponse,
 } from '@/types/api/campaigns'
 import { sanitizeRichHtml } from '@/utils/richText'
-import CampaignPresenceCursor from '@/components/domain/CampaignPresenceCursor.vue'
-import type { PresenceAction, PresenceKind, PresencePeer } from '@/composables/useCampaignPresence'
 import {
+  type BackgroundFrame,
+  backgroundPlacementStyle,
   barrierConditionLabel,
   barrierPairValue,
   barrierReadout,
-  backgroundPlacementStyle,
   edgePointOnShape,
+  nodeApRankBlocked,
   pinnedBackgroundRect,
   prereqIds,
   resolveConnectionColor,
-  resolveSize,
   resolveShape,
+  resolveSize,
   shapeCorners,
-  type BackgroundFrame,
 } from '@/utils/campaignLayout'
 import {
   boundsOf,
@@ -42,8 +41,62 @@ import {
   type LabelPlacement,
   type NodeLayout,
 } from '@/utils/stageLayout'
-import { useStageInteraction, type StageGesture } from '@/composables/useStageInteraction'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  useStageInteraction,
+  type StageGesture,
+  type StageMarquee,
+} from '@/composables/useStageInteraction'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  type ComputedRef,
+  type Ref,
+} from 'vue'
+
+export type RoadmapEdge = { fromId: string; toId: string }
+
+export type RoadmapVertexKind = 'node' | 'barrier' | 'text'
+
+export type RoadmapToolsLayer = 'edge-under' | 'edge-over' | 'under' | 'over'
+
+export interface RoadmapEdgeGeometry extends RoadmapEdge {
+  fromX: number
+  fromY: number
+  toX: number
+  toY: number
+  midX: number
+  midY: number
+}
+
+export interface RoadmapStage {
+  vertexById: ComputedRef<Map<string, NodeLayout>>
+  unit: ComputedRef<number>
+  scale: Ref<number>
+  hoverId: Ref<string | null>
+  draggingId: Ref<string | null>
+  marquee: Ref<StageMarquee | null>
+  clientToContent: (clientX: number, clientY: number) => { x: number; y: number }
+  nodeIdAtPoint: (clientX: number, clientY: number) => string | null
+  nodeIdFromEvent: (target: EventTarget | null) => string | null
+  kindOf: (id: string) => RoadmapVertexKind
+}
+
+export interface RoadmapTools {
+  attach: (stage: RoadmapStage | null) => void
+  connectTargetId: Ref<string | null>
+  positionOf: (id: string) => { cx: number; cy: number } | undefined
+  ignorePointer: (event: PointerEvent) => boolean
+  pointerDown: (event: PointerEvent, nodeId: string | null) => boolean
+  pointerMove: (event: PointerEvent) => void
+  pointerLeave: () => void
+  release: (fromId: string, clientX: number, clientY: number, target: EventTarget | null) => void
+  edgeAt: (clientX: number, clientY: number) => RoadmapEdge | null
+  contentChanged: () => void
+}
 
 const props = withDefaults(
   defineProps<{
@@ -65,9 +118,7 @@ const props = withDefaults(
     selectedEdge?: { fromId: string; toId: string } | null
     highlightBarrierId?: string | null
     barrierPlacement?: boolean
-    activeTray?: string | null
     followFocus?: boolean
-    presencePeers?: PresencePeer[]
     editable?: boolean
     gridLock?: boolean
     showTerminal?: boolean
@@ -75,6 +126,7 @@ const props = withDefaults(
     mode?: 'drag' | 'connect' | 'select'
     unit?: number
     markNext?: boolean
+    tools?: RoadmapTools | null
   }>(),
   {
     barriers: () => [],
@@ -94,9 +146,7 @@ const props = withDefaults(
     selectedEdge: null,
     highlightBarrierId: null,
     barrierPlacement: false,
-    activeTray: null,
     followFocus: true,
-    presencePeers: () => [],
     editable: false,
     gridLock: true,
     showTerminal: false,
@@ -104,6 +154,7 @@ const props = withDefaults(
     mode: 'drag',
     unit: 48,
     markNext: false,
+    tools: null,
   },
 )
 
@@ -119,7 +170,7 @@ const backgroundFill = computed(() => props.backgroundColor?.trim() || 'var(--ac
 const backgroundIsPinned = computed(() => !!props.backgroundUrl && !!props.backgroundPlacement)
 const showAmbience = computed(() => props.showStarfield || backgroundIsPinned.value)
 
-const themeBackdropActive = computed(() => themeStore.backdropConfig !== null)
+const themeBackdropActive = computed(() => themeStore.hasBackdrop)
 const showOwnStarfield = computed(() => showAmbience.value && !themeBackdropActive.value)
 const transparentToThemeBackdrop = computed(() => showAmbience.value && themeBackdropActive.value)
 
@@ -132,28 +183,16 @@ const emit = defineEmits<{
   move: [payload: { id: string; positionX: number; positionY: number }]
   moveMany: [payloads: Array<{ id: string; positionX: number; positionY: number }>]
   emptyClick: [payload: { x: number; y: number }]
-  connect: [payload: { fromId: string; toId: string }]
-  disconnect: [payload: { fromId: string; toId: string }]
-  placeBarrier: [payload: { fromId: string; toId: string }]
-  edgeSelect: [payload: { fromId: string; toId: string }]
-  cursormove: [
-    payload: {
-      x: number
-      y: number
-      action: PresenceAction
-      targetId: string | null
-      kind: PresenceKind
-      tray: string | null
-    },
-  ]
-  cursoroff: []
+  edgeSelect: [payload: RoadmapEdge]
+}>()
+
+defineSlots<{
+  tools?: (props: { layer: RoadmapToolsLayer; edge?: RoadmapEdgeGeometry }) => unknown
+  actions?: () => unknown
 }>()
 
 const selectedSet = computed(() => new Set(props.selectedIds))
 
-const connectFromId = ref<string | null>(null)
-const connectPoint = ref<{ x: number; y: number } | null>(null)
-const connectHoverId = ref<string | null>(null)
 const hoverNodeId = ref<string | null>(null)
 
 function onNodeHover(id: string | null) {
@@ -215,6 +254,7 @@ const {
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerLeave,
   onClickCapture: onNodeClickCapture,
 } = useStageInteraction(stage, {
   contentBounds,
@@ -227,21 +267,18 @@ const {
   dragEnabled: computed(() => props.editable && (props.mode === 'drag' || props.mode === 'select')),
   snap: computed(() => snapEnabled.value),
   groupIds: computed(() => (props.mode === 'select' ? props.selectedIds : [])),
-  ignoreSelectors: ['.campaign-roadmap__bottom-stack', '.campaign-roadmap__edge-x'],
-  shouldIgnore: (e) =>
-    !!props.barrierPlacement &&
-    !!(e.target as Element | null)?.closest?.('.campaign-roadmap__edge-hit'),
-  interceptPointerDown: beginConnect,
-  onPointerMoveExtra: trackStagePointer,
+  ignoreSelectors: ['.campaign-roadmap__bottom-stack'],
+  shouldIgnore: (e) => props.tools?.ignorePointer(e) ?? false,
+  interceptPointerDown: (e, nodeId) => props.tools?.pointerDown(e, nodeId) ?? false,
+  onPointerMoveExtra: (e) => props.tools?.pointerMove(e),
+  onPointerLeaveExtra: () => props.tools?.pointerLeave(),
   onGesture: handleStageGesture,
 })
-
-const remoteDragById = ref(new Map<string, { cx: number; cy: number; color: string }>())
 
 function appliedPos<T extends { id: string; cx: number; cy: number }>(n: T): T {
   const local = dragOverlay.value.get(n.id)
   if (local) return { ...n, cx: local.cx, cy: local.cy }
-  const remote = remoteDragById.value.get(n.id)
+  const remote = props.tools?.positionOf(n.id)
   if (remote) return { ...n, cx: remote.cx, cy: remote.cy }
   return n
 }
@@ -275,15 +312,10 @@ const difficultyById = computed(() => {
   return map
 })
 
-function nodeUnranked(d: CampaignDifficultyResponse): boolean {
-  if (d.status != null) return d.status !== 'RANKED'
-  return d.categoryId == null
-}
-
 const missingRewardIds = computed(() => {
   const set = new Set<string>()
   if (!props.flagMissingRewards) return set
-  if (props.difficulties.some(nodeUnranked)) return set
+  if (props.difficulties.some(nodeApRankBlocked)) return set
   for (const d of props.difficulties) {
     if ((d.xp ?? 0) <= 0 && (d.items?.length ?? 0) === 0) set.add(d.id)
   }
@@ -783,227 +815,41 @@ const overlapMarkers = computed(() => {
   )
 })
 
-function edgeAtPoint(clientX: number, clientY: number): { fromId: string; toId: string } | null {
-  if (typeof document === 'undefined') return null
-  const hit = document.elementFromPoint(clientX, clientY)
-  const line = hit?.closest('.campaign-roadmap__edge-hit') as SVGElement | null
-  const fromId = line?.dataset.edgeFrom
-  const toId = line?.dataset.edgeTo
-  return fromId && toId ? { fromId, toId } : null
-}
-
 const snapEnabled = computed(() => props.gridLock !== altHeld.value)
 
-function presenceKindOf(id: string): PresenceKind {
+function vertexKindOf(id: string): RoadmapVertexKind {
   if (barrierMetaById.value.has(id)) return 'barrier'
   if (textStaticById.value.has(id)) return 'text'
   return 'node'
 }
 
-let lastPresence = { x: 0, y: 0, has: false }
-
-function emitPresence(x: number, y: number) {
-  if (!props.editable) return
-  lastPresence = { x, y, has: true }
-  let action: PresenceAction = 'move'
-  let targetId: string | null = null
-  if (props.barrierPlacement) {
-    action = 'place'
-  } else if (connectFromId.value) {
-    action = 'connect'
-    targetId = connectHoverId.value ?? connectFromId.value
-  } else if (draggingNodeId.value) {
-    action = 'drag'
-    targetId = draggingNodeId.value
-  } else if (marquee.value) {
-    action = 'select'
-  } else if (hoverNodeId.value) {
-    action = 'select'
-    targetId = hoverNodeId.value
-  } else if (props.selectedId) {
-    action = 'edit'
-    targetId = props.selectedId
-  }
-  emit('cursormove', {
-    x,
-    y,
-    action,
-    targetId,
-    kind: targetId ? presenceKindOf(targetId) : null,
-    tray: props.activeTray ?? null,
-  })
-}
-
-function onPointerLeave() {
-  if (!props.editable) return
-  lastPresence.has = false
-  emit('cursoroff')
-}
-
-watch(
-  [
-    draggingNodeId,
-    connectFromId,
-    () => props.barrierPlacement,
-    () => props.selectedId,
-    () => props.activeTray,
-  ],
-  () => {
-    if (lastPresence.has) emitPresence(lastPresence.x, lastPresence.y)
-  },
-)
-
-const cursorDisplay = ref(new Map<string, { x: number; y: number }>())
-let cursorRaf: number | null = null
-
-function tickCursors() {
-  const disp = cursorDisplay.value
-  const alive = new Set<string>()
-  let changed = false
-  for (const peer of props.presencePeers) {
-    if (peer.x == null || peer.y == null) continue
-    alive.add(peer.userId)
-    const cur = disp.get(peer.userId)
-    if (!cur) {
-      disp.set(peer.userId, { x: peer.x, y: peer.y })
-      changed = true
-    } else {
-      const nx = cur.x + (peer.x - cur.x) * 0.28
-      const ny = cur.y + (peer.y - cur.y) * 0.28
-      if (Math.abs(nx - cur.x) > 0.02 || Math.abs(ny - cur.y) > 0.02) {
-        cur.x = nx
-        cur.y = ny
-        changed = true
-      }
-    }
-  }
-  for (const id of [...disp.keys()]) {
-    if (!alive.has(id)) {
-      disp.delete(id)
-      changed = true
-    }
-  }
-  if (changed) cursorDisplay.value = new Map(disp)
-
-  let drag: Map<string, { cx: number; cy: number; color: string }> | null = null
-  for (const peer of props.presencePeers) {
-    if (peer.action === 'drag' && peer.targetId && peer.x != null && peer.y != null) {
-      const d = disp.get(peer.userId)
-      if (!d) continue
-      const prev = remoteDragById.value.get(peer.targetId)
-      if (!prev || prev.cx !== d.x || prev.cy !== d.y) {
-        drag ??= new Map(remoteDragById.value)
-        drag.set(peer.targetId, { cx: d.x, cy: d.y, color: peer.color })
-      }
-    }
-  }
-  if (drag) remoteDragById.value = drag
-
-  cursorRaf = changed || drag ? requestAnimationFrame(tickCursors) : null
-}
-
-function startCursorLoop() {
-  if (cursorRaf == null) cursorRaf = requestAnimationFrame(tickCursors)
-}
-
-function stopCursorLoop() {
-  if (cursorRaf != null) {
-    cancelAnimationFrame(cursorRaf)
-    cursorRaf = null
-  }
-}
-
-watch(
-  () => props.presencePeers,
-  (peers) => {
-    if (peers.length > 0) startCursorLoop()
-    else {
-      stopCursorLoop()
-      if (cursorDisplay.value.size) cursorDisplay.value = new Map()
-      if (remoteDragById.value.size) remoteDragById.value = new Map()
-    }
-  },
-  { immediate: true, deep: true },
-)
-
-onUnmounted(stopCursorLoop)
-
-const renderedCursors = computed(() => {
-  const disp = cursorDisplay.value
-  const out: Array<{ peer: PresencePeer; x: number; y: number }> = []
-  for (const peer of props.presencePeers) {
-    const d = disp.get(peer.userId)
-    if (d) out.push({ peer, x: d.x, y: d.y })
-  }
-  return out
+props.tools?.attach({
+  vertexById,
+  unit: computed(() => props.unit),
+  scale,
+  hoverId: hoverNodeId,
+  draggingId: draggingNodeId,
+  marquee,
+  clientToContent,
+  nodeIdAtPoint,
+  nodeIdFromEvent,
+  kindOf: vertexKindOf,
 })
 
-const remoteConnects = computed(() => {
-  const disp = cursorDisplay.value
-  const out: Array<{ key: string; x1: number; y1: number; x2: number; y2: number; color: string }> =
-    []
-  for (const peer of props.presencePeers) {
-    if (peer.action !== 'connect' || !peer.targetId) continue
-    const from = vertexById.value.get(peer.targetId)
-    const to = disp.get(peer.userId)
-    if (from && to) {
-      out.push({
-        key: peer.userId,
-        x1: from.cx,
-        y1: from.cy,
-        x2: to.x,
-        y2: to.y,
-        color: peer.color,
-      })
-    }
-  }
-  return out
-})
-
-const remoteRings = computed(() => {
-  const out: Array<{ key: string; cx: number; cy: number; color: string }> = []
-  for (const peer of props.presencePeers) {
-    if (!peer.targetId || peer.action === 'move') continue
-    const v = vertexById.value.get(peer.targetId)
-    if (v)
-      out.push({ key: `${peer.userId}:${peer.targetId}`, cx: v.cx, cy: v.cy, color: peer.color })
-  }
-  return out
-})
+onUnmounted(() => props.tools?.attach(null))
 
 function pointerToGrid(cx: number, cy: number) {
   return hexProjection.toGrid(cx, cy, props.unit, snapEnabled.value)
 }
 
-function beginConnect(e: PointerEvent, nodeId: string | null): boolean {
-  if (!nodeId || !props.editable || props.mode !== 'connect') return false
-  connectFromId.value = nodeId
-  connectPoint.value = clientToContent(e.clientX, e.clientY)
-  return true
-}
-
-function trackStagePointer(e: PointerEvent) {
-  if (!props.editable && !connectFromId.value) return
-  const p = clientToContent(e.clientX, e.clientY)
-  emitPresence(p.x, p.y)
-  if (!connectFromId.value) return
-  connectPoint.value = p
-  const hover = nodeIdAtPoint(e.clientX, e.clientY)
-  connectHoverId.value = hover && hover !== connectFromId.value ? hover : null
-}
-
-function finishConnect(g: Extract<StageGesture, { kind: 'customRelease' }>) {
-  const targetId = connectHoverId.value ?? nodeIdAtPoint(g.clientX, g.clientY) ?? nodeIdFromEvent(g.target)
-  connectFromId.value = null
-  connectPoint.value = null
-  connectHoverId.value = null
-  if (targetId && targetId !== g.fromId) emit('connect', { fromId: g.fromId, toId: targetId })
+function edgeAt(clientX: number, clientY: number): RoadmapEdge | null {
+  return props.tools?.edgeAt(clientX, clientY) ?? null
 }
 
 function handleStageGesture(g: StageGesture) {
   switch (g.kind) {
     case 'customRelease':
-      finishConnect(g)
+      props.tools?.release(g.fromId, g.clientX, g.clientY, g.target)
       return
     case 'nodeDrag':
       emit('move', g.payload)
@@ -1016,7 +862,7 @@ function handleStageGesture(g: StageGesture) {
       return
     case 'marqueeEmpty': {
       if (g.additive) return
-      const edge = edgeAtPoint(g.clientX, g.clientY)
+      const edge = edgeAt(g.clientX, g.clientY)
       if (edge) emit('edgeSelect', edge)
       else emit('selectMany', [])
       return
@@ -1030,15 +876,11 @@ function handleStageGesture(g: StageGesture) {
         emit('deselect')
         return
       }
-      const edge = props.barrierPlacement ? null : edgeAtPoint(g.clientX, g.clientY)
+      const edge = props.barrierPlacement ? null : edgeAt(g.clientX, g.clientY)
       if (edge) emit('edgeSelect', edge)
       else emit('emptyClick', g.content)
     }
   }
-}
-
-function onEdgeClick(edge: { fromId: string; toId: string }) {
-  if (props.barrierPlacement) emit('placeBarrier', { fromId: edge.fromId, toId: edge.toId })
 }
 
 const canRecenter = computed(() => !!props.focusId && vertexById.value.has(props.focusId))
@@ -1072,7 +914,7 @@ let knownVertexIds = new Set<string>()
 watch(
   () => [props.difficulties, props.barriers, props.texts] as const,
   ([diffs, barrs, txts]) => {
-    if (remoteDragById.value.size) remoteDragById.value = new Map()
+    props.tools?.contentChanged()
     const nextIds = new Set<string>()
     for (const d of diffs) nextIds.add(d.id)
     for (const b of barrs) nextIds.add(b.id)
@@ -1341,18 +1183,7 @@ const controls = computed(() => [
             }"
             :style="{ '--edge-hl': e.color ?? 'var(--text-primary)' }"
           >
-            <line
-              class="campaign-roadmap__edge-hit"
-              :data-edge-from="e.fromId"
-              :data-edge-to="e.toId"
-              :x1="e.fromX"
-              :y1="e.fromY"
-              :x2="e.toX"
-              :y2="e.toY"
-              stroke="transparent"
-              :stroke-width="barrierPlacement ? Math.max(unit * 0.9, 40) : Math.max(unit * 0.3, 14)"
-              @click.stop="onEdgeClick(e)"
-            />
+            <slot name="tools" layer="edge-under" :edge="e" />
             <line
               class="campaign-roadmap__edge-line"
               :x1="e.fromX"
@@ -1372,21 +1203,7 @@ const controls = computed(() => [
               stroke-width="1"
               :opacity="e.cleared ? 0.95 : e.available ? 0.85 : e.color ? 0.55 : 0.4"
             />
-            <g
-              v-if="editable && !barrierPlacement"
-              class="campaign-roadmap__edge-x"
-              :transform="`translate(${e.midX}, ${e.midY})`"
-              @click.stop="emit('disconnect', { fromId: e.fromId, toId: e.toId })"
-            >
-              <circle r="10" fill="var(--bg-base)" stroke="var(--error)" stroke-width="1.5" />
-              <path
-                d="M-4 -4L4 4M-4 4L4 -4"
-                stroke="var(--error)"
-                stroke-width="2"
-                stroke-linecap="round"
-                fill="none"
-              />
-            </g>
+            <slot name="tools" layer="edge-over" :edge="e" />
           </g>
         </g>
 
@@ -1400,21 +1217,7 @@ const controls = computed(() => [
           <polygon v-else :points="snapShapePoints" />
         </g>
 
-        <g
-          v-if="connectFromId && connectPoint && vertexById.get(connectFromId)"
-          class="campaign-roadmap__connecting"
-          aria-hidden="true"
-        >
-          <line
-            :x1="vertexById.get(connectFromId)!.cx"
-            :y1="vertexById.get(connectFromId)!.cy"
-            :x2="connectPoint.x"
-            :y2="connectPoint.y"
-            stroke="var(--accent)"
-            stroke-width="2"
-            stroke-dasharray="6 4"
-          />
-        </g>
+        <slot name="tools" layer="under" />
 
         <rect
           v-if="marquee"
@@ -1433,7 +1236,7 @@ const controls = computed(() => [
           :data-id="n.id"
           :class="{
             'campaign-roadmap__node--editable': editable,
-            'campaign-roadmap__node--connect-target': connectHoverId === n.id,
+            'campaign-roadmap__node--connect-target': tools?.connectTargetId.value === n.id,
           }"
           :role="editable ? undefined : 'button'"
           :tabindex="editable ? undefined : 0"
@@ -1578,47 +1381,7 @@ const controls = computed(() => [
           </text>
         </g>
 
-        <g v-if="editable" class="campaign-roadmap__presence-fx">
-          <line
-            v-for="c in remoteConnects"
-            :key="`rconn-${c.key}`"
-            :x1="c.x1"
-            :y1="c.y1"
-            :x2="c.x2"
-            :y2="c.y2"
-            :stroke="c.color"
-            stroke-width="2"
-            stroke-dasharray="6 4"
-            opacity="0.75"
-          />
-          <circle
-            v-for="r in remoteRings"
-            :key="`rring-${r.key}`"
-            :cx="r.cx"
-            :cy="r.cy"
-            :r="unit * 0.82"
-            fill="none"
-            :stroke="r.color"
-            stroke-width="2"
-            stroke-dasharray="5 4"
-            opacity="0.8"
-          />
-        </g>
-
-        <g v-if="editable" class="campaign-roadmap__cursors">
-          <CampaignPresenceCursor
-            v-for="rc in renderedCursors"
-            :key="rc.peer.userId"
-            :x="rc.x"
-            :y="rc.y"
-            :inv-scale="1 / scale"
-            :color="rc.peer.color"
-            :name="rc.peer.name"
-            :avatar-url="rc.peer.avatarUrl"
-            :action="rc.peer.action"
-            :kind="rc.peer.kind"
-          />
-        </g>
+        <slot name="tools" layer="over" />
       </g>
     </svg>
 
@@ -1730,10 +1493,6 @@ const controls = computed(() => [
   transition: filter 120ms ease;
 }
 
-.campaign-roadmap__edge-hit {
-  pointer-events: stroke;
-}
-
 .campaign-roadmap__edge-line,
 .campaign-roadmap__edge-arrow {
   transition:
@@ -1762,15 +1521,6 @@ const controls = computed(() => [
   stroke-width: 3;
 }
 
-.campaign-roadmap__edges--place .campaign-roadmap__edge-hit,
-.campaign-roadmap__edges--interactive .campaign-roadmap__edge-hit {
-  cursor: pointer;
-}
-
-.campaign-roadmap__edge-group--selected .campaign-roadmap__edge-hit {
-  stroke: color-mix(in srgb, var(--page-accent, var(--accent)) 22%, transparent);
-}
-
 .campaign-roadmap__edge-group--placeable .campaign-roadmap__edge-line {
   stroke: var(--warning);
   stroke-width: 2.5;
@@ -1786,20 +1536,6 @@ const controls = computed(() => [
 .campaign-roadmap__edge-group--placeable:hover .campaign-roadmap__edge-line {
   stroke-width: 4;
   opacity: 1;
-}
-
-.campaign-roadmap__edge-x {
-  opacity: 0;
-  cursor: pointer;
-  transition: opacity 140ms ease;
-}
-
-.campaign-roadmap__edge-group:hover .campaign-roadmap__edge-x {
-  opacity: 1;
-}
-
-.campaign-roadmap__connecting line {
-  pointer-events: none;
 }
 
 .campaign-roadmap__affected {
@@ -1867,7 +1603,7 @@ const controls = computed(() => [
 
 .campaign-roadmap__text--editable {
   cursor: grab;
-  padding: 3px 8px;
+  padding: 3px var(--space-sm);
   border-radius: var(--radius-card);
   transition:
     background 120ms ease,

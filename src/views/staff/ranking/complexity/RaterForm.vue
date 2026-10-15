@@ -113,7 +113,7 @@ function setWorstShare(value: number) {
 
       <div class="rater-form__top">
         <section class="rater-form__group">
-          <h4 class="rater-form__group-title">Worst share</h4>
+          <h4 class="rater-form__group-title field-label">Worst share</h4>
           <RaterField label="Share of notes" :hint="WORST_SHARE_HINT" kind="share"
             :live="live?.worstShare ?? edited.worstShare" :model-value="edited.worstShare"
             @update:model-value="setWorstShare" />
@@ -124,7 +124,7 @@ function setWorstShare(value: number) {
         </section>
 
         <section class="rater-form__group">
-          <h4 class="rater-form__group-title">Board gate</h4>
+          <h4 class="rater-form__group-title field-label">Board gate</h4>
           <div class="rater-form__gate">
             <RaterField v-for="field in GATE_FIELDS" :key="field.key" :label="field.label"
               :hint="field.hint" :kind="field.kind" :deferred="field.slow"
@@ -137,7 +137,7 @@ function setWorstShare(value: number) {
 
       <section class="rater-form__section">
         <div class="rater-form__section-head">
-          <h4 class="rater-form__group-title">{{ BOARD_LINE.title }}</h4>
+          <h4 class="rater-form__group-title field-label">{{ BOARD_LINE.title }}</h4>
           <span class="rater-form__note">{{ BOARD_LINE.hint }}</span>
         </div>
 
@@ -159,7 +159,7 @@ function setWorstShare(value: number) {
       <details class="rater-form__section rater-form__fold" :open="chartOpen"
         @toggle="syncChartOpen">
         <summary class="rater-form__section-head rater-form__fold-head">
-          <h4 class="rater-form__group-title">{{ CHART_LINE.title }}</h4>
+          <h4 class="rater-form__group-title field-label">{{ CHART_LINE.title }}</h4>
           <span class="rater-form__note">{{ CHART_LINE.hint }}</span>
           <span class="rater-form__fold-toggle" aria-hidden="true"></span>
         </summary>
@@ -254,11 +254,6 @@ function setWorstShare(value: number) {
   align-items: center;
   gap: var(--space-xs);
   margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .rater-form__gate {

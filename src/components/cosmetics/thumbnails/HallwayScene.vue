@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { HallwayScene } from '@/types/api/items'
+import type { HallwayScene } from '@/types/cosmetics/background'
 import { darken, lighten, parseHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { drawHorrorFace } from '@/utils/cosmetics/horrorFace'

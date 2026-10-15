@@ -1,8 +1,8 @@
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
+import type { PlayerRef } from '@/types/api/common'
 import type { TableColumn } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
-import { toUserRef, type FlatUserRef } from '@/utils/mappers'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { useRouter } from 'vue-router'
@@ -21,7 +21,7 @@ export interface StatsBoardDef<K extends string, F> {
 }
 
 export function playerRoute(row: StatsRow): RouteLocationRaw | undefined {
-  const userId = row.userId as string | undefined
+  const userId = (row.player as PlayerRef | undefined)?.id
   return userId ? { name: 'player-profile', params: { userId } } : undefined
 }
 
@@ -63,14 +63,7 @@ export function useStatsBoard<K extends string, F, D extends StatsBoardDef<K, F>
     const page = currentPageData.value
     if (!page) return []
     const offset = page.number * page.size
-    return page.content.map((raw, index) => {
-      const item = raw as StatsRow
-      return {
-        ...item,
-        rank: offset + index + 1,
-        player: item.userId ? toUserRef(item as unknown as FlatUserRef) : undefined,
-      }
-    })
+    return page.content.map((raw, index) => ({ ...(raw as StatsRow), rank: offset + index + 1 }))
   })
 
   const request = computed(() => {

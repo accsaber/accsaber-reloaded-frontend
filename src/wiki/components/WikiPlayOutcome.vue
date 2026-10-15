@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { improvementXp, rawAp, XP_BASE_PER_SCORE } from '@/wiki/apCurve'
 import { computed, ref } from 'vue'
+import { formatAccuracy, formatFixed } from '@/utils/formatters'
 
 const props = withDefaults(
   defineProps<{
@@ -64,15 +65,13 @@ const xpNote = computed(() => {
 })
 
 const formatScore = (v: number) => Math.round(v).toLocaleString('en-US')
-const formatAccuracy = (v: number) => `${(v * 100).toFixed(2)}%`
-const formatAp = (v: number) => v.toFixed(1)
 </script>
 
 <template>
   <figure class="outcome">
     <div class="outcome__controls">
       <label class="outcome__slider">
-        <span class="outcome__label">This play, score before modifiers</span>
+        <span class="field-label">This play, score before modifiers</span>
         <input
           v-model.number="newScore"
           type="range"
@@ -89,17 +88,17 @@ const formatAp = (v: number) => v.toFixed(1)
 
     <div class="outcome__duel">
       <div class="outcome__side">
-        <span class="outcome__label">Your best so far</span>
+        <span class="field-label">Your best so far</span>
         <span class="outcome__score">{{ formatScore(pbScore) }}</span>
         <span class="outcome__meta">
-          {{ formatAccuracy(pbAccuracy) }} &middot; {{ formatAp(pbAp) }} AP
+          {{ formatAccuracy(pbAccuracy) }} &middot; {{ formatFixed(pbAp, 1) }} AP
         </span>
       </div>
       <div class="outcome__side outcome__side--live">
-        <span class="outcome__label">This play</span>
+        <span class="field-label">This play</span>
         <span class="outcome__score">{{ formatScore(newScore) }}</span>
         <span class="outcome__meta">
-          {{ formatAccuracy(newAccuracy) }} &middot; {{ formatAp(newAp) }} AP
+          {{ formatAccuracy(newAccuracy) }} &middot; {{ formatFixed(newAp, 1) }} AP
         </span>
       </div>
     </div>
@@ -142,14 +141,6 @@ const formatAp = (v: number) => v.toFixed(1)
 
 .outcome__slider input {
   accent-color: var(--accent);
-}
-
-.outcome__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .outcome__toggle {

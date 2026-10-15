@@ -2,7 +2,7 @@
 import FragmentedContent from '@/components/cosmetics/effects/FragmentedContent.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import type { ItemResponse } from '@/types/api/items'
-import type { FragmentSpec } from '@/utils/items'
+import type { FragmentSpec } from '@/utils/cosmetics/effectLayers'
 
 withDefaults(
   defineProps<{

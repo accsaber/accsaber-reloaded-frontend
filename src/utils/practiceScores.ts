@@ -1,4 +1,5 @@
 import type { PracticeScoreSubmission } from '@/types/api/practiceScores'
+import { readStored, readStoredString, writeStored, writeStoredString } from '@/utils/storage'
 
 const SCORES_KEY = 'range:scores'
 const PENDING_KEY = 'range:pending'
@@ -7,12 +8,7 @@ const MAX_LOCAL = 50
 const MAX_PENDING = 20
 
 function loadList(key: string): PracticeScoreSubmission[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '[]')
-    return Array.isArray(parsed) ? (parsed as PracticeScoreSubmission[]) : []
-  } catch {
-    return []
-  }
+  return readStored(key, (raw) => (Array.isArray(raw) ? (raw as PracticeScoreSubmission[]) : null), [])
 }
 
 export function loadLocalScores(): PracticeScoreSubmission[] {
@@ -23,18 +19,18 @@ export function addLocalScore(entry: PracticeScoreSubmission): PracticeScoreSubm
   const scores = [...loadLocalScores(), entry]
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_LOCAL)
-  localStorage.setItem(SCORES_KEY, JSON.stringify(scores))
+  writeStored(SCORES_KEY, scores)
   const pending = [...loadList(PENDING_KEY), entry].slice(-MAX_PENDING)
-  localStorage.setItem(PENDING_KEY, JSON.stringify(pending))
+  writeStored(PENDING_KEY, pending)
   return scores
 }
 
 export function loadLastName(): string {
-  return localStorage.getItem(NAME_KEY) ?? ''
+  return readStoredString(NAME_KEY) ?? ''
 }
 
 export function saveLastName(name: string) {
-  localStorage.setItem(NAME_KEY, name)
+  writeStoredString(NAME_KEY, name)
 }
 
 export async function flushPendingScores(): Promise<void> {
@@ -43,7 +39,7 @@ export async function flushPendingScores(): Promise<void> {
   const { submitPracticeScores } = await import('@/api/practiceScores')
   try {
     await submitPracticeScores(pending)
-    localStorage.removeItem(PENDING_KEY)
+    writeStoredString(PENDING_KEY, null)
   } catch {
   }
 }

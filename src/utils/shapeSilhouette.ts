@@ -1,4 +1,4 @@
-import type { BorderShapePathValue, BorderShapeValue } from '@/types/api/items'
+import type { BorderShapePathValue, BorderShapeValue } from '@/types/cosmetics/border'
 import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
 
 export interface FrameBounds {

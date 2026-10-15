@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useNow } from '@/composables/useNow'
-import { formatCountdown } from '@/utils/market'
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { formatDuration } from '@/utils/formatters'
 
 const props = defineProps<{
   endsAt: string
@@ -12,7 +12,7 @@ const now = useNow(1000)
 
 const endsAtMs = computed(() => new Date(props.endsAt).getTime())
 const remaining = computed(() => endsAtMs.value - now.value)
-const text = computed(() => (remaining.value <= 0 ? 'Ending…' : formatCountdown(remaining.value)))
+const text = computed(() => (remaining.value <= 0 ? 'Ending…' : formatDuration(remaining.value, { seconds: true })))
 const urgency = computed(() => {
   if (remaining.value <= 0) return 'ending'
   if (remaining.value < 60_000) return 'critical'

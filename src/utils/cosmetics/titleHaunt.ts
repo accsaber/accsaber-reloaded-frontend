@@ -1,4 +1,4 @@
-import type { TitleHauntSpec } from '@/types/api/items'
+import type { TitleHauntSpec } from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant } from '@/utils/cosmetics/titleAura'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import ResourcePicker from '@/components/domain/ResourcePicker.vue'
+import ResourcePicker from '@/views/staff/admin/operations/ResourcePicker.vue'
 import type { JobFieldKind, JobFieldResponse, JobFieldValue } from '@/types/api/jobs'
 import { computed } from 'vue'
 import { LEADERBOARD_PLATFORMS, RESOURCE_SOURCES } from './resourceSources'
@@ -81,7 +81,7 @@ function onFlagInput(event: Event) {
 
 <template>
   <div class="job-field">
-    <label class="job-field__label">
+    <label class="job-field__label field-label">
       {{ field.label }}
       <span v-if="field.required" class="job-field__required">required</span>
     </label>
@@ -120,11 +120,6 @@ function onFlagInput(event: Event) {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .job-field__required {

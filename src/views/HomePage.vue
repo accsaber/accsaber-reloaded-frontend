@@ -2,7 +2,7 @@
 import { getHealth } from '@/api/health'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import NewsHighlightBanner from '@/components/domain/NewsHighlightBanner.vue'
+import NewsHighlightBanner from '@/views/home/NewsHighlightBanner.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { tierKey, useLevelStore } from '@/stores/levels'

@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/math'
 export const DEFAULT_AVATAR_MASK
   = 'M14,0 L86,0 Q100,0 100,14 L100,86 Q100,100 86,100 L14,100 Q0,100 0,86 L0,14 Q0,0 14,0 Z'
 
@@ -80,7 +81,7 @@ function computeSafeBox(mask: string): AvatarImageBox {
     const blended = inscribed + (100 - inscribed) * density * density * density
     const size = density > 0.93
       ? 100
-      : Math.max(72, Math.min(100, blended))
+      : clamp(blended, 72, 100)
     result = { x: 50 - size / 2, y: 50 - size / 2, size }
   } catch {
     result = { x: 0, y: 0, size: 100 }

@@ -59,7 +59,7 @@ const formatRun = (count: number) => (opens.value ? `${(100 * count) / opens.val
 
 <template>
   <figure class="odds">
-    <figcaption class="odds__caption">
+    <figcaption class="odds__caption field-label">
       {{ crateName }}, {{ contents.length }} rewards
     </figcaption>
 
@@ -111,11 +111,6 @@ const formatRun = (count: number) => (opens.value ? `${(100 * count) / opens.val
 
 .odds__caption {
   margin-bottom: var(--space-sm);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .odds__table {

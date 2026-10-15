@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { ChartFill } from '@/types/api/items'
+import type { ChartFill } from '@/types/cosmetics/border'
 import { darken, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { hash01, randBetween as rand } from '@/utils/random'
@@ -159,17 +159,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="chart-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.chart-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

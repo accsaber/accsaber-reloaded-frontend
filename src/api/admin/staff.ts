@@ -2,8 +2,6 @@ import type {
   CreateStaffUserRequest,
   ForceChangePasswordRequest,
   LinkUserRequest,
-  OAuthLinkRequest,
-  StaffOAuthLinkResponse,
   StaffUserResponse,
   UpdateStaffRoleRequest,
   UpdateStaffStatusRequest,
@@ -40,17 +38,6 @@ export function updateStaffStatus(
 
 export function setStaffActive(id: string, active: boolean): Promise<StaffUserResponse> {
   return patch<StaffUserResponse>(`/staff/users/${id}/active${buildQuery({ active })}`)
-}
-
-export function linkOAuth(
-  id: string,
-  req: OAuthLinkRequest,
-): Promise<StaffOAuthLinkResponse> {
-  return post<StaffOAuthLinkResponse>(`/staff/users/${id}/oauth`, req)
-}
-
-export function unlinkOAuth(id: string, linkId: string): Promise<void> {
-  return del<void>(`/staff/users/${id}/oauth/${linkId}`)
 }
 
 export function linkUser(id: string, req: LinkUserRequest): Promise<StaffUserResponse> {

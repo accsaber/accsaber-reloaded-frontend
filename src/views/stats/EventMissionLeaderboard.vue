@@ -1,15 +1,15 @@
 <script setup lang="ts">
+import { formatCount, formatShortDate } from '@/utils/formatters'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { EventMissionLeaderboardResponse } from '@/types/api/statistics'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
-import { toUserRef } from '@/utils/mappers'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import StatsCloseButton from './StatsCloseButton.vue'
-import { NO_VALUE, fmtInt } from './statsFormat'
+import { NO_VALUE } from './statsFormat'
 import { playerRoute } from './useStatsBoard'
 
 const props = defineProps<{
@@ -44,15 +44,7 @@ const pageData = ref<Page<EventMissionLeaderboardResponse> | null>(null)
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 
 const rows = computed<Record<string, unknown>[]>(() =>
-  (pageData.value?.content ?? []).map((item) => ({
-    ...item,
-    player: toUserRef(item),
-  })))
-
-function formatDate(value: unknown): string {
-  if (!value) return NO_VALUE
-  return new Date(String(value)).toLocaleDateString(undefined, { dateStyle: 'medium' })
-}
+  (pageData.value?.content ?? []) as unknown as Record<string, unknown>[])
 
 let requestId = 0
 
@@ -94,15 +86,15 @@ watch(() => [props.eventKey, props.templateId, props.country, page.value].join('
 
     <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="5" row-key="rank" row-clickable
       :row-to="playerRoute" empty-message="Nobody has completed this mission yet." @row-click="onRowClick">
-      <template #cell-rank="{ value }"><span class="mission-lb__rank">#{{ fmtInt(value) }}</span></template>
+      <template #cell-rank="{ value }"><span class="mission-lb__rank">#{{ formatCount(value as number | null) }}</span></template>
       <template #cell-player="{ row }">
         <UserChip :user="(row.player as UserRefDisplay)" tooltip />
       </template>
-      <template #cell-completions="{ value }"><span class="mission-lb__strong">{{ fmtInt(value) }}</span></template>
-      <template #cell-xpEarned="{ value }">{{ fmtInt(value) }}</template>
-      <template #cell-itemsAwarded="{ value }">{{ fmtInt(value) }}</template>
+      <template #cell-completions="{ value }"><span class="mission-lb__strong">{{ formatCount(value as number | null) }}</span></template>
+      <template #cell-xpEarned="{ value }">{{ formatCount(value as number | null) }}</template>
+      <template #cell-itemsAwarded="{ value }">{{ formatCount(value as number | null) }}</template>
       <template #cell-lastCompletedAt="{ value }">
-        <span class="mission-lb__dim">{{ formatDate(value) }}</span>
+        <span class="mission-lb__dim">{{ formatShortDate(value as string | null, NO_VALUE) }}</span>
       </template>
     </DataTable>
 

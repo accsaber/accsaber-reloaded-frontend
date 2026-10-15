@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleSpotlightAuraSpec } from '@/types/api/items'
+import type { TitleSpotlightAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { useTemplateRef } from 'vue'

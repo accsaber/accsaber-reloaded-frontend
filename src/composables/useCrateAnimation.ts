@@ -24,6 +24,7 @@ import {
   type Spark,
 } from '@/utils/sliceSim'
 import { nextTick, onUnmounted, ref, type Ref } from 'vue'
+import { clamp, clamp01 } from '@/utils/math'
 
 export type CratePhase =
   | 'idle'
@@ -69,8 +70,6 @@ const TIMING = {
   shake: 240,
 } as const
 
-export const CRATE_PHASE_DURATIONS = TIMING
-
 const IDLE_HALF = IDLE_HALF_MOTION
 
 const RARITY_TOKEN: Record<string, string> = {
@@ -80,10 +79,6 @@ const RARITY_TOKEN: Record<string, string> = {
   epic: '--tier-apex',
   legendary: '--tier-gold',
   mythic: '--error',
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
 }
 
 function easeOutQuint(t: number): number {
@@ -229,11 +224,11 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     const maxJitter = cardW / 2 - innerMargin
     const jitter = (Math.random() * 2 - 1) * maxJitter
     targetOffset = centerOffset + jitter
-    cutPct.value = clamp(0.5 - jitter / cardW, 0, 1)
+    cutPct.value = clamp01(0.5 - jitter / cardW)
     const normalizedMiss = maxJitter > 0 ? Math.min(1, Math.abs(jitter) / maxJitter) : 0
     hitScore.value = Math.round(100 + 15 * (1 - normalizedMiss))
     const edgeRoom = Math.min(cutPct.value, 1 - cutPct.value) * 100 - 3
-    const shift = (Math.random() * 2 - 1) * Math.min(8, Math.max(0, edgeRoom))
+    const shift = (Math.random() * 2 - 1) * clamp(edgeRoom, 0, 8)
     cutShiftPct.value = shift
     bladeTiltDeg.value = (-Math.atan((2 * shift * cardW) / (100 * cardH)) * 180) / Math.PI
   }
@@ -248,7 +243,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
   }
 
   function sampleOffset(t: number, spin: number): number {
-    return targetOffset * easeOutQuint(clamp(t / spin, 0, 1))
+    return targetOffset * easeOutQuint(clamp01(t / spin))
   }
 
   function computeTickTimes(): CrateTick[] {
@@ -260,7 +255,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     const ticks: CrateTick[] = []
     for (let k = startIndex + 1; k <= endIndex; k++) {
       const offsetAtCross = stageW / 2 - k * cardTotal
-      const eased = clamp(offsetAtCross / targetOffset, 0, 1)
+      const eased = clamp01(offsetAtCross / targetOffset)
       const progress = 1 - Math.pow(1 - eased, 0.2)
       ticks.push({ t: progress * spin, progress })
     }
@@ -284,7 +279,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
 
   function updateHalves(dt: number, t: number, cutAt: number) {
     if (!bodies) return
-    const life = clamp((t - cutAt) / TIMING.halvesLife, 0, 1)
+    const life = clamp01((t - cutAt) / TIMING.halvesLife)
     stepSliceBodies(bodies, dt)
     const opacity = sliceOpacity(life)
     halfLeft.value = { x: bodies.left.x, y: bodies.left.y, angle: bodies.left.angle, opacity }

@@ -123,9 +123,6 @@ function cancel() {
 
 .login-finish__title {
   font-size: var(--text-section-heading);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
   line-height: 1.2;
 }
 
@@ -244,7 +241,7 @@ function cancel() {
 }
 
 .provider__brand-img {
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   display: block;
 }
 

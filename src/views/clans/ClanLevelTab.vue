@@ -15,6 +15,7 @@ import { loadClanLevels } from './clanLevels'
 import ClanLevelReward from './ClanLevelReward.vue'
 import ClanLevelTrail from './ClanLevelTrail.vue'
 import ClanXpSummary from './ClanXpSummary.vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{ clan: ClanResponse; seasonRunning: boolean }>()
 
@@ -38,7 +39,7 @@ const progress = computed(() => level.value?.progress ?? props.clan.level)
 const maxLevel = computed(() => Math.max(0, ...steps.value.map((s) => s.level)))
 const atMax = computed(() => steps.value.length > 0 && progress.value.level >= maxLevel.value)
 const xpToNext = computed(() => Math.max(0, Math.ceil(progress.value.xpForNextLevel - progress.value.xpForCurrentLevel)))
-const percent = computed(() => Math.max(0, Math.min(100, progress.value.progressPercent)))
+const percent = computed(() => clamp(progress.value.progressPercent, 0, 100))
 const headline = computed(() =>
   atMax.value
     ? `Level ${progress.value.level}, every reward unlocked.`
@@ -115,7 +116,7 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
 <template>
   <section class="level-tab">
     <div class="level-tab__now">
-      <p class="level-tab__headline">{{ headline }}</p>
+      <p class="section-title">{{ headline }}</p>
       <ClanBar v-if="!atMax" class="level-tab__bar" :value="percent" :max="100" />
       <p v-if="scaling" class="level-tab__scaling">
         Clan size scaling {{ scaling }}
@@ -139,7 +140,7 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     <ClanLevelTrail v-else-if="steps.length" :steps="steps" :max-level="maxLevel" :current-level="progress.level" :total-xp="progress.totalXp" />
 
     <div class="level-tab__xp">
-      <h2 class="level-tab__heading">XP this season</h2>
+      <h2 class="section-title">XP this season</h2>
       <SkeletonLoader v-if="loading" variant="text" :lines="3" />
       <ClanXpSummary v-else-if="seasonRunning" :by-source="level?.seasonXpBySource ?? {}" />
       <p v-else class="level-tab__no-season">No season running.</p>
@@ -178,13 +179,6 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
   gap: var(--space-sm);
 }
 
-.level-tab__headline {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .level-tab__bar {
   max-width: 560px;
 }
@@ -218,13 +212,6 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
 
 .level-tab__toggle {
   align-self: flex-start;
-}
-
-.level-tab__heading {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .level-tab__grant {

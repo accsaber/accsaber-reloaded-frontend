@@ -2,6 +2,7 @@
 import type { ClanWarResponse, ClanWarTeam, ClanWarTimelinePointResponse } from '@/types/api/clans'
 import { formatStanding, OPPOSING_TEAM, WAR_TEAMS, warSideStyles } from '@/utils/clans'
 import { computed, ref } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -90,7 +91,7 @@ const hovered = ref<Marker | null>(null)
 const tooltipStyle = computed(() =>
   hovered.value
     ? {
-        left: `${Math.min(88, Math.max(12, (hovered.value.x / VIEW_W) * 100))}%`,
+        left: `${clamp((hovered.value.x / VIEW_W) * 100, 12, 88)}%`,
         top: `${(hovered.value.y / VIEW_H) * 100}%`,
       }
     : undefined,
@@ -124,7 +125,7 @@ const summary = computed(() =>
 
 <template>
   <section class="timeline">
-    <h2 class="timeline__title">Timeline</h2>
+    <h2 class="section-title">Timeline</h2>
     <p v-if="!points.length" class="timeline__empty">No hits yet.</p>
     <div v-else class="timeline__frame">
       <svg class="timeline__chart" :viewBox="`0 0 ${VIEW_W} ${VIEW_H}`" role="img" :aria-label="summary">
@@ -166,12 +167,6 @@ const summary = computed(() =>
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.timeline__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
 }
 
 .timeline__empty {

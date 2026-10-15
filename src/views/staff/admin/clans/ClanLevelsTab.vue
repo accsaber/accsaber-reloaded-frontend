@@ -192,7 +192,7 @@ onMounted(load)
   <div class="clan-levels">
     <div class="clan-levels__header">
       <div>
-        <h2 class="clan-levels__title">Level table</h2>
+        <h2 class="section-title">Level table</h2>
         <p class="clan-levels__meta">Each capacity amount stacks on top of every lower level.</p>
       </div>
     </div>
@@ -323,13 +323,6 @@ onMounted(load)
   gap: var(--space-lg);
 }
 
-.clan-levels__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .clan-levels__meta {
   margin: 2px 0 0;
   font-size: var(--text-caption);
@@ -366,7 +359,7 @@ onMounted(load)
 
 .clan-levels__cell {
   min-width: 36px;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   font: inherit;
   font-family: var(--font-mono);
   color: var(--text-primary);
@@ -406,7 +399,7 @@ onMounted(load)
 .clan-levels__chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   padding: 2px 6px;
   font-size: var(--text-caption);
   color: var(--text-primary);

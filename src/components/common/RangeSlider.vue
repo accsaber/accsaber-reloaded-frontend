@@ -33,7 +33,7 @@ function onMaxInput(e: Event) {
 
 <template>
   <div class="range-slider">
-    <label v-if="label" class="range-slider__label">{{ label }}</label>
+    <label v-if="label" class="field-label">{{ label }}</label>
     <div class="range-slider__track-container">
       <div class="range-slider__track">
         <div class="range-slider__fill" :style="{ left: fillLeft + '%', width: (fillRight - fillLeft) + '%' }" />
@@ -55,14 +55,6 @@ function onMaxInput(e: Event) {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.range-slider__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .range-slider__track-container {

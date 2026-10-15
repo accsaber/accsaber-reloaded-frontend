@@ -27,7 +27,6 @@ import {
   mapStreakReference,
   MAP_WR_FLOOR,
   minMeaningfulTarget,
-  mulberry32,
   NORM_AP_MAX,
   NORM_AP_MIN,
   pbAnchorIndex,
@@ -57,6 +56,9 @@ import {
   type MissionTemplate,
 } from '@/wiki/missionSim'
 import { ref, shallowRef } from 'vue'
+import { formatAccuracy } from '@/utils/formatters'
+import { mulberry32 } from '@/utils/random'
+import { clamp } from '@/utils/math'
 
 export interface ForgeProfile {
   name: string
@@ -575,7 +577,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       steps.push({
         label: 'Cap against how you play maps this hard',
         detail: representative?.fromBand
-          ? `on maps between ${fmtComplexity(lo)} and ${fmtComplexity(hi)} complexity you usually land around ${(accuracyForNormalized(representative.value) * 100).toFixed(2)}%, and ${band} allows ${((COMPLEXITY_CAP_MULTIPLIER[band] - 1) * 100).toFixed(0)}% past that`
+          ? `on maps between ${fmtComplexity(lo)} and ${fmtComplexity(hi)} complexity you usually land around ${formatAccuracy(accuracyForNormalized(representative.value))}, and ${band} allows ${((COMPLEXITY_CAP_MULTIPLIER[band] - 1) * 100).toFixed(0)}% past that`
           : `you have no history at this complexity, so the ask is sized off how you score across the category instead`,
         value: complexityCapped,
         changed: true,
@@ -655,7 +657,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       const center = countCenter(template, band)
       const jitterRange = countJitterRange(template)
       const jitter = Math.round((rng() * 2 - 1) * jitterRange)
-      const count = Math.min(max, Math.max(min, center + jitter))
+      const count = clamp(center + jitter, min, max)
       out.push({
         key: 'count',
         title: 'Roll a count',
@@ -724,7 +726,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       const max = template.targetCountMax ?? 2
       const center = countCenter(template, band)
       const jitter = Math.round((rng() * 2 - 1) * countJitterRange(template))
-      const count = Math.min(Math.min(max, Math.max(min, center + jitter)), qualifying)
+      const count = Math.min(clamp(center + jitter, min, max), qualifying)
       out.push({
         key: 'count',
         title: 'Roll a count',
@@ -780,7 +782,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       const max = template.targetCountMax ?? 3
       const center = countCenter(template, band)
       const jitter = Math.round((rng() * 2 - 1) * countJitterRange(template))
-      const count = Math.min(max, Math.max(min, center + jitter))
+      const count = clamp(center + jitter, min, max)
       out.push({
         key: 'count',
         title: 'Roll a count',
@@ -1091,7 +1093,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
 
     const description =
       type === 'ACC_ON_MAP'
-        ? `Hit ${((accuracy ?? 0) * 100).toFixed(2)}%+ accuracy on ${picked.songName}.`
+        ? `Hit ${formatAccuracy(accuracy ?? 0)}+ accuracy on ${picked.songName}.`
         : type === 'AP_ON_MAP'
           ? `Score ${Math.round(final).toLocaleString()}+ AP on ${picked.songName}.`
           : `Set a personal best on ${picked.songName}.`
@@ -1115,7 +1117,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     return {
       key: 'chain',
       title: 'Settle on a number',
-      receipt: accuracy !== null ? `${(accuracy * 100).toFixed(2)}%` : fmtAp(final),
+      receipt: accuracy !== null ? formatAccuracy(accuracy) : fmtAp(final),
       note: 'Here is the part nobody gets to see. The starting point is only an opening bid. It gets blended with what the leaderboard says players at your level actually score on this map, then pushed up by floors and pulled down by ceilings until it lands somewhere that is a real climb without being a fantasy.',
       data: { kind: 'chain', steps, final, accuracy },
     }

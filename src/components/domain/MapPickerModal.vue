@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { getDifficulties } from '@/api/maps'
-import { getApiErrorMessage } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
@@ -10,7 +9,7 @@ import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
 import type { ImportCampaignMapRequest } from '@/types/api/campaigns'
@@ -18,8 +17,9 @@ import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { CategoryCode } from '@/types/display'
 import { QUEUE_STATUSES } from '@/utils/constants'
 import { computed, onMounted, ref, watch } from 'vue'
-import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
-import CampaignGlobalMapSearch from '@/views/staff/campaigns/CampaignGlobalMapSearch.vue'
+import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
+import CampaignGlobalMapSearch from '@/components/domain/CampaignGlobalMapSearch.vue'
+import { parseApiError } from '@/api/client'
 
 export interface FixedMapFilters {
   categoryId?: string | null
@@ -130,7 +130,7 @@ async function search() {
     totalPages.value = data.totalPages || 1
     if (page.value > totalPages.value) page.value = totalPages.value
   } catch (e) {
-    err.value = getApiErrorMessage(e, 'Search failed')
+    err.value = parseApiError(e, 'Search failed').message
     results.value = []
     totalPages.value = 1
   } finally {
@@ -464,7 +464,7 @@ function commit() {
   padding: 2px;
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .map-picker__source {
@@ -474,18 +474,18 @@ function commit() {
 .map-picker__status {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .map-picker__status-btn {
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
     color 120ms ease,
@@ -504,7 +504,7 @@ function commit() {
 }
 
 .map-picker__mode-btn {
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -534,7 +534,7 @@ function commit() {
   padding: var(--space-md);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .map-picker__search {
@@ -545,7 +545,7 @@ function commit() {
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-input);
   outline: none;
   transition: border-color 120ms ease;
 }
@@ -636,12 +636,12 @@ function commit() {
 
 .map-picker__error {
   margin: 0;
-  padding: 8px 10px;
+  padding: var(--space-sm) 10px;
   font-size: var(--text-caption);
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .map-picker__empty,
@@ -660,7 +660,7 @@ function commit() {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
@@ -676,7 +676,7 @@ function commit() {
 .map-picker__list::-webkit-scrollbar-thumb,
 .map-picker__staged-list::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
 }
 
 .map-picker__list li,
@@ -690,10 +690,10 @@ function commit() {
   grid-template-columns: 44px minmax(0, 1fr) auto;
   gap: var(--space-sm);
   align-items: center;
-  padding: 8px;
+  padding: var(--space-sm);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   text-align: left;
   color: inherit;
@@ -720,7 +720,7 @@ function commit() {
 .map-picker__cover {
   width: 44px;
   height: 44px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   overflow: hidden;
   background: var(--bg-elevated);
   flex-shrink: 0;
@@ -819,7 +819,7 @@ function commit() {
   flex-shrink: 0;
   color: var(--text-tertiary);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   opacity: 0.5;
 }
 
@@ -835,10 +835,10 @@ function commit() {
   grid-template-columns: 34px minmax(0, 1fr) auto auto;
   gap: var(--space-sm);
   align-items: center;
-  padding: 6px 8px;
+  padding: 6px var(--space-sm);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
 }
 
 .map-picker__staged-meta {
@@ -877,7 +877,7 @@ function commit() {
   color: var(--text-tertiary);
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
     color 120ms ease,

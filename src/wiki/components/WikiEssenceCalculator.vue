@@ -2,6 +2,7 @@
 import type { ItemResponse } from '@/types/api/items'
 import { formatEssence } from '@/utils/essence'
 import { computed, ref } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   items: ItemResponse[]
@@ -18,7 +19,7 @@ const destroyed = computed(() =>
 )
 
 function step(item: ItemResponse, by: number) {
-  const next = Math.max(0, Math.min(99, (counts.value[item.id] ?? 0) + by))
+  const next = clamp((counts.value[item.id] ?? 0) + by, 0, 99)
   counts.value = { ...counts.value, [item.id]: next }
 }
 

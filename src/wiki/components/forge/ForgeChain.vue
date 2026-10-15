@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ChainStep } from '@/wiki/useMissionForge'
 import { computed } from 'vue'
+import { formatAccuracy } from '@/utils/formatters'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   steps: ChainStep[]
@@ -16,7 +18,7 @@ const bounds = computed(() => {
 })
 
 function barPercent(value: number): number {
-  return Math.max(4, Math.min(100, ((value - bounds.value.min) / bounds.value.span) * 100))
+  return clamp(((value - bounds.value.min) / bounds.value.span) * 100, 4, 100)
 }
 
 function delta(index: number): number | null {
@@ -57,7 +59,7 @@ function delta(index: number): number | null {
     <p class="chain__final">
       <span class="chain__final-label">Lands on</span>
       <span class="chain__final-value">
-        <template v-if="accuracy !== null">{{ (accuracy * 100).toFixed(2) }}%</template>
+        <template v-if="accuracy !== null">{{ formatAccuracy(accuracy) }}</template>
         <template v-else>{{ Math.round(final).toLocaleString() }} AP</template>
       </span>
     </p>
@@ -83,7 +85,7 @@ function delta(index: number): number | null {
 .chain__step {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .chain__head {

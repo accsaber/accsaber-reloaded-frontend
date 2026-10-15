@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderArcadeOverlaySpec, BorderOverlayHost } from '@/types/api/items'
+import type { BorderArcadeOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { frameDelta, overlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'

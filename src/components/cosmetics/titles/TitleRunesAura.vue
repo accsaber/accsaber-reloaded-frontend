@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleRunesAuraSpec } from '@/types/api/items'
+import type { TitleRunesAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'

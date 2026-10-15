@@ -1,0 +1,216 @@
+<script setup lang="ts">
+import RelationListModal from '@/views/profile/RelationListModal.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useRelationsStore } from '@/stores/relations'
+import type {
+  RelationDirection,
+  ScoreRelationType,
+  UserRelationCounts,
+  UserRelationResponse,
+} from '@/types/api/relations'
+import { computed, ref, watch } from 'vue'
+
+const props = defineProps<{
+  userId: string
+  counts: UserRelationCounts
+}>()
+
+const authStore = useAuthStore()
+const relationsStore = useRelationsStore()
+
+const localCounts = ref<UserRelationCounts>({ ...props.counts })
+
+watch(
+  () => props.counts,
+  (next) => {
+    localCounts.value = { ...next }
+  },
+)
+
+const viewerFollowsTarget = computed(
+  () =>
+    authStore.isLoggedIn
+    && authStore.userId !== props.userId
+    && relationsStore.hasRelation(props.userId, 'follower'),
+)
+
+const viewerRivalsTarget = computed(
+  () =>
+    authStore.isLoggedIn
+    && authStore.userId !== props.userId
+    && relationsStore.hasRelation(props.userId, 'rival'),
+)
+
+watch(viewerFollowsTarget, (now, was) => {
+  if (now === was) return
+  const delta = now ? 1 : -1
+  localCounts.value.followerCount = Math.max(0, localCounts.value.followerCount + delta)
+})
+
+watch(viewerRivalsTarget, (now, was) => {
+  if (now === was) return
+  const delta = now ? 1 : -1
+  localCounts.value.rivaledByCount = Math.max(0, localCounts.value.rivaledByCount + delta)
+})
+
+interface Tile {
+  key: string
+  label: string
+  count: number
+  type: ScoreRelationType
+  direction: RelationDirection
+  modalTitle: string
+}
+
+const tiles = computed<Tile[]>(() => {
+  const c = localCounts.value
+  const result: Tile[] = []
+  if (c.followingCount !== undefined) {
+    result.push({
+      key: 'following',
+      label: 'Following',
+      count: c.followingCount,
+      type: 'follower',
+      direction: 'outgoing',
+      modalTitle: 'Following',
+    })
+  }
+  result.push({
+    key: 'followers',
+    label: 'Followers',
+    count: c.followerCount,
+    type: 'follower',
+    direction: 'incoming',
+    modalTitle: 'Followers',
+  })
+  if (c.rivalCount !== undefined) {
+    result.push({
+      key: 'rivaling',
+      label: 'Rivaling',
+      count: c.rivalCount,
+      type: 'rival',
+      direction: 'outgoing',
+      modalTitle: 'Rivaling',
+    })
+  }
+  result.push({
+    key: 'rivaledBy',
+    label: 'Rivaled by',
+    count: c.rivaledByCount,
+    type: 'rival',
+    direction: 'incoming',
+    modalTitle: 'Rivaled by',
+  })
+  return result
+})
+
+function handleRemoved(item: UserRelationResponse) {
+  const c = localCounts.value
+  if (item.type === 'follower' && c.followingCount !== undefined) {
+    c.followingCount = Math.max(0, c.followingCount - 1)
+  } else if (item.type === 'rival' && c.rivalCount !== undefined) {
+    c.rivalCount = Math.max(0, c.rivalCount - 1)
+  }
+}
+
+const activeTile = ref<Tile | null>(null)
+
+function open(tile: Tile) {
+  if (tile.count === 0) return
+  activeTile.value = tile
+}
+
+function close() {
+  activeTile.value = null
+}
+</script>
+
+<template>
+  <div class="relation-counts">
+    <button
+      v-for="tile in tiles"
+      :key="tile.key"
+      class="relation-counts__tile"
+      :class="{ 'relation-counts__tile--empty': tile.count === 0 }"
+      :disabled="tile.count === 0"
+      @click="open(tile)"
+    >
+      <span class="relation-counts__value">{{ tile.count.toLocaleString() }}</span>
+      <span class="relation-counts__label">{{ tile.label }}</span>
+    </button>
+
+    <RelationListModal
+      :open="activeTile !== null"
+      :user-id="userId"
+      :type="activeTile?.type ?? 'follower'"
+      :direction="activeTile?.direction ?? 'outgoing'"
+      :title="activeTile?.modalTitle ?? ''"
+      @close="close"
+      @removed="handleRemoved"
+    />
+  </div>
+</template>
+
+<style scoped>
+.relation-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: var(--space-md) var(--space-lg);
+  padding-top: var(--space-sm);
+}
+
+.relation-counts__tile {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-secondary);
+  transition: color 120ms ease;
+}
+
+.relation-counts__tile:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.relation-counts__tile:hover:not(:disabled) .relation-counts__label {
+  color: var(--accent);
+}
+
+.relation-counts__tile:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.relation-counts__tile--empty,
+.relation-counts__tile:disabled {
+  cursor: default;
+}
+
+.relation-counts__tile--empty .relation-counts__value,
+.relation-counts__tile:disabled .relation-counts__value {
+  color: var(--text-tertiary);
+}
+
+.relation-counts__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  transition: color 120ms ease;
+}
+
+.relation-counts__label {
+  font-size: var(--text-caption);
+  color: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 120ms ease;
+}
+</style>

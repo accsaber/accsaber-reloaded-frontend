@@ -2,6 +2,7 @@ import { getCategories } from '@/api/categories'
 import { useThemeStore } from '@/stores/theme'
 import type { CategoryResponse } from '@/types/api/categories'
 import type { CategoryCode, CategoryInfo } from '@/types/display'
+import { dedupeRequest } from '@/utils/dedupe'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -66,15 +67,11 @@ export const useCategoryStore = defineStore('categories', () => {
       code: cat.code,
       name: cat.name,
       accent: readCssToken('accent', cat.code),
-      tint: readCssToken('tint', cat.code),
-      tintLight: readCssToken('tint', cat.code),
     }))
     const extras: CategoryInfo[] = EXTRA_CODES.map((code) => ({
       code,
       name: EXTRA_NAMES[code] ?? code,
       accent: readCssToken('accent', code),
-      tint: readCssToken('tint', code),
-      tintLight: readCssToken('tint', code),
     }))
     return [...list, ...extras]
   })
@@ -100,13 +97,19 @@ export const useCategoryStore = defineStore('categories', () => {
   }
 
   function getAccent(code: string): string {
+    const known = categoryInfoByCode.value.get(code)
+    if (known) return known.accent
     void themeStore.theme
     void themeStore.activeTokens
     return readCssToken('accent', code)
   }
 
-  async function fetchCategories(force = false): Promise<void> {
-    if (loaded.value && !force) return
+  function fetchCategories(force = false): Promise<void> {
+    if (loaded.value && !force) return Promise.resolve()
+    return dedupeRequest('categories', loadCategories)
+  }
+
+  async function loadCategories(): Promise<void> {
     try {
       const result = await getCategories()
       categories.value = result

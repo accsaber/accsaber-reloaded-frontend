@@ -10,7 +10,7 @@ import {
   uploadEventBackground,
   uploadEventIcon,
 } from '@/api/admin/events'
-import { getApiErrorMessage, parseApiError } from '@/api/client'
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -106,7 +106,7 @@ async function refresh() {
     missions.value = missionTemplates
     syncForm()
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to load event')
+    errorMsg.value = parseApiError(e, 'Failed to load event').message
   } finally {
     loading.value = false
   }
@@ -182,7 +182,7 @@ async function commitBonusItems(ids: string[]) {
   try {
     event.value = await updateEvent(eventId.value, { bonusItemIds: ids })
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to update bonus items')
+    errorMsg.value = parseApiError(e, 'Failed to update bonus items').message
   } finally {
     bonusBusy.value = false
   }
@@ -209,7 +209,7 @@ async function toggleActive() {
       event.value = await getAdminEvent(eventId.value)
       syncForm()
     } catch (e) {
-      errorMsg.value = getApiErrorMessage(e, 'Failed to deactivate event')
+      errorMsg.value = parseApiError(e, 'Failed to deactivate event').message
     } finally {
       statusBusy.value = false
     }
@@ -220,7 +220,7 @@ async function toggleActive() {
       event.value = await updateEvent(eventId.value, { active: true })
       syncForm()
     } catch (e) {
-      errorMsg.value = getApiErrorMessage(e, 'Failed to reactivate event')
+      errorMsg.value = parseApiError(e, 'Failed to reactivate event').message
     } finally {
       statusBusy.value = false
     }
@@ -235,7 +235,7 @@ async function rollout() {
     await rolloutEventMissions(eventId.value)
     rolloutDone.value = true
   } catch (e) {
-    errorMsg.value = getApiErrorMessage(e, 'Failed to roll out missions')
+    errorMsg.value = parseApiError(e, 'Failed to roll out missions').message
   } finally {
     rolloutBusy.value = false
   }
@@ -297,20 +297,18 @@ function missionXp(m: MissionTemplateResponse): string {
 
     <template v-else-if="event">
       <section class="event-editor__panel">
-        <h2 class="event-editor__panel-title">Details</h2>
+        <h2 class="section-title">Details</h2>
         <div class="event-editor__grid">
           <BaseInput v-model="form.title" label="Title" />
           <BaseInput v-model="form.bonusXp" type="number" min="0" step="1" label="Completion bonus XP" />
           <div class="event-editor__field event-editor__field--full">
             <BaseInput v-model="form.slug" label="Slug (public URL)" placeholder="alphas-end" :error="slugError" />
-            <p class="event-editor__hint">
-              Public link <span class="mono">/events/{{ slugPreview || '…' }}</span>. Stays fixed when you rename the event.
-            </p>
+            <p class="event-editor__hint mono">/events/{{ slugPreview || '…' }}</p>
           </div>
           <BaseInput v-model="form.startsAt" type="datetime-local" label="Starts at" />
           <BaseInput v-model="form.endsAt" type="datetime-local" label="Ends at" />
           <div class="event-editor__field event-editor__field--full">
-            <label class="event-editor__label">Description</label>
+            <label class="field-label">Description</label>
             <textarea v-model="form.description" class="event-editor__textarea" rows="3"
               placeholder="Short summary shown on the event card" />
           </div>
@@ -329,7 +327,7 @@ function missionXp(m: MissionTemplateResponse): string {
       </section>
 
       <section class="event-editor__panel">
-        <h2 class="event-editor__panel-title">Images</h2>
+        <h2 class="section-title">Images</h2>
         <div class="event-editor__image-row">
           <ImageUploader label="Background" hint="16:9 hero, stored as WEBP" :image-url="event.backgroundUrl ?? null"
             :upload-handler="uploadBackground" :remove-handler="removeBackground" />
@@ -340,14 +338,11 @@ function missionXp(m: MissionTemplateResponse): string {
 
       <section class="event-editor__panel">
         <header class="event-editor__panel-header">
-          <h2 class="event-editor__panel-title">Completion bonus items</h2>
+          <h2 class="section-title">Completion bonus items</h2>
           <div class="event-editor__totals">
             <span class="mono">{{ bonusItems.length }}</span> selected
           </div>
         </header>
-        <p class="event-editor__hint">
-          Items granted alongside the bonus XP when a player completes the event.
-        </p>
         <div v-if="bonusItems.length" class="event-editor__chips">
           <span v-for="item in bonusItems" :key="item.id" class="event-editor__chip">
             {{ item.name }}
@@ -367,16 +362,11 @@ function missionXp(m: MissionTemplateResponse): string {
 
       <section class="event-editor__panel">
         <header class="event-editor__panel-header">
-          <h2 class="event-editor__panel-title">Missions</h2>
+          <h2 class="section-title">Missions</h2>
           <div class="event-editor__totals">
             <span class="mono">{{ missions.length }}</span> templates
           </div>
         </header>
-        <p class="event-editor__hint">
-          Authored mission templates for this event. Roll out after unlocking or adding missions to
-          create per-player progress.
-        </p>
-
         <div class="event-editor__rollout">
           <BaseButton size="sm" variant="primary" :loading="rolloutBusy" @click="rollout">
             Roll out to players
@@ -505,13 +495,6 @@ function missionXp(m: MissionTemplateResponse): string {
   gap: var(--space-md);
 }
 
-.event-editor__panel-title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .event-editor__panel-header {
   display: flex;
   align-items: baseline;
@@ -543,14 +526,6 @@ function missionXp(m: MissionTemplateResponse): string {
 
 .event-editor__field--full {
   grid-column: 1 / -1;
-}
-
-.event-editor__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .event-editor__textarea {
@@ -618,7 +593,7 @@ function missionXp(m: MissionTemplateResponse): string {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 4px 6px 4px 10px;
+  padding: var(--space-xs) 6px var(--space-xs) 10px;
   font-size: var(--text-caption);
   color: var(--text-primary);
   background: var(--bg-elevated);

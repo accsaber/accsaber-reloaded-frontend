@@ -1,9 +1,9 @@
-import type { PickerOption } from '@/components/domain/ResourcePicker.vue'
+import type { PickerOption } from '@/views/staff/admin/operations/ResourcePicker.vue'
 import type { JobFieldKind, LeaderboardPlatform } from '@/types/api/jobs'
 import type { ItemResponse } from '@/types/api/items'
 import type { MilestoneResponse } from '@/types/api/milestones'
 import type { KofiEventResponse } from '@/types/api/supporters'
-import { pickAvatarUrl, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickAvatarUrl, pickCoverUrl } from '@/utils/media'
 import { useCategoryStore } from '@/stores/categories'
 import { formatCents, formatRelativeDate } from '@/utils/formatters'
 

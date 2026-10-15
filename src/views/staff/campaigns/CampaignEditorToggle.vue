@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CampaignFieldHint from './CampaignFieldHint.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import { computed, useSlots } from 'vue'
 
 const props = withDefaults(
@@ -8,10 +8,9 @@ const props = withDefaults(
     label: string
     onText?: string
     offText?: string
-    hint?: string
     disabled?: boolean
   }>(),
-  { onText: '', offText: '', hint: '', disabled: false },
+  { onText: '', offText: '', disabled: false },
 )
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
@@ -24,29 +23,21 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
 </script>
 
 <template>
-  <button
-    type="button"
-    role="switch"
+  <BaseSwitch
     class="editor-toggle"
     :class="{ 'editor-toggle--on': modelValue }"
-    :aria-checked="modelValue"
+    :model-value="modelValue"
     :disabled="disabled"
-    @click="emit('update:modelValue', !modelValue)"
+    @update:model-value="emit('update:modelValue', $event)"
   >
     <span v-if="hasGlyph" class="editor-toggle__glyph">
       <slot name="glyph" />
     </span>
     <span class="editor-toggle__copy">
-      <span class="editor-toggle__label">
-        {{ label }}
-        <CampaignFieldHint v-if="hint" :text="hint" />
-      </span>
+      <span class="editor-toggle__label">{{ label }}</span>
       <span v-if="stateText" class="editor-toggle__state">{{ stateText }}</span>
     </span>
-    <span class="editor-toggle__track" aria-hidden="true">
-      <span class="editor-toggle__knob" />
-    </span>
-  </button>
+  </BaseSwitch>
 </template>
 
 <style scoped>
@@ -57,6 +48,7 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   width: 100%;
   padding: var(--space-sm) 12px;
   text-align: left;
+  white-space: normal;
   color: var(--text-secondary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
@@ -75,7 +67,6 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
 
 .editor-toggle:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
 }
 
 .editor-toggle--on,
@@ -101,7 +92,7 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
 .editor-toggle__label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -119,40 +110,12 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   line-height: 1.3;
 }
 
-.editor-toggle__track {
-  flex-shrink: 0;
-  width: 34px;
-  height: 18px;
-  padding: 2px;
-  background: var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  transition: background 120ms ease;
-}
-
-.editor-toggle--on .editor-toggle__track {
-  background: color-mix(in srgb, var(--page-accent) 35%, transparent);
-}
-
-.editor-toggle__knob {
-  display: block;
-  width: 14px;
-  height: 14px;
-  background: var(--text-tertiary);
-  border-radius: var(--radius-pill);
-  transition:
-    transform 150ms ease,
-    background 120ms ease;
-}
-
-.editor-toggle--on .editor-toggle__knob {
-  background: var(--page-accent);
-  transform: translateX(16px);
+.editor-toggle :deep(.base-switch__track) {
+  order: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .editor-toggle,
-  .editor-toggle__track,
-  .editor-toggle__knob {
+  .editor-toggle {
     transition: none;
   }
 }

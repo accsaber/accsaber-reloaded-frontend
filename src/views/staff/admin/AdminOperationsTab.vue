@@ -2,8 +2,8 @@
 import { computed, onUnmounted, ref } from 'vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
-import ResourcePicker from '@/components/domain/ResourcePicker.vue'
-import { useSupporterAdmin } from '@/composables/useSupporterAdmin'
+import ResourcePicker from '@/views/staff/admin/operations/ResourcePicker.vue'
+import { useSupporterAdmin } from '@/views/staff/admin/operations/useSupporterAdmin'
 import type { JobResponse, JobTypeResponse, RunJobRequest } from '@/types/api/jobs'
 import { useCategoryStore } from '@/stores/categories'
 import JobRunner from './operations/JobRunner.vue'
@@ -197,7 +197,7 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
 <template>
   <div class="tab">
     <div class="tab__header">
-      <h2 class="tab__title">Operations</h2>
+      <h2 class="section-title">Operations</h2>
       <p class="tab__subtitle">
         Every maintenance job the backend offers, with the inputs it asks for. Nothing is queued, so
         starting a job twice runs it twice.
@@ -347,7 +347,6 @@ async function reconnect(platform: 'beatleader' | 'scoresaber') {
 .tab { display: flex; flex-direction: column; gap: var(--space-lg); }
 
 .tab__header { display: flex; flex-direction: column; gap: var(--space-xs); }
-.tab__title { font-size: var(--text-section-heading); font-weight: 600; color: var(--text-primary); margin: 0; }
 .tab__subtitle { font-size: var(--text-caption); color: var(--text-secondary); margin: 0; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-md); }

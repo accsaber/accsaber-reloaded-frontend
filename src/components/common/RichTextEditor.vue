@@ -406,7 +406,7 @@ const formatGroups: FormatButton[][] = [
   align-items: center;
   flex-wrap: wrap;
   gap: 2px;
-  padding: 4px;
+  padding: var(--space-xs);
   border: 1px solid var(--bg-overlay);
   border-bottom: none;
   border-top-left-radius: var(--radius-input);
@@ -450,7 +450,7 @@ const formatGroups: FormatButton[][] = [
   padding: 0;
   margin: 0 1px;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   transition: transform 100ms ease;
 }
@@ -478,7 +478,7 @@ const formatGroups: FormatButton[][] = [
   width: 1px;
   height: 18px;
   background: var(--bg-overlay);
-  margin: 0 4px;
+  margin: 0 var(--space-xs);
 }
 
 .rich-editor__tb-spacer {
@@ -563,8 +563,8 @@ const formatGroups: FormatButton[][] = [
 .rich-editor__body :deep(code) {
   font-family: var(--font-mono);
   font-size: 0.9em;
-  padding: 0 4px;
-  border-radius: 3px;
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-btn);
   background: var(--bg-elevated);
   color: var(--accent);
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { formatCount } from '@/utils/formatters'
 import DataTable from '@/components/common/DataTable.vue'
-import ItemHoldersTooltip from '@/components/domain/ItemHoldersTooltip.vue'
+import ItemHoldersTooltip from '@/views/stats/ItemHoldersTooltip.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { ItemResponse } from '@/types/api/items'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
@@ -10,7 +11,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ItemStatsItemCell from './ItemStatsItemCell.vue'
 import ItemStatsModifiers from './ItemStatsModifiers.vue'
-import { fmtEssence, fmtInt, fmtPercentPoint } from './statsFormat'
+import { fmtEssence, fmtPercentPoint } from './statsFormat'
 import { playerRoute, type StatsRow } from './useStatsBoard'
 
 const props = defineProps<{
@@ -36,13 +37,13 @@ function itemOf(row: StatsRow): ItemResponse | null {
   return (row.item as ItemResponse | null | undefined) ?? null
 }
 
-const PRIMARY_STAT: Record<string, { key: string; fmt: (v: unknown) => string; cls: string }> = {
-  'most-items': { key: 'itemCount', fmt: fmtInt, cls: 'stat-accent' },
-  'most-crates-opened': { key: 'crateCount', fmt: fmtInt, cls: 'stat-accent' },
+const PRIMARY_STAT: Record<string, { key: string; fmt: (v: number) => string; cls: string }> = {
+  'most-items': { key: 'itemCount', fmt: formatCount, cls: 'stat-accent' },
+  'most-crates-opened': { key: 'crateCount', fmt: formatCount, cls: 'stat-accent' },
   'most-valuable-inventory': { key: 'totalValue', fmt: fmtEssence, cls: 'stat-essence' },
-  'first-editions': { key: 'firstEditionCount', fmt: fmtInt, cls: 'stat-accent' },
+  'first-editions': { key: 'firstEditionCount', fmt: formatCount, cls: 'stat-accent' },
   'most-complete-collection': { key: 'completionPercent', fmt: fmtPercentPoint, cls: 'stat-accent' },
-  'biggest-traders': { key: 'tradeCount', fmt: fmtInt, cls: 'stat-accent' },
+  'biggest-traders': { key: 'tradeCount', fmt: formatCount, cls: 'stat-accent' },
 }
 
 const primaryStat = computed(() => PRIMARY_STAT[props.board])
@@ -76,16 +77,16 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
       <ItemStatsModifiers :modifiers="row.modifiers" :unusual-effect="(row.unusualEffect as string | null)" />
     </template>
 
-    <template #cell-itemCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
-    <template #cell-crateCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
-    <template #cell-firstEditionCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
-    <template #cell-tradeCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
-    <template #cell-itemsTraded="{ value }">{{ fmtInt(value) }}</template>
-    <template #cell-ownedCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
-    <template #cell-catalogTotal="{ value }">{{ fmtInt(value) }}</template>
+    <template #cell-itemCount="{ value }"><span class="stat-accent">{{ formatCount(value as number | null) }}</span></template>
+    <template #cell-crateCount="{ value }"><span class="stat-accent">{{ formatCount(value as number | null) }}</span></template>
+    <template #cell-firstEditionCount="{ value }"><span class="stat-accent">{{ formatCount(value as number | null) }}</span></template>
+    <template #cell-tradeCount="{ value }"><span class="stat-accent">{{ formatCount(value as number | null) }}</span></template>
+    <template #cell-itemsTraded="{ value }">{{ formatCount(value as number | null) }}</template>
+    <template #cell-ownedCount="{ value }"><span class="stat-accent">{{ formatCount(value as number | null) }}</span></template>
+    <template #cell-catalogTotal="{ value }">{{ formatCount(value as number | null) }}</template>
     <template #cell-completionPercent="{ value }"><span class="stat-accent">{{ fmtPercentPoint(value) }}</span></template>
-    <template #cell-ownerCount="{ value }"><span class="stat-accent">{{ fmtInt(value) }}</span></template>
-    <template #cell-instanceCount="{ value }">{{ fmtInt(value) }}</template>
+    <template #cell-ownerCount="{ value }"><span class="stat-accent">{{ formatCount(value as number | null) }}</span></template>
+    <template #cell-instanceCount="{ value }">{{ formatCount(value as number | null) }}</template>
     <template #cell-itemsValue="{ value }">{{ fmtEssence(value) }}</template>
     <template #cell-essenceBalance="{ value }">{{ fmtEssence(value) }}</template>
     <template #cell-totalValue="{ value }"><span class="stat-essence">{{ fmtEssence(value) }}</span></template>
@@ -105,21 +106,21 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
 
         <div class="stats-card__details">
           <div v-if="hasOwner" class="stats-card__detail">
-            <span class="stats-card__label">{{ board === 'first-edition-holders' ? 'Holder' : 'Owner' }}</span>
+            <span class="stats-card__label field-label">{{ board === 'first-edition-holders' ? 'Holder' : 'Owner' }}</span>
             <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip />
           </div>
           <div v-if="board === 'rarest-unboxed'" class="stats-card__detail stats-card__detail--stacked">
-            <span class="stats-card__label">Modifiers</span>
+            <span class="stats-card__label field-label">Modifiers</span>
             <ItemStatsModifiers :modifiers="row.modifiers" :unusual-effect="(row.unusualEffect as string | null)" />
           </div>
           <div v-if="isScarcity" class="stats-card__counts">
             <span class="stats-card__count">
-              <span class="stats-card__label">Owners</span>
-              <span class="stat-accent">{{ fmtInt(row.ownerCount) }}</span>
+              <span class="stats-card__label field-label">Owners</span>
+              <span class="stat-accent">{{ formatCount(row.ownerCount as number) }}</span>
             </span>
             <span class="stats-card__count">
-              <span class="stats-card__label">Copies</span>
-              <span>{{ fmtInt(row.instanceCount) }}</span>
+              <span class="stats-card__label field-label">Copies</span>
+              <span>{{ formatCount(row.instanceCount as number) }}</span>
             </span>
           </div>
         </div>
@@ -131,7 +132,7 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
         <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip class="stats-card__player" />
 
         <span v-if="primaryStat" class="stats-card__stat" :class="primaryStat.cls">
-          {{ primaryStat.fmt(row[primaryStat.key]) }}
+          {{ primaryStat.fmt(row[primaryStat.key] as number) }}
         </span>
       </div>
     </template>
@@ -256,11 +257,6 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
 }
 
 .stats-card__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
   flex-shrink: 0;
 }
 

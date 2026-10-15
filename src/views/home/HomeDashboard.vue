@@ -42,13 +42,6 @@ const logoUrl = useBrandLogo()
   object-fit: contain;
 }
 
-.dashboard__welcome {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .dashboard__name {
   color: var(--accent-overall);
 }

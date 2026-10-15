@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleSmokeAuraSpec } from '@/types/api/items'
+import type { TitleSmokeAuraSpec } from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   aura: TitleSmokeAuraSpec
@@ -155,7 +156,7 @@ useElementCanvas(canvasRef, {
       const px = p.x + Math.sin(t * p.swayFreq * Math.PI * 2 + p.born) * p.swayAmp
       const py = p.y - lp * p.vy * (p.life / 1000)
       const size = p.baseSize * (1 + lp * 1.3)
-      const topFade = Math.max(0, Math.min(1, py / (fs * 0.9)))
+      const topFade = clamp01(py / (fs * 0.9))
       const alpha = Math.pow(Math.sin(Math.PI * lp), 0.8) * p.maxA * topFade
       ctx.save()
       ctx.translate(px, py)

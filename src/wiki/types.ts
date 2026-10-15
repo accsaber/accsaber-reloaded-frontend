@@ -15,7 +15,6 @@ export interface WikiSection {
   title: string
   accent?: string
   entries: WikiEntry[]
-  subsections?: WikiSection[]
 }
 
 export interface WikiTocItem {

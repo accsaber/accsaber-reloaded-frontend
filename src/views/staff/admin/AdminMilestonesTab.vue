@@ -22,8 +22,9 @@ import type { ItemResponse } from '@/types/api/items'
 import { MILESTONE_ICON_GROUPS } from '@/types/api/milestones'
 import type { MilestoneResponse, MilestoneSetResponse, PrerequisiteLinkResponse } from '@/types/api/milestones'
 import type { MilestoneStatus, MilestoneTier, MilestoneType } from '@/types/enums'
-import { TIER_COLORS, formatPercent } from '@/utils/constants'
+import { TIER_COLORS } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
+import { formatPercent } from '@/utils/formatters'
 
 const categoryStore = useCategoryStore()
 
@@ -505,7 +506,7 @@ const STATUS_OPTIONS = [
 <template>
   <div class="tab">
     <div class="tab__header">
-      <h2 class="tab__title">Milestones</h2>
+      <h2 class="section-title">Milestones</h2>
       <div class="header-actions">
         <BaseButton size="sm" @click="schemaOpen = !schemaOpen">
           {{ schemaOpen ? 'Hide' : 'Show' }} Schema Reference
@@ -534,7 +535,7 @@ const STATUS_OPTIONS = [
     <div class="layout">
       <div class="sets-panel">
         <div class="sets-panel__header">
-          <span class="sets-panel__title">Sets</span>
+          <span class="field-label">Sets</span>
           <button class="sets-panel__add" aria-label="New set" @click="openCreateSet">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
@@ -560,7 +561,7 @@ const STATUS_OPTIONS = [
         <template v-else>
           <div class="milestones-header">
             <div>
-              <h3 class="milestones-title">{{ selectedSet?.title }}</h3>
+              <h3 class="card-title">{{ selectedSet?.title }}</h3>
               <p class="milestones-meta">Set bonus: +{{ selectedSet?.setBonusXp }} XP</p>
             </div>
             <div class="milestones-header__actions">
@@ -641,18 +642,18 @@ const STATUS_OPTIONS = [
       <div class="milestone-form__row">
         <BaseInput v-model="milestoneForm.title" label="Title" style="flex: 2" required />
         <div class="form-field">
-          <label class="form-label">Set</label>
+          <label class="field-label">Set</label>
           <BaseSelect v-model="milestoneForm.setId" :options="setOptions" />
         </div>
       </div>
       <BaseInput v-model="milestoneForm.description" label="Description" />
       <div class="milestone-form__row">
         <div class="form-field">
-          <label class="form-label">Type</label>
+          <label class="field-label">Type</label>
           <BaseSelect v-model="milestoneForm.type" :options="TYPES.map((t) => ({ value: t, label: t }))" />
         </div>
         <div class="form-field">
-          <label class="form-label">Tier</label>
+          <label class="field-label">Tier</label>
           <BaseSelect v-model="milestoneForm.tier"
             :options="TIERS.map((t) => ({ value: t, label: t.charAt(0) + t.slice(1).toLowerCase() }))" />
         </div>
@@ -660,11 +661,11 @@ const STATUS_OPTIONS = [
       </div>
       <div class="milestone-form__row">
         <div class="form-field" style="flex: 1">
-          <label class="form-label">Category (optional)</label>
+          <label class="field-label">Category (optional)</label>
           <BaseSelect v-model="milestoneForm.categoryId" :options="categoryOptions" />
         </div>
         <div class="form-field" style="flex: 1">
-          <label class="form-label">Icon group</label>
+          <label class="field-label">Icon group</label>
           <BaseSelect v-model="milestoneForm.iconGroup" :options="iconGroupOptions" />
         </div>
       </div>
@@ -673,7 +674,7 @@ const STATUS_OPTIONS = [
         <BaseInput v-model.number="milestoneForm.positionX" label="Position X" type="number" />
         <BaseInput v-model.number="milestoneForm.positionY" label="Position Y" type="number" />
         <div class="form-field">
-          <label class="form-label">Progress model</label>
+          <label class="field-label">Progress model</label>
           <BaseSelect v-model="milestoneForm.progressModel" :options="progressModelOptions" />
         </div>
         <BaseInput v-model.number="milestoneForm.progressFloor" label="Progress floor" type="number" />
@@ -681,14 +682,14 @@ const STATUS_OPTIONS = [
 
       <div v-if="milestoneForm.progressModel === 'CURVE'" class="milestone-form__row">
         <div class="form-field" style="flex: 1">
-          <label class="form-label">Progress curve</label>
+          <label class="field-label">Progress curve</label>
           <BaseSelect v-model="milestoneForm.progressCurveId" :options="curveOptions" />
         </div>
       </div>
 
       <div class="ms-admin__rewards">
         <div class="ms-admin__rewards-head">
-          <span class="ms-admin__rewards-label">Item rewards</span>
+          <span class="field-label">Item rewards</span>
           <BaseButton size="sm" @click="showRewardPicker = true">Add item</BaseButton>
         </div>
         <p v-if="rewardDraft.length === 0" class="ms-admin__rewards-empty">No item rewards.</p>
@@ -702,7 +703,7 @@ const STATUS_OPTIONS = [
       </div>
 
       <div class="form-field">
-        <label class="form-label">Map Difficulty IDs (optional)</label>
+        <label class="field-label">Map Difficulty IDs (optional)</label>
         <textarea v-model="milestoneForm._mapDifficultyIds" class="ids-input"
           placeholder="Comma or newline separated UUIDs" rows="2" spellcheck="false" />
       </div>
@@ -711,10 +712,6 @@ const STATUS_OPTIONS = [
 
       <div class="form-section">
         <h4 class="form-section__title">Query Definition</h4>
-        <p class="form-section__hint">
-          Defines what value to measure. User/category/ranked-status filters are injected automatically at evaluation
-          time.
-        </p>
         <MilestoneQueryBuilder v-if="Object.keys(schema.tables).length" :schema="schema"
           v-model="milestoneForm._query" />
         <p v-else class="form-hint">Loading schema…</p>
@@ -725,7 +722,7 @@ const STATUS_OPTIONS = [
         <BaseInput v-model.number="milestoneForm.targetValue" label="Target Value" type="number" step="any"
           style="flex: 1" />
         <div class="form-field">
-          <label class="form-label">Comparison</label>
+          <label class="field-label">Comparison</label>
           <BaseSelect v-model="milestoneForm.comparison" :options="COMPARISONS" />
         </div>
       </div>
@@ -745,7 +742,7 @@ const STATUS_OPTIONS = [
   <BaseModal :open="showLinkModal" :title="`Link Maps - ${linkTarget?.title ?? ''}`" @close="showLinkModal = false">
     <div class="modal-form">
       <div class="form-field">
-        <label class="form-label">Map Difficulty IDs</label>
+        <label class="field-label">Map Difficulty IDs</label>
         <textarea v-model="linkMapIds" class="ids-input" placeholder="Comma or newline separated UUIDs" rows="4"
           spellcheck="false" />
       </div>
@@ -822,7 +819,7 @@ const STATUS_OPTIONS = [
 
       <div class="ms-admin__rewards">
         <div class="ms-admin__rewards-head">
-          <span class="ms-admin__rewards-label">Item rewards</span>
+          <span class="field-label">Item rewards</span>
           <BaseButton size="sm" @click="showRewardPicker = true">Add item</BaseButton>
         </div>
         <p v-if="rewardDraft.length === 0" class="ms-admin__rewards-empty">No item rewards.</p>
@@ -868,14 +865,6 @@ const STATUS_OPTIONS = [
   gap: var(--space-md);
 }
 
-.ms-admin__rewards-label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
-}
-
 .ms-admin__rewards-empty {
   margin: 0;
   font-size: var(--text-caption);
@@ -916,13 +905,6 @@ const STATUS_OPTIONS = [
   justify-content: space-between;
 }
 
-.tab__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .header-actions {
   display: flex;
   gap: var(--space-sm);
@@ -955,7 +937,7 @@ const STATUS_OPTIONS = [
 .schema-table__cols {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .schema-col {
@@ -964,11 +946,11 @@ const STATUS_OPTIONS = [
   color: var(--text-secondary);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   padding: 1px 6px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .schema-col__type {
@@ -996,14 +978,6 @@ const STATUS_OPTIONS = [
   justify-content: space-between;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
-}
-
-.sets-panel__title {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .sets-panel__add {
@@ -1092,13 +1066,6 @@ const STATUS_OPTIONS = [
   gap: var(--space-sm);
 }
 
-.milestones-title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .milestones-meta {
   font-size: var(--text-caption);
   color: var(--text-secondary);
@@ -1155,7 +1122,7 @@ const STATUS_OPTIONS = [
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
 }
 
 .milestone-card__status--draft {
@@ -1184,13 +1151,13 @@ const STATUS_OPTIONS = [
 .milestone-card__desc {
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  margin: 4px 0 0;
+  margin: var(--space-xs) 0 0;
 }
 
 .milestone-card__meta {
   display: flex;
   gap: var(--space-md);
-  margin-top: 4px;
+  margin-top: var(--space-xs);
 }
 
 .milestone-card__stat {
@@ -1228,14 +1195,6 @@ const STATUS_OPTIONS = [
   min-width: 120px;
 }
 
-.form-label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 .form-divider {
   height: 1px;
   background: var(--bg-overlay);
@@ -1247,12 +1206,6 @@ const STATUS_OPTIONS = [
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 var(--space-xs);
-}
-
-.form-section__hint {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: 0 0 var(--space-md);
 }
 
 .form-hint {
@@ -1310,7 +1263,6 @@ const STATUS_OPTIONS = [
   margin: 0;
 }
 
-
 .prereq-loading {
   display: flex;
   flex-direction: column;
@@ -1357,7 +1309,7 @@ const STATUS_OPTIONS = [
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--bg-overlay);
   background: transparent;
   color: var(--text-tertiary);

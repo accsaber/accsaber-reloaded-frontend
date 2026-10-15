@@ -19,10 +19,6 @@ export function listAllNews(params?: StaffNewsListParams): Promise<Page<NewsResp
   return get<Page<NewsResponse>>(`/admin/news${buildQuery(params)}`)
 }
 
-export function getAdminNews(id: string): Promise<NewsResponse> {
-  return get<NewsResponse>(`/admin/news/${id}`)
-}
-
 export async function createAdminNews(req: CreateNewsRequest): Promise<NewsResponse> {
   const res = await post<NewsResponse>('/admin/news', req)
   invalidateNewsCache()

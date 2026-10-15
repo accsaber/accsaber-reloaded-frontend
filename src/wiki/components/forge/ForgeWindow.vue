@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 export interface ForgeWindowMarker {
   value: number
@@ -21,7 +22,7 @@ const props = defineProps<{
 const span = computed(() => Math.max(0.0001, props.max - props.min))
 
 function toPercent(value: number): number {
-  return Math.max(0, Math.min(100, ((value - props.min) / span.value) * 100))
+  return clamp(((value - props.min) / span.value) * 100, 0, 100)
 }
 
 const windowStart = computed(() => toPercent(Math.max(props.windowMin, props.min)))

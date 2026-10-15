@@ -1,5 +1,5 @@
-import type { PublicClanResponse } from './clans'
-import type { MilestoneTier } from '../display'
+import type { MapDifficultyRef, PlayerRef } from './common'
+import type { MilestoneTier } from '../enums'
 import type { MilestoneComparison, MilestoneStatus, MilestoneType } from '../enums'
 import type { PaginationParams } from '../pagination'
 import type { ItemResponse } from './items'
@@ -98,13 +98,7 @@ export interface MilestoneCompletionResponse {
   achievedWithScoreId?: string
   score?: number
   maxScore?: number
-  coverUrl?: string
-  cdnCoverUrl?: string | null
-  difficulty?: string
-  songName?: string
-  songSubName?: string
-  songAuthor?: string
-  mapAuthor?: string
+  map?: MapDifficultyRef
 }
 
 export interface MilestoneListParams extends PaginationParams {
@@ -130,12 +124,7 @@ export interface PrerequisiteLinkResponse {
 }
 
 export interface MilestoneHolderResponse {
-  userId: string
-  name: string
-  avatarUrl: string
-  cdnAvatarUrl?: string | null
-  country: string
-  clan?: PublicClanResponse | null
+  player: PlayerRef
   completedAt: string
 }
 
@@ -160,3 +149,5 @@ export interface SetGroupLinkResponse {
 export interface ActivateMilestonesRequest {
   milestoneIds: string[]
 }
+
+export type MilestoneSort = 'tier' | 'completions' | 'completedAt' | 'progress'

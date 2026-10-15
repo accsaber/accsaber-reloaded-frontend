@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -81,7 +81,7 @@ const overflow = computed(() => Math.max(0, props.total - tiles.value.length))
 .pool__grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .pool__tile {

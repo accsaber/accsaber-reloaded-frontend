@@ -24,12 +24,13 @@ import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MetricType, ScoreDisplay, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { SCORE_DETAIL_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatRelativeDate, formatAccuracy } from '@/utils/formatters'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { resolveReplayChain } from '@/utils/replay'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { pickAvatarUrl } from '@/utils/media'
 
 export interface ScoreDetailPlayer {
   user: UserResponse | null
@@ -103,7 +104,7 @@ const playerRef = computed<UserRefDisplay>(() => ({
   supporterTier: playerUser.value?.supporterTier ?? props.score?.supporterTier ?? null,
   clan: playerUser.value?.clan ?? null,
 }))
-const playerAvatar = computed(() => playerUser.value?.cdnAvatarUrl ?? playerUser.value?.avatarUrl ?? '')
+const playerAvatar = computed(() => pickAvatarUrl(playerUser.value))
 const handleScoreCoverError = (e: Event) => {
   const img = e.currentTarget as HTMLImageElement
   const fb = props.score?.coverFallbackUrl
@@ -165,7 +166,7 @@ function scoreTypeLabel(s: ScoreResponse): string {
 function buildTooltipLines(s: ScoreResponse, prev: ScoreResponse | null): string[] {
   const lines: string[] = []
   lines.push(scoreTypeLabel(s))
-  lines.push(`Accuracy: ${(s.accuracy * 100).toFixed(2)}%`)
+  lines.push(`Accuracy: ${formatAccuracy(s.accuracy)}`)
   lines.push(`AP: ${s.ap.toFixed(2)}`)
   lines.push(`XP: ${(s.xpGained ?? 0).toFixed(1)} (${(s.baseXp ?? 0).toFixed(0)} base + ${(s.bonusXp ?? 0).toFixed(1)} bonus)`)
   if (s.streak115 != null) lines.push(`115 Streak: ${s.streak115}`)
@@ -674,7 +675,7 @@ watch(
   gap: var(--space-sm);
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: var(--space-xs);
 }
 
 .score-detail__char {
@@ -689,7 +690,7 @@ watch(
 .score-detail__chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -735,7 +736,7 @@ watch(
   flex-direction: column;
   align-items: flex-end;
   text-align: right;
-  gap: 4px;
+  gap: var(--space-xs);
   justify-content: center;
 }
 
@@ -810,7 +811,7 @@ watch(
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-left: 4px;
+  margin-left: var(--space-xs);
   font-weight: 600;
 }
 
@@ -828,9 +829,9 @@ watch(
   position: relative;
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--space-xs);
   margin-left: auto;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   background: color-mix(in srgb, var(--detail-accent) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--detail-accent) 30%, var(--bg-overlay));
   border-radius: var(--radius-btn);
@@ -866,7 +867,7 @@ watch(
   padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease, transform 120ms ease;

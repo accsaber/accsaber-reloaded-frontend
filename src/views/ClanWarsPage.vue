@@ -42,11 +42,4 @@ usePageMeta({
   padding: var(--space-lg) 0 var(--space-md);
 }
 
-.wars-page__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 </style>

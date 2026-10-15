@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import UserChip from '@/components/domain/UserChip.vue'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { useFloatingPanel } from '@/composables/useFloatingPanel'
+import { useUserSearch } from '@/composables/useUserSearch'
 import { getUser } from '@/api/users'
-import { useCategoryStore } from '@/stores/categories'
 import type { LeaderboardResponse } from '@/types/api/users'
 import type { UserRefDisplay } from '@/types/display'
 import { toUserRef } from '@/utils/mappers'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   modelValue: string | null
@@ -21,68 +21,24 @@ const emit = defineEmits<{
   select: [user: { userId: string; userName: string } | null]
 }>()
 
-const categoryStore = useCategoryStore()
+const { query: search, active, results, loading } = useUserSearch({ size: 12, sort: 'ranking,ASC' }, 2)
+const { isOpen, triggerRef, panelRef, panelStyle, open, close } = useFloatingPanel({ width: 'trigger', gap: 4 })
 
-const MIN_CHARS = 2
-const PAGE_SIZE = 12
-
-const search = ref('')
-const debounced = useDebouncedRef(search, 200)
-const results = ref<LeaderboardResponse[]>([])
-const loading = ref(false)
-const open = ref(false)
 const focusedIndex = ref(-1)
 const selected = ref<UserRefDisplay | null>(null)
-
-const containerRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
-const panelStyle = ref<Record<string, string>>({})
 
-let requestId = 0
+const showResults = computed(() => isOpen.value && active.value)
 
-const showResults = computed(() => open.value && debounced.value.trim().length >= MIN_CHARS)
-
-async function runSearch(query: string) {
-  const id = ++requestId
-  const overall = categoryStore.byCode.get('overall')?.id
-  if (!overall) return
-  loading.value = true
-  try {
-    const { getLeaderboard } = await import('@/api/leaderboards')
-    const page = await getLeaderboard(overall, {
-      page: 0,
-      size: PAGE_SIZE,
-      search: query,
-      sort: 'ranking,ASC',
-    })
-    if (id !== requestId) return
-    results.value = page.content
-    focusedIndex.value = page.content.length > 0 ? 0 : -1
-  } catch {
-    if (id === requestId) results.value = []
-  } finally {
-    if (id === requestId) loading.value = false
-  }
-}
-
-function updatePanelPosition() {
-  const trigger = containerRef.value
-  if (!trigger) return
-  const rect = trigger.getBoundingClientRect()
-  panelStyle.value = {
-    position: 'fixed',
-    top: `${rect.bottom + 4}px`,
-    left: `${rect.left}px`,
-    width: `${rect.width}px`,
-    minWidth: `${rect.width}px`,
-  }
-}
+watch(results, (list) => {
+  focusedIndex.value = list.length > 0 ? 0 : -1
+})
 
 function pick(user: LeaderboardResponse) {
   selected.value = toUserRef(user)
   emit('update:modelValue', user.userId)
   emit('select', { userId: user.userId, userName: user.userName })
-  open.value = false
+  close()
   search.value = ''
 }
 
@@ -92,18 +48,6 @@ function clear() {
   emit('select', null)
   search.value = ''
   nextTick(() => inputRef.value?.focus())
-}
-
-function openPanel() {
-  open.value = true
-  updatePanelPosition()
-}
-
-function onClickOutside(e: MouseEvent) {
-  const target = e.target as Node
-  if (!target.isConnected) return
-  if (containerRef.value?.contains(target)) return
-  open.value = false
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -118,19 +62,8 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     const choice = results.value[focusedIndex.value]
     if (choice) pick(choice)
-  } else if (e.key === 'Escape') {
-    open.value = false
   }
 }
-
-watch(debounced, (val) => {
-  const trimmed = val.trim()
-  if (trimmed.length < MIN_CHARS) {
-    results.value = []
-    return
-  }
-  runSearch(trimmed)
-})
 
 watch(() => props.modelValue, async (val) => {
   if (!val) {
@@ -146,26 +79,10 @@ watch(() => props.modelValue, async (val) => {
     selected.value = null
   }
 }, { immediate: true })
-
-function onReposition() {
-  if (open.value) updatePanelPosition()
-}
-
-onMounted(() => {
-  document.addEventListener('click', onClickOutside)
-  window.addEventListener('scroll', onReposition, true)
-  window.addEventListener('resize', onReposition)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', onClickOutside)
-  window.removeEventListener('scroll', onReposition, true)
-  window.removeEventListener('resize', onReposition)
-})
 </script>
 
 <template>
-  <div ref="containerRef" class="user-picker">
+  <div ref="triggerRef" class="user-picker">
     <div v-if="selected" class="user-picker__selected">
       <UserChip :user="selected" size="sm" class="user-picker__name" />
       <button type="button" class="user-picker__clear" :disabled="disabled" aria-label="Clear selection" @click="clear">
@@ -185,13 +102,13 @@ onUnmounted(() => {
       class="user-picker__input"
       :placeholder="placeholder"
       :disabled="disabled"
-      @focus="openPanel"
-      @input="openPanel"
+      @focus="open"
+      @input="open"
       @keydown="onKeydown"
     />
 
     <Teleport to="body">
-      <div v-if="showResults" class="user-picker__panel" :style="panelStyle">
+      <div v-if="showResults" ref="panelRef" class="user-picker__panel" :style="panelStyle">
         <div v-if="loading" class="user-picker__status">Searching...</div>
         <div v-else-if="results.length === 0" class="user-picker__status">No players found</div>
         <button

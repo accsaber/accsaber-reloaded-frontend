@@ -8,6 +8,7 @@ import { formatRelativeDate } from '@/utils/formatters'
 import { useNow } from '@/composables/useNow'
 import { computed } from 'vue'
 import WarScorebug from './war/WarScorebug.vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   clanId: string
@@ -22,7 +23,7 @@ const lastWar = computed(() => (props.war?.status === 'ended' ? props.war : null
 const enemy = computed(() => {
   return lastWar.value ? warOpponent(lastWar.value, props.clanId) : null
 })
-const progress = computed(() => Math.max(0, Math.min(100, props.level.progressPercent)))
+const progress = computed(() => clamp(props.level.progressPercent, 0, 100))
 const xpLeft = computed(() => Math.max(0, Math.round(props.level.xpForNextLevel - props.level.xpForCurrentLevel)))
 </script>
 

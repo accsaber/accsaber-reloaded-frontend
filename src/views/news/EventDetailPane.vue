@@ -289,18 +289,15 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
 }
 
 .event-detail__title {
-  margin: 0;
   font-size: clamp(2.5rem, 4vw, 3.75rem);
-  font-weight: 700;
   line-height: 1.04;
   letter-spacing: -0.02em;
-  color: var(--text-primary);
 }
 
 .event-detail__countdown {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   align-self: flex-start;
   margin: calc(-1 * var(--space-sm)) 0 calc(-1 * var(--space-sm));
   color: var(--status-accent);
@@ -368,7 +365,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
 .event-detail__bonus-claimed {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--success);

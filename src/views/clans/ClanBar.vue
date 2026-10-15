@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = withDefaults(
   defineProps<{
@@ -12,7 +13,7 @@ const props = withDefaults(
   { size: 'sm' },
 )
 
-const scale = computed(() => (props.max <= 0 ? 0 : Math.max(0, Math.min(1, props.value / props.max))))
+const scale = computed(() => (props.max <= 0 ? 0 : clamp01(props.value / props.max)))
 </script>
 
 <template>
@@ -43,7 +44,7 @@ const scale = computed(() => (props.max <= 0 ? 0 : Math.max(0, Math.min(1, props
 
 .clan-bar--lg {
   height: 16px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .clan-bar--broken {

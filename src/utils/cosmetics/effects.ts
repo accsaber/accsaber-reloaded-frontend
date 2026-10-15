@@ -1,6 +1,8 @@
-import type { Composition, ItemTypeKey } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
+import type { ItemTypeKey } from '@/types/api/items'
 import { hash01 } from '@/utils/random'
 import type { ShapeRing } from '@/utils/shapeSilhouette'
+import { clamp, clamp01 } from '@/utils/math'
 
 export interface OverlayBox {
   w: number
@@ -47,7 +49,7 @@ export function asColor(v: unknown): string {
 }
 
 export function clampNumber(v: unknown, lo: number, hi: number, fallback: number): number {
-  return Math.max(lo, Math.min(hi, asNumber(v) ?? fallback))
+  return clamp(asNumber(v) ?? fallback, lo, hi)
 }
 
 export function boxScale(minD: number, min = 0.7): number {
@@ -79,7 +81,7 @@ export function readPctSizing(
 }
 
 export function pctSize(minD: number, s: PctSizing, scale = 1): number {
-  return Math.max(s.minPx, Math.min(s.maxPx, ((s.pct * scale) / 100) * minD))
+  return clamp(((s.pct * scale) / 100) * minD, s.minPx, s.maxPx)
 }
 
 export function hostMatches(
@@ -298,11 +300,11 @@ export function activeEvents(t: number, interval: number, life: number, seed: nu
 }
 
 export function easeOut(x: number): number {
-  return 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3)
+  return 1 - Math.pow(1 - clamp01(x), 3)
 }
 
 export function easeIn(x: number): number {
-  const c = Math.max(0, Math.min(1, x))
+  const c = clamp01(x)
   return c * c * c
 }
 

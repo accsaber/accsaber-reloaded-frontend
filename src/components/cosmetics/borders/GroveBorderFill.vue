@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { GroveFill } from '@/types/api/items'
+import type { GroveFill } from '@/types/cosmetics/border'
 import { cyc, win } from '@/utils/cosmetics/canvasShapes'
 import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   fill: GroveFill
@@ -67,7 +68,7 @@ useElementCanvas(canvasRef, {
       const g = ctx.createRadialGradient(px, py, 0, px, py, pr)
       g.addColorStop(0, color)
       g.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.globalAlpha = Math.max(0, Math.min(1, a))
+      ctx.globalAlpha = clamp01(a)
       ctx.fillStyle = g
       ctx.beginPath()
       ctx.arc(px, py, pr, 0, Math.PI * 2)
@@ -133,17 +134,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="grove-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.grove-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

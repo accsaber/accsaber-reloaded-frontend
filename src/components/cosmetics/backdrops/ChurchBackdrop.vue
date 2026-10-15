@@ -8,6 +8,7 @@ import { hash01, randBetween as rand } from '@/utils/random'
 import { createRadialSprite, offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import type { ChurchBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   config: ChurchBackdropConfig
@@ -715,7 +716,7 @@ function aboveBackClip(row: number): FigureClip {
 const PEEK_X = 0.42
 
 function smooth(u: number): number {
-  const c = Math.min(1, Math.max(0, u))
+  const c = clamp01(u)
   return c * c * (3 - 2 * c)
 }
 

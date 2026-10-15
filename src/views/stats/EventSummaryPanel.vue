@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccuracy, formatCount, formatShortDate } from '@/utils/formatters'
 import DataTable from '@/components/common/DataTable.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type {
@@ -11,7 +12,7 @@ import { computed, ref, watch } from 'vue'
 import EventMissionLeaderboard from './EventMissionLeaderboard.vue'
 import StatsCloseButton from './StatsCloseButton.vue'
 import StatsHistogram from './StatsHistogram.vue'
-import { fmtDecimal, fmtFraction, fmtInt, labelCase, rateClass } from './statsFormat'
+import { fmtDecimal, labelCase, rateClass } from './statsFormat'
 
 const props = defineProps<{
   eventKey: string
@@ -58,8 +59,7 @@ const retention = computed<DistributionEntryResponse[]>(() =>
 
 const dateRange = computed(() => {
   if (!summary.value) return ''
-  const format = (iso: string) => new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
-  return `${format(summary.value.startsAt)} to ${format(summary.value.endsAt)}`
+  return `${formatShortDate(summary.value.startsAt)} to ${formatShortDate(summary.value.endsAt)}`
 })
 
 const openMissionName = computed(
@@ -105,10 +105,10 @@ watch(weekOptions, (options) => {
   <section class="event-summary">
     <header class="event-summary__head">
       <div>
-        <h3 class="event-summary__title">{{ summary?.title ?? 'Event' }}</h3>
+        <h3 class="card-title">{{ summary?.title ?? 'Event' }}</h3>
         <p v-if="dateRange" class="event-summary__dates">
           {{ dateRange }}
-          <span v-if="summary?.daysRan">({{ fmtInt(summary.daysRan) }} days)</span>
+          <span v-if="summary?.daysRan">({{ formatCount(summary.daysRan) }} days)</span>
         </p>
       </div>
       <StatsCloseButton label="Close event summary" @click="emit('close')" />
@@ -125,15 +125,15 @@ watch(weekOptions, (options) => {
       <dl class="event-summary__stats">
         <div class="event-summary__stat">
           <dt>Participants</dt>
-          <dd>{{ fmtInt(summary.participants) }}</dd>
+          <dd>{{ formatCount(summary.participants) }}</dd>
         </div>
         <div class="event-summary__stat">
           <dt>Finishers</dt>
-          <dd>{{ fmtInt(summary.finishers) }}</dd>
+          <dd>{{ formatCount(summary.finishers) }}</dd>
         </div>
         <div class="event-summary__stat">
           <dt>Finish rate</dt>
-          <dd :class="rateClass(summary.finishRate)">{{ fmtFraction(summary.finishRate) }}</dd>
+          <dd :class="rateClass(summary.finishRate)">{{ formatAccuracy(summary.finishRate, 1) }}</dd>
         </div>
         <div class="event-summary__stat">
           <dt>Median missions</dt>
@@ -141,27 +141,27 @@ watch(weekOptions, (options) => {
         </div>
         <div class="event-summary__stat">
           <dt>Mission rate</dt>
-          <dd :class="rateClass(summary.missionCompletionRate)">{{ fmtFraction(summary.missionCompletionRate) }}</dd>
+          <dd :class="rateClass(summary.missionCompletionRate)">{{ formatAccuracy(summary.missionCompletionRate, 1) }}</dd>
         </div>
         <div class="event-summary__stat">
           <dt>XP paid</dt>
-          <dd>{{ fmtInt(summary.totalXpPaid) }}</dd>
+          <dd>{{ formatCount(summary.totalXpPaid) }}</dd>
         </div>
       </dl>
 
       <p class="event-summary__line">
-        {{ fmtInt(summary.missionsAssigned) }} missions handed out:
-        {{ fmtInt(summary.missionsCompleted) }} finished,
-        {{ fmtInt(summary.missionsExpired) }} expired,
-        {{ fmtInt(summary.missionsOpen) }} still open.
-        Of the XP, {{ fmtInt(summary.missionXpPaid) }} came from missions and
-        {{ fmtInt(summary.bonusXpPaid) }} from the completion bonus.
+        {{ formatCount(summary.missionsAssigned) }} missions handed out:
+        {{ formatCount(summary.missionsCompleted) }} finished,
+        {{ formatCount(summary.missionsExpired) }} expired,
+        {{ formatCount(summary.missionsOpen) }} still open.
+        Of the XP, {{ formatCount(summary.missionXpPaid) }} came from missions and
+        {{ formatCount(summary.bonusXpPaid) }} from the completion bonus.
       </p>
 
       <StatsHistogram v-if="retention.length" title="Still going" :entries="retention" />
 
       <div v-if="weekOptions.length" class="event-summary__weeks">
-        <span class="event-summary__weeks-label">Week</span>
+        <span class="event-summary__weeks-label field-label">Week</span>
         <button type="button" class="event-summary__week" :class="{ 'event-summary__week--active': week === undefined }"
           @click="emit('update:week', undefined)">
           All
@@ -183,15 +183,15 @@ watch(weekOptions, (options) => {
             </span>
           </span>
         </template>
-        <template #cell-week="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-players="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-playersCompleted="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-playersExpired="{ value }">{{ fmtInt(value) }}</template>
+        <template #cell-week="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-players="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-playersCompleted="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-playersExpired="{ value }">{{ formatCount(value as number | null) }}</template>
         <template #cell-completionRate="{ value }">
-          <span :class="rateClass(value as number | null)">{{ fmtFraction(value) }}</span>
+          <span :class="rateClass(value as number | null)">{{ formatAccuracy(value as number | null, 1) }}</span>
         </template>
-        <template #cell-completions="{ value }">{{ fmtInt(value) }}</template>
-        <template #cell-xpPaid="{ value }">{{ fmtInt(value) }}</template>
+        <template #cell-completions="{ value }">{{ formatCount(value as number | null) }}</template>
+        <template #cell-xpPaid="{ value }">{{ formatCount(value as number | null) }}</template>
       </DataTable>
 
       <EventMissionLeaderboard v-if="templateId" :event-key="eventKey" :template-id="templateId"
@@ -216,13 +216,6 @@ watch(weekOptions, (options) => {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.event-summary__title {
-  margin: 0;
-  font-size: var(--text-card-title);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .event-summary__dates {
@@ -293,16 +286,11 @@ watch(weekOptions, (options) => {
 
 .event-summary__weeks-label {
   margin-right: var(--space-xs);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
 }
 
 .event-summary__week {
   min-width: 32px;
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   fn: (x: number, param: number) => number
@@ -69,17 +70,13 @@ const tickY = computed(() => props.formatYTick ?? props.formatY)
 const svgRef = ref<SVGSVGElement | null>(null)
 let dragging = false
 
-function clamp(value: number): number {
-  return Math.min(props.xMax, Math.max(props.xMin, value))
-}
-
 function updateFromPointer(event: PointerEvent) {
   const svg = svgRef.value
   if (!svg) return
   const rect = svg.getBoundingClientRect()
   const ratio = (event.clientX - rect.left) / rect.width
   const svgX = ratio * WIDTH
-  x.value = clamp(props.xMin + ((svgX - PAD.left) / PLOT_W) * (props.xMax - props.xMin))
+  x.value = clamp(props.xMin + ((svgX - PAD.left) / PLOT_W) * (props.xMax - props.xMin), props.xMin, props.xMax)
 }
 
 function onPointerDown(event: PointerEvent) {
@@ -99,9 +96,9 @@ function onPointerUp() {
 function onKeydown(event: KeyboardEvent) {
   const fine = (props.xMax - props.xMin) / 100
   if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
-    x.value = clamp(x.value - fine)
+    x.value = clamp(x.value - fine, props.xMin, props.xMax)
   } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
-    x.value = clamp(x.value + fine)
+    x.value = clamp(x.value + fine, props.xMin, props.xMax)
   } else if (event.key === 'Home') {
     x.value = props.xMin
   } else if (event.key === 'End') {
@@ -117,17 +114,17 @@ function onKeydown(event: KeyboardEvent) {
   <figure class="explorer">
     <div class="explorer__readouts">
       <div class="explorer__readout">
-        <span class="explorer__readout-label">{{ xLabel }}</span>
+        <span class="field-label">{{ xLabel }}</span>
         <span class="explorer__readout-value">{{ formatX(x) }}</span>
       </div>
       <div class="explorer__readout">
-        <span class="explorer__readout-label">{{ yLabel }}</span>
+        <span class="field-label">{{ yLabel }}</span>
         <span class="explorer__readout-value explorer__readout-value--accent">
           {{ formatY(pointY) }}
         </span>
       </div>
       <label v-if="hasParam" class="explorer__param">
-        <span class="explorer__readout-label">{{ paramLabel }}</span>
+        <span class="field-label">{{ paramLabel }}</span>
         <input
           v-model.number="param"
           type="range"
@@ -227,14 +224,6 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.explorer__readout-label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .explorer__readout-value {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleCosmicAuraSpec } from '@/types/api/items'
+import type { TitleCosmicAuraSpec } from '@/types/cosmetics/title'
 import { drawCosmicNebula, drawCosmicPlanet, drawCosmicStar, drawCosmicStreak } from '@/utils/cosmetics/cosmicField'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'

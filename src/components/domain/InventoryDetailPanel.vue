@@ -11,25 +11,35 @@ import ModifierCompositions from '@/components/cosmetics/effects/ModifierComposi
 import { useModifierColor } from '@/composables/useModifierColor'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
-import type { BorderColorValue, BorderShapeValue, CrateContentResponse, CrateModifierResponse, ItemModifierRef, ItemResponse, ItemVariant, UnusualEffectResponse, UserItemResponse } from '@/types/api/items'
+import type { BorderColorValue, BorderShapeValue } from '@/types/cosmetics/border'
+import type {
+  CrateContentResponse,
+  CrateModifierResponse,
+  ItemModifierRef,
+  ItemResponse,
+  UnusualEffectResponse,
+  UserItemResponse,
+} from '@/types/api/items'
+import type { ItemVariant } from '@/types/cosmetics/common'
 import { formatEssence } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
+import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
 import {
-  buildEffectLayers,
   displayItemName,
   isBorderTypeKey,
   isEquippableTypeKey,
-  rarityClass,
-  readBorderColorValue,
-  readBorderShapeValue,
   obtainableUntilSentence,
-  readFragmentSpec,
+  rarityClass,
   readItemVariants,
-  readThemeValue,
   resolveItemVariant,
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
+import {
+  readBorderColorValue,
+  readBorderShapeValue,
+  readThemeValue,
+} from '@/utils/cosmetics/readers'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
@@ -275,8 +285,8 @@ const sourceLabel = computed(() => {
     </div>
 
     <div class="inv-detail__head">
-      <span class="inv-detail__type">{{ typeName }}</span>
-      <h3 class="inv-detail__name" :style="itemNameStyle">
+      <span class="field-label">{{ typeName }}</span>
+      <h3 class="section-title" :style="itemNameStyle">
         <span v-if="locked" class="inv-detail__name-lock" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -564,20 +574,6 @@ const sourceLabel = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.inv-detail__type {
-  font-size: var(--text-caption);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.inv-detail__name {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .inv-detail__rarity {

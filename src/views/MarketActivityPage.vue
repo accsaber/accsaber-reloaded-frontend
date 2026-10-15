@@ -199,13 +199,6 @@ const breadcrumbs: Crumb[] = [
   flex-wrap: wrap;
 }
 
-.activity-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .activity-page__header-actions {
   display: flex;
   align-items: center;

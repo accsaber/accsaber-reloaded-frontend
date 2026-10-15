@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import AppNavbar from '@/components/layout/AppNavbar.vue'
-import ThemeBackdrop from '@/components/cosmetics/backdrops/ThemeBackdrop.vue'
 import { useBrandFavicon } from '@/composables/useBrandLogo'
 import { useNotificationSocket } from '@/composables/useNotificationSocket'
 import { useAuthStore } from '@/stores/auth'
@@ -20,6 +19,7 @@ const PreviewControlBar = isCreativesSubdomain
 
 const MaintenancePage = defineAsyncComponent(() => import('@/views/offline/MaintenancePage.vue'))
 const ClanChatBubble = defineAsyncComponent(() => import('@/components/layout/ClanChatBubble.vue'))
+const ThemeBackdrop = defineAsyncComponent(() => import('@/components/cosmetics/backdrops/ThemeBackdrop.vue'))
 
 const authStore = useAuthStore()
 const backendStatus = useBackendStatusStore()

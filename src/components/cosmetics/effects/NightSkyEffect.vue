@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, boxScale, type ContentBox, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -32,8 +33,8 @@ function isWide(box: ContentBox): boolean {
 function readNight(c: Composition, box: ContentBox): NightConfig {
   const elongated = isWide(box)
   return {
-    count: Math.max(4, Math.min(40, Math.round((asNumber(c.count) ?? 18) * (elongated ? 0.55 : 1)))),
-    sizePct: elongated ? 100 : Math.max(20, Math.min(100, asNumber(c.sizePct) ?? 46)),
+    count: clamp(Math.round((asNumber(c.count) ?? 18) * (elongated ? 0.55 : 1)), 4, 40),
+    sizePct: elongated ? 100 : clamp(asNumber(c.sizePct) ?? 46, 20, 100),
     driftMs: Math.max(3000, asNumber(c.driftMs) ?? 11000),
     sky: asString(c.sky) ?? '#161245',
     starColor: asString(c.starColor) ?? '#ded9ff',
@@ -42,7 +43,7 @@ function readNight(c: Composition, box: ContentBox): NightConfig {
     moonXPct: asNumber(c.moonXPct) ?? 74,
     moonYPct: asNumber(c.moonYPct) ?? 30,
     moonSizePct: (asNumber(c.moonSizePct) ?? 13) * (elongated ? 1.8 : 1),
-    intensity: Math.max(0.2, Math.min(1, asNumber(c.intensity) ?? 0.85)),
+    intensity: clamp(asNumber(c.intensity) ?? 0.85, 0.2, 1),
   }
 }
 

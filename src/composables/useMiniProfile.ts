@@ -1,8 +1,9 @@
 import { getUserEquippedItems } from '@/api/items'
 import { getUserLevel, getUserOverallStatistics } from '@/api/users'
+import { useInventoryStore } from '@/stores/inventory'
 import type { EquippedItemsResponse } from '@/types/api/items'
 import type { LevelResponse, UserCategoryStatisticsResponse } from '@/types/api/users'
-import { ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { effectScope, ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
 
 export interface MiniProfile {
   stats: UserCategoryStatisticsResponse | null
@@ -35,9 +36,25 @@ async function load(userId: string): Promise<MiniProfile> {
   return { stats, level, equipped: equipped ?? {} }
 }
 
-export function invalidateMiniProfile(userId: string): void {
+function invalidateMiniProfile(userId: string): void {
   cache.delete(userId)
   inflight.delete(userId)
+}
+
+let watchingEquipped = false
+
+function invalidateOnEquip(): void {
+  if (watchingEquipped) return
+  watchingEquipped = true
+  const inventory = useInventoryStore()
+  effectScope(true).run(() =>
+    watch(
+      () => inventory.equipped,
+      () => {
+        if (inventory.equippedUserId) invalidateMiniProfile(inventory.equippedUserId)
+      },
+    ),
+  )
 }
 
 function fetchMiniProfile(userId: string): Promise<MiniProfile> {
@@ -60,6 +77,7 @@ function fetchMiniProfile(userId: string): Promise<MiniProfile> {
 }
 
 export function useMiniProfile(userId: MaybeRefOrGetter<string>) {
+  invalidateOnEquip()
   const profile = ref<MiniProfile | null>(null)
   const loading = ref(false)
 

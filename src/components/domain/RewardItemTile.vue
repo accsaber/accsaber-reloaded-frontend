@@ -130,7 +130,7 @@ const hoverTitle = computed(() => {
   min-width: 15px;
   height: 15px;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   background: color-mix(in srgb, var(--bg-base) 70%, transparent);
   color: var(--text-secondary);
   font-family: var(--font-mono);
@@ -148,7 +148,7 @@ const hoverTitle = computed(() => {
   justify-content: center;
   width: 15px;
   height: 15px;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   background: color-mix(in srgb, var(--bg-base) 70%, transparent);
   color: var(--text-secondary);
   opacity: 0.75;

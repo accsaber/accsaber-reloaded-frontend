@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleSplatterAuraSpec } from '@/types/api/items'
+import type { TitleSplatterAuraSpec } from '@/types/cosmetics/title'
 import { easeOut } from '@/utils/cosmetics/effects'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { dripPath, stainPath } from '@/utils/cosmetics/splat'

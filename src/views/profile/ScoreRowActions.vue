@@ -58,7 +58,7 @@ function onPin() {
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   flex-shrink: 0;
 }
 

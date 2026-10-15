@@ -1,4 +1,4 @@
-import type { TitleBoilSpec } from '@/types/api/items'
+import type { TitleBoilSpec } from '@/types/cosmetics/title'
 import { hash01 } from '@/utils/random'
 
 const CLOCKWISE: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]]

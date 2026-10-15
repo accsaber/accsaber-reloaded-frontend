@@ -3,27 +3,25 @@ import { messageTimeMillis } from '@/composables/useChat'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
 import { useWallSnap } from '@/composables/useWallSnap'
-import { useAuthStore } from '@/stores/auth'
 import type { PublicClanResponse } from '@/types/api/clans'
-import ClanChatTab from '@/views/clans/ClanChatTab.vue'
-import { useClanChat } from '@/views/clans/useClanChat'
+import ClanChatTab from '@/components/domain/ClanChatTab.vue'
+import { useClanChat } from '@/composables/useClanChat'
 import { computed, ref, watch } from 'vue'
+import { clamp } from '@/utils/math'
 
 const SIZE = 48
 const INSET = 16
 const GAP = 8
 const PANEL_WIDTH = 340
 const PANEL_HEIGHT = 460
-const POLL_SIZE = 50
 const POLL_MS = 60000
 
 const props = defineProps<{ clan: PublicClanResponse }>()
 
-const auth = useAuthStore()
-
 const root = ref<HTMLElement | null>(null)
 const open = ref(false)
-const seenUntil = ref<number | null>(null)
+const seenUntil = ref<string | null>(null)
+const unreadCount = ref(0)
 
 function close() {
   open.value = false
@@ -41,24 +39,22 @@ const { side, position, dragging, viewport, consumeDragClick, handlers } = useWa
   INSET,
 )
 
-function latestTime(): number {
-  return chat.messages.value.reduce((max, m) => Math.max(max, messageTimeMillis(m.createdAt)), 0)
+function latestSeen(): string | null {
+  const latest = chat.messages.value.reduce((max, m) => Math.max(max, messageTimeMillis(m.createdAt)), 0)
+  return latest > 0 ? new Date(latest).toISOString() : seenUntil.value
 }
 
-const unread = computed(() => {
-  const since = seenUntil.value
-  if (open.value || since === null) return 0
-  return chat.messages.value.filter(
-    (m) => m.author.id !== auth.userId && messageTimeMillis(m.createdAt) > since,
-  ).length
-})
+const unread = computed(() => (open.value ? 0 : unreadCount.value))
 
 async function poll() {
+  const clanId = props.clan.id
+  const since = seenUntil.value
   try {
-    const { getClanChat } = await import('@/api/clans')
-    const page = await getClanChat(props.clan.id, { page: 0, size: POLL_SIZE })
-    for (const m of [...page.content].reverse()) chat.ingest(m)
-    seenUntil.value ??= latestTime()
+    const { getClanChatUnread } = await import('@/api/clans')
+    const res = await getClanChatUnread(clanId, since ?? new Date().toISOString())
+    if (clanId !== props.clan.id || since !== seenUntil.value) return
+    if (since === null) seenUntil.value = res.latestAt ?? new Date().toISOString()
+    else unreadCount.value = res.count
   } catch {}
 }
 
@@ -68,18 +64,20 @@ useRefetchOnFocus(() => {
 
 watch(() => props.clan.id, () => {
   seenUntil.value = null
+  unreadCount.value = 0
   open.value = false
   void poll()
 }, { immediate: true })
 
 function toggle() {
   if (consumeDragClick()) return
-  if (!open.value) void poll()
   open.value = !open.value
 }
 
 watch(open, (isOpen) => {
-  if (!isOpen) seenUntil.value = latestTime()
+  if (isOpen) return
+  seenUntil.value = latestSeen()
+  unreadCount.value = 0
 })
 
 useClickOutside(root, open, close)
@@ -95,7 +93,7 @@ const panelStyle = computed(() => {
   const room = opensUp.value ? y - GAP - INSET : viewport.value.height - y - SIZE - GAP - INSET
   const style: Record<string, string> = {
     width: `min(${PANEL_WIDTH}px, calc(100vw - ${INSET * 2}px))`,
-    '--chat-panel-height': `${Math.max(0, Math.min(PANEL_HEIGHT, room))}px`,
+    '--chat-panel-height': `${clamp(room, 0, PANEL_HEIGHT)}px`,
     [side.value]: `${INSET}px`,
   }
   if (opensUp.value) style.bottom = `${viewport.value.height - y + GAP}px`

@@ -40,7 +40,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
   padding: var(--space-xs) var(--space-md);
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);

@@ -12,7 +12,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 declare module 'vue-router' {
   interface RouteMeta {
     requiresStaff?: boolean
-    requiresAdmin?: boolean
     requiresCreative?: boolean
     requiredRole?: StaffRole
   }
@@ -380,20 +379,26 @@ function getLoginRoute(requiredRole?: StaffRole): string {
   return 'staff-login'
 }
 
+async function refreshExpiringStaffToken(auth: ReturnType<typeof useAuthStore>): Promise<boolean> {
+  if (!auth.staffToken || !auth.isTokenExpiringSoon) return true
+  try {
+    await auth.refreshStaffToken()
+    return true
+  } catch {
+    auth.clearStaffAuth()
+    return false
+  }
+}
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  if (isCreativesSubdomain || isCurationSubdomain || to.meta.requiresStaff) await auth.bootstrap()
 
   if (isCreativesSubdomain) {
     if (to.name === 'creatives-login' || to.name === 'auth-callback' || to.name === 'login-finish') {
       return
     }
-    if (auth.staffToken && auth.isTokenExpiringSoon) {
-      try {
-        await auth.refreshStaffToken()
-      } catch {
-        auth.clearStaffAuth()
-      }
-    }
+    await refreshExpiringStaffToken(auth)
     if (!auth.hasCreativeAccess) {
       return { name: 'creatives-login', query: { redirect: to.fullPath } }
     }
@@ -417,25 +422,14 @@ router.beforeEach(async (to) => {
     if (!auth.isAdmin) {
       return { name: 'staff-login', query: { redirect: to.fullPath } }
     }
-    if (auth.isTokenExpiringSoon) {
-      try {
-        await auth.refreshStaffToken()
-      } catch {
-        auth.clearStaffAuth()
-        return { name: 'staff-login', query: { redirect: to.fullPath } }
-      }
+    if (!(await refreshExpiringStaffToken(auth))) {
+      return { name: 'staff-login', query: { redirect: to.fullPath } }
     }
     return
   }
 
   if (to.meta.requiresCreative) {
-    if (auth.staffToken && auth.isTokenExpiringSoon) {
-      try {
-        await auth.refreshStaffToken()
-      } catch {
-        auth.clearStaffAuth()
-      }
-    }
+    await refreshExpiringStaffToken(auth)
     if (!auth.hasCreativeAccess) {
       return { name: 'creatives-login', query: { redirect: to.fullPath } }
     }
@@ -448,15 +442,8 @@ router.beforeEach(async (to) => {
     return { name: loginRoute, query: { redirect: to.fullPath } }
   }
 
-  if (auth.staffToken && auth.isTokenExpiringSoon) {
-    try {
-      await auth.refreshStaffToken()
-    } catch {
-      auth.clearStaffAuth()
-      if (!auth.isStaffAuthorized) {
-        return { name: loginRoute, query: { redirect: to.fullPath } }
-      }
-    }
+  if (!(await refreshExpiringStaffToken(auth)) && !auth.isStaffAuthorized) {
+    return { name: loginRoute, query: { redirect: to.fullPath } }
   }
 
   if (to.meta.requiredRole && !auth.hasRole(to.meta.requiredRole)) {

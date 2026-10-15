@@ -10,10 +10,15 @@ import type {
   PaletteDerivation,
   PaletteDerivationOp,
   PaletteStopName,
-} from '@/types/api/items'
+} from '@/types/cosmetics/border'
 import { darken, lerpHex, lighten, luminance } from '@/utils/color'
-import { interpolateBorderColorState, isAnimated, pickInterpolatedState } from '@/utils/items'
+import {
+  interpolateBorderColorState,
+  isAnimated,
+  pickInterpolatedState,
+} from '@/utils/cosmetics/interpolate'
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { clamp, clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   shape: BorderShapeValue
@@ -194,7 +199,7 @@ const frameThicknessPx = computed(() => {
   const max = frameSpec.value?.thicknessMaxPx ?? 8
   const prop = frameSpec.value?.thicknessProportional ?? 0.057
   if (c <= 0) return max
-  return Math.max(min, Math.min(max, Math.round(c * prop)))
+  return clamp(Math.round(c * prop), min, max)
 })
 
 const cornerRadiusPx = computed(() => {
@@ -370,13 +375,13 @@ function heartFillColors(p: Heart): { lit: string; shaded: string } {
   if (!r) return { lit: 'currentColor', shaded: 'currentColor' }
   const stops = [r.deepShadow, r.shadow, r.midShadow, r.base, r.midHighlight, r.highlight, r.apexHighlight]
   const prog = 1 - heartYPct(p) / 100
-  const idx = Math.min(stops.length - 2, Math.max(0, Math.floor(prog * (stops.length - 1))))
+  const idx = clamp(Math.floor(prog * (stops.length - 1)), 0, stops.length - 2)
   return { shaded: stops[idx], lit: stops[idx + 1] }
 }
 
 function sparkleLife(s: Sparkle): { x: number; y: number; opacity: number; scale: number } {
   const dt = tMs.value - s.bornMs
-  const t = Math.min(1, Math.max(0, dt / s.lifeMs))
+  const t = clamp01(dt / s.lifeMs)
   const drift = easeOutQuart(t)
   const distancePx = Math.max(16, frameThicknessPx.value * 2.8)
   return {

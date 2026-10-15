@@ -62,7 +62,7 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
       <div v-for="group in batchDifficultiesByCategory(batch)" :key="group.categoryCode" class="batch-category">
         <div class="batch-cat-header">
           <span class="batch-cat-dot" :style="{ background: group.accent }" />
-          <span class="batch-cat-name">{{ group.name }}</span>
+          <span class="field-label">{{ group.name }}</span>
         </div>
         <div class="batch-cards">
           <MapCardCompact v-for="m in group.diffs" :key="m.difficultyId" :map="m" :to="mapRouteTo(m)" />
@@ -151,14 +151,6 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-}
-
-.batch-cat-name {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .batch-cards {

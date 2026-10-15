@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { getApiErrorMessage } from '@/api/client'
 import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
@@ -10,6 +9,7 @@ import { eventState } from '@/utils/events'
 import EventCreateModal from '@/views/staff/admin/events/EventCreateModal.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { parseApiError } from '@/api/client'
 
 const router = useRouter()
 const now = useNow(30000)
@@ -54,7 +54,7 @@ async function fetchEvents() {
     const { listAllEvents } = await import('@/api/admin/events')
     events.value = await listAllEvents()
   } catch (e) {
-    errorMessage.value = getApiErrorMessage(e, 'Failed to load events.')
+    errorMessage.value = parseApiError(e, 'Failed to load events.').message
   } finally {
     loading.value = false
   }
@@ -83,7 +83,7 @@ async function deactivate(event: EventResponse) {
       e.id === event.id ? { ...e, active: false, live: false } : e,
     )
   } catch (e) {
-    errorMessage.value = getApiErrorMessage(e, 'Failed to deactivate the event.')
+    errorMessage.value = parseApiError(e, 'Failed to deactivate the event.').message
   } finally {
     delete actionLoading.value[event.id]
   }
@@ -116,7 +116,7 @@ function bonusSummary(event: EventResponse): string {
   <div class="events-mgmt">
     <div class="events-mgmt__header">
       <div>
-        <h2 class="events-mgmt__title">Events</h2>
+        <h2 class="section-title">Events</h2>
         <p class="events-mgmt__meta">{{ events.length }} total</p>
       </div>
       <div class="events-mgmt__actions">
@@ -205,13 +205,6 @@ function bonusSummary(event: EventResponse): string {
   flex-wrap: wrap;
 }
 
-.events-mgmt__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .events-mgmt__meta {
   font-size: var(--text-caption);
   color: var(--text-secondary);
@@ -253,7 +246,7 @@ function bonusSummary(event: EventResponse): string {
   font-size: var(--text-caption);
   font-family: var(--font-mono);
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   border: 1px solid var(--bg-overlay);
   color: var(--text-secondary);

@@ -30,6 +30,11 @@ export interface ChatMessageResponse {
   createdAt: string
 }
 
+export interface ChatUnreadResponse {
+  count: number
+  latestAt: string | null
+}
+
 export interface SendChatMessageRequest {
   content: string
 }

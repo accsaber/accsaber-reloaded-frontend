@@ -43,14 +43,16 @@ export function useClanPage(slugOrId: Ref<string>) {
 
   async function loadRoster(clanId: string) {
     rosterLoading.value = true
+    let roster: PlayerRef[] = []
     try {
       const { getClanMembers } = await import('@/api/clans')
-      members.value = (await getClanMembers(clanId, { page: 0, size: ROSTER_SIZE })).content
+      roster = (await getClanMembers(clanId, { page: 0, size: ROSTER_SIZE })).content
     } catch {
-      members.value = []
-    } finally {
-      rosterLoading.value = false
+      roster = []
     }
+    if (clan.value?.clan.id !== clanId) return
+    members.value = roster
+    rosterLoading.value = false
   }
 
   function setOnline(playerId: string, online: boolean) {
@@ -72,27 +74,33 @@ export function useClanPage(slugOrId: Ref<string>) {
     }
   }
 
+  let loadRequest = 0
+
   async function load(): Promise<ClanResponse | null> {
+    const request = ++loadRequest
     const initial = clan.value === null
     if (initial) loading.value = true
     error.value = null
     try {
       const { getClan, getClanStanding } = await import('@/api/clans')
       const fetched = await getClan(clan.value?.clan.id ?? slugOrId.value)
+      if (request !== loadRequest) return null
       clan.value = fetched
       const [rank] = await Promise.all([
         getClanStanding(fetched.clan.id).catch(() => null),
         loadRoster(fetched.clan.id),
         loadMyRequests(),
       ])
+      if (request !== loadRequest) return null
       standing.value = rank
       return fetched
     } catch {
+      if (request !== loadRequest) return null
       clan.value = null
       error.value = 'Clan not found.'
       return null
     } finally {
-      loading.value = false
+      if (request === loadRequest) loading.value = false
     }
   }
 

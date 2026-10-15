@@ -1,52 +1,39 @@
 <script setup lang="ts">
-import { getApiErrorMessage } from '@/api/client'
-import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import StatBlock from '@/components/common/StatBlock.vue'
-import ApToNextTooltip from '@/components/domain/ApToNextTooltip.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
-import LevelBadge from '@/components/domain/LevelBadge.vue'
-import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
-import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
-import UserChip from '@/components/domain/UserChip.vue'
-import NameHistoryPopover from '@/components/domain/NameHistoryPopover.vue'
-import PinnedMilestonesSection from '@/components/domain/PinnedMilestonesSection.vue'
-import PinnedScoresSection from '@/components/domain/PinnedScoresSection.vue'
-import ProfileBadgesRow from '@/components/domain/ProfileBadgesRow.vue'
-import ProfileBioEditor from '@/components/domain/ProfileBioEditor.vue'
-import ProfileXpTrend from '@/components/domain/ProfileXpTrend.vue'
-import RelationActions from '@/components/domain/RelationActions.vue'
-import RelationCountsBar from '@/components/domain/RelationCountsBar.vue'
-import SupporterProfileSection from '@/components/domain/SupporterProfileSection.vue'
-import { useSupporter } from '@/composables/useSupporter'
-import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
-import PageHeader from '@/components/layout/PageHeader.vue'
+import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
 import { useAppearance } from '@/composables/useAppearance'
-import { useSyncSetting } from '@/composables/useSyncSetting'
+import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
+import { useSupporter } from '@/composables/useSupporter'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useInventoryStore } from '@/stores/inventory'
 import { useRelationsStore } from '@/stores/relations'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
-import type { LevelResponse, PinnedScoreResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserMilestoneProgressResponse, UserResponse, UserScoresParams } from '@/types/api/users'
-import type { CategoryCode, UserRefDisplay } from '@/types/display'
-import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
-import { getRankClass } from '@/utils/ranking'
-import { pickAvatarUrl } from '@/composables/useAvatarFallback'
-import { computed, onUnmounted, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
-import ProfileInventoryTab from './profile/ProfileInventoryTab.vue'
-import ProfileMilestonesTab from './profile/ProfileMilestonesTab.vue'
-import ProfileScoresTab from './profile/ProfileScoresTab.vue'
-import ProfileStatisticsTab from './profile/ProfileStatisticsTab.vue'
-import ProfileStatsChart from './profile/ProfileStatsChart.vue'
-import ScoresPlaylistButton from './profile/ScoresPlaylistButton.vue'
+import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserCategoryStatisticsResponse, UserResponse, UserScoresParams } from '@/types/api/users'
+import type { CategoryCode } from '@/types/display'
+import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
+import { pickAvatarUrl } from '@/utils/media'
+import PinnedMilestonesSection from '@/views/profile/PinnedMilestonesSection.vue'
+import PinnedScoresSection from '@/views/profile/PinnedScoresSection.vue'
+import ProfileBio from '@/views/profile/ProfileBio.vue'
+import ProfileHero from '@/views/profile/ProfileHero.vue'
+import ProfileInventoryTab from '@/views/profile/ProfileInventoryTab.vue'
+import ProfileMilestonesTab from '@/views/profile/ProfileMilestonesTab.vue'
+import ProfileScoresTab from '@/views/profile/ProfileScoresTab.vue'
+import ProfileStatisticsTab from '@/views/profile/ProfileStatisticsTab.vue'
+import ProfileStatsChart from '@/views/profile/ProfileStatsChart.vue'
+import ProfileStatStrip from '@/views/profile/ProfileStatStrip.vue'
+import RelationCountsBar from '@/views/profile/RelationCountsBar.vue'
+import ScoresPlaylistButton from '@/views/profile/ScoresPlaylistButton.vue'
+import { usePinnedMilestones, usePinnedScores } from '@/views/profile/useProfilePins'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
@@ -62,14 +49,6 @@ const isBlockedByMe = computed(() => relationsStore.hasRelation(userId.value, 'b
 
 const user = ref<UserResponse | null>(null)
 const userAvatarUrl = computed(() => pickAvatarUrl(user.value))
-const heroUser = computed<UserRefDisplay>(() => ({
-  id: userId.value,
-  name: user.value?.name ?? '',
-  avatarUrl: user.value?.avatarUrl ?? null,
-  cdnAvatarUrl: user.value?.cdnAvatarUrl ?? null,
-  country: user.value?.country ?? null,
-  clan: user.value?.clan ?? null,
-}))
 const level = ref<LevelResponse | null>(null)
 const stats = ref<UserCategoryStatisticsResponse[]>([])
 const xpStats = ref<UserAllStatisticsResponse | null>(null)
@@ -102,21 +81,12 @@ const equipped = computed<EquippedItemsResponse>(() => {
 })
 
 const {
-  titleValue: equippedTitleValue,
-  borderShapeValue: equippedBorderShapeValue,
-  borderColorValue: equippedBorderColorValue,
-  titleEffects: equippedTitleEffects,
-  borderEffects: equippedBorderEffects,
   backgroundValue: equippedBackgroundValue,
   backgroundUrl: equippedBackgroundUrl,
   backgroundIsVideo: equippedBackgroundIsVideo,
   backgroundImageUrl: equippedBackgroundImageUrl,
   backgroundStyle: equippedBackgroundStyle,
-  thumbnailValue: equippedThumbnailValue,
-  thumbnailEffects: equippedThumbnailEffects,
 } = useEquippedRenderProps(equipped, { previewable: true })
-
-const heroThumbValue = computed(() => (hideReloadedProfileFeatures.value ? null : equippedThumbnailValue.value))
 
 const scorePlayer = computed(() => ({ user: user.value, level: level.value, equipped: equipped.value }))
 
@@ -157,73 +127,13 @@ const activeCategory = computed<CategoryCode>({
   set: (value) => { categoryParam.value = value === 'overall' ? '' : value },
 })
 
-const scoreSearch = ref('')
+const scoreSearch = queryRef('search')
 const scorePlaylistParams = ref<UserScoresParams | null>(null)
 const scoresTableWidth = ref(0)
 const editMode = ref(false)
-const nameDraft = ref('')
-const nameSaving = ref(false)
-const nameError = ref<string | null>(null)
-const nameInputRef = ref<HTMLInputElement | null>(null)
 
-const {
-  enabled: syncEnabled,
-  saving: syncSaving,
-  resyncQueued: syncResyncQueued,
-  fetch: fetchSyncSetting,
-  set: setSyncName,
-  reset: resetSyncNotice,
-} = useSyncSetting('sync.name')
-
-function enterEditMode() {
-  if (!user.value) return
-  nameDraft.value = user.value.name
-  nameError.value = null
-  editMode.value = true
-  fetchSyncSetting()
-}
-
-function exitEditMode() {
-  editMode.value = false
-  nameError.value = null
-  resetSyncNotice()
-}
-
-async function saveName() {
-  if (!user.value) return
-  const trimmed = nameDraft.value.trim()
-  if (!trimmed) {
-    nameError.value = 'Name cannot be empty.'
-    return
-  }
-  if (trimmed.length > 64) {
-    nameError.value = 'Name must be 64 characters or fewer.'
-    return
-  }
-  if (trimmed === user.value.name) {
-    nameInputRef.value?.blur()
-    return
-  }
-  nameSaving.value = true
-  nameError.value = null
-  try {
-    const { updateMyProfile } = await import('@/api/users')
-    await updateMyProfile({ name: trimmed })
-    user.value = { ...user.value, name: trimmed }
-    nameInputRef.value?.blur()
-    fetchSyncSetting()
-  } catch (err) {
-    nameError.value = getApiErrorMessage(err, 'Could not save your name.')
-  } finally {
-    nameSaving.value = false
-  }
-}
-
-function cancelNameEdit() {
-  if (!user.value) return
-  nameDraft.value = user.value.name
-  nameError.value = null
-  nameInputRef.value?.blur()
+function onRenamed(name: string) {
+  if (user.value) user.value = { ...user.value, name }
 }
 
 function onBioSaved(bio: string) {
@@ -231,165 +141,34 @@ function onBioSaved(bio: string) {
   user.value = { ...user.value, bio }
 }
 
-const pinnedScores = ref<PinnedScoreResponse[]>([])
-const pinnedLoading = ref(false)
-const pinPending = ref<Set<string>>(new Set())
-
-const pinnedScoreIds = computed(() => new Set(pinnedScores.value.map((p) => p.score.id)))
-const canPinMore = computed(() => pinnedScores.value.length < pinnedSlotLimit.value)
-
-async function fetchPinnedScores() {
-  pinnedLoading.value = true
-  try {
-    const { getUserPinnedScores } = await import('@/api/users')
-    pinnedScores.value = await getUserPinnedScores(userId.value)
-  } catch {
-    pinnedScores.value = []
-  }
-  pinnedLoading.value = false
-}
-
-function buildPinnedPayload(
-  ids: string[],
-  commentOverride?: { scoreId: string, comment: string | null },
-) {
-  const existingCommentByScoreId = new Map(
-    pinnedScores.value.map((p) => [p.score.id, p.comment]),
-  )
-  return ids.map((id, displayOrder) => {
-    const comment = commentOverride?.scoreId === id
-      ? commentOverride.comment
-      : existingCommentByScoreId.get(id) ?? null
-    return { scoreId: id, displayOrder, comment }
-  })
-}
-
-async function onPinToggle(scoreId: string) {
-  if (!isSelfProfile.value) return
-  if (pinPending.value.has(scoreId)) return
-  const currentIds = pinnedScores.value.map((p) => p.score.id)
-  const isCurrentlyPinned = currentIds.includes(scoreId)
-  const nextIds = isCurrentlyPinned
-    ? currentIds.filter((id) => id !== scoreId)
-    : [...currentIds, scoreId]
-  if (nextIds.length > pinnedSlotLimit.value) return
-
-  pinPending.value = new Set([...pinPending.value, scoreId])
-  try {
-    const { updateMyProfile } = await import('@/api/users')
-    await updateMyProfile({ pinnedScores: buildPinnedPayload(nextIds) })
-    if (isCurrentlyPinned) pinnedScores.value = pinnedScores.value.filter((p) => p.score.id !== scoreId)
-    else await fetchPinnedScores()
-  } catch {
-  } finally {
-    const next = new Set(pinPending.value)
-    next.delete(scoreId)
-    pinPending.value = next
-  }
-}
-
-const pinnedMilestones = ref<UserMilestoneProgressResponse[]>([])
-const pinnedMilestonesLoading = ref(false)
-const pinnedMilestoneIds = ref<Set<string>>(new Set())
-
-async function fetchPinnedMilestones() {
-  pinnedMilestonesLoading.value = true
-  try {
-    const { getUserPinnedMilestones } = await import('@/api/users')
-    pinnedMilestones.value = await getUserPinnedMilestones(userId.value)
-  } catch {
-    pinnedMilestones.value = []
-  }
-  pinnedMilestoneIds.value = new Set(pinnedMilestones.value.map((p) => p.milestoneId))
-  pinnedMilestonesLoading.value = false
-}
-
-const canPinMoreMilestones = computed(
-  () => pinnedMilestoneIds.value.size < pinnedSlotLimit.value,
-)
-
-const milestonePinPending = ref<Set<string>>(new Set())
-
-async function onMilestonePinToggle(milestoneId: string) {
-  if (!isSelfProfile.value || milestonePinPending.value.has(milestoneId)) return
-  const currentIds = [...pinnedMilestoneIds.value]
-  const isPinned = currentIds.includes(milestoneId)
-  const nextIds = isPinned
-    ? currentIds.filter((id) => id !== milestoneId)
-    : [...currentIds, milestoneId]
-  if (nextIds.length > pinnedSlotLimit.value) return
-
-  pinnedMilestoneIds.value = new Set(nextIds)
-  milestonePinPending.value = new Set([...milestonePinPending.value, milestoneId])
-  try {
-    const { updateMyProfile } = await import('@/api/users')
-    await updateMyProfile({
-      pinnedMilestones: nextIds.map((id, displayOrder) => ({ milestoneId: id, displayOrder })),
-    })
-    if (isPinned) pinnedMilestones.value = pinnedMilestones.value.filter((p) => p.milestoneId !== milestoneId)
-    else await fetchPinnedMilestones()
-  } catch {
-    pinnedMilestoneIds.value = new Set(currentIds)
-  } finally {
-    const next = new Set(milestonePinPending.value)
-    next.delete(milestoneId)
-    milestonePinPending.value = next
-  }
-}
-
-async function onUpdateComment(payload: { scoreId: string, comment: string | null }) {
-  if (!isSelfProfile.value) return
-  const currentIds = pinnedScores.value.map((p) => p.score.id)
-  if (!currentIds.includes(payload.scoreId)) return
-  try {
-    const { updateMyProfile } = await import('@/api/users')
-    await updateMyProfile({
-      pinnedScores: buildPinnedPayload(currentIds, payload),
-    })
-    pinnedScores.value = pinnedScores.value.map((p) =>
-      p.score.id === payload.scoreId ? { ...p, comment: payload.comment } : p,
-    )
-  } catch {
-  }
-}
+const pinContext = { userId, isSelfProfile, slotLimit: pinnedSlotLimit }
+const {
+  pinned: pinnedScores,
+  loading: pinnedLoading,
+  pending: pinPending,
+  pinnedIds: pinnedScoreIds,
+  canPinMore,
+  fetch: fetchPinnedScores,
+  toggle: onPinToggle,
+  updateComment: onUpdateComment,
+  reset: resetPinnedScores,
+} = usePinnedScores(pinContext)
+const {
+  pinned: pinnedMilestones,
+  loading: pinnedMilestonesLoading,
+  pending: milestonePinPending,
+  pinnedIds: pinnedMilestoneIds,
+  canPinMore: canPinMoreMilestones,
+  fetch: fetchPinnedMilestones,
+  toggle: onMilestonePinToggle,
+  reset: resetPinnedMilestones,
+} = usePinnedMilestones(pinContext)
 
 const categoryAwareTabs = new Set(['scores', 'statistics'])
-
-const heroCategoryTabsRef = ref<HTMLElement | null>(null)
 const heroCategoryTabsHidden = ref(false)
 const showCategoryDock = computed(
   () => heroCategoryTabsHidden.value && categoryAwareTabs.has(activeTab.value),
 )
-
-let dockObserver: IntersectionObserver | null = null
-const navbarQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)') : null
-
-function observeHeroCategoryTabs() {
-  dockObserver?.disconnect()
-  dockObserver = null
-  const el = heroCategoryTabsRef.value
-  if (!el) {
-    heroCategoryTabsHidden.value = false
-    return
-  }
-  const navbarHeight
-    = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 64
-  dockObserver = new IntersectionObserver(
-    ([entry]) => {
-      heroCategoryTabsHidden.value = entry.boundingClientRect.bottom <= navbarHeight
-    },
-    { rootMargin: `-${navbarHeight}px 0px 0px 0px` },
-  )
-  dockObserver.observe(el)
-}
-
-watch(heroCategoryTabsRef, observeHeroCategoryTabs)
-navbarQuery?.addEventListener('change', observeHeroCategoryTabs)
-
-onUnmounted(() => {
-  dockObserver?.disconnect()
-  navbarQuery?.removeEventListener('change', observeHeroCategoryTabs)
-})
 
 const activeStats = computed(() => {
   if (!Array.isArray(stats.value) || stats.value.length === 0) return null
@@ -424,34 +203,6 @@ const metaTitle = computed(() => {
 
 usePageMeta({ title: metaTitle })
 
-function rankRoute(ranking: number | null | undefined, country?: string | null) {
-  if (!ranking) return null
-  return {
-    name: 'leaderboards-category',
-    params: { categoryCode: activeCategory.value },
-    query: { ...(country ? { country } : {}), page: String(Math.ceil(ranking / 50)), highlight: userId.value },
-  }
-}
-
-const rankCells = computed(() => {
-  const s = activeStats.value
-  const d = statsDiff.value
-  return [
-    {
-      label: 'Global Rank',
-      value: s?.ranking ?? 0,
-      trend: d?.rankingDiff ? -d.rankingDiff : undefined,
-      to: rankRoute(s?.ranking),
-    },
-    {
-      label: 'Country Rank',
-      value: s?.countryRanking ?? 0,
-      trend: d?.countryRankingDiff ? -d.countryRankingDiff : undefined,
-      to: user.value?.country ? rankRoute(s?.countryRanking, user.value.country) : null,
-    },
-  ]
-})
-
 async function redirectToCanonicalProfile(canonicalId: string): Promise<boolean> {
   try {
     const failure = await router.replace({
@@ -473,14 +224,15 @@ function resetProfile() {
   xpStats.value = null
   localEquipped.value = {}
   ownedBadges.value = []
-  pinnedScores.value = []
-  pinnedMilestones.value = []
-  pinnedMilestoneIds.value = new Set()
-  pinPending.value = new Set()
-  milestonePinPending.value = new Set()
+  resetPinnedScores()
+  resetPinnedMilestones()
 }
 
+let profileRequest = 0
+
 async function fetchProfile() {
+  const request = ++profileRequest
+  const id = userId.value
   loading.value = true
   error.value = false
   resetProfile()
@@ -491,8 +243,19 @@ async function fetchProfile() {
       import('@/api/items'),
     ])
 
-    const userRes = await getUser(userId.value)
-    if (userRes.id !== userId.value && (await redirectToCanonicalProfile(userRes.id))) return
+    const details = Promise.allSettled([
+      getUserLevel(id),
+      getUserAllStatistics(id),
+      isSelfProfile.value ? inventoryStore.fetchEquipped(id, true) : itemsApi.getUserEquippedItems(id),
+      itemsApi.getUserItems(id, { typeKey: 'badge' }),
+    ])
+    fetchStatsDiff()
+    fetchPinnedScores()
+    fetchPinnedMilestones()
+
+    const userRes = await getUser(id)
+    if (request !== profileRequest) return
+    if (userRes.id !== id && (await redirectToCanonicalProfile(userRes.id))) return
     user.value = userRes
 
     if (userRes.banned || isBlockedByMe.value) {
@@ -500,15 +263,8 @@ async function fetchProfile() {
       return
     }
 
-    const equippedPromise = isSelfProfile.value
-      ? inventoryStore.fetchEquipped(userId.value, true)
-      : itemsApi.getUserEquippedItems(userId.value)
-    const [levelRes, allStatsRes, equippedRes, badgesRes] = await Promise.allSettled([
-      getUserLevel(userId.value),
-      getUserAllStatistics(userId.value),
-      equippedPromise,
-      itemsApi.getUserItems(userId.value, { typeKey: 'badge' }),
-    ])
+    const [levelRes, allStatsRes, equippedRes, badgesRes] = await details
+    if (request !== profileRequest) return
 
     if (levelRes.status === 'fulfilled') {
       level.value = levelRes.value
@@ -523,11 +279,8 @@ async function fetchProfile() {
     if (badgesRes.status === 'fulfilled') {
       ownedBadges.value = badgesRes.value
     }
-
-    fetchStatsDiff()
-    fetchPinnedScores()
-    fetchPinnedMilestones()
   } catch {
+    if (request !== profileRequest) return
     error.value = true
     resetProfile()
   }
@@ -559,7 +312,7 @@ watch(activeCategory, () => {
     </template>
 
     <template v-else-if="error || !user">
-      <PageHeader title="Player Not Found" />
+      <h1>Player Not Found</h1>
       <p class="profile-page__error">Could not load this player's profile.</p>
     </template>
 
@@ -587,158 +340,22 @@ watch(activeCategory, () => {
         <div v-else class="profile-page__bg-image" :style="{ backgroundImage: `url(${userAvatarUrl})` }" />
       </div>
 
-      <div class="profile-hero">
-        <ThumbnailBackdrop class="profile-hero__thumb" :value="heroThumbValue" :effects="equippedThumbnailEffects" />
-        <div class="profile-hero__level-col">
-          <PlayerTooltipTrigger class="profile-hero__badge-hover" :user="heroUser">
-            <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
-              :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="userAvatarUrl"
-              :plain="hideReloadedProfileFeatures"
-              :fallback-title="level?.title"
-              :equipped-title="equippedTitleValue"
-              :equipped-border-shape="equippedBorderShapeValue"
-              :equipped-border-color="equippedBorderColorValue"
-              :title-effects="equippedTitleEffects"
-              :border-effects="equippedBorderEffects" />
-          </PlayerTooltipTrigger>
-          <ProfileXpTrend v-if="!user.banned && !hideReloadedProfileFeatures" :stats-diff="statsDiff" />
-        </div>
-
-        <div class="profile-hero__details">
-          <div class="profile-hero__top-row">
-            <div class="profile-hero__name-col">
-              <div class="profile-hero__name-row">
-                <template v-if="editMode && isSelfProfile">
-                  <input ref="nameInputRef" v-model="nameDraft" type="text" maxlength="64"
-                    class="profile-hero__name profile-hero__name-input"
-                    :class="{ 'profile-hero__name-input--error': !!nameError }"
-                    :disabled="nameSaving" aria-label="Edit display name"
-                    @keydown.enter.prevent="saveName" @keydown.escape.prevent="cancelNameEdit" />
-                </template>
-                <UserChip v-else :user="heroUser" hide-avatar name-tag="h1" clan-effects class="profile-hero__name">
-                  <NameHistoryPopover :user-id="userId" :current-name="user.name" />
-                </UserChip>
-                <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
-              </div>
-              <p v-if="editMode && nameError" class="profile-hero__name-error">{{ nameError }}</p>
-              <p v-else-if="editMode && isSelfProfile" class="profile-hero__name-hint">Press Enter to save your name.</p>
-
-              <div v-if="editMode && isSelfProfile && syncEnabled !== null" class="profile-hero__sync">
-                <label class="profile-hero__sync-row">
-                  <input type="checkbox" class="profile-hero__sync-check"
-                    :checked="syncEnabled" :disabled="syncSaving"
-                    @change="setSyncName(($event.target as HTMLInputElement).checked)" />
-                  <span class="profile-hero__sync-label">Sync display name from BeatLeader / ScoreSaber</span>
-                </label>
-                <p v-if="syncResyncQueued" class="profile-hero__sync-notice">Resyncs at 4 AM.</p>
-              </div>
-              <ProfileBadgesRow
-                v-if="ownedBadges.length"
-                :badges="ownedBadges"
-                :primary-link-id="equipped['badge']?.linkId ?? null"
-                class="profile-hero__badges"
-              />
-              <p v-if="user.hmd" class="profile-hero__hmd">{{ user.hmd }}</p>
-              <SupporterProfileSection
-                v-if="supporterState"
-                :state="supporterState"
-                :is-self-profile="isSelfProfile"
-                class="profile-hero__supporter"
-              />
-            </div>
-
-            <div class="profile-hero__top-right">
-              <div class="profile-hero__links">
-                <BaseButton v-if="isSelfProfile" size="sm"
-                  :aria-label="editMode ? 'Exit edit mode' : 'Edit profile'"
-                  :title="editMode ? 'Exit edit mode' : 'Edit profile'"
-                  :variant="editMode ? 'primary' : 'default'"
-                  @click="editMode ? exitEditMode() : enterEditMode()">
-                  <svg v-if="editMode" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                  <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
-                  </svg>
-                </BaseButton>
-                <BaseButton size="sm" :href="`https://www.beatleader.com/u/${user.blId ?? user.id}`"
-                  aria-label="View on BeatLeader">
-                  <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                    class="profile-hero__platform-icon" decoding="async" />
-                </BaseButton>
-                <BaseButton size="sm" :href="`https://scoresaber.com/u/${user.ssId ?? user.id}`"
-                  aria-label="View on ScoreSaber">
-                  <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                    class="profile-hero__platform-icon" decoding="async" />
-                </BaseButton>
-                <RelationActions :target-user-id="userId" :target-name="user.name" show-snipe />
-              </div>
-            </div>
-          </div>
-
-          <div v-if="user.banned" class="profile-hero__banned">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-            </svg>
-            <span>This account is banned.</span>
-          </div>
-
-          <div v-else-if="isBlockedByMe" class="profile-hero__banned">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-            </svg>
-            <span>You blocked this player.</span>
-          </div>
-
-          <template v-else>
-            <div ref="heroCategoryTabsRef" class="profile-hero__category-tabs">
-              <CategoryTabs :model-value="activeCategory" :exclude="['xp']"
-                @update:model-value="activeCategory = $event" />
-            </div>
-
-            <div class="profile-hero__stats">
-              <StatBlock label="Total AP" :value="activeStats?.ap ?? 0" :trend="statsDiff?.apDiff">
-                <template #label-suffix>
-                  <ApToNextTooltip :user-id="userId" :category="activeCategory" />
-                </template>
-              </StatBlock>
-              <component :is="cell.to ? RouterLink : 'div'" v-for="cell in rankCells" :key="cell.label"
-                v-bind="cell.to ? { to: cell.to } : {}" class="profile-hero__rank-block">
-                <StatBlock :label="cell.label" :value="cell.value" :decimals="0" :trend="cell.trend" />
-                <span v-if="cell.value && cell.value <= 3" class="profile-hero__rank-badge"
-                  :class="getRankClass(cell.value)">#{{ cell.value }}</span>
-              </component>
-              <StatBlock label="Ranked Plays" :value="activeStats?.rankedPlays ?? 0" :decimals="0"
-                :trend="statsDiff?.rankedPlaysDiff" />
-            </div>
-
-            <RelationCountsBar v-if="user.relations" :user-id="userId" :counts="user.relations" />
-          </template>
-        </div>
-      </div>
+      <ProfileHero v-model:edit-mode="editMode" :user="user" :user-id="userId" :avatar-url="userAvatarUrl"
+        :level="level" :equipped="equipped" :stats-diff="statsDiff" :badges="ownedBadges"
+        :supporter-state="supporterState" :is-self-profile="isSelfProfile" :is-blocked-by-me="isBlockedByMe"
+        @renamed="onRenamed">
+        <ProfileStatStrip v-model:category="activeCategory" :user-id="userId" :country="user.country ?? null"
+          :stats="activeStats" :stats-diff="statsDiff" @tabs-hidden="heroCategoryTabsHidden = $event" />
+        <RelationCountsBar v-if="user.relations" :user-id="userId" :counts="user.relations" />
+      </ProfileHero>
 
       <template v-if="!user.banned && !isBlockedByMe">
-        <template v-if="!hideReloadedProfileFeatures">
-          <section v-if="editMode && isSelfProfile" class="profile-page__bio" aria-label="Edit bio">
-            <h2 class="profile-page__bio-label">About</h2>
-            <ProfileBioEditor :initial-bio="user.bio ?? ''" :max-chars="bioCharLimit" :can-use-effects="isProfileOwnerSupporter" @saved="onBioSaved" @cancel="exitEditMode" />
-          </section>
-          <section v-else-if="user.bio" class="profile-page__bio" aria-label="About this player">
-            <h2 class="profile-page__bio-label">About</h2>
-            <div class="profile-page__bio-body" v-html="user.bio" />
-          </section>
-        </template>
+        <ProfileBio v-if="!hideReloadedProfileFeatures" :bio="user.bio ?? null" :editing="editMode && isSelfProfile"
+          :max-chars="bioCharLimit" :can-use-effects="isProfileOwnerSupporter" @saved="onBioSaved"
+          @cancel="editMode = false" />
 
         <section v-if="showStatisticsChart" class="profile-page__inline-chart" aria-label="Statistics history">
-          <h2 class="profile-page__bio-label">History</h2>
+          <h2 class="profile-page__section-label">History</h2>
           <ProfileStatsChart :user-id="userId" :category="activeCategory" />
         </section>
 
@@ -924,301 +541,6 @@ watch(activeCategory, () => {
   }
 }
 
-.profile-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: stretch;
-  gap: var(--space-xl);
-  padding: var(--space-xl) 0 var(--space-lg);
-}
-
-.profile-hero > :not(.thumbnail-backdrop) {
-  position: relative;
-}
-
-.profile-hero__thumb {
-  inset: 0 auto 0 calc(-1 * var(--space-xl));
-  width: min(calc(100% + var(--space-xl)), 960px);
-  border-radius: 0;
-  mask-image:
-    linear-gradient(to right, transparent, rgb(0 0 0 / 0.5) 12%, rgb(0 0 0 / 0.25) 50%, transparent),
-    linear-gradient(to bottom, transparent, black 20%, black 70%, transparent);
-  mask-composite: intersect;
-}
-
-.profile-hero__top-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.profile-hero__top-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-xs);
-}
-
-.profile-hero__name-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
-.profile-hero__badges {
-  justify-content: flex-start !important;
-  max-width: none !important;
-}
-
-.profile-hero__hmd {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.profile-hero__supporter {
-  margin-top: var(--space-sm);
-  align-self: flex-start;
-}
-
-.profile-hero__category-tabs {
-  display: flex;
-  justify-content: flex-start;
-  margin-top: var(--space-xs);
-}
-
-.profile-hero__level-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-shrink: 0;
-}
-
-.profile-hero__badge-hover {
-  display: flex;
-  justify-content: center;
-}
-
-.profile-hero__details {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-md);
-  width: 100%;
-  min-width: 0;
-  min-height: 100%;
-}
-
-.profile-hero__name-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-sm);
-}
-
-.profile-hero__links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: var(--space-xs);
-}
-
-.profile-hero__name {
-  font-size: calc(var(--text-page-title) * 1.15);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.profile-hero__name-input {
-  display: inline-block;
-  min-width: 200px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 2px dashed var(--bg-overlay);
-  font-family: var(--font-sans);
-  outline: none;
-  transition: border-color 120ms ease;
-}
-
-.profile-hero__name-input:focus,
-.profile-hero__name-input:hover {
-  border-bottom-color: var(--accent);
-}
-
-.profile-hero__name-input--error,
-.profile-hero__name-input--error:focus {
-  border-bottom-color: var(--error);
-}
-
-.profile-hero__name-hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.profile-hero__name-error {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--error);
-}
-
-.profile-hero__sync {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: var(--space-xs);
-  max-width: 480px;
-}
-
-.profile-hero__sync-row {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  cursor: pointer;
-  font-size: var(--text-caption);
-  color: var(--text-primary);
-}
-
-.profile-hero__sync-check {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.profile-hero__sync-check:disabled {
-  cursor: progress;
-}
-
-.profile-hero__sync-label {
-  font-weight: 500;
-}
-
-.profile-hero__sync-notice {
-  margin: 0;
-  padding-left: 22px;
-  font-size: var(--text-caption);
-  color: var(--accent);
-}
-
-.profile-hero__banned {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
-  border-radius: var(--radius-card);
-  color: var(--error);
-  font-size: var(--text-body);
-  font-weight: 500;
-}
-
-.profile-hero__inactive-badge {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  background: color-mix(in srgb, var(--bg-overlay) 60%, transparent);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--bg-overlay);
-  letter-spacing: 0.03em;
-}
-
-.profile-hero__stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin-top: auto;
-  border-top: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.profile-hero__stats > * + * {
-  border-inline-start: 1px solid var(--bg-overlay);
-}
-
-.profile-hero__stats :deep(.stat-block) {
-  padding: var(--space-md) var(--space-lg);
-  gap: var(--space-xs);
-}
-
-.profile-hero__stats :deep(.stat-block__value) {
-  font-size: 2rem;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.profile-hero__stats :deep(.stat-block__label) {
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-@media (max-width: 599px) {
-  .profile-hero__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .profile-hero__stats > * + * {
-    border-inline-start: none;
-  }
-
-  .profile-hero__stats > *:nth-child(n + 3) {
-    border-block-start: 1px solid var(--bg-overlay);
-  }
-
-  .profile-hero__stats :deep(.stat-block__value) {
-    font-size: 1.625rem;
-  }
-}
-
-.profile-hero__rank-block {
-  position: relative;
-  color: inherit;
-  text-decoration: none;
-  transition: background-color 120ms ease;
-}
-
-a.profile-hero__rank-block:hover {
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-}
-
-a.profile-hero__rank-block:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
-}
-
-.profile-hero__platform-icon {
-  border-radius: var(--radius-btn);
-}
-
-.profile-hero__rank-badge {
-  position: absolute;
-  top: var(--space-xs);
-  right: var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: var(--radius-pill);
-  letter-spacing: 0.02em;
-}
-
-.profile-page__bio {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding-block: var(--space-sm) var(--space-md);
-}
-
 .profile-page__inline-chart {
   display: flex;
   flex-direction: column;
@@ -1227,112 +549,13 @@ a.profile-hero__rank-block:focus-visible {
   min-width: 0;
 }
 
-.profile-page__bio-label {
+.profile-page__section-label {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-tertiary);
   margin: 0;
-}
-
-.profile-page__bio-body {
-  color: var(--text-primary);
-  font-size: var(--text-body);
-  line-height: 1.65;
-}
-
-.profile-page__bio-body :deep(*:first-child) {
-  margin-top: 0;
-}
-
-.profile-page__bio-body :deep(*:last-child) {
-  margin-bottom: 0;
-}
-
-.profile-page__bio-body :deep(h3) {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 1.4em 0 0.4em;
-}
-
-.profile-page__bio-body :deep(h4),
-.profile-page__bio-body :deep(h5),
-.profile-page__bio-body :deep(h6) {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 1.2em 0 0.4em;
-}
-
-.profile-page__bio-body :deep(p) {
-  margin: 0 0 0.8em;
-}
-
-.profile-page__bio-body :deep(ul),
-.profile-page__bio-body :deep(ol) {
-  padding-left: 1.4em;
-  margin: 0 0 0.8em;
-}
-
-.profile-page__bio-body :deep(li) {
-  margin-bottom: 0.2em;
-}
-
-.profile-page__bio-body :deep(blockquote) {
-  margin: 0.6em 0 1em;
-  padding-left: var(--space-md);
-  color: var(--text-secondary);
-  font-style: italic;
-  border-left: 1px solid var(--bg-overlay);
-}
-
-.profile-page__bio-body :deep(code),
-.profile-page__bio-body :deep(tt) {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  padding: 1px 5px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-elevated);
-  color: var(--accent);
-}
-
-.profile-page__bio-body :deep(pre) {
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-card);
-  background: var(--bg-elevated);
-  overflow-x: auto;
-  margin: 0 0 0.8em;
-}
-
-.profile-page__bio-body :deep(pre code) {
-  padding: 0;
-  background: transparent;
-  color: var(--text-primary);
-}
-
-.profile-page__bio-body :deep(a) {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-  transition: opacity 120ms ease;
-}
-
-.profile-page__bio-body :deep(a:hover) {
-  opacity: 0.8;
-}
-
-.profile-page__bio-body :deep(hr) {
-  border: none;
-  border-top: 1px solid var(--bg-overlay);
-  margin: 1.2em 0;
-}
-
-.profile-page__bio-body :deep(small) {
-  font-size: 0.85em;
-  color: var(--text-secondary);
 }
 
 .profile-page__tabs-row {
@@ -1375,77 +598,6 @@ a.profile-hero__rank-block:focus-visible {
 }
 
 @media (max-width: 767px) {
-  .profile-hero {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
-    gap: var(--space-md);
-    padding: calc(var(--space-xl) + 36px) 0 var(--space-md);
-  }
-
-  .profile-hero > .profile-hero__details {
-    position: static;
-  }
-
-  .profile-hero__top-right {
-    position: absolute;
-    top: var(--space-sm);
-    right: 0;
-    width: auto;
-  }
-
-  .profile-hero__category-tabs {
-    width: 100%;
-  }
-
-  .profile-hero__category-tabs :deep(.base-tabs) {
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    gap: 0;
-    width: 100%;
-  }
-
-  .profile-hero__category-tabs :deep(.base-tabs__tab) {
-    padding-inline: var(--space-xs);
-    font-size: 0.8125rem;
-    white-space: nowrap;
-  }
-
-  .profile-hero__details {
-    align-items: center;
-  }
-
-  .profile-hero__top-row {
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-sm);
-    width: 100%;
-  }
-
-
-  .profile-hero__name-col {
-    width: 100%;
-    align-items: center;
-  }
-
-  .profile-hero__name-row {
-    justify-content: center;
-  }
-
-  .profile-hero__supporter {
-    align-self: center;
-    justify-content: center;
-  }
-
-  .profile-hero__badges {
-    justify-content: center !important;
-  }
-
-  .profile-hero__links {
-    flex-wrap: nowrap;
-    justify-content: flex-end;
-  }
-
   .profile-page__tabs-row {
     flex-direction: column;
     align-items: stretch;
@@ -1457,13 +609,6 @@ a.profile-hero__rank-block:focus-visible {
 
   .profile-page__cat-dock-inner {
     padding: 0 var(--space-md);
-  }
-}
-
-@media (max-width: 379px) {
-  .profile-hero__category-tabs :deep(.base-tabs__tab) {
-    padding-inline: 2px;
-    font-size: 0.75rem;
   }
 }
 </style>

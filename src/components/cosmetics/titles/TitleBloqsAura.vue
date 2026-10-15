@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleBloqsAuraSpec } from '@/types/api/items'
+import type { TitleBloqsAuraSpec } from '@/types/cosmetics/title'
 import { darken } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'

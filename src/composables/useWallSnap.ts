@@ -1,3 +1,4 @@
+import { readStored, writeStored } from '@/utils/storage'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 export type WallSide = 'left' | 'right'
@@ -9,21 +10,14 @@ interface StoredPosition {
 
 const DRAG_THRESHOLD = 5
 
-function readPosition(key: string): StoredPosition | null {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? 'null')
-    if (!parsed || typeof parsed !== 'object') return null
-    const { side, y } = parsed as Record<string, unknown>
-    return (side === 'left' || side === 'right') && typeof y === 'number' ? { side, y } : null
-  } catch {
-    return null
-  }
+function parsePosition(raw: unknown): StoredPosition | null {
+  if (!raw || typeof raw !== 'object') return null
+  const { side, y } = raw as Record<string, unknown>
+  return (side === 'left' || side === 'right') && typeof y === 'number' ? { side, y } : null
 }
 
-function writePosition(key: string, value: StoredPosition) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {}
+function readPosition(key: string): StoredPosition | null {
+  return readStored(key, parsePosition, null)
 }
 
 function topInset(inset: number): number {
@@ -75,7 +69,7 @@ export function useWallSnap(storageKey: string, size: number, inset: number) {
     side.value = dropped.x + size / 2 < viewport.value.width / 2 ? 'left' : 'right'
     y.value = dropped.y
     drag.value = null
-    writePosition(storageKey, { side: side.value, y: y.value })
+    writeStored(storageKey, { side: side.value, y: y.value })
   }
 
   function consumeDragClick(): boolean {

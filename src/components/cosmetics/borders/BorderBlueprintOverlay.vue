@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderBlueprintOverlaySpec, BorderOverlayHost } from '@/types/api/items'
+import type { BorderBlueprintOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { overlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { useTemplateRef } from 'vue'
 

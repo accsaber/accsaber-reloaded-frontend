@@ -6,6 +6,7 @@ import { hash01, makeRng, randBetween as rand } from '@/utils/random'
 import { blitSceneLayer, createRadialSprite, createSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import type { ForestBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
+import { clamp, clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   config: ForestBackdropConfig
@@ -124,7 +125,7 @@ function pathHalfAt(t: number): number {
 function treeColorAt(t: number): string {
   const colors = props.config.treeColors
   const n = colors.length
-  const pos = Math.min(1, Math.max(0, t)) * (n - 1)
+  const pos = clamp01(t) * (n - 1)
   const i = Math.min(n - 2, Math.floor(pos))
   return lerpHex(colors[n - 1 - i], colors[Math.max(0, n - 2 - i)], pos - i)
 }
@@ -499,7 +500,7 @@ function drawWisps(ctx: CanvasRenderingContext2D, w: number, h: number, ps: numb
       cell(ctx, Math.round(past.x / ps), Math.round(past.y / ps), ps, wp.color)
     }
     const pos = wispPos(wp, now)
-    const depth = Math.min(1, Math.max(0.35, (pos.y / h - 0.3) * 1.6))
+    const depth = clamp((pos.y / h - 0.3) * 1.6, 0.35, 1)
     const col = Math.round(pos.x / ps)
     const row = Math.round(pos.y / ps)
     ctx.globalAlpha = a

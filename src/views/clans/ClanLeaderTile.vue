@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import CountryFlag from '@/components/domain/CountryFlag.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import type { PlayerRef } from '@/types/api/common'
 import { CLAN_ROLE_LABEL } from '@/utils/clans'
 import { computed } from 'vue'
@@ -30,7 +30,7 @@ function whole(value: number | undefined): string {
         :alt="`${member.name} avatar`"
         loading="lazy"
         decoding="async"
-        @error="onAvatarError(pickAvatarFallback(member))($event)"
+        @error="onImageError(pickAvatarFallback(member))($event)"
       />
     </RouterLink>
     <div class="leader__body">

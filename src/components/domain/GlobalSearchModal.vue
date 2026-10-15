@@ -14,6 +14,8 @@ import { getRankClass } from '@/utils/ranking'
 import { isStaffSubdomain, playerProfileHref, mainSiteUrl } from '@/utils/subdomain'
 import { nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { formatFixed } from '@/utils/formatters'
+import { onImageError, pickCoverFallback, pickCoverUrl } from '@/utils/media'
 
 const props = defineProps<{
   open: boolean
@@ -52,7 +54,7 @@ watch(() => props.open, async (open) => {
     await nextTick()
     inputRef.value?.focus()
   }
-})
+}, { immediate: true })
 
 const enterOverride = ref(false)
 
@@ -164,17 +166,6 @@ function goToDifficulty(diff: PublicMapDifficultyResponse, event: MouseEvent) {
   emit('close')
 }
 
-function handleDiffCoverError(diff: PublicMapDifficultyResponse, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (diff.cdnCoverUrl && diff.coverUrl && img.src !== diff.coverUrl) {
-    img.src = diff.coverUrl
-  }
-}
-
-function formatAp(ap: number): string {
-  return ap.toLocaleString(undefined, { maximumFractionDigits: 2 })
-}
-
 function categoryCode(diff: PublicMapDifficultyResponse): string {
   return categoryStore.getCategoryCode(diff.categoryId) ?? 'overall'
 }
@@ -211,7 +202,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
               stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9" />
             </svg>
-            <span class="search-modal__section-title">Players</span>
+            <span class="field-label">Players</span>
             <span class="search-modal__section-count">{{ players.length }}</span>
           </button>
           <div v-if="!playersCollapsed" class="search-modal__section-body">
@@ -222,7 +213,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
               <span class="search-modal__rank" :class="getRankClass(p.ranking)">#{{ p.ranking }}</span>
               <UserChip :user="toUserRef(p)" class="search-modal__player" />
               <span class="search-modal__row-meta">
-                <span class="search-modal__stat">{{ formatAp(p.ap) }}</span>
+                <span class="search-modal__stat">{{ formatFixed(p.ap, 2) }}</span>
                 <span class="search-modal__stat-label">AP</span>
               </span>
             </a>
@@ -238,7 +229,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
               stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9" />
             </svg>
-            <span class="search-modal__section-title">Maps</span>
+            <span class="field-label">Maps</span>
             <span class="search-modal__section-count">{{ difficulties.length }}</span>
           </button>
           <div v-if="!mapsCollapsed" class="search-modal__section-body">
@@ -246,8 +237,8 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
             <div v-else-if="!difficulties.length" class="search-modal__empty">No maps found.</div>
             <a v-for="diff in difficulties" :key="diff.id" :href="diffHref(diff)" class="search-modal__row"
               @click="goToDifficulty(diff, $event)">
-              <img :src="diff.cdnCoverUrl ?? diff.coverUrl" :alt="diff.songName" class="search-modal__cover"
-                loading="lazy" decoding="async" @error="handleDiffCoverError(diff, $event)" />
+              <img :src="pickCoverUrl(diff)" :alt="diff.songName" class="search-modal__cover"
+                loading="lazy" decoding="async" @error="onImageError(pickCoverFallback(diff))($event)" />
               <span class="search-modal__row-main">
                 <CategoryBadge :category="categoryCode(diff)" size="sm" />
                 <span class="search-modal__row-title">{{ diff.songName }}</span>
@@ -294,7 +285,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
 .search-modal__input {
   width: 100%;
   height: 44px;
-  padding: 0 var(--space-md) 0 calc(var(--space-md) + 24px);
+  padding: 0 var(--space-md) 0 calc(var(--space-md) + var(--space-lg));
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
@@ -362,14 +353,6 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.search-modal__section-title {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
 }
 
 .search-modal__section-count {

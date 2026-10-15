@@ -52,7 +52,6 @@ const emptyMessage = computed(() =>
         :section="section"
         :active-slug="activeSlug"
         :searching="!!search.trim()"
-        :depth="0"
       />
     </div>
 

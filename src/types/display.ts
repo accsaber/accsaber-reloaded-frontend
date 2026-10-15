@@ -2,7 +2,7 @@ import type { MilestoneRewardResponse } from './api/milestones'
 import type { MilestoneGlyphKey } from '@/utils/milestoneIcons'
 import type { SupporterTier } from './api/supporters'
 import type { PublicClanResponse } from './api/clans'
-import type { MilestoneType, SupersedesReason } from './enums'
+import type { MilestoneTier, MilestoneType, SupersedesReason } from './enums'
 
 export interface Tab {
   key: string
@@ -16,8 +16,6 @@ export interface CategoryInfo {
   code: CategoryCode
   name: string
   accent: string
-  tint: string
-  tintLight: string
 }
 
 export interface TableColumn {
@@ -158,8 +156,6 @@ export interface DifficultyScoreDisplay {
   rankWhenSet: number
 }
 
-export type MilestoneTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'APEX'
-
 export interface MilestoneDisplay {
   id: string
   setId: string
@@ -179,12 +175,6 @@ export interface MilestoneDisplay {
   positionX: number
   positionY: number
   rewards: MilestoneRewardResponse[]
-}
-
-export interface LevelDisplay {
-  level: number
-  currentXp: number
-  requiredXp: number
 }
 
 export interface TimeSeriesPoint {

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import logoUrl from '@/assets/logo.png'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { useNow } from '@/composables/useNow'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useBackendStatusStore } from '@/stores/backendStatus'
 import { DISCORD_URL } from '@/utils/constants'
-import { computed, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 import PracticeRange from './PracticeRange.vue'
 
 const status = useBackendStatusStore()
@@ -16,11 +17,7 @@ usePageMeta({
   description: 'AccSaber is briefly down for maintenance.',
 })
 
-const now = ref(Date.now())
-const ticker = setInterval(() => {
-  now.value = Date.now()
-}, 500)
-onUnmounted(() => clearInterval(ticker))
+const now = useNow(500)
 
 const isNetwork = computed(() => status.reason === 'network')
 const showRange = computed(() => !reduced.value)
@@ -116,8 +113,6 @@ const statusText = computed(() => {
 
 .offline__title {
   font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .offline__lede {

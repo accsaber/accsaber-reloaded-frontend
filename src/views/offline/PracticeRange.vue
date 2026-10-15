@@ -204,7 +204,7 @@ function onPointer(e: PointerEvent) {
 <style scoped>
 .range {
   border: 1px solid var(--bg-overlay);
-  border-radius: 6px;
+  border-radius: var(--radius-modal);
   background: var(--bg-surface);
   overflow: hidden;
 }

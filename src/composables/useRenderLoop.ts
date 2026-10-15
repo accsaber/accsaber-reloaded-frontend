@@ -1,77 +1,73 @@
-import { onMounted, onUnmounted } from 'vue'
+import { onUnmounted } from 'vue'
 
-const BLURRED_FPS = 15
+const BLURRED_GAP = 1000 / 15
+
+interface Loop {
+  frame: (now: number) => void
+  enabled?: () => boolean
+}
 
 export interface RenderLoop {
   start: () => void
   stop: () => void
 }
 
+const active = new Set<Loop>()
+let rafId: number | null = null
+let focused = true
+let lastBlurredFrame = 0
+let listening = false
+
+function schedule() {
+  if (rafId === null && active.size > 0 && !document.hidden) rafId = requestAnimationFrame(tick)
+}
+
+function tick(now: number) {
+  rafId = null
+  if (document.hidden) return
+  if (!focused && now - lastBlurredFrame < BLURRED_GAP) {
+    schedule()
+    return
+  }
+  lastBlurredFrame = now
+  schedule()
+  for (const loop of active) {
+    if (loop.enabled?.() === false) {
+      active.delete(loop)
+      continue
+    }
+    try {
+      loop.frame(now)
+    } catch (e) {
+      reportError(e)
+    }
+  }
+}
+
+function listen() {
+  if (listening) return
+  listening = true
+  focused = document.hasFocus()
+  document.addEventListener('visibilitychange', schedule)
+  window.addEventListener('focus', () => { focused = true })
+  window.addEventListener('blur', () => { focused = false })
+}
+
 export function useRenderLoop(frame: (now: number) => void, enabled?: () => boolean): RenderLoop {
-  let rafId: number | null = null
-  let isVisible = true
-  let isFocused = true
-  let lastFrameAt = 0
-
-  function allowed(): boolean {
-    return isVisible && enabled?.() !== false
-  }
-
-  function frameGap(): number {
-    return isFocused ? 0 : 1000 / BLURRED_FPS
-  }
-
-  function loop(now: number) {
-    if (!allowed()) {
-      rafId = null
-      return
-    }
-    rafId = requestAnimationFrame(loop)
-    const gap = frameGap()
-    if (gap > 0) {
-      if (now - lastFrameAt < gap) return
-      lastFrameAt = Math.max(lastFrameAt + gap, now - gap)
-    }
-    frame(now)
-  }
+  const loop: Loop = { frame, enabled }
 
   function start() {
-    if (rafId !== null || !allowed()) return
-    lastFrameAt = performance.now() - 1000
-    rafId = requestAnimationFrame(loop)
+    if (enabled?.() === false) return
+    listen()
+    active.add(loop)
+    schedule()
   }
 
   function stop() {
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId)
-      rafId = null
-    }
+    active.delete(loop)
   }
 
-  function onVisibility() {
-    isVisible = !document.hidden
-    if (isVisible) start()
-    else stop()
-  }
-
-  function onFocusChange() {
-    isFocused = document.hasFocus()
-  }
-
-  onMounted(() => {
-    isVisible = !document.hidden
-    isFocused = document.hasFocus()
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('focus', onFocusChange)
-    window.addEventListener('blur', onFocusChange)
-  })
-
-  onUnmounted(() => {
-    stop()
-    document.removeEventListener('visibilitychange', onVisibility)
-    window.removeEventListener('focus', onFocusChange)
-    window.removeEventListener('blur', onFocusChange)
-  })
+  onUnmounted(stop)
 
   return { start, stop }
 }

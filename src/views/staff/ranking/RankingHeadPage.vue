@@ -224,7 +224,7 @@ function batchStatusClass(status: string): string {
           >
             <div class="batches-page__cat-header">
               <span class="batches-page__cat-dot" :style="{ background: group.accent }" />
-              <span class="batches-page__cat-name">{{ group.name }}</span>
+              <span class="field-label">{{ group.name }}</span>
             </div>
             <div class="batches-page__cat-cards">
               <MapCardCompact
@@ -275,13 +275,6 @@ function batchStatusClass(status: string): string {
   margin-bottom: var(--space-lg);
   flex-wrap: wrap;
   gap: var(--space-md);
-}
-
-.batches-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .batches-page__controls {
@@ -370,7 +363,7 @@ function batchStatusClass(status: string): string {
 .batches-page__batch-status {
   font-size: var(--text-caption);
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -425,14 +418,6 @@ function batchStatusClass(status: string): string {
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-}
-
-.batches-page__cat-name {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .batches-page__cat-cards {

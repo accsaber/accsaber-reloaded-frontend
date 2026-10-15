@@ -320,7 +320,7 @@ function unpin() {
   left: 50%;
   bottom: 6px;
   transform: translateX(-50%);
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   font-family: var(--font-sans);
   font-size: 0.5625rem;
   font-weight: 700;
@@ -344,7 +344,7 @@ function unpin() {
 .placer__scale {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .placer__scale input {
@@ -364,14 +364,14 @@ function unpin() {
 .placer__field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
 .placer__field input {
   width: 100%;
   min-width: 0;
-  padding: 7px 8px;
+  padding: 7px var(--space-sm);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-primary);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleCoronaAuraSpec } from '@/types/api/items'
+import type { TitleCoronaAuraSpec } from '@/types/cosmetics/title'
 import { eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'

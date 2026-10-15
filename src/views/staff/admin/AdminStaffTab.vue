@@ -9,7 +9,7 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
-import { ApiError, getApiErrorMessage } from '@/api/client'
+import { ApiError, parseApiError } from '@/api/client'
 import { generatePassword } from '@/utils/credentials'
 
 const users = ref<StaffUserResponse[]>([])
@@ -168,7 +168,7 @@ async function createUser() {
       showCreateModal.value = false
     }
   } catch (err) {
-    createError.value = getApiErrorMessage(err, 'Failed to create staff user.')
+    createError.value = parseApiError(err, 'Failed to create staff user.').message
   } finally {
     createLoading.value = false
   }
@@ -211,7 +211,7 @@ async function setActive(user: StaffUserResponse, active: boolean) {
     replaceUser(await setStaffActive(user.id, active))
   } catch (err) {
     const fallback = active ? 'Failed to reactivate staff user.' : 'Failed to deactivate staff user.'
-    actionError.value = getApiErrorMessage(err, fallback)
+    actionError.value = parseApiError(err, fallback).message
   } finally {
     delete actionLoading.value[user.id]
   }
@@ -244,7 +244,7 @@ async function saveLink() {
     replaceUser(await linkUser(id, { userId: linkUserId.value }))
     showLinkModal.value = false
   } catch (err) {
-    linkError.value = getApiErrorMessage(err, 'Failed to link user.')
+    linkError.value = parseApiError(err, 'Failed to link user.').message
   } finally {
     linkLoading.value = false
   }
@@ -291,7 +291,7 @@ async function confirmDelete() {
     deleteTarget.value = null
   } catch (err) {
     deleteBlocked.value = err instanceof ApiError && err.status === 409
-    deleteError.value = getApiErrorMessage(err, 'Failed to delete staff user.')
+    deleteError.value = parseApiError(err, 'Failed to delete staff user.').message
   } finally {
     deleteLoading.value = false
   }
@@ -309,7 +309,7 @@ async function deactivateInstead() {
   <div class="tab">
     <div class="tab__header">
       <div>
-        <h2 class="tab__title">Staff</h2>
+        <h2 class="section-title">Staff</h2>
         <p class="tab__meta">{{ totalElements }} staff accounts</p>
       </div>
       <div class="filter-row">
@@ -395,7 +395,7 @@ async function deactivateInstead() {
         player login, so they need the password below to sign in on the staff site.
       </p>
       <div class="form-field">
-        <label class="form-label">Generated Password</label>
+        <label class="field-label">Generated Password</label>
         <div class="credential">
           <code class="credential__value">{{ createdCredentials.password }}</code>
           <BaseButton size="sm" @click="copyPassword">{{ copied ? 'Copied' : 'Copy' }}</BaseButton>
@@ -425,7 +425,7 @@ async function deactivateInstead() {
 
       <template v-if="createMode === 'player'">
         <div class="form-field">
-          <label class="form-label">Player</label>
+          <label class="field-label">Player</label>
           <UserPicker v-model="createUserId" @select="onPickPlayer" />
           <span v-if="createUserName" class="form-hint">
             Staff username will be <strong>{{ createUserName }}</strong>. A password is generated
@@ -441,7 +441,7 @@ async function deactivateInstead() {
       </template>
 
       <div class="form-field">
-        <label class="form-label">Role</label>
+        <label class="field-label">Role</label>
         <BaseSelect v-model="createRole" :options="roleOptions" />
       </div>
       <p v-if="createError" class="form-error">{{ createError }}</p>
@@ -463,7 +463,7 @@ async function deactivateInstead() {
   <BaseModal :open="showEditModal" :title="`Edit Role - ${editTarget?.username}`" @close="showEditModal = false">
     <div class="modal-form">
       <div class="form-field">
-        <label class="form-label">Role</label>
+        <label class="field-label">Role</label>
         <BaseSelect v-model="editRole" :options="roleOptions" />
       </div>
     </div>
@@ -505,7 +505,7 @@ async function deactivateInstead() {
   <BaseModal :open="showLinkModal" :title="`Link Player - ${linkTarget?.username}`" @close="showLinkModal = false">
     <div class="modal-form">
       <div class="form-field">
-        <label class="form-label">Player</label>
+        <label class="field-label">Player</label>
         <UserPicker v-model="linkUserId" />
       </div>
       <p v-if="linkError" class="form-error">{{ linkError }}</p>
@@ -521,14 +521,13 @@ async function deactivateInstead() {
 .tab { display: flex; flex-direction: column; gap: var(--space-lg); }
 .tab__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-lg); flex-wrap: wrap; }
 .filter-row { display: flex; align-items: center; gap: var(--space-sm); }
-.tab__title { font-size: var(--text-section-heading); font-weight: 600; color: var(--text-primary); margin: 0; }
 .tab__meta { font-size: var(--text-caption); color: var(--text-secondary); margin: 2px 0 0; }
 
 .role-badge {
   font-size: var(--text-caption);
   font-family: var(--font-mono);
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   border: 1px solid;
 }
@@ -541,7 +540,7 @@ async function deactivateInstead() {
   font-size: var(--text-caption);
   font-family: var(--font-mono);
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   border: 1px solid;
 }
@@ -554,7 +553,7 @@ async function deactivateInstead() {
   font-size: var(--text-caption);
   font-family: var(--font-mono);
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   border: 1px solid var(--bg-overlay);
   background: var(--bg-elevated);
@@ -569,7 +568,7 @@ async function deactivateInstead() {
   font-size: var(--text-caption);
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px var(--space-xs);
   border-radius: var(--radius-btn);
   transition: color 80ms, background-color 80ms;
 }
@@ -578,7 +577,6 @@ async function deactivateInstead() {
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
 .modal-form { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-sm) 0; }
 .form-field { display: flex; flex-direction: column; gap: var(--space-xs); }
-.form-label { font-size: var(--text-caption); font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
 .form-error { font-size: var(--text-caption); color: var(--error); }
 .form-hint { font-size: var(--text-caption); color: var(--text-secondary); }
 .form-hint strong { color: var(--text-primary); font-weight: 600; }

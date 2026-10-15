@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { FullMoonScene } from '@/types/api/items'
+import type { FullMoonScene } from '@/types/cosmetics/background'
 import { lerpHex } from '@/utils/color'
 import { fillCircle as circle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { batFlight, drawBat } from '@/utils/cosmetics/graveyardScenery'

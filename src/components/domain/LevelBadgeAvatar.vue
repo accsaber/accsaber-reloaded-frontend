@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onAvatarError } from '@/composables/useAvatarFallback'
+import { onImageError } from '@/utils/media'
 
 const props = defineProps<{
   avatarUrl?: string | null
@@ -9,7 +9,7 @@ const props = defineProps<{
   fallbackUrl?: string | null
 }>()
 
-const handleAvatarError = (e: Event) => onAvatarError(props.fallbackUrl)(e)
+const handleAvatarError = (e: Event) => onImageError(props.fallbackUrl)(e)
 </script>
 
 <template>

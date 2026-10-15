@@ -9,6 +9,7 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 import WikiXpLadder from '@/wiki/WikiXpLadder.vue'
 import { computed, onMounted, ref } from 'vue'
+import { formatAccuracy } from '@/utils/formatters'
 
 const authStore = useAuthStore()
 const levelStore = useLevelStore()
@@ -65,7 +66,6 @@ const XP_SOURCES = [
   },
 ]
 
-const formatAccuracy = (v: number) => `${(v * 100).toFixed(2)}%`
 const formatAccuracyTick = (v: number) => `${(v * 100).toFixed(1).replace('.0', '')}%`
 const formatXp = (v: number) => `${Math.round(v)} XP`
 const formatXpTick = (v: number) => String(Math.round(v))

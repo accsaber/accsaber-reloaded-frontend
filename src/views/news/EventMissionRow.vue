@@ -3,6 +3,7 @@ import MissionRewards from '@/components/domain/MissionRewards.vue'
 import { formatUnlockDate, type EventMissionView, type MissionLock } from '@/utils/events'
 import { missionProgressLabel } from '@/utils/missions'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   mission: EventMissionView
@@ -23,7 +24,7 @@ const progressPct = computed(() => {
   if (!hasBar.value) return props.mission.completed ? 100 : 0
   const current = props.mission.progressCurrent ?? 0
   const target = props.mission.progressTarget as number
-  return Math.min(100, Math.max(0, (current / target) * 100))
+  return clamp((current / target) * 100, 0, 100)
 })
 
 const progressLabel = computed(() =>
@@ -197,7 +198,7 @@ const repeatLabel = computed(() => {
 .mission__repeat {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   flex-shrink: 0;
   font-size: 0.625rem;
   font-weight: 700;

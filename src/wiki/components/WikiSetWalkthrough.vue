@@ -4,6 +4,7 @@ import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import { useCountUp } from '@/composables/useCountUp'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   userId: string
@@ -39,7 +40,7 @@ const rows = computed(() =>
 )
 
 const interval = computed(() =>
-  Math.min(1100, Math.max(320, Math.round(18000 / Math.max(1, rows.value.length)))),
+  clamp(Math.round(18000 / Math.max(1, rows.value.length)), 320, 1100),
 )
 
 const bonusLanded = computed(() => rows.value.length > 0 && step.value >= rows.value.length)
@@ -161,7 +162,7 @@ onUnmounted(stopTimer)
 
       <div class="walk__head">
         <div class="walk__intro">
-          <h4 class="walk__title">{{ selectedSet.title }}</h4>
+          <h4 class="card-title">{{ selectedSet.title }}</h4>
           <p class="walk__desc">{{ selectedSet.description }}</p>
         </div>
         <button
@@ -243,7 +244,7 @@ onUnmounted(stopTimer)
       </div>
 
       <div class="walk__bonus" :class="{ 'walk__bonus--landed': bonusLanded }">
-        <span class="walk__bonus-label">Set bonus</span>
+        <span class="field-label">Set bonus</span>
         <span class="walk__bonus-value">
           {{ bonusLanded ? `+${selectedSet.setBonusXp.toLocaleString()} XP` : `${selectedSet.setBonusXp.toLocaleString()} XP once every one is done` }}
         </span>
@@ -303,13 +304,6 @@ onUnmounted(stopTimer)
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.walk__title {
-  margin: 0;
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .walk__desc {
@@ -407,14 +401,6 @@ onUnmounted(stopTimer)
 .walk__bonus--landed {
   opacity: 1;
   border-color: var(--accent);
-}
-
-.walk__bonus-label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .walk__bonus-value {

@@ -1,7 +1,3 @@
-import {
-  getMySettingsGroup as apiGetGroup,
-  patchMySettingsGroup as apiPatchGroup,
-} from '@/api/settings'
 import type {
   AppearanceSettings,
   PrivacySettings,
@@ -12,6 +8,8 @@ import type {
 import { DEFAULT_SCORE_ROW_FIELDS } from '@/utils/scoreRowFields'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+
+const api = () => import('@/api/settings')
 
 const PRIVACY_DEFAULTS: PrivacySettings = {
   'privacy.followingVisibility': 'public',
@@ -44,7 +42,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function fetchPrivacy(): Promise<void> {
     try {
-      const res = await apiGetGroup<PrivacySettings>('privacy')
+      const res = await (await api()).getMySettingsGroup<PrivacySettings>('privacy')
       privacy.value = { ...PRIVACY_DEFAULTS, ...res }
       privacyLoaded.value = true
     } catch {
@@ -61,7 +59,7 @@ export const useSettingsStore = defineStore('settings', () => {
     privacySaving.value = true
     privacyError.value = null
     try {
-      const fresh = await apiPatchGroup<PrivacySettings>('privacy', { [key]: value })
+      const fresh = await (await api()).patchMySettingsGroup<PrivacySettings>('privacy', { [key]: value })
       privacy.value = { ...PRIVACY_DEFAULTS, ...fresh }
       return true
     } catch {
@@ -75,7 +73,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function fetchAppearance(): Promise<void> {
     try {
-      const res = await apiGetGroup<AppearanceSettings>('appearance')
+      const res = await (await api()).getMySettingsGroup<AppearanceSettings>('appearance')
       appearance.value = { ...APPEARANCE_DEFAULTS, ...res }
       appearanceLoaded.value = true
     } catch {
@@ -93,7 +91,7 @@ export const useSettingsStore = defineStore('settings', () => {
     appearanceSaving.value = true
     appearanceError.value = null
     try {
-      const fresh = await apiPatchGroup<AppearanceSettings>('appearance', { [key]: value })
+      const fresh = await (await api()).patchMySettingsGroup<AppearanceSettings>('appearance', { [key]: value })
       appearance.value = { ...APPEARANCE_DEFAULTS, ...fresh }
       return true
     } catch {
@@ -116,7 +114,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function fetchGroup<T extends SettingsBag>(group: SettingGroup): Promise<T | null> {
     try {
-      return await apiGetGroup<T>(group)
+      return await (await api()).getMySettingsGroup<T>(group)
     } catch {
       return null
     }

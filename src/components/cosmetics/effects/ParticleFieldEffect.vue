@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -38,7 +39,7 @@ interface FieldParticle {
 
 const particles = computed<FieldParticle[]>(() => {
   const c = props.composition
-  const base = Math.max(3, Math.min(28, asNumber(c.count) ?? 8))
+  const base = clamp(asNumber(c.count) ?? 8, 3, 28)
   const wide = asString(c.spread) === 'field'
   const count = wide ? Math.round(base * 1.5) : base
   const motion = particleMotion(c)
@@ -46,7 +47,7 @@ const particles = computed<FieldParticle[]>(() => {
   const sMax = Math.max(sMin, asNumber(c.sizeMaxPx) ?? 3.6)
   const box = props.measure.box
   const reach = motion === 'gust' ? box.w : box.h
-  const travelBase = Math.min(asNumber(c.travelPx) ?? (wide ? 110 : 82), Math.max(24, reach * 0.9))
+  const travelBase = clamp(reach * 0.9, 24, asNumber(c.travelPx) ?? (wide ? 110 : 82))
   const speed = asNumber(c.speedSecs) ?? 3.6
   const spreadLo = wide ? 3 : 12
   const spreadSpan = (wide ? 97 : 88) - spreadLo

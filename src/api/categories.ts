@@ -15,7 +15,3 @@ export function getCategoryReweights(code: string): Promise<ReweightRoundRespons
   reweightCache.set(code, pending)
   return pending
 }
-
-export function getCategory(id: string): Promise<CategoryResponse> {
-  return get<CategoryResponse>(`/categories/${id}`)
-}

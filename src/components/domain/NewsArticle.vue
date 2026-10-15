@@ -84,7 +84,7 @@ const accent = computed(() => NEWS_TYPE_ACCENT[props.news.type])
 .news-article__pin {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -98,10 +98,6 @@ const accent = computed(() => NEWS_TYPE_ACCENT[props.news.type])
 }
 
 .news-article__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
   line-height: 1.2;
 }
 
@@ -178,7 +174,7 @@ const accent = computed(() => NEWS_TYPE_ACCENT[props.news.type])
   font-family: var(--font-mono);
   font-size: 0.9em;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
 }

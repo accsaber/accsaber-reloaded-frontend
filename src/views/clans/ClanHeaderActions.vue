@@ -80,7 +80,7 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
     </template>
 
     <template v-else-if="pendingRequest">
-      <span class="clan-actions__state">Request sent</span>
+      <span class="field-label">Request sent</span>
       <BaseButton size="sm" :loading="busy" @click="emit('resolve', 'cancelled')">Cancel</BaseButton>
     </template>
 
@@ -136,14 +136,6 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-sm);
-}
-
-.clan-actions__state {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .clan-actions__menu-btn {

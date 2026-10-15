@@ -1,14 +1,14 @@
-import type { LevelThreshold } from '@/api/levels'
 import { getLevelThresholds } from '@/api/levels'
+import type { LevelThresholdResponse } from '@/types/api/level-thresholds'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export function tierKey(title: string): string {
-  return title.toLowerCase().replace(/\s+/g, '-')
+export function tierKey(title: string | null): string {
+  return (title ?? '').toLowerCase().replace(/\s+/g, '-')
 }
 
 export const useLevelStore = defineStore('levels', () => {
-  const thresholds = ref<LevelThreshold[]>([])
+  const thresholds = ref<LevelThresholdResponse[]>([])
   const loaded = ref(false)
 
   function getTitleForLevel(level: number): string | null {

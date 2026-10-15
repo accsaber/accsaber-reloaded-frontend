@@ -5,7 +5,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CampaignPresenceActionGlyph from '@/components/domain/CampaignPresenceActionGlyph.vue'
+import CampaignPresenceActionGlyph from '@/views/staff/campaigns/CampaignPresenceActionGlyph.vue'
 import ChatPanel from '@/components/domain/ChatPanel.vue'
 import CampaignRoadmap from '@/components/domain/CampaignRoadmap.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
@@ -15,25 +15,29 @@ import {
   colorForUser,
   useCampaignPresence,
   type PresenceAction,
-  type PresenceKind,
   type PresencePeer,
 } from '@/composables/useCampaignPresence'
 import { useChat } from '@/composables/useChat'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import { useThemeStore } from '@/stores/theme'
 import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
+import CampaignRoadmapToolLayer from './CampaignRoadmapToolLayer.vue'
 import CampaignTrayIcon from './CampaignTrayIcon.vue'
 import CampaignTrayRail from './CampaignTrayRail.vue'
 import CampaignTrays from './CampaignTrays.vue'
 import { CAMPAIGN_EDITOR_KEY } from './campaignEditorContext'
 import { useCampaignEditor } from './useCampaignEditor'
+import { useCampaignRoadmapTools, type RoadmapCursorPayload } from './useCampaignRoadmapTools'
+import { TRAY_TITLES } from './useCampaignTrays'
 import { useCampaignTutorial } from './useCampaignTutorial'
+import './campaignEditorFields.css'
+import './trays/campaignTray.css'
 
 const MapPickerModal = defineAsyncComponent(() => import('@/components/domain/MapPickerModal.vue'))
 const CampaignCollaboratorPicker = defineAsyncComponent(() => import('./CampaignCollaboratorPicker.vue'))
 const CampaignItemPicker = defineAsyncComponent(() => import('./CampaignItemPicker.vue'))
-const CampaignGlobalMapSearch = defineAsyncComponent(() => import('./CampaignGlobalMapSearch.vue'))
+const CampaignGlobalMapSearch = defineAsyncComponent(() => import('@/components/domain/CampaignGlobalMapSearch.vue'))
 const CampaignTutorialModal = defineAsyncComponent(() => import('./CampaignTutorialModal.vue'))
 
 const CANVAS_MODES = ['drag', 'connect', 'select'] as const
@@ -43,90 +47,41 @@ provide(CAMPAIGN_EDITOR_KEY, editor)
 
 usePageMeta({
   title: computed(() =>
-    editor.campaign.value?.name
-      ? `Editing ${editor.campaign.value.name} | AccSaber`
+    editor.doc.campaign.value?.name
+      ? `Editing ${editor.doc.campaign.value.name} | AccSaber`
       : 'New Campaign | AccSaber',
   ),
   description: 'Campaign editor.',
 })
 
-const {
-  auth,
-  campaign,
-  loading,
-  error,
-  actionPending,
-  actionError,
-  showMapPicker,
-  selectedId,
-  selectedIdList,
-  canvasMode,
-  gridLock,
-  toggleGridLock,
-  itemPickerFor,
-  showCollaboratorPicker,
-  existingCollaboratorIds,
-  handleCollaboratorPicked,
-  requirementDirtyIds,
-  showRepublishWarning,
-  isCurator,
-  isCreator,
-  isCollaborator,
-  isUnsavedDraft,
-  canAccess,
-  editable,
-  publishConfirm,
-  performUnpublish,
-  accent,
-  selectedDifficulty,
-  breadcrumbs,
-  handleMove,
-  handleMoveMany,
-  handleConnect,
-  handleDisconnect,
-  handleEmptyClick,
-  selectedEdge,
-  selectedEdgeEndpoints,
-  handleEdgeSelect,
-  openMapPicker,
-  handleMapsPicked,
-  submitGlobalAdd,
-  campaignGenreBeatsaverSlugs,
-  usedMapDifficultyIds,
-  unrankedNodes,
-  showRepoint,
-  closeRepoint,
-  submitRepoint,
-  removeSelectedNode,
-  handleSelect,
-  handleSelectMany,
-  handleToggleSelect,
-  handleDeselect,
-  handleItemPicked,
-  performPublish,
-  closeMapPicker,
-  activeTray,
-  trayTitles,
-  activeTrayIsNode,
-  activeTrayIsBarrier,
-  closeTray,
-  hasConnections,
-  terminalMode,
-  canAddBarrier,
-  barrierPlacementMode,
-  toggleBarrierPlacement,
-  placeBarrierOnEdge,
-  selectedBarrier,
-  removeSelectedBarrier,
-  pickModeBarrierId,
-  addText,
-  selectedText,
-  removeSelectedText,
-  reloadFromRemote,
-  setChangeBroadcaster,
-  setViewCenterProvider,
-  canvasFrame,
-} = editor
+const { doc, access, collaborators, selection, vertices, connections, nodes, barriers } = editor
+const { texts, mapSources, trays, lifecycle, rewards, accent, breadcrumbs } = editor
+const { campaign, loading, error, actionPending, actionError, requirementDirtyIds } = doc
+const { isUnsavedDraft, reloadFromRemote, setChangeBroadcaster } = doc
+const { auth, isCurator, isCreator, canAccess, editable } = access
+const { isCollaborator, showCollaboratorPicker, existingCollaboratorIds } = collaborators
+const { handleCollaboratorPicked } = collaborators
+const { selectedId, selectedIdList } = selection
+const { selectedDifficulty, selectedBarrier, selectedText, gridLock, toggleGridLock } = vertices
+const { handleMove, handleMoveMany, setViewCenterProvider, canvasFrame } = vertices
+const { selectedEdge, selectedEdgeEndpoints, hasConnections, handleConnect, handleDisconnect } =
+  connections
+const { removeSelectedNode, unrankedNodes } = nodes
+const { canAddBarrier, barrierPlacementMode, toggleBarrierPlacement, placeBarrierOnEdge } = barriers
+const { removeSelectedBarrier, pickModeBarrierId } = barriers
+const { addText, removeSelectedText } = texts
+const { showMapPicker, openMapPicker, closeMapPicker, handleMapsPicked, submitGlobalAdd } =
+  mapSources
+const { campaignGenreBeatsaverSlugs, usedMapDifficultyIds, showRepoint, closeRepoint } = mapSources
+const { submitRepoint } = mapSources
+const { activeTray, activeTrayIsNode, activeTrayIsBarrier, closeTray } = trays
+const { handleSelect, handleSelectMany, handleToggleSelect, handleDeselect } = trays
+const { handleEmptyClick, handleEdgeSelect } = trays
+const { showRepublishWarning, publishConfirm, performPublish, performUnpublish } = lifecycle
+const { itemPickerFor, handleItemPicked } = rewards
+const { terminalMode } = editor.meta
+
+const canvasMode = ref<'drag' | 'connect' | 'select'>('drag')
 
 const roadmapRef = ref<InstanceType<typeof CampaignRoadmap> | null>(null)
 setViewCenterProvider(() => roadmapRef.value?.getViewCenterCell() ?? null)
@@ -240,17 +195,26 @@ function onSelfTypingStop() {
   sendTypingStop()
 }
 
-function onCursorMove(payload: {
-  x: number
-  y: number
-  action: PresenceAction
-  targetId: string | null
-  kind: PresenceKind
-  tray: string | null
-}) {
+function onCursorMove(payload: RoadmapCursorPayload) {
   selfAction.value = payload.action
   sendCursor(payload.x, payload.y, payload.action, payload.targetId, payload.kind, payload.tray)
 }
+
+const roadmapTools = useCampaignRoadmapTools({
+  editable: () => editable.value,
+  mode: () => canvasMode.value,
+  barrierPlacement: () => barrierPlacementMode.value,
+  selectedId: () => selectedId.value,
+  onConnect: handleConnect,
+  onDisconnect: handleDisconnect,
+  onPlaceBarrier: placeBarrierOnEdge,
+  presence: {
+    peers: () => presencePeers.value,
+    activeTray: () => activeTray.value,
+    onCursor: onCursorMove,
+    onCursorOff: sendCursorOff,
+  },
+})
 
 const TRAY_ACTIVITY: Record<string, string> = {
   rewards: 'Establishing rewards',
@@ -294,7 +258,7 @@ function peerActivity(p: PresencePeer): string {
 <template>
   <div
     class="campaign-editor"
-    :class="{ 'campaign-editor--backdrop': themeStore.backdropConfig }"
+    :class="{ 'campaign-editor--backdrop': themeStore.hasBackdrop }"
     :style="{ '--page-accent': accent }"
   >
     <template v-if="loading">
@@ -336,15 +300,12 @@ function peerActivity(p: PresencePeer): string {
           :selected-edge="selectedEdge"
           :highlight-barrier-id="pickModeBarrierId"
           :barrier-placement="barrierPlacementMode"
-          :active-tray="activeTray"
-          :presence-peers="presencePeers"
           :editable="editable"
           :grid-lock="gridLock"
           :show-terminal="terminalMode"
           :flag-missing-rewards="true"
           :mode="canvasMode"
-          @cursormove="onCursorMove"
-          @cursoroff="sendCursorOff"
+          :tools="roadmapTools"
           @select="handleSelect"
           @select-many="handleSelectMany"
           @toggle-select="handleToggleSelect"
@@ -352,11 +313,11 @@ function peerActivity(p: PresencePeer): string {
           @move="handleMove"
           @move-many="handleMoveMany"
           @empty-click="handleEmptyClick"
-          @connect="handleConnect"
-          @disconnect="handleDisconnect"
           @edge-select="handleEdgeSelect"
-          @place-barrier="placeBarrierOnEdge"
         >
+          <template #tools="{ layer, edge }">
+            <CampaignRoadmapToolLayer :tools="roadmapTools" :layer="layer" :edge="edge" />
+          </template>
           <template #actions>
             <div v-if="editable" class="campaign-editor__add-cluster" aria-label="Add to roadmap">
               <button type="button" class="campaign-editor__add-btn" @click="openMapPicker">
@@ -525,7 +486,7 @@ function peerActivity(p: PresencePeer): string {
       <Transition name="campaign-editor__tray">
         <section v-if="activeTray" class="campaign-editor__tray" aria-label="Editor tray">
           <header class="campaign-editor__tray-head">
-            <h2 class="campaign-editor__tray-title">{{ trayTitles[activeTray] }}</h2>
+            <h2 class="campaign-editor__tray-title">{{ TRAY_TITLES[activeTray] }}</h2>
             <button
               type="button"
               class="campaign-editor__tray-close"
@@ -816,7 +777,7 @@ function peerActivity(p: PresencePeer): string {
   justify-content: center;
   min-width: 18px;
   height: 18px;
-  padding: 0 4px;
+  padding: 0 var(--space-xs);
   background: var(--peer-color);
   border: 1.5px solid var(--bg-base);
   border-radius: var(--radius-pill);

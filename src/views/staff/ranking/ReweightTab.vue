@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { CategoryCode } from '@/types/display'
 import { CATEGORY_ORDER } from '@/utils/constants'
-import { formatDifficulty } from '@/utils/mappers'
 import { computed, ref } from 'vue'
 
 type Strategy = 'mine' | 'average' | 'combined'
@@ -113,7 +114,7 @@ async function loadBatch() {
       )
       voteCount = reweightVotes.length
 
-      const myVote = reweightVotes.find((v) => v.staffId === staffId.value)
+      const myVote = reweightVotes.find((v) => v.staff.id === staffId.value)
       if (myVote?.suggestedComplexity != null) {
         myComplexity = myVote.suggestedComplexity
       }
@@ -281,7 +282,7 @@ async function submitReweight() {
     showConfirmModal.value = false
     loadedBatches.value = []
   } catch (e) {
-    submitError.value = e instanceof Error ? e.message : 'Failed to submit reweight.'
+    submitError.value = parseApiError(e, 'Failed to submit reweight.').message
   } finally {
     submitting.value = false
   }
@@ -341,13 +342,13 @@ function toggleCollapse(index: number) {
 
       <div v-if="!collapsedBatches.has(batchIdx)" class="reweight-tab__batch-body">
         <div class="reweight-tab__reason-row">
-          <label class="reweight-tab__field-label">Reason</label>
+          <label class="field-label">Reason</label>
           <textarea v-model="loaded.reason" class="reweight-tab__reason-input"
             placeholder="Reason for this reweight (required)" rows="2" />
         </div>
 
         <div v-for="group in entriesByCategory(loaded)" :key="group.code" class="reweight-tab__category">
-          <div class="reweight-tab__category-header">
+          <div class="reweight-tab__category-header field-label">
             <span class="reweight-tab__category-dot" :style="{ background: group.accent }" />
             <span class="reweight-tab__category-name">{{ group.name }}</span>
             <span class="reweight-tab__category-count">({{ group.entries.length }})</span>
@@ -357,16 +358,14 @@ function toggleCollapse(index: number) {
             <div v-for="entry in group.entries" :key="entry.difficulty.id" class="reweight-card"
               :class="{ 'reweight-card--changed': Math.abs(entry.newComplexity - entry.original) > 0.001 }">
               <div class="reweight-card__left">
-                <GlowImage :src="entry.difficulty.coverUrl" :alt="entry.difficulty.songName" :size="48" />
+                <CoverImage :src="entry.difficulty.coverUrl" :alt="entry.difficulty.songName" :size="48" />
                 <div class="reweight-card__info">
                   <span class="reweight-card__title">{{ entry.difficulty.songName }}</span>
                   <span class="reweight-card__meta">
                     {{ entry.difficulty.songAuthor }} - {{ entry.difficulty.mapAuthor }}
                   </span>
                   <span class="reweight-card__badges">
-                    <span class="diff-badge" :class="'diff-badge--' + entry.difficulty.difficulty.toLowerCase()">
-                      {{ formatDifficulty(entry.difficulty.difficulty) }}
-                    </span>
+                    <DifficultyBadge :difficulty="entry.difficulty.difficulty" />
                   </span>
                 </div>
               </div>
@@ -542,14 +541,6 @@ function toggleCollapse(index: number) {
   gap: var(--space-xs);
 }
 
-.reweight-tab__field-label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .reweight-tab__reason-input {
   width: 100%;
   min-height: 52px;
@@ -584,11 +575,6 @@ function toggleCollapse(index: number) {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .reweight-tab__category-dot {

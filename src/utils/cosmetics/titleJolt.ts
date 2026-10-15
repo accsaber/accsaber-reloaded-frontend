@@ -1,4 +1,4 @@
-import type { TitleJoltSpec } from '@/types/api/items'
+import type { TitleJoltSpec } from '@/types/cosmetics/title'
 
 export interface JoltFrame {
   scale: number

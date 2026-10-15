@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { positionWeight, weightedTotal } from '@/wiki/apCurve'
 import { computed, ref } from 'vue'
+import { formatFixed } from '@/utils/formatters'
 
 const props = defineProps<{
   plays: number[]
@@ -30,7 +31,6 @@ const delta = computed(() => totalAfter.value - totalBefore.value)
 const direct = computed(() => rows.value.find((row) => row.isNew)?.contribution ?? 0)
 const slideCost = computed(() => direct.value - delta.value)
 
-const formatAp = (v: number) => v.toFixed(1)
 const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
 </script>
 
@@ -38,21 +38,21 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
   <figure class="sandbox">
     <div class="sandbox__controls">
       <label class="sandbox__slider">
-        <span class="sandbox__label">New play, raw AP</span>
+        <span class="field-label">New play, raw AP</span>
         <input v-model.number="newAp" type="range" min="0" :max="max" step="5" />
         <span class="sandbox__slider-value">{{ newAp }}</span>
       </label>
       <div class="sandbox__totals">
-        <span class="sandbox__label">Your total</span>
+        <span class="field-label">Your total</span>
         <span class="sandbox__total">
-          <span class="sandbox__num">{{ formatAp(totalBefore) }}</span>
+          <span class="sandbox__num">{{ formatFixed(totalBefore, 1) }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="5" y1="12" x2="19" y2="12" />
             <polyline points="12 5 19 12 12 19" />
           </svg>
-          <span class="sandbox__num">{{ formatAp(totalAfter) }}</span>
-          <span class="sandbox__delta">+{{ formatAp(delta) }}</span>
+          <span class="sandbox__num">{{ formatFixed(totalAfter, 1) }}</span>
+          <span class="sandbox__delta">+{{ formatFixed(delta, 1) }}</span>
         </span>
       </div>
     </div>
@@ -71,14 +71,14 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
           <td>{{ row.position }}</td>
           <td>{{ row.isNew ? row.ap.toFixed(0) : row.ap }}</td>
           <td>{{ formatWeight(row.weight) }}</td>
-          <td>{{ formatAp(row.contribution) }}</td>
+          <td>{{ formatFixed(row.contribution, 1) }}</td>
         </tr>
       </tbody>
     </table>
 
     <figcaption class="sandbox__breakdown">
-      The new play brings {{ formatAp(direct) }} at its landing spot, and nudging everything
-      below it one place down costs {{ formatAp(slideCost) }}, leaving +{{ formatAp(delta) }}.
+      The new play brings {{ formatFixed(direct, 1) }} at its landing spot, and nudging everything
+      below it one place down costs {{ formatFixed(slideCost, 1) }}, leaving +{{ formatFixed(delta, 1) }}.
     </figcaption>
   </figure>
 </template>
@@ -110,14 +110,6 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
 
 .sandbox__slider input {
   accent-color: var(--accent);
-}
-
-.sandbox__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .sandbox__slider-value {

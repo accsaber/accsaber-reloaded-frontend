@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import CampaignBoundsField from './CampaignBoundsField.vue'
-import CampaignFieldHint from './CampaignFieldHint.vue'
-import type { CampaignTargetRow } from './useCampaignEditor'
+import type { CampaignTargetRow } from './useCampaignTargets'
 
 const props = defineProps<{
   row: CampaignTargetRow
@@ -69,7 +69,7 @@ function onDragStart(event: DragEvent) {
         @update:model-value="emit('type', $event)"
       />
 
-      <CampaignFieldHint :text="row.hint" />
+      <HintTooltip :text="row.hint" />
 
       <button
         v-if="multi"
@@ -214,7 +214,7 @@ function onDragStart(event: DragEvent) {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--space-xs);
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.6875rem;

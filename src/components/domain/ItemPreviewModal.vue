@@ -5,7 +5,8 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
-import { itemVariantPreviews, rarityClass, readBorderColorValue, readBorderShapeValue } from '@/utils/items'
+import { itemVariantPreviews, rarityClass } from '@/utils/items'
+import { readBorderColorValue, readBorderShapeValue } from '@/utils/cosmetics/readers'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -172,7 +173,7 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 }
 
 .ipm__variant {
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);
   background: transparent;

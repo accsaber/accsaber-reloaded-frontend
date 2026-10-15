@@ -1,7 +1,9 @@
 import { useSocket } from '@/composables/useSocket'
 import { useAuthStore } from '@/stores/auth'
 import type { ChatMessageResponse } from '@/types/api/chat'
+import type { PlayerRef } from '@/types/api/common'
 import { hashString } from '@/utils/constants'
+import { pickAvatarUrl } from '@/utils/media'
 import { isUuid } from '@/utils/mapRoute'
 import { onScopeDispose, ref, type Ref } from 'vue'
 
@@ -26,14 +28,12 @@ export interface PresencePeer {
 
 interface PresenceWire {
   type: string
-  actorUserId?: string | null
-  actorName?: string | null
-  actorAvatarUrl?: string | null
+  actor?: PlayerRef | null
   targetId?: string | null
   x?: number | null
   y?: number | null
   field?: string | null
-  members?: { userId: string; name?: string | null; avatarUrl?: string | null }[] | null
+  members?: PlayerRef[] | null
   message?: ChatMessageResponse | null
 }
 
@@ -174,8 +174,8 @@ export function useCampaignPresence(
     if (type === 'presence_state') {
       const self = selfId()
       for (const m of msg.members ?? []) {
-        if (m.userId === self) continue
-        upsertPeer(m.userId, m.name, m.avatarUrl)
+        if (m.id === self) continue
+        upsertPeer(m.id, m.name, pickAvatarUrl(m))
       }
       syncPeers()
       return
@@ -186,7 +186,8 @@ export function useCampaignPresence(
       return
     }
 
-    const actorId = msg.actorUserId ?? null
+    const actor = msg.actor ?? null
+    const actorId = actor?.id ?? null
     if (!actorId || actorId === selfId()) return
 
     if (type === 'change') {
@@ -206,14 +207,14 @@ export function useCampaignPresence(
     }
 
     if (type === 'typing') {
-      const p = upsertPeer(actorId, msg.actorName, msg.actorAvatarUrl)
+      const p = upsertPeer(actorId, actor?.name, pickAvatarUrl(actor))
       p.lastSeen = Date.now()
       markTyping(actorId, msg.field !== 'off')
       syncPeers()
       return
     }
 
-    const peer = upsertPeer(actorId, msg.actorName, msg.actorAvatarUrl)
+    const peer = upsertPeer(actorId, actor?.name, pickAvatarUrl(actor))
     if (type !== 'presence_join') {
       const [action, kind, tray] = parseField(msg.field)
       peer.action = action

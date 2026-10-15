@@ -13,7 +13,7 @@ import type { ScoreRowField } from '@/types/api/settings'
 import type { UserRelationType } from '@/types/api/relations'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn, UserRefDisplay } from '@/types/display'
 import { countryOptionsFor } from '@/utils/countries'
-import { formatPlayCount, formatRelativeDate } from '@/utils/formatters'
+import { formatAccuracy, formatPlayCount, formatRelativeDate } from '@/utils/formatters'
 import { toDifficultyScoreDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
@@ -346,7 +346,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
               <UserChip :user="(row.player as UserRefDisplay)" size="sm" />
             </span>
             <span v-if="isScoreFieldVisible('accuracy')" class="ms-card__acc">
-              {{ ((row.accuracy as number) * 100).toFixed(2) }}%
+              {{ formatAccuracy(row.accuracy as number) }}
             </span>
 
             <span v-if="isScoreFieldVisible('date')" class="ms-card__date">
@@ -417,7 +417,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
 
 .map-scores__actions {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-xs);
   align-items: center;
   justify-content: center;
   position: relative;

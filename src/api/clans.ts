@@ -1,4 +1,4 @@
-import type { ChatMessageResponse, SendChatMessageRequest } from '@/types/api/chat'
+import type { ChatMessageResponse, ChatUnreadResponse, SendChatMessageRequest } from '@/types/api/chat'
 import type {
   ClanAllianceResponse,
   ClanAuditEntryResponse,
@@ -203,6 +203,10 @@ export function getClanChat(
   params?: PaginationParams,
 ): Promise<Page<ChatMessageResponse>> {
   return get<Page<ChatMessageResponse>>(`/clans/${clanId}/chat${buildQuery(params)}`)
+}
+
+export function getClanChatUnread(clanId: string, since: string): Promise<ChatUnreadResponse> {
+  return get<ChatUnreadResponse>(`/clans/${clanId}/chat/unread${buildQuery({ since })}`)
 }
 
 export function sendClanChatMessage(

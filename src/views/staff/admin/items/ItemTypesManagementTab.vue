@@ -215,7 +215,7 @@ onMounted(fetchTypes)
         <BaseInput v-model="form.description" label="Description" />
 
         <div class="types-mgmt__schema">
-          <label class="types-mgmt__schema-label">Value schema (JSON)</label>
+          <label class="field-label">Value schema (JSON)</label>
           <textarea
             v-model="schemaText"
             class="types-mgmt__schema-input"
@@ -275,13 +275,6 @@ onMounted(fetchTypes)
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.types-mgmt__schema-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .types-mgmt__schema-input {

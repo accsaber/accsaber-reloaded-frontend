@@ -16,7 +16,7 @@ import StolenFlameBorderFill from '@/components/cosmetics/borders/StolenFlameBor
 import ToonBorderFill from '@/components/cosmetics/borders/ToonBorderFill.vue'
 import WarpBorderFill from '@/components/cosmetics/borders/WarpBorderFill.vue'
 import WoodBorderFill from '@/components/cosmetics/borders/WoodBorderFill.vue'
-import type { CanvasFill } from '@/utils/items'
+import type { CanvasFill } from '@/utils/cosmetics/interpolate'
 import type { Component } from 'vue'
 
 export interface RimStyle {

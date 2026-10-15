@@ -5,7 +5,6 @@ import {
   refreshPlayerToken,
 } from '@/api/auth'
 import { login as apiLogin, refreshToken as apiRefresh, logout as apiLogout } from '@/api/staff-auth'
-import type { ItemVariant } from '@/types/api/items'
 import type { AuthMeResponse, OAuthProvider } from '@/types/api/player-auth'
 import type { StaffRole } from '@/types/enums'
 import {
@@ -14,9 +13,10 @@ import {
   readPlayerSession,
   writePlayerSession,
 } from '@/utils/playerSession'
-import { useThemeStore } from '@/stores/theme'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
+import { readStoredString, writeStoredString } from '@/utils/storage'
 
 const ROLE_HIERARCHY: Record<StaffRole, number> = {
   RANKING: 2,
@@ -31,8 +31,6 @@ const ROLE_HIERARCHY: Record<StaffRole, number> = {
 const PROACTIVE_REFRESH_MS = 24 * 60 * 60 * 1000
 
 const LEGACY_LS_USER_ID = 'userId'
-
-type ItemVariantValue = { variants?: ItemVariant[] }
 
 migrateLegacyPlayerSession()
 
@@ -63,13 +61,13 @@ export const useAuthStore = defineStore('auth', () => {
     restricted.value = false
   }
 
-  const staffToken = ref<string | null>(localStorage.getItem('staffToken'))
-  const staffRefreshToken = ref<string | null>(localStorage.getItem('staffRefreshToken'))
+  const staffToken = ref<string | null>(readStoredString('staffToken'))
+  const staffRefreshToken = ref<string | null>(readStoredString('staffRefreshToken'))
   const staffRole = ref<StaffRole | null>(
-    (localStorage.getItem('staffRole') as StaffRole) || null,
+    (readStoredString('staffRole') as StaffRole) || null,
   )
   const staffTokenExpiresAt = ref<number>(
-    Number(localStorage.getItem('staffTokenExpiresAt')) || 0,
+    Number(readStoredString('staffTokenExpiresAt')) || 0,
   )
 
   const hasPlayerSession = computed(() => accessToken.value !== null && refreshTokenValue.value !== null)
@@ -80,16 +78,12 @@ export const useAuthStore = defineStore('auth', () => {
   const userProfile = computed<UserProfileShape | null>(() => {
     const me = authMe.value
     if (!me) return null
-    const resolved = me.cdnAvatarUrl ?? me.avatarUrl ?? ''
-    const fallback = me.cdnAvatarUrl && me.avatarUrl && me.cdnAvatarUrl !== me.avatarUrl
-      ? me.avatarUrl
-      : null
     return {
-      name: me.name,
-      avatarUrl: resolved,
-      avatarFallbackUrl: fallback,
-      country: me.country ?? '',
-      clan: me.clan ?? null,
+      name: me.player.name,
+      avatarUrl: pickAvatarUrl(me.player),
+      avatarFallbackUrl: pickAvatarFallback(me.player),
+      country: me.player.country ?? '',
+      clan: me.player.clan ?? null,
     }
   })
 
@@ -164,7 +158,6 @@ export const useAuthStore = defineStore('auth', () => {
     authMe.value = null
     restricted.value = false
     clearPlayerSession()
-    useThemeStore().resetToBuiltin()
   }
 
   let playerRefreshPromise: Promise<boolean> | null = null
@@ -203,16 +196,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const me = await getAuthMe()
       authMe.value = me
-      if (userId.value !== me.userId && accessToken.value && refreshTokenValue.value) {
+      if (userId.value !== me.player.id && accessToken.value && refreshTokenValue.value) {
         writePlayerSession({
           accessToken: accessToken.value,
           refreshToken: refreshTokenValue.value,
           expiresAt: expiresAt.value,
-          userId: me.userId,
+          userId: me.player.id,
         })
       }
-      userId.value = me.userId
-      void syncEquippedTheme(me.userId)
+      userId.value = me.player.id
       return me
     } catch {
       authMe.value = null
@@ -220,34 +212,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function syncEquippedTheme(uid: string): Promise<void> {
-    const [{ useInventoryStore }, { buildEffectLayers, readThemeValue, resolveItemVariant }] =
-      await Promise.all([import('@/stores/inventory'), import('@/utils/items')])
-    const inventory = useInventoryStore()
-    await inventory.fetchEquipped(uid)
+  let booting: Promise<void> | null = null
 
-    const themeStore = useThemeStore()
-    const slot = inventory.equipped.theme
-    if (!slot) {
-      themeStore.resetToBuiltin()
-      return
-    }
-    const themeKey = `item:${slot.item.id}`
-    if (themeStore.theme === themeKey) return
-    const value = readThemeValue(resolveItemVariant(slot.item.value as ItemVariantValue, slot.variantKey))
-    if (!value) return
-    themeStore.setThemeFromTokens(
-      themeKey,
-      value.tokens,
-      buildEffectLayers(slot.modifiers, slot.unusualEffect),
-    )
+  function bootstrap(): Promise<void> {
+    return (booting ??= runBootstrap())
   }
 
-  async function bootstrap(): Promise<void> {
-    const legacy = localStorage.getItem(LEGACY_LS_USER_ID)
+  async function runBootstrap(): Promise<void> {
+    const legacy = readStoredString(LEGACY_LS_USER_ID)
     if (legacy && !accessToken.value) {
       legacyUserIdDetected.value = legacy
-      localStorage.removeItem(LEGACY_LS_USER_ID)
+      writeStoredString(LEGACY_LS_USER_ID, null)
     }
 
     if (accessToken.value) {
@@ -279,8 +254,8 @@ export const useAuthStore = defineStore('auth', () => {
   function setStaffAuth(token: string, role: StaffRole) {
     staffToken.value = token
     staffRole.value = role
-    localStorage.setItem('staffToken', token)
-    localStorage.setItem('staffRole', role)
+    writeStoredString('staffToken', token)
+    writeStoredString('staffRole', role)
   }
 
   function clearStaffAuth() {
@@ -288,10 +263,10 @@ export const useAuthStore = defineStore('auth', () => {
     staffRefreshToken.value = null
     staffRole.value = null
     staffTokenExpiresAt.value = 0
-    localStorage.removeItem('staffToken')
-    localStorage.removeItem('staffRefreshToken')
-    localStorage.removeItem('staffRole')
-    localStorage.removeItem('staffTokenExpiresAt')
+    writeStoredString('staffToken', null)
+    writeStoredString('staffRefreshToken', null)
+    writeStoredString('staffRole', null)
+    writeStoredString('staffTokenExpiresAt', null)
   }
 
   let staffRefreshPromise: Promise<void> | null = null
@@ -302,10 +277,10 @@ export const useAuthStore = defineStore('auth', () => {
     staffRefreshToken.value = res.refreshToken
     staffRole.value = res.role
     staffTokenExpiresAt.value = Date.now() + res.expiresIn * 1000
-    localStorage.setItem('staffToken', res.accessToken)
-    localStorage.setItem('staffRefreshToken', res.refreshToken)
-    localStorage.setItem('staffRole', res.role)
-    localStorage.setItem('staffTokenExpiresAt', String(staffTokenExpiresAt.value))
+    writeStoredString('staffToken', res.accessToken)
+    writeStoredString('staffRefreshToken', res.refreshToken)
+    writeStoredString('staffRole', res.role)
+    writeStoredString('staffTokenExpiresAt', String(staffTokenExpiresAt.value))
   }
 
   async function refreshStaffToken(): Promise<void> {
@@ -322,10 +297,10 @@ export const useAuthStore = defineStore('auth', () => {
         staffRefreshToken.value = res.refreshToken
         staffRole.value = res.role
         staffTokenExpiresAt.value = Date.now() + res.expiresIn * 1000
-        localStorage.setItem('staffToken', res.accessToken)
-        localStorage.setItem('staffRefreshToken', res.refreshToken)
-        localStorage.setItem('staffRole', res.role)
-        localStorage.setItem('staffTokenExpiresAt', String(staffTokenExpiresAt.value))
+        writeStoredString('staffToken', res.accessToken)
+        writeStoredString('staffRefreshToken', res.refreshToken)
+        writeStoredString('staffRole', res.role)
+        writeStoredString('staffTokenExpiresAt', String(staffTokenExpiresAt.value))
       } catch {
         clearStaffAuth()
       } finally {

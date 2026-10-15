@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, boxScale, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -22,15 +23,15 @@ interface FirefliesConfig {
 }
 
 function readFireflies(c: Composition): FirefliesConfig {
-  const sizeMin = Math.max(1, Math.min(8, asNumber(c.sizeMinPx) ?? 2))
+  const sizeMin = clamp(asNumber(c.sizeMinPx) ?? 2, 1, 8)
   return {
-    count: Math.max(4, Math.min(24, Math.round(asNumber(c.count) ?? 10))),
+    count: clamp(Math.round(asNumber(c.count) ?? 10), 4, 24),
     color: asString(c.color) ?? '#d9f06a',
     sizeMinPx: sizeMin,
-    sizeMaxPx: Math.max(sizeMin, Math.min(10, asNumber(c.sizeMaxPx) ?? 3.5)),
+    sizeMaxPx: clamp(asNumber(c.sizeMaxPx) ?? 3.5, sizeMin, 10),
     wanderSecs: Math.max(3, asNumber(c.wanderSecs) ?? 9),
     flickerSecs: Math.max(1.2, asNumber(c.flickerSecs) ?? 3.2),
-    intensity: Math.max(0.2, Math.min(1, asNumber(c.intensity) ?? 1)),
+    intensity: clamp(asNumber(c.intensity) ?? 1, 0.2, 1),
   }
 }
 

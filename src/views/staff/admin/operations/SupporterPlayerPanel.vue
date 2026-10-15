@@ -2,7 +2,7 @@
 import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import ResourcePicker from '@/components/domain/ResourcePicker.vue'
+import ResourcePicker from '@/views/staff/admin/operations/ResourcePicker.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import type { KofiEventResponse, SupporterStateResponse } from '@/types/api/supporters'
 import { KOFI_CLAIM_SOURCE_DISPLAY, KOFI_EVENT_TYPE_DISPLAY } from '@/types/api/supporters'

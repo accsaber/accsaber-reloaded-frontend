@@ -1,7 +1,5 @@
-import { normalizedAp } from '@/wiki/apCurve'
-
-const CURVE_SCALE = 61
-const CURVE_SHIFT = -18
+import { CURVE_SCALE, CURVE_SHIFT, interpolatePoints, normalizedAp } from '@/wiki/apCurve'
+import { clamp } from '@/utils/math'
 
 export type MissionBand = 'easy' | 'medium' | 'hard' | 'extreme'
 
@@ -62,18 +60,6 @@ const WEEKLY_XP_CURVE: readonly (readonly [number, number])[] = [
   [0, 85], [20, 175], [40, 320], [50, 420], [60, 520], [70, 610], [80, 690], [90, 755], [100, 790],
 ]
 
-function interpolate(points: readonly (readonly [number, number])[], x: number): number {
-  if (x <= points[0][0]) return points[0][1]
-  for (let i = 1; i < points.length; i++) {
-    const [x1, y1] = points[i]
-    if (x <= x1) {
-      const [x0, y0] = points[i - 1]
-      return y0 + ((x - x0) * (y1 - y0)) / (x1 - x0)
-    }
-  }
-  return points[points.length - 1][1]
-}
-
 export function accuracyForNormalized(normalized: number): number {
   if (normalized <= 0) return 0
   if (normalized >= 1) return 1
@@ -85,10 +71,6 @@ export function accuracyForNormalized(normalized: number): number {
     else hi = mid
   }
   return (lo + hi) / 2
-}
-
-export function rawApFor(accuracy: number, complexity: number): number {
-  return normalizedAp(accuracy) * (complexity - CURVE_SHIFT) * CURVE_SCALE
 }
 
 export function normalizedFor(rawAp: number, complexity: number): number {
@@ -198,7 +180,7 @@ export function skillAnchor(
 }
 
 export function realisticCeilingFraction(band: MissionBand, skillLevel: number): number {
-  const skill = Math.min(100, Math.max(0, skillLevel))
+  const skill = clamp(skillLevel, 0, 100)
   const adj = Math.max(0, (skill - 50) / 50)
   switch (band) {
     case 'easy': return 0.75 + adj * 0.1
@@ -329,7 +311,7 @@ export function bandFromWeightedRatio(weighted: number, maxWeighted: number): Mi
 
 export function blendBands(assigned: MissionBand, derived: MissionBand): MissionBand {
   const idx = Math.round(0.6 * BANDS.indexOf(assigned) + 0.4 * BANDS.indexOf(derived))
-  return BANDS[Math.min(BANDS.length - 1, Math.max(0, idx))]
+  return BANDS[clamp(idx, 0, BANDS.length - 1)]
 }
 
 export const SNIPE_BAND_FRACTION: Record<MissionBand, number> = {
@@ -363,12 +345,8 @@ export function computeXpReward(
   snipeDistance: number | null,
 ): number {
   const curve = template.pool === 'weekly' ? WEEKLY_XP_CURVE : DAILY_XP_CURVE
-  const base = interpolate(curve, skillLevel)
+  const base = interpolatePoints(curve, skillLevel)
   return Math.round(base * template.xpMultiplier * bandMultiplier(template, band) * snipeBoost(snipeDistance))
-}
-
-export function xpCurveBase(pool: 'daily' | 'weekly', skillLevel: number): number {
-  return interpolate(pool === 'weekly' ? WEEKLY_XP_CURVE : DAILY_XP_CURVE, skillLevel)
 }
 
 export const BAND_WEIGHTS: Record<MissionBand, number> = {
@@ -404,7 +382,7 @@ export const PB_ANCHOR_POOL_CAP = 100
 
 export function pbAnchorIndex(scoreCount: number, percentile: number): number {
   const sampled = Math.min(scoreCount, PB_ANCHOR_POOL_CAP)
-  return Math.min(scoreCount - 1, Math.max(0, Math.round(sampled * percentile)))
+  return clamp(Math.round(sampled * percentile), 0, scoreCount - 1)
 }
 
 const PB_AVAILABILITY_MIN_SCORES = 50
@@ -418,10 +396,6 @@ export function pbAvailabilityCap(
     return threshold
   }
   return Math.min(Math.round(sortedAps[band === 'hard' ? 14 : 9]), threshold)
-}
-
-export const STREAK_TARGET_FRACTION: Record<MissionBand, number> = {
-  easy: 0.5, medium: 0.7, hard: 0.9, extreme: 1.0,
 }
 
 export function streakTargetFor(band: MissionBand, reference: number, topTier: boolean): number {
@@ -438,7 +412,7 @@ export const STREAK_COMPLEXITY_MAX = 15
 export const STREAK_COMPLEXITY_BAND_SIZE = 3
 
 export function complexityBand(complexity: number): [number, number] {
-  const clamped = Math.max(STREAK_COMPLEXITY_MIN, Math.min(STREAK_COMPLEXITY_MAX, complexity))
+  const clamped = clamp(complexity, STREAK_COMPLEXITY_MIN, STREAK_COMPLEXITY_MAX)
   const count = Math.ceil((STREAK_COMPLEXITY_MAX - STREAK_COMPLEXITY_MIN) / STREAK_COMPLEXITY_BAND_SIZE)
   const index = Math.max(
     0,
@@ -569,16 +543,6 @@ export function liftedThreshold(target: CategorySkill, others: CategorySkill[]):
     fromCategory: best.categoryName,
     skillGap,
     fraction,
-  }
-}
-
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
 

@@ -60,8 +60,6 @@ export type ClanWarAidStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
 
 export type ClanWarPoolSource = 'pick' | 'replacement' | 'random'
 
-export type ClanListSort = 'name' | 'level' | 'members' | 'standing'
-
 export interface PublicClanResponse {
   id: string
   slug: string

@@ -48,7 +48,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 
 <template>
   <section class="fighters">
-    <h2 class="fighters__title">Fighters</h2>
+    <h2 class="section-title">Fighters</h2>
     <p v-if="error" class="fighters__error" role="alert">{{ error }}</p>
 
     <div v-if="!participants" class="fighters__sides">
@@ -116,12 +116,6 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.fighters__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
 }
 
 .fighters__empty,

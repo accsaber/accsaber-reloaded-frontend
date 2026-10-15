@@ -1,4 +1,4 @@
-import type { BorderColorFill } from '@/types/api/items'
+import type { BorderColorFill } from '@/types/cosmetics/border'
 import { luminance, parseHex } from '@/utils/color'
 
 export interface OverlaySpace {

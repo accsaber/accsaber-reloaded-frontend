@@ -2,7 +2,7 @@
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useRenderLoop } from '@/composables/useRenderLoop'
-import { onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 
 const props = defineProps<{
   particleCount?: number
@@ -33,6 +33,12 @@ let mouseY = -1000
 let startTime = 0
 let logicalW = 0
 let logicalH = 0
+let observer: IntersectionObserver | null = null
+const onScreen = ref(true)
+
+function animated(): boolean {
+  return !reduced.value && !mobile.value && onScreen.value
+}
 
 function tracksCursor(): boolean {
   return props.interactive !== false && !mobile.value && !reduced.value
@@ -95,7 +101,12 @@ function render(time: number) {
   draw(ctx, logicalW, logicalH, time)
 }
 
-const loop = useRenderLoop(render, () => !reduced.value)
+const loop = useRenderLoop(render, animated)
+
+watch(animated, (on) => {
+  if (on) loop.start()
+  else render(performance.now())
+})
 
 function onMouseMove(e: MouseEvent) {
   if (!canvasRef.value) return
@@ -127,7 +138,7 @@ function resize() {
   logicalW = w
   logicalH = h
   initParticles(w, h)
-  if (reduced.value) render(startTime || performance.now())
+  if (!animated()) render(startTime || performance.now())
 }
 
 watchEffect(() => {
@@ -144,11 +155,14 @@ onMounted(() => {
   startTime = performance.now()
   resize()
   window.addEventListener('resize', resize)
+  observer = new IntersectionObserver(([entry]) => { onScreen.value = !!entry?.isIntersecting })
+  if (canvasRef.value) observer.observe(canvasRef.value)
   loop.start()
 })
 
 onUnmounted(() => {
   loop.stop()
+  observer?.disconnect()
   window.removeEventListener('resize', resize)
   window.removeEventListener('mousemove', onMouseMove)
 })

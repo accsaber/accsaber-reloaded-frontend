@@ -1,3 +1,4 @@
+import { readStoredString, writeStoredString } from '@/utils/storage'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -15,23 +16,13 @@ export function useCampaignTutorial() {
 
   function closeTutorial(outcome: CampaignTutorialOutcome) {
     showTutorial.value = false
-    try {
-      localStorage.setItem(STORAGE_KEY, outcome)
-    } catch {}
-  }
-
-  function hasSeenTutorial(): boolean {
-    try {
-      return localStorage.getItem(STORAGE_KEY) != null
-    } catch {
-      return true
-    }
+    writeStoredString(STORAGE_KEY, outcome)
   }
 
   async function maybeAutoShow(userId: string | null) {
     if (route.name !== 'campaign-new') return
     if (!userId) return
-    if (hasSeenTutorial()) return
+    if (readStoredString(STORAGE_KEY) != null) return
     if (window.matchMedia('(max-width: 860px)').matches) return
     try {
       const { getCampaigns } = await import('@/api/campaigns')

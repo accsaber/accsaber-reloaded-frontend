@@ -170,13 +170,6 @@ function goMainSite() {
   padding: var(--space-xl);
 }
 
-.auth-callback__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .auth-callback__message {
   color: var(--text-secondary);
   max-width: 480px;

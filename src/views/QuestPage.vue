@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { getApiErrorMessage, parseApiError } from '@/api/client'
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
-import PageSection from '@/components/layout/PageSection.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import type { QuestReleaseResponse } from '@/types/api/quest'
@@ -15,6 +14,7 @@ import QuestInstallStep from './quest/QuestInstallStep.vue'
 import QuestReleasesStep from './quest/QuestReleasesStep.vue'
 import QuestSignInStep from './quest/QuestSignInStep.vue'
 import QuestStepper from './quest/QuestStepper.vue'
+import { clamp } from '@/utils/math'
 
 const STEPS = ['Sign in', 'Generate', 'Install']
 const STEP_TITLES = ['Sign in', 'Generate your download', 'Install on your headset']
@@ -43,15 +43,8 @@ const feedback = ref<{ variant: 'error' | 'success'; text: string } | null>(null
 const unlocked = computed(() => (authStore.isLoggedIn ? STEPS.length - 1 : 0))
 
 const user = computed<UserRefDisplay | null>(() => {
-  const me = authStore.authMe
-  if (!me) return null
-  return {
-    id: me.userId,
-    name: me.name,
-    avatarUrl: me.avatarUrl,
-    cdnAvatarUrl: me.cdnAvatarUrl,
-    country: me.country,
-  }
+  const me = authStore.authMe?.player
+  return me ? { ...me, clan: null } : null
 })
 
 async function loadReleases() {
@@ -61,7 +54,7 @@ async function loadReleases() {
     const { getQuestReleases } = await import('@/api/quest')
     releases.value = await getQuestReleases()
   } catch (err) {
-    listError.value = getApiErrorMessage(err, "Couldn't load releases - try again in a moment.")
+    listError.value = parseApiError(err, "Couldn't load releases - try again in a moment.").message
   } finally {
     loading.value = false
   }
@@ -86,7 +79,7 @@ async function generate(tag: string) {
 }
 
 function goTo(next: number) {
-  step.value = Math.min(Math.max(next, 0), unlocked.value)
+  step.value = clamp(next, 0, unlocked.value)
 }
 
 onMounted(loadReleases)
@@ -99,14 +92,16 @@ onMounted(loadReleases)
 
     <QuestStepper :steps="STEPS" :current="step" :unlocked="unlocked" @select="goTo" />
 
-    <PageSection :title="STEP_TITLES[step]">
+    <section class="quest__section">
+      <h2 class="section-title quest__section-title">{{ STEP_TITLES[step] }}</h2>
+
       <QuestSignInStep v-if="step === 0" :user="user" @sign-in="loginOpen = true" />
 
       <QuestReleasesStep v-else-if="step === 1" :releases="releases" :loading="loading"
         :list-error="listError" :feedback="feedback" :generating-tag="generatingTag" @generate="generate" />
 
       <QuestInstallStep v-else />
-    </PageSection>
+    </section>
 
     <nav class="quest__nav">
       <BaseButton :disabled="step === 0" @click="goTo(step - 1)">Previous</BaseButton>
@@ -124,6 +119,14 @@ onMounted(loadReleases)
   max-width: 880px;
   margin: 0 auto;
   padding: var(--space-lg) var(--space-lg) var(--space-2xl);
+}
+
+.quest__section {
+  margin-bottom: var(--space-2xl);
+}
+
+.quest__section-title {
+  margin-bottom: var(--space-md);
 }
 
 .quest__nav {

@@ -26,10 +26,6 @@ usePageMeta({
 }
 
 .vote-reweight__title {
-  margin: 0;
   padding-top: var(--space-lg);
-  color: var(--text-primary);
-  font-size: var(--text-page-title);
-  font-weight: 700;
 }
 </style>

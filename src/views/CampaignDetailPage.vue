@@ -6,18 +6,18 @@ import {
   getMyCampaignProgressByIdOrSlug,
   startCampaign,
 } from '@/api/campaigns'
-import { ApiError, getApiErrorMessage } from '@/api/client'
+import { ApiError, parseApiError } from '@/api/client'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import CampaignModifierBadges from '@/components/domain/CampaignModifierBadges.vue'
+import CampaignModifierBadges from '@/views/campaign/CampaignModifierBadges.vue'
 import CampaignRoadmap from '@/components/domain/CampaignRoadmap.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapChartStats from '@/components/domain/MapChartStats.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import { useCampaignAccent } from '@/composables/useCampaignAccent'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
@@ -28,9 +28,9 @@ import type {
   CampaignDetailResponse,
   CampaignDifficultyProgressResponse,
   CampaignDifficultyResponse,
-  CampaignLeaderboardPlayer,
   CampaignProgressResponse,
 } from '@/types/api/campaigns'
+import type { PlayerRef } from '@/types/api/common'
 import {
   barrierConditionLabel,
   barrierGoalValue,
@@ -80,7 +80,7 @@ const loginOpen = ref(false)
 
 const idOrSlug = computed(() => String(route.params.campaignId ?? ''))
 
-const spectatePlayer = ref<CampaignLeaderboardPlayer | null>(null)
+const spectatePlayer = ref<PlayerRef | null>(null)
 const spectateProgress = ref<CampaignProgressResponse | null>(null)
 const spectateLoading = ref(false)
 const spectateError = ref<string | null>(null)
@@ -94,7 +94,7 @@ const spectateUserId = computed(() => {
 const isSpectating = computed(() => spectateUserId.value !== null)
 
 const spectateName = computed(
-  () => spectatePlayer.value?.userName ?? (isSpectating.value ? 'this player' : ''),
+  () => spectatePlayer.value?.name ?? (isSpectating.value ? 'this player' : ''),
 )
 
 const activeProgress = computed(() =>
@@ -118,16 +118,17 @@ async function loadSpectatedProgress() {
   spectateProgress.value = null
   try {
     const { getUser, getUserCampaignProgress } = await import('@/api/users')
-    if (spectatePlayer.value?.userId !== userId) {
+    if (spectatePlayer.value?.id !== userId) {
       spectatePlayer.value = null
       void getUser(userId).then((user) => {
         if (seq !== spectateSeq) return
         spectatePlayer.value = {
-          userId: user.id,
-          userName: user.name,
+          id: user.id,
+          name: user.name,
           country: user.country,
           avatarUrl: user.avatarUrl,
-          cdnAvatarUrl: user.cdnAvatarUrl ?? undefined,
+          cdnAvatarUrl: user.cdnAvatarUrl,
+          clan: user.clan,
         }
       }, () => {})
     }
@@ -136,16 +137,16 @@ async function loadSpectatedProgress() {
     spectateProgress.value = result
   } catch (err) {
     if (seq !== spectateSeq) return
-    spectateError.value = getApiErrorMessage(err, 'Failed to load this run')
+    spectateError.value = parseApiError(err, 'Failed to load this run').message
   } finally {
     if (seq === spectateSeq) spectateLoading.value = false
   }
 }
 
-function spectate(player: CampaignLeaderboardPlayer) {
-  if (player.userId === spectateUserId.value) return
+function spectate(player: PlayerRef) {
+  if (player.id === spectateUserId.value) return
   spectatePlayer.value = player
-  void router.replace({ query: { ...route.query, viewing: player.userId } })
+  void router.replace({ query: { ...route.query, viewing: player.id } })
 }
 
 function stopSpectating() {
@@ -199,7 +200,7 @@ async function load() {
     if (err instanceof ApiError && err.status === 404) {
       campaign.value = null
     } else {
-      error.value = getApiErrorMessage(err, 'Failed to load campaign')
+      error.value = parseApiError(err, 'Failed to load campaign').message
     }
   } finally {
     loading.value = false
@@ -518,7 +519,7 @@ async function onStart() {
     myProgress.value = await getMyCampaignProgress(campaign.value.id)
     if (campaign.value.legacy) scheduleProgressRefresh(campaign.value.id)
   } catch (err) {
-    actionError.value = getApiErrorMessage(err, 'Failed to start campaign')
+    actionError.value = parseApiError(err, 'Failed to start campaign').message
   } finally {
     starting.value = false
   }
@@ -533,7 +534,7 @@ async function onAbandon() {
     await abandonCampaign(campaign.value.id)
     myProgress.value = await getMyCampaignProgress(campaign.value.id)
   } catch (err) {
-    actionError.value = getApiErrorMessage(err, 'Failed to abandon campaign')
+    actionError.value = parseApiError(err, 'Failed to abandon campaign').message
   } finally {
     abandoning.value = false
   }
@@ -649,7 +650,7 @@ function handleDeselect() {
 <template>
   <div
     class="campaign-detail"
-    :class="{ 'campaign-detail--backdrop': themeStore.backdropConfig }"
+    :class="{ 'campaign-detail--backdrop': themeStore.hasBackdrop }"
     :style="{ '--page-accent': accent }"
   >
     <template v-if="loading">
@@ -1187,7 +1188,7 @@ function handleDeselect() {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: var(--space-xs);
   font-size: var(--text-caption);
 }
 
@@ -1242,7 +1243,7 @@ function handleDeselect() {
 
 .campaign-detail__objective-table thead th,
 .campaign-detail__objective-table thead td {
-  padding: 0 0 4px var(--space-sm);
+  padding: 0 0 var(--space-xs) var(--space-sm);
   border-bottom: 1px solid var(--bg-overlay);
   text-align: right;
   font-family: var(--font-sans);
@@ -1339,14 +1340,14 @@ function handleDeselect() {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .campaign-detail__prereq {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 6px var(--space-sm);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;

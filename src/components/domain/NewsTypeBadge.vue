@@ -34,7 +34,7 @@ const label = computed(() => NEWS_TYPE_LABELS[props.type])
 }
 
 .news-type-badge--sm {
-  padding: 1px 8px;
+  padding: 1px var(--space-sm);
   font-size: 0.7rem;
 }
 </style>

@@ -3,7 +3,7 @@ import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import { computed } from 'vue'
@@ -48,7 +48,7 @@ const categoryCode = computed(() => categoryStore.getCategoryCode(props.difficul
   width: 40px;
   height: 40px;
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .war-map__body {

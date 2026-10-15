@@ -218,7 +218,7 @@ onMounted(() => {
   <div class="clan-seasons">
     <div class="clan-seasons__header">
       <div>
-        <h2 class="clan-seasons__title">Seasons</h2>
+        <h2 class="section-title">Seasons</h2>
         <p class="clan-seasons__meta">Seasons cannot overlap, and a closed season is read only.</p>
       </div>
       <BaseButton variant="primary" @click="openCreate">New season</BaseButton>
@@ -324,13 +324,6 @@ onMounted(() => {
   justify-content: space-between;
   gap: var(--space-lg);
   flex-wrap: wrap;
-}
-
-.clan-seasons__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .clan-seasons__meta {

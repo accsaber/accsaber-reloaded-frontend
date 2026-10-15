@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TitleLayerHost from '@/components/cosmetics/titles/TitleLayerHost.vue'
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleBrewSpec } from '@/types/api/items'
+import type { TitleBrewSpec } from '@/types/cosmetics/title'
 import { darken, lighten } from '@/utils/color'
 import {
   boneShape,

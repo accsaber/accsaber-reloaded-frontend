@@ -231,7 +231,7 @@ const newsTypeChoices = computed(() => [
 .rail__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .rail__chip {

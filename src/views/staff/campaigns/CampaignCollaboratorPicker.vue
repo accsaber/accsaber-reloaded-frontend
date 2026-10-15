@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { getApiErrorMessage } from '@/api/client'
 import BaseModal from '@/components/common/BaseModal.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
-import { useCategoryStore } from '@/stores/categories'
+import { useUserSearch } from '@/composables/useUserSearch'
 import type { LeaderboardResponse } from '@/types/api/users'
 import { toUserRef } from '@/utils/mappers'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 
 const props = withDefaults(defineProps<{ loading?: boolean; existingIds?: string[] }>(), {
   existingIds: () => [],
@@ -19,58 +17,16 @@ const emit = defineEmits<{
   pick: [userId: string]
 }>()
 
-const categoryStore = useCategoryStore()
-
-const PAGE_SIZE = 10
-
-const query = ref('')
-const debounced = useDebouncedRef(query, 220)
-const page = ref(1)
-const totalPages = ref(1)
-const results = ref<LeaderboardResponse[]>([])
-const fetching = ref(false)
-const err = ref<string | null>(null)
+const {
+  query,
+  page,
+  totalPages,
+  results,
+  loading: fetching,
+  error: err,
+} = useUserSearch({ size: 10, inactiveUsers: true })
 
 const existingSet = computed(() => new Set(props.existingIds))
-
-watch(debounced, () => {
-  page.value = 1
-})
-
-async function search() {
-  const categoryId = categoryStore.getCategoryId('overall')
-  if (!categoryId) {
-    err.value = 'Player search is unavailable right now.'
-    results.value = []
-    return
-  }
-  fetching.value = true
-  err.value = null
-  try {
-    const { getLeaderboard } = await import('@/api/leaderboards')
-    const data = await getLeaderboard(categoryId, {
-      search: debounced.value || undefined,
-      size: PAGE_SIZE,
-      page: page.value - 1,
-      inactiveUsers: true,
-    })
-    results.value = data.content
-    totalPages.value = data.totalPages || 1
-    if (page.value > totalPages.value) page.value = totalPages.value
-  } catch (e) {
-    err.value = getApiErrorMessage(e, 'Search failed')
-    results.value = []
-    totalPages.value = 1
-  } finally {
-    fetching.value = false
-  }
-}
-
-onMounted(search)
-
-watch([debounced, page], () => {
-  void search()
-})
 
 function rowClick(entry: LeaderboardResponse) {
   if (existingSet.value.has(String(entry.userId)) || props.loading) return
@@ -165,7 +121,7 @@ function rowClick(entry: LeaderboardResponse) {
 
 .collab-picker__error {
   margin: 0;
-  padding: 8px 10px;
+  padding: var(--space-sm) 10px;
   font-size: var(--text-caption);
   color: var(--error);
   background: color-mix(in srgb, var(--error) 8%, transparent);
@@ -186,7 +142,7 @@ function rowClick(entry: LeaderboardResponse) {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
@@ -213,7 +169,7 @@ function rowClick(entry: LeaderboardResponse) {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: var(--space-sm);
   align-items: center;
-  padding: 8px;
+  padding: var(--space-sm);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-btn);

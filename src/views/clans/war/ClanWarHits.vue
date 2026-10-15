@@ -4,7 +4,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import type { ClanWarHitResponse, ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
 import { formatStanding, warSideStyles, warTeamOf } from '@/utils/clans'
@@ -85,7 +85,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 <template>
   <section class="war-hits">
     <header class="war-hits__head">
-      <h2 class="war-hits__title">Hits</h2>
+      <h2 class="section-title">Hits</h2>
       <BaseSelect
         v-if="participants?.length"
         v-model="player"
@@ -154,13 +154,6 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 
 .war-hits__filter {
   width: 220px;
-}
-
-.war-hits__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .war-hits__error {

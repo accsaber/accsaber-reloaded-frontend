@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { getApiErrorMessage } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
@@ -21,6 +20,7 @@ import { BROWSE_SORT_OPTIONS } from '@/utils/campaignFilters'
 import { isCurationSubdomain, isCurationSurface } from '@/utils/subdomain'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQuery } from 'vue-router'
+import { parseApiError } from '@/api/client'
 
 type Pane = 'all' | 'mine' | 'runs' | 'review' | 'drafts' | 'invites'
 
@@ -216,7 +216,7 @@ async function loadCampaigns() {
     totalPages.value = page.totalPages || 1
   } catch (err) {
     if (id !== campaignRequest) return
-    error.value = getApiErrorMessage(err, 'Failed to load campaigns')
+    error.value = parseApiError(err, 'Failed to load campaigns').message
     items.value = []
   }
   loading.value = false
@@ -246,7 +246,7 @@ async function respondToInvite(inv: CampaignCollaboratorResponse, accept: boolea
     await respondToCampaignCollaboration(inv.campaignId, accept)
     pendingInvites.value = pendingInvites.value.filter((i) => i.id !== inv.id)
   } catch (err) {
-    error.value = getApiErrorMessage(err, `Failed to ${accept ? 'accept' : 'decline'} invite`)
+    error.value = parseApiError(err, `Failed to ${accept ? 'accept' : 'decline'} invite`).message
   } finally {
     respondingId.value = null
   }
@@ -400,7 +400,7 @@ watch(() => auth.isLoggedIn, loadInvites, { immediate: true })
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: var(--space-sm) 14px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -443,7 +443,7 @@ watch(() => auth.isLoggedIn, loadInvites, { immediate: true })
   justify-content: center;
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
+  padding: 0 var(--space-xs);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 600;

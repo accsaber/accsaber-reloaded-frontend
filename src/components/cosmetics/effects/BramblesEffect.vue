@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asColor, asNumber, clampNumber, easeOut, geometryMemo, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed, watch } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -109,7 +110,7 @@ function vineSpec(i: number, seed: number, box: ContentBox, poly: RingPoly): Vin
       dir: hash01(seed + 1) > 0.5 ? 1 : -1,
       len,
       amp: Math.max(3, len * 0.08),
-      width: Math.max(1, Math.min(4.5, len * 0.02)),
+      width: clamp(len * 0.02, 1, 4.5),
       thorn: Math.max(2, len * 0.07),
       leaf: Math.max(3, len * 0.11),
     }
@@ -120,7 +121,7 @@ function vineSpec(i: number, seed: number, box: ContentBox, poly: RingPoly): Vin
     dir: hash01(seed + 1) > 0.5 ? 1 : -1,
     len: pctSize(minD, c.length, 0.45),
     amp: Math.max(2, minD * 0.03),
-    width: Math.max(1.2, Math.min(4.5, minD * 0.024)),
+    width: clamp(minD * 0.024, 1.2, 4.5),
     thorn: Math.max(2, minD * 0.05),
     leaf: Math.max(3, minD * 0.09),
   }
@@ -134,7 +135,7 @@ function buildVine(spec: VineSpec, seed: number, poly: RingPoly): Vine {
   for (let i = 0; i <= STEPS; i++) {
     drift += (hash01(seed + i * 3) - 0.5) * spec.amp * 0.5
     drift *= 0.82
-    offset = Math.max(-spec.amp, Math.min(spec.amp, offset + drift))
+    offset = clamp(offset + drift, -spec.amp, spec.amp)
     const { p, n, t } = ringAt(poly, spec.start + spec.dir * i * step)
     const tt = { x: t.x * spec.dir, y: t.y * spec.dir }
     const leaf = i > 2 && i < STEPS - 1 && (i + 3) % LEAF_EVERY === 0

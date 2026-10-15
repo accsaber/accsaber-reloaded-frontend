@@ -66,7 +66,7 @@ watch(page, fetchClans)
   <div v-else class="browser">
     <div class="browser__header">
       <div>
-        <h2 class="browser__title">Clans</h2>
+        <h2 class="section-title">Clans</h2>
         <p class="browser__meta">Open a clan to see everything about it, moderate it or disband it.</p>
       </div>
       <BaseInput v-model="searchInput" placeholder="Search by name or tag" class="browser__search" />
@@ -112,13 +112,6 @@ watch(page, fetchClans)
   justify-content: space-between;
   gap: var(--space-lg);
   flex-wrap: wrap;
-}
-
-.browser__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .browser__meta {

@@ -36,7 +36,7 @@ const emit = defineEmits<{
   gap: 6px;
   height: 36px;
   max-width: 340px;
-  padding: 0 8px;
+  padding: 0 var(--space-sm);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--bg-overlay));
   border-radius: var(--radius-btn);
   background: color-mix(in srgb, var(--accent) 8%, transparent);

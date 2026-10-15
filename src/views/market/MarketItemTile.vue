@@ -6,16 +6,14 @@ import ModifierCompositions from '@/components/cosmetics/effects/ModifierComposi
 import { useModifierColor } from '@/composables/useModifierColor'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemModifierRef, ItemResponse, UserItemResponse } from '@/types/api/items'
+import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
 import {
-  buildEffectLayers,
   isBorderTypeKey,
   rarityClass,
-  readBorderColorValue,
-  readBorderShapeValue,
-  readFragmentSpec,
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
+import { readBorderColorValue, readBorderShapeValue } from '@/utils/cosmetics/readers'
 import { computed, onMounted } from 'vue'
 
 const props = defineProps<{

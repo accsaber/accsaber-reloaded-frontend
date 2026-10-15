@@ -7,30 +7,26 @@ import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
-import type {
-  BorderColorValue,
-  BorderShapeValue,
-  ItemResponse,
-  ThemeValue,
-  TitleValue,
-} from '@/types/api/items'
+import type { BorderColorValue, BorderShapeValue } from '@/types/cosmetics/border'
+import type { ItemResponse } from '@/types/api/items'
+import type { ThemeValue } from '@/types/cosmetics/theme'
+import type { TitleValue } from '@/types/cosmetics/title'
 import { SUPPORTER_TIER_PALETTE } from '@/types/api/supporters'
 import {
   pickAssetUrl,
-  rarityClass,
   readBackgroundValue,
   readBadgeValue,
   readBorderColorValue,
   readBorderShapeValue,
+  readClanTitleEffectValue,
   readCrateValue,
   readThemeValue,
-  readClanTitleEffectValue,
   readThumbnailBackgroundValue,
   readTitleValue,
-  tokenize,
-  type EffectLayer,
-  type TokenContext,
-} from '@/utils/items'
+} from '@/utils/cosmetics/readers'
+import { rarityClass, type TokenContext } from '@/utils/items'
+import { tokenize } from '@/utils/themeTokens'
+import { type EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { TITLE_AURA_PAD } from '@/utils/cosmetics/titleAura'
 import { useFitScale } from '@/composables/useFitScale'
 import { useThemeBase } from '@/composables/useThemeBase'
@@ -496,11 +492,11 @@ const fallbackInitial = computed(() => props.item.name.charAt(0).toUpperCase())
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   width: 70%;
   aspect-ratio: 1 / 1;
-  padding: 8px;
-  border-radius: 6px;
+  padding: var(--space-sm);
+  border-radius: var(--radius-modal);
   background: var(--color-bg, var(--bg-base));
   border: 1px solid color-mix(in srgb, var(--text-primary) 10%, transparent);
   justify-content: center;

@@ -3,7 +3,7 @@ import ClanTag from '@/components/domain/ClanTag.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
-import { onAvatarError, pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import type { UserRefDisplay } from '@/types/display'
 import { computed } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
@@ -53,7 +53,7 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
         :alt="`${user.name} avatar`"
         loading="lazy"
         decoding="async"
-        @error="onAvatarError(avatarFallback)($event)"
+        @error="onImageError(avatarFallback)($event)"
       />
       <span v-else class="user-chip__avatar user-chip__avatar--blank" aria-hidden="true" />
     </template>

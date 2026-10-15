@@ -32,7 +32,7 @@ import TitleSeasonsAura from '@/components/cosmetics/titles/TitleSeasonsAura.vue
 import TitleCurioAura from '@/components/cosmetics/titles/TitleCurioAura.vue'
 import TitleRadarAura from '@/components/cosmetics/titles/TitleRadarAura.vue'
 import TitleWaypointsAura from '@/components/cosmetics/titles/TitleWaypointsAura.vue'
-import type { TitleAuraSpec, TitleAuraType } from '@/types/api/items'
+import type { TitleAuraSpec, TitleAuraType } from '@/types/cosmetics/title'
 import type { TitleAuraLinks } from '@/utils/cosmetics/titleAura'
 import { computed, type Component } from 'vue'
 

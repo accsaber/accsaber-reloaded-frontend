@@ -147,7 +147,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
 }
 
 .campaign-filters__sort-btn {
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   background: transparent;
   border: none;
   border-radius: var(--radius-pill);
@@ -246,11 +246,11 @@ function tagAccent(tag: CampaignTagResponse): string | null {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-tertiary);
-  margin-right: 4px;
+  margin-right: var(--space-xs);
 }
 
 .campaign-filters__chip {
-  padding: 3px 8px;
+  padding: 3px var(--space-sm);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-pill);
@@ -286,7 +286,7 @@ function tagAccent(tag: CampaignTagResponse): string | null {
 
 .campaign-filters__clear {
   margin-left: auto;
-  padding: 4px var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
   background: none;
   border: none;
   font-family: var(--font-sans);

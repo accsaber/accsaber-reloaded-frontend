@@ -1,12 +1,11 @@
-import type { Difficulty, MapDifficultyStatus } from '@/types/enums'
+import type { MapDifficultyStatus } from '@/types/enums'
+import type { MapDifficultyRef, PlayerRef } from './common'
 
 export type ComplexityScenario = 'CURRENT' | 'NEW_SCRIPT' | 'PREVIEW'
 
 export type EstimateScenario = 'NEW_SCRIPT'
 
 export type ComparisonScenario = Exclude<ComplexityScenario, 'CURRENT'>
-
-export type ComplexityDatasetKind = 'scores' | 'difficulties' | 'complexity-history'
 
 export interface ScenarioMapValues {
   complexity: number | null
@@ -22,17 +21,8 @@ export interface ComplexityEstimateInfo {
 }
 
 export interface ComplexityDifficultyRow {
-  mapDifficultyId: string
-  mapId: string
-  songName: string
-  songSubName: string | null
-  songAuthor: string
-  mapAuthor: string
-  coverUrl: string | null
-  cdnCoverUrl: string | null
-  difficulty: Difficulty
+  map: MapDifficultyRef
   characteristic: string
-  categoryId: string
   categoryCode: string
   status: MapDifficultyStatus
   complexityPinned: boolean
@@ -50,11 +40,7 @@ export interface ScenarioPlayValues {
 }
 
 export interface ComplexityScoreRow {
-  userId: string
-  name: string
-  avatarUrl: string | null
-  cdnAvatarUrl: string | null
-  country: string
+  player: PlayerRef
   accuracy: number
   scenarios: Partial<Record<ComplexityScenario, ScenarioPlayValues>>
   deltas: Partial<Record<ComparisonScenario, ScenarioPlayValues>>
@@ -86,11 +72,7 @@ export interface ScenarioTotalValues {
 }
 
 export interface ComplexityPlayerRow {
-  userId: string
-  name: string
-  avatarUrl: string | null
-  cdnAvatarUrl: string | null
-  country: string
+  player: PlayerRef
   scenarios: Partial<Record<ComplexityScenario, ScenarioTotalValues>>
   deltas: Partial<Record<ComparisonScenario, ScenarioTotalValues>>
 }
@@ -217,10 +199,6 @@ export interface ComplexityPlayerCategory {
 }
 
 export interface ComplexityPlayerPlays {
-  userId: string
-  name: string
-  avatarUrl: string | null
-  cdnAvatarUrl: string | null
-  country: string
+  player: PlayerRef
   categories: ComplexityPlayerCategory[]
 }

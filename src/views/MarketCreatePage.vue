@@ -22,7 +22,7 @@ import {
 } from '@/utils/market'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import MarketItemPicker from './market/MarketItemPicker.vue'
+import ItemPickerGrid from '@/components/domain/ItemPickerGrid.vue'
 import MarketWallet from './market/MarketWallet.vue'
 
 usePageMeta({
@@ -262,11 +262,11 @@ const breadcrumbs: Crumb[] = [
 
     <div v-else class="create-page__layout">
       <section class="create-page__picker" aria-label="Choose an item">
-        <h2 class="create-page__section-title">Choose an item</h2>
+        <h2 class="create-page__section-title section-title">Choose an item</h2>
         <p v-if="fieldErrors.userItemLinkId" class="create-page__field-error">
           {{ fieldErrors.userItemLinkId }}
         </p>
-        <MarketItemPicker
+        <ItemPickerGrid
           :items="pickerItems"
           :loading="pickerLoading"
           :page="pickerPage"
@@ -281,7 +281,7 @@ const breadcrumbs: Crumb[] = [
       </section>
 
       <section class="create-page__form" aria-label="Listing details">
-        <h2 class="create-page__section-title">Listing details</h2>
+        <h2 class="create-page__section-title section-title">Listing details</h2>
 
         <p v-if="selected" class="create-page__selected">
           Listing <strong>{{ selectedName }}</strong>
@@ -318,7 +318,7 @@ const breadcrumbs: Crumb[] = [
         />
 
         <div class="create-page__field">
-          <span class="create-page__label">Sale type</span>
+          <span class="field-label">Sale type</span>
           <ChartToggleGroup :toggles="MODE_TOGGLES" :active="[mode]" label="Sale type"
             @select="mode = $event as ListingMode" />
         </div>
@@ -354,7 +354,7 @@ const breadcrumbs: Crumb[] = [
         </div>
 
         <div class="create-page__field">
-          <span class="create-page__label">Duration</span>
+          <span class="field-label">Duration</span>
           <ChartToggleGroup :toggles="durationToggles" :active="[String(durationMinutes ?? NO_LIMIT)]"
             label="Duration" @select="setDuration" />
           <p v-if="fieldErrors.durationMinutes" class="create-page__field-error">
@@ -402,13 +402,6 @@ const breadcrumbs: Crumb[] = [
   flex-wrap: wrap;
 }
 
-.create-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .create-page__subtitle {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
@@ -425,9 +418,6 @@ const breadcrumbs: Crumb[] = [
 
 .create-page__section-title {
   margin: 0 0 var(--space-md);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .create-page__form {
@@ -460,14 +450,6 @@ const breadcrumbs: Crumb[] = [
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.create-page__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .create-page__hint {

@@ -169,7 +169,7 @@ function toggleModifier(m: ItemModifierResponse) {
   height: 16px;
   flex-shrink: 0;
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   color: var(--accent);
 }
 

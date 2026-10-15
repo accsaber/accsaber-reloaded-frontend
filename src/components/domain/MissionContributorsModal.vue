@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { getApiErrorMessage } from '@/api/client'
 import BaseModal from '@/components/common/BaseModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -11,6 +10,7 @@ import type { Page, PaginationParams } from '@/types/pagination'
 import { getRankClass } from '@/utils/ranking'
 import { missionUnitLabel } from '@/utils/missions'
 import { computed, ref, watch } from 'vue'
+import { parseApiError } from '@/api/client'
 
 const props = defineProps<{
   mission: MissionResponse
@@ -58,7 +58,7 @@ async function load(missionId: string, target: number) {
   } catch (err) {
     rows.value = []
     totalPages.value = 0
-    error.value = getApiErrorMessage(err, 'Could not load contributors')
+    error.value = parseApiError(err, 'Could not load contributors').message
   } finally {
     loading.value = false
   }
@@ -138,9 +138,6 @@ watch(
   color: var(--text-secondary);
 }
 
-.contrib__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.contrib__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.contrib__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .contrib__player {
   flex: 1;

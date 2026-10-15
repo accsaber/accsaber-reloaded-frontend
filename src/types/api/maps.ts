@@ -1,9 +1,9 @@
 import type { PublicClanResponse } from './clans'
-import type { Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
+import type { CriteriaStatus, Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
 import type { PaginationParams } from '../pagination'
+import type { MapDifficultyRef, PlayerRef } from './common'
+import type { PublicStaffUserResponse } from './staff'
 import type { UserRelationType } from './relations'
-
-export type CriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED'
 
 export type AutoCriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'UNAVAILABLE'
 
@@ -84,12 +84,8 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   commentCount: number
   rankedAt: string | null
   createdAt: string
-  createdBy: string | null
-  createdByUsername: string | null
-  createdByAvatarUrl: string | null
-  createdByCdnAvatarUrl?: string | null
-  lastUpdatedBy: string | null
-  lastUpdatedByUsername: string | null
+  createdBy?: PublicStaffUserResponse
+  lastUpdatedBy?: PublicStaffUserResponse
   rankUpvotes: number
   rankDownvotes: number
   rankNeutrals: number
@@ -169,11 +165,8 @@ export interface MapComplexityHistoryResponse {
 
 export interface VoteResponse {
   id: string
-  mapDifficultyId: string
-  staffId: string
-  staffUsername: string | null
-  staffAvatarUrl: string | null
-  staffCdnAvatarUrl?: string | null
+  map: MapDifficultyRef
+  staff: PublicStaffUserResponse
   vote: VoteType
   type: MapVoteAction
   suggestedComplexity: number | null
@@ -183,15 +176,7 @@ export interface VoteResponse {
   active: boolean
   createdAt: string
   updatedAt: string
-  songName: string | null
-  songSubName: string | null
-  songAuthor: string | null
-  mapAuthor: string | null
-  coverUrl: string | null
-  cdnCoverUrl?: string | null
-  difficulty: Difficulty | null
   complexity: number | null
-  categoryId: string | null
 }
 
 export interface VoteListResponse {
@@ -227,11 +212,7 @@ export interface DifficultyScoreParams extends PaginationParams {
 
 export interface LeaderboardPreviewRow {
   rank: number
-  userId: string
-  name: string
-  avatarUrl: string | null
-  cdnAvatarUrl: string | null
-  country: string
+  player: PlayerRef
   platform: string
   accuracy: number
   ap: number
@@ -239,9 +220,7 @@ export interface LeaderboardPreviewRow {
 }
 
 export interface LeaderboardPreviewResponse {
-  mapDifficultyId: string
-  songName: string
-  difficulty: Difficulty
+  map: MapDifficultyRef
   characteristic: string
   categoryCode: string
   status: MapDifficultyStatus

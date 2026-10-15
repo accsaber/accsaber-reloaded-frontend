@@ -2,8 +2,10 @@
 import CampaignTrayIcon from './CampaignTrayIcon.vue'
 import { useCampaignEditorContext } from './campaignEditorContext'
 
-const { campaignTrays, nodeTrays, activeTray, selectedCount, selectedEdge, toggleTray } =
-  useCampaignEditorContext()
+const { trays, selection, connections } = useCampaignEditorContext()
+const { campaignTrays, nodeTrays, activeTray, toggleTray } = trays
+const { selectedCount } = selection
+const { selectedEdge } = connections
 
 const emit = defineEmits<{
   tutorial: []
@@ -123,8 +125,8 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-xs);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-card);
@@ -179,7 +181,7 @@ const emit = defineEmits<{
   right: 6px;
   min-width: 15px;
   height: 15px;
-  padding: 0 4px;
+  padding: 0 var(--space-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -193,7 +195,7 @@ const emit = defineEmits<{
 
 .campaign-editor__tray-empty {
   margin: 0;
-  padding: 4px 2px;
+  padding: var(--space-xs) 2px;
   font-family: var(--font-sans);
   font-size: 0.5625rem;
   font-weight: 500;
@@ -234,7 +236,7 @@ const emit = defineEmits<{
 
   .campaign-editor__tray-group-label {
     align-self: center;
-    padding: 0 4px 0 0;
+    padding: 0 var(--space-xs) 0 0;
   }
 }
 </style>

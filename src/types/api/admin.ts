@@ -1,4 +1,4 @@
-import type { BatchStatus, Difficulty, MapDifficultyStatus, MapVoteAction, StaffRole, StaffUserStatus, VoteType } from '../enums'
+import type { BatchStatus, Difficulty, MapVoteAction, StaffRole, StaffUserStatus, VoteType } from '../enums'
 
 export interface CreateStaffUserRequest {
   username?: string
@@ -22,11 +22,6 @@ export interface LinkUserRequest {
 
 export interface ForceChangePasswordRequest {
   newPassword: string
-}
-
-export interface OAuthLinkRequest {
-  provider: string
-  providerId: string
 }
 
 export interface StaffUserResponse {
@@ -57,10 +52,6 @@ export interface ImportMapFromLeaderboardIdsRequest {
   batchId?: string | null
 }
 
-export interface UpdateMapStatusRequest {
-  status: MapDifficultyStatus
-}
-
 export interface UpdateMapComplexityRequest {
   complexity: number
 }
@@ -88,28 +79,14 @@ export interface CastVoteRequest {
   reason?: string
 }
 
-export interface ApproveReweightRequest {
-  complexity: number
-}
-
 export interface BulkReweightRequest {
   items: { mapDifficultyId: string; complexity: number }[]
   reason: string
 }
 
-export interface ApproveUnrankRequest {
-  mapDifficultyId: string
-}
-
-export interface BulkUnrankRequest {
-  mapDifficultyIds: string[]
-}
 export interface DuplicateCandidateResponse {
-  primaryUserId: string
-  primaryUserName: string
-  secondaryUserId: string
-  secondaryUserName: string
-  country: string
+  primary: PlayerRef
+  secondary: PlayerRef
   identicalScores: number
   primaryTotalScores: number
   secondaryTotalScores: number
@@ -117,10 +94,8 @@ export interface DuplicateCandidateResponse {
 
 export interface DuplicateLinkResponse {
   id: string
-  primaryUserId: string
-  primaryUserName: string
-  secondaryUserId: string
-  secondaryUserName: string
+  primary: PlayerRef
+  secondary: PlayerRef
   merged: boolean
   mergedAt: string | null
   reason: string | null
@@ -212,13 +187,6 @@ export interface CreateMilestoneSetRequest {
   awardsItemId?: string
 }
 
-export interface UpdateMilestoneSetRequest {
-  title?: string
-  description?: string
-  setBonusXp?: number
-  awardsItemId?: string
-}
-
 export interface CreatePrerequisiteRequest {
   milestoneId: string
   prerequisiteMilestoneId: string
@@ -239,11 +207,11 @@ import type {
   CampaignNodeBorderLayer,
   CampaignRequirementType,
   CampaignPrerequisiteMode,
-  CampaignTagKind,
   CampaignTargetMode,
   CheckpointLabelPosition,
 } from '../enums'
 import type { CampaignBackgroundPlacement } from './campaigns'
+import type { PlayerRef } from './common'
 
 export type CampaignBackgroundPlacementInput =
   | CampaignBackgroundPlacement
@@ -348,11 +316,6 @@ export interface UpdateCampaignDifficultyRequest {
   prerequisiteMode?: CampaignPrerequisiteMode
 }
 
-export interface CreateCampaignTagRequest {
-  kind: CampaignTagKind
-  name: string
-}
-
 export interface AddCampaignItemRequest {
   itemId: string
   quantity?: number
@@ -416,6 +379,16 @@ export interface CampaignElementMove {
   positionY: number
 }
 
-export interface MoveCampaignElementsRequest {
-  moves: CampaignElementMove[]
+export interface RemoveScoreParams {
+  userId: string
+  mapDifficultyId: string
+  reason?: string
+}
+
+export interface WsStatus {
+  [platform: string]: Record<string, unknown>
+}
+
+export interface CountryOverrideRequest {
+  country: string | null
 }

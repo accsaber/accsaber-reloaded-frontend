@@ -6,7 +6,9 @@ import ClanTag from '@/components/domain/ClanTag.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import type { ClanResponse, ClanStandingResponse } from '@/types/api/clans'
 import { formatStanding, isPacifist } from '@/utils/clans'
-import { annotateEffectLayerStacks, pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue, readClanEquipped, valueFxLayers } from '@/utils/items'
+import { annotateEffectLayerStacks, valueFxLayers } from '@/utils/cosmetics/effectLayers'
+import { pickAssetUrl, pickVideoOrAssetUrl, readBackgroundValue } from '@/utils/cosmetics/readers'
+import { readClanEquipped } from '@/utils/items'
 import { computed } from 'vue'
 import ClanPacifistBadge from './ClanPacifistBadge.vue'
 
@@ -31,7 +33,7 @@ const bannerFx = computed(() => annotateEffectLayerStacks(valueFxLayers(banner.v
 const bannerFitClass = computed(() => (banner.value?.fit ? `clan-header__banner--${banner.value.fit}` : ''))
 
 const founded = computed(() =>
-  new Date(props.clan.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+  new Date(props.clan.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
 )
 </script>
 
@@ -189,13 +191,10 @@ const founded = computed(() =>
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm) var(--space-md);
-  margin: 0;
   min-width: 0;
   font-size: calc(var(--text-page-title) * 1.35);
-  font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.01em;
-  color: var(--text-primary);
 }
 
 .clan-header__tag {

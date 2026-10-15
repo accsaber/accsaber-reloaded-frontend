@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/common/EmptyState.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
@@ -9,6 +9,7 @@ import { useCategoryStore } from '@/stores/categories'
 import type { VoteResponse } from '@/types/api/maps'
 import { formatRelativeDate, truncate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
+import { pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -86,8 +87,8 @@ function criteriaLabel(vote: string): string {
       >
         <div class="activity-card__header">
           <img
-            v-if="vote.staffAvatarUrl"
-            :src="vote.staffAvatarUrl"
+            v-if="pickAvatarUrl(vote.staff)"
+            :src="pickAvatarUrl(vote.staff)"
             alt=""
             class="activity-card__avatar"
             loading="lazy"
@@ -98,7 +99,7 @@ function criteriaLabel(vote: string): string {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
             </svg>
           </div>
-          <span class="activity-card__username">{{ vote.staffUsername ?? 'Unknown' }}</span>
+          <span class="activity-card__username">{{ vote.staff.username ?? 'Unknown' }}</span>
           <span class="activity-card__vote-badge" :style="{ color: voteColor(vote.vote), borderColor: voteColor(vote.vote) }">
             {{ voteLabel(vote.vote) }}
           </span>
@@ -107,26 +108,26 @@ function criteriaLabel(vote: string): string {
         </div>
 
         <div
-          v-if="vote.songName"
+          v-if="vote.map.songName"
           class="activity-card__map"
-          @click="goToMap(vote.mapDifficultyId)"
+          @click="goToMap(vote.map.id)"
         >
-          <GlowImage v-if="vote.cdnCoverUrl || vote.coverUrl"
-            :src="vote.cdnCoverUrl ?? vote.coverUrl ?? ''" alt="" :size="48"
-            :fallback-src="vote.cdnCoverUrl && vote.coverUrl && vote.cdnCoverUrl !== vote.coverUrl ? vote.coverUrl : null" />
+          <CoverImage v-if="pickCoverUrl(vote.map)"
+            :src="pickCoverUrl(vote.map)" alt="" :size="48"
+            :fallback-src="pickCoverFallback(vote.map)" />
           <div class="activity-card__map-info">
             <div class="activity-card__map-title-row">
               <span
-                v-if="vote.categoryId"
+                v-if="vote.map.categoryId"
                 class="activity-card__cat-dot"
-                :style="{ background: categoryStore.getAccent(categoryStore.getCategoryCode(vote.categoryId) ?? 'overall') }"
+                :style="{ background: categoryStore.getAccent(categoryStore.getCategoryCode(vote.map.categoryId) ?? 'overall') }"
               />
-              <span class="activity-card__map-name">{{ truncate(vote.songName, 30) }}</span>
+              <span class="activity-card__map-name">{{ truncate(vote.map.songName, 30) }}</span>
             </div>
-            <span class="activity-card__map-artist">{{ truncate(vote.songAuthor ?? '', 25) }}</span>
+            <span class="activity-card__map-artist">{{ truncate(vote.map.songAuthor ?? '', 25) }}</span>
             <span class="activity-card__map-meta">
-              <span v-if="vote.mapAuthor">{{ vote.mapAuthor }}</span>
-              <span v-if="vote.difficulty" class="activity-card__map-diff">{{ formatDifficulty(vote.difficulty) }}</span>
+              <span v-if="vote.map.mapAuthor">{{ vote.map.mapAuthor }}</span>
+              <span class="activity-card__map-diff">{{ formatDifficulty(vote.map.difficulty) }}</span>
             </span>
           </div>
         </div>
@@ -178,9 +179,6 @@ function criteriaLabel(vote: string): string {
 }
 
 .activity-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
   margin: 0 0 var(--space-lg);
 }
 
@@ -220,7 +218,7 @@ function criteriaLabel(vote: string): string {
 .activity-card__avatar {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -362,11 +360,11 @@ function criteriaLabel(vote: string): string {
 .activity-card__override {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-size: 0.65rem;
   font-weight: 700;
   color: var(--warning);
-  padding: 1px 8px;
+  padding: 1px var(--space-sm);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--warning) 15%, transparent);
   border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);

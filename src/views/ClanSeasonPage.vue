@@ -8,8 +8,8 @@ import { useNow } from '@/composables/useNow'
 import type { ClanSeasonResponse, ClanStandingResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { formatCountdown, formatSignedStanding, formatStanding, isSeasonRunning } from '@/utils/clans'
-import { formatFullDate } from '@/utils/formatters'
+import { formatSignedStanding, formatStanding, isSeasonRunning } from '@/utils/clans'
+import { formatDuration, formatFullDate } from '@/utils/formatters'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -49,7 +49,7 @@ const breadcrumbs = computed<Crumb[]>(() => [
 const statusLine = computed(() => {
   const s = season.value
   if (!s) return ''
-  if (running.value) return `Running, ends in ${formatCountdown(new Date(s.endsAt).getTime() - now.value)}`
+  if (running.value) return `Running, ends in ${formatDuration(new Date(s.endsAt).getTime() - now.value, { zero: 'now' })}`
   if (s.closedAt) return `Closed ${formatFullDate(s.closedAt)}`
   return `Starts ${formatFullDate(s.startsAt)}`
 })
@@ -164,13 +164,6 @@ watch(() => [slugOrId.value, route.query.page], fetchStandings, { immediate: tru
   gap: var(--space-xs);
   text-align: center;
   padding: var(--space-lg) 0 var(--space-lg);
-}
-
-.season__title {
-  margin: 0;
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .season__status {

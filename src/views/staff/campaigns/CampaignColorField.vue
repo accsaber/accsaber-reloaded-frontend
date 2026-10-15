@@ -57,5 +57,3 @@ const swatch = computed(() => {
     <p v-if="error" class="campaign-editor__field-error" role="alert">{{ error }}</p>
   </label>
 </template>
-
-<style scoped src="./campaignEditorFields.css"></style>

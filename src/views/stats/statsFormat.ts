@@ -1,7 +1,8 @@
 import type { MissionTier, TimeSeriesPointResponse } from '@/types/api/statistics'
 import type { TimeSeriesPoint } from '@/types/display'
+import { formatCount } from '@/utils/formatters'
 
-export const NO_VALUE = '-'
+export const NO_VALUE = '–'
 
 export const MISSION_TIER_ORDER: MissionTier[] = [
   'new', 'casual', 'moderate', 'strong', 'top', 'elite', 'unknown',
@@ -27,19 +28,9 @@ export const MISSION_TIER_HINTS: Record<MissionTier, string> = {
   unknown: 'Assigned before skill was recorded',
 }
 
-export function fmtInt(value: unknown): string {
-  if (value === null || value === undefined) return NO_VALUE
-  return Number(value).toLocaleString()
-}
-
 export function fmtDecimal(value: unknown, digits = 1): string {
   if (value === null || value === undefined) return NO_VALUE
   return Number(value).toLocaleString(undefined, { maximumFractionDigits: digits })
-}
-
-export function fmtFraction(value: unknown, digits = 1): string {
-  if (value === null || value === undefined) return NO_VALUE
-  return `${(Number(value) * 100).toFixed(digits)}%`
 }
 
 export function fmtPercentPoint(value: unknown): string {
@@ -48,7 +39,7 @@ export function fmtPercentPoint(value: unknown): string {
 }
 
 export function fmtEssence(value: unknown): string {
-  return `✦ ${fmtInt(value)}`
+  return `✦ ${formatCount(value as number | null)}`
 }
 
 export function toChartPoints(data: TimeSeriesPointResponse[]): TimeSeriesPoint[] {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import GlowImage from '@/components/common/GlowImage.vue'
-import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import CoverImage from '@/components/common/CoverImage.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { SnipeComparisonResponse } from '@/types/api/snipe'
 import type { ScoreResponse } from '@/types/api/users'
@@ -11,6 +10,7 @@ import CategoryBadge from './CategoryBadge.vue'
 import ComplexityBadge from './ComplexityBadge.vue'
 import DifficultyBadge from './DifficultyBadge.vue'
 import SongTitle from './SongTitle.vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   comparison: SnipeComparisonResponse
@@ -37,7 +37,7 @@ const apDelta = computed(() => target.value.ap - (sniper.value?.ap ?? 0))
 const tugFillPercent = computed(() => {
   const t = target.value.accuracy
   if (!t) return 0
-  return Math.max(0, Math.min(100, ((sniper.value?.accuracy ?? 0) / t) * 100))
+  return clamp(((sniper.value?.accuracy ?? 0) / t) * 100, 0, 100)
 })
 
 const sides = computed<{ kind: 'sniper' | 'target'; score: ScoreResponse | null; role: string }[]>(() => [
@@ -58,7 +58,7 @@ const mapTarget = computed(() => buildMapRoute({
 <template>
   <article class="snipe-row" :style="{ '--row-accent': categoryAccent }">
     <RouterLink class="snipe-row__quadrant snipe-row__map" :to="mapTarget">
-      <GlowImage :src="pickCoverUrl(map)" :alt="map.songName" :size="88" :fallback-src="pickCoverFallback(map)" />
+      <CoverImage :source="map" :alt="map.songName" :size="88" />
       <div class="snipe-row__map-info">
         <CategoryBadge v-if="categoryCode" :category="categoryCode" size="sm" class="snipe-row__category-eyebrow" />
         <SongTitle class="snipe-row__song" layout="stacked" :name="map.songName"
@@ -337,7 +337,7 @@ const mapTarget = computed(() => buildMapRoute({
   width: 100%;
   height: 6px;
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   margin-top: var(--space-xs);
   overflow: hidden;
 }
@@ -350,7 +350,7 @@ const mapTarget = computed(() => buildMapRoute({
     color-mix(in srgb, var(--row-accent) 50%, transparent),
     var(--row-accent)
   );
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   transform-origin: left;
   transform: scaleX(var(--progress, 0));
   transition: transform 240ms ease-out;

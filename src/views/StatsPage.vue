@@ -3,12 +3,13 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
-import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
+import type { MapDifficultyRef } from '@/types/api/common'
 import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -207,11 +208,21 @@ const rows = computed<Record<string, unknown>[]>(() => {
   const offset = page.number * page.size
   return page.content.map((raw, index) => {
     const item = raw as Record<string, unknown>
+    const map = item.map as MapDifficultyRef | undefined
     return {
       ...item,
-      player: item.userId ? toUserRef(item as unknown as FlatUserRef) : undefined,
-      coverUrl: pickCoverUrl(item),
-      coverFallbackUrl: pickCoverFallback(item),
+      ...(map && {
+        mapId: map.mapId,
+        mapDifficultyId: map.id,
+        songName: map.songName,
+        songSubName: map.songSubName,
+        mapAuthor: map.mapAuthor,
+        difficulty: map.difficulty,
+        categoryId: map.categoryId,
+      }),
+      player: item.player ?? (item.userId ? toUserRef(item as unknown as FlatUserRef) : undefined),
+      coverUrl: pickCoverUrl(map ?? item),
+      coverFallbackUrl: pickCoverFallback(map ?? item),
       rank: offset + index + 1,
     }
   })
@@ -337,13 +348,6 @@ watch(() => JSON.stringify(leaderboardRequest.value), fetchLeaderboardData, { im
   position: relative;
   text-align: center;
   padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.stats__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .stats__subtitle {

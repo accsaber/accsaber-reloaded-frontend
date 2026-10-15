@@ -205,7 +205,7 @@ onMounted(fetchModifiers)
         </p>
 
         <fieldset class="modifiers-tab__fieldset" :disabled="!form.rollsGlobally">
-          <label class="modifiers-tab__label" for="global-chance">Global drop chance (%)</label>
+          <label class="field-label" for="global-chance">Global drop chance (%)</label>
           <input
             id="global-chance"
             v-model="form.chancePct"
@@ -231,7 +231,7 @@ onMounted(fetchModifiers)
 
           <div v-if="form.seasonal" class="modifiers-tab__season">
             <div class="modifiers-tab__season-row">
-              <span class="modifiers-tab__label">Season start</span>
+              <span class="field-label">Season start</span>
               <div class="modifiers-tab__md">
                 <BaseSelect v-model="form.startMonth" :options="MONTH_OPTIONS" />
                 <input
@@ -249,7 +249,7 @@ onMounted(fetchModifiers)
             </div>
 
             <div class="modifiers-tab__season-row">
-              <span class="modifiers-tab__label">Season end</span>
+              <span class="field-label">Season end</span>
               <div class="modifiers-tab__md">
                 <BaseSelect v-model="form.endMonth" :options="MONTH_OPTIONS" />
                 <input
@@ -347,14 +347,6 @@ onMounted(fetchModifiers)
 
 .modifiers-tab__fieldset:disabled {
   opacity: 0.5;
-}
-
-.modifiers-tab__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
 }
 
 .modifiers-tab__number,

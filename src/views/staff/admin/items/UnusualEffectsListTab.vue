@@ -11,7 +11,8 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import type { ModifierEffectSpec, UnusualEffectResponse } from '@/types/api/items'
+import type { ModifierEffectSpec } from '@/types/cosmetics/effects'
+import type { UnusualEffectResponse } from '@/types/api/items'
 import { computed, onMounted, ref } from 'vue'
 
 const STARTER_SPEC = `{
@@ -210,12 +211,12 @@ onMounted(fetchEffects)
         <BaseInput v-model="form.name" label="Name" :error="fieldErrors.name" />
 
         <div class="ue-tab__field">
-          <label class="ue-tab__label">Description</label>
+          <label class="field-label">Description</label>
           <textarea v-model="form.description" class="ue-tab__textarea" rows="2" placeholder="Optional" />
         </div>
 
         <div class="ue-tab__field">
-          <label class="ue-tab__label">Effect spec (JSON)</label>
+          <label class="field-label">Effect spec (JSON)</label>
           <div class="ue-tab__spec">
             <textarea
               v-model="form.specText"
@@ -225,7 +226,7 @@ onMounted(fetchEffects)
               spellcheck="false"
             />
             <div class="ue-tab__preview" aria-hidden="true">
-              <span class="ue-tab__preview-label">Preview</span>
+              <span class="field-label">Preview</span>
               <div class="ue-tab__preview-tile">
                 <ModifierCompositions v-if="parsedSpec" :spec="parsedSpec" />
               </div>
@@ -312,14 +313,6 @@ onMounted(fetchEffects)
 }
 
 .ue-tab__readonly-label,
-.ue-tab__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
-
 .ue-tab__readonly-value {
   color: var(--text-primary);
 }
@@ -367,13 +360,6 @@ onMounted(fetchEffects)
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.ue-tab__preview-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .ue-tab__preview-tile {

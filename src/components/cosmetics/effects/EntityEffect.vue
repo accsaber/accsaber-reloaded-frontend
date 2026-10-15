@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -24,15 +25,15 @@ interface EntityConfig {
 
 function readEntity(c: Composition): EntityConfig {
   return {
-    widthPct: Math.max(20, Math.min(90, asNumber(c.widthPct) ?? 55)),
-    xPct: Math.max(0, Math.min(100, asNumber(c.xPct) ?? 50)),
+    widthPct: clamp(asNumber(c.widthPct) ?? 55, 20, 90),
+    xPct: clamp(asNumber(c.xPct) ?? 50, 0, 100),
     yPct: asNumber(c.yPct) ?? null,
     bodyColor: asString(c.bodyColor) ?? '#0a0812',
     mistColor: asString(c.mistColor) ?? '#3d3654',
     eyeColor: asString(c.eyeColor) ?? '#ffffff',
     floatMs: Math.max(2000, asNumber(c.floatMs) ?? 7000),
     blinkMs: Math.max(2000, asNumber(c.blinkMs) ?? 6000),
-    intensity: Math.max(0.2, Math.min(1, asNumber(c.intensity) ?? 0.9)),
+    intensity: clamp(asNumber(c.intensity) ?? 0.9, 0.2, 1),
   }
 }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { LaserFill } from '@/types/api/items'
+import type { LaserFill } from '@/types/cosmetics/border'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { hash01, randBetween as rand } from '@/utils/random'
 import { useTemplateRef, watch } from 'vue'
@@ -306,17 +306,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="laser-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.laser-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccuracy } from '@/utils/formatters'
 import { getLeaderboard } from '@/api/leaderboards'
 import { getRelationScores } from '@/api/relations'
 import BaseTabs from '@/components/common/BaseTabs.vue'
@@ -95,30 +96,36 @@ function playerRoute(row: Record<string, unknown>): RouteLocationRaw {
   return { name: 'player-profile', params: { userId: row.userId as string } }
 }
 
+let rankingRequest = 0
+let scoresRequest = 0
+
 async function fetchRanking() {
+  const request = ++rankingRequest
   await categoryStore.fetchCategories()
   const categoryId = categoryStore.getCategoryId('overall')
-  if (!categoryId) return
+  if (!categoryId || request !== rankingRequest) return
   rankingLoading.value = true
   try {
-    rankingPageData.value = await getLeaderboard(categoryId, {
+    const next = await getLeaderboard(categoryId, {
       page: rankingPage.value - 1,
       size: RANKING_SIZE,
       sort: 'ranking,asc',
       relation: scoreMode.value,
       inactiveUsers: true,
     })
+    if (request === rankingRequest) rankingPageData.value = next
   } catch {
-    rankingPageData.value = null
+    if (request === rankingRequest) rankingPageData.value = null
   } finally {
-    rankingLoading.value = false
+    if (request === rankingRequest) rankingLoading.value = false
   }
 }
 
 async function fetchScores() {
+  const request = ++scoresRequest
   scoresLoading.value = true
   try {
-    scorePageData.value = await getRelationScores({
+    const next = await getRelationScores({
       type: scoreMode.value,
       includePrincipal: true,
       categoryId: filterCategoryId.value,
@@ -126,10 +133,11 @@ async function fetchScores() {
       size: SCORE_SIZE,
       sort: 'timeSet,desc',
     })
+    if (request === scoresRequest) scorePageData.value = next
   } catch {
-    scorePageData.value = null
+    if (request === scoresRequest) scorePageData.value = null
   } finally {
-    scoresLoading.value = false
+    if (request === scoresRequest) scoresLoading.value = false
   }
 }
 
@@ -141,7 +149,7 @@ watch([scoreMode, scorePage, filterCategoryId], fetchScores, { immediate: true }
   <section class="followed-activity" :style="{ '--accent': accent }">
     <div class="followed-activity__panel">
       <div class="followed-activity__header">
-        <h2 class="followed-activity__title">{{ scoreMode === 'follower' ? 'Followed Ranking' : 'Rival Ranking' }}</h2>
+        <h2 class="section-title">{{ scoreMode === 'follower' ? 'Followed Ranking' : 'Rival Ranking' }}</h2>
         <BaseTabs :tabs="scoreTabs" :model-value="scoreMode" class="followed-activity__feed-tabs"
           @update:model-value="setMode($event as ScoreRelationType)" />
       </div>
@@ -170,7 +178,7 @@ watch([scoreMode, scorePage, filterCategoryId], fetchScores, { immediate: true }
         </template>
 
         <template #cell-avgAccuracy="{ value }">
-          <template v-if="value != null">{{ ((value as number) * 100).toFixed(2) }}%</template>
+          <template v-if="value != null">{{ formatAccuracy(value as number) }}</template>
           <template v-else>-</template>
         </template>
 
@@ -194,7 +202,7 @@ watch([scoreMode, scorePage, filterCategoryId], fetchScores, { immediate: true }
 
     <div class="followed-activity__panel">
       <div class="followed-activity__header">
-        <h2 class="followed-activity__title">Activity Feed</h2>
+        <h2 class="section-title">Activity Feed</h2>
         <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>
             <FilterButton :active="filtersOpen || !!filterCategoryId" :has-indicator="!!filterCategoryId" />
@@ -278,13 +286,6 @@ watch([scoreMode, scorePage, filterCategoryId], fetchScores, { immediate: true }
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.followed-activity__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .followed-activity__feed-tabs {
@@ -378,7 +379,7 @@ watch([scoreMode, scorePage, filterCategoryId], fetchScores, { immediate: true }
 }
 
 .followed-activity__skeleton {
-  margin-top: 24px;
+  margin-top: var(--space-lg);
 }
 
 .followed-activity__feed--empty {

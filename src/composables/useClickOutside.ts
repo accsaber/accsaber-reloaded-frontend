@@ -1,7 +1,7 @@
 import { onUnmounted, watch, type Ref } from 'vue'
 
 export function useClickOutside(
-  elementRef: Ref<HTMLElement | null>,
+  elementRef: Readonly<Ref<HTMLElement | null>>,
   active: Ref<boolean> | (() => boolean),
   onOutside: () => void,
   options?: { ignoreRefs?: Ref<HTMLElement | null>[] },

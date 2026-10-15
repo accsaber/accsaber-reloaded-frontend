@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import MilestoneHolderTooltip from '@/components/domain/MilestoneHolderTooltip.vue';
 import type { MilestoneCompletionResponse } from '@/types/api/milestones';
-import { tierColor as getTierColor, formatPercent } from '@/utils/constants';
+import { tierColor as getTierColor } from '@/utils/constants';
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue';
 import SongTitle from '@/components/domain/SongTitle.vue';
-import { onImageError, pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback';
-import { formatFullDate } from '@/utils/formatters';
+import CoverImage from '@/components/common/CoverImage.vue';
+import { pickCoverUrl } from '@/utils/media';
+import { formatFullDate, formatPercent } from '@/utils/formatters';
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons';
 import { formatDifficulty } from '@/utils/mappers';
 import { computed, ref } from 'vue';
@@ -30,8 +31,7 @@ const isApex = computed(() => props.milestone.tier?.toUpperCase() === 'APEX')
 const badgeGlyph = computed(() => resolveMilestoneGlyph(props.milestone.iconGroup, props.milestone.querySpec))
 const hasScoreInfo = computed(() => isCompleted.value && !!props.milestone.achievedWithScoreId && !!accuracy.value)
 const typeLabel = computed(() => isMilestoneType.value ? 'milestone' : 'achievement')
-const coverUrl = computed(() => pickCoverUrl(props.milestone))
-const onCoverError = computed(() => onImageError(pickCoverFallback(props.milestone)))
+const coverUrl = computed(() => pickCoverUrl(props.milestone.map))
 
 const expanded = ref(false)
 
@@ -96,7 +96,7 @@ function toggleExpand() {
           <span class="milestone-detail__tier">{{ milestone.tier }}</span>
           <span class="milestone-detail__kind">{{ typeLabel }}</span>
         </div>
-        <h4 class="milestone-detail__title">
+        <h4 class="milestone-detail__title card-title">
           {{ milestone.title }}
           <span v-if="compact && milestone.description" class="milestone-detail__inline-desc">
             <span class="milestone-detail__inline-desc-sep">· </span>{{ milestone.description }}
@@ -173,19 +173,18 @@ function toggleExpand() {
       :class="compact && ['milestone-detail__dropdown', { 'milestone-detail__dropdown--open': expanded }]">
       <div :class="{ 'milestone-detail__dropdown-inner': compact }">
         <div class="milestone-detail__score">
-          <img v-if="coverUrl" :src="coverUrl" :alt="milestone.songName ?? 'Cover'" class="milestone-detail__cover"
-            loading="lazy" decoding="async" @error="onCoverError" />
+          <CoverImage v-if="coverUrl" :source="milestone.map" :alt="milestone.map?.songName ?? 'Cover'" :size="compact ? 40 : 48" />
           <div class="milestone-detail__score-info">
             <span class="milestone-detail__score-text">
               <template v-if="!compact">Completed with </template><strong>{{ accuracy }}%</strong> on
               <em>
                 <SongTitle
-                  :name="milestone.songName ?? 'Unknown Song'"
-                  :sub-name="milestone.songSubName"
-                />{{ milestone.songAuthor ? ` - ${milestone.songAuthor}` : '' }}</em>
-              <template v-if="milestone.difficulty"> ({{ formatDifficulty(milestone.difficulty) }})</template>
+                  :name="milestone.map?.songName ?? 'Unknown Song'"
+                  :sub-name="milestone.map?.songSubName"
+                />{{ milestone.map?.songAuthor ? ` - ${milestone.map.songAuthor}` : '' }}</em>
+              <template v-if="milestone.map"> ({{ formatDifficulty(milestone.map.difficulty) }})</template>
             </span>
-            <span v-if="milestone.mapAuthor" class="milestone-detail__mapper">Mapped by {{ milestone.mapAuthor }}</span>
+            <span v-if="milestone.map?.mapAuthor" class="milestone-detail__mapper">Mapped by {{ milestone.map.mapAuthor }}</span>
             <span v-if="completedAtFormatted" class="milestone-detail__date">{{ completedAtFormatted }}</span>
           </div>
         </div>
@@ -264,13 +263,6 @@ function toggleExpand() {
   color: var(--text-tertiary);
 }
 
-.milestone-detail__title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .milestone-detail__desc {
   font-size: var(--text-caption);
   color: var(--text-secondary);
@@ -308,14 +300,6 @@ function toggleExpand() {
   padding: var(--space-sm);
   background: var(--bg-elevated);
   border-radius: var(--radius-btn);
-}
-
-.milestone-detail__cover {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-btn);
-  object-fit: cover;
-  flex-shrink: 0;
 }
 
 .milestone-detail__score-info {
@@ -504,11 +488,6 @@ function toggleExpand() {
 
 .milestone-detail__dropdown--open .milestone-detail__dropdown-inner {
   padding-top: var(--space-sm);
-}
-
-.milestone-detail__dropdown .milestone-detail__cover {
-  width: 40px;
-  height: 40px;
 }
 
 .milestone-detail__progress-label {

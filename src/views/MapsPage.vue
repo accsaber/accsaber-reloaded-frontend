@@ -6,7 +6,7 @@ import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import MapCard from '@/components/domain/MapCard.vue'
+import MapCard from '@/views/maps/MapCard.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
@@ -18,10 +18,11 @@ import type { MapDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { toMapDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
+import { readStoredString, writeStoredString } from '@/utils/storage'
 import { computed, ref, watch } from 'vue'
 import { useRoute, type RouteLocationRaw } from 'vue-router'
 import BatchListView from './maps/BatchListView.vue'
-import MapFilterSidebar from './maps/MapFilterSidebar.vue'
+import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
 import MapListView from './maps/MapListView.vue'
 import PlaylistDropdown from '@/components/domain/PlaylistDropdown.vue'
 import ViewToggle from './maps/ViewToggle.vue'
@@ -42,22 +43,15 @@ const MAPS_VIEW_KEY = 'accsaber:maps-view'
 const MAX_COMPLEXITY = 20
 
 function storedView(): ViewMode {
-  try {
-    const stored = localStorage.getItem(MAPS_VIEW_KEY)
-    return stored === 'list' || stored === 'batch' ? stored : 'grid'
-  } catch {
-    return 'grid'
-  }
+  const stored = readStoredString(MAPS_VIEW_KEY)
+  return stored === 'list' || stored === 'batch' ? stored : 'grid'
 }
 
 const viewParam = queryRef<ViewMode>('view')
 const viewMode = computed<ViewMode>({
   get: () => viewParam.value || storedView(),
   set: (value) => {
-    try {
-      localStorage.setItem(MAPS_VIEW_KEY, value)
-    } catch {
-    }
+    writeStoredString(MAPS_VIEW_KEY, value)
     viewParam.value = value
   },
 })
@@ -292,13 +286,6 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
   display: flex;
   align-items: baseline;
   gap: var(--space-md);
-}
-
-.maps-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .maps-page__subtitle {

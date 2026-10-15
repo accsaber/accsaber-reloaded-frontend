@@ -3,9 +3,9 @@ import { COMPLEXITY_MAX, COMPLEXITY_MIN, rawAp } from '@/wiki/apCurve'
 import WikiCurveExplorer from '@/wiki/components/WikiCurveExplorer.vue'
 import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
+import { formatAccuracy, formatFixed } from '@/utils/formatters'
 
-const formatAccuracy = (v: number) => `${(v * 100).toFixed(2)}%`
-const formatAp = (v: number) => v.toFixed(1)
+const formatApValue = (v: number) => formatFixed(v, 1)
 const formatAccuracyTick = (v: number) => `${(v * 100).toFixed(1).replace('.0', '')}%`
 const formatApTick = (v: number) => String(Math.round(v))
 
@@ -49,7 +49,7 @@ const EXAMPLES = [
       x-label="Accuracy"
       y-label="AP"
       :format-x="formatAccuracy"
-      :format-y="formatAp"
+      :format-y="formatApValue"
       :format-x-tick="formatAccuracyTick"
       :format-y-tick="formatApTick"
       :initial-x="0.96"
@@ -82,7 +82,7 @@ const EXAMPLES = [
         <tr v-for="example in EXAMPLES" :key="`${example.acc}-${example.complexity}`">
           <td>{{ (example.acc * 100).toFixed(1).replace('.0', '') }}%</td>
           <td>{{ example.complexity }}</td>
-          <td>{{ formatAp(rawAp(example.acc, example.complexity)) }}</td>
+          <td>{{ formatFixed(rawAp(example.acc, example.complexity), 1) }}</td>
         </tr>
       </tbody>
     </table>

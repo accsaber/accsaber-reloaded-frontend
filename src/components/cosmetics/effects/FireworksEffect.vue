@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, boxScale, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -26,11 +27,11 @@ function readFireworks(c: Composition): FireworksConfig {
     ? c.colors.filter((v): v is string => typeof v === 'string')
     : []
   return {
-    count: Math.max(1, Math.min(6, Math.round(asNumber(c.count) ?? 3))),
+    count: clamp(Math.round(asNumber(c.count) ?? 3), 1, 6),
     periodSecs: Math.max(2.5, asNumber(c.periodSecs) ?? 5.6),
-    sparks: Math.max(6, Math.min(20, Math.round(asNumber(c.sparks) ?? 12))),
+    sparks: clamp(Math.round(asNumber(c.sparks) ?? 12), 6, 20),
     colors: rawColors.length > 0 ? rawColors : FW_COLORS,
-    intensity: Math.max(0.3, Math.min(1.5, asNumber(c.intensity) ?? 1)),
+    intensity: clamp(asNumber(c.intensity) ?? 1, 0.3, 1.5),
   }
 }
 

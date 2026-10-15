@@ -70,7 +70,7 @@ const mostAsked = MOST_ASKED
       </div>
 
       <section class="home__section">
-        <h2 class="home__section-title">Most asked</h2>
+        <h2 class="home__section-title section-title">Most asked</h2>
         <div class="home__cards">
           <WikiDocCard v-for="entry in mostAsked" :key="entry.slug" :entry="entry" />
         </div>
@@ -102,10 +102,7 @@ const mostAsked = MOST_ASKED
 }
 
 .home__title {
-  margin: 0;
   font-size: clamp(2rem, 5vw, 2.75rem);
-  font-weight: 700;
-  color: var(--text-primary);
   line-height: 1.15;
 }
 
@@ -139,9 +136,6 @@ const mostAsked = MOST_ASKED
 
 .home__section-title {
   margin: 0 0 var(--space-md);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .home__cards {

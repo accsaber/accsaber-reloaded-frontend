@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import type { LeaderboardResponse } from '@/types/api/users'
 import AdminTable from '@/components/admin/AdminTable.vue'
-import AdminUserMissionsModal from '@/components/admin/AdminUserMissionsModal.vue'
+import AdminUserMissionsModal from '@/views/staff/admin/AdminUserMissionsModal.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
@@ -11,6 +11,8 @@ import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { useCategoryStore } from '@/stores/categories'
 import { playerProfileHref } from '@/utils/subdomain'
+import { formatAccuracy } from '@/utils/formatters'
+import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 
 const categoryStore = useCategoryStore()
 
@@ -62,13 +64,6 @@ watch(page, () => {
 watch(() => categoryStore.loaded, (loaded) => {
   if (loaded) fetchUsers()
 }, { immediate: true })
-
-function handleAdminUserAvatarError(item: LeaderboardResponse, event: Event) {
-  const img = event.currentTarget as HTMLImageElement
-  if (item.cdnAvatarUrl && item.avatarUrl && img.src !== item.avatarUrl) {
-    img.src = item.avatarUrl
-  }
-}
 
 async function setBanned(user: LeaderboardResponse, banned: boolean) {
   actionLoading.value[user.userId] = true
@@ -159,7 +154,7 @@ async function clearCountry() {
   <div class="tab">
     <div class="tab__header">
       <div>
-        <h2 class="tab__title">Users</h2>
+        <h2 class="section-title">Users</h2>
         <p class="tab__meta">{{ totalElements.toLocaleString() }} players</p>
       </div>
       <BaseInput v-model="searchInput" placeholder="Search by name…" style="width: 260px" />
@@ -179,8 +174,8 @@ async function clearCountry() {
         <td class="mono muted right">{{ item.ranking }}</td>
         <td>
           <div class="player-cell">
-            <img :src="item.cdnAvatarUrl ?? item.avatarUrl" class="avatar" :alt="item.userName"
-              loading="lazy" decoding="async" @error="handleAdminUserAvatarError(item, $event)" />
+            <img :src="pickAvatarUrl(item)" class="avatar" :alt="item.userName"
+              loading="lazy" decoding="async" @error="onImageError(pickAvatarFallback(item))($event)" />
             <span>{{ item.userName }}</span>
             <span v-if="bannedSet.has(item.userId)" class="banned-badge">banned</span>
           </div>
@@ -192,7 +187,7 @@ async function clearCountry() {
           </button>
         </td>
         <td class="mono right">{{ item.ap.toFixed(2) }}</td>
-        <td class="mono right">{{ (item.averageAcc * 100).toFixed(2) }}%</td>
+        <td class="mono right">{{ formatAccuracy(item.averageAcc) }}</td>
         <td class="mono right muted">{{ item.rankedPlays }}</td>
         <td class="right tight">
           <div class="actions">
@@ -255,7 +250,6 @@ async function clearCountry() {
   flex-wrap: wrap;
 }
 
-.tab__title { font-size: var(--text-section-heading); font-weight: 600; color: var(--text-primary); margin: 0; }
 .tab__meta { font-size: var(--text-caption); color: var(--text-secondary); margin: 2px 0 0; }
 
 .player-cell { display: flex; align-items: center; gap: var(--space-sm); }

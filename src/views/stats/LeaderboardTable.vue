@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatAccuracy, formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
@@ -47,7 +47,8 @@ function rowTo(row: Record<string, unknown>) {
   if (props.activeTab === 'avg-ap' || props.activeTab === 'most-retried') {
     return mapRowRoute(row)
   }
-  if (row.userId) return { name: 'player-profile', params: { userId: row.userId as string } }
+  const userId = (row.player as UserRefDisplay | undefined)?.id
+  if (userId) return { name: 'player-profile', params: { userId } }
   return undefined
 }
 
@@ -76,7 +77,7 @@ function pushRow(row: Record<string, unknown>) {
 
     <template #cell-map="{ row }">
       <router-link :to="mapRowRoute(row)" class="map-cell map-cell--link" @click.stop>
-        <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="32"
+        <CoverImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="32"
           :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
         <div class="map-cell__info">
           <div class="map-cell__title-row">
@@ -93,7 +94,7 @@ function pushRow(row: Record<string, unknown>) {
     </template>
 
     <template #cell-streak115="{ value }"><span class="stat-accent">{{ value }}</span></template>
-    <template #cell-accuracy="{ value }">{{ ((value as number) * 100).toFixed(2) }}%</template>
+    <template #cell-accuracy="{ value }">{{ formatAccuracy(value as number) }}</template>
     <template #cell-ap="{ value }"><span class="stat-accent">{{ (value as number).toFixed(2) }}</span></template>
     <template #cell-averageWeightedAp="{ value }"><span class="stat-accent">{{ (value as number).toFixed(2) }}</span></template>
     <template #cell-supersededCount="{ value }"><span class="stat-accent">{{ (value as number).toLocaleString() }}</span></template>
@@ -120,7 +121,7 @@ function pushRow(row: Record<string, unknown>) {
         <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
         <UserChip v-if="row.player" :user="(row.player as UserRefDisplay)" size="sm" class="stats-card__player" />
         <router-link v-if="row.songName" class="stats-card__map" :to="mapRowRoute(row)" @click.stop>
-          <GlowImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28"
+          <CoverImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
           <div class="stats-card__map-info">
             <SongTitle class="stats-card__map-name" :name="(row.songName as string)"
@@ -325,7 +326,7 @@ function pushRow(row: Record<string, unknown>) {
 .stats-card__map-meta {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-size: 0.625rem;
   color: var(--text-tertiary);
   overflow: hidden;

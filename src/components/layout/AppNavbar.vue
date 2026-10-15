@@ -2,12 +2,10 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import EventNavPill from '@/components/layout/EventNavPill.vue'
-import GlobalSearchModal from '@/components/domain/GlobalSearchModal.vue'
 import MissionsDropdown from '@/components/domain/MissionsDropdown.vue'
 import NotificationsDropdown from '@/components/domain/NotificationsDropdown.vue'
 import NavbarMoreMenu from '@/components/layout/NavbarMoreMenu.vue'
 import NavbarUserMenu from '@/components/layout/NavbarUserMenu.vue'
-import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useBrandLogo } from '@/composables/useBrandLogo'
 import { useCurrentEvent } from '@/composables/useCurrentEvent'
@@ -20,7 +18,7 @@ import {
   isRankingSubdomain,
   isStaffSubdomain,
 } from '@/utils/subdomain'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
@@ -35,8 +33,15 @@ const {
   countdown: eventCountdown,
 } = useCurrentEvent()
 
+const GlobalSearchModal = defineAsyncComponent(() => import('@/components/domain/GlobalSearchModal.vue'))
+const PseudoLoginModal = defineAsyncComponent(() => import('@/components/domain/PseudoLoginModal.vue'))
+
 const loginModalOpen = ref(false)
 const searchModalOpen = ref(false)
+const loginUsed = ref(false)
+const searchUsed = ref(false)
+watch(loginModalOpen, () => { loginUsed.value = true }, { once: true })
+watch(searchModalOpen, () => { searchUsed.value = true }, { once: true })
 const showStaffLogoutConfirm = ref(false)
 const showSignOutConfirm = ref(false)
 const mobileDrawerOpen = ref(false)
@@ -356,9 +361,9 @@ onUnmounted(() => {
     </section>
   </div>
 
-  <GlobalSearchModal :open="searchModalOpen" @close="searchModalOpen = false" />
+  <GlobalSearchModal v-if="searchUsed" :open="searchModalOpen" @close="searchModalOpen = false" />
 
-  <PseudoLoginModal :open="loginModalOpen" @close="loginModalOpen = false" />
+  <PseudoLoginModal v-if="loginUsed" :open="loginModalOpen" @close="loginModalOpen = false" />
 
   <BaseModal :open="showStaffLogoutConfirm" title="Staff Log Out" max-width="340px"
     @close="showStaffLogoutConfirm = false">
@@ -720,7 +725,7 @@ onUnmounted(() => {
     width: 100%;
     height: 44px;
     flex-shrink: 0;
-    padding: 0 var(--space-md) 0 calc(var(--space-md) + 24px);
+    padding: 0 var(--space-md) 0 calc(var(--space-md) + var(--space-lg));
     background: var(--bg-base);
     border: 1px solid var(--bg-overlay);
     border-radius: var(--radius-btn);

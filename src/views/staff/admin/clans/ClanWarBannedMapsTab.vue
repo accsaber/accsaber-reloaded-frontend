@@ -6,7 +6,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import type { MapResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import { ref, watch } from 'vue'
@@ -66,7 +66,7 @@ watch(page, load, { immediate: true })
 
 <template>
   <div class="banned-maps">
-    <h2 class="banned-maps__title">Banned maps</h2>
+    <h2 class="section-title">Banned maps</h2>
     <SearchBox v-model="search" placeholder="Search maps to ban..." />
     <p v-if="error" class="banned-maps__error" role="alert">{{ error }}</p>
 
@@ -125,13 +125,6 @@ watch(page, load, { immediate: true })
   gap: var(--space-lg);
 }
 
-.banned-maps__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .banned-maps__error {
   margin: 0;
   font-size: var(--text-caption);
@@ -150,7 +143,7 @@ watch(page, load, { immediate: true })
   width: 36px;
   height: 36px;
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .banned-maps__song {

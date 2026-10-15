@@ -60,14 +60,14 @@ function badgeTitle(badge: CampaignBadge): string {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
 .campaign-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   padding: 2px 6px;
   font-family: var(--font-sans);
   font-weight: 700;

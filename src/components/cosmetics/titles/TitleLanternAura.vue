@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleLanternAuraSpec, TitleLanternSpec } from '@/types/api/items'
+import type { TitleLanternAuraSpec, TitleLanternSpec } from '@/types/cosmetics/title'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'

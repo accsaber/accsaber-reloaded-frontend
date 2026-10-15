@@ -107,7 +107,7 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
   align-items: center;
   gap: 1px;
   width: 100%;
-  padding-top: 4px;
+  padding-top: var(--space-xs);
   min-height: 0;
 }
 

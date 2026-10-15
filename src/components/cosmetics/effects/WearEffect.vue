@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { ringGeometry, ringPathD, type EffectMeasure } from '@/utils/cosmetics/effects'
-import { crackPath, seedNumber, wearBites, wearCracks, type WearBite, type WearCrack } from '@/utils/cosmetics/wear'
-import { readWearSpec, type TokenContext } from '@/utils/items'
+import {
+  crackPath,
+  readWearSpec,
+  seedNumber,
+  type WearBite,
+  wearBites,
+  type WearCrack,
+  wearCracks,
+} from '@/utils/cosmetics/wear'
+import { type TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 

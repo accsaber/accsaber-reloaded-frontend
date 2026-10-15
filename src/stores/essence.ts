@@ -1,6 +1,7 @@
-import { getEssenceBalance } from '@/api/items'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+
+const api = () => import('@/api/items')
 
 export const useEssenceStore = defineStore('essence', () => {
   const balance = ref<number | null>(null)
@@ -10,7 +11,7 @@ export const useEssenceStore = defineStore('essence', () => {
   async function fetchBalance(force = false): Promise<void> {
     if (!force && loaded.value) return
     try {
-      const res = await getEssenceBalance()
+      const res = await (await api()).getEssenceBalance()
       balance.value = res.balance
       reserved.value = res.reserved ?? 0
       loaded.value = true

@@ -335,7 +335,7 @@ function handleLinkClick() {
 .mission-row__done {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--success);

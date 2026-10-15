@@ -4,26 +4,27 @@ import TitleBrewLayer from '@/components/cosmetics/titles/TitleBrewLayer.vue'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useThemeBase } from '@/composables/useThemeBase'
 import { useTimeline } from '@/composables/useTimeline'
-import type {
-  TitleAscensionAuraSpec,
-  TitleBlazeSpec,
-  TitleBrewSpec,
-  TitleEclipseSpec,
-  TitleForgeSpec,
-  TitleFrostSpec,
-  TitleLanternSpec,
-  TitleRuneSpec,
-  TitleStateValue,
-  TitleTransmuteSpec,
-  TitleValue,
-} from '@/types/api/items'
-import { darken, lerpHex } from '@/utils/color'
+import type { TitleAscensionAuraSpec, TitleStateValue, TitleValue } from '@/types/cosmetics/title'
+import { darken } from '@/utils/color'
 import { win } from '@/utils/cosmetics/canvasShapes'
 import { boilCharStyle, boilStep } from '@/utils/cosmetics/titleBoil'
-import { eclipsePhase } from '@/utils/cosmetics/eclipseCycle'
-import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, type TitleAuraLinks } from '@/utils/cosmetics/titleAura'
+import {
+  blazeCharStyle,
+  brewCharStyle,
+  eclipseCharStyle,
+  forgeCharStyle,
+  frostCharStyle,
+  lanternCharStyle,
+  runeActive,
+  runeCharAt,
+  runeCharStyle,
+  TITLE_HIGHLIGHT,
+  TITLE_INK,
+  transmuteCharStyle,
+  type BrewSplash,
+} from '@/utils/cosmetics/titleEffects'
 import { hauntCharStyle } from '@/utils/cosmetics/titleHaunt'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
@@ -32,11 +33,11 @@ import {
   gradientToCss,
   interpolateTitleState,
   isAnimated,
-  lerpColor,
   pickInterpolatedState,
-} from '@/utils/items'
+} from '@/utils/cosmetics/interpolate'
 import { randBetween as rand, sinHash01 } from '@/utils/random'
 import { computed, ref, useId, watch } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   value: TitleValue
@@ -60,8 +61,6 @@ type GlyphFx<K extends GlyphKey> = (
 ) => CharStyle
 
 type GlyphEffect = (value: TitleValue, reduced: boolean) => ((i: number) => CharStyle) | null
-
-const INK = '#e9e3d0'
 
 const reducedMotion = useReducedMotion()
 
@@ -96,203 +95,24 @@ const effectiveStates = computed<TitleStateValue[]>(() => {
   }))
 })
 
-function forgeCharStyle(tNow: number, i: number, _n: number, spec: TitleForgeSpec): CharStyle {
-  const interval = spec.intervalMs ?? 8000
-  const stagger = spec.staggerMs ?? 180
-  const stamp = spec.stampMs ?? 130
-  const cool = spec.coolMs ?? 1100
-  const rawMs = 150
-  const raw = tone(spec.lightRaw, spec.raw, '#46566c')
-  const hot = tone(spec.lightHot, spec.hot, '#ffffff')
-  const heat = tone(spec.lightHeat, spec.heat, '#ff8a5c')
-  const base = state.value.color
-  let local = (tNow % interval) - (interval * 0.72 + i * stagger)
-  if (local < -rawMs) local += interval
-  if (local >= -rawMs && local < 0) return { color: raw, textShadow: 'none' }
-  if (local >= 0 && local < stamp) return { color: hot, transform: 'translateY(6%)', textShadow: `0 0 0.35em ${hot}` }
-  if (local >= stamp && local < stamp + cool) {
-    const p = (local - stamp) / cool
-    return {
-      color: base ? lerpColor(heat, base, p) : heat,
-      textShadow: p < 0.85 ? `0 0 ${(0.3 * (1 - p)).toFixed(3)}em ${heat}` : 'none',
-    }
-  }
-  return {}
-}
-
-function blazeCharStyle(tNow: number, i: number, n: number, spec: TitleBlazeSpec): CharStyle {
-  const interval = spec.intervalMs ?? 8000
-  const burn = spec.burnMs ?? 900
-  const die = spec.dieMs ?? 700
-  const cycle = Math.floor(tNow / interval)
-  const local = tNow % interval
-  const ember = tone(spec.lightEmber, spec.ember, '#ff8a5c')
-  const flame = tone(spec.lightFlame, spec.flame, '#ffb35c')
-  const hot = tone(spec.lightHot, spec.hot, '#ffd9a0')
-  const origin = Math.floor(sinHash01(cycle + 7) * n)
-  const start = interval * 0.55 + Math.abs(i - origin) * (spec.spreadMs ?? 120)
-  const extend = sinHash01(cycle * 13 + i) * 500
-  let burnAmt = 0
-  if (local >= start && local < start + burn + extend) burnAmt = Math.min(1, (local - start) / 140)
-  else if (local >= start + burn + extend) burnAmt = Math.max(0, 1 - (local - start - burn - extend) / die)
-  if (burnAmt > 0.02) {
-    const flick = 0.75 + 0.25 * Math.sin(tNow * 0.021 + i * 5.3)
-    const c = Math.min(1, burnAmt * flick)
-    return {
-      color: lerpColor(ember, c > 0.7 ? hot : flame, c),
-      transform: `translateY(${(-3.2 * burnAmt * flick).toFixed(2)}%)`,
-      textShadow: `0 0 ${(0.45 * c).toFixed(2)}em ${flame}, 0 -0.08em ${(0.28 * c).toFixed(2)}em ${hot}`,
-    }
-  }
-  const breathe = 0.5 + 0.5 * Math.sin(tNow * 0.0012 * (1 + sinHash01(i * 3) * 0.7) + i * 2.1)
-  return { textShadow: `0 0 ${(0.1 + 0.16 * breathe).toFixed(2)}em ${flame}` }
-}
-
-function frostCharStyle(tNow: number, i: number, n: number, spec: TitleFrostSpec): CharStyle {
-  const interval = spec.intervalMs ?? 9000
-  const creep = spec.creepMs ?? 1400
-  const hold = spec.holdMs ?? 2200
-  const thaw = spec.thawMs ?? 1200
-  const frost = tone(spec.lightFrost, spec.frost, '#e0f2fe')
-  const glint = tone(spec.lightGlint, spec.glint, '#ffffff')
-  const cycle = Math.floor(tNow / interval)
-  const local = tNow % interval
-  const order = sinHash01(cycle * 5 + 2) < 0.5 ? i : n - 1 - i
-  const start = interval * 0.3 + (order / Math.max(1, n - 1)) * creep
-  let amt = 0
-  if (local >= start && local < start + 260) amt = (local - start) / 260
-  else if (local >= start + 260 && local < start + creep + hold) amt = 1
-  else if (local >= start + creep + hold && local < start + creep + hold + thaw) amt = 1 - (local - start - creep - hold) / thaw
-  if (amt <= 0.02) return {}
-  const base = state.value.color ?? frost
-  const shimmer = 0.5 + 0.5 * Math.sin(tNow * 0.011 + i * 2.7)
-  return {
-    color: lerpColor(base, frost, amt),
-    textShadow: `0 0 ${(0.12 + 0.22 * amt * shimmer).toFixed(2)}em ${glint}, 0 -0.04em 0 ${lerpColor(base, glint, amt * 0.5)}`,
-  }
-}
-
-function lanternCharStyle(tNow: number, i: number, _n: number, spec: TitleLanternSpec): CharStyle {
-  const dim = tone(spec.lightDim, spec.dim, '#7a3a10')
-  const lit = tone(spec.lightLit, spec.lit, '#ffb347')
-  const glow = tone(spec.lightGlow, spec.glow, '#e8781e')
-  const level = lanternLevel(tNow / 1000, i * 0.9, spec)
-  return {
-    color: lerpHex(dim, lit, Math.min(1, Math.max(0, (level - 0.2) / 0.8))),
-    textShadow: `0 0 ${(2 + 10 * level).toFixed(1)}px ${withAlpha(glow, 0.75 * level)}`,
-  }
-}
-
-function eclipseCharStyle(tNow: number, i: number, n: number, spec: TitleEclipseSpec): CharStyle {
-  const t = tNow / 1000
-  const ph = eclipsePhase(t)
-  const dark = spec.dark
-  const corona = tone(spec.lightCorona, spec.corona, spec.corona)
-  const bead = spec.bead
-  const base = state.value.color ?? corona
-  const ring = ph.flash > 0.5 && i === Math.floor(sinHash01(ph.cycle * 17 + 3) * Math.max(1, n)) ? (ph.flash - 0.5) * 2 : 0
-  const beads = ph.flash > 0 && ph.flash <= 0.5 && i % 2 === 0 ? ph.flash * 2 : 0
-  const shadows: string[] = []
-  if (ph.tot > 0) shadows.push(`0 0 ${(spec.annular ? 0.08 + 0.1 * ph.tot : 0.12 + 0.3 * ph.tot).toFixed(2)}em ${withAlpha(corona, 0.85 * ph.tot)}`)
-  if (ring > 0) shadows.push(`0 0 ${(0.6 * ring).toFixed(2)}em ${withAlpha(bead, ring)}`, `0 0 0.15em ${withAlpha(bead, ring)}`)
-  if (beads > 0) shadows.push(`0.06em -0.08em 0 ${withAlpha(bead, beads)}`)
-  const out: CharStyle = {
-    color: ring > 0 ? lerpHex(dark, bead, ring) : lerpHex(base, dark, ph.cover),
-    textShadow: shadows.length ? shadows.join(', ') : 'none',
-  }
-  if (spec.annular && ph.tot > 0) {
-    out.WebkitTextStroke = `${(0.07 * ph.tot).toFixed(3)}em ${withAlpha(corona, ph.tot)}`
-    out.paintOrder = 'stroke fill'
-  }
-  return out
-}
-
-function transmuteCharStyle(tNow: number, i: number, _n: number, spec: TitleTransmuteSpec): CharStyle {
-  const interval = spec.intervalMs ?? 7000
-  const lead = tone(spec.lightLead, spec.lead, '#6b7280')
-  const gold = tone(spec.lightGold, spec.gold, state.value.color ?? '#f2c94c')
-  const glint = tone(spec.lightGlint, spec.glint, '#fff7dd')
-  const cycle = Math.floor(tNow / interval)
-  const local = tNow % interval
-  const failed = sinHash01(cycle * 19 + i * 7) < (spec.failChance ?? 0.2)
-  const dropAt = interval * 0.25
-  const start = interval * 0.4 + i * (spec.stepMs ?? 220)
-  if (local < dropAt) return {}
-  if (local < dropAt + 300) return { color: lerpColor(gold, lead, (local - dropAt) / 300) }
-  if (local < start || failed) return { color: lead, textShadow: 'none' }
-  const p = Math.min(1, (local - start) / 320)
-  return {
-    color: lerpColor(lead, gold, p),
-    textShadow: p < 1 ? `0 0 ${(0.4 * Math.sin(p * Math.PI)).toFixed(2)}em ${glint}` : 'none',
-  }
-}
-
-const RUNE_GLYPHS = ['ᚠ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚺ', 'ᛁ', 'ᛃ', 'ᛈ', 'ᛉ', 'ᛊ', 'ᛏ', 'ᛒ', 'ᛖ', 'ᛗ', 'ᛚ', 'ᛞ', 'ᛟ']
-
 const runeSpec = computed(() => motionSpec(props.value.rune))
 
-function runeActive(i: number): boolean {
-  const spec = runeSpec.value
-  if (!spec) return false
-  const interval = spec.intervalMs ?? 2600
-  const cycle = Math.floor(tMs.value / interval)
-  const local = tMs.value % interval
-  const victim = Math.floor(sinHash01(cycle * 23 + 5) * props.value.text.length)
-  return i === victim && local >= interval * 0.5 && local < interval * 0.5 + (spec.holdMs ?? 320) && props.value.text[i] !== ' '
-}
-
-function runeCharStyle(_t: number, i: number, _n: number, spec: TitleRuneSpec): CharStyle {
-  if (!runeActive(i)) return {}
-  const color = tone(spec.lightColor, spec.color, '#e9d5ff')
-  return { color, textShadow: `0 0 0.35em ${color}` }
-}
-
 const brewLiquid = ref('')
-const brewSplashes = ref<{ x: number; at: number }[]>([])
+const brewSplashes = ref<BrewSplash[]>([])
 
 function onBrewSplash(x: number): void {
   const t = tMs.value / 1000
   brewSplashes.value = [...brewSplashes.value.filter((sp) => t - sp.at < 1.5), { x, at: t }]
 }
 
-function brewBob(tNow: number, i: number, n: number, spec: TitleBrewSpec): { bob: number; rot: number } {
-  if (reducedMotion.value) return { bob: 0, rot: 0 }
-  const t = tNow / 1000
-  const amp = spec.bobEm ?? 0.07
-  let bob = Math.sin(t * 2.1 + i * 0.9) * amp
-  for (const sp of brewSplashes.value) {
-    const age = t - sp.at
-    if (age < 0 || age > 1.2) continue
-    const near = Math.max(0, 1 - Math.abs((i + 0.5) / n - sp.x) * 4)
-    bob -= near * Math.exp(-age * 3) * Math.sin(age * 14) * amp * 2.4
-  }
-  return { bob, rot: Math.sin(t * 1.3 + i * 1.7) * 2.5 }
-}
-
-function brewCharStyle(tNow: number, i: number, n: number, spec: TitleBrewSpec): CharStyle {
-  const { bob, rot } = brewBob(tNow, i, n, spec)
-  const first = spec.ingredients[0]
-  const top = state.value.color ?? INK
-  const sub = lerpHex(top, brewLiquid.value || tone(first?.lightColor, first?.color, top), 0.32)
-  const waterline = (((spec.surface ?? 0.66) - bob) * 100).toFixed(1)
-  return {
-    display: 'inline-block',
-    transform: `translateY(${bob.toFixed(3)}em) rotate(${rot.toFixed(2)}deg)`,
-    background: `linear-gradient(to bottom, ${top} 0 ${waterline}%, ${sub} ${waterline}% 100%)`,
-    '-webkit-background-clip': 'text',
-    'background-clip': 'text',
-    color: 'transparent',
-  }
-}
-
 function liftCharStyle(spec: TitleAscensionAuraSpec, i: number): CharStyle {
   const interval = (spec.intervalS ?? 7) * 1000
   const surge = win((tMs.value % interval) / interval, 0.74, 0.95)
   if (surge < 0) return {}
-  const p = Math.max(0, Math.min(1, surge * 1.35 - i * 0.055))
+  const p = clamp01(surge * 1.35 - i * 0.055)
   const pulse = Math.sin(Math.PI * p)
   if (pulse <= 0.02) return {}
-  const shine = tone(spec.lightShine, spec.shine, '#ffffff')
+  const shine = tone(spec.lightShine, spec.shine, TITLE_HIGHLIGHT)
   const out: CharStyle = {
     transform: `translateY(${(-0.3 * pulse).toFixed(3)}em)`,
     textShadow: `0 0 ${(0.35 * pulse).toFixed(2)}em ${shine}`,
@@ -305,7 +125,7 @@ function glyph<K extends GlyphKey>(key: K, fx: GlyphFx<K>, still = false): Glyph
   return (value, reduced) => {
     const spec = value[key]
     if (!spec || !spec.enabled || (reduced && !still)) return null
-    return (i) => fx(tMs.value, i, value.text.length, spec, isLightBase.value, state.value.color ?? INK)
+    return (i) => fx(tMs.value, i, value.text.length, spec, isLightBase.value, state.value.color ?? TITLE_INK)
   }
 }
 
@@ -320,7 +140,7 @@ const boilTick = computed(() => {
 
 const boilGlyph: GlyphEffect = () => {
   const spec = boilSpec.value
-  return spec ? (i) => boilCharStyle(boilTick.value, i, spec, state.value.color ?? INK) : null
+  return spec ? (i) => boilCharStyle(boilTick.value, i, spec, state.value.color ?? TITLE_INK) : null
 }
 
 const liftGlyph: GlyphEffect = (value, reduced) => {
@@ -329,7 +149,7 @@ const liftGlyph: GlyphEffect = (value, reduced) => {
 }
 
 const GLYPH_EFFECTS: GlyphEffect[] = [
-  glyph('brew', brewCharStyle, true),
+  glyph('brew', (t, i, n, spec, light, base) => brewCharStyle(t, i, n, spec, light, base, { liquid: brewLiquid.value, splashes: brewSplashes.value, still: reducedMotion.value }), true),
   glyph('sprout', sproutCharStyle),
   glyph('ascent', ascentCharStyle),
   glyph('slice', sliceCharStyle),
@@ -355,14 +175,14 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('devour', devourCharStyle),
   glyph('shock', shockCharStyle),
   glyph('sear', searCharStyle),
-  glyph('forge', forgeCharStyle),
+  glyph('forge', (t, i, n, spec, light) => forgeCharStyle(t, i, n, spec, light, state.value.color)),
   glyph('blaze', blazeCharStyle),
   glyph('haunt', hauntCharStyle),
-  glyph('frost', frostCharStyle),
+  glyph('frost', (t, i, n, spec, light) => frostCharStyle(t, i, n, spec, light, state.value.color)),
   glyph('lantern', lanternCharStyle),
-  glyph('eclipse', eclipseCharStyle),
-  glyph('transmute', transmuteCharStyle),
-  glyph('rune', runeCharStyle),
+  glyph('eclipse', (t, i, n, spec, light) => eclipseCharStyle(t, i, n, spec, light, state.value.color)),
+  glyph('transmute', (t, i, n, spec, light) => transmuteCharStyle(t, i, n, spec, light, state.value.color)),
+  glyph('rune', (t, i, _n, spec, light) => (runeActive(t, i, props.value.text, spec) ? runeCharStyle(spec, light) : {})),
   boilGlyph,
   liftGlyph,
 ]
@@ -390,9 +210,8 @@ const torchSpec = computed(() => motionSpec(props.value.torch))
 
 function glyphText(ch: string, i: number): string {
   if (reelSpec.value) return reelCharAt(tMs.value, i, ch, reelSpec.value)
-  if (!runeActive(i)) return ch
-  const cycle = Math.floor(tMs.value / (runeSpec.value?.intervalMs ?? 2600))
-  return RUNE_GLYPHS[Math.floor(sinHash01(cycle * 29 + i) * RUNE_GLYPHS.length)]
+  if (!runeSpec.value || !runeActive(tMs.value, i, props.value.text, runeSpec.value)) return ch
+  return runeCharAt(tMs.value, i, runeSpec.value)
 }
 
 const activeQuestMarkers = computed(() =>
@@ -474,8 +293,8 @@ const BAND_WIDTH_PCT = 16
 
 const glistenPhase = computed<{ active: boolean; leftPct: number; highlight: string }>(() => {
   const g = state.value.glisten
-  if (!g?.enabled || reducedMotion.value) return { active: false, leftPct: 0, highlight: '#ffffff' }
-  const highlight = g.highlight ?? '#ffffff'
+  if (!g?.enabled || reducedMotion.value) return { active: false, leftPct: 0, highlight: TITLE_HIGHLIGHT }
+  const highlight = g.highlight ?? TITLE_HIGHLIGHT
   const interval = g.intervalMs ?? 5000
   const duration = g.durationMs ?? 800
   const cyclePos = tMs.value % interval
@@ -648,7 +467,7 @@ const joltNow = computed(() => {
 
 const joltFlashColor = computed(() => {
   const spec = joltSpec.value
-  return tone(spec?.lightFlash, spec?.flash, '#ffffff')
+  return tone(spec?.lightFlash, spec?.flash, TITLE_HIGHLIGHT)
 })
 
 const joltStyle = computed<Record<string, string> | undefined>(() => {
@@ -712,7 +531,7 @@ const forgeHeadStyle = computed<Record<string, string> | undefined>(() => {
   const local = (tMs.value % interval) - startMs
   const span = endMs - startMs
   if (local < 0 || local > span) return undefined
-  const hot = tone(spec.lightHot, spec.hot, '#ffffff')
+  const hot = tone(spec.lightHot, spec.hot, TITLE_HIGHLIGHT)
   return {
     left: `${(local / span) * 100}%`,
     '--fx-c': hot,
@@ -779,7 +598,7 @@ const crustEmbers = computed<{ id: number; style: Record<string, string> }[]>(()
   const out = []
   for (let i = 0; i < 3; i++) {
     const delay = i * 0.12
-    const q = Math.max(0, Math.min(1, (p - delay) / (1 - delay)))
+    const q = clamp01((p - delay) / (1 - delay))
     if (q <= 0 || q >= 1) continue
     out.push({
       id: i,
@@ -800,7 +619,7 @@ const spectrumStyle = computed<Record<string, string> | undefined>(() => {
   if (!spec?.enabled || reducedMotion.value) return undefined
   const interval = spec.intervalMs ?? 5000
   const colors = tone(spec.lightColors, spec.colors, ['#f472b6', '#62d98a', '#e9e7f4', '#8da3c0', '#ff5c33'])
-  const fused = tone(spec.lightFused, spec.fused, '#ffffff')
+  const fused = tone(spec.lightFused, spec.fused, TITLE_HIGHLIGHT)
   const offset = spec.offsetPx ?? 14
   const c = (tMs.value % interval) / interval
   const split = win(c, 0.6, 0.72)
@@ -937,7 +756,7 @@ function flashStyle(fl: FlashInstance): Record<string, string> {
   const dur = spec?.durationMs ?? 260
   const p = Math.min(1, (tMs.value - fl.bornAt) / dur)
   return {
-    '--fx-c': tone(spec?.lightColor, spec?.color, '#ffffff'),
+    '--fx-c': tone(spec?.lightColor, spec?.color, TITLE_HIGHLIGHT),
     left: `${fl.xPct}%`,
     top: `${fl.yPct}%`,
     width: `${fl.lenEm}em`,
@@ -952,7 +771,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   const p = Math.min(1, (tMs.value - sp.bornAt) / fade)
   const wave = Math.sin(Math.PI * p)
   return {
-    color: tone(spec?.lightColor, spec?.color, '#ffffff'),
+    color: tone(spec?.lightColor, spec?.color, TITLE_HIGHLIGHT),
     left: `${sp.xPct}%`,
     top: `${sp.yPct}%`,
     width: `${sp.sizePx}px`,

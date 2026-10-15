@@ -19,10 +19,8 @@ export interface TradeItemRef {
 
 export interface TradeResponse {
   id: string
-  fromUserId: string
-  toUserId: string
-  fromUser: PlayerRef | null
-  toUser: PlayerRef | null
+  fromUser: PlayerRef
+  toUser: PlayerRef
   offeredItems: TradeItemRef[]
   requestedItems: TradeItemRef[]
   offeredEssence: number

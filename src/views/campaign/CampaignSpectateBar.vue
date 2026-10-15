@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import UserChip from '@/components/domain/UserChip.vue'
-import type { CampaignLeaderboardPlayer } from '@/types/api/campaigns'
-import { toUserRef } from '@/utils/mappers'
+import type { PlayerRef } from '@/types/api/common'
 
 defineProps<{
-  player: CampaignLeaderboardPlayer | null
+  player: PlayerRef | null
   name: string
   userId: string | null
   loading: boolean
@@ -34,7 +33,7 @@ const emit = defineEmits<{ stop: [] }>()
     <span class="spectate__rule" aria-hidden="true" />
 
     <p class="spectate__who" role="status">
-      <UserChip v-if="player" :user="toUserRef(player)" size="xs" />
+      <UserChip v-if="player" :user="player" size="xs" />
       <span v-else class="spectate__name">{{ name }}</span>
     </p>
 
@@ -173,7 +172,7 @@ const emit = defineEmits<{ stop: [] }>()
 .spectate__profile {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   flex-shrink: 0;
   font-family: var(--font-sans);
   font-size: 0.625rem;
@@ -193,7 +192,7 @@ const emit = defineEmits<{ stop: [] }>()
 @media (max-width: 860px) {
   .spectate {
     flex-wrap: wrap;
-    row-gap: 4px;
+    row-gap: var(--space-xs);
   }
 
   .spectate__rule {

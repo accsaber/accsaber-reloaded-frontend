@@ -3,6 +3,7 @@ import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/compl
 import { formatChartDuration } from '@/utils/chartMetadata'
 import { CX_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
 import { formatAccuracy, formatCount, formatFixed, formatRelativeDate } from '@/utils/formatters'
+import { clamp } from '@/utils/math'
 import {
   COEFFICIENT_ROWS,
   COEFFICIENT_SETS,
@@ -107,7 +108,7 @@ const boardLine = computed(() => {
   if (!weight || weight <= 0 || chartComplexity == null || boardComplexity == null) return null
   const move = weight * (boardComplexity - chartComplexity)
   const bound = props.maxNudge ?? null
-  const clamped = bound == null ? move : Math.max(-bound, Math.min(bound, move))
+  const clamped = bound == null ? move : clamp(move, -bound, bound)
   const limit = bound == null ? '' : `, ±${formatFixed(bound, 2)}`
   const inner = `${formatFixed(weight, 2)} x (${formatFixed(boardComplexity, CX_DECIMALS)} − ${formatFixed(chartComplexity, CX_DECIMALS)})`
   const final = formatFixed(chartComplexity + clamped, CX_DECIMALS)
@@ -145,7 +146,7 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 
     <template v-else>
       <div v-for="group in groups" :key="group.key" class="estimate-inputs__group">
-        <h5 class="estimate-inputs__group-title">{{ group.title }}</h5>
+        <h5 class="estimate-inputs__group-title field-label">{{ group.title }}</h5>
         <dl class="estimate-inputs__grid">
           <div v-for="field in group.fields" :key="field.key" class="estimate-inputs__field">
             <dt class="estimate-inputs__label">{{ field.label }}</dt>
@@ -156,7 +157,7 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 
       <div v-if="coefficientSets.length" class="estimate-inputs__coefficients">
         <div v-for="set in coefficientSets" :key="set.key" class="estimate-inputs__group">
-          <h5 class="estimate-inputs__group-title">{{ set.title }}</h5>
+          <h5 class="estimate-inputs__group-title field-label">{{ set.title }}</h5>
           <dl class="estimate-inputs__grid">
             <div v-for="row in set.rows" :key="row.key" class="estimate-inputs__field">
               <dt class="estimate-inputs__label">{{ row.label }}</dt>
@@ -237,11 +238,6 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 
 .estimate-inputs__group-title {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .estimate-inputs__coefficients {

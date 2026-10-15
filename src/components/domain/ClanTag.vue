@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import BorderDecals from '@/components/cosmetics/borders/BorderDecals.vue'
-import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import type { PublicClanResponse } from '@/types/api/clans'
-import type { BorderShapePathValue, ClanTagCap, ClanTagDecal } from '@/types/api/items'
+import type { BorderShapePathValue } from '@/types/cosmetics/border'
+import type { ClanTagCap, ClanTagDecal } from '@/types/cosmetics/clan'
 import { fillMeanLuminance } from '@/utils/cosmetics/overlayCanvas'
-import { annotateEffectLayerStacks, readClanEquipped, readClanTagCardValue, valueFxLayers } from '@/utils/items'
-import { computed } from 'vue'
+import { annotateEffectLayerStacks, valueFxLayers } from '@/utils/cosmetics/effectLayers'
+import { readClanEquipped } from '@/utils/items'
+import { readClanTagCardValue } from '@/utils/cosmetics/readers'
+import { computed, defineAsyncComponent } from 'vue'
 import { RouterLink } from 'vue-router'
+
+const BorderDecals = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderDecals.vue'))
+const ModifierCompositions = defineAsyncComponent(() => import('@/components/cosmetics/effects/ModifierCompositions.vue'))
 
 export type ClanTagSize = 'xs' | 'sm' | 'md' | 'lg'
 

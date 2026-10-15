@@ -1,144 +1,35 @@
 <script setup lang="ts">
-import { computed, onUnmounted, nextTick, ref } from 'vue'
+import { useFloatingPanel } from '@/composables/useFloatingPanel'
 
 defineProps<{
   label: string
   title: string
 }>()
 
-const POPUP_WIDTH = 260
-const SCROLL_OPTS: AddEventListenerOptions = { capture: true, passive: true }
-
-type Mode = 'hidden' | 'hover' | 'locked'
-
-const mode = ref<Mode>('hidden')
-const visible = computed(() => mode.value !== 'hidden')
-const locked = computed(() => mode.value === 'locked')
-const triggerRef = ref<HTMLElement | null>(null)
-const popupRef = ref<HTMLElement | null>(null)
-const popupStyle = ref<Record<string, string>>({})
-
-let hoverTimer: ReturnType<typeof setTimeout> | null = null
-let hideTimer: ReturnType<typeof setTimeout> | null = null
-
-function updatePosition() {
-  const el = triggerRef.value
-  if (!el) return
-  const rect = el.getBoundingClientRect()
-  const margin = 8
-  const maxLeft = window.innerWidth - POPUP_WIDTH - margin
-  const popupHeight = popupRef.value?.offsetHeight ?? 0
-  const spaceBelow = window.innerHeight - rect.bottom - margin
-  const spaceAbove = rect.top - margin
-  const flipUp =
-    popupHeight > 0 ? spaceBelow < popupHeight && spaceAbove > spaceBelow : spaceBelow < spaceAbove
-  const style: Record<string, string> = {
-    position: 'fixed',
-    left: `${Math.max(margin, Math.min(rect.left, maxLeft))}px`,
-    width: `${POPUP_WIDTH}px`,
-  }
-  if (flipUp) style.bottom = `${window.innerHeight - rect.top + margin}px`
-  else style.top = `${rect.bottom + margin}px`
-  popupStyle.value = style
-}
-
-function onScrollOrResize() {
-  if (visible.value) updatePosition()
-}
-
-function onOutsidePointer(event: PointerEvent) {
-  const target = event.target as Node | null
-  if (!target) return
-  if (triggerRef.value?.contains(target) || popupRef.value?.contains(target)) return
-  close()
-}
-
-function attachListeners() {
-  window.addEventListener('scroll', onScrollOrResize, SCROLL_OPTS)
-  window.addEventListener('resize', onScrollOrResize, { passive: true })
-  document.addEventListener('pointerdown', onOutsidePointer, true)
-}
-
-function detachListeners() {
-  window.removeEventListener('scroll', onScrollOrResize, SCROLL_OPTS)
-  window.removeEventListener('resize', onScrollOrResize)
-  document.removeEventListener('pointerdown', onOutsidePointer, true)
-}
-
-function clearTimers() {
-  if (hoverTimer) {
-    clearTimeout(hoverTimer)
-    hoverTimer = null
-  }
-  if (hideTimer) {
-    clearTimeout(hideTimer)
-    hideTimer = null
-  }
-}
-
-function show(next: Mode) {
-  updatePosition()
-  mode.value = next
-  attachListeners()
-  void nextTick(updatePosition)
-}
-
-function openHover() {
-  if (visible.value) return
-  show('hover')
-}
-
-function close() {
-  if (!visible.value) return
-  mode.value = 'hidden'
-  detachListeners()
-}
-
-function scheduleHide() {
-  if (locked.value) return
-  if (hideTimer) clearTimeout(hideTimer)
-  hideTimer = setTimeout(close, 160)
-}
-
-function onMouseEnter() {
-  if (hideTimer) {
-    clearTimeout(hideTimer)
-    hideTimer = null
-  }
-  if (visible.value) return
-  hoverTimer = setTimeout(openHover, 350)
-}
-
-function onMouseLeave() {
-  if (hoverTimer) {
-    clearTimeout(hoverTimer)
-    hoverTimer = null
-  }
-  scheduleHide()
-}
-
-function onToggle() {
-  clearTimers()
-  if (locked.value) close()
-  else show('locked')
-}
-
-onUnmounted(() => {
-  clearTimers()
-  detachListeners()
-})
-
+const {
+  isOpen,
+  locked,
+  triggerRef,
+  panelRef,
+  panelStyle,
+  close,
+  toggle,
+  onTriggerEnter,
+  onTriggerLeave,
+  onPanelEnter,
+  onPanelLeave,
+} = useFloatingPanel({ width: 260, gap: 8, hover: { openDelay: 350, closeDelay: 160 } })
 </script>
 
 <template>
-  <span ref="triggerRef" class="card-popover" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <span ref="triggerRef" class="card-popover" @mouseenter="onTriggerEnter" @mouseleave="onTriggerLeave">
     <button
       type="button"
       class="card-popover__btn"
-      :class="{ 'card-popover__btn--active': visible }"
-      :aria-expanded="visible"
+      :class="{ 'card-popover__btn--active': isOpen }"
+      :aria-expanded="isOpen"
       :aria-label="`Show ${title.toLowerCase()}`"
-      @click.stop.prevent="onToggle"
+      @click.stop.prevent="toggle"
       @keydown.escape="close"
     >
       {{ label }}
@@ -160,14 +51,14 @@ onUnmounted(() => {
     <Teleport to="body">
       <Transition name="card-popover">
         <div
-          v-if="visible"
-          ref="popupRef"
+          v-if="isOpen"
+          ref="panelRef"
           class="card-popover__popup"
-          :style="popupStyle"
+          :style="panelStyle"
           role="dialog"
           :aria-label="title"
-          @mouseenter="clearTimers"
-          @mouseleave="scheduleHide"
+          @mouseenter="onPanelEnter"
+          @mouseleave="onPanelLeave"
         >
           <div class="card-popover__head">
             <span class="card-popover__title">{{ title }}</span>
@@ -213,7 +104,7 @@ onUnmounted(() => {
 .card-popover__btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   padding: 1px 6px;
   font-family: var(--font-sans);
   font-size: 0.6875rem;

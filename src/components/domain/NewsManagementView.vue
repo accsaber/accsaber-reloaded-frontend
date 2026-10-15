@@ -16,6 +16,7 @@ import type { Page } from '@/types/pagination'
 import type { NewsStatus, NewsType } from '@/types/enums'
 import { NEWS_TYPE_LABELS, NEWS_TYPE_ORDER } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
+import { formatShortDate } from '@/utils/formatters'
 
 const props = defineProps<{
   title: string
@@ -144,11 +145,6 @@ function onImageChanged(updated: NewsResponse) {
   if (idx !== -1) items.value[idx] = updated
 }
 
-function formatDate(iso: string | null) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
 const STATUS_STYLE: Record<NewsStatus, string> = {
   DRAFT: 'var(--text-tertiary)',
   PUBLISHED: 'var(--success)',
@@ -160,7 +156,7 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
   <div class="news-mgmt">
     <div class="news-mgmt__header">
       <div>
-        <h2 class="news-mgmt__title">{{ title }}</h2>
+        <h2 class="section-title">{{ title }}</h2>
         <p class="news-mgmt__meta">{{ meta ?? `${totalElements} articles` }}</p>
       </div>
       <div class="news-mgmt__actions">
@@ -210,9 +206,9 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
             </svg>
           </span>
         </td>
-        <td class="muted">{{ item.staffUsername ?? '-' }}</td>
-        <td class="mono muted">{{ formatDate(item.publishedAt) }}</td>
-        <td class="mono muted">{{ formatDate(item.updatedAt) }}</td>
+        <td class="muted">{{ item.author.username ?? '-' }}</td>
+        <td class="mono muted">{{ formatShortDate(item.publishedAt, '-') }}</td>
+        <td class="mono muted">{{ formatShortDate(item.updatedAt, '-') }}</td>
         <td class="right">
           <div class="news-mgmt__row-actions">
             <BaseButton size="sm" @click="openEdit(item)">Edit</BaseButton>
@@ -267,13 +263,6 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
   flex-wrap: wrap;
 }
 
-.news-mgmt__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .news-mgmt__meta {
   font-size: var(--text-caption);
   color: var(--text-secondary);
@@ -313,7 +302,7 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
   font-size: var(--text-caption);
   font-family: var(--font-mono);
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   border: 1px solid;
   background: transparent;

@@ -1,11 +1,7 @@
 import type {
-  ApproveReweightRequest,
-  ApproveUnrankRequest,
   BulkReweightRequest,
-  BulkUnrankRequest,
   ImportMapFromLeaderboardIdsRequest,
   UpdateMapComplexityRequest,
-  UpdateMapStatusRequest,
 } from '@/types/api/admin'
 import type {
   AutoCriteriaCheckResponse,
@@ -41,18 +37,6 @@ export function getRankingMap(mapId: string): Promise<MapResponse> {
   return get<MapResponse>(`/ranking/maps/${mapId}`)
 }
 
-export function getRankingMapByHash(songHash: string): Promise<MapResponse> {
-  return get<MapResponse>(`/ranking/maps/hash/${songHash}`)
-}
-
-export function getRankingMapByCode(beatsaverCode: string): Promise<MapResponse> {
-  return get<MapResponse>(`/ranking/maps/by-code/${beatsaverCode}`)
-}
-
-export function getRankingMapDifficulties(mapId: string): Promise<MapDifficultyResponse[]> {
-  return get<MapDifficultyResponse[]>(`/ranking/maps/${mapId}/difficulties`)
-}
-
 export function getRankingDifficulty(difficultyId: string): Promise<MapDifficultyResponse> {
   return get<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}`)
 }
@@ -72,13 +56,6 @@ export function getDeactivatedDifficulties(
 
 export function importMap(req: ImportMapFromLeaderboardIdsRequest): Promise<MapDifficultyResponse> {
   return post<MapDifficultyResponse>('/ranking/maps/import', req)
-}
-
-export function updateMapStatus(
-  difficultyId: string,
-  req: UpdateMapStatusRequest,
-): Promise<MapDifficultyResponse> {
-  return patch<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/status`, req)
 }
 
 export function updateMapComplexity(
@@ -123,21 +100,6 @@ export function deactivateMapDifficulty(difficultyId: string): Promise<void> {
   return patch<void>(`/ranking/maps/difficulties/${difficultyId}/deactivate`)
 }
 
-export function approveReweight(
-  difficultyId: string,
-  req: ApproveReweightRequest,
-): Promise<MapDifficultyResponse> {
-  return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/reweight`, req)
-}
-
 export function bulkReweight(req: BulkReweightRequest): Promise<void> {
   return post<void>('/ranking/maps/difficulties/bulk-reweight', req)
-}
-
-export function approveUnrank(req: ApproveUnrankRequest): Promise<void> {
-  return post<void>('/ranking/maps/difficulties/unrank', req)
-}
-
-export function bulkUnrank(req: BulkUnrankRequest): Promise<void> {
-  return post<void>('/ranking/maps/difficulties/unrank/bulk', req)
 }

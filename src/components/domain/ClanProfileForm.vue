@@ -80,7 +80,7 @@ function setTag(value: string | number) {
       @update:model-value="setTag"
     />
     <div v-for="field in COLOR_FIELDS" :key="field.key" class="clan-form__color">
-      <span class="clan-form__label">{{ field.label }}</span>
+      <span class="field-label">{{ field.label }}</span>
       <div class="clan-form__color-row">
         <input
           type="color"
@@ -127,14 +127,6 @@ function setTag(value: string | number) {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.clan-form__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .clan-form__color-row {

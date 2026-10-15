@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -21,11 +22,11 @@ interface Ray {
 
 const rays = computed<Ray[]>(() => {
   const c = props.composition
-  const count = Math.max(3, Math.min(24, Math.round(asNumber(c.count) ?? 7)))
-  const spread = Math.max(10, Math.min(180, asNumber(c.spreadDeg) ?? 100))
+  const count = clamp(Math.round(asNumber(c.count) ?? 7), 3, 24)
+  const spread = clamp(asNumber(c.spreadDeg) ?? 100, 10, 180)
   const period = Math.max(0.6, (asNumber(c.flickerMs) ?? 3200) / 1000)
   const baseWidth = Math.max(0.5, asNumber(c.widthPct) ?? 5)
-  const intensity = Math.max(0.1, Math.min(1, asNumber(c.intensity) ?? 0.8))
+  const intensity = clamp(asNumber(c.intensity) ?? 0.8, 0.1, 1)
   const step = count > 1 ? spread / (count - 1) : 0
   const out: Ray[] = []
   for (let i = 0; i < count; i++) {
@@ -41,7 +42,7 @@ const rays = computed<Ray[]>(() => {
 })
 
 const color = computed(() => asString(props.composition.color) ?? '#fff4b8')
-const heightPct = computed(() => Math.max(80, Math.min(260, asNumber(props.composition.lengthPct) ?? 150)))
+const heightPct = computed(() => clamp(asNumber(props.composition.lengthPct) ?? 150, 80, 260))
 const originYPct = computed(() => asNumber(props.composition.originYPct) ?? 12)
 const blurPx = computed(() => Math.max(0, asNumber(props.composition.blurPx) ?? 1))
 </script>

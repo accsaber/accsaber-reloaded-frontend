@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { pickCoverFallback, pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import type { ComplexityDifficultyRow } from '@/types/api/complexity'
 import type { CategoryCode } from '@/types/display'
 import { computed } from 'vue'
@@ -17,21 +17,21 @@ const props = withDefaults(defineProps<{
   size: 32,
 })
 
-const coverUrl = computed(() => pickCoverUrl(props.row))
-const coverFallback = computed(() => pickCoverFallback(props.row))
+const coverUrl = computed(() => pickCoverUrl(props.row.map))
+const coverFallback = computed(() => pickCoverFallback(props.row.map))
 </script>
 
 <template>
   <div class="map-identity">
-    <GlowImage v-if="cover" :src="coverUrl" alt="" :size="size" :fallback-src="coverFallback" />
+    <CoverImage v-if="cover" :src="coverUrl" alt="" :size="size" :fallback-src="coverFallback" />
     <div class="map-identity__text">
-      <SongTitle class="map-identity__name" :name="row.songName" :sub-name="row.songSubName" />
+      <SongTitle class="map-identity__name" :name="row.map.songName" :sub-name="row.map.songSubName" />
       <span class="map-identity__meta">
         <CategoryBadge :category="(row.categoryCode as CategoryCode)" size="sm" />
-        <DifficultyBadge :difficulty="row.difficulty" />
+        <DifficultyBadge :difficulty="row.map.difficulty" />
         <span v-if="row.status !== 'RANKED'" class="status-pill"
           :class="`status-pill--${row.status.toLowerCase()}`">{{ row.status }}</span>
-        <span class="map-identity__author">{{ row.songAuthor }}</span>
+        <span class="map-identity__author">{{ row.map.songAuthor }}</span>
       </span>
     </div>
   </div>

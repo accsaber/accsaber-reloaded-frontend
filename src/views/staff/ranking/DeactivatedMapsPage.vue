@@ -3,11 +3,12 @@ import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -15,8 +16,8 @@ import { useCategoryStore } from '@/stores/categories'
 import type { MapDifficultyResponse } from '@/types/api/maps'
 import type { TableColumn } from '@/types/display'
 import { formatRelativeDate, truncate } from '@/utils/formatters'
-import { formatDifficulty } from '@/utils/mappers'
-import MapFilterSidebar from '@/views/maps/MapFilterSidebar.vue'
+import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
+import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -108,8 +109,8 @@ const rows = computed(() =>
     const catInfo = catCode ? categoryStore.getCategoryInfo(catCode) : undefined
     return {
       id: d.id,
-      coverUrl: d.cdnCoverUrl ?? d.coverUrl,
-      coverFallbackUrl: d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null,
+      coverUrl: pickCoverUrl(d),
+      coverFallbackUrl: pickCoverFallback(d),
       songName: truncate(d.songName, 30),
       songSubName: d.songSubName,
       songAuthor: truncate(d.songAuthor, 25),
@@ -119,7 +120,7 @@ const rows = computed(() =>
       complexity: d.complexity,
       difficulty: d.difficulty,
       createdAt: d.createdAt,
-      lastUpdatedByUsername: d.lastUpdatedByUsername,
+      lastUpdatedByUsername: d.lastUpdatedBy?.username,
     }
   }),
 )
@@ -198,7 +199,7 @@ watch(
         @sort="setSort"
       >
         <template #cell-cover="{ row }">
-          <GlowImage :src="row.coverUrl as string" alt="" :size="40"
+          <CoverImage :src="row.coverUrl as string" alt="" :size="40"
             :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
         </template>
 
@@ -208,9 +209,7 @@ watch(
               :sub-name="(row.songSubName as string | null)" />
             <span class="deactivated-page__song-meta">
               {{ row.songAuthor }}
-              <span class="diff-badge" :class="'diff-badge--' + (row.difficulty as string).toLowerCase()">
-                {{ formatDifficulty(row.difficulty as string) }}
-              </span>
+              <DifficultyBadge :difficulty="(row.difficulty as string)" />
             </span>
           </div>
         </template>
@@ -243,7 +242,7 @@ watch(
 
         <template #mobile-card="{ row }">
           <div class="deactivated-page__mobile-card">
-            <GlowImage :src="row.coverUrl as string" alt="" :size="48"
+            <CoverImage :src="row.coverUrl as string" alt="" :size="48"
               :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
             <div class="deactivated-page__mobile-info">
               <SongTitle class="deactivated-page__song-name" :name="(row.songName as string)"

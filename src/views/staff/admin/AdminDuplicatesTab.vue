@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatShortDate } from '@/utils/formatters'
 import { ref, computed } from 'vue'
 import type { DuplicateCandidateResponse, DuplicateLinkResponse } from '@/types/api/admin'
 import AdminTable from '@/components/admin/AdminTable.vue'
@@ -37,18 +38,18 @@ fetchLinks()
 const actionLoading = ref<Record<string, boolean>>({})
 
 async function linkCandidate(c: DuplicateCandidateResponse) {
-  const key = `${c.primaryUserId}-${c.secondaryUserId}`
+  const key = `${c.primary.id}-${c.secondary.id}`
   actionLoading.value[key] = true
   try {
     const { createDuplicateLink } = await import('@/api/admin/duplicates')
     const created = await createDuplicateLink({
-      primaryUserId: c.primaryUserId,
-      secondaryUserId: c.secondaryUserId,
+      primaryUserId: c.primary.id,
+      secondaryUserId: c.secondary.id,
       reason: `Auto-detected: ${c.identicalScores} identical scores`,
     })
     links.value.unshift(created)
     candidates.value = candidates.value.filter(
-      (x) => !(x.primaryUserId === c.primaryUserId && x.secondaryUserId === c.secondaryUserId),
+      (x) => !(x.primary.id === c.primary.id && x.secondary.id === c.secondary.id),
     )
   } finally {
     delete actionLoading.value[key]
@@ -56,13 +57,13 @@ async function linkCandidate(c: DuplicateCandidateResponse) {
 }
 
 async function mergeLink(link: DuplicateLinkResponse) {
-  if (!confirm(`Merge ${link.secondaryUserName} into ${link.primaryUserName}? Scores will be combined under the primary account.`)) return
+  if (!confirm(`Merge ${link.secondary.name} into ${link.primary.name}? Scores will be combined under the primary account.`)) return
   actionLoading.value[link.id] = true
   try {
     const { mergeDuplicate } = await import('@/api/admin/duplicates')
     const updated = await mergeDuplicate({
-      primaryUserId: link.primaryUserId,
-      secondaryUserId: link.secondaryUserId,
+      primaryUserId: link.primary.id,
+      secondaryUserId: link.secondary.id,
       reason: link.reason ?? undefined,
     })
     const idx = links.value.findIndex((l) => l.id === link.id)
@@ -73,7 +74,7 @@ async function mergeLink(link: DuplicateLinkResponse) {
 }
 
 async function unmergeLink(link: DuplicateLinkResponse) {
-  if (!confirm(`Unmerge ${link.secondaryUserName} from ${link.primaryUserName}?`)) return
+  if (!confirm(`Unmerge ${link.secondary.name} from ${link.primary.name}?`)) return
   actionLoading.value[link.id] = true
   try {
     const { unmergeDuplicate } = await import('@/api/admin/duplicates')
@@ -86,7 +87,7 @@ async function unmergeLink(link: DuplicateLinkResponse) {
 }
 
 async function deleteLink(link: DuplicateLinkResponse) {
-  if (!confirm(`Remove link between ${link.primaryUserName} and ${link.secondaryUserName}?`)) return
+  if (!confirm(`Remove link between ${link.primary.name} and ${link.secondary.name}?`)) return
   actionLoading.value[link.id] = true
   try {
     const { deleteDuplicateLink } = await import('@/api/admin/duplicates')
@@ -147,10 +148,6 @@ async function mergeAllUnmerged() {
   }
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
 const mergedLinks = computed(() => links.value.filter((l) => l.merged))
 const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
 </script>
@@ -159,7 +156,7 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
   <div class="tab">
     <div class="tab__header">
       <div>
-        <h2 class="tab__title">Duplicate Accounts</h2>
+        <h2 class="section-title">Duplicate Accounts</h2>
         <p class="tab__meta">Detect and merge duplicate player accounts</p>
       </div>
       <BaseButton @click="openManualLink">Manual Link</BaseButton>
@@ -184,17 +181,17 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
         <template #default="{ item }">
           <td>
             <div class="user-cell">
-              <span class="user-cell__name">{{ item.primaryUserName }}</span>
-              <span class="user-cell__id">{{ item.primaryUserId }}</span>
+              <span class="user-cell__name">{{ item.primary.name }}</span>
+              <span class="user-cell__id">{{ item.primary.id }}</span>
             </div>
           </td>
           <td>
             <div class="user-cell">
-              <span class="user-cell__name">{{ item.secondaryUserName }}</span>
-              <span class="user-cell__id">{{ item.secondaryUserId }}</span>
+              <span class="user-cell__name">{{ item.secondary.name }}</span>
+              <span class="user-cell__id">{{ item.secondary.id }}</span>
             </div>
           </td>
-          <td class="mono muted">{{ item.country }}</td>
+          <td class="mono muted">{{ item.primary.country }}</td>
           <td class="mono right">{{ item.identicalScores }}</td>
           <td class="mono right muted">{{ item.primaryTotalScores }}</td>
           <td class="mono right muted">{{ item.secondaryTotalScores }}</td>
@@ -202,7 +199,7 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
             <BaseButton
               size="sm"
               variant="primary"
-              :loading="actionLoading[`${item.primaryUserId}-${item.secondaryUserId}`]"
+              :loading="actionLoading[`${item.primary.id}-${item.secondary.id}`]"
               @click="linkCandidate(item)"
             >
               Link
@@ -231,18 +228,18 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
         <template #default="{ item }">
           <td>
             <div class="user-cell">
-              <span class="user-cell__name">{{ item.primaryUserName }}</span>
-              <span class="user-cell__id">{{ item.primaryUserId }}</span>
+              <span class="user-cell__name">{{ item.primary.name }}</span>
+              <span class="user-cell__id">{{ item.primary.id }}</span>
             </div>
           </td>
           <td>
             <div class="user-cell">
-              <span class="user-cell__name">{{ item.secondaryUserName }}</span>
-              <span class="user-cell__id">{{ item.secondaryUserId }}</span>
+              <span class="user-cell__name">{{ item.secondary.name }}</span>
+              <span class="user-cell__id">{{ item.secondary.id }}</span>
             </div>
           </td>
           <td class="muted">{{ item.reason ?? '-' }}</td>
-          <td class="mono muted">{{ formatDate(item.createdAt) }}</td>
+          <td class="mono muted">{{ formatShortDate(item.createdAt) }}</td>
           <td class="right">
             <div class="actions">
               <BaseButton size="sm" variant="primary" :loading="actionLoading[item.id]" @click="mergeLink(item)">
@@ -271,18 +268,18 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
         <template #default="{ item }">
           <td>
             <div class="user-cell">
-              <span class="user-cell__name">{{ item.primaryUserName }}</span>
-              <span class="user-cell__id">{{ item.primaryUserId }}</span>
+              <span class="user-cell__name">{{ item.primary.name }}</span>
+              <span class="user-cell__id">{{ item.primary.id }}</span>
             </div>
           </td>
           <td>
             <div class="user-cell">
-              <span class="user-cell__name">{{ item.secondaryUserName }}</span>
-              <span class="user-cell__id">{{ item.secondaryUserId }}</span>
+              <span class="user-cell__name">{{ item.secondary.name }}</span>
+              <span class="user-cell__id">{{ item.secondary.id }}</span>
             </div>
           </td>
           <td class="muted">{{ item.reason ?? '-' }}</td>
-          <td class="mono muted">{{ item.mergedAt ? formatDate(item.mergedAt) : '-' }}</td>
+          <td class="mono muted">{{ formatShortDate(item.mergedAt, '-') }}</td>
           <td class="right">
             <BaseButton size="sm" :loading="actionLoading[item.id]" @click="unmergeLink(item)">
               Unmerge
@@ -313,7 +310,6 @@ const unmergedLinks = computed(() => links.value.filter((l) => !l.merged))
 .tab { display: flex; flex-direction: column; gap: var(--space-xl); }
 
 .tab__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-lg); }
-.tab__title { font-size: var(--text-section-heading); font-weight: 600; color: var(--text-primary); margin: 0; }
 .tab__meta { font-size: var(--text-caption); color: var(--text-secondary); margin: 2px 0 0; }
 
 .section { display: flex; flex-direction: column; gap: var(--space-md); }

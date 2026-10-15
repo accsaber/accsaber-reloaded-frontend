@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MilestoneSort } from '@/api/milestones'
+import type { MilestoneSort } from '@/types/api/milestones'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -180,7 +180,7 @@ function toggleSet(setId: string) {
     <template v-else>
       <div v-for="dg in displayGroups" :key="dg.groupId" class="milestone-group">
         <div v-if="dg.groupName" class="milestone-group__header">
-          <h2 class="milestone-group__title">{{ dg.groupName }}</h2>
+          <h2 class="section-title">{{ dg.groupName }}</h2>
           <p v-if="dg.groupDescription" class="milestone-group__desc">{{ dg.groupDescription }}</p>
         </div>
 
@@ -188,7 +188,7 @@ function toggleSet(setId: string) {
           <button class="milestone-set__header" :aria-expanded="expandedSets.has(ms.setId)"
             @click="toggleSet(ms.setId)">
             <div class="milestone-set__info">
-              <h3 class="milestone-set__title">{{ ms.setTitle }}</h3>
+              <h3 class="milestone-set__title card-title">{{ ms.setTitle }}</h3>
               <span class="milestone-set__count">
                 {{ loggedIn ? `${ms.completedCount}/${ms.totalCount} completed` : `${ms.totalCount} milestones` }}
               </span>
@@ -265,13 +265,6 @@ function toggleSet(setId: string) {
   padding: var(--space-sm) 0;
 }
 
-.milestone-group__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
 .milestone-group__desc {
   font-size: var(--text-caption);
   color: var(--text-secondary);
@@ -307,13 +300,6 @@ function toggleSet(setId: string) {
   display: flex;
   align-items: baseline;
   gap: var(--space-md);
-}
-
-.milestone-set__title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .milestone-set__count {

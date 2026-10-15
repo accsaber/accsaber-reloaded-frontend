@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { DominionFill } from '@/types/api/items'
+import type { DominionFill } from '@/types/cosmetics/border'
 import { luminance } from '@/utils/color'
 import { cyc, win } from '@/utils/cosmetics/canvasShapes'
 import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
   fill: DominionFill
@@ -59,7 +60,7 @@ useElementCanvas(canvasRef, {
     ctx.fillRect(0, 0, w, h)
 
     const drawBody = (dx: number, dy: number, color: string, alpha: number) => {
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
+      ctx.globalAlpha = clamp01(alpha)
       const bx = toX(50 + dx)
       const by = toY(38 + dy)
       const core = ctx.createRadialGradient(bx, by, 0, bx, by, Math.max(4, 95 * s))
@@ -120,17 +121,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="dominion-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.dominion-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

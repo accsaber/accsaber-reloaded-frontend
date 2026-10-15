@@ -8,8 +8,8 @@ import type {
   BorderShapePathValue,
   BorderShapeStateValue,
   BorderShapeValue,
-  Gradient,
-} from '@/types/api/items'
+} from '@/types/cosmetics/border'
+import type { Gradient } from '@/types/cosmetics/common'
 import {
   gradientToCss,
   interpolateBorderColorState,
@@ -18,11 +18,12 @@ import {
   pickInterpolatedState,
   shapeTracks,
   trackPathD,
-} from '@/utils/items'
+} from '@/utils/cosmetics/interpolate'
 import { randBetween as rand } from '@/utils/random'
 import { shapeFrameBounds, shapeFrameMargin, type FrameBounds } from '@/utils/shapeSilhouette'
 import { computed, ref, watch } from 'vue'
 import PixelBorderRenderer from '@/components/cosmetics/borders/PixelBorderRenderer.vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   shape: BorderShapeValue | null
@@ -210,7 +211,7 @@ function currentShapeBracket(): ShapeBracket | null {
   const loop = sv.loop ?? 'loop'
   let t: number
   const tNow = tMs.value
-  if (loop === 'once') t = Math.min(Math.max(tNow, 0), total)
+  if (loop === 'once') t = clamp(tNow, 0, total)
   else if (loop === 'pingpong') {
     const cycles = Math.floor(tNow / total)
     const inCycle = tNow - cycles * total

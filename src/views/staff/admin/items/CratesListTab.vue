@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import {
   getAdminCrateContents,
   getAdminCrates,
@@ -90,7 +91,7 @@ async function submitCreate() {
     modalOpen.value = false
     router.push({ name: 'admin-crate-editor', params: { crateItemId: created.id } })
   } catch (e) {
-    createError.value = (e as Error).message ?? 'Failed to create crate'
+    createError.value = parseApiError(e, 'Failed to create crate').message
   } finally {
     submitting.value = false
   }
@@ -109,7 +110,7 @@ onMounted(async () => {
 <template>
   <div class="crates-list">
     <header class="crates-list__bar">
-      <div class="crates-list__title">All crates</div>
+      <div class="section-title">All crates</div>
       <BaseButton variant="primary" size="sm" :disabled="!crateTypeId" @click="openCreate">
         + New Crate
       </BaseButton>
@@ -178,12 +179,6 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.crates-list__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .crates-list__row-name {

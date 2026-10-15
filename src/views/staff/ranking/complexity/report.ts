@@ -57,16 +57,16 @@ function ladderSection(input: ComplexityReportInput): string[] {
 
 function mapLines(input: ComplexityReportInput): string[] {
   return input.maps.map((map) => {
-    const song = `${map.songName}${map.songSubName ? ` ${map.songSubName}` : ''}`
+    const song = `${map.map.songName}${map.map.songSubName ? ` ${map.map.songSubName}` : ''}`
     const tags = [
-      map.mapAuthor,
+      map.map.mapAuthor,
       input.categoryName(map.categoryCode),
-      formatDifficulty(map.difficulty),
+      formatDifficulty(map.map.difficulty),
     ].join(', ')
     const now = cx(map.scenarios.CURRENT?.complexity)
     const next = cx(map.scenarios[input.scenario]?.complexity)
     const change = formatSigned(map.deltas[input.scenario]?.complexity, CX_DECIMALS, '-')
-    return `- ${map.songAuthor} - ${song} (${tags}): ${now} --> ${next} (${change})`
+    return `- ${map.map.songAuthor} - ${song} (${tags}): ${now} --> ${next} (${change})`
   })
 }
 
@@ -83,7 +83,7 @@ function playerLines(input: ComplexityReportInput): string[] {
     const climbed = delta?.rank != null ? -delta.rank : null
     const rankNow = current?.rank != null ? `#${current.rank}` : '-'
     return (
-      `${next?.rank ?? '-'} - ${player.name} (${player.country}): ` +
+      `${next?.rank ?? '-'} - ${player.player.name} (${player.player.country}): ` +
       `${ap(current?.ap)} --> ${ap(next?.ap)} (${formatSigned(delta?.ap, AP_DECIMALS, '-')}); ` +
       `Rank Now: ${rankNow} (${formatSigned(climbed, 0, '-')})`
     )

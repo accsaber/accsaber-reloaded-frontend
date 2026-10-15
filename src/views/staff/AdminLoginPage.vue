@@ -138,9 +138,6 @@ async function handleLogin() {
 
 .login-title {
   font-size: var(--text-card-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
   line-height: 1.2;
 }
 

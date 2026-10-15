@@ -4,7 +4,7 @@ import type {
   CampaignDifficultyProgressResponse,
   CampaignDifficultyResponse,
 } from '@/types/api/campaigns'
-import { pickCoverUrl } from '@/composables/useAvatarFallback'
+import { pickCoverUrl } from '@/utils/media'
 import {
   edgePointOnShape,
   isMilestoneNode,

@@ -1,6 +1,7 @@
 import type { EventMissionProgressResponse, EventResponse, EventState } from '@/types/api/events'
 import type { ItemResponse } from '@/types/api/items'
 import type { MissionResponse, MissionType } from '@/types/api/missions'
+import { formatDuration } from '@/utils/formatters'
 
 export interface EventMissionView {
   id: string
@@ -125,25 +126,12 @@ export const EVENT_STATUS_COLOR: Record<EventStatus, string> = {
 }
 
 export function eventStatus(event: EventResponse, now: number): EventStatus {
-  const start = new Date(event.startsAt).getTime()
-  const end = new Date(event.endsAt).getTime()
-  if (now < start) return 'upcoming'
-  if (now >= end) return 'past'
-  return end - now <= ENDING_SOON_MS ? 'ending-soon' : 'live'
-}
-
-export function formatDuration(ms: number): string {
-  const totalMinutes = Math.max(0, Math.floor(ms / 60000))
-  const days = Math.floor(totalMinutes / 1440)
-  const hours = Math.floor((totalMinutes % 1440) / 60)
-  const minutes = totalMinutes % 60
-  if (days > 0) return `${days}d ${hours}h`
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  const state = eventState(event, now)
+  return state === 'live' && new Date(event.endsAt).getTime() - now <= ENDING_SOON_MS ? 'ending-soon' : state
 }
 
 export function eventCountdown(event: EventResponse, now: number): string {
-  const status = eventStatus(event, now)
+  const status = eventState(event, now)
   if (status === 'past') return 'Ended'
   if (status === 'upcoming') {
     const diff = new Date(event.startsAt).getTime() - now

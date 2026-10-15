@@ -1,3 +1,4 @@
+import { clamp } from '@/utils/math'
 export function brightenRgb(rgb: string, amount: number): string {
   const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
   if (!match) return rgb
@@ -9,18 +10,26 @@ export function brightenRgb(rgb: string, amount: number): string {
 
 export type RGB = [number, number, number]
 
-export function parseHex(hex: string): RGB | null {
+type RGBA = [number, number, number, number]
+
+function parseRgba(hex: string): RGBA | null {
   const m = hex.match(/^#([0-9a-fA-F]{3,8})$/)
   if (!m) return null
   let s = m[1]
   if (s.length === 3 || s.length === 4) s = s.split('').map((c) => c + c).join('')
   if (s.length !== 6 && s.length !== 8) return null
-  return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]
+  const alpha = s.length === 8 ? parseInt(s.slice(6, 8), 16) / 255 : 1
+  return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16), alpha]
+}
+
+export function parseHex(hex: string): RGB | null {
+  const rgba = parseRgba(hex)
+  return rgba ? [rgba[0], rgba[1], rgba[2]] : null
 }
 
 export function toHex(rgb: RGB): string {
   return '#' + rgb
-    .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
+    .map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0'))
     .join('')
 }
 
@@ -51,15 +60,16 @@ export function lighten(hex: string, factor: number): string {
   ])
 }
 
-export function lerpHex(a: string, b: string, t: number): string {
-  const ar = parseHex(a)
-  const br = parseHex(b)
+export function lerpHex(a: string, b: string, t: number, keepAlpha = false): string {
+  const ar = parseRgba(a)
+  const br = parseRgba(b)
   if (!ar || !br) return t < 0.5 ? a : b
-  return toHex([
-    ar[0] + (br[0] - ar[0]) * t,
-    ar[1] + (br[1] - ar[1]) * t,
-    ar[2] + (br[2] - ar[2]) * t,
-  ])
+  const mix = (i: number) => ar[i] + (br[i] - ar[i]) * t
+  const alpha = mix(3)
+  if (keepAlpha && alpha < 1) {
+    return `rgba(${Math.round(mix(0))},${Math.round(mix(1))},${Math.round(mix(2))},${alpha.toFixed(3)})`
+  }
+  return toHex([mix(0), mix(1), mix(2)])
 }
 
 export function luminance(hex: string): number {

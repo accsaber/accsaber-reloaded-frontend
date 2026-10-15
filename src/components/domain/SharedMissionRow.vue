@@ -7,8 +7,8 @@ import {
   missionProgressLabel,
   missionUnitLabel,
 } from '@/utils/missions'
-import { formatCountdown } from '@/utils/clans'
 import { computed } from 'vue'
+import { formatDuration } from '@/utils/formatters'
 
 const props = defineProps<{
   mission: MissionResponse
@@ -71,7 +71,7 @@ const unlockLabel = computed(() =>
 
 const deadline = computed(() => {
   if (state.value !== 'active' || !props.mission.endsWithWeek || !props.mission.expiresAt) return null
-  return formatCountdown(new Date(props.mission.expiresAt).getTime() - props.now, 'expired')
+  return formatDuration(new Date(props.mission.expiresAt).getTime() - props.now, { zero: 'expired' })
 })
 
 const urgent = computed(() =>
@@ -263,7 +263,7 @@ const yourShare = computed(() =>
 .cm__flag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   margin-left: auto;
   font-weight: 600;
   color: var(--text-tertiary);

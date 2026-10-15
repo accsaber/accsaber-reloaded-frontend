@@ -4,11 +4,12 @@ import CountryFlag from '@/components/domain/CountryFlag.vue';
 import LevelBadge from '@/components/domain/LevelBadge.vue';
 import RelationActions from '@/components/domain/RelationActions.vue';
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue';
-import { pickAvatarFallback, pickAvatarUrl } from '@/composables/useAvatarFallback';
+import { pickAvatarFallback, pickAvatarUrl } from '@/utils/media';
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
 import type { UserRefDisplay } from '@/types/display';
-import { fillToCss, thumbnailHostAttrs } from '@/utils/items';
+import { fillToCss } from '@/utils/cosmetics/interpolate'
+import { thumbnailHostAttrs } from '@/utils/cosmetics/readers';
 import { computed } from 'vue';
 
 const props = defineProps<{

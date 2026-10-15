@@ -3,15 +3,12 @@ import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { chartAnimationDuration, readChartTheme, useLineChart } from '@/composables/useLineChart'
 import { useCategoryStore } from '@/stores/categories'
-import type { ScoreResponse } from '@/types/api/users'
 import type { ChartToggle } from '@/types/display'
-import { dedupeRequest } from '@/utils/dedupe'
 import type { ChartConfiguration } from 'chart.js'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{ userId: string }>()
 
-const TOP_N = 100
 const CURVE_LENGTHS = [20, 50, 100]
 
 const categoryStore = useCategoryStore()
@@ -19,7 +16,7 @@ const categoryStore = useCategoryStore()
 interface Curve {
   code: string
   name: string
-  scores: ScoreResponse[]
+  ap: number[]
 }
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -28,10 +25,10 @@ const { render, destroy } = useLineChart(canvasRef)
 const loading = ref(true)
 const curves = ref<Curve[]>([])
 const hiddenCodes = ref<string[]>([])
-const requestedLength = ref(TOP_N)
+const requestedLength = ref(CURVE_LENGTHS[CURVE_LENGTHS.length - 1])
 
 const longestCurve = computed(() =>
-  curves.value.reduce((max, curve) => Math.max(max, curve.scores.length), 0),
+  curves.value.reduce((max, curve) => Math.max(max, curve.ap.length), 0),
 )
 
 const lengthToggles = computed<ChartToggle[]>(() =>
@@ -62,7 +59,7 @@ const plotted = computed(() =>
     .map((curve) => ({
       name: curve.name,
       color: categoryStore.getAccent(curve.code),
-      scores: curve.scores.slice(0, activeLength.value),
+      ap: curve.ap.slice(0, activeLength.value),
     })),
 )
 
@@ -75,27 +72,20 @@ function toggleCurve(code: string) {
 }
 
 async function fetchCurves() {
+  const userId = props.userId
   loading.value = true
   try {
-    await categoryStore.fetchCategories()
-    const { getUserScores } = await import('@/api/users')
-    const categories = categoryStore.categories
-    const pages = await Promise.all(
-      categories.map((cat) =>
-        dedupeRequest(`ap-curve|${props.userId}|${cat.id}`, () =>
-          getUserScores(props.userId, {
-            categoryId: cat.id,
-            page: 0,
-            size: TOP_N,
-            sort: 'ap,desc',
-          }),
-        ).catch(() => null),
-      ),
-    )
-    curves.value = categories
-      .map((cat, i) => ({ code: cat.code, name: cat.name, scores: pages[i]?.content ?? [] }))
-      .filter((curve) => curve.scores.length > 0)
+    const [, res] = await Promise.all([
+      categoryStore.fetchCategories(),
+      import('@/api/users').then((m) => m.getUserApCurves(userId)),
+    ])
+    if (userId !== props.userId) return
+    const byId = new Map(res.map((curve) => [curve.categoryId, curve.ap]))
+    curves.value = categoryStore.categories
+      .map((cat) => ({ code: cat.code, name: cat.name, ap: byId.get(cat.id) ?? [] }))
+      .filter((curve) => curve.ap.length > 0)
   } catch {
+    if (userId !== props.userId) return
     curves.value = []
   }
   loading.value = false
@@ -110,11 +100,11 @@ function buildChart(): ChartConfiguration<'line'> {
     data: {
       datasets: series.map((curve) => ({
         label: curve.name,
-        data: curve.scores.map((score, i) => ({ x: i + 1, y: score.ap })),
+        data: curve.ap.map((ap, i) => ({ x: i + 1, y: ap })),
         borderColor: curve.color,
         pointBackgroundColor: 'transparent',
         pointBorderColor: curve.color,
-        pointRadius: curve.scores.length > 60 ? 2 : 3,
+        pointRadius: curve.ap.length > 60 ? 2 : 3,
         pointHoverRadius: 5,
         borderWidth: 2,
         tension: 0.1,
@@ -132,11 +122,7 @@ function buildChart(): ChartConfiguration<'line'> {
               const item = items[0]
               return item ? `${series[item.datasetIndex].name} - #${item.parsed.x}` : ''
             },
-            label: (item) => {
-              const score = series[item.datasetIndex].scores[item.dataIndex]
-              const ap = `${(item.parsed.y ?? 0).toFixed(2)} AP`
-              return score ? [ap, score.songName] : ap
-            },
+            label: (item) => `${(item.parsed.y ?? 0).toFixed(2)} AP`,
           },
         },
       },

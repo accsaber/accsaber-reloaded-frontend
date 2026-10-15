@@ -1,43 +1,22 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
+import { useClickOutside } from '@/composables/useClickOutside'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 
-defineProps<{
-  open: boolean
-}>()
-
-const emit = defineEmits<{
-  'update:open': [value: boolean]
-}>()
+const open = defineModel<boolean>('open', { required: true })
 
 const sheet = useMediaQuery('(max-width: 767px)')
 const containerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 
-function onClickOutside(e: MouseEvent) {
-  const target = e.target as Node
-  if (containerRef.value?.contains(target) || panelRef.value?.contains(target)) return
-  emit('update:open', false)
-}
-
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('update:open', false)
-}
-
-onMounted(() => {
-  document.addEventListener('click', onClickOutside)
-  document.addEventListener('keydown', onKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', onClickOutside)
-  document.removeEventListener('keydown', onKeydown)
-})
+useClickOutside(containerRef, open, () => {
+  open.value = false
+}, { ignoreRefs: [panelRef] })
 </script>
 
 <template>
   <div ref="containerRef" class="filter-popover">
-    <div class="filter-popover__trigger" @click.stop="$emit('update:open', !open)">
+    <div class="filter-popover__trigger" @click.stop="open = !open">
       <slot name="trigger" />
     </div>
     <Teleport to="body" :disabled="!sheet">
@@ -55,12 +34,12 @@ onUnmounted(() => {
           aria-label="Filters"
         >
           <div v-if="sheet" class="filter-popover__sheet-head">
-            <span class="filter-popover__sheet-title">Filters</span>
+            <span class="card-title">Filters</span>
             <button
               type="button"
               class="filter-popover__close"
               aria-label="Close filters"
-              @click="$emit('update:open', false)"
+              @click="open = false"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -136,12 +115,6 @@ onUnmounted(() => {
   padding: var(--space-sm) 0;
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--bg-overlay);
-}
-
-.filter-popover__sheet-title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .filter-popover__close {

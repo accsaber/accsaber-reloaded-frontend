@@ -28,16 +28,6 @@ export class ApiError extends Error {
   }
 }
 
-export function getApiErrorMessage(err: unknown, fallback: string): string {
-  if (!(err instanceof ApiError)) return fallback
-  try {
-    const parsed = JSON.parse(err.message) as { message?: unknown }
-    return typeof parsed.message === 'string' ? parsed.message : fallback
-  } catch {
-    return fallback
-  }
-}
-
 export interface ApiFieldError {
   field: string
   message: string
@@ -56,7 +46,7 @@ export function parseApiError(err: unknown, fallback = 'Request failed'): Parsed
     return {
       status: 0,
       code: null,
-      message: err instanceof Error ? err.message : fallback,
+      message: err instanceof Error && err.constructor === Error ? err.message : fallback,
       fieldErrors: [],
     }
   }

@@ -204,7 +204,7 @@ const hasFootline = computed(() => !!rewardXp.value || rewardItems.value.length 
   position: absolute;
   top: 8px;
   left: 8px;
-  padding: 4px 8px;
+  padding: var(--space-xs) var(--space-sm);
   font-family: var(--font-sans);
   font-size: 0.5625rem;
   font-weight: 700;
@@ -336,7 +336,7 @@ const hasFootline = computed(() => !!rewardXp.value || rewardItems.value.length 
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .campaign-card__popover-list--tags {

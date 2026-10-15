@@ -30,7 +30,7 @@ defineEmits<{ select: [id: string] }>()
 .issue-notes__refs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-xs);
   margin-top: 6px;
 }
 

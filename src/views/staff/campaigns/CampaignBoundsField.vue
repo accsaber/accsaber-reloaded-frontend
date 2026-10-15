@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { clamp } from '@/utils/math'
 import { computed } from 'vue'
 
 type BoundKey = 'lower' | 'upper'
@@ -52,7 +53,7 @@ const bounds = computed(() =>
 function ratio(value: number): number {
   const span = props.max - props.min
   if (span <= 0) return 0
-  return Math.min(100, Math.max(0, ((value - props.min) / span) * 100))
+  return clamp(((value - props.min) / span) * 100, 0, 100)
 }
 
 const fillStyle = computed(() => {
@@ -61,10 +62,10 @@ const fillStyle = computed(() => {
   return { left: `${from}%`, right: `${100 - to}%` }
 })
 
-function clamp(key: BoundKey, value: number): number {
+function clampBound(key: BoundKey, value: number): number {
   const floor = key === 'upper' && props.lower != null ? props.lower : inputMin.value
   const ceiling = key === 'lower' && props.upper != null ? props.upper : inputMax.value
-  return Math.min(Math.max(value, floor), ceiling)
+  return clamp(value, floor, ceiling)
 }
 
 function setBound(key: BoundKey, value: number | null) {
@@ -75,7 +76,7 @@ function setBound(key: BoundKey, value: number | null) {
 function onInput(key: BoundKey, raw: string) {
   const parsed = Number(raw)
   if (!Number.isFinite(parsed)) return
-  setBound(key, clamp(key, parsed))
+  setBound(key, clampBound(key, parsed))
 }
 
 function onNumberChange(key: BoundKey, event: Event) {
@@ -84,7 +85,7 @@ function onNumberChange(key: BoundKey, event: Event) {
 }
 
 function addBound(key: BoundKey) {
-  setBound(key, key === 'upper' ? clamp(key, props.max) : clamp(key, props.min))
+  setBound(key, key === 'upper' ? clampBound(key, props.max) : clampBound(key, props.min))
   emit('commit')
 }
 
@@ -189,7 +190,7 @@ function removeBound(key: BoundKey) {
 .bounds {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .bounds__track {
@@ -285,7 +286,7 @@ function removeBound(key: BoundKey) {
 .bounds__field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   min-width: 0;
   flex: 1 1 110px;
 }
@@ -303,19 +304,19 @@ function removeBound(key: BoundKey) {
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
-  margin-left: 4px;
+  margin-left: var(--space-xs);
 }
 
 .bounds__entry {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .bounds__entry input {
   width: 100%;
   min-width: 0;
-  padding: 8px 10px;
+  padding: var(--space-sm) 10px;
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-primary);
@@ -363,7 +364,7 @@ function removeBound(key: BoundKey) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 8px 10px;
+  padding: var(--space-sm) 10px;
   font-family: var(--font-sans);
   font-size: 0.625rem;
   font-weight: 700;

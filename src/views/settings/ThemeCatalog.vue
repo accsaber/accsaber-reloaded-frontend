@@ -5,7 +5,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
 import type { ItemResponse, UserItemResponse } from '@/types/api/items'
-import { buildEffectLayers, filterThemableTokens, readItemVariants, readThemeValue, resolveItemVariant } from '@/utils/items'
+import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
+import { filterThemableTokens } from '@/utils/themeTokens'
+import { readItemVariants, resolveItemVariant } from '@/utils/items'
+import { readThemeValue } from '@/utils/cosmetics/readers'
 import { computed, onMounted, ref, watch } from 'vue'
 
 interface ThemeOption {
@@ -271,7 +274,7 @@ watch(() => authStore.userId, loadThemes)
   width: 56px;
   height: 40px;
   flex-shrink: 0;
-  padding: 4px;
+  padding: var(--space-xs);
   border-radius: var(--radius-btn);
   border: 1px solid color-mix(in srgb, var(--preview-surface, var(--bg-overlay)) 60%, transparent);
   background: var(--preview-base, var(--bg-base));

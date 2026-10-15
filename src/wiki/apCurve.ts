@@ -1,5 +1,5 @@
-const CURVE_SCALE = 61
-const CURVE_SHIFT = -18
+export const CURVE_SCALE = 61
+export const CURVE_SHIFT = -18
 
 const CURVE_POINTS: readonly (readonly [number, number])[] = [
   [0.0, 0.0],
@@ -61,7 +61,7 @@ const CURVE_POINTS: readonly (readonly [number, number])[] = [
   [1.0, 1.0],
 ]
 
-function interpolatePoints(
+export function interpolatePoints(
   points: readonly (readonly [number, number])[],
   x: number,
 ): number {

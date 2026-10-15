@@ -1,4 +1,9 @@
-import type { TitleBleedSpec, TitleBoilSpec, TitleFrostSpec, TitleLanternSpec } from '@/types/api/items'
+import type {
+  TitleBleedSpec,
+  TitleBoilSpec,
+  TitleFrostSpec,
+  TitleLanternSpec,
+} from '@/types/cosmetics/title'
 
 export interface TitleAuraLinks {
   frost?: TitleFrostSpec

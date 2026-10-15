@@ -1,8 +1,8 @@
-import { getApiErrorMessage } from '@/api/client'
 import type { UserCampaignResponse } from '@/types/api/campaigns'
 import type { CampaignFilterState } from '@/utils/campaignFilters'
 import { toUserCampaignParams } from '@/utils/campaignFilters'
 import { type MaybeRefOrGetter, ref, toValue, watch } from 'vue'
+import { parseApiError } from '@/api/client'
 
 const PAGE_SIZE = 20
 
@@ -46,7 +46,7 @@ export function useUserCampaigns(
       totalPages.value = result.totalPages || 1
     } catch (err) {
       if (token !== requestId) return
-      error.value = getApiErrorMessage(err, 'Failed to load campaigns')
+      error.value = parseApiError(err, 'Failed to load campaigns').message
       runs.value = []
       totalPages.value = 1
     } finally {

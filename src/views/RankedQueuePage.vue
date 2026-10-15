@@ -8,7 +8,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import PlaylistDropdown from '@/components/domain/PlaylistDropdown.vue'
-import RankedQueueRow from '@/components/domain/RankedQueueRow.vue'
+import RankedQueueRow from '@/views/ranked-queue/RankedQueueRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
@@ -17,7 +17,7 @@ import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
 import { QUEUE_STATUSES } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
-import MapFilterSidebar from './maps/MapFilterSidebar.vue'
+import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
 
 const queueCache = useLeaderboardCacheStore()
 const { queryRef } = useQueryParams()

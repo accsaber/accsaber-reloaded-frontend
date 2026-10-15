@@ -80,7 +80,3 @@ export function patchAdminItemModifier(
 export function awardItem(req: AwardItemRequest): Promise<UserItemResponse> {
   return post<UserItemResponse>('/admin/items/award', req)
 }
-
-export function revokeAwardedItem(linkId: string): Promise<void> {
-  return del<void>(`/admin/items/awards/${linkId}`)
-}

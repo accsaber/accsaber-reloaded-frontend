@@ -9,7 +9,6 @@ import type {
   ComplexityScenario,
 } from '@/types/api/complexity'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
-import { toUserRef } from '@/utils/mappers'
 import { AP_DECIMALS, SCENARIO_ORDER, SCENARIO_SHORT } from '@/utils/complexity'
 import { getRankClass } from '@/utils/ranking'
 import ScenarioCell from './ScenarioCell.vue'
@@ -43,7 +42,7 @@ function rankOf(row: ComplexityPlayerRow, scenario: ComplexityScenario): number 
 
 const accessors: Record<string, (row: ComplexityPlayerRow) => number | string | null> = {
   rankCurrent: (row) => rankOf(row, 'CURRENT'),
-  name: (row) => row.name.toLowerCase(),
+  name: (row) => row.player.name.toLowerCase(),
   apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
   rankScenario: (row) => rankOf(row, props.scenario),
   rankMove: (row) => row.deltas[props.scenario]?.rank ?? null,
@@ -99,10 +98,10 @@ const tableColumns = computed<TableColumn[]>(() => {
 const tableRows = computed(() =>
   visible.value.map((row) => ({
     ...Object.fromEntries(props.columns.map((scenario) => [apKey(scenario), apOf(row, scenario)])),
-    id: row.userId,
-    userId: row.userId,
-    name: row.name,
-    player: toUserRef(row),
+    id: row.player.id,
+    userId: row.player.id,
+    name: row.player.name,
+    player: row.player,
     rankCurrent: rankOf(row, 'CURRENT'),
     apCurrent: apOf(row, 'CURRENT'),
     apScenario: apOf(row, props.scenario),

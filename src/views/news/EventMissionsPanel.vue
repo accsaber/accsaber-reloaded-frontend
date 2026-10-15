@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import type { MissionResponse } from '@/types/api/missions'
 import MissionContributorsModal from '@/components/domain/MissionContributorsModal.vue'
 import SharedMissionRow from '@/components/domain/SharedMissionRow.vue'
 import EventMissionRow from '@/views/news/EventMissionRow.vue'
+import type { Tab } from '@/types/display'
 import type { PaginationParams } from '@/types/pagination'
 import { missionLockState, type EventMissionView } from '@/utils/events'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { clamp } from '@/utils/math'
 
 async function loadContributors(missionId: string, params: PaginationParams) {
   const { getCommunityContributors } = await import('@/api/missions')
@@ -25,9 +28,9 @@ const props = defineProps<{
   now: number
 }>()
 
-type Tab = number | 'all'
+type WeekTab = number | 'all'
 
-const activeTab = ref<Tab>(1)
+const activeTab = ref<WeekTab>(1)
 const openId = ref<string | null>(null)
 
 const weeks = computed(() => Math.max(1, props.totalWeeks))
@@ -79,6 +82,20 @@ const weekList = computed(() =>
     return { n, locked, current: props.currentWeek === n, complete: !locked && weekComplete(n) }
   }),
 )
+
+const TAB_ACCENT = 'var(--page-accent, var(--accent))'
+
+const weekTabs = computed<Tab[]>(() => {
+  const tabs: Tab[] = weekList.value.map((w) => ({ key: String(w.n), label: `Week ${w.n}`, accentColor: TAB_ACCENT }))
+  if (hasGlobalTab.value) tabs.push({ key: 'all', label: 'All Event', accentColor: TAB_ACCENT })
+  return tabs
+})
+
+const weekByKey = computed(() => new Map(weekList.value.map((w) => [String(w.n), w])))
+
+function selectTab(key: string) {
+  activeTab.value = key === 'all' ? 'all' : Number(key)
+}
 
 const activeWeekLocked = computed(
   () => activeTab.value !== 'all' && weekLocked(activeTab.value),
@@ -150,7 +167,7 @@ watch(
   () => [props.totalWeeks, props.currentWeek] as const,
   () => {
     const target = props.currentWeek ?? 1
-    activeTab.value = Math.min(weeks.value, Math.max(1, target))
+    activeTab.value = clamp(target, 1, weeks.value)
   },
   { immediate: true },
 )
@@ -160,42 +177,30 @@ watch(
   <section class="missions">
     <header class="missions__header">
       <h2 class="missions__title">Missions</h2>
-      <div v-if="showTabs" class="week-tabs" role="tablist" aria-label="Event weeks">
-        <button
-          v-for="w in weekList"
-          :key="w.n"
-          type="button"
-          role="tab"
-          class="week-tab"
-          :class="{ 'week-tab--active': w.n === activeTab, 'week-tab--locked': w.locked }"
-          :aria-selected="w.n === activeTab"
-          @click="activeTab = w.n"
-        >
-          Week {{ w.n }}
-          <svg v-if="w.locked" class="week-tab__lock" width="11" height="11" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <BaseTabs
+        v-if="showTabs"
+        label="Event weeks"
+        :tabs="weekTabs"
+        :model-value="String(activeTab)"
+        @update:model-value="selectTab"
+      >
+        <template #tab="{ tab, active }">
+          <span :class="{ 'week-tab--locked': weekByKey.get(tab.key)?.locked, 'week-tab--active': active }">
+            {{ tab.label }}
+          </span>
+          <svg v-if="weekByKey.get(tab.key)?.locked" class="week-tab__icon" width="11" height="11" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
-          <svg v-else-if="w.complete" class="week-tab__check" width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
-            aria-label="All missions complete">
+          <svg v-else-if="weekByKey.get(tab.key)?.complete" class="week-tab__icon week-tab__check" width="13"
+            height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+            stroke-linejoin="round" aria-label="All missions complete">
             <path d="M20 6 9 17l-5-5" />
           </svg>
-        </button>
-
-        <button
-          v-if="hasGlobalTab"
-          type="button"
-          role="tab"
-          class="week-tab week-tab--all"
-          :class="{ 'week-tab--active': activeTab === 'all' }"
-          :aria-selected="activeTab === 'all'"
-          @click="activeTab = 'all'"
-        >
-          All Event
-        </button>
-      </div>
+        </template>
+      </BaseTabs>
     </header>
 
     <p v-if="activeWeekLocked" class="missions__disclaimer">
@@ -272,41 +277,6 @@ watch(
   color: var(--text-primary);
 }
 
-.week-tabs {
-  display: flex;
-  gap: var(--space-md);
-  overflow-x: auto;
-  scrollbar-width: none;
-  box-shadow: inset 0 -1px var(--bg-overlay);
-}
-
-.week-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  padding: 0 0 var(--space-sm);
-  white-space: nowrap;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.week-tab:hover {
-  color: var(--text-primary);
-}
-
-.week-tab--active {
-  color: var(--text-primary);
-  border-bottom-color: var(--page-accent, var(--accent));
-}
-
 .week-tab--locked {
   color: var(--text-tertiary);
 }
@@ -315,17 +285,12 @@ watch(
   color: var(--text-secondary);
 }
 
-.week-tab__lock {
+.week-tab__icon {
   flex-shrink: 0;
 }
 
 .week-tab__check {
-  flex-shrink: 0;
   color: var(--success);
-}
-
-.week-tab--all {
-  margin-left: auto;
 }
 
 .group {
@@ -394,6 +359,6 @@ watch(
 
 .missions__list::-webkit-scrollbar-thumb {
   background: var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 </style>

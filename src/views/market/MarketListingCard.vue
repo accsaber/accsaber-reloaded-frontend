@@ -51,7 +51,7 @@ const settledLabel = computed(() => {
     </div>
 
     <div class="market-card__body">
-      <span class="market-card__title">{{ listing.title }}</span>
+      <span class="market-card__title card-title">{{ listing.title }}</span>
       <div class="market-card__item-row">
         <span class="market-card__item-name">{{ itemName }}</span>
         <span class="market-card__rarity" :class="rarityClass(listing.item.item.rarity)">
@@ -163,9 +163,6 @@ const settledLabel = computed(() => {
 }
 
 .market-card__title {
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

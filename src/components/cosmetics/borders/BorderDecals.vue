@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { BorderDecal } from '@/types/api/items'
+import type { BorderDecal } from '@/types/cosmetics/border'
 
 defineProps<{
   decals: BorderDecal[]

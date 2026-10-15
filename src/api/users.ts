@@ -1,7 +1,7 @@
 import type { CampaignProgressResponse } from '@/types/api/campaigns'
 import type { DifficultyListParams, PublicMapDifficultyResponse } from '@/types/api/maps'
 import type {
-  ApToNextResponse,
+  ApCurveResponse,
   HistoricScoresParams,
   HistoricStatisticsParams,
   LevelResponse,
@@ -10,7 +10,6 @@ import type {
   ProfileUpdateRequest,
   RankingHistoryResponse,
   ScoreResponse,
-  SkillCategory,
   SkillResponse,
   StatsDiffResponse,
   SyncSettings,
@@ -20,7 +19,7 @@ import type {
   UserResponse,
   UserScoresParams,
 } from '@/types/api/users'
-import type { Page, PaginationParams } from '@/types/pagination'
+import type { Page } from '@/types/pagination'
 import { get, patch, put } from './client'
 import { buildQuery } from './utils'
 
@@ -35,17 +34,12 @@ export function getUserScores(
   return get<Page<ScoreResponse>>(`/users/${userId}/scores${buildQuery(params)}`)
 }
 
-export function getUserLevel(userId: string): Promise<LevelResponse> {
-  return get<LevelResponse>(`/users/${userId}/level`)
+export function getUserApCurves(userId: string): Promise<ApCurveResponse[]> {
+  return get<ApCurveResponse[]>(`/users/${userId}/ap-curves`)
 }
 
-export function getUserMilestones(
-  userId: string,
-  params?: PaginationParams,
-): Promise<Page<UserMilestoneProgressResponse>> {
-  return get<Page<UserMilestoneProgressResponse>>(
-    `/users/${userId}/milestones${buildQuery(params)}`,
-  )
+export function getUserLevel(userId: string): Promise<LevelResponse> {
+  return get<LevelResponse>(`/users/${userId}/level`)
 }
 
 export function getUserCampaignProgress(
@@ -96,12 +90,6 @@ export function getUserStatsDiff(
     .catch(() => null)
 }
 
-export function getUserCompletedMilestones(
-  userId: string,
-): Promise<UserMilestoneProgressResponse[]> {
-  return get<UserMilestoneProgressResponse[]>(`/users/${userId}/milestones/completed`)
-}
-
 export function getUserPinnedMilestones(
   userId: string,
 ): Promise<UserMilestoneProgressResponse[]> {
@@ -128,20 +116,6 @@ export function getUserPinnedScores(userId: string): Promise<PinnedScoreResponse
 
 export function getUserSkill(userId: string): Promise<SkillResponse> {
   return get<SkillResponse>(`/users/${userId}/skill`)
-}
-
-export function getUserSkillCategory(
-  userId: string,
-  category: string,
-): Promise<SkillCategory> {
-  return get<SkillCategory>(`/users/${userId}/skill${buildQuery({ category })}`)
-}
-
-export function getUserApToNext(
-  userId: string,
-  category: string,
-): Promise<ApToNextResponse> {
-  return get<ApToNextResponse>(`/users/${userId}/categories/${category}/ap-to-next`)
 }
 
 export function updateMyProfile(body: ProfileUpdateRequest): Promise<void> {

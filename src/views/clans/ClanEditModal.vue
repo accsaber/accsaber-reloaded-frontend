@@ -4,7 +4,8 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import type { ClanResponse, UpdateClanRequest } from '@/types/api/clans'
 import { computed, ref, watch } from 'vue'
 import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
-import { clanDraftFrom, emptyClanDraft, formatCountdown, isPacifist, type ClanProfileDraft } from '@/utils/clans'
+import { clanDraftFrom, emptyClanDraft, isPacifist, type ClanProfileDraft } from '@/utils/clans'
+import { formatDuration } from '@/utils/formatters'
 
 const props = defineProps<{
   open: boolean
@@ -26,7 +27,7 @@ const pacifismState = computed(() => {
   const from = props.clan.pacifistFrom
   if (!from) return 'Off'
   if (isPacifist(props.clan)) return 'On'
-  return `Turns on in ${formatCountdown(new Date(from).getTime() - Date.now())}`
+  return `Turns on in ${formatDuration(new Date(from).getTime() - Date.now(), { zero: 'now' })}`
 })
 
 const draft = ref<ClanProfileDraft>(emptyClanDraft())

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEffectSurface } from '@/composables/useEffectSurface'
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asColor, asNumber, clampNumber, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'

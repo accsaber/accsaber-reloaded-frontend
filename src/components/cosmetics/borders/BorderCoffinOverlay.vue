@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import { useStackPointer } from '@/composables/useStackPointer'
-import type { BorderCoffinOverlaySpec, BorderOverlayHost } from '@/types/api/items'
+import type { BorderCoffinOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { darken, lighten } from '@/utils/color'
 import type { Ctx, Point } from '@/utils/cosmetics/canvasShapes'
 import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'

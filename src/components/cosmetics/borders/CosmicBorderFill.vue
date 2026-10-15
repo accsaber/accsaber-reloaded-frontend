@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import { drawCosmicNebula, drawCosmicPlanet, drawCosmicStar } from '@/utils/cosmetics/cosmicField'
-import type { CosmicFill } from '@/types/api/items'
+import type { CosmicFill } from '@/types/cosmetics/border'
 import { lighten } from '@/utils/color'
 import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   fill: CosmicFill
@@ -123,7 +124,7 @@ function fieldPos(el: FieldElement): { x: number; y: number } {
 }
 
 function clampToBand(v: number): number {
-  return Math.min(BAND.max, Math.max(BAND.min, v))
+  return clamp(v, BAND.min, BAND.max)
 }
 
 function buildPullRoute(from: { x: number; y: number }, sink: { x: number; y: number }): { pts: Array<{ x: number; y: number }>; side: 1 | -1 } {
@@ -410,17 +411,5 @@ useElementCanvas(canvasRef, {
 </script>
 
 <template>
-  <canvas ref="canvas" class="cosmic-border-fill" aria-hidden="true" />
+  <canvas ref="canvas" class="fx-canvas" aria-hidden="true" />
 </template>
-
-<style scoped>
-.cosmic-border-fill {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  pointer-events: none;
-}
-</style>

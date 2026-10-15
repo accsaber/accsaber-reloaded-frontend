@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
@@ -49,7 +49,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
     :row-to="rowTo" row-key="difficultyId" empty-message="No maps found matching your filters."
     @sort="emit('sort', $event)">
     <template #cell-cover="{ row }">
-      <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="44"
+      <CoverImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="44"
         :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
     </template>
     <template #cell-name="{ row }">
@@ -79,7 +79,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
 
     <template #mobile-card="{ row }">
       <router-link :to="rowTo(row)" class="list-card">
-        <GlowImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="48"
+        <CoverImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="48"
           class="list-card-cover" :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
         <div v-else class="list-card-cover-placeholder" />
         <div class="list-card-info">

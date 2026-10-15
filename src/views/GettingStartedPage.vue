@@ -20,7 +20,7 @@ usePageMeta({
 
     <ol class="gs__steps">
       <li class="gs__step">
-        <h2 class="gs__title">Install a Leaderboard Mod</h2>
+        <h2 class="section-title">Install a Leaderboard Mod</h2>
         <p class="gs__prose">
           You need a mod to submit scores. Grab
           <a href="https://beatleader.com/" target="_blank" rel="noopener noreferrer" class="gs__link">BeatLeader</a>
@@ -32,7 +32,7 @@ usePageMeta({
       </li>
 
       <li class="gs__step">
-        <h2 class="gs__title">Download the Playlists</h2>
+        <h2 class="section-title">Download the Playlists</h2>
         <p class="gs__prose">
           Grab the ranked map playlists and drop them into your
           <code class="gs__code">Playlists</code> folder. Pick the categories you want to play.
@@ -46,7 +46,7 @@ usePageMeta({
       </li>
 
       <li class="gs__step">
-        <h2 class="gs__title">Play and See Results</h2>
+        <h2 class="section-title">Play and See Results</h2>
         <p class="gs__prose">
           Play the maps from the playlists. Your scores are automatically submitted and will
           appear on the <RouterLink to="/leaderboards" class="gs__link">leaderboards</RouterLink>.
@@ -83,13 +83,6 @@ usePageMeta({
 
 .gs__step > * + * {
   margin-top: var(--space-md);
-}
-
-.gs__title {
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  margin: 0;
-  color: var(--text-primary);
 }
 
 .gs__prose {

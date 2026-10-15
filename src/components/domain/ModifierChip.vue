@@ -59,7 +59,7 @@ onMounted(() => {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  padding: 2px 8px;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   border: 1px solid var(--bg-overlay);
   background: var(--bg-base);

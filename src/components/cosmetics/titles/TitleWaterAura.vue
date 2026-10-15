@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { TitleWaterAuraSpec } from '@/types/api/items'
+import type { TitleWaterAuraSpec } from '@/types/cosmetics/title'
 import { lighten } from '@/utils/color'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'

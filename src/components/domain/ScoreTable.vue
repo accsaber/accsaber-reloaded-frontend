@@ -5,7 +5,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
 import type { SortState, TableColumn } from '@/types/display'
 import type { RouteLocationRaw } from 'vue-router'
-import { formatRelativeDate, isRecentDate } from '@/utils/formatters'
+import { formatRelativeDate, isRecentDate, formatAccuracy } from '@/utils/formatters'
 import { getRankClass } from '@/utils/ranking'
 import { computed, useSlots } from 'vue'
 
@@ -130,7 +130,7 @@ const customSlots = computed(() => {
 
       <template #cell-accuracy="sp">
         <slot name="cell-accuracy" v-bind="sp">
-          {{ ((sp.value as number) * 100).toFixed(2) }}%
+          {{ formatAccuracy(sp.value as number) }}
         </slot>
       </template>
 

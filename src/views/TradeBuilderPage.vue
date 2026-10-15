@@ -4,6 +4,7 @@ import { getUserInventory } from '@/api/items'
 import { createTrade } from '@/api/trades'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
@@ -11,7 +12,7 @@ import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
-import TradeBuilderSlot from '@/components/domain/TradeBuilderSlot.vue'
+import TradeBuilderSlot from '@/views/trades/TradeBuilderSlot.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -19,6 +20,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import type { UserItemResponse } from '@/types/api/items'
 import { TRADE_MAX_ITEMS_PER_SIDE } from '@/types/api/trades'
+import type { Tab } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { ESSENCE_GLYPH, formatEssenceAmount, formatEssenceNet } from '@/utils/essence'
 import { digitsOnly } from '@/utils/formatters'
@@ -56,6 +58,10 @@ const message = ref('')
 const submitting = ref(false)
 const errorMsg = ref<string | null>(null)
 
+const INVENTORY_TABS: Tab[] = [
+  { key: 'mine', label: 'Your inventory', accentColor: 'var(--page-accent)' },
+  { key: 'theirs', label: 'Their inventory', accentColor: 'var(--page-accent)' },
+]
 const activeTab = ref<'mine' | 'theirs'>('mine')
 const invPage = ref<Page<UserItemResponse> | null>(null)
 const invLoading = ref(false)
@@ -203,7 +209,7 @@ onMounted(() => {
 
     <template v-else>
       <section class="trade-builder__field">
-        <label class="trade-builder__label">Send to</label>
+        <label class="field-label">Send to</label>
         <UserPicker v-model="recipientUserId" placeholder="Search players by name..."
           @select="recipientName = $event?.userName ?? null" />
         <p v-if="isSelfRecipient" class="trade-builder__hint trade-builder__hint--warn">
@@ -213,14 +219,12 @@ onMounted(() => {
 
       <div class="trade-builder__layout">
         <section class="trade-builder__inventory-panel">
-          <div class="trade-builder__tabs" role="tablist">
-            <button type="button" role="tab" class="trade-builder__tab"
-              :class="{ 'trade-builder__tab--active': activeTab === 'mine' }" :aria-selected="activeTab === 'mine'"
-              @click="activeTab = 'mine'">Your inventory</button>
-            <button type="button" role="tab" class="trade-builder__tab"
-              :class="{ 'trade-builder__tab--active': activeTab === 'theirs' }" :aria-selected="activeTab === 'theirs'"
-              :disabled="!hasRecipient" @click="activeTab = 'theirs'">Their inventory</button>
-          </div>
+          <BaseTabs
+            :tabs="INVENTORY_TABS"
+            :model-value="activeTab"
+            :disabled-keys="hasRecipient ? [] : ['theirs']"
+            @update:model-value="activeTab = $event as 'mine' | 'theirs'"
+          />
 
           <SearchBox :key="activeTab" v-model="search"
             :placeholder="activeTab === 'mine' ? 'Search your tradeable items...' : 'Search their tradeable items...'" />
@@ -322,14 +326,6 @@ onMounted(() => {
   max-width: 480px;
 }
 
-.trade-builder__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
-
 .trade-builder__hint {
   margin: 0;
   font-size: var(--text-caption);
@@ -352,40 +348,6 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--space-md);
   min-width: 0;
-}
-
-.trade-builder__tabs {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.trade-builder__tab {
-  padding: var(--space-sm) var(--space-md);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.trade-builder__tab:hover:not(:disabled) {
-  color: var(--text-primary);
-}
-
-.trade-builder__tab--active {
-  color: var(--page-accent);
-  border-bottom-color: var(--page-accent);
-}
-
-.trade-builder__tab:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
 }
 
 .trade-builder__grid {

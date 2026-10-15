@@ -1,4 +1,4 @@
-export type { MilestoneTier } from './display'
+export type MilestoneTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'APEX'
 
 export type StaffRole =
   | 'RANKING'

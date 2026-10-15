@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import GlowImage from '@/components/common/GlowImage.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import type { MapDifficultyResponse } from '@/types/api/maps'
 import { truncate } from '@/utils/formatters'
+import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -42,10 +43,7 @@ const criteriaClass = computed(() => {
   return 'batch-card__criteria--pending'
 })
 
-const coverFallback = computed(() => {
-  const d = props.diff
-  return d.cdnCoverUrl && d.coverUrl && d.cdnCoverUrl !== d.coverUrl ? d.coverUrl : null
-})
+const coverFallback = computed(() => pickCoverFallback(props.diff))
 
 const actionClass = computed(() => (props.action ? `batch-card__action--${props.action}` : ''))
 </script>
@@ -58,8 +56,8 @@ const actionClass = computed(() => (props.action ? `batch-card__action--${props.
       <svg v-else width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
     </span>
 
-    <GlowImage
-      :src="diff.cdnCoverUrl ?? diff.coverUrl"
+    <CoverImage
+      :src="pickCoverUrl(diff)"
       :fallback-src="coverFallback"
       alt=""
       :size="36"

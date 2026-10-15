@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/api/items'
+import type { Composition } from '@/types/cosmetics/effects'
 import { asNumber, asString, boxScale, type EffectMeasure } from '@/utils/cosmetics/effects'
 import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   composition: Composition
@@ -26,16 +27,16 @@ interface SnowConfig {
 }
 
 function readSnow(c: Composition): SnowConfig {
-  const sizeMin = Math.max(4, Math.min(24, asNumber(c.sizeMinPx) ?? 8))
+  const sizeMin = clamp(asNumber(c.sizeMinPx) ?? 8, 4, 24)
   return {
-    count: Math.max(4, Math.min(24, Math.round(asNumber(c.count) ?? 10))),
+    count: clamp(Math.round(asNumber(c.count) ?? 10), 4, 24),
     color: asString(c.color) ?? '#cfe3fb',
     trailColor: asString(c.trailColor) ?? '#9cd0ff',
     sizeMinPx: sizeMin,
-    sizeMaxPx: Math.max(sizeMin, Math.min(28, asNumber(c.sizeMaxPx) ?? 15)),
+    sizeMaxPx: clamp(asNumber(c.sizeMaxPx) ?? 15, sizeMin, 28),
     fallSecs: Math.max(2, asNumber(c.fallSecs) ?? 7),
     spinSecs: Math.max(1.5, asNumber(c.spinSecs) ?? 5),
-    intensity: Math.max(0.2, Math.min(1, asNumber(c.intensity) ?? 0.9)),
+    intensity: clamp(asNumber(c.intensity) ?? 0.9, 0.2, 1),
   }
 }
 

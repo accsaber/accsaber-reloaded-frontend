@@ -1,8 +1,22 @@
-import type { TitleBleedSpec, TitleDevourSpec, TitleFlareSpec, TitleGalaxySpec, TitleGustSpec, TitlePixieSpec, TitleQuakeSpec, TitleRippleSpec, TitleSearSpec, TitleShockSpec, TitleTorchSpec, TitleWarcrySpec } from '@/types/api/items'
+import type {
+  TitleBleedSpec,
+  TitleDevourSpec,
+  TitleFlareSpec,
+  TitleGalaxySpec,
+  TitleGustSpec,
+  TitlePixieSpec,
+  TitleQuakeSpec,
+  TitleRippleSpec,
+  TitleSearSpec,
+  TitleShockSpec,
+  TitleTorchSpec,
+  TitleWarcrySpec,
+} from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant as pick } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
+import { clamp01 } from '@/utils/math'
 
 type Style = Record<string, string>
 
@@ -13,10 +27,6 @@ export function heartbeat(tSec: number, bpm: number): number {
 
 function easeOut(u: number): number {
   return 1 - Math.pow(1 - u, 3)
-}
-
-function clamp01(u: number): number {
-  return Math.min(1, Math.max(0, u))
 }
 
 const QUAKE_PETRIFY = 500

@@ -49,7 +49,7 @@ const open = ref(false)
   padding: 6px 10px;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -120,7 +120,7 @@ const open = ref(false)
   color: var(--text-primary);
   background: color-mix(in srgb, var(--error) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
 }
 
 .rules__aside {

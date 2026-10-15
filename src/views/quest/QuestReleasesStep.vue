@@ -2,7 +2,7 @@
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import BadgePill from '@/components/domain/BadgePill.vue'
+import BadgePill from '@/views/quest/BadgePill.vue'
 import type { QuestReleaseResponse } from '@/types/api/quest'
 import type { TableColumn } from '@/types/display'
 import { formatFullDate, formatRelativeDate } from '@/utils/formatters'

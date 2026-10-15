@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import type { LevelThreshold } from '@/api/levels'
 import logoUrl from '@/assets/logo.png'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import { tierKey } from '@/stores/levels'
 import type { ItemResponse } from '@/types/api/items'
+import type { LevelThresholdResponse } from '@/types/api/level-thresholds'
 import {
   readBorderColorValue,
   readBorderShapeValue,
   readThumbnailBackgroundValue,
   readTitleValue,
-} from '@/utils/items'
+} from '@/utils/cosmetics/readers'
 import { xpForLevel } from '@/wiki/apCurve'
 import { computed, ref } from 'vue'
+import { clamp } from '@/utils/math'
 
 const props = defineProps<{
-  thresholds: LevelThreshold[]
+  thresholds: LevelThresholdResponse[]
   itemsById: Map<string, ItemResponse>
   personalLevel?: number | null
   userName?: string | null
@@ -51,9 +52,9 @@ const maxLevel = computed(() =>
   ),
 )
 
-const level = ref(Math.min(Math.max(props.personalLevel ?? 42, 1), 999))
+const level = ref(clamp(props.personalLevel ?? 42, 1, 999))
 
-function tierColor(title: string): string {
+function tierColor(title: string | null): string {
   return `var(--tier-${tierKey(title)}, var(--text-secondary))`
 }
 
@@ -62,7 +63,7 @@ const bands = computed(() =>
     const from = Math.max(t.level, 1)
     const to = props.thresholds[i + 1]?.level ?? maxLevel.value
     return {
-      title: t.title,
+      title: t.title ?? undefined,
       from,
       left: ((from - 1) / (maxLevel.value - 1)) * 100,
       width: (Math.max(to - from, 0) / (maxLevel.value - 1)) * 100,
@@ -72,7 +73,7 @@ const bands = computed(() =>
 )
 
 const currentTier = computed(() => {
-  let match: LevelThreshold | null = null
+  let match: LevelThresholdResponse | null = null
   for (const t of props.thresholds) {
     if (t.level <= level.value) match = t
     else break
@@ -197,7 +198,7 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
         </div>
       </div>
       <div v-if="focusAwards" class="ladder__reward">
-        <span class="ladder__reward-when">
+        <span class="field-label">
           {{ level >= focusAwards.level ? 'Unlocked at' : 'First unlock at' }} level
           {{ focusAwards.level }}
         </span>
@@ -252,7 +253,7 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 
 .ladder__jump {
   margin-left: auto;
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   background: transparent;
@@ -360,14 +361,6 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
   flex-direction: column;
   gap: var(--space-sm);
   min-width: 0;
-}
-
-.ladder__reward-when {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .ladder__reward-items {

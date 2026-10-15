@@ -146,7 +146,7 @@ const filterColumnType = (i: number) => {
 
     <div class="qb__clause">
       <div class="qb__field">
-        <label class="qb__label">FROM</label>
+        <label class="field-label">FROM</label>
         <BaseSelect
           :model-value="local.from"
           :options="tableOptions"
@@ -154,18 +154,18 @@ const filterColumnType = (i: number) => {
         />
       </div>
       <div class="qb__field">
-        <label class="qb__label">SELECT function</label>
+        <label class="field-label">SELECT function</label>
         <BaseSelect v-model="local.select.function" :options="functionOptions" />
       </div>
       <div class="qb__field">
-        <label class="qb__label">Column</label>
+        <label class="field-label">Column</label>
         <BaseSelect v-model="local.select.column" :options="selectColumnOptions" />
       </div>
     </div>
 
     <div v-if="local.filters.length" class="qb__filters">
       <div class="qb__filters-header">
-        <span class="qb__label">WHERE</span>
+        <span class="field-label">WHERE</span>
       </div>
       <div v-for="(filter, i) in local.filters" :key="i" class="qb__filter">
         <div class="qb__filter-row">
@@ -261,14 +261,6 @@ const filterColumnType = (i: number) => {
   gap: var(--space-xs);
   flex: 1;
   min-width: 140px;
-}
-
-.qb__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .qb__filters {

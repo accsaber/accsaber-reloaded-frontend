@@ -133,7 +133,7 @@ watch([() => props.war.id, () => props.reloadKey], fetchAids, { immediate: true 
 <template>
   <section v-if="canAsk || canLeave || canOffer || aids.length" class="war-aid">
     <header class="war-aid__head">
-      <h2 class="war-aid__title">Allies</h2>
+      <h2 class="section-title">Allies</h2>
       <span class="war-aid__actions">
         <BaseButton v-if="canAsk && !asking" size="sm" @click="asking = true">Ask an ally</BaseButton>
         <template v-if="canOffer">
@@ -204,13 +204,6 @@ watch([() => props.war.id, () => props.reloadKey], fetchAids, { immediate: true 
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-}
-
-.war-aid__title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .war-aid__actions {

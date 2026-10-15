@@ -11,7 +11,6 @@ import type {
   ComplexityScenario,
 } from '@/types/api/complexity'
 import type { CategoryCode } from '@/types/display'
-import { toUserRef } from '@/utils/mappers'
 import { AP_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
 import { CATEGORY_ORDER } from '@/utils/constants'
 import PlayerPlaysTable from './PlayerPlaysTable.vue'
@@ -53,7 +52,7 @@ const excluded = computed<CategoryCode[]>(() => {
   return skip
 })
 
-watch(() => props.player?.userId, () => {
+watch(() => props.player?.player.id, () => {
   category.value = 'overall'
 })
 
@@ -79,12 +78,12 @@ const totals = computed(() => {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="player?.name ?? 'Player plays'" max-width="1200px"
+  <BaseModal :open="open" :title="player?.player.name ?? 'Player plays'" max-width="1200px"
     @close="emit('close')">
     <div class="plays-modal">
       <header class="plays-modal__head">
         <div v-if="player" class="plays-modal__identity">
-          <UserChip :user="toUserRef(player)" size="lg" />
+          <UserChip :user="player.player" size="lg" />
           <span class="plays-modal__meta">
             Best plays under {{ SCENARIO_LABELS[scenario].toLowerCase() }} next to today
           </span>
@@ -186,7 +185,7 @@ const totals = computed(() => {
 
 .plays-modal__limit-input {
   width: 64px;
-  padding: 4px var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);

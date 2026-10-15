@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { FusionScene } from '@/types/api/items'
+import type { FusionScene } from '@/types/cosmetics/background'
 import { cyc, win } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
+import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{ scene: FusionScene }>()
 
@@ -39,7 +40,7 @@ useElementCanvas(canvasRef, {
 
     const line = (dy: number, color: string, alpha: number, lw: number, wavAmp: number, phase: number) => {
       ctx.strokeStyle = color
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
+      ctx.globalAlpha = clamp01(alpha)
       ctx.lineWidth = Math.max(1, lw * s)
       ctx.beginPath()
       const step = Math.max(4, w / 60)
@@ -56,7 +57,7 @@ useElementCanvas(canvasRef, {
       const g = ctx.createRadialGradient(w / 2, y0, 0, w / 2, y0, Math.max(4, r * s))
       g.addColorStop(0, withAlpha(sc.beam, 0.28))
       g.addColorStop(1, withAlpha(sc.beam, 0))
-      ctx.globalAlpha = Math.max(0, Math.min(1, a))
+      ctx.globalAlpha = clamp01(a)
       ctx.fillStyle = g
       ctx.fillRect(0, 0, w, h)
       ctx.globalAlpha = 1

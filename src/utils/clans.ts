@@ -23,7 +23,8 @@ import type {
   PublicClanResponse,
 } from '@/types/api/clans'
 import type { Rule } from '@/types/display'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatDuration, formatRelativeDate } from '@/utils/formatters'
+import { hueOf, parseHex } from '@/utils/color'
 
 export const CLAN_ROLE_LABEL: Record<ClanRole, string> = {
   member: 'Member',
@@ -52,13 +53,6 @@ export function assignableRoles(viewer: ClanRole | null | undefined, target: Cla
       ? ['member', 'officer']
       : []
   return options.filter((role) => role !== target)
-}
-
-export const CLAN_ROLE_PLURAL: Record<ClanRole, string> = {
-  member: 'Members',
-  officer: 'Officers',
-  commander: 'Commanders',
-  founder: 'Founder',
 }
 
 export const CLAN_CAPACITY_LABEL: Record<ClanCapacity, string> = {
@@ -165,13 +159,13 @@ export interface WarClock {
 
 export function warClock(war: ClanWarResponse, now: number): WarClock {
   if (war.status === 'picking' && war.picksDueAt) {
-    return { label: 'Picks due', value: formatCountdown(new Date(war.picksDueAt).getTime() - now) }
+    return { label: 'Picks due', value: formatDuration(new Date(war.picksDueAt).getTime() - now, { zero: 'now' }) }
   }
   if (war.status === 'preparing' && war.startsAt) {
-    return { label: 'Starts in', value: formatCountdown(new Date(war.startsAt).getTime() - now) }
+    return { label: 'Starts in', value: formatDuration(new Date(war.startsAt).getTime() - now, { zero: 'now' }) }
   }
   if (war.status === 'active' && war.startsAt) {
-    return { label: 'Ends in', value: formatCountdown(new Date(war.startsAt).getTime() + WAR_MAX_MS - now) }
+    return { label: 'Ends in', value: formatDuration(new Date(war.startsAt).getTime() + WAR_MAX_MS - now, { zero: 'now' }) }
   }
   if (war.endedAt) {
     return { label: war.outcome ? CLAN_WAR_OUTCOME_LABEL[war.outcome] : 'Ended', value: formatRelativeDate(war.endedAt, now) }
@@ -271,17 +265,6 @@ export function formatSignedStanding(value: number): string {
   return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString()}`
 }
 
-export function formatCountdown(ms: number, zeroLabel = 'now'): string {
-  if (ms <= 0) return zeroLabel
-  const totalMinutes = Math.floor(ms / 60000)
-  const days = Math.floor(totalMinutes / 1440)
-  const hours = Math.floor((totalMinutes % 1440) / 60)
-  const minutes = totalMinutes % 60
-  if (days > 0) return `${days}d ${hours}h`
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
-}
-
 export const CLAN_AUDIT_LABEL: Record<ClanAuditAction, string> = {
   profile_updated: 'Profile updated',
   cosmetic_equipped: 'Cosmetic changed',
@@ -368,14 +351,9 @@ export function clanColorVars(clan: ClanColors): Record<string, string> {
 export const WAR_GUARD_MAX = 100
 
 function hueLightness(hex: string): [number, number] {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const light = (max + min) / 2
-  if (max === min) return [0, light]
-  const d = max - min
-  const hue = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
-  return [hue * 60, light]
+  const rgb = parseHex(hex) ?? [0, 0, 0]
+  const light = (Math.max(...rgb) + Math.min(...rgb)) / 510
+  return [hueOf(hex) ?? 0, light]
 }
 
 function similarColors(a: string | null, b: string | null): boolean {

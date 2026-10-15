@@ -2,6 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { computed, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import { clamp } from '@/utils/math'
 
 const OUTPUT_PX = 512
 const MAX_ZOOM = 4
@@ -33,14 +34,14 @@ function scale(): number {
   return (stageSize() / Math.min(img.naturalWidth, img.naturalHeight)) * zoom.value
 }
 
-function clamp(next: { x: number; y: number }) {
+function clampOffset(next: { x: number; y: number }) {
   const img = image.value
   if (!img) return next
   const limitX = Math.max(0, (img.naturalWidth * scale() - stageSize()) / 2)
   const limitY = Math.max(0, (img.naturalHeight * scale() - stageSize()) / 2)
   return {
-    x: Math.min(limitX, Math.max(-limitX, next.x)),
-    y: Math.min(limitY, Math.max(-limitY, next.y)),
+    x: clamp(next.x, -limitX, limitX),
+    y: clamp(next.y, -limitY, limitY),
   }
 }
 
@@ -83,7 +84,7 @@ watch(
 )
 
 watch(zoom, () => {
-  offset.value = clamp(offset.value)
+  offset.value = clampOffset(offset.value)
 })
 
 function onPointerDown(e: PointerEvent) {
@@ -93,7 +94,7 @@ function onPointerDown(e: PointerEvent) {
 
 function onPointerMove(e: PointerEvent) {
   if (!drag || drag.pointerId !== e.pointerId) return
-  offset.value = clamp({ x: offset.value.x + e.clientX - drag.x, y: offset.value.y + e.clientY - drag.y })
+  offset.value = clampOffset({ x: offset.value.x + e.clientX - drag.x, y: offset.value.y + e.clientY - drag.y })
   drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY }
 }
 
@@ -102,7 +103,7 @@ function onPointerUp() {
 }
 
 function onWheel(e: WheelEvent) {
-  zoom.value = Math.min(MAX_ZOOM, Math.max(1, zoom.value - e.deltaY * 0.002))
+  zoom.value = clamp(zoom.value - e.deltaY * 0.002, 1, MAX_ZOOM)
 }
 
 function confirm() {

@@ -1,7 +1,9 @@
 import { usePreviewStore } from '@/stores/preview'
 import { useThemeStore } from '@/stores/theme'
 import type { ItemResponse } from '@/types/api/items'
-import { buildEffectLayers, itemVariantPreviews, readThemeValue, type EffectLayer } from '@/utils/items'
+import { buildEffectLayers, type EffectLayer } from '@/utils/cosmetics/effectLayers'
+import { itemVariantPreviews } from '@/utils/items'
+import { readThemeValue } from '@/utils/cosmetics/readers'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { watch } from 'vue'
 

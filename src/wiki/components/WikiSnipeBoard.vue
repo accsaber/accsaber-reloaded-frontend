@@ -118,7 +118,7 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
   <figure class="board" data-wiki-raw>
     <div class="board__head">
       <div class="board__pair">
-        <span class="board__label">Sniping</span>
+        <span class="field-label">Sniping</span>
         <span class="board__names">
           <strong>{{ sniperName }}</strong> against <strong>{{ activeTargetName }}</strong>
         </span>
@@ -209,14 +209,6 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
   flex-direction: column;
   gap: 2px;
   min-width: 200px;
-}
-
-.board__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .board__names {

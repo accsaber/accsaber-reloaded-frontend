@@ -1,6 +1,5 @@
 import type {
   ApplyScriptParams,
-  ComplexityDatasetKind,
   ComplexityPreviewParams,
   ComplexityPreviewResponse,
   ComplexityRaterResponse,
@@ -13,8 +12,7 @@ import type {
   ComplexityPlayerPlays,
   ScenarioPageParams,
 } from '@/types/api/complexity'
-import type { DownloadedFile } from '../client'
-import { get, getFile, post } from '../client'
+import { get, post } from '../client'
 import { buildQuery } from '../utils'
 
 const BASE = '/ranking/complexity'
@@ -79,8 +77,4 @@ export function previewComplexity(
 
 export function applyComplexityScript(params: ApplyScriptParams): Promise<void> {
   return post<void>(`${BASE}/apply${buildQuery(params)}`)
-}
-
-export function downloadComplexityDataset(kind: ComplexityDatasetKind): Promise<DownloadedFile> {
-  return getFile(`${BASE}/dataset/${kind}`)
 }

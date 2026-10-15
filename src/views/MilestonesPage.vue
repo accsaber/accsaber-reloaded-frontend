@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import MilestoneCanvas from '@/components/domain/MilestoneCanvas.vue'
+import MilestoneCanvas from '@/views/milestones/MilestoneCanvas.vue'
 import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
 import MilestoneListView from '@/components/domain/MilestoneListView.vue'
-import MilestoneRewards from '@/components/domain/MilestoneRewards.vue'
+import MilestoneRewards from '@/views/milestones/MilestoneRewards.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import { getApiErrorMessage } from '@/api/client'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useSetGroups } from '@/composables/useSetGroups'
@@ -23,6 +22,7 @@ import { toMilestoneDisplay } from '@/utils/mappers'
 import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import type { MilestoneSetGroup } from '@/utils/milestoneLayout'
 import { computed, onMounted, ref, watch } from 'vue'
+import { parseApiError } from '@/api/client'
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
@@ -154,7 +154,7 @@ async function togglePin() {
     if (unpinning) pinned.value = pinned.value.filter((p) => p.milestoneId !== id)
     else pinned.value = await fetchPinned(authStore.userId)
   } catch (err) {
-    pinError.value = getApiErrorMessage(err, 'Could not update pins')
+    pinError.value = parseApiError(err, 'Could not update pins').message
   } finally {
     pinPending.value = false
   }
@@ -277,7 +277,7 @@ watch(() => authStore.userId, fetchUserData)
 
             <template v-else-if="selectedSet && selectedSetStats">
               <div class="milestones-page__set">
-                <h2 class="milestones-page__set-title">{{ selectedSet.title }}</h2>
+                <h2 class="section-title">{{ selectedSet.title }}</h2>
                 <p class="milestones-page__set-desc">{{ selectedSet.description }}</p>
                 <p class="milestones-page__set-meta">
                   <template v-if="authStore.isLoggedIn">
@@ -331,13 +331,6 @@ watch(() => authStore.userId, fetchUserData)
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-md);
-}
-
-.milestones-page__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .milestones-page__controls {
@@ -429,13 +422,6 @@ watch(() => authStore.userId, fetchUserData)
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   background: var(--bg-surface);
-}
-
-.milestones-page__set-title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .milestones-page__set-desc {

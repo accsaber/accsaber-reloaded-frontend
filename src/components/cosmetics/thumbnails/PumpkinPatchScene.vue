@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { PumpkinPatchScene } from '@/types/api/items'
+import type { PumpkinPatchScene } from '@/types/cosmetics/background'
 import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
 import { flickerNoise, type Ctx, type Point } from '@/utils/cosmetics/canvasShapes'
 import { drawBranch } from '@/utils/cosmetics/graveyardScenery'

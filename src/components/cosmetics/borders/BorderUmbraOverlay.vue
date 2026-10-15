@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import type { BorderOverlayHost, BorderUmbraOverlaySpec } from '@/types/api/items'
+import type { BorderOverlayHost, BorderUmbraOverlaySpec } from '@/types/cosmetics/border'
 import { lighten } from '@/utils/color'
 import { easeOut } from '@/utils/cosmetics/effects'
 import { eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'

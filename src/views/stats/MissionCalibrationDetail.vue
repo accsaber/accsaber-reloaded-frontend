@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatAccuracy, formatCount } from '@/utils/formatters'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type {
   MissionCalibrationResponse,
@@ -11,8 +12,6 @@ import StatsHistogram from './StatsHistogram.vue'
 import {
   MISSION_TIER_LABELS,
   NO_VALUE,
-  fmtFraction,
-  fmtInt,
   labelCase,
   rateClass,
 } from './statsFormat'
@@ -96,11 +95,11 @@ watch(() => JSON.stringify([props.templateId, props.filters]), fetchDetail, { im
                 :style="{ '--fill': ((row.completionRate ?? 0) * 100) + '%' }" />
             </span>
             <span class="tier-strip__rate" :class="rateClass(row.completionRate)">
-              {{ fmtFraction(row.completionRate) }}
+              {{ formatAccuracy(row.completionRate, 1) }}
             </span>
             <span class="tier-strip__counts"
-              :title="fmtInt(row.assigned) + ' assigned in this tier of ' + fmtInt(maxAssigned) + ' at the busiest tier'">
-              {{ fmtInt(row.completed) }} / {{ fmtInt(row.assigned) }}
+              :title="formatCount(row.assigned) + ' assigned in this tier of ' + formatCount(maxAssigned) + ' at the busiest tier'">
+              {{ formatCount(row.completed) }} / {{ formatCount(row.assigned) }}
             </span>
           </li>
         </ol>
@@ -112,9 +111,9 @@ watch(() => JSON.stringify([props.templateId, props.filters]), fetchDetail, { im
         <div v-for="row in shortfall" :key="row.band" class="shortfall__band">
           <div class="shortfall__head">
             <span class="shortfall__band-name">{{ labelCase(row.band) }}</span>
-            <span class="shortfall__stat">median reached {{ fmtFraction(row.medianReachedFraction) }}</span>
+            <span class="shortfall__stat">median reached {{ formatAccuracy(row.medianReachedFraction, 1) }}</span>
           </div>
-          <p class="shortfall__counts">{{ fmtInt(row.measured) }} measured of {{ fmtInt(row.failed) }} expired</p>
+          <p class="shortfall__counts">{{ formatCount(row.measured) }} measured of {{ formatCount(row.failed) }} expired</p>
           <StatsHistogram title="Progress at expiry" :entries="row.buckets" />
         </div>
       </div>

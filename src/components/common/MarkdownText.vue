@@ -42,7 +42,7 @@ const html = computed(() => renderMarkdown(props.content))
 .markdown-text :deep(h4),
 .markdown-text :deep(h5),
 .markdown-text :deep(h6) {
-  margin: var(--space-sm) 0 4px;
+  margin: var(--space-sm) 0 var(--space-xs);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -76,7 +76,7 @@ const html = computed(() => renderMarkdown(props.content))
 }
 
 .markdown-text :deep(code) {
-  padding: 1px 4px;
+  padding: 1px var(--space-xs);
   font-family: var(--font-mono);
   font-size: 0.9em;
   background: var(--bg-elevated);
@@ -88,7 +88,7 @@ const html = computed(() => renderMarkdown(props.content))
   padding: var(--space-sm);
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
   overflow-x: auto;
 }
 
@@ -100,7 +100,7 @@ const html = computed(() => renderMarkdown(props.content))
 
 .markdown-text :deep(img) {
   max-width: 100%;
-  border-radius: 3px;
+  border-radius: var(--radius-btn);
 }
 
 .markdown-text :deep(hr) {

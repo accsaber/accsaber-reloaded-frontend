@@ -10,7 +10,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { usePreviewStore } from '@/stores/preview'
 import type { ItemResponse, UnusualEffectResponse } from '@/types/api/items'
-import { itemVariantPreviews, readItemVariants, thumbnailHostAttrs } from '@/utils/items'
+import { itemVariantPreviews, readItemVariants } from '@/utils/items'
+import { thumbnailHostAttrs } from '@/utils/cosmetics/readers'
 import { isCreativesSubdomain } from '@/utils/subdomain'
 import { computed, ref, watch } from 'vue'
 
@@ -204,7 +205,7 @@ const chips = computed(() => {
 
       <div class="preview-dock__controls">
         <div class="preview-dock__group">
-          <span class="preview-dock__group-title">Border shape</span>
+          <span class="field-label">Border shape</span>
           <PreviewPicker v-model="borderShapeId" :items="borderShapes" placeholder="None" />
           <PreviewVariantRow :variants="borderShapeVariants" v-model="preview.borderShapeVariant" />
           <PreviewPicker v-model="borderShapeEffectId" :effects="effects" placeholder="No effect" />
@@ -212,7 +213,7 @@ const chips = computed(() => {
         </div>
 
         <div class="preview-dock__group">
-          <span class="preview-dock__group-title">Border color</span>
+          <span class="field-label">Border color</span>
           <PreviewPicker v-model="borderColorId" :items="borderColors" placeholder="None" />
           <PreviewVariantRow :variants="borderColorVariants" v-model="preview.borderColorVariant" />
           <PreviewPicker v-model="borderColorEffectId" :effects="effects" placeholder="No effect" />
@@ -220,7 +221,7 @@ const chips = computed(() => {
         </div>
 
         <div class="preview-dock__group">
-          <span class="preview-dock__group-title">Title</span>
+          <span class="field-label">Title</span>
           <PreviewPicker v-model="titleId" :items="titles" placeholder="None" />
           <PreviewVariantRow :variants="titleVariants" v-model="preview.titleVariant" />
           <PreviewPicker v-model="titleEffectId" :effects="effects" placeholder="No effect" />
@@ -228,7 +229,7 @@ const chips = computed(() => {
         </div>
 
         <div class="preview-dock__group">
-          <span class="preview-dock__group-title">Thumbnail</span>
+          <span class="field-label">Thumbnail</span>
           <PreviewPicker v-model="thumbnailId" :items="thumbnails" placeholder="None" />
           <PreviewVariantRow :variants="thumbnailVariants" v-model="preview.thumbnailVariant" />
           <PreviewPicker v-model="thumbnailEffectId" :effects="effects" placeholder="No effect" />
@@ -236,7 +237,7 @@ const chips = computed(() => {
         </div>
 
         <div class="preview-dock__group">
-          <span class="preview-dock__group-title">Theme</span>
+          <span class="field-label">Theme</span>
           <PreviewPicker v-model="themeId" :items="themes" placeholder="None" />
           <PreviewVariantRow :variants="themeVariants" v-model="preview.themeVariant" />
           <PreviewPicker v-model="themeEffectId" :effects="effects" placeholder="No effect" />
@@ -360,14 +361,6 @@ const chips = computed(() => {
   flex-direction: column;
   gap: var(--space-xs);
   min-width: 0;
-}
-
-.preview-dock__group-title {
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  font-weight: 600;
 }
 
 .preview-dock__bar {
