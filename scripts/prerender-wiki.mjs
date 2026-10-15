@@ -42,6 +42,8 @@ const inert = new Proxy(function () {}, {
 const memoryStorage = { getItem: () => null, setItem() {}, removeItem() {} }
 Object.assign(globalThis, {
   window: globalThis,
+  addEventListener() {},
+  removeEventListener() {},
   location: new URL(`${SITE}/`),
   document: inert,
   localStorage: memoryStorage,
