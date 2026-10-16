@@ -8,6 +8,7 @@ import ClanChatTab from '@/components/domain/ClanChatTab.vue'
 import { useClanChat } from '@/composables/useClanChat'
 import { computed, ref, watch } from 'vue'
 import { clamp } from '@/utils/math'
+import { readStoredString, writeStoredString } from '@/utils/storage'
 
 const SIZE = 48
 const INSET = 16
@@ -15,6 +16,10 @@ const GAP = 8
 const PANEL_WIDTH = 340
 const PANEL_HEIGHT = 460
 const POLL_MS = 60000
+
+function seenKey(clanId: string): string {
+  return `clan-chat:seen:${clanId}`
+}
 
 const props = defineProps<{ clan: PublicClanResponse }>()
 
@@ -62,8 +67,8 @@ useRefetchOnFocus(() => {
   if (!open.value) void poll()
 }, POLL_MS)
 
-watch(() => props.clan.id, () => {
-  seenUntil.value = null
+watch(() => props.clan.id, (id) => {
+  seenUntil.value = readStoredString(seenKey(id))
   unreadCount.value = 0
   open.value = false
   void poll()
@@ -78,6 +83,10 @@ watch(open, (isOpen) => {
   if (isOpen) return
   seenUntil.value = latestSeen()
   unreadCount.value = 0
+})
+
+watch(seenUntil, (value) => {
+  if (value) writeStoredString(seenKey(props.clan.id), value)
 })
 
 useClickOutside(root, open, close)
