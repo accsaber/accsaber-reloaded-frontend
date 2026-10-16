@@ -15,6 +15,7 @@ const NOTIFICATION_DEFAULTS: NotificationSettings = {
   'notifications.clanMembership': true,
   'notifications.clanAlliance': true,
   'notifications.clanWar': true,
+  'notifications.campaignInvite': true,
 }
 
 const CONTROLS: { key: keyof NotificationSettings & string; title: string }[] = [
@@ -53,6 +54,10 @@ const CONTROLS: { key: keyof NotificationSettings & string; title: string }[] = 
   {
     key: 'notifications.clanWar',
     title: 'Clan wars',
+  },
+  {
+    key: 'notifications.campaignInvite',
+    title: 'Campaign invites',
   },
   {
     key: 'notifications.server',

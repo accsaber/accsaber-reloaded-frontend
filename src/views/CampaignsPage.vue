@@ -222,20 +222,25 @@ async function loadCampaigns() {
   loading.value = false
 }
 
+let inviteRequest = 0
+
 async function loadInvites() {
+  const id = ++inviteRequest
   if (!auth.isLoggedIn) {
     pendingInvites.value = []
     return
   }
   invitesLoading.value = true
+  let invites: CampaignCollaboratorResponse[] = []
   try {
     const { getMyCollaborations } = await import('@/api/campaigns')
-    pendingInvites.value = (await getMyCollaborations({ status: 'PENDING', size: 50 })).content
+    invites = (await getMyCollaborations({ status: 'PENDING', size: 50 })).content
   } catch {
-    pendingInvites.value = []
-  } finally {
-    invitesLoading.value = false
+    invites = []
   }
+  if (id !== inviteRequest) return
+  pendingInvites.value = invites
+  invitesLoading.value = false
 }
 
 async function respondToInvite(inv: CampaignCollaboratorResponse, accept: boolean) {
@@ -272,6 +277,7 @@ function setSearch(value: string) {
 
 watch(() => `${pane.value}|${JSON.stringify(listParams())}`, loadCampaigns, { immediate: true })
 watch(() => auth.isLoggedIn, loadInvites, { immediate: true })
+watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
 </script>
 
 <template>

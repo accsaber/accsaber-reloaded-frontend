@@ -40,6 +40,12 @@ defineProps<{
       <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
       <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
     </template>
+    <template v-else-if="type === 'campaign_invite'">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <line x1="20" y1="8" x2="20" y2="14" />
+      <line x1="23" y1="11" x2="17" y2="11" />
+    </template>
     <template v-else-if="type === 'server'">
       <circle cx="12" cy="12" r="2" />
       <path d="M16.24 7.76a6 6 0 0 1 0 8.49" />
@@ -61,7 +67,8 @@ defineProps<{
 }
 
 .notification-type-icon--trade_offer,
-.notification-type-icon--market_bid {
+.notification-type-icon--market_bid,
+.notification-type-icon--campaign_invite {
   color: var(--info);
 }
 
