@@ -3,6 +3,7 @@ import CountryFlag from '@/components/domain/CountryFlag.vue'
 import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import type { PlayerRef } from '@/types/api/common'
 import { CLAN_ROLE_LABEL } from '@/utils/clans'
+import { formatPercent } from '@/utils/formatters'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -49,7 +50,7 @@ function whole(value: number | undefined): string {
         <div><dt>Breaks</dt><dd>{{ whole(membership?.seasonBreaks) }}</dd></div>
         <div>
           <dt>Strength</dt>
-          <dd>{{ membership ? `${Math.round(membership.strengthShare * 100)}%` : '-' }}</dd>
+          <dd>{{ membership ? `${formatPercent(membership.strengthShare * 100, 2)}%` : '-' }}</dd>
         </div>
       </dl>
     </div>

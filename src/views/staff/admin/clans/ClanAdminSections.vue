@@ -30,7 +30,7 @@ import {
   warOpponent,
   warResultFor,
 } from '@/utils/clans'
-import { formatFullDate, formatRelativeDate } from '@/utils/formatters'
+import { formatFullDate, formatPercent, formatRelativeDate } from '@/utils/formatters'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -94,7 +94,7 @@ function missionProgress(mission: MissionResponse): string {
           <td>{{ member.membership ? CLAN_ROLE_LABEL[member.membership.role] : '-' }}</td>
           <td>{{ member.membership ? formatFullDate(member.membership.joinedAt) : '-' }}</td>
           <td>{{ lastSeen(member) }}</td>
-          <td class="mono right">{{ Math.round((member.membership?.strengthShare ?? 0) * 100) }}%</td>
+          <td class="mono right">{{ formatPercent((member.membership?.strengthShare ?? 0) * 100, 2) }}%</td>
           <td class="mono right">{{ Math.round(member.membership?.seasonPlayXp ?? 0).toLocaleString() }}</td>
           <td class="mono right">{{ member.membership?.seasonHits ?? 0 }}</td>
           <td class="mono right">{{ member.membership?.seasonBreaks ?? 0 }}</td>

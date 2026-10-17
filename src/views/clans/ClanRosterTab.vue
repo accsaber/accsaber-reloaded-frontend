@@ -14,7 +14,7 @@ import {
   outranks,
   type LockedRankSlot,
 } from '@/utils/clans'
-import { formatRelativeDate } from '@/utils/formatters'
+import { formatPercent, formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import ClanLeaderTile from './ClanLeaderTile.vue'
 import ClanLockedSlot from './ClanLockedSlot.vue'
@@ -225,7 +225,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
           <template #cell-xp="{ value }">{{
             Math.round(value as number).toLocaleString()
           }}</template>
-          <template #cell-strength="{ value }">{{ Math.round((value as number) * 100) }}%</template>
+          <template #cell-strength="{ value }">{{ formatPercent((value as number) * 100, 2) }}%</template>
           <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
           <template #cell-actions="{ row }">
             <ClanMemberMenu
@@ -245,7 +245,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
                 <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
                 <span class="member-card__played">{{ lastPlayed(asPlayer(row)) }}</span>
                 <span class="member-card__stats">
-                  {{ row.hits }} hits · {{ row.breaks }} breaks · {{ Math.round((row.strength as number) * 100) }}%
+                  {{ row.hits }} hits · {{ row.breaks }} breaks · {{ formatPercent((row.strength as number) * 100, 2) }}%
                 </span>
               </div>
               <ClanMemberMenu
