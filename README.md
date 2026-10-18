@@ -64,8 +64,7 @@ API_PROXY_TARGET=http://localhost:8080
 
 ```
 src/
-  api/              One file per domain (users.ts, maps.ts, leaderboards.ts)
-  assets/           Static assets, fonts, logo, design tokens
+  api/              One file per domain (users.ts, maps.ts, leaderboards.ts  assets/           Static assets, fonts, logo, design tokens
   components/
     admin/          Admin-only components (AdminTable, MilestoneQueryBuilder)
     common/         Design system components (BaseButton, DataTable, StatBlock)
@@ -89,6 +88,7 @@ src/
 | `API_PROXY_TARGET` | Docker | Yes | Backend URL that `/v1/` is proxied to |
 | `VITE_ADMIN_URL` | Both | Yes | Admin panel URL |
 | `VITE_RANKING_URL` | Both | Yes | Ranking staff panel URL |
+| `VITE_AUTH_BASE` | Vite | No | API origin |
 | `VITE_WS_BASE` | Vite | No | WebSocket **origin** (`wss://host`, no path). Falls back to `VITE_API_BASE`'s host |
 
 ### Important Note on AI Usage

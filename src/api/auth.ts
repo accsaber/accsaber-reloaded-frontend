@@ -30,7 +30,8 @@ export function buildOAuthStartUrl(
   returnTo: string,
   pendingLinkToken?: string,
 ): string {
-  const base = import.meta.env.VITE_API_BASE ?? ''
+  const authBase = import.meta.env.VITE_AUTH_BASE
+  const base = authBase ? `${authBase.replace(/\/$/, '')}/v1` : (import.meta.env.VITE_API_BASE ?? '')
   const absolute = /^https?:\/\//i.test(base)
     ? base
     : `${window.location.origin}${base.startsWith('/') ? base : `/${base}`}`
