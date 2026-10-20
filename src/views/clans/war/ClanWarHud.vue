@@ -4,7 +4,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import type { ClanWarResponse } from '@/types/api/clans'
+import type { ClanWarResponse, ClanWarTeam } from '@/types/api/clans'
 import {
   CLAN_WAR_STATUS_LABEL,
   CLAN_WAR_TEAM_LABEL,
@@ -22,6 +22,7 @@ const props = defineProps<{
   war: ClanWarResponse
   now: number
   canRetreat: boolean
+  viewerTeam: ClanWarTeam | null
 }>()
 
 const emit = defineEmits<{
@@ -77,7 +78,7 @@ const teams = computed(() =>
 
     <div class="hud__middle" :class="`hud__middle--${war.status}`">
       <span class="hud__status">{{ CLAN_WAR_STATUS_LABEL[war.status] }}</span>
-      <WarClock :war="war" :now="now" large />
+      <WarClock :war="war" :now="now" :viewer-team="viewerTeam" large />
       <BaseButton v-if="canRetreat" class="hud__retreat" variant="destructive" size="sm" @click="emit('retreat')">
         Retreat
       </BaseButton>

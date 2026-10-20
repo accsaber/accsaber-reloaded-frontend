@@ -7,6 +7,7 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ClanWarRewardItemResponse } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
+import { warRewardReach } from '@/utils/clans'
 import { onMounted, ref } from 'vue'
 
 const itemTypeStore = useItemTypeStore()
@@ -123,7 +124,7 @@ onMounted(load)
           <span class="war-rewards__type">{{ itemTypeStore.typeLabel(reward.item.typeKey) }}</span>
         </td>
         <td class="mono right">{{ reward.quantity }}</td>
-        <td>{{ reward.topContributors === null ? 'Every contributor' : `Top ${reward.topContributors} by contribution` }}</td>
+        <td>{{ warRewardReach(reward.topContributors) }}</td>
         <td>{{ reward.active ? 'Yes' : 'No' }}</td>
         <td class="right">
           <span class="war-rewards__actions">

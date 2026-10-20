@@ -24,6 +24,7 @@ import type {
   ClanWarListParams,
   ClanWarParticipantResponse,
   ClanWarResponse,
+  ClanWarRewardsResponse,
   ClanXpGrantResponse,
   CreateClanAllianceRequest,
   CreateClanJoinRequest,
@@ -321,6 +322,10 @@ export function getClanWarHits(
   params?: PaginationParams & { userId?: string },
 ): Promise<Page<ClanWarHitResponse>> {
   return get<Page<ClanWarHitResponse>>(`/clans/wars/${warId}/hits${buildQuery(params)}`)
+}
+
+export function getClanWarRewards(warId: string): Promise<ClanWarRewardsResponse> {
+  return get<ClanWarRewardsResponse>(`/clans/wars/${warId}/rewards`)
 }
 
 export function requestClanWarAid(warId: string, req: RequestClanWarAidRequest): Promise<ClanWarAidResponse> {

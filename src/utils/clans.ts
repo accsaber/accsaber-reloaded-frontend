@@ -157,12 +157,16 @@ export interface WarClock {
   value: string
 }
 
-export function warClock(war: ClanWarResponse, now: number): WarClock {
+export function warClock(war: ClanWarResponse, now: number, viewerTeam: ClanWarTeam | null = null): WarClock {
   if (war.status === 'picking' && war.picksDueAt) {
     return { label: 'Picks due', value: formatDuration(new Date(war.picksDueAt).getTime() - now, { zero: 'now' }) }
   }
   if (war.status === 'preparing' && war.startsAt) {
     return { label: 'Starts in', value: formatDuration(new Date(war.startsAt).getTime() - now, { zero: 'now' }) }
+  }
+  if (war.status === 'active' && war.retreatAt) {
+    const label = viewerTeam === 'defend' ? 'Strike back before it ends' : 'Retreating, ends in'
+    return { label, value: formatDuration(new Date(war.retreatAt).getTime() - now, { zero: 'now' }) }
   }
   if (war.status === 'active' && war.startsAt) {
     return { label: 'Ends in', value: formatDuration(new Date(war.startsAt).getTime() + WAR_MAX_MS - now, { zero: 'now' }) }
@@ -180,6 +184,10 @@ export const CLAN_XP_SOURCE_LABEL: Record<ClanXpSource, string> = {
   war_win: 'War win',
 }
 
+
+export function warRewardReach(topContributors?: number): string {
+  return topContributors == null ? 'Everyone who contributes' : `Top ${topContributors} by contribution`
+}
 
 export function formatClanXp(xp: number): string {
   return xp.toLocaleString(undefined, { maximumFractionDigits: 1 })

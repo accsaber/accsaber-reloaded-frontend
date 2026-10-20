@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ClanWarResponse } from '@/types/api/clans'
+import type { ClanWarResponse, ClanWarTeam } from '@/types/api/clans'
 import { warClock, warHeadline, warModeLine } from '@/utils/clans'
 import { computed } from 'vue'
 
@@ -7,9 +7,10 @@ const props = defineProps<{
   war: ClanWarResponse
   now: number
   large?: boolean
+  viewerTeam?: ClanWarTeam | null
 }>()
 
-const clock = computed(() => warClock(props.war, props.now))
+const clock = computed(() => warClock(props.war, props.now, props.viewerTeam))
 const headline = computed(() => warHeadline(props.war))
 </script>
 

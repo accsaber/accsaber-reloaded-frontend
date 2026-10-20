@@ -78,10 +78,15 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       wins. A war with no hits for 7 days ends in a draw. Retreating or the season ending also
       ends it with no winner.
     </p>
+    <WikiHeading id="retreat">Retreating</WikiHeading>
     <p>
-      Standing that already moved stays moved. Only the attacker's lead or Founder can retreat.
-      Defenders cannot.
+      Only the attacker's lead or Founder can retreat. Defenders can't. Before the war goes active
+      it ends right away. Once it's active, a retreat takes 24 hours, so you can't land a bunch of
+      breaks and run. For that day your team's plays don't hit anyone, but the defenders can still
+      hit you. If they drain your stake before it's up, they win. Once you call it, there's no
+      taking it back.
     </p>
+    <p>Standing that already moved stays moved.</p>
 
     <WikiHeading id="pacifism">Pacifism</WikiHeading>
     <p>
@@ -95,7 +100,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="rewards">Rewards</WikiHeading>
     <p>
       The winning team gets 345 clan XP, split between its clans. Everyone who fought gets XP from
-      the damage they did. Some wars also give items to the top fighters on the winning team.
+      the damage they did. Everyone on the winning team who dealt damage gets a crate, and the top
+      fighters can get extra items.
     </p>
     <p>
       If barely anyone on the losing team has played since two weeks before the war started, the

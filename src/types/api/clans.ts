@@ -252,6 +252,7 @@ export interface ClanWarResponse {
   declaredAt: string
   picksDueAt: string | null
   startsAt: string | null
+  retreatAt: string | null
   endedAt: string | null
 }
 
@@ -366,8 +367,14 @@ export interface ClanWarRewardItemResponse {
   id: string
   item: ItemResponse
   quantity: number
-  topContributors: number | null
+  topContributors?: number
   active: boolean
+}
+
+export interface ClanWarRewardsResponse {
+  pool: ClanWarRewardItemResponse[]
+  clans: { clan: PublicClanResponse; clanXp: number; items: ClanWarRewardItemResponse[] }[]
+  players: { player: PlayerRef; clan: PublicClanResponse; xp: number; items: ClanWarRewardItemResponse[] }[]
 }
 
 export interface ClanStatsResponse {
