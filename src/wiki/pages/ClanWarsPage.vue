@@ -65,7 +65,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
-      After picking, both sides get 48 hours to prepare before the war goes active. Random pools
+      After picking, both sides get 24 hours to prepare before the war goes active. Plays during
+      prep don't hit anyone, but any PB you set still counts as the score the enemy has to beat, just like any other existing PB. Random pools
       skip picking unless the attacker offered Berserker. Once picking is done you can download all 10 maps as a playlist. The fighting
       itself is on <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
     </p>
