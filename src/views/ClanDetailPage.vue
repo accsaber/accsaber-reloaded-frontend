@@ -24,6 +24,7 @@ import ClanRosterTab from './clans/ClanRosterTab.vue'
 import { loadClanLevels } from './clans/clanLevels'
 import { useClanChat } from '@/composables/useClanChat'
 import { useClanFeed } from './clans/useClanFeed'
+import { formatShortDate } from '@/utils/formatters'
 import { useClanPage } from './clans/useClanPage'
 import { useCurrentClanSeason } from './clans/useCurrentClanSeason'
 
@@ -268,13 +269,17 @@ function askLeave() {
   const id = clan.value!.clan.id
   const others = members.value.length > 1
   const founderBlocked = isFounder.value && others
+  const cooldownEnd = members.value.find((m) => m.id === auth.userId)?.membership?.joinCooldownEndsAt
+  const cooling = cooldownEnd && Date.parse(cooldownEnd) > Date.now()
   ask({
     title: 'Leave clan',
     message: founderBlocked
       ? 'A Founder cannot walk out while anyone else is still in the clan, so hand it to another member first.'
-      : others
-        ? 'You can join another clan 14 days after you joined this one.'
-        : 'You are the last member, so leaving shuts the clan down for good.',
+      : !others
+        ? 'You are the last member, so leaving shuts the clan down for good.'
+        : cooling
+          ? `Are you sure? You won't be able to join another clan until ${formatShortDate(cooldownEnd)}.`
+          : 'Are you sure?',
     confirmLabel: 'Leave clan',
     destructive: true,
     blocked: founderBlocked,

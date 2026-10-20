@@ -348,8 +348,6 @@ export function clanColorVars(clan: ClanColors): Record<string, string> {
   return vars
 }
 
-export const WAR_GUARD_MAX = 100
-
 function hueLightness(hex: string): [number, number] {
   const rgb = parseHex(hex) ?? [0, 0, 0]
   const light = (Math.max(...rgb) + Math.min(...rgb)) / 510

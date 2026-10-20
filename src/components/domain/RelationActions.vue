@@ -6,6 +6,7 @@ import { RelationBlockedError, useRelationsStore } from '@/stores/relations'
 import type { UserRelationType } from '@/types/api/relations'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import SnipeIcon from '@/components/domain/SnipeIcon.vue'
 
 const props = defineProps<{
   targetUserId: string
@@ -97,15 +98,7 @@ const targetLabel = computed(() => props.targetName || 'this user')
       title="Snipe this player"
       @click="goToSnipe"
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9" />
-        <circle cx="12" cy="12" r="3" />
-        <line x1="12" y1="2" x2="12" y2="6" />
-        <line x1="12" y1="18" x2="12" y2="22" />
-        <line x1="2" y1="12" x2="6" y2="12" />
-        <line x1="18" y1="12" x2="22" y2="12" />
-      </svg>
+      <SnipeIcon />
     </BaseButton>
 
     <BaseButton

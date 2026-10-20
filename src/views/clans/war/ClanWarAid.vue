@@ -14,6 +14,7 @@ import { CLAN_WAR_TEAM_LABEL, WAR_TEAMS, warLeadFallen } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import ClanAidList from '../ClanAidList.vue'
 import ClanPicker from '../ClanPicker.vue'
+import WarSection from './WarSection.vue'
 
 const PAGE_SIZE = 50
 
@@ -131,26 +132,23 @@ watch([() => props.war.id, () => props.reloadKey], fetchAids, { immediate: true 
 </script>
 
 <template>
-  <section v-if="canAsk || canLeave || canOffer || aids.length" class="war-aid">
-    <header class="war-aid__head">
-      <h2 class="section-title">Allies</h2>
-      <span class="war-aid__actions">
-        <BaseButton v-if="canAsk && !asking" size="sm" @click="asking = true">Ask an ally</BaseButton>
-        <template v-if="canOffer">
-          <BaseButton
-            v-for="team in offerTeams"
-            :key="team"
-            size="sm"
-            :loading="busyId === `offer-${team}`"
-            :disabled="!!busyId"
-            @click="offer(team)"
-          >
-            Help {{ CLAN_WAR_TEAM_LABEL[team].toLowerCase() }}
-          </BaseButton>
-        </template>
-        <BaseButton v-if="canLeave" variant="destructive" size="sm" @click="leaveOpen = true">Leave the war</BaseButton>
-      </span>
-    </header>
+  <WarSection v-if="canAsk || canLeave || canOffer || aids.length" title="Allies">
+    <template #actions>
+      <BaseButton v-if="canAsk && !asking" size="sm" @click="asking = true">Ask an ally</BaseButton>
+      <template v-if="canOffer">
+        <BaseButton
+          v-for="team in offerTeams"
+          :key="team"
+          size="sm"
+          :loading="busyId === `offer-${team}`"
+          :disabled="!!busyId"
+          @click="offer(team)"
+        >
+          Help {{ CLAN_WAR_TEAM_LABEL[team].toLowerCase() }}
+        </BaseButton>
+      </template>
+      <BaseButton v-if="canLeave" variant="destructive" size="sm" @click="leaveOpen = true">Leave the war</BaseButton>
+    </template>
 
     <div v-if="asking" class="war-aid__form">
       <ClanPicker
@@ -188,30 +186,10 @@ watch([() => props.war.id, () => props.reloadKey], fetchAids, { immediate: true 
       @confirm="leave"
       @close="leaveOpen = false"
     />
-  </section>
+  </WarSection>
 </template>
 
 <style scoped>
-.war-aid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.war-aid__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.war-aid__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
 .war-aid__form {
   display: flex;
   flex-wrap: wrap;

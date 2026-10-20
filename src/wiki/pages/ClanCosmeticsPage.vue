@@ -18,8 +18,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="getting-them">Getting them</WikiHeading>
     <p>
-      Clans get cosmetics by leveling up, from season rewards, special missions, winning wars or events. They belong
-      to the clan. New clans start with none.
+      Clans get cosmetics by leveling up, season rewards and winning wars. Staff can give some out
+      too. They belong to the clan.
     </p>
 
     <WikiHeading id="equipping">Equipping</WikiHeading>

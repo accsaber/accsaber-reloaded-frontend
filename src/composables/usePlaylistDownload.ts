@@ -27,14 +27,14 @@ export function usePlaylistDownload() {
   function downloadPlaylist(categoryCode: string) {
     triggerDownload(
       `/playlists/${categoryCode}`,
-      `accsaber-${categoryCode.replace('_', '-')}.json`,
+      `accsaber-${categoryCode.replace('_', '-')}.bplist`,
     )
   }
 
   function downloadUnrankedPlaylist(categoryCode: string) {
     triggerDownload(
       `/playlists/unranked/${categoryCode}`,
-      `accsaber-queued-${categoryCode.replace('_', '-')}.json`,
+      `accsaber-queued-${categoryCode.replace('_', '-')}.bplist`,
     )
   }
 

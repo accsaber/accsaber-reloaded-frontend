@@ -11,6 +11,7 @@ import type {
   ClanWarHitResponse,
   ClanWarParticipantResponse,
   ClanWarResponse,
+  ClanWarStrikeRulesResponse,
 } from '@/types/api/clans'
 import { hasClanRole, WAR_TEAMS, warLeadSide } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
@@ -24,6 +25,7 @@ import ClanWarHits from './clans/war/ClanWarHits.vue'
 import ClanWarHud from './clans/war/ClanWarHud.vue'
 import ClanWarPool from './clans/war/ClanWarPool.vue'
 import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
+import { hitDamage, hitsToBreak } from './clans/war/warStrike'
 import WarPicksModal from './clans/war/WarPicksModal.vue'
 
 const FIGHTERS_SIZE = 100
@@ -41,6 +43,9 @@ const reloadKey = ref(0)
 const lastHit = ref<ClanWarHitResponse | null>(null)
 const participants = ref<ClanWarParticipantResponse[] | null>(null)
 const participantsError = ref<string | null>(null)
+const participantsMapId = ref('')
+const whatIfMapId = ref('')
+let participantsRequest = 0
 const picking = ref(false)
 const pickError = ref<string | null>(null)
 const picksOpen = ref(false)
@@ -93,14 +98,41 @@ async function load() {
 }
 
 async function loadParticipants() {
+  const request = ++participantsRequest
+  const mapDifficultyId = whatIfMapId.value
   participantsError.value = null
   try {
     const { getClanWarParticipants } = await import('@/api/clans')
-    participants.value = (await getClanWarParticipants(warId.value, { page: 0, size: FIGHTERS_SIZE })).content
+    const page = await getClanWarParticipants(warId.value, {
+      page: 0,
+      size: FIGHTERS_SIZE,
+      mapDifficultyId: mapDifficultyId || undefined,
+    })
+    if (request !== participantsRequest) return
+    participants.value = page.content
+    participantsMapId.value = mapDifficultyId
   } catch (err) {
+    if (request !== participantsRequest) return
     participants.value = []
     participantsError.value = parseApiError(err, 'Could not load the fighters.').message
   }
+}
+
+function trackStrike(victim: ClanWarParticipantResponse, hit: ClanWarHitResponse, rules: ClanWarStrikeRulesResponse) {
+  const preview = victim.strikePreview
+  if (!preview) return
+  if (hit.broke) {
+    victim.strikePreview = null
+    return
+  }
+  if (!hit.chip && hit.victimCycle === victim.guardCycle) {
+    preview.hitsThisCycle += 1
+    preview.damage = hitDamage(rules, preview.hitsThisCycle, preview.disparity)
+  }
+  preview.hitsToBreak = hitsToBreak(rules, victim.guard, preview.hitsThisCycle, preview.disparity)
+  if (!preview.onMap || hit.attacker.id !== auth.userId || hit.difficulty.id !== participantsMapId.value) return
+  if (!hit.chip) preview.onMap.hitUsed = true
+  if (preview.onMap.targetScore != null) preview.onMap.chipUsed = true
 }
 
 function applyHit(hit: ClanWarHitResponse) {
@@ -109,6 +141,7 @@ function applyHit(hit: ClanWarHitResponse) {
   if (victim) {
     victim.guard = hit.guardAfter
     if (hit.broke) victim.breaksSuffered += 1
+    if (detail.value) trackStrike(victim, hit, detail.value.strikeRules)
   }
   const clanId = participants.value?.find((p) => p.player.id === hit.attacker.id)?.clan.id ?? hit.attacker.clan?.id
   if (!clanId) return
@@ -182,16 +215,17 @@ async function retreat() {
 
 watch(
   warId,
-  async () => {
+  () => {
     detail.value = null
     lastHit.value = null
     participants.value = null
-    await Promise.all([load(), loadParticipants()])
+    whatIfMapId.value = ''
+    void load()
   },
   { immediate: true },
 )
 
-watch(() => auth.userId, loadParticipants)
+watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: true })
 </script>
 
 <template>
@@ -218,10 +252,14 @@ watch(() => auth.userId, loadParticipants)
       <template v-if="fighting">
         <ClanWarFighters
           :war="war"
+          :rules="detail.strikeRules"
           :participants="participants"
           :error="participantsError ?? pickError"
           :viewer-id="auth.userId"
           :picking="picking"
+          :pool="detail.pool"
+          :loaded-map-id="participantsMapId"
+          v-model:map-id="whatIfMapId"
           @pick="pickTarget"
         />
         <ClanWarTimeline :war="war" :points="detail.timeline" />
@@ -242,7 +280,7 @@ watch(() => auth.userId, loadParticipants)
         @war="applyWar"
       />
 
-      <WarPicksModal :open="picksOpen" :war="war" @close="picksOpen = false" @submitted="onPicksSubmitted" />
+      <WarPicksModal :open="picksOpen" :war="war" :pool="detail.pool" @close="picksOpen = false" @submitted="onPicksSubmitted" />
 
       <ConfirmModal
         :open="retreatOpen"

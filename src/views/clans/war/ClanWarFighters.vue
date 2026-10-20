@@ -3,18 +3,32 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import type { ClanWarParticipantResponse, ClanWarResponse, ClanWarTeam } from '@/types/api/clans'
-import { CLAN_WAR_TEAM_LABEL, WAR_GUARD_MAX, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
+import type {
+  ClanWarParticipantResponse,
+  ClanWarPoolEntryResponse,
+  ClanWarResponse,
+  ClanWarStrikeRulesResponse,
+  ClanWarTeam,
+} from '@/types/api/clans'
+import { WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
+import FighterStrike from './FighterStrike.vue'
+import WarSection from './WarSection.vue'
+import SnipeIcon from '@/components/domain/SnipeIcon.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
+  rules: ClanWarStrikeRulesResponse
   participants: ClanWarParticipantResponse[] | null
   error: string | null
   viewerId: string | null
   picking: boolean
+  pool: ClanWarPoolEntryResponse[]
+  loadedMapId: string
 }>()
+
+const mapId = defineModel<string>('mapId', { required: true })
 
 const emit = defineEmits<{
   pick: [userId: string | null]
@@ -26,20 +40,20 @@ const viewerTeam = computed(() => (viewer.value ? warTeamOf(props.war, viewer.va
 const canPick = computed(() => !!viewer.value && props.war.ruleset === 'duel' && props.war.status !== 'ended')
 
 function fightersOf(clanId: string): ClanWarParticipantResponse[] {
-  return (props.participants ?? [])
-    .filter((p) => p.clan.id === clanId)
-    .sort((a, b) => b.standingWeight - a.standingWeight)
+  return (props.participants ?? []).filter((p) => p.clan.id === clanId)
 }
 
 const teams = computed(() =>
-  WAR_TEAMS.map((team) => ({
-    team,
-    style: styles.value[team],
-    clans: props.war[team].sides
+  WAR_TEAMS.map((team) => {
+    const clans = props.war[team].sides
       .map((side) => ({ clan: side.clan, fighters: fightersOf(side.clan.id) }))
-      .filter((group) => group.fighters.length),
-  })),
+      .filter((group) => group.fighters.length)
+    const strikes = clans.some((group) => group.fighters.some((f) => f.strikePreview))
+    return { team, style: styles.value[team], clans, strikes }
+  }),
 )
+
+const stacked = computed(() => canPick.value || teams.value.some((t) => t.strikes))
 
 function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boolean {
   return canPick.value && team !== viewerTeam.value && fighter.inBand === true && !fighter.leftAt
@@ -47,8 +61,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 </script>
 
 <template>
-  <section class="fighters">
-    <h2 class="section-title">Fighters</h2>
+  <div class="fighters">
     <p v-if="error" class="fighters__error" role="alert">{{ error }}</p>
 
     <div v-if="!participants" class="fighters__sides">
@@ -59,16 +72,25 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
     <p v-else-if="!participants.length" class="fighters__empty">
       Nobody enrolled.
     </p>
-    <div v-else class="fighters__sides">
-      <div v-for="t in teams" :key="t.team" class="fighters__side clan-colors" :style="t.style">
-        <div class="fighters__head">
-          <span class="fighters__team">{{ CLAN_WAR_TEAM_LABEL[t.team] }}</span>
-          <span class="fighters__col fighters__col--num">Skill</span>
-          <span class="fighters__col">Guard</span>
-          <span class="fighters__col fighters__col--num">Damage</span>
-        </div>
+    <div v-else class="fighters__sides" :class="{ 'fighters__sides--stacked': stacked }">
+      <WarSection
+        v-for="t in teams"
+        :key="t.team"
+        class="fighters__side clan-colors"
+        :class="{ 'fighters__side--strikes': t.strikes }"
+        :style="t.style"
+      >
+        <template #title>
+          <h3 class="fighters__team">{{ t.team === 'attack' ? 'Attack' : 'Defense' }}</h3>
+        </template>
         <template v-for="group in t.clans" :key="group.clan.id">
-          <div class="fighters__clan"><ClanTag :clan="group.clan" size="sm" /></div>
+          <div class="fighters__head">
+            <span class="fighters__clan"><ClanTag :clan="group.clan" size="sm" /></span>
+            <span class="fighters__col fighters__col--num">Skill</span>
+            <span class="fighters__col">Guard</span>
+            <span class="fighters__col fighters__col--num">Damage</span>
+            <span v-if="t.strikes" class="fighters__col fighters__col--num">Your hit</span>
+          </div>
           <ul class="fighters__list">
             <li
               v-for="fighter in group.fighters"
@@ -79,8 +101,8 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
               <span class="fighters__who">
                 <UserChip :user="fighter.player" size="sm" link tooltip :hide-clan="fighter.player.clan?.id === group.clan.id" />
                 <span v-if="fighter.leftAt" class="fighters__left">left</span>
-                <span v-if="fighter.target" class="fighters__target">
-                  <span aria-hidden="true">→</span>
+                <span v-if="fighter.target" class="fighters__target" title="Target">
+                  <SnipeIcon :size="12" />
                   <UserChip :user="fighter.target" size="xs" compact hide-clan />
                 </span>
                 <span v-if="viewer?.target?.id === fighter.player.id" class="fighters__pick">
@@ -94,21 +116,32 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
                   :disabled="picking"
                   @click="emit('pick', fighter.player.id)"
                 >
-                  Pick
+                  Pick target
                 </BaseButton>
               </span>
               <span class="fighters__num">{{ fighter.skill.toFixed(1) }}</span>
               <span class="fighters__guard">
-                <ClanBar :value="fighter.guard" :max="WAR_GUARD_MAX" :broken="fighter.guard <= 0" />
+                <ClanBar :value="fighter.guard" :max="rules.guard" :broken="fighter.guard <= 0" />
                 <span class="fighters__guard-value">{{ Math.round(fighter.guard) }}</span>
               </span>
               <span class="fighters__num">{{ Math.round(fighter.contribution) }}</span>
+              <span v-if="t.strikes">
+                <FighterStrike
+                  v-if="fighter.strikePreview"
+                  v-model:map-id="mapId"
+                  :rules="rules"
+                  :preview="fighter.strikePreview"
+                  :guard="fighter.guard"
+                  :pool="pool"
+                  :loaded-map-id="loadedMapId"
+                />
+              </span>
             </li>
           </ul>
         </template>
-      </div>
+      </WarSection>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
@@ -153,23 +186,41 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
   padding: 0 var(--space-md);
 }
 
+.fighters__side--strikes .fighters__head,
+.fighters__side--strikes .fighters__row {
+  grid-template-columns: minmax(0, 1fr) 6ch 96px 56px 92px;
+}
+
 .fighters__head {
   height: 40px;
   border-bottom: 1px solid var(--bg-overlay);
 }
 
+.fighters__side :deep(.war-section__head) {
+  padding: 0 var(--space-md);
+  border-bottom: 1px solid var(--bg-overlay);
+}
+
+.fighters__side :deep(.war-section__body) {
+  gap: 0;
+  margin-top: 0;
+}
+
 .fighters__team {
-  font-size: var(--text-caption);
+  flex: 1;
+  margin: 0;
+  padding: var(--space-md) 0;
+  font-size: 1.75rem;
   font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
   color: var(--war-side);
 }
 
 .fighters__clan {
   display: flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
+  min-width: 0;
 }
 
 .fighters__target {
@@ -252,6 +303,10 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 
 .fighters__row--broken .fighters__guard-value {
   color: var(--error);
+}
+
+.fighters__sides--stacked {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (max-width: 860px) {

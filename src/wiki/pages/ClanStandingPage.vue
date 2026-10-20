@@ -14,7 +14,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       a bit less, like <RouterLink to="/wiki/weighted-ap">weighted AP</RouterLink>.
     </p>
     <p>
-      Allies that fought a war this season add to it too. It updates every 10 minutes and
+      Allies that fought a war this season add their best player's skill. It updates every 10 minutes and
       whenever someone joins or leaves. The Strength column on the roster shows each member's
       share.
     </p>
@@ -26,8 +26,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     </p>
     <p>
       Earned standing is the only part you can lose, and it never goes below 0. If your clan is
-      already at 0 when it gets broken, you lose nothing, but the attacker still gets the full
-      amount. The numbers are on
+      already at 0 when it gets broken, you lose nothing. The attacker still gets theirs,
+      depending on how active your team is. The numbers are on
       <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
     </p>
 

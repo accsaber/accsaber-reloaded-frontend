@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import type { ClanResponse, UpdateClanRequest } from '@/types/api/clans'
 import { computed, ref, watch } from 'vue'
 import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
@@ -73,10 +74,7 @@ function save() {
       :disabled="saving"
     />
 
-    <label class="clan-edit__toggle">
-      <input v-model="acceptingRequests" type="checkbox" :disabled="saving" />
-      <span>Take join requests</span>
-    </label>
+    <BaseSwitch v-model="acceptingRequests" class="clan-edit__toggle" label="Take join requests" :disabled="saving" />
 
     <div class="clan-edit__pacifism">
       <span class="clan-edit__pacifism-state">Pacifism: {{ pacifismState }}</span>
@@ -96,17 +94,7 @@ function save() {
 
 <style scoped>
 .clan-edit__toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
   margin-top: var(--space-md);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.clan-edit__toggle input {
-  accent-color: var(--page-accent, var(--accent));
 }
 
 .clan-edit__pacifism {

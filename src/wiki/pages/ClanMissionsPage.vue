@@ -20,6 +20,10 @@ const SHARED: WikiCompareRow[] = [
       Your clan gets 3 missions every week. They reset on Monday at 4am UTC. These are separate
       from your own <RouterLink to="/wiki/missions">missions</RouterLink>.
     </p>
+    <p>
+      A new clan gets its first missions 2 days after it's made, even mid-week. Targets go off how
+      many members you've got when they open.
+    </p>
 
     <WikiHeading id="shared">Shared missions</WikiHeading>
     <p>
@@ -29,8 +33,8 @@ const SHARED: WikiCompareRow[] = [
     <WikiCompareTable :columns="['Target']" :rows="SHARED" />
     <p>Bigger clans get bigger targets. A clan of 10 needs double what a clan of 5 does.</p>
     <p>
-      The XP drive counts XP from plays, milestones, campaigns and your own missions. XP from clan
-      missions and clan wars does not count.
+      The XP drive counts XP from plays, milestones, campaigns, events and basically every other
+      mission. XP from clan missions and clan wars does not count.
     </p>
 
     <WikiHeading id="everyone-sets-scores">Everyone sets scores</WikiHeading>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
@@ -24,6 +25,8 @@ usePageMeta({
 const draft = ref<ClanProfileDraft>(emptyClanDraft())
 const { file: iconFile, preview: iconPreview, stage: stageIcon } = stagedImage()
 const { file: bannerFile, preview: bannerPreview, stage: stageBanner } = stagedImage()
+const acceptingRequests = ref(true)
+const pacifist = ref(false)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const fieldErrors = ref<Record<string, string>>({})
@@ -57,6 +60,8 @@ async function submit() {
       tagColor: draft.value.tagColor || undefined,
       primaryColor: draft.value.primaryColor || undefined,
       secondaryColor: draft.value.secondaryColor || undefined,
+      acceptingRequests: acceptingRequests.value,
+      pacifist: pacifist.value,
     })
     if (iconFile.value || bannerFile.value) {
       const { uploadClanIcon, uploadClanBanner } = await import('@/api/cdn')
@@ -107,6 +112,10 @@ async function submit() {
         :remove-banner="() => stageBanner(null)"
         :disabled="saving"
       />
+      <div class="clan-create__switches">
+        <BaseSwitch v-model="acceptingRequests" label="Take join requests" :disabled="saving" />
+        <BaseSwitch v-model="pacifist" label="Pacifist" :disabled="saving" />
+      </div>
       <p v-if="error" class="clan-create__error" role="alert">{{ error }}</p>
       <div class="clan-create__footer">
         <span class="clan-create__rules">
@@ -142,6 +151,12 @@ async function submit() {
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+}
+
+.clan-create__switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
 }
 
 .clan-create__footer {

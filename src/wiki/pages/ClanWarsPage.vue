@@ -49,6 +49,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       <li>Category turf only uses maps from one category.</li>
       <li>Complexity turf only uses maps in a complexity range.</li>
     </ul>
+    <p>Some songs are war-banned and never show up in pools.</p>
 
     <WikiHeading id="picks">Picks</WikiHeading>
     <p>
@@ -58,9 +59,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     </p>
     <p>
       The attacker makes their picks while declaring. The defender then gets 24 hours to make
-      theirs. Anything they do not pick gets filled randomly. If they pick a map the attacker
-      already picked, it gets swapped for a random one. Nobody sees the other side's picks until
-      picking is over.
+      theirs, and can see the attacker's picks while doing it. Random maps stay hidden until
+      picking is over. Anything the defender does not pick gets filled randomly.
     </p>
 
     <WikiHeading id="phases">Phases</WikiHeading>
@@ -89,7 +89,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       help in one. You have to be out of every war first. Outside a season it starts right away.
       During a season it starts 7 days later. Your clan can still be attacked until then.
       Turning it off is instant and cancels the countdown. Turning it back on starts the 7 days
-      over.
+      over. If you make your clan pacifist from the start, it's instant.
     </p>
 
     <WikiHeading id="rewards">Rewards</WikiHeading>

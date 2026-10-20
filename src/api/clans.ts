@@ -309,7 +309,7 @@ export function updateClanWar(warId: string, req: UpdateClanWarRequest): Promise
 
 export function getClanWarParticipants(
   warId: string,
-  params?: PaginationParams,
+  params?: PaginationParams & { mapDifficultyId?: string },
 ): Promise<Page<ClanWarParticipantResponse>> {
   return get<Page<ClanWarParticipantResponse>>(
     `/clans/wars/${warId}/participants${buildQuery(params)}`,

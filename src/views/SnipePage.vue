@@ -32,6 +32,7 @@ import { brightenRgb } from '@/utils/color'
 import { toScoreDisplay } from '@/utils/mappers'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import SnipeIcon from '@/components/domain/SnipeIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -328,15 +329,7 @@ watch([sniperId, targetId, currentCategory, currentUnplayed], () => {
 
       <template v-for="(p, i) in players" :key="p.key">
         <div v-if="i === 1" class="snipe-hero__vs" aria-hidden="true">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9" />
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2" x2="12" y2="6" />
-            <line x1="12" y1="18" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="6" y2="12" />
-            <line x1="18" y1="12" x2="22" y2="12" />
-          </svg>
+          <SnipeIcon :size="40" />
           <span class="field-label">Sniping</span>
         </div>
 

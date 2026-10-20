@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import AccuracySlider from '@/components/common/AccuracySlider.vue'
 import { useFloatingPanel } from '@/composables/useFloatingPanel'
 import type { CurveResponse } from '@/types/api/categories'
 import { calculateAp, reverseApToAccuracy, reverseApToAccuracyByComplexity, tweakRawAp } from '@/utils/curveEval'
 import { computed, nextTick, ref, watch } from 'vue'
-import { clamp, clamp01 } from '@/utils/math'
+import { clamp01 } from '@/utils/math'
+import { formatAccuracy } from '@/utils/formatters'
 
 const props = withDefaults(defineProps<{
   open: boolean
@@ -44,80 +46,21 @@ const { triggerRef, panelRef, panelStyle } = useFloatingPanel({ model: openModel
 
 watch(() => props.anchorEl, (el) => { triggerRef.value = el }, { immediate: true })
 
-const wholeValue = ref(0)
-const decimalValue = ref(0)
+const tweakedAccuracy = ref(0)
 const referenceAccuracy = ref(0)
-const decimalMax = computed(() => wholeValue.value >= 100 ? 0 : 99)
-const combinedAccuracy = computed(() => (wholeValue.value + decimalValue.value / 100) / 100)
 
-const WHOLE_STOPS: Array<{ at: number, value: number }> = [
-  { at: 0, value: 0 },
-  { at: 1 / 6, value: 50 },
-  { at: 2 / 6, value: 80 },
-  { at: 3 / 6, value: 90 },
-  { at: 1, value: 100 },
-]
-const WHOLE_TRACK = 1000
-
-function segmentFor(pick: (stop: { at: number, value: number }) => number, target: number) {
-  let seg = 0
-  while (seg < WHOLE_STOPS.length - 2 && target > pick(WHOLE_STOPS[seg + 1])) seg++
-  return { a: WHOLE_STOPS[seg], b: WHOLE_STOPS[seg + 1] }
-}
-
-function trackToWhole(pos: number): number {
-  const t = clamp01(pos / WHOLE_TRACK)
-  const { a, b } = segmentFor((s) => s.at, t)
-  const frac = b.at > a.at ? (t - a.at) / (b.at - a.at) : 0
-  return Math.round(a.value + (b.value - a.value) * frac)
-}
-
-function wholeToTrack(whole: number): number {
-  const v = clamp(whole, 0, 100)
-  const { a, b } = segmentFor((s) => s.value, v)
-  const frac = b.value > a.value ? (v - a.value) / (b.value - a.value) : 0
-  return Math.round((a.at + (b.at - a.at) * frac) * WHOLE_TRACK)
-}
-
-const wholeTrack = computed({
-  get: () => wholeToTrack(wholeValue.value),
-  set: (pos: number) => { wholeValue.value = trackToWhole(pos) },
-})
-
-const wholeTicks = computed(() => {
-  const stops = WHOLE_STOPS.slice(1, -1).flatMap(({ at }) => {
-    const mark = `${(at * 100).toFixed(4)}%`
-    return [
-      `transparent calc(${mark} - 1px)`,
-      `var(--bg-base) calc(${mark} - 1px)`,
-      `var(--bg-base) ${mark}`,
-      `transparent ${mark}`,
-    ]
-  })
-  return `linear-gradient(to right, ${stops.join(', ')})`
-})
-
-function splitAccuracy(acc: number) {
-  const pct = Math.round(acc * 10000) / 100
-  wholeValue.value = Math.floor(pct)
-  decimalValue.value = Math.round((pct - Math.floor(pct)) * 100)
+function setAccuracy(acc: number) {
+  tweakedAccuracy.value = Math.round(acc * 10000) / 10000
 }
 
 function initAccuracy(acc: number) {
-  splitAccuracy(acc)
-  referenceAccuracy.value = combinedAccuracy.value
+  setAccuracy(acc)
+  referenceAccuracy.value = tweakedAccuracy.value
 }
-
-watch(() => wholeValue.value, (val) => {
-  if (val >= 100) {
-    wholeValue.value = 100
-    decimalValue.value = 0
-  }
-})
 
 function startEditingAcc() {
   editingAcc.value = true
-  editInput.value = `${wholeValue.value}.${decimalValue.value.toString().padStart(2, '0')}`
+  editInput.value = (tweakedAccuracy.value * 100).toFixed(2)
   nextTick(() => {
     const input = panelRef.value?.querySelector('.ap-tweaker__edit-input') as HTMLInputElement | null
     input?.select()
@@ -128,7 +71,7 @@ function commitAccEdit() {
   editingAcc.value = false
   const parsed = parseFloat(editInput.value)
   if (isNaN(parsed)) return
-  splitAccuracy(clamp01(parsed / 100))
+  setAccuracy(clamp01(parsed / 100))
 }
 
 function startEditingAp() {
@@ -152,7 +95,7 @@ function commitApEdit() {
     acc = reverseApToAccuracyByComplexity(curve.value, targetAp, props.complexity)
   }
 
-  if (acc != null) splitAccuracy(clamp01(acc))
+  if (acc != null) setAccuracy(clamp01(acc))
 }
 
 function handleEditKeydown(e: KeyboardEvent) {
@@ -188,9 +131,9 @@ watch([() => props.open, () => props.anchorEl], async ([isOpen]) => {
 const tweakedRawAp = computed(() => {
   if (!curve.value) return 0
   if (isScoreMode.value) {
-    return tweakRawAp(curve.value, referenceAccuracy.value, props.ap!, combinedAccuracy.value)
+    return tweakRawAp(curve.value, referenceAccuracy.value, props.ap!, tweakedAccuracy.value)
   }
-  return calculateAp(curve.value, combinedAccuracy.value, props.complexity ?? 0)
+  return calculateAp(curve.value, tweakedAccuracy.value, props.complexity ?? 0)
 })
 
 const weightResult = computed(() => {
@@ -254,22 +197,11 @@ function diffColor(val: number): string {
             <input v-if="editingAcc" v-model="editInput" class="ap-tweaker__edit-input" type="text" inputmode="decimal"
               @blur="commitAccEdit" @keydown="handleEditKeydown" />
             <button v-else class="ap-tweaker__acc-btn" @click="startEditingAcc">
-              {{ wholeValue }}.{{ decimalValue.toString().padStart(2, '0') }}%
+              {{ formatAccuracy(tweakedAccuracy) }}
             </button>
           </div>
 
-          <div class="ap-tweaker__slider-group">
-            <div class="ap-tweaker__slider-row">
-              <label class="ap-tweaker__label">Whole %</label>
-              <input v-model.number="wholeTrack" type="range" class="ap-tweaker__slider"
-                :style="{ backgroundImage: wholeTicks }" min="0" :max="WHOLE_TRACK" step="1" />
-            </div>
-            <div class="ap-tweaker__slider-row">
-              <label class="ap-tweaker__label">Decimal</label>
-              <input v-model.number="decimalValue" type="range" class="ap-tweaker__slider" min="0" :max="decimalMax"
-                step="1" :disabled="wholeValue >= 100" />
-            </div>
-          </div>
+          <AccuracySlider v-model="tweakedAccuracy" />
 
           <div class="ap-tweaker__results">
             <div class="ap-tweaker__result">
@@ -380,68 +312,6 @@ function diffColor(val: number): string {
   width: 100px;
   text-align: center;
   outline: none;
-}
-
-.ap-tweaker__slider-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.ap-tweaker__slider-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.ap-tweaker__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  width: 52px;
-  flex-shrink: 0;
-}
-
-.ap-tweaker__slider {
-  flex: 1;
-  height: 4px;
-  appearance: none;
-  background: var(--bg-overlay);
-  border-radius: var(--radius-xs);
-  outline: none;
-  cursor: pointer;
-}
-
-.ap-tweaker__slider:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.ap-tweaker__slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent, var(--text-primary));
-  border: 2px solid var(--bg-elevated);
-  cursor: pointer;
-  transition: transform 100ms ease;
-}
-
-.ap-tweaker__slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.ap-tweaker__slider:disabled::-webkit-slider-thumb {
-  cursor: not-allowed;
-}
-
-.ap-tweaker__slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent, var(--text-primary));
-  border: 2px solid var(--bg-elevated);
-  cursor: pointer;
 }
 
 .ap-tweaker__results {

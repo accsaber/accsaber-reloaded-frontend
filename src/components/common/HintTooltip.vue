@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { useFloatingPanel } from '@/composables/useFloatingPanel'
 
-defineProps<{
+const props = defineProps<{
   text: string
   label?: string
+  width?: number
 }>()
 
-const { isOpen, triggerRef, panelRef, panelStyle, open, close, onTriggerEnter, onTriggerLeave } =
+const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, onTriggerEnter, onTriggerLeave } =
   useFloatingPanel({
-    maxWidth: 240,
+    maxWidth: props.width ?? 240,
     side: 'above',
     align: 'start',
     gap: 6,
@@ -26,15 +27,22 @@ const { isOpen, triggerRef, panelRef, panelStyle, open, close, onTriggerEnter, o
     @mouseenter="onTriggerEnter"
     @mouseleave="onTriggerLeave"
     @focus="open"
-    @blur="close"
+    @blur="locked || close()"
     @keydown.escape="close"
-    @click.prevent
+    @click.prevent="toggle"
   >
     ?
     <Teleport to="body">
-      <span v-if="isOpen" ref="panelRef" class="hint__panel" :style="panelStyle" role="tooltip">
-        {{ text }}
-      </span>
+      <div
+        v-if="isOpen"
+        ref="panelRef"
+        class="hint__panel"
+        :class="{ 'hint__panel--locked': locked }"
+        :style="panelStyle"
+        role="tooltip"
+      >
+        <slot :locked="locked">{{ text }}</slot>
+      </div>
     </Teleport>
   </button>
 </template>
@@ -78,5 +86,9 @@ const { isOpen, triggerRef, panelRef, panelStyle, open, close, onTriggerEnter, o
   line-height: 1.5;
   white-space: normal;
   pointer-events: none;
+}
+
+.hint__panel--locked {
+  pointer-events: auto;
 }
 </style>

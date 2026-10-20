@@ -11,11 +11,19 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     </p>
 
     <WikiHeading id="making">Making a clan</WikiHeading>
-    <p>Making a clan is free as long as you are not in one already. You start as its Founder.</p>
+    <p>
+      Making a clan is free. You can't be in one already. The 14 day cooldown counts here too.
+      You start as its Founder.
+    </p>
     <p>
       Names can be 3 to 32 characters. Tags are 2 to 5 letters or numbers and always show in
       capitals. Both have to be unique. You also get to pick a tag color and two clan colors. You
-      can upload a square icon too, even an animated GIF.
+      can upload a square icon too, even an animated GIF. The Founder can put a banner on the clan
+      page too.
+    </p>
+    <p>
+      You can make it <RouterLink to="/wiki/clan-wars#pacifism">pacifist</RouterLink> or close
+      join requests straight from the start.
     </p>
 
     <WikiHeading id="joining">Joining</WikiHeading>

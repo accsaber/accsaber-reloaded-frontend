@@ -10,6 +10,7 @@ import type { Page } from '@/types/pagination'
 import { formatStanding, warSideStyles, warTeamOf } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
+import WarSection from './WarSection.vue'
 
 const PAGE_SIZE = 50
 
@@ -83,9 +84,8 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 </script>
 
 <template>
-  <section class="war-hits">
-    <header class="war-hits__head">
-      <h2 class="section-title">Hits</h2>
+  <WarSection title="Hits">
+    <template #actions>
       <BaseSelect
         v-if="participants?.length"
         v-model="player"
@@ -94,7 +94,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
         searchable
         placeholder="Every fighter"
       />
-    </header>
+    </template>
     <p v-if="error" class="war-hits__error" role="alert">{{ error }}</p>
 
     <div v-if="loading && !hits" class="war-hits__list">
@@ -134,24 +134,10 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
       :total-pages="hits!.totalPages"
       @update:page="page = $event"
     />
-  </section>
+  </WarSection>
 </template>
 
 <style scoped>
-.war-hits {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.war-hits__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
 .war-hits__filter {
   width: 220px;
 }

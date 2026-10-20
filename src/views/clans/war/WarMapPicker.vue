@@ -11,6 +11,7 @@ const props = defineProps<{
   complexityMin?: number | null
   complexityMax?: number | null
   disabled?: boolean
+  takenIds?: string[]
 }>()
 
 const picks = defineModel<PublicMapDifficultyResponse[]>({ required: true })
@@ -26,12 +27,13 @@ const fixedFilters = computed<FixedMapFilters>(() => ({
   complexityMax: props.complexityMax,
 }))
 
-function bannedLabel(diff: PublicMapDifficultyResponse): string | null {
-  return diff.warBanned ? 'Not allowed in wars' : null
+function blockedLabel(diff: PublicMapDifficultyResponse): string | null {
+  if (diff.warBanned) return 'Not allowed in wars'
+  return props.takenIds?.includes(diff.id) ? 'Already in pool' : null
 }
 
 function legal(diff: PublicMapDifficultyResponse): boolean {
-  if (diff.status !== 'RANKED' || diff.warBanned) return false
+  if (diff.status !== 'RANKED' || blockedLabel(diff)) return false
   if (props.categoryId && diff.categoryId !== props.categoryId) return false
   const complexity = diff.complexity ?? 0
   if (props.complexityMin != null && complexity < props.complexityMin) return false
@@ -40,7 +42,7 @@ function legal(diff: PublicMapDifficultyResponse): boolean {
 }
 
 const rows = computed(() =>
-  picks.value.map((diff) => ({ diff, flag: legal(diff) ? null : (bannedLabel(diff) ?? 'Not legal here') })),
+  picks.value.map((diff) => ({ diff, flag: legal(diff) ? null : (blockedLabel(diff) ?? 'Not legal here') })),
 )
 
 function add(picked: PublicMapDifficultyResponse[]) {
@@ -86,7 +88,7 @@ function remove(id: string) {
       :used-difficulty-ids="pickedIds"
       used-label="Picked"
       disable-used
-      :blocked-label="bannedLabel"
+      :blocked-label="blockedLabel"
       :commit-label="(n) => `Add ${n} ${n === 1 ? 'map' : 'maps'}`"
       @close="pickerOpen = false"
       @pick="add"

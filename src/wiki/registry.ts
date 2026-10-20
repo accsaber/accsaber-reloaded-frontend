@@ -602,7 +602,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'not taking requests',
         ],
         related: ['clan-ranks', 'clan-levels', 'clan-standing', 'clan-wars'],
-        updated: '2026-10-09',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClansPage.vue'),
       },
       {
@@ -658,7 +658,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           '50 members',
         ],
         related: ['clans', 'clan-ranks', 'clan-cosmetics', 'clan-wars', 'xp-and-levels'],
-        updated: '2026-10-13',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClanLevelsPage.vue'),
       },
       {
@@ -677,7 +677,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'clan items',
         ],
         related: ['clan-levels', 'clan-seasons', 'items-and-inventory'],
-        updated: '2026-10-15',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClanCosmeticsPage.vue'),
       },
       {
@@ -699,13 +699,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'tied',
         ],
         related: ['clan-seasons', 'clan-wars', 'war-combat', 'clan-missions', 'weighted-ap'],
-        updated: '2026-10-08',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClanStandingPage.vue'),
       },
       {
         slug: 'clan-seasons',
         title: 'Clan Seasons',
-        summary: 'Seasons last about half a year. Top clans get exclusive rewards.',
+        summary: 'How seasons rank clans and who gets the rewards at the end.',
         keywords: [
           'season',
           'clan season',
@@ -720,7 +720,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'starting in',
         ],
         related: ['clan-standing', 'clan-wars', 'clan-cosmetics'],
-        updated: '2026-10-08',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClanSeasonsPage.vue'),
       },
       {
@@ -745,7 +745,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'monday',
         ],
         related: ['missions', 'clan-levels', 'clan-standing', 'xp-and-levels'],
-        updated: '2026-10-08',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClanMissionsPage.vue'),
       },
       {
@@ -785,7 +785,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'engagement',
         ],
         related: ['war-combat', 'coalitions', 'clan-standing', 'clan-seasons', 'alliances-and-rivals'],
-        updated: '2026-10-13',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/ClanWarsPage.vue'),
       },
       {
@@ -815,7 +815,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           '80%',
         ],
         related: ['clan-wars', 'coalitions', 'clan-standing'],
-        updated: '2026-10-13',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/WarCombatPage.vue'),
       },
       {
@@ -858,11 +858,9 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'fall',
           'fallen',
           'leave',
-          'loans',
-          'lend',
         ],
         related: ['alliances-and-rivals', 'clan-wars', 'war-combat'],
-        updated: '2026-10-13',
+        updated: '2026-10-19',
         loader: () => import('@/wiki/pages/CoalitionsPage.vue'),
       },
     ],

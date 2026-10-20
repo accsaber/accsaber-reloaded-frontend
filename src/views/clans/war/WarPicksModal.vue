@@ -3,7 +3,7 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
-import type { ClanWarDetailResponse, ClanWarResponse } from '@/types/api/clans'
+import type { ClanWarDetailResponse, ClanWarPoolEntryResponse, ClanWarResponse } from '@/types/api/clans'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import { CLAN_RULESET_LABEL, isBerserkerOffer } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
@@ -12,6 +12,7 @@ import WarMapPicker from './WarMapPicker.vue'
 const props = defineProps<{
   open: boolean
   war: ClanWarResponse
+  pool: ClanWarPoolEntryResponse[]
 }>()
 
 const emit = defineEmits<{
@@ -27,8 +28,11 @@ const saving = ref(false)
 const error = ref<string | null>(null)
 
 const count = computed(() => props.war.arenaSpec.defenderPicks)
-const ready = computed(() => picks.value.length === count.value)
 const offer = computed(() => isBerserkerOffer(props.war))
+const takenIds = computed(() => props.pool.map((e) => e.difficulty.id))
+const ready = computed(
+  () => picks.value.length === count.value && picks.value.every((d) => !takenIds.value.includes(d.id)),
+)
 
 async function submit() {
   if (!ready.value || saving.value) return
@@ -48,19 +52,23 @@ async function submit() {
 }
 
 watch(
+  () => props.war.id,
+  () => {
+    picks.value = []
+    berserker.value = false
+  },
+)
+
+watch(
   () => props.open,
   (open) => {
-    if (open) {
-      picks.value = []
-      berserker.value = false
-      error.value = null
-    }
+    if (open) error.value = null
   },
 )
 </script>
 
 <template>
-  <BaseModal :open="open" :title="count ? 'Submit picks' : 'Answer offer'" max-width="640px" @close="emit('close')">
+  <BaseModal :open="open" persistent :title="count ? 'Submit picks' : 'Answer offer'" max-width="640px" @close="emit('close')">
     <div class="picks">
       <template v-if="offer">
         <ChartToggleGroup
@@ -78,6 +86,7 @@ watch(
         :complexity-min="war.arenaSpec.complexityMin ?? null"
         :complexity-max="war.arenaSpec.complexityMax ?? null"
         :disabled="saving"
+        :taken-ids="takenIds"
       />
       <p v-if="error" class="picks__error" role="alert">{{ error }}</p>
     </div>

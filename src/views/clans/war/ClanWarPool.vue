@@ -8,6 +8,7 @@ import { formatAccuracy } from '@/utils/formatters'
 import { saveBlob } from '@/utils/download'
 import { computed, ref } from 'vue'
 import WarMapRow from './WarMapRow.vue'
+import WarSection from './WarSection.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -30,7 +31,7 @@ async function download() {
   try {
     const { downloadClanWarPlaylist } = await import('@/api/clans')
     const file = await downloadClanWarPlaylist(props.war.id)
-    saveBlob(file.blob, file.filename ?? `accsaber-war-${props.war.attack.lead.tag}-vs-${props.war.defend.lead.tag}.json`)
+    saveBlob(file.blob, file.filename ?? `accsaber-war-${props.war.attack.lead.tag}-vs-${props.war.defend.lead.tag}.bplist`)
   } catch (err) {
     downloadError.value = parseApiError(err, 'Could not download the playlist.').message
   } finally {
@@ -40,19 +41,26 @@ async function download() {
 </script>
 
 <template>
-  <section class="war-pool">
-    <header class="war-pool__head">
+  <WarSection>
+    <template #title>
       <h2 class="war-pool__title section-title">
         Pool
         <span class="war-pool__count">{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : `${pool.length} maps` }}</span>
       </h2>
-      <span class="war-pool__actions">
-        <BaseButton v-if="canSubmitPicks" variant="primary" size="sm" @click="emit('submit-picks')">
-          {{ war.arenaSpec.defenderPicks ? 'Submit picks' : 'Answer offer' }}
-        </BaseButton>
-        <BaseButton v-if="!picking" size="sm" :loading="downloading" @click="download">Download playlist</BaseButton>
-      </span>
-    </header>
+    </template>
+    <template #actions>
+      <BaseButton v-if="!picking" size="sm" :loading="downloading" @click="download">Download playlist</BaseButton>
+    </template>
+
+    <BaseButton
+      v-if="canSubmitPicks"
+      class="war-pool__cta"
+      variant="primary"
+      size="lg"
+      @click="emit('submit-picks')"
+    >
+      {{ war.arenaSpec.defenderPicks ? 'Submit picks' : 'Answer offer' }}
+    </BaseButton>
 
     <p v-if="downloadError" class="war-pool__error" role="alert">{{ downloadError }}</p>
 
@@ -70,24 +78,10 @@ async function download() {
         </WarMapRow>
       </li>
     </ul>
-  </section>
+  </WarSection>
 </template>
 
 <style scoped>
-.war-pool {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.war-pool__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
 .war-pool__title {
   display: flex;
   align-items: baseline;
@@ -101,9 +95,26 @@ async function download() {
   color: var(--text-tertiary);
 }
 
-.war-pool__actions {
-  display: flex;
-  gap: var(--space-xs);
+.war-pool__cta {
+  --accent: var(--warning);
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  animation: war-pool-cta 1.6s ease-in-out infinite;
+}
+
+@keyframes war-pool-cta {
+  50% {
+    background: color-mix(in srgb, var(--warning) 22%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .war-pool__cta {
+    animation: none;
+  }
 }
 
 .war-pool__empty {

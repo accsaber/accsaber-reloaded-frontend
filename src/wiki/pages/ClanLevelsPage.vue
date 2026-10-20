@@ -26,7 +26,7 @@ const UNLOCKS: WikiCompareRow[] = [
 
     <WikiHeading id="clan-xp">Clan XP</WikiHeading>
     <ul>
-      <li>Every map a member plays gives 3.</li>
+      <li>Every ranked play a member sets gives 3. Partials don't count.</li>
       <li>A finished clan mission gives 70.</li>
       <li>Breaking someone in a war gives 6. In Berserker the smaller side gets less per break.</li>
       <li>Winning a war gives 345, split between the clans on the winning team.</li>
@@ -34,8 +34,9 @@ const UNLOCKS: WikiCompareRow[] = [
 
     <WikiHeading id="big-clans">Big clans</WikiHeading>
     <p>
-      Bigger and stronger clans earn more XP per week. Their XP is scaled to keep every clan
-      levelling at the same pace. Your clan's Level tab shows its clan size scaling.
+      Bigger and stronger clans earn more XP per week. To even it out, their XP from plays, breaks
+      and wins gets divided by their clan size scaling. You can see it on your clan's Level tab.
+      Small clans never get a boost though. Mission XP never gets scaled at all.
     </p>
 
     <WikiHeading id="unlocks">Unlocks</WikiHeading>

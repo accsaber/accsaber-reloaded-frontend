@@ -89,6 +89,7 @@ export interface ClanResponse {
 export interface ClanMembershipResponse {
   role: ClanRole
   joinedAt: string
+  joinCooldownEndsAt: string
   online: boolean
   lastPlayedAt: string | null
   strengthShare: number
@@ -282,6 +283,34 @@ export interface ClanWarDetailResponse {
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
   timeline: ClanWarTimelinePointResponse[]
+  strikeRules: ClanWarStrikeRulesResponse
+}
+
+export interface ClanWarStrikeRulesResponse {
+  guard: number
+  baseDamage: number
+  escalation: number
+  disparityExponent: number
+  missingScoreMultiplier: number
+  chipDamage: number
+  chipWindow: number
+  chipSkillExponent: number
+}
+
+export interface ClanWarStrikeMapResponse {
+  targetScore?: number
+  hitUsed: boolean
+  chipUsed: boolean
+}
+
+export interface ClanWarStrikePreviewResponse {
+  damage: number
+  hitsToBreak: number
+  hitsThisCycle: number
+  attackerSkill: number
+  victimSkill: number
+  disparity: number
+  onMap?: ClanWarStrikeMapResponse
 }
 
 export type ClanFeedFrame =
@@ -301,6 +330,7 @@ export interface ClanWarParticipantResponse {
   contribution: number
   joinedAt: string
   leftAt: string | null
+  strikePreview: ClanWarStrikePreviewResponse | null
 }
 
 export interface ClanWarHitResponse {
@@ -393,6 +423,8 @@ export interface CreateClanRequest {
   tagColor?: string
   primaryColor?: string
   secondaryColor?: string
+  acceptingRequests?: boolean
+  pacifist?: boolean
 }
 
 export interface UpdateClanRequest {

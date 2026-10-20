@@ -36,8 +36,10 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="rulesets">Rulesets</WikiHeading>
     <p>
       In Duels you can pick who to hit. Anyone above you is fair game. Going down, you can pick
-      anyone with at least 80% of your skill. A play hits your pick if it beats them. Otherwise it
-      hits the best enemy score it beats. If it beats nobody, it chips the closest score above you.
+      anyone with at least 80% of your skill. A play hits your pick if it beats them. If it just
+      comes close, it chips them. Otherwise it hits the best enemy score it beats. Someone with no
+      score on that map counts as beaten. Only if there's nobody to hit does it chip the closest
+      score above you.
     </p>
     <p>
       In Berserker one play can hit everyone on the other team at once. Broken players cannot be
@@ -64,7 +66,7 @@ const DAMAGE: WikiCompareRow[] = [
     <p>
       When someone's guard hits 0 they are broken. Their clan loses standing and yours gets it.
       It comes out of their clan's slice of the stake. If their clan has no earned standing left,
-      they lose nothing, but you still get the full amount.
+      they lose nothing. You still get yours.
     </p>
     <p>
       Stronger players are worth more standing. Breaking the same player again is worth 75% of
@@ -72,8 +74,8 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>A broken player gets 100 guard back once they set a new score on one of the war's maps.</p>
     <p>
-      If barely anyone on their team has played since two weeks before the war started, breaks
-      give a lot less standing and XP.
+      If barely anyone on their team has played since two weeks before the war started, you get way
+      less standing and XP from breaks. Your end-of-war XP drops too.
     </p>
 
     <WikiHeading id="contribution">What you get</WikiHeading>

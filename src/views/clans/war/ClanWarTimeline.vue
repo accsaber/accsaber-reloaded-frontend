@@ -3,6 +3,7 @@ import type { ClanWarResponse, ClanWarTeam, ClanWarTimelinePointResponse } from 
 import { formatStanding, OPPOSING_TEAM, WAR_TEAMS, warSideStyles } from '@/utils/clans'
 import { computed, ref } from 'vue'
 import { clamp } from '@/utils/math'
+import WarSection from './WarSection.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -124,8 +125,7 @@ const summary = computed(() =>
 </script>
 
 <template>
-  <section class="timeline">
-    <h2 class="section-title">Timeline</h2>
+  <WarSection title="Timeline">
     <p v-if="!points.length" class="timeline__empty">No hits yet.</p>
     <div v-else class="timeline__frame">
       <svg class="timeline__chart" :viewBox="`0 0 ${VIEW_W} ${VIEW_H}`" role="img" :aria-label="summary">
@@ -159,16 +159,10 @@ const summary = computed(() =>
         <span>{{ stamp(end) }}</span>
       </div>
     </div>
-  </section>
+  </WarSection>
 </template>
 
 <style scoped>
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
 .timeline__empty {
   margin: 0;
   font-size: var(--text-caption);
