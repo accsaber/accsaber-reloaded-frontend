@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useMediaQuery } from '@/composables/useMediaQuery';
 import type { SortState, TableColumn } from '@/types/display';
+import { formatSortGlyph } from '@/utils/formatters';
 import { tableNaturalWidth } from '@/utils/tableLayout';
 import { computed, useSlots } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
@@ -65,8 +66,7 @@ function handleSort(col: TableColumn) {
 
 function sortIcon(col: TableColumn): string {
   if (!col.sortable) return ''
-  if (props.sortState?.key !== col.key) return '\u2195'
-  return props.sortState.direction === 'asc' ? '\u2191' : '\u2193'
+  return formatSortGlyph(props.sortState?.key === col.key ? props.sortState.direction : null)
 }
 </script>
 

@@ -1,3 +1,5 @@
+import type { SortDirection } from '@/types/display'
+
 export function formatRelativeDate(dateString: string, now = Date.now()): string {
   const then = new Date(dateString).getTime()
   const diffMs = now - then
@@ -128,4 +130,9 @@ export function formatDuration(ms: number, opts: { seconds?: boolean; zero?: str
   if (hours > 0) return `${hours}h ${minutes}m`
   if (!opts.seconds) return `${minutes}m`
   return minutes > 0 ? `${minutes}m ${total % 60}s` : `${total % 60}s`
+}
+
+export function formatSortGlyph(direction: SortDirection | null): string {
+  if (!direction) return '↕'
+  return direction === 'asc' ? '↑' : '↓'
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
@@ -11,7 +12,9 @@ import type {
   ClanWarTeam,
 } from '@/types/api/clans'
 import { isWarRosterOpen, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
-import { computed } from 'vue'
+import type { SortDirection } from '@/types/display'
+import { formatSortGlyph } from '@/utils/formatters'
+import { computed, ref } from 'vue'
 import FighterStrike from './FighterStrike.vue'
 import WarGuard from './WarGuard.vue'
 import WarSection from './WarSection.vue'
@@ -38,14 +41,28 @@ const styles = computed(() => warSideStyles(props.war))
 const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.viewer.clan.id) : null))
 const canPick = computed(() => !!props.viewer && props.war.ruleset === 'duel' && isWarRosterOpen(props.war))
 
-function fightersOf(clanId: string): ClanWarParticipantResponse[] {
-  return (props.participants ?? []).filter((p) => p.clan.id === clanId)
+const breaksSort = ref<Record<ClanWarTeam, SortDirection | null>>({ attack: null, defend: null })
+
+function breaksTitle(breaks: number): string {
+  if (!breaks) return 'Not broken yet this war.'
+  return (
+    `Broken ${breaks} ${breaks === 1 ? 'time' : 'times'} this war. ` +
+    `Their next break only moves ${Math.round(0.75 ** breaks * 100)}% of the previous.`
+  )
+}
+
+function fightersOf(clanId: string, team: ClanWarTeam): ClanWarParticipantResponse[] {
+  const list = (props.participants ?? []).filter((p) => p.clan.id === clanId)
+  const direction = breaksSort.value[team]
+  if (!direction) return list
+  const sign = direction === 'asc' ? 1 : -1
+  return list.sort((a, b) => sign * (a.breaksSuffered - b.breaksSuffered))
 }
 
 const teams = computed(() =>
   WAR_TEAMS.map((team) => {
     const clans = props.war[team].sides
-      .map((side) => ({ clan: side.clan, fighters: fightersOf(side.clan.id) }))
+      .map((side) => ({ clan: side.clan, fighters: fightersOf(side.clan.id, team) }))
       .filter((group) => group.fighters.length)
     const strikes = clans.some((group) => group.fighters.some((f) => f.strikePreview))
     return { team, style: styles.value[team], clans, strikes }
@@ -86,6 +103,13 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
           <div class="fighters__head">
             <span class="fighters__clan"><ClanTag :clan="group.clan" size="sm" /></span>
             <span class="fighters__col fighters__col--num">Skill</span>
+            <button
+              type="button"
+              class="fighters__col fighters__sort"
+              @click="breaksSort[t.team] = breaksSort[t.team] === 'desc' ? 'asc' : 'desc'"
+            >
+              Broken <span class="fighters__sort-icon">{{ formatSortGlyph(breaksSort[t.team]) }}</span>
+            </button>
             <span class="fighters__col">Guard</span>
             <span class="fighters__col fighters__col--num">Damage</span>
             <span v-if="t.strikes" class="fighters__col fighters__col--num">Your hit</span>
@@ -123,6 +147,17 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
                 </BaseButton>
               </span>
               <span class="fighters__num">{{ fighter.skill.toFixed(1) }}</span>
+              <span class="fighters__breaks">
+                <HintTooltip :text="breaksTitle(fighter.breaksSuffered)">
+                  <template #trigger>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" />
+                      <path d="M12 7l-2 4 3 2-1 4" />
+                    </svg>
+                    ×{{ fighter.breaksSuffered }}
+                  </template>
+                </HintTooltip>
+              </span>
               <WarGuard :fighter="fighter" :rules="rules" />
               <span class="fighters__num">{{ Math.round(fighter.contribution) }}</span>
               <span v-if="t.strikes">
@@ -182,7 +217,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 .fighters__head,
 .fighters__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 6ch 132px 56px;
+  grid-template-columns: minmax(0, 1fr) 6ch 64px 132px 56px;
   align-items: center;
   gap: var(--space-md);
   padding: 0 var(--space-md);
@@ -190,7 +225,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 
 .fighters__side--strikes .fighters__head,
 .fighters__side--strikes .fighters__row {
-  grid-template-columns: minmax(0, 1fr) 6ch 132px 56px 92px;
+  grid-template-columns: minmax(0, 1fr) 6ch 64px 132px 56px 92px;
 }
 
 .fighters__head {
@@ -251,6 +286,27 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 .fighters__col {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
+}
+
+.fighters__sort {
+  padding: 0;
+  text-align: left;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fighters__sort:hover {
+  color: var(--text-primary);
+}
+
+.fighters__sort-icon {
+  font-size: 0.7rem;
+}
+
+.fighters__breaks :deep(.hint) {
+  gap: 2px;
 }
 
 .fighters__col--num,

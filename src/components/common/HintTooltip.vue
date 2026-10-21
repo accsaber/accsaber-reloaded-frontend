@@ -25,7 +25,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     ref="triggerRef"
     type="button"
     class="hint"
-    :class="{ 'hint--tag': tag }"
+    :class="{ 'hint--tag': tag || $slots.trigger }"
     :aria-label="label ? `What ${label} does` : text"
     @mouseenter="onTriggerEnter"
     @mouseleave="onTriggerLeave"
@@ -34,7 +34,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     @keydown.escape="close"
     @click.prevent="toggle"
   >
-    {{ tag ?? '?' }}
+    <slot name="trigger">{{ tag ?? '?' }}</slot>
     <Teleport to="body">
       <div
         v-if="isOpen"
