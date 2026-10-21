@@ -14,8 +14,8 @@ const DAMAGE: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      Once a war goes active, everyone in every clan on both teams is a fighter with 100 guard.
-      People who join mid-war get added too.
+      As soon as picking's done, everyone in every clan on both teams becomes a fighter with 100
+      guard alongside anyone who joins in preparation or mid-war.
     </p>
 
     <WikiHeading id="hits">Hits</WikiHeading>

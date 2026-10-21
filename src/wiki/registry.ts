@@ -726,7 +726,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'clan-missions',
         title: 'Clan Missions',
-        summary: 'Three missions a week the whole clan works on together.',
+        summary: 'Missions in a week the whole clan works on together.',
         keywords: [
           'clan missions',
           'weekly',
@@ -751,7 +751,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'clan-wars',
         title: 'Clan Wars',
-        summary: 'One clan attacks another on 10 maps with standing on the line.',
+        summary: 'One clan attacks another with standing on the line.',
         keywords: [
           'war',
           'wars',
@@ -785,7 +785,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'engagement',
         ],
         related: ['war-combat', 'coalitions', 'clan-standing', 'clan-seasons', 'alliances-and-rivals'],
-        updated: '2026-10-19',
+        updated: '2026-10-21',
         loader: () => import('@/wiki/pages/ClanWarsPage.vue'),
       },
       {
@@ -815,7 +815,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           '80%',
         ],
         related: ['clan-wars', 'coalitions', 'clan-standing'],
-        updated: '2026-10-19',
+        updated: '2026-10-21',
         loader: () => import('@/wiki/pages/WarCombatPage.vue'),
       },
       {
