@@ -173,7 +173,7 @@ export function warClock(war: ClanWarResponse, now: number, viewerTeam: ClanWarT
     return { label, value: formatDuration(new Date(war.retreatAt).getTime() - now, { zero: 'now' }) }
   }
   if (war.status === 'active' && war.startsAt) {
-    return { label: 'Ends in', value: formatDuration(new Date(war.startsAt).getTime() + WAR_MAX_MS - now, { zero: 'now' }) }
+    return { label: 'Time limit', value: formatDuration(new Date(war.startsAt).getTime() + WAR_MAX_MS - now, { zero: 'now' }) }
   }
   if (war.endedAt) {
     return { label: war.outcome ? CLAN_WAR_OUTCOME_LABEL[war.outcome] : 'Ended', value: formatRelativeDate(war.endedAt, now) }

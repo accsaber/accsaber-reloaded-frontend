@@ -74,8 +74,8 @@ const DAMAGE: WikiCompareRow[] = [
     <p>
       In Duels, a play that comes close to an enemy's score without beating it chips them. A chip
       does up to 3 damage. It gets smaller the further off you are and the lower your skill is
-      next to theirs. Against a 99.25, a strong player on a 99.22 chips about 2.3. A much weaker
-      player on a 98.7 chips 0.2. You can play with these values on your war's page.
+      next to theirs. It never goes below 1. Against a 99.25, a strong player on a 99.22 chips about 2.3. A much weaker
+      player on a 98.7 chips 1. You can play with these values on your war's page.
     </p>
     <p>
       Chips do not make your next hit stronger. Every hit or chip has a 25% chance to chip one

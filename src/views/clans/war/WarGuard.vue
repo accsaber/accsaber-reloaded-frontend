@@ -17,15 +17,15 @@ const streakTitle = computed(
     `Every hit makes the next one ${percent(props.rules.escalation)}% stronger, no matter who on your team lands it. ` +
     "It resets once they're broken.",
 )
-const safeTitle = computed(
+const brokenTitle = computed(
   () =>
-    "Broken. Nobody can hit them until they finish a play on one of the war's maps, " +
-    `which gives them ${Math.round(props.rules.guard)} guard back.`,
+    "Nobody can hit them until they finish a play on one of the war's maps. " +
+    `That gives them ${Math.round(props.rules.guard)} guard back.`,
 )
 </script>
 
 <template>
-  <span v-if="fighter.guard <= 0" class="war-guard__safe" :title="safeTitle">Safe</span>
+  <span v-if="fighter.guard <= 0" class="war-guard__broken" :title="brokenTitle">Broken</span>
   <span v-else class="war-guard">
     <span class="war-guard__bar">
       <ClanBar :value="fighter.guard" :max="rules.guard" />
@@ -60,7 +60,7 @@ const safeTitle = computed(
 }
 
 .war-guard__streak,
-.war-guard__safe {
+.war-guard__broken {
   font-size: var(--text-caption);
   font-weight: 600;
   white-space: nowrap;
@@ -71,7 +71,7 @@ const safeTitle = computed(
   color: var(--warning);
 }
 
-.war-guard__safe {
+.war-guard__broken {
   color: var(--text-tertiary);
   letter-spacing: 0.06em;
   text-transform: uppercase;

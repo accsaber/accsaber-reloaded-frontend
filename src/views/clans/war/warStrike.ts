@@ -87,6 +87,7 @@ function chipLines(
 ): StrikeLine[] {
   return [
     { label: 'Chip damage', value: formatDamage(rules.chipDamage) },
+    { label: 'Minimum chip', value: formatDamage(rules.minChipDamage) },
     factor('Closeness', closeness, accuracies),
     factor('Skill gap', ratio ** rules.chipSkillExponent, skillDetail(preview, rules.chipSkillExponent)),
   ]
@@ -116,6 +117,6 @@ export function strikeOutcome(
   const ratio = Math.min(1, preview.attackerSkill / preview.victimSkill)
   const accuracies = `your ${formatAccuracy(score / maxScore)} vs their ${formatAccuracy(target / maxScore)}`
   const lines = chipLines(rules, preview, closeness, ratio, accuracies)
-  const result = finish(lines, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent, guard)
+  const result = finish(lines, Math.max(rules.minChipDamage, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent), guard)
   return { kind: 'chip', note, ...result }
 }

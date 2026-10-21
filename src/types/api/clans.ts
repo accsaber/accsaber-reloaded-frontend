@@ -298,6 +298,7 @@ export interface ClanWarStrikeRulesResponse {
   disparityExponent: number
   missingScoreMultiplier: number
   chipDamage: number
+  minChipDamage: number
   chipWindow: number
   chipSkillExponent: number
 }

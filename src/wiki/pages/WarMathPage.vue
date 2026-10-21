@@ -9,6 +9,7 @@ const RULES = {
   disparityExponent: 1,
   missingScoreMultiplier: 0.35,
   chipDamage: 3,
+  minChipDamage: 1,
   chipWindow: 0.3,
   chipSkillExponent: 2,
   breakShare: 0.5,
@@ -48,6 +49,7 @@ const CHIP_PARAMS: WikiCompareRow[] = [
   },
   { label: 'Chip window', values: [`${RULES.chipWindow}`, 'You only chip inside it'] },
   { label: 'Chip skill exponent', values: [`${RULES.chipSkillExponent}`, 'Weaker players chip a lot less'] },
+  { label: 'Minimum chip', values: [`${RULES.minChipDamage}`, 'The least a chip can do'] },
 ]
 
 const BREAK_PARAMS: WikiCompareRow[] = [
@@ -93,6 +95,7 @@ const XP_PARAMS: WikiCompareRow[] = [
         <mn>{{ RULES.chipSkillExponent }}</mn>
       </msup>
     </math>
+    <p>A chip never does less than {{ RULES.minChipDamage }}.</p>
     <WikiCompareTable :columns="COLUMNS" :rows="CHIP_PARAMS" />
 
     <WikiHeading id="break">Standing on a break</WikiHeading>
