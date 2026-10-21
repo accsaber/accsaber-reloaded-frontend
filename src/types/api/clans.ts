@@ -93,6 +93,7 @@ export interface ClanMembershipResponse {
   online: boolean
   lastPlayedAt: string | null
   strengthShare: number
+  skill: number
   seasonPlayXp: number
   seasonHits: number
   seasonBreaks: number

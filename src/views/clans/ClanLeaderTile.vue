@@ -52,6 +52,7 @@ function whole(value: number | undefined): string {
           <dt>Strength</dt>
           <dd>{{ membership ? `${formatPercent(membership.strengthShare * 100, 2)}%` : '-' }}</dd>
         </div>
+        <div><dt>Skill</dt><dd>{{ membership ? membership.skill.toFixed(1) : '-' }}</dd></div>
       </dl>
     </div>
     <div class="leader__menu"><slot /></div>
@@ -159,7 +160,7 @@ function whole(value: number | undefined): string {
 
 .leader__stats {
   display: grid;
-  grid-template-columns: repeat(4, max-content);
+  grid-template-columns: repeat(5, max-content);
   justify-content: start;
   gap: var(--space-xs) var(--space-lg);
   margin: var(--space-sm) 0 0;

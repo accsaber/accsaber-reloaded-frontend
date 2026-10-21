@@ -48,6 +48,7 @@ const COLUMNS: TableColumn[] = [
     sortable: true,
     width: '120px',
   },
+  { key: 'skill', label: 'Skill', align: 'right', mono: true, sortable: true, width: '88px' },
   { key: 'played', label: 'Last played', align: 'right', sortable: true, width: '144px' },
   { key: 'actions', label: '', align: 'right', noLink: true, width: '48px' },
 ]
@@ -105,6 +106,7 @@ const rows = computed(() => {
         hits: m?.seasonHits ?? 0,
         breaks: m?.seasonBreaks ?? 0,
         strength: m?.strengthShare ?? 0,
+        skill: m?.skill ?? 0,
         played: m?.lastPlayedAt ? new Date(m.lastPlayedAt).getTime() : 0,
       }
     })
@@ -226,6 +228,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
             Math.round(value as number).toLocaleString()
           }}</template>
           <template #cell-strength="{ value }">{{ formatPercent((value as number) * 100, 2) }}%</template>
+          <template #cell-skill="{ value }">{{ (value as number).toFixed(1) }}</template>
           <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
           <template #cell-actions="{ row }">
             <ClanMemberMenu
@@ -245,7 +248,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
                 <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
                 <span class="member-card__played">{{ lastPlayed(asPlayer(row)) }}</span>
                 <span class="member-card__stats">
-                  {{ row.hits }} hits · {{ row.breaks }} breaks · {{ formatPercent((row.strength as number) * 100, 2) }}%
+                  {{ row.hits }} hits · {{ row.breaks }} breaks · {{ formatPercent((row.strength as number) * 100, 2) }}% · {{ (row.skill as number).toFixed(1) }} skill
                 </span>
               </div>
               <ClanMemberMenu
