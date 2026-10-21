@@ -3,7 +3,6 @@ import type {
   PrivacySettings,
   SettingGroup,
   SettingsBag,
-  Visibility,
 } from '@/types/api/settings'
 import { DEFAULT_SCORE_ROW_FIELDS } from '@/utils/scoreRowFields'
 import { defineStore } from 'pinia'
@@ -14,6 +13,7 @@ const api = () => import('@/api/settings')
 const PRIVACY_DEFAULTS: PrivacySettings = {
   'privacy.followingVisibility': 'public',
   'privacy.rivalsVisibility': 'public',
+  'privacy.showOnlineStatus': false,
 }
 
 const APPEARANCE_DEFAULTS: AppearanceSettings = {
@@ -50,9 +50,9 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function updatePrivacy(
-    key: keyof PrivacySettings,
-    value: Visibility,
+  async function updatePrivacy<K extends keyof PrivacySettings>(
+    key: K,
+    value: PrivacySettings[K],
   ): Promise<boolean> {
     const previous = privacy.value[key]
     privacy.value = { ...privacy.value, [key]: value }

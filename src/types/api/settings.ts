@@ -25,6 +25,7 @@ export type SettingsBag = Record<string, unknown>
 export interface PrivacySettings extends SettingsBag {
   'privacy.followingVisibility': Visibility
   'privacy.rivalsVisibility': Visibility
+  'privacy.showOnlineStatus': boolean
 }
 
 export interface AppearanceSettings extends SettingsBag {

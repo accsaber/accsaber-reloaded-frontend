@@ -17,7 +17,6 @@ import type {
   PrivacySettings,
   ReplayService,
   ScoreRowField,
-  Visibility,
 } from '@/types/api/settings'
 import { isRankingSubdomain } from '@/utils/subdomain'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
@@ -45,20 +44,21 @@ const VISIBILITY_OPTIONS = [
   { value: 'private' as const, label: 'Private', description: 'Only you.' },
 ]
 
-const PRIVACY_CONTROLS: { key: keyof PrivacySettings; title: string }[] = [
-  { key: 'privacy.followingVisibility', title: 'Following list' },
-  { key: 'privacy.rivalsVisibility', title: 'Rivals list' },
+const ON_OFF_OPTIONS = [
+  { value: true, label: 'On' },
+  { value: false, label: 'Off' },
+]
+
+const PRIVACY_CONTROLS = [
+  { key: 'privacy.followingVisibility' as const, title: 'Following list', options: VISIBILITY_OPTIONS },
+  { key: 'privacy.rivalsVisibility' as const, title: 'Rivals list', options: VISIBILITY_OPTIONS },
+  { key: 'privacy.showOnlineStatus' as const, title: 'Show online status', options: ON_OFF_OPTIONS },
 ]
 
 const REPLAY_SERVICE_OPTIONS = [
   { value: 'beatleader' as const, label: 'BeatLeader' },
   { value: 'arcviewer' as const, label: 'ArcViewer' },
   { value: 'chroviewer' as const, label: 'ChroViewer' },
-]
-
-const ON_OFF_OPTIONS = [
-  { value: true, label: 'On' },
-  { value: false, label: 'Off' },
 ]
 
 const me = computed(() => authStore.authMe?.player ?? null)
@@ -116,7 +116,7 @@ function selectSection(section: { key: SectionKey; requiresLogin: boolean }) {
   sectionParam.value = section.key === 'appearance' ? '' : section.key
 }
 
-async function setVisibility(key: keyof PrivacySettings, value: Visibility) {
+async function setPrivacy<K extends keyof PrivacySettings>(key: K, value: PrivacySettings[K]) {
   if (settingsStore.privacy[key] === value || settingsStore.privacySaving) return
   await settingsStore.updatePrivacy(key, value)
 }
@@ -299,10 +299,9 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
               <div class="settings-row__label">
                 <span class="settings-row__title">{{ control.title }}</span>
               </div>
-              <SettingsPicker :model-value="settingsStore.privacy[control.key] as Visibility"
-                :options="VISIBILITY_OPTIONS"
+              <SettingsPicker :model-value="settingsStore.privacy[control.key]" :options="control.options"
                 :aria-label="control.title" :disabled="settingsStore.privacySaving"
-                @update:model-value="(v) => setVisibility(control.key, v as Visibility)" />
+                @update:model-value="(v) => setPrivacy(control.key, v as never)" />
             </div>
 
             <p v-if="settingsStore.privacyError" class="settings-card__error">
