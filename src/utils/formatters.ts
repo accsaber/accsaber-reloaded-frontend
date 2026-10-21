@@ -84,6 +84,12 @@ export function formatAccuracy(value: number | null | undefined, digits = 2): st
   return `${(value * 100).toFixed(digits)}%`
 }
 
+export function formatOrdinal(n: number): string {
+  const suffixes = ['th', 'st', 'nd', 'rd']
+  const mod = n % 100
+  return `${n}${suffixes[(mod - 20) % 10] ?? suffixes[mod] ?? suffixes[0]}`
+}
+
 export function formatCount(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return EN_DASH
   return value.toLocaleString()

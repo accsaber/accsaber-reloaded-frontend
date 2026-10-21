@@ -159,9 +159,8 @@ function whole(value: number | undefined): string {
 }
 
 .leader__stats {
-  display: grid;
-  grid-template-columns: repeat(5, max-content);
-  justify-content: start;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-xs) var(--space-lg);
   margin: var(--space-sm) 0 0;
 }
@@ -188,10 +187,6 @@ function whole(value: number | undefined): string {
 @media (max-width: 767px) {
   .leader--founder {
     --portrait: 96px;
-  }
-
-  .leader__stats {
-    grid-template-columns: repeat(2, auto);
   }
 }
 </style>

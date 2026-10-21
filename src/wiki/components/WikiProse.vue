@@ -50,6 +50,21 @@
   border: 1px solid var(--bg-overlay);
 }
 
+.wiki-prose :deep(math[display='block']) {
+  margin: 0 0 var(--space-md);
+  padding: var(--space-md);
+  overflow-x: auto;
+  font-size: 1.15em;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.wiki-prose :deep(math mn) {
+  color: var(--accent);
+}
+
 .wiki-prose :deep(hr) {
   border: none;
   border-top: 1px solid var(--bg-overlay);

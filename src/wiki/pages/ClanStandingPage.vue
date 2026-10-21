@@ -25,10 +25,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       someone in a war takes standing from their clan and gives it to yours.
     </p>
     <p>
-      Earned standing is the only part you can lose, and it never goes below 0. If your clan is
+      Earned standing is the only part you can lose. It never goes below 0. If your clan is
       already at 0 when it gets broken, you lose nothing. The attacker still gets theirs,
       depending on how active your team is. The numbers are on
-      <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
+      <RouterLink to="/wiki/war-math#break">War Math</RouterLink>.
     </p>
 
     <WikiHeading id="ranking">The ranking</WikiHeading>

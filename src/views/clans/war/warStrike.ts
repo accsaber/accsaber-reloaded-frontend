@@ -50,14 +50,13 @@ export function hitsToBreak(
 function hitLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
   return [
     { label: 'Base damage', value: formatDamage(rules.baseDamage) },
-    factor('Escalation', rules.escalation ** preview.hitsThisCycle,
-      `×${formatDamage(rules.escalation)} per hit this cycle, ${preview.hitsThisCycle} so far`),
+    factor('Streak', rules.escalation ** preview.hitsThisCycle,
+      `×${formatDamage(rules.escalation)} per hit since their guard came back, ${preview.hitsThisCycle} so far`),
     factor('Skill gap', preview.disparity, skillDetail(preview, rules.disparityExponent)),
   ]
 }
 
-function finish(lines: StrikeLine[], damage: number, guard: number, used: string | null, suffix = ''): StrikeBreakdown {
-  if (used) return { damage: 0, lines: [...lines, { label: used, value: '×0' }, { label: '=', value: formatDamage(0) }] }
+function finish(lines: StrikeLine[], damage: number, guard: number, suffix = ''): StrikeBreakdown {
   const capped = Math.min(damage, guard)
   const cap: StrikeLine[] = damage > guard
     ? [{ label: 'Guard cap', value: formatDamage(guard), detail: 'a hit never takes more than the guard they have left' }]
@@ -71,12 +70,12 @@ export function hitBreakdown(
   guard: number,
 ): StrikeBreakdown {
   const hits = `${preview.hitsToBreak} ${preview.hitsToBreak === 1 ? 'hit' : 'hits'} to break`
-  return finish(hitLines(rules, preview), preview.damage, guard, null, ` per hit, ${hits}`)
+  return finish(hitLines(rules, preview), preview.damage, guard, ` per hit, ${hits}`)
 }
 
-function accuracyGap(targetScore: number, score: number, maxScore: number): number {
-  if (score === targetScore) return 0
-  return -Math.log10(1 - targetScore / maxScore) + Math.log10(1 - score / maxScore)
+export function accuracyGap(targetAccuracy: number, accuracy: number): number {
+  if (accuracy === targetAccuracy) return 0
+  return -Math.log10(1 - targetAccuracy) + Math.log10(1 - accuracy)
 }
 
 function chipLines(
@@ -100,26 +99,23 @@ export function strikeOutcome(
   score: number,
   maxScore: number,
 ): StrikeOutcome {
-  const onMap = preview.onMap
-  const target = onMap?.targetScore
-  const usedHit = onMap?.hitUsed ? 'Already used on this score' : null
+  const target = preview.onMap?.targetScore
   if (target == null) {
     const lines = [...hitLines(rules, preview), factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here')]
-    const result = finish(lines, preview.damage * rules.missingScoreMultiplier, guard, usedHit)
-    return { kind: 'damage', note: usedHit ?? 'No score on this map', ...result }
+    const result = finish(lines, preview.damage * rules.missingScoreMultiplier, guard)
+    return { kind: 'damage', note: 'No score on this map', ...result }
   }
   if (score > target) {
-    const result = finish(hitLines(rules, preview), preview.damage, guard, usedHit)
-    return { kind: 'damage', note: usedHit ?? "This score is above the target's score on this map", ...result }
+    const result = finish(hitLines(rules, preview), preview.damage, guard)
+    return { kind: 'damage', note: "This score is above the target's score on this map", ...result }
   }
-  const gap = accuracyGap(target, score, maxScore)
+  const gap = accuracyGap(target / maxScore, score / maxScore)
   const note = "This score is below the target's score on this map"
   if (!(gap < rules.chipWindow)) return { kind: 'none', damage: 0, note, lines: [] }
   const closeness = 1 - gap / rules.chipWindow
   const ratio = Math.min(1, preview.attackerSkill / preview.victimSkill)
   const accuracies = `your ${formatAccuracy(score / maxScore)} vs their ${formatAccuracy(target / maxScore)}`
-  const usedChip = onMap?.chipUsed ? 'Already used on this score' : null
   const lines = chipLines(rules, preview, closeness, ratio, accuracies)
-  const result = finish(lines, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent, guard, usedChip)
-  return { kind: 'chip', note: usedChip ?? note, ...result }
+  const result = finish(lines, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent, guard)
+  return { kind: 'chip', note, ...result }
 }

@@ -15,7 +15,7 @@ import type {
   ClanWarStrikeRulesResponse,
 } from '@/types/api/clans'
 import { hasClanRole, isWarRosterOpen, warLeadSide, warTeamOf } from '@/utils/clans'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useClanFeed } from './clans/useClanFeed'
@@ -29,6 +29,9 @@ import ClanWarRewards from './clans/war/ClanWarRewards.vue'
 import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
 import { hitDamage, hitsToBreak } from './clans/war/warStrike'
 import WarPicksModal from './clans/war/WarPicksModal.vue'
+import WarPrepPanel from './clans/war/WarPrepPanel.vue'
+import { useWarMapBoards } from './clans/war/useWarMapBoards'
+import { prefersReducedMotion } from '@/composables/useReducedMotion'
 
 const FIGHTERS_SIZE = 100
 
@@ -49,6 +52,7 @@ const participantsMapId = ref('')
 const whatIfMapId = ref('')
 const rewards = ref<ClanWarRewardsResponse | null>(null)
 const rewardsError = ref<string | null>(null)
+let detailRequest = 0
 let rewardsRequest = 0
 let participantsRequest = 0
 const picking = ref(false)
@@ -62,6 +66,25 @@ const war = computed(() => detail.value?.war ?? null)
 const fighting = computed(() => war.value?.status === 'active' || war.value?.status === 'ended')
 const rosterShown = computed(() => !!war.value && (isWarRosterOpen(war.value) || war.value.status === 'ended'))
 const ownClanId = computed(() => own.clan.value?.id ?? null)
+const viewer = computed(() => participants.value?.find((p) => p.player.id === auth.userId && !p.leftAt) ?? null)
+const boards = useWarMapBoards(
+  () => warId.value,
+  (mapId) => (participantsMapId.value === mapId ? participants.value : null),
+)
+const pushMapId = computed(() => {
+  let best: string | null = null
+  let gap = Number.POSITIVE_INFINITY
+  for (const entry of detail.value?.pool ?? []) {
+    const own = entry.viewerScore
+    const theirs = entry.targetScore
+    if (!own || !theirs || theirs.score <= own.score) continue
+    if (theirs.accuracy - own.accuracy < gap) {
+      gap = theirs.accuracy - own.accuracy
+      best = entry.difficulty.id
+    }
+  }
+  return best
+})
 
 const canSubmitPicks = computed(
   () =>
@@ -92,16 +115,19 @@ usePageMeta({
 })
 
 async function load() {
+  const request = ++detailRequest
   loading.value = detail.value === null
   error.value = null
   try {
     const { getClanWar } = await import('@/api/clans')
-    detail.value = await getClanWar(warId.value)
+    const next = await getClanWar(warId.value)
+    if (request === detailRequest) detail.value = next
   } catch {
+    if (request !== detailRequest) return
     detail.value = null
     error.value = 'War not found.'
   } finally {
-    loading.value = false
+    if (request === detailRequest) loading.value = false
   }
 }
 
@@ -150,9 +176,6 @@ function trackStrike(victim: ClanWarParticipantResponse, hit: ClanWarHitResponse
     preview.damage = hitDamage(rules, preview.hitsThisCycle, preview.disparity)
   }
   preview.hitsToBreak = hitsToBreak(rules, victim.guard, preview.hitsThisCycle, preview.disparity)
-  if (!preview.onMap || hit.attacker.id !== auth.userId || hit.difficulty.id !== participantsMapId.value) return
-  if (!hit.chip) preview.onMap.hitUsed = true
-  if (preview.onMap.targetScore != null) preview.onMap.chipUsed = true
 }
 
 function applyHit(hit: ClanWarHitResponse) {
@@ -181,6 +204,7 @@ function applyWar(next: ClanWarResponse) {
   detail.value.war = next
   reloadKey.value += 1
   void loadParticipants()
+  boards.invalidate()
   if (!statusChanged) return
   void load()
   void loadRewards()
@@ -207,11 +231,23 @@ async function pickTarget(userId: string | null) {
     const chosen = await chooseClanWarTarget(warId.value, { userId })
     const self = participants.value?.find((p) => p.player.id === chosen.player.id)
     if (self) self.target = chosen.target
+    void load()
   } catch (err) {
     pickError.value = parseApiError(err, 'Could not pick that target.').message
   } finally {
     picking.value = false
   }
+}
+
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' })
+}
+
+async function pushPbs() {
+  if (!pushMapId.value) return
+  boards.open(pushMapId.value)
+  await nextTick()
+  scrollTo(`war-pool-${pushMapId.value}`)
 }
 
 async function retreat() {
@@ -237,6 +273,7 @@ watch(
     participants.value = null
     whatIfMapId.value = ''
     rewards.value = null
+    boards.reset()
     void load()
     void loadRewards()
   },
@@ -259,9 +296,25 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
     <template v-else>
       <ClanWarHud :war="war" :now="now" :can-retreat="canRetreat" :viewer-team="viewerTeam" @retreat="retreatOpen = true" />
 
+      <WarPrepPanel
+        v-if="war.status === 'preparing'"
+        :war="war"
+        :viewer="viewer"
+        :own-clan="own.clan.value"
+        :can-push="!!pushMapId"
+        @pick="scrollTo('war-roster')"
+        @push="pushPbs"
+      />
+
       <ClanWarPool
         :war="war"
         :pool="detail.pool"
+        :rules="detail.strikeRules"
+        :participants="participants"
+        :viewer="viewer"
+        :expanded="boards.expanded.value"
+        :boards="boards.boards.value"
+        @toggle="boards.toggle"
         :can-submit-picks="canSubmitPicks"
         :signed-in="auth.isLoggedIn"
         @submit-picks="picksOpen = true"
@@ -271,11 +324,12 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
 
       <ClanWarFighters
         v-if="rosterShown"
+        id="war-roster"
         :war="war"
         :rules="detail.strikeRules"
         :participants="participants"
         :error="participantsError ?? pickError"
-        :viewer-id="auth.userId"
+        :viewer="viewer"
         :picking="picking"
         :pool="detail.pool"
         :loaded-map-id="participantsMapId"

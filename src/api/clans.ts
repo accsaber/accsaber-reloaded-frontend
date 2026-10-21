@@ -319,7 +319,7 @@ export function getClanWarParticipants(
 
 export function getClanWarHits(
   warId: string,
-  params?: PaginationParams & { userId?: string },
+  params?: PaginationParams & { userId?: string; chip?: boolean; clanId?: string },
 ): Promise<Page<ClanWarHitResponse>> {
   return get<Page<ClanWarHitResponse>>(`/clans/wars/${warId}/hits${buildQuery(params)}`)
 }

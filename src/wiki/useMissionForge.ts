@@ -56,7 +56,7 @@ import {
   type MissionTemplate,
 } from '@/wiki/missionSim'
 import { ref, shallowRef } from 'vue'
-import { formatAccuracy } from '@/utils/formatters'
+import { formatAccuracy, formatOrdinal } from '@/utils/formatters'
 import { mulberry32 } from '@/utils/random'
 import { clamp } from '@/utils/math'
 
@@ -1151,16 +1151,10 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     return { value: top[idx], index: idx, outlierGuarded: false, median, max }
   }
 
-  function ordinal(n: number): string {
-    const suffixes = ['th', 'st', 'nd', 'rd']
-    const mod = n % 100
-    return `${n}${suffixes[(mod - 20) % 10] ?? suffixes[mod] ?? suffixes[0]}`
-  }
-
   function streakBasis(rep: StreakReference): string {
     return rep.outlierGuarded
       ? `Your best run of ${rep.max} is a spike next to the ${rep.median} you typically land, so the reference gets built from the middle of your list instead and comes out at ${rep.value}.`
-      : `The reference is your ${ordinal(rep.index + 1)} best, ${rep.value}, deliberately not your top run.`
+      : `The reference is your ${formatOrdinal(rep.index + 1)} best, ${rep.value}, deliberately not your top run.`
   }
 
   async function run(type: ForgeMissionType, pool: 'daily' | 'weekly', seed: number) {

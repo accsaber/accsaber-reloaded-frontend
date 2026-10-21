@@ -14,32 +14,52 @@ const DAMAGE: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      As soon as picking's done, everyone in every clan on both teams becomes a fighter with 100
-      guard alongside anyone who joins in preparation or mid-war.
+      Once picking's done, everyone in every clan on both teams is a fighter with 100 guard.
+      Rosters never lock. Anyone who joins later becomes a fighter. Anyone who leaves drops out.
+    </p>
+    <p>
+      Guard is a shield. Hits wear it down without moving any standing. Standing only moves when
+      guard hits 0, which is a break.
+    </p>
+
+    <WikiHeading id="plays">How a play works</WikiHeading>
+    <p>
+      Every full play on a war map counts, even one worse than your PB. What matters is beating
+      their score. Fails and quits don't count. In Duels a play lands on one enemy. In Berserker it
+      lands on everyone it beats.
     </p>
 
     <WikiHeading id="hits">Hits</WikiHeading>
     <p>
-      You hit someone by beating their score on one of the war's maps. If they have no score
-      there, you still hit them for about a third of the damage. Only plays after the war started
-      count. You can only hit each of their scores once.
+      You hit someone by beating their score on a war map. If they have no score there, you hit
+      them for 35% of the damage. Only plays after the war starts count. You can hit the same
+      person on the same map with every play until they break.
     </p>
 
     <WikiHeading id="damage">Damage</WikiHeading>
-    <p>Hits on the same player keep getting stronger. If you are both the same skill:</p>
+    <p>
+      Each hit on a player makes the next one stronger, no matter who on your team lands it.
+      Hits on someone with no score count too. The streak starts over once their guard comes back.
+      If you are both the same skill:
+    </p>
     <WikiCompareTable :columns="['Damage', 'Guard left']" :rows="DAMAGE" />
     <p>
-      Skill matters too. It uses the Overall skill level from your profile. Hitting someone at
-      twice your level does double damage. Hitting someone at half your level does half.
+      Skill uses the Overall skill level from your profile. Hitting someone at twice your level
+      does double damage. Hitting someone at half your level does half. The full formula is on
+      <RouterLink to="/wiki/war-math#hit">War Math</RouterLink>.
     </p>
 
     <WikiHeading id="rulesets">Rulesets</WikiHeading>
     <p>
       In Duels you can pick who to hit. Anyone above you is fair game. Going down, you can pick
       anyone with at least 80% of your skill. A play hits your pick if it beats them. If it just
-      comes close, it chips them. Otherwise it hits the best enemy score it beats. Someone with no
-      score on that map counts as beaten. Only if there's nobody to hit does it chip the closest
-      score above you.
+      comes close, it chips them. Otherwise it goes auto. Someone with no score on that map counts
+      as beaten. If your pick is broken, your plays go auto until they're back.
+    </p>
+    <p>
+      Auto breaks someone if your play can. It picks whoever is worth the most standing. If nobody
+      breaks, it takes the biggest hit or chip it can land. Skill closeness doesn't matter. The pool
+      on the war page shows who auto would hit on each map.
     </p>
     <p>
       In Berserker one play can hit everyone on the other team at once. Broken players cannot be
@@ -55,7 +75,7 @@ const DAMAGE: WikiCompareRow[] = [
       In Duels, a play that comes close to an enemy's score without beating it chips them. A chip
       does up to 3 damage. It gets smaller the further off you are and the lower your skill is
       next to theirs. Against a 99.25, a strong player on a 99.22 chips about 2.3. A much weaker
-      player on a 98.7 chips 0.2.
+      player on a 98.7 chips 0.2. You can play with these values on your war's page.
     </p>
     <p>
       Chips do not make your next hit stronger. Every hit or chip has a 25% chance to chip one
@@ -70,20 +90,35 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       Stronger players are worth more standing. Breaking the same player again is worth 75% of
-      the last time.
+      the last time. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
     </p>
-    <p>A broken player gets 100 guard back once they set a new score on one of the war's maps.</p>
     <p>
-      If barely anyone on their team has played since two weeks before the war started, you get way
-      less standing and XP from breaks. Your end-of-war XP drops too.
+      Nobody can hit you while you're broken. You get 100 guard back the moment you finish any play
+      on a war map. That same play still hits like normal.
+    </p>
+    <p>
+      If barely anyone on their team has played in the two weeks before the war, you get a lot
+      less standing and XP from breaks. Your end-of-war XP drops too. That's
+      <RouterLink to="/wiki/war-math#engagement">engagement</RouterLink>.
+    </p>
+
+    <WikiHeading id="strategy">Playing it smart</WikiHeading>
+    <p>
+      The other team has to beat your scores to hit you. Pushing your PBs on the pool during prep
+      makes you harder to hit.
+    </p>
+    <p>
+      Go after people whose guard is already low. A 4th hit does over three times the first.
+      Picking the same target as your team breaks someone who keeps coming back. Auto is a fine
+      default. Hover the damage on the war page to see what a play would do to each enemy.
     </p>
 
     <WikiHeading id="contribution">What you get</WikiHeading>
     <p>You get XP from a war in two ways.</p>
     <ul>
       <li>
-        <strong>Right away:</strong> every break gives 50 XP, split between everyone who hit
-        that player based on the damage you dealt.
+        <strong>Right away:</strong> every break gives 50 XP. It's split by damage between everyone
+        who hit or chipped that player since their guard came back.
       </li>
       <li>
         <strong>When the war ends:</strong> you get 0.2 XP for every point of damage you did, plus
@@ -96,7 +131,7 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       Your clan gets 6 clan XP for every break. In Berserker, a side with fewer people gets less
-      per hit, per break and in clan XP. They also have more people to hit. One player fighting a
+      XP per hit, per break and in clan XP. Their damage stays the same. One player fighting a
       clan of 50 gets under 1 clan XP per break.
     </p>
   </WikiProse>

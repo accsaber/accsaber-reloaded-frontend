@@ -270,6 +270,9 @@ export interface ClanWarPoolEntryResponse {
   pickedBy: PublicClanResponse | null
   source: ClanWarPoolSource
   viewerScore: MyScoreSummary | null
+  target: PlayerRef | null
+  targetScore: MyScoreSummary | null
+  targetPicked: boolean
 }
 
 export interface ClanWarTimelinePointResponse {
@@ -301,8 +304,6 @@ export interface ClanWarStrikeRulesResponse {
 
 export interface ClanWarStrikeMapResponse {
   targetScore?: number
-  hitUsed: boolean
-  chipUsed: boolean
 }
 
 export interface ClanWarStrikePreviewResponse {

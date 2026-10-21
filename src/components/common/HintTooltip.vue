@@ -5,6 +5,8 @@ const props = defineProps<{
   text: string
   label?: string
   width?: number
+  more?: boolean
+  tag?: string
 }>()
 
 const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, onTriggerEnter, onTriggerLeave } =
@@ -23,6 +25,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     ref="triggerRef"
     type="button"
     class="hint"
+    :class="{ 'hint--tag': tag }"
     :aria-label="label ? `What ${label} does` : text"
     @mouseenter="onTriggerEnter"
     @mouseleave="onTriggerLeave"
@@ -31,7 +34,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     @keydown.escape="close"
     @click.prevent="toggle"
   >
-    ?
+    {{ tag ?? '?' }}
     <Teleport to="body">
       <div
         v-if="isOpen"
@@ -42,6 +45,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
         role="tooltip"
       >
         <slot :locked="locked">{{ text }}</slot>
+        <span v-if="more && !locked" class="hint__more">Click for more</span>
       </div>
     </Teleport>
   </button>
@@ -74,6 +78,19 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   color: var(--text-primary);
 }
 
+.hint--tag {
+  width: auto;
+  height: auto;
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .hint__panel {
   z-index: 10000;
   padding: var(--space-sm) var(--space-md);
@@ -86,6 +103,15 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   line-height: 1.5;
   white-space: normal;
   pointer-events: none;
+}
+
+.hint__more {
+  display: block;
+  margin-top: var(--space-xs);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--bg-overlay);
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
 }
 
 .hint__panel--locked {

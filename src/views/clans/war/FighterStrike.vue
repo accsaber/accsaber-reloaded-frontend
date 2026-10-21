@@ -48,7 +48,7 @@ const outcome = computed(() => {
   <span class="strike">
     <span class="strike__damage">
       {{ formatDamage(hit.damage) }}
-      <HintTooltip text="Damage breakdown" :width="320">
+      <HintTooltip text="Damage breakdown" :width="320" more>
         <template #default="{ locked }">
           <StrikeLines v-if="!locked" :lines="hit.lines" />
           <div v-else class="strike__what-if">

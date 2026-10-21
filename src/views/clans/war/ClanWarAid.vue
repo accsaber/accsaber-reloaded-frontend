@@ -17,6 +17,7 @@ import ClanPicker from '../ClanPicker.vue'
 import WarSection from './WarSection.vue'
 
 const PAGE_SIZE = 50
+const ALLY_SIZE = 100
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -43,21 +44,19 @@ const ownSide = computed(() =>
   WAR_TEAMS.flatMap((team) => props.war[team].sides).find((s) => s.clan.id === props.ownClanId && !s.leftAt) ?? null,
 )
 const isLead = computed(() => !!ownSide.value && props.war[ownSide.value.team].lead.id === props.ownClanId)
+const allyIds = ref<Set<string>>(new Set())
 const fallenTeams = computed(() => WAR_TEAMS.filter((team) => warLeadFallen(props.war[team])))
-const offerTeams = computed(() => WAR_TEAMS.filter((team) => !fallenTeams.value.includes(team)))
+const offerTeams = computed(() =>
+  WAR_TEAMS.filter((team) => !fallenTeams.value.includes(team) && allyIds.value.has(props.war[team].lead.id)),
+)
 const canAsk = computed(
   () => open.value && props.canAct && isLead.value && !fallenTeams.value.includes(ownSide.value!.team),
 )
 const canLeave = computed(() => open.value && props.canAct && !!ownSide.value && !isLead.value)
-const canOffer = computed(
-  () =>
-    open.value &&
-    props.canAct &&
-    !!props.ownClanId &&
-    !ownSide.value &&
-    !props.ownPacifist &&
-    offerTeams.value.length > 0,
+const mayOffer = computed(
+  () => open.value && props.canAct && !!props.ownClanId && !ownSide.value && !props.ownPacifist,
 )
+const canOffer = computed(() => mayOffer.value && offerTeams.value.length > 0)
 const warClanIds = computed(() => WAR_TEAMS.flatMap((team) => props.war[team].sides.map((s) => s.clan.id)))
 
 async function fetchAids() {
@@ -128,7 +127,16 @@ async function leave() {
   }
 }
 
+async function fetchAllies(clanId: string | null) {
+  allyIds.value = new Set()
+  if (!clanId) return
+  const { getClanAlliances } = await import('@/api/clans')
+  const page = await getClanAlliances(clanId, { page: 0, size: ALLY_SIZE }).catch(() => null)
+  if (page && clanId === props.ownClanId && mayOffer.value) allyIds.value = new Set(page.content.map((a) => a.ally.id))
+}
+
 watch([() => props.war.id, () => props.reloadKey], fetchAids, { immediate: true })
+watch(() => (mayOffer.value ? props.ownClanId : null), fetchAllies, { immediate: true })
 </script>
 
 <template>

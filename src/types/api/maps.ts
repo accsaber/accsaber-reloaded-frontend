@@ -208,6 +208,7 @@ export interface DifficultyListParams extends PaginationParams {
 export interface DifficultyScoreParams extends PaginationParams {
   country?: string
   relation?: UserRelationType
+  warId?: string
 }
 
 export interface LeaderboardPreviewRow {

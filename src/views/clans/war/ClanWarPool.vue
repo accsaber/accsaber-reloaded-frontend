@@ -1,43 +1,57 @@
 <script setup lang="ts">
-import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import type { ClanWarPoolEntryResponse, ClanWarResponse } from '@/types/api/clans'
-import { CLAN_WAR_POOL_SOURCE_LABEL } from '@/utils/clans'
-import { formatAccuracy } from '@/utils/formatters'
-import { saveBlob } from '@/utils/download'
-import { computed, ref } from 'vue'
+import type {
+  ClanWarParticipantResponse,
+  ClanWarPoolEntryResponse,
+  ClanWarResponse,
+  ClanWarStrikeRulesResponse,
+} from '@/types/api/clans'
+import { CLAN_WAR_POOL_SOURCE_LABEL, isWarRosterOpen } from '@/utils/clans'
+import { computed, defineAsyncComponent } from 'vue'
+import type { WarMapBoard } from './useWarMapBoards'
+import { useWarPlaylist } from './useWarPlaylist'
 import WarMapRow from './WarMapRow.vue'
+import WarPoolScore from './WarPoolScore.vue'
 import WarSection from './WarSection.vue'
+import { formatDamage } from './warStrike'
 
 const props = defineProps<{
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
+  rules: ClanWarStrikeRulesResponse
+  participants: ClanWarParticipantResponse[] | null
   canSubmitPicks: boolean
   signedIn: boolean
+  viewer: ClanWarParticipantResponse | null
+  expanded: string | null
+  boards: Record<string, WarMapBoard>
 }>()
 
 const emit = defineEmits<{
   'submit-picks': []
+  toggle: [mapId: string]
 }>()
 
-const downloading = ref(false)
-const downloadError = ref<string | null>(null)
+const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
+
+const playlist = useWarPlaylist(() => props.war)
+const open = computed(() => isWarRosterOpen(props.war))
 
 const picking = computed(() => props.war.status === 'picking')
-async function download() {
-  downloading.value = true
-  downloadError.value = null
-  try {
-    const { downloadClanWarPlaylist } = await import('@/api/clans')
-    const file = await downloadClanWarPlaylist(props.war.id)
-    saveBlob(file.blob, file.filename ?? `accsaber-war-${props.war.attack.lead.tag}-vs-${props.war.defend.lead.tag}.bplist`)
-  } catch (err) {
-    downloadError.value = parseApiError(err, 'Could not download the playlist.').message
-  } finally {
-    downloading.value = false
-  }
+const enemies = computed(() => new Map((props.participants ?? []).map((p) => [p.player.id, p])))
+
+function strikeOn(entry: ClanWarPoolEntryResponse) {
+  const enemy = entry.target ? enemies.value.get(entry.target.id) : undefined
+  const preview = enemy?.strikePreview
+  if (!enemy || !preview) return null
+  const multiplier = entry.targetScore ? 1 : props.rules.missingScoreMultiplier
+  const damage = Math.min(preview.damage * multiplier, enemy.guard)
+  return { damage, breaks: damage >= enemy.guard }
 }
+
+const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn(entry) })))
 </script>
 
 <template>
@@ -49,7 +63,7 @@ async function download() {
       </h2>
     </template>
     <template #actions>
-      <BaseButton v-if="!picking" size="sm" :loading="downloading" @click="download">Download playlist</BaseButton>
+      <BaseButton v-if="!picking" size="sm" :loading="playlist.downloading.value" @click="playlist.download">Download playlist</BaseButton>
     </template>
 
     <BaseButton
@@ -62,20 +76,60 @@ async function download() {
       {{ war.arenaSpec.defenderPicks ? 'Submit picks' : 'Answer offer' }}
     </BaseButton>
 
-    <p v-if="downloadError" class="war-pool__error" role="alert">{{ downloadError }}</p>
+    <p v-if="playlist.error.value" class="war-pool__error" role="alert">{{ playlist.error.value }}</p>
 
     <p v-if="pool.length === 0" class="war-pool__empty">No maps to show yet.</p>
     <ul v-else class="war-pool__list">
-      <li v-for="entry in pool" :key="entry.difficulty.id" class="war-pool__row">
+      <li
+        v-for="{ entry, strike } in rows"
+        :id="`war-pool-${entry.difficulty.id}`"
+        :key="entry.difficulty.id"
+        class="war-pool__row"
+      >
         <WarMapRow :difficulty="entry.difficulty">
           <span v-if="entry.viewerScore" class="war-pool__own">
-            <span class="war-pool__own-acc">{{ formatAccuracy(entry.viewerScore.accuracy) }}</span>
-            <span class="war-pool__own-ap">{{ Math.round(entry.viewerScore.ap ?? 0) }} AP</span>
+            <WarPoolScore :score="entry.viewerScore" />
           </span>
-          <span v-else-if="signedIn && war.status === 'active'" class="war-pool__own war-pool__own--none">Not played</span>
+          <span v-else-if="signedIn && isWarRosterOpen(war)" class="war-pool__own war-pool__own--none">Not played</span>
+          <span v-if="entry.target" class="war-pool__own war-pool__own--target">
+            vs
+            <WarPoolScore v-if="entry.targetScore" :score="entry.targetScore" />
+            <template v-else>no score</template>
+            ({{ entry.target.name }})
+            <span v-if="strike" class="war-pool__strike" :class="{ 'war-pool__strike--breaks': strike.breaks }">
+              {{ formatDamage(strike.damage) }}{{ strike.breaks ? ', breaks' : '' }}
+            </span>
+            <HintTooltip
+              v-if="!entry.targetPicked"
+              tag="auto"
+              label="auto"
+              text="Auto hits whoever your play hurts most. It breaks someone if it can, otherwise it takes the biggest hit."
+            />
+          </span>
           <ClanTag v-if="entry.pickedBy" :clan="entry.pickedBy" size="sm" />
           <span class="war-pool__source">{{ CLAN_WAR_POOL_SOURCE_LABEL[entry.source] }}</span>
+          <button
+            v-if="open"
+            type="button"
+            class="war-pool__expand"
+            :class="{ 'war-pool__expand--open': expanded === entry.difficulty.id }"
+            :aria-expanded="expanded === entry.difficulty.id"
+            :aria-label="`War leaderboard for ${entry.difficulty.songName}`"
+            @click="emit('toggle', entry.difficulty.id)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
         </WarMapRow>
+        <WarMapBoardView
+          v-if="open && expanded === entry.difficulty.id"
+          :war="war"
+          :rules="rules"
+          :board="boards[entry.difficulty.id]"
+          :viewer="viewer"
+        />
       </li>
     </ul>
   </WarSection>
@@ -141,6 +195,7 @@ async function download() {
 }
 
 .war-pool__row {
+  scroll-margin-top: calc(var(--navbar-height) + var(--space-md));
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
 }
@@ -163,14 +218,54 @@ async function download() {
   color: var(--text-secondary);
 }
 
-.war-pool__own-acc {
-  font-size: var(--text-body);
-  font-weight: 600;
+.war-pool__own--none,
+.war-pool__own--target {
+  color: var(--text-tertiary);
+}
+
+.war-pool__strike {
   color: var(--text-primary);
 }
 
-.war-pool__own--none {
+.war-pool__strike--breaks {
+  font-weight: 600;
+  color: var(--error);
+}
+
+.war-pool__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
   color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.war-pool__expand:hover,
+.war-pool__expand--open {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+.war-pool__expand svg {
+  transition: transform 150ms ease-out;
+}
+
+.war-pool__expand--open svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .war-pool__expand,
+  .war-pool__expand svg {
+    transition: none;
+  }
 }
 
 .war-pool__source {

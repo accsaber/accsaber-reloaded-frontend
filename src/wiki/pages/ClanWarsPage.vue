@@ -10,6 +10,11 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       Whichever team drains the other's stake first wins. Duels can also have
       <RouterLink to="/wiki/coalitions">allies</RouterLink> on each team.
     </p>
+    <p>
+      In short, one clan declares, both pick maps, everyone gets a day to prep, then you fight by
+      setting scores on those maps until one team's stake runs out. How the fighting works is on
+      <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
+    </p>
 
     <WikiHeading id="declaring">Declaring</WikiHeading>
     <p>Commanders and the Founder can declare war, but only during a season.</p>
@@ -59,20 +64,22 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     </p>
     <p>
       The attacker makes their picks while declaring. The defender then gets 24 hours to make
-      theirs, and can see the attacker's picks while doing it. Random maps stay hidden until
+      theirs. They can see the attacker's picks while doing it. Random maps stay hidden until
       picking is over. Anything the defender does not pick gets filled randomly.
     </p>
 
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
-      After picking, both sides get 24 hours to prepare before the war goes active. Plays during
-      prep don't hit anyone, but you can already see who's on the other team and pick your target
-      in Duels, so you've got the whole day to figure out who's going after who. Rosters keep
-      updating the whole time too. Any PB
-      you set during prep still counts as the score the enemy has to beat, just like any other existing PB. Random pools
-      skip picking unless the attacker offered Berserker. Once picking is done you can download all 10 maps as a playlist. The fighting
-      itself is on <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
+      Random pools skip picking unless the attacker offered Berserker. After picking, both sides
+      get 24 hours to prepare. Your clan chat gets a message when the pool locks in.
     </p>
+    <p>
+      Plays during prep don't hit anyone. You can already see the other team and pick your target
+      in Duels. Each map in the pool shows who your play would hit. It says auto when auto is
+      picking for you. Any PB you set during prep is a score the enemy has to beat. You can
+      download all 10 maps as a playlist.
+    </p>
+    <p>Use the day to pick targets and push your PBs on maps where enemies are close.</p>
 
     <WikiHeading id="endings">Endings</WikiHeading>
     <p>
@@ -85,9 +92,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="retreat">Retreating</WikiHeading>
     <p>
       Only the attacker's lead or Founder can retreat. Defenders can't. Before the war goes active
-      it ends right away. Once it's active, a retreat takes 24 hours, so you can't land a bunch of
-      breaks and run. For that day your team's plays don't hit anyone, but the defenders can still
-      hit you. If they drain your stake before it's up, they win. Once you call it, there's no
+      it ends right away. Once it's active, a retreat takes 24 hours. For that day your team's
+      plays don't hit anyone. The defenders can still hit you. If they drain your stake before it's up, they win. Once you call it, there's no
       taking it back.
     </p>
     <p>Standing that already moved stays moved.</p>
@@ -104,7 +110,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="rewards">Rewards</WikiHeading>
     <p>
       The winning team gets 345 clan XP, split between its clans. Everyone who fought gets XP from
-      the damage they did. Everyone on the winning team who dealt damage gets a crate, and the top
+      the damage they did. Everyone on the winning team who dealt damage gets a crate. The top
       fighters can get extra items.
     </p>
     <p>
