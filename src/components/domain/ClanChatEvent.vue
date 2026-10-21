@@ -29,6 +29,7 @@ const SENTENCES: Record<ChatEvent, Sentence> = {
   rivaled_by: { first: 'clan', middle: 'called this clan a rival' },
   war_declared: { first: 'actor', middle: 'declared war on', second: 'clan' },
   war_received: { first: 'clan', middle: 'declared war on this clan' },
+  war_preparing: { before: 'War with', first: 'clan', middle: 'is locked in. Pick your targets, it starts in 24h' },
   war_started: { before: 'The war with', first: 'clan', middle: 'has started' },
   war_hit: { first: 'actor', middle: 'hit', second: 'subject' },
   war_break: { first: 'actor', middle: 'broke the guard of', second: 'subject' },

@@ -10,7 +10,7 @@ import type {
   ClanWarStrikeRulesResponse,
   ClanWarTeam,
 } from '@/types/api/clans'
-import { WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
+import { isWarRosterOpen, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
 import FighterStrike from './FighterStrike.vue'
@@ -37,7 +37,7 @@ const emit = defineEmits<{
 const styles = computed(() => warSideStyles(props.war))
 const viewer = computed(() => props.participants?.find((p) => p.player.id === props.viewerId && !p.leftAt) ?? null)
 const viewerTeam = computed(() => (viewer.value ? warTeamOf(props.war, viewer.value.clan.id) : null))
-const canPick = computed(() => !!viewer.value && props.war.ruleset === 'duel' && props.war.status !== 'ended')
+const canPick = computed(() => !!viewer.value && props.war.ruleset === 'duel' && isWarRosterOpen(props.war))
 
 function fightersOf(clanId: string): ClanWarParticipantResponse[] {
   return (props.participants ?? []).filter((p) => p.clan.id === clanId)

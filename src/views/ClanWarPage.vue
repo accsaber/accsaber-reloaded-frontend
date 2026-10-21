@@ -14,7 +14,7 @@ import type {
   ClanWarRewardsResponse,
   ClanWarStrikeRulesResponse,
 } from '@/types/api/clans'
-import { hasClanRole, WAR_TEAMS, warLeadSide, warTeamOf } from '@/utils/clans'
+import { hasClanRole, isWarRosterOpen, warLeadSide, warTeamOf } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
@@ -60,6 +60,7 @@ const retreatError = ref<string | null>(null)
 
 const war = computed(() => detail.value?.war ?? null)
 const fighting = computed(() => war.value?.status === 'active' || war.value?.status === 'ended')
+const rosterShown = computed(() => !!war.value && (isWarRosterOpen(war.value) || war.value.status === 'ended'))
 const ownClanId = computed(() => own.clan.value?.id ?? null)
 
 const canSubmitPicks = computed(
@@ -174,16 +175,10 @@ function applyHit(hit: ClanWarHitResponse) {
   })
 }
 
-function rosterKey(current: ClanWarResponse): string {
-  return WAR_TEAMS.flatMap((team) => current[team].sides.map((s) => `${s.clan.id}${s.leftAt ? ':left' : ''}`)).join()
-}
-
 function applyWar(next: ClanWarResponse) {
   if (!detail.value || next.id !== detail.value.war.id) return
   const statusChanged = next.status !== detail.value.war.status
-  const rosterChanged = rosterKey(next) !== rosterKey(detail.value.war)
   detail.value.war = next
-  if (!statusChanged && !rosterChanged) return
   reloadKey.value += 1
   void loadParticipants()
   if (!statusChanged) return
@@ -274,19 +269,21 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
 
       <ClanWarRewards :war="war" :rewards="rewards" :error="rewardsError" :viewer-id="auth.userId" />
 
+      <ClanWarFighters
+        v-if="rosterShown"
+        :war="war"
+        :rules="detail.strikeRules"
+        :participants="participants"
+        :error="participantsError ?? pickError"
+        :viewer-id="auth.userId"
+        :picking="picking"
+        :pool="detail.pool"
+        :loaded-map-id="participantsMapId"
+        v-model:map-id="whatIfMapId"
+        @pick="pickTarget"
+      />
+
       <template v-if="fighting">
-        <ClanWarFighters
-          :war="war"
-          :rules="detail.strikeRules"
-          :participants="participants"
-          :error="participantsError ?? pickError"
-          :viewer-id="auth.userId"
-          :picking="picking"
-          :pool="detail.pool"
-          :loaded-map-id="participantsMapId"
-          v-model:map-id="whatIfMapId"
-          @pick="pickTarget"
-        />
         <ClanWarTimeline :war="war" :points="detail.timeline" />
         <ClanWarHits
           :war="war"

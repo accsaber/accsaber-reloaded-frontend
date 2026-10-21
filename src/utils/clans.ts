@@ -139,6 +139,10 @@ export function attackerPickCount(attackerStanding: number, defenderStanding: nu
   return Math.round(WAR_POOL_SIZE * share)
 }
 
+export function isWarRosterOpen(war: Pick<ClanWarResponse, 'status'>): boolean {
+  return war.status === 'preparing' || war.status === 'active'
+}
+
 export function warResultFor(war: ClanWarResponse, clanId: string): string {
   const outcome = war.outcome
   if (!outcome) return CLAN_WAR_STATUS_LABEL[war.status]
