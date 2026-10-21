@@ -169,11 +169,10 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
   align-items: start;
 }
 
-.fighters__side {
+.fighters__sides .fighters__side {
   --clan-bar-fill: var(--war-side);
   min-width: 0;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  padding: 0;
   overflow: hidden;
 }
 

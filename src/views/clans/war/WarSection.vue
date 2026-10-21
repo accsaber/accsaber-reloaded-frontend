@@ -19,6 +19,13 @@ defineProps<{
 </template>
 
 <style scoped>
+.war-section {
+  padding: var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
 .war-section__head {
   display: flex;
   flex-wrap: wrap;

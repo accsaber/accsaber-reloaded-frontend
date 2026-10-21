@@ -16,7 +16,7 @@ defineProps<{
 </script>
 
 <template>
-  <WarSection v-if="war.status !== 'ended'" title="On the line">
+  <WarSection v-if="war.status !== 'ended'" title="Winning rewards">
     <p v-if="error" class="war-rewards__error" role="alert">{{ error }}</p>
     <SkeletonLoader v-else-if="!rewards" variant="text" :lines="2" />
     <p v-else-if="!rewards.pool.length" class="war-rewards__empty">No items this war.</p>
