@@ -72,24 +72,25 @@ const XP_PARAMS: WikiCompareRow[] = [
   <WikiProse>
     <WikiHeading id="hit">Hit damage</WikiHeading>
     <math display="block">
-      <mtext>damage</mtext><mo>=</mo><mn>{{ RULES.baseDamage }}</mn><mo>×</mo>
-      <msup><mn>{{ RULES.escalation }}</mn><mtext>streak</mtext></msup><mo>×</mo>
+      <mtext>damage</mtext><mo>=</mo><mn>{{ RULES.baseDamage }}</mn><mo>x</mo>
+      <msup><mn>{{ RULES.escalation }}</mn><mtext>streak</mtext></msup><mo>x</mo>
       <msup>
         <mrow><mo>(</mo><mfrac><mtext>their skill</mtext><mtext>your skill</mtext></mfrac><mo>)</mo></mrow>
         <mn>{{ RULES.disparityExponent }}</mn>
       </msup>
     </math>
     <p>
-      With no score on the map it's times {{ RULES.missingScoreMultiplier }}. A hit never takes more
-      than the guard they have left.
+      If they have no score on the map, skill doesn't count. It's {{ RULES.baseDamage }} x
+      {{ RULES.escalation }}<sup>streak</sup> x {{ RULES.missingScoreMultiplier }}. A hit never takes more than
+      the guard they have left.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="HIT_PARAMS" />
 
     <WikiHeading id="chip">Chip damage</WikiHeading>
     <math display="block">
-      <mtext>chip</mtext><mo>=</mo><mn>{{ RULES.chipDamage }}</mn><mo>×</mo>
+      <mtext>chip</mtext><mo>=</mo><mn>{{ RULES.chipDamage }}</mn><mo>x</mo>
       <mrow><mo>(</mo><mn>1</mn><mo>−</mo><mfrac><mtext>gap</mtext><mn>{{ RULES.chipWindow }}</mn></mfrac><mo>)</mo></mrow>
-      <mo>×</mo>
+      <mo>x</mo>
       <msup>
         <mrow><mi>min</mi><mo>(</mo><mn>1</mn><mo>,</mo><mfrac><mtext>your skill</mtext><mtext>their skill</mtext></mfrac><mo>)</mo></mrow>
         <mn>{{ RULES.chipSkillExponent }}</mn>
@@ -100,9 +101,9 @@ const XP_PARAMS: WikiCompareRow[] = [
 
     <WikiHeading id="break">Standing on a break</WikiHeading>
     <math display="block">
-      <mtext>standing</mtext><mo>=</mo><mtext>team stake</mtext><mo>×</mo><mn>{{ RULES.breakShare }}</mn>
-      <mo>×</mo><mtext>roster weight</mtext><mo>×</mo>
-      <msup><mn>{{ RULES.breakDecay }}</mn><mtext>breaks before</mtext></msup><mo>×</mo><mtext>risk</mtext>
+      <mtext>standing</mtext><mo>=</mo><mtext>team stake</mtext><mo>x</mo><mn>{{ RULES.breakShare }}</mn>
+      <mo>x</mo><mtext>roster weight</mtext><mo>x</mo>
+      <msup><mn>{{ RULES.breakDecay }}</mn><mtext>breaks before</mtext></msup><mo>x</mo><mtext>risk</mtext>
     </math>
     <p>
       Team stake is their team's full stake. It can't move more than what's left in their clan's
@@ -122,16 +123,16 @@ const XP_PARAMS: WikiCompareRow[] = [
 
     <WikiHeading id="xp">XP</WikiHeading>
     <math display="block">
-      <mtext>break XP</mtext><mo>=</mo><mn>{{ RULES.breakXp }}</mn><mo>×</mo><mtext>engagement</mtext>
-      <mo>×</mo><mtext>your damage share</mtext>
+      <mtext>break XP</mtext><mo>=</mo><mn>{{ RULES.breakXp }}</mn><mo>x</mo><mtext>engagement</mtext>
+      <mo>x</mo><mtext>your damage share</mtext>
     </math>
     <math display="block">
       <mtext>contribution</mtext><mo>=</mo><mtext>damage</mtext><mo>+</mo>
-      <mn>{{ RULES.breakContribution }}</mn><mo>×</mo><mtext>breaks helped</mtext>
+      <mn>{{ RULES.breakContribution }}</mn><mo>x</mo><mtext>breaks helped</mtext>
     </math>
     <math display="block">
-      <mtext>end-of-war XP</mtext><mo>=</mo><mn>{{ RULES.xpPerContribution }}</mn><mo>×</mo>
-      <mtext>contribution</mtext><mo>×</mo><mtext>their engagement</mtext>
+      <mtext>end-of-war XP</mtext><mo>=</mo><mn>{{ RULES.xpPerContribution }}</mn><mo>x</mo>
+      <mtext>contribution</mtext><mo>x</mo><mtext>their engagement</mtext>
     </math>
     <p>
       Your clan gets {{ RULES.breakClanXp }} clan XP per break times engagement. The winning team
@@ -153,7 +154,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <p>
       Two players with the same skill keep hitting one guy. The hits do 15, 22.5 and 33.75. The
       4th would do 50.6. He only has 28.75 left. That hit breaks him. With no score on the map, the
-      first hit would be 15 × 0.35 = 5.25.
+      first hit would be 15 x 0.35 = 5.25.
     </p>
   </WikiProse>
 </template>

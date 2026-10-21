@@ -36,6 +36,10 @@ export function hitDamage(rules: ClanWarStrikeRulesResponse, hitsThisCycle: numb
   return rules.baseDamage * rules.escalation ** hitsThisCycle * disparity
 }
 
+export function noScoreDamage(rules: ClanWarStrikeRulesResponse, hitsThisCycle: number): number {
+  return hitDamage(rules, hitsThisCycle, 1) * rules.missingScoreMultiplier
+}
+
 export function hitsToBreak(
   rules: ClanWarStrikeRulesResponse,
   guard: number,
@@ -47,13 +51,16 @@ export function hitsToBreak(
   return hits
 }
 
-function hitLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+function streakLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
   return [
     { label: 'Base damage', value: formatDamage(rules.baseDamage) },
     factor('Streak', rules.escalation ** preview.hitsThisCycle,
       `×${formatDamage(rules.escalation)} per hit since their guard came back, ${preview.hitsThisCycle} so far`),
-    factor('Skill gap', preview.disparity, skillDetail(preview, rules.disparityExponent)),
   ]
+}
+
+function hitLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  return [...streakLines(rules, preview), factor('Skill gap', preview.disparity, skillDetail(preview, rules.disparityExponent))]
 }
 
 function finish(lines: StrikeLine[], damage: number, guard: number, suffix = ''): StrikeBreakdown {
@@ -102,8 +109,8 @@ export function strikeOutcome(
 ): StrikeOutcome {
   const target = preview.onMap?.targetScore
   if (target == null) {
-    const lines = [...hitLines(rules, preview), factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here')]
-    const result = finish(lines, preview.damage * rules.missingScoreMultiplier, guard)
+    const lines = [...streakLines(rules, preview), factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here')]
+    const result = finish(lines, noScoreDamage(rules, preview.hitsThisCycle), guard)
     return { kind: 'damage', note: 'No score on this map', ...result }
   }
   if (score > target) {

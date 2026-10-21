@@ -11,7 +11,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       <RouterLink to="/wiki/coalitions">allies</RouterLink> on each team.
     </p>
     <p>
-      In short, one clan declares, both pick maps, everyone gets a day to prep, then you fight by
+      In short, one clan declares, both pick maps, everyone gets a day or two to prep, then you fight by
       setting scores on those maps until one team's stake runs out. How the fighting works is on
       <RouterLink to="/wiki/war-combat">Hits & Breaks</RouterLink>.
     </p>
@@ -70,8 +70,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
-      Random pools skip picking unless the attacker offered Berserker. After picking, both sides
-      get 24 hours to prepare. Your clan chat gets a message when the pool locks in.
+      Random pools skip picking unless the attacker offered Berserker, so they get 48 hours of prep
+      instead. Everyone else gets 24 hours once picking is over. Your clan chat gets a message when
+      the pool locks in.
     </p>
     <p>
       Plays during prep don't hit anyone. You can already see the other team and pick your target
