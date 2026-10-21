@@ -112,7 +112,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
             </button>
             <span class="fighters__col">Guard</span>
             <span class="fighters__col fighters__col--num">Damage</span>
-            <span v-if="t.strikes" class="fighters__col fighters__col--num">Your hit</span>
+            <span v-if="t.strikes" class="fighters__col fighters__col--num fighters__col--hit">Your hit</span>
           </div>
           <ul class="fighters__list">
             <li
@@ -160,7 +160,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
               </span>
               <WarGuard :fighter="fighter" :rules="rules" />
               <span class="fighters__num">{{ Math.round(fighter.contribution) }}</span>
-              <span v-if="t.strikes">
+              <span v-if="t.strikes" class="fighters__strike">
                 <FighterStrike
                   v-if="fighter.strikePreview"
                   v-model:map-id="mapId"
@@ -373,6 +373,31 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 @media (max-width: 860px) {
   .fighters__sides {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .fighters__head,
+  .fighters__row,
+  .fighters__side--strikes .fighters__head,
+  .fighters__side--strikes .fighters__row {
+    grid-template-columns: 6ch 64px minmax(0, 1fr) 56px;
+    gap: var(--space-xs) var(--space-sm);
+    padding-block: var(--space-sm);
+  }
+
+  .fighters__head {
+    height: auto;
+  }
+
+  .fighters__clan,
+  .fighters__who,
+  .fighters__strike {
+    grid-column: 1 / -1;
+  }
+
+  .fighters__col--hit {
+    display: none;
   }
 }
 </style>
