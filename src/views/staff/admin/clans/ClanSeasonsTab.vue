@@ -255,7 +255,7 @@ onMounted(() => {
             <ul v-else class="clan-seasons__reward-list">
               <li v-for="reward in rewards" :key="reward.id" class="clan-seasons__reward">
                 <span class="mono">#{{ reward.rankFrom }}<template v-if="reward.rankTo !== reward.rankFrom"> to #{{ reward.rankTo }}</template></span>
-                <span>{{ reward.quantity }}× {{ reward.item.name }}</span>
+                <span>{{ reward.quantity }}x {{ reward.item.name }}</span>
                 <span class="clan-seasons__recipient">to {{ recipient(reward.item) }}</span>
                 <BaseButton v-if="!season.closedAt" size="sm" variant="destructive" :disabled="busy" @click="removeReward(reward)">Remove</BaseButton>
               </li>

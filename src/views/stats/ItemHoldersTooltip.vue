@@ -257,7 +257,7 @@ watch(
                 </div>
                 <div class="holders-tip__stats">
                   <span v-if="h.ranking != null" class="holders-tip__rank">#{{ h.ranking.toLocaleString() }}</span>
-                  <span v-if="h.quantity > 1" class="holders-tip__qty">×{{ h.quantity }}</span>
+                  <span v-if="h.quantity > 1" class="holders-tip__qty">x{{ h.quantity }}</span>
                   <span v-if="h.lowestSerial != null" class="holders-tip__serial">#{{ h.lowestSerial }}</span>
                 </div>
               </RouterLink>

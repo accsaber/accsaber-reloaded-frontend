@@ -32,14 +32,15 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="hits">Hits</WikiHeading>
     <p>
       You hit someone by beating their score on a war map. If they have no score there, you hit
-      them for 20% of the damage. Only plays after the war starts count. You can hit the same
+      them for 30% of the damage. Only plays after the war starts count. You can hit the same
       person on the same map with every play until they break.
     </p>
 
     <WikiHeading id="damage">Damage</WikiHeading>
     <p>
       Each hit on a player makes the next one stronger, no matter who on your team lands it.
-      Hits on someone with no score count too. The streak starts over once their guard comes back.
+      Hits on someone with no score count too, but only bump it by 1.25x instead of 1.5x. The
+      streak starts over once their guard comes back.
       If you are both the same skill:
     </p>
     <WikiCompareTable :columns="['Damage', 'Guard left']" :rows="DAMAGE" />

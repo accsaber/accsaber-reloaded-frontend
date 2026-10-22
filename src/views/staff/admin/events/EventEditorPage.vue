@@ -401,7 +401,7 @@ function missionXp(m: MissionTemplateResponse): string {
               <td class="right mono">{{ missionXp(m) }}</td>
               <td class="muted">{{ m.awardsItemName ?? '-' }}</td>
               <td class="right muted">
-                {{ m.repeatable ? (m.maxCompletions ? `×${m.maxCompletions}` : 'Yes') : 'No' }}
+                {{ m.repeatable ? (m.maxCompletions ? `x${m.maxCompletions}` : 'Yes') : 'No' }}
               </td>
             </tr>
           </tbody>

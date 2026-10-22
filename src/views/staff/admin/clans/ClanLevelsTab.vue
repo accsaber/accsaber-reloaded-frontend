@@ -262,7 +262,7 @@ onMounted(load)
           <span class="clan-levels__chips">
             <span v-for="arena in step.unlocks.arenas" :key="arena" class="clan-levels__chip">
               {{ modeLabel('arena', arena) }}
-              <button type="button" class="clan-levels__chip-x" :aria-label="`Lock ${arena}`" :disabled="busy" @click="lockMode('arena', arena)">×</button>
+              <button type="button" class="clan-levels__chip-x" :aria-label="`Lock ${arena}`" :disabled="busy" @click="lockMode('arena', arena)">x</button>
             </span>
           </span>
         </td>
@@ -270,7 +270,7 @@ onMounted(load)
           <span class="clan-levels__chips">
             <span v-for="ruleset in step.unlocks.rulesets" :key="ruleset" class="clan-levels__chip">
               {{ modeLabel('ruleset', ruleset) }}
-              <button type="button" class="clan-levels__chip-x" :aria-label="`Lock ${ruleset}`" :disabled="busy" @click="lockMode('ruleset', ruleset)">×</button>
+              <button type="button" class="clan-levels__chip-x" :aria-label="`Lock ${ruleset}`" :disabled="busy" @click="lockMode('ruleset', ruleset)">x</button>
             </span>
           </span>
         </td>
@@ -278,7 +278,7 @@ onMounted(load)
           <span class="clan-levels__chips">
             <span v-for="item in step.unlocks.cosmetics" :key="item.id" class="clan-levels__chip">
               {{ item.name }}
-              <button type="button" class="clan-levels__chip-x" :aria-label="`Remove ${item.name}`" :disabled="busy" @click="askRemoveItem(item)">×</button>
+              <button type="button" class="clan-levels__chip-x" :aria-label="`Remove ${item.name}`" :disabled="busy" @click="askRemoveItem(item)">x</button>
             </span>
             <button type="button" class="clan-levels__cell clan-levels__cell--empty" :disabled="busy" @click="pickerLevel = step.level">+</button>
           </span>

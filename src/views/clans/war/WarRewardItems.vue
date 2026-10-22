@@ -13,7 +13,7 @@ defineProps<{
   <ul class="reward-items">
     <li v-for="reward in items" :key="reward.id" class="reward-items__item">
       <RewardItemTile :item="reward.item" :size="reach ? 56 : 36" />
-      <span v-if="reward.quantity > 1" class="reward-items__quantity">×{{ reward.quantity }}</span>
+      <span v-if="reward.quantity > 1" class="reward-items__quantity">x{{ reward.quantity }}</span>
       <span v-if="reach" class="reward-items__reach">{{ warRewardReach(reward.topContributors) }}</span>
     </li>
   </ul>

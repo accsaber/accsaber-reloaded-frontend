@@ -7,7 +7,8 @@ const RULES = {
   baseDamage: 15,
   escalation: 1.5,
   disparityExponent: 1,
-  missingScoreMultiplier: 0.2,
+  missingScoreMultiplier: 0.3,
+  missingScoreEscalation: 1.25,
   chipDamage: 3,
   minChipDamage: 1,
   chipWindow: 0.3,
@@ -31,9 +32,14 @@ const HIT_PARAMS: WikiCompareRow[] = [
   { label: 'Base damage', values: [`${RULES.baseDamage}`, 'A first hit between equal players'] },
   {
     label: 'Escalation',
-    values: [`${RULES.escalation}`, 'Each hit already landed on them since their guard came back multiplies the next one'],
+    values: [`${RULES.escalation}`, 'Each hit that beat their score since their guard came back multiplies the next one'],
   },
-  { label: 'Streak', values: ['', 'Hits on that player from anyone since their guard last came back. Chips never count'] },
+  {
+    label: 'No-score escalation',
+    values: [`${RULES.missingScoreEscalation}`, 'Each hit on them while they had no score multiplies the next one by this instead'],
+  },
+  { label: 'Hits', values: ['', 'Hits on that player from anyone since their guard last came back that beat a score. Chips never count'] },
+  { label: 'No-score hits', values: ['', 'Hits on that player since their guard came back where they had no score on the map'] },
   { label: 'Skill', values: ['', 'Overall skill level from the profile, never lower than 1'] },
   {
     label: 'Disparity exponent',
@@ -73,16 +79,17 @@ const XP_PARAMS: WikiCompareRow[] = [
     <WikiHeading id="hit">Hit damage</WikiHeading>
     <math display="block">
       <mtext>damage</mtext><mo>=</mo><mn>{{ RULES.baseDamage }}</mn><mo>x</mo>
-      <msup><mn>{{ RULES.escalation }}</mn><mtext>streak</mtext></msup><mo>x</mo>
+      <msup><mn>{{ RULES.escalation }}</mn><mtext>hits</mtext></msup><mo>x</mo>
+      <msup><mn>{{ RULES.missingScoreEscalation }}</mn><mtext>no-score hits</mtext></msup><mo>x</mo>
       <msup>
         <mrow><mo>(</mo><mfrac><mtext>their skill</mtext><mtext>your skill</mtext></mfrac><mo>)</mo></mrow>
         <mn>{{ RULES.disparityExponent }}</mn>
       </msup>
     </math>
     <p>
-      If they have no score on the map, skill doesn't count. It's {{ RULES.baseDamage }} x
-      {{ RULES.escalation }}<sup>streak</sup> x {{ RULES.missingScoreMultiplier }}. A hit never takes more than
-      the guard they have left.
+      If they have no score on the map, skill doesn't count. You swap the skill part for
+      {{ RULES.missingScoreMultiplier }}. That hit also builds the streak by
+      {{ RULES.missingScoreEscalation }} instead of {{ RULES.escalation }}. A hit never takes more than the guard they have left.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="HIT_PARAMS" />
 
@@ -154,7 +161,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <p>
       Two players with the same skill keep hitting one guy. The hits do 15, 22.5 and 33.75. The
       4th would do 50.6. He only has 28.75 left. That hit breaks him. With no score on the map, the
-      first hit would be 15 x 0.2 = 3.
+      first hit would be 15 x 0.3 = 4.5. The one after it 15 x 1.25 x 0.3 = 5.63.
     </p>
   </WikiProse>
 </template>

@@ -32,7 +32,7 @@ const initial = computed(() => displayName.value.charAt(0).toUpperCase())
       <span v-if="typeLabel" class="reward-item__type">{{ typeLabel }}</span>
     </span>
 
-    <span class="reward-item__qty">×{{ quantity }}</span>
+    <span class="reward-item__qty">x{{ quantity }}</span>
 
     <slot name="action" />
   </div>

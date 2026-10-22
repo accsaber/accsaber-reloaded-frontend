@@ -172,10 +172,11 @@ function trackStrike(victim: ClanWarParticipantResponse, hit: ClanWarHitResponse
     return
   }
   if (!hit.chip && hit.victimCycle === victim.guardCycle) {
-    preview.hitsThisCycle += 1
-    preview.damage = hitDamage(rules, preview.hitsThisCycle, preview.disparity)
+    if (hit.missingScore) preview.noScoreHitsThisCycle += 1
+    else preview.hitsThisCycle += 1
+    preview.damage = hitDamage(rules, preview, preview.disparity)
   }
-  preview.hitsToBreak = hitsToBreak(rules, victim.guard, preview.hitsThisCycle, preview.disparity)
+  preview.hitsToBreak = hitsToBreak(rules, victim.guard, preview, preview.disparity)
 }
 
 function applyHit(hit: ClanWarHitResponse) {

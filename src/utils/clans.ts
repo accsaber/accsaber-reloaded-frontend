@@ -199,7 +199,7 @@ export function formatClanXp(xp: number): string {
 
 export function clanXpGrantLabel(grant: ClanXpGrantResponse): string {
   if (grant.source !== 'play') return CLAN_XP_SOURCE_LABEL[grant.source]
-  return grant.count > 1 ? `Plays ×${grant.count}` : 'Play'
+  return grant.count > 1 ? `Plays x${grant.count}` : 'Play'
 }
 
 export function clanXpGrantWhen(grant: ClanXpGrantResponse, now = Date.now()): string {
