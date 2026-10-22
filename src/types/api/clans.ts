@@ -298,10 +298,12 @@ export interface ClanWarStrikeRulesResponse {
   disparityExponent: number
   missingScoreMultiplier: number
   missingScoreEscalation: number
+  chipEscalation: number
   chipDamage: number
   minChipDamage: number
   chipWindow: number
   chipSkillExponent: number
+  brokenDurationHours: number
 }
 
 export interface ClanWarStrikeMapResponse {
@@ -313,6 +315,7 @@ export interface ClanWarStrikePreviewResponse {
   hitsToBreak: number
   hitsThisCycle: number
   noScoreHitsThisCycle: number
+  chipsThisCycle: number
   attackerSkill: number
   victimSkill: number
   disparity: number
@@ -331,6 +334,7 @@ export interface ClanWarParticipantResponse {
   standingWeight: number
   guard: number
   guardCycle: number
+  brokenAt?: string
   breaksSuffered: number
   contribution: number
   joinedAt: string
@@ -377,7 +381,7 @@ export interface ClanWarRewardItemResponse {
 
 export interface ClanWarRewardsResponse {
   pool: ClanWarRewardItemResponse[]
-  clans: { clan: PublicClanResponse; clanXp: number; items: ClanWarRewardItemResponse[] }[]
+  clans: { clan: PublicClanResponse; clanXp: number; standing: number; items: ClanWarRewardItemResponse[] }[]
   players: { player: PlayerRef; clan: PublicClanResponse; xp: number; items: ClanWarRewardItemResponse[] }[]
 }
 

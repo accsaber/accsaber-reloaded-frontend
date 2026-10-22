@@ -3,7 +3,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { ClanWarResponse, ClanWarRewardsResponse } from '@/types/api/clans'
-import { formatClanXp } from '@/utils/clans'
+import { formatClanXp, formatSignedStanding } from '@/utils/clans'
 import WarRewardItems from './WarRewardItems.vue'
 import WarSection from './WarSection.vue'
 
@@ -30,7 +30,16 @@ defineProps<{
       <ul class="war-rewards__list">
         <li v-for="row in rewards.clans" :key="row.clan.id" class="war-rewards__row">
           <ClanTag :clan="row.clan" size="sm" />
-          <span class="war-rewards__xp">+{{ formatClanXp(row.clanXp) }} clan XP</span>
+          <span class="war-rewards__xp">
+            +{{ formatClanXp(row.clanXp) }} clan XP
+            <span
+              v-if="Math.round(row.standing)"
+              class="war-rewards__standing"
+              :class="row.standing > 0 ? 'war-rewards__standing--gain' : 'war-rewards__standing--loss'"
+            >
+              {{ formatSignedStanding(row.standing) }} Standing
+            </span>
+          </span>
           <WarRewardItems :items="row.items" />
         </li>
       </ul>
@@ -76,7 +85,7 @@ defineProps<{
 
 .war-rewards__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 14ch minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 16ch minmax(0, 1fr);
   align-items: center;
   gap: var(--space-md);
   min-height: 48px;
@@ -100,11 +109,21 @@ defineProps<{
 }
 
 .war-rewards__xp {
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-primary);
   text-align: right;
+}
+
+.war-rewards__standing--gain {
+  color: var(--success);
+}
+
+.war-rewards__standing--loss {
+  color: var(--error);
 }
 
 @media (max-width: 640px) {

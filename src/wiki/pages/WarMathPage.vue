@@ -9,6 +9,7 @@ const RULES = {
   disparityExponent: 1,
   missingScoreMultiplier: 0.3,
   missingScoreEscalation: 1.2,
+  chipEscalation: 1.05,
   chipDamage: 3,
   minChipDamage: 1,
   chipWindow: 0.3,
@@ -23,6 +24,7 @@ const RULES = {
   xpPerContribution: 0.2,
   breakClanXp: 6,
   winClanXp: 345,
+  winStanding: 1000,
   sizeExponent: 0.6,
 }
 
@@ -38,8 +40,13 @@ const HIT_PARAMS: WikiCompareRow[] = [
     label: 'No-score escalation',
     values: [`${RULES.missingScoreEscalation}`, 'Each hit on them while they had no score multiplies the next one by this instead'],
   },
-  { label: 'Hits', values: ['', 'Hits on that player from anyone since their guard last came back that beat a score. Chips never count'] },
+  {
+    label: 'Chip escalation',
+    values: [`${RULES.chipEscalation}`, 'Each chip on them since their guard came back multiplies the next hit by this'],
+  },
+  { label: 'Hits', values: ['', 'Hits on that player from anyone since their guard last came back that beat a score'] },
   { label: 'No-score hits', values: ['', 'Hits on that player since their guard came back where they had no score on the map'] },
+  { label: 'Chips', values: ['', 'Chips on that player since their guard came back, the random extra ones too'] },
   { label: 'Skill', values: ['', 'Overall skill level from the profile, never lower than 1'] },
   {
     label: 'Disparity exponent',
@@ -71,6 +78,7 @@ const XP_PARAMS: WikiCompareRow[] = [
   { label: 'XP per contribution', values: [`${RULES.xpPerContribution}`, 'End-of-war XP for each point of contribution'] },
   { label: 'Clan XP per break', values: [`${RULES.breakClanXp}`, 'Goes to the clan that got the break'] },
   { label: 'Win clan XP', values: [`${RULES.winClanXp}`, 'Split between the winning clans by their slice of the stake'] },
+  { label: 'Win standing', values: [`${RULES.winStanding}`, 'Bonus standing, split the same way'] },
 ]
 </script>
 
@@ -81,6 +89,7 @@ const XP_PARAMS: WikiCompareRow[] = [
       <mtext>damage</mtext><mo>=</mo><mn>{{ RULES.baseDamage }}</mn><mo>x</mo>
       <msup><mn>{{ RULES.escalation }}</mn><mtext>hits</mtext></msup><mo>x</mo>
       <msup><mn>{{ RULES.missingScoreEscalation }}</mn><mtext>no-score hits</mtext></msup><mo>x</mo>
+      <msup><mn>{{ RULES.chipEscalation }}</mn><mtext>chips</mtext></msup><mo>x</mo>
       <msup>
         <mrow><mo>(</mo><mfrac><mtext>their skill</mtext><mtext>your skill</mtext></mfrac><mo>)</mo></mrow>
         <mn>{{ RULES.disparityExponent }}</mn>
@@ -143,7 +152,8 @@ const XP_PARAMS: WikiCompareRow[] = [
     </math>
     <p>
       Your clan gets {{ RULES.breakClanXp }} clan XP per break times engagement. The winning team
-      gets {{ RULES.winClanXp }} clan XP split by slice, times the losers' engagement.
+      gets {{ RULES.winClanXp }} clan XP and {{ RULES.winStanding }} bonus standing, both split by slice,
+      times the losers' engagement. The bonus is new standing. The losers don't pay for it.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="XP_PARAMS" />
 

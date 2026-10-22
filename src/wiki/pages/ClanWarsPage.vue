@@ -87,7 +87,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       If one team's stake hits 0, the other team wins. If the attacking or defending clan falls,
       its allies keep fighting on their own and no new help can join. If the attacking or defending clan disbands
       mid-war, the other team wins. After 28 days the team that drained more of the other's stake
-      wins. A war with no hits for 7 days ends in a draw. Retreating or the season ending also
+      wins. A war with no hits for 10 days ends in a draw. Retreating or the season ending also
       ends it with no winner.
     </p>
     <WikiHeading id="retreat">Retreating</WikiHeading>
@@ -110,13 +110,13 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="rewards">Rewards</WikiHeading>
     <p>
-      The winning team gets 345 clan XP, split between its clans. Everyone who fought gets XP from
+      The winning team gets 345 clan XP and 1000 bonus standing, split between its clans. Everyone who fought gets XP from
       the damage they did. Everyone on the winning team who dealt damage gets a crate. The top
       fighters can get extra items.
     </p>
     <p>
       If barely anyone on the losing team has played since two weeks before the war started, the
-      win is worth a lot less.
+      win is worth a lot less. That goes for the clan XP and the bonus standing.
     </p>
   </WikiProse>
 </template>

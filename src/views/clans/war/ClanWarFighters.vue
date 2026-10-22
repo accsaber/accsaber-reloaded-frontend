@@ -47,7 +47,7 @@ function breaksTitle(breaks: number): string {
   if (!breaks) return 'Not broken yet this war.'
   return (
     `Broken ${breaks} ${breaks === 1 ? 'time' : 'times'} this war. ` +
-    `Their next break only moves ${Math.round(0.75 ** breaks * 100)}% of the previous.`
+    `Their next break only moves ${Math.round(0.75 ** breaks * 100)}% of the original move.`
   )
 }
 

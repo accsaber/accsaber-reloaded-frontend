@@ -94,7 +94,7 @@ function kind(hit: ClanWarHitResponse): keyof typeof VERB {
 }
 
 function detail(hit: ClanWarHitResponse): string {
-  if (hit.broke) return `−${formatStanding(hit.standingMoved)} Standing, safe until they play`
+  if (hit.broke) return `−${formatStanding(hit.standingMoved)} Standing, safe until they play or a week passes`
   const left = `${formatDamage(hit.guardAfter)} left`
   const streak = streaks.value.get(hit.id)
   return streak ? `${formatOrdinal(streak)} hit, ${left}` : left

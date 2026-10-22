@@ -171,8 +171,9 @@ function trackStrike(victim: ClanWarParticipantResponse, hit: ClanWarHitResponse
     victim.strikePreview = null
     return
   }
-  if (!hit.chip && hit.victimCycle === victim.guardCycle) {
-    if (hit.missingScore) preview.noScoreHitsThisCycle += 1
+  if (hit.victimCycle === victim.guardCycle) {
+    if (hit.chip) preview.chipsThisCycle += 1
+    else if (hit.missingScore) preview.noScoreHitsThisCycle += 1
     else preview.hitsThisCycle += 1
     preview.damage = hitDamage(rules, preview, preview.disparity)
   }

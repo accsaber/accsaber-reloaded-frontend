@@ -22,6 +22,8 @@ interface StrikeOutcome extends StrikeBreakdown {
 
 export const formatDamage = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 })
 
+const formatRate = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 3 })
+
 function factor(label: string, value: number, detail: string): StrikeLine {
   const shown = formatFixed(value, 2)
   return { label, value: `x${shown}`, detail, muted: shown === formatFixed(1, 2) }
@@ -32,10 +34,11 @@ function skillDetail(preview: ClanWarStrikePreviewResponse, exponent: number): s
   return `your skill ${formatDamage(preview.attackerSkill)} vs theirs ${formatDamage(preview.victimSkill)}${power}`
 }
 
-type Streak = Pick<ClanWarStrikePreviewResponse, 'hitsThisCycle' | 'noScoreHitsThisCycle'>
+type Streak = Pick<ClanWarStrikePreviewResponse, 'hitsThisCycle' | 'noScoreHitsThisCycle' | 'chipsThisCycle'>
 
 export function streakFactor(rules: ClanWarStrikeRulesResponse, streak: Streak): number {
   return rules.escalation ** streak.hitsThisCycle * rules.missingScoreEscalation ** streak.noScoreHitsThisCycle
+    * rules.chipEscalation ** streak.chipsThisCycle
 }
 
 export function hitDamage(rules: ClanWarStrikeRulesResponse, streak: Streak, disparity: number): number {
@@ -60,13 +63,14 @@ export function hitsToBreak(
 }
 
 function streakLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
-  const noScore = preview.noScoreHitsThisCycle
-    ? `, x${formatDamage(rules.missingScoreEscalation)} per no-score hit, ${preview.noScoreHitsThisCycle} so far`
-    : ''
+  const rates = [
+    `x${formatRate(rules.escalation)} per hit (${preview.hitsThisCycle})`,
+    `x${formatRate(rules.missingScoreEscalation)} per no-score hit (${preview.noScoreHitsThisCycle})`,
+    `x${formatRate(rules.chipEscalation)} per chip (${preview.chipsThisCycle})`,
+  ]
   return [
     { label: 'Base damage', value: formatDamage(rules.baseDamage) },
-    factor('Streak', streakFactor(rules, preview),
-      `x${formatDamage(rules.escalation)} per hit since their guard came back, ${preview.hitsThisCycle} so far${noScore}`),
+    factor('Streak', streakFactor(rules, preview), `since their guard came back: ${rates.join(', ')}`),
   ]
 }
 

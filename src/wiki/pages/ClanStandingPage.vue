@@ -22,7 +22,8 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="earned">Earned</WikiHeading>
     <p>
       Earned standing starts at 0 every season. Finishing a clan mission gives 100. Breaking
-      someone in a war takes standing from their clan and gives it to yours.
+      someone in a war takes standing from their clan and gives it to yours. Winning a war gives
+      up to 1000 more.
     </p>
     <p>
       Earned standing is the only part you can lose. It never goes below 0. If your clan is

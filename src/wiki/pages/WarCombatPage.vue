@@ -79,7 +79,8 @@ const DAMAGE: WikiCompareRow[] = [
       player on a 98.7 chips 1. You can play with these values on your war's page.
     </p>
     <p>
-      Chips do not make your next hit stronger. Every hit or chip has a 25% chance to chip one
+      Each chip makes the next hit on them 5% stronger, so getting close still softens them up for
+      your team. Every hit or chip has a 25% chance to chip one
       more random enemy above you.
     </p>
 
@@ -95,7 +96,9 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       Nobody can hit you while you're broken. You get 100 guard back the moment you finish any play
-      on a war map. That same play still hits like normal.
+      on a war map. That same play still hits like normal. If you don't play, your guard comes back
+      on its own after a week, so you can't hide forever, and being away for a while only costs one
+      break a week.
     </p>
     <p>
       If barely anyone on their team has played in the two weeks before the war, you get a lot

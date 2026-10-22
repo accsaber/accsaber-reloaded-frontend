@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { ClanWarParticipantResponse, ClanWarStrikeRulesResponse } from '@/types/api/clans'
+import { useNow } from '@/composables/useNow'
+import { formatDuration } from '@/utils/formatters'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
 import { streakFactor } from './warStrike'
@@ -12,24 +14,36 @@ const props = defineProps<{
 const percent = (factor: number) => Math.round((factor - 1) * 100)
 
 const preview = computed(() => props.fighter.strikePreview)
-const streak = computed(() => (preview.value ? preview.value.hitsThisCycle + preview.value.noScoreHitsThisCycle : 0))
+const streak = computed(() => (preview.value
+  ? preview.value.hitsThisCycle + preview.value.noScoreHitsThisCycle + preview.value.chipsThisCycle
+  : 0))
 const boost = computed(() => (preview.value ? percent(streakFactor(props.rules, preview.value)) : 0))
 const streakTitle = computed(
   () =>
     `${streak.value} ${streak.value === 1 ? 'hit' : 'hits'} landed on them since their guard came back. ` +
     `Every hit makes the next one ${percent(props.rules.escalation)}% stronger, no matter who on your team lands it. ` +
-    `A hit on them while they had no score only adds ${percent(props.rules.missingScoreEscalation)}%. ` +
+    `A hit on them while they had no score only adds ${percent(props.rules.missingScoreEscalation)}%, ` +
+    `a chip ${percent(props.rules.chipEscalation)}%. ` +
     "It resets once they're broken.",
 )
+const now = useNow()
+const backWithin = computed(() => {
+  if (!props.fighter.brokenAt) return null
+  const limit = new Date(props.fighter.brokenAt).getTime() + props.rules.brokenDurationHours * 3_600_000
+  return formatDuration(limit - now.value)
+})
 const brokenTitle = computed(
   () =>
-    "Nobody can hit them until they finish a play on one of the war's maps. " +
-    `That gives them ${Math.round(props.rules.guard)} guard back.`,
+    "Nobody can hit them until they finish a play on one of the war's maps, or a week passes. " +
+    `Either gives them ${Math.round(props.rules.guard)} guard back.`,
 )
 </script>
 
 <template>
-  <span v-if="fighter.guard <= 0" class="war-guard__broken" :title="brokenTitle">Broken</span>
+  <span v-if="fighter.guard <= 0" class="war-guard war-guard__broken" :title="brokenTitle">
+    Broken
+    <span v-if="backWithin" class="war-guard__limit">for max {{ backWithin }}</span>
+  </span>
   <span v-else class="war-guard">
     <span class="war-guard__bar">
       <ClanBar :value="fighter.guard" :max="rules.guard" />
@@ -73,6 +87,15 @@ const brokenTitle = computed(
 
 .war-guard__streak {
   color: var(--warning);
+}
+
+.war-guard__limit {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-tertiary);
 }
 
 .war-guard__broken {
