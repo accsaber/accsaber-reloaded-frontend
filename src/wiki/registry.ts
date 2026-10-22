@@ -827,7 +827,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'escalation',
         ],
         related: ['clan-wars', 'war-math', 'coalitions', 'clan-standing'],
-        updated: '2026-10-21',
+        updated: '2026-10-22',
         loader: () => import('@/wiki/pages/WarCombatPage.vue'),
       },
       {

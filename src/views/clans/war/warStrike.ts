@@ -1,4 +1,5 @@
 import type { ClanWarStrikePreviewResponse, ClanWarStrikeRulesResponse } from '@/types/api/clans'
+import { formatStanding } from '@/utils/clans'
 import { formatAccuracy, formatFixed } from '@/utils/formatters'
 
 export type StrikeKind = 'damage' | 'chip' | 'none'
@@ -92,7 +93,16 @@ export function hitBreakdown(
   guard: number,
 ): StrikeBreakdown {
   const hits = `${preview.hitsToBreak} ${preview.hitsToBreak === 1 ? 'hit' : 'hits'} to break`
-  return finish(hitLines(rules, preview), preview.damage, guard, ` per hit, ${hits}`)
+  const result = finish(hitLines(rules, preview), preview.damage, guard, ` per hit, ${hits}`)
+  return { ...result, lines: [...result.lines, breakLine(preview)] }
+}
+
+function breakLine(preview: ClanWarStrikePreviewResponse): StrikeLine {
+  const taken = formatStanding(preview.standingTaken)
+  const gained = formatStanding(preview.standingGained)
+  return taken === gained
+    ? { label: 'Breaking them', value: `${taken} Standing`, detail: 'from their clan to yours' }
+    : { label: 'Breaking them', value: `-${taken} Standing`, detail: `for their clan, +${gained} for yours` }
 }
 
 export function accuracyGap(targetAccuracy: number, accuracy: number): number {

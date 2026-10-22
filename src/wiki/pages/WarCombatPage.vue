@@ -93,6 +93,7 @@ const DAMAGE: WikiCompareRow[] = [
     <p>
       Stronger players are worth more standing. Breaking the same player again is worth 75% of
       the last time. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
+      Hover the damage on the war page to see how much standing breaking someone would move.
     </p>
     <p>
       Nobody can hit you while you're broken. You get 100 guard back the moment you finish any play

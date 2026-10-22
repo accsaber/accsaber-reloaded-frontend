@@ -319,6 +319,8 @@ export interface ClanWarStrikePreviewResponse {
   attackerSkill: number
   victimSkill: number
   disparity: number
+  standingTaken: number
+  standingGained: number
   onMap?: ClanWarStrikeMapResponse
 }
 
