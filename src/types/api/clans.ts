@@ -326,7 +326,6 @@ export interface ClanWarParticipantResponse {
   clan: PublicClanResponse
   target: PlayerRef | null
   skill: number
-  inBand: boolean | null
   standingWeight: number
   guard: number
   guardCycle: number

@@ -7,7 +7,7 @@ const RULES = {
   baseDamage: 15,
   escalation: 1.5,
   disparityExponent: 1,
-  missingScoreMultiplier: 0.35,
+  missingScoreMultiplier: 0.2,
   chipDamage: 3,
   minChipDamage: 1,
   chipWindow: 0.3,
@@ -154,7 +154,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <p>
       Two players with the same skill keep hitting one guy. The hits do 15, 22.5 and 33.75. The
       4th would do 50.6. He only has 28.75 left. That hit breaks him. With no score on the map, the
-      first hit would be 15 x 0.35 = 5.25.
+      first hit would be 15 x 0.2 = 3.
     </p>
   </WikiProse>
 </template>

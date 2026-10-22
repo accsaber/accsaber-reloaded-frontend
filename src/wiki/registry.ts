@@ -816,7 +816,6 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'chip',
           'target',
           'pick a target',
-          '80%',
           'auto',
           'auto target',
           'shield',

@@ -72,7 +72,7 @@ const teams = computed(() =>
 const stacked = computed(() => canPick.value || teams.value.some((t) => t.strikes))
 
 function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boolean {
-  return canPick.value && team !== viewerTeam.value && fighter.inBand === true && !fighter.leftAt
+  return canPick.value && team !== viewerTeam.value && !fighter.leftAt
 }
 </script>
 

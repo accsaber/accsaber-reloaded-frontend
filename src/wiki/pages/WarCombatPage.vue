@@ -32,7 +32,7 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="hits">Hits</WikiHeading>
     <p>
       You hit someone by beating their score on a war map. If they have no score there, you hit
-      them for 35% of the damage. Only plays after the war starts count. You can hit the same
+      them for 20% of the damage. Only plays after the war starts count. You can hit the same
       person on the same map with every play until they break.
     </p>
 
@@ -51,8 +51,8 @@ const DAMAGE: WikiCompareRow[] = [
 
     <WikiHeading id="rulesets">Rulesets</WikiHeading>
     <p>
-      In Duels you can pick who to hit. Anyone above you is fair game. Going down, you can pick
-      anyone with at least 80% of your skill. A play hits your pick if it beats them. If it just
+      In Duels you can pick anyone on the other team to hit, whatever their skill. A play hits
+      your pick if it beats them. If it just
       comes close, it chips them. Otherwise it goes auto. Someone with no score on that map counts
       as beaten. If your pick is broken, your plays go auto until they're back.
     </p>
