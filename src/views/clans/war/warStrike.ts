@@ -24,7 +24,7 @@ export const formatDamage = (value: number) => value.toLocaleString(undefined, {
 
 function factor(label: string, value: number, detail: string): StrikeLine {
   const shown = formatFixed(value, 2)
-  return { label, value: `×${shown}`, detail, muted: shown === formatFixed(1, 2) }
+  return { label, value: `x${shown}`, detail, muted: shown === formatFixed(1, 2) }
 }
 
 function skillDetail(preview: ClanWarStrikePreviewResponse, exponent: number): string {
@@ -32,30 +32,41 @@ function skillDetail(preview: ClanWarStrikePreviewResponse, exponent: number): s
   return `your skill ${formatDamage(preview.attackerSkill)} vs theirs ${formatDamage(preview.victimSkill)}${power}`
 }
 
-export function hitDamage(rules: ClanWarStrikeRulesResponse, hitsThisCycle: number, disparity: number): number {
-  return rules.baseDamage * rules.escalation ** hitsThisCycle * disparity
+type Streak = Pick<ClanWarStrikePreviewResponse, 'hitsThisCycle' | 'noScoreHitsThisCycle'>
+
+export function streakFactor(rules: ClanWarStrikeRulesResponse, streak: Streak): number {
+  return rules.escalation ** streak.hitsThisCycle * rules.missingScoreEscalation ** streak.noScoreHitsThisCycle
 }
 
-export function noScoreDamage(rules: ClanWarStrikeRulesResponse, hitsThisCycle: number): number {
-  return hitDamage(rules, hitsThisCycle, 1) * rules.missingScoreMultiplier
+export function hitDamage(rules: ClanWarStrikeRulesResponse, streak: Streak, disparity: number): number {
+  return rules.baseDamage * streakFactor(rules, streak) * disparity
+}
+
+export function noScoreDamage(rules: ClanWarStrikeRulesResponse, streak: Streak): number {
+  return hitDamage(rules, streak, 1) * rules.missingScoreMultiplier
 }
 
 export function hitsToBreak(
   rules: ClanWarStrikeRulesResponse,
   guard: number,
-  hitsThisCycle: number,
+  streak: Streak,
   disparity: number,
 ): number {
   let hits = 0
-  for (let left = guard; left > 0; hits++) left -= hitDamage(rules, hitsThisCycle + hits, disparity)
+  for (let left = guard; left > 0; hits++) {
+    left -= hitDamage(rules, { ...streak, hitsThisCycle: streak.hitsThisCycle + hits }, disparity)
+  }
   return hits
 }
 
 function streakLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  const noScore = preview.noScoreHitsThisCycle
+    ? `, x${formatDamage(rules.missingScoreEscalation)} per no-score hit, ${preview.noScoreHitsThisCycle} so far`
+    : ''
   return [
     { label: 'Base damage', value: formatDamage(rules.baseDamage) },
-    factor('Streak', rules.escalation ** preview.hitsThisCycle,
-      `×${formatDamage(rules.escalation)} per hit since their guard came back, ${preview.hitsThisCycle} so far`),
+    factor('Streak', streakFactor(rules, preview),
+      `x${formatDamage(rules.escalation)} per hit since their guard came back, ${preview.hitsThisCycle} so far${noScore}`),
   ]
 }
 
@@ -110,7 +121,7 @@ export function strikeOutcome(
   const target = preview.onMap?.targetScore
   if (target == null) {
     const lines = [...streakLines(rules, preview), factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here')]
-    const result = finish(lines, noScoreDamage(rules, preview.hitsThisCycle), guard)
+    const result = finish(lines, noScoreDamage(rules, preview), guard)
     return { kind: 'damage', note: 'No score on this map', ...result }
   }
   if (score > target) {

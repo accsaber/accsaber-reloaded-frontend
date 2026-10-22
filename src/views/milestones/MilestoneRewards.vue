@@ -21,7 +21,7 @@ withDefaults(
         <span class="ms-rewards__text">
           <span class="ms-rewards__name">{{ reward.item.name }}</span>
           <span class="ms-rewards__meta">
-            {{ reward.item.rarity }}<template v-if="reward.quantity > 1"> · ×{{ reward.quantity }}</template>
+            {{ reward.item.rarity }}<template v-if="reward.quantity > 1"> · x{{ reward.quantity }}</template>
           </span>
         </span>
       </li>

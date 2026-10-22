@@ -43,7 +43,7 @@ function setFont(value: string) {
       <BaseSelect :model-value="formText.font" :options="FONT_OPTIONS" @update:model-value="setFont" />
     </div>
     <label class="campaign-editor__field">
-      <span>Scale: {{ formText.scale.toFixed(1) }}×</span>
+      <span>Scale: {{ formText.scale.toFixed(1) }}x</span>
       <input
         v-model.number="formText.scale"
         type="range"

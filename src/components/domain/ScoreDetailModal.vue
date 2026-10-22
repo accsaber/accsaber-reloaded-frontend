@@ -352,10 +352,10 @@ watch(
                 <path d="M3 8L7 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
               FC
-              <span v-if="score.streak115" class="score-detail__chip-sub">{{ score.streak115 }}×115</span>
+              <span v-if="score.streak115" class="score-detail__chip-sub">{{ score.streak115 }}x115</span>
             </span>
             <span v-else-if="score.streak115 != null && score.streak115 > 0" class="score-detail__chip">
-              {{ score.streak115 }}×115
+              {{ score.streak115 }}x115
             </span>
             <span v-for="mod in score.modifiers" :key="mod" class="score-detail__chip score-detail__chip--mod">
               {{ mod }}

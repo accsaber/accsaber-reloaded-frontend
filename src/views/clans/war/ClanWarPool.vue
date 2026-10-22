@@ -46,7 +46,7 @@ function strikeOn(entry: ClanWarPoolEntryResponse) {
   const enemy = entry.target ? enemies.value.get(entry.target.id) : undefined
   const preview = enemy?.strikePreview
   if (!enemy || !preview) return null
-  const raw = entry.targetScore ? preview.damage : noScoreDamage(props.rules, preview.hitsThisCycle)
+  const raw = entry.targetScore ? preview.damage : noScoreDamage(props.rules, preview)
   const damage = Math.min(raw, enemy.guard)
   return { damage, breaks: damage >= enemy.guard }
 }

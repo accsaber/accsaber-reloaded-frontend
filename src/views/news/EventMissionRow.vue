@@ -64,7 +64,7 @@ const doneTicks = computed(() => Math.max(1, props.mission.completions ?? 1))
 const completionsLabel = computed(() => {
   const m = props.mission
   if (!m.repeatable || m.completions === null) return null
-  return m.maxCompletions ? `${m.completions}/${m.maxCompletions}` : `×${m.completions}`
+  return m.maxCompletions ? `${m.completions}/${m.maxCompletions}` : `x${m.completions}`
 })
 
 const showsCount = computed(
@@ -74,7 +74,7 @@ const showsCount = computed(
 const repeatLabel = computed(() => {
   const m = props.mission
   if (!m.repeatable) return null
-  if (m.maxCompletions && !showsCount.value) return `Repeatable ×${m.maxCompletions}`
+  if (m.maxCompletions && !showsCount.value) return `Repeatable x${m.maxCompletions}`
   return 'Repeatable'
 })
 </script>

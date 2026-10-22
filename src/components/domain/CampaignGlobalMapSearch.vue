@@ -367,10 +367,10 @@ async function importDiff(map: BeatSaverMapResponse, row: DiffRow) {
       count,
       message: attached
         ? count > 1
-          ? `Attached ×${count}`
+          ? `Attached x${count}`
           : 'Attached · already in system'
         : count > 1
-          ? `Added ×${count}`
+          ? `Added x${count}`
           : 'Added',
     })
   } catch (e) {

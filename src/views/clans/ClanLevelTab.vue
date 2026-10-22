@@ -47,7 +47,7 @@ const headline = computed(() =>
 )
 const scaling = computed(() => {
   const factor = level.value?.rosterFactor ?? 1
-  return factor > 1 ? `×${factor.toFixed(1)}` : null
+  return factor > 1 ? `x${factor.toFixed(1)}` : null
 })
 const nextRewards = computed(() =>
   steps.value
@@ -69,7 +69,7 @@ const xpRows = computed(() =>
     amount: formatClanXp(grant.amount),
     detail:
       grant.rosterFactor > 1
-        ? `${formatClanXp(grant.rawAmount)} XP with clan size scaling ×${grant.rosterFactor.toFixed(1)}`
+        ? `${formatClanXp(grant.rawAmount)} XP with clan size scaling x${grant.rosterFactor.toFixed(1)}`
         : '',
     createdAt: clanXpGrantWhen(grant),
   })),

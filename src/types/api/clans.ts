@@ -297,6 +297,7 @@ export interface ClanWarStrikeRulesResponse {
   escalation: number
   disparityExponent: number
   missingScoreMultiplier: number
+  missingScoreEscalation: number
   chipDamage: number
   minChipDamage: number
   chipWindow: number
@@ -311,6 +312,7 @@ export interface ClanWarStrikePreviewResponse {
   damage: number
   hitsToBreak: number
   hitsThisCycle: number
+  noScoreHitsThisCycle: number
   attackerSkill: number
   victimSkill: number
   disparity: number

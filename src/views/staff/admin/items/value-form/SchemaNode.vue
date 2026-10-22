@@ -292,7 +292,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
         @input="updateRowValue(row.id, ($event.target as HTMLInputElement).value)"
       />
       <button type="button" class="schema-node__icon-btn" aria-label="Remove" @click="removeRow(row.id)">
-        ×
+        x
       </button>
     </div>
     <button type="button" class="schema-node__add" @click="addRow">+ Add token</button>
@@ -311,7 +311,7 @@ const label = computed(() => (props.fieldKey ? humanizeKey(props.fieldKey) : '')
       <div class="schema-node__array-head">
         <span class="schema-node__array-index">#{{ index + 1 }}</span>
         <button type="button" class="schema-node__icon-btn" aria-label="Remove" @click="removeItem(index)">
-          ×
+          x
         </button>
       </div>
       <SchemaNode

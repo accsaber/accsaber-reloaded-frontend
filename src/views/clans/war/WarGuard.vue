@@ -2,6 +2,7 @@
 import type { ClanWarParticipantResponse, ClanWarStrikeRulesResponse } from '@/types/api/clans'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
+import { streakFactor } from './warStrike'
 
 const props = defineProps<{
   fighter: ClanWarParticipantResponse
@@ -10,11 +11,14 @@ const props = defineProps<{
 
 const percent = (factor: number) => Math.round((factor - 1) * 100)
 
-const streak = computed(() => props.fighter.strikePreview?.hitsThisCycle ?? 0)
+const preview = computed(() => props.fighter.strikePreview)
+const streak = computed(() => (preview.value ? preview.value.hitsThisCycle + preview.value.noScoreHitsThisCycle : 0))
+const boost = computed(() => (preview.value ? percent(streakFactor(props.rules, preview.value)) : 0))
 const streakTitle = computed(
   () =>
     `${streak.value} ${streak.value === 1 ? 'hit' : 'hits'} landed on them since their guard came back. ` +
     `Every hit makes the next one ${percent(props.rules.escalation)}% stronger, no matter who on your team lands it. ` +
+    `A hit on them while they had no score only adds ${percent(props.rules.missingScoreEscalation)}%. ` +
     "It resets once they're broken.",
 )
 const brokenTitle = computed(
@@ -32,7 +36,7 @@ const brokenTitle = computed(
       <span class="war-guard__value">{{ Math.round(fighter.guard) }}</span>
     </span>
     <span v-if="streak" class="war-guard__streak" :title="streakTitle">
-      +{{ percent(rules.escalation ** streak) }}% next hit
+      +{{ boost }}% next hit
     </span>
   </span>
 </template>
