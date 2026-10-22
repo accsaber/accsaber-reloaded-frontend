@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
+import RewardAmountTile from '@/components/domain/RewardAmountTile.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { ClanWarResponse, ClanWarRewardsResponse } from '@/types/api/clans'
 import { formatClanXp, formatSignedStanding } from '@/utils/clans'
@@ -19,8 +20,11 @@ defineProps<{
   <WarSection v-if="war.status !== 'ended'" title="Winning rewards">
     <p v-if="error" class="war-rewards__error" role="alert">{{ error }}</p>
     <SkeletonLoader v-else-if="!rewards" variant="text" :lines="2" />
-    <p v-else-if="!rewards.pool.length" class="war-rewards__empty">No items this war.</p>
-    <WarRewardItems v-else :items="rewards.pool" reach />
+    <div v-else class="war-rewards__win">
+      <RewardAmountTile v-if="rewards.winStanding" :amount="rewards.winStanding" label="Standing" :size="56" />
+      <RewardAmountTile v-if="rewards.winClanXp" :amount="rewards.winClanXp" label="Clan XP" :size="56" />
+      <WarRewardItems :items="rewards.pool" reach />
+    </div>
   </WarSection>
 
   <WarSection v-else title="Rewards">
@@ -63,14 +67,16 @@ defineProps<{
 </template>
 
 <style scoped>
-.war-rewards__empty,
-.war-rewards__error {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.war-rewards__win {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
 }
 
 .war-rewards__error {
+  margin: 0;
+  font-size: var(--text-caption);
   color: var(--error);
 }
 

@@ -5,6 +5,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import EventMissionsPanel from '@/views/news/EventMissionsPanel.vue'
 import EventProgressBar from '@/views/news/EventProgressBar.vue'
+import RewardAmountTile from '@/components/domain/RewardAmountTile.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
 import type { EventProfileResponse, EventProgressResponse, EventResponse } from '@/types/api/events'
 import type { MissionResponse } from '@/types/api/missions'
@@ -212,10 +213,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
               </span>
             </div>
             <div class="event-detail__bonus-rewards">
-              <div v-if="event.bonusXp" class="event-detail__xp-tile" :title="`${event.bonusXp?.toLocaleString()} XP`">
-                <span class="event-detail__xp-amount">{{ event.bonusXp?.toLocaleString() }}</span>
-                <span class="event-detail__xp-label">XP</span>
-              </div>
+              <RewardAmountTile v-if="event.bonusXp" :amount="event.bonusXp" label="XP" />
               <RewardItemTile
                 v-for="item in event.bonusItems"
                 :key="item.id"
@@ -376,35 +374,6 @@ onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility)
   flex-wrap: wrap;
   gap: var(--space-md);
   align-items: center;
-}
-
-.event-detail__xp-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--tier-gold) 45%, transparent);
-  border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--tier-gold) 8%, var(--bg-base));
-  color: var(--tier-gold);
-}
-
-.event-detail__xp-amount {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 1.05rem;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.event-detail__xp-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
 }
 
 @media (max-width: 959px) {

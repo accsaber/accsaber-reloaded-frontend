@@ -381,6 +381,8 @@ export interface ClanWarRewardItemResponse {
 
 export interface ClanWarRewardsResponse {
   pool: ClanWarRewardItemResponse[]
+  winClanXp: number
+  winStanding: number
   clans: { clan: PublicClanResponse; clanXp: number; standing: number; items: ClanWarRewardItemResponse[] }[]
   players: { player: PlayerRef; clan: PublicClanResponse; xp: number; items: ClanWarRewardItemResponse[] }[]
 }
