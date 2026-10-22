@@ -39,7 +39,7 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="damage">Damage</WikiHeading>
     <p>
       Each hit on a player makes the next one stronger, no matter who on your team lands it.
-      Hits on someone with no score count too, but only bump it by 1.25x instead of 1.5x. The
+      Hits on someone with no score count too, but only bump it by 1.2x instead of 1.5x. The
       streak starts over once their guard comes back.
       If you are both the same skill:
     </p>
