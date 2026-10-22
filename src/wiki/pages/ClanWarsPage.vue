@@ -70,7 +70,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
-      Random pools skip picking unless the attacker offered Berserker, so they get 48 hours of prep
+      Random pools skip picking unless the attacker offered Berserker. They get 48 hours of prep
       instead. Everyone else gets 24 hours once picking is over. Your clan chat gets a message when
       the pool locks in.
     </p>
