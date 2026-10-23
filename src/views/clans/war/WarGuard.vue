@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ClanWarParticipantResponse, ClanWarStrikeRulesResponse } from '@/types/api/clans'
 import { useNow } from '@/composables/useNow'
+import { guardBackAt } from '@/utils/clans'
 import { formatDuration } from '@/utils/formatters'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
@@ -9,6 +10,7 @@ import { streakFactor } from './warStrike'
 const props = defineProps<{
   fighter: ClanWarParticipantResponse
   rules: ClanWarStrikeRulesResponse
+  wipeAt: number | null
 }>()
 
 const percent = (factor: number) => Math.round((factor - 1) * 100)
@@ -29,8 +31,7 @@ const streakTitle = computed(
 const now = useNow()
 const backWithin = computed(() => {
   if (!props.fighter.brokenAt) return null
-  const limit = new Date(props.fighter.brokenAt).getTime() + props.rules.brokenDurationHours * 3_600_000
-  return formatDuration(limit - now.value)
+  return formatDuration(guardBackAt(props.fighter.brokenAt, props.rules, props.wipeAt) - now.value)
 })
 const brokenTitle = computed(
   () =>

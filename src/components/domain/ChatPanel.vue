@@ -29,6 +29,7 @@ const props = withDefaults(
     closable?: boolean
     notices?: ChatNotice[]
     collapseEvents?: ChatEvent[]
+    feed?: boolean
     authorColor?: (userId: string) => string
   }>(),
   { notices: () => [], collapseEvents: () => [] },
@@ -70,9 +71,12 @@ function isSelf(m: ChatMessageResponse): boolean {
   return !!auth.userId && m.author.id === auth.userId
 }
 
-function displayTime(m: ChatMessageResponse): string {
-  const ms = messageTimeMillis(m.createdAt)
+function timeAt(ms: number): string {
   return ms ? formatRelativeDate(new Date(ms).toISOString()) : 'just now'
+}
+
+function displayTime(m: ChatMessageResponse): string {
+  return timeAt(messageTimeMillis(m.createdAt))
 }
 
 function isoTime(m: ChatMessageResponse): string {
@@ -188,7 +192,7 @@ if (!props.floating) void props.chat.loadHistory()
 <template>
   <section
     class="chat-panel"
-    :class="{ 'chat-panel--open': open, 'chat-panel--floating': floating }"
+    :class="{ 'chat-panel--open': open, 'chat-panel--floating': floating, 'chat-panel--feed': feed }"
     :aria-label="title"
   >
     <button
@@ -224,7 +228,7 @@ if (!props.floating) void props.chat.loadHistory()
 
     <div v-if="open" class="chat-panel__panel">
       <header class="chat-panel__head">
-        <h2 class="chat-panel__title">{{ title }}</h2>
+        <slot name="title"><h2 class="chat-panel__title">{{ title }}</h2></slot>
         <button
           v-if="floating || closable"
           type="button"
@@ -276,9 +280,13 @@ if (!props.floating) void props.chat.loadHistory()
         <template v-for="entry in entries" :key="entry.key">
         <div v-if="entry.kind === 'event'" class="chat-panel__line">
           <slot name="event" :message="entry.message" :count="entry.count" />
+          <time v-if="feed" class="chat-panel__line-time" :datetime="isoTime(entry.message)">
+            {{ displayTime(entry.message) }}
+          </time>
         </div>
         <div v-else-if="entry.kind === 'notice'" class="chat-panel__line">
           <slot name="notice" :notice="entry.notice" />
+          <time v-if="feed" class="chat-panel__line-time">{{ timeAt(entry.notice.at) }}</time>
         </div>
         <article
           v-else
@@ -467,6 +475,36 @@ if (!props.floating) void props.chat.loadHistory()
   line-height: 1.6;
   text-align: center;
   color: var(--text-tertiary);
+}
+
+.chat-panel--feed .chat-panel__log {
+  gap: 0;
+}
+
+.chat-panel--feed .chat-panel__line {
+  --chat-line-justify: flex-start;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  align-self: stretch;
+  padding: var(--space-xs) 0;
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+.chat-panel--feed .chat-panel__line > :first-child {
+  min-width: 0;
+}
+
+.chat-panel--feed .chat-panel__line + .chat-panel__line {
+  border-top: 1px solid var(--bg-overlay);
+}
+
+.chat-panel__line-time {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .chat-panel__head {

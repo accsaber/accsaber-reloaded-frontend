@@ -146,7 +146,7 @@ const breadcrumbs = computed<Crumb[]>(() => [
 
 const chatClanId = computed(() => clan.value?.clan.id ?? null)
 const isMember = computed(() => viewerRole.value !== null)
-const { chat, notices, status: chatStatus } = useClanChat(chatClanId, isMember, {
+const { chat, feed, notices, status: chatStatus } = useClanChat(chatClanId, isMember, {
   onPresence: setOnline,
   onRejected: () => {
     void Promise.all([reload(), refreshViewer()])
@@ -542,7 +542,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           @transfer="askTransfer"
           @claim="claimClan"
         />
-        <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
+        <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :feed="feed" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
         <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" />
         <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
         <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />

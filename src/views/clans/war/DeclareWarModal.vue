@@ -17,14 +17,15 @@ import type {
   ClanWarDetailResponse,
 } from '@/types/api/clans'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import { attackerPickCount, CLAN_ARENA_LABEL, CLAN_RULESET_LABEL } from '@/utils/clans'
+import { attackerPickCount, CLAN_ARENA_LABEL, CLAN_RULESET_LABEL, isRandomArena } from '@/utils/clans'
 import { COMPLEXITY_MAX } from '@/utils/complexity'
 import { computed, ref, watch } from 'vue'
 import ClanPicker from '../ClanPicker.vue'
 import { loadClanLevels } from '../clanLevels'
 import WarMapPicker from './WarMapPicker.vue'
+import WarOptionTiles, { type WarOption } from './WarOptionTiles.vue'
 
-const ARENAS: ClanArena[] = ['mixed', 'random', 'category_turf', 'complexity_turf']
+const ARENAS: ClanArena[] = ['mixed', 'random', 'modern_random', 'category_turf', 'complexity_turf']
 const RULESETS: ClanRuleset[] = ['duel', 'berserker']
 
 const props = defineProps<{
@@ -58,7 +59,7 @@ const categoryOptions = computed(() =>
 )
 
 const pickCount = computed(() => {
-  if (arena.value === 'random' || !target.value) return 0
+  if (isRandomArena(arena.value) || !target.value) return 0
   return attackerPickCount(props.ownClan.standing, target.value.standing)
 })
 
@@ -71,13 +72,23 @@ const ready = computed(() => {
   if (!unlocked.value.arenas.includes(arena.value) || !unlocked.value.rulesets.includes(ruleset.value)) return false
   if (arena.value === 'category_turf' && !categoryId.value) return false
   if (arena.value === 'complexity_turf' && complexity.value[0] >= complexity.value[1]) return false
-  return arena.value === 'random' || picks.value.length === pickCount.value
+  return isRandomArena(arena.value) || picks.value.length === pickCount.value
 })
 
 function lockLabel(axis: 'arenas' | 'rulesets', mode: string): string {
   const step = steps.value.find((s) => (s.unlocks[axis] as string[]).includes(mode))
   return step ? `Level ${step.level}` : 'Locked'
 }
+
+function modeOptions(axis: 'arenas' | 'rulesets', modes: string[], labels: Record<string, string>): WarOption[] {
+  return modes.map((mode) => {
+    const locked = !(unlocked.value?.[axis] as string[] | undefined)?.includes(mode)
+    return { key: mode, label: labels[mode], disabled: locked, note: locked ? lockLabel(axis, mode) : undefined }
+  })
+}
+
+const arenaOptions = computed(() => modeOptions('arenas', ARENAS, CLAN_ARENA_LABEL))
+const rulesetOptions = computed(() => modeOptions('rulesets', RULESETS, CLAN_RULESET_LABEL))
 
 async function load() {
   loading.value = true
@@ -110,7 +121,7 @@ async function submit() {
       categoryId: turfCategoryId.value ?? undefined,
       complexityMin: turfMin.value ?? undefined,
       complexityMax: turfMax.value ?? undefined,
-      mapDifficultyIds: arena.value === 'random' ? [] : picks.value.map((d) => d.id),
+      mapDifficultyIds: isRandomArena(arena.value) ? [] : picks.value.map((d) => d.id),
     })
     emit('declared', detail)
   } catch (err) {
@@ -170,22 +181,13 @@ watch(arena, () => {
 
       <section class="declare__step">
         <h3 class="declare__label field-label">Arena</h3>
-        <div class="declare__tiles" role="radiogroup">
-          <button
-            v-for="option in ARENAS"
-            :key="option"
-            type="button"
-            role="radio"
-            class="declare__tile"
-            :class="{ 'declare__tile--active': arena === option }"
-            :aria-checked="arena === option"
-            :disabled="saving || !unlocked.arenas.includes(option)"
-            @click="arena = option"
-          >
-            <span>{{ CLAN_ARENA_LABEL[option] }}</span>
-            <span v-if="!unlocked.arenas.includes(option)" class="declare__lock">{{ lockLabel('arenas', option) }}</span>
-          </button>
-        </div>
+        <WarOptionTiles
+          :model-value="arena"
+          :options="arenaOptions"
+          label="Arena"
+          :disabled="saving"
+          @update:model-value="arena = $event as ClanArena"
+        />
         <p v-if="fieldErrors.arena" class="declare__error" role="alert">{{ fieldErrors.arena }}</p>
 
         <BaseSelect
@@ -210,25 +212,16 @@ watch(arena, () => {
 
       <section class="declare__step">
         <h3 class="declare__label field-label">Ruleset</h3>
-        <div class="declare__tiles" role="radiogroup">
-          <button
-            v-for="option in RULESETS"
-            :key="option"
-            type="button"
-            role="radio"
-            class="declare__tile"
-            :class="{ 'declare__tile--active': ruleset === option }"
-            :aria-checked="ruleset === option"
-            :disabled="saving || !unlocked.rulesets.includes(option)"
-            @click="ruleset = option"
-          >
-            <span>{{ CLAN_RULESET_LABEL[option] }}</span>
-            <span v-if="!unlocked.rulesets.includes(option)" class="declare__lock">{{ lockLabel('rulesets', option) }}</span>
-          </button>
-        </div>
+        <WarOptionTiles
+          :model-value="ruleset"
+          :options="rulesetOptions"
+          label="Ruleset"
+          :disabled="saving"
+          @update:model-value="ruleset = $event as ClanRuleset"
+        />
       </section>
 
-      <section v-if="arena !== 'random'" class="declare__step">
+      <section v-if="!isRandomArena(arena)" class="declare__step">
         <h3 class="declare__label field-label">Your picks</h3>
         <p v-if="!target" class="declare__hint">Pick a target first.</p>
         <WarMapPicker
@@ -288,49 +281,6 @@ watch(arena, () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.declare__tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: var(--space-sm);
-}
-
-.declare__tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: var(--space-sm) var(--space-md);
-  font: inherit;
-  font-size: var(--text-body);
-  font-weight: 600;
-  text-align: left;
-  color: var(--text-primary);
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.declare__tile:hover:not(:disabled) {
-  border-color: var(--text-tertiary);
-}
-
-.declare__tile--active {
-  color: var(--page-accent, var(--accent));
-  border-color: var(--page-accent, var(--accent));
-}
-
-.declare__tile:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
-.declare__lock {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-tertiary);
 }
 
 .declare__hint {

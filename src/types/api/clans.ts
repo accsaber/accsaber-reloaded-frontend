@@ -38,9 +38,13 @@ export type ClanStandingSource = 'war_break' | 'mission'
 
 export type ClanItemSource = 'level' | 'season' | 'war' | 'manual'
 
-export type ClanArena = 'mixed' | 'random' | 'category_turf' | 'complexity_turf'
+export type ClanArena = 'mixed' | 'random' | 'modern_random' | 'category_turf' | 'complexity_turf'
 
 export type ClanRuleset = 'duel' | 'berserker'
+
+export type ClanWarTargeting = 'follow' | 'auto' | 'manual'
+
+export type ClanWarOrder = 'auto' | 'target' | 'halt'
 
 export type ClanWarStatus = 'picking' | 'preparing' | 'active' | 'ended'
 
@@ -304,6 +308,7 @@ export interface ClanWarStrikeRulesResponse {
   chipWindow: number
   chipSkillExponent: number
   brokenDurationHours: number
+  wipeDurationHours: number
 }
 
 export interface ClanWarStrikeMapResponse {
@@ -328,10 +333,17 @@ export type ClanFeedFrame =
   | { type: 'war'; warId: string; data: ClanWarResponse }
   | { type: 'hit'; warId: string; data: ClanWarHitResponse }
 
+export interface ClanWarOrdersResponse {
+  targeting: ClanWarTargeting
+  order: ClanWarOrder
+  target: PlayerRef | null
+}
+
 export interface ClanWarParticipantResponse {
   player: PlayerRef
   clan: PublicClanResponse
   target: PlayerRef | null
+  orders: ClanWarOrdersResponse | null
   skill: number
   standingWeight: number
   guard: number
@@ -525,7 +537,14 @@ export interface UpdateClanWarSideRequest {
 }
 
 export interface ChooseClanWarTargetRequest {
-  userId: string | null
+  targeting: ClanWarTargeting
+  userId?: string | null
+}
+
+export interface GiveClanWarOrderRequest {
+  userId: string
+  order: ClanWarOrder
+  targetUserId?: string
 }
 
 export interface UpdateClanPacifismRequest {

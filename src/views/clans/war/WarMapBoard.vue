@@ -19,6 +19,7 @@ const props = defineProps<{
   rules: ClanWarStrikeRulesResponse
   board: WarMapBoard | undefined
   viewer: ClanWarParticipantResponse | null
+  wipeAt: number | null
 }>()
 
 const STATUS_LABEL = { hit: 'you can hit', chip: 'chip range' } as const
@@ -89,7 +90,7 @@ function rowClass(row: Record<string, unknown>) {
         </span>
       </template>
       <template #cell-guard="{ row }">
-        <WarGuard v-if="row.fighter" :fighter="(row.fighter as ClanWarParticipantResponse)" :rules="rules" />
+        <WarGuard v-if="row.fighter" :fighter="(row.fighter as ClanWarParticipantResponse)" :rules="rules" :wipe-at="wipeAt" />
       </template>
       <template #cell-status="{ row }">
         <span v-if="row.status" class="war-board__status" :class="`war-board__status--${row.status}`">

@@ -1,15 +1,23 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import ChatPanel from '@/components/domain/ChatPanel.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { UseChatReturn } from '@/composables/useChat'
 import type { ChatMessageResponse } from '@/types/api/chat'
 import type { ConnectionStatus } from '@/types/display'
 import ClanChatEvent from './ClanChatEvent.vue'
+import { computed, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import type { PresenceNotice } from '@/composables/useClanChat'
 
+const VIEWS = [
+  { key: 'chat', label: 'Chat' },
+  { key: 'feed', label: 'Notifications' },
+]
+
 const props = defineProps<{
   chat: UseChatReturn
+  feed?: UseChatReturn
   notices?: PresenceNotice[]
   status?: ConnectionStatus
   readonly?: boolean
@@ -18,6 +26,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+const view = ref('chat')
+const showFeed = computed(() => !!props.feed && view.value === 'feed')
 
 function eventTo(message: ChatMessageResponse): RouteLocationRaw | null {
   if (message.war) return { name: 'clan-war', params: { warId: message.war.id } }
@@ -32,18 +43,28 @@ function eventTo(message: ChatMessageResponse): RouteLocationRaw | null {
   <section class="clan-chat">
     <p v-if="status === 'reconnecting'" class="clan-chat__stale">Reconnecting, new messages may be late.</p>
     <ChatPanel
-      :chat="chat"
+      :key="view"
+      :chat="showFeed && feed ? feed : chat"
       title="Clan chat"
       placeholder="Message your clan"
-      empty-text="Nothing said yet."
-      :notices="notices"
+      :empty-text="showFeed ? 'Nothing happened yet.' : 'Nothing said yet.'"
+      :notices="showFeed || !feed ? notices : []"
       :collapse-events="['war_hit']"
-      :readonly="readonly"
+      :feed="showFeed"
+      :readonly="readonly || showFeed"
       :closable="closable"
       @close="emit('close')"
     >
+      <template v-if="feed" #title>
+        <BaseTabs v-model="view" :tabs="VIEWS" variant="segmented" label="Clan chat" />
+      </template>
       <template #event="{ message, count }">
-        <RouterLink v-if="eventTo(message)" class="clan-chat__event-link" :to="eventTo(message)!">
+        <RouterLink
+          v-if="eventTo(message)"
+          class="clan-chat__event-link"
+          :class="{ 'clan-chat__event-link--row': showFeed }"
+          :to="eventTo(message)!"
+        >
           <ClanChatEvent :message="message" :count="count" />
         </RouterLink>
         <ClanChatEvent v-else :message="message" :count="count" />
@@ -75,6 +96,10 @@ function eventTo(message: ChatMessageResponse): RouteLocationRaw | null {
   color: inherit;
   text-decoration: none;
   border-bottom: 1px dotted var(--text-tertiary);
+}
+
+.clan-chat__event-link--row {
+  border-bottom: none;
 }
 
 .clan-chat__event-link:hover {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import type { ClanWarParticipantResponse, ClanWarResponse, PublicClanResponse } from '@/types/api/clans'
-import { computed } from 'vue'
+import { CLAN_WAR_TARGETING_LABEL } from '@/utils/clans'
 import { useWarPlaylist } from './useWarPlaylist'
 import WarSection from './WarSection.vue'
 
@@ -18,18 +18,17 @@ const emit = defineEmits<{
 }>()
 
 const playlist = useWarPlaylist(() => props.war)
-const canPick = computed(() => !!props.viewer && props.war.ruleset === 'duel')
 </script>
 
 <template>
   <WarSection title="Prep">
     <ol class="war-prep__steps">
-      <li v-if="canPick" class="war-prep__step">
+      <li v-if="viewer?.orders" class="war-prep__step">
         <span class="war-prep__label">
-          Pick a target or leave it on auto
-          <span class="war-prep__state">{{ viewer?.target?.name ?? 'auto' }}</span>
+          Choose who you hit
+          <span class="war-prep__state">{{ CLAN_WAR_TARGETING_LABEL[viewer.orders.targeting] }}</span>
         </span>
-        <BaseButton size="sm" @click="emit('pick')">Pick target</BaseButton>
+        <BaseButton size="sm" @click="emit('pick')">Targeting</BaseButton>
       </li>
       <li class="war-prep__step">
         <span class="war-prep__label">Download the playlist</span>

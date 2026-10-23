@@ -51,6 +51,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <ul>
       <li>Mixed pools can use any ranked map.</li>
       <li>Random pools are 10 random ranked maps that nobody picks.</li>
+      <li>Modern random is the same thing, but only maps ranked in 2024 or later.</li>
       <li>Category turf only uses maps from one category.</li>
       <li>Complexity turf only uses maps in a complexity range.</li>
     </ul>
@@ -70,9 +71,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
-      Random pools skip picking unless the attacker offered Berserker. They get 48 hours of prep
-      instead. Everyone else gets 24 hours once picking is over. Your clan chat gets a message when
-      the pool locks in.
+      Random pools and Modern random skip picking unless the attacker offered Berserker. Once the pool locks in, prep
+      runs for somewhere between 24 and 48 hours, picked at random. The war page shows the exact start as soon as it's set, and your clan
+      chat gets a message when the pool locks in.
     </p>
     <p>
       Plays during prep don't hit anyone. You can already see the other team and pick your target
@@ -80,7 +81,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       picking for you. Any PB you set during prep is a score the enemy has to beat. You can
       download all 10 maps as a playlist.
     </p>
-    <p>Use the day to pick targets and push your PBs on maps where enemies are close.</p>
+    <p>Use that time to pick targets and push your PBs on maps where enemies are close.</p>
 
     <WikiHeading id="endings">Endings</WikiHeading>
     <p>

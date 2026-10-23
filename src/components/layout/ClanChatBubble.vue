@@ -33,7 +33,7 @@ function close() {
 }
 
 const clanId = computed<string | null>(() => props.clan.id)
-const { chat, notices, status } = useClanChat(clanId, open, {
+const { chat, feed, notices, status } = useClanChat(clanId, open, {
   onPresence: () => {},
   onRejected: close,
 })
@@ -135,7 +135,7 @@ const label = computed(() =>
     </button>
 
     <div v-if="open" class="bubble-panel" :style="panelStyle">
-      <ClanChatTab :chat="chat" :notices="notices" :status="status" :clan-slug="clan.slug" closable @close="close" />
+      <ClanChatTab :chat="chat" :feed="feed" :notices="notices" :status="status" :clan-slug="clan.slug" closable @close="close" />
     </div>
   </div>
 </template>

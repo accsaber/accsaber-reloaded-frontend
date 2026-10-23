@@ -50,8 +50,7 @@ const players = computed(() => ({
 <template>
   <span v-if="sentence" class="chat-event">
     <template v-if="count > 1">
-      <span class="chat-event__count">{{ count }} hits</span>
-      <span>, latest:</span>
+      <span><span class="chat-event__count">{{ count }} hits</span>, latest:</span>
     </template>
     <span v-if="sentence.before">{{ sentence.before }}</span>
     <template v-for="(slot, index) in [sentence.first, sentence.second]" :key="index">
@@ -68,7 +67,7 @@ const players = computed(() => ({
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: var(--chat-line-justify, center);
   gap: 0 var(--space-xs);
 }
 

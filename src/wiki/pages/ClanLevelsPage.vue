@@ -7,6 +7,7 @@ const UNLOCKS: WikiCompareRow[] = [
   { label: 'New clan', values: ['0', '10 member spots, Mixed pools, Duels'] },
   { label: 'Level 2', values: ['171', '+5 member spots'] },
   { label: 'Level 3', values: ['365', '+2 Officers, Random pools'] },
+  { label: 'Level 4', values: ['639', 'Modern random'] },
   { label: 'Level 5', values: ['997', '+5 member spots, +1 ally, Berserker'] },
   { label: 'Level 6', values: ['1,443', '+1 Commander, Category turf'] },
   { label: 'Level 8', values: ['2,610', '+5 member spots'] },

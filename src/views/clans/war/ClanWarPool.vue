@@ -27,6 +27,7 @@ const props = defineProps<{
   viewer: ClanWarParticipantResponse | null
   expanded: string | null
   boards: Record<string, WarMapBoard>
+  wipeAt: number | null
 }>()
 
 const emit = defineEmits<{
@@ -129,6 +130,7 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn
           :rules="rules"
           :board="boards[entry.difficulty.id]"
           :viewer="viewer"
+          :wipe-at="wipeAt"
         />
       </li>
     </ul>

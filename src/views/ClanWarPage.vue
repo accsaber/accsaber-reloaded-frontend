@@ -13,8 +13,11 @@ import type {
   ClanWarResponse,
   ClanWarRewardsResponse,
   ClanWarStrikeRulesResponse,
+  ClanWarTargeting,
 } from '@/types/api/clans'
-import { hasClanRole, isWarRosterOpen, warLeadSide, warTeamOf } from '@/utils/clans'
+import BaseBanner from '@/components/common/BaseBanner.vue'
+import { formatDuration } from '@/utils/formatters'
+import { hasClanRole, isWarRosterOpen, warLeadSide, warTeamOf, warWipe } from '@/utils/clans'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
@@ -24,12 +27,15 @@ import ClanWarAid from './clans/war/ClanWarAid.vue'
 import ClanWarFighters from './clans/war/ClanWarFighters.vue'
 import ClanWarHits from './clans/war/ClanWarHits.vue'
 import ClanWarHud from './clans/war/ClanWarHud.vue'
+import ClanWarOrders from './clans/war/ClanWarOrders.vue'
 import ClanWarPool from './clans/war/ClanWarPool.vue'
 import ClanWarRewards from './clans/war/ClanWarRewards.vue'
 import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
 import { hitDamage, hitsToBreak } from './clans/war/warStrike'
+import WarHaltBanner from './clans/war/WarHaltBanner.vue'
 import WarPicksModal from './clans/war/WarPicksModal.vue'
 import WarPrepPanel from './clans/war/WarPrepPanel.vue'
+import WarTargeting from './clans/war/WarTargeting.vue'
 import { useWarMapBoards } from './clans/war/useWarMapBoards'
 import { prefersReducedMotion } from '@/composables/useReducedMotion'
 
@@ -67,6 +73,15 @@ const fighting = computed(() => war.value?.status === 'active' || war.value?.sta
 const rosterShown = computed(() => !!war.value && (isWarRosterOpen(war.value) || war.value.status === 'ended'))
 const ownClanId = computed(() => own.clan.value?.id ?? null)
 const viewer = computed(() => participants.value?.find((p) => p.player.id === auth.userId && !p.leftAt) ?? null)
+const halted = computed(() => viewer.value?.orders?.targeting === 'follow' && viewer.value.orders.order === 'halt')
+const canOrder = computed(() => !!viewerTeam.value && hasClanRole(own.role.value, 'commander'))
+const wipe = computed(() =>
+  war.value?.status === 'active' && detail.value && participants.value
+    ? warWipe(war.value, participants.value, detail.value.strikeRules)
+    : null,
+)
+const wipeAt = computed(() => wipe.value?.at ?? null)
+const wipeIn = computed(() => (wipe.value && wipe.value.at > now.value ? `in ${formatDuration(wipe.value.at - now.value)}` : 'now'))
 const boards = useWarMapBoards(
   () => warId.value,
   (mapId) => (participantsMapId.value === mapId ? participants.value : null),
@@ -225,17 +240,25 @@ function onPicksSubmitted(next: ClanWarDetailResponse) {
   reloadKey.value += 1
 }
 
-async function pickTarget(userId: string | null) {
+function applyOrders(row: ClanWarParticipantResponse) {
+  const fighter = participants.value?.find((p) => p.player.id === row.player.id)
+  if (!fighter) return
+  fighter.target = row.target
+  fighter.orders = row.orders
+}
+
+async function setTargeting(targeting: ClanWarTargeting, userId?: string | null) {
+  const request = warId.value
   picking.value = true
   pickError.value = null
   try {
     const { chooseClanWarTarget } = await import('@/api/clans')
-    const chosen = await chooseClanWarTarget(warId.value, { userId })
-    const self = participants.value?.find((p) => p.player.id === chosen.player.id)
-    if (self) self.target = chosen.target
+    const chosen = await chooseClanWarTarget(request, { targeting, userId })
+    if (request !== warId.value) return
+    applyOrders(chosen)
     void load()
   } catch (err) {
-    pickError.value = parseApiError(err, 'Could not pick that target.').message
+    pickError.value = parseApiError(err, 'Could not change your targeting.').message
   } finally {
     picking.value = false
   }
@@ -298,15 +321,21 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
     <template v-else>
       <ClanWarHud :war="war" :now="now" :can-retreat="canRetreat" :viewer-team="viewerTeam" @retreat="retreatOpen = true" />
 
+      <BaseBanner v-if="wipe" variant="warning" :dismissible="false">
+        {{ wipe.team === 'attack' ? 'Attack' : 'Defense' }} is wiped. Everyone broken comes back {{ wipeIn }}.
+      </BaseBanner>
+
       <WarPrepPanel
         v-if="war.status === 'preparing'"
         :war="war"
         :viewer="viewer"
         :own-clan="own.clan.value"
         :can-push="!!pushMapId"
-        @pick="scrollTo('war-roster')"
+        @pick="scrollTo('war-targeting')"
         @push="pushPbs"
       />
+
+      <WarHaltBanner v-if="halted" :saving="picking" @auto="setTargeting('auto')" />
 
       <ClanWarPool
         :war="war"
@@ -316,6 +345,7 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
         :viewer="viewer"
         :expanded="boards.expanded.value"
         :boards="boards.boards.value"
+        :wipe-at="wipeAt"
         @toggle="boards.toggle"
         :can-submit-picks="canSubmitPicks"
         :signed-in="auth.isLoggedIn"
@@ -324,19 +354,38 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
 
       <ClanWarRewards :war="war" :rewards="rewards" :error="rewardsError" :viewer-id="auth.userId" />
 
+      <WarTargeting
+        v-if="viewer?.orders && isWarRosterOpen(war)"
+        id="war-targeting"
+        :orders="viewer.orders"
+        :ruleset="war.ruleset"
+        :pick="viewer.target"
+        :saving="picking"
+        :error="pickError"
+        @targeting="setTargeting"
+      />
+
+      <ClanWarOrders
+        v-if="ownClanId && canOrder && participants && isWarRosterOpen(war)"
+        :war="war"
+        :participants="participants"
+        :own-clan-id="ownClanId"
+        @saved="applyOrders"
+      />
+
       <ClanWarFighters
         v-if="rosterShown"
-        id="war-roster"
         :war="war"
         :rules="detail.strikeRules"
         :participants="participants"
-        :error="participantsError ?? pickError"
+        :error="participantsError"
         :viewer="viewer"
         :picking="picking"
         :pool="detail.pool"
         :loaded-map-id="participantsMapId"
+        :wipe-at="wipeAt"
         v-model:map-id="whatIfMapId"
-        @pick="pickTarget"
+        @pick="setTargeting('manual', $event)"
       />
 
       <template v-if="fighting">

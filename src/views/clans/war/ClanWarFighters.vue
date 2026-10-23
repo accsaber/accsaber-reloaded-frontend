@@ -29,6 +29,7 @@ const props = defineProps<{
   picking: boolean
   pool: ClanWarPoolEntryResponse[]
   loadedMapId: string
+  wipeAt: number | null
 }>()
 
 const mapId = defineModel<string>('mapId', { required: true })
@@ -39,7 +40,9 @@ const emit = defineEmits<{
 
 const styles = computed(() => warSideStyles(props.war))
 const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.viewer.clan.id) : null))
-const canPick = computed(() => !!props.viewer && props.war.ruleset === 'duel' && isWarRosterOpen(props.war))
+const canPick = computed(
+  () => props.viewer?.orders?.targeting === 'manual' && props.war.ruleset === 'duel' && isWarRosterOpen(props.war),
+)
 
 const breaksSort = ref<Record<ClanWarTeam, SortDirection | null>>({ attack: null, defend: null })
 
@@ -132,7 +135,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
                   <SnipeIcon :size="12" />
                   <UserChip :user="fighter.target" size="xs" compact hide-clan />
                 </span>
-                <span v-if="viewer?.target?.id === fighter.player.id" class="fighters__pick">
+                <span v-if="canPick && viewer?.target?.id === fighter.player.id" class="fighters__pick">
                   <span class="fighters__picked">Your pick</span>
                   <BaseButton size="sm" :disabled="picking" @click="emit('pick', null)">Clear</BaseButton>
                 </span>
@@ -158,7 +161,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
                   </template>
                 </HintTooltip>
               </span>
-              <WarGuard :fighter="fighter" :rules="rules" />
+              <WarGuard :fighter="fighter" :rules="rules" :wipe-at="wipeAt" />
               <span class="fighters__num">{{ Math.round(fighter.contribution) }}</span>
               <span v-if="t.strikes" class="fighters__strike">
                 <FighterStrike
@@ -219,7 +222,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
   display: grid;
   grid-template-columns: minmax(0, 1fr) 6ch 64px 132px 56px;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   padding: 0 var(--space-md);
 }
 
@@ -262,6 +265,8 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 
 .fighters__target {
   display: inline-flex;
+  flex-basis: 100%;
+  order: 1;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
@@ -335,9 +340,11 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 
 .fighters__who {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 0 var(--space-sm);
   min-width: 0;
+  padding-block: var(--space-xs);
 }
 
 .fighters__left {

@@ -17,6 +17,7 @@ import type {
   ClanStandingParams,
   ClanStandingResponse,
   ChooseClanWarTargetRequest,
+  GiveClanWarOrderRequest,
   ClanWarAidListParams,
   ClanWarAidResponse,
   ClanWarDetailResponse,
@@ -201,13 +202,14 @@ export function getClanStandingEvents(
 
 export function getClanChat(
   clanId: string,
+  events: boolean,
   params?: PaginationParams,
 ): Promise<Page<ChatMessageResponse>> {
-  return get<Page<ChatMessageResponse>>(`/clans/${clanId}/chat${buildQuery(params)}`)
+  return get<Page<ChatMessageResponse>>(`/clans/${clanId}/chat${buildQuery({ ...params, events })}`)
 }
 
 export function getClanChatUnread(clanId: string, since: string): Promise<ChatUnreadResponse> {
-  return get<ChatUnreadResponse>(`/clans/${clanId}/chat/unread${buildQuery({ since })}`)
+  return get<ChatUnreadResponse>(`/clans/${clanId}/chat/unread${buildQuery({ since, events: false })}`)
 }
 
 export function sendClanChatMessage(
@@ -357,6 +359,13 @@ export function chooseClanWarTarget(
   req: ChooseClanWarTargetRequest,
 ): Promise<ClanWarParticipantResponse> {
   return put<ClanWarParticipantResponse>(`/clans/wars/${warId}/target`, req)
+}
+
+export function giveClanWarOrder(
+  warId: string,
+  req: GiveClanWarOrderRequest,
+): Promise<ClanWarParticipantResponse> {
+  return put<ClanWarParticipantResponse>(`/clans/wars/${warId}/orders`, req)
 }
 
 export function downloadClanWarPlaylist(warId: string): Promise<DownloadedFile> {

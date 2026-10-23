@@ -12,10 +12,13 @@ import type {
   ClanStandingSource,
   ClanUnlocksResponse,
   ClanWarOutcome,
+  ClanWarParticipantResponse,
   ClanWarPoolSource,
   ClanWarRefResponse,
   ClanWarResponse,
   ClanWarStatus,
+  ClanWarStrikeRulesResponse,
+  ClanWarTargeting,
   ClanWarTeam,
   ClanWarTeamResponse,
   ClanXpGrantResponse,
@@ -65,13 +68,24 @@ export const CLAN_CAPACITY_LABEL: Record<ClanCapacity, string> = {
 export const CLAN_ARENA_LABEL: Record<ClanArena, string> = {
   mixed: 'Mixed pools',
   random: 'Random pools',
+  modern_random: 'Modern random',
   category_turf: 'Category turf',
   complexity_turf: 'Complexity turf',
+}
+
+export function isRandomArena(arena: ClanArena): boolean {
+  return arena === 'random' || arena === 'modern_random'
 }
 
 export const CLAN_RULESET_LABEL: Record<ClanRuleset, string> = {
   duel: 'Duels',
   berserker: 'Berserker',
+}
+
+export const CLAN_WAR_TARGETING_LABEL: Record<ClanWarTargeting, string> = {
+  follow: 'Follow commanders',
+  auto: 'Auto',
+  manual: 'Pick',
 }
 
 export const CLAN_WAR_STATUS_LABEL: Record<ClanWarStatus, string> = {
@@ -122,6 +136,40 @@ export function warLeadFallen(team: ClanWarTeamResponse): boolean {
 
 export function warOpponent(war: ClanWarResponse, clanId: string): PublicClanResponse {
   return war[OPPOSING_TEAM[warTeamOf(war, clanId) ?? 'defend']].lead
+}
+
+export interface WarWipe {
+  team: ClanWarTeam
+  at: number
+}
+
+function teamWipeAt(war: ClanWarResponse, team: ClanWarTeam, participants: ClanWarParticipantResponse[]): number | null {
+  const fighting = new Set(
+    war[team].sides.filter((side) => !(side.stake > 0 && side.stakeRemaining <= 0)).map((side) => side.clan.id),
+  )
+  const fighters = participants.filter((p) => !p.leftAt && fighting.has(p.clan.id))
+  if (!fighters.length || fighters.some((p) => !p.brokenAt)) return null
+  return Math.max(...fighters.map((p) => new Date(p.brokenAt!).getTime()))
+}
+
+export function warWipe(
+  war: ClanWarResponse,
+  participants: ClanWarParticipantResponse[],
+  rules: ClanWarStrikeRulesResponse,
+): WarWipe | null {
+  let wipe: WarWipe | null = null
+  for (const team of WAR_TEAMS) {
+    const last = teamWipeAt(war, team, participants)
+    if (last === null) continue
+    const at = last + rules.wipeDurationHours * 3_600_000
+    if (!wipe || at < wipe.at) wipe = { team, at }
+  }
+  return wipe
+}
+
+export function guardBackAt(brokenAt: string, rules: ClanWarStrikeRulesResponse, wipeAt: number | null): number {
+  const own = new Date(brokenAt).getTime() + rules.brokenDurationHours * 3_600_000
+  return wipeAt === null ? own : Math.min(own, wipeAt)
 }
 
 export function isPacifist(clan: ClanResponse, now = Date.now()): boolean {

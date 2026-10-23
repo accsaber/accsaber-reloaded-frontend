@@ -27,8 +27,11 @@ export function useClanChat(
   handlers: { onPresence: (playerId: string, online: boolean) => void; onRejected: () => void },
 ) {
   const chat = useChat(clanId, {
-    load: (id, params) => import('@/api/clans').then((m) => m.getClanChat(id, params)),
+    load: (id, params) => import('@/api/clans').then((m) => m.getClanChat(id, false, params)),
     send: (id, req) => import('@/api/clans').then((m) => m.sendClanChatMessage(id, req)),
+  })
+  const feed = useChat(clanId, {
+    load: (id, params) => import('@/api/clans').then((m) => m.getClanChat(id, true, params)),
   })
 
   const notices = ref<PresenceNotice[]>([])
@@ -37,7 +40,7 @@ export function useClanChat(
   function onFrame(frame: ClanChatFrame) {
     if (frame.channelId !== clanId.value) return
     if (frame.type === 'chat' && frame.message) {
-      chat.ingest(frame.message)
+      ;(frame.message.event ? feed : chat).ingest(frame.message)
       return
     }
     if (frame.type === 'presence' && frame.player && typeof frame.online === 'boolean') {
@@ -58,5 +61,5 @@ export function useClanChat(
     onHalt: handlers.onRejected,
   })
 
-  return { chat, notices, status }
+  return { chat, feed, notices, status }
 }

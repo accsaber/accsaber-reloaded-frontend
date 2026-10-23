@@ -5,7 +5,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const RULES = {
   baseDamage: 15,
-  escalation: 1.5,
+  escalation: 1.45,
   disparityExponent: 1,
   missingScoreMultiplier: 0.3,
   missingScoreEscalation: 1.2,
@@ -66,8 +66,8 @@ const CHIP_PARAMS: WikiCompareRow[] = [
 ]
 
 const BREAK_PARAMS: WikiCompareRow[] = [
-  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on a team once moves half that team's stake"] },
-  { label: 'Roster weight', values: ['', "Their share of their team's strength. Stronger players count for more"] },
+  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once moves half its stake. A weaker team loses a bit less per round"] },
+  { label: 'Break weight', values: ['', "Their skill squared, over their team's total skill squared, pulled a quarter of the way toward the stronger team's total"] },
   { label: 'Break decay', values: [`${RULES.breakDecay}`, 'Each repeat break on the same player moves 25% less'] },
   { label: 'Risk', values: [`1 or ${RULES.allyRisk}`, `1 for the two lead clans, ${RULES.allyRisk} for allies`] },
 ]
@@ -118,7 +118,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <WikiHeading id="break">Standing on a break</WikiHeading>
     <math display="block">
       <mtext>standing</mtext><mo>=</mo><mtext>team stake</mtext><mo>x</mo><mn>{{ RULES.breakShare }}</mn>
-      <mo>x</mo><mtext>roster weight</mtext><mo>x</mo>
+      <mo>x</mo><mtext>break weight</mtext><mo>x</mo>
       <msup><mn>{{ RULES.breakDecay }}</mn><mtext>breaks before</mtext></msup><mo>x</mo><mtext>risk</mtext>
     </math>
     <p>

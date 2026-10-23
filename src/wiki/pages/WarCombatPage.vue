@@ -25,7 +25,8 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="plays">How a play works</WikiHeading>
     <p>
       Every full play on a war map counts, even one worse than your PB. What matters is beating
-      their score. Fails and quits don't count. In Duels a play lands on one enemy. In Berserker it
+      their score. Fails and quits don't count. Neither do plays with Faster Song or Super Fast
+      Song, since a shorter map is just a quicker hit. In Duels a play lands on one enemy. In Berserker it
       lands on everyone it beats.
     </p>
 
@@ -39,7 +40,7 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="damage">Damage</WikiHeading>
     <p>
       Each hit on a player makes the next one stronger, no matter who on your team lands it.
-      Hits on someone with no score count too, but only bump it by 1.2x instead of 1.5x. The
+      Hits on someone with no score count too, but only bump it by 1.2x instead of 1.45x. The
       streak starts over once their guard comes back.
       If you are both the same skill:
     </p>
@@ -52,10 +53,19 @@ const DAMAGE: WikiCompareRow[] = [
 
     <WikiHeading id="rulesets">Rulesets</WikiHeading>
     <p>
+      By default you just follow your commanders. If they haven't told you anything, your plays
+      go auto. They can send you at a specific enemy, or tell you to hold fire for a bit, which
+      means your plays don't hit anyone until they lift it. Your guard still comes back when you
+      play though. If you'd rather do your own thing, switch to auto or pick someone yourself
+      on the war page.
+    </p>
+    <p>
       In Duels you can pick anyone on the other team to hit, whatever their skill. A play hits
       your pick if it beats them. If it just
       comes close, it chips them. Otherwise it goes auto. Someone with no score on that map counts
-      as beaten. If your pick is broken, your plays go auto until they're back.
+      as beaten. If your pick is broken, your plays go auto until they're back. The same goes for
+      someone your commander sent you at. The other team can see who you picked, but not your
+      commander's orders.
     </p>
     <p>
       Auto breaks someone if your play can. It picks whoever is worth the most standing. If nobody
@@ -91,7 +101,8 @@ const DAMAGE: WikiCompareRow[] = [
       they lose nothing. You still get yours.
     </p>
     <p>
-      Stronger players are worth more standing. Breaking the same player again is worth 75% of
+      Stronger players are worth more standing. A weaker team takes a few more breaks to drain,
+      about 10% more against a stacked one. Breaking the same player again is worth 75% of
       the last time. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
       Hover the damage on the war page to see how much standing breaking someone would move.
     </p>
@@ -100,6 +111,11 @@ const DAMAGE: WikiCompareRow[] = [
       on a war map. That same play still hits like normal. If you don't play, your guard comes back
       on its own after a week, so you can't hide forever, and being away for a while only costs one
       break a week.
+    </p>
+    <p>
+      If a whole team gets broken, nobody waits a week. Two days after the last one goes down,
+      everyone broken in the war comes back, both teams, all at once. If someone on that team
+      plays before then, the timer's off and everyone goes back to their own week.
     </p>
     <p>
       If barely anyone on their team has played in the two weeks before the war, you get a lot
