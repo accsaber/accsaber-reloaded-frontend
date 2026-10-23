@@ -343,7 +343,7 @@ export interface ClanWarParticipantResponse {
   player: PlayerRef
   clan: PublicClanResponse
   target: PlayerRef | null
-  orders: ClanWarOrdersResponse | null
+  orders?: ClanWarOrdersResponse
   skill: number
   standingWeight: number
   guard: number

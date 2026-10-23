@@ -133,6 +133,6 @@ export function formatDuration(ms: number, opts: { seconds?: boolean; zero?: str
 }
 
 export function formatSortGlyph(direction: SortDirection | null): string {
-  if (!direction) return '↕'
+  if (!direction) return '↕︎'
   return direction === 'asc' ? '↑' : '↓'
 }
