@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/formatters'
 import {
   deactivateEvent,
   deleteEventBackground,
@@ -241,16 +242,9 @@ async function rollout() {
   }
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
-
 function missionWindow(m: MissionTemplateResponse): string {
-  const start = m.unlocksAt ? dateFmt.format(new Date(m.unlocksAt)) : 'Event start'
-  const end = m.completableUntil ? dateFmt.format(new Date(m.completableUntil)) : 'Event end'
+  const start = m.unlocksAt ? formatDateTime(m.unlocksAt) : 'Event start'
+  const end = m.completableUntil ? formatDateTime(m.completableUntil) : 'Event end'
   return `${start} → ${end}`
 }
 

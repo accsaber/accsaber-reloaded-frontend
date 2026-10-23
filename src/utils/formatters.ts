@@ -120,6 +120,14 @@ export function formatShortDate(value: string | null | undefined, fallback = EN_
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+const DATE_TIME = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' } as const
+const localDateTime = new Intl.DateTimeFormat(undefined, DATE_TIME)
+const utcDateTime = new Intl.DateTimeFormat(undefined, { ...DATE_TIME, hourCycle: 'h23', timeZone: 'UTC' })
+
+export function formatDateTime(at: string | number, utc = false): string {
+  return utc ? `${utcDateTime.format(new Date(at))} UTC` : localDateTime.format(new Date(at))
+}
+
 export function formatDuration(ms: number, opts: { seconds?: boolean; zero?: string } = {}): string {
   if (ms <= 0 && opts.zero) return opts.zero
   const total = Math.max(0, Math.floor(ms / 1000))

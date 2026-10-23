@@ -16,7 +16,8 @@ import type {
   ClanWarTargeting,
 } from '@/types/api/clans'
 import BaseBanner from '@/components/common/BaseBanner.vue'
-import { formatDuration } from '@/utils/formatters'
+import HintTooltip from '@/components/common/HintTooltip.vue'
+import { formatDateTime, formatDuration } from '@/utils/formatters'
 import { hasClanRole, isWarRosterOpen, warLeadSide, warTeamOf, warWipe } from '@/utils/clans'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -81,7 +82,8 @@ const wipe = computed(() =>
     : null,
 )
 const wipeAt = computed(() => wipe.value?.at ?? null)
-const wipeIn = computed(() => (wipe.value && wipe.value.at > now.value ? `in ${formatDuration(wipe.value.at - now.value)}` : 'now'))
+const wipeIn = computed(() => (wipe.value && wipe.value.at > now.value ? formatDuration(wipe.value.at - now.value) : ''))
+const wipeAtUtc = computed(() => (wipe.value ? formatDateTime(wipe.value.at, true) : ''))
 const boards = useWarMapBoards(
   () => warId.value,
   (mapId) => (participantsMapId.value === mapId ? participants.value : null),
@@ -322,7 +324,9 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
       <ClanWarHud :war="war" :now="now" :can-retreat="canRetreat" :viewer-team="viewerTeam" @retreat="retreatOpen = true" />
 
       <BaseBanner v-if="wipe" variant="warning" :dismissible="false">
-        {{ wipe.team === 'attack' ? 'Attack' : 'Defense' }} is wiped. Everyone broken comes back {{ wipeIn }}.
+        {{ wipe.team === 'attack' ? 'Attack' : 'Defense' }} is wiped. Everyone broken comes back
+        <template v-if="wipeIn">in <HintTooltip class="wipe-time" :text="wipeAtUtc" :tag="wipeIn" /></template>
+        <template v-else>now</template>.
       </BaseBanner>
 
       <WarPrepPanel
@@ -429,6 +433,17 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
 </template>
 
 <style scoped>
+button.wipe-time {
+  padding: 0;
+  border: none;
+  border-bottom: 1px dotted currentColor;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .war-page {
   display: flex;
   flex-direction: column;

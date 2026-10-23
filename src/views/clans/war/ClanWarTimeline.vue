@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDateTime } from '@/utils/formatters'
 import type { ClanWarResponse, ClanWarTeam, ClanWarTimelinePointResponse } from '@/types/api/clans'
 import { formatStanding, OPPOSING_TEAM, WAR_TEAMS, warSideStyles } from '@/utils/clans'
 import { computed, ref } from 'vue'
@@ -98,10 +99,6 @@ const tooltipStyle = computed(() =>
     : undefined,
 )
 
-function stamp(at: string | number): string {
-  return new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
 function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`
 }
@@ -152,11 +149,11 @@ const summary = computed(() =>
       </svg>
       <div v-if="hovered" class="timeline__tooltip" :style="tooltipStyle" role="status">
         <span>{{ tooltipLine(hovered) }}</span>
-        <span class="timeline__tooltip-time">{{ stamp(hovered.point.at) }}</span>
+        <span class="timeline__tooltip-time">{{ formatDateTime(hovered.point.at) }}</span>
       </div>
       <div class="timeline__ends">
-        <span>{{ stamp(start) }}</span>
-        <span>{{ stamp(end) }}</span>
+        <span>{{ formatDateTime(start) }}</span>
+        <span>{{ formatDateTime(end) }}</span>
       </div>
     </div>
   </WarSection>
