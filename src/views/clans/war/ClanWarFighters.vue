@@ -119,7 +119,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
               <HintTooltip v-if="t.reduced" class="fighters__last-stand" :text="lastStandTitle">
                 <template #trigger>
                   <span class="fighters__last-stand-label">Last stand</span>
-                  Damage reduced by {{ t.reduced }}%
+                  -{{ t.reduced }}% damage
                 </template>
               </HintTooltip>
             </span>
@@ -284,6 +284,9 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 }
 
 .fighters__clan .fighters__last-stand {
+  display: block;
+  flex-shrink: 1;
+  min-width: 0;
   padding: 0;
   border: none;
   font-weight: 400;
