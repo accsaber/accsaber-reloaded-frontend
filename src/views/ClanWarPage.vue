@@ -202,10 +202,9 @@ function applyWar(next: ClanWarResponse) {
   detail.value.war = next
   reloadKey.value += 1
   void loadParticipants()
-  boards.invalidate()
-  if (!statusChanged) return
   void load()
-  void loadRewards()
+  boards.invalidate()
+  if (statusChanged) void loadRewards()
 }
 
 useClanFeed(attackLeadId, {
@@ -360,6 +359,7 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
         v-if="rosterShown"
         :war="war"
         :rules="detail.strikeRules"
+        :last-stand="detail.lastStand"
         :participants="participants"
         :error="participantsError"
         :viewer="viewer"

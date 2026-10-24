@@ -294,6 +294,7 @@ export interface ClanWarDetailResponse {
   pool: ClanWarPoolEntryResponse[]
   timeline: ClanWarTimelinePointResponse[]
   strikeRules: ClanWarStrikeRulesResponse
+  lastStand?: Record<ClanWarTeam, number>
 }
 
 export interface ClanWarStrikeRulesResponse {

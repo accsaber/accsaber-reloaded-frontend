@@ -14,7 +14,7 @@ import type {
 } from '@/types/api/clans'
 import { isWarRosterOpen, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
 import type { SortDirection } from '@/types/display'
-import { formatPercent, formatSortGlyph } from '@/utils/formatters'
+import { formatSortGlyph } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import FighterStrike from './FighterStrike.vue'
 import WarGuard from './WarGuard.vue'
@@ -31,6 +31,7 @@ const props = defineProps<{
   pool: ClanWarPoolEntryResponse[]
   loadedMapId: string
   wipe: WarWipe | null
+  lastStand?: Record<ClanWarTeam, number>
 }>()
 
 const mapId = defineModel<string>('mapId', { required: true })
@@ -65,22 +66,19 @@ function fightersOf(clanId: string, team: ClanWarTeam): ClanWarParticipantRespon
 
 const lastStandTitle = computed(
   () =>
-    `Less than ${Math.round(props.rules.lastStandFrom * 100)}% of their team is still standing. ` +
-    `The fewer are left, the less your hits do, down to ${Math.round(props.rules.lastStandDamage * 100)}% on the last one.`,
+    `Less than ${Math.round(props.rules.lastStandFrom * 100)}% of this team is still standing. ` +
+    `The fewer are left, the less damage they take, down to ${Math.round(props.rules.lastStandDamage * 100)}% on the last one.`,
 )
 
 const teams = computed(() =>
   WAR_TEAMS.map((team) => {
     const clans = props.war[team].sides
-      .map((side) => {
-        const fighters = fightersOf(side.clan.id, team)
-        const lastStand = fighters.find((f) => f.strikePreview)?.strikePreview?.lastStand ?? 1
-        const reduced = lastStand < 1 ? formatPercent((1 - lastStand) * 100, 0) : null
-        return { clan: side.clan, fighters, reduced }
-      })
+      .map((side) => ({ clan: side.clan, fighters: fightersOf(side.clan.id, team) }))
       .filter((group) => group.fighters.length)
     const strikes = clans.some((group) => group.fighters.some((f) => f.strikePreview))
-    return { team, style: styles.value[team], clans, strikes }
+    const factor = props.lastStand?.[team] ?? 1
+    const reduced = factor < 1 ? Math.round((1 - factor) * 100) : null
+    return { team, style: styles.value[team], clans, strikes, reduced }
   }),
 )
 
@@ -118,10 +116,10 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
           <div class="fighters__head">
             <span class="fighters__clan">
               <ClanTag :clan="group.clan" size="sm" />
-              <HintTooltip v-if="group.reduced" class="fighters__last-stand" :text="lastStandTitle">
+              <HintTooltip v-if="t.reduced" class="fighters__last-stand" :text="lastStandTitle">
                 <template #trigger>
                   <span class="fighters__last-stand-label">Last stand</span>
-                  Damage reduced by {{ group.reduced }}%
+                  Damage reduced by {{ t.reduced }}%
                 </template>
               </HintTooltip>
             </span>
