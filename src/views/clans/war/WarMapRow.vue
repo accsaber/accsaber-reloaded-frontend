@@ -3,6 +3,7 @@ import CategoryBadge from '@/components/domain/CategoryBadge.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
+import { buildMapRoute } from '@/utils/mapRoute'
 import { pickCoverUrl } from '@/utils/media'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
@@ -13,6 +14,7 @@ const props = defineProps<{
 }>()
 
 const categoryStore = useCategoryStore()
+const mapRoute = computed(() => buildMapRoute({ ...props.difficulty, difficultyId: props.difficulty.id }))
 const categoryCode = computed(() => categoryStore.getCategoryCode(props.difficulty.categoryId) ?? 'overall')
 </script>
 
@@ -20,7 +22,7 @@ const categoryCode = computed(() => categoryStore.getCategoryCode(props.difficul
   <div class="war-map">
     <img class="war-map__cover" :src="pickCoverUrl(difficulty)" alt="" loading="lazy" decoding="async" />
     <div class="war-map__body">
-      <RouterLink class="war-map__title" :to="{ name: 'map-detail', params: { mapId: difficulty.mapId } }">
+      <RouterLink class="war-map__title" :to="mapRoute">
         <SongTitle :name="difficulty.songName" :sub-name="difficulty.songSubName" />
       </RouterLink>
       <span class="war-map__badges">

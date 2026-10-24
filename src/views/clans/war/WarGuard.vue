@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ClanWarParticipantResponse, ClanWarStrikeRulesResponse } from '@/types/api/clans'
 import { useNow } from '@/composables/useNow'
-import { guardBackAt } from '@/utils/clans'
+import { guardBackAt, type WarWipe } from '@/utils/clans'
 import { formatDuration } from '@/utils/formatters'
 import { computed } from 'vue'
 import ClanBar from '../ClanBar.vue'
@@ -10,8 +10,11 @@ import { streakFactor } from './warStrike'
 const props = defineProps<{
   fighter: ClanWarParticipantResponse
   rules: ClanWarStrikeRulesResponse
-  wipeAt: number | null
+  wipe: WarWipe | null
+  repeatMap?: boolean
 }>()
+
+const REPEAT_TITLE = "Your team already hit them on this map. Hitting them here again won't get the streak bonus."
 
 const percent = (factor: number) => Math.round((factor - 1) * 100)
 
@@ -20,18 +23,20 @@ const streak = computed(() => (preview.value
   ? preview.value.hitsThisCycle + preview.value.noScoreHitsThisCycle + preview.value.chipsThisCycle
   : 0))
 const boost = computed(() => (preview.value ? percent(streakFactor(props.rules, preview.value)) : 0))
-const streakTitle = computed(
-  () =>
-    `${streak.value} ${streak.value === 1 ? 'hit' : 'hits'} landed on them since their guard came back. ` +
-    `Every hit makes the next one ${percent(props.rules.escalation)}% stronger, no matter who on your team lands it. ` +
-    `A hit on them while they had no score only adds ${percent(props.rules.missingScoreEscalation)}%, ` +
+const streakTitle = computed(() => {
+  const maps = preview.value ? preview.value.hitsThisCycle + preview.value.noScoreHitsThisCycle : 0
+  const chips = preview.value?.chipsThisCycle ?? 0
+  return `${maps} ${maps === 1 ? 'map' : 'maps'} hit and ${chips} ${chips === 1 ? 'chip' : 'chips'} since their guard came back. ` +
+    `Every new map hit makes the next one ${percent(props.rules.escalation)}% stronger, no matter who on your team lands it. ` +
+    `A map hit while they had no score only adds ${percent(props.rules.missingScoreEscalation)}%, ` +
     `a chip ${percent(props.rules.chipEscalation)}%. ` +
-    "It resets once they're broken.",
-)
+    'Hitting them again on the same map gets no streak bonus. ' +
+    "It resets once they're broken."
+})
 const now = useNow()
 const backWithin = computed(() => {
   if (!props.fighter.brokenAt) return null
-  return formatDuration(guardBackAt(props.fighter.brokenAt, props.rules, props.wipeAt) - now.value)
+  return formatDuration(guardBackAt(props.fighter.brokenAt, props.rules, props.wipe) - now.value)
 })
 const brokenTitle = computed(
   () =>
@@ -50,7 +55,8 @@ const brokenTitle = computed(
       <ClanBar :value="fighter.guard" :max="rules.guard" />
       <span class="war-guard__value">{{ Math.round(fighter.guard) }}</span>
     </span>
-    <span v-if="streak" class="war-guard__streak" :title="streakTitle">
+    <span v-if="repeatMap" class="war-guard__repeat" :title="REPEAT_TITLE">Already hit</span>
+    <span v-else-if="streak" class="war-guard__streak" :title="streakTitle">
       +{{ boost }}% next hit
     </span>
   </span>
@@ -88,6 +94,14 @@ const brokenTitle = computed(
 
 .war-guard__streak {
   color: var(--warning);
+}
+
+.war-guard__repeat {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--error);
+  cursor: help;
 }
 
 .war-guard__limit {

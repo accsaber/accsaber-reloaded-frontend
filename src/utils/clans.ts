@@ -12,7 +12,6 @@ import type {
   ClanStandingSource,
   ClanUnlocksResponse,
   ClanWarOutcome,
-  ClanWarParticipantResponse,
   ClanWarPoolSource,
   ClanWarRefResponse,
   ClanWarResponse,
@@ -126,6 +125,14 @@ export function warTeamOf(war: ClanWarResponse, clanId: string): ClanWarTeam | n
   return WAR_TEAMS.find((team) => war[team].sides.some((side) => side.clan.id === clanId)) ?? null
 }
 
+export function warClan(war: ClanWarResponse, clanId: string): PublicClanResponse | null {
+  for (const team of WAR_TEAMS) {
+    const side = war[team].sides.find((s) => s.clan.id === clanId)
+    if (side) return side.clan
+  }
+  return null
+}
+
 export function warLeadSide(team: ClanWarTeamResponse) {
   return team.sides.find((side) => side.clan.id === team.lead.id) ?? null
 }
@@ -139,37 +146,20 @@ export function warOpponent(war: ClanWarResponse, clanId: string): PublicClanRes
 }
 
 export interface WarWipe {
-  team: ClanWarTeam
+  wipedAt: number
   at: number
 }
 
-function teamWipeAt(war: ClanWarResponse, team: ClanWarTeam, participants: ClanWarParticipantResponse[]): number | null {
-  const fighting = new Set(
-    war[team].sides.filter((side) => !(side.stake > 0 && side.stakeRemaining <= 0)).map((side) => side.clan.id),
-  )
-  const fighters = participants.filter((p) => !p.leftAt && fighting.has(p.clan.id))
-  if (!fighters.length || fighters.some((p) => !p.brokenAt)) return null
-  return Math.max(...fighters.map((p) => new Date(p.brokenAt!).getTime()))
+export function warWipe(war: ClanWarResponse, rules: ClanWarStrikeRulesResponse): WarWipe | null {
+  if (!war.wipedAt) return null
+  const wipedAt = Date.parse(war.wipedAt)
+  return { wipedAt, at: wipedAt + rules.wipeDurationHours * 3_600_000 }
 }
 
-export function warWipe(
-  war: ClanWarResponse,
-  participants: ClanWarParticipantResponse[],
-  rules: ClanWarStrikeRulesResponse,
-): WarWipe | null {
-  let wipe: WarWipe | null = null
-  for (const team of WAR_TEAMS) {
-    const last = teamWipeAt(war, team, participants)
-    if (last === null) continue
-    const at = last + rules.wipeDurationHours * 3_600_000
-    if (!wipe || at < wipe.at) wipe = { team, at }
-  }
-  return wipe
-}
-
-export function guardBackAt(brokenAt: string, rules: ClanWarStrikeRulesResponse, wipeAt: number | null): number {
-  const own = new Date(brokenAt).getTime() + rules.brokenDurationHours * 3_600_000
-  return wipeAt === null ? own : Math.min(own, wipeAt)
+export function guardBackAt(brokenAt: string, rules: ClanWarStrikeRulesResponse, wipe: WarWipe | null): number {
+  const broken = Date.parse(brokenAt)
+  const own = broken + rules.brokenDurationHours * 3_600_000
+  return wipe && broken <= wipe.wipedAt ? Math.min(own, wipe.at) : own
 }
 
 export function isPacifist(clan: ClanResponse, now = Date.now()): boolean {

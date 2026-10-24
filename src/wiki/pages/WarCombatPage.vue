@@ -4,10 +4,11 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const DAMAGE: WikiCompareRow[] = [
-  { label: '1st hit', values: ['15', '85'] },
-  { label: '2nd hit', values: ['22.5', '62.5'] },
-  { label: '3rd hit', values: ['33.75', '28.75'] },
-  { label: '4th hit', values: ['50.63', 'Broken'] },
+  { label: '1st hit', values: ['12', '88'] },
+  { label: '2nd hit', values: ['17.4', '70.6'] },
+  { label: '3rd hit', values: ['25.23', '45.37'] },
+  { label: '4th hit', values: ['36.58', '8.79'] },
+  { label: '5th hit', values: ['53.04', 'Broken'] },
 ]
 </script>
 
@@ -34,21 +35,32 @@ const DAMAGE: WikiCompareRow[] = [
     <p>
       You hit someone by beating their score on a war map. If they have no score there, you hit
       them for 30% of the damage. Only plays after the war starts count. You can hit the same
-      person on the same map with every play until they break.
+      person on the same map with every play, but replaying one map won't get you far. More on
+      that below.
     </p>
 
     <WikiHeading id="damage">Damage</WikiHeading>
     <p>
-      Each hit on a player makes the next one stronger, no matter who on your team lands it.
-      Hits on someone with no score count too, but only bump it by 1.2x instead of 1.45x. The
-      streak starts over once their guard comes back.
-      If you are both the same skill:
+      Every map a player gets hit on makes the next hit on them stronger, no matter who on your
+      team lands it. Hits on someone with no score count too, but only bump it by 1.2x instead of
+      1.45x. Hitting them again on a map they already got hit on just does base damage and only builds
+      as much as a chip, so you break people by beating them on different maps, not by spamming your
+      best one. The streak starts over once their guard comes back.
+      If you are both the same skill and every hit is on a new map:
     </p>
     <WikiCompareTable :columns="['Damage', 'Guard left']" :rows="DAMAGE" />
     <p>
       Skill uses the Overall skill level from your profile. Hitting someone at twice your level
       does double damage. Hitting someone at half your level does half. The full formula is on
       <RouterLink to="/wiki/war-math#hit">War Math</RouterLink>.
+    </p>
+    <p>
+      Two things make hits softer. A map someone already got broken on by a hit (chips don't count) hits them for 75% for the
+      rest of the war, and 50% once it's broken them three times, so you can't keep farming the
+      same person on your comfort map. And once less than half of a team is still standing, hits
+      and chips on them get weaker, down to half for the last one up. Coming back into a beaten
+      team isn't just painting a target on yourself anymore. None of this changes how much
+      standing a break moves.
     </p>
 
     <WikiHeading id="rulesets">Rulesets</WikiHeading>
@@ -85,8 +97,9 @@ const DAMAGE: WikiCompareRow[] = [
     <p>
       In Duels, a play that comes close to an enemy's score without beating it chips them. A chip
       does up to 3 damage. It gets smaller the further off you are and the lower your skill is
-      next to theirs. It never goes below 1. Against a 99.25, a strong player on a 99.22 chips about 2.3. A much weaker
-      player on a 98.7 chips 1. You can play with these values on your war's page.
+      next to theirs, all the way down to almost nothing. Against a 99.25, someone at the same
+      skill on a 99.22 chips about 2.9, on a 98.7 about 1.6, and on a 97.7 barely 0.1. Below about
+      97.6 it doesn't chip at all. You can play with these values on your war's page.
     </p>
     <p>
       Each chip makes the next hit on them 5% stronger, so getting close still softens them up for
@@ -114,8 +127,9 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       If a whole team gets broken, nobody waits a week. Two days after the last one goes down,
-      everyone broken in the war comes back, both teams, all at once. If someone on that team
-      plays before then, the timer's off and everyone goes back to their own week.
+      everyone who was broken by then comes back, both teams, all at once. Getting up early doesn't
+      cancel it for anyone else. But if you get up and get broken again, that one's on you, you're back
+      on a full week.
     </p>
     <p>
       If barely anyone on their team has played in the two weeks before the war, you get a lot

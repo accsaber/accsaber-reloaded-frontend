@@ -4,15 +4,17 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const RULES = {
-  baseDamage: 15,
+  baseDamage: 12,
   escalation: 1.45,
   disparityExponent: 1,
   missingScoreMultiplier: 0.3,
   missingScoreEscalation: 1.2,
   chipEscalation: 1.05,
+  mapBreakDecay: 0.75,
+  mapBreakFloor: 0.5,
+  lastStandDamage: 0.5,
   chipDamage: 3,
-  minChipDamage: 1,
-  chipWindow: 0.3,
+  chipWindow: 0.5,
   chipSkillExponent: 2,
   breakShare: 0.5,
   breakDecay: 0.75,
@@ -34,25 +36,33 @@ const HIT_PARAMS: WikiCompareRow[] = [
   { label: 'Base damage', values: [`${RULES.baseDamage}`, 'A first hit between equal players'] },
   {
     label: 'Escalation',
-    values: [`${RULES.escalation}`, 'Each hit that beat their score since their guard came back multiplies the next one'],
+    values: [`${RULES.escalation}`, 'Each map they got hit on with a score since their guard came back multiplies the next hit'],
   },
   {
     label: 'No-score escalation',
-    values: [`${RULES.missingScoreEscalation}`, 'Each hit on them while they had no score multiplies the next one by this instead'],
+    values: [`${RULES.missingScoreEscalation}`, 'Each map they got hit on while they had no score multiplies the next hit by this instead'],
   },
   {
     label: 'Chip escalation',
     values: [`${RULES.chipEscalation}`, 'Each chip on them since their guard came back multiplies the next hit by this'],
   },
-  { label: 'Hits', values: ['', 'Hits on that player from anyone since their guard last came back that beat a score'] },
-  { label: 'No-score hits', values: ['', 'Hits on that player since their guard came back where they had no score on the map'] },
-  { label: 'Chips', values: ['', 'Chips on that player since their guard came back, the random extra ones too'] },
+  { label: 'Maps hit', values: ['', 'Maps that player got hit on by anyone since their guard came back, beating a score. A second hit on the same map counts once'] },
+  { label: 'No-score maps', values: ['', 'Maps that player got hit on since their guard came back while they had no score there'] },
+  { label: 'Chips', values: ['', 'Chips on that player since their guard came back, the random extra ones too, plus every repeat hit on a map they were already hit on'] },
   { label: 'Skill', values: ['', 'Overall skill level from the profile, never lower than 1'] },
   {
     label: 'Disparity exponent',
     values: [`${RULES.disparityExponent}`, 'Someone at twice your skill takes double. Half your skill takes half'],
   },
   { label: 'No-score multiplier', values: [`${RULES.missingScoreMultiplier}`, 'They have no score on the map'] },
+  {
+    label: 'Map penalty',
+    values: [`${RULES.mapBreakDecay} per break`, `For each time a hit on this map broke them this war (chip breaks don't count), never below ${RULES.mapBreakFloor}`],
+  },
+  {
+    label: 'Last stand',
+    values: [`1 to ${RULES.lastStandDamage}`, `1 while half their team is up, sliding to ${RULES.lastStandDamage} for the last one standing`],
+  },
 ]
 
 const CHIP_PARAMS: WikiCompareRow[] = [
@@ -62,7 +72,6 @@ const CHIP_PARAMS: WikiCompareRow[] = [
   },
   { label: 'Chip window', values: [`${RULES.chipWindow}`, 'You only chip inside it'] },
   { label: 'Chip skill exponent', values: [`${RULES.chipSkillExponent}`, 'Weaker players chip a lot less'] },
-  { label: 'Minimum chip', values: [`${RULES.minChipDamage}`, 'The least a chip can do'] },
 ]
 
 const BREAK_PARAMS: WikiCompareRow[] = [
@@ -87,16 +96,18 @@ const XP_PARAMS: WikiCompareRow[] = [
     <WikiHeading id="hit">Hit damage</WikiHeading>
     <math display="block">
       <mtext>damage</mtext><mo>=</mo><mn>{{ RULES.baseDamage }}</mn><mo>x</mo>
-      <msup><mn>{{ RULES.escalation }}</mn><mtext>hits</mtext></msup><mo>x</mo>
-      <msup><mn>{{ RULES.missingScoreEscalation }}</mn><mtext>no-score hits</mtext></msup><mo>x</mo>
+      <msup><mn>{{ RULES.escalation }}</mn><mtext>maps hit</mtext></msup><mo>x</mo>
+      <msup><mn>{{ RULES.missingScoreEscalation }}</mn><mtext>no-score maps</mtext></msup><mo>x</mo>
       <msup><mn>{{ RULES.chipEscalation }}</mn><mtext>chips</mtext></msup><mo>x</mo>
       <msup>
         <mrow><mo>(</mo><mfrac><mtext>their skill</mtext><mtext>your skill</mtext></mfrac><mo>)</mo></mrow>
         <mn>{{ RULES.disparityExponent }}</mn>
       </msup>
+      <mo>x</mo><mtext>map penalty</mtext><mo>x</mo><mtext>last stand</mtext>
     </math>
     <p>
-      If they have no score on the map, skill doesn't count. You swap the skill part for
+      If they already got hit on this map since their guard came back, every escalation part is
+      1, so it's base damage. It still counts as a chip for later hits. If they have no score on the map, skill doesn't count. You swap the skill part for
       {{ RULES.missingScoreMultiplier }}. That hit also builds the streak by
       {{ RULES.missingScoreEscalation }} instead of {{ RULES.escalation }}. A hit never takes more than the guard they have left.
     </p>
@@ -112,7 +123,7 @@ const XP_PARAMS: WikiCompareRow[] = [
         <mn>{{ RULES.chipSkillExponent }}</mn>
       </msup>
     </math>
-    <p>A chip never does less than {{ RULES.minChipDamage }}.</p>
+    <p>The last stand factor scales chips too. There is no minimum. A chip near the edge of the window does almost nothing.</p>
     <WikiCompareTable :columns="COLUMNS" :rows="CHIP_PARAMS" />
 
     <WikiHeading id="break">Standing on a break</WikiHeading>
@@ -169,9 +180,9 @@ const XP_PARAMS: WikiCompareRow[] = [
 
     <WikiHeading id="example">An example</WikiHeading>
     <p>
-      Two players with the same skill keep hitting one guy. The hits do 15, 22.5 and 33.75. The
-      4th would do 50.6. He only has 28.75 left. That hit breaks him. With no score on the map, the
-      first hit would be 15 x 0.3 = 4.5. The one after it 15 x 1.2 x 0.3 = 5.4.
+      Two players with the same skill keep hitting one guy. The hits do 12, 17.4, 25.23 and 36.58. The
+      5th would do 53.04. He only has 8.79 left. That hit breaks him. With no score on the map, the
+      first hit would be 12 x 0.3 = 3.6. The one after it 12 x 1.2 x 0.3 = 4.32.
     </p>
   </WikiProse>
 </template>

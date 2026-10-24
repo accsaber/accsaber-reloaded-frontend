@@ -23,4 +23,6 @@ export interface MapDifficultyRef {
   difficulty: Difficulty
   categoryId?: string
   categoryName?: string
+  beatsaverCode: string
+  characteristic: string
 }

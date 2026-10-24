@@ -16,12 +16,15 @@ interface StrikeBreakdown {
   lines: StrikeLine[]
 }
 
-interface StrikeOutcome extends StrikeBreakdown {
+export interface StrikeOutcome extends StrikeBreakdown {
   kind: StrikeKind
   note: string
 }
 
-export const formatDamage = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 1 })
+export function formatDamage(value: number): string {
+  if (value > 0 && value < 0.1) return '<0.1'
+  return value.toLocaleString(undefined, { maximumFractionDigits: 1 })
+}
 
 const formatRate = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 3 })
 
@@ -42,41 +45,42 @@ export function streakFactor(rules: ClanWarStrikeRulesResponse, streak: Streak):
     * rules.chipEscalation ** streak.chipsThisCycle
 }
 
-export function hitDamage(rules: ClanWarStrikeRulesResponse, streak: Streak, disparity: number): number {
-  return rules.baseDamage * streakFactor(rules, streak) * disparity
-}
+const NO_STREAK: Streak = { hitsThisCycle: 0, noScoreHitsThisCycle: 0, chipsThisCycle: 0 }
 
-export function noScoreDamage(rules: ClanWarStrikeRulesResponse, streak: Streak): number {
-  return hitDamage(rules, streak, 1) * rules.missingScoreMultiplier
-}
+const mapStreak = (preview: ClanWarStrikePreviewResponse): Streak => (preview.onMap?.repeatMap ? NO_STREAK : preview)
 
-export function hitsToBreak(
-  rules: ClanWarStrikeRulesResponse,
-  guard: number,
-  streak: Streak,
-  disparity: number,
-): number {
-  let hits = 0
-  for (let left = guard; left > 0; hits++) {
-    left -= hitDamage(rules, { ...streak, hitsThisCycle: streak.hitsThisCycle + hits }, disparity)
-  }
-  return hits
+export function noScoreDamage(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): number {
+  return rules.baseDamage * streakFactor(rules, mapStreak(preview)) * rules.missingScoreMultiplier
+    * (preview.onMap?.mapPenalty ?? 1) * preview.lastStand
 }
 
 function streakLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  const base = { label: 'Base damage', value: formatDamage(rules.baseDamage) }
+  if (preview.onMap?.repeatMap) return [base, factor('Streak', 1, 'already hit on this map: no streak bonus')]
   const rates = [
-    `x${formatRate(rules.escalation)} per hit (${preview.hitsThisCycle})`,
-    `x${formatRate(rules.missingScoreEscalation)} per no-score hit (${preview.noScoreHitsThisCycle})`,
+    `x${formatRate(rules.escalation)} per map hit (${preview.hitsThisCycle})`,
+    `x${formatRate(rules.missingScoreEscalation)} per no-score map hit (${preview.noScoreHitsThisCycle})`,
     `x${formatRate(rules.chipEscalation)} per chip (${preview.chipsThisCycle})`,
   ]
-  return [
-    { label: 'Base damage', value: formatDamage(rules.baseDamage) },
-    factor('Streak', streakFactor(rules, preview), `since their guard came back: ${rates.join(', ')}`),
-  ]
+  return [base, factor('Streak', streakFactor(rules, preview), `since their guard came back: ${rates.join(', ')}`)]
+}
+
+function lastStandLines(preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  return preview.lastStand < 1 ? [factor('Last stand', preview.lastStand, 'few of their team are still unbroken')] : []
+}
+
+function penaltyLines(preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  const penalty = preview.onMap?.mapPenalty ?? 1
+  const map = penalty < 1 ? [factor('Map penalty', penalty, 'this map broke them before')] : []
+  return [...map, ...lastStandLines(preview)]
 }
 
 function hitLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
-  return [...streakLines(rules, preview), factor('Skill gap', preview.disparity, skillDetail(preview, rules.disparityExponent))]
+  return [
+    ...streakLines(rules, preview),
+    factor('Skill gap', preview.disparity, skillDetail(preview, rules.disparityExponent)),
+    ...penaltyLines(preview),
+  ]
 }
 
 function finish(lines: StrikeLine[], damage: number, guard: number, suffix = ''): StrikeBreakdown {
@@ -105,7 +109,7 @@ function breakLine(preview: ClanWarStrikePreviewResponse): StrikeLine {
     : { label: 'Breaking them', value: `-${taken} Standing`, detail: `for their clan, +${gained} for yours` }
 }
 
-export function accuracyGap(targetAccuracy: number, accuracy: number): number {
+function accuracyGap(targetAccuracy: number, accuracy: number): number {
   if (accuracy === targetAccuracy) return 0
   return -Math.log10(1 - targetAccuracy) + Math.log10(1 - accuracy)
 }
@@ -119,9 +123,9 @@ function chipLines(
 ): StrikeLine[] {
   return [
     { label: 'Chip damage', value: formatDamage(rules.chipDamage) },
-    { label: 'Minimum chip', value: formatDamage(rules.minChipDamage) },
     factor('Closeness', closeness, accuracies),
     factor('Skill gap', ratio ** rules.chipSkillExponent, skillDetail(preview, rules.chipSkillExponent)),
+    ...lastStandLines(preview),
   ]
 }
 
@@ -134,7 +138,11 @@ export function strikeOutcome(
 ): StrikeOutcome {
   const target = preview.onMap?.targetScore
   if (target == null) {
-    const lines = [...streakLines(rules, preview), factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here')]
+    const lines = [
+      ...streakLines(rules, preview),
+      factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here'),
+      ...penaltyLines(preview),
+    ]
     const result = finish(lines, noScoreDamage(rules, preview), guard)
     return { kind: 'damage', note: 'No score on this map', ...result }
   }
@@ -149,6 +157,6 @@ export function strikeOutcome(
   const ratio = Math.min(1, preview.attackerSkill / preview.victimSkill)
   const accuracies = `your ${formatAccuracy(score / maxScore)} vs their ${formatAccuracy(target / maxScore)}`
   const lines = chipLines(rules, preview, closeness, ratio, accuracies)
-  const result = finish(lines, Math.max(rules.minChipDamage, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent), guard)
+  const result = finish(lines, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent * preview.lastStand, guard)
   return { kind: 'chip', note, ...result }
 }

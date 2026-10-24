@@ -1,5 +1,5 @@
 import type { PaginationParams } from '../pagination'
-import type { PlayerRef } from './common'
+import type { MapDifficultyRef, PlayerRef } from './common'
 import type { ItemResponse } from './items'
 import type { PublicMapDifficultyResponse } from './maps'
 import type { MyScoreSummary } from './users'
@@ -259,6 +259,7 @@ export interface ClanWarResponse {
   startsAt: string | null
   retreatAt: string | null
   endedAt: string | null
+  wipedAt?: string | null
 }
 
 export interface ClanWarRefResponse {
@@ -303,8 +304,11 @@ export interface ClanWarStrikeRulesResponse {
   missingScoreMultiplier: number
   missingScoreEscalation: number
   chipEscalation: number
+  mapBreakDecay: number
+  mapBreakFloor: number
+  lastStandDamage: number
+  lastStandFrom: number
   chipDamage: number
-  minChipDamage: number
   chipWindow: number
   chipSkillExponent: number
   brokenDurationHours: number
@@ -313,6 +317,8 @@ export interface ClanWarStrikeRulesResponse {
 
 export interface ClanWarStrikeMapResponse {
   targetScore?: number
+  repeatMap: boolean
+  mapPenalty: number
 }
 
 export interface ClanWarStrikePreviewResponse {
@@ -324,6 +330,7 @@ export interface ClanWarStrikePreviewResponse {
   attackerSkill: number
   victimSkill: number
   disparity: number
+  lastStand: number
   standingTaken: number
   standingGained: number
   onMap?: ClanWarStrikeMapResponse
@@ -341,7 +348,7 @@ export interface ClanWarOrdersResponse {
 
 export interface ClanWarParticipantResponse {
   player: PlayerRef
-  clan: PublicClanResponse
+  clanId: string
   target: PlayerRef | null
   orders?: ClanWarOrdersResponse
   skill: number
@@ -361,7 +368,7 @@ export interface ClanWarHitResponse {
   attacker: PlayerRef
   victim: PlayerRef
   victimCycle: number
-  difficulty: PublicMapDifficultyResponse
+  map: MapDifficultyRef
   missingScore: boolean
   chip: boolean
   damage: number

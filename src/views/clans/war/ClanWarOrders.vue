@@ -40,13 +40,13 @@ const tabs = computed(() => [
   ...(duel.value ? [{ key: 'target', label: 'Target' }] : []),
   { key: 'halt', label: 'Halt' },
 ])
-const fighters = computed(() => props.participants.filter((p) => p.clan.id === props.ownClanId && !p.leftAt))
+const fighters = computed(() => props.participants.filter((p) => p.clanId === props.ownClanId && !p.leftAt))
 const following = computed(() => fighters.value.filter((p) => p.orders?.targeting === 'follow'))
 const enemyOptions = computed(() => {
   const team = warTeamOf(props.war, props.ownClanId)
   if (!team) return []
   return props.participants
-    .filter((p) => !p.leftAt && warTeamOf(props.war, p.clan.id) === OPPOSING_TEAM[team])
+    .filter((p) => !p.leftAt && warTeamOf(props.war, p.clanId) === OPPOSING_TEAM[team])
     .map((p) => ({ value: p.player.id, label: p.player.name }))
 })
 

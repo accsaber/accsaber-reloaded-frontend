@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { WarWipe } from '@/utils/clans'
 import BaseButton from '@/components/common/BaseButton.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
@@ -27,7 +28,7 @@ const props = defineProps<{
   viewer: ClanWarParticipantResponse | null
   expanded: string | null
   boards: Record<string, WarMapBoard>
-  wipeAt: number | null
+  wipe: WarWipe | null
 }>()
 
 const emit = defineEmits<{
@@ -129,8 +130,9 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn
           :war="war"
           :rules="rules"
           :board="boards[entry.difficulty.id]"
+          :max-score="entry.difficulty.maxScore"
           :viewer="viewer"
-          :wipe-at="wipeAt"
+          :wipe="wipe"
         />
       </li>
     </ul>

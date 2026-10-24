@@ -4,12 +4,13 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import { buildMapRoute } from '@/utils/mapRoute'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { pickCoverUrl } from '@/utils/media'
 import type { ClanWarHitResponse, ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
-import { formatStanding, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
+import { formatStanding, WAR_TEAMS, warClan, warSideStyles, warTeamOf } from '@/utils/clans'
 import { formatOrdinal, formatRelativeDate } from '@/utils/formatters'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { computed, ref, watch } from 'vue'
@@ -44,7 +45,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const styles = computed(() => warSideStyles(props.war))
-const clanOf = computed(() => new Map((props.participants ?? []).map((p) => [p.player.id, p.clan])))
+const clanOf = computed(() => new Map((props.participants ?? []).map((p) => [p.player.id, warClan(props.war, p.clanId)])))
 const playerOptions = computed(() => [
   { value: '', label: 'Every fighter' },
   ...(props.participants ?? []).map((p) => ({ value: p.player.id, label: p.player.name })),
@@ -56,7 +57,7 @@ const clanOptions = computed(() => [
 const filtered = computed(() => !!player.value || !!damageKind.value || !!clan.value)
 
 function actingClan(hit: ClanWarHitResponse) {
-  return clanOf.value.get(hit.attacker.id) ?? hit.attacker.clan ?? null
+  return clanOf.value.get(hit.attacker.id) ?? null
 }
 
 function rowStyle(hit: ClanWarHitResponse) {
@@ -86,7 +87,7 @@ const streaks = computed(() => {
   return known
 })
 
-const VERB = { hit: 'hit', chip: 'chipped', break: 'broken' }
+const VERB = { hit: 'hit', chip: 'chipped', break: 'broke' }
 
 function kind(hit: ClanWarHitResponse): keyof typeof VERB {
   if (hit.broke) return 'break'
@@ -104,7 +105,7 @@ function involves(hit: ClanWarHitResponse): boolean {
   if (player.value && hit.attacker.id !== player.value && hit.victim.id !== player.value) return false
   if (damageKind.value && hit.chip !== (damageKind.value === 'chips')) return false
   if (!clan.value) return true
-  return [hit.attacker, hit.victim].some((p) => (clanOf.value.get(p.id) ?? p.clan)?.id === clan.value)
+  return [hit.attacker, hit.victim].some((p) => clanOf.value.get(p.id)?.id === clan.value)
 }
 
 async function fetchHits() {
@@ -179,21 +180,18 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
         <span class="war-hits__clan">
           <ClanTag v-if="actingClan(hit)" :clan="actingClan(hit)!" size="sm" />
         </span>
-        <span v-if="hit.broke" class="war-hits__who">
-          <UserChip :user="hit.victim" size="xs" link hide-clan />
-          <span class="war-hits__verb">{{ VERB.break }} by</span>
-          <UserChip :user="hit.attacker" size="xs" compact link hide-clan />
-        </span>
-        <span v-else class="war-hits__who">
+        <span class="war-hits__who">
           <UserChip :user="hit.attacker" size="xs" link hide-clan />
           <span class="war-hits__verb">{{ VERB[kind(hit)] }}</span>
           <UserChip :user="hit.victim" size="xs" compact link hide-clan />
-          <span class="war-hits__verb">for</span>
-          <span class="war-hits__damage">{{ formatDamage(hit.damage) }}</span>
+          <template v-if="!hit.broke">
+            <span class="war-hits__verb">for</span>
+            <span class="war-hits__damage">{{ formatDamage(hit.damage) }}</span>
+          </template>
         </span>
-        <RouterLink class="war-hits__map" :to="{ name: 'map-detail', params: { mapId: hit.difficulty.mapId } }">
-          <img class="war-hits__cover" :src="pickCoverUrl(hit.difficulty)" alt="" loading="lazy" decoding="async" />
-          <span class="war-hits__song">{{ hit.difficulty.songName }}</span>
+        <RouterLink class="war-hits__map" :to="buildMapRoute(hit.map)">
+          <img class="war-hits__cover" :src="pickCoverUrl(hit.map)" alt="" loading="lazy" decoding="async" />
+          <span class="war-hits__song">{{ hit.map.songName }}</span>
           <span v-if="hit.missingScore" class="war-hits__flag">no score</span>
         </RouterLink>
         <span class="war-hits__result" :title="breakTitle(hit)">{{ detail(hit) }}</span>

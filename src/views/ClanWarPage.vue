@@ -12,7 +12,6 @@ import type {
   ClanWarParticipantResponse,
   ClanWarResponse,
   ClanWarRewardsResponse,
-  ClanWarStrikeRulesResponse,
   ClanWarTargeting,
 } from '@/types/api/clans'
 import BaseBanner from '@/components/common/BaseBanner.vue'
@@ -32,7 +31,6 @@ import ClanWarOrders from './clans/war/ClanWarOrders.vue'
 import ClanWarPool from './clans/war/ClanWarPool.vue'
 import ClanWarRewards from './clans/war/ClanWarRewards.vue'
 import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
-import { hitDamage, hitsToBreak } from './clans/war/warStrike'
 import WarHaltBanner from './clans/war/WarHaltBanner.vue'
 import WarPicksModal from './clans/war/WarPicksModal.vue'
 import WarPrepPanel from './clans/war/WarPrepPanel.vue'
@@ -77,11 +75,8 @@ const viewer = computed(() => participants.value?.find((p) => p.player.id === au
 const halted = computed(() => viewer.value?.orders?.targeting === 'follow' && viewer.value.orders.order === 'halt')
 const canOrder = computed(() => !!viewerTeam.value && hasClanRole(own.role.value, 'commander'))
 const wipe = computed(() =>
-  war.value?.status === 'active' && detail.value && participants.value
-    ? warWipe(war.value, participants.value, detail.value.strikeRules)
-    : null,
+  war.value?.status === 'active' && detail.value ? warWipe(war.value, detail.value.strikeRules) : null,
 )
-const wipeAt = computed(() => wipe.value?.at ?? null)
 const wipeIn = computed(() => (wipe.value && wipe.value.at > now.value ? formatDuration(wipe.value.at - now.value) : ''))
 const wipeAtUtc = computed(() => (wipe.value ? formatDateTime(wipe.value.at, true) : ''))
 const boards = useWarMapBoards(
@@ -181,31 +176,15 @@ async function loadParticipants() {
   }
 }
 
-function trackStrike(victim: ClanWarParticipantResponse, hit: ClanWarHitResponse, rules: ClanWarStrikeRulesResponse) {
-  const preview = victim.strikePreview
-  if (!preview) return
-  if (hit.broke) {
-    victim.strikePreview = null
-    return
-  }
-  if (hit.victimCycle === victim.guardCycle) {
-    if (hit.chip) preview.chipsThisCycle += 1
-    else if (hit.missingScore) preview.noScoreHitsThisCycle += 1
-    else preview.hitsThisCycle += 1
-    preview.damage = hitDamage(rules, preview, preview.disparity)
-  }
-  preview.hitsToBreak = hitsToBreak(rules, victim.guard, preview, preview.disparity)
-}
-
 function applyHit(hit: ClanWarHitResponse) {
   lastHit.value = hit
   const victim = participants.value?.find((p) => p.player.id === hit.victim.id)
   if (victim) {
     victim.guard = hit.guardAfter
     if (hit.broke) victim.breaksSuffered += 1
-    if (detail.value) trackStrike(victim, hit, detail.value.strikeRules)
   }
-  const clanId = participants.value?.find((p) => p.player.id === hit.attacker.id)?.clan.id ?? hit.attacker.clan?.id
+  if (!hit.broke) void loadParticipants()
+  const clanId = participants.value?.find((p) => p.player.id === hit.attacker.id)?.clanId
   if (!clanId) return
   detail.value?.timeline.push({
     at: hit.createdAt,
@@ -324,7 +303,7 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
       <ClanWarHud :war="war" :now="now" :can-retreat="canRetreat" :viewer-team="viewerTeam" @retreat="retreatOpen = true" />
 
       <BaseBanner v-if="wipe" variant="warning" :dismissible="false">
-        {{ wipe.team === 'attack' ? 'Attack' : 'Defense' }} is wiped. Everyone broken comes back
+        A team got wiped. Everyone broken before that comes back
         <template v-if="wipeIn">in <HintTooltip class="wipe-time" :text="wipeAtUtc" :tag="wipeIn" /></template>
         <template v-else>now</template>.
       </BaseBanner>
@@ -349,7 +328,7 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
         :viewer="viewer"
         :expanded="boards.expanded.value"
         :boards="boards.boards.value"
-        :wipe-at="wipeAt"
+        :wipe="wipe"
         @toggle="boards.toggle"
         :can-submit-picks="canSubmitPicks"
         :signed-in="auth.isLoggedIn"
@@ -387,7 +366,7 @@ watch([warId, whatIfMapId, () => auth.userId], loadParticipants, { immediate: tr
         :picking="picking"
         :pool="detail.pool"
         :loaded-map-id="participantsMapId"
-        :wipe-at="wipeAt"
+        :wipe="wipe"
         v-model:map-id="whatIfMapId"
         @pick="setTargeting('manual', $event)"
       />

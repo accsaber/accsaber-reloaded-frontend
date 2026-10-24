@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { WarWipe } from '@/utils/clans'
 import BaseButton from '@/components/common/BaseButton.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -13,7 +14,7 @@ import type {
 } from '@/types/api/clans'
 import { isWarRosterOpen, WAR_TEAMS, warSideStyles, warTeamOf } from '@/utils/clans'
 import type { SortDirection } from '@/types/display'
-import { formatSortGlyph } from '@/utils/formatters'
+import { formatPercent, formatSortGlyph } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import FighterStrike from './FighterStrike.vue'
 import WarGuard from './WarGuard.vue'
@@ -29,7 +30,7 @@ const props = defineProps<{
   picking: boolean
   pool: ClanWarPoolEntryResponse[]
   loadedMapId: string
-  wipeAt: number | null
+  wipe: WarWipe | null
 }>()
 
 const mapId = defineModel<string>('mapId', { required: true })
@@ -39,7 +40,7 @@ const emit = defineEmits<{
 }>()
 
 const styles = computed(() => warSideStyles(props.war))
-const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.viewer.clan.id) : null))
+const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.viewer.clanId) : null))
 const canPick = computed(
   () => props.viewer?.orders?.targeting === 'manual' && props.war.ruleset === 'duel' && isWarRosterOpen(props.war),
 )
@@ -55,17 +56,28 @@ function breaksTitle(breaks: number): string {
 }
 
 function fightersOf(clanId: string, team: ClanWarTeam): ClanWarParticipantResponse[] {
-  const list = (props.participants ?? []).filter((p) => p.clan.id === clanId)
+  const list = (props.participants ?? []).filter((p) => p.clanId === clanId)
   const direction = breaksSort.value[team]
   if (!direction) return list
   const sign = direction === 'asc' ? 1 : -1
   return list.sort((a, b) => sign * (a.breaksSuffered - b.breaksSuffered))
 }
 
+const lastStandTitle = computed(
+  () =>
+    `Less than ${Math.round(props.rules.lastStandFrom * 100)}% of their team is still standing. ` +
+    `The fewer are left, the less your hits do, down to ${Math.round(props.rules.lastStandDamage * 100)}% on the last one.`,
+)
+
 const teams = computed(() =>
   WAR_TEAMS.map((team) => {
     const clans = props.war[team].sides
-      .map((side) => ({ clan: side.clan, fighters: fightersOf(side.clan.id, team) }))
+      .map((side) => {
+        const fighters = fightersOf(side.clan.id, team)
+        const lastStand = fighters.find((f) => f.strikePreview)?.strikePreview?.lastStand ?? 1
+        const reduced = lastStand < 1 ? formatPercent((1 - lastStand) * 100, 0) : null
+        return { clan: side.clan, fighters, reduced }
+      })
       .filter((group) => group.fighters.length)
     const strikes = clans.some((group) => group.fighters.some((f) => f.strikePreview))
     return { team, style: styles.value[team], clans, strikes }
@@ -104,7 +116,15 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
         </template>
         <template v-for="group in t.clans" :key="group.clan.id">
           <div class="fighters__head">
-            <span class="fighters__clan"><ClanTag :clan="group.clan" size="sm" /></span>
+            <span class="fighters__clan">
+              <ClanTag :clan="group.clan" size="sm" />
+              <HintTooltip v-if="group.reduced" class="fighters__last-stand" :text="lastStandTitle">
+                <template #trigger>
+                  <span class="fighters__last-stand-label">Last stand</span>
+                  Damage reduced by {{ group.reduced }}%
+                </template>
+              </HintTooltip>
+            </span>
             <span class="fighters__col fighters__col--num">Skill</span>
             <button
               type="button"
@@ -161,7 +181,7 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
                   </template>
                 </HintTooltip>
               </span>
-              <WarGuard :fighter="fighter" :rules="rules" :wipe-at="wipeAt" />
+              <WarGuard :fighter="fighter" :rules="rules" :wipe="wipe" />
               <span class="fighters__num">{{ Math.round(fighter.contribution) }}</span>
               <span v-if="t.strikes" class="fighters__strike">
                 <FighterStrike
@@ -260,7 +280,29 @@ function pickable(fighter: ClanWarParticipantResponse, team: ClanWarTeam): boole
 
 .fighters__clan {
   display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   min-width: 0;
+}
+
+.fighters__clan .fighters__last-stand {
+  padding: 0;
+  border: none;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: var(--text-caption);
+  color: var(--warning);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fighters__last-stand-label {
+  margin-right: var(--space-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .fighters__target {
