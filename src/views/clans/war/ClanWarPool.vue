@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { WarWipe } from '@/utils/clans'
 import BaseButton from '@/components/common/BaseButton.vue'
-import HintTooltip from '@/components/common/HintTooltip.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type {
   ClanWarParticipantResponse,
@@ -9,20 +8,18 @@ import type {
   ClanWarResponse,
   ClanWarStrikeRulesResponse,
 } from '@/types/api/clans'
-import { CLAN_WAR_POOL_SOURCE_LABEL, isWarRosterOpen } from '@/utils/clans'
-import { computed, defineAsyncComponent } from 'vue'
+import { isWarRosterOpen } from '@/utils/clans'
+import { formatAccuracy } from '@/utils/formatters'
+import { computed } from 'vue'
 import type { WarMapBoard } from './useWarMapBoards'
 import { useWarPlaylist } from './useWarPlaylist'
-import WarMapRow from './WarMapRow.vue'
-import WarPoolScore from './WarPoolScore.vue'
+import WarPoolEntry from './WarPoolEntry.vue'
 import WarSection from './WarSection.vue'
-import { formatDamage } from './warStrike'
 
 const props = defineProps<{
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
   rules: ClanWarStrikeRulesResponse
-  participants: ClanWarParticipantResponse[] | null
   canSubmitPicks: boolean
   signedIn: boolean
   viewer: ClanWarParticipantResponse | null
@@ -36,31 +33,16 @@ const emit = defineEmits<{
   toggle: [mapId: string]
 }>()
 
-const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
-
 const playlist = useWarPlaylist(() => props.war)
 const open = computed(() => isWarRosterOpen(props.war))
-
 const picking = computed(() => props.war.status === 'picking')
-const enemies = computed(() => new Map((props.participants ?? []).map((p) => [p.player.id, p])))
-
-function strikeOn(entry: ClanWarPoolEntryResponse) {
-  const enemy = entry.target ? enemies.value.get(entry.target.id) : undefined
-  if (!enemy || entry.targetDamage == null) return null
-  const damage = Math.min(entry.targetDamage, enemy.guard)
-  return { damage, breaks: damage >= enemy.guard }
-}
-
-const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn(entry) })))
 </script>
 
 <template>
-  <WarSection>
+  <WarSection storage-key="pool">
     <template #title>
-      <h2 class="war-pool__title section-title">
-        Pool
-        <span class="war-pool__count">{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : `${pool.length} maps` }}</span>
-      </h2>
+      Map pool
+      <span class="war-pool__count">{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : `${pool.length} maps` }}</span>
     </template>
     <template #actions>
       <BaseButton v-if="!picking" size="sm" :loading="playlist.downloading.value" @click="playlist.download">Download playlist</BaseButton>
@@ -80,75 +62,35 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn
 
     <p v-if="pool.length === 0" class="war-pool__empty">No maps to show yet.</p>
     <ul v-else class="war-pool__list">
-      <li
-        v-for="{ entry, strike } in rows"
-        :id="`war-pool-${entry.difficulty.id}`"
-        :key="entry.difficulty.id"
-        class="war-pool__row"
-      >
-        <WarMapRow :difficulty="entry.difficulty">
-          <span v-if="entry.viewerScore" class="war-pool__own">
-            <WarPoolScore :score="entry.viewerScore" />
-          </span>
-          <span v-else-if="signedIn && isWarRosterOpen(war)" class="war-pool__own war-pool__own--none">Not played</span>
-          <span v-if="entry.target" class="war-pool__own war-pool__own--target">
-            vs
-            <WarPoolScore v-if="entry.targetScore" :score="entry.targetScore" />
-            <template v-else>no score</template>
-            ({{ entry.target.name }})
-            <span v-if="strike" class="war-pool__strike" :class="{ 'war-pool__strike--breaks': strike.breaks }">
-              {{ formatDamage(strike.damage) }}{{ strike.breaks ? ', breaks' : '' }}
-            </span>
-            <HintTooltip
-              v-if="!entry.targetPicked"
-              tag="auto"
-              label="auto"
-              text="Auto hits whoever your play hurts most. It breaks someone if it can, otherwise it takes the biggest hit."
-            />
-          </span>
-          <ClanTag v-if="entry.pickedBy" :clan="entry.pickedBy" size="sm" />
-          <span class="war-pool__source">{{ CLAN_WAR_POOL_SOURCE_LABEL[entry.source] }}</span>
-          <button
-            v-if="open"
-            type="button"
-            class="war-pool__expand"
-            :class="{ 'war-pool__expand--open': expanded === entry.difficulty.id }"
-            :aria-expanded="expanded === entry.difficulty.id"
-            :aria-label="`War leaderboard for ${entry.difficulty.songName}`"
-            @click="emit('toggle', entry.difficulty.id)"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-        </WarMapRow>
-        <WarMapBoardView
-          v-if="open && expanded === entry.difficulty.id"
+      <li v-for="entry in pool" :id="`war-pool-${entry.difficulty.id}`" :key="entry.difficulty.id" class="war-pool__row">
+        <WarPoolEntry
+          :entry="entry"
           :war="war"
           :rules="rules"
-          :board="boards[entry.difficulty.id]"
-          :max-score="entry.difficulty.maxScore"
           :viewer="viewer"
+          :expanded="expanded"
+          :boards="boards"
           :wipe="wipe"
-        />
+          :expandable="open"
+          @toggle="emit('toggle', $event)"
+        >
+          <span v-if="entry.viewerScore" class="war-pool__own">
+            Your PB {{ formatAccuracy(entry.viewerScore.accuracy) }} · {{ Math.round(entry.viewerScore.ap) }} AP
+          </span>
+          <span v-else-if="signedIn && open" class="war-pool__own">Not played</span>
+          <ClanTag v-if="entry.pickedBy" :clan="entry.pickedBy" size="sm" />
+        </WarPoolEntry>
       </li>
     </ul>
   </WarSection>
 </template>
 
 <style scoped>
-.war-pool__title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-}
-
 .war-pool__count {
   font-family: var(--font-mono);
   font-size: var(--text-body);
   font-weight: 500;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .war-pool__cta {
@@ -175,13 +117,13 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn
 
 .war-pool__empty {
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--text-secondary);
 }
 
 .war-pool__error {
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--error);
 }
 
@@ -211,70 +153,7 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, strike: strikeOn
 }
 
 .war-pool__own {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  margin-right: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--text-secondary);
-}
-
-.war-pool__own--none,
-.war-pool__own--target {
-  color: var(--text-tertiary);
-}
-
-.war-pool__strike {
-  color: var(--text-primary);
-}
-
-.war-pool__strike--breaks {
-  font-weight: 600;
-  color: var(--error);
-}
-
-.war-pool__expand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease-out, border-color 120ms ease-out;
-}
-
-.war-pool__expand:hover,
-.war-pool__expand--open {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.war-pool__expand svg {
-  transition: transform 150ms ease-out;
-}
-
-.war-pool__expand--open svg {
-  transform: rotate(180deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .war-pool__expand,
-  .war-pool__expand svg {
-    transition: none;
-  }
-}
-
-.war-pool__source {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 </style>

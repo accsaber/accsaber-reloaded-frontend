@@ -12,7 +12,7 @@ import type {
   ClanStandingSource,
   ClanUnlocksResponse,
   ClanWarOutcome,
-  ClanWarPoolSource,
+  ClanWarParticipantResponse,
   ClanWarRefResponse,
   ClanWarResponse,
   ClanWarStatus,
@@ -24,6 +24,7 @@ import type {
   ClanXpSource,
   PublicClanResponse,
 } from '@/types/api/clans'
+import type { PlayerRef } from '@/types/api/common'
 import type { Rule } from '@/types/display'
 import { formatDuration, formatRelativeDate } from '@/utils/formatters'
 import { hueOf, parseHex } from '@/utils/color'
@@ -82,12 +83,12 @@ export const CLAN_RULESET_LABEL: Record<ClanRuleset, string> = {
 }
 
 export const CLAN_WAR_TARGETING_LABEL: Record<ClanWarTargeting, string> = {
-  follow: 'Follow commanders',
+  follow: 'Follow commands',
   auto: 'Auto',
   manual: 'Pick',
 }
 
-export const CLAN_WAR_STATUS_LABEL: Record<ClanWarStatus, string> = {
+const CLAN_WAR_STATUS_LABEL: Record<ClanWarStatus, string> = {
   picking: 'Picking',
   preparing: 'Preparing',
   active: 'Active',
@@ -101,12 +102,6 @@ export const CLAN_WAR_OUTCOME_LABEL: Record<ClanWarOutcome, string> = {
   retreated: 'Retreated',
   forfeited: 'Forfeited',
   season_ended: 'Season ended',
-}
-
-export const CLAN_WAR_POOL_SOURCE_LABEL: Record<ClanWarPoolSource, string> = {
-  pick: 'Pick',
-  replacement: 'Swapped in',
-  random: 'Random',
 }
 
 export const CLAN_WAR_TEAM_LABEL: Record<ClanWarTeam, string> = {
@@ -156,10 +151,9 @@ export function warWipe(war: ClanWarResponse, rules: ClanWarStrikeRulesResponse)
   return { wipedAt, at: wipedAt + rules.wipeDurationHours * 3_600_000 }
 }
 
-export function guardBackAt(brokenAt: string, rules: ClanWarStrikeRulesResponse, wipe: WarWipe | null): number {
-  const broken = Date.parse(brokenAt)
-  const own = broken + rules.brokenDurationHours * 3_600_000
-  return wipe && broken <= wipe.wipedAt ? Math.min(own, wipe.at) : own
+export function guardBackAt(brokenAt: string, reviveAt: string, wipe: WarWipe | null): number {
+  const own = Date.parse(reviveAt)
+  return wipe && Date.parse(brokenAt) <= wipe.wipedAt ? Math.min(own, wipe.at) : own
 }
 
 export function isPacifist(clan: ClanResponse, now = Date.now()): boolean {
@@ -175,6 +169,16 @@ export function attackerPickCount(attackerStanding: number, defenderStanding: nu
   const underdog = 0.5 + (WAR_MAX_UNDERDOG_SHARE - 0.5) * (1 - ratio)
   const share = attackerStanding < defenderStanding ? underdog : 1 - underdog
   return Math.round(WAR_POOL_SIZE * share)
+}
+
+export type WarAimReason = 'commander' | 'pick' | 'auto' | 'halt' | 'unpicked'
+
+export function warAim(viewer: ClanWarParticipantResponse): { target: PlayerRef | null; reason: WarAimReason } {
+  const orders = viewer.orders
+  if (orders?.targeting === 'manual') return viewer.target ? { target: viewer.target, reason: 'pick' } : { target: null, reason: 'unpicked' }
+  if (orders?.targeting === 'follow' && orders.order === 'halt') return { target: null, reason: 'halt' }
+  if (orders?.targeting === 'follow' && orders.order === 'target' && orders.target) return { target: orders.target, reason: 'commander' }
+  return { target: null, reason: 'auto' }
 }
 
 export function isWarRosterOpen(war: Pick<ClanWarResponse, 'status'>): boolean {

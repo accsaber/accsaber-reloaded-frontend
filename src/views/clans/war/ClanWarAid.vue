@@ -140,7 +140,7 @@ watch(() => (mayOffer.value ? props.ownClanId : null), fetchAllies, { immediate:
 </script>
 
 <template>
-  <WarSection v-if="canAsk || canLeave || canOffer || aids.length" title="Allies">
+  <WarSection v-if="canAsk || canLeave || canOffer || aids.length" title="Allies" fixed>
     <template #actions>
       <BaseButton v-if="canAsk && !asking" size="sm" @click="asking = true">Ask an ally</BaseButton>
       <template v-if="canOffer">

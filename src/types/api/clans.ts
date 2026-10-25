@@ -259,7 +259,7 @@ export interface ClanWarResponse {
   startsAt: string | null
   retreatAt: string | null
   endedAt: string | null
-  wipedAt?: string | null
+  wipedAt: string | null
 }
 
 export interface ClanWarRefResponse {
@@ -278,7 +278,9 @@ export interface ClanWarPoolEntryResponse {
   target: PlayerRef | null
   targetScore: MyScoreSummary | null
   targetPicked: boolean
-  targetDamage?: number
+  targetDamage: number | null
+  targetMapPenalty?: number
+  targetRepeatMap: boolean | null
 }
 
 export interface ClanWarTimelinePointResponse {
@@ -295,7 +297,12 @@ export interface ClanWarDetailResponse {
   pool: ClanWarPoolEntryResponse[]
   timeline: ClanWarTimelinePointResponse[]
   strikeRules: ClanWarStrikeRulesResponse
-  lastStand?: Record<ClanWarTeam, number>
+  lastStand?: Record<ClanWarTeam, ClanWarLastStandResponse>
+}
+
+export interface ClanWarLastStandResponse {
+  damage: number
+  reviveSpeed: number
 }
 
 export interface ClanWarStrikeRulesResponse {
@@ -303,9 +310,8 @@ export interface ClanWarStrikeRulesResponse {
   baseDamage: number
   escalation: number
   disparityExponent: number
-  missingScoreMultiplier: number
-  missingScoreEscalation: number
   chipEscalation: number
+  repeatMapShare: number
   mapBreakDecay: number
   mapBreakFloor: number
   lastStandDamage: number
@@ -318,7 +324,7 @@ export interface ClanWarStrikeRulesResponse {
 }
 
 export interface ClanWarStrikeMapResponse {
-  targetScore?: number
+  targetScore: number | null
   repeatMap: boolean
   mapPenalty: number
 }
@@ -327,7 +333,6 @@ export interface ClanWarStrikePreviewResponse {
   damage: number
   hitsToBreak: number
   hitsThisCycle: number
-  noScoreHitsThisCycle: number
   chipsThisCycle: number
   attackerSkill: number
   victimSkill: number
@@ -358,7 +363,10 @@ export interface ClanWarParticipantResponse {
   guard: number
   guardCycle: number
   brokenAt?: string
+  reviveAt?: string
   breaksSuffered: number
+  bounty: number
+  breakStanding?: number
   contribution: number
   joinedAt: string
   leftAt: string | null

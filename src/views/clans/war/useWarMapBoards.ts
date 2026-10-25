@@ -11,17 +11,12 @@ export interface WarMapBoard {
   error: string | null
 }
 
-export function useWarMapBoards(
-  warId: () => string,
-  loadedFighters: (mapId: string) => ClanWarParticipantResponse[] | null,
-) {
+export function useWarMapBoards(warId: () => string) {
   const expanded = ref<string | null>(null)
   const boards = ref<Record<string, WarMapBoard>>({})
   let generation = 0
 
-  async function fetchFighters(war: string, mapId: string, reuse: boolean) {
-    const loaded = reuse ? loadedFighters(mapId) : null
-    if (loaded) return loaded
+  async function fetchFighters(war: string, mapId: string) {
     const { getClanWarParticipants } = await import('@/api/clans')
     const page = await getClanWarParticipants(war, { page: 0, size: BOARD_SIZE, mapDifficultyId: mapId })
     return page.content
@@ -33,12 +28,12 @@ export function useWarMapBoards(
     return page.content
   }
 
-  async function load(mapId: string, reuse = true) {
+  async function load(mapId: string) {
     const current = generation
     const war = warId()
     boards.value[mapId] = { scores: null, fighters: null, error: null }
     try {
-      const [scores, fighters] = await Promise.all([fetchScores(war, mapId), fetchFighters(war, mapId, reuse)])
+      const [scores, fighters] = await Promise.all([fetchScores(war, mapId), fetchFighters(war, mapId)])
       if (current === generation) boards.value[mapId] = { scores, fighters, error: null }
     } catch (err) {
       if (current !== generation) return
@@ -59,7 +54,7 @@ export function useWarMapBoards(
   function invalidate() {
     generation += 1
     boards.value = {}
-    if (expanded.value) void load(expanded.value, false)
+    if (expanded.value) void load(expanded.value)
   }
 
   function reset() {

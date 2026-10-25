@@ -10,12 +10,13 @@ import type {
   PublicClanResponse,
 } from '@/types/api/clans'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
-import { warClan, warTeamOf, type WarWipe } from '@/utils/clans'
+import { warClan, warSideStyles, warTeamOf, type WarWipe } from '@/utils/clans'
+import { formatAccuracy } from '@/utils/formatters'
 import { toDifficultyScoreDisplay } from '@/utils/mappers'
 import { computed } from 'vue'
 import type { WarMapBoard } from './useWarMapBoards'
-import StrikeLines from './StrikeLines.vue'
-import { formatDamage, strikeOutcome, type StrikeOutcome } from './warStrike'
+import { mapOutcome, penaltyPercent, type StrikeOutcome } from './warStrike'
+import WarStrikeStatus from './WarStrikeStatus.vue'
 import WarGuard from './WarGuard.vue'
 
 const props = defineProps<{
@@ -27,16 +28,17 @@ const props = defineProps<{
   maxScore: number
 }>()
 
+const styles = computed(() => warSideStyles(props.war))
 const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.viewer.clanId) : null))
 const fighters = computed(() => new Map((props.board?.fighters ?? []).map((f) => [f.player.id, f])))
 
 const columns = computed<TableColumn[]>(() => [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '56px' },
-  { key: 'player', label: 'Player', align: 'left', width: '200px', flex: true },
-  { key: 'accuracy', label: 'Acc', align: 'right', mono: true, width: '76px' },
-  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '76px' },
-  { key: 'guard', label: 'Guard', align: 'left', width: '136px' },
-  ...(props.viewer ? [{ key: 'status', label: '', align: 'right' as const, width: '96px' }] : []),
+  { key: 'rank', label: '#', align: 'right', mono: true, width: '48px' },
+  { key: 'player', label: 'Player', align: 'left', width: '160px', flex: true },
+  { key: 'accuracy', label: 'Acc', align: 'right', mono: true, width: '72px' },
+  { key: 'ap', label: 'AP', align: 'right', mono: true, width: '80px' },
+  { key: 'guard', label: 'Guard', align: 'left', width: '152px' },
+  ...(props.viewer ? [{ key: 'status', label: 'Your PB', align: 'right' as const, width: '120px' }] : []),
 ])
 
 const viewerScore = computed(() => props.board?.scores?.find((s) => s.userId === props.viewer?.player.id) ?? null)
@@ -44,7 +46,15 @@ const viewerScore = computed(() => props.board?.scores?.find((s) => s.userId ===
 function status(fighter: ClanWarParticipantResponse) {
   const own = viewerScore.value
   if (!own || !fighter.strikePreview || fighter.guard <= 0) return null
-  const outcome = strikeOutcome(props.rules, fighter.strikePreview, fighter.guard, own.score, props.maxScore)
+  const preview = fighter.strikePreview
+  const map = {
+    targetScore: preview.onMap?.targetScore ?? null,
+    targetDamage: preview.damage,
+    maxScore: props.maxScore,
+    mapPenalty: preview.onMap?.mapPenalty,
+    repeatMap: preview.onMap?.repeatMap,
+  }
+  const outcome = mapOutcome(props.rules, preview, fighter.guard, map, own.score)
   return outcome.kind === 'none' ? null : outcome
 }
 
@@ -53,11 +63,6 @@ const penaltyTitle = computed(
     'They already got broken on this map. Every break here makes your hits on them here weaker, ' +
     `but never below ${Math.round(props.rules.mapBreakFloor * 100)}% damage. Try another map.`,
 )
-
-function penaltyOf(fighter: ClanWarParticipantResponse | null): number | null {
-  const penalty = fighter?.strikePreview?.onMap?.mapPenalty
-  return penalty !== undefined && penalty < 1 ? Math.round(penalty * 100) : null
-}
 
 const rows = computed(() =>
   (props.board?.scores ?? []).map((s, i) => {
@@ -72,9 +77,9 @@ const rows = computed(() =>
       accuracy: display.accuracy,
       ap: display.ap,
       fighter,
-      penalty: penaltyOf(fighter),
-      repeatMap: !!fighter?.strikePreview?.onMap?.repeatMap,
+      penalty: penaltyPercent(fighter?.strikePreview?.onMap?.mapPenalty),
       clan: fighter ? warClan(props.war, fighter.clanId) : null,
+      side: team ? styles.value[team] : undefined,
       status: enemy && fighter ? status(fighter) : null,
     }
   }),
@@ -101,23 +106,48 @@ function rowClass(row: Record<string, unknown>) {
       <template #cell-player="{ row }">
         <span class="war-board__player">
           <ClanTag v-if="row.clan" :clan="(row.clan as PublicClanResponse)" size="sm" />
-          <UserChip :user="(row.player as UserRefDisplay)" size="sm" link hide-clan />
-          <HintTooltip v-if="row.penalty !== null" class="war-board__penalty" :text="penaltyTitle">
-            <template #trigger>Only takes {{ row.penalty }}% of damage from this map</template>
+          <UserChip :user="(row.player as UserRefDisplay)" size="sm" link tooltip hide-clan />
+          <HintTooltip v-if="row.penalty !== null" variant="inline" class="war-board__penalty" :text="penaltyTitle">
+            <template #trigger>Broken here before: {{ row.penalty }}% damage</template>
           </HintTooltip>
         </span>
       </template>
       <template #cell-guard="{ row }">
-        <WarGuard v-if="row.fighter" :fighter="(row.fighter as ClanWarParticipantResponse)" :rules="rules" :wipe="wipe"
-          :repeat-map="(row.repeatMap as boolean)" />
+        <WarGuard
+          v-if="row.fighter"
+          class="clan-colors war-board__side"
+          :style="row.side"
+          :fighter="(row.fighter as ClanWarParticipantResponse)"
+          :rules="rules"
+          :wipe="wipe"
+          streak
+        />
       </template>
       <template #cell-status="{ row }">
-        <span v-if="row.status" class="war-board__status" :class="`war-board__status--${(row.status as StrikeOutcome).kind}`">
-          {{ (row.status as StrikeOutcome).kind === 'damage' ? `Hit: ${formatDamage((row.status as StrikeOutcome).damage)}` : 'chip range' }}
-          <HintTooltip text="Damage breakdown" :width="320">
-            <StrikeLines :lines="(row.status as StrikeOutcome).lines" />
+        <WarStrikeStatus v-if="row.status" :outcome="(row.status as StrikeOutcome)" />
+      </template>
+      <template #mobile-card="{ row }">
+        <div class="war-board__card" :class="{ 'war-board__card--self': row._userId === viewer?.player.id }">
+          <span class="war-board__rank">#{{ row.rank }}</span>
+          <span class="war-board__player">
+            <ClanTag v-if="row.clan" :clan="(row.clan as PublicClanResponse)" size="sm" />
+            <UserChip :user="(row.player as UserRefDisplay)" size="sm" link tooltip hide-clan />
+          </span>
+          <span class="war-board__acc">{{ formatAccuracy(row.accuracy as number) }}</span>
+          <WarGuard
+            v-if="row.fighter"
+            class="clan-colors war-board__side war-board__wide"
+            :style="row.side"
+            :fighter="(row.fighter as ClanWarParticipantResponse)"
+            :rules="rules"
+            :wipe="wipe"
+            streak
+          />
+          <WarStrikeStatus v-if="row.status" class="war-board__wide" :outcome="(row.status as StrikeOutcome)" />
+          <HintTooltip v-if="row.penalty !== null" variant="inline" class="war-board__penalty war-board__wide" :text="penaltyTitle">
+            <template #trigger>Broken here before: {{ row.penalty }}% damage</template>
           </HintTooltip>
-        </span>
+        </div>
       </template>
     </ScoreTable>
   </div>
@@ -142,34 +172,44 @@ function rowClass(row: Record<string, unknown>) {
   min-width: 0;
 }
 
-.war-board .war-board__penalty {
-  padding: 0;
-  border: none;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
+.war-board__penalty {
   margin-left: auto;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--warning);
   white-space: nowrap;
 }
 
-
-.war-board__status {
-  display: inline-flex;
+.war-board__card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
+  gap: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-body);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.war-board__card--self {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
+}
+
+.war-board__rank {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.war-board__acc {
+  font-family: var(--font-mono);
   font-weight: 600;
-  color: var(--text-tertiary);
 }
 
-.war-board__status--damage {
-  color: var(--success);
+.war-board__side {
+  --clan-bar-fill: var(--war-side);
 }
 
-.war-board__status--chip {
-  color: var(--warning);
+.war-board__wide {
+  grid-column: 1 / -1;
 }
 
 .war-board :deep(.data-table__row.data-table__row--self-highlight) {

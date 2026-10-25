@@ -4,11 +4,12 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const DAMAGE: WikiCompareRow[] = [
-  { label: '1st hit', values: ['12', '88'] },
-  { label: '2nd hit', values: ['17.4', '70.6'] },
-  { label: '3rd hit', values: ['25.23', '45.37'] },
-  { label: '4th hit', values: ['36.58', '8.79'] },
-  { label: '5th hit', values: ['53.04', 'Broken'] },
+  { label: '1st hit', values: ['10', '90'] },
+  { label: '2nd hit', values: ['13', '77'] },
+  { label: '3rd hit', values: ['16.9', '60.1'] },
+  { label: '4th hit', values: ['21.97', '38.13'] },
+  { label: '5th hit', values: ['28.56', '9.57'] },
+  { label: '6th hit', values: ['37.13', 'Broken'] },
 ]
 </script>
 
@@ -33,8 +34,8 @@ const DAMAGE: WikiCompareRow[] = [
 
     <WikiHeading id="hits">Hits</WikiHeading>
     <p>
-      You hit someone by beating their score on a war map. If they have no score there, you hit
-      them for 30% of the damage. Only plays after the war starts count. You can hit the same
+      You hit someone by beating their score on a war map. If they have no score there, every hit
+      does a flat 10 (less on a map they've been broken on before). Only plays after the war starts count. You can hit the same
       person on the same map with every play, but replaying one map won't get you far. More on
       that below.
     </p>
@@ -42,10 +43,10 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="damage">Damage</WikiHeading>
     <p>
       Every map a player gets hit on makes the next hit on them stronger, no matter who on your
-      team lands it. Hits on someone with no score count too, but only bump it by 1.2x instead of
-      1.45x. Hitting them again on a map they already got hit on just does base damage and only builds
-      as much as a chip, so you break people by beating them on different maps, not by spamming your
-      best one. The streak starts over once their guard comes back.
+      team lands it. Hits on someone with no score never get stronger and only bump the
+      next real hit as much as a chip does. Hitting them again on a map they already got hit on only keeps 40% of the streak bonus, and
+      40% of that again the time after. It only builds the streak as much as a chip. Spamming one map
+      fades out fast, so spread your hits across maps. The streak starts over once their guard comes back.
       If you are both the same skill and every hit is on a new map:
     </p>
     <WikiCompareTable :columns="['Damage', 'Guard left']" :rows="DAMAGE" />
@@ -55,7 +56,7 @@ const DAMAGE: WikiCompareRow[] = [
       <RouterLink to="/wiki/war-math#hit">War Math</RouterLink>.
     </p>
     <p>
-      Two things make hits softer. A map someone already got broken on by a hit (chips don't count) hits them for 75% for the
+      Two things make hits softer. A map someone already got broken on hits them for 75% for the
       rest of the war, and 50% once it's broken them three times, so you can't keep farming the
       same person on your comfort map. And once less than half of a team is still standing, hits
       and chips on them get weaker, down to half for the last one up. Coming back into a beaten
@@ -114,9 +115,12 @@ const DAMAGE: WikiCompareRow[] = [
       they lose nothing. You still get yours.
     </p>
     <p>
-      Stronger players are worth more standing. A weaker team takes a few more breaks to drain,
-      about 10% more against a stacked one. Breaking the same player again is worth 75% of
-      the last time. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
+      Stronger players are worth more standing and the same skill is worth the same on both
+      teams, however deep either roster is. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. Get broken
+      and you come back with about half of it (a 1.7 comes back near 1), then every bit of damage you
+      deal climbs it again, up to 1.75. Around 100 damage is enough to get from the bottom back to 1.
+      Keep going down without hitting back and it sinks toward 0.25. So someone on a rampage is worth
+      a lot to take down, and someone who gets up and does nothing is cheap. Break XP goes up and down with it too. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
       Hover the damage on the war page to see how much standing breaking someone would move.
     </p>
     <p>
@@ -126,10 +130,18 @@ const DAMAGE: WikiCompareRow[] = [
       break a week.
     </p>
     <p>
-      If a whole team gets broken, nobody waits a week. Two days after the last one goes down,
-      everyone who was broken by then comes back, both teams, all at once. Getting up early doesn't
+      That week runs faster the fewer of your team are still up. With half the team standing it's
+      a normal week. The moment you drop under half it jumps to double speed, and keeps climbing to
+      3.5x for the last one standing, so a week turns into two days. It's everyone's clock on the team, even if you were broken
+      days ago. Time you already waited always counts. The war page shows your team's speed and
+      when you're back.
+    </p>
+    <p>
+      If a whole team gets broken, the whole team comes back together, exactly two days after the
+      last one goes down. Anyone broken on the other
+      team comes back then too or sooner if their own clock runs out first. Getting up early doesn't
       cancel it for anyone else. But if you get up and get broken again, that one's on you, you're back
-      on a full week.
+      on your own clock.
     </p>
     <p>
       If barely anyone on their team has played in the two weeks before the war, you get a lot

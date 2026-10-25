@@ -24,7 +24,7 @@ const groups = computed(() => {
 </script>
 
 <template>
-  <WarSection v-if="war.status !== 'ended'" title="Winning rewards">
+  <WarSection v-if="war.status !== 'ended'" title="Winning rewards" fixed>
     <p v-if="error" class="war-rewards__error" role="alert">{{ error }}</p>
     <SkeletonLoader v-else-if="!rewards" variant="text" :lines="2" />
     <div v-else class="war-rewards__win">
@@ -34,7 +34,7 @@ const groups = computed(() => {
     </div>
   </WarSection>
 
-  <WarSection v-else title="Rewards">
+  <WarSection v-else title="Rewards" fixed>
     <p v-if="error" class="war-rewards__error" role="alert">{{ error }}</p>
     <SkeletonLoader v-else-if="!rewards" variant="table-row" />
     <ul v-else class="war-rewards__clans">

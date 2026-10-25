@@ -90,6 +90,7 @@ const paths = computed(() =>
 )
 
 const hovered = ref<Marker | null>(null)
+const chartOpen = ref(false)
 const tooltipStyle = computed(() =>
   hovered.value
     ? {
@@ -124,7 +125,13 @@ const summary = computed(() =>
 <template>
   <WarSection title="Timeline">
     <p v-if="!points.length" class="timeline__empty">No hits yet.</p>
-    <div v-else class="timeline__frame">
+    <p v-else class="timeline__summary">
+      {{ summary }}.
+      <button type="button" class="timeline__show" :aria-expanded="chartOpen" @click="chartOpen = !chartOpen">
+        {{ chartOpen ? 'Hide chart' : 'Show chart' }}
+      </button>
+    </p>
+    <div v-if="points.length" class="timeline__frame" :class="{ 'timeline__frame--folded': !chartOpen }">
       <svg class="timeline__chart" :viewBox="`0 0 ${VIEW_W} ${VIEW_H}`" role="img" :aria-label="summary">
         <line :x1="LEFT" :x2="LEFT + WIDTH" :y1="AXIS" :y2="AXIS" class="timeline__axis" />
         <g v-for="path in paths" :key="path.team" class="clan-colors" :style="styles[path.team]">
@@ -160,10 +167,31 @@ const summary = computed(() =>
 </template>
 
 <style scoped>
-.timeline__empty {
+.timeline__empty,
+.timeline__summary {
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--text-secondary);
+}
+
+.timeline__show {
+  display: none;
+  padding: 0;
+  font: inherit;
+  color: var(--page-accent, var(--accent));
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .timeline__show {
+    display: inline;
+  }
+
+  .timeline__frame--folded {
+    display: none;
+  }
 }
 
 .timeline__frame {
@@ -239,7 +267,7 @@ const summary = computed(() =>
   display: flex;
   justify-content: space-between;
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 @media (prefers-reduced-motion: reduce) {

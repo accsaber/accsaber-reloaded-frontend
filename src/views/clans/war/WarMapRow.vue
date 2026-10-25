@@ -11,6 +11,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   difficulty: PublicMapDifficultyResponse
+  plain?: boolean
 }>()
 
 const categoryStore = useCategoryStore()
@@ -26,9 +27,9 @@ const categoryCode = computed(() => categoryStore.getCategoryCode(props.difficul
         <SongTitle :name="difficulty.songName" :sub-name="difficulty.songSubName" />
       </RouterLink>
       <span class="war-map__badges">
-        <CategoryBadge :category="categoryCode" size="sm" />
+        <CategoryBadge v-if="!plain" :category="categoryCode" size="sm" />
         <DifficultyBadge :difficulty="difficulty.difficulty" />
-        <ComplexityBadge v-if="difficulty.complexity != null" :complexity="difficulty.complexity" />
+        <ComplexityBadge v-if="!plain && difficulty.complexity != null" :complexity="difficulty.complexity" />
       </span>
     </div>
     <div class="war-map__trailing">

@@ -295,8 +295,8 @@ export function declareClanWar(
   return post<ClanWarDetailResponse>(`/clans/${clanId}/wars`, req)
 }
 
-export function getClanWar(warId: string): Promise<ClanWarDetailResponse> {
-  return get<ClanWarDetailResponse>(`/clans/wars/${warId}`)
+export function getClanWar(warId: string, params?: { focus?: string }): Promise<ClanWarDetailResponse> {
+  return get<ClanWarDetailResponse>(`/clans/wars/${warId}${buildQuery(params)}`)
 }
 
 export function submitClanWarPicks(

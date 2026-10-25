@@ -118,7 +118,7 @@ export interface PublicMapDifficultyResponse extends MapChartStatsSource {
   autoCriteriaStatus: AutoCriteriaStatus | null
   ssLeaderboardId: string | null
   blLeaderboardId: string | null
-  maxScore: number
+  maxScore: number | null
   complexity: number | null
   rankedAt: string | null
   createdAt: string

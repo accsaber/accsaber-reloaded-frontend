@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
+import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
@@ -11,7 +12,7 @@ import { pickCoverUrl } from '@/utils/media'
 import type { ClanWarHitResponse, ClanWarParticipantResponse, ClanWarResponse } from '@/types/api/clans'
 import type { Page } from '@/types/pagination'
 import { formatStanding, WAR_TEAMS, warClan, warSideStyles, warTeamOf } from '@/utils/clans'
-import { formatOrdinal, formatRelativeDate } from '@/utils/formatters'
+import { formatRelativeDate } from '@/utils/formatters'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { computed, ref, watch } from 'vue'
 import { formatDamage } from './warStrike'
@@ -43,6 +44,7 @@ let hitsRequest = 0
 const hits = ref<Page<ClanWarHitResponse> | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const pending = ref<ClanWarHitResponse[]>([])
 
 const styles = computed(() => warSideStyles(props.war))
 const clanOf = computed(() => new Map((props.participants ?? []).map((p) => [p.player.id, warClan(props.war, p.clanId)])))
@@ -69,24 +71,6 @@ function breakTitle(hit: ClanWarHitResponse): string | undefined {
   return hit.xpAwarded == null ? undefined : `${Math.round(hit.xpAwarded)} XP`
 }
 
-const streaks = computed(() => {
-  const known = new Map<string, number>()
-  const counted = new Map<string, number>()
-  const page = hits.value
-  for (const hit of [...(page?.content ?? [])].reverse()) {
-    if (player.value && hit.victim.id !== player.value) continue
-    if (clan.value && clanOf.value.get(hit.victim.id)?.id !== clan.value) continue
-    const key = `${hit.victim.id}:${hit.victimCycle}`
-    const count = counted.get(key) ?? (page?.last ? 0 : undefined)
-    if (count !== undefined && !hit.chip) {
-      known.set(hit.id, count + 1)
-      counted.set(key, count + 1)
-    }
-    if (hit.broke) counted.set(`${hit.victim.id}:${hit.victimCycle + 1}`, 0)
-  }
-  return known
-})
-
 const VERB = { hit: 'hit', chip: 'chipped', break: 'broke' }
 
 function kind(hit: ClanWarHitResponse): keyof typeof VERB {
@@ -95,10 +79,8 @@ function kind(hit: ClanWarHitResponse): keyof typeof VERB {
 }
 
 function detail(hit: ClanWarHitResponse): string {
-  if (hit.broke) return `−${formatStanding(hit.standingMoved)} Standing, safe until they play or a week passes`
-  const left = `${formatDamage(hit.guardAfter)} left`
-  const streak = streaks.value.get(hit.id)
-  return streak ? `${formatOrdinal(streak)} hit, ${left}` : left
+  if (hit.broke) return `−${formatStanding(hit.standingMoved)} Standing, safe until they play or their timer runs out`
+  return `${formatDamage(hit.guardAfter)} guard left`
 }
 
 function involves(hit: ClanWarHitResponse): boolean {
@@ -121,7 +103,9 @@ async function fetchHits() {
       chip: damageKind.value ? damageKind.value === 'chips' : undefined,
       clanId: clan.value || undefined,
     })
-    if (request === hitsRequest) hits.value = next
+    if (request !== hitsRequest) return
+    hits.value = next
+    pending.value = []
   } catch (err) {
     if (request === hitsRequest) error.value = parseApiError(err, 'Could not load the damage.').message
   } finally {
@@ -133,11 +117,16 @@ watch(
   () => props.incoming,
   (hit) => {
     if (!hit || !hits.value || page.value !== 1 || !involves(hit)) return
-    if (hits.value.content.some((h) => h.id === hit.id)) return
-    hits.value.content.unshift(hit)
-    if (hits.value.content.length > PAGE_SIZE) hits.value.content.pop()
+    if (hits.value.content.some((h) => h.id === hit.id) || pending.value.some((h) => h.id === hit.id)) return
+    pending.value.unshift(hit)
   },
 )
+
+function showPending() {
+  if (!hits.value) return
+  hits.value.content = [...pending.value, ...hits.value.content].slice(0, PAGE_SIZE)
+  pending.value = []
+}
 
 watch([player, damageKind, clan], () => {
   if (page.value === 1) void fetchHits()
@@ -148,7 +137,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 </script>
 
 <template>
-  <WarSection title="Damage">
+  <WarSection title="Battle log">
     <template #actions>
       <span class="war-hits__filters">
         <BaseTabs v-model="damageKind" :tabs="KIND_TABS" variant="segmented" label="Damage type" />
@@ -164,6 +153,9 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
       </span>
     </template>
     <p v-if="error" class="war-hits__error" role="alert">{{ error }}</p>
+    <BaseButton v-if="pending.length" class="war-hits__new" size="sm" @click="showPending">
+      {{ pending.length }} new {{ pending.length === 1 ? 'hit' : 'hits' }}
+    </BaseButton>
 
     <div v-if="loading && !hits" class="war-hits__list">
       <SkeletonLoader v-for="i in 4" :key="i" variant="table-row" />
@@ -181,9 +173,9 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
           <ClanTag v-if="actingClan(hit)" :clan="actingClan(hit)!" size="sm" />
         </span>
         <span class="war-hits__who">
-          <UserChip :user="hit.attacker" size="xs" link hide-clan />
+          <UserChip :user="hit.attacker" size="xs" link tooltip hide-clan />
           <span class="war-hits__verb">{{ VERB[kind(hit)] }}</span>
-          <UserChip :user="hit.victim" size="xs" compact link hide-clan />
+          <UserChip :user="hit.victim" size="xs" compact link tooltip hide-clan />
           <template v-if="!hit.broke">
             <span class="war-hits__verb">for</span>
             <span class="war-hits__damage">{{ formatDamage(hit.damage) }}</span>
@@ -223,13 +215,13 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 
 .war-hits__error {
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--error);
 }
 
 .war-hits__empty {
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--text-secondary);
 }
 
@@ -246,13 +238,13 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 
 .war-hits__row {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1.3fr) minmax(0, 1fr) 36ch 7ch;
+  grid-template-columns: 72px minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.4fr) 8ch;
   gap: var(--space-md);
   align-items: center;
-  height: 40px;
-  padding: 0 var(--space-md);
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
 }
 
 .war-hits__row:last-child {
@@ -278,7 +270,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 
 .war-hits__verb {
   flex-shrink: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .war-hits__row--break .war-hits__verb {
@@ -316,7 +308,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 
 .war-hits__flag {
   flex-shrink: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .war-hits__damage {
@@ -334,23 +326,22 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
   color: var(--text-secondary);
 }
 
+.war-hits__result {
+  white-space: normal;
+}
+
 .war-hits__row--break .war-hits__result {
   font-weight: 600;
   color: var(--war-side);
 }
 
-.war-hits__when {
-  color: var(--text-tertiary);
-}
-
-.war-hits__row--chip .war-hits__who,
-.war-hits__row--chip .war-hits__song {
-  opacity: 0.6;
-}
-
 .war-hits__row--chip .war-hits__damage {
   font-weight: 400;
-  color: var(--text-tertiary);
+  color: var(--warning);
+}
+
+.war-hits__new {
+  align-self: flex-start;
 }
 
 @media (max-width: 720px) {

@@ -2,15 +2,19 @@
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import type { ClanWarResponse } from '@/types/api/clans'
+import type { ClanWarResponse, ClanWarTeam } from '@/types/api/clans'
 import { formatStanding, WAR_TEAMS, warSideStyles } from '@/utils/clans'
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import ClanBar from '../ClanBar.vue'
+import ClanWarSideRow from './ClanWarSideRow.vue'
 import WarClock from './WarClock.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
   now: number
+  hud?: boolean
+  viewerTeam?: ClanWarTeam | null
 }>()
 
 const styles = computed(() => warSideStyles(props.war))
@@ -18,7 +22,12 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
 </script>
 
 <template>
-  <RouterLink class="scorebug" :to="{ name: 'clan-war', params: { warId: war.id } }">
+  <component
+    :is="hud ? 'header' : RouterLink"
+    class="scorebug"
+    :class="{ 'scorebug--hud': hud }"
+    :to="hud ? undefined : { name: 'clan-war', params: { warId: war.id } }"
+  >
     <span
       v-for="entry in teams"
       :key="entry.team"
@@ -31,19 +40,27 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
         <span class="scorebug__titles">
           <ClanTag :clan="entry.data.lead" size="sm" effects />
           <ClanName class="scorebug__name" :clan="entry.data.lead" />
-          <span v-if="entry.data.sides.length > 1" class="scorebug__allies">
+          <span v-if="!hud && entry.data.sides.length > 1" class="scorebug__allies">
             +{{ entry.data.sides.length - 1 }} {{ entry.data.sides.length === 2 ? 'ally' : 'allies' }}
           </span>
         </span>
       </span>
+      <span v-if="hud" class="scorebug__label">Standing at stake</span>
       <ClanBar :value="entry.data.stakeRemaining" :max="entry.data.stake" :mirror="entry.team === 'defend'" />
       <span class="scorebug__stake">
         {{ formatStanding(entry.data.stakeRemaining) }}<span class="scorebug__total"> / {{ formatStanding(entry.data.stake) }}</span>
       </span>
+      <ul v-if="hud && entry.data.sides.length > 1" class="scorebug__sides">
+        <ClanWarSideRow v-for="side in entry.data.sides" :key="side.clan.id" :side="side" :now="now" />
+      </ul>
+      <slot name="team" :team="entry.team" />
     </span>
 
-    <WarClock class="scorebug__middle" :war="war" :now="now" />
-  </RouterLink>
+    <span class="scorebug__middle">
+      <WarClock :war="war" :now="now" :viewer-team="viewerTeam" :large="hud" />
+      <slot name="middle" />
+    </span>
+  </component>
 </template>
 
 <style scoped>
@@ -136,6 +153,47 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
 
 .scorebug__middle {
   grid-area: middle;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.scorebug--hud {
+  align-items: start;
+}
+
+.scorebug--hud:hover {
+  border-color: var(--bg-overlay);
+}
+
+.scorebug__sides {
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  list-style: none;
+}
+
+.scorebug__label {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.scorebug--hud .scorebug__stake {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--war-side);
+}
+
+.scorebug--hud .scorebug__total {
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+}
+
+.scorebug--hud .scorebug__name {
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 @media (max-width: 640px) {

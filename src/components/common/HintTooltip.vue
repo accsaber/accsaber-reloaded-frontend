@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useFloatingPanel } from '@/composables/useFloatingPanel'
+import { useId } from 'vue'
 
 const props = defineProps<{
   text: string
@@ -7,7 +8,10 @@ const props = defineProps<{
   width?: number
   more?: boolean
   tag?: string
+  variant?: 'inline'
 }>()
+
+const panelId = useId()
 
 const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, onTriggerEnter, onTriggerLeave } =
   useFloatingPanel({
@@ -25,8 +29,9 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     ref="triggerRef"
     type="button"
     class="hint"
-    :class="{ 'hint--tag': tag || $slots.trigger }"
-    :aria-label="label ? `What ${label} does` : text"
+    :class="variant === 'inline' ? 'hint--inline' : { 'hint--tag': tag || $slots.trigger }"
+    :aria-label="tag || $slots.trigger ? undefined : label ? `What ${label} does` : text"
+    :aria-describedby="isOpen ? panelId : undefined"
     @mouseenter="onTriggerEnter"
     @mouseleave="onTriggerLeave"
     @focus="open"
@@ -38,6 +43,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     <Teleport to="body">
       <div
         v-if="isOpen"
+        :id="panelId"
         ref="panelRef"
         class="hint__panel"
         :class="{ 'hint__panel--locked': locked }"
@@ -89,6 +95,26 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   line-height: 1.3;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.hint--inline {
+  display: inline;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-bottom: 1px dotted currentColor;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+}
+
+.hint--inline:hover,
+.hint--inline:focus-visible {
+  color: inherit;
 }
 
 .hint__panel {

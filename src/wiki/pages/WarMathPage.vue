@@ -4,20 +4,22 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const RULES = {
-  baseDamage: 12,
-  escalation: 1.45,
+  baseDamage: 10,
+  escalation: 1.3,
   disparityExponent: 1,
-  missingScoreMultiplier: 0.3,
-  missingScoreEscalation: 1.2,
   chipEscalation: 1.05,
+  repeatMapShare: 0.4,
   mapBreakDecay: 0.75,
   mapBreakFloor: 0.5,
   lastStandDamage: 0.5,
   chipDamage: 3,
   chipWindow: 0.5,
   chipSkillExponent: 2,
-  breakShare: 0.5,
-  breakDecay: 0.75,
+  breakShare: 0.4,
+  bountyFloor: 0.25,
+  bountyCap: 1.75,
+  bountyDamageScale: 150,
+  bountyCarry: 0.5,
   allyRisk: 0.3,
   engagementFull: 0.5,
   engagementDays: 14,
@@ -39,25 +41,19 @@ const HIT_PARAMS: WikiCompareRow[] = [
     values: [`${RULES.escalation}`, 'Each map they got hit on with a score since their guard came back multiplies the next hit'],
   },
   {
-    label: 'No-score escalation',
-    values: [`${RULES.missingScoreEscalation}`, 'Each map they got hit on while they had no score multiplies the next hit by this instead'],
-  },
-  {
     label: 'Chip escalation',
-    values: [`${RULES.chipEscalation}`, 'Each chip on them since their guard came back multiplies the next hit by this'],
+    values: [`${RULES.chipEscalation}`, 'Each chip or no-score hit on them since their guard came back multiplies the next hit by this'],
   },
   { label: 'Maps hit', values: ['', 'Maps that player got hit on by anyone since their guard came back, beating a score. A second hit on the same map counts once'] },
-  { label: 'No-score maps', values: ['', 'Maps that player got hit on since their guard came back while they had no score there'] },
-  { label: 'Chips', values: ['', 'Chips on that player since their guard came back, the random extra ones too, plus every repeat hit on a map they were already hit on'] },
+  { label: 'Chips', values: ['', 'Chips on that player since their guard came back, the random extra ones too, plus every no-score hit and every repeat hit on a map they were already hit on'] },
   { label: 'Skill', values: ['', 'Overall skill level from the profile, never lower than 1'] },
   {
     label: 'Disparity exponent',
     values: [`${RULES.disparityExponent}`, 'Someone at twice your skill takes double. Half your skill takes half'],
   },
-  { label: 'No-score multiplier', values: [`${RULES.missingScoreMultiplier}`, 'They have no score on the map'] },
   {
     label: 'Map penalty',
-    values: [`${RULES.mapBreakDecay} per break`, `For each time a hit on this map broke them this war (chip breaks don't count), never below ${RULES.mapBreakFloor}`],
+    values: [`${RULES.mapBreakDecay} per break`, `For each time a hit on this map broke them this war (a chip break counts on the last map a hit landed on), never below ${RULES.mapBreakFloor}`],
   },
   {
     label: 'Last stand',
@@ -75,9 +71,9 @@ const CHIP_PARAMS: WikiCompareRow[] = [
 ]
 
 const BREAK_PARAMS: WikiCompareRow[] = [
-  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once moves half its stake. A weaker team loses a bit less per round"] },
-  { label: 'Break weight', values: ['', "Their skill squared, over their team's total skill squared, pulled a quarter of the way toward the stronger team's total"] },
-  { label: 'Break decay', values: [`${RULES.breakDecay}`, 'Each repeat break on the same player moves 25% less'] },
+  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once, at a bounty of 1, moves 40% of its stake. A weaker team loses a bit less per round"] },
+  { label: 'Break weight', values: ['', "Their skill squared, over the stronger team's total skill squared. Same pool for both teams"] },
+  { label: 'Bounty', values: [`${RULES.bountyFloor} to ${RULES.bountyCap}`, 'Starts at 1. When they get broken, the next life starts halfway between the floor and what it was, then climbs toward the cap with every bit of damage they deal'] },
   { label: 'Risk', values: [`1 or ${RULES.allyRisk}`, `1 for the two lead clans, ${RULES.allyRisk} for allies`] },
 ]
 
@@ -97,7 +93,6 @@ const XP_PARAMS: WikiCompareRow[] = [
     <math display="block">
       <mtext>damage</mtext><mo>=</mo><mn>{{ RULES.baseDamage }}</mn><mo>x</mo>
       <msup><mn>{{ RULES.escalation }}</mn><mtext>maps hit</mtext></msup><mo>x</mo>
-      <msup><mn>{{ RULES.missingScoreEscalation }}</mn><mtext>no-score maps</mtext></msup><mo>x</mo>
       <msup><mn>{{ RULES.chipEscalation }}</mn><mtext>chips</mtext></msup><mo>x</mo>
       <msup>
         <mrow><mo>(</mo><mfrac><mtext>their skill</mtext><mtext>your skill</mtext></mfrac><mo>)</mo></mrow>
@@ -106,10 +101,10 @@ const XP_PARAMS: WikiCompareRow[] = [
       <mo>x</mo><mtext>map penalty</mtext><mo>x</mo><mtext>last stand</mtext>
     </math>
     <p>
-      If they already got hit on this map since their guard came back, every escalation part is
-      1, so it's base damage. It still counts as a chip for later hits. If they have no score on the map, skill doesn't count. You swap the skill part for
-      {{ RULES.missingScoreMultiplier }}. That hit also builds the streak by
-      {{ RULES.missingScoreEscalation }} instead of {{ RULES.escalation }}. A hit never takes more than the guard they have left.
+      If they already got hit on this map since their guard came back, the hit keeps
+      {{ RULES.repeatMapShare }} of the streak bonus for every earlier hit on that map, so a 400% bonus becomes 160%, then 64%.
+      It only adds to the streak like a chip. If they have no score on the map, the streak doesn't count. The hit is a flat {{ RULES.baseDamage }}, times the map penalty, nothing else. It builds the streak
+      the same as a chip. A hit never takes more than the guard they have left.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="HIT_PARAMS" />
 
@@ -130,11 +125,19 @@ const XP_PARAMS: WikiCompareRow[] = [
     <math display="block">
       <mtext>standing</mtext><mo>=</mo><mtext>team stake</mtext><mo>x</mo><mn>{{ RULES.breakShare }}</mn>
       <mo>x</mo><mtext>break weight</mtext><mo>x</mo>
-      <msup><mn>{{ RULES.breakDecay }}</mn><mtext>breaks before</mtext></msup><mo>x</mo><mtext>risk</mtext>
+      <mtext>bounty</mtext><mo>x</mo><mtext>risk</mtext>
+    </math>
+    <math display="block">
+      <mtext>bounty</mtext><mo>=</mo><mn>{{ RULES.bountyCap }}</mn><mo>−</mo>
+      <mrow><mo>(</mo><mn>{{ RULES.bountyCap }}</mn><mo>−</mo><mtext>start</mtext><mo>)</mo></mrow><mo>x</mo>
+      <msup><mi>e</mi><mrow><mo>−</mo><mtext>damage dealt</mtext><mo>/</mo><mn>{{ RULES.bountyDamageScale }}</mn></mrow></msup>
     </math>
     <p>
       Team stake is their team's full stake. It can't move more than what's left in their clan's
-      slice. Your clan gets that amount times their team's engagement.
+      slice. Your clan gets that amount times their team's engagement. Start is 1 if they've never
+      been broken this war. After a break it's {{ RULES.bountyFloor }} plus {{ RULES.bountyCarry }} of whatever their
+      bounty was above {{ RULES.bountyFloor }} when they went down. Damage dealt is everything they did since
+      their last break, chips and no-score hits included. The bounty also scales the break XP.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="BREAK_PARAMS" />
 
@@ -180,9 +183,9 @@ const XP_PARAMS: WikiCompareRow[] = [
 
     <WikiHeading id="example">An example</WikiHeading>
     <p>
-      Two players with the same skill keep hitting one guy. The hits do 12, 17.4, 25.23 and 36.58. The
-      5th would do 53.04. He only has 8.79 left. That hit breaks him. With no score on the map, the
-      first hit would be 12 x 0.3 = 3.6. The one after it 12 x 1.2 x 0.3 = 4.32.
+      Two players with the same skill keep hitting one guy. The hits do 10, 13, 16.9, 21.97 and 28.56.
+      The 6th would do 37.13. He only has 9.57 left. That hit breaks him. With no score on the map,
+      every hit would be 10, so it takes 10.
     </p>
   </WikiProse>
 </template>

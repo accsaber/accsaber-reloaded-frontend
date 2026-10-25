@@ -18,7 +18,6 @@ interface StrikeBreakdown {
 
 export interface StrikeOutcome extends StrikeBreakdown {
   kind: StrikeKind
-  note: string
 }
 
 export function formatDamage(value: number): string {
@@ -38,29 +37,72 @@ function skillDetail(preview: ClanWarStrikePreviewResponse, exponent: number): s
   return `your skill ${formatDamage(preview.attackerSkill)} vs theirs ${formatDamage(preview.victimSkill)}${power}`
 }
 
-type Streak = Pick<ClanWarStrikePreviewResponse, 'hitsThisCycle' | 'noScoreHitsThisCycle' | 'chipsThisCycle'>
+type Streak = Pick<ClanWarStrikePreviewResponse, 'hitsThisCycle' | 'chipsThisCycle'>
 
 export function streakFactor(rules: ClanWarStrikeRulesResponse, streak: Streak): number {
-  return rules.escalation ** streak.hitsThisCycle * rules.missingScoreEscalation ** streak.noScoreHitsThisCycle
-    * rules.chipEscalation ** streak.chipsThisCycle
+  return rules.escalation ** streak.hitsThisCycle * rules.chipEscalation ** streak.chipsThisCycle
 }
 
-const NO_STREAK: Streak = { hitsThisCycle: 0, noScoreHitsThisCycle: 0, chipsThisCycle: 0 }
+export function targetValue(fighter: { guard: number; strikePreview: ClanWarStrikePreviewResponse | null }): number {
+  const preview = fighter.strikePreview
+  if (fighter.guard <= 0 || !preview) return -1
+  return preview.standingTaken / Math.max(1, preview.hitsToBreak)
+}
 
-const mapStreak = (preview: ClanWarStrikePreviewResponse): Streak => (preview.onMap?.repeatMap ? NO_STREAK : preview)
+export function formatBounty(bounty: number): string | null {
+  const change = Math.round((bounty - 1) * 100)
+  return change ? `${change > 0 ? '+' : ''}${change}%` : null
+}
 
-function noScoreDamage(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): number {
-  return rules.baseDamage * streakFactor(rules, mapStreak(preview)) * rules.missingScoreMultiplier
-    * (preview.onMap?.mapPenalty ?? 1) * preview.lastStand
+export function penaltyPercent(penalty: number | null | undefined): number | null {
+  return penalty != null && penalty < 1 ? Math.round(penalty * 100) : null
+}
+
+export function repeatShare(rules: ClanWarStrikeRulesResponse): number {
+  return Math.round(rules.repeatMapShare * 100)
+}
+
+export function repeatTitle(rules: ClanWarStrikeRulesResponse): string {
+  return `Each earlier hit on this map cuts the streak bonus to ${repeatShare(rules)}% of what it was. New maps get the full streak.`
+}
+
+export function isNoScore(preview: ClanWarStrikePreviewResponse): boolean {
+  return !!preview.onMap && preview.onMap.targetScore === null
+}
+
+const MAX_SHARE = 0.999999
+
+function level(score: number, maxScore: number): number {
+  return -Math.log10(1 - Math.min(MAX_SHARE, score / maxScore))
+}
+
+export function minHit(targetScore: number, maxScore: number): number | null {
+  return targetScore + 1 > maxScore ? null : targetScore + 1
+}
+
+export function minChip(rules: ClanWarStrikeRulesResponse, targetScore: number, maxScore: number): number {
+  const target = level(targetScore, maxScore)
+  const chips = (score: number) => target - level(score, maxScore) < rules.chipWindow
+  let score = Math.floor(maxScore * (1 - 10 ** rules.chipWindow * (1 - Math.min(MAX_SHARE, targetScore / maxScore)))) + 1
+  if (score <= 0) return 0
+  while (score > 1 && chips(score - 1)) score -= 1
+  while (score <= targetScore && !chips(score)) score += 1
+  return score
+}
+
+function closeness(rules: ClanWarStrikeRulesResponse, targetScore: number, score: number, maxScore: number): number {
+  return 1 - (level(targetScore, maxScore) - level(score, maxScore)) / rules.chipWindow
+}
+
+function skillRatio(preview: ClanWarStrikePreviewResponse): number {
+  return Math.min(1, Math.max(1, preview.attackerSkill) / Math.max(1, preview.victimSkill))
 }
 
 function streakLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
   const base = { label: 'Base damage', value: formatDamage(rules.baseDamage) }
-  if (preview.onMap?.repeatMap) return [base, factor('Streak', 1, 'already hit on this map: no streak bonus')]
   const rates = [
     `x${formatRate(rules.escalation)} per map hit (${preview.hitsThisCycle})`,
-    `x${formatRate(rules.missingScoreEscalation)} per no-score map hit (${preview.noScoreHitsThisCycle})`,
-    `x${formatRate(rules.chipEscalation)} per chip (${preview.chipsThisCycle})`,
+    `x${formatRate(rules.chipEscalation)} per chip, no-score or repeat hit (${preview.chipsThisCycle})`,
   ]
   return [base, factor('Streak', streakFactor(rules, preview), `since their guard came back: ${rates.join(', ')}`)]
 }
@@ -69,17 +111,28 @@ function lastStandLines(preview: ClanWarStrikePreviewResponse): StrikeLine[] {
   return preview.lastStand < 1 ? [factor('Last stand', preview.lastStand, 'few of their team are still unbroken')] : []
 }
 
+function noScoreLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  return [
+    { label: 'Base damage', value: formatDamage(rules.baseDamage), detail: "they haven't played this map" },
+    ...penaltyLines(preview),
+  ]
+}
+
 function penaltyLines(preview: ClanWarStrikePreviewResponse): StrikeLine[] {
   const penalty = preview.onMap?.mapPenalty ?? 1
-  const map = penalty < 1 ? [factor('Map penalty', penalty, 'this map broke them before')] : []
-  return [...map, ...lastStandLines(preview)]
+  return penalty < 1 ? [factor('Broken here before', penalty, 'this map broke them before')] : []
 }
 
 function hitLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): StrikeLine[] {
+  const repeat = preview.onMap?.repeatMap
+    ? [{ label: 'Repeat map', value: 'reduced streak', detail: repeatTitle(rules) }]
+    : []
   return [
     ...streakLines(rules, preview),
+    ...repeat,
     factor('Skill gap', preview.disparity, skillDetail(preview, rules.disparityExponent)),
     ...penaltyLines(preview),
+    ...lastStandLines(preview),
   ]
 }
 
@@ -91,72 +144,60 @@ function finish(lines: StrikeLine[], damage: number, guard: number, suffix = '')
   return { damage: capped, lines: [...lines, ...cap, { label: '=', value: `${formatDamage(capped)}${suffix}` }] }
 }
 
-export function hitBreakdown(
-  rules: ClanWarStrikeRulesResponse,
-  preview: ClanWarStrikePreviewResponse,
-  guard: number,
-): StrikeBreakdown {
-  const hits = `${preview.hitsToBreak} ${preview.hitsToBreak === 1 ? 'hit' : 'hits'} to break`
-  const result = finish(hitLines(rules, preview), preview.damage, guard, ` per hit, ${hits}`)
-  return { ...result, lines: [...result.lines, breakLine(preview)] }
-}
-
 function breakLine(preview: ClanWarStrikePreviewResponse): StrikeLine {
   const taken = formatStanding(preview.standingTaken)
   const gained = formatStanding(preview.standingGained)
   return taken === gained
     ? { label: 'Breaking them', value: `${taken} Standing`, detail: 'from their clan to yours' }
-    : { label: 'Breaking them', value: `-${taken} Standing`, detail: `for their clan, +${gained} for yours` }
+    : { label: 'Breaking them', value: `${taken} Standing`, detail: `taken from their clan, yours gets ${gained}` }
 }
 
-function accuracyGap(targetAccuracy: number, accuracy: number): number {
-  if (accuracy === targetAccuracy) return 0
-  return -Math.log10(1 - targetAccuracy) + Math.log10(1 - accuracy)
-}
-
-function chipLines(
-  rules: ClanWarStrikeRulesResponse,
-  preview: ClanWarStrikePreviewResponse,
-  closeness: number,
-  ratio: number,
-  accuracies: string,
-): StrikeLine[] {
-  return [
-    { label: 'Chip damage', value: formatDamage(rules.chipDamage) },
-    factor('Closeness', closeness, accuracies),
-    factor('Skill gap', ratio ** rules.chipSkillExponent, skillDetail(preview, rules.chipSkillExponent)),
-    ...lastStandLines(preview),
-  ]
-}
-
-export function strikeOutcome(
+export function hitBreakdown(
   rules: ClanWarStrikeRulesResponse,
   preview: ClanWarStrikePreviewResponse,
   guard: number,
+  bounty: number,
+): StrikeLine[] {
+  const hits = `${preview.hitsToBreak} ${preview.hitsToBreak === 1 ? 'hit' : 'hits'} to break`
+  const lines = isNoScore(preview) ? noScoreLines(rules, preview) : hitLines(rules, preview)
+  const change = formatBounty(bounty)
+  const bountyLine = { label: 'Bounty', value: change ?? '', detail: 'big hitters are worth more, freshly broken players less' }
+  return [...finish(lines, preview.damage, guard, ` per hit, ${hits}`).lines, ...(change ? [bountyLine] : []), breakLine(preview)]
+}
+
+export function mapOutcome(
+  rules: ClanWarStrikeRulesResponse,
+  preview: ClanWarStrikePreviewResponse,
+  guard: number,
+  map: { targetScore: number | null; targetDamage: number; maxScore: number; mapPenalty?: number; repeatMap?: boolean },
+  score: number,
+): StrikeOutcome {
+  if (map.targetScore === null || score > map.targetScore) {
+    const onMap = { targetScore: map.targetScore, repeatMap: !!map.repeatMap, mapPenalty: map.mapPenalty ?? 1 }
+    const scoped = { ...preview, onMap }
+    const lines = map.targetScore === null ? noScoreLines(rules, scoped) : hitLines(rules, scoped)
+    return { kind: 'damage', ...finish(lines, map.targetDamage, guard) }
+  }
+  return chipOutcome(rules, preview, guard, map.targetScore, score, map.maxScore)
+}
+
+function chipOutcome(
+  rules: ClanWarStrikeRulesResponse,
+  preview: ClanWarStrikePreviewResponse,
+  guard: number,
+  target: number,
   score: number,
   maxScore: number,
 ): StrikeOutcome {
-  const target = preview.onMap?.targetScore
-  if (target == null) {
-    const lines = [
-      ...streakLines(rules, preview),
-      factor('No score on the map', rules.missingScoreMultiplier, 'they have no score here'),
-      ...penaltyLines(preview),
-    ]
-    const result = finish(lines, noScoreDamage(rules, preview), guard)
-    return { kind: 'damage', note: 'No score on this map', ...result }
-  }
-  if (score > target) {
-    const result = finish(hitLines(rules, preview), preview.damage, guard)
-    return { kind: 'damage', note: "This score is above the target's score on this map", ...result }
-  }
-  const gap = accuracyGap(target / maxScore, score / maxScore)
-  const note = "This score is below the target's score on this map"
-  if (!(gap < rules.chipWindow)) return { kind: 'none', damage: 0, note, lines: [] }
-  const closeness = 1 - gap / rules.chipWindow
-  const ratio = Math.min(1, preview.attackerSkill / preview.victimSkill)
+  if (score < minChip(rules, target, maxScore)) return { kind: 'none', damage: 0, lines: [] }
   const accuracies = `your ${formatAccuracy(score / maxScore)} vs their ${formatAccuracy(target / maxScore)}`
-  const lines = chipLines(rules, preview, closeness, ratio, accuracies)
-  const result = finish(lines, rules.chipDamage * closeness * ratio ** rules.chipSkillExponent * preview.lastStand, guard)
-  return { kind: 'chip', note, ...result }
+  const close = closeness(rules, target, score, maxScore)
+  const punching = skillRatio(preview) ** rules.chipSkillExponent
+  const lines = [
+    { label: 'Chip damage', value: formatDamage(rules.chipDamage) },
+    factor('Closeness', close, accuracies),
+    factor('Skill gap', punching, skillDetail(preview, rules.chipSkillExponent)),
+    ...lastStandLines(preview),
+  ]
+  return { kind: 'chip', ...finish(lines, rules.chipDamage * close * punching * preview.lastStand, guard) }
 }
