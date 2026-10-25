@@ -16,7 +16,7 @@ import { useWarPlaylist } from './useWarPlaylist'
 import WarMapRow from './WarMapRow.vue'
 import WarPoolScore from './WarPoolScore.vue'
 import WarSection from './WarSection.vue'
-import { formatDamage, noScoreDamage } from './warStrike'
+import { formatDamage } from './warStrike'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -46,10 +46,8 @@ const enemies = computed(() => new Map((props.participants ?? []).map((p) => [p.
 
 function strikeOn(entry: ClanWarPoolEntryResponse) {
   const enemy = entry.target ? enemies.value.get(entry.target.id) : undefined
-  const preview = enemy?.strikePreview
-  if (!enemy || !preview) return null
-  const raw = entry.targetScore ? preview.damage : noScoreDamage(props.rules, preview)
-  const damage = Math.min(raw, enemy.guard)
+  if (!enemy || entry.targetDamage == null) return null
+  const damage = Math.min(entry.targetDamage, enemy.guard)
   return { damage, breaks: damage >= enemy.guard }
 }
 

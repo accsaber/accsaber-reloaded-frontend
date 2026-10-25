@@ -278,6 +278,7 @@ export interface ClanWarPoolEntryResponse {
   target: PlayerRef | null
   targetScore: MyScoreSummary | null
   targetPicked: boolean
+  targetDamage?: number
 }
 
 export interface ClanWarTimelinePointResponse {

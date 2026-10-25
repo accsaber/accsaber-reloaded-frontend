@@ -49,7 +49,7 @@ const NO_STREAK: Streak = { hitsThisCycle: 0, noScoreHitsThisCycle: 0, chipsThis
 
 const mapStreak = (preview: ClanWarStrikePreviewResponse): Streak => (preview.onMap?.repeatMap ? NO_STREAK : preview)
 
-export function noScoreDamage(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): number {
+function noScoreDamage(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikePreviewResponse): number {
   return rules.baseDamage * streakFactor(rules, mapStreak(preview)) * rules.missingScoreMultiplier
     * (preview.onMap?.mapPenalty ?? 1) * preview.lastStand
 }
