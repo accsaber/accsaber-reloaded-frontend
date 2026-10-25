@@ -9,20 +9,21 @@ import type { PlayerRef } from '@/types/api/common'
 import type { SortState, TableColumn } from '@/types/display'
 import {
   assignableRoles,
+  CLAN_ROLE_LABEL,
   CLAN_ROLE_ORDER,
   hasClanRole,
   outranks,
-  type LockedRankSlot,
+  type RankSlot,
 } from '@/utils/clans'
 import { formatPercent, formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import ClanLeaderTile from './ClanLeaderTile.vue'
-import ClanLockedSlot from './ClanLockedSlot.vue'
 import ClanMemberMenu, { type MemberActions, type MemberPick } from './ClanMemberMenu.vue'
+import ClanRankSlot from './ClanRankSlot.vue'
 
 const props = defineProps<{
   members: PlayerRef[]
-  lockedSlots: LockedRankSlot[]
+  slots: RankSlot[]
   loading: boolean
   viewerRole: ClanRole | null
   viewerId: string | null
@@ -70,22 +71,28 @@ const canClaim = computed(() => {
   return !lastPlayed || now.value - new Date(lastPlayed).getTime() > FOUNDER_INACTIVITY_MS
 })
 const sortState = ref<SortState>({ key: 'xp', direction: 'desc' })
+const split = computed(() => sortState.value.key === 'xp' && sortState.value.direction === 'desc')
 
 function seasonXp(member: PlayerRef): number {
   return member.membership?.seasonPlayXp ?? 0
 }
 
-const leaderGroups = computed(() =>
-  CLAN_ROLE_ORDER.filter((role) => role !== 'member')
-    .map((role) => ({
-      role,
-      members: props.members
+function seatsFor(role: ClanRole, held: number): RankSlot[] {
+  const seats = props.slots.filter((s) => s.role === role)
+  return [...seats.filter((s) => s.open).slice(held), ...seats.filter((s) => !s.open)]
+}
+
+const leaderGroups = computed(() => {
+  if (!split.value) return []
+  return CLAN_ROLE_ORDER.filter((role) => role !== 'member')
+    .map((role) => {
+      const members = props.members
         .filter((m) => m.membership?.role === role)
-        .sort((a, b) => seasonXp(b) - seasonXp(a)),
-      locked: props.lockedSlots.filter((s) => s.role === role),
-    }))
-    .filter((g) => g.members.length || g.locked.length),
-)
+        .sort((a, b) => seasonXp(b) - seasonXp(a))
+      return { role, members, seats: seatsFor(role, members.length) }
+    })
+    .filter((g) => g.members.length || g.seats.length)
+})
 
 const leaderColumns = computed(() =>
   [
@@ -96,12 +103,13 @@ const leaderColumns = computed(() =>
 
 const rows = computed(() => {
   const list = props.members
-    .filter((m) => !m.membership || m.membership.role === 'member')
+    .filter((m) => !split.value || !m.membership || m.membership.role === 'member')
     .map((member) => {
       const m = member.membership
       return {
         id: member.id,
         player: member,
+        role: m && m.role !== 'member' ? CLAN_ROLE_LABEL[m.role] : null,
         xp: m?.seasonPlayXp ?? 0,
         hits: m?.seasonHits ?? 0,
         breaks: m?.seasonBreaks ?? 0,
@@ -145,6 +153,17 @@ const memberActions = computed(() => {
     if (actions) map.set(member.id, actions)
   }
   return map
+})
+
+const candidates = computed(() => {
+  const byRole: Partial<Record<ClanRole, PlayerRef[]>> = {}
+  for (const member of props.members) {
+    const current = member.membership?.role
+    for (const role of memberActions.value.get(member.id)?.roles ?? []) {
+      if (current && outranks(role, current)) (byRole[role] ??= []).push(member)
+    }
+  }
+  return byRole
 })
 
 function onPick(member: PlayerRef, action: MemberPick) {
@@ -196,11 +215,12 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
                 @pick="onPick(member, $event)"
               />
             </ClanLeaderTile>
-            <ClanLockedSlot
-              v-for="(slot, i) in group.locked"
+            <ClanRankSlot
+              v-for="(seat, i) in group.seats"
               :key="`${group.role}-${i}`"
-              :role="slot.role"
-              :level="slot.level"
+              :seat="seat"
+              :candidates="candidates[group.role] ?? []"
+              @pick="emit('change-role', $event, group.role)"
             />
           </template>
         </div>
@@ -221,6 +241,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
           <template #cell-member="{ row }">
             <span class="roster__who">
               <UserChip :user="asPlayer(row)" link tooltip hide-clan />
+              <span v-if="row.role" class="roster__role">{{ row.role }}</span>
               <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
             </span>
           </template>
@@ -243,6 +264,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
               <div class="member-card__grid">
                 <span class="roster__who">
                   <UserChip :user="asPlayer(row)" size="sm" link hide-clan />
+                  <span v-if="row.role" class="roster__role">{{ row.role }}</span>
                   <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
                 </span>
                 <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
@@ -308,6 +330,11 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   align-items: center;
   gap: var(--space-sm);
   min-width: 0;
+}
+
+.roster__role {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .roster__online {

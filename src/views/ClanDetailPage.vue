@@ -11,7 +11,7 @@ import type { ClanLevelStepResponse, ClanRole, ClanWarDetailResponse, ClanWarRes
 import type { ItemResponse } from '@/types/api/items'
 import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
-import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, isPacifist, lockedRankSlots } from '@/utils/clans'
+import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, isPacifist, rankSlots } from '@/utils/clans'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -115,7 +115,7 @@ const activeTab = computed<ClanTab>(() => {
   return [...tabs.value, ...manageTabs.value].some((t) => t.key === requested) ? (requested as ClanTab) : 'roster'
 })
 const levelSteps = ref<ClanLevelStepResponse[]>([])
-const lockedSlots = computed(() => (clan.value ? lockedRankSlots(levelSteps.value, clan.value.level.level) : []))
+const slots = computed(() => (clan.value ? rankSlots(levelSteps.value, clan.value.level.level) : []))
 
 watch(
   () => activeTab.value === 'roster',
@@ -533,7 +533,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         <ClanRosterTab
           v-if="activeTab === 'roster'"
           :members="members"
-          :locked-slots="lockedSlots"
+          :slots="slots"
           :loading="rosterLoading && members.length === 0"
           :viewer-role="viewerRole"
           :viewer-id="auth.userId"

@@ -260,9 +260,10 @@ export const CLAN_ITEM_SOURCE_LABEL: Record<ClanItemSource, string> = {
   manual: 'Granted',
 }
 
-export interface LockedRankSlot {
+export interface RankSlot {
   role: ClanRole
   level: number
+  open: boolean
 }
 
 const RANK_SLOT_CAPACITY: Partial<Record<ClanRole, ClanCapacity>> = {
@@ -270,13 +271,13 @@ const RANK_SLOT_CAPACITY: Partial<Record<ClanRole, ClanCapacity>> = {
   officer: 'officer_slots',
 }
 
-export function lockedRankSlots(steps: ClanLevelStepResponse[], level: number): LockedRankSlot[] {
-  const slots: LockedRankSlot[] = []
-  const upcoming = steps.filter((s) => s.level > level).sort((a, b) => a.level - b.level)
+export function rankSlots(steps: ClanLevelStepResponse[], level: number): RankSlot[] {
+  const slots: RankSlot[] = []
+  const ordered = [...steps].sort((a, b) => a.level - b.level)
   for (const [role, capacity] of Object.entries(RANK_SLOT_CAPACITY) as [ClanRole, ClanCapacity][]) {
-    for (const step of upcoming) {
+    for (const step of ordered) {
       const amount = step.unlocks.capacities[capacity] ?? 0
-      for (let i = 0; i < amount; i++) slots.push({ role, level: step.level })
+      for (let i = 0; i < amount; i++) slots.push({ role, level: step.level, open: step.level <= level })
     }
   }
   return slots
