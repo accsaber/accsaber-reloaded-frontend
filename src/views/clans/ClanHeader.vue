@@ -20,11 +20,11 @@ const founded = computed(() =>
 
 <template>
   <header class="clan-header">
-    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !clan.bannerUrl }">
+    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !clan.clan.bannerUrl }">
       <div
-        v-if="clan.bannerUrl"
+        v-if="clan.clan.bannerUrl"
         class="clan-header__banner"
-        :style="{ backgroundImage: `url(${clan.bannerUrl})` }"
+        :style="{ backgroundImage: `url(${clan.clan.bannerUrl})` }"
         aria-hidden="true"
       />
       <div class="clan-header__top">

@@ -2,6 +2,7 @@
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
+import ClanTotals, { type ClanTotalsRow } from './ClanTotals.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanResponse, ClanSeasonResponse, ClanStandingEventResponse, ClanStandingResponse } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
@@ -11,7 +12,7 @@ import { formatRelativeDate } from '@/utils/formatters'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 
-const props = defineProps<{ clan: ClanResponse }>()
+const props = defineProps<{ clan: ClanResponse; standing: ClanStandingResponse | null }>()
 
 const route = useRoute()
 const router = useRouter()
@@ -24,7 +25,7 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 })
 
 const seasons = ref<ClanSeasonResponse[] | null>(null)
-const standing = ref<ClanStandingResponse | null>(null)
+const pastStanding = ref<ClanStandingResponse | null>(null)
 const events = ref<Page<ClanStandingEventResponse> | null>(null)
 const eventsLoading = ref(true)
 
@@ -36,6 +37,16 @@ const selectedSeason = computed(() => {
 })
 const pastSeason = computed(() => (selectedSeason.value !== runningSlug.value ? selectedSeason.value : ''))
 const closedSeason = computed(() => seasons.value?.find((s) => s.slug === pastSeason.value && s.closedAt)?.slug ?? '')
+
+const shown = computed(() => (pastSeason.value ? pastStanding.value : props.standing))
+const totals = computed<ClanTotalsRow[]>(() => {
+  const s = shown.value
+  if (!s) return []
+  return [
+    { key: 'base', label: 'Base', value: s.baseStanding, text: formatStanding(s.baseStanding) },
+    { key: 'earned', label: 'Earned', value: s.earned, text: formatSignedStanding(s.earned), down: s.earned < 0 },
+  ]
+})
 
 const seasonOptions = computed(() =>
   (seasons.value ?? []).map((s) => ({ value: s.slug, label: s.slug === runningSlug.value ? `${s.name} (running)` : s.name })),
@@ -65,13 +76,13 @@ function setSeason(slug: string) {
 }
 
 async function fetchStanding(season: string) {
-  standing.value = null
+  pastStanding.value = null
   if (!season) return
   try {
     const { getClanStanding } = await import('@/api/clans')
-    standing.value = await getClanStanding(props.clan.clan.id, { season })
+    pastStanding.value = await getClanStanding(props.clan.clan.id, { season })
   } catch {
-    standing.value = null
+    pastStanding.value = null
   }
 }
 
@@ -119,10 +130,9 @@ watch(() => [seasonKey.value, route.query.page], () => { if (seasonKey.value !==
       />
     </div>
 
-    <p v-if="standing" class="standing-tab__past">
-      Finished #{{ standing.rank }} with {{ formatStanding(standing.standing) }} Standing,
-      {{ formatStanding(standing.baseStanding) }} base and {{ formatSignedStanding(standing.earned) }} earned.
-    </p>
+    <ClanTotals v-if="shown" :rows="totals">
+      <template v-if="pastSeason" #default>Finished #{{ shown.rank }} with {{ formatStanding(shown.standing) }} Standing.</template>
+    </ClanTotals>
 
     <DataTable
       :columns="columns"
@@ -152,11 +162,6 @@ watch(() => [seasonKey.value, route.query.page], () => { if (seasonKey.value !==
   display: flex;
   justify-content: flex-end;
   min-height: 0;
-}
-
-.standing-tab__past {
-  margin: 0;
-  color: var(--text-secondary);
 }
 
 .standing-tab__amount {

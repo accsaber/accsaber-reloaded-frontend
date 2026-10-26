@@ -5,16 +5,16 @@ import ClanBar from './ClanBar.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
-import type { ClanLevelResponse, ClanLevelStepResponse, ClanResponse, ClanXpGrantResponse } from '@/types/api/clans'
+import type { ClanLevelResponse, ClanLevelStepResponse, ClanResponse, ClanXpGrantResponse, ClanXpSource } from '@/types/api/clans'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
-import { clanXpGrantLabel, clanXpGrantWhen, formatClanXp, hasUnlocks } from '@/utils/clans'
+import { CLAN_XP_SOURCE_LABEL, clanXpGrantLabel, clanXpGrantWhen, formatClanXp, hasUnlocks } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { loadClanLevels } from './clanLevels'
 import ClanLevelReward from './ClanLevelReward.vue'
 import ClanLevelTrail from './ClanLevelTrail.vue'
-import ClanXpSummary from './ClanXpSummary.vue'
+import ClanTotals, { type ClanTotalsRow } from './ClanTotals.vue'
 import { clamp } from '@/utils/math'
 
 const props = defineProps<{ clan: ClanResponse; seasonRunning: boolean }>()
@@ -55,6 +55,14 @@ const nextRewards = computed(() =>
     .sort((a, b) => a.level - b.level)
     .slice(0, 2),
 )
+
+const sourceRows = computed<ClanTotalsRow[]>(() =>
+  (Object.entries(level.value?.seasonXpBySource ?? {}) as [ClanXpSource, number][])
+    .filter(([, xp]) => xp > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([source, xp]) => ({ key: source, label: CLAN_XP_SOURCE_LABEL[source], value: xp, text: formatClanXp(xp) })),
+)
+const seasonXp = computed(() => sourceRows.value.reduce((sum, row) => sum + row.value, 0))
 
 const xpColumns: TableColumn[] = [
   { key: 'source', label: 'Source', align: 'left' },
@@ -142,7 +150,10 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     <div class="level-tab__xp">
       <h2 class="section-title">XP this season</h2>
       <SkeletonLoader v-if="loading" variant="text" :lines="3" />
-      <ClanXpSummary v-else-if="seasonRunning" :by-source="level?.seasonXpBySource ?? {}" />
+      <ClanTotals v-else-if="seasonRunning" :rows="sourceRows">
+        <template v-if="sourceRows.length">{{ formatClanXp(seasonXp) }} XP this season.</template>
+        <template v-else>No XP this season yet.</template>
+      </ClanTotals>
       <p v-else class="level-tab__no-season">No season running.</p>
       <BaseButton class="level-tab__toggle" size="sm" :aria-expanded="showAll" @click="toggleAll">
         {{ showAll ? 'Hide grants' : 'Show all grants' }}

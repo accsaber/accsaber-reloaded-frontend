@@ -77,7 +77,7 @@ async function save() {
         <input v-model="removeMedia" type="checkbox" value="icon" :disabled="busy" />
         <span>Remove the icon</span>
       </label>
-      <label v-if="clan.bannerUrl" class="moderate__toggle">
+      <label v-if="clan.clan.bannerUrl" class="moderate__toggle">
         <input v-model="removeMedia" type="checkbox" value="banner" :disabled="busy" />
         <span>Remove the banner</span>
       </label>

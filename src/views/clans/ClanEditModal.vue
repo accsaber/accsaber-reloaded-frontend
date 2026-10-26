@@ -67,7 +67,7 @@ function save() {
       :icon-url="clan.clan.iconUrl"
       :upload-icon="uploadIcon"
       :remove-icon="removeIcon"
-      :banner-url="clan.bannerUrl"
+      :banner-url="clan.clan.bannerUrl"
       :upload-banner="uploadBanner"
       :remove-banner="removeBanner"
       :equipped="clan.clan.equipped"

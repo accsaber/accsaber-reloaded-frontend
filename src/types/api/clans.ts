@@ -73,13 +73,13 @@ export interface PublicClanResponse {
   primaryColor: string | null
   secondaryColor: string | null
   iconUrl: string | null
+  bannerUrl: string | null
   equipped: ItemResponse[]
 }
 
 export interface ClanResponse {
   clan: PublicClanResponse
   description: string | null
-  bannerUrl: string | null
   acceptingRequests: boolean
   level: LevelResponse
   standing: number
