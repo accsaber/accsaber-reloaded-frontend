@@ -205,5 +205,14 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
     gap: var(--space-md);
     padding: var(--space-md);
   }
+
+  .scorebug--hud {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'middle'
+      'attack'
+      'defend';
+    gap: var(--space-lg);
+  }
 }
 </style>

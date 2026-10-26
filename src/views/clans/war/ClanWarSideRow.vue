@@ -59,8 +59,12 @@ const badge = computed(() => (props.side.leftAt ? 'Left' : props.side.fallen ? '
 }
 
 .side-row__name {
+  min-width: 0;
+  overflow: hidden;
   font-size: var(--text-body);
   font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .side-row__stake {

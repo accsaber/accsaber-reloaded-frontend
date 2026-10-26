@@ -299,7 +299,6 @@ function everyone(next: ClanWarOrder) {
                   <UserChip :user="fighter.player" size="sm" tooltip hide-clan />
                 </button>
                 <UserChip v-else :user="fighter.player" size="sm" link tooltip hide-clan />
-                <span v-if="fighter.player.id === viewer?.player.id" class="roster__tag">(you)</span>
                 <span v-if="t.enemy && fighter.player.id === aimId" class="roster__tag roster__tag--aim">aimed</span>
                 <span v-else-if="t.enemy && fighter.player.id === bestId" class="roster__tag roster__tag--best">best target</span>
                 <span v-if="t.enemy && fighter.player.id === commanderPick" class="roster__tag roster__tag--commander">commander pick</span>
