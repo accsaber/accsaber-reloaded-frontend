@@ -19,6 +19,7 @@ defineProps<{
   boards: Record<string, WarMapBoard>
   wipe: WarWipe | null
   expandable: boolean
+  link?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -32,7 +33,7 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
   <WarMapRow :difficulty="entry.difficulty" plain>
     <slot />
     <button
-      v-if="expandable"
+      v-if="expandable && !link"
       type="button"
       class="war-entry__expand"
       :aria-expanded="expanded === entry.difficulty.id"
@@ -46,6 +47,15 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
     </button>
   </WarMapRow>
   <slot name="below" />
+  <button
+    v-if="expandable && link"
+    type="button"
+    class="war-entry__link"
+    :aria-expanded="expanded === entry.difficulty.id"
+    @click="emit('toggle', entry.difficulty.id)"
+  >
+    {{ expanded === entry.difficulty.id ? 'Hide leaderboard' : 'Full leaderboard' }}
+  </button>
   <WarMapBoardView
     v-if="expandable && expanded === entry.difficulty.id && entry.difficulty.maxScore != null"
     :war="war"
@@ -77,6 +87,21 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
 .war-entry__expand[aria-expanded='true'] {
   color: var(--text-primary);
   border-color: var(--text-secondary);
+}
+
+.war-entry__link {
+  align-self: flex-start;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.war-entry__link:hover {
+  color: var(--text-primary);
 }
 
 .war-entry__expand svg {

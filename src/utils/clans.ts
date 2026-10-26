@@ -95,7 +95,7 @@ const CLAN_WAR_STATUS_LABEL: Record<ClanWarStatus, string> = {
   ended: 'Ended',
 }
 
-export const CLAN_WAR_OUTCOME_LABEL: Record<ClanWarOutcome, string> = {
+const CLAN_WAR_OUTCOME_LABEL: Record<ClanWarOutcome, string> = {
   attacker_won: 'Attacker won',
   defender_won: 'Defender won',
   drawn: 'Draw',
@@ -160,8 +160,8 @@ export function isPacifist(clan: ClanResponse, now = Date.now()): boolean {
   return !!clan.pacifistFrom && new Date(clan.pacifistFrom).getTime() <= now
 }
 
-export const WAR_POOL_SIZE = 10
-export const WAR_MAX_UNDERDOG_SHARE = 0.85
+const WAR_POOL_SIZE = 10
+const WAR_MAX_UNDERDOG_SHARE = 0.85
 
 export function attackerPickCount(attackerStanding: number, defenderStanding: number): number {
   const stronger = Math.max(attackerStanding, defenderStanding)
@@ -417,7 +417,7 @@ function similarColors(a: string | null, b: string | null): boolean {
   return hueGap < 30 && Math.abs(la - lb) < 0.2
 }
 
-export type WarSideStyles = Record<ClanWarTeam, Record<string, string>>
+type WarSideStyles = Record<ClanWarTeam, Record<string, string>>
 
 function clashSide(clan: PublicClanResponse): string {
   return clan.secondaryColor ? 'var(--clan-accent-2)' : 'oklch(from var(--clan-accent) l c calc(h + 150))'

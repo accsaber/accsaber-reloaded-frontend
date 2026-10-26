@@ -8,7 +8,7 @@ import type {
   ClanWarStrikeRulesResponse,
 } from '@/types/api/clans'
 import { formatStanding, warSideStyles, warTeamOf, type WarWipe } from '@/utils/clans'
-import { formatAccuracy, formatDuration } from '@/utils/formatters'
+import { formatAccuracy, formatDuration, formatSigned } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import StrikeLines from './StrikeLines.vue'
 import type { WarMapBoard } from './useWarMapBoards'
@@ -41,15 +41,15 @@ const CHIP_TITLE = 'Score just under them and you still chip their guard. The cl
 const howOpen = ref(false)
 const style = computed(() => warSideStyles(props.war)[warTeamOf(props.war, props.fighter.clanId) ?? 'defend'])
 const preview = computed(() => props.fighter.strikePreview)
-const up = computed(() => props.fighter.guard > 0)
+const guard = computed(() => (props.fighter.guard > 0 ? props.fighter.guard : props.rules.guard))
 const startsIn = computed(() =>
   props.war.status === 'preparing' && props.war.startsAt
     ? formatDuration(new Date(props.war.startsAt).getTime() - props.now, { zero: 'now' })
     : null,
 )
-const nextHit = computed(() => (preview.value ? Math.min(preview.value.damage, props.fighter.guard) : 0))
+const nextHit = computed(() => (preview.value ? Math.min(preview.value.damage, guard.value) : 0))
 const breakdown = computed(() =>
-  preview.value ? hitBreakdown(props.rules, preview.value, props.fighter.guard, props.fighter.bounty) : [],
+  preview.value ? hitBreakdown(props.rules, preview.value, guard.value, props.fighter.bounty) : [],
 )
 
 function pct(score: number, maxScore: number): string {
@@ -59,10 +59,9 @@ function pct(score: number, maxScore: number): string {
 function plan(entry: ClanWarPoolEntryResponse) {
   const maxScore = entry.difficulty.maxScore
   if (entry.target?.id !== props.fighter.player.id || maxScore == null) return null
-  const guard = props.fighter.guard
   const penalty = penaltyPercent(entry.targetMapPenalty)
-  const damage = entry.targetDamage == null ? null : Math.min(entry.targetDamage, guard)
-  const breaks = damage != null && damage >= guard
+  const damage = entry.targetDamage == null ? null : Math.min(entry.targetDamage, guard.value)
+  const breaks = damage != null && damage >= guard.value
   const repeat = !!entry.targetRepeatMap
   if (!entry.targetScore) return { noScore: true, damage, breaks, penalty, repeat } as const
   const target = entry.targetScore.score
@@ -79,7 +78,20 @@ function plan(entry: ClanWarPoolEntryResponse) {
   } as const
 }
 
-const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ? plan(entry) : null })))
+function scores(entry: ClanWarPoolEntryResponse) {
+  const theirs = entry.target?.id === props.fighter.player.id ? entry.targetScore : null
+  const mine = entry.viewerScore
+  const gap = mine && theirs ? (mine.accuracy - theirs.accuracy) * 100 : null
+  return {
+    them: theirs ? formatAccuracy(theirs.accuracy) : '-',
+    you: mine ? formatAccuracy(mine.accuracy) : '-',
+    diff: gap === null ? '-' : `${formatSigned(gap, 2, '-')}%`,
+    gap: gap === null ? 0 : Math.sign(gap),
+    ahead: !!mine && entry.target?.id === props.fighter.player.id && (!theirs || mine.score > theirs.score),
+  }
+}
+
+const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry), scores: scores(entry) })))
 </script>
 
 <template>
@@ -92,7 +104,7 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ?
         </header>
         <p v-if="startsIn" class="target__line">Starts in {{ startsIn }}. Hits count from then.</p>
         <div v-if="preview" class="target__how">
-          <span v-if="up" class="target__line">Next hit {{ formatDamage(nextHit) }} <span class="target__soft">on a new map</span></span>
+          <span class="target__line">Next hit {{ formatDamage(nextHit) }} <span class="target__soft">on a new map</span></span>
           <button type="button" class="target__how-toggle" :aria-expanded="howOpen" aria-controls="war-target-how" @click="howOpen = !howOpen">
             How?
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -111,7 +123,7 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ?
 
     <h3 class="target__label target__where">Where to hit them</h3>
     <ul class="target__maps">
-      <li v-for="{ entry, plan: p } in rows" :key="entry.difficulty.id" class="target__map">
+      <li v-for="{ entry, plan: p, scores: sc } in rows" :key="entry.difficulty.id" class="target__map">
         <WarPoolEntry
           :entry="entry"
           :war="war"
@@ -121,9 +133,23 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ?
           :boards="boards"
           :wipe="wipe"
           expandable
+          link
           @toggle="emit('toggle', $event)"
         >
-          <span v-if="entry.viewerScore" class="target__soft">Your PB {{ formatAccuracy(entry.viewerScore.accuracy) }}</span>
+          <span class="target__scores">
+            <span class="target__score">
+              <span class="target__label">Them</span>
+              {{ sc.them }}
+            </span>
+            <span class="target__score" :class="{ 'target__score--ahead': sc.gap > 0, 'target__score--behind': sc.gap < 0 }">
+              <span class="target__label">Diff</span>
+              {{ sc.diff }}
+            </span>
+            <span class="target__score" :class="{ 'target__score--ahead': sc.ahead }">
+              <span class="target__label">You</span>
+              {{ sc.you }}
+            </span>
+          </span>
           <template #below>
             <p v-if="p" class="target__plan">
               <template v-if="p.noScore">
@@ -146,7 +172,7 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ?
                 class="target__calc"
                 :rules="rules"
                 :preview="preview"
-                :guard="fighter.guard"
+                :guard="guard"
                 :target-score="entry.targetScore?.score ?? null"
                 :target-damage="entry.targetDamage"
                 :max-score="entry.difficulty.maxScore"
@@ -291,13 +317,31 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ?
   border-bottom: none;
 }
 
-.target__plan {
-  padding-left: calc(40px + var(--space-md));
-}
-
 .target__calc {
   margin-left: var(--space-xs);
   vertical-align: middle;
+}
+
+.target__scores {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.target__score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+}
+
+.target__score--ahead {
+  color: var(--success);
+}
+
+.target__score--behind {
+  color: var(--error);
 }
 
 .target__lands {
@@ -319,10 +363,6 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: up.value ?
 @media (max-width: 600px) {
   .target {
     padding: var(--space-md);
-  }
-
-  .target__plan {
-    padding-left: 0;
   }
 
   .target__top {

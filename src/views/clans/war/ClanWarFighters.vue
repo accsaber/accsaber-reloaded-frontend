@@ -3,6 +3,7 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
@@ -56,6 +57,8 @@ const ORDER_TABS = computed(() => [
 ])
 
 const now = useNow()
+const LATER_TITLE = "What they'll be worth once they're back."
+
 const sorts = ref<Partial<Record<ClanWarTeam, { key: SortKey; direction: SortDirection }>>>({})
 const busy = ref<string | null>(null)
 const orderError = ref<string | null>(null)
@@ -305,11 +308,17 @@ function everyone(next: ClanWarOrder) {
               </th>
               <td class="roster__guard" data-label="Guard"><WarGuard :fighter="fighter" :rules="rules" :wipe="wipe" /></td>
               <td v-if="t.standing" class="roster__num roster__standing" data-label="Standing">
-                <template v-if="fighter.brokenAt">-</template>
-                <template v-else-if="standingOf(fighter) !== null">{{ formatStanding(standingOf(fighter)!) }}</template>
+                <template v-if="standingOf(fighter) === null">-</template>
+                <HintTooltip v-else-if="fighter.brokenAt" variant="inline" class="roster__later" :text="LATER_TITLE">
+                  <template #trigger>{{ formatStanding(standingOf(fighter)!) }}</template>
+                </HintTooltip>
+                <template v-else>{{ formatStanding(standingOf(fighter)!) }}</template>
               </td>
               <td v-if="t.bounty" class="roster__num" data-label="Bounty" :class="{ 'roster__bounty--down': fighter.bounty < 1 }">
-                {{ fighter.brokenAt ? '-' : formatBounty(fighter.bounty) }}
+                <HintTooltip v-if="fighter.brokenAt && formatBounty(fighter.bounty)" variant="inline" class="roster__later" :text="LATER_TITLE">
+                  <template #trigger>{{ formatBounty(fighter.bounty) }}</template>
+                </HintTooltip>
+                <template v-else>{{ formatBounty(fighter.bounty) }}</template>
               </td>
               <td v-if="t.strikes" class="roster__num" data-label="Hits to break">
                 <template v-if="fighter.brokenAt">-</template>
@@ -505,6 +514,11 @@ function everyone(next: ClanWarOrder) {
   color: var(--success);
 }
 
+.roster__table .roster__detail td > * {
+  width: 0;
+  min-width: 100%;
+}
+
 .roster__table .roster__detail td {
   padding: 0 var(--space-sm) var(--space-sm);
   border-top: none;
@@ -545,6 +559,10 @@ function everyone(next: ClanWarOrder) {
   align-items: center;
   gap: var(--space-sm);
   font-weight: 600;
+}
+
+.roster__later {
+  color: var(--text-secondary);
 }
 
 .roster__bounty--down {
