@@ -33,7 +33,7 @@ const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.vie
 const fighters = computed(() => new Map((props.board?.fighters ?? []).map((f) => [f.player.id, f])))
 
 const columns = computed<TableColumn[]>(() => [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '48px' },
+  { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
   { key: 'player', label: 'Player', align: 'left', width: '160px', flex: true },
   { key: 'accuracy', label: 'Acc', align: 'right', mono: true, width: '72px' },
   { key: 'ap', label: 'AP', align: 'right', mono: true, width: '80px' },
