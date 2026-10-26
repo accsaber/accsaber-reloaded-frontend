@@ -10,8 +10,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       missions only give standing during one too.
     </p>
     <p>
-      Between seasons there's no wars. Clan missions still give clan XP though. Pacifism kicks in
-      instantly too.
+      Between seasons there's no wars. Clan missions still give clan XP though.
     </p>
 
     <WikiHeading id="ranking">The ranking</WikiHeading>

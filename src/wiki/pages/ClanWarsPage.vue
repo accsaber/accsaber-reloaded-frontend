@@ -103,10 +103,15 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <WikiHeading id="pacifism">Pacifism</WikiHeading>
     <p>
       The Founder can make the clan pacifist. Pacifist clans cannot declare war, get attacked or
-      help in one. You have to be out of every war first. Outside a season it starts right away.
-      During a season it starts 7 days later. Your clan can still be attacked until then.
-      Turning it off is instant and cancels the countdown. Turning it back on starts the 7 days
-      over. If you make your clan pacifist from the start, it's instant.
+      help in one. You cannot turn it on while your clan is attacking someone. If your clan has
+      not attacked anyone in the last 7 days, it starts right away. Otherwise it starts 7 days
+      after your last attack ended. Defending does not count. Wars you are already defending in
+      keep going.
+    </p>
+    <p>
+      Until it starts, your clan can still be attacked and can still help an ally defend. It
+      cannot declare war or join an attack. Turning it off is instant and cancels the countdown.
+      If you make your clan pacifist from the start, it's instant.
     </p>
 
     <WikiHeading id="rewards">Rewards</WikiHeading>

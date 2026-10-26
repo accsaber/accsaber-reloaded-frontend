@@ -1,6 +1,6 @@
 export type Visibility = 'public' | 'followers_only' | 'private'
 
-export type SettingGroup = 'privacy' | 'appearance' | 'notifications'
+export type SettingGroup = 'privacy' | 'appearance' | 'notifications' | 'clans'
 
 export type ReplayService = 'beatleader' | 'chroviewer' | 'arcviewer'
 
@@ -39,6 +39,10 @@ export interface AppearanceSettings extends SettingsBag {
   'appearance.hideReloadedProfileFeatures': boolean
   'appearance.showStatisticsChart': boolean
   'appearance.clanChatBubble': boolean
+}
+
+export interface ClanSettings extends SettingsBag {
+  'clans.warParticipation': boolean
 }
 
 export interface NotificationSettings extends SettingsBag {

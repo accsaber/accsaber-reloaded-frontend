@@ -20,6 +20,12 @@ const DAMAGE: WikiCompareRow[] = [
       Rosters never lock. Anyone who joins later becomes a fighter. Anyone who leaves drops out.
     </p>
     <p>
+      You can turn off Participate in clan wars in your settings. You stay in your clan but sit
+      out its new wars. Turn it off during prep and you drop out right away. Once a war starts,
+      turning it off does nothing until that war ends. Turning it back on mid-war does not put you
+      in. If you join a clan mid-war with it off, you stay out of that war.
+    </p>
+    <p>
       Guard is a shield. Hits wear it down without moving any standing. Standing only moves when
       guard hits 0, which is a break.
     </p>
@@ -116,7 +122,7 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       Stronger players are worth more standing and the same skill is worth the same on both
-      teams, however deep either roster is. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. Get broken
+      teams, however deep either roster is. Players who sit out do not count. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. Get broken
       and you come back with about half of it (a 1.7 comes back near 1), then every bit of damage you
       deal climbs it again, up to 1.75. Around 100 damage is enough to get from the bottom back to 1.
       Keep going down without hitting back and it sinks toward 0.25. So someone on a rampage is worth

@@ -1,12 +1,13 @@
 import type {
   AppearanceSettings,
+  ClanSettings,
   PrivacySettings,
   SettingGroup,
   SettingsBag,
 } from '@/types/api/settings'
 import { DEFAULT_SCORE_ROW_FIELDS } from '@/utils/scoreRowFields'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 
 const api = () => import('@/api/settings')
 
@@ -29,87 +30,65 @@ const APPEARANCE_DEFAULTS: AppearanceSettings = {
   'appearance.clanChatBubble': true,
 }
 
-export const useSettingsStore = defineStore('settings', () => {
-  const privacy = ref<PrivacySettings>({ ...PRIVACY_DEFAULTS })
-  const privacyLoaded = ref(false)
-  const privacySaving = ref(false)
-  const privacyError = ref<string | null>(null)
+const CLAN_DEFAULTS: ClanSettings = {
+  'clans.warParticipation': true,
+}
 
-  const appearance = ref<AppearanceSettings>({ ...APPEARANCE_DEFAULTS })
-  const appearanceLoaded = ref(false)
-  const appearanceSaving = ref(false)
-  const appearanceError = ref<string | null>(null)
+function settingsGroup<T extends SettingsBag>(group: SettingGroup, defaults: T, saveError: string) {
+  const values = ref({ ...defaults }) as Ref<T>
+  const loaded = ref(false)
+  const saving = ref(false)
+  const error = ref<string | null>(null)
 
-  async function fetchPrivacy(): Promise<void> {
+  async function fetch(): Promise<void> {
     try {
-      const res = await (await api()).getMySettingsGroup<PrivacySettings>('privacy')
-      privacy.value = { ...PRIVACY_DEFAULTS, ...res }
-      privacyLoaded.value = true
+      const res = await (await api()).getMySettingsGroup<T>(group)
+      values.value = { ...defaults, ...res }
+      loaded.value = true
     } catch {
-      privacyLoaded.value = false
+      loaded.value = false
     }
   }
 
-  async function updatePrivacy<K extends keyof PrivacySettings>(
-    key: K,
-    value: PrivacySettings[K],
-  ): Promise<boolean> {
-    const previous = privacy.value[key]
-    privacy.value = { ...privacy.value, [key]: value }
-    privacySaving.value = true
-    privacyError.value = null
+  async function update<K extends keyof T>(key: K, value: T[K]): Promise<boolean> {
+    if (saving.value) return false
+    const previous = values.value[key]
+    values.value = { ...values.value, [key]: value }
+    saving.value = true
+    error.value = null
     try {
-      const fresh = await (await api()).patchMySettingsGroup<PrivacySettings>('privacy', { [key]: value })
-      privacy.value = { ...PRIVACY_DEFAULTS, ...fresh }
+      const patch: Partial<T> = {}
+      patch[key] = value
+      const fresh = await (await api()).patchMySettingsGroup<T>(group, patch)
+      values.value = { ...defaults, ...fresh }
       return true
     } catch {
-      privacy.value = { ...privacy.value, [key]: previous }
-      privacyError.value = "Couldn't save privacy setting."
+      values.value = { ...values.value, [key]: previous }
+      error.value = saveError
       return false
     } finally {
-      privacySaving.value = false
-    }
-  }
-
-  async function fetchAppearance(): Promise<void> {
-    try {
-      const res = await (await api()).getMySettingsGroup<AppearanceSettings>('appearance')
-      appearance.value = { ...APPEARANCE_DEFAULTS, ...res }
-      appearanceLoaded.value = true
-    } catch {
-      appearanceLoaded.value = false
-    }
-  }
-
-  async function updateAppearance<K extends keyof AppearanceSettings>(
-    key: K,
-    value: AppearanceSettings[K],
-  ): Promise<boolean> {
-    const previous = appearance.value[key]
-    if (appearanceSaving.value) return false
-    appearance.value = { ...appearance.value, [key]: value }
-    appearanceSaving.value = true
-    appearanceError.value = null
-    try {
-      const fresh = await (await api()).patchMySettingsGroup<AppearanceSettings>('appearance', { [key]: value })
-      appearance.value = { ...APPEARANCE_DEFAULTS, ...fresh }
-      return true
-    } catch {
-      appearance.value = { ...appearance.value, [key]: previous }
-      appearanceError.value = "Couldn't save appearance setting."
-      return false
-    } finally {
-      appearanceSaving.value = false
+      saving.value = false
     }
   }
 
   function reset() {
-    privacy.value = { ...PRIVACY_DEFAULTS }
-    privacyLoaded.value = false
-    privacyError.value = null
-    appearance.value = { ...APPEARANCE_DEFAULTS }
-    appearanceLoaded.value = false
-    appearanceError.value = null
+    values.value = { ...defaults }
+    loaded.value = false
+    error.value = null
+  }
+
+  return { values, loaded, saving, error, fetch, update, reset }
+}
+
+export const useSettingsStore = defineStore('settings', () => {
+  const privacy = settingsGroup('privacy', PRIVACY_DEFAULTS, "Couldn't save privacy setting.")
+  const appearance = settingsGroup('appearance', APPEARANCE_DEFAULTS, "Couldn't save appearance setting.")
+  const clans = settingsGroup('clans', CLAN_DEFAULTS, "Couldn't save clan setting.")
+
+  function reset() {
+    privacy.reset()
+    appearance.reset()
+    clans.reset()
   }
 
   async function fetchGroup<T extends SettingsBag>(group: SettingGroup): Promise<T | null> {
@@ -121,18 +100,24 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   return {
-    privacy,
-    privacyLoaded,
-    privacySaving,
-    privacyError,
-    fetchPrivacy,
-    updatePrivacy,
-    appearance,
-    appearanceLoaded,
-    appearanceSaving,
-    appearanceError,
-    fetchAppearance,
-    updateAppearance,
+    privacy: privacy.values,
+    privacyLoaded: privacy.loaded,
+    privacySaving: privacy.saving,
+    privacyError: privacy.error,
+    fetchPrivacy: privacy.fetch,
+    updatePrivacy: privacy.update,
+    appearance: appearance.values,
+    appearanceLoaded: appearance.loaded,
+    appearanceSaving: appearance.saving,
+    appearanceError: appearance.error,
+    fetchAppearance: appearance.fetch,
+    updateAppearance: appearance.update,
+    clans: clans.values,
+    clansLoaded: clans.loaded,
+    clansSaving: clans.saving,
+    clansError: clans.error,
+    fetchClans: clans.fetch,
+    updateClans: clans.update,
     fetchGroup,
     reset,
   }

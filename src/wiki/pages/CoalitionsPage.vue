@@ -22,9 +22,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       <li>It can only help in one war at a time. Its own wars do not count toward that.</li>
       <li>Clans joining the attack need less standing than the defending clan.</li>
       <li>Pacifist clans cannot join.</li>
+      <li>A clan counting down to pacifism cannot join the attack.</li>
     </ul>
     <p>
-      Allies can join at any point in the war. Their whole roster fights. Once the attacking or
+      Allies can join at any point in the war. Everyone in them fights, apart from players who turned off war participation. Once the attacking or
       defending clan falls, its team cannot take any more help. The allies already in are the last
       ones left.
     </p>
