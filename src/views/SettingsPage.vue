@@ -33,7 +33,7 @@ usePageMeta({
   description: 'Manage appearance, account, and linked accounts.',
 })
 
-type SectionKey = 'appearance' | 'notifications' | 'privacy' | 'account'
+type SectionKey = 'appearance' | 'notifications' | 'privacy' | 'clans' | 'account'
 
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -72,6 +72,7 @@ const sections = computed(() => [
   { key: 'appearance' as const, label: 'Appearance', requiresLogin: false },
   { key: 'notifications' as const, label: 'Notifications', requiresLogin: !isLoggedIn.value },
   { key: 'privacy' as const, label: 'Privacy', requiresLogin: !isLoggedIn.value },
+  { key: 'clans' as const, label: 'Clans', requiresLogin: !isLoggedIn.value },
   { key: 'account' as const, label: 'Account', requiresLogin: !canAccessAccount.value },
 ])
 
@@ -160,13 +161,6 @@ const appearanceCards = computed(() => [
     rows: [
       { key: 'appearance.hideReloadedProfileFeatures' as const, title: 'Hide profile extras', value: hideReloadedProfileFeatures.value, options: ON_OFF_OPTIONS },
       { key: 'appearance.showStatisticsChart' as const, title: 'Statistics chart on profile', value: showStatisticsChart.value, options: ON_OFF_OPTIONS },
-    ],
-  },
-  {
-    title: 'Clans',
-    clans: true,
-    rows: [
-      { key: 'appearance.clanChatBubble' as const, title: 'Clan chat bubble', value: clanChatBubble.value, options: ON_OFF_OPTIONS },
     ],
   },
 ])
@@ -284,22 +278,6 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
                 :disabled="settingsStore.appearanceSaving"
                 @update:model-value="(v) => setAppearance(row.key, v as never)" />
             </div>
-
-            <template v-if="card.clans && isLoggedIn">
-              <div class="settings-row">
-                <div class="settings-row__label">
-                  <span class="settings-row__title">Participate in clan wars</span>
-                  <span class="caption">
-                    Off keeps you in your clan but out of its new wars. Turning it off during prep takes you out.
-                    Once a war has started, changing it does nothing until that war ends.
-                  </span>
-                </div>
-                <SettingsPicker :model-value="settingsStore.clans['clans.warParticipation']" :options="ON_OFF_OPTIONS"
-                  aria-label="Participate in clan wars" :disabled="settingsStore.clansSaving"
-                  @update:model-value="(v) => setClanSetting('clans.warParticipation', v as boolean)" />
-              </div>
-              <p v-if="settingsStore.clansError" class="settings-card__error">{{ settingsStore.clansError }}</p>
-            </template>
           </section>
 
           <section v-if="!canAccessAccount" class="settings-card settings-card--gated">
@@ -335,6 +313,35 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
           </section>
 
           <BlockedUsersSection />
+        </template>
+
+        <template v-else-if="activeSection === 'clans' && isLoggedIn">
+          <section class="settings-card">
+            <header class="settings-card__header">
+              <h2 class="settings-card__title">Clans</h2>
+            </header>
+
+            <div class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">Participate in clan wars</span>
+              </div>
+              <SettingsPicker :model-value="settingsStore.clans['clans.warParticipation']" :options="ON_OFF_OPTIONS"
+                aria-label="Participate in clan wars" :disabled="settingsStore.clansSaving"
+                @update:model-value="(v) => setClanSetting('clans.warParticipation', v as boolean)" />
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row__label">
+                <span class="settings-row__title">Clan chat bubble</span>
+              </div>
+              <SettingsPicker :model-value="clanChatBubble" :options="ON_OFF_OPTIONS"
+                aria-label="Clan chat bubble" :disabled="settingsStore.appearanceSaving"
+                @update:model-value="(v) => setAppearance('appearance.clanChatBubble', v as boolean)" />
+            </div>
+
+            <p v-if="settingsStore.clansError" class="settings-card__error">{{ settingsStore.clansError }}</p>
+            <p v-if="settingsStore.appearanceError" class="settings-card__error">{{ settingsStore.appearanceError }}</p>
+          </section>
         </template>
 
         <template v-else-if="activeSection === 'account' && canAccessAccount">
