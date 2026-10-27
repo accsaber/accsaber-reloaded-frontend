@@ -109,7 +109,7 @@ const focused = computed(() => {
   const id = previewId.value ?? aimId.value
   return enemies.value.find((p) => p.player.id === id) ?? bestTarget.value
 })
-const focusId = computed(() => (rosterOpen.value && viewer.value ? (focused.value?.player.id ?? null) : null))
+const focusId = computed(() => (rosterOpen.value ? (focused.value?.player.id ?? null) : null))
 
 const wipe = computed(() => (war.value?.status === 'active' && detail.value ? warWipe(war.value, detail.value.strikeRules) : null))
 const wipeIn = computed(() => (wipe.value && wipe.value.at > now.value ? formatDuration(wipe.value.at - now.value) : ''))
@@ -412,13 +412,14 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
         :can-aim="canAim"
         :saving="picking"
         :own-clan-id="ownClanId"
+        :viewer-team="ended ? null : viewerTeam"
         :can-order="canOrder && rosterOpen"
         :last-stand="ended ? undefined : detail.lastStand"
         @focus="togglePreview"
         @aim="setTargeting('manual', $event)"
         @saved="applyOrders"
       >
-        <template v-if="rosterOpen && viewer" #detail="{ fighter }">
+        <template v-if="rosterOpen && viewerTeam" #detail="{ fighter }">
           <WarTargetCard
             :war="war"
             :rules="detail.strikeRules"

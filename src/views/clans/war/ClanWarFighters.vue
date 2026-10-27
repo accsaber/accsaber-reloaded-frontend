@@ -39,6 +39,7 @@ const props = defineProps<{
   canAim: boolean
   saving: boolean
   ownClanId: string | null
+  viewerTeam: ClanWarTeam | null
   canOrder: boolean
   bestId: string | null
   lastStand?: Record<ClanWarTeam, ClanWarLastStandResponse>
@@ -64,13 +65,12 @@ const busy = ref<string | null>(null)
 const orderError = ref<string | null>(null)
 const choosing = ref<string | null>(null)
 
-const viewerTeam = computed(() => (props.viewer ? warTeamOf(props.war, props.viewer.clanId) : null))
 const styles = computed(() => warSideStyles(props.war))
-const order = computed<ClanWarTeam[]>(() => (viewerTeam.value ? [OPPOSING_TEAM[viewerTeam.value], viewerTeam.value] : WAR_TEAMS))
+const order = computed<ClanWarTeam[]>(() => (props.viewerTeam ? [OPPOSING_TEAM[props.viewerTeam], props.viewerTeam] : WAR_TEAMS))
 
 function titleOf(team: ClanWarTeam): string {
-  if (!viewerTeam.value) return CLAN_WAR_TEAM_LABEL[team]
-  return team === viewerTeam.value ? 'Your team' : 'Enemies'
+  if (!props.viewerTeam) return CLAN_WAR_TEAM_LABEL[team]
+  return team === props.viewerTeam ? 'Your team' : 'Enemies'
 }
 
 const FIRST_DIRECTION: Record<SortKey, SortDirection> = { standing: 'desc', hits: 'asc', bounty: 'desc' }
@@ -105,7 +105,7 @@ function hittable(list: ClanWarParticipantResponse[], team: ClanWarTeam, enemy: 
 
 function fightersOf(team: ClanWarTeam): ClanWarParticipantResponse[] {
   const list = (props.participants ?? []).filter((p) => warTeamOf(props.war, p.clanId) === team && !p.leftAt)
-  const enemy = !!viewerTeam.value && team !== viewerTeam.value
+  const enemy = !!props.viewerTeam && team !== props.viewerTeam
   const broken = list.filter((p) => p.brokenAt).sort((a, b) => backAt(a) - backAt(b))
   return [...hittable(list.filter((p) => !p.brokenAt), team, enemy), ...broken]
 }
@@ -124,8 +124,8 @@ const teams = computed(() =>
     const left = (props.participants ?? [])
       .filter((f) => f.leftAt && warTeamOf(props.war, f.clanId) === team)
       .sort((a, b) => new Date(b.leftAt!).getTime() - new Date(a.leftAt!).getTime())
-    const own = team === viewerTeam.value
-    const enemy = !!viewerTeam.value && !own
+    const own = team === props.viewerTeam
+    const enemy = !!props.viewerTeam && !own
     const strikes = fighters.some((f) => f.strikePreview)
     const standing = fighters.some((f) => standingOf(f) !== null)
     const bounty = fighters.some((f) => formatBounty(f.bounty) !== null)
@@ -146,7 +146,7 @@ const teams = computed(() =>
       bounty,
       orders,
       aim,
-      key: viewerTeam.value ? (own ? 'own' : 'enemies') : team,
+      key: props.viewerTeam ? (own ? 'own' : 'enemies') : team,
       lastStand: lastStandLine(team),
       columns: 2 + [standing, strikes, bounty, aim, orders].filter(Boolean).length,
     }

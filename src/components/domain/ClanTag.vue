@@ -130,9 +130,9 @@ const style = computed<Record<string, string> | undefined>(() => {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 0.2em 0.5em;
+  padding: 0.15em 0.45em;
   font-family: var(--font-sans);
-  font-size: 0.72em;
+  font-size: 0.64em;
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: 0.06em;
@@ -200,7 +200,7 @@ const style = computed<Record<string, string> | undefined>(() => {
 
 .clan-tag--xs {
   padding-block: 0.1em;
-  font-size: 0.78em;
+  font-size: 0.7em;
 }
 
 .clan-tag--xs:not(.clan-tag--shaped) {
