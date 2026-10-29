@@ -19,6 +19,7 @@ export interface CrateIconPath {
 }
 
 export interface CrateIconValue {
+  base?: boolean
   strap?: string
   latch?: string
   seam?: string

@@ -18,6 +18,8 @@ const styleVars = computed<Record<string, string> | undefined>(() => {
   return Object.keys(out).length ? out : undefined
 })
 
+const showBase = computed(() => props.value?.base !== false)
+
 const glow = computed(() => props.value?.glow ?? null)
 
 const layers = computed<Record<CrateIconLayer, CrateIconPath[]>>(() => {
@@ -46,7 +48,7 @@ function pathFill(p: CrateIconPath): string {
       </radialGradient>
     </defs>
 
-    <rect class="crate-icon__body" x="3" y="4.5" width="18" height="15" rx="1.6" />
+    <rect v-if="showBase" class="crate-icon__body" x="3" y="4.5" width="18" height="15" rx="1.6" />
 
     <path
       v-for="(p, i) in layers.back"
@@ -62,7 +64,11 @@ function pathFill(p: CrateIconPath): string {
       stroke-linejoin="round"
     />
 
-    <path class="crate-icon__lid" d="M3,9 L3,6.1 Q3,4.5 4.6,4.5 L19.4,4.5 Q21,4.5 21,6.1 L21,9 Z" />
+    <path
+      v-if="showBase"
+      class="crate-icon__lid"
+      d="M3,9 L3,6.1 Q3,4.5 4.6,4.5 L19.4,4.5 Q21,4.5 21,6.1 L21,9 Z"
+    />
 
     <path
       v-for="(p, i) in layers.lid"
@@ -78,7 +84,7 @@ function pathFill(p: CrateIconPath): string {
       stroke-linejoin="round"
     />
 
-    <line class="crate-icon__seam" x1="3.4" y1="9" x2="20.6" y2="9" />
+    <line v-if="showBase" class="crate-icon__seam" x1="3.4" y1="9" x2="20.6" y2="9" />
 
     <path
       v-for="(p, i) in layers.panel"
@@ -94,18 +100,20 @@ function pathFill(p: CrateIconPath): string {
       stroke-linejoin="round"
     />
 
-    <rect class="crate-icon__strap" x="6.05" y="5.4" width="1.9" height="13.2" rx="0.3" />
-    <rect class="crate-icon__strap" x="16.05" y="5.4" width="1.9" height="13.2" rx="0.3" />
-    <rect class="crate-icon__groove" x="6.85" y="5.4" width="0.3" height="13.2" />
-    <rect class="crate-icon__groove" x="16.85" y="5.4" width="0.3" height="13.2" />
-    <circle class="crate-icon__rivet" cx="7" cy="6.3" r="0.28" />
-    <circle class="crate-icon__rivet" cx="7" cy="17.3" r="0.28" />
-    <circle class="crate-icon__rivet" cx="17" cy="6.3" r="0.28" />
-    <circle class="crate-icon__rivet" cx="17" cy="17.3" r="0.28" />
-    <rect class="crate-icon__latch" x="5.5" y="8.35" width="3" height="1.3" rx="0.25" />
-    <rect class="crate-icon__latch" x="15.5" y="8.35" width="3" height="1.3" rx="0.25" />
-    <rect class="crate-icon__keyhole" x="6.85" y="8.6" width="0.3" height="0.8" />
-    <rect class="crate-icon__keyhole" x="16.85" y="8.6" width="0.3" height="0.8" />
+    <template v-if="showBase">
+      <rect class="crate-icon__strap" x="6.05" y="5.4" width="1.9" height="13.2" rx="0.3" />
+      <rect class="crate-icon__strap" x="16.05" y="5.4" width="1.9" height="13.2" rx="0.3" />
+      <rect class="crate-icon__groove" x="6.85" y="5.4" width="0.3" height="13.2" />
+      <rect class="crate-icon__groove" x="16.85" y="5.4" width="0.3" height="13.2" />
+      <circle class="crate-icon__rivet" cx="7" cy="6.3" r="0.28" />
+      <circle class="crate-icon__rivet" cx="7" cy="17.3" r="0.28" />
+      <circle class="crate-icon__rivet" cx="17" cy="6.3" r="0.28" />
+      <circle class="crate-icon__rivet" cx="17" cy="17.3" r="0.28" />
+      <rect class="crate-icon__latch" x="5.5" y="8.35" width="3" height="1.3" rx="0.25" />
+      <rect class="crate-icon__latch" x="15.5" y="8.35" width="3" height="1.3" rx="0.25" />
+      <rect class="crate-icon__keyhole" x="6.85" y="8.6" width="0.3" height="0.8" />
+      <rect class="crate-icon__keyhole" x="16.85" y="8.6" width="0.3" height="0.8" />
+    </template>
 
     <path
       v-for="(p, i) in layers.front"
@@ -121,7 +129,7 @@ function pathFill(p: CrateIconPath): string {
       stroke-linejoin="round"
     />
 
-    <rect class="crate-icon__frame" x="3" y="4.5" width="18" height="15" rx="1.6" />
+    <rect v-if="showBase" class="crate-icon__frame" x="3" y="4.5" width="18" height="15" rx="1.6" />
   </svg>
 </template>
 
