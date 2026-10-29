@@ -175,7 +175,7 @@ const feedback = ref<{ variant: 'success' | 'error'; message: string } | null>(n
 let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 
 const unownedKeys = computed(
-  () => new Set((data.value?.content ?? []).filter((u) => u.linkId === null).map((u) => u.item.id)),
+  () => new Set((data.value?.content ?? []).filter((u) => !u.linkId).map((u) => u.item.id)),
 )
 
 function isUnowned(userItem: UserItemResponse): boolean {
@@ -417,7 +417,7 @@ function showFeedback(variant: 'success' | 'error', message: string) {
 }
 
 function mutateLink(linkId: string, nextQuantity: number | null) {
-  const apply = <T extends { linkId: string | null; quantity: number }>(list: T[]): T[] =>
+  const apply = <T extends { linkId?: string; quantity: number }>(list: T[]): T[] =>
     nextQuantity === null
       ? list.filter((u) => u.linkId !== linkId)
       : list.map((u) => (u.linkId === linkId ? { ...u, quantity: nextQuantity } : u))
