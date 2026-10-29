@@ -147,7 +147,7 @@ function handleClick() {
 
 .feed-card__body {
   display: grid;
-  grid-template-columns: 32px 48px 1fr auto;
+  grid-template-columns: minmax(32px, max-content) 48px 1fr auto;
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
@@ -155,7 +155,7 @@ function handleClick() {
 
 @media (min-width: 768px) {
   .feed-card--compact .feed-card__body {
-    grid-template-columns: 32px 36px 1fr auto;
+    grid-template-columns: minmax(32px, max-content) 36px 1fr auto;
     gap: 0 var(--space-sm);
     padding: var(--space-xs) var(--space-sm);
   }
@@ -332,7 +332,7 @@ function handleClick() {
 
 @media (max-width: 767px) {
   .feed-card__body {
-    grid-template-columns: 24px 40px 1fr;
+    grid-template-columns: minmax(24px, max-content) 40px 1fr;
     grid-template-rows: auto auto;
     gap: var(--space-sm);
   }
