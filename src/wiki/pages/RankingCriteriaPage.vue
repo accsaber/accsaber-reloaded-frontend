@@ -49,7 +49,7 @@ const RULE_GROUPS = [
       "The two hands' swing paths cannot cross within 60ms of each other",
       'Every note sits inside the 4 by 3 grid',
       'No vision blocks within 500ms. A note in the middle row of column 2 hides columns 1 and 2 behind it, and one in column 3 hides columns 3 and 4',
-      'A note in the outer column next to it is only half hidden for the first 150ms, so it can come up to 150ms after it, but not between 150ms and 400ms',
+      'A note in the outer column next to it is only half hidden for the first 150ms, so it can come up to 150ms after it, but not between 150ms and 500ms',
       'Fully vertical palm-ups are not allowed: a straight up or down note that has to be hit palm-up',
       'Shrado angles have at least 1400ms of spacing between the two notes',
       '4-wides are not allowed',
