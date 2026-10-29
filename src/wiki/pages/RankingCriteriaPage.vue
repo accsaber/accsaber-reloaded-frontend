@@ -238,6 +238,11 @@ const PATTERN_ROWS: WikiCompareRow[] = [
       map against everything listed here automatically and flags what it finds. If you are not
       sure about an edge case, ask in the Discord before suggesting.
     </p>
+    <p>
+      A map can stay in the queue for as long as 6 months, after which time it will be removed
+      from the queue and deactivated. If you're the mapper, feel free to ask any ranking team member
+      for feedback.
+    </p>
   </WikiProse>
 </template>
 
