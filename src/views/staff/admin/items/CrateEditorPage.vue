@@ -17,6 +17,7 @@ import {
   getAdminItem,
   getAdminItems,
   setItemActive,
+  setItemObtainableUntil,
   updateItem,
   uploadItemIcon,
 } from '@/api/admin/items'
@@ -42,6 +43,7 @@ import type {
   UpdateItemRequest,
 } from '@/types/api/items'
 import { createCrateRoller, type CrateRoll } from '@/utils/crateRoll'
+import { isoToLocalInput, localInputToIso } from '@/utils/events'
 import { isItemObtainable, RARITY_ORDER } from '@/utils/items'
 import { decimalToPercent, percentToDecimal } from '@/utils/modifiers'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -91,6 +93,7 @@ const form = ref({
   stackable: true,
   welcomeGrant: false,
   missionPoolable: false,
+  obtainableUntil: '',
 })
 
 const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: r }))
@@ -170,6 +173,7 @@ function syncFormFromCrate() {
     stackable: crate.value.stackable,
     welcomeGrant: crate.value.welcomeGrant,
     missionPoolable: crate.value.missionPoolable,
+    obtainableUntil: isoToLocalInput(crate.value.obtainableUntil ?? ''),
   }
 }
 
@@ -188,7 +192,11 @@ async function saveMetadata() {
       welcomeGrant: form.value.welcomeGrant,
       missionPoolable: form.value.missionPoolable,
     }
-    crate.value = await updateItem(crate.value.id, req)
+    let saved = await updateItem(crate.value.id, req)
+    if (form.value.obtainableUntil !== isoToLocalInput(saved.obtainableUntil ?? '')) {
+      saved = await setItemObtainableUntil(saved.id, localInputToIso(form.value.obtainableUntil))
+    }
+    crate.value = saved
     syncFormFromCrate()
   } catch (e) {
     errorMsg.value = parseApiError(e, 'Failed to save metadata').message
@@ -576,6 +584,7 @@ watch(crateId, refresh)
             @update:model-value="(v: string) => (form.rarity = v as ItemRarity)" />
           <ImageUploader label="Icon" aspect-ratio="1 / 1" :image-url="crate?.iconUrl ?? null"
             :upload-handler="onCrateIconUpload" :remove-handler="onCrateIconRemove" />
+          <BaseInput v-model="form.obtainableUntil" type="datetime-local" label="Add to campaigns until" />
           <div class="crate-editor__meta-checks">
             <label class="crate-editor__check">
               <input v-model="form.tradeable" type="checkbox" /> Tradeable

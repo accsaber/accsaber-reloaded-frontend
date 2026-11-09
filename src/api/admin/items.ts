@@ -56,6 +56,10 @@ export function setItemActive(id: string, active: boolean): Promise<ItemResponse
   return patch<ItemResponse>(`/admin/items/${id}/active${buildQuery({ active })}`)
 }
 
+export function setItemObtainableUntil(id: string, at: string | null): Promise<ItemResponse> {
+  return patch<ItemResponse>(`/admin/items/${id}/obtainable-until${buildQuery({ at })}`)
+}
+
 export function deprecateItem(id: string): Promise<ItemResponse> {
   return post<ItemResponse>(`/admin/items/${id}/deprecate`)
 }
