@@ -116,7 +116,7 @@ async function search() {
       if (fixed.complexityMax != null) params.complexityMax = fixed.complexityMax
     } else {
       if (selectedCategory.value) {
-        params.categoryId = selectedCategory.value
+        params.categoryId = categoryStore.getCategoryId(selectedCategory.value)
       }
       if (complexityRange.value[0] > 0) {
         params.complexityMin = complexityRange.value[0]

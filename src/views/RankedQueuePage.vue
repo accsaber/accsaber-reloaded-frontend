@@ -12,6 +12,7 @@ import RankedQueueRow from '@/views/ranked-queue/RankedQueueRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
+import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { Page } from '@/types/pagination'
@@ -43,6 +44,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 })
 
 const searchQuery = queryRef('q')
+const categoryStore = useCategoryStore()
 const categoryParam = queryRef('category')
 const selectedCategory = computed<string | null>({
   get: () => categoryParam.value || null,
@@ -66,7 +68,7 @@ const subtitle = computed(() => {
 const request = computed(() => ({
   ...paginationParams.value,
   status: QUEUE_STATUSES,
-  categoryId: selectedCategory.value ?? undefined,
+  categoryId: categoryStore.getCategoryId(selectedCategory.value ?? ''),
   search: searchQuery.value.trim() || undefined,
 }))
 

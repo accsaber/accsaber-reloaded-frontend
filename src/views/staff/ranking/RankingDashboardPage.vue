@@ -249,7 +249,7 @@ function buildFetchParams(): Record<string, unknown> {
     params.batchId = latestBatch.value!.id
   }
   if (selectedCategory.value) {
-    params.categoryId = selectedCategory.value
+    params.categoryId = categoryStore.getCategoryId(selectedCategory.value)
   }
   if (complexityRange.value[0] > 0) params.complexityMin = complexityRange.value[0]
   if (complexityRange.value[1] < 20) params.complexityMax = complexityRange.value[1]

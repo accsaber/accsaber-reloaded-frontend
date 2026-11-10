@@ -136,7 +136,7 @@ const difficultyRequest = computed(() => {
     params: {
       ...paginationParams.value,
       status: 'RANKED',
-      categoryId: selectedCategory.value ?? undefined,
+      categoryId: categoryStore.getCategoryId(selectedCategory.value ?? ''),
       complexityMin: min > 0 ? min : undefined,
       complexityMax: max < MAX_COMPLEXITY ? max : undefined,
       search: searchQuery.value.trim() || undefined,

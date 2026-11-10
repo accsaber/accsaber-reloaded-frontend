@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  'update:selectedCategory': [categoryId: string | null]
+  'update:selectedCategory': [categoryCode: string | null]
   'update:complexityRange': [range: [number, number]]
   'update:unplayedOnly': [value: boolean]
 }>()
@@ -43,13 +43,6 @@ function onRangeChange(val: [number, number]) {
   }, 400)
 }
 
-function selectCategory(code: string) {
-  emit('update:selectedCategory', categoryStore.getCategoryId(code) ?? null)
-}
-
-function isSelected(code: string) {
-  return props.selectedCategory !== null && props.selectedCategory === categoryStore.getCategoryId(code)
-}
 </script>
 
 <template>
@@ -79,8 +72,8 @@ function isSelected(code: string) {
             type="radio"
             class="map-filters__control"
             :name="categoryGroup"
-            :checked="isSelected(info.code)"
-            @change="selectCategory(info.code)"
+            :checked="selectedCategory === info.code"
+            @change="emit('update:selectedCategory', info.code)"
           />
           <span class="map-filters__cat-dot" :style="{ background: info.accent }" />
           <span>{{ info.name }}</span>

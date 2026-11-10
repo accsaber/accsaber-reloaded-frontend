@@ -152,6 +152,10 @@ const skillMode = computed<'tier' | 'range'>(() => (skillModeParam.value === 'ra
 const skillMin = computed(() => toNumber(skillMinParam.value))
 const skillMax = computed(() => toNumber(skillMaxParam.value))
 const minAssigned = computed(() => toNumber(minAssignedParam.value) ?? 1)
+const categoryIds = computed(() => {
+  const id = categoryStore.getCategoryId(categoryFilter.value)
+  return id ? [id] : undefined
+})
 
 function boardFilters(def: MissionBoardDef): MissionStatsParams {
   const has = (filter: MissionFilterKey) => def.filters.includes(filter)
@@ -160,7 +164,7 @@ function boardFilters(def: MissionBoardDef): MissionStatsParams {
     pool: has('pool') ? poolFilter.value : undefined,
     type: has('type') && typeFilter.value ? [typeFilter.value] : undefined,
     band: has('band') ? bandFilter.value : undefined,
-    categoryId: has('category') && categoryFilter.value ? [categoryFilter.value] : undefined,
+    categoryId: has('category') ? categoryIds.value : undefined,
     tier: has('tier') && useTiers ? tierFilter.value : undefined,
     skillMin: has('skillRange') && !useTiers ? skillMin.value : undefined,
     skillMax: has('skillRange') && !useTiers ? skillMax.value : undefined,
@@ -180,7 +184,7 @@ const filters = computed(() => boardFilters(boardDef.value))
 const detailFilters = computed<MissionStatsParams>(() => ({
   pool: poolFilter.value,
   band: bandFilter.value,
-  categoryId: categoryFilter.value ? [categoryFilter.value] : undefined,
+  categoryId: categoryIds.value,
   tier: skillMode.value === 'tier' ? tierFilter.value : undefined,
   skillMin: skillMode.value === 'range' ? skillMin.value : undefined,
   skillMax: skillMode.value === 'range' ? skillMax.value : undefined,
@@ -191,7 +195,7 @@ const chartRange = computed<TimeRange>(() => (rangeParam.value in TIME_RANGE_PAR
 
 const categoryOptions = computed(() => [
   { value: '', label: 'All Categories' },
-  ...categoryStore.categories.map((c) => ({ value: c.id, label: c.name })),
+  ...categoryStore.categories.map((c) => ({ value: c.code, label: c.name })),
 ])
 
 const typeOptions = [
