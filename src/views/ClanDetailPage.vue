@@ -645,11 +645,8 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
 
 .clan-page__tabs :deep(.base-tabs) {
   flex: 1;
-  flex-wrap: nowrap;
   min-width: 0;
-  overflow-x: auto;
   border-bottom: none;
-  scrollbar-width: none;
 }
 
 .clan-page__tabs :deep(.base-tabs__tab) {
