@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PinnedScoreCard from '@/views/profile/PinnedScoreCard.vue'
+import ProfileFold from '@/views/profile/ProfileFold.vue'
 import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
@@ -56,9 +57,8 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
 </script>
 
 <template>
-  <section v-if="loading || pinned.length > 0" class="pinned" aria-label="Pinned scores">
-    <header class="pinned__header">
-      <h2 class="pinned__label">Pinned</h2>
+  <ProfileFold v-if="loading || pinned.length > 0" label="Pinned" storage-key="pinned-scores" aria-label="Pinned scores">
+    <template #meta>
       <span v-if="!loading && pinned.length > 0" class="pinned__count">
         {{ pinned.length }} of {{ maxSlots }}
         <span
@@ -67,7 +67,7 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
           title="Supporters get extra pinned slots"
         >Supporter perk</span>
       </span>
-    </header>
+    </template>
 
     <div v-if="loading" class="pinned__grid">
       <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="card" />
@@ -80,32 +80,10 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
 
     <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" :player="player"
       @close="detailOpen = false" />
-  </section>
+  </ProfileFold>
 </template>
 
 <style scoped>
-.pinned {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.pinned__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.pinned__label {
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
 .pinned__count {
   display: inline-flex;
   align-items: baseline;

@@ -115,8 +115,11 @@ const targetLabel = computed(() => props.targetName || 'this user')
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
-        <line x1="19" y1="8" x2="19" y2="14" />
-        <line x1="22" y1="11" x2="16" y2="11" />
+        <polyline v-if="isFollower" points="16 11 18 13 22 9" />
+        <template v-else>
+          <line x1="19" y1="8" x2="19" y2="14" />
+          <line x1="22" y1="11" x2="16" y2="11" />
+        </template>
       </svg>
     </BaseButton>
 
@@ -140,6 +143,7 @@ const targetLabel = computed(() => props.targetName || 'this user')
         <path d="M12 18v4" />
         <path d="M2 12h4" />
         <path d="M18 12h4" />
+        <circle v-if="isRival" cx="12" cy="12" r="3" fill="currentColor" />
       </svg>
     </BaseButton>
 
@@ -155,7 +159,11 @@ const targetLabel = computed(() => props.targetName || 'this user')
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10" />
-        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        <template v-if="isBlocked">
+          <line x1="9" y1="9" x2="15" y2="15" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+        </template>
+        <line v-else x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
       </svg>
     </BaseButton>
 

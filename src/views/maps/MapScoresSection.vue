@@ -94,11 +94,13 @@ const showStreak115 = computed(() =>
   sortState.value.key === 'streak115' || scores.value.some((s) => s.streak115 != null && s.streak115 > 0),
 )
 
-const LEADING_COLUMNS: TableColumn[] = [
-  { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: '80px' },
+const filtering = computed(() => !!countryFilter.value || !!relationFilter.value)
+
+const leadingColumns = computed<TableColumn[]>(() => [
+  { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: filtering.value ? '150px' : '80px' },
   { key: 'player', label: 'Player', align: 'left', width: '240px', flex: true },
   { key: 'score', label: 'Score', sortable: true, align: 'right', mono: true, width: '108px' },
-]
+])
 
 const TRAILING_COLUMNS: TableColumn[] = [
   { key: 'detail', label: '', align: 'center', width: '84px', noLink: true },
@@ -118,7 +120,7 @@ const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
 
 const columns = computed(() =>
   buildScoreColumns(scoreRowFields.value, {
-    leading: LEADING_COLUMNS,
+    leading: leadingColumns.value,
     trailing: TRAILING_COLUMNS,
     fields: {
       ...FIELD_COLUMNS,
@@ -135,13 +137,12 @@ watch(
 
 const rows = computed(() => {
   const pageOffset = (paginationParams.value.page ?? 0) * (paginationParams.value.size ?? 50)
-  const filtering = !!countryFilter.value || !!relationFilter.value
   return scores.value.map((s, i) => {
     const positional = pageOffset + i + 1
     return {
       _userId: s.userId,
-      rank: filtering ? positional : s.rank,
-      parenRank: filtering ? s.rank : null,
+      rank: filtering.value ? positional : s.rank,
+      parenRank: filtering.value ? s.rank : null,
       player: s.player,
       accuracy: s.accuracy,
       score: s.score,

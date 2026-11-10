@@ -7,6 +7,7 @@ import { computed } from 'vue'
 const props = withDefaults(defineProps<{
   modelValue: CategoryCode
   exclude?: CategoryCode[]
+  variant?: 'underline' | 'segmented'
 }>(), {
   exclude: () => [],
 })
@@ -36,6 +37,10 @@ const tabs = computed(() => {
 </script>
 
 <template>
-  <BaseTabs :tabs="tabs" :model-value="modelValue"
-    @update:model-value="emit('update:modelValue', $event as CategoryCode)" />
+  <BaseTabs :tabs="tabs" :model-value="modelValue" :variant="variant" label="Category"
+    @update:model-value="emit('update:modelValue', $event as CategoryCode)">
+    <template v-if="variant === 'segmented'" #tab="{ tab }">
+      <span :style="{ color: tab.accentColor }">{{ tab.label }}</span>
+    </template>
+  </BaseTabs>
 </template>

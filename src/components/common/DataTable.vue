@@ -2,7 +2,7 @@
 import { useMediaQuery } from '@/composables/useMediaQuery';
 import type { SortState, TableColumn } from '@/types/display';
 import { formatSortGlyph } from '@/utils/formatters';
-import { tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
+import { columnWidth, tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
 import { computed, useSlots } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
@@ -80,7 +80,7 @@ function sortIcon(col: TableColumn): string {
               'data-table__th--sortable': col.sortable,
               'data-table__th--mono': col.mono,
               [`data-table__th--${col.align ?? 'left'}`]: true,
-            }" :style="col.width && !col.flex ? { width: col.width } : undefined" @click="handleSort(col)">
+            }" :style="col.width && !col.flex ? { width: `${columnWidth(col)}px` } : undefined" @click="handleSort(col)">
               <svg v-if="col.icon" class="data-table__th-icon" width="14" height="14" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" role="img" :aria-label="col.label">

@@ -82,7 +82,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="tabsRef" class="profile-stats__category-tabs">
-    <CategoryTabs v-model="category" :exclude="['xp']" />
+    <CategoryTabs v-model="category" :exclude="['xp']" variant="segmented" />
   </div>
 
   <div class="profile-stats">
@@ -107,6 +107,14 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-start;
   margin-top: var(--space-xs);
+}
+
+.profile-stats__category-tabs :deep(.base-tabs__tab) {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.profile-stats__category-tabs :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
+  opacity: 0.5;
 }
 
 .profile-stats {

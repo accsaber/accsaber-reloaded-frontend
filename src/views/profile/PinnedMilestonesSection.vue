@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import ProfileFold from '@/views/profile/ProfileFold.vue'
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
@@ -32,13 +33,13 @@ const cards = computed(() =>
 </script>
 
 <template>
-  <section
+  <ProfileFold
     v-if="loading || pinned.length > 0"
-    class="pinned-ms"
+    label="Milestones"
+    storage-key="pinned-milestones"
     aria-label="Pinned milestones"
   >
-    <header class="pinned-ms__header">
-      <h2 class="pinned-ms__label">Milestones</h2>
+    <template #meta>
       <span v-if="!loading && pinned.length > 0" class="pinned-ms__count">
         {{ pinned.length }} of {{ maxSlots }}
         <span
@@ -47,7 +48,7 @@ const cards = computed(() =>
           title="Supporters get extra pinned slots"
         >Supporter perk</span>
       </span>
-    </header>
+    </template>
 
     <div v-if="loading" class="pinned-ms__grid">
       <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="card" />
@@ -80,32 +81,10 @@ const cards = computed(() =>
         </button>
       </article>
     </div>
-  </section>
+  </ProfileFold>
 </template>
 
 <style scoped>
-.pinned-ms {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.pinned-ms__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.pinned-ms__label {
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
 .pinned-ms__count {
   display: inline-flex;
   align-items: baseline;

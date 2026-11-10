@@ -172,13 +172,6 @@ function cancelNameEdit() {
             :primary-link-id="equipped['badge']?.linkId ?? null"
             class="profile-hero__badges"
           />
-          <p v-if="user.hmd" class="profile-hero__hmd">{{ user.hmd }}</p>
-          <SupporterProfileSection
-            v-if="supporterState"
-            :state="supporterState"
-            :is-self-profile="isSelfProfile"
-            class="profile-hero__supporter"
-          />
         </div>
 
         <div class="profile-hero__top-right">
@@ -211,6 +204,13 @@ function cancelNameEdit() {
             </BaseButton>
             <RelationActions :target-user-id="userId" :target-name="user.name" show-snipe />
           </div>
+          <SupporterProfileSection
+            v-if="supporterState"
+            :state="supporterState"
+            :is-self-profile="isSelfProfile"
+            class="profile-hero__supporter"
+          />
+          <p v-if="user.hmd" class="profile-hero__hmd">{{ user.hmd }}</p>
         </div>
       </div>
 
@@ -264,7 +264,7 @@ function cancelNameEdit() {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
 .profile-hero__name-col {
@@ -281,13 +281,13 @@ function cancelNameEdit() {
 
 .profile-hero__hmd {
   margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-card-title);
   color: var(--text-secondary);
 }
 
-.profile-hero__supporter {
-  margin-top: var(--space-sm);
-  align-self: flex-start;
+.profile-hero .profile-hero__supporter {
+  justify-content: flex-end;
+  font-size: var(--text-card-title);
 }
 
 .profile-hero__level-col {
@@ -325,6 +325,29 @@ function cancelNameEdit() {
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: var(--space-xs);
+}
+
+.profile-hero__links :deep(.base-button) {
+  padding: var(--space-sm);
+}
+
+.profile-hero__links :deep(.base-button :is(svg, img)) {
+  width: 18px;
+  height: 18px;
+}
+
+.profile-hero .profile-hero__name :deep(.user-chip__clan) {
+  font-size: 0.9375rem;
+  opacity: 1;
+}
+
+.profile-hero .profile-hero__name :deep(.user-chip__flag) {
+  font-size: 1.875rem;
+}
+
+.profile-hero .profile-hero__name :deep(.name-history__toggle) {
+  width: 22px;
+  height: 22px;
 }
 
 .profile-hero__name {
@@ -448,10 +471,13 @@ function cancelNameEdit() {
   }
 
   .profile-hero__top-right {
+    align-items: center;
+  }
+
+  .profile-hero__links {
     position: absolute;
     top: var(--space-sm);
     right: 0;
-    width: auto;
   }
 
   .profile-hero__details {
@@ -474,8 +500,7 @@ function cancelNameEdit() {
     justify-content: center;
   }
 
-  .profile-hero__supporter {
-    align-self: center;
+  .profile-hero .profile-hero__supporter {
     justify-content: center;
   }
 

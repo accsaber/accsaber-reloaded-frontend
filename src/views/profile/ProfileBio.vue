@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ProfileBioEditor from '@/views/profile/ProfileBioEditor.vue'
+import ProfileFold from '@/views/profile/ProfileFold.vue'
 
 defineProps<{
   bio: string | null
@@ -20,10 +21,9 @@ defineEmits<{
     <ProfileBioEditor :initial-bio="bio ?? ''" :max-chars="maxChars" :can-use-effects="canUseEffects"
       @saved="$emit('saved', $event)" @cancel="$emit('cancel')" />
   </section>
-  <section v-else-if="bio" class="profile-bio" aria-label="About this player">
-    <h2 class="profile-bio__label">About</h2>
+  <ProfileFold v-else-if="bio" class="profile-bio" label="About" storage-key="about" aria-label="About this player">
     <div class="profile-bio__body" v-html="bio" />
-  </section>
+  </ProfileFold>
 </template>
 
 <style scoped>

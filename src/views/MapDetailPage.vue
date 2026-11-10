@@ -280,13 +280,13 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
             <p class="map-detail__mapper">Mapped by <strong>{{ map.mapAuthor }}</strong></p>
 
             <div v-if="activeDifficulty" class="map-detail__diff-meta">
-              <BaseTabs v-if="difficultyTabs.length > 1" class="map-detail__picker" variant="segmented" label="Difficulty"
+              <BaseTabs v-if="difficultyTabs.length" class="map-detail__picker" variant="segmented" label="Difficulty"
                 :tabs="difficultyTabs" :model-value="activeDifficultyId" @update:model-value="activeDifficultyId = $event">
                 <template #tab="{ tab }">
                   <DifficultyBadge :difficulty="tab.label" />
                 </template>
               </BaseTabs>
-              <DifficultyBadge v-if="difficultyTabs.length <= 1" :difficulty="activeDifficulty.difficulty" />
+              <DifficultyBadge v-else :difficulty="activeDifficulty.difficulty" />
               <ComplexityBadge v-if="isActiveDifficultyRanked" :complexity="activeDifficulty.complexity ?? 0" />
               <span v-if="hasCategory" class="map-detail__category-name" :style="{ color: categoryAccent }">{{ categoryName }}</span>
             </div>
@@ -496,6 +496,15 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
+}
+
+.map-detail__links :deep(.base-button) {
+  padding: var(--space-sm);
+}
+
+.map-detail__links :deep(.base-button :is(svg, img)) {
+  width: 18px;
+  height: 18px;
 }
 
 .map-detail__site-icon {
