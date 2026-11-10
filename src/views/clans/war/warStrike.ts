@@ -49,6 +49,9 @@ export function targetValue(fighter: { guard: number; strikePreview: ClanWarStri
   return preview.standingTaken / Math.max(1, preview.hitsToBreak)
 }
 
+const BOUNTY_HINT =
+  'Bounty is how much extra Standing a fighter is worth when broken. It grows with the damage they deal, weighted by the bounty of whoever they hit. Hitting a low bounty player barely raises yours, hitting a high bounty player raises it more.'
+
 export function formatBounty(bounty: number): string | null {
   const change = Math.round((bounty - 1) * 100)
   return change ? `${change > 0 ? '+' : ''}${change}%` : null
@@ -161,7 +164,7 @@ export function hitBreakdown(
   const hits = `${preview.hitsToBreak} ${preview.hitsToBreak === 1 ? 'hit' : 'hits'} to break`
   const lines = isNoScore(preview) ? noScoreLines(rules, preview) : hitLines(rules, preview)
   const change = formatBounty(bounty)
-  const bountyLine = { label: 'Bounty', value: change ?? '', detail: 'big hitters are worth more, freshly broken players less' }
+  const bountyLine = { label: 'Bounty', value: change ?? '', detail: BOUNTY_HINT }
   return [...finish(lines, preview.damage, guard, ` per hit, ${hits}`).lines, ...(change ? [bountyLine] : []), breakLine(preview)]
 }
 

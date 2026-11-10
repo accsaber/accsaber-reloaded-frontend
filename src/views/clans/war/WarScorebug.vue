@@ -19,6 +19,15 @@ const props = defineProps<{
 
 const styles = computed(() => warSideStyles(props.war))
 const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[team], style: styles.value[team] })))
+
+const lead = computed(() => {
+  if (props.war.status !== 'active') return null
+  const left = (team: ClanWarTeam) => (props.war[team].stake > 0 ? props.war[team].stakeRemaining / props.war[team].stake : 1)
+  const gap = left('attack') - left('defend')
+  const leader = props.war[gap > 0 ? 'attack' : 'defend']
+  const margin = Math.round(Math.abs(gap) * leader.stake)
+  return margin > 0 ? `${leader.lead.name} ahead by ${formatStanding(margin)}` : null
+})
 </script>
 
 <template>
@@ -58,6 +67,7 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
 
     <span class="scorebug__middle">
       <WarClock :war="war" :now="now" :viewer-team="viewerTeam" :large="hud" />
+      <strong v-if="hud && lead" class="scorebug__lead">{{ lead }}</strong>
       <slot name="middle" />
     </span>
   </component>
@@ -157,6 +167,12 @@ const teams = computed(() => WAR_TEAMS.map((team) => ({ team, data: props.war[te
   flex-direction: column;
   align-items: center;
   gap: var(--space-sm);
+}
+
+.scorebug__lead {
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-align: center;
 }
 
 .scorebug--hud {

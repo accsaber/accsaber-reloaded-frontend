@@ -9,6 +9,7 @@ export interface MemberActions {
   roles: ClanRole[]
   kick: boolean
   wars: boolean
+  warsFull: boolean
   transfer: boolean
   claim: boolean
 }
@@ -53,8 +54,16 @@ function pick(action: MemberPick) {
       >
         Make {{ CLAN_ROLE_LABEL[role].toLowerCase() }}
       </button>
-      <button v-if="actions.wars" type="button" class="member-menu__item" role="menuitem" @click="pick('wars')">
+      <button
+        v-if="actions.wars"
+        type="button"
+        class="member-menu__item"
+        role="menuitem"
+        :disabled="actions.warsFull"
+        @click="pick('wars')"
+      >
         {{ member.membership?.warParticipation ? 'Take off wars' : 'Put back in wars' }}
+        <span v-if="actions.warsFull" class="member-menu__reason">Half the clan is already out</span>
       </button>
       <button v-if="actions.transfer" type="button" class="member-menu__item" role="menuitem" @click="pick('transfer')">
         Transfer founder
@@ -116,8 +125,18 @@ function pick(action: MemberPick) {
   cursor: pointer;
 }
 
-.member-menu__item:hover {
+.member-menu__item:hover:not(:disabled) {
   background: var(--bg-overlay);
+}
+
+.member-menu__item:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.member-menu__reason {
+  display: block;
+  font-size: var(--text-caption);
 }
 
 .member-menu__item--danger {

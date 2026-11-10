@@ -1,3 +1,4 @@
+import { parseApiError } from '@/api/client'
 import type {
   AppearanceSettings,
   ClanSettings,
@@ -62,9 +63,9 @@ function settingsGroup<T extends SettingsBag>(group: SettingGroup, defaults: T, 
       const fresh = await (await api()).patchMySettingsGroup<T>(group, patch)
       values.value = { ...defaults, ...fresh }
       return true
-    } catch {
+    } catch (err) {
       values.value = { ...values.value, [key]: previous }
-      error.value = saveError
+      error.value = parseApiError(err, saveError).message
       return false
     } finally {
       saving.value = false

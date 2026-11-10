@@ -552,6 +552,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         <ClanRosterTab
           v-if="activeTab === 'roster'"
           :members="members"
+          :member-count="clan.memberCount"
           :slots="slots"
           :loading="rosterLoading && members.length === 0"
           :viewer-role="viewerRole"

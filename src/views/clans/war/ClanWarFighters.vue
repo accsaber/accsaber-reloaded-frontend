@@ -131,7 +131,10 @@ const teams = computed(() =>
     const bounty = fighters.some((f) => formatBounty(f.bounty) !== null)
     const orders = own && commanded.value.length > 0
     const aim = enemy && props.canAim
+    const unbroken = fighters.filter((f) => !f.brokenAt)
+    const atRisk = unbroken.reduce((sum, f) => sum + (standingOf(f) ?? 0), 0)
     return {
+      atRisk: standing && unbroken.length ? `${unbroken.length} unbroken, ${formatStanding(atRisk)} Standing at risk` : null,
       team,
       title: titleOf(team),
       style: styles.value[team],
@@ -244,6 +247,7 @@ function everyone(next: ClanWarOrder) {
       >
         <template #title><span class="roster__title">{{ t.title }}</span></template>
         <template #actions>
+          <span v-if="t.atRisk" class="roster__tag">{{ t.atRisk }}</span>
           <span v-if="t.lastStand" class="roster__last-stand">{{ t.lastStand }}</span>
           <span v-if="t.orders" class="roster__bulk">
             <BaseButton size="sm" :loading="busy === 'all-auto'" :disabled="!!busy || !following.length" @click="everyone('auto')">

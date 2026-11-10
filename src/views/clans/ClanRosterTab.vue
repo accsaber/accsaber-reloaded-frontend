@@ -23,6 +23,7 @@ import ClanRankSlot from './ClanRankSlot.vue'
 
 const props = defineProps<{
   members: PlayerRef[]
+  memberCount: number
   slots: RankSlot[]
   loading: boolean
   viewerRole: ClanRole | null
@@ -134,6 +135,14 @@ function onSort(key: string) {
   }
 }
 
+const offWars = computed(() => {
+  if (props.members.length !== props.memberCount) return null
+  return {
+    off: props.members.filter((m) => m.membership?.warParticipation === false).length,
+    limit: Math.floor(props.memberCount / 2),
+  }
+})
+
 function actionsFor(member: PlayerRef): MemberActions | null {
   const role = member.membership?.role
   if (!props.viewerRole || !role || member.id === props.viewerId) return null
@@ -142,6 +151,7 @@ function actionsFor(member: PlayerRef): MemberActions | null {
     roles: assignableRoles(props.viewerRole, role),
     kick: below && hasClanRole(props.viewerRole, 'officer'),
     wars: below && hasClanRole(props.viewerRole, 'commander'),
+    warsFull: !!offWars.value && offWars.value.off >= offWars.value.limit && !!member.membership?.warParticipation,
     transfer: below && hasClanRole(props.viewerRole, 'founder'),
     claim: role === 'founder' && canClaim.value,
   }
@@ -233,6 +243,9 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
         <h2 class="section-title">
           Members <span class="roster__count">{{ rows.length }}</span>
         </h2>
+        <p v-if="viewerRole && offWars" class="caption">
+          {{ offWars.off }} / {{ offWars.limit }} off wars. Up to half the clan can sit out of wars.
+        </p>
         <DataTable
           :columns="COLUMNS"
           :rows="rows"

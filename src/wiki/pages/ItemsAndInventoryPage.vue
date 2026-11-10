@@ -111,7 +111,7 @@ onMounted(async () => {
       same item. You pick one when you equip it. Sabers and pedestals do not use a slot,
       because they are files you install into Beat Saber by hand.
     </p>
-    <p>You can preview any theme from your settings, including ones you do not own.</p>
+    <p>You can preview themes you do not own from your settings.</p>
 
     <WikiHeading id="rarity">Rarity</WikiHeading>
     <p>

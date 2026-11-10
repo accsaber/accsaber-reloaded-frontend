@@ -885,7 +885,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'size share',
         ],
         related: ['war-combat', 'clan-wars', 'clan-standing'],
-        updated: '2026-10-24',
+        updated: '2026-11-10',
         loader: () => import('@/wiki/pages/WarMathPage.vue'),
       },
       {

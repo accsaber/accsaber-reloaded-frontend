@@ -24,7 +24,8 @@ const DAMAGE: WikiCompareRow[] = [
       out its new wars. Turn it off during prep and you drop out right away. Once a war starts,
       turning it off does nothing until that war ends. Turning it back on mid-war does not put you
       in. If you join a clan mid-war with it off, you stay out of that war. Commanders and the
-      Founder can turn it off for anyone ranked below them before a war starts.
+      Founder can turn it off for anyone ranked below them before a war starts. At most half the
+      clan can sit out. The Founder and Commanders count too.
     </p>
     <p>
       Guard is a shield. Hits wear it down without moving any standing. Standing only moves when
@@ -123,11 +124,11 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       Stronger players are worth more standing and the same skill is worth the same on both
-      teams, however deep either roster is. Players who sit out do not count. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. Get broken
-      and you come back with about half of it (a 1.7 comes back near 1), then every bit of damage you
-      deal climbs it again, up to 1.75. Around 100 damage is enough to get from the bottom back to 1.
-      Keep going down without hitting back and it sinks toward 0.25. So someone on a rampage is worth
-      a lot to take down, and someone who gets up and does nothing is cheap. Break XP goes up and down with it too. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
+      teams, however deep either roster is. Players who sit out do not count. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. It is how much extra standing you are worth when broken. Get broken
+      and you come back with about half of it (a 1.7 comes back near 1). It grows with the damage you
+      deal, weighted by the bounty of whoever you hit, up to 1.75. Hitting a low bounty player barely raises yours.
+      Hitting a high bounty player raises it more. Around 100 damage on players at a bounty of 1 is enough to get from the bottom back to 1.
+      Keep going down without hitting back and it sinks toward 0.25. Break XP goes up and down with it too. <RouterLink to="/wiki/war-math#break">The standing formula</RouterLink> shows how it adds up.
       Hover the damage on the war page to see how much standing breaking someone would move.
     </p>
     <p>

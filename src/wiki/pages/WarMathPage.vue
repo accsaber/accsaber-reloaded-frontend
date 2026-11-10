@@ -73,7 +73,7 @@ const CHIP_PARAMS: WikiCompareRow[] = [
 const BREAK_PARAMS: WikiCompareRow[] = [
   { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once, at a bounty of 1, moves 40% of its stake. A weaker team loses a bit less per round"] },
   { label: 'Break weight', values: ['', "Their skill squared, over the stronger team's total skill squared. Same pool for both teams"] },
-  { label: 'Bounty', values: [`${RULES.bountyFloor} to ${RULES.bountyCap}`, 'Starts at 1. When they get broken, the next life starts halfway between the floor and what it was, then climbs toward the cap with every bit of damage they deal'] },
+  { label: 'Bounty', values: [`${RULES.bountyFloor} to ${RULES.bountyCap}`, 'Starts at 1. When they get broken, the next life starts halfway between the floor and what it was, then climbs toward the cap with the damage they deal, weighted by the bounty of whoever they hit'] },
   { label: 'Risk', values: [`1 or ${RULES.allyRisk}`, `1 for the two lead clans, ${RULES.allyRisk} for allies`] },
 ]
 
@@ -137,7 +137,7 @@ const XP_PARAMS: WikiCompareRow[] = [
       slice. Your clan gets that amount times their team's engagement. Start is 1 if they've never
       been broken this war. After a break it's {{ RULES.bountyFloor }} plus {{ RULES.bountyCarry }} of whatever their
       bounty was above {{ RULES.bountyFloor }} when they went down. Damage dealt is everything they did since
-      their last break, chips and no-score hits included. The bounty also scales the break XP.
+      their last break, chips and no-score hits included. Each hit counts as its damage times the bounty of whoever it hit. The bounty also scales the break XP.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="BREAK_PARAMS" />
 

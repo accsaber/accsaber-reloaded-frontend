@@ -169,7 +169,7 @@ const PATTERN_ROWS: WikiCompareRow[] = [
     <p>
       A difficulty has to meet these standards before the ranking team votes on it. Mapping terms
       are not explained here. The
-      <a href="https://bsmg.wiki/wiki/Mapping" target="_blank" rel="noopener noreferrer">BSMG Wiki</a>
+      <a href="https://bsmg.wiki/mapping/glossary.html" target="_blank" rel="noopener noreferrer">BSMG Wiki</a>
       covers all of them.
     </p>
 

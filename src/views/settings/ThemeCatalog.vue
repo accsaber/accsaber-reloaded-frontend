@@ -145,20 +145,18 @@ function stopPreview() {
   themeStore.stopPreview()
 }
 
-function togglePreview(card: ThemeCard, option: ThemeOption) {
+async function onPick(card: ThemeCard, option: ThemeOption) {
   if (isPreviewed(card, option) || isActive(card, option)) {
     stopPreview()
     return
   }
-  const owned = ownedThemeByItemId.value.get(card.id)
+  if (card.owned) {
+    await pickTheme(card, option)
+    if (!themeStore.previewing) picked.value = null
+    return
+  }
   picked.value = { card, option }
-  themeStore.previewThemeTokens(option.tokens, owned ? buildEffectLayers(owned.modifiers, owned.unusualEffect) : null)
-}
-
-async function equipPreviewed() {
-  if (!preview.value) return
-  await pickTheme(preview.value.card, preview.value.option)
-  if (!themeStore.previewing) picked.value = null
+  themeStore.previewThemeTokens(option.tokens)
 }
 
 useClickOutside(rootRef, () => preview.value !== null, stopPreview)
@@ -197,7 +195,7 @@ watch(() => authStore.userId, loadThemes)
       <button v-for="option in card.options" :key="option.key" type="button" class="theme-card__option"
         :class="{ 'theme-card__option--active': card.options.length > 1 && isShown(card, option) }" role="radio"
         :aria-checked="isActive(card, option)" :aria-label="option.label ? `${card.name} ${option.label}` : card.name"
-        @click="togglePreview(card, option)">
+        @click="onPick(card, option)">
         <span class="theme-card__preview" :style="previewVars(option.tokens)">
           <ThemeBackdropPreview v-if="!card.builtin" :tokens="option.tokens" />
           <span class="theme-card__swatch theme-card__swatch--bg" />
@@ -223,11 +221,8 @@ watch(() => authStore.userId, loadThemes)
     <div v-if="preview" class="theme-preview" role="status">
       <span class="theme-preview__text">
         Previewing <strong>{{ preview.card.name }} {{ preview.option.label }}</strong>. This is only a preview.
-        <template v-if="!preview.card.owned">{{ preview.card.hint }}</template>
+        {{ preview.card.hint }}
       </span>
-      <BaseButton v-if="preview.card.owned" size="sm" variant="primary" :loading="themeBusy !== null" @click="equipPreviewed">
-        Equip
-      </BaseButton>
       <BaseButton size="sm" @click="stopPreview">Stop preview</BaseButton>
     </div>
   </div>
