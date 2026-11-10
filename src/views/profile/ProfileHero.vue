@@ -230,6 +230,8 @@ function cancelNameEdit() {
 
 <style scoped>
 .profile-hero {
+  --hero-avatar: 160px;
+  --hero-picker: 46px;
   position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
@@ -258,6 +260,7 @@ function cancelNameEdit() {
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
+  min-height: calc(var(--hero-avatar) - var(--space-md) - var(--hero-picker));
 }
 
 .profile-hero__top-right {
@@ -296,6 +299,11 @@ function cancelNameEdit() {
   align-items: center;
   gap: var(--space-sm);
   flex-shrink: 0;
+}
+
+.profile-hero__level-col :deep(.level-badge__stack) {
+  width: var(--hero-avatar);
+  height: var(--hero-avatar);
 }
 
 .profile-hero__badge-hover {
@@ -338,7 +346,6 @@ function cancelNameEdit() {
 
 .profile-hero .profile-hero__name :deep(.user-chip__clan) {
   font-size: 0.9375rem;
-  opacity: 1;
 }
 
 .profile-hero .profile-hero__name :deep(.user-chip__flag) {
@@ -468,6 +475,10 @@ function cancelNameEdit() {
 
   .profile-hero > .profile-hero__details {
     position: static;
+  }
+
+  .profile-hero__top-row {
+    min-height: 0;
   }
 
   .profile-hero__top-right {

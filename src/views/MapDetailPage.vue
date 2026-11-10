@@ -357,11 +357,9 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
         </div>
       </div>
 
-      <BaseTabs v-if="isActiveDifficultyRanked" :tabs="contentTabs" :model-value="activeTab"
-        :class="{ 'map-detail__wide': activeTab === 'leaderboard' }" @update:model-value="activeTab = $event" />
+      <BaseTabs v-if="isActiveDifficultyRanked" :tabs="contentTabs" :model-value="activeTab" @update:model-value="activeTab = $event" />
 
-      <div v-if="isActiveDifficultyRanked" class="map-detail__content"
-        :class="{ 'map-detail__wide': activeTab === 'leaderboard' }">
+      <div v-if="isActiveDifficultyRanked" class="map-detail__content">
         <div v-show="activeTab === 'leaderboard'">
           <MapScoresSection v-if="activeDifficultyId" :difficulty-id="activeDifficultyId" :map-id="map?.id"
             :map-name="map?.songName" :map-sub-name="map?.songSubName"
@@ -389,17 +387,14 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   align-items: center;
   gap: var(--space-lg);
   --accent: var(--page-accent, var(--accent-overall));
+  --page-column: clamp(1280px, var(--scores-column, 1280px), var(--page-width-wide));
 }
 
 .map-detail>*:not(.map-detail__bg) {
   width: 100%;
-  max-width: var(--page-column, 1280px);
+  max-width: var(--page-column);
   position: relative;
   z-index: 1;
-}
-
-.map-detail__wide {
-  --page-column: clamp(1280px, var(--scores-column, 1280px), var(--page-width-wide));
 }
 
 .map-detail__bg {
