@@ -3,10 +3,12 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SortDirectionToggle from '@/components/common/SortDirectionToggle.vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import type { SortState, TableColumn } from '@/types/display'
 import type { RouteLocationRaw } from 'vue-router'
 import { formatRelativeDate, isRecentDate, formatAccuracy } from '@/utils/formatters'
 import { getRankClass } from '@/utils/ranking'
+import { tableCardQuery } from '@/utils/tableLayout'
 import { computed, useSlots } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -28,6 +30,8 @@ const props = withDefaults(defineProps<{
   emptyMessage: 'No scores found',
   totalPages: 0,
 })
+
+const cards = useMediaQuery(() => tableCardQuery(props.columns))
 
 const emit = defineEmits<{
   sort: [key: string]
@@ -91,7 +95,7 @@ const customSlots = computed(() => {
 
 <template>
   <div class="score-table">
-    <div v-if="sortOptions.length > 0 && !loading && rows.length > 0" class="score-table__mobile-sort">
+    <div v-if="cards && sortOptions.length > 0 && !loading && rows.length > 0" class="score-table__mobile-sort">
       <BaseSelect class="score-table__mobile-sort-select" :model-value="sortState?.key ?? ''" :options="sortOptions"
         placeholder="Sort by..." @update:model-value="onSortKeySelect" />
       <SortDirectionToggle :direction="sortState?.direction" @toggle="onDirectionToggle" />
@@ -216,19 +220,13 @@ const customSlots = computed(() => {
 }
 
 .score-table__mobile-sort {
-  display: none;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: stretch;
 }
 
 .score-table__mobile-sort-select {
   flex: 1;
   min-width: 0;
-}
-
-@media (max-width: 767px) {
-  .score-table__mobile-sort {
-    display: flex;
-    gap: var(--space-sm);
-    align-items: stretch;
-  }
 }
 </style>

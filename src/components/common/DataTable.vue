@@ -2,7 +2,7 @@
 import { useMediaQuery } from '@/composables/useMediaQuery';
 import type { SortState, TableColumn } from '@/types/display';
 import { formatSortGlyph } from '@/utils/formatters';
-import { tableNaturalWidth } from '@/utils/tableLayout';
+import { tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
 import { computed, useSlots } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
@@ -33,7 +33,7 @@ const slots = useSlots()
 const skeletonCount = computed(() => props.loadingRows ?? 5)
 const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
-const mobile = useMediaQuery('(max-width: 767px)')
+const mobile = useMediaQuery(() => tableCardQuery(props.columns))
 const rowHrefs = computed(() => props.rows.map(resolveRowHref))
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {

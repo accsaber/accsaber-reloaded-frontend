@@ -1,18 +1,26 @@
-import { onUnmounted, readonly, ref, type Ref } from 'vue'
+import { onUnmounted, readonly, ref, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
 
 export const MOBILE_MEDIA_QUERY = '(max-width: 959px)'
 
-export function useMediaQuery(query: string): Readonly<Ref<boolean>> {
+export function useMediaQuery(query: MaybeRefOrGetter<string>): Readonly<Ref<boolean>> {
   const matches = ref(false)
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return readonly(matches)
   }
-  const media = window.matchMedia(query)
-  matches.value = media.matches
+  let media: MediaQueryList | null = null
   const handler = () => {
-    matches.value = media.matches
+    matches.value = !!media?.matches
   }
-  media.addEventListener('change', handler)
-  onUnmounted(() => media.removeEventListener('change', handler))
+  watch(
+    () => toValue(query),
+    (value) => {
+      media?.removeEventListener('change', handler)
+      media = window.matchMedia(value)
+      handler()
+      media.addEventListener('change', handler)
+    },
+    { immediate: true },
+  )
+  onUnmounted(() => media?.removeEventListener('change', handler))
   return readonly(matches)
 }

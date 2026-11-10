@@ -98,15 +98,29 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
 }
 
 .user-chip .user-chip__clan {
-  font-size: 0.6875rem;
+  font-size: 0.5625rem;
+  opacity: 0.7;
+}
+
+.user-chip .user-chip__clan:hover,
+.user-chip .user-chip__clan:focus-visible {
+  opacity: 1;
 }
 
 .user-chip--xs .user-chip__clan {
-  font-size: 0.625rem;
+  font-size: 0.5rem;
 }
 
 .user-chip--lg .user-chip__clan {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
+}
+
+@media (max-width: 767px) {
+  .user-chip .user-chip__clan {
+    flex-shrink: 1000;
+    min-width: 0;
+    overflow: hidden;
+  }
 }
 
 .user-chip__flag {
