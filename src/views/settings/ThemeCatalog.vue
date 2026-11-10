@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { equipItem, getItems, getUserItems } from '@/api/items'
+import BaseButton from '@/components/common/BaseButton.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
+import { useClickOutside } from '@/composables/useClickOutside'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
@@ -9,7 +11,7 @@ import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
 import { filterThemableTokens } from '@/utils/themeTokens'
 import { readItemVariants, resolveItemVariant } from '@/utils/items'
 import { readThemeValue } from '@/utils/cosmetics/readers'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface ThemeOption {
   key: string
@@ -33,8 +35,8 @@ const themeStore = useThemeStore()
 const itemTypeStore = useItemTypeStore()
 
 const BUILTIN_PREVIEW_TOKENS: Record<string, Record<string, string>> = {
-  dark: { 'bg-base': '#08080d', 'bg-surface': '#11111c', 'bg-elevated': '#1a1929', 'accent': '#f5b800' },
-  light: { 'bg-base': '#f3f2f7', 'bg-surface': '#fdfcff', 'bg-elevated': '#ebe9f1', 'accent': '#f5b800' },
+  dark: { 'base': 'dark', 'bg-base': '#08080d', 'bg-surface': '#11111c', 'bg-elevated': '#1a1929', 'accent': '#f5b800' },
+  light: { 'base': 'light', 'bg-base': '#f3f2f7', 'bg-surface': '#fdfcff', 'bg-elevated': '#ebe9f1', 'accent': '#f5b800' },
 }
 
 const BUILTIN_THEMES: ThemeCard[] = ['Dark', 'Light'].map((name) => ({
@@ -52,7 +54,7 @@ const ownedThemes = ref<UserItemResponse[]>([])
 const themeBusy = ref<string | null>(null)
 
 const ownedThemeByItemId = computed(() => new Map(ownedThemes.value.map((u) => [u.item.id, u])))
-const activeTokensJson = computed(() => JSON.stringify(themeStore.activeTokens))
+const activeTokensJson = computed(() => JSON.stringify(themeStore.equippedTokens))
 
 function modeLabel(tokens: Record<string, string>): string {
   return tokens.base === 'light' ? 'Light' : 'Dark'
@@ -126,6 +128,42 @@ async function loadThemes() {
   ownedThemes.value = owned
 }
 
+const rootRef = ref<HTMLElement | null>(null)
+const picked = ref<{ card: ThemeCard; option: ThemeOption } | null>(null)
+const preview = computed(() => (themeStore.previewing ? picked.value : null))
+
+function isPreviewed(card: ThemeCard, option: ThemeOption): boolean {
+  return preview.value?.card.id === card.id && preview.value.option.key === option.key
+}
+
+function isShown(card: ThemeCard, option: ThemeOption): boolean {
+  return preview.value ? isPreviewed(card, option) : isActive(card, option)
+}
+
+function stopPreview() {
+  picked.value = null
+  themeStore.stopPreview()
+}
+
+function togglePreview(card: ThemeCard, option: ThemeOption) {
+  if (isPreviewed(card, option) || isActive(card, option)) {
+    stopPreview()
+    return
+  }
+  const owned = ownedThemeByItemId.value.get(card.id)
+  picked.value = { card, option }
+  themeStore.previewThemeTokens(option.tokens, owned ? buildEffectLayers(owned.modifiers, owned.unusualEffect) : null)
+}
+
+async function equipPreviewed() {
+  if (!preview.value) return
+  await pickTheme(preview.value.card, preview.value.option)
+  if (!themeStore.previewing) picked.value = null
+}
+
+useClickOutside(rootRef, () => preview.value !== null, stopPreview)
+onBeforeUnmount(stopPreview)
+
 async function pickTheme(card: ThemeCard, option: ThemeOption) {
   if (!card.owned || themeBusy.value) return
   themeBusy.value = card.id
@@ -149,17 +187,17 @@ watch(() => authStore.userId, loadThemes)
 </script>
 
 <template>
-  <div class="theme-grid" role="radiogroup" aria-label="Theme">
+  <div ref="rootRef" class="theme-grid" role="radiogroup" aria-label="Theme">
     <div v-for="card in themeCards" :key="card.id" class="theme-card" :class="{
-      'theme-card--active': card.options.some((o) => isActive(card, o)),
+      'theme-card--active': card.options.some((o) => isActive(card, o)) || preview?.card.id === card.id,
       'theme-card--locked': !card.owned,
       'theme-card--multi': card.options.length > 1,
       'theme-card--wide': card.options.length > 2,
     }" :title="!card.owned ? card.hint : undefined">
       <button v-for="option in card.options" :key="option.key" type="button" class="theme-card__option"
-        :class="{ 'theme-card__option--active': card.options.length > 1 && isActive(card, option) }" role="radio"
+        :class="{ 'theme-card__option--active': card.options.length > 1 && isShown(card, option) }" role="radio"
         :aria-checked="isActive(card, option)" :aria-label="option.label ? `${card.name} ${option.label}` : card.name"
-        :disabled="!card.owned || themeBusy === card.id" @click="pickTheme(card, option)">
+        @click="togglePreview(card, option)">
         <span class="theme-card__preview" :style="previewVars(option.tokens)">
           <ThemeBackdropPreview v-if="!card.builtin" :tokens="option.tokens" />
           <span class="theme-card__swatch theme-card__swatch--bg" />
@@ -172,7 +210,8 @@ watch(() => authStore.userId, loadThemes)
         <span class="theme-card__name">{{ card.name }}</span>
         <span class="theme-card__hint">{{ card.hint }}</span>
       </div>
-      <span v-if="card.options.some((o) => isActive(card, o))" class="theme-card__active-tag">Active</span>
+      <span v-if="preview?.card.id === card.id" class="theme-card__active-tag">Preview</span>
+      <span v-else-if="card.options.some((o) => isActive(card, o))" class="theme-card__active-tag">Active</span>
       <span v-else-if="!card.owned" class="theme-card__lock-tag" aria-label="Locked">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
@@ -180,6 +219,16 @@ watch(() => authStore.userId, loadThemes)
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </span>
+    </div>
+    <div v-if="preview" class="theme-preview" role="status">
+      <span class="theme-preview__text">
+        Previewing <strong>{{ preview.card.name }} {{ preview.option.label }}</strong>. This is only a preview.
+        <template v-if="!preview.card.owned">{{ preview.card.hint }}</template>
+      </span>
+      <BaseButton v-if="preview.card.owned" size="sm" variant="primary" :loading="themeBusy !== null" @click="equipPreviewed">
+        Equip
+      </BaseButton>
+      <BaseButton size="sm" @click="stopPreview">Stop preview</BaseButton>
     </div>
   </div>
 </template>
@@ -204,7 +253,7 @@ watch(() => authStore.userId, loadThemes)
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
-.theme-card:hover:not(.theme-card--locked) {
+.theme-card:hover {
   border-color: var(--text-tertiary);
 }
 
@@ -247,17 +296,13 @@ watch(() => authStore.userId, loadThemes)
   inset: 0;
 }
 
-.theme-card__option:disabled {
-  cursor: not-allowed;
-}
-
 .theme-card--multi .theme-card__option {
   padding: var(--space-xs);
   border: 1px solid transparent;
   border-radius: var(--radius-btn);
 }
 
-.theme-card--multi .theme-card__option:hover:not(:disabled) {
+.theme-card--multi .theme-card__option:hover {
   background: var(--bg-elevated);
 }
 
@@ -330,6 +375,28 @@ watch(() => authStore.userId, loadThemes)
   right: var(--space-xs);
   display: inline-flex;
   color: var(--text-tertiary);
+}
+
+.theme-preview {
+  position: sticky;
+  bottom: var(--space-md);
+  z-index: 1;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--page-accent);
+  border-radius: var(--radius-card);
+}
+
+.theme-preview__text {
+  flex: 1;
+  min-width: 200px;
 }
 
 @media (max-width: 520px) {

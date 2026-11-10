@@ -4,7 +4,7 @@ import { applyThemeTokens, clearThemeTokens } from '@/utils/themeTokens'
 import type { EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { readStored, readStoredString, writeStored, writeStoredString } from '@/utils/storage'
 import { defineStore } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 
 export type BuiltinTheme = 'dark' | 'light'
 export type Theme = BuiltinTheme | string
@@ -68,7 +68,31 @@ export const useThemeStore = defineStore('theme', () => {
     root.setAttribute('data-theme', resolvedBase.value)
   }
 
+  const equippedLook = shallowRef<{ tokens: Record<string, string> | null; effects: EffectLayer[] | null } | null>(null)
+  const previewing = computed(() => equippedLook.value !== null)
+  const equippedTokens = computed(() => (equippedLook.value ? equippedLook.value.tokens : activeTokens.value))
+
+  function swapLook(tokens: Record<string, string> | null, effects: EffectLayer[] | null) {
+    if (activeTokens.value) clearThemeTokens(activeTokens.value)
+    activeTokens.value = tokens
+    if (tokens) applyThemeTokens(tokens)
+    activeEffects.value = effects?.length ? effects : null
+  }
+
+  function previewThemeTokens(tokens: Record<string, string> | null, effects: EffectLayer[] | null = null) {
+    equippedLook.value ??= { tokens: activeTokens.value, effects: activeEffects.value }
+    swapLook(tokens ?? equippedLook.value.tokens, effects)
+  }
+
+  function stopPreview() {
+    const look = equippedLook.value
+    if (!look) return
+    equippedLook.value = null
+    swapLook(look.tokens, look.effects)
+  }
+
   function setTheme(value: Theme) {
+    equippedLook.value = null
     if (activeTokens.value) {
       clearThemeTokens(activeTokens.value)
       activeTokens.value = null
@@ -83,22 +107,13 @@ export const useThemeStore = defineStore('theme', () => {
     tokens: Record<string, string>,
     effects?: EffectLayer[],
   ) {
+    equippedLook.value = null
     if (activeTokens.value) clearThemeTokens(activeTokens.value)
     activeTokens.value = tokens
     writeStored(TOKENS_STORAGE_KEY, tokens)
     applyThemeTokens(tokens)
     setActiveEffects(effects)
     theme.value = themeKey
-  }
-
-  function previewThemeTokens(
-    tokens: Record<string, string> | null,
-    effects: EffectLayer[] | null = null,
-  ) {
-    if (activeTokens.value) clearThemeTokens(activeTokens.value)
-    activeTokens.value = tokens
-    if (tokens) applyThemeTokens(tokens)
-    activeEffects.value = effects?.length ? effects : null
   }
 
   function toggle() {
@@ -155,5 +170,5 @@ export const useThemeStore = defineStore('theme', () => {
     if (!active) resetToBuiltin()
   })
 
-  return { theme, activeTokens, activeEffects, resolvedBase, hasBackdrop, toggle, setTheme, resetToBuiltin, setThemeFromTokens, previewThemeTokens }
+  return { theme, activeTokens, activeEffects, resolvedBase, hasBackdrop, previewing, equippedTokens, toggle, setTheme, resetToBuiltin, setThemeFromTokens, previewThemeTokens, stopPreview }
 })

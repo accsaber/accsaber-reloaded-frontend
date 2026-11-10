@@ -1,7 +1,7 @@
 import { usePreviewStore } from '@/stores/preview'
 import { useThemeStore } from '@/stores/theme'
 import type { ItemResponse } from '@/types/api/items'
-import { buildEffectLayers, type EffectLayer } from '@/utils/cosmetics/effectLayers'
+import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
 import { itemVariantPreviews } from '@/utils/items'
 import { readThemeValue } from '@/utils/cosmetics/readers'
 import { isCreativesSubdomain } from '@/utils/subdomain'
@@ -19,35 +19,14 @@ export function usePreviewTheme() {
   const preview = usePreviewStore()
   const themeStore = useThemeStore()
 
-  let savedTokens: Record<string, string> | null = null
-  let savedEffects: EffectLayer[] | null = null
-  let snapshotted = false
-
-  function apply(tokens: Record<string, string> | null, effects: EffectLayer[]) {
-    if (!snapshotted) {
-      savedTokens = themeStore.activeTokens ? { ...themeStore.activeTokens } : null
-      savedEffects = themeStore.activeEffects ? [...themeStore.activeEffects] : null
-      snapshotted = true
-    }
-    themeStore.previewThemeTokens(tokens ?? savedTokens, effects)
-  }
-
-  function revert() {
-    if (!snapshotted) return
-    themeStore.previewThemeTokens(savedTokens, savedEffects)
-    savedTokens = null
-    savedEffects = null
-    snapshotted = false
-  }
-
   watch(
     () => [preview.theme, preview.themeVariant, preview.themeEffect, preview.themeModifiers] as const,
     ([themeItem, variantKey, effect, modifiers]) => {
       if (!isCreativesSubdomain) return
       const tokens = themeItem ? resolveThemeTokens(themeItem, variantKey) : null
       const effects = buildEffectLayers(modifiers, effect)
-      if (tokens || effects.length) apply(tokens, effects)
-      else revert()
+      if (tokens || effects.length) themeStore.previewThemeTokens(tokens, effects)
+      else themeStore.stopPreview()
     },
     { immediate: true },
   )

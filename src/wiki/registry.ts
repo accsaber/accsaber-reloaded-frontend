@@ -999,9 +999,11 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'bound',
           'locked item',
           'what is my item worth',
+          'preview theme',
+          'theme preview',
         ],
         related: ['xp-and-levels', 'milestones-and-achievements', 'crates', 'essence', 'modifiers-and-effects'],
-        updated: '2026-09-07',
+        updated: '2026-11-10',
         loader: () => import('@/wiki/pages/ItemsAndInventoryPage.vue'),
       },
       {
