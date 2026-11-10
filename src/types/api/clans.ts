@@ -95,6 +95,7 @@ export interface ClanMembershipResponse {
   joinedAt: string
   joinCooldownEndsAt: string
   online: boolean
+  warParticipation: boolean
   lastPlayedAt: string | null
   strengthShare: number
   skill: number

@@ -99,6 +99,14 @@ export function updateClanMember(
   return patch<PlayerRef>(`/clans/${clanId}/members/${userId}`, req)
 }
 
+export function setClanMemberWarParticipation(
+  clanId: string,
+  userId: string,
+  participates: boolean,
+): Promise<PlayerRef> {
+  return patch<PlayerRef>(`/clans/${clanId}/members/${userId}/war-participation?participates=${participates}`)
+}
+
 export function removeClanMember(clanId: string, userId: string): Promise<void> {
   return del<void>(`/clans/${clanId}/members/${userId}`)
 }

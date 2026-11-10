@@ -324,6 +324,25 @@ function askKick(member: PlayerRef) {
   })
 }
 
+function askWars(member: PlayerRef) {
+  const id = clan.value!.clan.id
+  const participates = !member.membership?.warParticipation
+  const label = participates ? 'Put back in wars' : 'Take off wars'
+  ask({
+    title: `${label}: ${member.name}`,
+    message: participates
+      ? `${member.name} fights in wars that have not started yet. They can turn this back off anytime.`
+      : `${member.name} sits out wars that have not started yet. They can turn this back on anytime.`,
+    confirmLabel: label,
+    destructive: false,
+    run: async () => {
+      const { setClanMemberWarParticipation } = await import('@/api/clans')
+      const updated = await setClanMemberWarParticipation(id, member.id, participates)
+      members.value = members.value.map((m) => (m.id === updated.id ? updated : m))
+    },
+  })
+}
+
 function askTransfer(member: PlayerRef) {
   const id = clan.value!.clan.id
   ask({
@@ -539,6 +558,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           :viewer-id="auth.userId"
           @change-role="changeRole"
           @kick="askKick"
+          @wars="askWars"
           @transfer="askTransfer"
           @claim="claimClan"
         />

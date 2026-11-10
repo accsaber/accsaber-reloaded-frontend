@@ -32,6 +32,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'change-role': [member: PlayerRef, role: ClanRole]
   kick: [member: PlayerRef]
+  wars: [member: PlayerRef]
   transfer: [member: PlayerRef]
   claim: []
 }>()
@@ -140,6 +141,7 @@ function actionsFor(member: PlayerRef): MemberActions | null {
   const actions: MemberActions = {
     roles: assignableRoles(props.viewerRole, role),
     kick: below && hasClanRole(props.viewerRole, 'officer'),
+    wars: below && hasClanRole(props.viewerRole, 'commander'),
     transfer: below && hasClanRole(props.viewerRole, 'founder'),
     claim: role === 'founder' && canClaim.value,
   }
@@ -168,6 +170,7 @@ const candidates = computed(() => {
 
 function onPick(member: PlayerRef, action: MemberPick) {
   if (action === 'kick') emit('kick', member)
+  else if (action === 'wars') emit('wars', member)
   else if (action === 'transfer') emit('transfer', member)
   else if (action === 'claim') emit('claim')
   else emit('change-role', member, action)
@@ -243,6 +246,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
               <UserChip :user="asPlayer(row)" link tooltip hide-clan />
               <span v-if="row.role" class="roster__role">{{ row.role }}</span>
               <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
+              <span v-if="asPlayer(row).membership?.warParticipation === false" class="roster__role">off wars</span>
             </span>
           </template>
           <template #cell-xp="{ value }">{{
@@ -266,6 +270,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
                   <UserChip :user="asPlayer(row)" size="sm" link hide-clan />
                   <span v-if="row.role" class="roster__role">{{ row.role }}</span>
                   <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
+              <span v-if="asPlayer(row).membership?.warParticipation === false" class="roster__role">off wars</span>
                 </span>
                 <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
                 <span class="member-card__played">{{ lastPlayed(asPlayer(row)) }}</span>

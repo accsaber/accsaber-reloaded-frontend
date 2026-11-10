@@ -23,7 +23,8 @@ const DAMAGE: WikiCompareRow[] = [
       You can turn off Participate in clan wars in your settings. You stay in your clan but sit
       out its new wars. Turn it off during prep and you drop out right away. Once a war starts,
       turning it off does nothing until that war ends. Turning it back on mid-war does not put you
-      in. If you join a clan mid-war with it off, you stay out of that war.
+      in. If you join a clan mid-war with it off, you stay out of that war. Commanders and the
+      Founder can turn it off for anyone ranked below them before a war starts.
     </p>
     <p>
       Guard is a shield. Hits wear it down without moving any standing. Standing only moves when

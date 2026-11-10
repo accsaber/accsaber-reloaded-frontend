@@ -16,6 +16,7 @@ const PERMISSIONS: WikiCompareRow[] = [
   { label: 'Declare war', values: [false, false, true, true] },
   { label: 'Call in allies or help one', values: [false, false, true, true] },
   { label: 'Give war orders to members', values: [false, false, true, true] },
+  { label: 'Take lower ranks off wars', values: [false, false, true, true] },
   { label: 'Make someone a Commander', values: [false, false, false, true] },
   { label: 'Make alliances', values: [false, false, false, true] },
   { label: 'Make the clan pacifist', values: [false, false, false, true] },

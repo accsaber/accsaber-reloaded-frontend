@@ -43,6 +43,7 @@ function whole(value: number | undefined): string {
         <CountryFlag v-if="member.country" :country="member.country" />
         <span v-if="membership?.online" class="leader__online">online</span>
         <span v-else>played {{ lastPlayed }}</span>
+        <span v-if="membership?.warParticipation === false">off wars</span>
       </span>
       <dl class="leader__stats">
         <div><dt>Season XP</dt><dd>{{ whole(membership?.seasonPlayXp) }}</dd></div>

@@ -8,11 +8,12 @@ import { ref } from 'vue'
 export interface MemberActions {
   roles: ClanRole[]
   kick: boolean
+  wars: boolean
   transfer: boolean
   claim: boolean
 }
 
-export type MemberPick = ClanRole | 'kick' | 'transfer' | 'claim'
+export type MemberPick = ClanRole | 'kick' | 'wars' | 'transfer' | 'claim'
 
 const props = defineProps<{
   member: PlayerRef
@@ -51,6 +52,9 @@ function pick(action: MemberPick) {
         @click="pick(role)"
       >
         Make {{ CLAN_ROLE_LABEL[role].toLowerCase() }}
+      </button>
+      <button v-if="actions.wars" type="button" class="member-menu__item" role="menuitem" @click="pick('wars')">
+        {{ member.membership?.warParticipation ? 'Take off wars' : 'Put back in wars' }}
       </button>
       <button v-if="actions.transfer" type="button" class="member-menu__item" role="menuitem" @click="pick('transfer')">
         Transfer founder
