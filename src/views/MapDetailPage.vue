@@ -3,7 +3,6 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import StatBlock from '@/components/common/StatBlock.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
@@ -122,7 +121,7 @@ async function copyBsr() {
 const difficultyTabs = computed(() =>
   rankedDifficulties.value.map((d) => ({
     key: d.id,
-    label: formatDifficulty(d.difficulty),
+    label: d.difficulty,
   }))
 )
 
@@ -247,12 +246,11 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 <template>
   <div class="map-detail" :style="{ '--page-accent': resolvedAccent, '--scores-column': scoresTableWidth + 'px' }">
     <template v-if="loading">
-      <div class="map-detail__skeleton">
-        <SkeletonLoader variant="avatar" width="120px" height="120px" />
-        <SkeletonLoader variant="text" width="300px" />
-        <SkeletonLoader variant="text" width="200px" />
-        <div class="map-detail__skeleton-stats">
-          <SkeletonLoader v-for="i in 4" :key="i" variant="stat-block" />
+      <div class="map-detail__hero">
+        <SkeletonLoader variant="avatar" width="200px" height="200px" />
+        <div class="map-detail__name-col">
+          <SkeletonLoader variant="text" width="300px" />
+          <SkeletonLoader variant="text" width="200px" />
         </div>
       </div>
     </template>
@@ -270,87 +268,91 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
       </div>
 
       <div class="map-detail__hero">
-        <div class="map-detail__cover-wrap">
-          <img class="map-detail__cover" :src="coverUrl" :alt="map.songName" fetchpriority="high" decoding="async"
-            @error="handleMapCoverError" />
-        </div>
+        <img class="map-detail__cover" :src="coverUrl" :alt="map.songName" fetchpriority="high" decoding="async"
+          @error="handleMapCoverError" />
 
         <div class="map-detail__details">
-          <div class="map-detail__name-row">
-            <h1 class="map-detail__song">
+          <div class="map-detail__name-col">
+            <h1>
               <SongTitle layout="stacked" :name="map.songName" :sub-name="map.songSubName" />
             </h1>
-          </div>
-          <p class="map-detail__artist">{{ map.songAuthor }}</p>
-          <p class="map-detail__mapper">Mapped by <strong>{{ map.mapAuthor }}</strong></p>
+            <p class="map-detail__artist">{{ map.songAuthor }}</p>
+            <p class="map-detail__mapper">Mapped by <strong>{{ map.mapAuthor }}</strong></p>
 
-          <div class="map-detail__links">
-            <BaseButton v-if="map.beatsaverCode" size="sm" :href="`beatsaver://${map.beatsaverCode}`"
-              aria-label="One-Click Install" title="One-Click Install">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M8 13V4.5a1.5 1.5 0 0 1 3 0V12" />
-                <path d="M11 11.5V6.5a1.5 1.5 0 0 1 3 0V12" />
-                <path d="M14 10.5V8.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2a1.5 1.5 0 0 1 3 0V12" />
-              </svg>
-            </BaseButton>
-            <BaseButton v-if="map.beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${map.beatsaverCode}`"
-              aria-label="View on BeatSaver">
-              <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
-                class="map-detail__site-icon" decoding="async" />
-            </BaseButton>
-            <BaseButton v-if="map.beatsaverCode" size="sm" aria-label="Copy BSR" title="Copy BSR"
-              class="map-detail__bsr-btn" @click="copyBsr">
-              <span v-if="bsrCopied" class="map-detail__bsr-label">Copied!</span>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="12" y1="5" x2="12" y2="14" />
-                <line x1="12" y1="18" x2="12" y2="19" />
-              </svg>
-            </BaseButton>
-            <BaseButton v-if="activeDifficulty?.blLeaderboardId" size="sm"
-              :href="`https://www.beatleader.com/leaderboard/global/${activeDifficulty.blLeaderboardId}`"
-              aria-label="View on BeatLeader">
-              <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
-                class="map-detail__site-icon" decoding="async" />
-            </BaseButton>
-            <BaseButton v-if="activeDifficulty?.ssLeaderboardId" size="sm"
-              :href="`https://scoresaber.com/leaderboard/${activeDifficulty.ssLeaderboardId}`"
-              aria-label="View on ScoreSaber">
-              <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
-                class="map-detail__site-icon" decoding="async" />
-            </BaseButton>
-            <BaseButton v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" size="sm" aria-label="AP Tweaker"
-              @click="toggleMapTweaker($event)">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"
-                  stroke-linecap="round" stroke-linejoin="round" />
-                <path
-                  d="M16.2 12.5a1.4 1.4 0 00.28 1.54l.05.05a1.7 1.7 0 11-2.4 2.4l-.05-.05a1.4 1.4 0 00-1.54-.28 1.4 1.4 0 00-.84 1.28v.14a1.7 1.7 0 11-3.4 0v-.07a1.4 1.4 0 00-.92-1.28 1.4 1.4 0 00-1.54.28l-.05.05a1.7 1.7 0 11-2.4-2.4l.05-.05a1.4 1.4 0 00.28-1.54 1.4 1.4 0 00-1.28-.84H2.3a1.7 1.7 0 110-3.4h.07a1.4 1.4 0 001.28-.92 1.4 1.4 0 00-.28-1.54l-.05-.05a1.7 1.7 0 112.4-2.4l.05.05a1.4 1.4 0 001.54.28h.07a1.4 1.4 0 00.84-1.28V2.3a1.7 1.7 0 113.4 0v.07a1.4 1.4 0 00.84 1.28 1.4 1.4 0 001.54-.28l.05-.05a1.7 1.7 0 112.4 2.4l-.05.05a1.4 1.4 0 00-.28 1.54v.07a1.4 1.4 0 001.28.84h.14a1.7 1.7 0 110 3.4h-.07a1.4 1.4 0 00-1.28.84z"
-                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </BaseButton>
-            <ApTweaker v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" :open="tweakerOpen" :curve-id="scoreCurveId"
-              :anchor-el="tweakerAnchor" :complexity="activeDifficulty.complexity ?? undefined" :show-weighted="false"
-              @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
-          </div>
-
-          <BaseTabs v-if="difficultyTabs.length > 1" :tabs="difficultyTabs" :model-value="activeDifficultyId"
-            @update:model-value="activeDifficultyId = $event" />
-
-          <div v-if="activeDifficulty" class="map-detail__stats-strip">
-            <div class="map-detail__diff-meta">
-              <DifficultyBadge :difficulty="activeDifficulty.difficulty" />
+            <div v-if="activeDifficulty" class="map-detail__diff-meta">
+              <BaseTabs v-if="difficultyTabs.length > 1" class="map-detail__picker" variant="segmented" label="Difficulty"
+                :tabs="difficultyTabs" :model-value="activeDifficultyId" @update:model-value="activeDifficultyId = $event">
+                <template #tab="{ tab }">
+                  <DifficultyBadge :difficulty="tab.label" />
+                </template>
+              </BaseTabs>
+              <DifficultyBadge v-if="difficultyTabs.length <= 1" :difficulty="activeDifficulty.difficulty" />
               <ComplexityBadge v-if="isActiveDifficultyRanked" :complexity="activeDifficulty.complexity ?? 0" />
               <span v-if="hasCategory" class="map-detail__category-name" :style="{ color: categoryAccent }">{{ categoryName }}</span>
             </div>
-            <div v-if="showApStats" class="map-detail__stats">
-              <StatBlock label="Max AP" :value="diffStats?.maxAp?.toFixed(2) ?? '-'" />
-              <StatBlock label="Min AP" :value="diffStats?.minAp?.toFixed(2) ?? '-'" />
-              <StatBlock label="Avg AP" :value="diffStats?.averageAp?.toFixed(2) ?? '-'" />
-              <StatBlock label="Total Scores" :value="diffStats?.totalScores ?? 0" :decimals="0" />
+          </div>
+
+          <div class="map-detail__side">
+            <div class="map-detail__links">
+              <BaseButton v-if="map.beatsaverCode" size="sm" :href="`beatsaver://${map.beatsaverCode}`"
+                aria-label="One-Click Install" title="One-Click Install">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M8 13V4.5a1.5 1.5 0 0 1 3 0V12" />
+                  <path d="M11 11.5V6.5a1.5 1.5 0 0 1 3 0V12" />
+                  <path d="M14 10.5V8.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6v-2a1.5 1.5 0 0 1 3 0V12" />
+                </svg>
+              </BaseButton>
+              <BaseButton v-if="map.beatsaverCode" size="sm" :href="`https://beatsaver.com/maps/${map.beatsaverCode}`"
+                aria-label="View on BeatSaver">
+                <img src="https://beatsaver.com/static/favicon/favicon-32x32.png" alt="BeatSaver" width="16" height="16"
+                  class="map-detail__site-icon" decoding="async" />
+              </BaseButton>
+              <BaseButton v-if="map.beatsaverCode" size="sm" aria-label="Copy BSR" title="Copy BSR"
+                @click="copyBsr">
+                <span v-if="bsrCopied" class="map-detail__bsr-label">Copied!</span>
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="14" />
+                  <line x1="12" y1="18" x2="12" y2="19" />
+                </svg>
+              </BaseButton>
+              <BaseButton v-if="activeDifficulty?.blLeaderboardId" size="sm"
+                :href="`https://www.beatleader.com/leaderboard/global/${activeDifficulty.blLeaderboardId}`"
+                aria-label="View on BeatLeader">
+                <img src="https://beatleader.com/assets/favicon-32x32.png" alt="BeatLeader" width="16" height="16"
+                  class="map-detail__site-icon" decoding="async" />
+              </BaseButton>
+              <BaseButton v-if="activeDifficulty?.ssLeaderboardId" size="sm"
+                :href="`https://scoresaber.com/leaderboard/${activeDifficulty.ssLeaderboardId}`"
+                aria-label="View on ScoreSaber">
+                <img src="https://scoresaber.com/favicon-32x32.png" alt="ScoreSaber" width="16" height="16"
+                  class="map-detail__site-icon" decoding="async" />
+              </BaseButton>
+              <BaseButton v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" size="sm" aria-label="AP Tweaker"
+                @click="toggleMapTweaker($event)">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M16.2 12.5a1.4 1.4 0 00.28 1.54l.05.05a1.7 1.7 0 11-2.4 2.4l-.05-.05a1.4 1.4 0 00-1.54-.28 1.4 1.4 0 00-.84 1.28v.14a1.7 1.7 0 11-3.4 0v-.07a1.4 1.4 0 00-.92-1.28 1.4 1.4 0 00-1.54.28l-.05.05a1.7 1.7 0 11-2.4-2.4l.05-.05a1.4 1.4 0 00.28-1.54 1.4 1.4 0 00-1.28-.84H2.3a1.7 1.7 0 110-3.4h.07a1.4 1.4 0 001.28-.92 1.4 1.4 0 00-.28-1.54l-.05-.05a1.7 1.7 0 112.4-2.4l.05.05a1.4 1.4 0 001.54.28h.07a1.4 1.4 0 00.84-1.28V2.3a1.7 1.7 0 113.4 0v.07a1.4 1.4 0 00.84 1.28 1.4 1.4 0 001.54-.28l.05-.05a1.7 1.7 0 112.4 2.4l-.05.05a1.4 1.4 0 00-.28 1.54v.07a1.4 1.4 0 001.28.84h.14a1.7 1.7 0 110 3.4h-.07a1.4 1.4 0 00-1.28.84z"
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </BaseButton>
+              <ApTweaker v-if="scoreCurveId && activeDifficulty && isActiveDifficultyRanked" :open="tweakerOpen" :curve-id="scoreCurveId"
+                :anchor-el="tweakerAnchor" :complexity="activeDifficulty.complexity ?? undefined" :show-weighted="false"
+                @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
             </div>
-            <MapChartStats :source="activeDifficulty" />
+
+            <template v-if="showApStats && diffStats">
+              <p class="map-detail__summary">{{ diffStats.totalScores }} scores</p>
+              <p class="map-detail__summary">{{ diffStats.averageAp?.toFixed(2) ?? '-' }} average AP</p>
+            </template>
+
+            <details v-if="activeDifficulty" class="map-detail__chart">
+              <summary>Map stats</summary>
+              <MapChartStats :source="activeDifficulty" />
+            </details>
           </div>
         </div>
       </div>
@@ -391,13 +393,13 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 
 .map-detail>*:not(.map-detail__bg) {
   width: 100%;
-  max-width: var(--page-column, 1100px);
+  max-width: var(--page-column, 1280px);
   position: relative;
   z-index: 1;
 }
 
 .map-detail__wide {
-  --page-column: clamp(1100px, var(--scores-column, 1100px), var(--page-width-wide));
+  --page-column: clamp(1280px, var(--scores-column, 1280px), var(--page-width-wide));
 }
 
 .map-detail__bg {
@@ -419,32 +421,20 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   background-size: cover;
   background-position: center 20%;
   background-repeat: no-repeat;
-  filter: blur(40px);
+  filter: blur(40px) brightness(0.55) saturate(1.5);
   opacity: 0.3;
 }
 
 .map-detail__hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: var(--space-xl);
-  padding: var(--space-xl) var(--space-lg);
-  text-align: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.map-detail__cover-wrap {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  flex-shrink: 0;
+  padding: var(--space-xl) 0 var(--space-lg);
 }
 
 .map-detail__cover {
-  width: 120px;
-  height: 120px;
+  width: 200px;
+  height: 200px;
   border-radius: var(--radius-avatar);
   object-fit: cover;
   border: 1px solid var(--bg-overlay);
@@ -452,44 +442,60 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 
 .map-detail__details {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg) var(--space-xl);
   min-width: 0;
 }
 
-.map-detail__name-row {
+.map-detail__side {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+  gap: var(--space-md);
+  text-align: right;
 }
 
-.map-detail__song {
-  text-align: center;
+.map-detail__name-col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.map-detail__name-col h1 {
+  font-size: calc(var(--text-page-title) * 1.5);
+}
+
+.map-detail__name-col :deep(.song-title__sub) {
+  font-size: var(--text-section-heading);
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .map-detail__artist {
+  font-size: var(--text-section-heading);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.map-detail__mapper {
   font-size: var(--text-body);
   color: var(--text-secondary);
   margin: 0;
 }
 
-.map-detail__mapper {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  margin: 0;
-}
-
 .map-detail__mapper strong {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .map-detail__links {
   display: flex;
-  gap: var(--space-sm);
+  flex-wrap: wrap;
+  gap: var(--space-xs);
 }
 
 .map-detail__site-icon {
@@ -502,30 +508,70 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   letter-spacing: 0.02em;
 }
 
-.map-detail__stats-strip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-sm);
-  width: 100%;
-}
-
 .map-detail__diff-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm) var(--space-lg);
+  margin-top: var(--space-sm);
+  font-size: var(--text-card-title);
+}
+
+.map-detail__picker :deep(.base-tabs__tab) {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.map-detail__picker :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
+  opacity: 0.5;
 }
 
 .map-detail__category-name {
-  font-size: var(--text-body);
   font-weight: 600;
 }
 
-.map-detail__stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-sm);
+.map-detail__summary {
+  margin: 0;
+  font-size: var(--text-card-title);
+  color: var(--text-secondary);
+}
+
+.map-detail__chart {
+  position: relative;
+  align-self: stretch;
+}
+
+.map-detail__chart summary {
+  width: fit-content;
+  margin-left: auto;
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.map-detail__chart :deep(.chart-stats) {
+  width: 0;
+  min-width: 100%;
+  border-top: none;
+}
+
+.map-detail__chart summary:hover {
+  color: var(--text-primary);
+}
+
+@media (min-width: 1280px) {
+  .map-detail__chart {
+    align-self: flex-end;
+    margin-top: var(--space-sm);
+  }
+
+  .map-detail__chart :deep(.chart-stats) {
+    position: absolute;
+    right: calc(100% + var(--space-md));
+    bottom: 0;
+    width: 480px;
+    min-width: 0;
+    padding: 0;
+  }
 }
 
 .map-detail__content {
@@ -542,24 +588,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   padding: var(--space-3xl);
 }
 
-.map-detail__skeleton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-xl) var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.map-detail__skeleton-stats {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
-}
-
 @media (max-width: 767px) {
   .map-detail__bg {
     top: calc(-1 * var(--space-md));
@@ -567,24 +595,36 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
     right: calc(-1 * var(--space-md));
   }
 
-  .map-detail__cover-wrap {
-    width: 96px;
-    height: 96px;
+  .map-detail__hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: var(--space-md);
+    text-align: center;
   }
 
   .map-detail__cover {
-    width: 96px;
-    height: 96px;
+    width: 128px;
+    height: 128px;
   }
 
-  .map-detail__stats {
-    justify-content: center;
+  .map-detail__details,
+  .map-detail__name-col,
+  .map-detail__side {
+    align-items: center;
+    text-align: center;
   }
 
+  .map-detail__details {
+    flex-direction: column;
+  }
+
+  .map-detail__chart summary {
+    margin-right: auto;
+  }
+
+  .map-detail__links,
   .map-detail__diff-meta {
-    flex-wrap: wrap;
     justify-content: center;
   }
-
 }
 </style>
