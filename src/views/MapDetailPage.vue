@@ -531,7 +531,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 }
 
 .map-detail__picker :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
-  opacity: 0.5;
+  opacity: 0.7;
 }
 
 .map-detail__category-name {

@@ -82,7 +82,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="tabsRef" class="profile-stats__category-tabs">
-    <CategoryTabs v-model="category" :exclude="['xp']" variant="segmented" />
+    <CategoryTabs v-model="category" :exclude="['xp']" />
   </div>
 
   <div class="profile-stats">
@@ -107,14 +107,6 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-start;
   margin-top: var(--space-xs);
-}
-
-.profile-stats__category-tabs :deep(.base-tabs__tab) {
-  padding: var(--space-sm) var(--space-md);
-}
-
-.profile-stats__category-tabs :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
-  opacity: 0.5;
 }
 
 .profile-stats {
@@ -188,7 +180,7 @@ a.profile-stats__rank-block:focus-visible {
     width: 100%;
   }
 
-  .profile-stats__category-tabs :deep(.base-tabs__tab) {
+  .profile-stats__category-tabs :deep(.base-tabs.base-tabs--segmented .base-tabs__tab) {
     padding-inline: var(--space-xs);
     font-size: 0.8125rem;
     white-space: nowrap;
@@ -214,7 +206,7 @@ a.profile-stats__rank-block:focus-visible {
 }
 
 @media (max-width: 379px) {
-  .profile-stats__category-tabs :deep(.base-tabs__tab) {
+  .profile-stats__category-tabs :deep(.base-tabs.base-tabs--segmented .base-tabs__tab) {
     padding-inline: 2px;
     font-size: 0.75rem;
   }

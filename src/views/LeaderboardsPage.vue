@@ -290,10 +290,9 @@ watch(requestKey, fetchData, { immediate: true })
 
 .leaderboards__controls {
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: var(--space-md);
-  flex-wrap: wrap;
 }
 
 .leaderboards__filter {
@@ -405,7 +404,6 @@ watch(requestKey, fetchData, { immediate: true })
 
 @media (max-width: 767px) {
   .leaderboards__controls {
-    flex-direction: column;
     align-items: stretch;
   }
 

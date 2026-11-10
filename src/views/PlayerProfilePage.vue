@@ -447,8 +447,9 @@ watch(activeCategory, () => {
 }
 
 .profile-page__cat-dock-inner :deep(.base-tabs) {
-  border-bottom: none;
   flex-wrap: nowrap;
+  width: fit-content;
+  margin-block: var(--space-xs);
 }
 
 .cat-dock-enter-active,

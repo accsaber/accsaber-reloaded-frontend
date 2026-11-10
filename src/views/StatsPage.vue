@@ -360,10 +360,9 @@ watch(() => JSON.stringify(leaderboardRequest.value), fetchLeaderboardData, { im
 
 .stats__category-filter {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-md);
-  flex-wrap: wrap;
 }
 
 .stats__table {
