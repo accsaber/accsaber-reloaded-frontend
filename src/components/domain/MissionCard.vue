@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import MissionRewards from '@/components/domain/MissionRewards.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { MissionResponse } from '@/types/api/missions'
@@ -10,6 +11,7 @@ import type { RouteLocationRaw } from 'vue-router'
 type Segment =
   | { kind: 'text'; text: string }
   | { kind: 'link'; text: string; to: RouteLocationRaw }
+  | { kind: 'hint'; text: string; tip: string }
 
 const props = defineProps<{
   mission: MissionResponse
@@ -44,25 +46,18 @@ const counterLabel = computed(() =>
   missionProgressLabel(props.mission.type, progress.value, target.value),
 )
 
-const binaryHint = computed(() => {
+function inlineHint(segments: Segment[]): Segment[] {
   const m = props.mission
-  switch (m.type) {
-    case 'ACC_ON_MAP':
-      return m.targetAcc != null ? `Reach ${m.targetAcc.toFixed(2)}% acc` : ''
-    case 'AP_ON_MAP':
-      return m.targetAp != null ? `Score ${m.targetAp.toLocaleString()} AP` : ''
-    case 'PB_SPECIFIC_MAP':
-      return 'Set a new PB'
-    case 'SNIPE_PLAYER_ON_MAP': {
-      const parts: string[] = []
-      if (m.targetAcc != null) parts.push(`${m.targetAcc.toFixed(2)}% acc`)
-      if (m.targetAp != null) parts.push(`${m.targetAp.toLocaleString()} AP`)
-      return parts.length > 0 ? `Beat ${parts.join(' · ')}` : 'Beat their score'
-    }
-    default:
-      return ''
-  }
-})
+  const acc = m.targetAcc != null ? `${m.targetAcc.toFixed(2)}%` : null
+  const ap = m.targetAp != null ? m.targetAp.toLocaleString() : null
+  const score = m.targetScore != null ? m.targetScore.toLocaleString() : null
+  const forms = [acc && `${acc} accuracy`, ap && `${ap} AP`, score && `${score} score`].filter(Boolean)
+  if (forms.length < 2) return segments
+  const anchor = [acc, ap, score, 'score'].find((word) =>
+    word && segments.some((seg) => seg.kind === 'text' && seg.text.includes(word)),
+  )
+  return anchor ? inline(segments, anchor, (text) => ({ kind: 'hint', text, tip: forms.join(', ') })) : segments
+}
 
 function inlineLink(
   segments: Segment[],
@@ -70,6 +65,10 @@ function inlineLink(
   to: RouteLocationRaw | null,
 ): Segment[] {
   if (!name || !to) return segments
+  return inline(segments, name, (text) => ({ kind: 'link', text, to }))
+}
+
+function inline(segments: Segment[], name: string, build: (text: string) => Segment): Segment[] {
   const out: Segment[] = []
   let replaced = false
   for (const seg of segments) {
@@ -83,7 +82,7 @@ function inlineLink(
       continue
     }
     if (idx > 0) out.push({ kind: 'text', text: seg.text.slice(0, idx) })
-    out.push({ kind: 'link', text: name, to })
+    out.push(build(name))
     const tail = seg.text.slice(idx + name.length)
     if (tail) out.push({ kind: 'text', text: tail })
     replaced = true
@@ -110,7 +109,7 @@ const segments = computed<Segment[]>(() => {
     })
     : null
   out = inlineLink(out, map?.songName, mapTo)
-  return out
+  return inlineHint(out)
 })
 
 function handleLinkClick() {
@@ -119,31 +118,19 @@ function handleLinkClick() {
 </script>
 
 <template>
-  <article
-    class="mission-row"
-    :class="[
-      mission.band ? `mission-row--${mission.band}` : null,
-      { 'mission-row--done': isCompleted },
-    ]"
-  >
-    <header class="mission-row__head">
-      <h3 class="mission-row__title">
-        <span class="mission-row__name">{{ mission.name }}</span>
-        <span v-if="categoryName" class="mission-row__sep">·</span>
-        <span v-if="categoryName" class="mission-row__cat" :style="{ color: categoryColor }">
-          {{ categoryName }}
-        </span>
-        <span
-          v-if="mission.band"
-          class="mission-row__band"
-          :class="`mission-row__band--${mission.band}`"
-          :style="mission.band === 'hard' ? { color: categoryColor, borderColor: categoryColor } : undefined"
-        >{{ BAND_LABEL[mission.band] }}</span>
-      </h3>
+  <article class="mission-row" :class="{ 'mission-row--done': isCompleted }">
+    <h3 class="mission-row__title">
+      <span class="mission-row__name">{{ mission.name }}</span>
+      <span v-if="categoryName" class="mission-row__cat" :style="{ color: categoryColor }">
+        {{ categoryName }}
+      </span>
+    </h3>
+    <div class="mission-row__side">
       <MissionRewards :xp-reward="mission.xpReward" :item-reward="mission.itemReward" :size="28" />
-    </header>
+      <span v-if="mission.band" class="caption">{{ BAND_LABEL[mission.band] }}</span>
+    </div>
 
-    <p class="caption">
+    <p class="caption mission-row__text">
       <template v-for="(seg, i) in segments" :key="i">
         <router-link
           v-if="seg.kind === 'link'"
@@ -151,60 +138,51 @@ function handleLinkClick() {
           class="mission-row__link"
           @click="handleLinkClick"
         >{{ seg.text }}</router-link>
+        <HintTooltip v-else-if="seg.kind === 'hint'" variant="inline" :text="seg.tip">
+          <template #trigger>{{ seg.text }}</template>
+        </HintTooltip>
         <template v-else>{{ seg.text }}</template>
       </template>
     </p>
 
-    <div class="mission-row__status">
-      <template v-if="isCompleted">
-        <span class="mission-row__done">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Completed
-        </span>
-      </template>
-      <template v-else-if="hasBar">
-        <div class="mission-row__bar" role="progressbar"
-          :aria-valuenow="progress" :aria-valuemin="0" :aria-valuemax="target">
-          <div class="mission-row__bar-fill" :style="{ transform: `scaleX(${fillPercent / 100})` }" />
-        </div>
-        <span class="mission-row__counter">{{ counterLabel }}</span>
-      </template>
-      <template v-else>
-        <span class="mission-row__hint">{{ binaryHint }}</span>
-      </template>
+    <span v-if="isCompleted" class="mission-row__done">Completed</span>
+    <div v-else-if="hasBar" class="mission-row__status">
+      <div class="mission-row__bar" role="progressbar"
+        :aria-valuenow="progress" :aria-valuemin="0" :aria-valuemax="target">
+        <div class="mission-row__bar-fill" :style="{ transform: `scaleX(${fillPercent / 100})` }" />
+      </div>
+      <span class="mission-row__counter">{{ counterLabel }}</span>
     </div>
   </article>
 </template>
 
 <style scoped>
 .mission-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  position: relative;
 }
 
-.mission-row + .mission-row {
-  border-top: 1px solid var(--bg-overlay);
+.mission-row__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  grid-row: span 2;
+}
+
+.mission-row__text {
+  grid-column: 1;
+}
+
+.mission-row__status,
+.mission-row__done {
+  grid-column: 1 / -1;
 }
 
 .mission-row--done .mission-row__name {
   color: var(--text-secondary);
-}
-
-.mission-row--extreme {
-  --mission-reward-accent: var(--tier-gold);
-}
-
-.mission-row__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
 }
 
 .mission-row__title {
@@ -221,16 +199,8 @@ function handleLinkClick() {
 }
 
 .mission-row__cat {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
   flex-shrink: 0;
-}
-
-.mission-row__sep {
-  color: var(--text-tertiary);
-  font-weight: 400;
 }
 
 .mission-row__name {
@@ -240,47 +210,12 @@ function handleLinkClick() {
   min-width: 0;
 }
 
-.mission-row__band {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border-radius: var(--radius-xs);
-  border: 1px solid;
-  flex-shrink: 0;
-}
-
-.mission-row__band--easy {
-  color: var(--text-tertiary);
-  border-color: color-mix(in srgb, var(--text-tertiary) 60%, transparent);
-}
-
-.mission-row__band--medium {
-  color: var(--text-secondary);
-  border-color: color-mix(in srgb, var(--text-secondary) 50%, transparent);
-}
-
-.mission-row__band--hard {
-  background: color-mix(in srgb, currentColor 12%, transparent);
-}
-
-.mission-row__band--extreme {
-  color: var(--tier-gold);
-  border-color: color-mix(in srgb, var(--tier-gold) 70%, transparent);
-  background: color-mix(in srgb, var(--tier-gold) 14%, transparent);
-}
-
-
 .mission-row__link {
   color: var(--text-primary);
   font-weight: 500;
   text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .mission-row__link:hover {
@@ -309,35 +244,20 @@ function handleLinkClick() {
   background: var(--accent);
   border-radius: var(--radius-xs);
   transform-origin: left center;
-  transition: transform 320ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform var(--dur-enter) var(--ease-in-out);
   will-change: transform;
 }
 
 .mission-row__counter {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;
 }
 
-.mission-row__hint {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
-}
-
 .mission-row__done {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--success);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mission-row__bar-fill {
-    transition: none;
-  }
 }
 </style>

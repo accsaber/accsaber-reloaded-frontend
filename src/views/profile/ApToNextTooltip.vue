@@ -116,7 +116,7 @@ watch(
     </svg>
 
     <Teleport to="body">
-      <Transition name="ap-next-tip">
+      <Transition name="pop">
         <div
           v-if="isOpen"
           ref="panelRef"
@@ -235,26 +235,5 @@ watch(
 .ap-next-tip__empty {
   font-size: var(--text-caption);
   color: var(--text-tertiary);
-}
-
-.ap-next-tip-enter-active {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
-}
-
-.ap-next-tip-leave-active {
-  transition: opacity 100ms ease-in, transform 100ms ease-in;
-}
-
-.ap-next-tip-enter-from,
-.ap-next-tip-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ap-next-tip-enter-from,
-  .ap-next-tip-leave-to {
-    transform: none;
-  }
 }
 </style>

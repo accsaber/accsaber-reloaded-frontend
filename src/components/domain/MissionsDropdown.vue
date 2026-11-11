@@ -17,7 +17,7 @@ async function loadHistory(): Promise<MissionResponse[]> {
 </script>
 
 <template>
-  <NavbarPopover label="Missions" width="440px">
+  <NavbarPopover label="Missions">
     <template #trigger>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

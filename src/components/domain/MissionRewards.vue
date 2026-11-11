@@ -47,7 +47,7 @@ const lines = computed(() =>
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   font-weight: 600;
-  color: var(--mission-reward-accent, var(--page-accent, var(--accent)));
+  color: var(--page-accent, var(--accent));
   white-space: nowrap;
 }
 </style>

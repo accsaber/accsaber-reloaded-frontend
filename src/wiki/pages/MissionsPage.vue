@@ -163,7 +163,7 @@ onMounted(resolveProfile)
 
     <WikiHeading id="bands">Bands</WikiHeading>
     <p>
-      The tag on a mission card reading easy, medium, hard or extreme is its band. It is the
+      The word under a mission's reward reading easy, medium, hard or extreme is its band. It is the
       mission's own difficulty. We call it a band to keep it apart from map difficulties
       like Expert+.
     </p>

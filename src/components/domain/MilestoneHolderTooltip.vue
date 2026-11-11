@@ -51,7 +51,7 @@ async function fetchHolders() {
     </span>
 
     <Teleport to="body">
-      <Transition name="holder-tooltip">
+      <Transition name="pop">
         <div v-if="isOpen" ref="panelRef" class="holder-popup" :style="panelStyle"
           @mouseenter="onPanelEnter" @mouseleave="onPanelLeave">
           <div class="holder-popup__card">
@@ -175,27 +175,5 @@ async function fetchHolders() {
   text-align: center;
   font-size: var(--text-caption);
   color: var(--text-tertiary);
-}
-
-.holder-tooltip-enter-active {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
-}
-
-.holder-tooltip-leave-active {
-  transition: opacity 100ms ease-in, transform 100ms ease-in;
-}
-
-.holder-tooltip-enter-from,
-.holder-tooltip-leave-to {
-  opacity: 0;
-  transform: translateY(4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .holder-tooltip-enter-active,
-  .holder-tooltip-leave-active {
-    transition: none;
-  }
 }
 </style>

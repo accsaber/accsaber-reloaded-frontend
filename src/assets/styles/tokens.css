@@ -1,6 +1,5 @@
 :root,
 .token-defaults {
-  /* --- Base Palette (Dark Mode - Default) --- */
   --bg-base: #08080d;
   --bg-surface: #11111c;
   --bg-elevated: #1a1929;
@@ -9,34 +8,29 @@
   --text-secondary: #8c87a3;
   --text-tertiary: #5e5973;
 
-  /* --- Category Accents --- */
   --accent-true-acc: #22c55e;
   --accent-standard-acc: #3b82f6;
   --accent-tech-acc: #ef4444;
   --accent-low-mid: #eab308;
   --accent-overall: #f5b800;
 
-  /* --- Category Tints (Dark) --- */
   --tint-true-acc: #0f3d1e;
   --tint-standard-acc: #162650;
   --tint-tech-acc: #3d1414;
   --tint-low-mid: #3d3508;
   --tint-overall: #3a2812;
 
-  /* --- Semantic Colors --- */
   --success: #22c55e;
   --warning: #eab308;
   --error: #ef4444;
   --info: #3b82f6;
 
-  /* --- Difficulty Colors --- */
   --diff-easy: #3cb371;
   --diff-normal: #4a90d9;
   --diff-hard: #f97316;
   --diff-expert: #ef4444;
   --diff-expert-plus: #8b5cf6;
 
-  /* --- Complexity Scale (0 -> 14, stop positions live in utils/complexity.ts) --- */
   --complexity-0: #4a90d9;
   --complexity-3: #22c55e;
   --complexity-6: #eab308;
@@ -44,7 +38,6 @@
   --complexity-10: #ef4444;
   --complexity-14: #a855f7;
 
-  /* --- Campaign Difficulty Tiers (easy -> impossible) --- */
   --campaign-tier-beginner: #22c55e;
   --campaign-tier-apprentice: #3b82f6;
   --campaign-tier-intermediate: #f97316;
@@ -53,7 +46,6 @@
   --campaign-tier-impossible: #1e40af;
   --campaign-loved: #e56fb0;
 
-  /* --- Milestone Tiers --- */
   --tier-bronze: #cd7f32;
   --tier-silver: #c0c0c0;
   --tier-gold: #ffd700;
@@ -61,12 +53,9 @@
   --tier-diamond: #b9f2ff;
   --tier-apex: #a855f7;
 
-  /* --- Clan tag card ink, fixed over any fill --- */
   --clan-tag-ink-dark: #14121f;
   --clan-tag-ink-light: #f7f6fb;
 
-  /* --- XP source colors (dark) — fixed hex, not theme-token refs, so equipped
-     item themes cannot collapse them; each distinct + AA on its own background --- */
   --xp-score: #e58a3a;
   --xp-milestone: #eec843;
   --xp-set-bonus: #3ccfd6;
@@ -77,7 +66,6 @@
   --xp-up: #33d17a;
   --xp-down: #f2685f;
 
-  /* --- Level Tier Colors --- */
   --tier-newcomer: #6b7280;
   --tier-apprentice: #3b82f6;
   --tier-adept: #10b981;
@@ -95,25 +83,20 @@
   --tier-promethean: #ff5c33;
   --tier-supreme: #ffffff;
 
-  /* --- Role Colors --- */
   --role-admin: #ef4444;
   --role-developer: #3b82f6;
   --role-moderator: #22c55e;
   --role-head-ranking: #eab308;
   --role-ranking: #a855f7;
 
-  /* --- Chart --- */
   --chart-grid: rgba(255, 255, 255, 0.06);
   --chart-text: #8888a0;
 
-  /* --- Skeleton --- */
   --skeleton-base: var(--bg-overlay);
   --skeleton-highlight: color-mix(in srgb, var(--text-tertiary) 25%, var(--bg-overlay));
 
-  /* --- Default Accent (Overall) --- */
   --accent: var(--accent-overall);
 
-  /* --- Spacing --- */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
@@ -123,7 +106,6 @@
   --space-3xl: 64px;
   --page-width-wide: 1500px;
 
-  /* --- Border Radius --- */
   --radius-xs: 2px;
   --radius-btn: 3px;
   --radius-input: 3px;
@@ -138,24 +120,23 @@
   --dur-fast: 120ms;
   --dur-enter: 250ms;
   --dur-exit: 200ms;
+  --dur-menu: 180ms;
+  --dur-menu-exit: 150ms;
   --stagger: 30ms;
   --stagger-total: 600ms;
   --press-scale: 0.97;
   --pop-scale: 0.95;
 
-  /* --- Layout --- */
   --navbar-height: 64px;
   --navbar-bg: color-mix(in srgb, var(--bg-surface) 80%, transparent);
   --navbar-bg-scrolled: color-mix(in srgb, var(--bg-surface) 92%, transparent);
   --navbar-text: var(--text-secondary);
   --navbar-text-strong: var(--text-primary);
 
-  /* --- Typography --- */
   --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'Poppins', system-ui, sans-serif;
   --font-code: ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 
-  /* --- Font Sizes --- */
   --text-page-title: 1.75rem;
   --text-section-heading: 1.25rem;
   --text-card-title: 1rem;
@@ -171,7 +152,6 @@
   }
 }
 
-/* --- Light Mode --- */
 [data-theme='light'] {
   --bg-base: #f3f2f7;
   --bg-surface: #fdfcff;
@@ -190,7 +170,6 @@
   --skeleton-base: var(--bg-elevated);
   --skeleton-highlight: color-mix(in srgb, var(--text-tertiary) 35%, var(--bg-elevated));
 
-  /* Complexity scale (light) - darkened for AA legibility on the light background */
   --complexity-0: #1a5fc4;
   --complexity-3: #146c34;
   --complexity-6: #7a5c05;
@@ -198,7 +177,6 @@
   --complexity-10: #c02222;
   --complexity-14: #7c3aed;
 
-  /* XP source colors (light) — darkened for AA legibility on the light background */
   --xp-score: #a3450a;
   --xp-milestone: #6f5807;
   --xp-set-bonus: #0c665f;
@@ -211,12 +189,10 @@
 
   --campaign-loved: #ab1c78;
 
-  /* Level tiers 140+ (light) - near-white/white tiers need dark counterparts */
   --tier-exalted: #77719a;
   --tier-titanic: #5d7391;
   --tier-supreme: #0a0a0f;
 
-  /* Category Tints (Light) */
   --tint-true-acc: #d4f5e0;
   --tint-standard-acc: #d4e4fd;
   --tint-tech-acc: #fdd4d4;
@@ -224,7 +200,6 @@
   --tint-overall: #fde9c2;
 }
 
-/* Scoped to a class the theme store toggles for ~220ms; otherwise this would run on every hover. */
 html.theme-transitioning,
 html.theme-transitioning *,
 html.theme-transitioning *::before,
@@ -251,7 +226,6 @@ html.theme-transitioning *::after {
   --text-tertiary: #8a7389;
 }
 
-/* --- Milestone node/badge surfaces --- */
 .ms-surface {
   --ms-rim-idle: color-mix(in srgb, var(--ms-tier) 8%, var(--bg-overlay));
   --ms-ink-idle: color-mix(in srgb, var(--ms-tier) 6%, var(--text-tertiary));

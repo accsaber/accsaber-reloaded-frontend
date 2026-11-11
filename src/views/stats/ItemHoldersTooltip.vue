@@ -173,7 +173,7 @@ watch(
     </button>
 
     <Teleport to="body">
-      <Transition name="holders-tip">
+      <Transition name="pop">
         <div
           v-if="isOpen"
           ref="panelRef"
@@ -463,7 +463,6 @@ watch(
   min-width: 0;
 }
 
-
 .holders-tip__follow {
   width: 12px;
   height: 12px;
@@ -547,28 +546,9 @@ watch(
   50% { opacity: 0.85; }
 }
 
-.holders-tip-enter-active {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
-}
-
-.holders-tip-leave-active {
-  transition: opacity 100ms ease-in, transform 100ms ease-in;
-}
-
-.holders-tip-enter-from,
-.holders-tip-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .holders-tip__shimmer {
     animation: none;
-  }
-
-  .holders-tip-enter-from,
-  .holders-tip-leave-to {
-    transform: none;
   }
 }
 </style>

@@ -52,7 +52,7 @@ function goToSettings() {
 </script>
 
 <template>
-  <BaseModal :open="open" title="Log In" max-width="420px" @close="emit('close')">
+  <BaseModal :open="open" title="Log in" max-width="420px" @close="emit('close')">
     <div class="auth-modal">
       <template v-if="isLoggedIn && me">
         <div class="auth-modal__profile">
@@ -64,10 +64,9 @@ function goToSettings() {
           </div>
         </div>
 
-
         <div class="auth-modal__actions">
-          <BaseButton variant="primary" @click="goToSettings">Open Settings</BaseButton>
-          <BaseButton variant="destructive" @click="handleLogout">Log Out</BaseButton>
+          <BaseButton variant="primary" @click="goToSettings">Open settings</BaseButton>
+          <BaseButton variant="destructive" @click="handleLogout">Log out</BaseButton>
         </div>
       </template>
 

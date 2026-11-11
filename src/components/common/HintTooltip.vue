@@ -41,18 +41,20 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   >
     <slot name="trigger">{{ tag ?? '?' }}</slot>
     <Teleport to="body">
-      <div
-        v-if="isOpen"
-        :id="panelId"
-        ref="panelRef"
-        class="hint__panel"
-        :class="{ 'hint__panel--locked': locked }"
-        :style="panelStyle"
-        role="tooltip"
-      >
-        <slot :locked="locked">{{ text }}</slot>
-        <span v-if="more && !locked" class="hint__more">Click for more</span>
-      </div>
+      <Transition name="pop">
+        <div
+          v-if="isOpen"
+          :id="panelId"
+          ref="panelRef"
+          class="hint__panel"
+          :class="{ 'hint__panel--locked': locked }"
+          :style="panelStyle"
+          role="tooltip"
+        >
+          <slot :locked="locked">{{ text }}</slot>
+          <span v-if="more && !locked" class="hint__more">Click for more</span>
+        </div>
+      </Transition>
     </Teleport>
   </button>
 </template>
@@ -63,24 +65,22 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   padding: 0;
-  background: none;
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-overlay);
+  border: none;
   border-radius: 50%;
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
   line-height: 1;
-  text-transform: none;
-  letter-spacing: 0;
   cursor: help;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .hint:hover,
 .hint:focus-visible {
-  border-color: var(--text-tertiary);
   color: var(--text-primary);
 }
 
@@ -93,8 +93,6 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   font-size: var(--text-caption);
   font-weight: 600;
   line-height: 1.3;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .hint--inline {
@@ -105,10 +103,9 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
   border: none;
   border-bottom: 1px dotted currentColor;
   border-radius: 0;
+  background: none;
   color: inherit;
   font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
   text-align: inherit;
 }
 
@@ -120,10 +117,10 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
 .hint__panel {
   z-index: 10000;
   padding: var(--space-sm) var(--space-md);
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-overlay);
   border-radius: var(--radius-card);
-  color: var(--text-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   line-height: 1.5;
@@ -134,10 +131,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
 .hint__more {
   display: block;
   margin-top: var(--space-xs);
-  padding-top: var(--space-xs);
-  border-top: 1px solid var(--bg-overlay);
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .hint__panel--locked {

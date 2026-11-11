@@ -25,7 +25,7 @@ function onSelect(notification: NotificationResponse) {
 </script>
 
 <template>
-  <NavbarPopover v-model:open="open" width="400px"
+  <NavbarPopover v-model:open="open"
     :label="store.unreadCount > 0 ? `Notifications, ${store.unreadCount} unread` : 'Notifications'">
     <template #trigger>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useClickOutside } from '@/composables/useClickOutside'
-import { computed, ref, watch } from 'vue'
+import { useNavbarPanel } from '@/composables/useNavbarPanel'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 interface NavLink {
@@ -13,16 +13,7 @@ const props = defineProps<{
 }>()
 
 const route = useRoute()
-const open = ref(false)
-const rootRef = ref<HTMLElement | null>(null)
-
-useClickOutside(rootRef, open, () => {
-  open.value = false
-})
-
-watch(() => route.fullPath, () => {
-  open.value = false
-})
+const { open, rootRef } = useNavbarPanel()
 
 function isActive(to: string): boolean {
   return route.path === to || route.path.startsWith(to + '/')
@@ -44,9 +35,10 @@ const anyActive = computed(() => props.items.some((item) => isActive(item.to)))
       </svg>
     </button>
 
-    <Transition name="navbar-menu">
-      <div v-if="open" class="navbar-menu navbar-more__panel" role="menu">
-        <router-link v-for="item in items" :key="item.to" :to="item.to" class="navbar-menu__item"
+    <Transition name="pop">
+      <div v-if="open" class="navbar-menu navbar-more__panel stagger" role="menu">
+        <router-link v-for="(item, i) in items" :key="item.to" :to="item.to" :style="{ '--i': i }"
+          class="navbar-menu__item"
           :class="{ 'navbar-more__item--active': isActive(item.to) }" role="menuitem"
           @click="open = false">
           {{ item.label }}
@@ -70,7 +62,7 @@ const anyActive = computed(() => props.items.some((item) => isActive(item.to)))
 }
 
 .navbar-more__chevron {
-  transition: transform 150ms ease;
+  transition: transform var(--dur-menu) var(--ease-in-out);
 }
 
 .navbar-more__chevron--open {
@@ -79,16 +71,11 @@ const anyActive = computed(() => props.items.some((item) => isActive(item.to)))
 
 .navbar-more__panel {
   left: 0;
+  transform-origin: top left;
 }
 
 .navbar-more__item--active {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .navbar-more__chevron {
-    transition: none;
-  }
 }
 </style>

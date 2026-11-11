@@ -5,6 +5,7 @@ import EventNavPill from '@/components/layout/EventNavPill.vue'
 import MissionsDropdown from '@/components/domain/MissionsDropdown.vue'
 import NotificationsDropdown from '@/components/domain/NotificationsDropdown.vue'
 import NavbarMoreMenu from '@/components/layout/NavbarMoreMenu.vue'
+import NavbarPopover from '@/components/layout/NavbarPopover.vue'
 import NavbarUserMenu from '@/components/layout/NavbarUserMenu.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useBrandLogo } from '@/composables/useBrandLogo'
@@ -33,15 +34,13 @@ const {
   countdown: eventCountdown,
 } = useCurrentEvent()
 
-const GlobalSearchModal = defineAsyncComponent(() => import('@/components/domain/GlobalSearchModal.vue'))
+const GlobalSearchPanel = defineAsyncComponent(() => import('@/components/domain/GlobalSearchPanel.vue'))
 const PseudoLoginModal = defineAsyncComponent(() => import('@/components/domain/PseudoLoginModal.vue'))
 
 const loginModalOpen = ref(false)
-const searchModalOpen = ref(false)
+const searchOpen = ref(false)
 const loginUsed = ref(false)
-const searchUsed = ref(false)
 watch(loginModalOpen, () => { loginUsed.value = true }, { once: true })
-watch(searchModalOpen, () => { searchUsed.value = true }, { once: true })
 const showStaffLogoutConfirm = ref(false)
 const showSignOutConfirm = ref(false)
 const mobileDrawerOpen = ref(false)
@@ -192,7 +191,7 @@ async function confirmStaffLogout() {
 }
 
 function openSearch() {
-  searchModalOpen.value = true
+  searchOpen.value = true
   mobileDrawerOpen.value = false
 }
 
@@ -269,31 +268,39 @@ onUnmounted(() => {
           </svg>
         </router-link>
 
-        <button type="button" class="navbar__search" @click="openSearch">
-          <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <span class="navbar__search-placeholder">Search anything...</span>
-        </button>
+        <NavbarPopover v-model:open="searchOpen" label="Search players and maps" width="560px"
+          trigger-class="navbar__search" cover>
+          <template #trigger>
+            <svg class="navbar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span class="navbar__search-placeholder">Search players and maps</span>
+          </template>
+          <GlobalSearchPanel />
+        </NavbarPopover>
 
         <NavbarUserMenu @login="loginModalOpen = true" @sign-out="showSignOutConfirm = true"
           @staff-logout="showStaffLogoutConfirm = true" />
 
         <button class="navbar__icon-btn navbar__hamburger" aria-label="Menu"
           @click="mobileDrawerOpen = !mobileDrawerOpen">
-          <svg v-if="!mobileDrawerOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-          <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <span class="swap">
+            <Transition name="swap">
+              <svg v-if="!mobileDrawerOpen" key="open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+              <svg v-else key="close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </Transition>
+          </span>
         </button>
       </div>
     </div>
@@ -319,7 +326,7 @@ onUnmounted(() => {
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <span class="navbar__search-placeholder">Search anything...</span>
+        <span class="navbar__search-placeholder">Search players and maps</span>
       </button>
     </section>
 
@@ -356,33 +363,31 @@ onUnmounted(() => {
       <button v-if="authStore.isLoggedIn"
         class="navbar__drawer-link navbar__drawer-link--danger"
         @click="mobileDrawerOpen = false; showSignOutConfirm = true">
-        Sign out
+        Log out
       </button>
     </section>
   </div>
 
-  <GlobalSearchModal v-if="searchUsed" :open="searchModalOpen" @close="searchModalOpen = false" />
-
   <PseudoLoginModal v-if="loginUsed" :open="loginModalOpen" @close="loginModalOpen = false" />
 
-  <BaseModal :open="showStaffLogoutConfirm" title="Staff Log Out" max-width="340px"
+  <BaseModal :open="showStaffLogoutConfirm" title="Staff log out" max-width="340px"
     @close="showStaffLogoutConfirm = false">
     <p class="logout-confirm__message">Are you sure you want to log out of the staff panel?</p>
     <template #footer>
       <div class="logout-confirm__actions">
         <BaseButton @click="showStaffLogoutConfirm = false">Cancel</BaseButton>
-        <BaseButton variant="destructive" @click="confirmStaffLogout">Log Out</BaseButton>
+        <BaseButton variant="destructive" @click="confirmStaffLogout">Log out</BaseButton>
       </div>
     </template>
   </BaseModal>
 
-  <BaseModal :open="showSignOutConfirm" title="Sign Out" max-width="340px"
+  <BaseModal :open="showSignOutConfirm" title="Log out" max-width="340px"
     @close="showSignOutConfirm = false">
-    <p class="logout-confirm__message">Are you sure you want to sign out?</p>
+    <p class="logout-confirm__message">Are you sure you want to log out?</p>
     <template #footer>
       <div class="logout-confirm__actions">
         <BaseButton @click="showSignOutConfirm = false">Cancel</BaseButton>
-        <BaseButton variant="destructive" @click="confirmSignOut">Sign Out</BaseButton>
+        <BaseButton variant="destructive" @click="confirmSignOut">Log out</BaseButton>
       </div>
     </template>
   </BaseModal>
@@ -399,7 +404,7 @@ onUnmounted(() => {
   background: var(--navbar-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  transition: box-shadow 200ms ease, background 200ms ease;
+  transition: box-shadow var(--dur-menu) var(--ease-out), background var(--dur-menu) var(--ease-out);
 }
 
 .navbar--scrolled {
@@ -425,7 +430,7 @@ onUnmounted(() => {
   padding: var(--space-xs);
   border-radius: var(--radius-btn);
   text-decoration: none;
-  transition: background 120ms ease;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .navbar__logo:hover {
@@ -457,7 +462,7 @@ onUnmounted(() => {
   color: var(--navbar-text);
   text-decoration: none;
   border-radius: var(--radius-btn);
-  transition: color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 
 .navbar__link:hover {
@@ -497,12 +502,12 @@ onUnmounted(() => {
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-body);
   cursor: pointer;
   text-align: left;
-  transition: border-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .navbar__search:hover {
@@ -519,7 +524,7 @@ onUnmounted(() => {
 .navbar__search-icon {
   position: absolute;
   left: var(--space-sm);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   pointer-events: none;
 }
 
@@ -540,7 +545,7 @@ onUnmounted(() => {
   border-radius: var(--radius-btn);
   color: var(--navbar-text);
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 
 .navbar__icon-btn:hover {
@@ -558,7 +563,6 @@ onUnmounted(() => {
   min-width: 200px;
   padding: var(--space-xs);
   background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
@@ -580,30 +584,12 @@ onUnmounted(() => {
   border-radius: var(--radius-btn);
   white-space: nowrap;
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 
 .navbar-menu__item:hover {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-overlay) 45%, transparent);
-}
-
-.navbar-menu-enter-active,
-.navbar-menu-leave-active {
-  transition: opacity 100ms ease, transform 100ms ease;
-}
-
-.navbar-menu-enter-from,
-.navbar-menu-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .navbar-menu-enter-active,
-  .navbar-menu-leave-active {
-    transition: none;
-  }
 }
 
 .navbar__hamburger {
@@ -709,7 +695,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateY(-8px);
     pointer-events: none;
-    transition: opacity 180ms ease, transform 180ms ease;
+    transition: opacity var(--dur-menu) var(--ease-out), transform var(--dur-menu) var(--ease-out);
   }
 
   .navbar__drawer--open {
@@ -758,7 +744,7 @@ onUnmounted(() => {
     border-radius: var(--radius-btn);
     cursor: pointer;
     text-align: left;
-    transition: color 120ms ease, background 120ms ease;
+    transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
   }
 
   .navbar__drawer-link:hover {
@@ -788,9 +774,7 @@ onUnmounted(() => {
   }
 
   .navbar__drawer-section+.navbar__drawer-section {
-    margin-top: var(--space-sm);
-    padding-top: var(--space-sm);
-    border-top: 1px solid var(--bg-overlay);
+    margin-top: var(--space-md);
   }
 }
 </style>

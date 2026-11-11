@@ -20,7 +20,7 @@ defineEmits<{
 <template>
   <div class="notifications-panel">
     <header class="notifications-panel__header">
-      <h2 class="notifications-panel__title">Notifications</h2>
+      <h2 class="card-title">Notifications</h2>
       <button type="button" class="notifications-panel__mark-all" :disabled="unreadCount === 0"
         @click="$emit('markAll')">
         Mark all as read
@@ -62,16 +62,9 @@ defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
+  min-height: 56px;
+  padding: var(--space-sm) var(--space-md);
   flex-shrink: 0;
-}
-
-.notifications-panel__title {
-  margin: 0;
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .notifications-panel__mark-all {
@@ -83,7 +76,7 @@ defineEmits<{
   font-size: var(--text-caption);
   font-weight: 500;
   cursor: pointer;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .notifications-panel__mark-all:hover:not(:disabled) {
@@ -98,9 +91,8 @@ defineEmits<{
 .notifications-panel__degraded {
   margin: 0;
   padding: var(--space-xs) var(--space-md);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-caption);
-  border-bottom: 1px solid var(--bg-overlay);
   flex-shrink: 0;
 }
 
@@ -121,12 +113,11 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   padding: var(--space-sm) var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
   color: var(--text-secondary);
   font-size: var(--text-caption);
   font-weight: 500;
   text-decoration: none;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
   flex-shrink: 0;
 }
 

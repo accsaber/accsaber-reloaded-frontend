@@ -78,8 +78,10 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
     const align = toValue(opts.align)
     const left = align === 'end' ? rect.right - width : align === 'center' ? rect.left + (rect.width - width) / 2 : rect.left
     style.left = `${Math.max(VIEWPORT_EDGE, Math.min(left, window.innerWidth - VIEWPORT_EDGE - width))}px`
-    if (opensAbove(rect, gap)) style.bottom = `${window.innerHeight - rect.top + gap}px`
+    const above = opensAbove(rect, gap)
+    if (above) style.bottom = `${window.innerHeight - rect.top + gap}px`
     else style.top = `${rect.bottom + gap}px`
+    style.transformOrigin = `${above ? 'bottom' : 'top'} ${align === 'end' ? 'right' : align === 'center' ? 'center' : 'left'}`
     panelStyle.value = style
   }
 

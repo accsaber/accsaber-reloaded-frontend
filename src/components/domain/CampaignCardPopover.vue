@@ -49,7 +49,7 @@ const {
     </button>
 
     <Teleport to="body">
-      <Transition name="card-popover">
+      <Transition name="pop">
         <div
           v-if="isOpen"
           ref="panelRef"
@@ -194,30 +194,5 @@ const {
   padding: var(--space-sm);
   max-height: 260px;
   overflow-y: auto;
-}
-
-.card-popover-enter-active {
-  transition:
-    opacity 150ms ease-out,
-    transform 150ms ease-out;
-}
-
-.card-popover-leave-active {
-  transition:
-    opacity 100ms ease-in,
-    transform 100ms ease-in;
-}
-
-.card-popover-enter-from,
-.card-popover-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card-popover-enter-from,
-  .card-popover-leave-to {
-    transform: none;
-  }
 }
 </style>

@@ -47,7 +47,6 @@ function onSelect() {
       <span class="notification-row__title">{{ notification.title }}</span>
       <span class="notification-row__time">{{ timestamp }}</span>
     </span>
-    <span v-if="!notification.read" class="notification-row__dot" aria-label="Unread"></span>
   </component>
 </template>
 
@@ -64,7 +63,7 @@ function onSelect() {
   font-family: var(--font-sans);
   text-align: left;
   cursor: default;
-  transition: background 120ms ease;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .notification-row--md {
@@ -124,16 +123,7 @@ function onSelect() {
 }
 
 .notification-row__time {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-caption);
-}
-
-.notification-row__dot {
-  flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  margin-top: 7px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 </style>

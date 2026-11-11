@@ -393,7 +393,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
           <section class="settings-card">
             <div class="settings-row">
               <div class="settings-row__label">
-                <span class="settings-row__title">Sign out</span>
+                <span class="settings-row__title">Log out</span>
               </div>
               <BaseButton variant="destructive" @click="logoutConfirm = true">Log out</BaseButton>
             </div>
@@ -402,12 +402,12 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
       </main>
     </div>
 
-    <BaseModal :open="logoutConfirm" title="Log Out" max-width="340px" @close="logoutConfirm = false">
+    <BaseModal :open="logoutConfirm" title="Log out" max-width="340px" @close="logoutConfirm = false">
       <p class="settings__confirm-msg">Are you sure you want to log out?</p>
       <template #footer>
         <div class="settings__confirm-actions">
           <BaseButton @click="logoutConfirm = false">Cancel</BaseButton>
-          <BaseButton variant="destructive" @click="confirmLogout">Log Out</BaseButton>
+          <BaseButton variant="destructive" @click="confirmLogout">Log out</BaseButton>
         </div>
       </template>
     </BaseModal>

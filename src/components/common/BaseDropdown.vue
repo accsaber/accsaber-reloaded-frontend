@@ -20,7 +20,7 @@ const { triggerRef, panelRef, panelStyle } = useFloatingPanel({
     <div class="base-dropdown__trigger" @click="open = !open">
       <slot name="trigger" />
     </div>
-    <Transition name="dropdown">
+    <Transition name="pop">
       <div v-if="open" ref="panelRef" class="base-dropdown__panel" :style="panelStyle">
         <slot />
       </div>
@@ -47,24 +47,5 @@ const { triggerRef, panelRef, panelStyle } = useFloatingPanel({
   border-radius: var(--radius-card);
   padding: var(--space-sm);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: opacity 100ms ease, transform 100ms ease;
-}
-
-.dropdown-enter-from,
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .dropdown-enter-active,
-  .dropdown-leave-active {
-    transition: none;
-  }
 }
 </style>

@@ -26,7 +26,7 @@ function onEnter() {
     @mouseenter="onEnter" @mouseleave="onTriggerLeave">
     <slot />
     <Teleport to="body">
-      <Transition name="tooltip">
+      <Transition name="pop">
         <div v-if="isOpen" ref="panelRef" class="tooltip-trigger__popup" :style="panelStyle"
           @mouseenter="onPanelEnter" @mouseleave="onPanelLeave">
           <PlayerTooltipCard :user="user" />
@@ -51,19 +51,5 @@ function onEnter() {
   z-index: 10000;
   pointer-events: auto;
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
-}
-
-.tooltip-enter-active {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
-}
-
-.tooltip-leave-active {
-  transition: opacity 100ms ease-in, transform 100ms ease-in;
-}
-
-.tooltip-enter-from,
-.tooltip-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
 }
 </style>
