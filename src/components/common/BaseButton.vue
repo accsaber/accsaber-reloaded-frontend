@@ -91,7 +91,8 @@ const linkAttrs = computed(() =>
 }
 
 .base-button--md {
-  padding: var(--space-sm) var(--space-md);
+  min-height: var(--control-h);
+  padding: 0 var(--space-md);
 }
 
 .base-button--lg {

@@ -82,9 +82,10 @@ onUnmounted(() => {
   gap: var(--space-xs);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
-  padding: var(--space-xs) var(--space-sm);
+  height: var(--control-h);
+  padding: 0 var(--space-sm);
   background: var(--bg-base);
-  transition: border-color 120ms ease-in;
+  transition: border-color var(--dur-fast) var(--ease-out);
   min-width: 0;
 }
 

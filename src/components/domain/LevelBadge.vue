@@ -122,8 +122,6 @@ const fallbackTitleStyle = computed(() => {
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-secondary);
 }
 
@@ -155,7 +153,7 @@ const fallbackTitleStyle = computed(() => {
 
 .level-badge__xp {
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;
 }

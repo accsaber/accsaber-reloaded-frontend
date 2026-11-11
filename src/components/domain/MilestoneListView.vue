@@ -207,7 +207,7 @@ function toggleSet(setId: string) {
               </svg>
             </button>
 
-            <Transition name="milestone-set">
+            <Transition name="collapse">
               <div v-if="expandedSets.has(ms.setId)" class="milestone-set__body">
                 <div class="milestone-set__rows stagger" :style="{ '--n': ms.milestones.length }">
                   <MilestoneDetail v-for="(m, i) in ms.milestones" :key="m.milestoneId" :style="{ '--i': i }"
@@ -351,20 +351,6 @@ function toggleSet(setId: string) {
 .milestone-set__body {
   display: grid;
   grid-template-rows: 1fr;
-}
-
-.milestone-set-enter-active {
-  transition: grid-template-rows var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out);
-}
-
-.milestone-set-leave-active {
-  transition: grid-template-rows var(--dur-exit) var(--ease-in), opacity var(--dur-exit) var(--ease-in);
-}
-
-.milestone-set-enter-from,
-.milestone-set-leave-to {
-  grid-template-rows: 0fr;
-  opacity: 0;
 }
 
 .milestone-set__rows {

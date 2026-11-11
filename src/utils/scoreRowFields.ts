@@ -71,8 +71,8 @@ export function buildScoreColumns(
 }
 
 export const SCORE_FIELD_COLUMNS = {
-  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '76px' },
-  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '100px' },
+  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '118px' },
+  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '118px' },
   streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '64px' },
   max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
   pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '84px' },

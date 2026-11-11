@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CoverImage from '@/components/common/CoverImage.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
@@ -265,8 +266,8 @@ watch(
         </span>
       </template>
 
-      <template #cell-difficulty="{ value }">
-        <span class="scores-tab__difficulty">{{ value }}</span>
+      <template #cell-difficulty="{ value, row }">
+        <DifficultyBadge :difficulty="(row.rawDifficulty as string | undefined) ?? (value as string)" />
       </template>
 
       <template #cell-streak115="{ value }">
@@ -367,12 +368,8 @@ watch(
   white-space: nowrap;
 }
 
-.scores-tab__difficulty {
-  color: var(--text-secondary);
-}
-
 .scores-tab__streak--empty {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .scores-tab__ap-cell {

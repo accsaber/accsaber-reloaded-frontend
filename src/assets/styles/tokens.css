@@ -105,7 +105,7 @@
   --space-xl: 32px;
   --space-2xl: 48px;
   --space-3xl: 64px;
-  --control-h: 32px;
+  --control-h: 36px;
 
   --radius-xs: 2px;
   --radius-btn: 3px;
@@ -155,6 +155,15 @@
 }
 
 [data-theme='light'] {
+  --accent-true-acc: #15803d;
+  --accent-standard-acc: #1d4ed8;
+  --accent-tech-acc: #b91c1c;
+  --accent-low-mid: #854d0e;
+  --accent-overall: #9a6700;
+  --tier-gold: #9a6700;
+  --tier-silver: #6b7280;
+  --tier-bronze: #92400e;
+
   color-scheme: light;
   --bg-base: #f3f2f7;
   --bg-surface: #fdfcff;

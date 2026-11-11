@@ -152,7 +152,8 @@ function onKeydown(e: KeyboardEvent) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: var(--space-sm) var(--space-md);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   font-size: var(--text-body);
   font-weight: 500;
   transition: color var(--dur-fast) var(--ease-out);
@@ -183,7 +184,10 @@ function onKeydown(e: KeyboardEvent) {
 
 .base-tabs--segmented .base-tabs__tab {
   position: relative;
-  padding: var(--space-sm) var(--space-md);
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--control-h) - 4px);
+  padding: 0 var(--space-md);
   font-size: 0.8125rem;
   font-weight: 500;
   transition: color var(--dur-fast) var(--ease-out);

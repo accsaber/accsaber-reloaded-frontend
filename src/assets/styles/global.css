@@ -139,6 +139,20 @@ h1 {
   filter: blur(2px);
 }
 
+.collapse-enter-active {
+  transition: grid-template-rows var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out);
+}
+
+.collapse-leave-active {
+  transition: grid-template-rows var(--dur-exit) var(--ease-in), opacity var(--dur-exit) var(--ease-in);
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
 .fade-enter-active {
   transition: opacity var(--dur-enter) var(--ease-out);
 }

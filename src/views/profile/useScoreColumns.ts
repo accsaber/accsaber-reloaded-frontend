@@ -13,7 +13,7 @@ const LEADING_COLUMNS: TableColumn[] = [
 const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
   ...SCORE_FIELD_COLUMNS,
   difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '76px' },
-  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '100px' },
+  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '118px' },
   complexity: { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', mono: true, width: '112px' },
   category: { key: 'category', label: 'Category', align: 'center', width: '92px' },
 }

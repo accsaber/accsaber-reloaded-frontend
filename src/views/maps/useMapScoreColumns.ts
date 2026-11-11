@@ -10,7 +10,7 @@ const TRAILING_COLUMNS: TableColumn[] = [
 
 const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
   ...SCORE_FIELD_COLUMNS,
-  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '84px' },
+  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '118px' },
 }
 
 export function useMapScoreColumns(filtering: () => boolean) {

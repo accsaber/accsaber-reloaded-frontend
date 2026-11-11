@@ -168,13 +168,13 @@ function saveComment() {
   font-size: var(--text-section-heading);
   font-weight: 500;
   line-height: 1;
-  color: var(--text-primary);
+  color: var(--card-accent);
 }
 
 .pin-card__ap {
   font-size: var(--text-body);
   font-weight: 500;
-  color: var(--card-accent);
+  color: var(--text-primary);
 }
 
 .pin-card__foot {

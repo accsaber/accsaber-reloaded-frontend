@@ -356,13 +356,6 @@ watch(selectedRange, fetchHistoricStats)
   padding: 0 var(--space-sm);
 }
 
-.map-stats__break::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: currentColor;
-}
-
 .map-stats__tone--buff {
   color: var(--success);
 }

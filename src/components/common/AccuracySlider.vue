@@ -121,8 +121,8 @@ const wholeTrack = computed({
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
-.acc-slider__input::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+.acc-slider__input:active::-webkit-slider-thumb {
+  transform: scaleX(1.12);
 }
 
 .acc-slider__input:disabled::-webkit-slider-thumb {
@@ -136,5 +136,10 @@ const wholeTrack = computed({
   background: var(--accent, var(--text-primary));
   border: 2px solid var(--bg-elevated);
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.acc-slider__input:active::-moz-range-thumb {
+  transform: scaleX(1.12);
 }
 </style>

@@ -50,7 +50,7 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
     const floor = Math.max(rect.width, opts.minWidth ?? 0)
     const cap = Math.max(
       floor,
-      Math.min(opts.maxWidth ?? DEFAULT_MAX_WIDTH, window.innerWidth - VIEWPORT_EDGE * 2),
+      Math.min(opts.maxWidth ?? DEFAULT_MAX_WIDTH, document.documentElement.clientWidth - VIEWPORT_EDGE * 2),
     )
     style.width = 'max-content'
     style.minWidth = `${floor}px`
@@ -77,7 +77,7 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
     const width = widthStyle(rect, style)
     const align = toValue(opts.align)
     const left = align === 'end' ? rect.right - width : align === 'center' ? rect.left + (rect.width - width) / 2 : rect.left
-    style.left = `${Math.max(VIEWPORT_EDGE, Math.min(left, window.innerWidth - VIEWPORT_EDGE - width))}px`
+    style.left = `${Math.max(VIEWPORT_EDGE, Math.min(left, document.documentElement.clientWidth - VIEWPORT_EDGE - width))}px`
     const above = opensAbove(rect, gap)
     if (above) style.bottom = `${window.innerHeight - rect.top + gap}px`
     else style.top = `${rect.bottom + gap}px`

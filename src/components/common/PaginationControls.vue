@@ -129,8 +129,8 @@ function cancelJump() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--control-h);
+  height: var(--control-h);
   border: 1px solid transparent;
   border-radius: var(--radius-btn);
   background: transparent;
@@ -153,8 +153,8 @@ function cancelJump() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
+  min-width: var(--control-h);
+  height: var(--control-h);
   padding: 0 var(--space-sm);
   border: 1px solid transparent;
   border-radius: var(--radius-btn);
@@ -186,8 +186,8 @@ function cancelJump() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
+  min-width: var(--control-h);
+  height: var(--control-h);
   border: 1px solid transparent;
   border-radius: var(--radius-btn);
   background: transparent;
@@ -204,7 +204,7 @@ function cancelJump() {
 
 .pagination__jump-input {
   width: 56px;
-  height: 32px;
+  height: var(--control-h);
   padding: 0 var(--space-xs);
   border: 1px solid var(--page-accent, var(--accent));
   border-radius: var(--radius-btn);

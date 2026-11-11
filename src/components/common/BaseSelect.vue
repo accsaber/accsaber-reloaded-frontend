@@ -101,7 +101,8 @@ function select(value: string) {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
