@@ -10,7 +10,8 @@ defineProps<{
 <template>
   <div class="skeleton" :class="`skeleton--${variant ?? 'text'}`" :style="{ width: width, height: height }">
     <template v-if="(variant ?? 'text') === 'text'">
-      <div v-for="i in (lines ?? 1)" :key="i" class="skeleton__line"
+      <div v-if="height && !lines" class="skeleton__line skeleton__line--fill" />
+      <div v-for="i in (lines ?? 1)" v-else :key="i" class="skeleton__line"
         :style="{ width: i === (lines ?? 1) ? '60%' : '100%' }" />
     </template>
 
@@ -73,9 +74,19 @@ defineProps<{
   margin-bottom: 0;
 }
 
-.skeleton__avatar {
+.skeleton__line--fill {
+  height: 100%;
+}
+
+.skeleton--avatar {
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
+}
+
+.skeleton__avatar {
+  width: 100%;
+  height: 100%;
   border-radius: var(--radius-avatar);
 }
 

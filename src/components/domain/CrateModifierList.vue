@@ -41,7 +41,7 @@ const expanded = ref(false)
       <SkeletonLoader v-for="i in 2" :key="i" variant="table-row" />
     </div>
 
-    <ul v-else-if="expanded" class="crate-modifiers__list crate-modifiers__list--bordered">
+    <ul v-else-if="expanded" class="crate-modifiers__list">
       <li v-for="cm in modifiers" :key="cm.modifier.id" class="crate-modifiers__row">
         <ModifierChip :modifier="cm.modifier" />
         <UnusualEffectsPopover v-if="cm.modifier.key === 'unusual'" :crate-id="crateId" />
@@ -74,21 +74,20 @@ const expanded = ref(false)
 
 .crate-modifiers__title {
   font-size: var(--text-caption);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
 .crate-modifiers__count {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .crate-modifiers__chevron {
   margin-left: auto;
   flex-shrink: 0;
-  color: var(--text-tertiary);
-  transition: transform 150ms ease;
+  color: var(--text-secondary);
+  transition: transform var(--dur-fast) var(--ease-in-out);
 }
 
 .crate-modifiers__chevron--open {
@@ -100,12 +99,6 @@ const expanded = ref(false)
   color: var(--text-primary);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .crate-modifiers__chevron {
-    transition: none;
-  }
-}
-
 .crate-modifiers__list {
   display: flex;
   flex-direction: column;
@@ -114,20 +107,11 @@ const expanded = ref(false)
   list-style: none;
 }
 
-.crate-modifiers__list--bordered {
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
 .crate-modifiers__row {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
-}
-
-.crate-modifiers__row + .crate-modifiers__row {
-  border-top: 1px solid var(--bg-overlay);
+  padding: var(--space-xs) 0;
 }
 
 .crate-modifiers__chance {

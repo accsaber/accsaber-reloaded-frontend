@@ -167,20 +167,17 @@ const weightedDiff = computed(() => {
 })
 
 function formatDiff(val: number): string {
-  if (Math.abs(val) < 0.005) return '0.00'
   return (val > 0 ? '+' : '') + val.toFixed(2)
 }
 
 function diffColor(val: number): string {
-  if (val > 0.005) return 'var(--success)'
-  if (val < -0.005) return 'var(--error)'
-  return 'var(--text-secondary)'
+  return val > 0 ? 'var(--success)' : 'var(--error)'
 }
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition name="tweaker">
+    <Transition name="pop">
       <div v-if="open" ref="panelRef" class="ap-tweaker" :style="panelStyle" @mousedown.stop @click.stop>
         <div class="ap-tweaker__header">
           <span class="field-label">AP Tweaker</span>
@@ -211,7 +208,8 @@ function diffColor(val: number): string {
               <button v-else class="ap-tweaker__result-btn" @click="startEditingAp">
                 {{ tweakedRawAp.toFixed(2) }}
               </button>
-              <span v-if="isScoreMode && !editingAp" class="ap-tweaker__result-diff" :style="{ color: diffColor(apDiff) }">
+              <span v-if="isScoreMode && !editingAp && Math.abs(apDiff) >= 0.005" class="ap-tweaker__result-diff"
+                :style="{ color: diffColor(apDiff) }">
                 {{ formatDiff(apDiff) }}
               </span>
             </div>
@@ -220,12 +218,13 @@ function diffColor(val: number): string {
               <span class="ap-tweaker__result-value">
                 {{ weightResult.posChanged ? '~' : '' }}{{ weightResult.weightedAp.toFixed(2) }}
               </span>
-              <span class="ap-tweaker__result-diff" :style="{ color: diffColor(weightedDiff) }">
+              <span v-if="Math.abs(weightedDiff) >= 0.005" class="ap-tweaker__result-diff"
+                :style="{ color: diffColor(weightedDiff) }">
                 {{ formatDiff(weightedDiff) }}
               </span>
             </div>
             <span v-if="showWeighted && isScoreMode && weightResult.posChanged" class="ap-tweaker__approx-note">
-              Position changed - weighted AP may differ
+              Position changed, weighted AP may differ
             </span>
           </div>
         </template>
@@ -238,11 +237,10 @@ function diffColor(val: number): string {
 <style scoped>
 .ap-tweaker {
   z-index: 300;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-overlay);
   border-radius: var(--radius-card);
   padding: var(--space-sm) var(--space-md);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -263,9 +261,9 @@ function diffColor(val: number): string {
   border: none;
   border-radius: var(--radius-btn);
   background: transparent;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .ap-tweaker__close:hover {
@@ -274,7 +272,7 @@ function diffColor(val: number): string {
 
 .ap-tweaker__loading {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-align: center;
   padding: var(--space-sm) 0;
 }
@@ -293,11 +291,11 @@ function diffColor(val: number): string {
   border-radius: var(--radius-input);
   padding: 2px var(--space-sm);
   cursor: pointer;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .ap-tweaker__acc-btn:hover {
-  border-color: var(--bg-overlay);
+  border-color: var(--text-tertiary);
 }
 
 .ap-tweaker__edit-input {
@@ -319,7 +317,6 @@ function diffColor(val: number): string {
   flex-direction: column;
   gap: var(--space-xs);
   padding-top: var(--space-xs);
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .ap-tweaker__result {
@@ -355,11 +352,11 @@ function diffColor(val: number): string {
   padding: 0;
   cursor: pointer;
   text-align: left;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .ap-tweaker__result-btn:hover {
-  border-color: var(--bg-overlay);
+  border-color: var(--text-tertiary);
 }
 
 .ap-tweaker__ap-edit {
@@ -383,27 +380,7 @@ function diffColor(val: number): string {
 }
 
 .ap-tweaker__approx-note {
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
-  font-style: italic;
-}
-
-.tweaker-enter-active,
-.tweaker-leave-active {
-  transition: opacity 100ms ease, transform 100ms ease;
-}
-
-.tweaker-enter-from,
-.tweaker-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .tweaker-enter-active,
-  .tweaker-leave-active {
-    transition: none;
-  }
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 </style>

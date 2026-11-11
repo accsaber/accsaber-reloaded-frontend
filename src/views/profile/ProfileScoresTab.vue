@@ -9,7 +9,6 @@ import { useAppearance } from '@/composables/useAppearance'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
-import type { ScoreRowField } from '@/types/api/settings'
 import type { ScoreResponse, UserScoresParams } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -18,14 +17,13 @@ import { toScoreDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
-import { buildScoreColumns } from '@/utils/scoreRowFields'
-import { tableNaturalWidth } from '@/utils/tableLayout'
 import ScoreRowActions from '@/views/profile/ScoreRowActions.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = withDefaults(defineProps<{
   userId: string
+  columns: TableColumn[]
   category: CategoryCode
   search?: string
   isSelfProfile?: boolean
@@ -42,7 +40,6 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'pin-toggle': [scoreId: string]
   'params-change': [params: UserScoresParams | null]
-  'width-change': [width: number]
 }>()
 
 const router = useRouter()
@@ -52,7 +49,6 @@ const modifierStore = useModifierStore()
 const {
   primaryReplayService,
   fallbackReplayService,
-  scoreRowFields,
   isScoreFieldVisible,
 } = useAppearance()
 
@@ -160,52 +156,6 @@ function rowActions(row: Record<string, unknown>) {
 }
 
 const totalPages = computed(() => scoreData.value?.totalPages ?? 0)
-
-const showStreak115 = computed(() =>
-  sortState.value.key === 'streak115' || scores.value.some((s) => s.streak115 != null),
-)
-
-const LEADING_COLUMNS: TableColumn[] = [
-  { key: 'leaderboardRank', label: '#', sortable: true, align: 'right', mono: true, width: '80px' },
-  { key: 'cover', label: '', width: '56px' },
-  { key: 'mapName', label: 'Map', align: 'left', width: '240px', flex: true },
-]
-
-const trailingColumns = computed<TableColumn[]>(() => [
-  { key: 'actions', label: '', align: 'center', width: props.isSelfProfile ? '112px' : '84px', noLink: true },
-])
-
-const FIELD_COLUMNS: Record<ScoreRowField, TableColumn> = {
-  difficulty: { key: 'difficulty', label: 'Diff', align: 'center', width: '76px' },
-  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '76px' },
-  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '100px' },
-  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '100px' },
-  complexity: { key: 'complexity', label: 'COMP', sortable: true, align: 'center', mono: true, width: '76px' },
-  category: { key: 'category', label: 'Category', align: 'center', width: '92px' },
-  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '64px' },
-  max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
-  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '84px' },
-  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '76px' },
-  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '84px' },
-  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '84px' },
-}
-
-const columns = computed(() =>
-  buildScoreColumns(scoreRowFields.value, {
-    leading: LEADING_COLUMNS,
-    trailing: trailingColumns.value,
-    fields: {
-      ...FIELD_COLUMNS,
-      streak_115: showStreak115.value ? FIELD_COLUMNS.streak_115 : null,
-    },
-  }),
-)
-
-watch(
-  columns,
-  (cols) => emit('width-change', tableNaturalWidth(cols)),
-  { immediate: true },
-)
 
 const scoreParams = computed<UserScoresParams>(() => ({
   ...paginationParams.value,
@@ -354,9 +304,7 @@ watch(
 
             <span class="ps-card__meta-cell">
               <template v-if="isScoreFieldVisible('category')">
-                <span class="ps-card__dot"
-                  :style="{ background: categoryStore.getAccent(row.categoryCode as string) }" />
-                <span class="ps-card__category">{{ row.category }}</span>
+                <span :style="{ color: categoryStore.getAccent(row.categoryCode as string) }">{{ row.category }}</span>
               </template>
               <template v-if="isScoreFieldVisible('complexity') && (row.complexity as number | null) != null">
                 <span class="ps-card__sep">·</span>
@@ -401,7 +349,7 @@ watch(
 }
 
 .scores-tab__category {
-  color: color-mix(in srgb, var(--cat-accent) 30%, var(--text-secondary));
+  color: var(--cat-accent);
   font-size: var(--text-caption);
 }
 
@@ -441,15 +389,27 @@ watch(
   border: none;
   border-radius: var(--radius-btn);
   background: transparent;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
-  transition: color 120ms ease;
+  opacity: 0;
+  transition: color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.scores-tab :deep(tr:hover) .scores-tab__tweak-btn,
+.scores-tab__tweak-btn:focus-visible {
+  opacity: 1;
 }
 
 .scores-tab__tweak-btn:hover {
-  color: var(--accent, var(--text-primary));
+  color: var(--accent);
+}
+
+@media (hover: none) {
+  .scores-tab__tweak-btn {
+    opacity: 1;
+  }
 }
 
 .ps-card {
@@ -458,15 +418,9 @@ watch(
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
-  transition: border-color 120ms ease;
-}
-
-.ps-card:hover {
-  border-color: var(--text-tertiary);
 }
 
 .ps-card__cover-placeholder {
@@ -526,18 +480,6 @@ watch(
   color: var(--text-secondary);
 }
 
-.ps-card__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.ps-card__category {
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
 .ps-card__cx {
   font-family: var(--font-mono);
   color: var(--text-secondary);
@@ -550,7 +492,7 @@ watch(
 }
 
 .ps-card__date {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -576,7 +518,7 @@ watch(
 .ps-card__weighted {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   justify-self: end;
   white-space: nowrap;
 }

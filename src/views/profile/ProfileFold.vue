@@ -31,27 +31,55 @@ function toggle() {
       </h2>
       <slot v-if="!collapsed" name="meta" />
     </header>
-    <slot v-if="!collapsed" />
+    <Transition name="fold">
+      <div v-if="!collapsed" class="profile-fold__body">
+        <div class="profile-fold__inner">
+          <slot />
+        </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
 <style scoped>
-.profile-fold {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+.profile-fold__body {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.profile-fold__inner {
+  min-height: 0;
+  padding-top: var(--space-sm);
+}
+
+.fold-enter-active {
+  transition: grid-template-rows var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out);
+}
+
+.fold-leave-active {
+  transition: grid-template-rows var(--dur-exit) var(--ease-in), opacity var(--dur-exit) var(--ease-in);
+}
+
+.fold-enter-active .profile-fold__inner,
+.fold-leave-active .profile-fold__inner {
+  overflow: clip;
+}
+
+.fold-enter-from,
+.fold-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
 }
 
 .profile-fold__header {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .profile-fold__label {
   margin: 0;
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
 }
 
 .profile-fold__toggle {
@@ -61,16 +89,19 @@ function toggle() {
   padding: 0;
   font: inherit;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
   background: none;
   border: none;
   cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .profile-fold__toggle:hover {
   color: var(--text-primary);
+}
+
+.profile-fold__chevron {
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .profile-fold__chevron--collapsed {

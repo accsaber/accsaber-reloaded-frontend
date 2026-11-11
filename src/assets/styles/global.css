@@ -11,6 +11,7 @@
 html {
   overflow-x: hidden;
   max-width: 100vw;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -82,6 +83,16 @@ h1 {
 .stagger > * {
   animation: settle-in var(--dur-enter) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * min(var(--stagger), var(--stagger-total) / var(--n, 1)));
+}
+
+@keyframes confirm-pulse {
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.confirm {
+  animation: confirm-pulse var(--dur-enter) var(--ease-in-out);
 }
 
 .refreshing {

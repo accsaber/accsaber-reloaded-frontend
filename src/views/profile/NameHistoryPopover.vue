@@ -89,22 +89,19 @@ watch(open, (isOpen) => {
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid var(--bg-overlay);
+  border: none;
   background: transparent;
   border-radius: var(--radius-btn);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease, transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-enter) var(--ease-out);
 }
 
 .name-history__toggle:hover {
-  background: var(--bg-elevated);
   color: var(--text-primary);
-  border-color: var(--text-tertiary);
 }
 
 .name-history__toggle--open {
-  background: var(--bg-elevated);
   color: var(--text-primary);
   transform: rotate(180deg);
 }
@@ -127,12 +124,10 @@ watch(open, (isOpen) => {
 }
 
 .name-history__header {
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
   padding: 2px var(--space-xs) var(--space-xs);
-  border-bottom: 1px solid var(--bg-overlay);
 }
 
 .name-history__state {
@@ -155,10 +150,6 @@ watch(open, (isOpen) => {
   gap: var(--space-sm);
   padding: var(--space-xs) var(--space-xs);
   font-size: var(--text-caption);
-}
-
-.name-history__row + .name-history__row {
-  border-top: 1px dashed color-mix(in srgb, var(--bg-overlay) 60%, transparent);
 }
 
 .name-history__date {

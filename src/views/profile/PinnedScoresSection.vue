@@ -8,22 +8,15 @@ import { useModifierStore } from '@/stores/modifiers'
 import type { PinnedScoreResponse, ScoreResponse } from '@/types/api/users'
 import type { ScoreDisplay } from '@/types/display'
 import { toScoreDisplay } from '@/utils/mappers'
-import { STANDARD_PIN_SLOTS } from '@/utils/constants'
 import { ref } from 'vue'
 
-withDefaults(
-  defineProps<{
-    userId: string
-    pinned: PinnedScoreResponse[]
-    loading: boolean
-    isSelfProfile: boolean
-    maxSlots?: number
-    player?: ScoreDetailPlayer | null
-  }>(),
-  { maxSlots: STANDARD_PIN_SLOTS },
-)
-
-const STANDARD_SLOTS = STANDARD_PIN_SLOTS
+defineProps<{
+  pinned: PinnedScoreResponse[]
+  loading: boolean
+  isSelfProfile: boolean
+  maxSlots: number
+  player?: ScoreDetailPlayer | null
+}>()
 
 const emit = defineEmits<{
   unpin: [scoreId: string]
@@ -46,36 +39,22 @@ function onOpenDetail(score: ScoreResponse) {
   detailUserId.value = score.userId
   detailOpen.value = true
 }
-
-function onUnpin(scoreId: string) {
-  emit('unpin', scoreId)
-}
-
-function onCommentSave(payload: { scoreId: string, comment: string | null }) {
-  emit('update-comment', payload)
-}
 </script>
 
 <template>
-  <ProfileFold v-if="loading || pinned.length > 0" label="Pinned" storage-key="pinned-scores" aria-label="Pinned scores">
+  <ProfileFold v-if="loading || pinned.length" label="Pinned" storage-key="pinned-scores"
+    aria-label="Pinned scores">
     <template #meta>
-      <span v-if="!loading && pinned.length > 0" class="pinned__count">
-        {{ pinned.length }} of {{ maxSlots }}
-        <span
-          v-if="maxSlots > STANDARD_SLOTS && isSelfProfile"
-          class="pinned__perk"
-          title="Supporters get extra pinned slots"
-        >Supporter perk</span>
-      </span>
+      <span v-if="isSelfProfile && !loading" class="caption">{{ pinned.length }} of {{ maxSlots }}</span>
     </template>
-
-    <div v-if="loading" class="pinned__grid">
-      <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="card" />
-    </div>
-    <div v-else class="pinned__grid">
-      <PinnedScoreCard v-for="pin in pinned" :key="pin.score.id" :score="pin.score" :comment="pin.comment"
-        :editable="isSelfProfile" :can-unpin="isSelfProfile"
-        @unpin="onUnpin" @open-detail="onOpenDetail" @save-comment="onCommentSave" />
+    <div class="pinned__grid stagger" :style="{ '--n': pinned.length }">
+      <template v-if="loading">
+        <SkeletonLoader v-for="i in 3" :key="i" variant="text" height="124px" />
+      </template>
+      <PinnedScoreCard v-for="(pin, i) in pinned" v-else :key="pin.score.id" :style="{ '--i': i }" :score="pin.score"
+        :comment="pin.comment"
+        :editable="isSelfProfile" @unpin="emit('unpin', $event)" @open-detail="onOpenDetail"
+        @save-comment="emit('update-comment', $event)" />
     </div>
 
     <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" :player="player"
@@ -84,33 +63,9 @@ function onCommentSave(payload: { scoreId: string, comment: string | null }) {
 </template>
 
 <style scoped>
-.pinned__count {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.pinned__perk {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .pinned__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: var(--space-md);
-}
-
-@media (max-width: 599px) {
-  .pinned__grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

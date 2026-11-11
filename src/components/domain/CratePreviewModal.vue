@@ -198,9 +198,11 @@ onUnmounted(() => {
           <span class="field-label">Modifiers</span>
         </div>
 
-        <div v-if="modifiersLoading" class="crate-preview__modifiers-body">
-          <SkeletonLoader v-for="i in 2" :key="i" variant="table-row" />
-        </div>
+        <ul v-if="modifiersLoading" class="crate-preview__modifiers-body">
+          <li v-for="i in 3" :key="i" class="crate-preview__modifier-row">
+            <SkeletonLoader width="180px" :lines="2" />
+          </li>
+        </ul>
 
         <p v-else-if="!modifiers.length" class="crate-preview__empty">
           No modifiers roll on this crate.
@@ -228,7 +230,10 @@ onUnmounted(() => {
         </div>
 
         <div v-if="contentsLoading" class="crate-preview__items-body">
-          <SkeletonLoader v-for="i in 3" :key="i" variant="table-row" />
+          <span v-for="i in 12" :key="i" class="crate-preview__tile">
+            <SkeletonLoader width="116px" height="116px" />
+            <SkeletonLoader :lines="2" />
+          </span>
         </div>
 
         <p v-else-if="!contents.length" class="crate-preview__empty">
@@ -290,7 +295,7 @@ onUnmounted(() => {
         </div>
 
         <div v-if="effectsLoading" class="crate-preview__effects-grid">
-          <SkeletonLoader v-for="i in 2" :key="i" variant="table-row" />
+          <SkeletonLoader v-for="i in 10" :key="i" width="96px" height="120px" />
         </div>
 
         <p v-else-if="!effects.length" class="crate-preview__empty">

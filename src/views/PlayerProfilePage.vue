@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
@@ -19,6 +18,7 @@ import type { LevelResponse, StatsDiffResponse, UserAllStatisticsResponse, UserC
 import type { CategoryCode } from '@/types/display'
 import { STANDARD_PIN_SLOTS, SUPPORTER_PIN_SLOTS } from '@/utils/constants'
 import { pickAvatarUrl } from '@/utils/media'
+import { tableNaturalWidth } from '@/utils/tableLayout'
 import PinnedMilestonesSection from '@/views/profile/PinnedMilestonesSection.vue'
 import PinnedScoresSection from '@/views/profile/PinnedScoresSection.vue'
 import ProfileBio from '@/views/profile/ProfileBio.vue'
@@ -31,8 +31,10 @@ import ProfileStatsChart from '@/views/profile/ProfileStatsChart.vue'
 import ProfileStatStrip from '@/views/profile/ProfileStatStrip.vue'
 import RelationCountsBar from '@/views/profile/RelationCountsBar.vue'
 import ScoresPlaylistButton from '@/views/profile/ScoresPlaylistButton.vue'
+import { useProfileEdit } from '@/views/profile/useProfileEdit'
+import { useScoreColumns } from '@/views/profile/useScoreColumns'
 import { usePinnedMilestones, usePinnedScores } from '@/views/profile/useProfilePins'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -129,16 +131,13 @@ const activeCategory = computed<CategoryCode>({
 
 const scoreSearch = queryRef('search')
 const scorePlaylistParams = ref<UserScoresParams | null>(null)
-const scoresTableWidth = ref(0)
-const editMode = ref(false)
+const scoreColumns = useScoreColumns(() => authStore.userId === userId.value)
+const scoresTableWidth = computed(() => tableNaturalWidth(scoreColumns.value))
+const edit = reactive(useProfileEdit(user, bioCharLimit))
 
-function onRenamed(name: string) {
-  if (user.value) user.value = { ...user.value, name }
-}
-
-function onBioSaved(bio: string) {
-  if (!user.value) return
-  user.value = { ...user.value, bio }
+function onAvatarChanged(updated: UserResponse) {
+  if (user.value) user.value = { ...user.value, avatarUrl: updated.avatarUrl, cdnAvatarUrl: updated.cdnAvatarUrl }
+  authStore.fetchAuthMe()
 }
 
 const pinContext = { userId, isSelfProfile, slotLimit: pinnedSlotLimit }
@@ -191,11 +190,6 @@ async function fetchStatsDiff() {
   }
 }
 
-const breadcrumbs = computed(() => [
-  { label: 'Leaderboards', to: '/leaderboards' },
-  { label: user.value?.name ?? 'Player' },
-])
-
 const metaTitle = computed(() => {
   if (!user.value) return undefined
   return `${user.value.name} | AccSaber`
@@ -218,6 +212,7 @@ async function redirectToCanonicalProfile(canonicalId: string): Promise<boolean>
 }
 
 function resetProfile() {
+  edit.cancel()
   user.value = null
   level.value = null
   stats.value = []
@@ -301,24 +296,22 @@ watch(activeCategory, () => {
 <template>
   <div class="profile-page" :style="{ '--page-accent': accent, '--scores-column': scoresTableWidth + 'px' }">
     <template v-if="loading">
-      <div class="profile-page__skeleton-hero">
-        <SkeletonLoader variant="avatar" width="96px" height="96px" />
-        <SkeletonLoader variant="text" width="200px" />
-        <SkeletonLoader variant="text" width="120px" />
-        <div class="profile-page__skeleton-stats">
-          <SkeletonLoader v-for="i in 4" :key="i" variant="stat-block" />
+      <div class="profile-page__skeleton">
+        <SkeletonLoader variant="avatar" width="160px" height="160px" />
+        <div class="profile-page__skeleton-details">
+          <SkeletonLoader variant="text" width="260px" height="40px" />
+          <SkeletonLoader variant="text" width="340px" height="38px" />
+          <SkeletonLoader variant="text" width="460px" height="36px" />
+          <SkeletonLoader variant="text" width="380px" height="20px" />
         </div>
       </div>
     </template>
 
     <template v-else-if="error || !user">
-      <h1>Player Not Found</h1>
-      <p class="profile-page__error">Could not load this player's profile.</p>
+      <h1>Player not found</h1>
     </template>
 
     <template v-else>
-      <Breadcrumbs :crumbs="breadcrumbs" />
-
       <div class="profile-page__bg">
         <video
           v-if="equippedBackgroundIsVideo && equippedBackgroundUrl"
@@ -340,26 +333,27 @@ watch(activeCategory, () => {
         <div v-else class="profile-page__bg-image" :style="{ backgroundImage: `url(${userAvatarUrl})` }" />
       </div>
 
-      <ProfileHero v-model:edit-mode="editMode" :user="user" :user-id="userId" :avatar-url="userAvatarUrl"
+      <ProfileHero v-model:name-draft="edit.name" :user="user" :user-id="userId" :avatar-url="userAvatarUrl"
         :level="level" :equipped="equipped" :stats-diff="statsDiff" :badges="ownedBadges"
         :supporter-state="supporterState" :is-self-profile="isSelfProfile" :is-blocked-by-me="isBlockedByMe"
-        @renamed="onRenamed">
+        :editing="edit.editing && isSelfProfile" :saving="edit.saving" :edit-error="edit.error"
+        @edit="edit.start" @save="edit.save" @cancel="edit.cancel" @avatar-changed="onAvatarChanged">
         <ProfileStatStrip v-model:category="activeCategory" :user-id="userId" :country="user.country ?? null"
           :stats="activeStats" :stats-diff="statsDiff" @tabs-hidden="heroCategoryTabsHidden = $event" />
         <RelationCountsBar v-if="user.relations" :user-id="userId" :counts="user.relations" />
       </ProfileHero>
 
       <template v-if="!user.banned && !isBlockedByMe">
-        <ProfileBio v-if="!hideReloadedProfileFeatures" :bio="user.bio ?? null" :editing="editMode && isSelfProfile"
-          :max-chars="bioCharLimit" :can-use-effects="isProfileOwnerSupporter" @saved="onBioSaved"
-          @cancel="editMode = false" />
+        <ProfileBio v-if="!hideReloadedProfileFeatures" v-model:draft="edit.bio" :bio="user.bio ?? null"
+          :editing="edit.editing && isSelfProfile" :max-chars="bioCharLimit"
+          :can-use-effects="isProfileOwnerSupporter" />
 
         <section v-if="showStatisticsChart" class="profile-page__inline-chart" aria-label="Statistics history">
-          <h2 class="profile-page__section-label">History</h2>
+          <h2 class="section-title">History</h2>
           <ProfileStatsChart :user-id="userId" :category="activeCategory" />
         </section>
 
-        <PinnedScoresSection v-if="!hideReloadedProfileFeatures" :user-id="userId" :pinned="pinnedScores"
+        <PinnedScoresSection v-if="!hideReloadedProfileFeatures" :pinned="pinnedScores"
           :loading="pinnedLoading" :is-self-profile="isSelfProfile" :max-slots="pinnedSlotLimit"
           :player="scorePlayer" @unpin="onPinToggle" @update-comment="onUpdateComment" />
 
@@ -376,11 +370,12 @@ watch(activeCategory, () => {
         </div>
 
         <div class="profile-page__content">
-          <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :category="activeCategory"
+          <ProfileScoresTab v-if="activeTab === 'scores'" :user-id="userId" :columns="scoreColumns"
+            :category="activeCategory"
             :search="scoreSearch" :is-self-profile="isSelfProfile" :pinned-score-ids="pinnedScoreIds"
             :player="scorePlayer"
             :can-pin-more="canPinMore" :pin-pending="pinPending" @pin-toggle="onPinToggle"
-            @params-change="scorePlaylistParams = $event" @width-change="scoresTableWidth = $event" />
+            @params-change="scorePlaylistParams = $event" />
           <ProfileStatisticsTab v-if="activeTab === 'statistics'" :user-id="userId" :category="activeCategory"
             :xp-stats="xpStats" />
           <ProfileMilestonesTab v-if="activeTab === 'milestones'" :user-id="userId"
@@ -451,7 +446,7 @@ watch(activeCategory, () => {
 
 .cat-dock-enter-active,
 .cat-dock-leave-active {
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition: opacity var(--dur-menu) var(--ease-out), transform var(--dur-menu) var(--ease-out);
 }
 
 .cat-dock-enter-from,
@@ -547,15 +542,6 @@ watch(activeCategory, () => {
   min-width: 0;
 }
 
-.profile-page__section-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin: 0;
-}
-
 .profile-page__tabs-row {
   display: flex;
   align-items: center;
@@ -574,31 +560,39 @@ watch(activeCategory, () => {
   min-height: 400px;
 }
 
-.profile-page__error {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: var(--space-3xl);
+.profile-page__skeleton {
+  display: flex;
+  gap: var(--space-xl);
+  padding: var(--space-xl) 0 var(--space-lg);
 }
 
-.profile-page__skeleton-hero {
+.profile-page__skeleton-details {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--space-md);
-  padding: var(--space-xl) 0;
+  min-width: 0;
 }
 
-.profile-page__skeleton-stats {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
+.profile-page__tabs-row :deep(.base-tabs--underline) {
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 @media (max-width: 767px) {
   .profile-page__tabs-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .profile-page__skeleton {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .profile-page__skeleton-details {
+    align-items: center;
   }
 
   .profile-page__scores-tools :deep(.search-box) {

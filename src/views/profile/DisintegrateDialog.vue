@@ -230,7 +230,7 @@ function onConfirm(): void {
   color: var(--text-primary);
   font-size: 1rem;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .disintegrate__step:hover:not(:disabled) {
@@ -292,7 +292,7 @@ function onConfirm(): void {
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .disintegrate__remove:hover:not(:disabled) {

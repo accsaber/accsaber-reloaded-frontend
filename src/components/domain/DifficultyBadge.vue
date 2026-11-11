@@ -14,18 +14,18 @@ const COLOR_BY_DIFFICULTY: Record<string, string> = {
 }
 
 const LABEL_BY_DIFFICULTY: Record<string, string> = {
-  EASY: 'EASY',
-  NORMAL: 'NORMAL',
-  HARD: 'HARD',
-  EXPERT: 'EXPERT',
-  EXPERT_PLUS: 'EXPERT+',
+  EASY: 'Easy',
+  NORMAL: 'Normal',
+  HARD: 'Hard',
+  EXPERT: 'Expert',
+  EXPERT_PLUS: 'Expert+',
 }
 
 const colorClass = computed(
   () => COLOR_BY_DIFFICULTY[props.difficulty] ?? 'difficulty-badge--expert-plus',
 )
 const label = computed(
-  () => LABEL_BY_DIFFICULTY[props.difficulty] ?? props.difficulty.toUpperCase(),
+  () => LABEL_BY_DIFFICULTY[props.difficulty] ?? props.difficulty,
 )
 </script>
 
@@ -40,10 +40,8 @@ const label = computed(
   color: var(--badge-color);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
   line-height: 1.4;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 

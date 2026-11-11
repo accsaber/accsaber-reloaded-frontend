@@ -25,15 +25,7 @@ const { isOpen, triggerRef, panelRef, panelStyle, open, close, onTriggerEnter, o
   hover: { openDelay: 0, closeDelay: 0 },
 })
 
-const chipStyle = computed(() =>
-  color.value
-    ? {
-        color: color.value,
-        borderColor: `color-mix(in srgb, ${color.value} 50%, transparent)`,
-        background: `color-mix(in srgb, ${color.value} 10%, transparent)`,
-      }
-    : undefined,
-)
+const chipStyle = computed(() => (color.value ? { color: color.value } : undefined))
 
 onMounted(() => {
   modifierStore.fetchModifiers()
@@ -67,13 +59,9 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--bg-overlay);
-  background: var(--bg-base);
+  border-radius: var(--radius-xs);
   color: var(--text-secondary);
 }
 

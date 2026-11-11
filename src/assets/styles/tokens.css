@@ -1,12 +1,13 @@
 :root,
 .token-defaults {
+  color-scheme: dark;
   --bg-base: #08080d;
   --bg-surface: #11111c;
   --bg-elevated: #1a1929;
   --bg-overlay: #2d2a3c;
   --text-primary: #e6e4ee;
-  --text-secondary: #8c87a3;
-  --text-tertiary: #5e5973;
+  --text-secondary: #a6a1bb;
+  --text-tertiary: #85809b;
 
   --accent-true-acc: #22c55e;
   --accent-standard-acc: #3b82f6;
@@ -107,6 +108,7 @@
   --page-width-wide: 1500px;
 
   --radius-xs: 2px;
+  --control-h: 32px;
   --radius-btn: 3px;
   --radius-input: 3px;
   --radius-card: 4px;
@@ -153,13 +155,14 @@
 }
 
 [data-theme='light'] {
+  color-scheme: light;
   --bg-base: #f3f2f7;
   --bg-surface: #fdfcff;
   --bg-elevated: #ebe9f1;
   --bg-overlay: #cfccda;
   --text-primary: #1a1726;
-  --text-secondary: #6a6580;
-  --text-tertiary: #9b96b0;
+  --text-secondary: #544f68;
+  --text-tertiary: #6a6580;
 
   --fx-blend: normal;
   --fx-ember-halo: rgba(40, 18, 4, 0.5);

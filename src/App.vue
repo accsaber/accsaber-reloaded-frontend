@@ -71,12 +71,12 @@ function dismissRestrictedBanner() {
 
 watch(
   () => authStore.isLoggedIn,
-  (loggedIn) => {
+  (loggedIn, wasLoggedIn) => {
     if (loggedIn) {
       void relationsStore.fetchAll()
       void settingsStore.fetchPrivacy()
       void settingsStore.fetchAppearance()
-    } else {
+    } else if (wasLoggedIn) {
       relationsStore.reset()
       settingsStore.reset()
       essenceStore.reset()

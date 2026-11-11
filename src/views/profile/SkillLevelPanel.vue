@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { SkillCategory, SkillResponse } from '@/types/api/users'
 import type { CategoryInfo } from '@/types/display'
 import { clamp01 } from '@/utils/math'
-import { computed, ref, useId } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   skill: SkillResponse | null
@@ -20,7 +21,6 @@ const CENTER = SIZE / 2
 const RINGS = 4
 const ANGLE_OFFSET = -Math.PI / 2
 
-const gradientId = useId()
 const hoveredIndex = ref<number | null>(null)
 const pinnedIndex = ref<number | null>(null)
 
@@ -69,7 +69,6 @@ const radarAxes = computed(() => {
       label: cat.categoryName,
       value: cat.skillLevel,
       accent,
-      normalized,
       components: cat.components,
       x: CENTER + RADIUS * normalized * Math.cos(angle),
       y: CENTER + RADIUS * normalized * Math.sin(angle),
@@ -104,18 +103,12 @@ const spokes = computed(() => {
   })
 })
 
-const dataPolygon = computed(() =>
-  radarAxes.value.map((a) => `${a.x},${a.y}`).join(' '),
+const viewHeight = computed(() =>
+  Math.max(CENTER, ...radarAxes.value.map((a) => a.labelY)) + PADDING / 2,
 )
 
-const gradients = computed(() =>
-  radarAxes.value.map((axis, i) => ({
-    id: `${gradientId}-${i}`,
-    cx: axis.x,
-    cy: axis.y,
-    r: RADIUS * (0.35 + 0.65 * axis.normalized),
-    color: axis.accent,
-  })),
+const dataPolygon = computed(() =>
+  radarAxes.value.map((a) => `${a.x},${a.y}`).join(' '),
 )
 
 function textAnchor(labelX: number): string {
@@ -152,7 +145,7 @@ const active = computed(() =>
 const tooltipStyle = computed(() => {
   if (!active.value) return undefined
   const left = (active.value.x / SIZE) * 100
-  const top = (active.value.y / SIZE) * 100
+  const top = (active.value.y / viewHeight.value) * 100
   const placeAbove = active.value.y > CENTER
   return {
     left: `clamp(calc(var(--tip-w) / 2), ${left}%, calc(100% - var(--tip-w) / 2))`,
@@ -166,30 +159,24 @@ const tooltipStyle = computed(() => {
 
 <template>
   <div class="skill-panel">
-    <div v-if="loading && !skill" class="skill-panel__loading">
-      <SkeletonLoader variant="stat-block" />
-      <SkeletonLoader variant="card" />
-    </div>
+    <template v-if="loading && !skill">
+      <SkeletonLoader variant="text" width="120px" height="1.5rem" />
+      <SkeletonLoader variant="card" class="skill-panel__radar-skeleton" />
+    </template>
 
     <template v-else-if="skill">
-      <div v-if="overall" class="skill-panel__headline">
-        <div class="skill-panel__headline-value">{{ overall.skillLevel.toFixed(1) }}</div>
-        <div
-          v-if="overallTier"
-          class="skill-panel__headline-tier"
-          :style="{ color: overallTier.color }"
-        >
+      <p v-if="overall" class="skill-panel__headline">
+        <span class="skill-panel__headline-value">{{ overall.skillLevel.toFixed(1) }}</span>
+        <span v-if="overallTier" class="skill-panel__headline-tier" :style="{ color: overallTier.color }">
           {{ overallTier.label }}
-        </div>
-        <div class="field-label">Overall Skill Level</div>
-      </div>
+        </span>
+        <HintTooltip text="Your average skill between all categories." />
+      </p>
 
-      <div v-if="hasNoActivity" class="skill-panel__empty">
-        Play a ranked map to start your skill rating.
-      </div>
+      <p v-if="hasNoActivity" class="caption">Play a ranked map to start your skill rating</p>
 
       <div v-else-if="radarAxes.length >= 3" class="skill-panel__radar">
-        <svg :viewBox="`0 0 ${SIZE} ${SIZE}`" class="skill-panel__svg">
+        <svg :viewBox="`0 0 ${SIZE} ${viewHeight}`" class="skill-panel__svg">
           <polygon
             v-for="(ring, i) in gridRings"
             :key="'r' + i"
@@ -207,15 +194,7 @@ const tooltipStyle = computed(() => {
             class="skill-panel__spoke"
           />
 
-          <defs>
-            <radialGradient v-for="grad in gradients" :id="grad.id" :key="grad.id" gradientUnits="userSpaceOnUse"
-              :cx="grad.cx" :cy="grad.cy" :r="grad.r">
-              <stop offset="0%" :stop-color="grad.color" stop-opacity="0.55" />
-              <stop offset="100%" :stop-color="grad.color" stop-opacity="0" />
-            </radialGradient>
-          </defs>
-          <polygon v-for="grad in gradients" :key="'f' + grad.id" :points="dataPolygon" :fill="`url(#${grad.id})`" />
-          <polygon :points="dataPolygon" class="skill-panel__data-stroke" />
+          <polygon :points="dataPolygon" class="skill-panel__data" />
 
           <g v-for="(axis, i) in radarAxes" :key="'l' + i">
             <text
@@ -283,18 +262,18 @@ const tooltipStyle = computed(() => {
             class="skill-panel__tooltip-close"
             aria-label="Close breakdown"
             @click="clearPin"
-          >x</button>
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
 
-          <div class="skill-panel__tooltip-head">
-            <div class="field-label">{{ active.label }}</div>
-          </div>
+          <div class="field-label">{{ active.label }}</div>
           <div class="skill-panel__tooltip-level">{{ active.value.toFixed(1) }}</div>
 
           <div class="skill-panel__tooltip-meta">
-            <span>
-              {{ formatRank(active.components.categoryRank) }}
-              <span class="skill-panel__tooltip-of">of {{ active.components.activePlayers.toLocaleString() }}</span>
-            </span>
+            {{ formatRank(active.components.categoryRank) }}
+            <span class="skill-panel__tooltip-of">of {{ active.components.activePlayers.toLocaleString() }}</span>
           </div>
 
           <div class="skill-panel__bars">
@@ -330,60 +309,42 @@ const tooltipStyle = computed(() => {
 .skill-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--space-md);
   width: 100%;
   max-width: 360px;
 }
 
-.skill-panel__loading {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
+.skill-panel__radar-skeleton {
+  aspect-ratio: 288 / 227;
 }
 
 .skill-panel__headline {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-xs);
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: 0;
 }
 
 .skill-panel__headline-value {
   font-family: var(--font-mono);
-  font-size: 2.25rem;
-  font-weight: 600;
+  font-size: var(--text-stat-lg);
+  font-weight: 500;
   line-height: 1;
   color: var(--text-primary);
 }
 
 .skill-panel__headline-tier {
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-}
-
-.skill-panel__empty {
-  padding: var(--space-lg);
-  width: 100%;
-  text-align: center;
-  color: var(--text-secondary);
   font-size: var(--text-body);
-  border: 1px dashed var(--bg-overlay);
-  border-radius: var(--radius-card);
+  font-weight: 600;
 }
 
 .skill-panel__radar {
   position: relative;
-  display: flex;
-  justify-content: center;
   width: 100%;
 }
 
 .skill-panel__svg {
+  display: block;
   width: 100%;
   height: auto;
   overflow: visible;
@@ -396,15 +357,16 @@ const tooltipStyle = computed(() => {
   stroke-width: 0.5;
 }
 
-.skill-panel__data-stroke {
-  fill: none;
-  stroke: color-mix(in srgb, var(--text-primary) 30%, transparent);
+.skill-panel__data {
+  fill: var(--page-accent, var(--accent));
+  fill-opacity: 0.15;
+  stroke: var(--page-accent, var(--accent));
   stroke-width: 1;
   stroke-linejoin: round;
 }
 
 .skill-panel__dot {
-  transition: r 120ms ease-out;
+  transition: r var(--dur-fast) var(--ease-out);
 }
 
 .skill-panel__dot-group {
@@ -436,17 +398,14 @@ const tooltipStyle = computed(() => {
 }
 
 .skill-panel__tooltip {
-  --card-accent: var(--text-tertiary);
+  --card-accent: var(--text-secondary);
   --tip-w: min(280px, 100%);
   position: absolute;
   z-index: 10;
   width: var(--tip-w);
   padding: var(--space-md);
-  padding-top: var(--space-lg);
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-overlay);
   border-radius: var(--radius-card);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -455,65 +414,48 @@ const tooltipStyle = computed(() => {
 
 .skill-panel__tooltip--pinned {
   pointer-events: auto;
-  border-color: var(--card-accent);
 }
 
 .skill-panel__tooltip-close {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  padding: 0;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  display: flex;
+  padding: var(--space-xs);
   background: transparent;
   border: none;
-  color: var(--text-tertiary);
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  line-height: 1;
+  color: var(--text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-xs);
-  transition: color 120ms ease, background-color 120ms ease;
+  border-radius: var(--radius-btn);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .skill-panel__tooltip-close:hover {
   color: var(--text-primary);
-  background: var(--bg-overlay);
-}
-
-.skill-panel__tooltip-head {
-  padding-right: 28px;
 }
 
 .skill-panel__tooltip-level {
   font-family: var(--font-mono);
-  font-size: 1.5rem;
+  font-size: var(--text-stat-lg);
   font-weight: 500;
   line-height: 1;
   color: var(--card-accent);
 }
 
 .skill-panel__tooltip-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
   font-size: var(--text-caption);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-family: var(--font-mono);
-  flex-wrap: wrap;
-  row-gap: var(--space-xs);
 }
 
 .skill-panel__tooltip-of {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .skill-panel__bars {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  margin-top: var(--space-xs);
 }
 
 .skill-panel__bar {

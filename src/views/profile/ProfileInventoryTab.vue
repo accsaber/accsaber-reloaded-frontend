@@ -1,29 +1,20 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseSelect from '@/components/common/BaseSelect.vue'
-import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import FilterButton from '@/components/common/FilterButton.vue'
-import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import SearchBox from '@/components/common/SearchBox.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CrateOpeningOverlay from '@/views/profile/CrateOpeningOverlay.vue'
 import DisintegrateDialog from '@/views/profile/DisintegrateDialog.vue'
+import InventoryToolbar from '@/views/profile/InventoryToolbar.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import InventoryLayout, { INVENTORY_NARROW_QUERY } from '@/components/domain/InventoryLayout.vue'
 import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
-import ItemFilterPanel, {
-  type ItemFilterCollectionOption,
-} from '@/components/domain/ItemFilterPanel.vue'
 import { useCrateContents } from '@/composables/useCrateContents'
 import { useCrateModifiers } from '@/composables/useCrateModifiers'
 import { useCrateUnusualEffects } from '@/composables/useCrateUnusualEffects'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { useItemDownload } from '@/composables/useItemDownload'
-import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useOwnedItemIds } from '@/composables/useOwnedItemIds'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -56,7 +47,7 @@ import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
 import { readThemeValue } from '@/utils/cosmetics/readers'
 import { resolveItemVariant } from '@/utils/items'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 const props = defineProps<{
   userId: string
@@ -83,21 +74,6 @@ const modifierKeys = ref<string[]>([])
 const collectionIds = ref<string[]>([])
 const search = ref('')
 
-const hasActiveFilters = computed(
-  () =>
-    typeKeys.value.length > 0 ||
-    rarities.value.length > 0 ||
-    modifierKeys.value.length > 0 ||
-    collectionIds.value.length > 0,
-)
-
-function clearFilters() {
-  typeKeys.value = []
-  rarities.value = []
-  modifierKeys.value = []
-  collectionIds.value = []
-}
-
 const unownedParam = queryRef<'1'>('unowned')
 const showUnowned = computed<boolean>({
   get: () => unownedParam.value === '1',
@@ -121,20 +97,6 @@ const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } 
   secondarySort: null,
 })
 
-const sortOptions = [
-  { value: 'date', label: 'Newest' },
-  { value: 'name', label: 'Name' },
-  { value: 'type', label: 'Type' },
-  { value: 'rarity', label: 'Rarity' },
-  { value: 'quantity', label: 'Quantity' },
-  { value: 'crate', label: 'Collection' },
-]
-
-const { typeGroups, modifierOptions } = useItemFilterOptions({
-  hiddenModifierKeys: ['decorated'],
-})
-
-const filtersOpen = ref(false)
 const collections = ref<ItemResponse[]>([])
 const previewCrate = ref<ItemResponse | null>(null)
 
@@ -142,10 +104,6 @@ function openCratePreview(crate: ItemResponse) {
   mobileDetailOpen.value = false
   previewCrate.value = crate
 }
-
-const collectionOptions = computed<ItemFilterCollectionOption[]>(() =>
-  collections.value.map((c) => ({ id: c.id, label: c.name, iconUrl: c.iconUrl })),
-)
 
 async function fetchCollections() {
   try {
@@ -601,123 +559,39 @@ onUnmounted(() => {
       {{ feedback.message }}
     </BaseBanner>
 
-    <div class="inv-tab__controls">
-      <div class="inv-tab__filters">
-        <SearchBox v-model="search" placeholder="Search items..." class="inv-tab__search" />
-
-        <div class="inv-tab__filters-right">
-          <BaseSelect
-            :model-value="sortState.key"
-            :options="sortOptions"
-            placeholder="Sort"
-            @update:model-value="setSort"
-          />
-          <button
-            type="button"
-            class="inv-tab__sort-dir"
-            :aria-label="sortState.direction === 'asc' ? 'Sort descending' : 'Sort ascending'"
-            @click="setSort(sortState.key)"
-          >
-            <svg
-              class="inv-tab__sort-icon"
-              :class="{ 'inv-tab__sort-icon--asc': sortState.direction === 'asc' }"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <polyline points="19 12 12 19 5 12" />
-            </svg>
-          </button>
-          <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
-            <template #trigger>
-              <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
-            </template>
-            <ItemFilterPanel
-              :rarities="rarities"
-              :type-keys="typeKeys"
-              :type-groups="typeGroups"
-              :modifier-keys="modifierKeys"
-              :modifier-options="modifierOptions"
-              :collection-ids="collectionIds"
-              :collection-options="collectionOptions"
-              :has-active-filters="hasActiveFilters"
-              @update:rarities="rarities = $event"
-              @update:type-keys="typeKeys = $event"
-              @update:modifier-keys="modifierKeys = $event"
-              @update:collection-ids="collectionIds = $event"
-              @clear="clearFilters"
-            />
-          </FilterPopover>
-        </div>
-      </div>
-
-      <div class="inv-tab__actions-bar">
-        <div class="inv-tab__actions-left">
-          <BaseSwitch v-model="showUnowned" label="Unowned" aria-label="Show unowned items" />
-
-          <BaseButton v-if="isOwnProfile && !showUnowned" size="sm" @click="toggleSelectMode">
-            {{ selectMode ? 'Done' : 'Select' }}
+    <InventoryToolbar
+      v-model:search="search"
+      v-model:show-unowned="showUnowned"
+      v-model:type-keys="typeKeys"
+      v-model:rarities="rarities"
+      v-model:modifier-keys="modifierKeys"
+      v-model:collection-ids="collectionIds"
+      :user-id="userId"
+      :sort-state="sortState"
+      :collections="collections"
+      :is-own-profile="isOwnProfile"
+      :can-offer-trade="canOfferTrade"
+      :select-mode="selectMode"
+      :balance="essenceStore.balance"
+      @sort="setSort"
+      @toggle-select="toggleSelectMode"
+    >
+      <template #selection>
+        <div class="inv-tab__selection">
+          <span class="inv-tab__selection-count">{{ selection.length }} selected</span>
+          <span class="inv-tab__selection-essence">
+            <span class="inv-tab__glyph" aria-hidden="true">{{ ESSENCE_GLYPH }}</span>
+            {{ formatEssenceAmount(selectionEssence) }}
+          </span>
+          <BaseButton size="sm" @click="selectPage">Select Page</BaseButton>
+          <BaseButton size="sm" :disabled="selection.length === 0" @click="selection = []">Clear</BaseButton>
+          <BaseButton variant="destructive" size="sm" :disabled="selection.length === 0"
+            @click="openDisintegrateDialog([...selection])">
+            Disintegrate
           </BaseButton>
         </div>
-
-        <div class="inv-tab__actions-right">
-          <span
-            v-if="isOwnProfile && essenceStore.balance !== null"
-            class="inv-tab__wallet"
-            :aria-label="`Essence balance: ${formatEssenceAmount(essenceStore.balance)}`"
-            title="Item essence"
-          >
-            <span class="inv-tab__wallet-glyph" aria-hidden="true">{{ ESSENCE_GLYPH }}</span>
-            <span class="inv-tab__wallet-amount">{{ formatEssenceAmount(essenceStore.balance) }}</span>
-          </span>
-          <RouterLink v-if="isOwnProfile" :to="{ name: 'market' }" custom v-slot="{ navigate, href }">
-            <BaseButton variant="primary" :href="href" @click="(e: MouseEvent) => { e.preventDefault(); navigate() }">
-              Market Hub
-            </BaseButton>
-          </RouterLink>
-          <RouterLink
-            v-else-if="canOfferTrade"
-            :to="{ name: 'trade-new', query: { to: userId } }"
-            custom
-            v-slot="{ navigate, href }"
-          >
-            <BaseButton variant="primary" :href="href" @click="(e: MouseEvent) => { e.preventDefault(); navigate() }">
-              Offer Trade
-            </BaseButton>
-          </RouterLink>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="selectMode" class="inv-tab__selection">
-      <span class="inv-tab__selection-count">
-        {{ selection.length }} selected
-      </span>
-      <span class="inv-tab__selection-essence">
-        <span class="inv-tab__wallet-glyph" aria-hidden="true">{{ ESSENCE_GLYPH }}</span>
-        {{ formatEssenceAmount(selectionEssence) }}
-      </span>
-      <div class="inv-tab__selection-actions">
-        <BaseButton size="sm" @click="selectPage">Select page</BaseButton>
-        <BaseButton size="sm" :disabled="selection.length === 0" @click="selection = []">
-          Clear
-        </BaseButton>
-        <BaseButton
-          variant="destructive"
-          size="sm"
-          :disabled="selection.length === 0"
-          @click="openDisintegrateDialog([...selection])"
-        >
-          Disintegrate
-        </BaseButton>
-      </div>
-    </div>
+      </template>
+    </InventoryToolbar>
 
     <InventoryLayout
       :detail-open="mobileDetailOpen"
@@ -725,7 +599,7 @@ onUnmounted(() => {
       @close-detail="mobileDetailOpen = false"
     >
       <template v-if="loading">
-        <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
+        <div v-for="i in 20" :key="i" class="inv-tab__skeleton" />
       </template>
       <template v-else>
         <InventoryItemCell
@@ -833,137 +707,29 @@ onUnmounted(() => {
   gap: var(--space-lg);
 }
 
-.inv-tab__controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.inv-tab__filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.inv-tab__filters-right {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.inv-tab__filters :deep(.base-select) {
-  flex: 0 0 auto;
-}
-
-.inv-tab__filters :deep(.base-select__trigger) {
-  min-width: 150px;
-  padding: var(--space-xs) var(--space-sm);
-}
-
-.inv-tab__search {
-  flex: 0 1 320px;
-  min-width: 140px;
-}
-
-.inv-tab__sort-dir {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-xs) var(--space-sm);
+.inv-tab__skeleton {
+  aspect-ratio: 1 / 1;
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  border-radius: var(--radius-card);
 }
 
-.inv-tab__sort-dir:hover {
-  background: var(--bg-elevated);
-  border-color: var(--text-tertiary);
-  color: var(--text-primary);
-}
-
-.inv-tab__sort-icon {
-  transition: transform 120ms ease;
-}
-
-.inv-tab__sort-icon--asc {
-  transform: rotate(180deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .inv-tab__sort-icon {
-    transition: none;
-  }
-}
-
-.inv-tab__actions-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.inv-tab__actions-left {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-}
-
-.inv-tab__actions-right {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.inv-tab__wallet {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: var(--bg-surface);
-  white-space: nowrap;
-}
-
-.inv-tab__wallet-glyph {
+.inv-tab__glyph {
   color: var(--tier-gold);
-  font-size: var(--text-body);
   line-height: 1;
-}
-
-.inv-tab__wallet-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
 }
 
 .inv-tab__selection {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm) var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  gap: var(--space-sm);
 }
 
 .inv-tab__selection-count {
+  min-width: 10ch;
   font-size: var(--text-body);
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .inv-tab__selection-essence {
@@ -974,13 +740,5 @@ onUnmounted(() => {
   font-size: var(--text-body);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-}
-
-.inv-tab__selection-actions {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-left: auto;
 }
 </style>

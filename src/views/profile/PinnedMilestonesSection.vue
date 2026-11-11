@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ProfileFold from '@/views/profile/ProfileFold.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
@@ -20,8 +20,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{ unpin: [milestoneId: string] }>()
 
-const STANDARD_SLOTS = STANDARD_PIN_SLOTS
-
 const cards = computed(() =>
   props.pinned.map((pin) => ({
     pin,
@@ -33,36 +31,25 @@ const cards = computed(() =>
 </script>
 
 <template>
-  <ProfileFold
-    v-if="loading || pinned.length > 0"
-    label="Milestones"
-    storage-key="pinned-milestones"
-    aria-label="Pinned milestones"
-  >
+  <ProfileFold v-if="loading || pinned.length > 0" label="Milestones" storage-key="pinned-milestones"
+    aria-label="Pinned milestones">
     <template #meta>
-      <span v-if="!loading && pinned.length > 0" class="pinned-ms__count">
-        {{ pinned.length }} of {{ maxSlots }}
-        <span
-          v-if="maxSlots > STANDARD_SLOTS && isSelfProfile"
-          class="pinned-ms__perk"
-          title="Supporters get extra pinned slots"
-        >Supporter perk</span>
-      </span>
+      <span v-if="isSelfProfile && !loading" class="caption">{{ pinned.length }} of {{ maxSlots }}</span>
     </template>
 
     <div v-if="loading" class="pinned-ms__grid">
-      <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="card" />
+      <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="text" height="80px" />
     </div>
 
-    <div v-else class="pinned-ms__grid">
-      <article v-for="card in cards" :key="card.pin.milestoneId" class="pinned-ms__card">
+    <div v-else class="pinned-ms__grid stagger" :style="{ '--n': cards.length }">
+      <article v-for="(card, i) in cards" :key="card.pin.milestoneId" class="pinned-ms__card" :style="{ '--i': i }">
         <MilestoneBadge :glyph="card.glyph" :tier="card.pin.tier" :size="48" completed />
 
         <div class="pinned-ms__text">
-          <h3 class="pinned-ms__title">{{ card.pin.title }}</h3>
+          <h3 class="card-title">{{ card.pin.title }}</h3>
           <p v-if="card.pin.description" class="pinned-ms__desc">{{ card.pin.description }}</p>
           <p class="pinned-ms__meta">
-            <span class="pinned-ms__rarity">{{ card.rarity }}</span>
+            {{ card.rarity }}
             <template v-if="card.completedOn"> · {{ card.completedOn }}</template>
           </p>
         </div>
@@ -85,17 +72,10 @@ const cards = computed(() =>
 </template>
 
 <style scoped>
-.pinned-ms__count {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.pinned-ms__perk {
-  color: var(--text-secondary);
+.pinned-ms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .pinned-ms__grid {
@@ -110,7 +90,6 @@ const cards = computed(() =>
   align-items: flex-start;
   gap: var(--space-md);
   padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   background: var(--bg-surface);
 }
@@ -118,15 +97,8 @@ const cards = computed(() =>
 .pinned-ms__text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-xs);
   min-width: 0;
-}
-
-.pinned-ms__title {
-  margin: 0;
-  font-size: var(--text-card-title);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .pinned-ms__desc {
@@ -140,10 +112,6 @@ const cards = computed(() =>
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.pinned-ms__rarity {
   color: var(--text-secondary);
 }
 
@@ -159,10 +127,10 @@ const cards = computed(() =>
   border: none;
   border-radius: var(--radius-btn);
   background: none;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 120ms ease, color 120ms ease;
+  transition: opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .pinned-ms__unpin svg {
@@ -177,5 +145,11 @@ const cards = computed(() =>
 
 .pinned-ms__unpin:hover {
   color: var(--error);
+}
+
+@media (hover: none) {
+  .pinned-ms__unpin {
+    opacity: 1;
+  }
 }
 </style>

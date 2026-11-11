@@ -50,7 +50,7 @@ const sortOptions = computed(() => {
 
 const viewTabs = computed<Tab[]>(() => [
   { key: 'all', label: 'All Progress' },
-  { key: 'completed', label: props.loggedIn ? `Completed (${completedMilestones.value.length})` : 'Completed' },
+  { key: 'completed', label: props.loggedIn ? `Completed ${completedMilestones.value.length}` : 'Completed' },
 ])
 
 interface MilestoneGroup {
@@ -146,14 +146,15 @@ function toggleSet(setId: string) {
 <template>
   <div class="milestone-list-view">
     <div class="milestone-list-view__controls">
-      <BaseTabs :tabs="viewTabs" :model-value="viewMode" @update:model-value="viewMode = $event" />
+      <BaseTabs class="milestone-list-view__tabs" :tabs="viewTabs" :model-value="viewMode"
+        @update:model-value="viewMode = $event" />
       <BaseSelect :model-value="activeSort" :options="sortOptions"
         @update:model-value="activeSort = $event as MilestoneSort" />
     </div>
 
-    <template v-if="loading">
-      <SkeletonLoader v-for="i in 3" :key="i" variant="card" />
-    </template>
+    <div v-if="loading" class="milestone-group">
+      <SkeletonLoader v-for="i in 8" :key="i" variant="text" height="24px" class="milestone-list-view__skeleton" />
+    </div>
 
     <div v-else-if="viewMode === 'completed' && !loggedIn" class="milestone-list-view__login-hint">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -169,8 +170,9 @@ function toggleSet(setId: string) {
     </p>
 
     <template v-else-if="isFlatSort">
-      <div class="milestone-set__rows milestone-set__rows--flat">
-        <MilestoneDetail v-for="m in activeMilestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
+      <div class="milestone-set__rows milestone-set__rows--flat stagger" :style="{ '--n': activeMilestones.length }">
+        <MilestoneDetail v-for="(m, i) in activeMilestones" :key="m.milestoneId" :style="{ '--i': i }"
+          :milestone="m" :logged-in="loggedIn"
           :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
           :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
           compact @pin-toggle="emit('pin-toggle', $event)" />
@@ -179,38 +181,43 @@ function toggleSet(setId: string) {
 
     <template v-else>
       <div v-for="dg in displayGroups" :key="dg.groupId" class="milestone-group">
-        <div v-if="dg.groupName" class="milestone-group__header">
+        <div v-if="dg.groupName">
           <h2 class="section-title">{{ dg.groupName }}</h2>
           <p v-if="dg.groupDescription" class="milestone-group__desc">{{ dg.groupDescription }}</p>
         </div>
 
-        <div v-for="ms in dg.sets" :key="ms.setId" class="milestone-set">
-          <button class="milestone-set__header" :aria-expanded="expandedSets.has(ms.setId)"
-            @click="toggleSet(ms.setId)">
-            <div class="milestone-set__info">
+        <div class="milestone-group__sets">
+          <div v-for="ms in dg.sets" :key="ms.setId" class="milestone-set">
+            <button class="milestone-set__header" :aria-expanded="expandedSets.has(ms.setId)"
+              @click="toggleSet(ms.setId)">
               <h3 class="milestone-set__title card-title">{{ ms.setTitle }}</h3>
               <span class="milestone-set__count">
-                {{ loggedIn ? `${ms.completedCount}/${ms.totalCount} completed` : `${ms.totalCount} milestones` }}
+                {{ loggedIn ? `${ms.completedCount} of ${ms.totalCount}` : `${ms.totalCount} milestones` }}
               </span>
-            </div>
-            <div class="milestone-set__meta">
-              <span v-if="ms.setBonusXp > 0" class="milestone-set__bonus">
-                +{{ ms.setBonusXp }} XP bonus
+              <span v-if="loggedIn" class="milestone-set__bar" aria-hidden="true">
+                <span class="milestone-set__bar-fill"
+                  :style="{ transform: `scaleX(${ms.completedCount / ms.totalCount})` }" />
               </span>
+              <span v-if="ms.setBonusXp > 0" class="milestone-set__bonus">+{{ ms.setBonusXp }} XP</span>
               <svg class="milestone-set__chevron"
                 :class="{ 'milestone-set__chevron--open': expandedSets.has(ms.setId) }" viewBox="0 0 20 20"
                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 aria-hidden="true">
                 <polyline points="6 8 10 12 14 8" />
               </svg>
-            </div>
-          </button>
+            </button>
 
-          <div v-if="expandedSets.has(ms.setId)" class="milestone-set__rows">
-            <MilestoneDetail v-for="m in ms.milestones" :key="m.milestoneId" :milestone="m" :logged-in="loggedIn"
-              :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
-              :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
-              compact @pin-toggle="emit('pin-toggle', $event)" />
+            <Transition name="milestone-set">
+              <div v-if="expandedSets.has(ms.setId)" class="milestone-set__body">
+                <div class="milestone-set__rows stagger" :style="{ '--n': ms.milestones.length }">
+                  <MilestoneDetail v-for="(m, i) in ms.milestones" :key="m.milestoneId" :style="{ '--i': i }"
+                    :milestone="m"
+                    :logged-in="loggedIn" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
+                    :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
+                    compact @pin-toggle="emit('pin-toggle', $event)" />
+                </div>
+              </div>
+            </Transition>
           </div>
         </div>
       </div>
@@ -232,6 +239,10 @@ function toggleSet(setId: string) {
   gap: var(--space-md);
 }
 
+.milestone-list-view__tabs {
+  flex: none;
+}
+
 .milestone-list-view__empty {
   padding: var(--space-3xl) var(--space-md);
   text-align: center;
@@ -245,7 +256,7 @@ function toggleSet(setId: string) {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-3xl) var(--space-md);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -255,14 +266,14 @@ function toggleSet(setId: string) {
   max-width: 320px;
 }
 
+.milestone-list-view__skeleton {
+  margin: var(--space-md) 0;
+}
+
 .milestone-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-}
-
-.milestone-group__header {
-  padding: var(--space-sm) 0;
+  gap: var(--space-sm);
 }
 
 .milestone-group__desc {
@@ -271,96 +282,121 @@ function toggleSet(setId: string) {
   margin: var(--space-xs) 0 0;
 }
 
-.milestone-set {
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: hidden;
+.milestone-group__sets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .milestone-set__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-md);
   width: 100%;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-md);
   border: none;
-  background: transparent;
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
   cursor: pointer;
   text-align: left;
   font-family: var(--font-sans);
-  transition: background-color 120ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .milestone-set__header:hover {
   background: var(--bg-elevated);
 }
 
-.milestone-set__info {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-md);
-}
-
 .milestone-set__count {
+  flex: 1;
   font-size: var(--text-caption);
   color: var(--text-secondary);
   font-family: var(--font-mono);
 }
 
-.milestone-set__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
+.milestone-set__bar {
+  width: 120px;
+  height: 2px;
+  background: var(--bg-overlay);
+  overflow: hidden;
+}
+
+.milestone-set__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--page-accent, var(--accent));
+  transform-origin: left;
 }
 
 .milestone-set__bonus {
+  min-width: 88px;
+  text-align: right;
   font-size: var(--text-caption);
-  color: var(--accent);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-weight: 500;
 }
 
 .milestone-set__chevron {
   width: 16px;
   height: 16px;
-  color: var(--text-tertiary);
-  transition: transform 150ms ease;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform var(--dur-fast) var(--ease-in-out);
 }
 
 .milestone-set__chevron--open {
   transform: rotate(180deg);
 }
 
+.milestone-set__body {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.milestone-set-enter-active {
+  transition: grid-template-rows var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out);
+}
+
+.milestone-set-leave-active {
+  transition: grid-template-rows var(--dur-exit) var(--ease-in), opacity var(--dur-exit) var(--ease-in);
+}
+
+.milestone-set-enter-from,
+.milestone-set-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
 .milestone-set__rows {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 var(--space-md);
+}
+
+.milestone-set__rows > :last-child {
+  margin-bottom: var(--space-md);
 }
 
 .milestone-set__rows--flat {
   padding: 0;
   gap: var(--space-sm);
+  overflow: visible;
+}
+
+.milestone-set__rows--flat > :last-child {
+  margin-bottom: 0;
 }
 
 @media (max-width: 767px) {
-  .milestone-set__header {
-    padding: var(--space-md);
+  .milestone-set__bar {
+    display: none;
   }
 
-  .milestone-set__info {
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .milestone-set__title {
-    font-size: var(--text-body);
-  }
-
-  .milestone-set__rows {
-    padding: var(--space-xs) var(--space-sm) var(--space-md);
-    gap: var(--space-sm);
+  .milestone-set__bonus {
+    min-width: 0;
   }
 }
 </style>

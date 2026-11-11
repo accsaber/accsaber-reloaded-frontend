@@ -446,7 +446,7 @@ watch(
           Map
         </BaseButton>
         <BaseButton v-for="replay in replayChain" :key="replay.provider" size="sm" :href="replay.url">
-          <img :src="replay.icon" :alt="replay.name" width="20" height="20" style="border-radius: 3px;"
+          <img :src="replay.icon" :alt="replay.name" width="20" height="20" class="score-detail__replay-icon"
             loading="lazy" decoding="async" />
           {{ replay.name }}
         </BaseButton>
@@ -457,15 +457,16 @@ watch(
             <polyline points="15 3 21 3 21 9" />
             <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
-          BeatLeader
+          Score Page
         </BaseButton>
       </div>
 
       <div class="score-detail__history">
-        <span class="score-detail__history-label">History</span>
+        <h3 class="card-title">History</h3>
         <TimeSeriesChart :data="chartPoints" :metric-label="selectedMetric" :accent-color="resolvedAccent"
           :available-metrics="SCORE_DETAIL_METRICS" :selected-metric="selectedMetric as MetricType"
           :selected-range="selectedRange" :format-value="chartFormatValue" ordinal
+          :y-max="selectedMetric === 'accuracy' ? 100 : undefined"
           @update:selected-metric="selectedMetric = $event as ScoreMetric"
           @update:selected-range="selectedRange = $event" />
       </div>
@@ -496,7 +497,7 @@ watch(
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: var(--radius-btn);
-  transition: color 120ms ease, background-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
   z-index: 3;
 }
 
@@ -612,8 +613,6 @@ watch(
   gap: var(--space-lg);
   align-items: center;
   padding: var(--space-md) 0;
-  border-top: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-overlay);
   position: relative;
   z-index: 1;
 }
@@ -630,7 +629,6 @@ watch(
   height: 112px;
   border-radius: var(--radius-card);
   object-fit: cover;
-  border: 1px solid var(--bg-overlay);
 }
 
 .score-detail__map-info {
@@ -651,7 +649,6 @@ watch(
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-  letter-spacing: -0.005em;
 }
 
 .score-detail__credits {
@@ -665,11 +662,11 @@ watch(
 }
 
 .score-detail__credits-sep {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .score-detail__credits-mapper {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .score-detail__chips {
@@ -685,8 +682,6 @@ watch(
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .score-detail__chip {
@@ -697,31 +692,21 @@ watch(
   font-size: 0.6875rem;
   font-weight: 600;
   color: var(--text-secondary);
-  padding: 2px 6px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  letter-spacing: 0.02em;
 }
 
 .score-detail__chip--fc {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 50%, transparent);
-  background: color-mix(in srgb, var(--success) 10%, transparent);
   font-family: var(--font-sans);
   font-weight: 700;
-  letter-spacing: 0.08em;
 }
 
 .score-detail__chip-sub {
-  color: color-mix(in srgb, var(--success) 80%, var(--text-primary));
   font-family: var(--font-mono);
   font-weight: 600;
-  letter-spacing: 0;
 }
 
 .score-detail__chip--mod {
   color: var(--detail-accent);
-  border-color: color-mix(in srgb, var(--detail-accent) 40%, transparent);
 }
 
 .score-detail__scores {
@@ -729,7 +714,6 @@ watch(
   align-items: center;
   gap: var(--space-xl);
   padding-left: var(--space-lg);
-  border-left: 1px solid var(--bg-overlay);
   align-self: stretch;
 }
 
@@ -748,7 +732,6 @@ watch(
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1;
-  letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -762,8 +745,6 @@ watch(
 .score-detail__metric-label {
   font-size: 0.6875rem;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   font-weight: 600;
 }
 
@@ -784,7 +765,7 @@ watch(
 }
 
 .score-detail__meta-sep {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .score-detail__meta-value {
@@ -798,8 +779,6 @@ watch(
   font-family: var(--font-sans);
   font-size: 0.625rem;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   margin-left: var(--space-xs);
   font-weight: 600;
 }
@@ -820,24 +799,15 @@ watch(
   align-items: baseline;
   gap: var(--space-xs);
   margin-left: auto;
-  padding: 2px var(--space-sm);
-  background: color-mix(in srgb, var(--detail-accent) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--detail-accent) 30%, var(--bg-overlay));
-  border-radius: var(--radius-btn);
   cursor: help;
   outline: none;
 }
 
-.score-detail__xp:hover,
-.score-detail__xp:focus-visible {
-  border-color: color-mix(in srgb, var(--detail-accent) 55%, var(--bg-overlay));
-}
-
 .score-detail__xp-help {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   align-self: center;
   margin-left: 2px;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .score-detail__xp:hover .score-detail__xp-help,
@@ -859,7 +829,7 @@ watch(
   gap: var(--space-xs);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
   transform: translateY(4px);
   z-index: 10;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
@@ -893,8 +863,6 @@ watch(
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   font-weight: 600;
 }
 
@@ -926,8 +894,6 @@ watch(
 .score-detail__xp-label {
   font-size: 0.625rem;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   font-weight: 600;
 }
 
@@ -940,7 +906,7 @@ watch(
 }
 
 .score-detail__xp-breakdown {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
@@ -964,7 +930,6 @@ watch(
   flex-direction: column;
   gap: var(--space-sm);
   padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
   position: relative;
   z-index: 1;
 }
@@ -975,14 +940,6 @@ watch(
 
 .score-detail__history :deep(.chart-skeleton) {
   height: 170px !important;
-}
-
-.score-detail__history-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
 
 @media (max-width: 768px) {
@@ -1009,10 +966,7 @@ watch(
 
   .score-detail__scores {
     grid-column: 1 / -1;
-    border-left: none;
-    border-top: 1px solid var(--bg-overlay);
     padding-left: 0;
-    padding-top: var(--space-md);
     justify-content: space-between;
   }
 
@@ -1044,5 +998,8 @@ watch(
   .score-detail__links :deep(.base-button) {
     flex: 1 1 auto;
   }
+}
+.score-detail__replay-icon {
+  border-radius: var(--radius-xs);
 }
 </style>

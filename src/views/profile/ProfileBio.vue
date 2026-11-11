@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProfileBioEditor from '@/views/profile/ProfileBioEditor.vue'
+import RichTextEditor from '@/components/common/RichTextEditor.vue'
 import ProfileFold from '@/views/profile/ProfileFold.vue'
 
 defineProps<{
@@ -9,19 +9,17 @@ defineProps<{
   canUseEffects: boolean
 }>()
 
-defineEmits<{
-  saved: [bio: string]
-  cancel: []
-}>()
+const draft = defineModel<string>('draft', { required: true })
 </script>
 
 <template>
   <section v-if="editing" class="profile-bio" aria-label="Edit bio">
-    <h2 class="profile-bio__label">About</h2>
-    <ProfileBioEditor :initial-bio="bio ?? ''" :max-chars="maxChars" :can-use-effects="canUseEffects"
-      @saved="$emit('saved', $event)" @cancel="$emit('cancel')" />
+    <RichTextEditor v-model="draft" aria-label="Bio" :allow-rich-effects="canUseEffects" />
+    <span class="profile-bio__counter" :class="{ 'profile-bio__counter--over': draft.length > maxChars }">
+      {{ draft.length.toLocaleString() }} / {{ maxChars.toLocaleString() }}
+    </span>
   </section>
-  <ProfileFold v-else-if="bio" class="profile-bio" label="About" storage-key="about" aria-label="About this player">
+  <ProfileFold v-else-if="bio" label="About" storage-key="about" aria-label="About this player">
     <div class="profile-bio__body" v-html="bio" />
   </ProfileFold>
 </template>
@@ -34,19 +32,22 @@ defineEmits<{
   padding-block: var(--space-sm) var(--space-md);
 }
 
-.profile-bio__label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  margin: 0;
+.profile-bio__counter {
+  align-self: flex-end;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.profile-bio__counter--over {
+  color: var(--error);
 }
 
 .profile-bio__body {
   color: var(--text-primary);
   font-size: var(--text-body);
   line-height: 1.65;
+  text-wrap: pretty;
 }
 
 .profile-bio__body :deep(*:first-child) {
@@ -89,7 +90,6 @@ defineEmits<{
   margin: 0.6em 0 1em;
   padding-left: var(--space-md);
   color: var(--text-secondary);
-  font-style: italic;
   border-left: 1px solid var(--bg-overlay);
 }
 
@@ -124,11 +124,10 @@ defineEmits<{
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
-  transition: opacity 120ms ease;
 }
 
 .profile-bio__body :deep(a:hover) {
-  opacity: 0.8;
+  text-decoration-thickness: 2px;
 }
 
 .profile-bio__body :deep(hr) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import ImageCropModal from '@/components/common/ImageCropModal.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PlayerTooltipTrigger from '@/components/domain/PlayerTooltipTrigger.vue'
@@ -8,6 +9,7 @@ import RelationActions from '@/components/domain/RelationActions.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
+import { IMAGE_ACCEPT, useImagePick } from '@/composables/useImagePick'
 import { useSyncSetting } from '@/composables/useSyncSetting'
 import type { EquippedItemsResponse, UserItemResponse } from '@/types/api/items'
 import type { SupporterStateResponse } from '@/types/api/supporters'
@@ -17,7 +19,7 @@ import NameHistoryPopover from '@/views/profile/NameHistoryPopover.vue'
 import ProfileBadgesRow from '@/views/profile/ProfileBadgesRow.vue'
 import ProfileXpTrend from '@/views/profile/ProfileXpTrend.vue'
 import SupporterProfileSection from '@/views/profile/SupporterProfileSection.vue'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 const props = defineProps<{
   user: UserResponse
@@ -30,12 +32,18 @@ const props = defineProps<{
   supporterState: SupporterStateResponse | null
   isSelfProfile: boolean
   isBlockedByMe: boolean
+  editing: boolean
+  saving: boolean
+  editError: string | null
 }>()
 
-const editMode = defineModel<boolean>('editMode', { required: true })
+const nameDraft = defineModel<string>('nameDraft', { required: true })
 
 const emit = defineEmits<{
-  renamed: [name: string]
+  edit: []
+  save: []
+  cancel: []
+  'avatar-changed': [user: UserResponse]
 }>()
 
 const { hideReloadedProfileFeatures } = useAppearance()
@@ -61,63 +69,27 @@ const heroUser = computed<UserRefDisplay>(() => ({
   clan: props.user.clan ?? null,
 }))
 
-const nameDraft = ref('')
-const nameSaving = ref(false)
-const nameError = ref<string | null>(null)
-const nameInputRef = ref<HTMLInputElement | null>(null)
+const nameSync = reactive(useSyncSetting('sync.name'))
+const avatarSync = reactive(useSyncSetting('sync.avatar'))
+const syncs = [
+  { label: 'Sync name from BeatLeader or ScoreSaber', setting: nameSync },
+  { label: 'Sync avatar from BeatLeader or ScoreSaber', setting: avatarSync },
+]
 
-const {
-  enabled: syncEnabled,
-  saving: syncSaving,
-  resyncQueued: syncResyncQueued,
-  fetch: fetchSyncSetting,
-  set: setSyncName,
-  reset: resetSyncNotice,
-} = useSyncSetting('sync.name')
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatar = reactive(useImagePick(async (file) => {
+  const { uploadMyAvatar } = await import('@/api/cdn')
+  emit('avatar-changed', await uploadMyAvatar(file))
+  avatarSync.fetch()
+}, () => true))
 
-watch(editMode, (editing) => {
-  nameError.value = null
-  if (editing) {
-    nameDraft.value = props.user.name
-    fetchSyncSetting()
-  } else {
-    resetSyncNotice()
+watch(() => props.editing, (editing) => {
+  avatar.error = null
+  for (const { setting } of syncs) {
+    if (editing) setting.fetch()
+    else setting.reset()
   }
 }, { immediate: true })
-
-function nameValidationError(name: string): string | null {
-  if (!name) return 'Name cannot be empty.'
-  if (name.length > 64) return 'Name must be 64 characters or fewer.'
-  return null
-}
-
-async function saveName() {
-  const trimmed = nameDraft.value.trim()
-  nameError.value = nameValidationError(trimmed)
-  if (nameError.value) return
-  if (trimmed === props.user.name) {
-    nameInputRef.value?.blur()
-    return
-  }
-  nameSaving.value = true
-  try {
-    const { updateMyProfile } = await import('@/api/users')
-    await updateMyProfile({ name: trimmed })
-    emit('renamed', trimmed)
-    nameInputRef.value?.blur()
-    fetchSyncSetting()
-  } catch (err) {
-    nameError.value = parseApiError(err, 'Could not save your name.').message
-  } finally {
-    nameSaving.value = false
-  }
-}
-
-function cancelNameEdit() {
-  nameDraft.value = props.user.name
-  nameError.value = null
-  nameInputRef.value?.blur()
-}
 </script>
 
 <template>
@@ -135,37 +107,34 @@ function cancelNameEdit() {
           :title-effects="titleEffects"
           :border-effects="borderEffects" />
       </PlayerTooltipTrigger>
-      <ProfileXpTrend v-if="!user.banned && !hideReloadedProfileFeatures" :stats-diff="statsDiff" />
+      <template v-if="editing">
+        <BaseButton size="sm" :loading="avatar.busy" @click="avatarInput?.click()">Change Avatar</BaseButton>
+        <p v-if="avatar.error" class="profile-hero__error" role="alert">{{ avatar.error }}</p>
+        <input ref="avatarInput" type="file" hidden :accept="IMAGE_ACCEPT" @change="avatar.pick" />
+        <ImageCropModal :file="avatar.cropping" @confirm="avatar.send" @close="avatar.cropping = null" />
+      </template>
+      <ProfileXpTrend v-else-if="!user.banned && !hideReloadedProfileFeatures" :stats-diff="statsDiff" />
     </div>
 
     <div class="profile-hero__details">
       <div class="profile-hero__top-row">
         <div class="profile-hero__name-col">
-          <div class="profile-hero__name-row">
-            <template v-if="editMode && isSelfProfile">
-              <input ref="nameInputRef" v-model="nameDraft" type="text" maxlength="64"
-                class="profile-hero__name profile-hero__name-input"
-                :class="{ 'profile-hero__name-input--error': !!nameError }"
-                :disabled="nameSaving" aria-label="Edit display name"
-                @keydown.enter.prevent="saveName" @keydown.escape.prevent="cancelNameEdit" />
+          <template v-if="editing">
+            <input v-model="nameDraft" type="text" maxlength="64" class="profile-hero__name profile-hero__name-input"
+              :disabled="saving" aria-label="Display name" @keydown.enter.prevent="emit('save')"
+              @keydown.escape.prevent="emit('cancel')" />
+            <template v-for="sync in syncs" :key="sync.label">
+              <BaseSwitch v-if="sync.setting.enabled !== null" :model-value="sync.setting.enabled"
+                :label="sync.setting.resyncQueued ? `${sync.label}, resyncs at 4 AM` : sync.label"
+                :disabled="sync.setting.saving" @update:model-value="sync.setting.set" />
             </template>
-            <UserChip v-else :user="heroUser" hide-avatar name-tag="h1" clan-effects class="profile-hero__name">
+          </template>
+          <template v-else>
+            <UserChip :user="heroUser" hide-avatar name-tag="h1" clan-effects class="profile-hero__name">
               <NameHistoryPopover :user-id="userId" :current-name="user.name" />
             </UserChip>
-            <span v-if="user.playerInactive && !user.banned" class="profile-hero__inactive-badge">Inactive</span>
-          </div>
-          <p v-if="editMode && nameError" class="profile-hero__name-error">{{ nameError }}</p>
-          <p v-else-if="editMode && isSelfProfile" class="profile-hero__name-hint">Press Enter to save your name.</p>
-
-          <div v-if="editMode && isSelfProfile && syncEnabled !== null" class="profile-hero__sync">
-            <label class="profile-hero__sync-row">
-              <input type="checkbox" class="profile-hero__sync-check"
-                :checked="syncEnabled" :disabled="syncSaving"
-                @change="setSyncName(($event.target as HTMLInputElement).checked)" />
-              <span class="profile-hero__sync-label">Sync display name from BeatLeader / ScoreSaber</span>
-            </label>
-            <p v-if="syncResyncQueued" class="profile-hero__sync-notice">Resyncs at 4 AM.</p>
-          </div>
+            <p v-if="user.playerInactive && !user.banned" class="profile-hero__meta">Inactive</p>
+          </template>
           <ProfileBadgesRow
             v-if="badges.length"
             :badges="badges"
@@ -175,18 +144,14 @@ function cancelNameEdit() {
         </div>
 
         <div class="profile-hero__top-right">
-          <div class="profile-hero__links">
-            <BaseButton v-if="isSelfProfile" size="sm"
-              :aria-label="editMode ? 'Exit edit mode' : 'Edit profile'"
-              :title="editMode ? 'Exit edit mode' : 'Edit profile'"
-              :variant="editMode ? 'primary' : 'default'"
-              @click="editMode = !editMode">
-              <svg v-if="editMode" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          <div v-if="editing" class="profile-hero__links">
+            <BaseButton size="sm" :disabled="saving" @click="emit('cancel')">Cancel</BaseButton>
+            <BaseButton size="sm" variant="primary" :loading="saving" @click="emit('save')">Save</BaseButton>
+          </div>
+          <div v-else class="profile-hero__links profile-hero__links--icons">
+            <BaseButton v-if="isSelfProfile" size="sm" aria-label="Edit profile" title="Edit profile"
+              @click="emit('edit')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
@@ -204,24 +169,20 @@ function cancelNameEdit() {
             </BaseButton>
             <RelationActions :target-user-id="userId" :target-name="user.name" show-snipe />
           </div>
+          <p v-if="editError" class="profile-hero__error" role="alert">{{ editError }}</p>
           <SupporterProfileSection
             v-if="supporterState"
             :state="supporterState"
             :is-self-profile="isSelfProfile"
             class="profile-hero__supporter"
           />
-          <p v-if="user.hmd" class="profile-hero__hmd">{{ user.hmd }}</p>
+          <p v-if="user.hmd && !editing" class="profile-hero__meta">{{ user.hmd }}</p>
         </div>
       </div>
 
-      <div v-if="user.banned || isBlockedByMe" class="profile-hero__banned">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-        </svg>
-        <span>{{ user.banned ? 'This account is banned.' : 'You blocked this player.' }}</span>
-      </div>
+      <p v-if="user.banned || isBlockedByMe" class="profile-hero__error">
+        {{ user.banned ? 'This account is banned' : 'You blocked this player' }}
+      </p>
 
       <slot v-else />
     </div>
@@ -231,11 +192,10 @@ function cancelNameEdit() {
 <style scoped>
 .profile-hero {
   --hero-avatar: 160px;
-  --hero-picker: 46px;
   position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
-  align-items: stretch;
+  align-items: start;
   gap: var(--space-xl);
   padding: var(--space-xl) 0 var(--space-lg);
 }
@@ -254,51 +214,11 @@ function cancelNameEdit() {
   mask-composite: intersect;
 }
 
-.profile-hero__top-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-  min-height: calc(var(--hero-avatar) - var(--space-md) - var(--hero-picker));
-}
-
-.profile-hero__top-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-sm);
-}
-
-.profile-hero__name-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
-.profile-hero__badges {
-  justify-content: flex-start !important;
-  max-width: none !important;
-}
-
-.profile-hero__hmd {
-  margin: 0;
-  font-size: var(--text-card-title);
-  color: var(--text-secondary);
-}
-
-.profile-hero .profile-hero__supporter {
-  justify-content: flex-end;
-  font-size: var(--text-card-title);
-}
-
 .profile-hero__level-col {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-sm);
-  flex-shrink: 0;
 }
 
 .profile-hero__level-col :deep(.level-badge__stack) {
@@ -314,34 +234,31 @@ function cancelNameEdit() {
 .profile-hero__details {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-md);
-  width: 100%;
+  gap: var(--space-lg);
   min-width: 0;
-  min-height: 100%;
 }
 
-.profile-hero__name-row {
+.profile-hero__top-row {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-sm);
-}
-
-.profile-hero__links {
-  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
   flex-wrap: wrap;
-  justify-content: flex-start;
+}
+
+.profile-hero__name-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-xs);
+  min-width: 0;
 }
 
-.profile-hero__links :deep(.base-button) {
-  padding: var(--space-sm);
-}
-
-.profile-hero__links :deep(.base-button :is(svg, img)) {
-  width: 18px;
-  height: 18px;
+.profile-hero__name {
+  font-size: calc(var(--text-page-title) * 1.15);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .profile-hero .profile-hero__name :deep(.user-chip__clan) {
@@ -352,112 +269,62 @@ function cancelNameEdit() {
   font-size: 1.875rem;
 }
 
-.profile-hero .profile-hero__name :deep(.name-history__toggle) {
-  width: 22px;
-  height: 22px;
-}
-
-.profile-hero__name {
-  font-size: calc(var(--text-page-title) * 1.15);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
 .profile-hero__name-input {
-  display: inline-block;
-  min-width: 200px;
+  width: min(100%, 420px);
   padding: 0;
   background: transparent;
   border: none;
-  border-bottom: 2px dashed var(--bg-overlay);
+  border-bottom: 2px solid var(--bg-overlay);
   font-family: var(--font-sans);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
-.profile-hero__name-input:focus,
-.profile-hero__name-input:hover {
+.profile-hero__name-input:focus {
   border-bottom-color: var(--accent);
 }
 
-.profile-hero__name-input--error,
-.profile-hero__name-input--error:focus {
-  border-bottom-color: var(--error);
+.profile-hero__meta {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--text-secondary);
 }
 
-.profile-hero__name-hint {
+.profile-hero__error {
   margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.profile-hero__name-error {
-  margin: 0;
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: var(--error);
 }
 
-.profile-hero__sync {
+.profile-hero__badges {
+  justify-content: flex-start !important;
+  max-width: none !important;
+}
+
+.profile-hero__top-right {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  margin-top: var(--space-xs);
-  max-width: 480px;
-}
-
-.profile-hero__sync-row {
-  display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-sm);
-  cursor: pointer;
-  font-size: var(--text-caption);
-  color: var(--text-primary);
 }
 
-.profile-hero__sync-check {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.profile-hero__sync-check:disabled {
-  cursor: progress;
-}
-
-.profile-hero__sync-label {
-  font-weight: 500;
-}
-
-.profile-hero__sync-notice {
-  margin: 0;
-  padding-left: 22px;
-  font-size: var(--text-caption);
-  color: var(--accent);
-}
-
-.profile-hero__banned {
+.profile-hero__links {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
-  border-radius: var(--radius-card);
-  color: var(--error);
-  font-size: var(--text-body);
-  font-weight: 500;
+  gap: var(--space-xs);
 }
 
-.profile-hero__inactive-badge {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  background: color-mix(in srgb, var(--bg-overlay) 60%, transparent);
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--bg-overlay);
-  letter-spacing: 0.03em;
+.profile-hero__links--icons :deep(.base-button) {
+  padding: var(--space-sm);
+}
+
+.profile-hero__links--icons :deep(.base-button :is(svg, img)) {
+  width: 18px;
+  height: 18px;
+}
+
+.profile-hero .profile-hero__supporter {
+  justify-content: flex-end;
+  font-size: var(--text-card-title);
 }
 
 .profile-hero__platform-icon {
@@ -466,7 +333,7 @@ function cancelNameEdit() {
 
 @media (max-width: 767px) {
   .profile-hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     justify-items: center;
     text-align: center;
     gap: var(--space-md);
@@ -475,24 +342,8 @@ function cancelNameEdit() {
 
   .profile-hero > .profile-hero__details {
     position: static;
-  }
-
-  .profile-hero__top-row {
-    min-height: 0;
-  }
-
-  .profile-hero__top-right {
     align-items: center;
-  }
-
-  .profile-hero__links {
-    position: absolute;
-    top: var(--space-sm);
-    right: 0;
-  }
-
-  .profile-hero__details {
-    align-items: center;
+    width: 100%;
   }
 
   .profile-hero__top-row {
@@ -507,8 +358,14 @@ function cancelNameEdit() {
     align-items: center;
   }
 
-  .profile-hero__name-row {
-    justify-content: center;
+  .profile-hero__top-right {
+    align-items: center;
+  }
+
+  .profile-hero__links {
+    position: absolute;
+    top: var(--space-sm);
+    right: 0;
   }
 
   .profile-hero .profile-hero__supporter {
@@ -517,11 +374,6 @@ function cancelNameEdit() {
 
   .profile-hero__badges {
     justify-content: center !important;
-  }
-
-  .profile-hero__links {
-    flex-wrap: nowrap;
-    justify-content: flex-end;
   }
 }
 </style>

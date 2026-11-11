@@ -72,38 +72,31 @@ function onPin() {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--bg-overlay);
+  border: none;
   border-radius: var(--radius-btn);
   background: transparent;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: pointer;
   text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
 .row-actions__btn:hover:not(:disabled):not(.row-actions__btn--disabled) {
+  background: var(--bg-overlay);
   color: var(--text-primary);
-  border-color: var(--text-tertiary);
 }
 
 .row-actions__btn--active {
-  color: var(--accent, var(--accent-overall));
-  border-color: color-mix(in srgb, var(--accent, var(--accent-overall)) 50%, var(--bg-overlay));
-  background: color-mix(in srgb, var(--accent, var(--accent-overall)) 10%, transparent);
-}
-
-.row-actions__btn--active:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent, var(--accent-overall)) 18%, transparent);
+  color: var(--accent);
 }
 
 .row-actions__btn--disabled {
-  opacity: 0.35;
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
 .row-actions__btn:disabled {
   cursor: progress;
-  opacity: 0.6;
 }
 
 .row-actions__replay {

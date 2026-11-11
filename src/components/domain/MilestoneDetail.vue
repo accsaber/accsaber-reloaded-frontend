@@ -196,7 +196,7 @@ function toggleExpand() {
 <style scoped>
 .milestone-detail {
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
+  border: 1px solid transparent;
   border-radius: var(--radius-card);
   padding: var(--space-lg) var(--space-lg);
   display: flex;
@@ -211,7 +211,7 @@ function toggleExpand() {
 }
 
 .milestone-detail:not(.milestone-detail--compact) .milestone-detail__badge {
-  animation: milestone-badge-in 240ms cubic-bezier(0.25, 1, 0.5, 1);
+  animation: milestone-badge-in var(--dur-enter) var(--ease-out);
 }
 
 @keyframes milestone-badge-in {
@@ -249,18 +249,20 @@ function toggleExpand() {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: lowercase;
   color: var(--tier-color);
+}
+
+.milestone-detail__tier::first-letter {
+  text-transform: uppercase;
 }
 
 .milestone-detail__kind {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
+  text-transform: lowercase;
+  color: var(--text-secondary);
 }
 
 .milestone-detail__desc {
@@ -427,7 +429,8 @@ function toggleExpand() {
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 .milestone-detail__pin:hover {
@@ -457,7 +460,7 @@ function toggleExpand() {
   height: 16px;
   flex-shrink: 0;
   color: var(--text-tertiary);
-  transition: transform 150ms ease;
+  transition: transform var(--dur-fast) var(--ease-in-out);
 }
 
 .milestone-detail--expanded .milestone-detail__chevron {
@@ -475,7 +478,7 @@ function toggleExpand() {
 .milestone-detail__dropdown {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 200ms ease;
+  transition: grid-template-rows var(--dur-enter) var(--ease-in-out);
 }
 
 .milestone-detail__dropdown--open {
@@ -516,7 +519,7 @@ function toggleExpand() {
   border-radius: var(--radius-xs);
   transform-origin: left;
   transform: scaleX(var(--progress, 0));
-  transition: transform 300ms ease-out;
+  transition: transform var(--dur-enter) var(--ease-out);
 }
 
 .milestone-detail__progress-row {

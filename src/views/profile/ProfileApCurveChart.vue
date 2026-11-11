@@ -91,6 +91,11 @@ async function fetchCurves() {
   loading.value = false
 }
 
+function axisFloor(series: { ap: number[] }[]): number {
+  const sorted = series.flatMap((curve) => curve.ap).sort((a, b) => a - b)
+  return Math.floor(sorted[Math.floor(sorted.length * 0.05)] / 50) * 50
+}
+
 function buildChart(): ChartConfiguration<'line'> {
   const series = plotted.value
   const theme = readChartTheme()
@@ -130,7 +135,7 @@ function buildChart(): ChartConfiguration<'line'> {
         x: {
           type: 'linear' as const,
           min: 1,
-          title: { display: true, text: 'Nth Score', color: theme.text, font: theme.font },
+          title: { display: true, text: 'Nth score', color: theme.text, font: theme.font },
           grid: { color: theme.grid },
           ticks: {
             color: theme.text,
@@ -141,6 +146,7 @@ function buildChart(): ChartConfiguration<'line'> {
           },
         },
         y: {
+          min: axisFloor(series),
           title: { display: true, text: 'Raw AP', color: theme.text, font: theme.font },
           grid: { color: theme.grid },
           ticks: {
@@ -192,6 +198,7 @@ watch(plotted, () => {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  align-items: center;
   gap: var(--space-sm);
 }
 

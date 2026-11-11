@@ -9,13 +9,12 @@ const RANGE_KEY = 'profile:stats:range'
 export const STATS_CHART_METRICS: {
   key: MetricType
   label: string
-  colorVar: string
-  invertY?: boolean
+  colorVar?: string
 }[] = [
-  { key: 'ap', label: 'AP', colorVar: '--tier-apex' },
-  { key: 'avgAccuracy', label: 'Avg Accuracy', colorVar: '--success' },
-  { key: 'rankedPlays', label: 'Ranked Plays', colorVar: '--info' },
-  { key: 'rank', label: 'Rank', colorVar: '--tier-gold', invertY: true },
+  { key: 'ap', label: 'AP' },
+  { key: 'avgAccuracy', label: 'Avg Accuracy', colorVar: '--tier-platinum' },
+  { key: 'rankedPlays', label: 'Ranked Plays', colorVar: '--tier-silver' },
+  { key: 'rank', label: 'Rank', colorVar: '--tier-apex' },
 ]
 
 const METRIC_KEYS = STATS_CHART_METRICS.map((m) => m.key)

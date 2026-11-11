@@ -104,6 +104,7 @@ function onKeydown(e: KeyboardEvent) {
 .base-tabs {
   position: relative;
   display: flex;
+  overflow-y: clip;
 }
 
 .base-tabs__indicator {
@@ -158,7 +159,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .base-tabs--underline .base-tabs__indicator {
-  top: calc(var(--tab-h) - 2px);
+  top: calc(var(--tab-h) - 3px);
   height: 3px;
   background: var(--tab-accent);
 }

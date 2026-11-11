@@ -57,14 +57,11 @@ watch(
 
 <template>
   <CratePreviewModal
-    :open="open"
+    :open="open && !loading"
     :crate="crate"
     :contents="contents"
-    :contents-loading="loading"
     :modifiers="modifiers"
-    :modifiers-loading="loading"
     :effects="effects"
-    :effects-loading="loading"
     @close="$emit('close')"
   />
 </template>

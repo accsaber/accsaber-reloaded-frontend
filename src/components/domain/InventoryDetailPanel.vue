@@ -231,7 +231,7 @@ const choiceGroups = computed<ChoiceGroup[]>(() => {
   }
   return groups
 })
-const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value || untradeable.value)
+const showActions = computed(() => showEquipActions.value || showDownload.value || showDisintegrate.value)
 const obtainableSentence = computed(() =>
   item.value ? obtainableUntilSentence(item.value) : null,
 )
@@ -285,7 +285,6 @@ const sourceLabel = computed(() => {
     </div>
 
     <div class="inv-detail__head">
-      <span class="field-label">{{ typeName }}</span>
       <h3 class="section-title" :style="itemNameStyle">
         <span v-if="locked" class="inv-detail__name-lock" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -296,7 +295,10 @@ const sourceLabel = computed(() => {
         </span>
         {{ fullItemName }}
       </h3>
-      <span class="inv-detail__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
+      <span class="inv-detail__kind">
+        <span class="inv-detail__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
+        {{ typeName }}
+      </span>
     </div>
 
     <p v-if="item.description" class="inv-detail__description">{{ item.description }}</p>
@@ -407,6 +409,10 @@ const sourceLabel = computed(() => {
           <dt>Source</dt>
           <dd>{{ sourceLabel }}</dd>
         </div>
+        <div v-if="untradeable" class="inv-detail__row">
+          <dt>Trading</dt>
+          <dd>Untradeable</dd>
+        </div>
         <div v-if="userItem.crate" class="inv-detail__row">
           <dt>Collection</dt>
           <dd>
@@ -443,7 +449,7 @@ const sourceLabel = computed(() => {
       </div>
     </dl>
 
-    <div v-if="locked" class="inv-detail__pill">
+    <div v-if="locked" class="inv-detail__state">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
@@ -452,7 +458,7 @@ const sourceLabel = computed(() => {
       Not in your inventory
     </div>
 
-    <div v-if="!locked && item.deprecated" class="inv-detail__notice">This item has been deprecated.</div>
+    <p v-if="!locked && item.deprecated" class="inv-detail__notice">This item has been deprecated</p>
 
     <div v-if="showActions" class="inv-detail__actions">
       <div class="inv-detail__actions-row">
@@ -489,13 +495,7 @@ const sourceLabel = computed(() => {
         >
           Unequip
         </BaseButton>
-        <span v-else-if="showEquipActions" class="inv-detail__pill inv-detail__pill--accent">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Equipped
-        </span>
+        <BaseButton v-else-if="showEquipActions" size="md" disabled>Equipped</BaseButton>
 
         <BaseButton
           v-if="showDisintegrate"
@@ -507,15 +507,6 @@ const sourceLabel = computed(() => {
           Disintegrate
           <span class="inv-detail__essence-yield">· +{{ formatEssence(disintegrateEssence) }}</span>
         </BaseButton>
-
-        <span v-if="untradeable" class="inv-detail__pill" aria-label="Untradeable">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-          </svg>
-          Untradeable
-        </span>
       </div>
     </div>
   </div>
@@ -532,7 +523,6 @@ const sourceLabel = computed(() => {
   gap: var(--space-md);
   padding: var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
@@ -540,7 +530,7 @@ const sourceLabel = computed(() => {
   align-items: center;
   justify-content: center;
   min-height: 240px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-caption);
   text-align: center;
 }
@@ -554,8 +544,7 @@ const sourceLabel = computed(() => {
   aspect-ratio: 1 / 1;
   max-height: 220px;
   background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 
@@ -576,12 +565,15 @@ const sourceLabel = computed(() => {
   gap: var(--space-xs);
 }
 
-.inv-detail__rarity {
+.inv-detail__kind {
   font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.inv-detail__rarity {
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rarity-color, var(--text-tertiary));
+  color: var(--rarity-color);
+  text-transform: capitalize;
 }
 
 .inv-detail__description {
@@ -596,9 +588,6 @@ const sourceLabel = computed(() => {
   flex-direction: column;
   gap: var(--space-xs);
   margin: 0;
-  padding: var(--space-sm) 0;
-  border-top: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-overlay);
 }
 
 .inv-detail__row {
@@ -610,8 +599,6 @@ const sourceLabel = computed(() => {
 
 .inv-detail__row dt {
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .inv-detail__row dd {
@@ -631,7 +618,7 @@ const sourceLabel = computed(() => {
   font: inherit;
   text-align: right;
   cursor: pointer;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .inv-detail__collection:hover {
@@ -679,7 +666,8 @@ const sourceLabel = computed(() => {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .inv-detail__choice:hover:not(:disabled) {
@@ -694,10 +682,7 @@ const sourceLabel = computed(() => {
 }
 
 .inv-detail__notice {
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--warning) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-  border-radius: var(--radius-card);
+  margin: 0;
   color: var(--warning);
   font-size: var(--text-caption);
 }
@@ -731,36 +716,22 @@ const sourceLabel = computed(() => {
 
 .inv-detail__essence-yield {
   font-variant-numeric: tabular-nums;
-  opacity: 0.85;
 }
 
 .inv-detail__name-lock {
   display: inline-flex;
   align-items: center;
   margin-right: var(--space-xs);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   vertical-align: -2px;
 }
 
-.inv-detail__pill {
+.inv-detail__state {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
   gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--bg-base) 60%, transparent);
-}
-
-.inv-detail__pill--accent {
-  font-weight: 600;
-  color: var(--accent);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text-secondary);
 }
 </style>

@@ -157,3 +157,13 @@ export function hashString(str: string): number {
   }
   return Math.abs(hash)
 }
+
+export const XP_SOURCES = [
+  { label: 'Score', color: 'var(--xp-score)', total: 'totalScoreXp', diff: 'scoreXpDiff' },
+  { label: 'Milestone', color: 'var(--xp-milestone)', total: 'totalMilestoneXp', diff: 'milestoneXpDiff' },
+  { label: 'Set Bonus', color: 'var(--xp-set-bonus)', total: 'totalMilestoneSetBonusXp', diff: 'milestoneSetBonusXpDiff' },
+  { label: 'Mission', color: 'var(--xp-mission)', total: 'totalMissionXp', diff: 'missionXpDiff' },
+  { label: 'Campaign', color: 'var(--xp-campaign)', total: 'totalCampaignXp', diff: 'campaignXpDiff' },
+  { label: 'Event', color: 'var(--xp-event)', total: 'totalEventXp', diff: 'eventXpDiff' },
+  { label: 'Clan', color: 'var(--xp-clan)', total: 'totalClanXp', diff: 'clanXpDiff' },
+] as const

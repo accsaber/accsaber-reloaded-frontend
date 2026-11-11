@@ -59,7 +59,6 @@ interface Tile {
   count: number
   type: ScoreRelationType
   direction: RelationDirection
-  modalTitle: string
 }
 
 const tiles = computed<Tile[]>(() => {
@@ -72,7 +71,6 @@ const tiles = computed<Tile[]>(() => {
       count: c.followingCount,
       type: 'follower',
       direction: 'outgoing',
-      modalTitle: 'Following',
     })
   }
   result.push({
@@ -81,7 +79,6 @@ const tiles = computed<Tile[]>(() => {
     count: c.followerCount,
     type: 'follower',
     direction: 'incoming',
-    modalTitle: 'Followers',
   })
   if (c.rivalCount !== undefined) {
     result.push({
@@ -90,7 +87,6 @@ const tiles = computed<Tile[]>(() => {
       count: c.rivalCount,
       type: 'rival',
       direction: 'outgoing',
-      modalTitle: 'Rivaling',
     })
   }
   result.push({
@@ -99,7 +95,6 @@ const tiles = computed<Tile[]>(() => {
     count: c.rivaledByCount,
     type: 'rival',
     direction: 'incoming',
-    modalTitle: 'Rivaled by',
   })
   return result
 })
@@ -144,7 +139,7 @@ function close() {
       :user-id="userId"
       :type="activeTile?.type ?? 'follower'"
       :direction="activeTile?.direction ?? 'outgoing'"
-      :title="activeTile?.modalTitle ?? ''"
+      :title="activeTile?.label ?? ''"
       @close="close"
       @removed="handleRemoved"
     />
@@ -158,7 +153,6 @@ function close() {
   align-items: baseline;
   justify-content: flex-start;
   gap: var(--space-md) var(--space-lg);
-  padding-top: var(--space-sm);
 }
 
 .relation-counts__tile {
@@ -171,7 +165,7 @@ function close() {
   cursor: pointer;
   font: inherit;
   color: var(--text-secondary);
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .relation-counts__tile:hover:not(:disabled) {
@@ -203,14 +197,18 @@ function close() {
   font-weight: 600;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .relation-counts__label {
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   color: inherit;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+@media (max-width: 767px) {
+  .relation-counts {
+    justify-content: center;
+  }
 }
 </style>

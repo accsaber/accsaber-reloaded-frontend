@@ -18,7 +18,8 @@ const display = computed(() => {
   if (delta.value === 0) return '\u2014'
   const arrow = delta.value > 0 ? '\u25B2' : '\u25BC'
   const sign = delta.value > 0 ? '+' : ''
-  return `${arrow} ${sign}${delta.value}`
+  const amount = Number.isInteger(delta.value) ? delta.value : delta.value.toFixed(2)
+  return `${arrow} ${sign}${amount}`
 })
 </script>
 

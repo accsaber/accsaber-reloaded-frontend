@@ -110,21 +110,20 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
 
 .crate-contents__title {
   font-size: var(--text-caption);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
 .crate-contents__count {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .crate-contents__chevron {
   margin-left: auto;
   flex-shrink: 0;
-  color: var(--text-tertiary);
-  transition: transform 150ms ease;
+  color: var(--text-secondary);
+  transition: transform var(--dur-fast) var(--ease-in-out);
 }
 
 .crate-contents__chevron--open {
@@ -136,20 +135,12 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   color: var(--text-primary);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .crate-contents__chevron {
-    transition: none;
-  }
-}
-
 .crate-contents__mystery {
   margin: 0;
   padding: var(--space-md);
   text-align: center;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-caption);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
 }
 
 .crate-contents__list {
@@ -157,17 +148,8 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   flex-direction: column;
   margin: 0;
   padding: 0;
+  gap: var(--space-sm);
   list-style: none;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: hidden;
-}
-
-.crate-contents__group {
-}
-
-.crate-contents__group + .crate-contents__group {
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .crate-contents__group-head {
@@ -175,16 +157,17 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--bg-elevated);
+  padding: var(--space-xs) 0;
 }
 
 .crate-contents__group-rarity {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--rarity-color);
+}
+
+.crate-contents__group-rarity::first-letter {
   text-transform: uppercase;
-  color: var(--rarity-color, var(--text-tertiary));
 }
 
 .crate-contents__group-chance {
@@ -206,11 +189,7 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
-}
-
-.crate-contents__row + .crate-contents__row {
-  border-top: 1px solid color-mix(in srgb, var(--bg-overlay) 60%, transparent);
+  padding: var(--space-xs) 0;
 }
 
 .crate-contents__art {
@@ -221,8 +200,7 @@ const groups = computed(() => groupCrateContentsByRarity(props.contents))
   width: 36px;
   height: 36px;
   background: var(--bg-base);
-  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 35%, var(--bg-overlay));
-  border-radius: var(--radius-input);
+  border-radius: var(--radius-xs);
   overflow: hidden;
 }
 

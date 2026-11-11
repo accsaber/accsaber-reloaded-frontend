@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { getCdnLimits, type CdnLimits } from '@/api/cdn'
 import { parseApiError } from '@/api/client'
 import ImageCropModal from '@/components/common/ImageCropModal.vue'
-import { computed, onMounted, ref } from 'vue'
+import { IMAGE_ACCEPT, useImagePick } from '@/composables/useImagePick'
+import { computed, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
   imageUrl: string | null
@@ -19,79 +19,19 @@ const props = withDefaults(defineProps<{
   disabled: false,
 })
 
-const limits = ref<CdnLimits | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
-const busy = ref(false)
-const err = ref<string | null>(null)
-const cropping = ref<File | null>(null)
+const { busy, error: err, cropping, pick: onPick, send: upload } = useImagePick(
+  (file) => props.uploadHandler(file),
+  () => props.crop,
+)
 const cropAspect = computed(() => {
   const [w, h = 1] = props.aspectRatio.split('/').map(Number)
   return w / h || 1
 })
 
-onMounted(async () => {
-  try {
-    limits.value = await getCdnLimits()
-  } catch {
-    /* limits will validate server-side on upload */
-  }
-})
-
 function trigger() {
   if (props.disabled || busy.value) return
   fileInput.value?.click()
-}
-
-function validate(file: File): string | null {
-  if (limits.value) {
-    if (file.size > limits.value.maxUploadBytes) {
-      const mb = (limits.value.maxUploadBytes / 1_048_576).toFixed(1)
-      return `File is too large. Max ${mb} MB.`
-    }
-    if (!limits.value.allowedMimeTypes.includes(file.type)) {
-      return `Unsupported format. Use ${limits.value.allowedMimeTypes
-        .map((m) => m.replace('image/', ''))
-        .join(', ')}.`
-    }
-  }
-  return null
-}
-
-async function onPick(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  const issue = validate(file)
-  if (issue) {
-    err.value = issue
-    return
-  }
-  err.value = null
-  if (props.crop && !(await isAnimated(file))) cropping.value = file
-  else await upload(file)
-}
-
-async function isAnimated(file: File): Promise<boolean> {
-  if (file.type === 'image/gif') return true
-  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer())
-  const ascii = String.fromCharCode(...head)
-  if (file.type === 'image/webp') return ascii.slice(12, 16) === 'VP8X' && (head[20] & 0x02) !== 0
-  if (file.type === 'image/avif') return ascii.includes('avis')
-  return false
-}
-
-async function upload(file: File) {
-  cropping.value = null
-  busy.value = true
-  err.value = null
-  try {
-    await props.uploadHandler(file)
-  } catch (e) {
-    err.value = parseApiError(e, 'Upload failed.').message
-  } finally {
-    busy.value = false
-  }
 }
 
 async function onRemove() {
@@ -106,8 +46,6 @@ async function onRemove() {
     busy.value = false
   }
 }
-
-const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
 </script>
 
 <template>
@@ -148,7 +86,7 @@ const acceptList = 'image/avif,image/gif,image/jpeg,image/png,image/webp'
     <p v-if="err" class="image-uploader__error" role="alert">{{ err }}</p>
 
     <input ref="fileInput" type="file" class="image-uploader__file"
-      :accept="acceptList" @change="onPick" />
+      :accept="IMAGE_ACCEPT" @change="onPick" />
 
     <ImageCropModal v-if="crop" :file="cropping" :aspect="cropAspect" @confirm="upload" @close="cropping = null" />
   </div>

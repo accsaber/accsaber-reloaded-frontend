@@ -21,7 +21,7 @@ const props = withDefaults(
     userId?: string | null
     emptyMessage?: string
   }>(),
-  { userId: null, emptyMessage: 'No campaigns match these filters.' },
+  { userId: null, emptyMessage: 'No campaigns yet' },
 )
 
 const auth = useAuthStore()
@@ -49,12 +49,19 @@ const { runs, loading, error, page, totalPages } = useUserCampaigns(
   filters,
 )
 
+const filtered = computed(() => {
+  const { search, official, curated, loved, tagIds, progressStatus } = controls.value
+  return !!search || official || curated || loved || tagIds.length > 0 || progressStatus.length > 0
+})
+
+const empty = computed(() => !loading.value && !error.value && runs.value.length === 0)
+
 onMounted(loadTags)
 </script>
 
 <template>
   <div class="user-campaigns">
-    <div class="user-campaigns__controls">
+    <div v-if="filtered || !empty" class="user-campaigns__controls">
       <SearchBox v-model="controls.search" class="user-campaigns__search"
         placeholder="Search title or creator..." />
       <CampaignFilterBar v-model="controls" :tags="tags"
@@ -67,11 +74,11 @@ onMounted(loadTags)
       <SkeletonLoader v-for="i in 4" :key="i" variant="card" />
     </div>
 
-    <EmptyState v-else-if="!error && runs.length === 0" :message="emptyMessage" />
+    <EmptyState v-else-if="empty" :message="filtered ? 'No campaigns match these filters' : emptyMessage" />
 
-    <div v-else class="user-campaigns__grid">
-      <CampaignRow v-for="run in runs" :key="run.id" :campaign="run.campaign" :progress="run"
-        :viewing-user-id="viewingUserId" />
+    <div v-else class="user-campaigns__grid stagger" :style="{ '--n': runs.length }">
+      <CampaignRow v-for="(run, i) in runs" :key="run.id" :style="{ '--i': i }" :campaign="run.campaign"
+        :progress="run" :viewing-user-id="viewingUserId" />
     </div>
 
     <div v-if="totalPages > 1 && !loading" class="user-campaigns__pagination">

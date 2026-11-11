@@ -27,7 +27,9 @@ const narrow = useMediaQuery(INVENTORY_NARROW_QUERY)
     </div>
 
     <BaseModal v-if="narrow" :open="detailOpen" :title="detailTitle" @close="$emit('closeDetail')">
-      <slot name="detail" />
+      <div class="inv-layout__sheet">
+        <slot name="detail" />
+      </div>
     </BaseModal>
     <aside v-else class="inv-layout__detail">
       <slot name="detail" />
@@ -54,6 +56,11 @@ const narrow = useMediaQuery(INVENTORY_NARROW_QUERY)
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: var(--space-md);
+}
+
+.inv-layout__sheet :deep(.inv-detail) {
+  padding: 0;
+  background: transparent;
 }
 
 .inv-layout__detail {

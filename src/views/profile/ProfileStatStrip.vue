@@ -3,7 +3,6 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import type { StatsDiffResponse, UserCategoryStatisticsResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
-import { getRankClass } from '@/utils/ranking'
 import ApToNextTooltip from '@/views/profile/ApToNextTooltip.vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -81,21 +80,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="tabsRef" class="profile-stats__category-tabs">
+  <div ref="tabsRef" class="profile-stats__tabs">
     <CategoryTabs v-model="category" :exclude="['xp']" />
   </div>
 
   <div class="profile-stats">
-    <StatBlock label="Total AP" :value="stats?.ap ?? 0" :trend="statsDiff?.apDiff">
+    <StatBlock class="profile-stats__ap" label="Total AP" :value="stats?.ap ?? 0" :trend="statsDiff?.apDiff">
       <template #label-suffix>
         <ApToNextTooltip :user-id="userId" :category="category" />
       </template>
     </StatBlock>
     <component :is="cell.to ? RouterLink : 'div'" v-for="cell in rankCells" :key="cell.label"
-      v-bind="cell.to ? { to: cell.to } : {}" class="profile-stats__rank-block">
+      v-bind="cell.to ? { to: cell.to } : {}" class="profile-stats__link">
       <StatBlock :label="cell.label" :value="cell.value" :decimals="0" :trend="cell.trend" />
-      <span v-if="cell.value && cell.value <= 3" class="profile-stats__rank-badge"
-        :class="getRankClass(cell.value)">#{{ cell.value }}</span>
     </component>
     <StatBlock label="Ranked Plays" :value="stats?.rankedPlays ?? 0" :decimals="0"
       :trend="statsDiff?.rankedPlaysDiff" />
@@ -103,112 +100,59 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.profile-stats__category-tabs {
+.profile-stats__tabs {
   display: flex;
-  justify-content: flex-start;
-  margin-top: var(--space-xs);
 }
 
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin-top: auto;
-  border-top: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.profile-stats > * + * {
-  border-inline-start: 1px solid var(--bg-overlay);
+  gap: var(--space-md);
 }
 
 .profile-stats :deep(.stat-block) {
-  padding: var(--space-md) var(--space-lg);
-  gap: var(--space-xs);
+  padding: 0;
 }
 
 .profile-stats :deep(.stat-block__value) {
+  font-size: var(--text-stat-lg);
+  line-height: 1.2;
+}
+
+.profile-stats__ap :deep(.stat-block__value) {
   font-size: 2rem;
-  line-height: 1;
-  letter-spacing: -0.01em;
+  line-height: 0.9;
 }
 
-.profile-stats :deep(.stat-block__label) {
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.profile-stats__rank-block {
-  position: relative;
+.profile-stats__link {
   color: inherit;
   text-decoration: none;
-  transition: background-color 120ms ease;
 }
 
-a.profile-stats__rank-block:hover {
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-}
-
-a.profile-stats__rank-block:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
-}
-
-.profile-stats__rank-badge {
-  position: absolute;
-  top: var(--space-xs);
-  right: var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: var(--radius-pill);
-  letter-spacing: 0.02em;
+a.profile-stats__link:hover :deep(.stat-block__label) {
+  color: var(--accent);
 }
 
 @media (max-width: 767px) {
-  .profile-stats__category-tabs {
+  .profile-stats__tabs {
     width: 100%;
   }
 
-  .profile-stats__category-tabs :deep(.base-tabs) {
+  .profile-stats__tabs :deep(.base-tabs) {
     flex-wrap: nowrap;
     justify-content: space-between;
-    gap: 0;
     width: 100%;
   }
 
-  .profile-stats__category-tabs :deep(.base-tabs.base-tabs--segmented .base-tabs__tab) {
+  .profile-stats__tabs :deep(.base-tabs.base-tabs--segmented .base-tabs__tab) {
     padding-inline: var(--space-xs);
-    font-size: 0.8125rem;
     white-space: nowrap;
   }
-}
 
-@media (max-width: 599px) {
   .profile-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .profile-stats > * + * {
-    border-inline-start: none;
-  }
-
-  .profile-stats > *:nth-child(n + 3) {
-    border-block-start: 1px solid var(--bg-overlay);
-  }
-
-  .profile-stats :deep(.stat-block__value) {
-    font-size: 1.625rem;
-  }
-}
-
-@media (max-width: 379px) {
-  .profile-stats__category-tabs :deep(.base-tabs.base-tabs--segmented .base-tabs__tab) {
-    padding-inline: 2px;
-    font-size: 0.75rem;
+    width: 100%;
+    text-align: start;
   }
 }
 </style>

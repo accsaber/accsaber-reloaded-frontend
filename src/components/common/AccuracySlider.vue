@@ -99,7 +99,7 @@ const wholeTrack = computed({
   flex: 1;
   height: 4px;
   appearance: none;
-  background: var(--bg-overlay);
+  background: var(--bg-base);
   border-radius: var(--radius-xs);
   outline: none;
   cursor: pointer;
@@ -118,7 +118,7 @@ const wholeTrack = computed({
   background: var(--accent, var(--text-primary));
   border: 2px solid var(--bg-elevated);
   cursor: pointer;
-  transition: transform 100ms ease;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .acc-slider__input::-webkit-slider-thumb:hover {

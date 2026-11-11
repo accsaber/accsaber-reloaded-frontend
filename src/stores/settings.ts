@@ -7,6 +7,7 @@ import type {
   SettingsBag,
 } from '@/types/api/settings'
 import { DEFAULT_SCORE_ROW_FIELDS } from '@/utils/scoreRowFields'
+import { readStored, writeStored, writeStoredString } from '@/utils/storage'
 import { defineStore } from 'pinia'
 import { ref, type Ref } from 'vue'
 
@@ -36,15 +37,21 @@ const CLAN_DEFAULTS: ClanSettings = {
 }
 
 function settingsGroup<T extends SettingsBag>(group: SettingGroup, defaults: T, saveError: string) {
-  const values = ref({ ...defaults }) as Ref<T>
+  const cacheKey = `settings:${group}`
+  const cached = readStored<Partial<T>>(cacheKey, (raw) => (raw && typeof raw === 'object' ? raw as Partial<T> : null), {})
+  const values = ref({ ...defaults, ...cached }) as Ref<T>
+
+  function apply(next: Partial<T>) {
+    values.value = { ...defaults, ...next }
+    writeStored(cacheKey, next)
+  }
   const loaded = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
 
   async function fetch(): Promise<void> {
     try {
-      const res = await (await api()).getMySettingsGroup<T>(group)
-      values.value = { ...defaults, ...res }
+      apply(await (await api()).getMySettingsGroup<T>(group))
       loaded.value = true
     } catch {
       loaded.value = false
@@ -60,8 +67,7 @@ function settingsGroup<T extends SettingsBag>(group: SettingGroup, defaults: T, 
     try {
       const patch: Partial<T> = {}
       patch[key] = value
-      const fresh = await (await api()).patchMySettingsGroup<T>(group, patch)
-      values.value = { ...defaults, ...fresh }
+      apply(await (await api()).patchMySettingsGroup<T>(group, patch))
       return true
     } catch (err) {
       values.value = { ...values.value, [key]: previous }
@@ -74,6 +80,7 @@ function settingsGroup<T extends SettingsBag>(group: SettingGroup, defaults: T, 
 
   function reset() {
     values.value = { ...defaults }
+    writeStoredString(cacheKey, null)
     loaded.value = false
     error.value = null
   }
