@@ -38,7 +38,7 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
   <div class="feed-card" :style="{ '--card-accent': accent }"
     role="button" tabindex="0" @click="emit('select', entry)" @keydown.enter.self="emit('select', entry)">
     <span class="rank feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
-    <CoverImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48"
+    <CoverImage v-if="entry.coverUrl" class="feed-card__cover" :src="entry.coverUrl" :alt="entry.mapName" :size="48"
       :fallback-src="entry.coverFallbackUrl ?? null" />
 
     <div class="feed-card__info">
@@ -191,18 +191,46 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 
 @media (max-width: 767px) {
   .feed-card {
-    grid-template-columns: 2.5rem 48px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr);
     gap: var(--space-sm) var(--space-md);
   }
 
-  .feed-card__stats {
-    grid-column: 1 / -1;
-    grid-template-columns: auto auto 1fr;
+  .feed-card__cover {
+    grid-area: 1 / 1;
+  }
+
+  .feed-card__info {
+    grid-area: 1 / 2;
+  }
+
+  .feed-card__rank {
+    grid-area: 2 / 1;
+    align-self: baseline;
     text-align: left;
+  }
+
+  .feed-card__stats {
+    grid-area: 2 / 2;
+    grid-template-columns: auto auto 1fr;
+    align-self: baseline;
+    text-align: left;
+  }
+
+  .feed-card__line {
+    flex-wrap: wrap;
+    row-gap: 2px;
   }
 
   .feed-card__line--end {
     grid-column: auto;
+  }
+
+  .feed-card__player {
+    max-width: 100%;
+  }
+
+  .feed-card__mapper {
+    flex-basis: 100%;
   }
 }
 </style>

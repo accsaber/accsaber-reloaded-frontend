@@ -139,4 +139,11 @@ watch(page, fetchScores, { immediate: true })
   place-content: center;
   color: var(--text-secondary);
 }
+
+@media (max-width: 767px) {
+  .home-feed__list {
+    grid-auto-rows: auto;
+    min-height: 0;
+  }
+}
 </style>
