@@ -15,7 +15,7 @@ withDefaults(
     <span v-if="subName" class="song-title__sub">{{ subName }}</span>
   </span>
   <span v-else
-    >{{ name }}<span v-if="subName" class="song-title__sub-inline">{{ ` ${subName}` }}</span></span
+    ><span class="song-title__name-inline">{{ name }}</span><span v-if="subName" class="song-title__sub-inline">{{ ` ${subName}` }}</span></span
   >
 </template>
 

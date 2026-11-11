@@ -83,7 +83,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  max-width: 1030px;
+  max-width: 1200px;
   min-height: calc(100svh - var(--navbar-height) - var(--space-xl) * 2);
   margin: 0 auto;
   width: 100%;

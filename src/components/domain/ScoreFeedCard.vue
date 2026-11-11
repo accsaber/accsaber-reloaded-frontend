@@ -37,12 +37,14 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 <template>
   <div class="feed-card" :style="{ '--card-accent': accent }"
     role="button" tabindex="0" @click="emit('select', entry)" @keydown.enter.self="emit('select', entry)">
+    <span class="rank feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
     <CoverImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48"
       :fallback-src="entry.coverFallbackUrl ?? null" />
 
     <div class="feed-card__info">
       <span class="feed-card__title">
-        <SongTitle class="feed-card__song" :name="entry.mapName" :sub-name="entry.mapSubName" />
+        <SongTitle class="feed-card__song" :class="{ 'feed-card__song--sub': entry.mapSubName }"
+          :name="entry.mapName" :sub-name="entry.mapSubName" />
         <DifficultyBadge :difficulty="entry.rawDifficulty ?? entry.difficulty" />
       </span>
       <span class="feed-card__line">
@@ -59,7 +61,6 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
       <span class="feed-card__ap">{{ entry.ap.toFixed(2) }} AP</span>
       <span class="feed-card__line feed-card__line--end">
         <template v-if="!compact">
-          <span :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
           <span>{{ entry.score.toLocaleString() }}</span>
           <span>115s: {{ entry.streak115 }}</span>
           <span v-if="isFC" class="feed-card__fc">FC</span>
@@ -76,7 +77,7 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 <style scoped>
 .feed-card {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 2.5rem 48px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
   min-height: 64px;
@@ -91,6 +92,10 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 .feed-card:focus-visible {
   background: var(--bg-elevated);
   outline: none;
+}
+
+.feed-card__rank {
+  text-align: right;
 }
 
 .feed-card__info {
@@ -139,6 +144,14 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
   color: var(--text-primary);
 }
 
+.feed-card__song--sub {
+  color: var(--text-secondary);
+}
+
+.feed-card__song--sub :deep(.song-title__name-inline) {
+  color: var(--text-primary);
+}
+
 .feed-card__mapper {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -146,7 +159,7 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 
 .feed-card__stats {
   display: grid;
-  grid-template-columns: auto 6.5rem;
+  grid-template-columns: auto 6rem;
   align-items: baseline;
   gap: 2px var(--space-sm);
   text-align: right;
@@ -178,7 +191,7 @@ const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 
 @media (max-width: 767px) {
   .feed-card {
-    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-columns: 2.5rem 48px minmax(0, 1fr);
     gap: var(--space-sm) var(--space-md);
   }
 

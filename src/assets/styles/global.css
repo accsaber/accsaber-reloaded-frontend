@@ -113,6 +113,13 @@ h1 {
   pointer-events: none;
 }
 
+.rank {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .rank--gold {
   color: var(--tier-gold);
   font-weight: 700;

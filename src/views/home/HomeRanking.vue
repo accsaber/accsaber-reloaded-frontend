@@ -100,7 +100,7 @@ watch(page, fetchRanking, { immediate: true })
       :empty-message="emptyMessage"
     >
       <template #cell-rank="{ value }">
-        <span class="home-ranking__rank" :class="getRankClass(value as number)">#{{ value }}</span>
+        <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
       </template>
 
       <template #cell-player="{ row }">
@@ -118,7 +118,7 @@ watch(page, fetchRanking, { immediate: true })
 
       <template #mobile-card="{ row }">
         <RouterLink :to="playerRoute(row)" class="home-ranking__card">
-          <span class="home-ranking__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
+          <span class="rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
           <UserChip :user="(row.player as UserRefDisplay)" size="sm" hide-clan class="home-ranking__player" />
           <span class="home-ranking__ap">{{ (row.ap as number).toFixed(2) }}</span>
         </RouterLink>
@@ -176,12 +176,6 @@ watch(page, fetchRanking, { immediate: true })
 .home-ranking :deep(.data-table__cell-link) {
   padding-left: var(--space-sm);
   padding-right: var(--space-sm);
-}
-
-.home-ranking__rank {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--text-secondary);
 }
 
 .home-ranking__player {
