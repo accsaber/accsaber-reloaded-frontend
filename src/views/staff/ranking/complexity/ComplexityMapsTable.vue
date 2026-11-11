@@ -268,7 +268,7 @@ function rowClass(row: Record<string, unknown>) {
   background: color-mix(in srgb, var(--bg-surface) 93%, var(--warning) 7%);
 }
 
-.complexity-maps :deep(.data-table__row.complexity-maps__row--moved:nth-child(even)) {
+.complexity-maps :deep(.data-table__row--alt.complexity-maps__row--moved) {
   background: color-mix(in srgb, var(--bg-elevated) 93%, var(--warning) 7%);
 }
 

@@ -135,24 +135,25 @@ a.profile-stats__link:hover :deep(.stat-block__label) {
 
 @media (max-width: 767px) {
   .profile-stats__tabs {
-    width: 100%;
+    justify-content: center;
+    max-width: 100%;
   }
 
   .profile-stats__tabs :deep(.base-tabs) {
     flex-wrap: nowrap;
-    justify-content: space-between;
-    width: 100%;
-  }
-
-  .profile-stats__tabs :deep(.base-tabs.base-tabs--segmented .base-tabs__tab) {
-    padding-inline: var(--space-xs);
-    white-space: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .profile-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-lg) var(--space-md);
     width: 100%;
-    text-align: start;
+  }
+
+  .profile-stats :deep(.stat-block) {
+    align-items: center;
   }
 }
 </style>

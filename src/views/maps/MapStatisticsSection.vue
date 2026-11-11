@@ -287,7 +287,7 @@ watch(selectedRange, fetchHistoricStats)
   cursor: pointer;
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-btn);
-  transition: background 120ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .map-stats__top-row:hover {
@@ -296,7 +296,6 @@ watch(selectedRange, fetchHistoricStats)
 
 .map-stats__top-row--current {
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
 }
 
 .map-stats__top-player {
@@ -319,7 +318,7 @@ watch(selectedRange, fetchHistoricStats)
 
 .map-stats__top-date {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -360,7 +359,7 @@ watch(selectedRange, fetchHistoricStats)
 
 .map-stats__break-date {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .map-stats__complexity-list {
@@ -380,7 +379,7 @@ watch(selectedRange, fetchHistoricStats)
 
 .map-stats__complexity-date {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   min-width: 100px;
 }
 

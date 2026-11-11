@@ -208,6 +208,8 @@ function close() {
 
 @media (max-width: 767px) {
   .relation-counts {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
     justify-content: center;
   }
 }

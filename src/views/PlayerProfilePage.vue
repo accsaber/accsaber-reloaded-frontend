@@ -407,7 +407,7 @@ watch(activeCategory, () => {
   align-items: center;
   gap: var(--space-lg);
   --accent: var(--page-accent, var(--accent-overall));
-  --page-column: clamp(1280px, var(--scores-column, 1280px), var(--page-width-wide));
+  --page-column: max(1280px, var(--scores-column, 1280px));
 }
 
 .profile-page>*:not(.profile-page__bg):not(.profile-page__cat-dock) {
@@ -553,6 +553,11 @@ watch(activeCategory, () => {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+.profile-page__scores-tools :deep(.spl__btn),
+.profile-page__scores-tools :deep(.search-box) {
+  height: var(--control-h);
 }
 
 

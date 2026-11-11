@@ -69,3 +69,14 @@ export function buildScoreColumns(
     .filter((col): col is TableColumn => !!col)
   return [...(layout.leading ?? []), ...configured, ...(layout.trailing ?? [])]
 }
+
+export const SCORE_FIELD_COLUMNS = {
+  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '76px' },
+  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '100px' },
+  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '64px' },
+  max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
+  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '84px' },
+  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '76px' },
+  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '84px' },
+  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '84px' },
+} satisfies Partial<Record<ScoreRowField, TableColumn>>

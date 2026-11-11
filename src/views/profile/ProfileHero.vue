@@ -337,11 +337,10 @@ watch(() => props.editing, (editing) => {
     justify-items: center;
     text-align: center;
     gap: var(--space-md);
-    padding: calc(var(--space-xl) + 36px) 0 var(--space-md);
+    padding: var(--space-lg) 0 var(--space-md);
   }
 
   .profile-hero > .profile-hero__details {
-    position: static;
     align-items: center;
     width: 100%;
   }
@@ -363,9 +362,8 @@ watch(() => props.editing, (editing) => {
   }
 
   .profile-hero__links {
-    position: absolute;
-    top: var(--space-sm);
-    right: 0;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .profile-hero .profile-hero__supporter {

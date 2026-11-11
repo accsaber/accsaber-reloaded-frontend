@@ -3,6 +3,7 @@ import CoverImage from '@/components/common/CoverImage.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
+import ScoreRowActions from '@/components/domain/ScoreRowActions.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { useAppearance } from '@/composables/useAppearance'
@@ -17,7 +18,6 @@ import { toScoreDisplay } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { getRankClass } from '@/utils/ranking'
 import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
-import ScoreRowActions from '@/views/profile/ScoreRowActions.vue'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -78,6 +78,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 })
 
 const loading = ref(false)
+const refreshing = ref(false)
 const scoreData = ref<Page<ScoreResponse> | null>(null)
 
 const detailOpen = ref(false)
@@ -169,7 +170,8 @@ let requestId = 0
 
 async function fetchScores() {
   const id = ++requestId
-  loading.value = true
+  loading.value = !scoreData.value
+  refreshing.value = !loading.value
   try {
     const { getUserScores } = await import('@/api/users')
     const page = await getUserScores(props.userId, scoreParams.value)
@@ -177,7 +179,10 @@ async function fetchScores() {
   } catch {
     if (id === requestId) scoreData.value = null
   }
-  if (id === requestId) loading.value = false
+  if (id === requestId) {
+    loading.value = false
+    refreshing.value = false
+  }
 }
 
 function scoreRowTo(row: Record<string, unknown>) {
@@ -216,7 +221,8 @@ watch(
 
 <template>
   <div class="scores-tab">
-    <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="8"
+    <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
+      :loading-rows="8"
       :page="currentPage" :total-pages="totalPages" row-clickable :row-to="scoreRowTo" row-key="mapDifficultyId"
       medal-ranks
       :empty-message="props.search ? `No maps matching &quot;${props.search}&quot;` : 'No scores found'" @sort="setSort"

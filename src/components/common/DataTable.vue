@@ -3,7 +3,7 @@ import { useMediaQuery } from '@/composables/useMediaQuery';
 import type { SortState, TableColumn } from '@/types/display';
 import { formatSortGlyph } from '@/utils/formatters';
 import { columnWidth, tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
-import { computed, ref, useSlots, watch } from 'vue';
+import { computed, onUnmounted, ref, shallowRef, useSlots, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
 import DataTableCardFallback from './DataTableCardFallback.vue';
@@ -21,6 +21,7 @@ const props = defineProps<{
   emptyMessage?: string
   rowClass?: (row: Record<string, unknown>, index: number) => string | Record<string, boolean> | undefined
   dense?: boolean
+  refreshing?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -34,20 +35,81 @@ const skeletonCount = computed(() => props.loadingRows ?? 5)
 const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
 const mobile = useMediaQuery(() => tableCardQuery(props.columns))
-const rowHrefs = computed(() => props.rows.map(resolveRowHref))
 const MAX_SLIDING_ROWS = 10
-const fresh = ref(true)
-const generation = ref(0)
+const shown = shallowRef(props.rows)
+const rowHrefs = computed(() => shown.value.map(resolveRowHref))
+const staleFrom = ref<number | null>(null)
+const cascade = ref(true)
+const batches = new WeakMap<Record<string, unknown>, number>()
+let batch = 0
+let swapTimer: ReturnType<typeof setTimeout> | undefined
 
-watch(() => props.rows, (next, prev) => {
+function swapStep(count: number): number {
+  const style = getComputedStyle(document.documentElement)
+  const stagger = parseFloat(style.getPropertyValue('--stagger'))
+  const total = parseFloat(style.getPropertyValue('--stagger-total'))
+  return Math.min(stagger, total / count)
+}
+
+function stamp(rows: Record<string, unknown>[]) {
+  for (const row of rows) batches.set(row, batch)
+}
+
+function renderKey(row: Record<string, unknown>, index: number): string {
+  return `${batches.get(row) ?? 0}:${resolveRowKey(row, index)}`
+}
+
+function swapRows(next: Record<string, unknown>[]) {
+  const step = swapStep(next.length)
+  let index = 0
+  cascade.value = false
+  batch++
+  stamp(next)
+  const advance = () => {
+    index++
+    if (index === next.length) {
+      shown.value = next
+      staleFrom.value = null
+      return
+    }
+    const rows = shown.value.slice()
+    rows[index - 1] = next[index - 1]
+    shown.value = rows
+    staleFrom.value = index
+    swapTimer = setTimeout(advance, step)
+  }
+  advance()
+}
+
+watch(() => props.rows, (next) => {
+  clearTimeout(swapTimer)
+  const prev = shown.value
   const previous = new Map(prev.map((row, index) => [resolveRowKey(row, index), index]))
   const positions = next.map((row, index) => previous.get(resolveRowKey(row, index)))
   const kept = positions.filter((position) => position !== undefined).length
   const moved = positions.filter((position, index) => position !== undefined && position !== index).length
-  if (kept === next.length && next.length === prev.length && moved === 0) return
-  fresh.value = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
-  if (fresh.value) generation.value++
+  const replaced = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!replaced || still || !prev.length || !next.length) {
+    stamp(next)
+    shown.value = next
+    staleFrom.value = null
+    cascade.value = !prev.length
+  } else {
+    swapRows(next)
+  }
 })
+
+watch(() => props.refreshing, (refreshing) => {
+  if (refreshing) staleFrom.value = 0
+  else if (shown.value === props.rows) staleFrom.value = null
+})
+
+onUnmounted(() => clearTimeout(swapTimer))
+
+function isStale(index: number): boolean {
+  return staleFrom.value !== null && index >= staleFrom.value
+}
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
   if (!props.rowKey) return index
@@ -105,16 +167,16 @@ function sortIcon(col: TableColumn): string {
             </th>
           </tr>
         </thead>
-        <TransitionGroup :key="generation" tag="tbody" name="row" :class="{ stagger: fresh }"
-          :style="{ '--n': rows.length }">
+        <TransitionGroup tag="tbody" name="row" class="stagger" :style="{ '--n': shown.length }">
           <template v-if="loading">
-            <tr v-for="i in skeletonCount" :key="'skel-' + i" class="data-table__row">
+            <tr v-for="i in skeletonCount" :key="'skel-' + i" class="data-table__row"
+              :class="{ 'data-table__row--alt': i % 2 === 0 }">
               <td v-for="col in columns" :key="col.key" class="data-table__td">
                 <SkeletonLoader variant="text" />
               </td>
             </tr>
           </template>
-          <template v-else-if="rows.length === 0">
+          <template v-else-if="shown.length === 0">
             <tr key="empty">
               <td :colspan="columns.length" class="data-table__empty">
                 <slot name="empty">
@@ -124,9 +186,13 @@ function sortIcon(col: TableColumn): string {
             </tr>
           </template>
           <template v-else>
-            <tr v-for="(row, index) in rows" :key="resolveRowKey(row, index)" class="data-table__row"
-              :class="[{ 'data-table__row--clickable': rowClickable || !!rowTo }, rowClass?.(row, index)]"
-              :style="{ '--i': index }"
+            <tr v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table__row"
+              :class="[{
+                'data-table__row--clickable': rowClickable || !!rowTo,
+                'data-table__row--alt': index % 2 === 1,
+                'data-table__row--stale': isStale(index),
+              }, rowClass?.(row, index)]"
+              :style="{ '--i': cascade ? index : 0 }"
               @click="handleRowClick(row, index, $event)">
               <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
                 'data-table__td--mono': col.mono,
@@ -152,19 +218,21 @@ function sortIcon(col: TableColumn): string {
       <template v-if="loading">
         <SkeletonLoader v-for="i in skeletonCount" :key="'skel-card-' + i" variant="card" />
       </template>
-      <template v-else-if="rows.length === 0">
+      <template v-else-if="shown.length === 0">
         <div class="data-table__empty-card">
           <slot name="empty">{{ emptyMessage ?? 'No data available' }}</slot>
         </div>
       </template>
       <template v-else-if="slots['mobile-card']">
-        <div v-for="(row, index) in rows" :key="resolveRowKey(row, index)" class="data-table-cards__custom">
+        <div v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table-cards__custom"
+          :class="{ 'data-table__row--stale': isStale(index) }">
           <slot name="mobile-card" :row="row" :index="index" />
         </div>
       </template>
       <template v-else>
-        <DataTableCardFallback v-for="(row, index) in rows" :key="resolveRowKey(row, index)" :columns="columns"
-          :row="row" :clickable="rowClickable" @click="emit('rowClick', row, index)">
+        <DataTableCardFallback v-for="(row, index) in shown" :key="renderKey(row, index)" :columns="columns"
+          :row="row" :clickable="rowClickable" :class="{ 'data-table__row--stale': isStale(index) }"
+          @click="emit('rowClick', row, index)">
           <template v-for="col in columns" :key="col.key" #[`cell-${col.key}`]="slotProps">
             <slot :name="`cell-${col.key}`" :row="slotProps.row" :value="slotProps.value" :index="index">
               {{ slotProps.value }}
@@ -249,6 +317,7 @@ function sortIcon(col: TableColumn): string {
 
 .data-table__row {
   height: 48px;
+  background: var(--bg-surface);
   border-left: 2px solid transparent;
   transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
@@ -270,13 +339,15 @@ function sortIcon(col: TableColumn): string {
 
 .row-leave-active {
   display: none;
+  transition: none;
 }
 
-.data-table__row:nth-child(odd) {
-  background: var(--bg-surface);
+.data-table__row--stale {
+  opacity: 0.25;
+  pointer-events: none;
 }
 
-.data-table__row:nth-child(even) {
+.data-table__row--alt {
   background: var(--bg-elevated);
 }
 

@@ -27,7 +27,6 @@ const stats = computed(() => buildChartStats(props.source))
   grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: var(--space-xs) var(--space-md);
   padding: var(--space-sm) 0;
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .chart-stats__item {
@@ -38,17 +37,14 @@ const stats = computed(() => buildChartStats(props.source))
 }
 
 .chart-stats__label {
-  font-size: 0.5625rem;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .chart-stats__value {
   font-family: var(--font-mono);
   font-size: var(--text-stat-inline);
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 </style>

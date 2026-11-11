@@ -3,22 +3,21 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import RelationFilter from '@/components/domain/RelationFilter.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
+import ScoreRowActions from '@/components/domain/ScoreRowActions.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useAppearance } from '@/composables/useAppearance'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
-import type { ScoreRowField } from '@/types/api/settings'
 import type { UserRelationType } from '@/types/api/relations'
-import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, TableColumn, UserRefDisplay } from '@/types/display'
+import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, UserRefDisplay } from '@/types/display'
 import { countryOptionsFor } from '@/utils/countries'
 import { formatAccuracy, formatPlayCount, formatRelativeDate } from '@/utils/formatters'
 import { toDifficultyScoreDisplay } from '@/utils/mappers'
 import { getRankClass } from '@/utils/ranking'
 import { resolveReplay, type ResolvedReplay } from '@/utils/replay'
-import { buildScoreColumns } from '@/utils/scoreRowFields'
-import { tableNaturalWidth } from '@/utils/tableLayout'
+import { useMapScoreColumns } from '@/views/maps/useMapScoreColumns'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -37,7 +36,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'top-scores-loaded': [scores: DifficultyScoreDisplay[]]
-  'width-change': [width: number]
 }>()
 
 const authStore = useAuthStore()
@@ -46,7 +44,6 @@ const modifierStore = useModifierStore()
 const {
   primaryReplayService,
   fallbackReplayService,
-  scoreRowFields,
   isScoreFieldVisible,
 } = useAppearance()
 
@@ -85,55 +82,15 @@ const relationFilter = ref<UserRelationType | ''>('')
 const scores = ref<DifficultyScoreDisplay[]>([])
 const totalPages = ref(0)
 const loading = ref(true)
+const refreshing = ref(false)
 
 const detailOpen = ref(false)
 const detailScore = ref<ScoreDisplay | null>(null)
 const detailUserId = ref('')
 
-const showStreak115 = computed(() =>
-  sortState.value.key === 'streak115' || scores.value.some((s) => s.streak115 != null && s.streak115 > 0),
-)
-
 const filtering = computed(() => !!countryFilter.value || !!relationFilter.value)
 
-const leadingColumns = computed<TableColumn[]>(() => [
-  { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: filtering.value ? '150px' : '80px' },
-  { key: 'player', label: 'Player', align: 'left', width: '240px', flex: true },
-  { key: 'score', label: 'Score', sortable: true, align: 'right', mono: true, width: '108px' },
-])
-
-const TRAILING_COLUMNS: TableColumn[] = [
-  { key: 'detail', label: '', align: 'center', width: '84px', noLink: true },
-]
-
-const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
-  accuracy: { key: 'accuracy', label: 'Acc', sortable: true, align: 'right', mono: true, width: '76px' },
-  ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '84px' },
-  weighted_ap: { key: 'weighted', label: 'Weighted', sortable: true, align: 'right', mono: true, width: '100px' },
-  streak_115: { key: 'streak115', label: '115s', sortable: true, align: 'right', mono: true, width: '64px' },
-  max_streak_115: { key: 'maxStreak115', label: 'Max', sortable: true, align: 'right', mono: true, width: '64px' },
-  pauses: { key: 'pauses', label: 'Pauses', sortable: true, align: 'right', mono: true, width: '84px' },
-  play_count: { key: 'playCount', label: 'Plays', sortable: true, align: 'right', mono: true, width: '76px' },
-  last_played_at: { key: 'lastPlayedAt', label: 'Played', sortable: true, align: 'right', width: '84px' },
-  date: { key: 'date', label: 'Date', sortable: true, align: 'right', width: '84px' },
-}
-
-const columns = computed(() =>
-  buildScoreColumns(scoreRowFields.value, {
-    leading: leadingColumns.value,
-    trailing: TRAILING_COLUMNS,
-    fields: {
-      ...FIELD_COLUMNS,
-      streak_115: showStreak115.value ? FIELD_COLUMNS.streak_115 : null,
-    },
-  }),
-)
-
-watch(
-  columns,
-  (cols) => emit('width-change', tableNaturalWidth(cols)),
-  { immediate: true },
-)
+const columns = useMapScoreColumns(() => filtering.value)
 
 const rows = computed(() => {
   const pageOffset = (paginationParams.value.page ?? 0) * (paginationParams.value.size ?? 50)
@@ -174,9 +131,7 @@ function playerRowTo(row: Record<string, unknown>) {
   return { name: 'player-profile', params: { userId: row._userId as string } }
 }
 
-function openDetail(userId: string, event: Event) {
-  event.preventDefault()
-  event.stopPropagation()
+function openDetail(userId: string) {
   const s = scores.value.find((sc) => sc.userId === userId)
   if (!s) return
   detailUserId.value = s.userId
@@ -235,7 +190,8 @@ let awaitingPageReset = false
 async function fetchScores() {
   const { difficultyId, params } = scoresRequest.value
   const id = ++requestId
-  loading.value = true
+  loading.value = !scores.value.length
+  refreshing.value = !loading.value
   try {
     const { getDifficultyScores } = await import('@/api/maps')
     const res = await getDifficultyScores(difficultyId, params)
@@ -261,6 +217,7 @@ async function fetchScores() {
     totalPages.value = 0
   }
   loading.value = false
+  refreshing.value = false
 }
 
 watch([searchQuery, countryFilter, relationFilter], () => {
@@ -285,7 +242,8 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
       <SearchBox v-model="searchQuery" placeholder="Search players..." />
     </div>
 
-    <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
+    <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
+      :loading-rows="10"
       :page="currentPage" :total-pages="totalPages" medal-ranks row-clickable :row-to="playerRowTo"
       row-key="_userId" :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort"
       @update:page="setPage">
@@ -319,21 +277,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
       </template>
 
       <template #cell-detail="{ row }">
-        <div class="map-scores__actions">
-          <a v-if="rowReplay(row)" class="map-scores__detail-btn"
-            :href="rowReplay(row)!.url" target="_blank" rel="noopener noreferrer"
-            :aria-label="rowReplay(row)!.label" :title="rowReplay(row)!.label" @click.stop>
-            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" class="map-scores__replay-icon" loading="lazy" decoding="async" />
-          </a>
-          <button class="map-scores__detail-btn" aria-label="View score details"
-            @click="openDetail(row._userId as string, $event)">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
+        <ScoreRowActions :replay="rowReplay(row)" @detail="openDetail(row._userId as string)" />
       </template>
 
       <template #mobile-card="{ row }">
@@ -360,19 +304,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
               / {{ (row.weighted as number).toFixed(2) }}
             </span>
           </div>
-          <a v-if="rowReplay(row)" class="ms-card__detail-btn"
-            :href="rowReplay(row)!.url" target="_blank" rel="noopener noreferrer"
-            :aria-label="rowReplay(row)!.label" :title="rowReplay(row)!.label" @click.stop>
-            <img :src="rowReplay(row)!.icon" alt="" width="14" height="14" class="map-scores__replay-icon" loading="lazy" decoding="async" />
-          </a>
-          <button class="ms-card__detail-btn" aria-label="View score details"
-            @click.stop="openDetail(row._userId as string, $event)">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 11L5.5 5L8 8L10.5 4L14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
-          </button>
+          <ScoreRowActions :replay="rowReplay(row)" stacked @detail="openDetail(row._userId as string)" />
         </router-link>
       </template>
     </ScoreTable>
@@ -395,50 +327,21 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
   gap: var(--space-sm);
 }
 
+.map-scores__controls :deep(.base-select__trigger),
+.map-scores__controls :deep(.search-box),
+.map-scores__controls :deep(.filter-button) {
+  height: var(--control-h);
+}
+
 .map-scores__rank-global {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-weight: 400;
   margin-left: 2px;
 }
 
 .map-scores__muted {
-  color: var(--text-tertiary);
-}
-
-.map-scores__actions {
-  display: inline-flex;
-  gap: var(--space-xs);
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-}
-
-.map-scores__detail-btn {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.map-scores__detail-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.map-scores__replay-icon {
-  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
 }
 
 .map-scores :deep(.data-table__row.data-table__row--self-highlight) {
@@ -451,17 +354,11 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   cursor: pointer;
   min-height: 48px;
-  transition: border-color 120ms ease;
   text-decoration: none;
   color: inherit;
-}
-
-.ms-card:hover {
-  border-color: var(--text-tertiary);
 }
 
 .ms-card__rank {
@@ -496,7 +393,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
 
 .ms-card__date {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -522,30 +419,9 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
 .ms-card__weighted {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   justify-self: end;
   white-space: nowrap;
-}
-
-.ms-card__detail-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  flex-shrink: 0;
-  text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.ms-card__detail-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
 }
 
 .ms-card--self-highlight {

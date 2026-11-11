@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<{
   rows: Record<string, unknown>[]
   sortState?: SortState
   loading?: boolean
+  refreshing?: boolean
   loadingRows?: number
   emptyMessage?: string
   rowClickable?: boolean
@@ -107,6 +108,7 @@ const customSlots = computed(() => {
       :rows="rows"
       :sort-state="sortState"
       :loading="loading"
+      :refreshing="refreshing"
       :loading-rows="loadingRows"
       :row-clickable="rowClickable"
       :row-to="rowTo"
@@ -218,5 +220,10 @@ const customSlots = computed(() => {
 .score-table__mobile-sort-select {
   flex: 1;
   min-width: 0;
+}
+
+.score-table__mobile-sort :deep(.base-select__trigger),
+.score-table__mobile-sort :deep(.sort-dir) {
+  height: var(--control-h);
 }
 </style>

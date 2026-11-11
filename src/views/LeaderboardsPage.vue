@@ -214,8 +214,9 @@ watch(requestKey, fetchData, { immediate: true })
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
 
-    <div class="leaderboards__table" :class="{ refreshing }">
-      <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
+    <div class="leaderboards__table">
+      <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
+        :loading-rows="10"
         :row-class="rowClass" :row-to="playerRowTo" row-key="userId" empty-message="No players found"
         @sort="setSort">
         <template #cell-rank="{ value, row }">

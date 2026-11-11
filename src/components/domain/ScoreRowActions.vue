@@ -3,10 +3,10 @@ import type { ResolvedReplay } from '@/utils/replay'
 import { computed } from 'vue'
 
 const props = defineProps<{
-  showPin: boolean
-  pinned: boolean
-  pinDisabled: boolean
-  pinPending: boolean
+  showPin?: boolean
+  pinned?: boolean
+  pinDisabled?: boolean
+  pinPending?: boolean
   replay: ResolvedReplay | null
   stacked?: boolean
 }>()

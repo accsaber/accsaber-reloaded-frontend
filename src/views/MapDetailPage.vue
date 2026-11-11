@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import StatBlock from '@/components/common/StatBlock.vue'
 import ApTweaker from '@/components/domain/ApTweaker.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
@@ -19,10 +19,12 @@ import { DIFFICULTY_ORDER } from '@/utils/constants'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { onImageError, pickCoverFallback, pickCoverUrl } from '@/utils/media'
+import { tableNaturalWidth } from '@/utils/tableLayout'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MapScoresSection from './maps/MapScoresSection.vue'
 import MapStatisticsSection from './maps/MapStatisticsSection.vue'
+import { useMapScoreColumns } from './maps/useMapScoreColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,7 +45,8 @@ const error = ref(false)
 
 const activeTab = ref('leaderboard')
 const statsVisited = ref(false)
-const scoresTableWidth = ref(0)
+const scoreColumns = useMapScoreColumns(() => false)
+const scoresTableWidth = computed(() => tableNaturalWidth(scoreColumns.value))
 const contentTabs = [
   { key: 'leaderboard', label: 'Leaderboard' },
   { key: 'statistics', label: 'Statistics' },
@@ -124,11 +127,6 @@ const difficultyTabs = computed(() =>
     label: d.difficulty,
   }))
 )
-
-const breadcrumbs = computed(() => [
-  { label: 'Maps', to: '/maps' },
-  { label: map.value?.songName ?? 'Map' },
-])
 
 const metaTitle = computed(() => {
   if (!map.value) return undefined
@@ -249,20 +247,19 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
       <div class="map-detail__hero">
         <SkeletonLoader variant="avatar" width="200px" height="200px" />
         <div class="map-detail__name-col">
-          <SkeletonLoader variant="text" width="300px" />
-          <SkeletonLoader variant="text" width="200px" />
+          <SkeletonLoader width="360px" height="50px" />
+          <SkeletonLoader width="200px" height="28px" />
+          <SkeletonLoader width="160px" height="20px" />
+          <SkeletonLoader width="280px" height="40px" />
         </div>
       </div>
     </template>
 
     <template v-else-if="error || !map">
       <h1 class="map-detail__error-title">Map Not Found</h1>
-      <p class="map-detail__error">Could not load this map.</p>
     </template>
 
     <template v-else>
-      <Breadcrumbs :crumbs="breadcrumbs" />
-
       <div class="map-detail__bg">
         <div class="map-detail__bg-image" :style="{ backgroundImage: `url(${coverUrl})` }" />
       </div>
@@ -344,13 +341,13 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
                 @update:open="(val: boolean) => { tweakerOpen = val; if (!val) tweakerAnchor = null }" />
             </div>
 
-            <template v-if="showApStats && diffStats">
-              <p class="map-detail__summary">{{ diffStats.totalScores }} scores</p>
-              <p class="map-detail__summary">{{ diffStats.averageAp?.toFixed(2) ?? '-' }} average AP</p>
-            </template>
+            <div v-if="showApStats && diffStats" class="map-detail__stats">
+              <StatBlock label="Scores" :value="diffStats.totalScores" :decimals="0" />
+              <StatBlock label="Average AP" :value="diffStats.averageAp ?? '-'" />
+            </div>
 
             <details v-if="activeDifficulty" class="map-detail__chart">
-              <summary>Map stats</summary>
+              <summary>Map Stats</summary>
               <MapChartStats :source="activeDifficulty" />
             </details>
           </div>
@@ -367,8 +364,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
             :cover-url="coverUrl" :cover-fallback-url="coverFallbackUrl" :category-code="categoryCode"
             :difficulty="activeDifficulty ? formatDifficulty(activeDifficulty.difficulty) : undefined"
             :complexity="activeDifficulty?.complexity ?? null"
-            @top-scores-loaded="onTopScoresLoaded"
-            @width-change="scoresTableWidth = $event" />
+            @top-scores-loaded="onTopScoresLoaded" />
         </div>
 
         <MapStatisticsSection v-if="statsVisited && activeDifficultyId" v-show="activeTab === 'statistics'"
@@ -387,7 +383,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   align-items: center;
   gap: var(--space-lg);
   --accent: var(--page-accent, var(--accent-overall));
-  --page-column: clamp(1280px, var(--scores-column, 1280px), var(--page-width-wide));
+  --page-column: max(1280px, var(--scores-column, 1280px));
 }
 
 .map-detail>*:not(.map-detail__bg) {
@@ -432,7 +428,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   height: 200px;
   border-radius: var(--radius-avatar);
   object-fit: cover;
-  border: 1px solid var(--bg-overlay);
 }
 
 .map-detail__details {
@@ -509,7 +504,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 .map-detail__bsr-label {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
-  letter-spacing: 0.02em;
 }
 
 .map-detail__diff-meta {
@@ -521,18 +515,19 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   font-size: var(--text-card-title);
 }
 
-.map-detail__picker :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
-  opacity: 0.7;
-}
-
 .map-detail__category-name {
   font-weight: 600;
 }
 
-.map-detail__summary {
-  margin: 0;
-  font-size: var(--text-card-title);
-  color: var(--text-secondary);
+.map-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 120px);
+  gap: var(--space-md);
+}
+
+.map-detail__stats :deep(.stat-block) {
+  align-items: flex-end;
+  padding: 0;
 }
 
 .map-detail__chart {
@@ -551,7 +546,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 .map-detail__chart :deep(.chart-stats) {
   width: 0;
   min-width: 100%;
-  border-top: none;
 }
 
 .map-detail__chart summary:hover {
@@ -580,12 +574,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
 
 .map-detail__error-title {
   text-align: center;
-}
-
-.map-detail__error {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: var(--space-3xl);
 }
 
 @media (max-width: 767px) {
@@ -625,6 +613,10 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   .map-detail__links,
   .map-detail__diff-meta {
     justify-content: center;
+  }
+
+  .map-detail__stats :deep(.stat-block) {
+    align-items: center;
   }
 }
 </style>

@@ -105,10 +105,9 @@
   --space-xl: 32px;
   --space-2xl: 48px;
   --space-3xl: 64px;
-  --page-width-wide: 1500px;
+  --control-h: 32px;
 
   --radius-xs: 2px;
-  --control-h: 32px;
   --radius-btn: 3px;
   --radius-input: 3px;
   --radius-card: 4px;
@@ -151,6 +150,7 @@
 @media (max-width: 767px) {
   :root {
     --navbar-height: 56px;
+    --control-h: 40px;
   }
 }
 
