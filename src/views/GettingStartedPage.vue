@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
-import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
-import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
+import { PLUGIN_RELEASES_URL } from '@/utils/constants'
 
 const { playlistCategories, downloadPlaylist } = usePlaylistDownload()
 
@@ -14,82 +13,74 @@ usePageMeta({
 </script>
 
 <template>
-  <div class="gs">
-    <Breadcrumbs :crumbs="[{ label: 'Home', to: '/' }, { label: 'Getting Started' }]" />
-    <PageHeaderBleed title="Getting Started" subtitle="Three steps to the leaderboards." />
+  <div class="gs stagger">
+    <h1>Getting Started</h1>
 
-    <ol class="gs__steps">
-      <li class="gs__step">
-        <h2 class="section-title">Install a Leaderboard Mod</h2>
-        <p class="gs__prose">
-          You need a mod to submit scores. Grab
-          <a href="https://beatleader.com/" target="_blank" rel="noopener noreferrer" class="gs__link">BeatLeader</a>
-          (recommended) or
-          <a href="https://scoresaber.com/" target="_blank" rel="noopener noreferrer" class="gs__link">ScoreSaber</a>
-          for your platform - PC or Quest.
-        </p>
-        <BaseButton href="/download" variant="primary">Download our new AccSaber mod</BaseButton>
-      </li>
+    <section class="gs__step">
+      <h2 class="section-title">Install the Mods</h2>
+      <p class="gs__prose">
+        Your scores reach us through
+        <a href="https://beatleader.com/" target="_blank" rel="noopener noreferrer" class="gs__link">BeatLeader</a>,
+        <a href="https://scoresaber.com/" target="_blank" rel="noopener noreferrer" class="gs__link">ScoreSaber</a>,
+        or the AccSaber mod. Install any or all, knowing the AccSaber mod is the only one that submits attempts.
+      </p>
+      <div class="gs__actions">
+        <BaseButton :href="PLUGIN_RELEASES_URL" variant="primary">AccSaber mod for PC</BaseButton>
+        <BaseButton href="/quest" variant="primary">AccSaber mod for Quest</BaseButton>
+      </div>
+    </section>
 
-      <li class="gs__step">
-        <h2 class="section-title">Download the Playlists</h2>
-        <p class="gs__prose">
-          Grab the ranked map playlists and drop them into your
-          <code class="gs__code">Playlists</code> folder. Pick the categories you want to play.
-        </p>
-        <div class="gs__playlists">
-          <BaseButton v-for="cat in playlistCategories" :key="cat.code" size="sm" @click="downloadPlaylist(cat.code)">
-            <span class="gs__dot" :style="{ background: cat.accent }" />
-            {{ cat.name }}
-          </BaseButton>
-        </div>
-      </li>
+    <section class="gs__step">
+      <h2 class="section-title">Download the Playlists</h2>
+      <p class="gs__prose">
+        Grab the ranked map playlists for the categories you want to play and drop them into your
+        <code class="gs__code">Playlists</code> folder.
+      </p>
+      <div class="gs__actions">
+        <BaseButton v-for="cat in playlistCategories" :key="cat.code" @click="downloadPlaylist(cat.code)">
+          <span :style="{ color: cat.accent }">{{ cat.name }}</span>
+        </BaseButton>
+      </div>
+    </section>
 
-      <li class="gs__step">
-        <h2 class="section-title">Play and See Results</h2>
-        <p class="gs__prose">
-          Play the maps from the playlists. Your scores are automatically submitted and will
-          appear on the <RouterLink to="/leaderboards" class="gs__link">leaderboards</RouterLink>.
-          Browse all the <RouterLink to="/maps" class="gs__link">ranked maps</RouterLink>
-          to find your next challenge.
-        </p>
-      </li>
-    </ol>
+    <section class="gs__step">
+      <h2 class="section-title">Play and See Results</h2>
+      <p class="gs__prose">
+        Play the maps from the playlists. Your scores are submitted automatically and show up on the
+        <RouterLink to="/leaderboards" class="gs__link">leaderboards</RouterLink>, and every
+        <RouterLink to="/maps" class="gs__link">ranked map</RouterLink> is there to browse for your next one.
+      </p>
+    </section>
   </div>
 </template>
 
 <style scoped>
 .gs {
-  max-width: 640px;
-  margin: 0 auto;
-  width: 100%;
-  padding: var(--space-lg) var(--space-lg) var(--space-3xl);
-}
-
-.gs__steps {
   display: flex;
   flex-direction: column;
   gap: var(--space-2xl);
-  margin: 0;
-  padding-left: var(--space-lg);
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--space-lg) 0 var(--space-3xl);
 }
 
-.gs__step::marker {
-  color: var(--accent-overall);
-  font-family: var(--font-mono);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-}
+.gs > :nth-child(2) { --i: 1; }
+.gs > :nth-child(3) { --i: 2; }
+.gs > :nth-child(4) { --i: 3; }
 
-.gs__step > * + * {
-  margin-top: var(--space-md);
+.gs__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .gs__prose {
-  font-size: var(--text-body);
+  max-width: 65ch;
+  margin: 0;
   color: var(--text-secondary);
   line-height: 1.7;
-  margin: 0;
+  text-wrap: pretty;
 }
 
 .gs__link {
@@ -98,34 +89,20 @@ usePageMeta({
   text-decoration: none;
 }
 
-.gs__link:hover {
+.gs__link:hover,
+.gs__link:focus-visible {
   text-decoration: underline;
 }
 
 .gs__code {
   font-family: var(--font-code);
   font-size: 0.8125em;
-  background: var(--bg-elevated);
   color: var(--text-primary);
-  padding: 1px 6px;
-  border-radius: var(--radius-btn);
 }
 
-.gs__playlists {
+.gs__actions {
   display: flex;
-  gap: var(--space-sm);
   flex-wrap: wrap;
-}
-
-.gs__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-@media (max-width: 767px) {
-  .gs {
-    padding: var(--space-md) var(--space-md) var(--space-2xl);
-  }
+  gap: var(--space-sm);
 }
 </style>

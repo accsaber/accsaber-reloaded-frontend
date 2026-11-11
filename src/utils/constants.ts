@@ -104,6 +104,7 @@ export const STANDARD_PIN_SLOTS = 4
 export const SUPPORTER_PIN_SLOTS = 8
 
 export const KOFI_URL = 'https://ko-fi.com/accsaberreloaded'
+export const PLUGIN_RELEASES_URL = 'https://github.com/not-dexter/accsaber-reloaded-plugin/releases'
 
 export const DISCORD_URL = 'https://discord.gg/DmzKSgcJWe'
 

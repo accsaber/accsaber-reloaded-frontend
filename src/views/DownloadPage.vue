@@ -2,8 +2,7 @@
 import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
-
-const PLUGIN_RELEASES_URL = 'https://github.com/not-dexter/accsaber-reloaded-plugin/releases'
+import { PLUGIN_RELEASES_URL } from '@/utils/constants'
 
 usePageMeta({
   title: 'Download | AccSaber',
