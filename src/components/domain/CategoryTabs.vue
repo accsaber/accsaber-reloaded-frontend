@@ -49,13 +49,6 @@ const tabs = computed(() => {
   flex-wrap: wrap;
 }
 
-.category-tabs.base-tabs :deep(.base-tabs__tab) {
-  padding: var(--space-sm) var(--space-md);
-  font-size: 0.8125rem;
-  letter-spacing: normal;
-  text-transform: none;
-}
-
 .category-tabs.base-tabs :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
   opacity: 0.7;
 }

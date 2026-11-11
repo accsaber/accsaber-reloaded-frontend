@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import type { PublicNewsResponse } from '@/types/api/news'
-import { NEWS_TYPE_ACCENT } from '@/utils/constants'
 import { readStoredString, writeStoredString } from '@/utils/storage'
 import { computed, onMounted, ref } from 'vue'
 
@@ -20,7 +19,6 @@ function isRecent(iso: string | null): boolean {
   return Date.now() - new Date(iso).getTime() < WINDOW_MS
 }
 
-const accent = computed(() => (news.value ? NEWS_TYPE_ACCENT[news.value.type] : 'var(--accent)'))
 const target = computed(() => (news.value ? { path: '/news', query: { post: news.value.slug } } : '/news'))
 const visible = computed(() => news.value !== null && !dismissed.value)
 
@@ -43,56 +41,49 @@ onMounted(async () => {
 </script>
 
 <template>
-  <BaseBanner v-if="visible && news" class="news-banner" :style="{ '--banner-accent': accent }" role="status"
-    @close="dismiss">
-    <template #icon>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 11l18-8v18L3 13z" />
-        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
-      </svg>
-    </template>
-
-    <router-link :to="target" class="news-banner__link">
-      <span class="news-banner__title">{{ news.title }}</span>
-      <p v-if="news.description" class="news-banner__desc">{{ news.description }}</p>
-    </router-link>
-  </BaseBanner>
+  <Transition name="fade">
+    <BaseBanner v-if="visible && news" class="news-banner" role="status" @close="dismiss">
+      <router-link :to="target" class="news-banner__link">
+        <span class="news-banner__title">{{ news.title }}</span>
+        <span v-if="news.description" class="news-banner__desc">{{ news.description }}</span>
+      </router-link>
+    </BaseBanner>
+  </Transition>
 </template>
 
 <style scoped>
 .news-banner {
+  max-width: none;
+  min-height: 40px;
+  margin: 0;
+  padding-block: 0;
   background: var(--bg-surface);
-  border-color: color-mix(in srgb, var(--banner-accent) 25%, var(--bg-overlay));
 }
 
 .news-banner__link {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  text-decoration: none;
+  align-items: baseline;
+  gap: var(--space-md);
+  min-width: 0;
   color: inherit;
-  width: 100%;
+  text-decoration: none;
 }
 
 .news-banner__title {
-  font-size: 1rem;
+  flex-shrink: 0;
   font-weight: 600;
   color: var(--text-primary);
-  letter-spacing: 0.01em;
 }
 
 .news-banner__desc {
-  margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  opacity: 0.92;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .news-banner__desc {
+    display: none;
+  }
 }
 </style>

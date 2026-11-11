@@ -16,9 +16,6 @@ defineEmits<{
 
 <template>
   <div class="banner" :class="`banner--${variant}`" :role="role">
-    <span v-if="$slots.icon" class="banner__icon">
-      <slot name="icon" />
-    </span>
     <div class="banner__body">
       <slot />
     </div>
@@ -26,7 +23,7 @@ defineEmits<{
     <button
       v-if="dismissible"
       type="button"
-      class="banner__close"
+      class="banner__close pressable"
       aria-label="Dismiss"
       @click="$emit('close')"
     >
@@ -50,7 +47,6 @@ defineEmits<{
   margin: 0 auto var(--space-lg);
   padding: var(--space-sm) var(--space-md);
   background: color-mix(in srgb, var(--banner-accent, var(--accent, var(--info))) 8%, var(--bg-surface));
-  border: 1px solid color-mix(in srgb, var(--banner-accent, var(--accent, var(--info))) 30%, var(--bg-overlay));
   border-radius: var(--radius-card);
   color: var(--text-secondary);
   font-size: var(--text-body);
@@ -61,16 +57,9 @@ defineEmits<{
 .banner--error { --banner-accent: var(--error); }
 .banner--success { --banner-accent: var(--success); }
 
-.banner__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--banner-accent);
-}
-
 .banner__body {
   flex: 1;
+  min-width: 0;
   line-height: 1.5;
 }
 
@@ -86,7 +75,7 @@ defineEmits<{
   border-radius: var(--radius-btn);
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .banner__close:hover {

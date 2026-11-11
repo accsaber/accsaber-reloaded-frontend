@@ -35,7 +35,7 @@ const linkAttrs = computed(() =>
 </script>
 
 <template>
-  <component :is="tag" class="base-button" :class="[
+  <component :is="tag" class="base-button pressable" :class="[
     `base-button--${variant ?? 'default'}`,
     `base-button--${size ?? 'md'}`,
     { 'base-button--loading': loading },
@@ -55,13 +55,17 @@ const linkAttrs = computed(() =>
   justify-content: center;
   gap: var(--space-sm);
   border: 1px solid var(--bg-overlay);
-  background: transparent;
+  background: var(--bg-surface);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: var(--text-body);
   cursor: pointer;
   border-radius: var(--radius-btn);
-  transition: background-color 120ms ease-in, border-color 120ms ease-in, color 120ms ease-in;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
   white-space: nowrap;
   text-decoration: none;
 }
@@ -101,7 +105,7 @@ const linkAttrs = computed(() =>
 }
 
 .base-button--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
   border-color: var(--accent);
 }
 
@@ -111,7 +115,7 @@ const linkAttrs = computed(() =>
 }
 
 .base-button--destructive:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--error) 10%, transparent);
+  background: color-mix(in srgb, var(--error) 10%, var(--bg-surface));
   border-color: var(--error);
 }
 

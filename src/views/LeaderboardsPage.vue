@@ -69,7 +69,9 @@ const relationFilter = queryRef<UserRelationType>('relation')
 const searchQuery = queryRef('search')
 const showInactive = ref(true)
 const loading = ref(true)
+const refreshing = ref(false)
 const pageData = shallowRef<LeaderboardPage | null>(null)
+const shownXp = ref<boolean | null>(null)
 const highlightedUserId = ref<string | null>(null)
 
 const accent = computed(() => categoryStore.getAccent(activeCategory.value))
@@ -84,7 +86,7 @@ const rows = computed<Record<string, unknown>[]>(() => {
   const useCountryRank = !!countryFilter.value && !relationFilter.value && showInactive.value
 
   return source.content.map((entry, i) => {
-    const p = isXpMode.value
+    const p = shownXp.value
       ? toXpPlayerDisplay(entry as XpLeaderboardResponse)
       : toPlayerDisplay(entry as LeaderboardResponse)
     const ownRank = useCountryRank && p.countryRank ? p.countryRank : offset + i + 1
@@ -143,19 +145,25 @@ async function fetchData() {
   const id = ++requestId
   const cacheKey = { key: requestKey.value }
   const cached = lbCache.getCached<LeaderboardPage>(cacheKey)
-  if (cached) pageData.value = cached
-  loading.value = !cached
+  if (cached) {
+    pageData.value = cached
+    shownXp.value = xp
+  }
+  loading.value = !cached && shownXp.value !== xp
+  refreshing.value = !cached && !loading.value
   try {
     const { getLeaderboard, getXpLeaderboard } = await import('@/api/leaderboards')
     const res = xp ? await getXpLeaderboard(params) : await getLeaderboard(categoryId!, params)
     lbCache.setCache(cacheKey, res)
     if (id !== requestId) return
     pageData.value = res
+    shownXp.value = xp
   } catch {
     if (id !== requestId) return
     if (!cached) pageData.value = null
   }
   loading.value = false
+  refreshing.value = false
   await handleHighlight()
 }
 
@@ -206,7 +214,7 @@ watch(requestKey, fetchData, { immediate: true })
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
 
-    <div class="leaderboards__table">
+    <div class="leaderboards__table" :class="{ refreshing }">
       <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
         :row-class="rowClass" :row-to="playerRowTo" row-key="userId" empty-message="No players found"
         @sort="setSort">

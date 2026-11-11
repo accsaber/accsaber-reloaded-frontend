@@ -54,6 +54,17 @@ function dismissLegacyBanner() {
 
 const showRestrictedBanner = computed(() => authStore.restricted)
 
+function pinLeavingPage(el: Element) {
+  if (!(el instanceof HTMLElement)) return
+  const { offsetTop, offsetLeft, offsetWidth } = el
+  el.style.position = 'absolute'
+  el.style.top = `${offsetTop}px`
+  el.style.left = `${offsetLeft}px`
+  el.style.width = `${offsetWidth}px`
+  el.style.maxHeight = `${Math.max(0, window.innerHeight - offsetTop - 1)}px`
+  el.style.overflow = 'hidden'
+}
+
 function dismissRestrictedBanner() {
   authStore.clearRestricted()
 }
@@ -90,7 +101,7 @@ watch(
         personalized experience.
       </BaseBanner>
       <router-view v-slot="{ Component }">
-        <transition name="page">
+        <transition name="page" @before-leave="pinLeavingPage">
           <component :is="Component" />
         </transition>
       </router-view>
@@ -102,16 +113,22 @@ watch(
 
 <style scoped>
 .main-content {
-  min-height: calc(100vh - var(--navbar-height));
+  position: relative;
+  min-height: calc(100svh - var(--navbar-height));
   padding: var(--space-xl);
   padding-top: calc(var(--navbar-height) + var(--space-xl));
 }
 
-.page-enter-active,
+.page-enter-active {
+  transition:
+    opacity var(--dur-enter) var(--ease-out),
+    transform var(--dur-enter) var(--ease-out);
+}
+
 .page-leave-active {
   transition:
-    opacity 150ms ease,
-    transform 150ms ease;
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .page-enter-from {
@@ -126,7 +143,6 @@ watch(
 
 @media (max-width: 767px) {
   .main-content {
-    min-height: calc(100vh - var(--navbar-height));
     padding: var(--space-md);
     padding-top: calc(var(--navbar-height) + var(--space-md));
   }

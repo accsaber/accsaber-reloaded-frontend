@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Tab } from '@/types/display'
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   tabs: Tab[]
@@ -29,6 +29,42 @@ const focusKey = computed(() =>
   props.tabs.some((t) => t.key === props.modelValue) ? props.modelValue : enabledTabs.value[0]?.key,
 )
 
+const listRef = ref<HTMLElement | null>(null)
+const indicator = ref<Record<string, string> | null>(null)
+const settled = ref(false)
+let observer: ResizeObserver | null = null
+let observedTab: HTMLElement | null = null
+
+const activeAccent = computed(
+  () => props.tabs.find((t) => t.key === props.modelValue)?.accentColor ?? 'var(--accent)',
+)
+
+function measure() {
+  const tab = listRef.value?.querySelector<HTMLElement>('.base-tabs__tab--active') ?? null
+  if (tab !== observedTab) {
+    if (observedTab) observer?.unobserve(observedTab)
+    if (tab) observer?.observe(tab)
+    observedTab = tab
+  }
+  indicator.value = tab && {
+    '--tab-x': `${tab.offsetLeft}px`,
+    '--tab-y': `${tab.offsetTop}px`,
+    '--tab-w': `${tab.offsetWidth}px`,
+    '--tab-h': `${tab.offsetHeight}px`,
+  }
+}
+
+watch(() => [props.modelValue, props.tabs], measure, { flush: 'post' })
+
+onMounted(() => {
+  observer = new ResizeObserver(measure)
+  if (listRef.value) observer.observe(listRef.value)
+  measure()
+  requestAnimationFrame(() => { settled.value = true })
+})
+
+onUnmounted(() => observer?.disconnect())
+
 function nextKey(key: string): string | undefined {
   const list = enabledTabs.value
   const index = list.findIndex((t) => t.key === props.modelValue)
@@ -50,10 +86,12 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="base-tabs" :class="`base-tabs--${variant}`" role="tablist" :aria-label="label" @keydown="onKeydown">
+  <div ref="listRef" class="base-tabs" :class="[`base-tabs--${variant}`, { 'base-tabs--settled': settled }]"
+    :style="{ '--tab-accent': activeAccent }" role="tablist" :aria-label="label" @keydown="onKeydown">
+    <span v-if="indicator" class="base-tabs__indicator" :style="indicator" aria-hidden="true" />
     <button v-for="tab in tabs" :id="idPrefix && `${idPrefix}-tab-${tab.key}`" :key="tab.key"
       type="button" class="base-tabs__tab" :class="{ 'base-tabs__tab--active': modelValue === tab.key }"
-      :style="modelValue === tab.key ? { '--tab-accent': tab.accentColor ?? 'var(--accent)' } : undefined" role="tab"
+      role="tab"
       :aria-selected="modelValue === tab.key" :aria-controls="idPrefix && `${idPrefix}-panel-${tab.key}`"
       :tabindex="focusKey === tab.key ? 0 : -1" :disabled="disabledKeys.includes(tab.key)"
       @click="$emit('update:modelValue', tab.key)">
@@ -64,7 +102,24 @@ function onKeydown(e: KeyboardEvent) {
 
 <style scoped>
 .base-tabs {
+  position: relative;
   display: flex;
+}
+
+.base-tabs__indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--tab-w);
+  transform: translate(var(--tab-x), var(--tab-y));
+  pointer-events: none;
+}
+
+.base-tabs--settled .base-tabs__indicator {
+  transition:
+    transform var(--dur-enter) var(--ease-in-out),
+    width var(--dur-enter) var(--ease-in-out),
+    background-color var(--dur-enter) var(--ease-in-out);
 }
 
 .base-tabs__tab {
@@ -99,49 +154,42 @@ function onKeydown(e: KeyboardEvent) {
   padding: var(--space-sm) var(--space-md);
   font-size: var(--text-body);
   font-weight: 500;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
-.base-tabs--underline .base-tabs__tab::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
+.base-tabs--underline .base-tabs__indicator {
+  top: calc(var(--tab-h) - 2px);
   height: 3px;
-  background: transparent;
+  background: var(--tab-accent);
 }
 
 .base-tabs--underline .base-tabs__tab--active {
-  color: var(--tab-accent, var(--accent));
-  font-weight: 600;
-}
-
-.base-tabs--underline .base-tabs__tab--active::after {
-  background: var(--tab-accent, var(--accent));
+  color: var(--tab-accent);
 }
 
 .base-tabs--segmented {
   gap: 2px;
   padding: 2px;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-surface);
   border-radius: var(--radius-btn);
 }
 
+.base-tabs--segmented .base-tabs__indicator {
+  height: var(--tab-h);
+  background: var(--bg-overlay);
+  border-radius: calc(var(--radius-btn) - 2px);
+}
+
 .base-tabs--segmented .base-tabs__tab {
-  padding: var(--space-xs) var(--space-sm);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  border-radius: var(--radius-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  transition: color 120ms ease, background 120ms ease;
+  position: relative;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .base-tabs--segmented .base-tabs__tab--active {
   color: var(--text-primary);
-  background: var(--bg-elevated);
 }
 
 @media (max-width: 767px) {

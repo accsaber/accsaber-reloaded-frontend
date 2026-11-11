@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CoverImage from '@/components/common/CoverImage.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useCategoryStore } from '@/stores/categories'
@@ -21,9 +22,6 @@ const emit = defineEmits<{
 const categoryStore = useCategoryStore()
 
 const accent = computed(() => categoryStore.getAccent(props.entry.categoryCode))
-const categoryName = computed(() =>
-  categoryStore.getCategoryInfo(props.entry.categoryCode)?.name ?? props.entry.categoryCode,
-)
 const relativeTime = computed(() => {
   void props.now
   return formatRelativeDate(props.entry.timeSet)
@@ -34,341 +32,164 @@ const hasObstacleHits = computed(() => props.entry.wallHits > 0 || props.entry.b
 const isFC = computed(() => totalMistakes.value === 0 && !hasObstacleHits.value)
 const isXFC = computed(() => totalMistakes.value === 0 && hasObstacleHits.value)
 
-function handleClick() {
-  emit('select', props.entry)
-}
-
 </script>
 
 <template>
-  <div class="feed-card" :class="{ 'feed-card--compact': compact }" :style="{ '--card-accent': accent }"
-    @click="handleClick">
-    <div class="feed-card__player-tab" @click.stop>
-      <UserChip :user="entry.player" size="xs" tooltip class="feed-card__player" />
+  <div class="feed-card" :style="{ '--card-accent': accent }"
+    role="button" tabindex="0" @click="emit('select', entry)" @keydown.enter.self="emit('select', entry)">
+    <CoverImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="48"
+      :fallback-src="entry.coverFallbackUrl ?? null" />
+
+    <div class="feed-card__info">
+      <span class="feed-card__title">
+        <SongTitle class="feed-card__song" :name="entry.mapName" :sub-name="entry.mapSubName" />
+        <DifficultyBadge :difficulty="entry.rawDifficulty ?? entry.difficulty" />
+      </span>
+      <span class="feed-card__line">
+        <span class="feed-card__player" @click.stop>
+          <UserChip :user="entry.player" size="sm" tooltip hide-clan />
+        </span>
+        <span class="feed-card__mapper">Mapped by {{ entry.mapAuthor }}</span>
+      </span>
+      <span v-if="!compact" class="feed-card__line">{{ entry.artistName }}</span>
     </div>
 
-    <div class="feed-card__body">
-      <span class="feed-card__rank" :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
-
-      <div class="feed-card__cover">
-        <CoverImage v-if="entry.coverUrl" :src="entry.coverUrl" :alt="entry.mapName" :size="compact ? 36 : 48"
-          :fallback-src="entry.coverFallbackUrl ?? null" />
-      </div>
-
-      <div class="feed-card__info">
-        <SongTitle class="feed-card__song" :name="entry.mapName" :sub-name="entry.mapSubName" />
-        <span class="feed-card__meta">{{ entry.artistName }} - {{ entry.mapAuthor }}</span>
-        <span class="feed-card__row3">
-          <span class="feed-card__diff">{{ entry.difficulty }}</span>
-          <span class="feed-card__dot" />
-          <span class="feed-card__category">{{ categoryName }}</span>
-          <template v-if="entry.modifiers.length">
-            <span class="feed-card__dot" />
-            <span class="feed-card__mods">{{ entry.modifiers.join(', ') }}</span>
-          </template>
-        </span>
-      </div>
-
-      <div class="feed-card__stats">
-        <div class="feed-card__stats-top">
-          <span class="feed-card__accuracy">{{ formatAccuracy(entry.accuracy) }}</span>
-          <span class="feed-card__ap">{{ entry.ap.toFixed(2) }} <span class="feed-card__ap-label">AP</span></span>
-        </div>
-        <div v-if="!compact" class="feed-card__stats-mid">
-          <span class="feed-card__score">{{ entry.score.toLocaleString() }}</span>
-        </div>
-        <div class="feed-card__stats-bottom">
-          <span class="feed-card__streak">115s: {{ entry.streak115 }}</span>
+    <div class="feed-card__stats">
+      <span class="feed-card__accuracy">{{ formatAccuracy(entry.accuracy) }}</span>
+      <span class="feed-card__ap">{{ entry.ap.toFixed(2) }} AP</span>
+      <span class="feed-card__line feed-card__line--end">
+        <template v-if="!compact">
+          <span :class="getRankClass(entry.rank)">#{{ entry.rank }}</span>
+          <span>{{ entry.score.toLocaleString() }}</span>
+          <span>115s: {{ entry.streak115 }}</span>
           <span v-if="isFC" class="feed-card__fc">FC</span>
-          <span v-else-if="isXFC" class="feed-card__xfc">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-              stroke-linecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-            FC
-          </span>
-          <span v-else class="feed-card__misses">{{ totalMistakes }}
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-              stroke-linecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </span>
-          <span class="feed-card__time">{{ relativeTime }}</span>
-        </div>
-      </div>
+          <span v-else-if="isXFC" class="feed-card__xfc">FC with hits</span>
+          <span v-else class="feed-card__misses">{{ totalMistakes }} missed</span>
+        </template>
+        <span v-if="entry.modifiers.length">{{ entry.modifiers.join(', ') }}</span>
+        <span>{{ relativeTime }}</span>
+      </span>
     </div>
   </div>
 </template>
 
 <style scoped>
 .feed-card {
-  position: relative;
-  margin-top: var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: visible;
-  cursor: pointer;
-  transition: border-color 120ms ease;
-}
-
-.feed-card:hover {
-  border-color: var(--text-tertiary);
-}
-
-.feed-card:has(.feed-card__player-tab:hover) {
-  z-index: 10;
-}
-
-.feed-card__player-tab {
-  position: absolute;
-  bottom: 100%;
-  left: var(--space-sm);
-  display: inline-flex;
-  border-radius: var(--radius-card) var(--radius-card) 0 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-elevated);
-  padding: var(--space-xs) var(--space-sm);
-  cursor: pointer;
-  z-index: 1;
-}
-
-.feed-card__player-tab:hover {
-  z-index: 10000;
-}
-
-.feed-card__player {
-  max-width: 220px;
-  font-weight: 600;
-}
-
-.feed-card__body {
   display: grid;
-  grid-template-columns: minmax(32px, max-content) 48px 1fr auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
+  min-height: 64px;
   padding: var(--space-sm) var(--space-md);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
-@media (min-width: 768px) {
-  .feed-card--compact .feed-card__body {
-    grid-template-columns: minmax(32px, max-content) 36px 1fr auto;
-    gap: 0 var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
-  }
-}
-
-.feed-card__rank {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-align: center;
-  white-space: nowrap;
-}
-
-.feed-card__rank.rank--gold {
-  color: var(--tier-gold);
-}
-
-.feed-card__rank.rank--silver {
-  color: var(--tier-silver);
-}
-
-.feed-card__rank.rank--bronze {
-  color: var(--tier-bronze);
-}
-
-.feed-card__cover {
-  flex-shrink: 0;
+.feed-card:hover,
+.feed-card:focus-visible {
+  background: var(--bg-elevated);
+  outline: none;
 }
 
 .feed-card__info {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
   min-width: 0;
 }
 
-.feed-card__song {
-  font-size: var(--text-body);
-  font-weight: 600;
+.feed-card__player {
+  flex-shrink: 0;
+  max-width: 60%;
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.feed-card__meta {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.feed-card__row3 {
+.feed-card__line {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
+  max-width: 100%;
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.feed-card__diff {
   color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.feed-card__dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.feed-card__category {
-  color: var(--card-accent, var(--accent));
-  font-weight: 500;
   white-space: nowrap;
 }
 
-.feed-card__mods {
-  font-size: 0.65rem;
-  color: var(--text-tertiary);
-  padding: 1px 5px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
+.feed-card__line--end {
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+}
+
+.feed-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  max-width: 100%;
+}
+
+.feed-card__song {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-card-title);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.feed-card__mapper {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .feed-card__stats {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.feed-card__stats-top {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 6.5rem;
   align-items: baseline;
-  gap: var(--space-md);
+  gap: 2px var(--space-sm);
+  text-align: right;
+  font-family: var(--font-mono);
 }
 
 .feed-card__accuracy {
-  font-family: var(--font-mono);
-  font-size: 1.05rem;
+  font-size: var(--text-section-heading);
   font-weight: 600;
-  color: var(--card-accent, var(--accent));
+  color: var(--card-accent);
 }
 
 .feed-card__ap {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-primary);
 }
 
-.feed-card__ap-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  font-weight: 400;
-}
-
-.feed-card__stats-mid {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.feed-card__score {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.feed-card__stats-bottom {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-caption);
-}
-
-.feed-card__streak {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
 .feed-card__fc {
-  font-family: var(--font-mono);
-  font-weight: 700;
   color: var(--success);
 }
 
 .feed-card__xfc {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-family: var(--font-mono);
-  font-weight: 700;
   color: var(--warning);
 }
 
 .feed-card__misses {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-family: var(--font-mono);
   color: var(--error);
 }
 
-.feed-card__time {
-  color: var(--text-tertiary);
-}
-
 @media (max-width: 767px) {
-  .feed-card__body {
-    grid-template-columns: minmax(24px, max-content) 40px 1fr;
-    grid-template-rows: auto auto;
-    gap: var(--space-sm);
-  }
-
-  .feed-card__rank {
-    font-size: var(--text-caption);
-    grid-row: 1 / 3;
-  }
-
-  .feed-card__cover {
-    grid-row: 1 / 3;
-  }
-
-  .feed-card__info {
-    grid-column: 3;
-    grid-row: 1;
+  .feed-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: var(--space-sm) var(--space-md);
   }
 
   .feed-card__stats {
-    grid-column: 3;
-    grid-row: 2;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: var(--space-sm);
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto 1fr;
+    text-align: left;
   }
 
-  .feed-card__stats-top,
-  .feed-card__stats-mid,
-  .feed-card__stats-bottom {
-    gap: var(--space-xs);
-  }
-
-  .feed-card__accuracy {
-    font-size: var(--text-body);
+  .feed-card__line--end {
+    grid-column: auto;
   }
 }
 </style>

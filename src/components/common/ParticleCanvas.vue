@@ -2,6 +2,7 @@
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useRenderLoop } from '@/composables/useRenderLoop'
+import { subscribeWindowPointer } from '@/utils/windowPointer'
 import { onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 
 const props = defineProps<{
@@ -34,6 +35,8 @@ let startTime = 0
 let logicalW = 0
 let logicalH = 0
 let observer: IntersectionObserver | null = null
+let resizeObserver: ResizeObserver | null = null
+let stopPointer: (() => void) | null = null
 const onScreen = ref(true)
 
 function animated(): boolean {
@@ -44,19 +47,19 @@ function tracksCursor(): boolean {
   return props.interactive !== false && !mobile.value && !reduced.value
 }
 
-function initParticles(w: number, h: number) {
+function initParticles() {
   particles = Array.from({ length: count }, () => {
-    const y = Math.random() * h
+    const y = Math.random()
     const bright = Math.random() < 0.32
     return {
-      x: Math.random() * w,
+      x: Math.random(),
       y,
       opacity: bright ? 0.6 + Math.random() * 0.4 : 0.18 + Math.random() * 0.18,
       size: bright ? 2 + Math.random() * 1.5 : 1 + Math.random() * 1.5,
       speed: 0.5 + Math.random() * 2.5,
       phase: Math.random() * Math.PI * 2,
       depth: bright ? 0.6 + Math.random() * 0.4 : 0.3 + Math.random() * 0.4,
-      warm: Math.random() < (1 - y / h) * 0.6,
+      warm: Math.random() < (1 - y) * 0.6,
     }
   })
 }
@@ -78,8 +81,10 @@ function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number)
     let opacity = p.opacity * twinkle
     let size = p.size
     let near = 0
+    const x = p.x * w
+    const y = p.y * h
     if (cursor) {
-      const dist = Math.hypot(p.x - mouseX, p.y - mouseY)
+      const dist = Math.hypot(x - mouseX, y - mouseY)
       if (dist < RADIUS) {
         near = 1 - dist / RADIUS
         near = near * near * (3 - 2 * near)
@@ -89,7 +94,7 @@ function draw(ctx: CanvasRenderingContext2D, w: number, h: number, time: number)
     }
     const [r, g, b] = starColor(p.warm, dark)
     ctx.beginPath()
-    ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2)
+    ctx.arc(x, y, size / 2, 0, Math.PI * 2)
     ctx.fillStyle = `rgba(${Math.round(r + (cr - r) * near)}, ${Math.round(g + (cg - g) * near)}, ${Math.round(b + (cb - b) * near)}, ${opacity})`
     ctx.fill()
   }
@@ -108,18 +113,9 @@ watch(animated, (on) => {
   else render(performance.now())
 })
 
-function onMouseMove(e: MouseEvent) {
-  if (!canvasRef.value) return
-  const rect = canvasRef.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  if (x >= -RADIUS && x <= rect.width + RADIUS && y >= -RADIUS && y <= rect.height + RADIUS) {
-    mouseX = x
-    mouseY = y
-  } else {
-    mouseX = -1000
-    mouseY = -1000
-  }
+function clearPointer() {
+  mouseX = -1000
+  mouseY = -1000
 }
 
 function resize() {
@@ -137,24 +133,29 @@ function resize() {
   if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   logicalW = w
   logicalH = h
-  initParticles(w, h)
   if (!animated()) render(startTime || performance.now())
 }
 
 watchEffect(() => {
-  if (tracksCursor()) {
-    window.addEventListener('mousemove', onMouseMove)
-  } else {
-    window.removeEventListener('mousemove', onMouseMove)
-    mouseX = -1000
-    mouseY = -1000
-  }
+  stopPointer?.()
+  stopPointer = null
+  clearPointer()
+  if (!tracksCursor()) return
+  stopPointer = subscribeWindowPointer({
+    measure: () => canvasRef.value?.getBoundingClientRect() ?? null,
+    apply: (rect, x, y) => {
+      mouseX = x - rect.left
+      mouseY = y - rect.top
+    },
+    idle: () => {},
+  })
 })
 
 onMounted(() => {
   startTime = performance.now()
-  resize()
-  window.addEventListener('resize', resize)
+  initParticles()
+  resizeObserver = new ResizeObserver(resize)
+  if (canvasRef.value?.parentElement) resizeObserver.observe(canvasRef.value.parentElement)
   observer = new IntersectionObserver(([entry]) => { onScreen.value = !!entry?.isIntersecting })
   if (canvasRef.value) observer.observe(canvasRef.value)
   loop.start()
@@ -163,8 +164,8 @@ onMounted(() => {
 onUnmounted(() => {
   loop.stop()
   observer?.disconnect()
-  window.removeEventListener('resize', resize)
-  window.removeEventListener('mousemove', onMouseMove)
+  resizeObserver?.disconnect()
+  stopPointer?.()
 })
 </script>
 

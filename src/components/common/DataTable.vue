@@ -3,7 +3,7 @@ import { useMediaQuery } from '@/composables/useMediaQuery';
 import type { SortState, TableColumn } from '@/types/display';
 import { formatSortGlyph } from '@/utils/formatters';
 import { columnWidth, tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
-import { computed, useSlots } from 'vue';
+import { computed, ref, useSlots, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
 import DataTableCardFallback from './DataTableCardFallback.vue';
@@ -35,6 +35,19 @@ const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
 const mobile = useMediaQuery(() => tableCardQuery(props.columns))
 const rowHrefs = computed(() => props.rows.map(resolveRowHref))
+const MAX_SLIDING_ROWS = 10
+const fresh = ref(true)
+const generation = ref(0)
+
+watch(() => props.rows, (next, prev) => {
+  const previous = new Map(prev.map((row, index) => [resolveRowKey(row, index), index]))
+  const positions = next.map((row, index) => previous.get(resolveRowKey(row, index)))
+  const kept = positions.filter((position) => position !== undefined).length
+  const moved = positions.filter((position, index) => position !== undefined && position !== index).length
+  if (kept === next.length && next.length === prev.length && moved === 0) return
+  fresh.value = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
+  if (fresh.value) generation.value++
+})
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
   if (!props.rowKey) return index
@@ -92,7 +105,8 @@ function sortIcon(col: TableColumn): string {
             </th>
           </tr>
         </thead>
-        <tbody>
+        <TransitionGroup :key="generation" tag="tbody" name="row" :class="{ stagger: fresh }"
+          :style="{ '--n': rows.length }">
           <template v-if="loading">
             <tr v-for="i in skeletonCount" :key="'skel-' + i" class="data-table__row">
               <td v-for="col in columns" :key="col.key" class="data-table__td">
@@ -101,7 +115,7 @@ function sortIcon(col: TableColumn): string {
             </tr>
           </template>
           <template v-else-if="rows.length === 0">
-            <tr>
+            <tr key="empty">
               <td :colspan="columns.length" class="data-table__empty">
                 <slot name="empty">
                   {{ emptyMessage ?? 'No data available' }}
@@ -112,6 +126,7 @@ function sortIcon(col: TableColumn): string {
           <template v-else>
             <tr v-for="(row, index) in rows" :key="resolveRowKey(row, index)" class="data-table__row"
               :class="[{ 'data-table__row--clickable': rowClickable || !!rowTo }, rowClass?.(row, index)]"
+              :style="{ '--i': index }"
               @click="handleRowClick(row, index, $event)">
               <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
                 'data-table__td--mono': col.mono,
@@ -129,7 +144,7 @@ function sortIcon(col: TableColumn): string {
               </td>
             </tr>
           </template>
-        </tbody>
+        </TransitionGroup>
       </table>
     </div>
 
@@ -164,6 +179,7 @@ function sortIcon(col: TableColumn): string {
 <style scoped>
 .data-table-scroll {
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .data-table {
@@ -192,9 +208,6 @@ function sortIcon(col: TableColumn): string {
   color: var(--text-secondary);
   font-size: var(--text-caption);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--bg-overlay);
   white-space: nowrap;
   z-index: 1;
 }
@@ -237,7 +250,26 @@ function sortIcon(col: TableColumn): string {
 .data-table__row {
   height: 48px;
   border-left: 2px solid transparent;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.row-move {
+  transition:
+    transform var(--dur-enter) var(--ease-in-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.row-enter-active {
+  transition: opacity var(--dur-enter) var(--ease-out);
+}
+
+.row-enter-from {
+  opacity: 0;
+}
+
+.row-leave-active {
+  display: none;
 }
 
 .data-table__row:nth-child(odd) {

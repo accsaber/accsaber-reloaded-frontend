@@ -75,7 +75,7 @@ function cancelJump() {
 
 <template>
   <nav v-if="totalPages > 1" class="pagination" aria-label="Pagination">
-    <button class="pagination__nav" :disabled="page <= 1" aria-label="First page" @click="emit('update:page', 1)">
+    <button class="pagination__nav pressable" :disabled="page <= 1" aria-label="First page" @click="emit('update:page', 1)">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round">
         <polyline points="7 3 2 8 7 13" />
@@ -87,12 +87,12 @@ function cancelJump() {
       <input v-if="editingLeft" ref="leftInputRef" v-model="jumpInput" class="pagination__jump-input" type="number"
         :min="1" :max="totalPages" :placeholder="`1-${totalPages}`" @keydown.enter="submitJump"
         @keydown.escape="cancelJump" @blur="cancelJump" />
-      <button v-else class="pagination__ellipsis" aria-label="Jump to page" @click="openJump('left')">
+      <button v-else class="pagination__ellipsis pressable" aria-label="Jump to page" @click="openJump('left')">
         &hellip;
       </button>
     </template>
 
-    <button v-for="p in pageNumbers" :key="p" class="pagination__page"
+    <button v-for="p in pageNumbers" :key="p" class="pagination__page pressable"
       :class="{ 'pagination__page--active': p === page }" @click="emit('update:page', p)">
       {{ p }}
     </button>
@@ -101,12 +101,12 @@ function cancelJump() {
       <input v-if="editingRight" ref="rightInputRef" v-model="jumpInput" class="pagination__jump-input" type="number"
         :min="1" :max="totalPages" :placeholder="`1-${totalPages}`" @keydown.enter="submitJump"
         @keydown.escape="cancelJump" @blur="cancelJump" />
-      <button v-else class="pagination__ellipsis" aria-label="Jump to page" @click="openJump('right')">
+      <button v-else class="pagination__ellipsis pressable" aria-label="Jump to page" @click="openJump('right')">
         &hellip;
       </button>
     </template>
 
-    <button class="pagination__nav" :disabled="page >= totalPages" aria-label="Last page"
+    <button class="pagination__nav pressable" :disabled="page >= totalPages" aria-label="Last page"
       @click="emit('update:page', totalPages)">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round">
@@ -136,7 +136,7 @@ function cancelJump() {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .pagination__nav:hover:not(:disabled) {
@@ -163,7 +163,7 @@ function cancelJump() {
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .pagination__page:hover {
@@ -194,7 +194,7 @@ function cancelJump() {
   color: var(--text-tertiary);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .pagination__ellipsis:hover {

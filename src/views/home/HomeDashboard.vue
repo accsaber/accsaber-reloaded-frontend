@@ -1,23 +1,41 @@
 <script setup lang="ts">
-import { useBrandLogo } from '@/composables/useBrandLogo'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import { useAuthStore } from '@/stores/auth'
-import FollowedActivity from './FollowedActivity.vue'
+import { useCategoryStore } from '@/stores/categories'
+import type { ScoreRelationType } from '@/types/api/relations'
+import type { CategoryCode, Tab } from '@/types/display'
+import { computed, ref } from 'vue'
 import HomeActions from './HomeActions.vue'
+import HomeFeed from './HomeFeed.vue'
+import HomeRanking from './HomeRanking.vue'
 
 const authStore = useAuthStore()
-const logoUrl = useBrandLogo()
+const categoryStore = useCategoryStore()
+const relation = ref<ScoreRelationType>('follower')
+const category = ref<CategoryCode>('overall')
+const accent = computed(() => categoryStore.getAccent(category.value))
+
+const relationTabs: Tab[] = [
+  { key: 'follower', label: 'Following' },
+  { key: 'rival', label: 'Rivals' },
+]
 </script>
 
 <template>
-  <div class="dashboard">
+  <div class="dashboard" :style="{ '--page-accent': accent }">
     <div class="dashboard__top">
-      <img :src="logoUrl" alt="AccSaber" class="dashboard__logo" fetchpriority="high" decoding="async" />
-      <h1 class="dashboard__welcome">
-        Welcome back, <span class="dashboard__name">{{ authStore.userProfile?.name }}</span>
-      </h1>
-      <HomeActions class="dashboard__actions" />
+      <h1>Welcome back, <span class="dashboard__name">{{ authStore.userProfile?.name }}</span></h1>
+      <HomeActions />
     </div>
-    <FollowedActivity />
+    <div class="dashboard__filters">
+      <BaseTabs v-model="relation" :tabs="relationTabs" variant="segmented" label="Players shown" />
+      <CategoryTabs v-model="category" :exclude="['xp']" />
+    </div>
+    <div class="dashboard__panels">
+      <HomeRanking :relation="relation" :category="category" />
+      <HomeFeed :relation="relation" :category="category" />
+    </div>
   </div>
 </template>
 
@@ -25,51 +43,45 @@ const logoUrl = useBrandLogo()
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-lg);
   width: 100%;
 }
 
 .dashboard__top {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-lg);
-}
-
-.dashboard__logo {
-  width: 156px;
-  height: 156px;
-  object-fit: contain;
+  justify-content: space-between;
+  gap: var(--space-md);
 }
 
 .dashboard__name {
   color: var(--accent-overall);
 }
 
-.dashboard__actions {
-  max-width: 360px;
-  justify-content: flex-end;
+.dashboard__filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.dashboard__panels {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--space-xl);
 }
 
 @media (max-width: 767px) {
-  .dashboard__top {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
-    gap: var(--space-md);
+  .dashboard__filters :deep(.category-tabs.base-tabs .base-tabs__tab) {
+    flex: 1;
+    padding-inline: var(--space-sm);
   }
+}
 
-  .dashboard__logo {
-    width: 96px;
-    height: 96px;
-  }
-
-  .dashboard__welcome {
-    font-size: var(--text-section-heading);
-  }
-
-  .dashboard__actions {
-    justify-content: center;
+@media (max-width: 960px) {
+  .dashboard__panels {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

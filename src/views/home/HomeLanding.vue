@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { useBrandLogo } from '@/composables/useBrandLogo'
 import HomeActions from './HomeActions.vue'
+import HomeRanking from './HomeRanking.vue'
 
 const logoUrl = useBrandLogo()
 </script>
 
 <template>
   <div class="landing">
-    <img :src="logoUrl" alt="AccSaber" class="landing__logo" fetchpriority="high" decoding="async" />
-    <p class="landing__tagline">New and improved stack for AccSaber.</p>
-    <HomeActions class="landing__actions" />
+    <div class="landing__hero">
+      <img :src="logoUrl" alt="AccSaber" class="landing__logo" width="144" height="144" fetchpriority="high"
+        decoding="async" />
+      <h1 class="landing__title">The accuracy leaderboard<br />for Beat Saber</h1>
+      <HomeActions class="landing__actions" />
+    </div>
+    <HomeRanking class="landing__ranking" />
   </div>
 </template>
 
@@ -18,35 +23,54 @@ const logoUrl = useBrandLogo()
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-3xl);
+}
+
+.landing__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  padding-top: var(--space-2xl);
   text-align: center;
 }
 
 .landing__logo {
-  width: 120px;
-  height: 120px;
+  width: 144px;
+  height: 144px;
   object-fit: contain;
 }
 
-.landing__tagline {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  color: var(--text-secondary);
+.landing__title {
+  font-size: 2.5rem;
+  line-height: 1.15;
 }
 
 .landing__actions {
-  max-width: 420px;
-  margin-top: var(--space-md);
+  justify-content: center;
+}
+
+.landing__ranking {
+  width: 100%;
+  max-width: 640px;
 }
 
 @media (max-width: 767px) {
-  .landing__logo {
-    width: 80px;
-    height: 80px;
+  .landing {
+    gap: var(--space-2xl);
   }
 
-  .landing__tagline {
-    font-size: var(--text-body);
+  .landing__hero {
+    padding-top: var(--space-md);
+  }
+
+  .landing__logo {
+    width: 96px;
+    height: 96px;
+  }
+
+  .landing__title {
+    font-size: var(--text-page-title);
   }
 }
 </style>

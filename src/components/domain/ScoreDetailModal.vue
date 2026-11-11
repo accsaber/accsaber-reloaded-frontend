@@ -364,6 +364,12 @@ watch(
         </div>
         <div class="score-detail__scores">
           <div class="score-detail__metric">
+            <span class="score-detail__metric-value">#{{ score.leaderboardRank }}</span>
+            <span class="score-detail__metric-label">
+              rank<span v-if="score.rankWhenSet != null && score.rankWhenSet !== score.leaderboardRank"> · set as #{{ score.rankWhenSet }}</span>
+            </span>
+          </div>
+          <div class="score-detail__metric">
             <span class="score-detail__metric-value">{{ (score.accuracy * 100).toFixed(2) }}<span class="score-detail__metric-unit">%</span></span>
             <span class="score-detail__metric-label">accuracy</span>
           </div>
@@ -377,10 +383,6 @@ watch(
       </div>
 
       <div class="score-detail__meta">
-        <span class="score-detail__rank">#{{ score.leaderboardRank }}</span>
-        <span v-if="score.rankWhenSet != null && score.rankWhenSet !== score.leaderboardRank"
-          class="score-detail__rank-set">set as #{{ score.rankWhenSet }}</span>
-        <span class="score-detail__meta-sep">·</span>
         <span class="score-detail__meta-value">{{ score.score.toLocaleString() }}<span class="score-detail__meta-label">score</span></span>
         <template v-if="showNoMods">
           <span class="score-detail__meta-sep">·</span>
@@ -779,19 +781,6 @@ watch(
   position: relative;
   z-index: 1;
   padding-bottom: var(--space-sm);
-}
-
-.score-detail__rank {
-  font-family: var(--font-mono);
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.score-detail__rank-set {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 
 .score-detail__meta-sep {

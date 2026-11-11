@@ -521,10 +521,6 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   font-size: var(--text-card-title);
 }
 
-.map-detail__picker :deep(.base-tabs__tab) {
-  padding: var(--space-sm) var(--space-md);
-}
-
 .map-detail__picker :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
   opacity: 0.7;
 }

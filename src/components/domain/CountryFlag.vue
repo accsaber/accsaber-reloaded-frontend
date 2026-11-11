@@ -20,6 +20,7 @@ const flag = computed(() => {
 
 <style scoped>
 .country-flag {
+  font-family: 'Twemoji Country Flags', var(--font-sans);
   font-size: 1em;
   line-height: 1;
 }

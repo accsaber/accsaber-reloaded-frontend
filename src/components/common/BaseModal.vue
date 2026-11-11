@@ -14,6 +14,21 @@ const emit = defineEmits<{
   close: []
 }>()
 
+let trigger: DOMRect | null = null
+
+function onEnter(el: Element) {
+  const modal = el.firstElementChild
+  if (!trigger || !(modal instanceof HTMLElement) || !modal.offsetWidth) return
+  const dx = trigger.left + trigger.width / 2 - (modal.offsetLeft + modal.offsetWidth / 2)
+  const dy = trigger.top + trigger.height / 2 - (modal.offsetTop + modal.offsetHeight / 2)
+  const sx = Math.min(1, trigger.width / modal.offsetWidth)
+  const sy = Math.min(1, trigger.height / modal.offsetHeight)
+  modal.style.transition = 'none'
+  modal.style.setProperty('--modal-from', `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`)
+  void modal.offsetWidth
+  modal.style.transition = ''
+}
+
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.open) emit('close')
 }
@@ -25,6 +40,10 @@ function onBackdropClick() {
 watch(
   () => props.open,
   (open, wasOpen) => {
+    if (open && !wasOpen) {
+      const active = document.activeElement
+      trigger = active instanceof HTMLElement && active !== document.body ? active.getBoundingClientRect() : null
+    }
     if (open) document.body.style.overflow = 'hidden'
     else if (wasOpen) document.body.style.overflow = ''
   },
@@ -43,7 +62,7 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <Transition name="modal">
+    <Transition name="modal" @enter="onEnter">
       <div v-if="open" class="modal-backdrop" @click.self="onBackdropClick">
         <div class="modal" :style="{ maxWidth: maxWidth ?? '560px' }" role="dialog" aria-modal="true">
           <div v-if="title" class="modal__header">
@@ -108,7 +127,7 @@ onUnmounted(() => {
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: var(--radius-btn);
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .modal__close:hover {
@@ -130,11 +149,11 @@ onUnmounted(() => {
 }
 
 .modal-enter-active {
-  transition: opacity 150ms ease;
+  transition: opacity var(--dur-enter) var(--ease-out);
 }
 
 .modal-leave-active {
-  transition: opacity 150ms ease;
+  transition: opacity var(--dur-exit) var(--ease-in);
 }
 
 .modal-enter-from,
@@ -143,20 +162,16 @@ onUnmounted(() => {
 }
 
 .modal-enter-active .modal {
-  transition: transform 200ms ease-out, opacity 200ms ease-out;
+  transition: transform var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out);
 }
 
 .modal-leave-active .modal {
-  transition: transform 150ms ease-in, opacity 150ms ease-in;
+  transition: transform var(--dur-exit) var(--ease-in), opacity var(--dur-exit) var(--ease-in);
 }
 
-.modal-enter-from .modal {
-  transform: scale(0.95);
-  opacity: 0;
-}
-
+.modal-enter-from .modal,
 .modal-leave-to .modal {
-  transform: scale(0.95);
+  transform: var(--modal-from, scale(var(--pop-scale)));
   opacity: 0;
 }
 
