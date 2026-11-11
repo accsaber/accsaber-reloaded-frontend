@@ -48,6 +48,7 @@ let skeletonShown = !!props.loading
 function columnShape(): string {
   return props.columns.map((col) => col.key).join()
 }
+
 let swapTimer: ReturnType<typeof setTimeout> | undefined
 
 function swapStep(count: number): number {
@@ -65,30 +66,52 @@ function renderKey(row: Record<string, unknown>, index: number): string {
   return `${batches.get(row) ?? 0}:${resolveRowKey(row, index)}`
 }
 
+let target: Record<string, unknown>[] | null = null
+let cursor = 0
+let step = 0
+
+function advance() {
+  if (!target) return
+  cursor++
+  if (cursor >= target.length) {
+    shown.value = target
+    staleFrom.value = null
+    target = null
+    return
+  }
+  const rows = shown.value.slice()
+  rows[cursor - 1] = target[cursor - 1]
+  shown.value = rows
+  staleFrom.value = cursor
+  swapTimer = setTimeout(advance, step)
+}
+
 function swapRows(next: Record<string, unknown>[]) {
-  const step = swapStep(next.length)
-  let index = 0
+  step = swapStep(next.length)
+  cursor = 0
   cascade.value = false
   batch++
   stamp(next)
-  const advance = () => {
-    index++
-    if (index === next.length) {
-      shown.value = next
-      staleFrom.value = null
-      return
-    }
-    const rows = shown.value.slice()
-    rows[index - 1] = next[index - 1]
-    shown.value = rows
-    staleFrom.value = index
-    swapTimer = setTimeout(advance, step)
-  }
+  target = next
   advance()
 }
 
+function sameRows(a: Record<string, unknown>[], b: Record<string, unknown>[]): boolean {
+  return a.length === b.length && a.every((row, index) => resolveRowKey(row, index) === resolveRowKey(b[index], index))
+}
+
+function retarget(next: Record<string, unknown>[]) {
+  stamp(next)
+  const rows = shown.value.slice()
+  for (let index = 0; index < cursor; index++) rows[index] = next[index]
+  shown.value = rows
+  target = next
+}
+
 watch(() => props.rows, (next) => {
+  if (target && sameRows(target, next)) return retarget(next)
   clearTimeout(swapTimer)
+  target = null
   const prev = shown.value
   const previous = new Map(prev.map((row, index) => [resolveRowKey(row, index), index]))
   const positions = next.map((row, index) => previous.get(resolveRowKey(row, index)))
@@ -115,8 +138,8 @@ watch(() => props.loading, (loading) => {
 })
 
 watch(() => props.refreshing, (refreshing) => {
-  if (refreshing) staleFrom.value = 0
-  else if (shown.value === props.rows) staleFrom.value = null
+  if (refreshing && !target) staleFrom.value = 0
+  else if (!refreshing && !target) staleFrom.value = null
 })
 
 onUnmounted(() => clearTimeout(swapTimer))

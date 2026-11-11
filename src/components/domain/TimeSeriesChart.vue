@@ -23,6 +23,7 @@ const props = defineProps<{
   yMin?: number
   ordinal?: boolean
   emptyMessage?: string
+  loading?: boolean
   markers?: ChartMarker[]
 }>()
 
@@ -354,11 +355,11 @@ watch([
     <ChartToggleGroup :toggles="timeRanges" :active="[activeRange]" label="Time range"
       @select="emit('update:selectedRange', $event as TimeRange)" />
     <div class="chart-container__canvas-wrap">
-      <SkeletonLoader v-if="isLoading" variant="card" height="240px" />
+      <SkeletonLoader v-if="isLoading || loading" height="100%" />
       <div v-else-if="!hasData" class="chart-container__empty">
         {{ emptyMessage ?? 'No scores could be found with the timeframe selected.' }}
       </div>
-      <canvas ref="canvasRef" :class="{ 'chart-container__canvas--hidden': isLoading || !hasData }" />
+      <canvas ref="canvasRef" :class="{ 'chart-container__canvas--hidden': isLoading || loading || !hasData }" />
     </div>
   </div>
 </template>

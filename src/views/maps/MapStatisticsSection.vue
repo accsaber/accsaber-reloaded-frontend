@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { MapComplexityHistoryResponse, MapDifficultyStatisticsResponse, TopScoreSnapshot } from '@/types/api/maps'
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 
 const historicStats = ref<MapDifficultyStatisticsResponse[]>([])
 const complexityHistory = ref<MapComplexityHistoryResponse[]>([])
+const statsLoading = ref(true)
+const complexityLoading = ref(true)
 const selectedMetric = ref<MetricType>('ap')
 const selectedRange = ref<TimeRange>('30d')
 
@@ -134,6 +137,12 @@ const reweightMarkers = computed<ChartMarker[]>(() => {
     }))
 })
 
+const CHANGE_LABEL: Record<ComplexityChange['type'], string> = {
+  BUFF: 'Buff',
+  NERF: 'Nerf',
+  INITIAL: 'Initial',
+}
+
 type TopHistoryItem =
   | { kind: 'score'; key: string; entry: TopScoreSnapshot; current: boolean }
   | { kind: 'break'; key: string; change: ComplexityChange }
@@ -166,6 +175,7 @@ async function fetchHistoricStats() {
   const request = ++historicRequest
   if (!props.difficultyId) {
     historicStats.value = []
+    statsLoading.value = false
     return
   }
   let next: typeof historicStats.value = []
@@ -175,13 +185,16 @@ async function fetchHistoricStats() {
   } catch {
     next = []
   }
-  if (request === historicRequest) historicStats.value = next
+  if (request !== historicRequest) return
+  historicStats.value = next
+  statsLoading.value = false
 }
 
 async function fetchComplexityHistory() {
   const request = ++complexityRequest
   if (!props.mapId) {
     complexityHistory.value = []
+    complexityLoading.value = false
     return
   }
   let next: typeof complexityHistory.value = []
@@ -191,90 +204,103 @@ async function fetchComplexityHistory() {
   } catch {
     next = []
   }
-  if (request === complexityRequest) complexityHistory.value = next
+  if (request !== complexityRequest) return
+  complexityHistory.value = next
+  complexityLoading.value = false
 }
 
-watch(() => props.difficultyId, fetchHistoricStats, { immediate: true })
+watch(() => props.difficultyId, () => {
+  statsLoading.value = true
+  fetchHistoricStats()
+}, { immediate: true })
 watch(() => props.mapId, fetchComplexityHistory, { immediate: true })
 watch(selectedRange, fetchHistoricStats)
 </script>
 
 <template>
   <div class="map-stats">
-    <section v-if="topScoreHistory.length > 0" class="map-stats__section">
-      <h2 class="map-stats__heading">#1 History</h2>
-      <div class="map-stats__top-history">
-        <template v-for="item in topHistoryItems" :key="item.key">
-          <div v-if="item.kind === 'score'" class="map-stats__top-row"
-            :class="{ 'map-stats__top-row--current': item.current }" tabindex="0" role="button"
-            @click="emit('navigate-player', item.entry.userId)"
-            @keydown.enter="emit('navigate-player', item.entry.userId)">
-            <UserChip :user="toUserRef(item.entry)" class="map-stats__top-player" />
-            <span class="map-stats__top-acc">{{ formatAccuracy(item.entry.accuracy) }}</span>
-            <span class="map-stats__top-ap">{{ item.entry.ap.toFixed(2) }} AP</span>
-            <span class="map-stats__top-date">{{ formatRelativeDate(item.entry.timeSet) }}</span>
-          </div>
-          <div v-else class="map-stats__break"
-            :class="item.change.type === 'BUFF' ? 'map-stats__break--buff' : 'map-stats__break--nerf'">
-            <span class="map-stats__break-tag">{{ item.change.type === 'BUFF' ? '↑ BUFF' : '↓ NERF' }}</span>
-            <span class="map-stats__break-val">{{ item.change.from.toFixed(1) }} → {{ item.change.to.toFixed(1) }}</span>
-            <span class="map-stats__break-date">{{ formatShortDate(item.change.date) }}</span>
-          </div>
-        </template>
-      </div>
-    </section>
-
-    <section v-if="complexityChanges.length > 0" class="map-stats__section">
-      <h2 class="map-stats__heading">Complexity History</h2>
-      <div class="map-stats__complexity-list">
-        <div v-for="(change, i) in complexityChanges" :key="i" class="map-stats__complexity-entry">
-          <span class="map-stats__complexity-date">{{ formatShortDate(change.date) }}</span>
-          <template v-if="change.type === 'INITIAL'">
-            <span class="map-stats__complexity-val">{{ change.to.toFixed(1) }}</span>
-            <span class="map-stats__complexity-tag map-stats__complexity-tag--initial">INITIAL</span>
-          </template>
-          <template v-else>
-            <span class="map-stats__complexity-val">{{ change.from.toFixed(1) }} → {{ change.to.toFixed(1) }}</span>
-            <span class="map-stats__complexity-tag"
-              :class="change.type === 'BUFF' ? 'map-stats__complexity-tag--buff' : 'map-stats__complexity-tag--nerf'">
-              {{ change.type === 'BUFF' ? '↑ BUFF' : '↓ NERF' }}
-            </span>
-          </template>
-        </div>
-      </div>
-    </section>
-
-    <section v-if="difficultyId" class="map-stats__section">
-      <h2 class="map-stats__heading">Statistics Over Time</h2>
+    <section v-if="difficultyId" class="map-stats__section map-stats__chart">
+      <h2 class="section-title">Statistics Over Time</h2>
       <TimeSeriesChart :data="statsChartPoints" :metric-label="selectedMetricLabel" :accent-color="accentColor"
         :available-metrics="MAP_STATS_METRICS" :selected-metric="selectedMetric" :selected-range="selectedRange"
-        :markers="reweightMarkers" @update:selected-metric="selectedMetric = $event as MetricType"
+        :markers="reweightMarkers" :loading="statsLoading"
+        @update:selected-metric="selectedMetric = $event as MetricType"
         @update:selected-range="selectedRange = $event" />
     </section>
+
+    <div class="map-stats__side">
+      <section v-if="statsLoading || topScoreHistory.length > 0" class="map-stats__section">
+        <h2 class="section-title">#1 History</h2>
+        <div v-if="statsLoading" class="map-stats__list">
+          <SkeletonLoader v-for="i in 5" :key="i" height="40px" />
+        </div>
+        <div v-else class="map-stats__list stagger" :style="{ '--n': topHistoryItems.length }">
+          <template v-for="(item, i) in topHistoryItems" :key="item.key">
+            <div v-if="item.kind === 'score'" class="map-stats__top-row"
+              :class="{ 'map-stats__top-row--current': item.current }" :style="{ '--i': i }" tabindex="0"
+              role="button" @click="emit('navigate-player', item.entry.userId)"
+              @keydown.enter="emit('navigate-player', item.entry.userId)">
+              <UserChip :user="toUserRef(item.entry)" class="map-stats__top-player" />
+              <span class="map-stats__top-acc">{{ formatAccuracy(item.entry.accuracy) }}</span>
+              <span class="map-stats__top-ap">{{ item.entry.ap.toFixed(2) }} AP</span>
+              <span class="map-stats__top-date">{{ formatRelativeDate(item.entry.timeSet) }}</span>
+            </div>
+            <div v-else class="map-stats__break" :class="`map-stats__tone--${item.change.type.toLowerCase()}`"
+              :style="{ '--i': i }">
+              <span class="map-stats__tone-label">{{ CHANGE_LABEL[item.change.type] }}</span>
+              <span class="map-stats__break-val">{{ item.change.from.toFixed(1) }} → {{ item.change.to.toFixed(1) }}</span>
+              <span class="map-stats__break-val">{{ formatShortDate(item.change.date) }}</span>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <section v-if="complexityLoading || complexityChanges.length > 0" class="map-stats__section">
+        <h2 class="section-title">Complexity History</h2>
+        <div v-if="complexityLoading" class="map-stats__list">
+          <SkeletonLoader v-for="i in 2" :key="i" height="24px" />
+        </div>
+        <div v-else class="map-stats__list stagger" :style="{ '--n': complexityChanges.length }">
+          <div v-for="(change, i) in complexityChanges" :key="change.date" class="map-stats__complexity-entry"
+            :style="{ '--i': i }">
+            <span class="map-stats__complexity-date">{{ formatShortDate(change.date) }}</span>
+            <span class="map-stats__complexity-val">
+              <template v-if="change.type !== 'INITIAL'">{{ change.from.toFixed(1) }} → </template>{{ change.to.toFixed(1) }}
+            </span>
+            <span class="map-stats__tone-label" :class="`map-stats__tone--${change.type.toLowerCase()}`">
+              {{ CHANGE_LABEL[change.type] }}
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .map-stats {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 440px;
+  align-items: start;
+  gap: var(--space-2xl);
 }
 
+.map-stats__side,
 .map-stats__section {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.map-stats__side {
+  gap: var(--space-2xl);
+}
+
+.map-stats__section {
   gap: var(--space-md);
-  margin-bottom: var(--space-xl);
 }
 
-.map-stats__heading {
-  font-size: var(--text-section);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.map-stats__top-history {
+.map-stats__list {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -284,9 +310,10 @@ watch(selectedRange, fetchHistoricStats)
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  cursor: pointer;
-  padding: var(--space-xs) var(--space-md);
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-btn);
+  cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out);
 }
 
@@ -300,55 +327,58 @@ watch(selectedRange, fetchHistoricStats)
 
 .map-stats__top-player {
   flex: 1;
+  min-width: 0;
 }
 
-.map-stats__top-acc {
+.map-stats__top-acc,
+.map-stats__top-ap {
+  flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--text-primary);
-  flex-shrink: 0;
 }
 
 .map-stats__top-ap {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
   color: var(--page-accent, var(--accent));
-  flex-shrink: 0;
 }
 
 .map-stats__top-date {
+  flex-shrink: 0;
+  min-width: 7ch;
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  flex-shrink: 0;
+  text-align: end;
 }
 
 .map-stats__break {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 0 var(--space-md);
-  margin: var(--space-xs) 0;
+  padding: 0 var(--space-sm);
 }
 
 .map-stats__break::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: color-mix(in srgb, currentColor 45%, transparent);
+  background: currentColor;
 }
 
-.map-stats__break--buff {
+.map-stats__tone--buff {
   color: var(--success);
 }
 
-.map-stats__break--nerf {
+.map-stats__tone--nerf {
   color: var(--error);
 }
 
-.map-stats__break-tag {
+.map-stats__tone--initial {
+  color: var(--text-secondary);
+}
+
+.map-stats__tone-label {
   font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .map-stats__break-val {
@@ -357,30 +387,18 @@ watch(selectedRange, fetchHistoricStats)
   color: var(--text-secondary);
 }
 
-.map-stats__break-date {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.map-stats__complexity-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
 .map-stats__complexity-entry {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-surface);
-  border-radius: var(--radius-btn);
+  min-height: 24px;
+  padding: 0 var(--space-sm);
 }
 
 .map-stats__complexity-date {
+  min-width: 100px;
   font-size: var(--text-caption);
   color: var(--text-secondary);
-  min-width: 100px;
 }
 
 .map-stats__complexity-val {
@@ -389,31 +407,9 @@ watch(selectedRange, fetchHistoricStats)
   color: var(--text-primary);
 }
 
-.map-stats__complexity-tag {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 1px var(--space-sm);
-  border-radius: var(--radius-pill);
-}
-
-.map-stats__complexity-tag--initial {
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-}
-
-.map-stats__complexity-tag--buff {
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-}
-
-.map-stats__complexity-tag--nerf {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 15%, transparent);
-}
-
-@media (max-width: 767px) {
-  .map-stats__top-row {
-    flex-wrap: wrap;
+@media (max-width: 1023px) {
+  .map-stats {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
