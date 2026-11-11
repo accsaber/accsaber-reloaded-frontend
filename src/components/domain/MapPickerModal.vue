@@ -227,7 +227,6 @@ function commit() {
         <FilterButton
           v-if="!fixedFilters"
           :active="filtersOpen || hasActiveFilters"
-          :has-indicator="hasActiveFilters"
           @click="filtersOpen = !filtersOpen"
         />
         <div v-if="modeToggle" class="map-picker__mode" role="radiogroup" aria-label="Selection mode">

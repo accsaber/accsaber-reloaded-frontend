@@ -42,13 +42,10 @@ function onRangeChange(val: [number, number]) {
     emit('update:complexityRange', val)
   }, 400)
 }
-
 </script>
 
 <template>
   <div class="map-filters">
-    <h3 class="map-filters__title">Filters</h3>
-
     <div class="map-filters__section">
       <h4 class="map-filters__heading field-label">Category</h4>
       <div class="map-filters__categories">
@@ -60,7 +57,6 @@ function onRangeChange(val: [number, number]) {
             :checked="selectedCategory === null"
             @change="emit('update:selectedCategory', null)"
           />
-          <span class="map-filters__cat-dot map-filters__cat-dot--all" />
           <span>All</span>
         </label>
         <label
@@ -75,8 +71,7 @@ function onRangeChange(val: [number, number]) {
             :checked="selectedCategory === info.code"
             @change="emit('update:selectedCategory', info.code)"
           />
-          <span class="map-filters__cat-dot" :style="{ background: info.accent }" />
-          <span>{{ info.name }}</span>
+          <span :style="{ color: info.accent }">{{ info.name }}</span>
         </label>
       </div>
     </div>
@@ -101,7 +96,6 @@ function onRangeChange(val: [number, number]) {
           :checked="unplayedOnly"
           @change="emit('update:unplayedOnly', !unplayedOnly)"
         />
-        <span class="map-filters__cat-dot map-filters__cat-dot--unplayed" />
         <span>Unplayed only</span>
       </label>
     </div>
@@ -113,13 +107,6 @@ function onRangeChange(val: [number, number]) {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.map-filters__title {
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
 }
 
 .map-filters__section {
@@ -150,20 +137,5 @@ function onRangeChange(val: [number, number]) {
 .map-filters__control {
   accent-color: var(--accent);
   cursor: pointer;
-}
-
-.map-filters__cat-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.map-filters__cat-dot--all {
-  border: 1px solid var(--text-tertiary);
-}
-
-.map-filters__cat-dot--unplayed {
-  background: var(--info);
 }
 </style>

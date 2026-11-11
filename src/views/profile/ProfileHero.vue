@@ -99,7 +99,7 @@ watch(() => props.editing, (editing) => {
       <PlayerTooltipTrigger class="profile-hero__badge-hover" :user="heroUser">
         <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
           :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="avatarUrl"
-          :plain="hideReloadedProfileFeatures"
+          :plain="hideReloadedProfileFeatures" shared-target
           :fallback-title="level?.title"
           :equipped-title="titleValue"
           :equipped-border-shape="borderShapeValue"

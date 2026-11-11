@@ -72,7 +72,6 @@ export interface MapDisplay {
   complexity: number
   categoryCode: CategoryCode
   difficulty: string
-  difficultyLabel: string
   characteristic?: string
   totalScores?: number
   rankedAt?: string

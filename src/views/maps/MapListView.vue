@@ -13,6 +13,7 @@ import type { RouteLocationRaw } from 'vue-router'
 const props = defineProps<{
   maps: MapDisplay[]
   loading: boolean
+  refreshing: boolean
   sortState: SortState
   mapRouteTo: (map: MapDisplay) => RouteLocationRaw
 }>()
@@ -24,8 +25,6 @@ const categoryStore = useCategoryStore()
 const listColumns: TableColumn[] = [
   { key: 'cover', label: '', width: '76px' },
   { key: 'name', label: 'Name', sortable: true, align: 'left' },
-  { key: 'artistName', label: 'Artist', align: 'left' },
-  { key: 'mapperName', label: 'Mapper', align: 'left' },
   { key: 'category', label: 'Category', sortable: true, align: 'center', width: '112px' },
   { key: 'difficulty', label: 'Difficulty', align: 'center', width: '104px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '124px' },
@@ -45,7 +44,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
 </script>
 
 <template>
-  <DataTable :columns="listColumns" :rows="rows" :sort-state="sortState" :loading="loading" :loading-rows="10"
+  <DataTable :columns="listColumns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing" :loading-rows="10"
     :row-to="rowTo" row-key="difficultyId" empty-message="No maps found matching your filters."
     @sort="emit('sort', $event)">
     <template #cell-cover="{ row }">
@@ -56,7 +55,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
       <div class="name-cell">
         <SongTitle class="name" :name="(row.songName as string)"
           :sub-name="(row.songSubName as string | null)" />
-        <span class="diff-label">{{ row.difficultyLabel }}</span>
+        <span class="credits">{{ row.artistName }} · {{ row.mapperName }}</span>
       </div>
     </template>
     <template #cell-category="{ row }">
@@ -85,7 +84,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
         <div class="list-card-info">
           <SongTitle class="name" :name="(row.songName as string)"
             :sub-name="(row.songSubName as string | null)" />
-          <span class="list-card-meta">{{ row.artistName }} · {{ row.mapperName }}</span>
+          <span class="credits">{{ row.artistName }} · {{ row.mapperName }}</span>
         </div>
         <div class="list-card-badges">
           <DifficultyBadge :difficulty="(row.difficulty as string)" />
@@ -111,9 +110,12 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
   white-space: nowrap;
 }
 
-.diff-label {
+.credits {
   font-size: var(--text-caption);
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .category {
@@ -143,7 +145,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
   min-height: 48px;
   text-decoration: none;
   color: inherit;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .list-card:hover {
@@ -170,14 +172,6 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.list-card-meta {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .list-card-badges {

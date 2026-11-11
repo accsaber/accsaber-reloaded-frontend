@@ -14,6 +14,7 @@ import type { RouteLocationRaw } from 'vue-router'
 defineProps<{
   batches: PublicBatchResponse[]
   loading: boolean
+  refreshing: boolean
   mapRouteTo: (m: Pick<MapDisplay, 'id' | 'difficultyId' | 'difficulty' | 'characteristic' | 'beatsaverCode'>) => RouteLocationRaw
 }>()
 
@@ -31,44 +32,43 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
 </script>
 
 <template>
-  <div v-if="loading" class="batch-skeletons">
-    <SkeletonLoader v-for="i in 3" :key="i" variant="card" />
+  <div v-if="loading" class="batches">
+    <div v-for="i in 2" :key="i" class="batch">
+      <SkeletonLoader width="240px" height="52px" />
+      <div class="batch-cards">
+        <SkeletonLoader v-for="j in 8" :key="j" height="98px" />
+      </div>
+    </div>
   </div>
   <EmptyState v-else-if="batches.length === 0" message="No released batches found." />
-  <div v-else class="batches">
-    <div v-for="batch in batches" :key="batch.id" class="batch">
+  <div v-else class="batches stagger" :class="{ refreshing }" :style="{ '--n': batches.length }">
+    <section v-for="(batch, i) in batches" :key="batch.id" class="batch" :style="{ '--i': i }">
       <div class="batch-header">
-        <div class="batch-header-top">
-          <div class="batch-heading">
-            <h2 class="batch-name">{{ batch.name }}</h2>
-            <div class="batch-meta">
-              <span class="batch-count">{{ batch.difficulties.length }} difficulties</span>
-              <span v-if="batch.releasedAt" class="batch-date">{{ formatRelativeDate(batch.releasedAt) }}</span>
-            </div>
-          </div>
-          <BaseButton size="sm" class="batch-download" :aria-label="`Download ${batch.name} playlist`"
-            @click="downloadBatchPlaylist(batch.id, batch.name)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span>Playlist</span>
-          </BaseButton>
+        <div class="batch-heading">
+          <h2 class="section-title">{{ batch.name }}</h2>
+          <span class="caption">
+            {{ batch.difficulties.length }} difficulties<template v-if="batch.releasedAt"> · {{ formatRelativeDate(batch.releasedAt) }}</template>
+          </span>
         </div>
-        <p v-if="batch.description" class="batch-desc">{{ batch.description }}</p>
+        <BaseButton :aria-label="`Download ${batch.name} playlist`"
+          @click="downloadBatchPlaylist(batch.id, batch.name)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Playlist
+        </BaseButton>
       </div>
+      <p v-if="batch.description" class="caption batch-desc">{{ batch.description }}</p>
       <div v-for="group in batchDifficultiesByCategory(batch)" :key="group.categoryCode" class="batch-category">
-        <div class="batch-cat-header">
-          <span class="batch-cat-dot" :style="{ background: group.accent }" />
-          <span class="field-label">{{ group.name }}</span>
-        </div>
+        <span class="field-label" :style="{ color: group.accent }">{{ group.name }}</span>
         <div class="batch-cards">
           <MapCardCompact v-for="m in group.diffs" :key="m.difficultyId" :map="m" :to="mapRouteTo(m)" />
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -76,7 +76,7 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
 .batches {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-2xl);
 }
 
 .batch {
@@ -86,93 +86,36 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
 }
 
 .batch-header {
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.batch-header-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
 }
 
 .batch-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
-.batch-name {
-  font-size: var(--text-section);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
+.batch-heading .section-title {
   overflow-wrap: anywhere;
 }
 
-.batch-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-top: var(--space-xs);
-}
-
-.batch-count,
-.batch-date {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .batch-desc {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  margin: var(--space-sm) 0 0;
-}
-
-.batch-download {
-  flex-shrink: 0;
+  max-width: 65ch;
 }
 
 .batch-category {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding-left: var(--space-md);
-}
-
-.batch-cat-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.batch-cat-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
 }
 
 .batch-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--space-sm);
-}
-
-.batch-skeletons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-@media (max-width: 767px) {
-  .batch-header-top {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .batch-download {
-    align-self: flex-start;
-  }
 }
 </style>

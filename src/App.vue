@@ -141,6 +141,16 @@ watch(
   transform: translateX(-8px);
 }
 
+:root[data-cover-transition] .page-enter-active {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+:root[data-cover-transition] .page-leave-active {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .main-content {
     padding: var(--space-md);

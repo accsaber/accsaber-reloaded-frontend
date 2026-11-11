@@ -265,8 +265,8 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
       </div>
 
       <div class="map-detail__hero">
-        <img class="map-detail__cover" :src="coverUrl" :alt="map.songName" fetchpriority="high" decoding="async"
-          @error="handleMapCoverError" />
+        <img class="map-detail__cover" data-shared-target :src="coverUrl" :alt="map.songName" fetchpriority="high"
+          decoding="async" @error="handleMapCoverError" />
 
         <div class="map-detail__details">
           <div class="map-detail__name-col">

@@ -49,6 +49,7 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
       <img
         v-if="avatarUrl"
         class="user-chip__avatar"
+        data-shared="avatar"
         :src="avatarUrl"
         :alt="`${user.name} avatar`"
         loading="lazy"

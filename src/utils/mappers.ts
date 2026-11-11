@@ -239,7 +239,6 @@ export function toMapDisplay(
     complexity: diff.complexity ?? 0,
     categoryCode: getCategoryCode(diff.categoryId) ?? 'overall',
     difficulty: diff.difficulty,
-    difficultyLabel: formatDifficulty(diff.difficulty),
     characteristic: diff.characteristic,
     totalScores: diff.statistics?.totalScores,
     rankedAt: diff.rankedAt ?? undefined,

@@ -34,7 +34,7 @@ watch(resolvedSrc, () => { broken.value = false })
 
 <template>
   <div v-if="!broken" class="cover-image" :style="{ width: `${size}px`, height: `${size}px` }">
-    <img class="cover-image__img" :src="resolvedSrc" :alt="alt" loading="lazy" decoding="async"
+    <img class="cover-image__img" data-shared="cover" :src="resolvedSrc" :alt="alt" loading="lazy" decoding="async"
       @error="handleError" />
   </div>
 </template>

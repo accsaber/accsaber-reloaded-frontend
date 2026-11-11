@@ -439,7 +439,6 @@ function resetFilters() {
       </div>
       <FilterButton
         :active="filtersOpen || hasActiveFilters"
-        :has-indicator="hasActiveFilters"
         @click="filtersOpen = !filtersOpen"
       />
     </div>

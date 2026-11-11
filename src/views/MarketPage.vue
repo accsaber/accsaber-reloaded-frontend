@@ -233,7 +233,7 @@ watch(
         />
         <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>
-            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
+            <FilterButton :active="filtersOpen || hasActiveFilters" />
           </template>
           <ItemFilterPanel
             :rarities="rarities"

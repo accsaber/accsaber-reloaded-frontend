@@ -4,6 +4,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import { installRoutePrefetch } from './router/prefetch'
+import { installCoverTransitions } from './router/coverTransition'
 
 import '@/assets/styles/global.css'
 
@@ -31,4 +32,5 @@ void Promise.all([
 const booting = authStore.bootstrap()
 app.use(router)
 installRoutePrefetch(router)
+installCoverTransitions(router)
 void Promise.all([booting, router.isReady().catch(() => {})]).then(() => app.mount('#app'))

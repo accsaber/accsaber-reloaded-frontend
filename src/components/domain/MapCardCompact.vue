@@ -2,34 +2,23 @@
 import CoverImage from '@/components/common/CoverImage.vue';
 import type { MapDisplay } from '@/types/display';
 import { isRankingSubdomain } from '@/utils/subdomain';
-import { computed } from 'vue';
-import { useRouter, type RouteLocationRaw } from 'vue-router';
+import { RouterLink, type RouteLocationRaw } from 'vue-router';
 import ComplexityBadge from './ComplexityBadge.vue';
 import DifficultyBadge from './DifficultyBadge.vue';
 import SongTitle from './SongTitle.vue';
 
-const props = defineProps<{
+defineProps<{
   map: MapDisplay
   to: RouteLocationRaw
 }>()
-
-const router = useRouter()
-
-const href = computed(() => router.resolve(props.to).href)
-
-function handleClick(event: MouseEvent) {
-  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
-  event.preventDefault()
-  router.push(props.to)
-}
 </script>
 
 <template>
-  <a class="map-card-compact" :href="href" @click="handleClick">
+  <RouterLink class="map-card-compact" :to="to">
     <CoverImage :src="map.coverUrl" :alt="map.songName" :size="80" class="map-card-compact__cover"
       :fallback-src="map.coverFallbackUrl ?? null" />
     <div class="map-card-compact__info">
-      <SongTitle class="map-card-compact__song" layout="stacked" :name="map.songName"
+      <SongTitle class="map-card-compact__song" :name="map.songName"
         :sub-name="map.songSubName" />
       <div class="map-card-compact__primary">
         <DifficultyBadge :difficulty="map.difficulty" />
@@ -41,7 +30,7 @@ function handleClick(event: MouseEvent) {
         <span class="map-card-compact__mapper">{{ map.mapperName }}</span>
       </span>
     </div>
-  </a>
+  </RouterLink>
 </template>
 
 <style scoped>
@@ -55,7 +44,7 @@ function handleClick(event: MouseEvent) {
   cursor: pointer;
   text-decoration: none;
   color: inherit;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
   min-width: 260px;
 }
 

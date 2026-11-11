@@ -91,7 +91,7 @@ function clearFilters() {
       <SortDirectionToggle :direction="sortState.direction" @toggle="$emit('sort', sortState.key)" />
       <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
         <template #trigger>
-          <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
+          <FilterButton :active="filtersOpen || hasActiveFilters" />
         </template>
         <ItemFilterPanel v-model:rarities="rarities" v-model:type-keys="typeKeys"
           v-model:modifier-keys="modifierKeys" v-model:collection-ids="collectionIds" :type-groups="typeGroups"

@@ -118,7 +118,7 @@ const emptyMessage = computed(() => (request.value.search || request.value.categ
         class="queue-page__search" />
       <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
         <template #trigger>
-          <FilterButton :active="filtersOpen || selectedCategory !== null" :has-indicator="selectedCategory !== null" />
+          <FilterButton :active="filtersOpen || selectedCategory !== null" />
         </template>
         <MapFilterSidebar v-model:selected-category="selectedCategory" :show-complexity="false" />
       </FilterPopover>

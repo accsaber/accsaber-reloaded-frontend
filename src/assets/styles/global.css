@@ -166,6 +166,19 @@ h1 {
   opacity: 0;
 }
 
+::view-transition-group(shared-cover) {
+  animation-duration: var(--dur-move);
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(shared-cover) {
+  display: none;
+}
+
+::view-transition-new(shared-cover) {
+  animation: none;
+}
+
 .fx-canvas {
   position: absolute;
   inset: 0;

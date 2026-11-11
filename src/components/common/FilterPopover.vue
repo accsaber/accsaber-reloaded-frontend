@@ -20,10 +20,10 @@ useClickOutside(containerRef, open, () => {
       <slot name="trigger" />
     </div>
     <Teleport to="body" :disabled="!sheet">
-      <Transition name="backdrop">
+      <Transition name="fade">
         <div v-if="open && sheet" class="filter-popover__backdrop" />
       </Transition>
-      <Transition :name="sheet ? 'sheet' : 'popover'">
+      <Transition :name="sheet ? 'sheet' : 'pop'">
         <div
           v-if="open"
           ref="panelRef"
@@ -76,6 +76,7 @@ useClickOutside(containerRef, open, () => {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   padding: var(--space-md);
+  transform-origin: top right;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -135,48 +136,16 @@ useClickOutside(containerRef, open, () => {
   color: var(--text-primary);
 }
 
-.popover-enter-active,
-.popover-leave-active {
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.popover-enter-from,
-.popover-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 .sheet-enter-active {
-  transition: transform 200ms ease-out;
+  transition: transform var(--dur-enter) var(--ease-out);
 }
 
 .sheet-leave-active {
-  transition: transform 150ms ease-in;
+  transition: transform var(--dur-exit) var(--ease-in);
 }
 
 .sheet-enter-from,
 .sheet-leave-to {
   transform: translateY(100%);
-}
-
-.backdrop-enter-active,
-.backdrop-leave-active {
-  transition: opacity 150ms ease;
-}
-
-.backdrop-enter-from,
-.backdrop-leave-to {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .popover-enter-active,
-  .popover-leave-active,
-  .sheet-enter-active,
-  .sheet-leave-active,
-  .backdrop-enter-active,
-  .backdrop-leave-active {
-    transition: none;
-  }
 }
 </style>

@@ -91,7 +91,7 @@ const newsTypeChoices = computed(() => [
       />
       <FilterPopover v-model:open="filtersOpen">
         <template #trigger>
-          <FilterButton :active="filtersOpen || filterActive" :has-indicator="filterActive" />
+          <FilterButton :active="filtersOpen || filterActive" />
         </template>
         <div class="rail__filters">
           <div class="rail__filter-group">

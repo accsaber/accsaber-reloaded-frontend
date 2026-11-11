@@ -25,7 +25,7 @@ import BatchListView from './maps/BatchListView.vue'
 import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
 import MapListView from './maps/MapListView.vue'
 import PlaylistDropdown from '@/components/domain/PlaylistDropdown.vue'
-import ViewToggle from './maps/ViewToggle.vue'
+import ViewToggle, { type ViewMode } from './maps/ViewToggle.vue'
 
 const route = useRoute()
 const categoryStore = useCategoryStore()
@@ -36,8 +36,6 @@ usePageMeta({
   title: 'Maps | AccSaber',
   description: 'Browse all ranked maps on AccSaber across categories and difficulties.',
 })
-
-type ViewMode = 'grid' | 'list' | 'batch'
 
 const MAPS_VIEW_KEY = 'accsaber:maps-view'
 const MAX_COMPLEXITY = 20
@@ -122,6 +120,7 @@ const batchTotalPages = ref(0)
 const batchLoading = ref(true)
 
 const isBatchView = computed(() => viewMode.value === 'batch')
+const firstLoad = computed(() => loading.value && difficulties.value.length === 0)
 const pageCount = computed(() => (isBatchView.value ? batchTotalPages.value : totalPages.value))
 
 const mapDisplays = computed<MapDisplay[]>(() =>
@@ -221,12 +220,10 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
 <template>
   <div class="maps-page">
     <div class="maps-page__header">
-      <div>
-        <h1 class="maps-page__title">Maps</h1>
-        <p v-if="!isBatchView && !loading" class="maps-page__subtitle">
-          {{ totalElements.toLocaleString() }} ranked difficulties
-        </p>
-      </div>
+      <h1>Maps</h1>
+      <span v-if="!isBatchView && totalElements" class="caption">
+        {{ totalElements.toLocaleString() }} ranked difficulties
+      </span>
     </div>
 
     <div class="maps-page__controls">
@@ -242,7 +239,7 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
 
         <FilterPopover v-if="!isBatchView" v-model:open="filtersOpen">
           <template #trigger>
-            <FilterButton :active="filtersOpen || hasActiveFilters" :has-indicator="hasActiveFilters" />
+            <FilterButton :active="filtersOpen || hasActiveFilters" />
           </template>
           <MapFilterSidebar v-model:selected-category="selectedCategory" v-model:complexity-range="complexityRange"
             v-model:unplayed-only="unplayedOnly" :show-unplayed="authStore.isLoggedIn" />
@@ -252,19 +249,22 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
 
     <div class="maps-page__content">
       <template v-if="viewMode === 'grid'">
-        <div v-if="loading" class="maps-page__grid">
-          <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
+        <div v-if="firstLoad" class="maps-page__grid">
+          <SkeletonLoader v-for="i in 20" :key="i" variant="card" />
         </div>
         <EmptyState v-else-if="mapDisplays.length === 0" message="No maps found matching your filters." />
-        <div v-else class="maps-page__grid">
-          <MapCard v-for="m in mapDisplays" :key="m.difficultyId" :map="m" :to="mapRouteTo(m)" />
+        <div v-else class="maps-page__grid stagger" :class="{ refreshing: loading }"
+          :style="{ '--n': mapDisplays.length }">
+          <MapCard v-for="(m, i) in mapDisplays" :key="m.difficultyId" :map="m" :to="mapRouteTo(m)"
+            :style="{ '--i': i }" />
         </div>
       </template>
 
-      <MapListView v-else-if="viewMode === 'list'" :maps="mapDisplays" :loading="loading" :sort-state="sortState"
-        :map-route-to="mapRouteTo" @sort="setSort" />
+      <MapListView v-else-if="viewMode === 'list'" :maps="mapDisplays" :loading="firstLoad"
+        :refreshing="loading && !firstLoad" :sort-state="sortState" :map-route-to="mapRouteTo" @sort="setSort" />
 
-      <BatchListView v-else-if="viewMode === 'batch'" :batches="batches" :loading="batchLoading"
+      <BatchListView v-else-if="viewMode === 'batch'" :batches="batches"
+        :loading="batchLoading && batches.length === 0" :refreshing="batchLoading && batches.length > 0"
         :map-route-to="mapRouteTo" />
 
       <PaginationControls v-if="pageCount > 1" :page="currentPage" :total-pages="pageCount" @update:page="setPage" />
@@ -286,12 +286,6 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
   display: flex;
   align-items: baseline;
   gap: var(--space-md);
-}
-
-.maps-page__subtitle {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
 }
 
 .maps-page__controls {
@@ -330,6 +324,10 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-md);
+}
+
+.maps-page__grid :deep(.skeleton__card-image) {
+  aspect-ratio: 1 / 1;
 }
 
 @media (max-width: 767px) {

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useTiltEffect } from '@/composables/useTiltEffect'
+import { useCategoryStore } from '@/stores/categories'
 import { onImageError } from '@/utils/media'
 import type { MapDisplay } from '@/types/display'
 import { computed, ref } from 'vue'
-import { useRouter, type RouteLocationRaw } from 'vue-router'
-import CategoryBadge from '@/components/domain/CategoryBadge.vue'
+import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
@@ -14,40 +14,36 @@ const props = defineProps<{
   to: RouteLocationRaw
 }>()
 
-const router = useRouter()
+const categoryStore = useCategoryStore()
 const cardRef = ref<HTMLElement | null>(null)
 const { style: tiltStyle } = useTiltEffect(cardRef)
 
-const href = computed(() => router.resolve(props.to).href)
+const categoryName = computed(() => categoryStore.getCategoryInfo(props.map.categoryCode)?.name ?? props.map.categoryCode)
 const handleCoverError = (e: Event) => onImageError(props.map.coverFallbackUrl)(e)
-
-function handleClick(event: MouseEvent) {
-  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
-  event.preventDefault()
-  router.push(props.to)
-}
 </script>
 
 <template>
-  <a ref="cardRef" class="map-card" :href="href" :style="tiltStyle" @click="handleClick">
-    <div class="map-card__image-wrap">
-      <img class="map-card__cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" decoding="async"
-        @error="handleCoverError" />
-    </div>
-    <div class="map-card__body">
-      <CategoryBadge :category="map.categoryCode" size="sm" class="map-card__category" />
-      <SongTitle class="map-card__song card-title" layout="stacked" :name="map.songName"
-        :sub-name="map.songSubName" />
-      <div class="map-card__primary">
-        <DifficultyBadge :difficulty="map.difficulty" />
-        <ComplexityBadge :complexity="map.complexity" />
+  <RouterLink v-slot="{ href, navigate }" :to="to" custom>
+    <a ref="cardRef" class="map-card" :href="href" :style="tiltStyle" @click="navigate">
+      <div class="map-card__image-wrap">
+        <img class="map-card__cover" data-shared="cover" :src="map.coverUrl" :alt="map.songName" loading="lazy" decoding="async"
+          @error="handleCoverError" />
       </div>
-      <div class="map-card__secondary">
-        <span class="map-card__artist">{{ map.artistName }}</span>
-        <span class="map-card__mapper">{{ map.mapperName }}</span>
+      <div class="map-card__body">
+        <SongTitle class="map-card__line card-title" :name="map.songName" :sub-name="map.songSubName" />
+        <div class="map-card__identity">
+          <div class="map-card__labels">
+            <span class="map-card__category" :style="{ color: categoryStore.getAccent(map.categoryCode) }">
+              {{ categoryName }}
+            </span>
+            <DifficultyBadge :difficulty="map.difficulty" />
+          </div>
+          <ComplexityBadge :complexity="map.complexity" />
+        </div>
+        <span class="map-card__line map-card__credits">{{ map.artistName }} · {{ map.mapperName }}</span>
       </div>
-    </div>
-  </a>
+    </a>
+  </RouterLink>
 </template>
 
 <style scoped>
@@ -57,17 +53,16 @@ function handleClick(event: MouseEvent) {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   overflow: hidden;
-  cursor: pointer;
   text-decoration: none;
   color: inherit;
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
   will-change: transform;
 }
 
 .map-card:hover {
   border-color: var(--text-tertiary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transform: scale(1.01);
 }
 
 .map-card__image-wrap {
@@ -89,47 +84,46 @@ function handleClick(event: MouseEvent) {
   gap: var(--space-sm);
 }
 
-.map-card__category {
-  margin-bottom: -3px;
-}
-
-.map-card__song {
+.map-card__line {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 
-.map-card__primary {
+.map-card__identity {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-sm);
-  flex-wrap: wrap;
 }
 
-.map-card__secondary {
+.map-card__labels {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: var(--space-sm);
   min-width: 0;
 }
 
-.map-card__artist,
-.map-card__mapper {
+.map-card__category {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.map-card__artist {
+.map-card__credits {
+  font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .map-card:hover {
-    transform: none;
+@media (max-width: 767px) {
+  .map-card__body {
+    padding: var(--space-sm);
+  }
+
+  .map-card__labels {
+    flex-direction: column;
+    gap: 0;
   }
 }
 </style>

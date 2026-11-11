@@ -17,6 +17,7 @@ const props = defineProps<{
   fallbackTitleColor?: string | null
   hideProgress?: boolean
   plain?: boolean
+  sharedTarget?: boolean
   equippedTitle?: TitleValue | null
   equippedBorderShape?: BorderShapeValue | null
   equippedBorderColor?: BorderColorValue | null
@@ -55,6 +56,7 @@ const fallbackTitleStyle = computed(() => {
   <div class="level-badge">
     <BorderComposition
       class="level-badge__stack"
+      :data-shared-target="sharedTarget ? '' : undefined"
       :shape="borderShape"
       :color="borderColor"
       :avatar-url="avatarUrl"
