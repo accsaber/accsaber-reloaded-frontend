@@ -42,6 +42,12 @@ const staleFrom = ref<number | null>(null)
 const cascade = ref(true)
 const batches = new WeakMap<Record<string, unknown>, number>()
 let batch = 0
+let shape = columnShape()
+let skeletonShown = !!props.loading
+
+function columnShape(): string {
+  return props.columns.map((col) => col.key).join()
+}
 let swapTimer: ReturnType<typeof setTimeout> | undefined
 
 function swapStep(count: number): number {
@@ -90,14 +96,22 @@ watch(() => props.rows, (next) => {
   const moved = positions.filter((position, index) => position !== undefined && position !== index).length
   const replaced = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (!replaced || still || !prev.length || !next.length) {
+  const restart = skeletonShown || shape !== columnShape()
+  shape = columnShape()
+  skeletonShown = !!props.loading
+  if (restart || !replaced || still || !prev.length || !next.length) {
+    if (restart) batch++
     stamp(next)
     shown.value = next
     staleFrom.value = null
-    cascade.value = !prev.length
+    cascade.value = restart || !prev.length
   } else {
     swapRows(next)
   }
+})
+
+watch(() => props.loading, (loading) => {
+  if (loading) skeletonShown = true
 })
 
 watch(() => props.refreshing, (refreshing) => {

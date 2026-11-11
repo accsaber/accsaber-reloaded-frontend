@@ -139,13 +139,6 @@ a.profile-stats__link:hover :deep(.stat-block__label) {
     max-width: 100%;
   }
 
-  .profile-stats__tabs :deep(.base-tabs) {
-    flex-wrap: nowrap;
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
   .profile-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-lg) var(--space-md);

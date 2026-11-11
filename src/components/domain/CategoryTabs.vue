@@ -49,7 +49,12 @@ const tabs = computed(() => {
   flex-wrap: wrap;
 }
 
-.category-tabs.base-tabs :deep(.base-tabs__tab:not(.base-tabs__tab--active):not(:hover)) {
-  opacity: 0.7;
+@media (max-width: 767px) {
+  .category-tabs.base-tabs {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
 }
 </style>

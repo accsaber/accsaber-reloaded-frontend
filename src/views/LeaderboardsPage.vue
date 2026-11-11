@@ -197,8 +197,8 @@ watch(requestKey, fetchData, { immediate: true })
   <div class="leaderboards" :style="{ '--page-accent': accent }">
     <header class="leaderboards__header">
       <h1 class="leaderboards__title">{{ categoryName }}</h1>
-      <p v-if="totalPlayers > 0" class="leaderboards__subtitle">
-        {{ totalPlayers.toLocaleString() }} players ranked
+      <p class="leaderboards__subtitle">
+        <template v-if="totalPlayers > 0">{{ totalPlayers.toLocaleString() }} players ranked</template>
       </p>
     </header>
 
@@ -216,7 +216,7 @@ watch(requestKey, fetchData, { immediate: true })
 
     <div class="leaderboards__table">
       <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
-        :loading-rows="10"
+        :loading-rows="50"
         :row-class="rowClass" :row-to="playerRowTo" row-key="userId" empty-message="No players found"
         @sort="setSort">
         <template #cell-rank="{ value, row }">
@@ -294,7 +294,7 @@ watch(requestKey, fetchData, { immediate: true })
   font-size: var(--text-caption);
   color: var(--text-secondary);
   margin: var(--space-xs) 0 0;
-  letter-spacing: 0.02em;
+  min-height: 1lh;
 }
 
 .leaderboards__controls {
@@ -306,11 +306,18 @@ watch(requestKey, fetchData, { immediate: true })
 
 .leaderboards__filter {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
   gap: var(--space-sm);
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+.leaderboards__filter :deep(.base-switch),
+.leaderboards__filter :deep(.search-box),
+.leaderboards__filter :deep(.base-select__trigger),
+.leaderboards__filter :deep(.filter-button) {
+  height: var(--control-h);
 }
 
 .leaderboards__table {
@@ -319,7 +326,7 @@ watch(requestKey, fetchData, { immediate: true })
 
 .rank-cell__global {
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-weight: 400;
   margin-left: 2px;
 }
@@ -331,7 +338,7 @@ watch(requestKey, fetchData, { immediate: true })
 
 .leaderboards__table :deep(.lb-row--highlighted),
 .lb-card.lb-row--highlighted {
-  animation: row-highlight 2s ease-out;
+  animation: row-highlight 2s var(--ease-out);
 }
 
 @keyframes row-highlight {
@@ -355,16 +362,10 @@ watch(requestKey, fetchData, { immediate: true })
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   min-height: 48px;
-  transition: border-color 120ms ease;
   text-decoration: none;
   color: inherit;
-}
-
-.lb-card:hover {
-  border-color: var(--text-tertiary);
 }
 
 .lb-card__rank {
@@ -392,7 +393,16 @@ watch(requestKey, fetchData, { immediate: true })
 
 @media (max-width: 767px) {
   .leaderboards__controls {
-    align-items: stretch;
+    align-items: center;
+  }
+
+  .leaderboards__filter {
+    width: 100%;
+  }
+
+  .leaderboards__filter :deep(.search-box) {
+    flex: 1 1 100%;
+    order: -1;
   }
 
   .leaderboards__header {
