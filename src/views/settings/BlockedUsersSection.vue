@@ -51,7 +51,7 @@ async function unblock(item: UserRelationResponse) {
 <style scoped>
 .blocked-users__empty {
   margin: 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-caption);
 }
 

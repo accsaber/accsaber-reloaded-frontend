@@ -1,11 +1,14 @@
 <script setup lang="ts" generic="T extends string | number | boolean">
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import { computed } from 'vue'
+
 interface PickerOption {
   value: T
   label: string
   description?: string
 }
 
-defineProps<{
+const props = defineProps<{
   modelValue: T | null
   options: PickerOption[]
   ariaLabel: string
@@ -13,53 +16,23 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
+
+const tabs = computed(() => props.options.map((option) => ({ key: String(option.value), label: option.label })))
+const descriptions = computed(
+  () => new Map(props.options.map((option) => [String(option.value), option.description])),
+)
+
+function pick(key: string) {
+  const option = props.options.find((candidate) => String(candidate.value) === key)
+  if (option) emit('update:modelValue', option.value)
+}
 </script>
 
 <template>
-  <div class="settings-picker" role="radiogroup" :aria-label="ariaLabel">
-    <button v-for="opt in options" :key="String(opt.value)" type="button" class="settings-picker__btn"
-      :class="{ 'settings-picker__btn--active': modelValue === opt.value }" role="radio"
-      :aria-checked="modelValue === opt.value" :title="opt.description" :disabled="disabled"
-      @click="emit('update:modelValue', opt.value)">
-      {{ opt.label }}
-    </button>
-  </div>
+  <BaseTabs variant="segmented" :tabs="tabs" :model-value="String(modelValue)" :label="ariaLabel"
+    :disabled-keys="disabled ? tabs.map((tab) => tab.key) : []" @update:model-value="pick">
+    <template #tab="{ tab }">
+      <span :title="descriptions.get(tab.key)">{{ tab.label }}</span>
+    </template>
+  </BaseTabs>
 </template>
-
-<style scoped>
-.settings-picker {
-  display: inline-flex;
-  padding: 3px;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  gap: 2px;
-}
-
-.settings-picker__btn {
-  padding: var(--space-xs) var(--space-md);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.settings-picker__btn:hover:not(:disabled) {
-  color: var(--text-primary);
-}
-
-.settings-picker__btn--active {
-  color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 10%, var(--bg-surface));
-}
-
-.settings-picker__btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-</style>

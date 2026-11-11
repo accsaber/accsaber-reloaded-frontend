@@ -135,7 +135,7 @@ export function useCampaignDocument(ctx: DocumentContext) {
     if (campaign.value && campaign.value.id !== '') return campaign.value
     const curator = ctx.isCurator()
     if (!auth.isLoggedIn && !curator) {
-      actionError.value = 'Sign in to create a campaign.'
+      actionError.value = 'Log in to create a campaign.'
       return null
     }
     try {

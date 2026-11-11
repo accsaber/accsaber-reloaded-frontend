@@ -38,7 +38,7 @@ const willBuyout = computed(
 )
 
 const disabledReason = computed(() => {
-  if (!props.loggedIn) return 'Sign in to bid or buy on the market.'
+  if (!props.loggedIn) return 'Log in to bid or buy on the market.'
   if (isSameMarketUser(props.listing.seller, props.viewerId)) return 'This is your listing.'
   if (isSameMarketUser(props.listing.currentBidder, props.viewerId))
     return "You're the highest bidder."

@@ -151,7 +151,7 @@ const breadcrumbs: Crumb[] = [
       </div>
     </div>
 
-    <EmptyState v-if="!authStore.isLoggedIn" message="Sign in to see your market activity." />
+    <EmptyState v-if="!authStore.isLoggedIn" message="Log in to see your market activity." />
 
     <template v-else>
       <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="activeTab = $event as TabKey" />

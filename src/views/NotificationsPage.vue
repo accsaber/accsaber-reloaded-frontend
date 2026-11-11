@@ -170,7 +170,7 @@ watch([filter, currentPage, () => authStore.isLoggedIn], fetchPage, { immediate:
     </template>
 
     <template v-else>
-      <EmptyState message="Sign in to see your notifications." action-label="Sign in"
+      <EmptyState message="Log in to see your notifications." action-label="Log in"
         @action="loginModalOpen = true" />
     </template>
 

@@ -91,7 +91,7 @@ async function handleLogin() {
           :disabled="!identifier || !password"
           style="width: 100%"
         >
-          Sign In
+          Log in
         </BaseButton>
       </form>
     </div>

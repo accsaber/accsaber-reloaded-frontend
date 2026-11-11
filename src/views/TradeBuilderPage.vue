@@ -205,7 +205,7 @@ onMounted(() => {
     <Breadcrumbs :crumbs="breadcrumbs" />
     <PageHeaderBleed title="New Trade Offer" />
 
-    <EmptyState v-if="!authStore.isLoggedIn" message="Sign in to create a trade offer." />
+    <EmptyState v-if="!authStore.isLoggedIn" message="Log in to create a trade offer." />
 
     <template v-else>
       <section class="trade-builder__field">

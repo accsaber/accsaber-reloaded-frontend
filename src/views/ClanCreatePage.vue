@@ -91,7 +91,7 @@ async function submit() {
       <h1 class="clan-create__title">Create a clan</h1>
     </header>
 
-    <EmptyState v-if="!auth.isLoggedIn" message="Sign in to create a clan." />
+    <EmptyState v-if="!auth.isLoggedIn" message="Log in to create a clan." />
 
     <div v-else-if="currentClan" class="clan-create__blocked">
       <p>You are already in a clan.</p>

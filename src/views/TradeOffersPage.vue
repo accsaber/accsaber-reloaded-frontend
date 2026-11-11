@@ -129,7 +129,7 @@ onMounted(() => {
     <Breadcrumbs :crumbs="breadcrumbs" />
     <PageHeaderBleed title="Trade Offers" />
 
-    <EmptyState v-if="!authStore.isLoggedIn" message="Sign in to view your trade offers." />
+    <EmptyState v-if="!authStore.isLoggedIn" message="Log in to view your trade offers." />
 
     <div v-else class="trades-page__layout">
       <main class="trades-page__main">

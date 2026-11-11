@@ -2,11 +2,9 @@
 import '@/assets/styles/settings.css'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import ImageUploader from '@/components/common/ImageUploader.vue'
 import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import { useAppearance } from '@/composables/useAppearance'
-import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useSyncSetting } from '@/composables/useSyncSetting'
@@ -62,9 +60,6 @@ const REPLAY_SERVICE_OPTIONS = [
   { value: 'chroviewer' as const, label: 'ChroViewer' },
 ]
 
-const me = computed(() => authStore.authMe?.player ?? null)
-const meAvatarUrl = computed(() => pickAvatarUrl(me.value))
-const handleMeAvatarError = (e: Event) => onImageError(pickAvatarFallback(me.value))(e)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const canAccessAccount = computed(() => isLoggedIn.value || (isRankingSubdomain && authStore.isStaffAuthorized))
 
@@ -77,6 +72,8 @@ const sections = computed(() => [
 ])
 
 const sectionParam = queryRef<SectionKey>('section')
+const activeIndex = computed(() => sections.value.findIndex((section) => section.key === activeSection.value))
+
 const activeSection = computed<SectionKey>(() => {
   const found = sections.value.find((s) => s.key === sectionParam.value)
   return found && !found.requiresLogin ? found.key : 'appearance'
@@ -92,12 +89,6 @@ function fetchSyncSettings() {
   if (!isLoggedIn.value || activeSection.value !== 'account') return
   nameSync.fetch()
   avatarSync.fetch()
-}
-
-async function uploadAvatar(file: File) {
-  const { uploadMyAvatar } = await import('@/api/cdn')
-  await uploadMyAvatar(file)
-  await Promise.all([authStore.fetchAuthMe(), avatarSync.fetch()])
 }
 
 async function confirmLogout() {
@@ -205,6 +196,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
 
     <div class="settings__layout">
       <nav class="settings__nav" aria-label="Settings sections">
+        <span class="settings__nav-indicator" :style="{ '--active-index': activeIndex }" aria-hidden="true" />
         <button v-for="section in sections" :key="section.key" type="button" class="settings__nav-btn" :class="{
           'settings__nav-btn--active': activeSection === section.key,
           'settings__nav-btn--locked': section.requiresLogin,
@@ -219,7 +211,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
         </button>
       </nav>
 
-      <main class="settings__main">
+      <main :key="activeSection" class="settings__main stagger">
         <template v-if="activeSection === 'appearance'">
           <section class="settings-card">
             <header class="settings-card__header">
@@ -284,7 +276,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
             <header class="settings-card__header">
               <h2 class="settings-card__title">More options locked</h2>
             </header>
-            <BaseButton variant="primary" @click="loginModalOpen = true">Sign in</BaseButton>
+            <BaseButton variant="primary" @click="loginModalOpen = true">Log in</BaseButton>
           </section>
         </template>
 
@@ -349,19 +341,6 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
             <header class="settings-card__header">
               <h2 class="settings-card__title">Account</h2>
             </header>
-
-            <div v-if="me" class="settings-profile settings-profile--with-uploader">
-              <div class="settings-profile__avatar-block">
-                <ImageUploader v-if="isLoggedIn" label="Avatar" aspect-ratio="1 / 1"
-                  :image-url="meAvatarUrl || null" :upload-handler="uploadAvatar" />
-                <img v-else-if="meAvatarUrl" :src="meAvatarUrl" :alt="me.name"
-                  class="settings-profile__avatar" decoding="async" @error="handleMeAvatarError" />
-              </div>
-              <div class="settings-profile__text">
-                <span class="settings-profile__name">{{ me.name }}</span>
-                <span v-if="me.country" class="settings-profile__country">{{ me.country }}</span>
-              </div>
-            </div>
 
             <div v-if="isLoggedIn" class="settings-row">
               <div class="settings-row__label">
@@ -441,7 +420,20 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
   top: calc(var(--navbar-height) + var(--space-md));
 }
 
+.settings__nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-btn);
+  transform: translateY(calc(var(--active-index) * (40px + var(--space-xs))));
+  transition: transform var(--dur-enter) var(--ease-in-out);
+}
+
 .settings__nav-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -450,7 +442,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
   height: 40px;
   padding: 0 var(--space-md);
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   border-radius: var(--radius-btn);
   color: var(--text-secondary);
   font-family: var(--font-sans);
@@ -458,7 +450,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 
 .settings__nav-btn:hover {
@@ -468,22 +460,16 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
 
 .settings__nav-btn--active {
   color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 8%, var(--bg-surface));
-  border-color: color-mix(in srgb, var(--page-accent) 40%, transparent);
-}
-
-.settings__nav-btn--locked .settings__nav-label {
-  color: var(--text-tertiary);
-}
-
-.settings__nav-btn--locked:hover .settings__nav-label {
-  color: var(--text-secondary);
 }
 
 .settings__nav-lock {
-  color: var(--text-tertiary);
   flex-shrink: 0;
 }
+
+.settings__main > :nth-child(2) { --i: 1; }
+.settings__main > :nth-child(3) { --i: 2; }
+.settings__main > :nth-child(4) { --i: 3; }
+.settings__main > :nth-child(n + 5) { --i: 4; }
 
 .settings__main {
   display: flex;
@@ -494,65 +480,7 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
 
 .settings-card--gated {
   background: color-mix(in srgb, var(--page-accent) 4%, var(--bg-surface));
-  border-color: color-mix(in srgb, var(--page-accent) 30%, transparent);
   align-items: flex-start;
-}
-
-.settings-profile {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.settings-profile--with-uploader {
-  align-items: flex-start;
-}
-
-.settings-profile__avatar-block {
-  width: 128px;
-  flex-shrink: 0;
-}
-
-@media (max-width: 480px) {
-  .settings-profile--with-uploader {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .settings-profile__avatar-block {
-    width: 100%;
-  }
-}
-
-.settings-profile__avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-avatar);
-  object-fit: cover;
-}
-
-.settings-profile__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.settings-profile__name {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: var(--text-body);
-}
-
-.settings-profile__country {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .settings__confirm-msg {
@@ -581,9 +509,17 @@ watch([activeSection, () => authStore.userId], fetchSyncSettings, { immediate: t
     padding-bottom: var(--space-xs);
   }
 
+  .settings__nav-indicator {
+    display: none;
+  }
+
   .settings__nav-btn {
     flex-shrink: 0;
     width: auto;
+  }
+
+  .settings__nav-btn--active {
+    background: var(--bg-surface);
   }
 }
 </style>

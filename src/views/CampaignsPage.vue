@@ -141,7 +141,7 @@ const browseFilters = computed<CampaignFilterState>(() => ({
 }))
 
 const emptyMessage = computed(() => {
-  if (pane.value === 'mine') return auth.isLoggedIn ? 'No campaigns yet' : 'Sign in to see your campaigns'
+  if (pane.value === 'mine') return auth.isLoggedIn ? 'No campaigns yet' : 'Log in to see your campaigns'
   if (pane.value === 'review') return 'Nothing to review'
   if (pane.value === 'drafts') return 'No drafts'
   return 'No campaigns found'
@@ -349,7 +349,7 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
     </template>
 
     <template v-else-if="pane === 'runs'">
-      <EmptyState v-if="!auth.isLoggedIn" message="Sign in to see your runs" />
+      <EmptyState v-if="!auth.isLoggedIn" message="Log in to see your runs" />
       <UserCampaignsPanel v-else empty-message="No runs yet" />
     </template>
 

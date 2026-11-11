@@ -258,7 +258,7 @@ const breadcrumbs: Crumb[] = [
       />
     </div>
 
-    <EmptyState v-if="!authStore.isLoggedIn" message="Sign in to list items on the market." />
+    <EmptyState v-if="!authStore.isLoggedIn" message="Log in to list items on the market." />
 
     <div v-else class="create-page__layout">
       <section class="create-page__picker" aria-label="Choose an item">

@@ -139,7 +139,7 @@ async function handleLogin() {
           <div class="staff-login__divider"><span>or</span></div>
 
           <button class="staff-login__secondary" @click="mode = 'password'">
-            Sign in with username &amp; password
+            Log in with username &amp; password
           </button>
         </template>
 
@@ -164,7 +164,7 @@ async function handleLogin() {
 
         <BaseButton type="submit" variant="primary" size="lg" :loading="loading"
           :disabled="!identifier || !password" style="width: 100%">
-          Sign In
+          Log in
         </BaseButton>
 
         <button type="button" class="staff-login__link" @click="mode = 'providers'">

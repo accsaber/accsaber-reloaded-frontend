@@ -22,8 +22,8 @@ defineEmits<{
       </div>
     </template>
 
-    <EmptyState v-else message="Sign in to generate a mod linked to your AccSaber account."
-      action-label="Sign in" @action="$emit('sign-in')" />
+    <EmptyState v-else message="Log in to generate a mod linked to your AccSaber account."
+      action-label="Log in" @action="$emit('sign-in')" />
   </div>
 </template>
 

@@ -7,7 +7,7 @@ import { ref } from 'vue'
 const STATUS_MESSAGES: Record<number, string> = {
   400: "This item isn't available to download.",
   404: 'File not found - contact staff.',
-  401: 'Your session has expired. Sign in again to download.',
+  401: 'Your session has expired. Log in again to download.',
 }
 
 function fallbackFilename(name: string): string {

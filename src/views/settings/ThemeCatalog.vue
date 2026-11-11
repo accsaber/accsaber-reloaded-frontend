@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { equipItem, getItems, getUserItems } from '@/api/items'
-import BaseButton from '@/components/common/BaseButton.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useAuthStore } from '@/stores/auth'
@@ -191,7 +190,7 @@ watch(() => authStore.userId, loadThemes)
       'theme-card--locked': !card.owned,
       'theme-card--multi': card.options.length > 1,
       'theme-card--wide': card.options.length > 2,
-    }" :title="!card.owned ? card.hint : undefined">
+    }">
       <button v-for="option in card.options" :key="option.key" type="button" class="theme-card__option"
         :class="{ 'theme-card__option--active': card.options.length > 1 && isShown(card, option) }" role="radio"
         :aria-checked="isActive(card, option)" :aria-label="option.label ? `${card.name} ${option.label}` : card.name"
@@ -206,11 +205,9 @@ watch(() => authStore.userId, loadThemes)
       </button>
       <div class="theme-card__body">
         <span class="theme-card__name">{{ card.name }}</span>
-        <span class="theme-card__hint">{{ card.hint }}</span>
+        <span class="theme-card__hint" :title="card.hint">{{ card.hint }}</span>
       </div>
-      <span v-if="preview?.card.id === card.id" class="theme-card__active-tag">Preview</span>
-      <span v-else-if="card.options.some((o) => isActive(card, o))" class="theme-card__active-tag">Active</span>
-      <span v-else-if="!card.owned" class="theme-card__lock-tag" aria-label="Locked">
+      <span v-if="!card.owned" class="theme-card__lock-tag" aria-label="Locked">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -218,20 +215,13 @@ watch(() => authStore.userId, loadThemes)
         </svg>
       </span>
     </div>
-    <div v-if="preview" class="theme-preview" role="status">
-      <span class="theme-preview__text">
-        Previewing <strong>{{ preview.card.name }} {{ preview.option.label }}</strong>. This is only a preview.
-        {{ preview.card.hint }}
-      </span>
-      <BaseButton size="sm" @click="stopPreview">Stop preview</BaseButton>
-    </div>
   </div>
 </template>
 
 <style scoped>
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--space-sm);
 }
 
@@ -239,32 +229,21 @@ watch(() => authStore.userId, loadThemes)
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm) var(--space-md);
-  padding: var(--space-md);
+  align-content: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
   background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
+  border: 1px solid transparent;
   border-radius: var(--radius-card);
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
 .theme-card:hover {
-  border-color: var(--text-tertiary);
+  background: var(--bg-elevated);
 }
 
 .theme-card--active {
   border-color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 6%, var(--bg-base));
-}
-
-.theme-card--locked {
-  opacity: 0.55;
-}
-
-.theme-card--multi .theme-card__body {
-  order: -1;
-  flex-basis: 100%;
-  padding-right: var(--space-xl);
 }
 
 .theme-card--wide {
@@ -273,15 +252,18 @@ watch(() => authStore.userId, loadThemes)
 
 .theme-card__option {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: var(--space-xs);
+  min-width: 0;
   padding: 0;
   background: none;
   border: none;
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
+  text-align: left;
   cursor: pointer;
 }
 
@@ -291,18 +273,7 @@ watch(() => authStore.userId, loadThemes)
   inset: 0;
 }
 
-.theme-card--multi .theme-card__option {
-  padding: var(--space-xs);
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-}
-
-.theme-card--multi .theme-card__option:hover {
-  background: var(--bg-elevated);
-}
-
 .theme-card__option--active {
-  border-color: var(--page-accent) !important;
   color: var(--page-accent);
 }
 
@@ -310,22 +281,30 @@ watch(() => authStore.userId, loadThemes)
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  width: 56px;
-  height: 40px;
-  flex-shrink: 0;
-  padding: var(--space-xs);
-  border-radius: var(--radius-btn);
-  border: 1px solid color-mix(in srgb, var(--preview-surface, var(--bg-overlay)) 60%, transparent);
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  height: 72px;
+  padding: var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
   background: var(--preview-base, var(--bg-base));
   overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.theme-card__option--active .theme-card__preview {
+  border-color: var(--page-accent);
+}
+
+.theme-card--locked .theme-card__preview {
+  opacity: 0.5;
 }
 
 .theme-card__swatch {
   position: relative;
   z-index: 1;
   display: block;
-  height: 6px;
+  height: 8px;
   border-radius: var(--radius-xs);
 }
 
@@ -335,9 +314,9 @@ watch(() => authStore.userId, loadThemes)
 
 .theme-card__body {
   display: flex;
+  flex-basis: 100%;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
   min-width: 0;
 }
 
@@ -347,51 +326,28 @@ watch(() => authStore.userId, loadThemes)
   color: var(--text-primary);
 }
 
+.theme-card--locked .theme-card__name {
+  color: var(--text-secondary);
+}
+
 .theme-card__hint {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
   font-size: var(--text-caption);
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
-.theme-card__active-tag {
-  position: absolute;
-  top: var(--space-xs);
-  right: var(--space-xs);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--page-accent);
-}
-
 .theme-card__lock-tag {
   position: absolute;
-  top: var(--space-xs);
-  right: var(--space-xs);
-  display: inline-flex;
-  color: var(--text-tertiary);
-}
-
-.theme-preview {
-  position: sticky;
-  bottom: var(--space-md);
+  top: var(--space-md);
+  right: var(--space-md);
   z-index: 1;
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  font-size: var(--text-body);
+  display: inline-flex;
   color: var(--text-primary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--page-accent);
-  border-radius: var(--radius-card);
-}
-
-.theme-preview__text {
-  flex: 1;
-  min-width: 200px;
 }
 
 @media (max-width: 520px) {

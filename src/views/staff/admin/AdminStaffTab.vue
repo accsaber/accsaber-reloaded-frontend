@@ -392,7 +392,7 @@ async function deactivateInstead() {
       </p>
       <p v-else class="created-note">
         <strong>{{ createdCredentials.username }}</strong> is now staff. This role is not carried by a
-        player login, so they need the password below to sign in on the staff site.
+        player login, so they need the password below to log in on the staff site.
       </p>
       <div class="form-field">
         <label class="field-label">Generated Password</label>

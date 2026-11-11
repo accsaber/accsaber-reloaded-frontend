@@ -71,7 +71,7 @@ function onDragEnd() {
 </script>
 
 <template>
-  <ul class="field-editor" role="list">
+  <TransitionGroup tag="ul" name="reorder" class="field-editor" role="list">
     <li v-for="(field, index) in order" :key="field" class="field-editor__row" :class="{
       'field-editor__row--hidden': !visible.has(field),
       'field-editor__row--dragging': dragIndex === index,
@@ -121,7 +121,7 @@ function onDragEnd() {
         </button>
       </span>
     </li>
-  </ul>
+  </TransitionGroup>
 </template>
 
 <style scoped>
@@ -140,11 +140,15 @@ function onDragEnd() {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
+  border: 1px solid transparent;
   border-radius: var(--radius-btn);
   background: var(--bg-base);
   cursor: grab;
-  transition: border-color 120ms ease, background-color 120ms ease, opacity 120ms ease;
+  transition:
+    transform var(--dur-enter) var(--ease-in-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
 }
 
 .field-editor__row--hidden {
@@ -193,7 +197,7 @@ function onDragEnd() {
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .field-editor__btn:hover:not(:disabled) {

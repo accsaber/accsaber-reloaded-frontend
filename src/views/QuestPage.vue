@@ -16,11 +16,11 @@ import QuestSignInStep from './quest/QuestSignInStep.vue'
 import QuestStepper from './quest/QuestStepper.vue'
 import { clamp } from '@/utils/math'
 
-const STEPS = ['Sign in', 'Generate', 'Install']
-const STEP_TITLES = ['Sign in', 'Generate your download', 'Install on your headset']
+const STEPS = ['Log in', 'Generate', 'Install']
+const STEP_TITLES = ['Log in', 'Generate your download', 'Install on your headset']
 
 const GENERATE_ERRORS: Record<number, string> = {
-  401: 'Your session expired. Sign in again to generate a download.',
+  401: 'Your session expired. Log in again to generate a download.',
   404: 'That release is no longer available. Reload the page and try again.',
   429: "You've generated 5 downloads in the last hour. Try again in an hour.",
 }

@@ -100,7 +100,6 @@ async function disconnect(provider: OAuthProvider) {
   gap: var(--space-md);
   padding: var(--space-md);
   background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
 }
 
@@ -136,7 +135,7 @@ async function disconnect(provider: OAuthProvider) {
   cursor: pointer;
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-btn);
-  transition: background 120ms ease, border-color 120ms ease;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .connection__remove:hover:not(:disabled) {
@@ -145,7 +144,7 @@ async function disconnect(provider: OAuthProvider) {
 }
 
 .connection__remove:disabled {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 

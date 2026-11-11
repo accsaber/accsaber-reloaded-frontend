@@ -136,7 +136,7 @@ async function handleRequestAccess() {
         </p>
 
         <button type="button" class="staff-login__link" @click="backToSignIn">
-          Back to Sign In
+          Back to log in
         </button>
       </template>
 
@@ -150,7 +150,7 @@ async function handleRequestAccess() {
           Your request has been submitted. An administrator will review it shortly.
         </p>
         <button type="button" class="staff-login__link" @click="backToSignIn">
-          Back to Sign In
+          Back to log in
         </button>
       </div>
     </template>

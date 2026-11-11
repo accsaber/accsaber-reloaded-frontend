@@ -273,7 +273,7 @@ function peerActivity(p: PresencePeer): string {
     </template>
 
     <template v-else-if="!auth.isLoggedIn && !isCurator">
-      <EmptyState message="Sign in to edit a campaign." />
+      <EmptyState message="Log in to edit a campaign." />
     </template>
 
     <template v-else-if="!canAccess">
