@@ -54,7 +54,7 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
     :row-to="rowTo" row-key="rank" empty-message="No records found">
 
     <template #cell-rank="{ value }">
-      <span class="rank-cell" :class="getRankClass(value as number)">#{{ value }}</span>
+      <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
     </template>
 
     <template #cell-player="{ row }">
@@ -95,7 +95,7 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
       <div v-if="isItemBoard" class="stats-card stats-card--item" :class="{ 'stats-card--static': isScarcity }"
         @click="pushRow(row)">
         <div class="stats-card__head">
-          <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
+          <span class="rank stats-card__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
           <ItemStatsItemCell :item="itemOf(row)" :serial="(row.serialNumber as number | null | undefined)" small />
           <span v-if="hasOwner && itemOf(row)" class="stats-card__badge" :class="rarityClass(itemOf(row)!.rarity)">
             {{ itemOf(row)!.rarity }}
@@ -127,7 +127,7 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
       </div>
 
       <div v-else class="stats-card" @click="pushRow(row)">
-        <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
+        <span class="rank stats-card__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
 
         <UserChip :user="(row.player as UserRefDisplay)" size="sm" tooltip class="stats-card__player" />
 
@@ -140,15 +140,6 @@ const primaryStat = computed(() => PRIMARY_STAT[props.board])
 </template>
 
 <style scoped>
-.rank-cell {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.rank-cell.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.rank-cell.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.rank-cell.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .stat-accent {
   color: var(--page-accent);

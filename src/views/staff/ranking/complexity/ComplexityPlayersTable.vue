@@ -132,7 +132,7 @@ function selectPlayer(row: Record<string, unknown>) {
       @row-click="selectPlayer"
     >
       <template #cell-rankCurrent="{ row }">
-        <span class="complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
+        <span class="rank complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
           {{ row.rankCurrent != null ? `#${row.rankCurrent}` : '–' }}
         </span>
       </template>
@@ -152,7 +152,7 @@ function selectPlayer(row: Record<string, unknown>) {
       </template>
 
       <template #cell-rankScenario="{ row }">
-        <span class="complexity-players__rank">
+        <span class="rank complexity-players__rank">
           {{ row.rankScenario != null ? `#${row.rankScenario}` : '–' }}
         </span>
       </template>
@@ -164,7 +164,7 @@ function selectPlayer(row: Record<string, unknown>) {
 
       <template #mobile-card="{ row }">
         <button type="button" class="complexity-players__card" @click="selectPlayer(row)">
-          <span class="complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
+          <span class="rank complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
             {{ row.rankCurrent != null ? `#${row.rankCurrent}` : '–' }}
           </span>
           <div class="complexity-players__card-body">
@@ -198,9 +198,7 @@ function selectPlayer(row: Record<string, unknown>) {
 }
 
 .complexity-players__rank {
-  font-family: var(--font-mono);
   font-size: var(--text-body);
-  color: var(--text-secondary);
 }
 
 .complexity-players__card {

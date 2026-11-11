@@ -84,7 +84,7 @@ watch(
 
     <ol v-else class="contrib__list">
       <li v-for="row in rows" :key="row.player.id" class="contrib__row">
-        <span class="contrib__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
+        <span class="rank contrib__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
         <UserChip :user="row.player" link class="contrib__player" @click="emit('navigate')" />
         <span v-if="paid" class="contrib__reward" :class="{ 'contrib__reward--pending': !row.rewarded }">
           {{ row.rewarded ? 'Rewarded' : 'Paying out' }}
@@ -133,11 +133,8 @@ watch(
 .contrib__rank {
   min-width: 40px;
   text-align: right;
-  font-family: var(--font-mono);
   font-size: var(--text-body);
-  color: var(--text-secondary);
 }
-
 
 .contrib__player {
   flex: 1;

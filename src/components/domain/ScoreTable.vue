@@ -118,7 +118,7 @@ const customSlots = computed(() => {
     >
       <template #cell-rank="sp">
         <slot name="cell-rank" v-bind="sp">
-          <span class="score-table__rank" :class="medalRanks ? getRankClass(sp.value as number) : ''">
+          <span class="rank" :class="medalRanks ? getRankClass(sp.value as number) : ''">
             #{{ sp.value }}
           </span>
         </slot>
@@ -126,7 +126,7 @@ const customSlots = computed(() => {
 
       <template #cell-leaderboardRank="sp">
         <slot name="cell-leaderboardRank" v-bind="sp">
-          <span class="score-table__rank" :class="medalRanks ? getRankClass(sp.value as number) : ''">
+          <span class="rank" :class="medalRanks ? getRankClass(sp.value as number) : ''">
             #{{ sp.value }}
           </span>
         </slot>
@@ -191,16 +191,6 @@ const customSlots = computed(() => {
   flex-direction: column;
   gap: var(--space-lg);
 }
-
-.score-table__rank {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.score-table__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.score-table__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.score-table__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .score-table__ap {
   font-weight: 500;

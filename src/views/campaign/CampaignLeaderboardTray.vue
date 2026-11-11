@@ -360,7 +360,7 @@ function isSpectating(player: PlayerRef): boolean {
           :title="`View ${row.player.name}'s run`"
           @click="emit('spectate', row.player)"
         >
-          <span v-if="row.rank != null" class="lb__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
+          <span v-if="row.rank != null" class="rank lb__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
           <img
             class="lb__avatar"
             :src="pickAvatarUrl(row.player)"
@@ -592,15 +592,8 @@ function isSpectating(player: PlayerRef): boolean {
   flex-shrink: 0;
   min-width: 30px;
   text-align: right;
-  font-family: var(--font-mono);
   font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
 }
-
-.lb__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.lb__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.lb__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .lb__avatar {
   width: 28px;

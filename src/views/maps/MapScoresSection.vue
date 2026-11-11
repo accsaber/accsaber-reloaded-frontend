@@ -290,7 +290,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
       row-key="_userId" :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort"
       @update:page="setPage">
       <template #cell-rank="{ value, row }">
-        <span class="map-scores__rank" :class="getRankClass(value as number)">
+        <span class="rank" :class="getRankClass(value as number)">
           #{{ value }}
           <span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
         </span>
@@ -341,7 +341,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
           :class="{ 'ms-card--self-highlight': !!authStore.userId && row._userId === authStore.userId }">
           <div class="ms-card__grid">
             <span class="ms-card__name-cell">
-              <span class="ms-card__rank map-scores__rank" :class="getRankClass(row.rank as number)">
+              <span class="rank ms-card__rank" :class="getRankClass(row.rank as number)">
                 #{{ row.rank }}<span v-if="row.parenRank" class="map-scores__rank-global">(#{{ row.parenRank }})</span>
               </span>
               <UserChip :user="(row.player as UserRefDisplay)" size="sm" />
@@ -394,16 +394,6 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
   justify-content: space-between;
   gap: var(--space-sm);
 }
-
-.map-scores__rank {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.map-scores__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.map-scores__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.map-scores__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .map-scores__rank-global {
   font-size: var(--text-caption);

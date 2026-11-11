@@ -68,7 +68,7 @@ function pushRow(row: Record<string, unknown>) {
     row-key="rank" empty-message="No records found" :row-class="supersededRowClass">
 
     <template #cell-rank="{ value }">
-      <span class="rank-cell" :class="getRankClass(value as number)">#{{ value }}</span>
+      <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
     </template>
 
     <template #cell-player="{ row }">
@@ -118,7 +118,7 @@ function pushRow(row: Record<string, unknown>) {
     <template #mobile-card="{ row }">
       <div class="stats-card" :class="{ 'stats-card--superseded': isScoreTab && row.active === false }"
         @click="pushRow(row)">
-        <span class="stats-card__rank rank-cell" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
+        <span class="rank stats-card__rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
         <UserChip v-if="row.player" :user="(row.player as UserRefDisplay)" size="sm" class="stats-card__player" />
         <router-link v-if="row.songName" class="stats-card__map" :to="mapRowRoute(row)" @click.stop>
           <CoverImage :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="28"
@@ -153,15 +153,6 @@ function pushRow(row: Record<string, unknown>) {
 </template>
 
 <style scoped>
-.rank-cell {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.rank-cell.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.rank-cell.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.rank-cell.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .map-cell {
   display: flex;

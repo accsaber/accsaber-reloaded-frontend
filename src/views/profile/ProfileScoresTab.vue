@@ -343,7 +343,7 @@ watch(
           <div v-else class="ps-card__cover-placeholder" />
           <div class="ps-card__grid">
             <span class="ps-card__name-cell">
-              <span class="ps-card__rank" :class="getRankClass(row.leaderboardRank as number)">#{{ row.leaderboardRank }}</span>
+              <span class="rank ps-card__rank" :class="getRankClass(row.leaderboardRank as number)">#{{ row.leaderboardRank }}</span>
               <SongTitle class="ps-card__name" :name="(row.mapName as string)"
                 :sub-name="(row.mapSubName as string | null)" :title="(row.mapName as string)" />
               <span v-if="isScoreFieldVisible('difficulty')" class="ps-card__diff">{{ row.difficulty }}</span>
@@ -500,15 +500,9 @@ watch(
 }
 
 .ps-card__rank {
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
-  color: var(--text-tertiary);
   flex-shrink: 0;
 }
-
-.ps-card__rank.rank--gold { color: var(--tier-gold); font-weight: 700; }
-.ps-card__rank.rank--silver { color: var(--tier-silver); font-weight: 700; }
-.ps-card__rank.rank--bronze { color: var(--tier-bronze); font-weight: 700; }
 
 .ps-card__name {
   font-weight: 500;

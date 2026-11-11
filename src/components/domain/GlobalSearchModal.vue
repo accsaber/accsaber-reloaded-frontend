@@ -210,7 +210,7 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
             <div v-else-if="!players.length" class="search-modal__empty">No players found.</div>
             <a v-for="p in players" :key="p.userId" :href="playerHref(p.userId)" class="search-modal__row"
               @click="goToPlayer(p.userId, $event)">
-              <span class="search-modal__rank" :class="getRankClass(p.ranking)">#{{ p.ranking }}</span>
+              <span class="rank search-modal__rank" :class="getRankClass(p.ranking)">#{{ p.ranking }}</span>
               <UserChip :user="toUserRef(p)" class="search-modal__player" />
               <span class="search-modal__row-meta">
                 <span class="search-modal__stat">{{ formatFixed(p.ap, 2) }}</span>
@@ -395,26 +395,9 @@ function categoryCode(diff: PublicMapDifficultyResponse): string {
 }
 
 .search-modal__rank {
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
-  color: var(--text-secondary);
   min-width: 36px;
   text-align: right;
-}
-
-.search-modal__rank.rank--gold {
-  color: var(--tier-gold);
-  font-weight: 700;
-}
-
-.search-modal__rank.rank--silver {
-  color: var(--tier-silver);
-  font-weight: 700;
-}
-
-.search-modal__rank.rank--bronze {
-  color: var(--tier-bronze);
-  font-weight: 700;
 }
 
 .search-modal__cover {

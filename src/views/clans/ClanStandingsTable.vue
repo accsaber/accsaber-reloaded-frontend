@@ -67,7 +67,7 @@ function asRow(row: Record<string, unknown>): StandingsRow {
     @sort="emit('sort', $event)"
   >
     <template #cell-rank="{ value }">
-      <span class="standings__rank" :class="getRankClass(value as number)">#{{ value }}</span>
+      <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
     </template>
 
     <template #cell-clan="{ row }">
@@ -89,7 +89,7 @@ function asRow(row: Record<string, unknown>): StandingsRow {
 
     <template #mobile-card="{ row }">
       <RouterLink :to="rowTo(row)" class="standings-card">
-        <span class="standings__rank standings-card__rank" :class="getRankClass(asRow(row).rank)">#{{ asRow(row).rank }}</span>
+        <span class="rank standings-card__rank" :class="getRankClass(asRow(row).rank)">#{{ asRow(row).rank }}</span>
         <span class="standings-card__identity">
           <ClanIcon :clan="asRow(row).clan" :size="32" />
           <ClanTag :clan="asRow(row).clan" size="md" effects />
@@ -106,26 +106,6 @@ function asRow(row: Record<string, unknown>): StandingsRow {
 </template>
 
 <style scoped>
-.standings__rank {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.standings__rank.rank--gold {
-  color: var(--tier-gold);
-  font-weight: 700;
-}
-
-.standings__rank.rank--silver {
-  color: var(--tier-silver);
-  font-weight: 700;
-}
-
-.standings__rank.rank--bronze {
-  color: var(--tier-bronze);
-  font-weight: 700;
-}
 
 .standings__identity {
   display: flex;

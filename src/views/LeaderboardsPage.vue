@@ -219,7 +219,7 @@ watch(requestKey, fetchData, { immediate: true })
         :row-class="rowClass" :row-to="playerRowTo" row-key="userId" empty-message="No players found"
         @sort="setSort">
         <template #cell-rank="{ value, row }">
-          <span class="rank-cell" :class="getRankClass(value as number)">
+          <span class="rank" :class="getRankClass(value as number)">
             #{{ value }}
             <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
           </span>
@@ -250,7 +250,7 @@ watch(requestKey, fetchData, { immediate: true })
 
         <template #mobile-card="{ row }">
           <router-link :to="playerRowTo(row)" class="lb-card" :class="rowClass(row)" :data-user-id="row.userId">
-            <span class="lb-card__rank rank-cell" :class="getRankClass(row.rank as number)">
+            <span class="rank lb-card__rank" :class="getRankClass(row.rank as number)">
               #{{ row.rank }}
               <span v-if="row.parenRank" class="rank-cell__global">(#{{ row.parenRank }})</span>
             </span>
@@ -314,27 +314,6 @@ watch(requestKey, fetchData, { immediate: true })
 
 .leaderboards__table {
   --accent: var(--page-accent);
-}
-
-.rank-cell {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.rank-cell.rank--gold {
-  color: var(--tier-gold);
-  font-weight: 700;
-}
-
-.rank-cell.rank--silver {
-  color: var(--tier-silver);
-  font-weight: 700;
-}
-
-.rank-cell.rank--bronze {
-  color: var(--tier-bronze);
-  font-weight: 700;
 }
 
 .rank-cell__global {
