@@ -347,13 +347,13 @@ watch([
 
 <template>
   <div class="chart-container">
-    <div v-if="availableMetrics?.length" class="chart-container__controls">
-      <BaseTabs v-if="availableMetrics && selectedMetric"
+    <div class="chart-container__controls">
+      <BaseTabs v-if="availableMetrics?.length && selectedMetric" variant="segmented" label="Metric"
         :tabs="availableMetrics.map((m) => ({ key: m.key, label: m.label }))" :model-value="selectedMetric"
         @update:model-value="emit('update:selectedMetric', $event as MetricType)" />
+      <ChartToggleGroup :toggles="timeRanges" :active="[activeRange]" label="Time range"
+        @select="emit('update:selectedRange', $event as TimeRange)" />
     </div>
-    <ChartToggleGroup :toggles="timeRanges" :active="[activeRange]" label="Time range"
-      @select="emit('update:selectedRange', $event as TimeRange)" />
     <div class="chart-container__canvas-wrap">
       <SkeletonLoader v-if="isLoading || loading" height="100%" />
       <div v-else-if="!hasData" class="chart-container__empty">
@@ -373,7 +373,15 @@ watch([
 
 .chart-container__controls {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-sm);
+}
+
+.chart-container__controls :deep(.base-tabs--segmented .base-tabs__tab) {
+  height: calc(var(--control-h) - 4px);
+  padding-block: 0;
 }
 
 .chart-container__canvas-wrap {

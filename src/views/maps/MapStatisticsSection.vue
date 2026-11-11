@@ -219,8 +219,7 @@ watch(selectedRange, fetchHistoricStats)
 
 <template>
   <div class="map-stats">
-    <section v-if="difficultyId" class="map-stats__section map-stats__chart">
-      <h2 class="section-title">Statistics Over Time</h2>
+    <section v-if="difficultyId" class="map-stats__section map-stats__chart" aria-label="Statistics over time">
       <TimeSeriesChart :data="statsChartPoints" :metric-label="selectedMetricLabel" :accent-color="accentColor"
         :available-metrics="MAP_STATS_METRICS" :selected-metric="selectedMetric" :selected-range="selectedRange"
         :markers="reweightMarkers" :loading="statsLoading"

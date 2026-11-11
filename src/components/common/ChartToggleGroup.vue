@@ -34,7 +34,8 @@ defineEmits<{ select: [key: string] }>()
 }
 
 .chart-toggles__btn {
-  padding: var(--space-xs) var(--space-sm);
+  height: calc(var(--control-h) - 4px);
+  padding: 0 var(--space-sm);
   border: none;
   border-radius: calc(var(--radius-btn) - 2px);
   background: transparent;
