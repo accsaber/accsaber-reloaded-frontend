@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ProfileFold from '@/views/profile/ProfileFold.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
 import type { UserMilestoneProgressResponse } from '@/types/api/users'
 import { resolveMilestoneGlyph } from '@/utils/milestoneIcons'
@@ -37,12 +38,13 @@ const cards = computed(() =>
       <span v-if="isSelfProfile && !loading" class="caption">{{ pinned.length }} of {{ maxSlots }}</span>
     </template>
 
-    <div v-if="loading" class="pinned-ms__grid">
-      <SkeletonLoader v-for="i in Math.min(maxSlots, 3)" :key="i" variant="text" height="80px" />
-    </div>
-
-    <div v-else class="pinned-ms__grid stagger" :style="{ '--n': cards.length }">
-      <article v-for="(card, i) in cards" :key="card.pin.milestoneId" class="pinned-ms__card" :style="{ '--i': i }">
+    <SwapList class="pinned-ms__grid" :items="cards" :item-key="(card) => card.pin.milestoneId" :loading="loading"
+      :placeholders="Math.min(maxSlots, 3)">
+      <template #placeholder>
+        <SkeletonLoader class="placeholder" variant="text" height="80px" />
+      </template>
+      <template #default="{ item: card, swap }">
+      <article class="pinned-ms__card" v-bind="swap">
         <MilestoneBadge :glyph="card.glyph" :tier="card.pin.tier" :size="48" completed />
 
         <div class="pinned-ms__text">
@@ -67,7 +69,8 @@ const cards = computed(() =>
           </svg>
         </button>
       </article>
-    </div>
+      </template>
+    </SwapList>
   </ProfileFold>
 </template>
 

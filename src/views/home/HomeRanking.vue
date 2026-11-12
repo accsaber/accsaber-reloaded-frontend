@@ -89,7 +89,7 @@ watch(page, fetchRanking, { immediate: true })
     </div>
 
     <DataTable
-      :class="{ refreshing: loading && pageData }"
+      :refreshing="loading && !!pageData"
       :columns="columns"
       :rows="rows"
       :loading="!pageData && loading"

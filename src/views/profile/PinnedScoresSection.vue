@@ -3,6 +3,7 @@ import PinnedScoreCard from '@/views/profile/PinnedScoreCard.vue'
 import ProfileFold from '@/views/profile/ProfileFold.vue'
 import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { PinnedScoreResponse, ScoreResponse } from '@/types/api/users'
@@ -47,15 +48,16 @@ function onOpenDetail(score: ScoreResponse) {
     <template #meta>
       <span v-if="isSelfProfile && !loading" class="caption">{{ pinned.length }} of {{ maxSlots }}</span>
     </template>
-    <div class="pinned__grid stagger" :style="{ '--n': pinned.length }">
-      <template v-if="loading">
-        <SkeletonLoader v-for="i in 3" :key="i" variant="text" height="124px" />
+    <SwapList class="pinned__grid" :items="pinned" :item-key="(pin) => pin.score.id" :loading="loading">
+      <template #placeholder>
+        <SkeletonLoader class="placeholder" variant="text" height="124px" />
       </template>
-      <PinnedScoreCard v-for="(pin, i) in pinned" v-else :key="pin.score.id" :style="{ '--i': i }" :score="pin.score"
-        :comment="pin.comment"
-        :editable="isSelfProfile" @unpin="emit('unpin', $event)" @open-detail="onOpenDetail"
-        @save-comment="emit('update-comment', $event)" />
-    </div>
+      <template #default="{ item: pin, swap }">
+        <PinnedScoreCard v-bind="swap" :score="pin.score" :comment="pin.comment" :editable="isSelfProfile"
+          @unpin="emit('unpin', $event)" @open-detail="onOpenDetail"
+          @save-comment="emit('update-comment', $event)" />
+      </template>
+    </SwapList>
 
     <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" :player="player"
       @close="detailOpen = false" />

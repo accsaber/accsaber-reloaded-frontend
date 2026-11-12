@@ -3,6 +3,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import RelationActions from '@/components/domain/RelationActions.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -116,20 +117,18 @@ watch(page, () => {
 <template>
   <BaseModal :open="open" :title="title" max-width="480px" @close="emit('close')">
     <div class="relation-list">
-      <template v-if="loading">
-        <SkeletonLoader v-for="i in PAGE_SIZE" :key="i" variant="text" height="48px" />
-      </template>
+      <EmptyState v-if="!loading && items.length === 0" message="Nothing to show here yet." />
 
-      <template v-else-if="items.length === 0">
-        <EmptyState message="Nothing to show here yet." />
-      </template>
-
-      <template v-else>
+      <SwapList v-else class="relation-list" :items="items" :item-key="(item) => item.id" :loading="loading"
+        :placeholders="PAGE_SIZE">
+        <template #placeholder>
+          <SkeletonLoader class="placeholder" variant="text" height="48px" />
+        </template>
+        <template #default="{ item, swap }">
         <div
-          v-for="item in items"
-          :key="item.id"
           class="relation-list__row"
-          :class="{ 'relation-list__row--hidden': isHidden(item) }"
+          :class="[swap.class, { 'relation-list__row--hidden': isHidden(item) }]"
+          :style="swap.style"
           :role="isHidden(item) ? undefined : 'button'"
           :tabindex="isHidden(item) ? undefined : 0"
           @click="!isHidden(item) && item.targetUserId && goToProfile(item.targetUserId)"
@@ -165,14 +164,15 @@ watch(page, () => {
             />
           </template>
         </div>
+        </template>
+      </SwapList>
 
-        <PaginationControls class="relation-list__pagination"
-          v-if="totalPages > 1"
-          :page="page"
-          :total-pages="totalPages"
-          @update:page="page = $event"
-        />
-      </template>
+      <PaginationControls class="relation-list__pagination"
+        v-if="totalPages > 1"
+        :page="page"
+        :total-pages="totalPages"
+        @update:page="page = $event"
+      />
     </div>
   </BaseModal>
 </template>

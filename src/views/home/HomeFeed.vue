@@ -2,10 +2,10 @@
 import { getRelationScores } from '@/api/relations'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useNow } from '@/composables/useNow'
-import { useRowSwap } from '@/composables/useRowSwap'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRelationType } from '@/types/api/relations'
@@ -36,13 +36,6 @@ const entries = computed<ScoreFeedEntry[]>(
     categoryStore.getCategoryCode(score.categoryId),
   )) ?? [],
 )
-
-const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => entries.value, {
-  key: (entry) => entry.key,
-  refreshing: () => loading.value && !!pageData.value,
-  loading: () => loading.value && !pageData.value,
-  placeholders: () => SIZE,
-})
 
 const modalOpen = ref(false)
 const modalScore = ref<ScoreDisplay | null>(null)
@@ -89,22 +82,17 @@ watch(page, fetchScores, { immediate: true })
       <h2 class="section-title">Latest scores</h2>
     </div>
 
-    <p v-if="shown.length === 0" class="home-feed__list home-feed__empty">No scores yet</p>
+    <p v-if="pageData && entries.length === 0" class="home-feed__list home-feed__empty">No scores yet</p>
 
-    <div v-else class="home-feed__list stagger" :style="{ '--n': shown.length }">
-      <template v-for="(entry, i) in shown" :key="renderKey(entry, i)">
-        <SkeletonLoader v-if="isPlaceholder(entry)" class="placeholder" width="100%" height="100%" />
-        <ScoreFeedCard
-          v-else
-          :entry="entry"
-          :now="now"
-          :class="{ stale: isStale(i) }"
-          :style="{ '--i': cascade ? i : 0 }"
-          compact
-          @select="onSelectScore"
-        />
+    <SwapList v-else class="home-feed__list" :items="entries" :item-key="(entry) => entry.key"
+      :loading="loading && !pageData" :refreshing="loading && !!pageData" :placeholders="SIZE">
+      <template #placeholder>
+        <SkeletonLoader class="placeholder" width="100%" height="100%" />
       </template>
-    </div>
+      <template #default="{ item, swap }">
+        <ScoreFeedCard :entry="item" :now="now" v-bind="swap" compact @select="onSelectScore" />
+      </template>
+    </SwapList>
 
     <PaginationControls
       v-if="(pageData?.totalPages ?? 0) > 1"

@@ -2,6 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import MapCardCompact from '@/components/domain/MapCardCompact.vue'
 import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
 import { useCategoryStore } from '@/stores/categories'
@@ -32,17 +33,19 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
 </script>
 
 <template>
-  <div v-if="loading" class="batches">
-    <div v-for="i in 2" :key="i" class="batch">
-      <SkeletonLoader width="240px" height="52px" />
-      <div class="batch-cards">
-        <SkeletonLoader v-for="j in 8" :key="j" height="98px" />
+  <EmptyState v-if="!loading && batches.length === 0" message="No released batches found." />
+  <SwapList v-else class="batches" :items="batches" :item-key="(batch) => batch.id" :loading="loading"
+    :refreshing="refreshing" :placeholders="2">
+    <template #placeholder>
+      <div class="batch placeholder">
+        <SkeletonLoader width="240px" height="52px" />
+        <div class="batch-cards">
+          <SkeletonLoader v-for="j in 8" :key="j" height="98px" />
+        </div>
       </div>
-    </div>
-  </div>
-  <EmptyState v-else-if="batches.length === 0" message="No released batches found." />
-  <div v-else class="batches stagger" :class="{ refreshing }" :style="{ '--n': batches.length }">
-    <section v-for="(batch, i) in batches" :key="batch.id" class="batch" :style="{ '--i': i }">
+    </template>
+    <template #default="{ item: batch, swap }">
+    <section class="batch" v-bind="swap">
       <div class="batch-header">
         <div class="batch-heading">
           <h2 class="section-title">{{ batch.name }}</h2>
@@ -69,7 +72,8 @@ function batchDifficultiesByCategory(batch: PublicBatchResponse) {
         </div>
       </div>
     </section>
-  </div>
+    </template>
+  </SwapList>
 </template>
 
 <style scoped>

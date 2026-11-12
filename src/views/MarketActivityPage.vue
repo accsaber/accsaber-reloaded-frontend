@@ -3,10 +3,10 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
-import { useRowSwap } from '@/composables/useRowSwap'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import type { MarketListingResponse, MarketListingStatus } from '@/types/api/market'
@@ -87,12 +87,6 @@ const byTab = computed(() => {
 
 const TAB_LABEL: Record<TabKey, string> = { selling: 'Selling', bidding: 'Bidding', won: 'Won' }
 
-const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => byTab.value[activeTab.value], {
-  key: (entry) => entry.listing.id,
-  loading: () => loading.value,
-  placeholders: () => 5,
-})
-
 const tabs = computed<Tab[]>(() =>
   (Object.keys(TAB_LABEL) as TabKey[]).map((key) => {
     const count = byTab.value[key].length
@@ -165,7 +159,7 @@ const breadcrumbs: Crumb[] = [
       <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="activeTab = $event as TabKey" />
 
       <EmptyState
-        v-if="shown.length === 0"
+        v-if="!loading && byTab[activeTab].length === 0"
         :message="EMPTY_MESSAGE[activeTab]"
         :action-label="activeTab === 'selling' ? 'List an item' : 'Browse the market'"
         @action="
@@ -173,18 +167,15 @@ const breadcrumbs: Crumb[] = [
         "
       />
 
-      <div v-else class="activity-page__grid stagger" :style="{ '--n': shown.length }">
-        <template v-for="(entry, i) in shown" :key="renderKey(entry, i)">
-          <MarketListingGhost v-if="isPlaceholder(entry)" />
-          <MarketListingCard
-            v-else
-            :listing="entry.listing"
-            :tag="entry.tag"
-            :class="{ stale: isStale(i) }"
-            :style="{ '--i': cascade ? i : 0 }"
-          />
+      <SwapList v-else class="activity-page__grid" :items="byTab[activeTab]"
+        :item-key="(entry) => entry.listing.id" :loading="loading" :placeholders="5">
+        <template #placeholder>
+          <MarketListingGhost />
         </template>
-      </div>
+        <template #default="{ item, swap }">
+          <MarketListingCard :listing="item.listing" :tag="item.tag" v-bind="swap" />
+        </template>
+      </SwapList>
     </template>
   </div>
 </template>

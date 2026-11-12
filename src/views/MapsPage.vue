@@ -5,11 +5,11 @@ import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import MapCard from '@/views/maps/MapCard.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
-import { useRowSwap } from '@/composables/useRowSwap'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
@@ -126,13 +126,6 @@ const pageCount = computed(() => (isBatchView.value ? batchTotalPages.value : to
 const mapDisplays = computed<MapDisplay[]>(() =>
   difficulties.value.map((d) => toMapDisplay(d, (id) => categoryStore.getCategoryCode(id))),
 )
-
-const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => mapDisplays.value, {
-  key: (m) => m.difficultyId,
-  refreshing: () => loading.value && !firstLoad.value,
-  loading: () => firstLoad.value,
-  placeholders: () => 20,
-})
 
 const difficultyRequest = computed(() => {
   if (isBatchView.value) return null
@@ -256,14 +249,16 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
 
     <div class="maps-page__content">
       <template v-if="viewMode === 'grid'">
-        <EmptyState v-if="shown.length === 0" message="No maps found matching your filters." />
-        <div v-else class="maps-page__grid stagger" :style="{ '--n': shown.length }">
-          <template v-for="(m, i) in shown" :key="renderKey(m, i)">
-            <div v-if="isPlaceholder(m)" class="maps-page__ghost card-ghost placeholder" aria-hidden="true" />
-            <MapCard v-else :map="m" :to="mapRouteTo(m)" :class="{ stale: isStale(i) }"
-              :style="{ '--i': cascade ? i : 0 }" />
+        <EmptyState v-if="!loading && mapDisplays.length === 0" message="No maps found matching your filters." />
+        <SwapList v-else class="maps-page__grid" :items="mapDisplays" :item-key="(m) => m.difficultyId"
+          :loading="firstLoad" :refreshing="loading && !firstLoad" :placeholders="20">
+          <template #placeholder>
+            <div class="maps-page__ghost card-ghost placeholder" aria-hidden="true" />
           </template>
-        </div>
+          <template #default="{ item, swap }">
+            <MapCard :map="item" :to="mapRouteTo(item)" v-bind="swap" />
+          </template>
+        </SwapList>
       </template>
 
       <MapListView v-else-if="viewMode === 'list'" :maps="mapDisplays" :loading="firstLoad"

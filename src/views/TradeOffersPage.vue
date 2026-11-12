@@ -6,6 +6,7 @@ import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import TradeOfferRow, { type TradeAction } from '@/views/trades/TradeOfferRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -78,7 +79,8 @@ function selectSection(direction: string, history: boolean) {
 const trades = ref<TradeResponse[]>([])
 const totalPages = ref(0)
 const loading = ref(true)
-const batch = ref(0)
+const loaded = ref(false)
+const leaving = ref<string | null>(null)
 const acting = ref<{ id: string; action: TradeAction } | null>(null)
 const actionError = ref<string | null>(null)
 
@@ -104,13 +106,19 @@ async function fetchActive() {
     if (id !== requestId) return
     trades.value = []
   }
-  batch.value++
+  loaded.value = true
   loading.value = false
 }
 
 function resolve(tradeId: string) {
-  trades.value = trades.value.filter((t) => t.id !== tradeId)
+  leaving.value = tradeId
   if (activeKey.value === 'incoming') tradeStore.pendingIncomingCount = Math.max(0, tradeStore.pendingIncomingCount - 1)
+}
+
+function finishLeave(tradeId: string) {
+  if (leaving.value !== tradeId) return
+  leaving.value = null
+  trades.value = trades.value.filter((t) => t.id !== tradeId)
   if (trades.value.length === 0) fetchActive()
 }
 
@@ -163,20 +171,24 @@ onMounted(() => {
         {{ actionError }}
       </BaseBanner>
 
-      <div v-if="batch === 0" class="trades-page__reserved" aria-busy="true" />
+      <EmptyState v-if="loaded && !loading && trades.length === 0" :message="section.emptyMessage" />
 
-      <EmptyState v-else-if="trades.length === 0" :message="section.emptyMessage" />
-
-      <TransitionGroup v-else :key="batch" tag="div" name="collapse" class="trades-page__list stagger"
-        :class="{ refreshing: loading }" :style="{ '--n': trades.length }">
-        <div v-for="(t, i) in trades" :key="t.id" class="collapsible" :style="{ '--i': i }">
-          <div class="trades-page__item">
-            <TradeOfferRow :trade="t" :perspective="section.direction"
-              :busy="acting?.id === t.id ? acting.action : null" :spendable-balance="essenceStore.balance"
-              @act="runAction(t.id, $event)" />
+      <SwapList v-else :items="trades" :item-key="(t) => t.id" :loading="!loaded" :refreshing="loaded && loading">
+        <template #placeholder>
+          <div class="trades-page__ghost placeholder" />
+        </template>
+        <template #default="{ item: t, swap }">
+          <div class="collapsible"
+            :class="[swap.class, { 'collapse-leave-active collapse-leave-to': leaving === t.id }]"
+            :style="swap.style" @transitionend.self="finishLeave(t.id)">
+            <div class="trades-page__item">
+              <TradeOfferRow :trade="t" :perspective="section.direction"
+                :busy="acting?.id === t.id ? acting.action : null" :spendable-balance="essenceStore.balance"
+                @act="runAction(t.id, $event)" />
+            </div>
           </div>
-        </div>
-      </TransitionGroup>
+        </template>
+      </SwapList>
 
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
         @update:page="setPage($event)" />
@@ -203,8 +215,12 @@ onMounted(() => {
   gap: var(--space-md);
 }
 
-.trades-page__reserved {
-  min-height: 60vh;
+.trades-page__ghost {
+  height: 220px;
+  margin-bottom: var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
 }
 
 .trades-page__item {

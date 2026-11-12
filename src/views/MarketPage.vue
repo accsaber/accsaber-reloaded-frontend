@@ -7,13 +7,13 @@ import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import ItemFilterPanel from '@/components/domain/ItemFilterPanel.vue'
 import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
-import { useRowSwap } from '@/composables/useRowSwap'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import { useTradeStore } from '@/stores/trades'
@@ -132,13 +132,6 @@ const totalElements = ref(0)
 const loading = ref(true)
 let requestId = 0
 
-const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => listings.value, {
-  key: (listing) => listing.id,
-  refreshing: () => loading.value && listings.value.length > 0,
-  loading: () => loading.value && listings.value.length === 0,
-  placeholders: () => 10,
-})
-
 const browseParams = computed<MarketBrowseParams>(() => ({
   search: search.value.trim() || undefined,
   rarity: rarities.value.length > 0 ? rarities.value : undefined,
@@ -253,20 +246,23 @@ watch(
     </div>
 
     <EmptyState
-      v-if="shown.length === 0"
+      v-if="!loading && listings.length === 0"
       :message="emptyState.message"
       :action-label="emptyState.action"
       @action="emptyState.run?.()"
     />
 
     <template v-else>
-      <div class="market-page__grid stagger" :style="{ '--n': shown.length }">
-        <template v-for="(listing, i) in shown" :key="renderKey(listing, i)">
-          <MarketListingGhost v-if="isPlaceholder(listing)" />
-          <MarketListingCard v-else :listing="listing" :class="{ stale: isStale(i) }"
-            :style="{ '--i': cascade ? i : 0 }" />
+      <SwapList class="market-page__grid" :items="listings" :item-key="(listing) => listing.id"
+        :loading="loading && listings.length === 0" :refreshing="loading && listings.length > 0"
+        :placeholders="10">
+        <template #placeholder>
+          <MarketListingGhost />
         </template>
-      </div>
+        <template #default="{ item, swap }">
+          <MarketListingCard :listing="item" v-bind="swap" />
+        </template>
+      </SwapList>
 
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
         @update:page="setPage" />
