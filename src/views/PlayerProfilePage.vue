@@ -238,41 +238,38 @@ async function fetchProfile() {
       import('@/api/items'),
     ])
 
-    const details = Promise.allSettled([
-      getUserLevel(id),
-      getUserAllStatistics(id),
-      isSelfProfile.value ? inventoryStore.fetchEquipped(id, true) : itemsApi.getUserEquippedItems(id),
-      itemsApi.getUserItems(id, { typeKey: 'badge' }),
-    ])
+    let reveal!: (visible: boolean) => void
+    const revealed = new Promise<boolean>((resolve) => { reveal = resolve })
+    const late = <T>(pending: Promise<T>, apply: (value: T) => void) => {
+      Promise.all([pending, revealed]).then(
+        ([value, visible]) => { if (visible && request === profileRequest) apply(value) },
+        () => undefined,
+      )
+    }
+    const equippedRequest = isSelfProfile.value ? inventoryStore.fetchEquipped(id, true) : itemsApi.getUserEquippedItems(id)
+    late(getUserLevel(id), (value) => { level.value = value })
+    late(getUserAllStatistics(id), (value) => {
+      xpStats.value = value
+      stats.value = value.categories
+    })
     fetchStatsDiff()
     fetchPinnedScores()
     fetchPinnedMilestones()
 
-    const userRes = await getUser(id)
+    const [userRes, [equippedRes, badgesRes]] = await Promise.all([
+      getUser(id),
+      Promise.allSettled([equippedRequest, itemsApi.getUserItems(id, { typeKey: 'badge' })]),
+    ])
     if (request !== profileRequest) return
     if (userRes.id !== id && (await redirectToCanonicalProfile(userRes.id))) return
     user.value = userRes
-
-    if (userRes.banned || isBlockedByMe.value) {
-      loading.value = false
-      return
-    }
-
-    const [levelRes, allStatsRes, equippedRes, badgesRes] = await details
-    if (request !== profileRequest) return
-
-    if (levelRes.status === 'fulfilled') {
-      level.value = levelRes.value
-    }
-    if (allStatsRes.status === 'fulfilled') {
-      xpStats.value = allStatsRes.value
-      stats.value = allStatsRes.value.categories
-    }
-    if (equippedRes.status === 'fulfilled' && !isSelfProfile.value) {
-      localEquipped.value = (equippedRes.value as EquippedItemsResponse) ?? {}
-    }
-    if (badgesRes.status === 'fulfilled') {
-      ownedBadges.value = badgesRes.value
+    const visible = !userRes.banned && !isBlockedByMe.value
+    reveal(visible)
+    if (visible) {
+      if (equippedRes.status === 'fulfilled' && !isSelfProfile.value) {
+        localEquipped.value = (equippedRes.value as EquippedItemsResponse) ?? {}
+      }
+      if (badgesRes.status === 'fulfilled') ownedBadges.value = badgesRes.value
     }
   } catch {
     if (request !== profileRequest) return

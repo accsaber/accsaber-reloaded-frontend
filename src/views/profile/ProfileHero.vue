@@ -95,7 +95,7 @@ watch(() => props.editing, (editing) => {
 <template>
   <div class="profile-hero">
     <ThumbnailBackdrop class="profile-hero__thumb" :value="thumbValue" :effects="thumbnailEffects" />
-    <div class="profile-hero__level-col">
+    <div class="profile-hero__level-col" :class="{ 'profile-hero__level-col--pending': !level }">
       <PlayerTooltipTrigger class="profile-hero__badge-hover" :user="heroUser">
         <LevelBadge :level="level?.level ?? 0" :current-xp="level?.xpForCurrentLevel ?? 0"
           :required-xp="level?.xpForNextLevel ?? 1" :avatar-url="avatarUrl"
@@ -224,6 +224,10 @@ watch(() => props.editing, (editing) => {
 .profile-hero__level-col :deep(.level-badge__stack) {
   width: var(--hero-avatar);
   height: var(--hero-avatar);
+}
+
+.profile-hero__level-col--pending :deep(.level-badge__below) {
+  visibility: hidden;
 }
 
 .profile-hero__badge-hover {

@@ -7,7 +7,6 @@ import { computed, onUnmounted, ref, shallowRef, useSlots, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
 import DataTableCardFallback from './DataTableCardFallback.vue';
-import SkeletonLoader from './SkeletonLoader.vue';
 
 const props = defineProps<{
   columns: TableColumn[]
@@ -31,7 +30,7 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const slots = useSlots()
-const skeletonCount = computed(() => props.loadingRows ?? 5)
+const reserved = computed(() => ({ '--loading-rows': props.loadingRows ?? 5 }))
 const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
 const mobile = useMediaQuery(() => tableCardQuery(props.columns))
@@ -43,7 +42,7 @@ const cascade = ref(true)
 const batches = new WeakMap<Record<string, unknown>, number>()
 let batch = 0
 let shape = columnShape()
-let skeletonShown = !!props.loading
+let wasLoading = !!props.loading
 
 function columnShape(): string {
   return props.columns.map((col) => col.key).join()
@@ -119,9 +118,9 @@ watch(() => props.rows, (next) => {
   const moved = positions.filter((position, index) => position !== undefined && position !== index).length
   const replaced = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const restart = skeletonShown || shape !== columnShape()
+  const restart = wasLoading || shape !== columnShape()
   shape = columnShape()
-  skeletonShown = !!props.loading
+  wasLoading = !!props.loading
   if (restart || !replaced || still || !prev.length || !next.length) {
     if (restart) batch++
     stamp(next)
@@ -134,7 +133,7 @@ watch(() => props.rows, (next) => {
 })
 
 watch(() => props.loading, (loading) => {
-  if (loading) skeletonShown = true
+  if (loading) wasLoading = true
 })
 
 watch(() => props.refreshing, (refreshing) => {
@@ -183,7 +182,7 @@ function sortIcon(col: TableColumn): string {
 </script>
 
 <template>
-  <div class="data-table-wrapper">
+  <div class="data-table-wrapper" :aria-busy="loading">
     <div v-if="!mobile" class="data-table-scroll">
       <table class="data-table" :class="{ 'data-table--dense': dense }" :style="{ minWidth }">
         <thead>
@@ -205,14 +204,9 @@ function sortIcon(col: TableColumn): string {
           </tr>
         </thead>
         <TransitionGroup tag="tbody" name="row" class="stagger" :style="{ '--n': shown.length }">
-          <template v-if="loading">
-            <tr v-for="i in skeletonCount" :key="'skel-' + i" class="data-table__row"
-              :class="{ 'data-table__row--alt': i % 2 === 0 }">
-              <td v-for="col in columns" :key="col.key" class="data-table__td">
-                <SkeletonLoader variant="text" />
-              </td>
-            </tr>
-          </template>
+          <tr v-if="loading" key="loading" aria-hidden="true">
+            <td :colspan="columns.length" class="data-table__reserved" :style="reserved" />
+          </tr>
           <template v-else-if="shown.length === 0">
             <tr key="empty">
               <td :colspan="columns.length" class="data-table__empty">
@@ -252,14 +246,10 @@ function sortIcon(col: TableColumn): string {
     </div>
 
     <div v-else class="data-table-cards">
-      <template v-if="loading">
-        <SkeletonLoader v-for="i in skeletonCount" :key="'skel-card-' + i" variant="card" />
-      </template>
-      <template v-else-if="shown.length === 0">
-        <div class="data-table__empty-card">
-          <slot name="empty">{{ emptyMessage ?? 'No data available' }}</slot>
-        </div>
-      </template>
+      <div v-if="loading" class="data-table__reserved" :style="reserved" aria-hidden="true" />
+      <div v-else-if="shown.length === 0" class="data-table__empty-card">
+        <slot name="empty">{{ emptyMessage ?? 'No data available' }}</slot>
+      </div>
       <template v-else-if="slots['mobile-card']">
         <div v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table-cards__custom"
           :class="{ 'data-table__row--stale': isStale(index) }">
@@ -285,6 +275,10 @@ function sortIcon(col: TableColumn): string {
 .data-table-scroll {
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+.data-table-wrapper {
+  --row-h: 48px;
 }
 
 .data-table {
@@ -352,8 +346,12 @@ function sortIcon(col: TableColumn): string {
   font-size: 0.7rem;
 }
 
+.data-table__reserved {
+  height: calc(var(--loading-rows) * var(--row-h));
+}
+
 .data-table__row {
-  height: 48px;
+  height: var(--row-h);
   background: var(--bg-surface);
   border-left: 2px solid transparent;
   transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
