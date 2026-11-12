@@ -26,6 +26,7 @@ const { displayValue } = useCountUp(numericRef, { decimals: props.decimals ?? 2 
       {{ isNumeric ? displayValue : value }}
     </div>
     <RankChange v-if="trend" :value="trend" />
+    <slot />
   </div>
 </template>
 

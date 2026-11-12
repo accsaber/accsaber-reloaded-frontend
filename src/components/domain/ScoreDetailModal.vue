@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import CategoryBadge from '@/components/domain/CategoryBadge.vue'
+import CoverImage from '@/components/common/CoverImage.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
+import StatBlock from '@/components/common/StatBlock.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
@@ -11,6 +13,7 @@ import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { useAppearance } from '@/composables/useAppearance'
+import { useCategoryStore } from '@/stores/categories'
 import { useThemeStore } from '@/stores/theme'
 import type {
   EquippedItemsResponse,
@@ -23,7 +26,7 @@ import type {
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { MetricType, ScoreDisplay, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
-import { SCORE_DETAIL_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
+import { DAY_MS, HOUR_MS, SCORE_DETAIL_METRICS, TIME_RANGE_PARAMS } from '@/utils/constants'
 import { formatRelativeDate, formatAccuracy } from '@/utils/formatters'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
 import { buildMapRoute } from '@/utils/mapRoute'
@@ -53,6 +56,7 @@ type ScoreMetric = 'accuracy' | 'ap' | 'xpCumulative' | 'xpPerAttempt'
 
 const router = useRouter()
 const themeStore = useThemeStore()
+const categoryStore = useCategoryStore()
 const { primaryReplayService, fallbackReplayService } = useAppearance()
 const replayChain = computed(() =>
   resolveReplayChain(
@@ -105,14 +109,6 @@ const playerRef = computed<UserRefDisplay>(() => ({
   clan: playerUser.value?.clan ?? null,
 }))
 const playerAvatar = computed(() => pickAvatarUrl(playerUser.value))
-const handleScoreCoverError = (e: Event) => {
-  const img = e.currentTarget as HTMLImageElement
-  const fb = props.score?.coverFallbackUrl
-  if (fb && img.src !== fb && img.dataset.fellBack !== '1') {
-    img.dataset.fellBack = '1'
-    img.src = fb
-  }
-}
 const complexity = computed(() => props.score?.complexity ?? mapDifficulty.value?.complexity ?? null)
 const difficultyRaw = computed(() => props.score?.rawDifficulty ?? mapDifficulty.value?.difficulty ?? null)
 const characteristic = computed(() => props.score?.characteristic ?? mapDifficulty.value?.characteristic ?? null)
@@ -125,23 +121,44 @@ const isFc = computed(() => {
   return !!s && !s.misses && !s.badCuts && !s.wallHits && !s.bombHits
 })
 
-const detailParts = computed<string[]>(() => {
-  const s = props.score
-  if (!s) return []
-  const out: string[] = []
-  if (s.playCount != null) out.push(`${s.playCount} ${s.playCount === 1 ? 'play' : 'plays'}`)
-  if (s.pauses != null) out.push(`${s.pauses} ${s.pauses === 1 ? 'pause' : 'pauses'}`)
-  if (s.maxCombo != null) out.push(`${s.maxCombo.toLocaleString()} combo`)
-  if (s.hmd) out.push(s.hmd)
-  out.push(formatRelativeDate(s.date))
-  return out
+const category = computed(() => {
+  const code = props.score?.categoryCode
+  if (!code) return null
+  return { name: categoryStore.getCategoryInfo(code)?.name ?? code, accent: categoryStore.getAccent(code) }
 })
 
-const showNoMods = computed(() => {
+interface Fact {
+  label: string
+  value: string
+  bad?: boolean
+}
+
+const facts = computed<Fact[]>(() => {
   const s = props.score
-  if (!s || s.scoreNoMods == null) return false
-  return s.scoreNoMods !== s.score
+  if (!s) return []
+  const count = (label: string, value: number | null | undefined, bad = false): Fact[] =>
+    value != null && (!bad || value > 0) ? [{ label, value: value.toLocaleString(), bad }] : []
+  return [
+    { label: 'Score', value: s.score.toLocaleString() },
+    ...(s.scoreNoMods != null && s.scoreNoMods !== s.score ? count('No Mods', s.scoreNoMods) : []),
+    ...count('Plays', s.playCount),
+    ...count('Pauses', s.pauses),
+    ...count('Max Combo', s.maxCombo),
+    ...count('Misses', s.misses, true),
+    ...count('Bad Cuts', s.badCuts, true),
+    ...count('Wall Hits', s.wallHits, true),
+    ...count('Bomb Hits', s.bombHits, true),
+    ...(s.hmd ? [{ label: 'Headset', value: s.hmd }] : []),
+    { label: 'Set', value: formatRelativeDate(s.date) },
+  ]
 })
+
+const RANGE_UNIT_MS = { h: HOUR_MS, d: DAY_MS, mo: DAY_MS * 30 }
+
+function rangeMs(range: TimeRange): number {
+  const { amount, unit } = TIME_RANGE_PARAMS[range]
+  return amount * RANGE_UNIT_MS[unit]
+}
 
 const xpTotals = computed(() =>
   historicData.value.reduce(
@@ -195,16 +212,25 @@ const chartPoints = computed<TimeSeriesPoint[]>(() => {
     (a, b) => new Date(a.timeSet).getTime() - new Date(b.timeSet).getTime(),
   )
   const valueOf = METRIC_VALUE[selectedMetric.value]
+  const since = Date.now() - rangeMs(selectedRange.value)
   let cumulativeXp = 0
-  return sorted.map((s, i) => {
-    cumulativeXp += s.xpGained ?? 0
-    return {
-      timestamp: new Date(s.timeSet).getTime(),
-      value: valueOf(s, cumulativeXp),
-      tooltipLines: buildTooltipLines(s, i > 0 ? sorted[i - 1] : null),
-    }
-  })
+  return sorted
+    .map((s, i) => {
+      cumulativeXp += s.xpGained ?? 0
+      return {
+        timestamp: new Date(s.timeSet).getTime(),
+        value: valueOf(s, cumulativeXp),
+        tooltipLines: buildTooltipLines(s, i > 0 ? sorted[i - 1] : null),
+      }
+    })
+    .filter((point) => point.timestamp >= since)
 })
+
+function fittingRange(scores: ScoreResponse[]): TimeRange {
+  const oldest = Math.min(...scores.map((s) => new Date(s.timeSet).getTime()))
+  const ranges = Object.keys(TIME_RANGE_PARAMS) as TimeRange[]
+  return ranges.find((range) => Date.now() - rangeMs(range) <= oldest) ?? 'all'
+}
 
 const chartFormatValue = computed(() => {
   if (selectedMetric.value === 'accuracy') return (v: number) => `${v.toFixed(2)}%`
@@ -236,10 +262,12 @@ async function fetchHistoric() {
   if (!props.score) return
   try {
     const { getUserScoresHistoric } = await import('@/api/users')
-    historicData.value = await getUserScoresHistoric(props.userId, {
+    const scores = await getUserScoresHistoric(props.userId, {
       mapDifficultyId: props.score.mapDifficultyId,
-      ...TIME_RANGE_PARAMS[selectedRange.value],
+      ...TIME_RANGE_PARAMS.all,
     })
+    historicData.value = scores
+    if (scores.length) selectedRange.value = fittingRange(scores)
   } catch {
     historicData.value = []
   }
@@ -271,7 +299,7 @@ async function fetchMapDifficulty() {
 }
 
 watch(
-  [() => props.open, () => props.score?.mapDifficultyId, selectedRange],
+  [() => props.open, () => props.score?.mapDifficultyId],
   ([open]) => {
     if (open && props.score) fetchHistoric()
   },
@@ -290,16 +318,9 @@ watch(
 </script>
 
 <template>
-  <BaseModal :open="open" max-width="980px" @close="emit('close')">
+  <BaseModal :open="open" max-width="980px" close-button @close="emit('close')">
     <div v-if="score" class="score-detail" :style="{ '--detail-accent': resolvedAccent }">
-      <button class="score-detail__close" aria-label="Close" @click="emit('close')">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-        </svg>
-      </button>
-
-
-      <div class="score-detail__player">
+      <header class="score-detail__player">
         <ThumbnailBackdrop class="score-detail__thumb" :value="equippedThumbnail" :effects="equippedThumbnailEffects" />
         <LevelBadge
           v-if="playerAvatar"
@@ -317,159 +338,82 @@ watch(
           :border-effects="equippedBorderEffects"
         />
         <div v-else class="score-detail__player-skeleton" />
-
-        <div class="score-detail__player-info">
-          <div class="score-detail__player-name-row">
-            <UserChip :user="playerRef" size="lg" hide-avatar name-tag="h2" class="score-detail__player-name" />
-          </div>
-        </div>
-
-        <CategoryBadge class="score-detail__category" :category="score.categoryCode" size="md" />
-      </div>
+        <UserChip :user="playerRef" size="lg" hide-avatar name-tag="h2" class="score-detail__player-name" />
+      </header>
 
       <div class="score-detail__main">
-        <div v-if="score.coverUrl" class="score-detail__cover-wrap">
-          <img :src="score.coverUrl" :alt="score.mapName" class="score-detail__cover" decoding="async"
-            @error="handleScoreCoverError" />
-        </div>
-        <div class="score-detail__map-info">
-          <h3 class="score-detail__song">
+        <CoverImage v-if="score.coverUrl" :src="score.coverUrl" :alt="score.mapName" :size="112"
+          :fallback-src="score.coverFallbackUrl ?? null" />
+        <div class="score-detail__map">
+          <h3 class="section-title score-detail__song">
             <SongTitle :name="score.mapName" :sub-name="songSubName" />
           </h3>
-          <p class="score-detail__credits">
-            <span v-if="score.artistName">{{ score.artistName }}</span>
-            <span v-if="score.mapAuthor" class="score-detail__credits-sep">·</span>
-            <span v-if="score.mapAuthor" class="score-detail__credits-mapper">mapped by {{ score.mapAuthor }}</span>
+          <p class="caption">
+            {{ score.artistName }}<template v-if="score.artistName && score.mapAuthor"> · </template>
+            <template v-if="score.mapAuthor">mapped by {{ score.mapAuthor }}</template>
           </p>
-          <div class="score-detail__chips">
+          <div class="score-detail__tags">
+            <span v-if="category" class="score-detail__tag" :style="{ color: category.accent }">{{ category.name }}</span>
             <DifficultyBadge v-if="difficultyRaw" :difficulty="difficultyRaw" />
             <ComplexityBadge v-if="complexity != null" :complexity="complexity" />
-            <span v-if="characteristic && characteristic !== 'Standard'" class="score-detail__char">
-              {{ characteristic }}
-            </span>
-            <span v-if="isFc" class="score-detail__chip score-detail__chip--fc">
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 8L7 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              FC
-              <span v-if="score.streak115" class="score-detail__chip-sub">{{ score.streak115 }}x115</span>
-            </span>
-            <span v-else-if="score.streak115 != null && score.streak115 > 0" class="score-detail__chip">
-              {{ score.streak115 }}x115
-            </span>
-            <span v-for="mod in score.modifiers" :key="mod" class="score-detail__chip score-detail__chip--mod">
-              {{ mod }}
-            </span>
+            <span v-if="characteristic && characteristic !== 'Standard'" class="score-detail__tag">{{ characteristic }}</span>
+            <span v-if="isFc" class="score-detail__tag score-detail__tag--good">Full combo</span>
+            <span v-if="score.streak115" class="score-detail__tag">{{ score.streak115 }}x115</span>
+            <span v-for="mod in score.modifiers" :key="mod" class="score-detail__tag">{{ mod }}</span>
           </div>
         </div>
-        <div class="score-detail__scores">
-          <div class="score-detail__metric">
-            <span class="score-detail__metric-value">#{{ score.leaderboardRank }}</span>
-            <span class="score-detail__metric-label">
-              rank<span v-if="score.rankWhenSet != null && score.rankWhenSet !== score.leaderboardRank"> · set as #{{ score.rankWhenSet }}</span>
+        <div class="score-detail__figures">
+          <StatBlock label="Rank" :value="`#${score.leaderboardRank}`">
+            <span v-if="score.rankWhenSet != null && score.rankWhenSet !== score.leaderboardRank" class="caption">
+              set as #{{ score.rankWhenSet }}
             </span>
-          </div>
-          <div class="score-detail__metric">
-            <span class="score-detail__metric-value">{{ (score.accuracy * 100).toFixed(2) }}<span class="score-detail__metric-unit">%</span></span>
-            <span class="score-detail__metric-label">accuracy</span>
-          </div>
-          <div class="score-detail__metric score-detail__metric--ap">
-            <span class="score-detail__metric-value">{{ score.ap.toFixed(2) }}</span>
-            <span class="score-detail__metric-label">
-              AP<span v-if="score.weightedAp !== score.ap"> · weighted {{ score.weightedAp.toFixed(2) }}</span>
-            </span>
-          </div>
+          </StatBlock>
+          <StatBlock label="Accuracy" :value="formatAccuracy(score.accuracy)" />
+          <StatBlock label="AP" :value="score.ap" class="score-detail__ap"
+            :style="category ? { '--figure': category.accent } : undefined">
+            <span v-if="score.weightedAp !== score.ap" class="caption">weighted {{ score.weightedAp.toFixed(2) }}</span>
+          </StatBlock>
         </div>
       </div>
 
-      <div class="score-detail__meta">
-        <span class="score-detail__meta-value">{{ score.score.toLocaleString() }}<span class="score-detail__meta-label">score</span></span>
-        <template v-if="showNoMods">
-          <span class="score-detail__meta-sep">·</span>
-          <span class="score-detail__meta-value">{{ score.scoreNoMods!.toLocaleString() }}<span class="score-detail__meta-label">no mods</span></span>
-        </template>
-        <template v-for="(part, idx) in detailParts" :key="idx">
-          <span class="score-detail__meta-sep">·</span>
-          <span class="score-detail__meta-text">{{ part }}</span>
-        </template>
-        <template v-if="!isFc">
-          <span class="score-detail__meta-sep">·</span>
-          <span v-if="(score.misses ?? 0) > 0" class="score-detail__meta-bad">{{ score.misses }} {{ score.misses === 1 ? 'miss' : 'misses' }}</span>
-          <span v-if="(score.badCuts ?? 0) > 0" class="score-detail__meta-bad">{{ score.badCuts }} bad</span>
-          <span v-if="(score.wallHits ?? 0) > 0" class="score-detail__meta-bad">{{ score.wallHits }} {{ score.wallHits === 1 ? 'wall' : 'walls' }}</span>
-          <span v-if="(score.bombHits ?? 0) > 0" class="score-detail__meta-bad">{{ score.bombHits }} {{ score.bombHits === 1 ? 'bomb' : 'bombs' }}</span>
-        </template>
-        <span v-if="xpTotals.total > 0" class="score-detail__xp" tabindex="0" aria-label="XP breakdown">
-          <span class="score-detail__xp-label">XP</span>
-          <span class="score-detail__xp-value">{{ xpTotals.total.toFixed(1) }}</span>
-          <span class="score-detail__xp-breakdown">{{ xpTotals.base.toFixed(0) }}+<span class="score-detail__xp-bonus">{{ xpTotals.bonus.toFixed(1) }}</span></span>
-          <svg class="score-detail__xp-help" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-          <span class="score-detail__xp-tooltip" role="tooltip">
-            <span class="score-detail__xp-tooltip-row">
-              <span class="score-detail__xp-tooltip-key">Base</span>
-              <span class="score-detail__xp-tooltip-val">{{ xpTotals.base.toFixed(1) }}</span>
-            </span>
-            <span class="score-detail__xp-tooltip-row">
-              <span class="score-detail__xp-tooltip-key">Bonus</span>
-              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--bonus">{{ xpTotals.bonus.toFixed(1) }}</span>
-            </span>
-            <span class="score-detail__xp-tooltip-divider" />
-            <span class="score-detail__xp-tooltip-row">
-              <span class="score-detail__xp-tooltip-key score-detail__xp-tooltip-key--total">Total</span>
-              <span class="score-detail__xp-tooltip-val score-detail__xp-tooltip-val--total">{{ xpTotals.total.toFixed(1) }}</span>
-            </span>
-          </span>
-        </span>
+      <div class="score-detail__facts">
+        <StatBlock v-for="fact in facts" :key="fact.label" :label="fact.label" :value="fact.value"
+          :class="{ 'score-detail__bad': fact.bad }" />
+        <StatBlock v-if="xpTotals.total > 0" label="XP" :value="xpTotals.total.toFixed(1)">
+          <template #label-suffix>
+            <HintTooltip label="XP"
+              :text="`Base ${xpTotals.base.toFixed(1)}, bonus ${xpTotals.bonus.toFixed(1)}`" />
+          </template>
+        </StatBlock>
       </div>
 
       <div class="score-detail__links">
-        <BaseButton size="sm" @click="goToProfile">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          Profile
-        </BaseButton>
-        <BaseButton v-if="score.mapId" size="sm" @click="goToMap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-            <line x1="8" y1="2" x2="8" y2="18" />
-            <line x1="16" y1="6" x2="16" y2="22" />
-          </svg>
-          Map
-        </BaseButton>
-        <BaseButton v-for="replay in replayChain" :key="replay.provider" size="sm" :href="replay.url">
-          <img :src="replay.icon" :alt="replay.name" width="20" height="20" class="score-detail__replay-icon"
-            loading="lazy" decoding="async" />
-          {{ replay.name }}
-        </BaseButton>
-        <BaseButton v-if="score.blScoreId" size="sm" :href="`https://beatleader.com/score/${score.blScoreId}`">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-          Score Page
-        </BaseButton>
+        <div class="score-detail__link-group">
+          <BaseButton @click="goToProfile">Profile</BaseButton>
+          <BaseButton v-if="score.mapId" @click="goToMap">Map</BaseButton>
+        </div>
+        <div class="score-detail__link-group">
+          <BaseButton v-for="replay in replayChain" :key="replay.provider" :href="replay.url">
+            <img :src="replay.icon" alt="" width="20" height="20" class="score-detail__replay-icon"
+              loading="lazy" decoding="async" />
+            {{ replay.name }}
+          </BaseButton>
+          <BaseButton v-if="score.blScoreId" :href="`https://beatleader.com/score/${score.blScoreId}`">
+            Score Page
+          </BaseButton>
+        </div>
       </div>
 
-      <div class="score-detail__history">
+      <section class="score-detail__history">
         <h3 class="card-title">History</h3>
-        <TimeSeriesChart :data="chartPoints" :metric-label="selectedMetric" :accent-color="resolvedAccent"
-          :available-metrics="SCORE_DETAIL_METRICS" :selected-metric="selectedMetric as MetricType"
-          :selected-range="selectedRange" :format-value="chartFormatValue" ordinal
-          :y-max="selectedMetric === 'accuracy' ? 100 : undefined"
+        <TimeSeriesChart v-if="historicData.length > 1" :data="chartPoints" :metric-label="selectedMetric"
+          :accent-color="resolvedAccent" :available-metrics="SCORE_DETAIL_METRICS"
+          :selected-metric="selectedMetric as MetricType" :selected-range="selectedRange"
+          :format-value="chartFormatValue" ordinal :y-max="selectedMetric === 'accuracy' ? 100 : undefined"
           @update:selected-metric="selectedMetric = $event as ScoreMetric"
           @update:selected-range="selectedRange = $event" />
-      </div>
+        <p v-else class="caption">One attempt on this map</p>
+      </section>
     </div>
   </BaseModal>
 </template>
@@ -478,41 +422,19 @@ watch(
 .score-detail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
   position: relative;
   --accent: var(--detail-accent);
 }
 
-.score-detail__close {
-  position: absolute;
-  top: calc(-1 * var(--space-md));
-  right: calc(-1 * var(--space-sm));
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: var(--radius-btn);
-  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
-  z-index: 3;
-}
-
-.score-detail__close:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
 .score-detail__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
+  --badge: 64px;
   position: relative;
+  display: grid;
+  grid-template-columns: var(--badge) minmax(0, 1fr);
+  grid-template-rows: repeat(2, calc(var(--badge) / 2));
+  column-gap: var(--space-md);
   z-index: 1;
-  min-height: 64px;
 }
 
 .score-detail__thumb {
@@ -525,413 +447,125 @@ watch(
   mask-composite: intersect;
 }
 
-.score-detail__player > :not(.thumbnail-backdrop) {
-  position: relative;
-}
-
 .score-detail__levelbadge {
-  flex-shrink: 0;
+  display: contents;
 }
 
-.score-detail__levelbadge :deep(.level-badge) {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.score-detail__levelbadge :deep(.level-badge__stack) {
-  width: 64px;
-  height: 64px;
-}
-
-.score-detail__levelbadge :deep(.level-badge__below) {
-  align-items: flex-start;
-  width: auto;
-  padding: 0;
-  gap: 0;
-}
-
-.score-detail__levelbadge :deep(.level-badge__title-line) {
-  white-space: normal;
-  flex-wrap: wrap;
-  font-size: var(--text-caption);
-}
-
-.score-detail__levelbadge :deep(.level-badge__level) {
-  font-size: var(--text-caption);
+.score-detail__levelbadge :deep(.level-badge__stack),
+.score-detail__player-skeleton {
+  grid-area: 1 / 1 / span 2;
+  width: var(--badge);
+  height: var(--badge);
 }
 
 .score-detail__player-skeleton {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-avatar);
   background: var(--bg-elevated);
-  flex-shrink: 0;
 }
 
-.score-detail__player-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.score-detail__player-name-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
+.score-detail__levelbadge :deep(.level-badge__below) {
+  grid-area: 2 / 2;
+  align-items: flex-start;
+  align-self: start;
+  width: auto;
 }
 
 .score-detail__player-name {
-  font-family: var(--font-sans);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.score-detail__player-name-row :deep(.country-flag) {
-  font-size: 1.125rem;
-}
-
-.score-detail__category {
-  flex-shrink: 0;
-  margin-left: auto;
-  padding-right: var(--space-xl);
+  grid-area: 1 / 2;
+  align-self: end;
 }
 
 .score-detail__main {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr) auto;
-  gap: var(--space-lg);
+  display: flex;
   align-items: center;
-  padding: var(--space-md) 0;
+  gap: var(--space-lg);
   position: relative;
   z-index: 1;
 }
 
-.score-detail__cover-wrap {
-  position: relative;
-  width: 112px;
-  height: 112px;
-  flex-shrink: 0;
-}
-
-.score-detail__cover {
-  width: 112px;
-  height: 112px;
-  border-radius: var(--radius-card);
-  object-fit: cover;
-}
-
-.score-detail__map-info {
+.score-detail__map {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-xs);
+  flex: 1;
   min-width: 0;
 }
 
 .score-detail__song {
-  font-family: var(--font-sans);
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.score-detail__credits {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: 0;
+.score-detail__tags {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
-  align-items: baseline;
-}
-
-.score-detail__credits-sep {
-  color: var(--text-secondary);
-}
-
-.score-detail__credits-mapper {
-  color: var(--text-secondary);
-}
-
-.score-detail__chips {
-  display: flex;
-  gap: var(--space-sm);
   align-items: center;
-  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
   margin-top: var(--space-xs);
 }
 
-.score-detail__char {
-  font-family: var(--font-sans);
+.score-detail__tag {
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-secondary);
 }
 
-.score-detail__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.score-detail__chip--fc {
+.score-detail__tag--good {
   color: var(--success);
-  font-family: var(--font-sans);
-  font-weight: 700;
 }
 
-.score-detail__chip-sub {
-  font-family: var(--font-mono);
-  font-weight: 600;
-}
-
-.score-detail__chip--mod {
-  color: var(--detail-accent);
-}
-
-.score-detail__scores {
-  display: flex;
-  align-items: center;
+.score-detail__figures {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
   gap: var(--space-xl);
-  padding-left: var(--space-lg);
-  align-self: stretch;
+  flex-shrink: 0;
 }
 
-.score-detail__metric {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  gap: var(--space-xs);
-  justify-content: center;
+.score-detail :deep(.stat-block) {
+  padding: 0;
 }
 
-.score-detail__metric-value {
-  font-family: var(--font-mono);
-  font-size: 2.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+.score-detail__figures :deep(.stat-block__value) {
+  font-size: 2rem;
+  line-height: 1.2;
 }
 
-.score-detail__metric-unit {
-  font-size: 1.5rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-  margin-left: 2px;
+.score-detail__ap :deep(.stat-block__value) {
+  color: var(--figure, var(--text-primary));
 }
 
-.score-detail__metric-label {
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.score-detail__metric--ap .score-detail__metric-value {
-  color: var(--detail-accent);
-}
-
-.score-detail__meta {
+.score-detail__facts {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-sm);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  position: relative;
-  z-index: 1;
-  padding-bottom: var(--space-sm);
+  gap: var(--space-md) var(--space-xl);
 }
 
-.score-detail__meta-sep {
-  color: var(--text-secondary);
-}
-
-.score-detail__meta-value {
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
+.score-detail__facts :deep(.stat-block__value) {
   font-size: var(--text-body);
 }
 
-.score-detail__meta-label {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  margin-left: var(--space-xs);
-  font-weight: 600;
-}
-
-.score-detail__meta-text {
-  color: var(--text-secondary);
-}
-
-.score-detail__meta-bad {
+.score-detail__bad :deep(.stat-block__value) {
   color: var(--error);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
 }
 
-.score-detail__xp {
-  position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  margin-left: auto;
-  cursor: help;
-  outline: none;
-}
-
-.score-detail__xp-help {
-  color: var(--text-secondary);
-  align-self: center;
-  margin-left: 2px;
-  transition: color var(--dur-fast) var(--ease-out);
-}
-
-.score-detail__xp:hover .score-detail__xp-help,
-.score-detail__xp:focus-visible .score-detail__xp-help {
-  color: var(--text-secondary);
-}
-
-.score-detail__xp-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  min-width: 240px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  padding: var(--space-sm) var(--space-md);
+.score-detail__links,
+.score-detail__link-group {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-  transform: translateY(4px);
-  z-index: 10;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  text-align: left;
-}
-
-.score-detail__xp-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  right: 14px;
-  border: 5px solid transparent;
-  border-top-color: var(--bg-elevated);
-}
-
-.score-detail__xp:hover .score-detail__xp-tooltip,
-.score-detail__xp:focus-visible .score-detail__xp-tooltip {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.score-detail__xp-tooltip-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-md);
-}
-
-.score-detail__xp-tooltip-key {
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.score-detail__xp-tooltip-key--total {
-  color: var(--text-primary);
-}
-
-.score-detail__xp-tooltip-val {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.score-detail__xp-tooltip-val--bonus {
-  color: var(--detail-accent);
-}
-
-.score-detail__xp-tooltip-val--total {
-  font-weight: 700;
-}
-
-.score-detail__xp-tooltip-divider {
-  height: 1px;
-  background: var(--bg-overlay);
-  margin: 2px 0;
-}
-
-.score-detail__xp-label {
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.score-detail__xp-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.score-detail__xp-breakdown {
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.score-detail__xp-bonus {
-  color: var(--detail-accent);
-  font-weight: 600;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
 .score-detail__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  position: relative;
-  z-index: 1;
+  justify-content: space-between;
+}
+
+.score-detail__replay-icon {
+  border-radius: var(--radius-xs);
 }
 
 .score-detail__history {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding-top: var(--space-md);
-  position: relative;
-  z-index: 1;
 }
 
 .score-detail__history :deep(.chart-canvas-wrapper) {
@@ -943,63 +577,13 @@ watch(
 }
 
 @media (max-width: 768px) {
-  .score-detail__player {
-    flex-wrap: wrap;
-  }
-
-  .score-detail__category {
-    margin-left: 0;
-    padding-right: 0;
-  }
-
   .score-detail__main {
-    grid-template-columns: 96px minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    row-gap: var(--space-md);
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .score-detail__cover-wrap,
-  .score-detail__cover {
-    width: 96px;
-    height: 96px;
+  .score-detail__figures {
+    gap: var(--space-lg);
   }
-
-  .score-detail__scores {
-    grid-column: 1 / -1;
-    padding-left: 0;
-    justify-content: space-between;
-  }
-
-  .score-detail__song {
-    font-size: 1.125rem;
-  }
-
-  .score-detail__metric-value {
-    font-size: 2rem;
-  }
-
-  .score-detail__xp {
-    margin-left: 0;
-  }
-
-  .score-detail__xp-tooltip {
-    left: 0;
-    right: auto;
-    min-width: 0;
-    width: max-content;
-    max-width: calc(100vw - var(--space-md) * 2 - var(--space-lg) * 2);
-  }
-
-  .score-detail__xp-tooltip::after {
-    left: 14px;
-    right: auto;
-  }
-
-  .score-detail__links :deep(.base-button) {
-    flex: 1 1 auto;
-  }
-}
-.score-detail__replay-icon {
-  border-radius: var(--radius-xs);
 }
 </style>

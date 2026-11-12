@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { chartAnimationDuration, readChartTheme, useLineChart } from '@/composables/useLineChart'
@@ -172,8 +173,8 @@ watch(plotted, () => {
   <div class="ap-curve">
     <div class="ap-curve__controls">
       <ChartToggleGroup :toggles="categoryToggles" :active="visibleCodes" label="Categories" @select="toggleCurve" />
-      <ChartToggleGroup v-if="lengthToggles.length > 1" :toggles="lengthToggles" :active="[String(activeLength)]"
-        label="Curve length" @select="requestedLength = Number($event)" />
+      <BaseTabs v-if="lengthToggles.length > 1" variant="segmented" label="Curve length" :tabs="lengthToggles"
+        :model-value="String(activeLength)" @update:model-value="requestedLength = Number($event)" />
     </div>
 
     <div class="ap-curve__canvas-wrap">

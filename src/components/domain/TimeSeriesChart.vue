@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { chartAnimationDuration, readChartTheme, useLineChart, type ChartTheme } from '@/composables/useLineChart'
 import { useThemeStore } from '@/stores/theme'
-import type { ChartMarker, ChartSeries, ChartToggle, MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
+import type { ChartMarker, ChartSeries, MetricType, Tab, TimeRange, TimeSeriesPoint } from '@/types/display'
 import { DAY_MS, HOUR_MS, rangeWindowStart } from '@/utils/constants'
 import type { ChartConfiguration, Plugin, Scale } from 'chart.js'
 import { computed, ref, watch } from 'vue'
@@ -64,7 +63,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const { render } = useLineChart(canvasRef)
 const isLoading = ref(true)
 
-const timeRanges: ChartToggle[] = [
+const timeRanges: Tab[] = [
   { key: '24h', label: '24h' },
   { key: '7d', label: '7d' },
   { key: '14d', label: '2w' },
@@ -351,8 +350,8 @@ watch([
       <BaseTabs v-if="availableMetrics?.length && selectedMetric" variant="segmented" label="Metric"
         :tabs="availableMetrics.map((m) => ({ key: m.key, label: m.label }))" :model-value="selectedMetric"
         @update:model-value="emit('update:selectedMetric', $event as MetricType)" />
-      <ChartToggleGroup :toggles="timeRanges" :active="[activeRange]" label="Time range"
-        @select="emit('update:selectedRange', $event as TimeRange)" />
+      <BaseTabs variant="segmented" label="Time range" :tabs="timeRanges" :model-value="activeRange"
+        @update:model-value="emit('update:selectedRange', $event as TimeRange)" />
     </div>
     <div class="chart-container__canvas-wrap">
       <SkeletonLoader v-if="isLoading || loading" height="100%" />

@@ -118,8 +118,8 @@ export const LEGAL_UPDATED = '10 September 2026'
 export const SCORE_DETAIL_METRICS: { key: MetricType; label: string }[] = [
   { key: 'accuracy' as MetricType, label: 'Accuracy' },
   { key: 'ap' as MetricType, label: 'AP' },
-  { key: 'xpCumulative', label: 'XP (Cumulative)' },
-  { key: 'xpPerAttempt', label: 'XP (Per Attempt)' },
+  { key: 'xpCumulative', label: 'XP Total' },
+  { key: 'xpPerAttempt', label: 'XP Per Attempt' },
 ]
 
 export const MAP_STATS_METRICS: { key: MetricType; label: string }[] = [

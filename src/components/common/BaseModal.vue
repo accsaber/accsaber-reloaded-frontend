@@ -8,6 +8,7 @@ const props = defineProps<{
   title?: string
   maxWidth?: string
   persistent?: boolean
+  closeButton?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -73,6 +74,12 @@ onUnmounted(() => {
               </svg>
             </button>
           </div>
+          <button v-else-if="closeButton" class="modal__close modal__close--floating" aria-label="Close"
+            @click="emit('close')">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
           <div class="modal__body">
             <slot />
           </div>
@@ -107,6 +114,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.modal__close--floating {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 3;
 }
 
 .modal__header {
