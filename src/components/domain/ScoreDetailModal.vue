@@ -80,6 +80,7 @@ const resolvedAccent = computed(() => {
 const historicData = ref<ScoreResponse[]>([])
 const selectedMetric = ref<ScoreMetric>('accuracy')
 const selectedRange = ref<TimeRange>('30d')
+const historyLoading = ref(false)
 
 const fetchedPlayer = ref<ScoreDetailPlayer | null>(null)
 const resolvedPlayer = computed(() => props.player ?? fetchedPlayer.value)
@@ -258,19 +259,26 @@ function goToMap() {
   }))
 }
 
+let historyRequest = 0
+
 async function fetchHistoric() {
   if (!props.score) return
+  const request = ++historyRequest
+  historyLoading.value = true
   try {
     const { getUserScoresHistoric } = await import('@/api/users')
     const scores = await getUserScoresHistoric(props.userId, {
       mapDifficultyId: props.score.mapDifficultyId,
       ...TIME_RANGE_PARAMS.all,
     })
+    if (request !== historyRequest) return
     historicData.value = scores
     if (scores.length) selectedRange.value = fittingRange(scores)
   } catch {
+    if (request !== historyRequest) return
     historicData.value = []
   }
+  historyLoading.value = false
 }
 
 async function fetchPlayer() {
@@ -406,13 +414,13 @@ watch(
 
       <section class="score-detail__history">
         <h3 class="card-title">History</h3>
-        <TimeSeriesChart v-if="historicData.length > 1" :data="chartPoints" :metric-label="selectedMetric"
-          :accent-color="resolvedAccent" :available-metrics="SCORE_DETAIL_METRICS"
+        <TimeSeriesChart :data="historicData.length > 1 ? chartPoints : []" :loading="historyLoading"
+          :empty-message="historicData.length > 1 ? undefined : 'One attempt on this map'"
+          :metric-label="selectedMetric" :accent-color="resolvedAccent" :available-metrics="SCORE_DETAIL_METRICS"
           :selected-metric="selectedMetric as MetricType" :selected-range="selectedRange"
           :format-value="chartFormatValue" ordinal :y-max="selectedMetric === 'accuracy' ? 100 : undefined"
           @update:selected-metric="selectedMetric = $event as ScoreMetric"
           @update:selected-range="selectedRange = $event" />
-        <p v-else class="caption">One attempt on this map</p>
       </section>
     </div>
   </BaseModal>
