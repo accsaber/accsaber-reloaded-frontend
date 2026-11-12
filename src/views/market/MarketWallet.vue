@@ -23,9 +23,10 @@ defineProps<{
 <style scoped>
 .market-wallet {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   background: var(--bg-surface);
@@ -38,7 +39,6 @@ defineProps<{
 }
 
 .market-wallet__reserved {
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-secondary);
 }

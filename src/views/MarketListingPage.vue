@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
+import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
@@ -85,11 +87,14 @@ const itemName = computed(() =>
   listing.value ? displayItemName(modifiers.value, listing.value.item.item.name) : '',
 )
 const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))
+const renamed = computed(
+  () => itemName.value.trim().toLowerCase() !== (listing.value?.title ?? '').trim().toLowerCase(),
+)
 const pbCount = computed(() => listing.value?.item.counters?.play_count ?? null)
 const typeLabel = computed(() => {
   const typeKey = listing.value?.item.item.typeKey
   if (!typeKey) return ''
-  return itemTypeStore.typeLabel(typeKey)
+  return itemTypeStore.typeLabel(typeKey).toLowerCase()
 })
 
 const avatarUrl = computed(() => authStore.userProfile?.avatarUrl ?? null)
@@ -260,163 +265,126 @@ itemTypeStore.fetchItemTypes()
 </script>
 
 <template>
-  <div class="listing-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
+  <div class="listing-page">
     <Breadcrumbs :crumbs="breadcrumbs" />
 
-    <div v-if="loading" class="listing-page__layout">
-      <div class="listing-page__item">
-        <SkeletonLoader variant="card" />
-        <SkeletonLoader variant="text" :lines="4" />
-      </div>
-      <div class="listing-page__panel">
-        <SkeletonLoader variant="text" :lines="2" />
-        <SkeletonLoader variant="stat-block" />
-        <SkeletonLoader variant="text" :lines="3" />
-      </div>
+    <div v-if="loading" class="listing-page__layout" aria-busy="true">
+      <SkeletonLoader class="listing-page__art listing-page__art--loading" height="100%" />
+      <SkeletonLoader class="listing-page__deal" height="240px" />
     </div>
 
     <EmptyState v-else-if="notFound || !listing" message="This listing doesn't exist or was removed." />
 
-    <template v-else>
-      <div class="listing-page__layout">
-        <section class="listing-page__item" aria-label="Item details">
-          <MarketItemTile
-            :user-item="listing.item"
-            :quantity="listing.quantity"
-            :item-override="previewItem"
-            compose-borders
-            :avatar-url="avatarUrl"
-            class="listing-page__tile"
-          />
-
-          <div v-if="variantPreviews" class="listing-page__variants">
-            <button
-              v-for="variant in variantPreviews"
-              :key="variant.key"
-              type="button"
-              class="listing-page__variant"
-              :class="{ 'listing-page__variant--active': variant.key === activeVariant?.key }"
-              @click="pickedVariantKey = variant.key"
-            >
-              {{ variant.label }}
-            </button>
-          </div>
-
-          <div class="listing-page__item-meta">
-            <p class="listing-page__item-kind">
-              <span class="listing-page__rarity" :class="rarityClass(listing.item.item.rarity)">
-                {{ listing.item.item.rarity }}
-              </span>
-              <span class="listing-page__type">{{ typeLabel }}</span>
-            </p>
-            <h2 class="section-title" :style="itemNameStyle">{{ itemName }}</h2>
-            <p v-if="listing.item.item.description" class="listing-page__item-desc">
-              {{ listing.item.item.description }}
-            </p>
-            <div v-if="chipModifiers.length > 0 || listing.item.unusualEffect" class="listing-page__chips">
-              <ModifierChip v-for="m in chipModifiers" :key="m.id" :modifier="m" />
-              <span v-if="listing.item.unusualEffect" class="listing-page__unusual">
-                ★ {{ listing.item.unusualEffect.name }}
-              </span>
-            </div>
-            <dl class="listing-page__facts">
-              <template v-if="listing.item.serialNumber != null">
-                <dt>Serial</dt>
-                <dd>#{{ listing.item.serialNumber }}</dd>
-              </template>
-              <template v-if="pbCount != null">
-                <dt>PB Counter</dt>
-                <dd>{{ pbCount }}</dd>
-              </template>
-              <dt>Quantity</dt>
-              <dd>{{ listing.quantity }}</dd>
-              <dt>Listed</dt>
-              <dd>{{ formatRelativeDate(listing.createdAt) }}</dd>
-            </dl>
-          </div>
-        </section>
-
-        <section class="listing-page__panel" aria-label="Listing">
-          <h1 class="listing-page__title">{{ listing.title }}</h1>
-
-          <p class="listing-page__seller">
-            Listed by
-            <UserChip :user="listing.seller" link />
-          </p>
-
-          <p v-if="listing.description" class="listing-page__description">{{ listing.description }}</p>
-
-          <div class="listing-page__status">
-            <div v-if="price" class="listing-page__price">
-              <span class="listing-page__price-label">{{ price.label }}</span>
-              <EssenceAmount
-                v-if="price.amount != null"
-                :amount="price.amount"
-                class="listing-page__price-value"
-              />
-              <span v-if="auction" class="listing-page__bid-count">
-                {{ listing.bidCount }} {{ listing.bidCount === 1 ? 'bid' : 'bids' }}
-              </span>
-            </div>
-
-            <div v-if="active" class="listing-page__timer">
-              <ListingCountdown v-if="listing.endsAt" :ends-at="listing.endsAt" size="lg" />
-              <span v-else class="listing-page__no-limit">
-                <span class="listing-page__infinity" aria-hidden="true">∞</span> No time limit
-              </span>
-              <span v-if="socketStatus === 'reconnecting'" class="listing-page__stale">
-                Reconnecting...
-              </span>
-            </div>
-          </div>
-
-          <p v-if="active && listing.currentBidder" class="listing-page__leader">
-            Highest bidder:
-            <UserChip :user="listing.currentBidder" link />
-          </p>
-
-          <div v-if="neutralBanner" class="listing-page__banner listing-page__banner--neutral">
-            {{ neutralBanner }}
-          </div>
-
-          <div v-else-if="listing.status === 'sold'" class="listing-page__banner listing-page__banner--sold">
-            <span>
-              Sold
-              <template v-if="listing.finalPrice != null">
-                for <EssenceAmount :amount="listing.finalPrice" />
-              </template>
-              <template v-if="listing.winner"> to </template>
-            </span>
-            <UserChip v-if="listing.winner" :user="listing.winner" link />
-            <span v-if="listing.settledAt" class="listing-page__banner-time">
-              {{ formatRelativeDate(listing.settledAt) }}
-            </span>
-          </div>
-
-          <MarketBidPanel
-            v-if="active && !awaitingSettlement"
-            :listing="listing"
-            :viewer-id="viewerId"
-            :logged-in="authStore.isLoggedIn"
-            :balance="essenceStore.balance"
-            :reserved="essenceStore.reserved"
-            :busy="actionBusy"
-            :amount-error="amountError"
-            :form-error="formError"
-            @bid="handleBid"
-            @buy="handleBuy"
-          />
-
-          <BaseButton v-if="canCancel" variant="destructive" size="sm" :loading="actionBusy" @click="handleCancel">
-            {{ cancelArmed ? 'Confirm cancellation' : 'Cancel listing' }}
-          </BaseButton>
-
-          <p v-if="formError && !active" class="listing-page__error" role="alert">{{ formError }}</p>
-        </section>
+    <div v-else class="listing-page__layout">
+      <div class="listing-page__art">
+        <MarketItemTile
+          :user-item="listing.item"
+          :quantity="listing.quantity"
+          :item-override="previewItem"
+          compose-borders
+          :avatar-url="avatarUrl"
+        />
+        <BaseTabs v-if="variantPreviews && activeVariant" :tabs="variantPreviews" :model-value="activeVariant.key"
+          variant="segmented" label="Item variant" @update:model-value="pickedVariantKey = $event" />
       </div>
 
-      <MarketBidHistory :listing="listing" :bids="bids" :viewer-id="viewerId" />
-    </template>
+      <section class="listing-page__deal" aria-label="Listing">
+        <header class="listing-page__head">
+          <h1 class="listing-page__title">{{ listing.title }}</h1>
+          <UserChip :user="listing.seller" link />
+          <p v-if="listing.description" class="listing-page__text">{{ listing.description }}</p>
+        </header>
+
+        <div class="listing-page__figures">
+          <div v-if="price" class="listing-page__figure">
+            <span class="field-label">{{ price.label }}</span>
+            <EssenceAmount v-if="price.amount != null" :amount="price.amount" class="listing-page__number" />
+            <span v-if="auction && listing.bidCount > 0" class="caption">
+              {{ listing.bidCount }} {{ listing.bidCount === 1 ? 'bid' : 'bids' }}
+            </span>
+          </div>
+          <div v-if="active && listing.endsAt" class="listing-page__figure">
+            <span class="field-label">Time left</span>
+            <ListingCountdown :ends-at="listing.endsAt" size="lg" bare class="listing-page__number" />
+            <span v-if="socketStatus === 'reconnecting'" class="caption">Reconnecting</span>
+          </div>
+        </div>
+
+        <p v-if="active && listing.currentBidder" class="listing-page__line">
+          <span class="field-label">Highest bidder</span>
+          <UserChip :user="listing.currentBidder" link />
+        </p>
+
+        <BaseBanner v-if="neutralBanner" :dismissible="false">{{ neutralBanner }}</BaseBanner>
+
+        <BaseBanner v-else-if="listing.status === 'sold'" variant="success" :dismissible="false">
+          <span class="listing-page__line">
+            Sold
+            <template v-if="listing.winner">to <UserChip :user="listing.winner" link /></template>
+            <span v-if="listing.settledAt" class="caption">{{ formatRelativeDate(listing.settledAt) }}</span>
+          </span>
+        </BaseBanner>
+
+        <MarketBidPanel
+          v-if="active && !awaitingSettlement"
+          :listing="listing"
+          :viewer-id="viewerId"
+          :logged-in="authStore.isLoggedIn"
+          :balance="essenceStore.balance"
+          :reserved="essenceStore.reserved"
+          :busy="actionBusy"
+          :amount-error="amountError"
+          :form-error="formError"
+          @bid="handleBid"
+          @buy="handleBuy"
+        />
+
+        <BaseButton v-if="canCancel" class="listing-page__cancel" variant="destructive" :loading="actionBusy"
+          @click="handleCancel">
+          {{ cancelArmed ? 'Confirm cancellation' : 'Cancel listing' }}
+        </BaseButton>
+
+        <p v-if="formError && !active" class="caption listing-page__error" role="alert">{{ formError }}</p>
+      </section>
+
+      <section class="listing-page__item" aria-label="Item details">
+        <p class="listing-page__kind">
+          <span class="listing-page__rarity" :class="rarityClass(listing.item.item.rarity)">
+            {{ listing.item.item.rarity }}
+          </span>
+          {{ typeLabel }}
+        </p>
+        <h2 v-if="renamed" class="section-title" :style="itemNameStyle">{{ itemName }}</h2>
+        <p v-if="listing.item.item.description" class="listing-page__text">
+          {{ listing.item.item.description }}
+        </p>
+        <div v-if="chipModifiers.length > 0 || listing.item.unusualEffect" class="listing-page__line">
+          <ModifierChip v-for="m in chipModifiers" :key="m.id" :modifier="m" />
+          <span v-if="listing.item.unusualEffect" class="listing-page__unusual">
+            {{ listing.item.unusualEffect.name }}
+          </span>
+        </div>
+        <dl class="listing-page__facts">
+          <template v-if="listing.item.serialNumber != null">
+            <dt class="field-label">Serial</dt>
+            <dd>#{{ listing.item.serialNumber }}</dd>
+          </template>
+          <template v-if="pbCount != null">
+            <dt class="field-label">PB counter</dt>
+            <dd>{{ pbCount }}</dd>
+          </template>
+          <template v-if="listing.quantity > 1">
+            <dt class="field-label">Quantity</dt>
+            <dd>{{ listing.quantity }}</dd>
+          </template>
+          <dt class="field-label">Listed</dt>
+          <dd>{{ formatRelativeDate(listing.createdAt) }}</dd>
+        </dl>
+      </section>
+
+      <MarketBidHistory v-if="auction" class="listing-page__history" :listing="listing" :bids="bids"
+        :viewer-id="viewerId" />
+    </div>
   </div>
 </template>
 
@@ -433,123 +401,41 @@ itemTypeStore.fetchItemTypes()
 .listing-page__layout {
   display: grid;
   grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
-  gap: var(--space-xl);
+  grid-template-areas:
+    'art deal'
+    'item history';
+  gap: var(--space-lg) var(--space-xl);
   align-items: start;
 }
 
-.listing-page__item {
+.listing-page__head {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.listing-page__title {
+  overflow-wrap: anywhere;
+}
+
+.listing-page__art {
+  grid-area: art;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-md);
 }
 
-.listing-page__tile {
-  max-width: 380px;
+.listing-page__art--loading {
+  aspect-ratio: 1 / 1;
 }
 
-.listing-page__variants {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  max-width: 380px;
-}
-
-.listing-page__variant {
-  padding: var(--space-xs) 12px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
-}
-
-.listing-page__variant:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.listing-page__variant--active {
-  border-color: var(--page-accent, var(--accent));
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--page-accent, var(--accent)) 12%, transparent);
-}
-
-.listing-page__item-meta {
+.listing-page__deal {
+  grid-area: deal;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.listing-page__item-kind {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin: 0;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.listing-page__rarity {
-  color: var(--rarity-color, var(--text-tertiary));
-}
-
-.listing-page__type {
-  color: var(--text-tertiary);
-  text-transform: capitalize;
-}
-
-.listing-page__item-desc {
-  margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-secondary);
-  line-height: 1.5;
-  max-width: 65ch;
-}
-
-.listing-page__chips {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
-}
-
-.listing-page__unusual {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  color: var(--tier-gold);
-  border: 1px solid color-mix(in srgb, var(--tier-gold) 45%, transparent);
-}
-
-.listing-page__facts {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-xs) var(--space-md);
-  margin: 0;
-  font-size: var(--text-body);
-}
-
-.listing-page__facts dt {
-  color: var(--text-tertiary);
-}
-
-.listing-page__facts dd {
-  margin: 0;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-
-.listing-page__panel {
-  display: flex;
-  flex-direction: column;
+  align-self: stretch;
   gap: var(--space-md);
   padding: var(--space-lg);
   background: var(--bg-surface);
@@ -557,141 +443,100 @@ itemTypeStore.fetchItemTypes()
   border-radius: var(--radius-card);
 }
 
-.listing-page__title {
-  overflow-wrap: anywhere;
+.listing-page__figures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-md) var(--space-xl);
 }
 
-.listing-page__seller {
+.listing-page__figure {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-xs);
+}
+
+.listing-page__number {
+  font-size: 2rem;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.listing-page__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
   margin: 0;
-  font-size: var(--text-body);
+}
+
+.listing-page__cancel {
+  align-self: flex-start;
+}
+
+.listing-page__error {
+  color: var(--error);
+}
+
+.listing-page__item {
+  grid-area: item;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.listing-page__kind {
+  margin: 0;
   color: var(--text-secondary);
 }
 
-.listing-page__description {
+.listing-page__rarity {
+  font-weight: 600;
+  color: var(--rarity-color);
+  text-transform: capitalize;
+}
+
+.listing-page__text {
+  max-width: 65ch;
   margin: 0;
-  font-size: var(--text-body);
   color: var(--text-secondary);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-width: 65ch;
 }
 
-.listing-page__status {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-  padding: var(--space-md) 0;
-  border-top: 1px solid var(--bg-overlay);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.listing-page__price {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.listing-page__price-label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.listing-page__price-value {
-  font-size: 1.5rem;
-  color: var(--text-primary);
-}
-
-.listing-page__bid-count {
+.listing-page__unusual {
   font-size: var(--text-caption);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--tier-gold);
 }
 
-.listing-page__timer {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-xs);
-}
-
-.listing-page__no-limit {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-body);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.listing-page__infinity {
-  font-size: 1.25rem;
-  line-height: 1;
-  color: var(--text-tertiary);
-}
-
-.listing-page__stale {
-  font-size: var(--text-caption);
-  color: var(--warning);
-}
-
-.listing-page__leader {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+.listing-page__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-xs) var(--space-md);
   margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-secondary);
 }
 
-.listing-page__banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
-  padding: var(--space-md);
-  border-radius: var(--radius-card);
-  font-size: var(--text-body);
-}
-
-.listing-page__banner--sold {
-  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
-  background: color-mix(in srgb, var(--success) 8%, var(--bg-surface));
-  color: var(--text-primary);
-}
-
-.listing-page__banner--neutral {
-  border: 1px solid var(--bg-overlay);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.listing-page__banner-time {
-  margin-left: auto;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.listing-page__error {
+.listing-page__facts dd {
   margin: 0;
-  font-size: var(--text-body);
-  color: var(--error);
+}
+
+.listing-page__history {
+  grid-area: history;
 }
 
 @media (max-width: 900px) {
   .listing-page__layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'art'
+      'deal'
+      'item'
+      'history';
   }
 
-  .listing-page__tile {
+  .listing-page__art {
     max-width: 320px;
   }
 }

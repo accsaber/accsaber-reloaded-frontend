@@ -27,6 +27,7 @@ const active = computed(() => props.listing.status === 'active')
 const price = computed(() => listingPrice(props.listing))
 const kind = computed(() => listingKind(props.listing))
 const auction = computed(() => isAuction(props.listing))
+const renamed = computed(() => itemName.value.trim().toLowerCase() !== props.listing.title.trim().toLowerCase())
 const settledLabel = computed(() => {
   const label = MARKET_STATUS_LABEL[props.listing.status]
   const when = props.listing.settledAt ? ` ${formatRelativeDate(props.listing.settledAt)}` : ''
@@ -36,7 +37,7 @@ const settledLabel = computed(() => {
 
 <template>
   <RouterLink
-    class="market-card"
+    class="market-card pressable"
     :class="{
       'market-card--settled': !active,
       'market-card--alert': tag?.tone === 'error',
@@ -51,38 +52,32 @@ const settledLabel = computed(() => {
     </div>
 
     <div class="market-card__body">
-      <span class="market-card__title card-title">{{ listing.title }}</span>
-      <div class="market-card__item-row">
-        <span class="market-card__item-name">{{ itemName }}</span>
+      <span class="market-card__line card-title">{{ listing.title }}</span>
+      <span class="market-card__line market-card__item">
         <span class="market-card__rarity" :class="rarityClass(listing.item.item.rarity)">
           {{ listing.item.item.rarity }}
         </span>
-      </div>
+        <template v-if="renamed">{{ ` ${itemName}` }}</template>
+      </span>
 
-      <div class="market-card__price">
-        <span class="market-card__price-label">{{ price.label }}</span>
-        <EssenceAmount v-if="price.amount != null" :amount="price.amount" class="market-card__price-value" />
-      </div>
-      <div v-if="active && kind === 'auction_buyout' && listing.buyoutPrice != null" class="market-card__buyout">
-        Buy now <EssenceAmount :amount="listing.buyoutPrice" />
-      </div>
-
-      <div class="market-card__meta">
-        <UserChip :user="listing.seller" compact hide-clan class="market-card__seller" />
-        <span class="market-card__meta-right">
-          <span v-if="auction" class="market-card__bids">
-            {{ listing.bidCount }} {{ listing.bidCount === 1 ? 'bid' : 'bids' }}
-          </span>
-          <ListingCountdown
-            v-if="active && listing.endsAt"
-            :ends-at="listing.endsAt"
-            class="market-card__countdown"
-          />
-          <span v-else-if="active" class="market-card__no-limit">
-            <span class="market-card__infinity" aria-hidden="true">∞</span> No time limit
-          </span>
-          <span v-else class="market-card__settled">{{ settledLabel }}</span>
+      <div class="market-card__row market-card__price">
+        <span class="market-card__amount">
+          <span class="caption">{{ price.label }}</span>
+          <EssenceAmount v-if="price.amount != null" :amount="price.amount" class="market-card__price-value" />
         </span>
+        <span v-if="active && kind === 'auction_buyout' && listing.buyoutPrice != null" class="caption">
+          or <EssenceAmount :amount="listing.buyoutPrice" />
+        </span>
+      </div>
+
+      <div class="market-card__row">
+        <UserChip :user="listing.seller" compact hide-clan class="market-card__seller" />
+        <span v-if="!active" class="caption">{{ settledLabel }}</span>
+        <span v-else-if="auction && listing.bidCount > 0" class="caption market-card__timing">
+          {{ listing.bidCount }} {{ listing.bidCount === 1 ? 'bid' : 'bids' }}
+          <template v-if="listing.endsAt"> · <ListingCountdown :ends-at="listing.endsAt" bare /></template>
+        </span>
+        <ListingCountdown v-else-if="listing.endsAt" :ends-at="listing.endsAt" bare />
       </div>
     </div>
   </RouterLink>
@@ -92,28 +87,24 @@ const settledLabel = computed(() => {
 .market-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-sm);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+  overflow: hidden;
   text-decoration: none;
   color: var(--text-primary);
-  transition: border-color 150ms ease-out, transform 150ms ease-out;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .market-card:hover {
   border-color: var(--text-tertiary);
-  transform: scale(1.01);
 }
 
 .market-card:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--page-accent, var(--accent)) 60%, transparent);
+  outline: 2px solid var(--page-accent, var(--accent));
   outline-offset: 2px;
-}
-
-.market-card--settled .market-card__art {
-  opacity: 0.6;
 }
 
 .market-card--alert {
@@ -124,109 +115,93 @@ const settledLabel = computed(() => {
   position: relative;
 }
 
+.market-card__art :deep(.market-item-tile) {
+  background: var(--bg-base);
+  border: none;
+  border-radius: 0;
+}
+
+.market-card--settled .market-card__art :deep(.market-item-tile) {
+  filter: grayscale(0.6);
+}
+
 .market-card__tag {
   position: absolute;
-  top: var(--space-xs);
-  left: var(--space-xs);
-  padding: 2px 6px;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  padding: 0 var(--space-sm);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.6;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--bg-base) 82%, transparent);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-surface);
   color: var(--text-secondary);
   z-index: 2;
 }
 
 .market-card__tag--success {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 45%, transparent);
 }
 
 .market-card__tag--error {
   color: var(--error);
-  border-color: color-mix(in srgb, var(--error) 55%, transparent);
 }
 
 .market-card__tag--gold {
   color: var(--tier-gold);
-  border-color: color-mix(in srgb, var(--tier-gold) 45%, transparent);
 }
 
 .market-card__body {
+  --row-h: 24px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   min-width: 0;
+  padding: var(--space-md);
 }
 
-.market-card__title {
+.market-card__line {
+  line-height: var(--row-h);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.market-card__item-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.market-card__item-name {
-  font-size: var(--text-caption);
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.market-card__rarity {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rarity-color, var(--text-tertiary));
-  flex-shrink: 0;
-}
-
-.market-card__price {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  margin-top: var(--space-xs);
-}
-
-.market-card__price-label {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
-.market-card__price-value {
-  font-size: 1.125rem;
-  color: var(--text-primary);
-}
-
-.market-card__buyout {
+.market-card__item {
   font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
-.market-card__meta {
+.market-card__rarity {
+  font-weight: 600;
+  color: var(--rarity-color);
+  text-transform: capitalize;
+}
+
+.market-card__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  border-top: 1px solid var(--bg-overlay);
-  padding-top: var(--space-xs);
-  min-height: 22px;
+  min-width: 0;
+  height: var(--row-h);
+  white-space: nowrap;
+}
+
+.market-card__price {
+  align-items: baseline;
+}
+
+.market-card__amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.market-card__price-value {
+  font-size: 1.125rem;
 }
 
 .market-card__seller {
@@ -234,46 +209,27 @@ const settledLabel = computed(() => {
   min-width: 0;
 }
 
-.market-card__meta-right {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
+.market-card__timing {
   flex-shrink: 0;
 }
 
-.market-card__bids {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.market-card__settled {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.market-card__no-limit {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.market-card__infinity {
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--text-tertiary);
-}
-
-@media (prefers-reduced-motion: reduce) {
+@media (max-width: 767px) {
   .market-card {
-    transition: none;
+    flex-direction: row;
   }
 
-  .market-card:hover {
-    transform: none;
+  .market-card__art {
+    flex: 0 0 128px;
+    display: flex;
+    align-items: center;
+    background: var(--bg-base);
+  }
+
+  .market-card__body {
+    flex: 1;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
   }
 }
 </style>

@@ -6,6 +6,7 @@ import { formatDuration } from '@/utils/formatters'
 const props = defineProps<{
   endsAt: string
   size?: 'sm' | 'lg'
+  bare?: boolean
 }>()
 
 const now = useNow(1000)
@@ -44,6 +45,7 @@ onUnmounted(() => {
     :class="[`listing-countdown--${urgency}`, { 'listing-countdown--lg': size === 'lg' }]"
   >
     <svg
+      v-if="!bare"
       class="listing-countdown__icon"
       viewBox="0 0 24 24"
       fill="none"
@@ -98,7 +100,7 @@ onUnmounted(() => {
 }
 
 .listing-countdown--lg {
-  font-size: var(--text-body);
+  font-size: inherit;
 }
 
 .listing-countdown--lg .listing-countdown__icon {
@@ -107,36 +109,23 @@ onUnmounted(() => {
 }
 
 .listing-countdown--lg .listing-countdown__value {
-  font-size: 1.125rem;
+  font-size: inherit;
   font-weight: 600;
 }
 
 .listing-countdown__extended {
-  padding: 1px 6px;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  font-weight: 600;
   color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
-  border-radius: var(--radius-pill);
 }
 
 .countdown-ext-enter-active,
 .countdown-ext-leave-active {
-  transition: opacity 150ms ease-out;
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .countdown-ext-enter-from,
 .countdown-ext-leave-to {
   opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .countdown-ext-enter-active,
-  .countdown-ext-leave-active {
-    transition: none;
-  }
 }
 </style>

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import type { MarketListingResponse } from '@/types/api/market'
 import { formatEssence } from '@/utils/essence'
 import { digitsOnly } from '@/utils/formatters'
 import { isAuction, isSameMarketUser, sanitizeEssenceInput } from '@/utils/market'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 import EssenceAmount from '@/components/domain/EssenceAmount.vue'
 
 const props = defineProps<{
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   buy: []
 }>()
 
+const inputId = useId()
 const amount = ref('')
 const armedBid = ref(false)
 const armedBuy = ref(false)
@@ -46,7 +48,10 @@ const disabledReason = computed(() => {
 })
 
 const bidLocked = computed(() => disabledReason.value !== null)
+const actionSlot = computed(() => (disabledReason.value ? 'trigger' : 'default'))
 const buyLocked = computed(() => !props.loggedIn || isSameMarketUser(props.listing.seller, props.viewerId))
+const buyReason = computed(() => (buyLocked.value ? disabledReason.value : null))
+const buySlot = computed(() => (buyReason.value ? 'trigger' : 'default'))
 
 const overBalance = computed(
   () =>
@@ -111,62 +116,54 @@ function submitBuy() {
 
 <template>
   <div class="bid-panel">
-    <template v-if="auction">
-      <div class="bid-panel__row">
-        <BaseInput
-          class="bid-panel__input"
-          :model-value="amount"
-          label="Your bid"
-          inputmode="numeric"
-          autocomplete="off"
-          :disabled="bidLocked || busy"
-          :error="amountError ?? undefined"
-          @update:model-value="onAmountInput"
-          @keydown.enter="submitBid"
-        />
-        <BaseButton
-          class="bid-panel__submit"
-          variant="primary"
-          :disabled="bidLocked || amountNumber == null"
-          :loading="busy"
-          @click="submitBid"
-        >
-          {{ bidButtonLabel }}
-        </BaseButton>
-      </div>
+    <div v-if="auction" class="bid-panel__label">
+      <label class="field-label" :for="inputId">Your bid</label>
+      <span class="caption">Minimum <EssenceAmount :amount="minimumBid" /></span>
+    </div>
 
-      <p class="bid-panel__hint">
-        Minimum bid <EssenceAmount :amount="minimumBid" />
-      </p>
+    <div class="bid-panel__row">
+      <BaseInput
+        v-if="auction"
+        :id="inputId"
+        :model-value="amount"
+        inputmode="numeric"
+        autocomplete="off"
+        :disabled="bidLocked || busy"
+        :error="amountError ?? undefined"
+        @update:model-value="onAmountInput"
+        @keydown.enter="submitBid"
+      />
+      <component :is="disabledReason ? HintTooltip : 'div'" v-if="auction" class="bid-panel__action"
+        v-bind="disabledReason ? { text: disabledReason, variant: 'bare', as: 'span' } : {}">
+        <template #[actionSlot]>
+          <BaseButton variant="primary" :disabled="bidLocked || amountNumber == null" :loading="busy"
+            @click="submitBid">
+            {{ bidButtonLabel }}
+          </BaseButton>
+        </template>
+      </component>
+      <component :is="buyReason ? HintTooltip : 'div'" v-if="buyout != null" class="bid-panel__action"
+        v-bind="buyReason ? { text: buyReason, variant: 'bare', as: 'span' } : {}">
+        <template #[buySlot]>
+          <BaseButton :variant="auction ? 'default' : 'primary'" :disabled="buyLocked" :loading="busy"
+            @click="submitBuy">
+            {{ buyButtonLabel }}
+          </BaseButton>
+        </template>
+      </component>
+    </div>
 
-      <p v-if="willBuyout && !bidLocked && buyout != null" class="bid-panel__warning" role="alert">
-        Buys it now for <EssenceAmount :amount="buyout" />
-      </p>
+    <p v-if="willBuyout && !bidLocked && buyout != null" class="caption bid-panel__warning" role="alert">
+      Buys it now for <EssenceAmount :amount="buyout" />
+    </p>
+    <p v-else-if="overBalance" class="caption bid-panel__warning">That's more than your available balance.</p>
 
-      <p v-else-if="overBalance" class="bid-panel__warning">
-        That's more than your available balance.
-      </p>
-    </template>
+    <p v-if="formError" class="caption bid-panel__error" role="alert">{{ formError }}</p>
 
-    <BaseButton
-      v-if="buyout != null"
-      class="bid-panel__buy"
-      :variant="auction ? 'default' : 'primary'"
-      size="lg"
-      :disabled="buyLocked"
-      :loading="busy"
-      @click="submitBuy"
-    >
-      {{ buyButtonLabel }}
-    </BaseButton>
-
-    <p v-if="disabledReason" class="bid-panel__reason">{{ disabledReason }}</p>
-    <p v-if="formError" class="bid-panel__error" role="alert">{{ formError }}</p>
-
-    <p v-if="loggedIn && balance != null" class="bid-panel__balance">
+    <p v-if="loggedIn && balance != null" class="caption">
       Balance <EssenceAmount :amount="balance" />
       <template v-if="(reserved ?? 0) > 0">
-        · <EssenceAmount :amount="reserved ?? 0" /> held in bids
+        with <EssenceAmount :amount="reserved ?? 0" /> held in bids
       </template>
     </p>
   </div>
@@ -179,50 +176,41 @@ function submitBuy() {
   gap: var(--space-sm);
 }
 
+.bid-panel__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+}
+
 .bid-panel__row {
   display: flex;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--space-sm);
 }
 
-.bid-panel__input {
-  flex: 1;
+.bid-panel__row :deep(.base-input) {
+  flex: 0 1 180px;
   min-width: 0;
 }
 
-.bid-panel__submit {
-  flex-shrink: 0;
+.bid-panel__action {
+  display: inline-flex;
 }
 
-.bid-panel__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.bid-panel__action :deep(.base-button:disabled) {
+  pointer-events: none;
+}
+
+span.bid-panel__action {
+  cursor: not-allowed;
 }
 
 .bid-panel__warning {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--warning);
 }
 
-.bid-panel__reason {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
 .bid-panel__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
-}
-
-.bid-panel__balance {
-  margin: 0;
-  padding-top: var(--space-xs);
-  border-top: 1px solid var(--bg-overlay);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 </style>

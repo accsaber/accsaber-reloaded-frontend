@@ -3,7 +3,6 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
@@ -18,7 +17,7 @@ import MarketListingCard, { type ListingCardTag } from './market/MarketListingCa
 import MarketWallet from './market/MarketWallet.vue'
 
 usePageMeta({
-  title: 'My Market Activity | AccSaber',
+  title: 'My Activity | Market | AccSaber',
   description: 'Track what you are selling, bidding on, and have won on the AccSaber market.',
 })
 
@@ -84,11 +83,14 @@ const byTab = computed(() => {
   return out
 })
 
-const tabs = computed<Tab[]>(() => [
-  { key: 'selling', label: `Selling (${byTab.value.selling.length})` },
-  { key: 'bidding', label: `Bidding (${byTab.value.bidding.length})` },
-  { key: 'won', label: `Won (${byTab.value.won.length})` },
-])
+const TAB_LABEL: Record<TabKey, string> = { selling: 'Selling', bidding: 'Bidding', won: 'Won' }
+
+const tabs = computed<Tab[]>(() =>
+  (Object.keys(TAB_LABEL) as TabKey[]).map((key) => {
+    const count = byTab.value[key].length
+    return { key, label: count ? `${TAB_LABEL[key]} (${count})` : TAB_LABEL[key] }
+  }),
+)
 
 const EMPTY_MESSAGE: Record<TabKey, string> = {
   selling: 'Nothing listed',
@@ -132,13 +134,11 @@ const breadcrumbs: Crumb[] = [
 </script>
 
 <template>
-  <div class="activity-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
+  <div class="activity-page">
     <Breadcrumbs :crumbs="breadcrumbs" />
 
     <div class="activity-page__header">
-      <div>
-        <h1 class="activity-page__title">My Market Activity</h1>
-      </div>
+      <h1>My Activity</h1>
       <div v-if="authStore.isLoggedIn" class="activity-page__header-actions">
         <MarketWallet
           v-if="essenceStore.balance !== null"
@@ -156,9 +156,7 @@ const breadcrumbs: Crumb[] = [
     <template v-else>
       <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="activeTab = $event as TabKey" />
 
-      <div v-if="loading" class="activity-page__grid">
-        <SkeletonLoader v-for="i in 8" :key="i" variant="card" />
-      </div>
+      <div v-if="loading" class="activity-page__reserved" aria-busy="true" />
 
       <EmptyState
         v-else-if="byTab[activeTab].length === 0"
@@ -169,12 +167,14 @@ const breadcrumbs: Crumb[] = [
         "
       />
 
-      <div v-else class="activity-page__grid">
+      <div v-else :key="activeTab" class="activity-page__grid stagger"
+        :style="{ '--n': byTab[activeTab].length }">
         <MarketListingCard
-          v-for="entry in byTab[activeTab]"
+          v-for="(entry, i) in byTab[activeTab]"
           :key="entry.listing.id"
           :listing="entry.listing"
           :tag="entry.tag"
+          :style="{ '--i': i }"
         />
       </div>
     </template>
@@ -193,7 +193,7 @@ const breadcrumbs: Crumb[] = [
 
 .activity-page__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
@@ -206,6 +206,10 @@ const breadcrumbs: Crumb[] = [
   flex-wrap: wrap;
 }
 
+.activity-page__reserved {
+  min-height: 60vh;
+}
+
 .activity-page__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -214,7 +218,7 @@ const breadcrumbs: Crumb[] = [
 
 @media (max-width: 767px) {
   .activity-page__grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

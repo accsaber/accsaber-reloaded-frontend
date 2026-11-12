@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ItemFilterPanel from '@/components/domain/ItemFilterPanel.vue'
 import { useItemFilterOptions } from '@/composables/useItemFilterOptions'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
+import { useRowSwap } from '@/composables/useRowSwap'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import { useTradeStore } from '@/stores/trades'
@@ -52,10 +53,11 @@ const SORT_OPTIONS: { value: MarketSortOption; label: string }[] = [
   { value: 'price_desc', label: 'Price: high to low' },
 ]
 
-const KIND_OPTIONS: { value: MarketKind | ''; label: string }[] = [
-  { value: '', label: 'All' },
-  { value: 'auction', label: 'Auctions' },
-  { value: 'shop', label: 'Buy now' },
+const ALL_KINDS = 'all'
+const KIND_TABS = [
+  { key: ALL_KINDS, label: 'All' },
+  { key: 'auction', label: 'Auctions' },
+  { key: 'shop', label: 'Buy now' },
 ]
 
 const search = queryRef('search')
@@ -89,16 +91,16 @@ function priceRef(key: string) {
 const minPrice = priceRef('min')
 const maxPrice = priceRef('max')
 
-const hasActiveFilters = computed(
+const hasPanelFilters = computed(
   () =>
     rarities.value.length > 0 ||
     typeKeys.value.length > 0 ||
     modifierKeys.value.length > 0 ||
     effectKeys.value.length > 0 ||
-    kind.value !== '' ||
     minPrice.value != null ||
     maxPrice.value != null,
 )
+const hasActiveFilters = computed(() => hasPanelFilters.value || kind.value !== '')
 
 function clearFilters() {
   setQuery({
@@ -128,6 +130,11 @@ const totalPages = ref(0)
 const totalElements = ref(0)
 const loading = ref(true)
 let requestId = 0
+
+const { shown, cascade, isStale, renderKey } = useRowSwap(() => listings.value, {
+  key: (listing) => listing.id,
+  refreshing: () => loading.value,
+})
 
 const browseParams = computed<MarketBrowseParams>(() => ({
   search: search.value.trim() || undefined,
@@ -179,50 +186,32 @@ watch(
 </script>
 
 <template>
-  <div class="market-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
+  <div class="market-page">
     <div class="market-page__header">
-      <div>
-        <h1 class="market-page__title">Market Hub</h1>
-        <p v-if="!loading" class="market-page__subtitle">
+      <div class="market-page__title">
+        <h1>Market Hub</h1>
+        <span v-if="totalElements" class="caption">
           {{ totalElements.toLocaleString() }} active {{ totalElements === 1 ? 'listing' : 'listings' }}
-        </p>
+        </span>
       </div>
-      <div class="market-page__header-actions">
+      <div v-if="authStore.isLoggedIn" class="market-page__actions">
         <MarketWallet
-          v-if="authStore.isLoggedIn && essenceStore.balance !== null"
+          v-if="essenceStore.balance !== null"
           :balance="essenceStore.balance"
           :reserved="essenceStore.reserved ?? 0"
         />
-        <BaseButton v-if="authStore.isLoggedIn" href="/trade-offers">
+        <BaseButton href="/trade-offers">
           Trade offers{{ tradeStore.pendingIncomingCount > 0 ? ` (${tradeStore.pendingIncomingCount})` : '' }}
         </BaseButton>
-        <BaseButton v-if="authStore.isLoggedIn" href="/market/me">
-          My activity
-        </BaseButton>
-        <BaseButton
-          v-if="authStore.isLoggedIn"
-          variant="primary"
-          href="/market/new"
-        >
-          List an item
-        </BaseButton>
+        <BaseButton href="/market/me">My activity</BaseButton>
+        <BaseButton variant="primary" href="/market/new">List an item</BaseButton>
       </div>
     </div>
 
     <div class="market-page__controls">
       <div class="market-page__controls-left">
-        <div class="market-page__kind" role="group" aria-label="Listing kind">
-          <button
-            v-for="option in KIND_OPTIONS"
-            :key="option.value"
-            type="button"
-            class="market-page__kind-btn"
-            :class="{ 'market-page__kind-btn--active': kind === option.value }"
-            @click="kind = option.value"
-          >
-            {{ option.label }}
-          </button>
-        </div>
+        <BaseTabs :tabs="KIND_TABS" :model-value="kind || ALL_KINDS" variant="segmented" label="Listing kind"
+          @update:model-value="kind = $event === ALL_KINDS ? '' : ($event as MarketKind)" />
         <SearchBox v-model="search" placeholder="Search titles or item names..." />
       </div>
       <div class="market-page__controls-right">
@@ -233,7 +222,7 @@ watch(
         />
         <FilterPopover :open="filtersOpen" @update:open="filtersOpen = $event">
           <template #trigger>
-            <FilterButton :active="filtersOpen || hasActiveFilters" />
+            <FilterButton :active="filtersOpen || hasPanelFilters" />
           </template>
           <ItemFilterPanel
             :rarities="rarities"
@@ -247,7 +236,7 @@ watch(
             show-price
             :min-price="minPrice"
             :max-price="maxPrice"
-            :has-active-filters="hasActiveFilters"
+            :has-active-filters="hasPanelFilters"
             @update:rarities="rarities = $event"
             @update:type-keys="typeKeys = $event"
             @update:modifier-keys="modifierKeys = $event"
@@ -260,23 +249,23 @@ watch(
       </div>
     </div>
 
-    <div v-if="loading" class="market-page__grid">
-      <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
-    </div>
+    <div v-if="loading && shown.length === 0" class="market-page__reserved" aria-busy="true" />
 
     <EmptyState
-      v-else-if="listings.length === 0"
+      v-else-if="shown.length === 0"
       :message="emptyState.message"
       :action-label="emptyState.action"
       @action="emptyState.run?.()"
     />
 
     <template v-else>
-      <div class="market-page__grid">
-        <MarketListingCard v-for="listing in listings" :key="listing.id" :listing="listing" />
+      <div class="market-page__grid stagger" :style="{ '--n': shown.length }">
+        <MarketListingCard v-for="(listing, i) in shown" :key="renderKey(listing, i)" :listing="listing"
+          :class="{ stale: isStale(i) }" :style="{ '--i': cascade ? i : 0 }" />
       </div>
 
-      <PaginationControls :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
+        @update:page="setPage" />
     </template>
   </div>
 </template>
@@ -291,86 +280,41 @@ watch(
   width: 100%;
 }
 
-.market-page__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.market-page__subtitle {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
-}
-
-.market-page__header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
+.market-page__header,
 .market-page__controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.market-page__title,
+.market-page__actions,
+.market-page__controls-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.market-page__title {
+  align-items: baseline;
   gap: var(--space-md);
 }
 
 .market-page__controls-left {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-md);
-  flex-wrap: wrap;
   min-width: 0;
   flex: 1;
 }
 
 .market-page__controls-left :deep(.search-box) {
-  min-width: 280px;
   flex: 1 1 280px;
   max-width: 420px;
-}
-
-.market-page__controls-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.market-page__kind {
-  display: inline-flex;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  overflow: hidden;
-}
-
-.market-page__kind-btn {
-  padding: var(--space-xs) var(--space-md);
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
-}
-
-.market-page__kind-btn + .market-page__kind-btn {
-  border-left: 1px solid var(--bg-overlay);
-}
-
-.market-page__kind-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.market-page__kind-btn--active {
-  background: color-mix(in srgb, var(--page-accent) 12%, var(--bg-surface));
-  color: var(--page-accent);
-  font-weight: 600;
 }
 
 .market-page__grid {
@@ -379,22 +323,21 @@ watch(
   gap: var(--space-md);
 }
 
+.market-page__reserved {
+  min-height: 60vh;
+}
+
 @media (max-width: 767px) {
   .market-page__grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
-
-  .market-page__controls {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .market-page__controls-left {
-    width: 100%;
+    flex-basis: 100%;
   }
 
   .market-page__controls-left :deep(.search-box) {
-    min-width: 0;
-    flex: 1 1 100%;
+    flex-basis: 100%;
     max-width: none;
   }
 }

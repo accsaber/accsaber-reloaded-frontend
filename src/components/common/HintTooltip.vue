@@ -9,6 +9,7 @@ const props = defineProps<{
   more?: boolean
   tag?: string
   variant?: 'inline' | 'bare'
+  as?: 'button' | 'span'
 }>()
 
 const panelId = useId()
@@ -24,10 +25,12 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
 </script>
 
 <template>
-  <button
+  <component
+    :is="as ?? 'button'"
     v-if="text"
     ref="triggerRef"
-    type="button"
+    :type="as === 'span' ? undefined : 'button'"
+    :tabindex="as === 'span' ? 0 : undefined"
     class="hint"
     :class="variant ? `hint--${variant}` : { 'hint--tag': tag || $slots.trigger }"
     :aria-label="tag || ($slots.trigger && variant !== 'bare') ? undefined : label ? `What ${label} does` : text"
@@ -56,7 +59,7 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
         </div>
       </Transition>
     </Teleport>
-  </button>
+  </component>
 </template>
 
 <style scoped>

@@ -136,6 +136,10 @@ function onSelect(linkId: string) {
   gap: var(--space-sm);
 }
 
+.item-picker__grid :deep(.inventory-cell--plain) {
+  border-color: var(--bg-overlay);
+}
+
 .item-picker__reserved {
   height: calc(var(--tile) * 3);
 }
