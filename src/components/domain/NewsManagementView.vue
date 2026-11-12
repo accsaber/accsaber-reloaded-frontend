@@ -192,7 +192,7 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
           </div>
         </td>
         <td>
-          <NewsTypeBadge :type="item.type" size="sm" />
+          <NewsTypeBadge :type="item.type" />
         </td>
         <td>
           <span class="news-mgmt__status" :style="{ color: STATUS_STYLE[item.status], borderColor: STATUS_STYLE[item.status] }">

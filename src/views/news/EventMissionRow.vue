@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import MissionRewards from '@/components/domain/MissionRewards.vue'
 import { formatUnlockDate, type EventMissionView, type MissionLock } from '@/utils/events'
 import { missionProgressLabel } from '@/utils/missions'
 import { computed } from 'vue'
-import { clamp } from '@/utils/math'
 
 const props = defineProps<{
   mission: EventMissionView
@@ -20,12 +20,9 @@ const hasBar = computed(
   () => props.mission.progressTarget !== null && props.mission.progressTarget > 0,
 )
 
-const progressPct = computed(() => {
-  if (!hasBar.value) return props.mission.completed ? 100 : 0
-  const current = props.mission.progressCurrent ?? 0
-  const target = props.mission.progressTarget as number
-  return clamp((current / target) * 100, 0, 100)
-})
+const progress = computed(() =>
+  hasBar.value ? (props.mission.progressCurrent ?? 0) / (props.mission.progressTarget as number) : 0,
+)
 
 const progressLabel = computed(() =>
   missionProgressLabel(
@@ -116,15 +113,13 @@ const repeatLabel = computed(() => {
     <p v-if="mission.description" class="mission__desc">{{ mission.description }}</p>
 
     <div v-if="state === 'locked'" class="mission__progress">
-      <span class="mission__flag mission__flag--lock">{{ lockHint }}</span>
+      <span class="mission__flag">{{ lockHint }}</span>
     </div>
 
     <div v-else-if="mission.tracked" class="mission__progress">
       <span v-if="state === 'completed'" class="mission__flag mission__flag--done">Completed</span>
       <template v-if="showBar">
-        <div class="mission__track">
-          <div class="mission__fill" :style="{ width: `${progressPct}%` }" />
-        </div>
+        <ProgressBar :value="progress" />
         <span class="mission__count">{{ progressLabel }}</span>
       </template>
       <span v-else-if="state !== 'completed'" class="mission__flag">In progress</span>
@@ -139,11 +134,6 @@ const repeatLabel = computed(() => {
   flex-direction: column;
   gap: var(--space-xs);
   padding: var(--space-md) 0;
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.mission:last-child {
-  border-bottom: none;
 }
 
 .mission--locked {
@@ -190,7 +180,7 @@ const repeatLabel = computed(() => {
 .mission__name {
   flex: 1;
   min-width: 0;
-  font-size: 1rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -200,17 +190,14 @@ const repeatLabel = computed(() => {
   align-items: center;
   gap: var(--space-xs);
   flex-shrink: 0;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
 .mission__desc {
   margin: 0;
   padding-left: calc(20px + var(--space-sm));
-  font-size: 0.85rem;
+  font-size: var(--text-body);
   color: var(--text-secondary);
   line-height: 1.45;
 }
@@ -222,31 +209,15 @@ const repeatLabel = computed(() => {
   padding-left: calc(20px + var(--space-sm));
 }
 
-.mission__track {
-  flex: 1;
-  height: 7px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-overlay);
-  overflow: hidden;
-}
-
-.mission__fill {
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--page-accent, var(--accent));
-  transition: width 300ms ease;
-}
-
 .mission__count {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
 }
 
 .mission__flag {
-  font-size: 0.82rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
@@ -255,14 +226,10 @@ const repeatLabel = computed(() => {
   font-weight: 600;
 }
 
-.mission__flag--lock {
-  font-style: italic;
-}
-
 .mission__completions {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 </style>

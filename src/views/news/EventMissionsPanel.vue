@@ -8,7 +8,7 @@ import EventMissionRow from '@/views/news/EventMissionRow.vue'
 import type { Tab } from '@/types/display'
 import type { PaginationParams } from '@/types/pagination'
 import { missionLockState, type EventMissionView } from '@/utils/events'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { clamp } from '@/utils/math'
 
 async function loadContributors(missionId: string, params: PaginationParams) {
@@ -24,6 +24,7 @@ const props = defineProps<{
   unlockedWeek: number | null
   begun: boolean | null
   live: boolean
+  ended: boolean
   joinPrompt: boolean
   now: number
 }>()
@@ -65,6 +66,7 @@ function sortCommunity(list: MissionResponse[]): MissionResponse[] {
 }
 
 function weekLocked(w: number): boolean {
+  if (props.ended) return false
   if (props.currentWeek == null || w > props.currentWeek) return true
   if (props.begun && props.unlockedWeek != null && w > props.unlockedWeek) return true
   return false
@@ -79,15 +81,19 @@ const weekList = computed(() =>
   Array.from({ length: weeks.value }, (_, i) => {
     const n = i + 1
     const locked = weekLocked(n)
-    return { n, locked, current: props.currentWeek === n, complete: !locked && weekComplete(n) }
+    return { n, locked, complete: !locked && weekComplete(n) }
   }),
 )
 
 const TAB_ACCENT = 'var(--page-accent, var(--accent))'
 
 const weekTabs = computed<Tab[]>(() => {
-  const tabs: Tab[] = weekList.value.map((w) => ({ key: String(w.n), label: `Week ${w.n}`, accentColor: TAB_ACCENT }))
-  if (hasGlobalTab.value) tabs.push({ key: 'all', label: 'All Event', accentColor: TAB_ACCENT })
+  const tabs: Tab[] = weekList.value.map((w) => ({
+    key: String(w.n),
+    label: String(w.n),
+    accentColor: TAB_ACCENT,
+  }))
+  if (hasGlobalTab.value) tabs.push({ key: 'all', label: 'All', accentColor: TAB_ACCENT })
   return tabs
 })
 
@@ -97,9 +103,7 @@ function selectTab(key: string) {
   activeTab.value = key === 'all' ? 'all' : Number(key)
 }
 
-const activeWeekLocked = computed(
-  () => activeTab.value !== 'all' && weekLocked(activeTab.value),
-)
+const activeWeekLocked = computed(() => activeTab.value !== 'all' && weekLocked(activeTab.value))
 
 const visibleRows = computed(() => {
   if (activeTab.value === 'all') return []
@@ -107,11 +111,13 @@ const visibleRows = computed(() => {
   const filtered = showTabs.value ? props.missions.filter((m) => m.week === week) : props.missions
   return filtered.map((mission) => ({
     mission,
-    lock: missionLockState(mission, {
-      begun: props.begun,
-      currentWeek: props.currentWeek,
-      live: props.live,
-    }),
+    lock: props.ended
+      ? null
+      : missionLockState(mission, {
+          begun: props.begun,
+          currentWeek: props.currentWeek,
+          live: props.live,
+        }),
   }))
 })
 
@@ -123,7 +129,7 @@ const visibleCommunity = computed(() => {
 })
 
 function communityLocked(mission: MissionResponse): boolean {
-  return activeTab.value !== 'all' && mission.unlocked === false
+  return !props.ended && activeTab.value !== 'all' && mission.unlocked === false
 }
 
 const showGroupLabels = computed(
@@ -133,31 +139,6 @@ const showGroupLabels = computed(
 const openMission = computed(
   () => props.communityMissions.find((m) => m.id === openId.value) ?? null,
 )
-
-const listRef = ref<HTMLElement | null>(null)
-const scrollable = ref(false)
-const atEnd = ref(true)
-
-const showScrollCue = computed(() => scrollable.value && !atEnd.value)
-
-function measureScroll() {
-  const el = listRef.value
-  if (!el) {
-    scrollable.value = false
-    atEnd.value = true
-    return
-  }
-  const max = el.scrollHeight - el.clientHeight
-  scrollable.value = max > 1
-  atEnd.value = el.scrollTop >= max - 1
-}
-
-onMounted(measureScroll)
-
-watch([visibleRows, visibleCommunity], () => {
-  if (listRef.value) listRef.value.scrollTop = 0
-  nextTick(measureScroll)
-})
 
 watch(hasGlobalTab, (has) => {
   if (!has && activeTab.value === 'all') activeTab.value = 1
@@ -176,44 +157,72 @@ watch(
 <template>
   <section class="missions">
     <header class="missions__header">
-      <h2 class="missions__title">Missions</h2>
-      <BaseTabs
-        v-if="showTabs"
-        label="Event weeks"
-        :tabs="weekTabs"
-        :model-value="String(activeTab)"
-        @update:model-value="selectTab"
-      >
-        <template #tab="{ tab, active }">
-          <span :class="{ 'week-tab--locked': weekByKey.get(tab.key)?.locked, 'week-tab--active': active }">
-            {{ tab.label }}
-          </span>
-          <svg v-if="weekByKey.get(tab.key)?.locked" class="week-tab__icon" width="11" height="11" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="11" width="18" height="11" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <svg v-else-if="weekByKey.get(tab.key)?.complete" class="week-tab__icon week-tab__check" width="13"
-            height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
-            stroke-linejoin="round" aria-label="All missions complete">
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </template>
-      </BaseTabs>
+      <h2 class="section-title">Missions</h2>
+      <div v-if="showTabs" class="missions__weeks">
+        <span class="field-label">Week</span>
+        <BaseTabs
+          label="Event weeks"
+          :tabs="weekTabs"
+          :model-value="String(activeTab)"
+          @update:model-value="selectTab"
+        >
+          <template #tab="{ tab, active }">
+            <span
+              :class="{
+                'week-tab--locked': weekByKey.get(tab.key)?.locked,
+                'week-tab--active': active,
+              }"
+            >
+              {{ tab.label }}
+            </span>
+            <svg
+              v-if="weekByKey.get(tab.key)?.locked"
+              class="week-tab__icon"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <svg
+              v-else-if="weekByKey.get(tab.key)?.complete"
+              class="week-tab__icon week-tab__check"
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-label="All missions complete"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </template>
+        </BaseTabs>
+      </div>
     </header>
 
-    <p v-if="activeWeekLocked" class="missions__disclaimer">
+    <p v-if="activeWeekLocked" class="caption">
       Missions subject to change before release.
     </p>
 
-    <EmptyState v-if="!visibleRows.length && !visibleCommunity.length"
-      message="No missions unlocked for this week yet." />
-    <div v-else ref="listRef" class="missions__list" :class="{ 'missions__list--more': showScrollCue }"
-      @scroll.passive="measureScroll">
+    <EmptyState
+      v-if="!visibleRows.length && !visibleCommunity.length"
+      message="No missions unlocked for this week yet."
+    />
+    <div v-else class="missions__list">
       <div v-if="visibleRows.length" class="group">
         <div v-if="showGroupLabels" class="group__head">
-          <span class="group__label">Personal</span>
+          <span class="field-label">Personal</span>
         </div>
         <EventMissionRow
           v-for="row in visibleRows"
@@ -225,11 +234,9 @@ watch(
 
       <div v-if="visibleCommunity.length" class="group">
         <div v-if="showGroupLabels || joinPrompt" class="group__head">
-          <span v-if="showGroupLabels" class="group__label">Community</span>
-          <span v-if="showGroupLabels" class="group__note">
-            Optional
-          </span>
-          <span v-if="joinPrompt" class="group__join">Join the event to contribute.</span>
+          <span v-if="showGroupLabels" class="field-label">Community</span>
+          <span v-if="showGroupLabels" class="caption">Optional</span>
+          <span v-if="joinPrompt" class="caption group__join">Join the event to contribute.</span>
         </div>
         <SharedMissionRow
           v-for="mission in visibleCommunity"
@@ -257,6 +264,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  min-width: 0;
   padding: var(--space-lg);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
@@ -267,14 +275,27 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
-.missions__title {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  color: var(--text-primary);
+.missions__weeks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.missions__weeks :deep(.base-tabs) {
+  flex: 1;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-width: 0;
+}
+
+.missions__weeks :deep(.base-tabs__tab) {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
 }
 
 .week-tab--locked {
@@ -293,15 +314,6 @@ watch(
   color: var(--success);
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-}
-
-.group + .group {
-  border-top: 1px solid var(--bg-overlay);
-}
-
 .group__head {
   display: flex;
   align-items: baseline;
@@ -310,55 +322,44 @@ watch(
   padding-top: var(--space-md);
 }
 
-.group__label {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.group__note {
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
-}
-
 .group__join {
-  font-size: 0.8rem;
-  font-style: italic;
   color: var(--warning);
 }
 
-.missions__disclaimer {
-  margin: calc(-1 * var(--space-sm)) 0 0;
-  font-size: 0.82rem;
-  font-style: italic;
-  color: var(--text-tertiary);
+.missions__list,
+.group {
+  display: flex;
+  flex-direction: column;
 }
 
 .missions__list {
-  --mission-row-h: 117px;
-  --mission-scrollbar-w: 5px;
-  display: flex;
-  flex-direction: column;
-  max-height: min(calc(var(--mission-row-h) * 5), 62vh);
+  --scrollbar: 10px;
+  gap: var(--space-lg);
+  max-height: 62vh;
+  margin-right: calc(-1 * var(--space-lg));
+  padding-right: calc(var(--space-lg) - var(--scrollbar));
   overflow-y: auto;
-  padding-right: var(--space-sm);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--bg-overlay) transparent;
 }
 
-.missions__list--more {
-  mask-image: linear-gradient(to bottom, black calc(100% - 52px), transparent);
+@supports (-moz-appearance: none) {
+  .missions__list {
+    --scrollbar: 8px;
+  }
 }
 
-.missions__list::-webkit-scrollbar {
-  width: var(--mission-scrollbar-w);
-}
+@media (max-width: 959px) {
+  .missions {
+    padding: var(--space-md);
+  }
 
-.missions__list::-webkit-scrollbar-thumb {
-  background: var(--bg-overlay);
-  border-radius: var(--radius-btn);
+  .missions__list {
+    max-height: none;
+    margin-right: 0;
+    padding-right: 0;
+    overflow-y: visible;
+  }
 }
 </style>

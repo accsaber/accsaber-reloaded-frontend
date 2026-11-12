@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import NewsLinkedResource from '@/components/domain/NewsLinkedResource.vue'
-import NewsTypeBadge from '@/components/domain/NewsTypeBadge.vue'
 import type { PublicNewsResponse } from '@/types/api/news'
 import { NEWS_TYPE_ACCENT } from '@/utils/constants'
-import { formatFullDate } from '@/utils/formatters'
 import { renderMarkdown } from '@/utils/markdown'
 import { computed } from 'vue'
 
@@ -22,17 +20,6 @@ const accent = computed(() => NEWS_TYPE_ACCENT[props.news.type])
     </div>
 
     <header class="news-article__header">
-      <div class="news-article__meta">
-        <NewsTypeBadge :type="news.type" />
-        <span v-if="news.pinned" class="news-article__pin">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-          </svg>
-          Pinned
-        </span>
-        <span v-if="news.publishedAt" class="news-article__date">{{ formatFullDate(news.publishedAt) }}</span>
-      </div>
-
       <h1 class="news-article__title">{{ news.title }}</h1>
       <p v-if="news.description" class="news-article__description">{{ news.description }}</p>
       <p v-if="news.authorName" class="news-article__author">by {{ news.authorName }}</p>
@@ -72,29 +59,6 @@ const accent = computed(() => NEWS_TYPE_ACCENT[props.news.type])
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.news-article__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
-.news-article__pin {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--detail-accent);
-}
-
-.news-article__date {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
 }
 
 .news-article__title {

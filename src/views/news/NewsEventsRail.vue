@@ -4,7 +4,9 @@ import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import EventStatusGlyph from '@/views/news/EventStatusGlyph.vue'
 import NewsTypeGlyph from '@/views/news/NewsTypeGlyph.vue'
 import RailListCard from '@/views/news/RailListCard.vue'
@@ -70,15 +72,17 @@ const eventCards = computed(() =>
     }),
 )
 
-const eventStateChoices = computed(() => [
-  { key: null as EventState | null, label: 'All', accent: 'var(--accent)' },
-  ...EVENT_STATE_ORDER.map((s) => ({ key: s, label: EVENT_STATE_LABELS[s], accent: EVENT_STATE_ACCENT[s] })),
-])
+const ALL = 'all'
 
-const newsTypeChoices = computed(() => [
-  { key: null as NewsType | null, label: 'All', accent: 'var(--accent)' },
-  ...NEWS_TYPE_ORDER.map((t) => ({ key: t, label: NEWS_TYPE_LABELS[t], accent: NEWS_TYPE_ACCENT[t] })),
-])
+const eventStateTabs = [
+  { key: ALL, label: 'All' },
+  ...EVENT_STATE_ORDER.map((s) => ({ key: s, label: EVENT_STATE_LABELS[s], accentColor: EVENT_STATE_ACCENT[s] })),
+]
+
+const newsTypeTabs = [
+  { key: ALL, label: 'All' },
+  ...NEWS_TYPE_ORDER.map((t) => ({ key: t, label: NEWS_TYPE_LABELS[t], accentColor: NEWS_TYPE_ACCENT[t] })),
+]
 </script>
 
 <template>
@@ -94,92 +98,69 @@ const newsTypeChoices = computed(() => [
           <FilterButton :active="filtersOpen || filterActive" />
         </template>
         <div class="rail__filters">
-          <div class="rail__filter-group">
-            <span class="rail__filter-label">Events</span>
-            <div class="rail__chips">
-              <button
-                v-for="choice in eventStateChoices"
-                :key="choice.key ?? 'all'"
-                type="button"
-                class="rail__chip"
-                :class="{ 'rail__chip--active': eventFilter === choice.key }"
-                :style="{ '--chip-accent': choice.accent }"
-                @click="emit('update:eventFilter', choice.key)"
-              >
-                {{ choice.label }}
-              </button>
-            </div>
-          </div>
-
-          <div class="rail__filter-group">
-            <span class="rail__filter-label">News</span>
-            <div class="rail__chips">
-              <button
-                v-for="choice in newsTypeChoices"
-                :key="choice.key ?? 'all'"
-                type="button"
-                class="rail__chip"
-                :class="{ 'rail__chip--active': newsFilter === choice.key }"
-                :style="{ '--chip-accent': choice.accent }"
-                @click="emit('update:newsFilter', choice.key)"
-              >
-                {{ choice.label }}
-              </button>
-            </div>
-          </div>
+          <span class="field-label">Events</span>
+          <BaseTabs variant="segmented" label="Event state" :tabs="eventStateTabs" :model-value="eventFilter ?? ALL"
+            @update:model-value="emit('update:eventFilter', $event === ALL ? null : ($event as EventState))" />
+          <span class="field-label">News</span>
+          <BaseTabs variant="segmented" label="News type" :tabs="newsTypeTabs" :model-value="newsFilter ?? ALL"
+            @update:model-value="emit('update:newsFilter', $event === ALL ? null : ($event as NewsType))" />
         </div>
       </FilterPopover>
     </div>
 
     <section class="rail__section">
-      <h2 class="rail__heading">Events</h2>
-      <div v-if="loadingEvents" class="rail__list">
-        <SkeletonLoader v-for="i in 2" :key="i" variant="card" style="height: 72px" />
-      </div>
-      <p v-else-if="!eventCards.length" class="rail__empty">No events right now.</p>
-      <div v-else class="rail__list">
-        <RailListCard
-          v-for="card in eventCards"
-          :key="card.event.id"
-          :title="card.event.title"
-          :image-url="card.event.iconUrl ?? card.event.backgroundUrl"
-          :meta="card.meta"
-          :badge="card.badge"
-          :accent="card.color"
-          :active="activeKind === 'event' && activeId === card.event.slug"
-          @select="emit('select-event', card.event.slug)"
-        >
-          <template #fallback>
-            <EventStatusGlyph :status="card.status" />
-          </template>
-        </RailListCard>
-      </div>
+      <h2 class="field-label">Events</h2>
+      <p v-if="!loadingEvents && !eventCards.length" class="caption">No events right now</p>
+      <SwapList v-else class="rail__list" :items="eventCards" :item-key="(card) => card.event.id"
+        :loading="loadingEvents" :placeholders="2">
+        <template #placeholder>
+          <SkeletonLoader class="placeholder" height="58px" />
+        </template>
+        <template #default="{ item: card, swap }">
+          <RailListCard
+            v-bind="swap"
+            :title="card.event.title"
+            :image-url="card.event.iconUrl ?? card.event.backgroundUrl"
+            :meta="card.meta"
+            :badge="card.badge"
+            :accent="card.color"
+            :active="activeKind === 'event' && activeId === card.event.slug"
+            @select="emit('select-event', card.event.slug)"
+          >
+            <template #fallback>
+              <EventStatusGlyph :status="card.status" />
+            </template>
+          </RailListCard>
+        </template>
+      </SwapList>
     </section>
 
     <section class="rail__section">
-      <h2 class="rail__heading">News</h2>
-      <div v-if="loadingNews" class="rail__list">
-        <SkeletonLoader v-for="i in 4" :key="i" variant="card" style="height: 72px" />
-      </div>
-      <EmptyState v-else-if="!news.length" message="No news yet." />
-      <div v-else class="rail__list">
-        <RailListCard
-          v-for="item in news"
-          :key="item.id"
-          :title="item.title"
-          :image-url="item.imageUrl"
-          :meta="item.publishedAt ? formatRelativeDate(item.publishedAt) : null"
-          :badge="NEWS_TYPE_LABELS[item.type]"
-          :accent="NEWS_TYPE_ACCENT[item.type]"
-          :pinned="item.pinned"
-          :active="activeKind === 'news' && activeId === item.slug"
-          @select="emit('select-news', item.slug)"
-        >
-          <template #fallback>
-            <NewsTypeGlyph :type="item.type" />
-          </template>
-        </RailListCard>
-      </div>
+      <h2 class="field-label">News</h2>
+      <EmptyState v-if="!loadingNews && !news.length" message="No news yet." />
+      <SwapList v-else class="rail__list" :items="news" :item-key="(item) => item.id" :loading="loadingNews"
+        :placeholders="6">
+        <template #placeholder>
+          <SkeletonLoader class="placeholder" height="58px" />
+        </template>
+        <template #default="{ item, swap }">
+          <RailListCard
+            v-bind="swap"
+            :title="item.title"
+            :image-url="item.imageUrl"
+            :meta="item.publishedAt ? formatRelativeDate(item.publishedAt) : null"
+            :badge="NEWS_TYPE_LABELS[item.type]"
+            :accent="NEWS_TYPE_ACCENT[item.type]"
+            :pinned="item.pinned"
+            :active="activeKind === 'news' && activeId === item.slug"
+            @select="emit('select-news', item.slug)"
+          >
+            <template #fallback>
+              <NewsTypeGlyph :type="item.type" />
+            </template>
+          </RailListCard>
+        </template>
+      </SwapList>
       <PaginationControls
         v-if="totalNewsPages > 1"
         :page="newsPage"
@@ -192,16 +173,21 @@ const newsTypeChoices = computed(() => [
 </template>
 
 <style scoped>
-.rail {
+.rail,
+.rail__section {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
+.rail__section {
+  gap: var(--space-sm);
+}
+
 .rail__tools {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
 .rail__tools :deep(.search-box) {
@@ -211,80 +197,31 @@ const newsTypeChoices = computed(() => [
 .rail__filters {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-}
-
-.rail__filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.rail__filter-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-}
-
-.rail__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.rail__chip {
-  padding: 3px 10px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
-}
-
-.rail__chip:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.rail__chip--active {
-  border-color: var(--chip-accent);
-  color: var(--chip-accent);
-  background: color-mix(in srgb, var(--chip-accent) 12%, transparent);
-}
-
-.rail__section {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-sm);
+  width: max-content;
+  max-width: 100%;
 }
 
-.rail__heading {
-  margin: 0;
-  padding-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--bg-overlay);
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
+.rail__filters :deep(.base-tabs) {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+}
+
+.rail__filters :deep(.base-tabs__tab) {
+  justify-content: center;
+  padding-inline: var(--space-sm);
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .rail__filters {
+    width: 100%;
+  }
 }
 
 .rail__list {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-}
-
-.rail__empty {
-  margin: 0;
-  padding: var(--space-sm) 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 </style>

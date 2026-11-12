@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import MissionRewards from '@/components/domain/MissionRewards.vue'
 import type { MissionResponse } from '@/types/api/missions'
 import { formatUnlockDate } from '@/utils/events'
@@ -30,12 +31,10 @@ const yours = computed(() => props.mission.yourContribution ?? 0)
 
 const perMember = computed(() => props.mission.perMember === true)
 
-const pct = computed(() =>
-  target.value > 0 ? Math.min(100, (progress.value / target.value) * 100) : 0,
-)
+const ratio = computed(() => (target.value > 0 ? progress.value / target.value : 0))
 
-const yoursPct = computed(() =>
-  target.value > 0 && !perMember.value ? Math.min(pct.value, (yours.value / target.value) * 100) : 0,
+const yoursRatio = computed(() =>
+  target.value > 0 && !perMember.value ? yours.value / target.value : 0,
 )
 
 const progressLabel = computed(() => {
@@ -64,7 +63,9 @@ const state = computed<'upcoming' | 'active' | 'completed' | 'expired'>(() => {
 })
 
 const unlockLabel = computed(() =>
-  (props.locked || state.value === 'upcoming') && props.mission.unlocksAt
+  (props.locked || state.value === 'upcoming')
+  && props.mission.unlocksAt
+  && new Date(props.mission.unlocksAt).getTime() > props.now
     ? `Unlocks ${formatUnlockDate(props.mission.unlocksAt)}`
     : null,
 )
@@ -109,11 +110,7 @@ const yourShare = computed(() =>
     <p v-if="mission.description" class="cm__desc">{{ mission.description }}</p>
 
     <div v-if="!locked" class="cm__bar">
-      <div class="cm__track" role="progressbar" :aria-valuenow="progress" :aria-valuemin="0"
-        :aria-valuemax="target">
-        <div class="cm__fill" :style="{ width: `${pct}%` }" />
-        <div v-if="yoursPct > 0" class="cm__yours" :style="{ width: `${yoursPct}%` }" />
-      </div>
+      <ProgressBar :value="ratio" :share="yoursRatio" />
       <span class="cm__count">{{ progressLabel }}</span>
     </div>
 
@@ -126,7 +123,7 @@ const yourShare = computed(() =>
       <span v-else class="cm__empty">No contributions yet.</span>
 
       <span v-if="memberProgress" class="cm__yours-label">Your goal: {{ memberProgress }}</span>
-      <span v-else-if="yourShare" class="cm__yours-label">your share {{ yourShare }}</span>
+      <span v-else-if="yourShare" class="cm__yours-label">Your share {{ yourShare }}</span>
 
       <span v-if="state === 'completed'" class="cm__flag cm__flag--done">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
@@ -147,11 +144,6 @@ const yourShare = computed(() =>
   flex-direction: column;
   gap: var(--space-xs);
   padding: var(--space-md) 0;
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.cm:last-child {
-  border-bottom: none;
 }
 
 .cm--expired {
@@ -178,14 +170,14 @@ const yourShare = computed(() =>
   margin: 0;
   flex: 1 1 12rem;
   min-width: 0;
-  font-size: 1rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .cm__desc {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--text-body);
   line-height: 1.45;
   color: var(--text-secondary);
 }
@@ -197,37 +189,11 @@ const yourShare = computed(() =>
   margin-top: 2px;
 }
 
-.cm__track {
-  position: relative;
-  flex: 1;
-  height: 7px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-overlay);
-  overflow: hidden;
-}
-
-.cm__fill,
-.cm__yours {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: var(--radius-pill);
-  transition: width 300ms ease;
-}
-
-.cm__fill {
-  background: color-mix(in srgb, var(--page-accent, var(--accent)) 40%, var(--bg-overlay));
-}
-
-.cm__yours {
-  background: var(--page-accent, var(--accent));
-}
-
 .cm__count {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
 }
 
 .cm__meta {
@@ -235,7 +201,7 @@ const yourShare = computed(() =>
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-sm);
-  font-size: 0.8rem;
+  font-size: var(--text-caption);
 }
 
 .cm__contributors {
@@ -247,7 +213,9 @@ const yourShare = computed(() =>
   color: var(--text-secondary);
   cursor: pointer;
   border-bottom: 1px solid var(--bg-overlay);
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .cm__contributors:hover {
@@ -257,7 +225,6 @@ const yourShare = computed(() =>
 
 .cm__yours-label {
   color: var(--page-accent, var(--accent));
-  font-variant-numeric: tabular-nums;
 }
 
 .cm__flag {
@@ -279,7 +246,6 @@ const yourShare = computed(() =>
 
 .cm__flag--deadline {
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
 }
 
 .cm--urgent .cm__flag--deadline {
@@ -288,13 +254,5 @@ const yourShare = computed(() =>
 
 .cm__empty {
   color: var(--text-tertiary);
-  font-style: italic;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cm__fill,
-  .cm__yours {
-    transition: none;
-  }
 }
 </style>

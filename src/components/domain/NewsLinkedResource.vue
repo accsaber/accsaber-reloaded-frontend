@@ -1,19 +1,16 @@
 <script setup lang="ts">
 import CoverImage from '@/components/common/CoverImage.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import MapCardCompact from '@/components/domain/MapCardCompact.vue'
+import BatchListView from '@/components/domain/BatchListView.vue'
 import MilestoneCard from '@/components/domain/MilestoneCard.vue'
-import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
 import type { CampaignDetailResponse } from '@/types/api/campaigns'
 import type { CurveResponse } from '@/types/api/categories'
 import type { MilestoneResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import type { PublicNewsResponse } from '@/types/api/news'
-import { groupBatchByCategory } from '@/utils/batches'
 import { campaignBadges } from '@/utils/campaignBadges'
 import { campaignDifficultyLabel } from '@/utils/campaignDifficulty'
 import { requirementGoalText } from '@/utils/campaignLayout'
-import { formatRelativeDate } from '@/utils/formatters'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { computed, ref, watch } from 'vue'
@@ -28,7 +25,6 @@ const props = defineProps<{
   news: PublicNewsResponse
 }>()
 
-const categoryStore = useCategoryStore()
 
 const resource = ref<Resource | null>(null)
 const loading = ref(false)
@@ -40,16 +36,6 @@ const linkedKind = computed<Resource['kind'] | null>(() => {
   if (props.news.milestoneSetId) return 'milestoneSet'
   if (props.news.curveId) return 'curve'
   return null
-})
-
-const batchGroups = computed(() => {
-  if (resource.value?.kind !== 'batch') return []
-  return groupBatchByCategory(
-    resource.value.data,
-    (id) => categoryStore.getCategoryCode(id),
-    (code) => categoryStore.getAccent(code),
-    (code) => categoryStore.getCategoryInfo(code)?.name ?? code,
-  )
 })
 
 async function loadBatch(id: string) {
@@ -135,21 +121,10 @@ function mapRouteTo(m: { id: string; difficultyId?: string; difficulty?: string;
   })
 }
 
-const sectionTitle = computed(() => {
-  switch (linkedKind.value) {
-    case 'batch': return 'Batch'
-    case 'campaign': return 'Campaign'
-    case 'milestoneSet': return 'Milestone set'
-    case 'curve': return 'Curve'
-    default: return ''
-  }
-})
 </script>
 
 <template>
   <section v-if="linkedKind" class="linked-resource">
-    <h2 class="linked-resource__title">{{ sectionTitle }}</h2>
-
     <div v-if="loading" class="linked-resource__loading">
       <SkeletonLoader variant="card" style="height: 60px" />
       <SkeletonLoader variant="card" style="height: 60px" />
@@ -157,33 +132,8 @@ const sectionTitle = computed(() => {
 
     <p v-else-if="error" class="linked-resource__error">{{ error }}</p>
 
-    <template v-else-if="resource?.kind === 'batch'">
-      <header class="linked-resource__header">
-        <div>
-          <h3 class="linked-resource__name">{{ resource.data.name }}</h3>
-          <p v-if="resource.data.description" class="linked-resource__desc">{{ resource.data.description }}</p>
-        </div>
-        <div class="linked-resource__meta">
-          <span>{{ resource.data.difficulties.length }} difficulties</span>
-          <span v-if="resource.data.releasedAt"> · {{ formatRelativeDate(resource.data.releasedAt) }}</span>
-        </div>
-      </header>
-
-      <div v-for="group in batchGroups" :key="group.categoryCode" class="batch-category">
-        <div class="batch-category__header">
-          <span class="batch-category__dot" :style="{ background: group.accent }" />
-          <span class="field-label">{{ group.name }}</span>
-        </div>
-        <div class="batch-category__cards">
-          <MapCardCompact
-            v-for="m in group.diffs"
-            :key="m.difficultyId"
-            :map="m"
-            :to="mapRouteTo(m)"
-          />
-        </div>
-      </div>
-    </template>
+    <BatchListView v-else-if="resource?.kind === 'batch'" :batches="[resource.data]" :loading="false"
+      :refreshing="false" :map-route-to="mapRouteTo" />
 
     <template v-else-if="resource?.kind === 'campaign'">
       <header class="linked-resource__header">
@@ -272,16 +222,6 @@ const sectionTitle = computed(() => {
   flex-direction: column;
   gap: var(--space-md);
   padding-top: var(--space-lg);
-  border-top: 1px solid var(--bg-overlay);
-}
-
-.linked-resource__title {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 0;
 }
 
 .linked-resource__loading {
@@ -323,30 +263,6 @@ const sectionTitle = computed(() => {
   font-family: var(--font-mono);
 }
 
-.batch-category {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.batch-category__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.batch-category__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.batch-category__cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-sm);
-}
-
 .campaign-rows {
   display: flex;
   flex-direction: column;
@@ -363,7 +279,7 @@ const sectionTitle = computed(() => {
   border-radius: var(--radius-btn);
   text-decoration: none;
   color: inherit;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
 .campaign-row:hover {

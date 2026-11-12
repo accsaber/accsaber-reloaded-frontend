@@ -37,7 +37,7 @@ const newsPage = ref(1)
 const totalNewsPages = ref(0)
 
 const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY)
-const mobileView = ref<'rail' | 'detail'>('rail')
+const mobileView = ref<'rail' | 'detail'>(route.query.event || route.query.post ? 'detail' : 'rail')
 
 function setQuery(key: 'event' | 'post', value: string, clearKey: 'event' | 'post') {
   router.replace({ query: { ...route.query, [clearKey]: undefined, [key]: value } })
@@ -184,8 +184,9 @@ onMounted(loadEvents)
   align-self: start;
   max-height: calc(100vh - var(--navbar-height) - var(--space-lg));
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-overlay) transparent;
   padding-right: var(--space-lg);
-  border-right: 1px solid var(--bg-overlay);
 }
 
 .hub__main {
@@ -223,7 +224,7 @@ onMounted(loadEvents)
 
 @media (max-width: 959px) {
   .hub {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-lg);
   }
 

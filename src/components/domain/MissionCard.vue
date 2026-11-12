@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import HintTooltip from '@/components/common/HintTooltip.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import MissionRewards from '@/components/domain/MissionRewards.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { MissionResponse } from '@/types/api/missions'
@@ -37,10 +38,6 @@ const progress = computed(() => props.mission.progressValue ?? 0)
 const target = computed(() => props.mission.targetValue ?? 0)
 
 const hasBar = computed(() => target.value > 0)
-
-const fillPercent = computed(() =>
-  hasBar.value ? Math.round(Math.min(1, progress.value / target.value) * 100) : 0,
-)
 
 const counterLabel = computed(() =>
   missionProgressLabel(props.mission.type, progress.value, target.value),
@@ -147,10 +144,7 @@ function handleLinkClick() {
 
     <span v-if="isCompleted" class="mission-row__done">Completed</span>
     <div v-else-if="hasBar" class="mission-row__status">
-      <div class="mission-row__bar" role="progressbar"
-        :aria-valuenow="progress" :aria-valuemin="0" :aria-valuemax="target">
-        <div class="mission-row__bar-fill" :style="{ transform: `scaleX(${fillPercent / 100})` }" />
-      </div>
+      <ProgressBar :value="progress / target" />
       <span class="mission-row__counter">{{ counterLabel }}</span>
     </div>
   </article>
@@ -227,25 +221,8 @@ function handleLinkClick() {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  min-height: 4px;
-}
-
-.mission-row__bar {
-  flex: 1;
-  height: 4px;
-  background: var(--bg-overlay);
-  border-radius: var(--radius-xs);
-  overflow: hidden;
-}
-
-.mission-row__bar-fill {
-  width: 100%;
-  height: 100%;
-  background: var(--accent);
-  border-radius: var(--radius-xs);
-  transform-origin: left center;
-  transition: transform var(--dur-enter) var(--ease-in-out);
-  will-change: transform;
+  --bar-height: 4px;
+  --bar-color: var(--accent);
 }
 
 .mission-row__counter {
