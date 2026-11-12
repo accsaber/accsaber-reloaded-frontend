@@ -125,6 +125,7 @@
   --dur-menu: 180ms;
   --dur-menu-exit: 150ms;
   --stagger: 30ms;
+  --placeholder-delay: 0ms;
   --stagger-total: 600ms;
   --press-scale: 0.97;
   --pop-scale: 0.95;

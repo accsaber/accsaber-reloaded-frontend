@@ -5,11 +5,11 @@ import FilterButton from '@/components/common/FilterButton.vue'
 import FilterPopover from '@/components/common/FilterPopover.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MapCard from '@/views/maps/MapCard.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
+import { useRowSwap } from '@/composables/useRowSwap'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicBatchResponse } from '@/types/api/batches'
@@ -126,6 +126,13 @@ const pageCount = computed(() => (isBatchView.value ? batchTotalPages.value : to
 const mapDisplays = computed<MapDisplay[]>(() =>
   difficulties.value.map((d) => toMapDisplay(d, (id) => categoryStore.getCategoryCode(id))),
 )
+
+const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => mapDisplays.value, {
+  key: (m) => m.difficultyId,
+  refreshing: () => loading.value && !firstLoad.value,
+  loading: () => firstLoad.value,
+  placeholders: () => 20,
+})
 
 const difficultyRequest = computed(() => {
   if (isBatchView.value) return null
@@ -249,14 +256,13 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
 
     <div class="maps-page__content">
       <template v-if="viewMode === 'grid'">
-        <div v-if="firstLoad" class="maps-page__grid">
-          <SkeletonLoader v-for="i in 20" :key="i" variant="card" />
-        </div>
-        <EmptyState v-else-if="mapDisplays.length === 0" message="No maps found matching your filters." />
-        <div v-else class="maps-page__grid stagger" :class="{ refreshing: loading }"
-          :style="{ '--n': mapDisplays.length }">
-          <MapCard v-for="(m, i) in mapDisplays" :key="m.difficultyId" :map="m" :to="mapRouteTo(m)"
-            :style="{ '--i': i }" />
+        <EmptyState v-if="shown.length === 0" message="No maps found matching your filters." />
+        <div v-else class="maps-page__grid stagger" :style="{ '--n': shown.length }">
+          <template v-for="(m, i) in shown" :key="renderKey(m, i)">
+            <div v-if="isPlaceholder(m)" class="maps-page__ghost card-ghost placeholder" aria-hidden="true" />
+            <MapCard v-else :map="m" :to="mapRouteTo(m)" :class="{ stale: isStale(i) }"
+              :style="{ '--i': cascade ? i : 0 }" />
+          </template>
         </div>
       </template>
 
@@ -326,11 +332,15 @@ watch(() => JSON.stringify(batchRequest.value), fetchBatches, { immediate: true 
   gap: var(--space-md);
 }
 
-.maps-page__grid :deep(.skeleton__card-image) {
-  aspect-ratio: 1 / 1;
+.maps-page__ghost {
+  --ghost-body: 115.6px;
 }
 
 @media (max-width: 767px) {
+  .maps-page__ghost {
+    --ghost-body: 109px;
+  }
+
   .maps-page__grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }

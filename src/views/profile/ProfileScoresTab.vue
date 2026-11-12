@@ -223,7 +223,7 @@ watch(
 <template>
   <div class="scores-tab">
     <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
-      :loading-rows="8"
+      :loading-rows="20" :row-height="52"
       :page="currentPage" :total-pages="totalPages" row-clickable :row-to="scoreRowTo" row-key="mapDifficultyId"
       medal-ranks
       :empty-message="props.search ? `No maps matching &quot;${props.search}&quot;` : 'No scores found'" @sort="setSort"

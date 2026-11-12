@@ -27,6 +27,7 @@ import type {
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MarketListingCard from './market/MarketListingCard.vue'
+import MarketListingGhost from './market/MarketListingGhost.vue'
 import MarketWallet from './market/MarketWallet.vue'
 
 usePageMeta({
@@ -131,9 +132,11 @@ const totalElements = ref(0)
 const loading = ref(true)
 let requestId = 0
 
-const { shown, cascade, isStale, renderKey } = useRowSwap(() => listings.value, {
+const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => listings.value, {
   key: (listing) => listing.id,
-  refreshing: () => loading.value,
+  refreshing: () => loading.value && listings.value.length > 0,
+  loading: () => loading.value && listings.value.length === 0,
+  placeholders: () => 10,
 })
 
 const browseParams = computed<MarketBrowseParams>(() => ({
@@ -249,10 +252,8 @@ watch(
       </div>
     </div>
 
-    <div v-if="loading && shown.length === 0" class="market-page__reserved" aria-busy="true" />
-
     <EmptyState
-      v-else-if="shown.length === 0"
+      v-if="shown.length === 0"
       :message="emptyState.message"
       :action-label="emptyState.action"
       @action="emptyState.run?.()"
@@ -260,8 +261,11 @@ watch(
 
     <template v-else>
       <div class="market-page__grid stagger" :style="{ '--n': shown.length }">
-        <MarketListingCard v-for="(listing, i) in shown" :key="renderKey(listing, i)" :listing="listing"
-          :class="{ stale: isStale(i) }" :style="{ '--i': cascade ? i : 0 }" />
+        <template v-for="(listing, i) in shown" :key="renderKey(listing, i)">
+          <MarketListingGhost v-if="isPlaceholder(listing)" />
+          <MarketListingCard v-else :listing="listing" :class="{ stale: isStale(i) }"
+            :style="{ '--i': cascade ? i : 0 }" />
+        </template>
       </div>
 
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
@@ -321,10 +325,6 @@ watch(
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-md);
-}
-
-.market-page__reserved {
-  min-height: 60vh;
 }
 
 @media (max-width: 767px) {

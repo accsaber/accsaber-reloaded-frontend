@@ -5,6 +5,7 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import ScoreDetailModal from '@/components/domain/ScoreDetailModal.vue'
 import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useNow } from '@/composables/useNow'
+import { useRowSwap } from '@/composables/useRowSwap'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { ScoreRelationType } from '@/types/api/relations'
@@ -25,7 +26,7 @@ const categoryStore = useCategoryStore()
 const modifierStore = useModifierStore()
 const now = useNow()
 
-const loading = ref(false)
+const loading = ref(true)
 const pageData = ref<Page<ScoreResponse> | null>(null)
 const page = ref(1)
 const entries = computed<ScoreFeedEntry[]>(
@@ -35,6 +36,13 @@ const entries = computed<ScoreFeedEntry[]>(
     categoryStore.getCategoryCode(score.categoryId),
   )) ?? [],
 )
+
+const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => entries.value, {
+  key: (entry) => entry.key,
+  refreshing: () => loading.value && !!pageData.value,
+  loading: () => loading.value && !pageData.value,
+  placeholders: () => SIZE,
+})
 
 const modalOpen = ref(false)
 const modalScore = ref<ScoreDisplay | null>(null)
@@ -81,23 +89,21 @@ watch(page, fetchScores, { immediate: true })
       <h2 class="section-title">Latest scores</h2>
     </div>
 
-    <div v-if="!pageData && loading" class="home-feed__list">
-      <SkeletonLoader v-for="i in SIZE" :key="i" width="100%" height="100%" />
-    </div>
+    <p v-if="shown.length === 0" class="home-feed__list home-feed__empty">No scores yet</p>
 
-    <p v-else-if="entries.length === 0" class="home-feed__list home-feed__empty">No scores yet</p>
-
-    <div v-else :key="entries[0].key" class="home-feed__list stagger"
-      :class="{ refreshing: loading }" :style="{ '--n': entries.length }">
-      <ScoreFeedCard
-        v-for="(entry, i) in entries"
-        :key="entry.key"
-        :entry="entry"
-        :now="now"
-        :style="{ '--i': i }"
-        compact
-        @select="onSelectScore"
-      />
+    <div v-else class="home-feed__list stagger" :style="{ '--n': shown.length }">
+      <template v-for="(entry, i) in shown" :key="renderKey(entry, i)">
+        <SkeletonLoader v-if="isPlaceholder(entry)" class="placeholder" width="100%" height="100%" />
+        <ScoreFeedCard
+          v-else
+          :entry="entry"
+          :now="now"
+          :class="{ stale: isStale(i) }"
+          :style="{ '--i': cascade ? i : 0 }"
+          compact
+          @select="onSelectScore"
+        />
+      </template>
     </div>
 
     <PaginationControls

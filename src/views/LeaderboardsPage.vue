@@ -212,7 +212,9 @@ watch(requestKey, fetchData, { immediate: true })
       </div>
     </div>
 
-    <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+    <div v-if="loading || totalPages > 1" class="leaderboards__pages">
+      <PaginationControls :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+    </div>
 
     <div class="leaderboards__table">
       <DataTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
@@ -275,6 +277,10 @@ watch(requestKey, fetchData, { immediate: true })
 </template>
 
 <style scoped>
+.leaderboards__pages {
+  min-height: var(--control-h);
+}
+
 .leaderboards {
   display: flex;
   flex-direction: column;

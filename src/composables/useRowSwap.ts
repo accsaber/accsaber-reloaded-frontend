@@ -6,17 +6,39 @@ interface RowSwapOptions<T> {
   key: (row: T, index: number) => string | number
   restart?: () => boolean
   refreshing?: () => boolean | undefined
+  loading?: () => boolean | undefined
+  placeholders?: () => number
+}
+
+function token(name: string): number {
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name))
 }
 
 function swapStep(count: number): number {
-  const style = getComputedStyle(document.documentElement)
-  const stagger = parseFloat(style.getPropertyValue('--stagger'))
-  const total = parseFloat(style.getPropertyValue('--stagger-total'))
-  return Math.min(stagger, total / count)
+  return Math.min(token('--stagger'), token('--stagger-total') / count)
 }
 
 export function useRowSwap<T extends object>(source: () => T[], options: RowSwapOptions<T>) {
-  const shown = shallowRef(source())
+  const placeholderRows = new WeakSet<object>()
+
+  function placeholders(): T[] {
+    return Array.from({ length: options.placeholders?.() ?? 0 }, () => {
+      const row = {} as T
+      placeholderRows.add(row)
+      return row
+    })
+  }
+
+  function isPlaceholder(row: T): boolean {
+    return placeholderRows.has(row)
+  }
+
+  function keyOf(row: T, index: number): string | number {
+    return isPlaceholder(row) ? `placeholder-${index}` : options.key(row, index)
+  }
+
+  const shown = shallowRef(options.loading?.() ? placeholders() : source())
+  let placeholdersSince = performance.now()
   const staleFrom = ref<number | null>(null)
   const cascade = ref(true)
   const batches = new WeakMap<T, number>()
@@ -31,7 +53,7 @@ export function useRowSwap<T extends object>(source: () => T[], options: RowSwap
   }
 
   function renderKey(row: T, index: number): string {
-    return `${batches.get(row) ?? 0}:${options.key(row, index)}`
+    return `${batches.get(row) ?? 0}:${keyOf(row, index)}`
   }
 
   function advance() {
@@ -61,7 +83,7 @@ export function useRowSwap<T extends object>(source: () => T[], options: RowSwap
   }
 
   function sameRows(a: T[], b: T[]): boolean {
-    return a.length === b.length && a.every((row, index) => options.key(row, index) === options.key(b[index]!, index))
+    return a.length === b.length && a.every((row, index) => keyOf(row, index) === keyOf(b[index]!, index))
   }
 
   function retarget(next: T[]) {
@@ -73,12 +95,14 @@ export function useRowSwap<T extends object>(source: () => T[], options: RowSwap
   }
 
   watch(source, (next) => {
+    if (options.loading?.() && !next.length) return
     if (target && sameRows(target, next)) return retarget(next)
     clearTimeout(swapTimer)
     target = null
-    const prev = shown.value
-    const previous = new Map(prev.map((row, index) => [options.key(row, index), index]))
-    const positions = next.map((row, index) => previous.get(options.key(row, index)))
+    const unseen = shown.value.some(isPlaceholder) && performance.now() - placeholdersSince < token('--placeholder-delay')
+    const prev = unseen ? [] : shown.value
+    const previous = new Map(prev.map((row, index) => [keyOf(row, index), index]))
+    const positions = next.map((row, index) => previous.get(keyOf(row, index)))
     const kept = positions.filter((position) => position !== undefined).length
     const moved = positions.filter((position, index) => position !== undefined && position !== index).length
     const replaced = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
@@ -100,11 +124,24 @@ export function useRowSwap<T extends object>(source: () => T[], options: RowSwap
     staleFrom.value = refreshing ? 0 : null
   })
 
+  watch(() => options.loading?.(), (loading) => {
+    if (target) return
+    if (loading) {
+      cascade.value = false
+      staleFrom.value = null
+      placeholdersSince = performance.now()
+      shown.value = placeholders()
+    } else if (shown.value.some(isPlaceholder)) {
+      shown.value = source()
+    }
+  })
+
   onUnmounted(() => clearTimeout(swapTimer))
 
   function isStale(index: number): boolean {
-    return staleFrom.value !== null && index >= staleFrom.value
+    const row = shown.value[index]
+    return staleFrom.value !== null && index >= staleFrom.value && !!row && !isPlaceholder(row)
   }
 
-  return { shown, cascade, isStale, renderKey }
+  return { shown, cascade, isStale, isPlaceholder, renderKey }
 }

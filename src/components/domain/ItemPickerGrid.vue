@@ -2,6 +2,7 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import { useRowSwap } from '@/composables/useRowSwap'
 import type { UserItemResponse } from '@/types/api/items'
@@ -45,9 +46,13 @@ const empty = computed(() =>
   ?? (props.search ? 'No listable items match your search.' : 'You have no tradeable items to list.'),
 )
 
-const { shown, cascade, isStale, renderKey } = useRowSwap(() => props.items, {
+const DEFAULT_PLACEHOLDERS = 12
+
+const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => props.items, {
   key: (userItem) => userItem.linkId,
-  refreshing: () => props.loading,
+  refreshing: () => props.loading && props.items.length > 0,
+  loading: () => props.loading && props.items.length === 0,
+  placeholders: () => props.pageSize || DEFAULT_PLACEHOLDERS,
 })
 
 const fillers = computed(() =>
@@ -75,20 +80,20 @@ function onSelect(linkId: string) {
 
     <p v-if="error" class="item-picker__error" role="alert">{{ error }}</p>
 
-    <div v-if="loading && items.length === 0" class="item-picker__reserved" aria-busy="true" />
-
-    <EmptyState v-else-if="items.length === 0" :message="empty" />
+    <EmptyState v-if="shown.length === 0" :message="empty" />
 
     <template v-else>
       <div class="item-picker__grid stagger" :style="{ '--n': shown.length }">
         <div
           v-for="(userItem, i) in shown"
           :key="renderKey(userItem, i)"
-          :class="{ stale: isStale(i) }"
+          :class="{ stale: isStale(i), 'item-picker__filler placeholder': isPlaceholder(userItem) }"
           :style="{ '--i': cascade ? i : 0 }"
           :title="disabledLinkIds.has(userItem.linkId) ? disabledTitle : undefined"
         >
+          <SkeletonLoader v-if="isPlaceholder(userItem)" height="100%" />
           <InventoryItemCell
+            v-else
             :user-item="userItem"
             :selected="userItem.linkId === selectedLinkId"
             :locked="disabledLinkIds.has(userItem.linkId)"
@@ -138,10 +143,6 @@ function onSelect(linkId: string) {
 
 .item-picker__grid :deep(.inventory-cell--plain) {
   border-color: var(--bg-overlay);
-}
-
-.item-picker__reserved {
-  height: calc(var(--tile) * 3);
 }
 
 .item-picker__filler {

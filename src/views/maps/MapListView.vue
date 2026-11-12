@@ -44,7 +44,7 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
 </script>
 
 <template>
-  <DataTable :columns="listColumns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing" :loading-rows="10"
+  <DataTable :columns="listColumns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing" :loading-rows="20" :row-height="60"
     :row-to="rowTo" row-key="difficultyId" empty-message="No maps found matching your filters."
     @sort="emit('sort', $event)">
     <template #cell-cover="{ row }">

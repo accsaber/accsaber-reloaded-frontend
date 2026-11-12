@@ -253,6 +253,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
           <SkeletonLoader width="280px" height="40px" />
         </div>
       </div>
+      <div class="map-detail__reserved" />
     </template>
 
     <template v-else-if="error || !map">
@@ -414,6 +415,12 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
   background-repeat: no-repeat;
   filter: blur(40px) brightness(0.55) saturate(1.5);
   opacity: 0.3;
+}
+
+@media (min-width: 768px) {
+  .map-detail__reserved {
+    height: 2607px;
+  }
 }
 
 .map-detail__hero {

@@ -4,10 +4,11 @@ import { useRowSwap } from '@/composables/useRowSwap';
 import type { SortState, TableColumn } from '@/types/display';
 import { formatSortGlyph } from '@/utils/formatters';
 import { columnWidth, tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
-import { computed, useSlots, watch } from 'vue';
+import { computed, useSlots } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
 import DataTableCardFallback from './DataTableCardFallback.vue';
+import SkeletonLoader from './SkeletonLoader.vue';
 
 const props = defineProps<{
   columns: TableColumn[]
@@ -18,6 +19,7 @@ const props = defineProps<{
   rowKey?: string | ((row: Record<string, unknown>, index: number) => string | number)
   loading?: boolean
   loadingRows?: number
+  rowHeight?: number
   emptyMessage?: string
   rowClass?: (row: Record<string, unknown>, index: number) => string | Record<string, boolean> | undefined
   dense?: boolean
@@ -31,34 +33,29 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const slots = useSlots()
-const reserved = computed(() => ({ '--loading-rows': props.loadingRows ?? 5 }))
 const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
 const mobile = useMediaQuery(() => tableCardQuery(props.columns))
 let shape = columnShape()
-let wasLoading = !!props.loading
 
 function columnShape(): string {
   return props.columns.map((col) => col.key).join()
 }
 
 function restarts(): boolean {
-  const restart = wasLoading || shape !== columnShape()
+  const restart = shape !== columnShape()
   shape = columnShape()
-  wasLoading = !!props.loading
   return restart
 }
 
-const { shown, cascade, isStale, renderKey } = useRowSwap(() => props.rows, {
+const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => props.rows, {
   key: resolveRowKey,
   restart: restarts,
   refreshing: () => props.refreshing,
+  loading: () => props.loading,
+  placeholders: () => props.loadingRows ?? 5,
 })
-const rowHrefs = computed(() => shown.value.map(resolveRowHref))
-
-watch(() => props.loading, (loading) => {
-  if (loading) wasLoading = true
-})
+const rowHrefs = computed(() => shown.value.map((row) => (isPlaceholder(row) ? undefined : resolveRowHref(row))))
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
   if (!props.rowKey) return index
@@ -95,7 +92,8 @@ function sortIcon(col: TableColumn): string {
 </script>
 
 <template>
-  <div class="data-table-wrapper" :aria-busy="loading">
+  <div class="data-table-wrapper" :aria-busy="loading"
+    :style="rowHeight ? { '--row-h': `${rowHeight}px` } : undefined">
     <div v-if="!mobile" class="data-table-scroll">
       <table class="data-table" :class="{ 'data-table--dense': dense }" :style="{ minWidth }">
         <thead>
@@ -117,10 +115,7 @@ function sortIcon(col: TableColumn): string {
           </tr>
         </thead>
         <TransitionGroup tag="tbody" name="row" class="stagger" :style="{ '--n': shown.length }">
-          <tr v-if="loading" key="loading" aria-hidden="true">
-            <td :colspan="columns.length" class="data-table__reserved" :style="reserved" />
-          </tr>
-          <template v-else-if="shown.length === 0">
+          <template v-if="shown.length === 0">
             <tr key="empty">
               <td :colspan="columns.length" class="data-table__empty">
                 <slot name="empty">
@@ -129,8 +124,14 @@ function sortIcon(col: TableColumn): string {
               </td>
             </tr>
           </template>
-          <template v-else>
-            <tr v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table__row"
+          <template v-for="(row, index) in shown" v-else :key="renderKey(row, index)">
+            <tr v-if="isPlaceholder(row)" class="data-table__row placeholder"
+              :class="{ 'data-table__row--alt': index % 2 === 1 }" aria-hidden="true">
+              <td v-for="col in columns" :key="col.key" class="data-table__td">
+                <SkeletonLoader variant="text" />
+              </td>
+            </tr>
+            <tr v-else class="data-table__row"
               :class="[{
                 'data-table__row--clickable': rowClickable || !!rowTo,
                 'data-table__row--alt': index % 2 === 1,
@@ -159,10 +160,13 @@ function sortIcon(col: TableColumn): string {
     </div>
 
     <div v-else class="data-table-cards">
-      <div v-if="loading" class="data-table__reserved" :style="reserved" aria-hidden="true" />
-      <div v-else-if="shown.length === 0" class="data-table__empty-card">
+      <div v-if="shown.length === 0" class="data-table__empty-card">
         <slot name="empty">{{ emptyMessage ?? 'No data available' }}</slot>
       </div>
+      <template v-else-if="shown.some(isPlaceholder)">
+        <SkeletonLoader v-for="(row, index) in shown" :key="renderKey(row, index)" class="placeholder"
+          height="var(--row-h)" />
+      </template>
       <template v-else-if="slots['mobile-card']">
         <div v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table-cards__custom"
           :class="{ stale: isStale(index) }">
@@ -257,10 +261,6 @@ function sortIcon(col: TableColumn): string {
 .data-table__sort-icon {
   margin-left: var(--space-xs);
   font-size: 0.7rem;
-}
-
-.data-table__reserved {
-  height: calc(var(--loading-rows) * var(--row-h));
 }
 
 .data-table__row {

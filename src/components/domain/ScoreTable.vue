@@ -18,6 +18,7 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   refreshing?: boolean
   loadingRows?: number
+  rowHeight?: number
   emptyMessage?: string
   rowClickable?: boolean
   rowTo?: (row: Record<string, unknown>) => RouteLocationRaw | undefined
@@ -110,6 +111,7 @@ const customSlots = computed(() => {
       :loading="loading"
       :refreshing="refreshing"
       :loading-rows="loadingRows"
+      :row-height="rowHeight"
       :row-clickable="rowClickable"
       :row-to="rowTo"
       :row-key="rowKey"
@@ -178,16 +180,17 @@ const customSlots = computed(() => {
       </template>
     </DataTable>
 
-    <PaginationControls
-      v-if="totalPages > 1"
-      :page="page ?? 1"
-      :total-pages="totalPages"
-      @update:page="emit('update:page', $event)"
-    />
+    <div v-if="loading || totalPages > 1" class="score-table__pages">
+      <PaginationControls :page="page ?? 1" :total-pages="totalPages" @update:page="emit('update:page', $event)" />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.score-table__pages {
+  min-height: var(--control-h);
+}
+
 .score-table {
   display: flex;
   flex-direction: column;

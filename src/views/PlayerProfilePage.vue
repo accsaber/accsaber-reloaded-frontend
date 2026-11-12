@@ -302,6 +302,7 @@ watch(activeCategory, () => {
           <SkeletonLoader variant="text" width="380px" height="20px" />
         </div>
       </div>
+      <div class="profile-page__reserved" />
     </template>
 
     <template v-else-if="error || !user">
@@ -565,7 +566,14 @@ watch(activeCategory, () => {
 .profile-page__skeleton {
   display: flex;
   gap: var(--space-xl);
+  min-height: 301px;
   padding: var(--space-xl) 0 var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .profile-page__reserved {
+    height: 1195px;
+  }
 }
 
 .profile-page__skeleton-details {

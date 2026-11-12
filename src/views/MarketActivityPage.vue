@@ -6,6 +6,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useRefetchOnFocus } from '@/composables/useRefetchOnFocus'
+import { useRowSwap } from '@/composables/useRowSwap'
 import { useAuthStore } from '@/stores/auth'
 import { useEssenceStore } from '@/stores/essence'
 import type { MarketListingResponse, MarketListingStatus } from '@/types/api/market'
@@ -14,6 +15,7 @@ import { isSameMarketUser } from '@/utils/market'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MarketListingCard, { type ListingCardTag } from './market/MarketListingCard.vue'
+import MarketListingGhost from './market/MarketListingGhost.vue'
 import MarketWallet from './market/MarketWallet.vue'
 
 usePageMeta({
@@ -84,6 +86,12 @@ const byTab = computed(() => {
 })
 
 const TAB_LABEL: Record<TabKey, string> = { selling: 'Selling', bidding: 'Bidding', won: 'Won' }
+
+const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => byTab.value[activeTab.value], {
+  key: (entry) => entry.listing.id,
+  loading: () => loading.value,
+  placeholders: () => 5,
+})
 
 const tabs = computed<Tab[]>(() =>
   (Object.keys(TAB_LABEL) as TabKey[]).map((key) => {
@@ -156,10 +164,8 @@ const breadcrumbs: Crumb[] = [
     <template v-else>
       <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="activeTab = $event as TabKey" />
 
-      <div v-if="loading" class="activity-page__reserved" aria-busy="true" />
-
       <EmptyState
-        v-else-if="byTab[activeTab].length === 0"
+        v-if="shown.length === 0"
         :message="EMPTY_MESSAGE[activeTab]"
         :action-label="activeTab === 'selling' ? 'List an item' : 'Browse the market'"
         @action="
@@ -167,15 +173,17 @@ const breadcrumbs: Crumb[] = [
         "
       />
 
-      <div v-else :key="activeTab" class="activity-page__grid stagger"
-        :style="{ '--n': byTab[activeTab].length }">
-        <MarketListingCard
-          v-for="(entry, i) in byTab[activeTab]"
-          :key="entry.listing.id"
-          :listing="entry.listing"
-          :tag="entry.tag"
-          :style="{ '--i': i }"
-        />
+      <div v-else class="activity-page__grid stagger" :style="{ '--n': shown.length }">
+        <template v-for="(entry, i) in shown" :key="renderKey(entry, i)">
+          <MarketListingGhost v-if="isPlaceholder(entry)" />
+          <MarketListingCard
+            v-else
+            :listing="entry.listing"
+            :tag="entry.tag"
+            :class="{ stale: isStale(i) }"
+            :style="{ '--i': cascade ? i : 0 }"
+          />
+        </template>
       </div>
     </template>
   </div>
@@ -204,10 +212,6 @@ const breadcrumbs: Crumb[] = [
   align-items: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
-}
-
-.activity-page__reserved {
-  min-height: 60vh;
 }
 
 .activity-page__grid {

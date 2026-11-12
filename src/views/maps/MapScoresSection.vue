@@ -243,7 +243,7 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
     </div>
 
     <ScoreTable :columns="columns" :rows="rows" :sort-state="sortState" :loading="loading" :refreshing="refreshing"
-      :loading-rows="10"
+      :loading-rows="50"
       :page="currentPage" :total-pages="totalPages" medal-ranks row-clickable :row-to="playerRowTo"
       row-key="_userId" :row-class="scoreRowClass" empty-message="No scores recorded yet." @sort="setSort"
       @update:page="setPage">

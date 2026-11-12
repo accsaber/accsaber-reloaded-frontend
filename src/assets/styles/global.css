@@ -101,6 +101,31 @@ h1 {
   transition: opacity var(--dur-fast) var(--ease-out);
 }
 
+@keyframes placeholder-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.stagger > .placeholder,
+.placeholder {
+  animation: placeholder-in var(--dur-fast) var(--ease-out) var(--placeholder-delay) backwards;
+  pointer-events: none;
+}
+
+.card-ghost {
+  padding-bottom: var(--ghost-body);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-card);
+}
+
+.card-ghost::before {
+  content: '';
+  display: block;
+  aspect-ratio: 1 / 1;
+}
+
 .stale {
   opacity: 0.25;
   pointer-events: none;
