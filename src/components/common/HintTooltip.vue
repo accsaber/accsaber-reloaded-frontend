@@ -8,7 +8,7 @@ const props = defineProps<{
   width?: number
   more?: boolean
   tag?: string
-  variant?: 'inline'
+  variant?: 'inline' | 'bare'
 }>()
 
 const panelId = useId()
@@ -29,8 +29,8 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
     ref="triggerRef"
     type="button"
     class="hint"
-    :class="variant === 'inline' ? 'hint--inline' : { 'hint--tag': tag || $slots.trigger }"
-    :aria-label="tag || $slots.trigger ? undefined : label ? `What ${label} does` : text"
+    :class="variant ? `hint--${variant}` : { 'hint--tag': tag || $slots.trigger }"
+    :aria-label="tag || ($slots.trigger && variant !== 'bare') ? undefined : label ? `What ${label} does` : text"
     :aria-describedby="isOpen ? panelId : undefined"
     @mouseenter="onTriggerEnter"
     @mouseleave="onTriggerLeave"
@@ -112,6 +112,15 @@ const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, o
 .hint--inline:hover,
 .hint--inline:focus-visible {
   color: inherit;
+}
+
+.hint--bare {
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
 }
 
 .hint__panel {

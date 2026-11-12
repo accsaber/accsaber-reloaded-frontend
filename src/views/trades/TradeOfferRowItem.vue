@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
@@ -29,140 +30,83 @@ const accentStyle = computed(() => (accent.value ? { '--cell-accent': accent.val
 </script>
 
 <template>
-  <div class="trade-row-item" :style="accentStyle">
-    <div
-      class="trade-row-item__tile"
-      :class="rarityClass(itemRef.item.rarity)"
-      tabindex="0"
-      :aria-label="itemRef.item.name"
-    >
-      <FragmentedItem v-if="fragmentSpec" :item="itemRef.item" :spec="fragmentSpec" />
-      <ItemPreview v-else :item="itemRef.item" :effects="effectLayers" :context="tokenCtx" :selected="false" />
-      <ModifierCompositions
-        v-for="layer in overlayLayers"
-        :key="layer.key"
-        :spec="layer.spec"
-        :context="tokenCtx"
-        :type-key="itemRef.item.typeKey"
-        measure-selector=".title-renderer, .item-preview > *"
-      />
-      <span v-if="itemRef.serialNumber != null" class="trade-row-item__serial">#{{ itemRef.serialNumber }}</span>
-      <span v-if="quantity > 1" class="trade-row-item__qty">x{{ quantity }}</span>
-    </div>
-    <div class="trade-row-item__tooltip" role="tooltip">
-      <span class="trade-row-item__tooltip-name">{{ name }}</span>
-      <p v-if="itemRef.item.description" class="trade-row-item__tooltip-desc">{{ itemRef.item.description }}</p>
-      <span class="trade-row-item__tooltip-meta">
-        <span class="trade-row-item__tooltip-rarity" :class="rarityClass(itemRef.item.rarity)">{{ itemRef.item.rarity }}</span>
+  <HintTooltip :text="name" variant="bare" :width="280">
+    <template #trigger>
+      <span class="trade-row-item" :class="rarityClass(itemRef.item.rarity)" :style="accentStyle">
+        <FragmentedItem v-if="fragmentSpec" :item="itemRef.item" :spec="fragmentSpec" />
+        <ItemPreview v-else :item="itemRef.item" :effects="effectLayers" :context="tokenCtx" :selected="false" />
+        <ModifierCompositions
+          v-for="layer in overlayLayers"
+          :key="layer.key"
+          :spec="layer.spec"
+          :context="tokenCtx"
+          :type-key="itemRef.item.typeKey"
+          measure-selector=".title-renderer, .item-preview > *"
+        />
+        <span v-if="itemRef.serialNumber != null" class="trade-row-item__mark trade-row-item__mark--serial">
+          #{{ itemRef.serialNumber }}
+        </span>
+        <span v-if="quantity > 1" class="trade-row-item__mark trade-row-item__mark--qty">x{{ quantity }}</span>
       </span>
-    </div>
-  </div>
+    </template>
+    <span class="trade-row-item__name">{{ name }}</span>
+    <span v-if="itemRef.item.description" class="trade-row-item__line">{{ itemRef.item.description }}</span>
+    <span class="trade-row-item__line trade-row-item__rarity" :class="rarityClass(itemRef.item.rarity)">
+      {{ itemRef.item.rarity }}
+    </span>
+  </HintTooltip>
 </template>
 
 <style scoped>
 .trade-row-item {
-  position: relative;
-  width: 56px;
-}
-
-.trade-row-item__tile {
+  --cell-accent: var(--rarity-color);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  background: var(--bg-surface);
-  border: 1px solid var(--cell-accent, var(--rarity-color, var(--text-tertiary)));
+  width: 64px;
+  height: 64px;
+  background: var(--bg-base);
+  border: 1px solid var(--cell-accent);
   border-radius: var(--radius-card);
   overflow: hidden;
-  cursor: help;
-  outline: none;
-  --cell-accent: var(--rarity-color, var(--text-tertiary));
 }
 
-.trade-row-item__tile:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--cell-accent, var(--accent-overall)) 60%, transparent);
-  outline-offset: 2px;
-}
-
-.trade-row-item__serial {
+.trade-row-item__mark {
   position: absolute;
-  top: 2px;
-  right: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  color: var(--text-tertiary);
-}
-
-.trade-row-item__qty {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  padding: 1px var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
-  border: 1px solid var(--cell-accent, var(--bg-overlay));
-  border-radius: var(--radius-pill);
+  right: var(--space-xs);
+  font-size: 0.625rem;
   line-height: 1;
 }
 
-.trade-row-item__tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translate(-50%, -4px);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-width: 200px;
-  max-width: 280px;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-elevated);
-  border: 1px solid var(--cell-accent, var(--bg-overlay));
-  border-radius: var(--radius-card);
-  pointer-events: none;
-  opacity: 0;
-  z-index: 30;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.trade-row-item:hover .trade-row-item__tooltip,
-.trade-row-item:focus-within .trade-row-item__tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-.trade-row-item__tooltip-name {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.trade-row-item__tooltip-desc {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.trade-row-item__tooltip-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.trade-row-item__mark--serial {
+  top: var(--space-xs);
   color: var(--text-tertiary);
 }
 
-.trade-row-item__tooltip-rarity { color: var(--rarity-color, var(--text-tertiary)); }
+.trade-row-item__mark--qty {
+  bottom: var(--space-xs);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trade-row-item__name,
+.trade-row-item__line {
+  display: block;
+  text-align: left;
+}
+
+.trade-row-item__name {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.trade-row-item__line {
+  color: var(--text-secondary);
+}
+
+.trade-row-item__rarity {
+  color: var(--rarity-color);
+  text-transform: capitalize;
+}
 </style>

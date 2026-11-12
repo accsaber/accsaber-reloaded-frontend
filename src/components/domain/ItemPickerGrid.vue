@@ -2,7 +2,6 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import type { UserItemResponse } from '@/types/api/items'
 import { computed } from 'vue'
@@ -15,12 +14,20 @@ const props = withDefaults(defineProps<{
   search: string
   selectedLinkId?: string | null
   disabledLinkIds?: Set<string>
+  disabledTitle?: string
+  checkedLinkIds?: Set<string>
+  full?: boolean
+  pageSize?: number
   placeholder?: string
   emptyMessage?: string
   error?: string | null
 }>(), {
   selectedLinkId: null,
   disabledLinkIds: () => new Set<string>(),
+  disabledTitle: 'Unequip this item before listing it',
+  checkedLinkIds: undefined,
+  full: false,
+  pageSize: 0,
   placeholder: 'Search your tradeable items...',
   emptyMessage: undefined,
   error: null,
@@ -36,6 +43,14 @@ const empty = computed(() =>
   props.emptyMessage
   ?? (props.search ? 'No listable items match your search.' : 'You have no tradeable items to list.'),
 )
+
+const fillers = computed(() =>
+  props.totalPages > 1 && props.pageSize ? Math.max(0, props.pageSize - props.items.length) : 0,
+)
+
+function selectable(linkId: string): boolean {
+  return !props.disabledLinkIds.has(linkId) && (!props.full || !!props.checkedLinkIds?.has(linkId))
+}
 
 function onSelect(linkId: string) {
   if (props.disabledLinkIds.has(linkId)) return
@@ -54,30 +69,35 @@ function onSelect(linkId: string) {
 
     <p v-if="error" class="item-picker__error" role="alert">{{ error }}</p>
 
-    <div v-if="loading" class="item-picker__grid">
-      <SkeletonLoader v-for="i in 12" :key="i" variant="card" />
-    </div>
+    <div v-if="loading && items.length === 0" class="item-picker__reserved" aria-busy="true" />
 
     <EmptyState v-else-if="items.length === 0" :message="empty" />
 
     <template v-else>
-      <div class="item-picker__grid">
+      <div :key="page" class="item-picker__grid stagger" :class="{ refreshing: loading }"
+        :style="{ '--n': items.length }">
         <div
-          v-for="userItem in items"
+          v-for="(userItem, i) in items"
           :key="userItem.linkId"
-          class="item-picker__cell"
-          :title="disabledLinkIds.has(userItem.linkId) ? 'Unequip this item before listing it' : undefined"
+          :style="{ '--i': i }"
+          :title="disabledLinkIds.has(userItem.linkId) ? disabledTitle : undefined"
         >
           <InventoryItemCell
             :user-item="userItem"
             :selected="userItem.linkId === selectedLinkId"
             :locked="disabledLinkIds.has(userItem.linkId)"
+            :select-mode="!!checkedLinkIds"
+            :checked="checkedLinkIds?.has(userItem.linkId)"
+            :selectable="selectable(userItem.linkId)"
             @select="onSelect"
+            @toggle="onSelect"
           />
         </div>
+        <div v-for="n in fillers" :key="n" class="item-picker__filler" aria-hidden="true" />
       </div>
 
       <PaginationControls
+        v-if="totalPages > 1"
         :page="page"
         :total-pages="totalPages"
         @update:page="emit('update:page', $event)"
@@ -88,6 +108,7 @@ function onSelect(linkId: string) {
 
 <style scoped>
 .item-picker {
+  --tile: 96px;
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
@@ -105,7 +126,15 @@ function onSelect(linkId: string) {
 
 .item-picker__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));
   gap: var(--space-sm);
+}
+
+.item-picker__reserved {
+  height: calc(var(--tile) * 3);
+}
+
+.item-picker__filler {
+  aspect-ratio: 1 / 1;
 }
 </style>

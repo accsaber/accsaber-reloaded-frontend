@@ -6,86 +6,68 @@ defineProps<{
   userItem: UserItemResponse
   quantity: number
   stackMax: number
-  stackable: boolean
 }>()
 
-const emit = defineEmits<{
-  remove: [linkId: string]
-  'update:quantity': [linkId: string, value: number]
+defineEmits<{
+  remove: []
+  'update:quantity': [value: number]
 }>()
-
-function onInput(linkId: string, event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  emit('update:quantity', linkId, value)
-}
 </script>
 
 <template>
-  <InventoryItemCell
-    :user-item="userItem"
-    :selected="true"
-    @select="emit('remove', userItem.linkId)"
-  />
-  <label
-    v-if="stackable && stackMax > 1"
-    class="trade-slot-qty"
-  >
-    <span class="trade-slot-qty__label">QTY</span>
-    <input
-      type="number"
-      class="trade-slot-qty__input"
-      min="1"
-      :max="stackMax"
-      :value="quantity"
-      @input="onInput(userItem.linkId, $event)"
-    />
-    <span class="trade-slot-qty__max">/ {{ stackMax }}</span>
-  </label>
+  <div class="trade-slot">
+    <InventoryItemCell :user-item="{ ...userItem, quantity }" selected @select="$emit('remove')" />
+    <div v-if="userItem.item.stackable && stackMax > 1" class="trade-slot__stepper">
+      <button type="button" class="trade-slot__step pressable" aria-label="One less" :disabled="quantity <= 1"
+        @click="$emit('update:quantity', quantity - 1)">
+        −
+      </button>
+      <span class="trade-slot__count">{{ quantity }}/{{ stackMax }}</span>
+      <button type="button" class="trade-slot__step pressable" aria-label="One more" :disabled="quantity >= stackMax"
+        @click="$emit('update:quantity', quantity + 1)">
+        +
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.trade-slot-qty {
+.trade-slot {
+  --step: 20px;
+  position: relative;
+}
+
+.trade-slot__stepper {
   position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
+  inset: auto 0 0;
+  display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 2px 6px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  z-index: 2;
+  justify-content: space-between;
+  background: var(--bg-base);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
 
-.trade-slot-qty__label {
-  color: var(--text-tertiary);
-  letter-spacing: 0.08em;
-}
-
-.trade-slot-qty__input {
-  width: 32px;
+.trade-slot__step {
+  width: var(--step);
+  height: var(--step);
   padding: 0;
-  background: transparent;
-  border: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
   color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  text-align: center;
-  outline: none;
-  -moz-appearance: textfield;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.trade-slot-qty__input::-webkit-outer-spin-button,
-.trade-slot-qty__input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.trade-slot-qty__max {
+.trade-slot__step:disabled {
   color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.trade-slot__count {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 </style>

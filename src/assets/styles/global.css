@@ -139,6 +139,20 @@ h1 {
   filter: blur(2px);
 }
 
+.collapsible {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.collapsible > * {
+  min-height: 0;
+}
+
+.collapse-enter-active > *,
+.collapse-leave-active > * {
+  overflow: clip;
+}
+
 .collapse-enter-active {
   transition: grid-template-rows var(--dur-enter) var(--ease-out), opacity var(--dur-enter) var(--ease-out);
 }

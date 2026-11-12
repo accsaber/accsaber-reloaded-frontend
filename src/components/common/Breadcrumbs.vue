@@ -37,10 +37,6 @@ defineProps<{
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
 }
 
 .breadcrumbs__crumb {
@@ -53,7 +49,7 @@ defineProps<{
 
 .breadcrumbs__crumb--link {
   color: var(--text-secondary);
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .breadcrumbs__crumb--link:hover {

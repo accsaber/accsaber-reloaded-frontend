@@ -32,7 +32,7 @@ function toggle() {
       <slot v-if="!collapsed" name="meta" />
     </header>
     <Transition name="collapse">
-      <div v-if="!collapsed" class="profile-fold__body">
+      <div v-if="!collapsed" class="collapsible">
         <div class="profile-fold__inner">
           <slot />
         </div>
@@ -42,19 +42,8 @@ function toggle() {
 </template>
 
 <style scoped>
-.profile-fold__body {
-  display: grid;
-  grid-template-rows: 1fr;
-}
-
 .profile-fold__inner {
-  min-height: 0;
   padding-top: var(--space-sm);
-}
-
-.collapse-enter-active .profile-fold__inner,
-.collapse-leave-active .profile-fold__inner {
-  overflow: clip;
 }
 
 .profile-fold__header {

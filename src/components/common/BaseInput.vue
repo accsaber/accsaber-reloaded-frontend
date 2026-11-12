@@ -33,14 +33,15 @@ defineEmits<{
 }
 
 .base-input__field {
-  padding: var(--space-sm) var(--space-md);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  transition: border-color 120ms ease-in, box-shadow 120ms ease-in;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
   outline: none;
 }
 

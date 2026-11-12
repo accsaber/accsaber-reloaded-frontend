@@ -59,9 +59,9 @@ const cellAccentStyle = computed(() => (accent.value ? { '--cell-accent': accent
 const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))
 const fullItemName = computed(() => displayItemName(modifiers.value, item.value.name))
 
-const justEquipped = ref(false)
+const confirmed = ref(false)
 
-watch(() => props.equipped, (now, was) => { justEquipped.value = !!now && !was })
+watch(() => props.equipped || (props.selectMode && props.checked), (now, was) => { confirmed.value = !!now && !was })
 
 onMounted(() => {
   modifierStore.fetchModifiers()
@@ -80,7 +80,7 @@ onMounted(() => {
           'inventory-cell--selected': selected,
           'inventory-cell--highlighted': highlighted,
           'inventory-cell--equipped': equipped,
-          confirm: justEquipped,
+          confirm: confirmed,
           'inventory-cell--deprecated': item.deprecated,
           'inventory-cell--locked': locked,
           'inventory-cell--title-fx': item.typeKey === 'title' || item.typeKey === 'clan_title_effect',
@@ -93,7 +93,7 @@ onMounted(() => {
       :aria-pressed="selectMode ? !!checked : selected"
       :disabled="selectMode && !selectable"
       @click="onClick"
-      @animationend.self="justEquipped = false"
+      @animationend.self="confirmed = false"
     >
       <span class="inventory-cell__art">
         <FragmentedItem v-if="fragmentSpec" :item="item" :spec="fragmentSpec" :selected="selected" />

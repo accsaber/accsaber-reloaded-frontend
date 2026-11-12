@@ -3,72 +3,49 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import EssenceAmount from '@/components/domain/EssenceAmount.vue'
 import TradeOfferRowItem from '@/views/trades/TradeOfferRowItem.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import type { TradeItemRef, TradeResponse } from '@/types/api/trades'
-import type { UserRefDisplay } from '@/types/display'
+import type { TradeResponse } from '@/types/api/trades'
 import { formatEssenceAmount, formatEssenceNet } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
 import { computed } from 'vue'
 
+export type TradeAction = 'accept' | 'decline' | 'cancel'
+
 const props = defineProps<{
   trade: TradeResponse
   perspective: 'incoming' | 'outgoing'
-  busy?: boolean
+  busy?: TradeAction | null
   spendableBalance?: number | null
 }>()
 
 defineEmits<{
-  accept: [tradeId: string]
-  decline: [tradeId: string]
-  cancel: [tradeId: string]
+  act: [action: TradeAction]
 }>()
 
-const counterpart = computed<UserRefDisplay>(() =>
-  props.perspective === 'incoming' ? props.trade.fromUser : props.trade.toUser,
-)
-
 const incoming = computed(() => props.perspective === 'incoming')
+const pending = computed(() => props.trade.status === 'pending')
+const counterpart = computed(() => (incoming.value ? props.trade.fromUser : props.trade.toUser))
 
-const sides = computed<{ label: string; items: TradeItemRef[]; essence: number }[]>(() => {
+const sides = computed(() => {
   const t = props.trade
   const offered = { items: t.offeredItems, essence: t.offeredEssence }
   const requested = { items: t.requestedItems, essence: t.requestedEssence }
-  return incoming.value
-    ? [{ label: 'You give', ...requested }, { label: 'You receive', ...offered }]
-    : [{ label: 'You offered', ...offered }, { label: 'They give', ...requested }]
+  const [give, get] = incoming.value ? [requested, offered] : [offered, requested]
+  return [{ label: 'You give', ...give }, { label: 'You get', ...get }]
 })
 
-const acceptCost = computed(() =>
-  props.perspective === 'incoming' && props.trade.status === 'pending'
-    ? props.trade.requestedEssence
-    : 0,
+const net = computed(() => sides.value[1].essence - sides.value[0].essence)
+const essenceInvolved = computed(() => props.trade.offeredEssence > 0 || props.trade.requestedEssence > 0)
+const shortfall = computed(() =>
+  incoming.value && props.spendableBalance != null && props.trade.requestedEssence > props.spendableBalance,
 )
-
-const essenceInvolved = computed(
-  () => props.trade.offeredEssence > 0 || props.trade.requestedEssence > 0,
-)
-
-const recipientNet = computed(() => props.trade.offeredEssence - props.trade.requestedEssence)
-
-const cannotAffordAccept = computed(
-  () =>
-    acceptCost.value > 0 &&
-    props.spendableBalance != null &&
-    acceptCost.value > props.spendableBalance,
-)
-
-const showActions = computed(() => props.trade.status === 'pending')
-
 </script>
 
 <template>
-  <div class="trade-row">
+  <article class="trade-row">
     <header class="trade-row__head">
-      <span class="field-label">
-        {{ perspective === 'incoming' ? 'Offered by' : 'Sent to' }}
-      </span>
-      <UserChip class="trade-row__user" :user="counterpart" link />
-      <span class="trade-row__head-spacer" />
-      <span class="trade-row__status-pill" :class="`trade-row__status-pill--${trade.status}`">
+      <UserChip :user="counterpart" link />
+      <span class="caption">{{ formatRelativeDate(trade.createdAt) }}</span>
+      <span v-if="!pending" class="trade-row__status" :class="`trade-row__status--${trade.status}`">
         {{ trade.status }}
       </span>
     </header>
@@ -76,62 +53,36 @@ const showActions = computed(() => props.trade.status === 'pending')
     <p v-if="trade.message" class="trade-row__message">{{ trade.message }}</p>
 
     <div class="trade-row__sides">
-      <template v-for="(side, i) in sides" :key="side.label">
-        <div v-if="i === 1" class="trade-row__swap" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="17 1 21 5 17 9" />
-            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-            <polyline points="7 23 3 19 7 15" />
-            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-          </svg>
+      <section v-for="side in sides" :key="side.label" class="trade-row__side">
+        <span class="field-label">{{ side.label }}</span>
+        <EssenceAmount v-if="side.essence > 0" class="trade-row__essence" :amount="side.essence" />
+        <div v-if="side.items.length" class="trade-row__items">
+          <TradeOfferRowItem v-for="ref in side.items" :key="ref.linkId" :item-ref="ref" />
         </div>
-        <section class="trade-row__side">
-          <span class="trade-row__side-label">
-            {{ side.label }}
-            <span class="trade-row__count">({{ side.items.length }})</span>
-          </span>
-          <div v-if="side.essence > 0" class="trade-row__essence">
-            <EssenceAmount :amount="side.essence" />
-            <span class="trade-row__essence-word">essence</span>
-          </div>
-          <div v-if="side.items.length === 0 && side.essence === 0" class="trade-row__side-empty">Nothing</div>
-          <div v-else-if="side.items.length > 0" class="trade-row__side-items">
-            <TradeOfferRowItem v-for="ref in side.items" :key="ref.linkId" :item-ref="ref" />
-          </div>
-        </section>
-      </template>
+        <span v-else-if="side.essence === 0" class="caption">Nothing</span>
+      </section>
     </div>
 
-    <footer class="trade-row__foot">
-      <span class="trade-row__date">{{ formatRelativeDate(trade.createdAt) }}</span>
-      <div v-if="showActions" class="trade-row__actions">
-        <template v-if="perspective === 'incoming'">
-          <span
-            v-if="cannotAffordAccept"
-            class="trade-row__accept-cost trade-row__accept-cost--short"
-          >
-            Accepting costs {{ formatEssenceAmount(acceptCost) }} ✦, you only have
-            {{ formatEssenceAmount(spendableBalance ?? 0) }} available
-          </span>
-          <span v-else-if="essenceInvolved" class="trade-row__accept-cost">
-            {{ formatEssenceNet(recipientNet) }}
-          </span>
-          <BaseButton
-            variant="primary"
-            size="sm"
-            :loading="busy"
-            :disabled="cannotAffordAccept"
-            @click="$emit('accept', trade.id)"
-          >Accept</BaseButton>
-          <BaseButton variant="destructive" size="sm" :loading="busy" @click="$emit('decline', trade.id)">Decline</BaseButton>
+    <footer v-if="pending" class="trade-row__foot">
+      <span v-if="shortfall" class="caption trade-row__short">
+        Costs {{ formatEssenceAmount(trade.requestedEssence) }} essence, you have
+        {{ formatEssenceAmount(spendableBalance ?? 0) }}
+      </span>
+      <span v-else-if="essenceInvolved" class="caption">{{ formatEssenceNet(net) }}</span>
+      <div class="trade-row__actions">
+        <template v-if="incoming">
+          <BaseButton :disabled="!!busy" :loading="busy === 'decline'" @click="$emit('act', 'decline')">
+            Decline
+          </BaseButton>
+          <BaseButton variant="primary" :disabled="shortfall || !!busy" :loading="busy === 'accept'"
+            @click="$emit('act', 'accept')">
+            Accept
+          </BaseButton>
         </template>
-        <template v-else>
-          <BaseButton variant="destructive" size="sm" :loading="busy" @click="$emit('cancel', trade.id)">Cancel</BaseButton>
-        </template>
+        <BaseButton v-else :loading="busy === 'cancel'" @click="$emit('act', 'cancel')">Cancel Offer</BaseButton>
       </div>
     </footer>
-  </div>
+  </article>
 </template>
 
 <style scoped>
@@ -148,157 +99,79 @@ const showActions = computed(() => props.trade.status === 'pending')
 .trade-row__head {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
-.trade-row__head-spacer {
-  flex: 1;
+.trade-row__status {
+  margin-left: auto;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: capitalize;
 }
 
-.trade-row__user {
-  font-weight: 500;
-  max-width: 14rem;
+.trade-row__status--accepted {
+  color: var(--success);
 }
-
-.trade-row__status-pill {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  border: 1px solid currentColor;
-}
-
-.trade-row__status-pill--pending { color: var(--warning); }
-.trade-row__status-pill--accepted { color: var(--success); }
-.trade-row__status-pill--declined,
-.trade-row__status-pill--cancelled,
-.trade-row__status-pill--expired { color: var(--text-tertiary); }
 
 .trade-row__message {
+  max-width: 65ch;
   margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-base);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
   color: var(--text-secondary);
-  font-style: italic;
+  overflow-wrap: anywhere;
 }
 
 .trade-row__sides {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: var(--space-md);
-  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
 }
 
 .trade-row__side {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  min-width: 0;
-}
-
-.trade-row__side-label {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.trade-row__count {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  letter-spacing: 0;
-  text-transform: none;
+  align-items: flex-start;
+  gap: var(--space-sm);
 }
 
 .trade-row__essence {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  align-self: flex-start;
-  padding: var(--space-xs) var(--space-sm);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--tier-gold) 7%, var(--bg-surface));
-  border: 1px solid color-mix(in srgb, var(--tier-gold) 40%, transparent);
-  border-radius: var(--radius-card);
+  font-size: var(--text-stat-lg);
 }
 
-.trade-row__essence-word {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.trade-row__accept-cost {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  align-self: center;
-  text-align: right;
-}
-
-.trade-row__accept-cost--short {
-  color: var(--error);
-}
-
-.trade-row__side-empty {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  padding: var(--space-sm) 0;
-}
-
-.trade-row__side-items {
+.trade-row__items {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.trade-row__swap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  padding: 0 var(--space-xs);
+  gap: var(--space-sm);
 }
 
 .trade-row__foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
+  justify-content: flex-end;
+  gap: var(--space-md);
 }
 
-.trade-row__date {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.trade-row__short {
+  color: var(--error);
 }
 
 .trade-row__actions {
   display: flex;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
 @media (max-width: 640px) {
   .trade-row__sides {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .trade-row__swap {
-    transform: rotate(90deg);
-    align-self: center;
+  .trade-row__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trade-row__actions > * {
+    flex: 1;
   }
 }
 </style>

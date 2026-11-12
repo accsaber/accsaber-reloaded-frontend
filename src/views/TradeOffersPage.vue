@@ -2,12 +2,11 @@
 import { parseApiError } from '@/api/client'
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import TradeOfferRow from '@/views/trades/TradeOfferRow.vue'
+import TradeOfferRow, { type TradeAction } from '@/views/trades/TradeOfferRow.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
@@ -29,22 +28,21 @@ const tradeStore = useTradeStore()
 const { queryRef } = useQueryParams()
 
 type SectionKey = 'incoming' | 'incoming-history' | 'sent' | 'sent-history'
-type TradeAction = 'accept' | 'decline' | 'cancel'
+type Direction = 'incoming' | 'outgoing'
 
 const HISTORY: TradeStatus[] = ['accepted', 'declined', 'cancelled', 'expired']
 
-const SECTIONS: Record<SectionKey, {
-  label: string
-  direction: 'incoming' | 'outgoing'
-  statuses: TradeStatus[]
-  sub?: boolean
-  emptyMessage: string
-}> = {
-  incoming: { label: 'Incoming Offers', direction: 'incoming', statuses: ['pending'], emptyMessage: 'You have no incoming trade offers.' },
-  'incoming-history': { label: 'Incoming Offer History', direction: 'incoming', statuses: HISTORY, sub: true, emptyMessage: 'No incoming offer history yet.' },
-  sent: { label: 'Sent Offers', direction: 'outgoing', statuses: ['pending'], emptyMessage: 'You have no outgoing trade offers.' },
-  'sent-history': { label: 'Sent Offer History', direction: 'outgoing', statuses: HISTORY, sub: true, emptyMessage: 'No sent offer history yet.' },
+const SECTIONS: Record<SectionKey, { direction: Direction; history: boolean; emptyMessage: string }> = {
+  incoming: { direction: 'incoming', history: false, emptyMessage: 'You have no incoming trade offers.' },
+  'incoming-history': { direction: 'incoming', history: true, emptyMessage: 'No incoming offer history yet.' },
+  sent: { direction: 'outgoing', history: false, emptyMessage: 'You have no outgoing trade offers.' },
+  'sent-history': { direction: 'outgoing', history: true, emptyMessage: 'No sent offer history yet.' },
 }
+
+const STATE_TABS = [
+  { key: 'open', label: 'Open' },
+  { key: 'history', label: 'History' },
+]
 
 const breadcrumbs: Crumb[] = [
   { label: 'Market Hub', to: { name: 'market' } },
@@ -62,10 +60,26 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
   secondarySort: null,
 })
 
+const directionTabs = computed(() => [
+  {
+    key: 'incoming',
+    label: tradeStore.pendingIncomingCount ? `Incoming (${tradeStore.pendingIncomingCount})` : 'Incoming',
+  },
+  { key: 'outgoing', label: 'Sent' },
+])
+
+function selectSection(direction: string, history: boolean) {
+  const key = (Object.keys(SECTIONS) as SectionKey[]).find(
+    (k) => SECTIONS[k].direction === direction && SECTIONS[k].history === history,
+  )
+  sectionParam.value = !key || key === 'incoming' ? '' : key
+}
+
 const trades = ref<TradeResponse[]>([])
 const totalPages = ref(0)
 const loading = ref(true)
-const actionBusy = ref<string | null>(null)
+const batch = ref(0)
+const acting = ref<{ id: string; action: TradeAction } | null>(null)
 const actionError = ref<string | null>(null)
 
 let requestId = 0
@@ -77,15 +91,21 @@ async function fetchActive() {
   loading.value = true
   try {
     const { getTrades } = await import('@/api/trades')
-    const page = await getTrades({ direction: section.value.direction, status: section.value.statuses, ...paginationParams.value })
+    const page = await getTrades({
+      direction: section.value.direction,
+      status: section.value.history ? HISTORY : ['pending'],
+      ...paginationParams.value,
+    })
     if (id !== requestId) return
     trades.value = page.content
     totalPages.value = page.totalPages
     if (key === 'incoming') tradeStore.pendingIncomingCount = page.totalElements
   } catch {
-    if (id === requestId) trades.value = []
+    if (id !== requestId) return
+    trades.value = []
   }
-  if (id === requestId) loading.value = false
+  batch.value++
+  loading.value = false
 }
 
 function resolve(tradeId: string) {
@@ -95,7 +115,7 @@ function resolve(tradeId: string) {
 }
 
 async function runAction(tradeId: string, action: TradeAction) {
-  actionBusy.value = tradeId
+  acting.value = { id: tradeId, action }
   actionError.value = null
   try {
     const api = await import('@/api/trades')
@@ -105,13 +125,9 @@ async function runAction(tradeId: string, action: TradeAction) {
   } catch (e) {
     actionError.value = parseApiError(e, `Could not ${action} this trade.`).message
   } finally {
-    actionBusy.value = null
+    acting.value = null
   }
   if (action === 'accept') essenceStore.fetchBalance(true)
-}
-
-function selectSection(key: SectionKey) {
-  sectionParam.value = key === 'incoming' ? '' : key
 }
 
 watch(() => JSON.stringify([activeKey.value, paginationParams.value]), fetchActive, { immediate: true })
@@ -125,48 +141,46 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="trades-page" :style="{ '--page-accent': 'var(--accent-overall)' }">
+  <div class="trades-page">
     <Breadcrumbs :crumbs="breadcrumbs" />
-    <PageHeaderBleed title="Trade Offers" />
+
+    <header class="trades-page__header">
+      <h1>Trade Offers</h1>
+      <BaseButton v-if="authStore.isLoggedIn" variant="primary" href="/trade-offers/new">New Trade Offer</BaseButton>
+    </header>
 
     <EmptyState v-if="!authStore.isLoggedIn" message="Log in to view your trade offers." />
 
-    <div v-else class="trades-page__layout">
-      <main class="trades-page__main">
-        <BaseBanner v-if="actionError" variant="error" role="alert" @close="actionError = null">
-          {{ actionError }}
-        </BaseBanner>
+    <template v-else>
+      <div class="trades-page__controls">
+        <BaseTabs :tabs="directionTabs" :model-value="section.direction" label="Offer direction"
+          @update:model-value="selectSection($event, section.history)" />
+        <BaseTabs :tabs="STATE_TABS" :model-value="section.history ? 'history' : 'open'" variant="segmented"
+          label="Offer state" @update:model-value="selectSection(section.direction, $event === 'history')" />
+      </div>
 
-        <template v-if="loading && trades.length === 0">
-          <SkeletonLoader v-for="i in 4" :key="i" variant="card" height="96px" />
-        </template>
+      <BaseBanner v-if="actionError" variant="error" role="alert" @close="actionError = null">
+        {{ actionError }}
+      </BaseBanner>
 
-        <EmptyState v-else-if="trades.length === 0" :message="section.emptyMessage" />
+      <div v-if="batch === 0" class="trades-page__reserved" aria-busy="true" />
 
-        <template v-else>
-          <TradeOfferRow v-for="t in trades" :key="t.id" :trade="t" :perspective="section.direction"
-            :busy="actionBusy === t.id" :spendable-balance="essenceStore.balance"
-            @accept="runAction($event, 'accept')" @decline="runAction($event, 'decline')"
-            @cancel="runAction($event, 'cancel')" />
+      <EmptyState v-else-if="trades.length === 0" :message="section.emptyMessage" />
 
-          <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
-            @update:page="setPage($event)" />
-        </template>
-      </main>
+      <TransitionGroup v-else :key="batch" tag="div" name="collapse" class="trades-page__list stagger"
+        :class="{ refreshing: loading }" :style="{ '--n': trades.length }">
+        <div v-for="(t, i) in trades" :key="t.id" class="collapsible" :style="{ '--i': i }">
+          <div class="trades-page__item">
+            <TradeOfferRow :trade="t" :perspective="section.direction"
+              :busy="acting?.id === t.id ? acting.action : null" :spendable-balance="essenceStore.balance"
+              @act="runAction(t.id, $event)" />
+          </div>
+        </div>
+      </TransitionGroup>
 
-      <aside class="trades-page__sidebar">
-        <BaseButton variant="primary" size="lg" href="/trade-offers/new">New Trade Offer</BaseButton>
-
-        <nav class="trades-page__nav">
-          <button v-for="(cfg, key) in SECTIONS" :key="key" class="trades-page__nav-btn"
-            :class="{ 'trades-page__nav-btn--active': activeKey === key, 'trades-page__nav-btn--sub': cfg.sub }"
-            @click="selectSection(key)">
-            <span class="trades-page__nav-label">{{ cfg.label }}</span>
-            <span v-if="key === 'incoming'" class="trades-page__nav-count">({{ tradeStore.pendingIncomingCount }} Pending)</span>
-          </button>
-        </nav>
-      </aside>
-    </div>
+      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
+        @update:page="setPage($event)" />
+    </template>
   </div>
 </template>
 
@@ -180,92 +194,25 @@ onMounted(() => {
   width: 100%;
 }
 
-.trades-page__layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: var(--space-xl);
-  align-items: start;
-}
-
-.trades-page__main {
+.trades-page__header,
+.trades-page__controls {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-md);
-  min-width: 0;
 }
 
-.trades-page__sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  position: sticky;
-  top: calc(var(--navbar-height, 64px) + var(--space-md));
+.trades-page__reserved {
+  min-height: 60vh;
 }
 
-.trades-page__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  padding: var(--space-sm);
+.trades-page__item {
+  padding-bottom: var(--space-md);
+  transition: padding var(--dur-exit) var(--ease-in);
 }
 
-.trades-page__nav-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  text-align: left;
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-.trades-page__nav-btn:hover {
-  background: var(--bg-elevated);
-}
-
-.trades-page__nav-btn--active {
-  background: color-mix(in srgb, var(--page-accent) 12%, var(--bg-surface));
-  border-color: color-mix(in srgb, var(--page-accent) 40%, transparent);
-  color: var(--page-accent);
-}
-
-.trades-page__nav-btn--sub {
-  padding-left: var(--space-lg);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.trades-page__nav-label {
-  font-weight: 500;
-}
-
-.trades-page__nav-count {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.trades-page__nav-btn--active .trades-page__nav-count {
-  color: var(--page-accent);
-}
-
-@media (max-width: 1023px) {
-  .trades-page__layout {
-    grid-template-columns: 1fr;
-  }
-
-  .trades-page__sidebar {
-    position: static;
-    flex-direction: column;
-  }
+.collapse-leave-to > .trades-page__item {
+  padding-bottom: 0;
 }
 </style>
