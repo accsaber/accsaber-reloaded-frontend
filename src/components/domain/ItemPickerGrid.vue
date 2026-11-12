@@ -3,6 +3,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
+import { useRowSwap } from '@/composables/useRowSwap'
 import type { UserItemResponse } from '@/types/api/items'
 import { computed } from 'vue'
 
@@ -44,8 +45,13 @@ const empty = computed(() =>
   ?? (props.search ? 'No listable items match your search.' : 'You have no tradeable items to list.'),
 )
 
+const { shown, cascade, isStale, renderKey } = useRowSwap(() => props.items, {
+  key: (userItem) => userItem.linkId,
+  refreshing: () => props.loading,
+})
+
 const fillers = computed(() =>
-  props.totalPages > 1 && props.pageSize ? Math.max(0, props.pageSize - props.items.length) : 0,
+  props.totalPages > 1 && props.pageSize ? Math.max(0, props.pageSize - shown.value.length) : 0,
 )
 
 function selectable(linkId: string): boolean {
@@ -74,12 +80,12 @@ function onSelect(linkId: string) {
     <EmptyState v-else-if="items.length === 0" :message="empty" />
 
     <template v-else>
-      <div :key="page" class="item-picker__grid stagger" :class="{ refreshing: loading }"
-        :style="{ '--n': items.length }">
+      <div class="item-picker__grid stagger" :style="{ '--n': shown.length }">
         <div
-          v-for="(userItem, i) in items"
-          :key="userItem.linkId"
-          :style="{ '--i': i }"
+          v-for="(userItem, i) in shown"
+          :key="renderKey(userItem, i)"
+          :class="{ stale: isStale(i) }"
+          :style="{ '--i': cascade ? i : 0 }"
           :title="disabledLinkIds.has(userItem.linkId) ? disabledTitle : undefined"
         >
           <InventoryItemCell

@@ -101,6 +101,11 @@ h1 {
   transition: opacity var(--dur-fast) var(--ease-out);
 }
 
+.stale {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
 .pop-enter-active {
   transition: opacity var(--dur-menu) var(--ease-out), transform var(--dur-menu) var(--ease-out);
 }

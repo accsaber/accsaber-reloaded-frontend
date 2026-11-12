@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useMediaQuery } from '@/composables/useMediaQuery';
+import { useRowSwap } from '@/composables/useRowSwap';
 import type { SortState, TableColumn } from '@/types/display';
 import { formatSortGlyph } from '@/utils/formatters';
 import { columnWidth, tableCardQuery, tableNaturalWidth } from '@/utils/tableLayout';
-import { computed, onUnmounted, ref, shallowRef, useSlots, watch } from 'vue';
+import { computed, useSlots, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRouter } from 'vue-router';
 import DataTableCardFallback from './DataTableCardFallback.vue';
@@ -34,13 +35,6 @@ const reserved = computed(() => ({ '--loading-rows': props.loadingRows ?? 5 }))
 const minWidth = computed(() => tableNaturalWidth(props.columns) + 'px')
 const dense = computed(() => props.dense || props.columns.length >= 13)
 const mobile = useMediaQuery(() => tableCardQuery(props.columns))
-const MAX_SLIDING_ROWS = 10
-const shown = shallowRef(props.rows)
-const rowHrefs = computed(() => shown.value.map(resolveRowHref))
-const staleFrom = ref<number | null>(null)
-const cascade = ref(true)
-const batches = new WeakMap<Record<string, unknown>, number>()
-let batch = 0
 let shape = columnShape()
 let wasLoading = !!props.loading
 
@@ -48,104 +42,23 @@ function columnShape(): string {
   return props.columns.map((col) => col.key).join()
 }
 
-let swapTimer: ReturnType<typeof setTimeout> | undefined
-
-function swapStep(count: number): number {
-  const style = getComputedStyle(document.documentElement)
-  const stagger = parseFloat(style.getPropertyValue('--stagger'))
-  const total = parseFloat(style.getPropertyValue('--stagger-total'))
-  return Math.min(stagger, total / count)
-}
-
-function stamp(rows: Record<string, unknown>[]) {
-  for (const row of rows) batches.set(row, batch)
-}
-
-function renderKey(row: Record<string, unknown>, index: number): string {
-  return `${batches.get(row) ?? 0}:${resolveRowKey(row, index)}`
-}
-
-let target: Record<string, unknown>[] | null = null
-let cursor = 0
-let step = 0
-
-function advance() {
-  if (!target) return
-  cursor++
-  if (cursor >= target.length) {
-    shown.value = target
-    staleFrom.value = null
-    target = null
-    return
-  }
-  const rows = shown.value.slice()
-  rows[cursor - 1] = target[cursor - 1]
-  shown.value = rows
-  staleFrom.value = cursor
-  swapTimer = setTimeout(advance, step)
-}
-
-function swapRows(next: Record<string, unknown>[]) {
-  step = swapStep(next.length)
-  cursor = 0
-  cascade.value = false
-  batch++
-  stamp(next)
-  target = next
-  advance()
-}
-
-function sameRows(a: Record<string, unknown>[], b: Record<string, unknown>[]): boolean {
-  return a.length === b.length && a.every((row, index) => resolveRowKey(row, index) === resolveRowKey(b[index], index))
-}
-
-function retarget(next: Record<string, unknown>[]) {
-  stamp(next)
-  const rows = shown.value.slice()
-  for (let index = 0; index < cursor; index++) rows[index] = next[index]
-  shown.value = rows
-  target = next
-}
-
-watch(() => props.rows, (next) => {
-  if (target && sameRows(target, next)) return retarget(next)
-  clearTimeout(swapTimer)
-  target = null
-  const prev = shown.value
-  const previous = new Map(prev.map((row, index) => [resolveRowKey(row, index), index]))
-  const positions = next.map((row, index) => previous.get(resolveRowKey(row, index)))
-  const kept = positions.filter((position) => position !== undefined).length
-  const moved = positions.filter((position, index) => position !== undefined && position !== index).length
-  const replaced = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
-  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+function restarts(): boolean {
   const restart = wasLoading || shape !== columnShape()
   shape = columnShape()
   wasLoading = !!props.loading
-  if (restart || !replaced || still || !prev.length || !next.length) {
-    if (restart) batch++
-    stamp(next)
-    shown.value = next
-    staleFrom.value = null
-    cascade.value = restart || !prev.length
-  } else {
-    swapRows(next)
-  }
+  return restart
+}
+
+const { shown, cascade, isStale, renderKey } = useRowSwap(() => props.rows, {
+  key: resolveRowKey,
+  restart: restarts,
+  refreshing: () => props.refreshing,
 })
+const rowHrefs = computed(() => shown.value.map(resolveRowHref))
 
 watch(() => props.loading, (loading) => {
   if (loading) wasLoading = true
 })
-
-watch(() => props.refreshing, (refreshing) => {
-  if (refreshing && !target) staleFrom.value = 0
-  else if (!refreshing && !target) staleFrom.value = null
-})
-
-onUnmounted(() => clearTimeout(swapTimer))
-
-function isStale(index: number): boolean {
-  return staleFrom.value !== null && index >= staleFrom.value
-}
 
 function resolveRowKey(row: Record<string, unknown>, index: number): string | number {
   if (!props.rowKey) return index
@@ -221,7 +134,7 @@ function sortIcon(col: TableColumn): string {
               :class="[{
                 'data-table__row--clickable': rowClickable || !!rowTo,
                 'data-table__row--alt': index % 2 === 1,
-                'data-table__row--stale': isStale(index),
+                stale: isStale(index),
               }, rowClass?.(row, index)]"
               :style="{ '--i': cascade ? index : 0 }"
               @click="handleRowClick(row, index, $event)">
@@ -252,13 +165,13 @@ function sortIcon(col: TableColumn): string {
       </div>
       <template v-else-if="slots['mobile-card']">
         <div v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table-cards__custom"
-          :class="{ 'data-table__row--stale': isStale(index) }">
+          :class="{ stale: isStale(index) }">
           <slot name="mobile-card" :row="row" :index="index" />
         </div>
       </template>
       <template v-else>
         <DataTableCardFallback v-for="(row, index) in shown" :key="renderKey(row, index)" :columns="columns"
-          :row="row" :clickable="rowClickable" :class="{ 'data-table__row--stale': isStale(index) }"
+          :row="row" :clickable="rowClickable" :class="{ stale: isStale(index) }"
           @click="emit('rowClick', row, index)">
           <template v-for="col in columns" :key="col.key" #[`cell-${col.key}`]="slotProps">
             <slot :name="`cell-${col.key}`" :row="slotProps.row" :value="slotProps.value" :index="index">
@@ -375,11 +288,6 @@ function sortIcon(col: TableColumn): string {
 .row-leave-active {
   display: none;
   transition: none;
-}
-
-.data-table__row--stale {
-  opacity: 0.25;
-  pointer-events: none;
 }
 
 .data-table__row--alt {
