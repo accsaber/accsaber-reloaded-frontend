@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
-import ProfileFold from '@/views/profile/ProfileFold.vue'
+import StoredFold from '@/components/common/StoredFold.vue'
 
 defineProps<{
   bio: string | null
@@ -19,9 +19,9 @@ const draft = defineModel<string>('draft', { required: true })
       {{ draft.length.toLocaleString() }} / {{ maxChars.toLocaleString() }}
     </span>
   </section>
-  <ProfileFold v-else-if="bio" label="About" storage-key="about" aria-label="About this player">
+  <StoredFold v-else-if="bio" label="About" storage-key="about" aria-label="About this player">
     <div class="profile-bio__body" v-html="bio" />
-  </ProfileFold>
+  </StoredFold>
 </template>
 
 <style scoped>

@@ -45,6 +45,8 @@ import { collectMissingPrerequisites } from '@/utils/campaignProgress'
 import { buildMapRoute } from '@/utils/mapRoute'
 import { isCurationSurface } from '@/utils/subdomain'
 import CampaignAwards from '@/views/campaign/CampaignAwards.vue'
+import StoredFold from '@/components/common/StoredFold.vue'
+import { buildChartStats } from '@/utils/chartMetadata'
 import CampaignLeaderboardTray from '@/views/campaign/CampaignLeaderboardTray.vue'
 import CampaignOverviewRail from '@/views/campaign/CampaignOverviewRail.vue'
 import CampaignSpectateBar from '@/views/campaign/CampaignSpectateBar.vue'
@@ -368,6 +370,8 @@ const displayedTargets = computed(() => {
     }
   })
 })
+
+const displayedHasChartStats = computed(() => buildChartStats(displayedDifficulty.value).length > 0)
 
 const isMultiObjective = computed(() => displayedTargets.value.length > 1)
 
@@ -749,11 +753,10 @@ function handleDeselect() {
               </div>
 
               <div v-if="displayedTargets.length > 0" class="campaign-detail__objectives">
-                <h3 class="field-label campaign-detail__section-label">{{ objectiveModeLabel }}</h3>
                 <table class="campaign-detail__objective-table">
                   <thead>
                     <tr>
-                      <td />
+                      <th scope="col" class="field-label">{{ objectiveModeLabel }}</th>
                       <th v-if="displayedProgress" scope="col">{{ viewerLabel }}</th>
                       <th scope="col">Goal</th>
                     </tr>
@@ -777,7 +780,10 @@ function handleDeselect() {
                 <CampaignModifierBadges :modifiers="displayedDifficulty.modifiers" />
               </div>
 
-              <MapChartStats :source="displayedDifficulty" />
+              <StoredFold v-if="displayedHasChartStats" label="Map Details" storage-key="campaign-map-details"
+                default-collapsed>
+                <MapChartStats :source="displayedDifficulty" />
+              </StoredFold>
 
               <MarkdownText v-if="displayedDifficulty.description" :content="displayedDifficulty.description" />
 
@@ -1120,7 +1126,12 @@ function handleDeselect() {
   font-variant-numeric: tabular-nums;
 }
 
-.campaign-detail__objective-table thead th {
+.campaign-detail__objective-table thead th:first-child {
+  padding: 0 0 var(--space-xs);
+  text-align: left;
+}
+
+.campaign-detail__objective-table thead th:not(:first-child) {
   padding: 0 0 var(--space-xs) var(--space-sm);
   text-align: right;
   font-size: var(--text-caption);

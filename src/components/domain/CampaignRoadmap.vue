@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import StageControls from '@/components/domain/StageControls.vue'
 import ParticleCanvas from '@/components/common/ParticleCanvas.vue'
 import CampaignBarrierGate from '@/components/domain/CampaignBarrierGate.vue'
 import CampaignNode from '@/components/domain/CampaignNode.vue'
@@ -205,7 +206,9 @@ function onNodeHover(id: string | null) {
 }
 
 function onNodeFocus(id: string, event: FocusEvent) {
-  const rect = (event.currentTarget as SVGGElement).getBoundingClientRect()
+  const el = event.currentTarget as SVGGElement
+  if (el.matches(':hover')) return
+  const rect = el.getBoundingClientRect()
   hoverNodeId.value = id
   emit('hover', id, { x: rect.left + rect.width / 2, y: rect.bottom })
 }
@@ -1056,9 +1059,9 @@ const snapShapePoints = computed(() => {
 })
 
 const controls = computed(() => [
-  { label: 'Zoom in', run: () => adjustZoom(1.2), d: 'M12 5v14M5 12h14', dot: false },
-  { label: 'Zoom out', run: () => adjustZoom(1 / 1.2), d: 'M5 12h14', dot: false },
-  { label: 'Fit roadmap', run: () => fitToContent(), d: 'M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4', dot: false },
+  { label: 'Zoom in', run: () => adjustZoom(1.2), d: 'M12 5v14M5 12h14' },
+  { label: 'Zoom out', run: () => adjustZoom(1 / 1.2), d: 'M5 12h14' },
+  { label: 'Fit roadmap', run: () => fitToContent(), d: 'M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4' },
   ...(canRecenter.value
     ? [{
       label: 'Recenter on current progress',
@@ -1394,31 +1397,7 @@ const controls = computed(() => [
       <p v-if="overlapMarkers.length > 0" class="campaign-roadmap__overlap-note" role="status">
         {{ overlapMarkers.length }} stacked
       </p>
-      <div class="campaign-roadmap__controls" aria-label="Roadmap controls">
-        <button
-          v-for="c in controls"
-          :key="c.label"
-          type="button"
-          class="campaign-roadmap__btn"
-          :aria-label="c.label"
-          @click="c.run"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path :d="c.d" />
-            <circle v-if="c.dot" cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
-          </svg>
-        </button>
-      </div>
+      <StageControls :controls="controls" />
       <slot name="actions" />
     </div>
   </div>
@@ -1753,37 +1732,6 @@ const controls = computed(() => [
   flex-direction: column;
   align-items: center;
   gap: 6px;
-}
-
-.campaign-roadmap__controls {
-  display: flex;
-  flex-direction: row;
-  gap: 2px;
-  padding: 2px;
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.campaign-roadmap__btn {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  border-radius: var(--radius-pill);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) var(--ease-out);
-}
-
-.campaign-roadmap__btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
 }
 
 .campaign-roadmap__overlap-note {

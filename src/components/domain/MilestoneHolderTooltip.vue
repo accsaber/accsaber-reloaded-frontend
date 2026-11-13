@@ -41,7 +41,7 @@ async function fetchHolders() {
 </script>
 
 <template>
-  <span ref="triggerRef" class="holder-trigger" @mouseenter="onTriggerEnter" @mouseleave="onTriggerLeave">
+  <span v-if="completions > 0 && completions < 50" ref="triggerRef" class="holder-trigger" @mouseenter="onTriggerEnter" @mouseleave="onTriggerLeave">
     <span class="holder-trigger__pill">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

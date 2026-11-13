@@ -2,6 +2,7 @@
 import MilestoneNodeView from '@/views/milestones/MilestoneNode.vue'
 import MilestoneRegionView from '@/views/milestones/MilestoneRegion.vue'
 import MilestoneStencils from '@/views/milestones/MilestoneStencils.vue'
+import StageControls from '@/components/domain/StageControls.vue'
 import { useStageInteraction, type StageGesture } from '@/composables/useStageInteraction'
 import type { MilestoneSetResponse, PrerequisiteLinkResponse } from '@/types/api/milestones'
 import type { MilestoneDisplay } from '@/types/display'
@@ -39,6 +40,7 @@ const emit = defineEmits<{
 const MIN_SCALE = 0.3
 const MAX_SCALE = 2.2
 const TARGET_SCALE = 0.86
+const FOCUS_MIN_SCALE = 0.5
 const GRID_PITCH = MILESTONE_UNIT * 21
 
 const categoryStore = useCategoryStore()
@@ -96,13 +98,11 @@ const {
   stageWidth,
   stageHeight,
   scale,
-  translateX,
-  translateY,
   minScale,
   transformStyle,
   measure,
-  clampPan,
   adjustZoom,
+  focusPoint,
   revealPoint,
   onWheel,
   onPointerDown,
@@ -120,61 +120,27 @@ const {
   onGesture: handleGesture,
 })
 
-const CAMERA_TWEEN_MS = 400
-
-let cameraRaf = 0
 let framedOnce = false
-
-function easeOutQuart(t: number): number {
-  return 1 - Math.pow(1 - t, 4)
-}
-
-function cancelCameraTween() {
-  if (cameraRaf) cancelAnimationFrame(cameraRaf)
-  cameraRaf = 0
-}
-
-function applyCamera(s: number, tx: number, ty: number, animate: boolean) {
-  cancelCameraTween()
-  const from = { s: scale.value, x: translateX.value, y: translateY.value }
-  scale.value = s
-  translateX.value = tx
-  translateY.value = ty
-  clampPan()
-  if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-  const to = { s: scale.value, x: translateX.value, y: translateY.value }
-  scale.value = from.s
-  translateX.value = from.x
-  translateY.value = from.y
-  const start = performance.now()
-  const step = (now: number) => {
-    const t = Math.min(1, (now - start) / CAMERA_TWEEN_MS)
-    const e = easeOutQuart(t)
-    scale.value = from.s + (to.s - from.s) * e
-    translateX.value = from.x + (to.x - from.x) * e
-    translateY.value = from.y + (to.y - from.y) * e
-    cameraRaf = t < 1 ? requestAnimationFrame(step) : 0
-  }
-  cameraRaf = requestAnimationFrame(step)
-}
 
 function fitBox(readable: boolean) {
   measure()
-  const box = map.value.focusedRect ?? contentBounds.value
+  const focused = map.value.focusedRect
+  const label = GROUP_LABEL_UNITS * MILESTONE_UNIT
+  const box = focused
+    ? { x: focused.x, y: focused.y - label, width: focused.width, height: focused.height + label }
+    : contentBounds.value
   if (box.width <= 0 || box.height <= 0 || stageWidth.value <= 0 || stageHeight.value <= 0) return
 
   const pad = readable ? 24 : 36
   const fitH = (stageHeight.value - pad * 2) / box.height
   const fitW = (readable ? stageWidth.value * 0.66 : stageWidth.value - pad * 2) / box.width
-  const floor = readable ? clamp(Math.max(fitH, fitW), MIN_SCALE, TARGET_SCALE) : minScale.value
-  const s = clamp(Math.min(fitH, fitW), floor, MAX_SCALE)
+  const s = readable
+    ? clamp(Math.min(fitH, fitW), FOCUS_MIN_SCALE, TARGET_SCALE)
+    : clamp(Math.min(fitH, fitW), minScale.value, MAX_SCALE)
 
-  const anchorTop = readable && box.height * s > stageHeight.value - pad * 2
-  const tx = stageWidth.value / 2 - (box.x + box.width / 2) * s
-  const ty = anchorTop ? pad - box.y * s : stageHeight.value / 2 - (box.y + box.height / 2) * s
-
-  applyCamera(s, tx, ty, !readable || framedOnce)
+  const anchorTop = box.height * s > stageHeight.value - pad * 2
+  const cy = anchorTop ? box.y + (stageHeight.value / 2 - pad) / s : box.y + box.height / 2
+  focusPoint(box.x + box.width / 2, cy, s, !readable || framedOnce)
   if (readable) framedOnce = true
 }
 
@@ -302,8 +268,6 @@ watch(
   },
 )
 
-const CLOSE_MS = 160
-
 let closeTimer = 0
 
 watch(
@@ -323,11 +287,12 @@ watch(
     }
 
     closing.value = true
+    const exitMs = parseFloat(getComputedStyle(stage.value!).getPropertyValue('--dur-exit'))
     closeTimer = window.setTimeout(() => {
       closing.value = false
       displayedSetId.value = next
       void nextTick(frameFocused)
-    }, CLOSE_MS)
+    }, exitMs)
   },
 )
 
@@ -336,27 +301,17 @@ watch(
   () => void nextTick(frameFocused),
 )
 
-function onStagePointerDown(e: PointerEvent) {
-  cancelCameraTween()
-  onPointerDown(e)
-}
-
-function onStageWheel(e: WheelEvent) {
-  cancelCameraTween()
-  onWheel(e)
-}
-
-function zoomBy(factor: number) {
-  cancelCameraTween()
-  adjustZoom(factor)
-}
+const controls = [
+  { label: 'Zoom in', run: () => adjustZoom(1.25), d: 'M12 5v14M5 12h14' },
+  { label: 'Zoom out', run: () => adjustZoom(1 / 1.25), d: 'M5 12h14' },
+  { label: 'Fit to view', run: () => fitBox(false), d: 'M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4' },
+]
 
 onMounted(() => {
   void nextTick(frameFocused)
 })
 
 onUnmounted(() => {
-  cancelCameraTween()
   window.clearTimeout(closeTimer)
 })
 </script>
@@ -368,8 +323,8 @@ onUnmounted(() => {
     role="application"
     aria-label="Milestone map"
     tabindex="0"
-    @wheel="onStageWheel"
-    @pointerdown="onStagePointerDown"
+    @wheel="onWheel"
+    @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
     @pointercancel="onPointerUp"
@@ -425,7 +380,7 @@ onUnmounted(() => {
         </g>
 
         <circle
-          v-if="focusedNode"
+          v-if="focusedNode && focusedNode.id !== selectedId"
           class="ms-canvas__focus"
           :cx="focusedNode.cx"
           :cy="focusedNode.cy"
@@ -451,15 +406,16 @@ onUnmounted(() => {
             :key="node.id"
             :node="node"
             :accent="accentFor(node.milestone.categoryCode)"
-            :style="{ '--ms-node-delay': `${Math.min(index * 14, 240)}ms` }"
+            :style="{ '--i': Math.min(index, 8) }"
           />
         </g>
 
         <text
           v-if="labelNode"
           class="ms-canvas__label"
+          :style="{ '--inv': 1 / scale }"
           :x="labelNode.cx"
-          :y="labelNode.cy + labelNode.radius + 18"
+          :y="labelNode.cy + labelNode.radius + 20 / scale"
           text-anchor="middle"
           aria-hidden="true"
         >
@@ -471,9 +427,7 @@ onUnmounted(() => {
     <p class="ms-canvas__status" role="status" aria-live="polite">{{ focusedSummary }}</p>
 
     <div class="ms-canvas__zoom">
-      <button type="button" aria-label="Zoom in" @click="zoomBy(1.25)">+</button>
-      <button type="button" aria-label="Zoom out" @click="zoomBy(1 / 1.25)">−</button>
-      <button type="button" aria-label="Fit set to view" @click="fitBox(false)">Fit</button>
+      <StageControls :controls="controls" />
     </div>
   </div>
 </template>
@@ -482,7 +436,7 @@ onUnmounted(() => {
 .ms-canvas {
   position: relative;
   width: 100%;
-  height: clamp(560px, 82vh, 1120px);
+  height: 100%;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   background: var(--bg-base);
@@ -520,8 +474,8 @@ onUnmounted(() => {
 }
 
 .ms-canvas__nodes .ms-node {
-  animation: ms-canvas-fade-in 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
-  animation-delay: var(--ms-node-delay, 0ms);
+  animation: ms-canvas-fade-in var(--dur-enter) var(--ease-out) both;
+  animation-delay: calc(var(--i) * var(--stagger));
 }
 
 .ms-canvas__edge {
@@ -529,8 +483,8 @@ onUnmounted(() => {
   stroke: var(--bg-overlay);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
-  animation: ms-canvas-fade-in 200ms cubic-bezier(0.25, 1, 0.5, 1) both;
-  animation-delay: 120ms;
+  animation: ms-canvas-fade-in var(--dur-enter) var(--ease-out) both;
+  animation-delay: var(--dur-fast);
 }
 
 @keyframes ms-canvas-fade-in {
@@ -541,7 +495,7 @@ onUnmounted(() => {
 
 .ms-canvas__nodes--closing .ms-node,
 .ms-canvas__edges--closing .ms-canvas__edge {
-  animation: ms-canvas-fade-out 140ms ease-in both;
+  animation: ms-canvas-fade-out var(--dur-exit) var(--ease-in) both;
   animation-delay: 0ms;
   pointer-events: none;
 }
@@ -582,19 +536,17 @@ onUnmounted(() => {
   font-family: var(--font-sans);
   font-size: 34px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   pointer-events: none;
 }
 
 .ms-canvas__label {
   fill: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: calc(var(--text-body) * var(--inv));
   font-weight: 600;
   paint-order: stroke;
   stroke: var(--bg-base);
-  stroke-width: 4;
+  stroke-width: calc(4px * var(--inv));
   stroke-linejoin: round;
   pointer-events: none;
 }
@@ -614,27 +566,6 @@ onUnmounted(() => {
   position: absolute;
   right: var(--space-md);
   bottom: var(--space-md);
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.ms-canvas__zoom button {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
-}
-
-.ms-canvas__zoom button:hover {
-  background: var(--bg-elevated);
-  border-color: var(--text-tertiary);
 }
 
 @media (prefers-reduced-motion: reduce) {

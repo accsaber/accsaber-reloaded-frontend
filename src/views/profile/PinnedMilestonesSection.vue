@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProfileFold from '@/views/profile/ProfileFold.vue'
+import StoredFold from '@/components/common/StoredFold.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import SwapList from '@/components/common/SwapList.vue'
 import MilestoneBadge from '@/components/domain/MilestoneBadge.vue'
@@ -32,7 +32,7 @@ const cards = computed(() =>
 </script>
 
 <template>
-  <ProfileFold v-if="loading || pinned.length > 0" label="Milestones" storage-key="pinned-milestones"
+  <StoredFold v-if="loading || pinned.length > 0" label="Milestones" storage-key="pinned-milestones"
     aria-label="Pinned milestones">
     <template #meta>
       <span v-if="isSelfProfile && !loading" class="caption">{{ pinned.length }} of {{ maxSlots }}</span>
@@ -71,7 +71,7 @@ const cards = computed(() =>
       </article>
       </template>
     </SwapList>
-  </ProfileFold>
+  </StoredFold>
 </template>
 
 <style scoped>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { getPlaylistExportUrl } from '@/api/campaigns'
 import BaseButton from '@/components/common/BaseButton.vue'
-import ProgressBar from '@/components/common/ProgressBar.vue'
-import StatBlock from '@/components/common/StatBlock.vue'
 import CampaignCategoryTags from '@/components/domain/CampaignCategoryTags.vue'
+import ProgressStat from '@/components/domain/ProgressStat.vue'
 import CampaignCurationCredits from '@/views/campaign/CampaignCurationCredits.vue'
 import CampaignStatusBadge from '@/components/domain/CampaignStatusBadge.vue'
 import CampaignVoteControl from '@/components/domain/CampaignVoteControl.vue'
@@ -166,11 +165,8 @@ const modeSentence = computed(() => {
           {{ spectateError }}
         </p>
         <template v-else>
-          <StatBlock class="campaign-detail__cleared" :label="`Cleared of ${total}`" :value="completed" :decimals="0">
-            <div class="campaign-detail__bar">
-              <ProgressBar :value="total > 0 ? completed / total : 0" />
-            </div>
-          </StatBlock>
+          <ProgressStat :label="`Cleared of ${total}`" :value="completed"
+            :ratio="total > 0 ? completed / total : 0" />
           <p class="caption campaign-detail__progress-foot">
             <template v-if="spectating">
               <span>{{ statusLabel }}</span>
@@ -327,14 +323,6 @@ const modeSentence = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.campaign-detail__cleared {
-  padding: 0;
-}
-
-.campaign-detail__bar {
-  display: flex;
 }
 
 .campaign-detail__progress-foot {

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { MilestoneSort } from '@/types/api/milestones'
-import BaseSelect from '@/components/common/BaseSelect.vue'
-import BaseTabs from '@/components/common/BaseTabs.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
-import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
-import type { Tab } from '@/types/display'
+import SwapList from '@/components/common/SwapList.vue'
+import MilestoneListControls from '@/components/domain/MilestoneListControls.vue'
+import MilestoneRow from '@/components/domain/MilestoneRow.vue'
+import type { MilestoneCompletionResponse, MilestoneSetResponse, MilestoneSort } from '@/types/api/milestones'
 import type { ResolvedSetGroup } from '@/types/milestones'
-import { computed, ref } from 'vue'
+import { readStoredString, writeStoredString } from '@/utils/storage'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
   milestones: MilestoneCompletionResponse[]
@@ -20,51 +20,36 @@ const props = defineProps<{
   pinnedIds?: Set<string>
   canPinMore?: boolean
   pinPending?: Set<string>
+  hideControls?: boolean
 }>()
 
 const emit = defineEmits<{ 'pin-toggle': [milestoneId: string] }>()
 
-function isPinned(id: string): boolean {
-  return props.pinnedIds?.has(id) ?? false
-}
+const filter = defineModel<string>('filter', { default: 'all' })
+const sort = defineModel<MilestoneSort>('sort', { default: 'tier' })
 
-function pinDisabled(id: string): boolean {
-  return !isPinned(id) && props.canPinMore === false
-}
+const SHAPE_KEY = 'accsaber:milestone-list-shape'
+const shape = ref(readStoredString(SHAPE_KEY) ?? 'gsssgssssgsssss')
 
 const expandedSets = ref<Set<string>>(new Set())
-const viewMode = ref('all')
-const activeSort = ref<MilestoneSort>('tier')
 
-const sortOptions = computed(() => {
-  const options = [
-    { value: 'tier', label: 'Tier' },
-    { value: 'completions', label: 'Most Completed' },
-  ]
-  if (props.loggedIn) {
-    options.push({ value: 'completedAt', label: 'Recently Completed' })
-    options.push({ value: 'progress', label: 'Progress' })
-  }
-  return options
-})
-
-const viewTabs = computed<Tab[]>(() => [
-  { key: 'all', label: 'All Progress' },
-  { key: 'completed', label: props.loggedIn ? `Completed ${completedMilestones.value.length}` : 'Completed' },
-])
-
-interface MilestoneGroup {
-  setId: string
-  setTitle: string
-  setBonusXp: number
-  completedCount: number
-  totalCount: number
+interface SetEntry {
+  key: string
+  title: string
+  bonusXp: number
+  completed: number
   milestones: MilestoneCompletionResponse[]
 }
 
-const completedMilestones = computed(() =>
-  props.milestones.filter((m) => m.userCompleted === true),
-)
+interface HeadingEntry {
+  key: string
+  heading: string
+  description: string
+}
+
+type Entry = SetEntry | HeadingEntry
+
+const completedMilestones = computed(() => props.milestones.filter((m) => m.userCompleted === true))
 
 const SORTS: Record<Exclude<MilestoneSort, 'tier'>, (a: MilestoneCompletionResponse, b: MilestoneCompletionResponse) => number> = {
   completions: (a, b) => b.completions - a.completions,
@@ -75,307 +60,261 @@ const SORTS: Record<Exclude<MilestoneSort, 'tier'>, (a: MilestoneCompletionRespo
 }
 
 const activeMilestones = computed(() => {
-  const base = viewMode.value === 'completed' ? completedMilestones.value : props.milestones
-  return activeSort.value === 'tier' ? base : [...base].sort(SORTS[activeSort.value])
+  const base = filter.value === 'completed' ? completedMilestones.value : props.milestones
+  return sort.value === 'tier' ? base : [...base].sort(SORTS[sort.value])
 })
-
-const isFlatSort = computed(() => activeSort.value !== 'tier')
-
-function buildMilestoneGroup(setId: string, setInfo: MilestoneSetResponse | undefined, milestones: MilestoneCompletionResponse[]): MilestoneGroup {
-  return {
-    setId,
-    setTitle: setInfo?.title ?? 'Other',
-    setBonusXp: setInfo?.setBonusXp ?? 0,
-    completedCount: milestones.filter((m) => m.userCompleted === true).length,
-    totalCount: milestones.length,
-    milestones,
-  }
-}
 
 const milestonesBySetId = computed(() => {
   const map = new Map<string, MilestoneCompletionResponse[]>()
   for (const m of activeMilestones.value) {
-    const key = m.setId || 'uncategorized'
-    const list = map.get(key)
+    const list = map.get(m.setId)
     if (list) list.push(m)
-    else map.set(key, [m])
+    else map.set(m.setId, [m])
   }
   return map
 })
 
-const setMap = computed(() => new Map(props.sets.map((s) => [s.id, s])))
-
-interface DisplayGroup {
-  groupId: string
-  groupName: string
-  groupDescription: string
-  sets: MilestoneGroup[]
+function setEntries(sets: MilestoneSetResponse[]): SetEntry[] {
+  return sets.flatMap((set) => {
+    const milestones = milestonesBySetId.value.get(set.id) ?? []
+    if (milestones.length === 0) return []
+    return {
+      key: set.id,
+      title: set.title,
+      bonusXp: set.setBonusXp,
+      completed: milestones.filter((m) => m.userCompleted === true).length,
+      milestones,
+    }
+  })
 }
 
-function buildDisplayGroup(groupId: string, groupName: string, groupDescription: string, groupSets: MilestoneSetResponse[]): DisplayGroup {
-  return {
-    groupId,
-    groupName,
-    groupDescription,
-    sets: groupSets
-      .map((s) => buildMilestoneGroup(s.id, setMap.value.get(s.id), milestonesBySetId.value.get(s.id) ?? []))
-      .filter((g) => g.totalCount > 0),
-  }
-}
+const entries = computed<Entry[]>(() => {
+  if (!props.groups?.length) return setEntries(props.sets)
+  const bands = [
+    ...props.groups.map((g) => ({ id: g.group.id, name: g.group.name, description: g.group.description, sets: g.sets })),
+    { id: 'standalone', name: 'Other', description: '', sets: props.standaloneSets ?? [] },
+  ]
+  return bands.flatMap((band) => {
+    const sets = setEntries(band.sets)
+    if (sets.length === 0) return []
+    return [{ key: `group-${band.id}`, heading: band.name, description: band.description }, ...sets]
+  })
+})
 
-const displayGroups = computed<DisplayGroup[]>(() => {
-  if (!props.groups?.length) {
-    const sets = [...milestonesBySetId.value].map(([setId, items]) => buildMilestoneGroup(setId, setMap.value.get(setId), items))
-    return sets.length ? [{ groupId: 'all', groupName: '', groupDescription: '', sets }] : []
-  }
-  return [
-    ...props.groups.map((rg) => buildDisplayGroup(rg.group.id, rg.group.name, rg.group.description, rg.sets)),
-    buildDisplayGroup('standalone', 'Other', '', props.standaloneSets ?? []),
-  ].filter((dg) => dg.sets.length > 0)
+watch(entries, (list) => {
+  if (props.loading || list.length === 0 || filter.value !== 'all') return
+  shape.value = list.map((e) => ('heading' in e ? 'g' : 's')).join('')
+  writeStoredString(SHAPE_KEY, shape.value)
 })
 
 function toggleSet(setId: string) {
-  if (expandedSets.value.has(setId)) {
-    expandedSets.value.delete(setId)
-  } else {
-    expandedSets.value.add(setId)
-  }
+  if (!expandedSets.value.delete(setId)) expandedSets.value.add(setId)
+}
+
+function pinDisabled(id: string): boolean {
+  return !props.pinnedIds?.has(id) && props.canPinMore === false
 }
 </script>
 
 <template>
-  <div class="milestone-list-view">
-    <div class="milestone-list-view__controls">
-      <BaseTabs class="milestone-list-view__tabs" :tabs="viewTabs" :model-value="viewMode"
-        @update:model-value="viewMode = $event" />
-      <BaseSelect :model-value="activeSort" :options="sortOptions"
-        @update:model-value="activeSort = $event as MilestoneSort" />
+  <div class="milestone-list">
+    <div v-if="!hideControls" class="milestone-list__controls">
+      <MilestoneListControls v-model:filter="filter" v-model:sort="sort" :logged-in="loggedIn"
+        :completed-count="completedMilestones.length" />
     </div>
 
-    <div v-if="loading" class="milestone-group">
-      <SkeletonLoader v-for="i in 8" :key="i" variant="text" height="24px" class="milestone-list-view__skeleton" />
-    </div>
-
-    <div v-else-if="viewMode === 'completed' && !loggedIn" class="milestone-list-view__login-hint">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-      <p>Log in to track milestone progress</p>
-    </div>
-
-    <p v-else-if="displayGroups.length === 0" class="milestone-list-view__empty">
-      {{ viewMode === 'completed' ? 'No completed milestones yet' : 'No milestone progress found' }}
+    <p v-if="!loading && activeMilestones.length === 0" class="caption milestone-list__empty">
+      {{ filter === 'completed' ? 'No completed milestones yet' : 'No milestones found' }}
     </p>
 
-    <template v-else-if="isFlatSort">
-      <div class="milestone-set__rows milestone-set__rows--flat stagger" :style="{ '--n': activeMilestones.length }">
-        <MilestoneDetail v-for="(m, i) in activeMilestones" :key="m.milestoneId" :style="{ '--i': i }"
-          :milestone="m" :logged-in="loggedIn"
-          :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
-          :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
-          compact @pin-toggle="emit('pin-toggle', $event)" />
-      </div>
-    </template>
+    <div v-else-if="sort !== 'tier'" class="milestone-list__rows milestone-list__surface stagger"
+      :style="{ '--n': activeMilestones.length }">
+      <MilestoneRow v-for="(m, i) in activeMilestones" :key="m.milestoneId" :style="{ '--i': i }" :milestone="m"
+        :logged-in="loggedIn" :pinnable="pinnable" :pinned="pinnedIds?.has(m.milestoneId)"
+        :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
+        @pin-toggle="emit('pin-toggle', $event)" />
+    </div>
 
-    <template v-else>
-      <div v-for="dg in displayGroups" :key="dg.groupId" class="milestone-group">
-        <div v-if="dg.groupName">
-          <h2 class="section-title">{{ dg.groupName }}</h2>
-          <p v-if="dg.groupDescription" class="milestone-group__desc">{{ dg.groupDescription }}</p>
+    <SwapList v-else class="milestone-list__sets" :items="entries" :item-key="(e) => e.key" :loading="loading"
+      :placeholders="shape.length">
+      <template #placeholder="{ index }">
+        <div v-if="shape[index] === 'g'" class="milestone-list__heading placeholder">
+          <SkeletonLoader width="160px" height="24px" />
+        </div>
+        <SkeletonLoader v-else class="placeholder" height="56px" />
+      </template>
+
+      <template #default="{ item, swap }">
+        <div v-if="'heading' in item" class="milestone-list__heading" v-bind="swap">
+          <h2 class="section-title">{{ item.heading }}</h2>
+          <p v-if="item.description" class="caption">{{ item.description }}</p>
         </div>
 
-        <div class="milestone-group__sets">
-          <div v-for="ms in dg.sets" :key="ms.setId" class="milestone-set">
-            <button class="milestone-set__header" :aria-expanded="expandedSets.has(ms.setId)"
-              @click="toggleSet(ms.setId)">
-              <h3 class="milestone-set__title card-title">{{ ms.setTitle }}</h3>
-              <span class="milestone-set__count">
-                {{ loggedIn ? `${ms.completedCount} of ${ms.totalCount}` : `${ms.totalCount} milestones` }}
+        <div v-else class="milestone-list__surface" v-bind="swap">
+          <button type="button" class="milestone-list__set" :aria-expanded="expandedSets.has(item.key)"
+            @click="toggleSet(item.key)">
+            <span class="milestone-list__set-name">
+              <span class="card-title">{{ item.title }}</span>
+              <span class="caption">
+                {{ loggedIn ? `${item.completed} of ${item.milestones.length}` : `${item.milestones.length} milestones` }}
               </span>
-              <span v-if="loggedIn" class="milestone-set__bar" aria-hidden="true">
-                <span class="milestone-set__bar-fill"
-                  :style="{ transform: `scaleX(${ms.completedCount / ms.totalCount})` }" />
-              </span>
-              <span v-if="ms.setBonusXp > 0" class="milestone-set__bonus">+{{ ms.setBonusXp }} XP</span>
-              <svg class="milestone-set__chevron"
-                :class="{ 'milestone-set__chevron--open': expandedSets.has(ms.setId) }" viewBox="0 0 20 20"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                aria-hidden="true">
-                <polyline points="6 8 10 12 14 8" />
-              </svg>
-            </button>
+            </span>
+            <span v-if="loggedIn" class="milestone-list__set-bar">
+              <ProgressBar :value="item.completed / item.milestones.length" />
+            </span>
+            <span class="caption milestone-list__set-bonus">
+              {{ item.bonusXp > 0 ? `+${item.bonusXp.toLocaleString()} XP` : '' }}
+            </span>
+            <svg class="milestone-list__chevron"
+              :class="{ 'milestone-list__chevron--open': expandedSets.has(item.key) }" width="16" height="16"
+              viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 8 10 12 14 8" />
+            </svg>
+          </button>
 
-            <Transition name="collapse">
-              <div v-if="expandedSets.has(ms.setId)" class="collapsible">
-                <div class="milestone-set__rows stagger" :style="{ '--n': ms.milestones.length }">
-                  <MilestoneDetail v-for="(m, i) in ms.milestones" :key="m.milestoneId" :style="{ '--i': i }"
-                    :milestone="m"
-                    :logged-in="loggedIn" :pinnable="pinnable" :pinned="isPinned(m.milestoneId)"
-                    :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
-                    compact @pin-toggle="emit('pin-toggle', $event)" />
-                </div>
+          <Transition name="collapse">
+            <div v-if="expandedSets.has(item.key)" class="collapsible">
+              <div class="milestone-list__rows stagger" :style="{ '--n': item.milestones.length }">
+                <MilestoneRow v-for="(m, i) in item.milestones" :key="m.milestoneId" :style="{ '--i': i }"
+                  :milestone="m" :logged-in="loggedIn" :pinnable="pinnable" :pinned="pinnedIds?.has(m.milestoneId)"
+                  :pin-disabled="pinDisabled(m.milestoneId)" :pin-pending="pinPending?.has(m.milestoneId)"
+                  @pin-toggle="emit('pin-toggle', $event)" />
               </div>
-            </Transition>
-          </div>
+            </div>
+          </Transition>
         </div>
-      </div>
-    </template>
+      </template>
+    </SwapList>
   </div>
 </template>
 
 <style scoped>
-.milestone-list-view {
+.milestone-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
 }
 
-.milestone-list-view__controls {
+.milestone-list__controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
 }
 
-.milestone-list-view__tabs {
-  flex: none;
-}
-
-.milestone-list-view__empty {
+.milestone-list__empty {
   padding: var(--space-3xl) var(--space-md);
   text-align: center;
-  color: var(--text-secondary);
-  margin: 0;
 }
 
-.milestone-list-view__login-hint {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-3xl) var(--space-md);
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.milestone-list-view__login-hint p {
-  margin: 0;
-  font-size: var(--text-body);
-  max-width: 320px;
-}
-
-.milestone-list-view__skeleton {
-  margin: var(--space-md) 0;
-}
-
-.milestone-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.milestone-group__desc {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
-}
-
-.milestone-group__sets {
+.milestone-list__sets {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.milestone-set__header {
+.milestone-list__heading {
   display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  min-height: 52px;
+  margin-bottom: var(--space-xs);
+}
+
+.milestone-list__heading:not(:first-child) {
+  margin-top: var(--space-lg);
+}
+
+.milestone-list__surface {
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
+}
+
+.milestone-list__set {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 16px;
   align-items: center;
   gap: var(--space-md);
   width: 100%;
-  padding: var(--space-md);
+  height: 56px;
+  padding: 0 var(--space-md);
   border: none;
   border-radius: var(--radius-card);
-  background: var(--bg-surface);
-  cursor: pointer;
+  background: none;
+  font-family: inherit;
   text-align: left;
-  font-family: var(--font-sans);
+  cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out);
 }
 
-.milestone-set__header:hover {
+.milestone-list__set:has(.milestone-list__set-bar) {
+  grid-template-columns: minmax(0, 1fr) 120px 88px 16px;
+}
+
+.milestone-list__set:hover {
   background: var(--bg-elevated);
 }
 
-.milestone-set__count {
-  flex: 1;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
+.milestone-list__set-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  min-width: 0;
 }
 
-.milestone-set__bar {
-  width: 120px;
-  height: 2px;
-  background: var(--bg-overlay);
+.milestone-list__set-name > * {
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.milestone-set__bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--page-accent, var(--accent));
-  transform-origin: left;
+.milestone-list__set-name .caption {
+  flex: none;
 }
 
-.milestone-set__bonus {
-  min-width: 88px;
+.milestone-list__set-bar {
+  display: flex;
+  --bar-height: 2px;
+}
+
+.milestone-list__set-bonus {
   text-align: right;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
 }
 
-.milestone-set__chevron {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.milestone-list__chevron {
   color: var(--text-secondary);
   transition: transform var(--dur-fast) var(--ease-in-out);
 }
 
-.milestone-set__chevron--open {
+.milestone-list__chevron--open {
   transform: rotate(180deg);
 }
 
-.milestone-set__rows {
+.milestone-list__rows {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  padding: 0 var(--space-md);
-}
-
-.milestone-set__rows > :last-child {
-  margin-bottom: var(--space-md);
-}
-
-.milestone-set__rows--flat {
-  padding: 0;
-  gap: var(--space-sm);
-  overflow: visible;
-}
-
-.milestone-set__rows--flat > :last-child {
-  margin-bottom: 0;
+  padding: var(--space-xs);
 }
 
 @media (max-width: 767px) {
-  .milestone-set__bar {
+  .milestone-list__set:has(.milestone-list__set-bar) {
+    grid-template-columns: minmax(0, 1fr) 88px 16px;
+  }
+
+  .milestone-list__set-bar {
     display: none;
   }
 
-  .milestone-set__bonus {
-    min-width: 0;
+  .milestone-list__heading {
+    justify-content: flex-start;
+    min-height: 70px;
+  }
+
+  .milestone-list__set-name {
+    flex-direction: column;
+    gap: 0;
   }
 }
 </style>

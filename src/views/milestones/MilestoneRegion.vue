@@ -114,21 +114,18 @@ const pips = computed(() =>
   font-family: var(--font-sans);
   font-size: 30px;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
 .ms-region__meta {
   fill: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 17px;
-  letter-spacing: 0.04em;
 }
 
 .ms-region__bonus {
   fill: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: 16px;
-  letter-spacing: 0.04em;
 }
 
 .ms-region__pip {

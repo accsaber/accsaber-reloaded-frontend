@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import PinnedScoreCard from '@/views/profile/PinnedScoreCard.vue'
-import ProfileFold from '@/views/profile/ProfileFold.vue'
+import StoredFold from '@/components/common/StoredFold.vue'
 import ScoreDetailModal, { type ScoreDetailPlayer } from '@/components/domain/ScoreDetailModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import SwapList from '@/components/common/SwapList.vue'
@@ -43,7 +43,7 @@ function onOpenDetail(score: ScoreResponse) {
 </script>
 
 <template>
-  <ProfileFold v-if="loading || pinned.length" label="Pinned" storage-key="pinned-scores"
+  <StoredFold v-if="loading || pinned.length" label="Pinned" storage-key="pinned-scores"
     aria-label="Pinned scores">
     <template #meta>
       <span v-if="isSelfProfile && !loading" class="caption">{{ pinned.length }} of {{ maxSlots }}</span>
@@ -61,7 +61,7 @@ function onOpenDetail(score: ScoreResponse) {
 
     <ScoreDetailModal :open="detailOpen" :score="detailScore" :user-id="detailUserId" :player="player"
       @close="detailOpen = false" />
-  </ProfileFold>
+  </StoredFold>
 </template>
 
 <style scoped>

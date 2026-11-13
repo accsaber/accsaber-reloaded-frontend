@@ -303,3 +303,8 @@ export function toMilestoneDisplay(m: MilestoneCompletionResponse, categoryCode?
     rewards: m.rewards ?? [],
   }
 }
+
+export function milestoneScoreAccuracy(m: MilestoneCompletionResponse): number | null {
+  if (!m.userCompleted || !m.achievedWithScoreId || !m.score || !m.maxScore) return null
+  return m.score / m.maxScore
+}

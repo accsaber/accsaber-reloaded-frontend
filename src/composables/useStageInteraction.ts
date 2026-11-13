@@ -180,6 +180,7 @@ export function useStageInteraction(
 
   function adjustZoom(factor: number) {
     if (!stage.value) return
+    stopGlide()
     zoomAround(stageWidth.value / 2, stageHeight.value / 2, scale.value * factor)
   }
 

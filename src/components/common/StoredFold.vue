@@ -5,23 +5,25 @@ import { computed, ref } from 'vue'
 const props = defineProps<{
   label: string
   storageKey: string
+  defaultCollapsed?: boolean
 }>()
 
 const key = computed(() => `profile:fold:${props.storageKey}`)
-const collapsed = ref(readStoredString(key.value) === '1')
+const stored = readStoredString(key.value)
+const collapsed = ref(stored === null ? !!props.defaultCollapsed : stored === '1')
 
 function toggle() {
   collapsed.value = !collapsed.value
-  writeStoredString(key.value, collapsed.value ? '1' : null)
+  writeStoredString(key.value, collapsed.value ? '1' : '0')
 }
 </script>
 
 <template>
-  <section class="profile-fold">
-    <header class="profile-fold__header">
-      <h2 class="profile-fold__label">
-        <button type="button" class="profile-fold__toggle" :aria-expanded="!collapsed" @click="toggle">
-          <svg class="profile-fold__chevron" :class="{ 'profile-fold__chevron--collapsed': collapsed }" width="12"
+  <section class="stored-fold">
+    <header class="stored-fold__header">
+      <h2 class="stored-fold__label">
+        <button type="button" class="stored-fold__toggle" :aria-expanded="!collapsed" @click="toggle">
+          <svg class="stored-fold__chevron" :class="{ 'stored-fold__chevron--collapsed': collapsed }" width="12"
             height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round" aria-hidden="true">
             <path d="m6 9 6 6 6-6" />
@@ -33,7 +35,7 @@ function toggle() {
     </header>
     <Transition name="collapse">
       <div v-if="!collapsed" class="collapsible">
-        <div class="profile-fold__inner">
+        <div class="stored-fold__inner">
           <slot />
         </div>
       </div>
@@ -42,22 +44,23 @@ function toggle() {
 </template>
 
 <style scoped>
-.profile-fold__inner {
+.stored-fold__inner {
+  min-width: 0;
   padding-top: var(--space-sm);
 }
 
-.profile-fold__header {
+.stored-fold__header {
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
 }
 
-.profile-fold__label {
+.stored-fold__label {
   margin: 0;
   font-size: var(--text-caption);
 }
 
-.profile-fold__toggle {
+.stored-fold__toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -71,15 +74,15 @@ function toggle() {
   transition: color var(--dur-fast) var(--ease-out);
 }
 
-.profile-fold__toggle:hover {
+.stored-fold__toggle:hover {
   color: var(--text-primary);
 }
 
-.profile-fold__chevron {
+.stored-fold__chevron {
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
-.profile-fold__chevron--collapsed {
+.stored-fold__chevron--collapsed {
   transform: rotate(-90deg);
 }
 </style>

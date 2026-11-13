@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import MilestoneDetail from '@/components/domain/MilestoneDetail.vue'
+import MilestoneRow from '@/components/domain/MilestoneRow.vue'
 import { useCountUp } from '@/composables/useCountUp'
 import type { MilestoneCompletionResponse, MilestoneSetResponse } from '@/types/api/milestones'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -239,7 +239,7 @@ onUnmounted(stopTimer)
           }"
           @click="jumpTo(index)"
         >
-          <MilestoneDetail :milestone="milestone" compact />
+          <MilestoneRow :milestone="milestone" />
         </div>
       </div>
 
@@ -285,7 +285,7 @@ onUnmounted(stopTimer)
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .walk__set:hover {
@@ -325,7 +325,7 @@ onUnmounted(stopTimer)
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .walk__play:hover {
@@ -373,8 +373,9 @@ onUnmounted(stopTimer)
 
 .walk__row {
   cursor: pointer;
+  background: var(--bg-surface);
   border-radius: var(--radius-card);
-  transition: opacity 180ms ease-out;
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .walk__row--pending {
@@ -395,7 +396,7 @@ onUnmounted(stopTimer)
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   opacity: 0.5;
-  transition: opacity 180ms ease-out, border-color 180ms ease-out;
+  transition: opacity var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .walk__bonus--landed {
