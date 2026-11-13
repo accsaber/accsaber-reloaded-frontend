@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { equipItem, getItems, getUserItems } from '@/api/items'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import ThemeBackdropPreview from '@/components/cosmetics/backdrops/ThemeBackdropPreview.vue'
 import { useClickOutside } from '@/composables/useClickOutside'
 import { useAuthStore } from '@/stores/auth'
@@ -10,6 +12,7 @@ import { buildEffectLayers } from '@/utils/cosmetics/effectLayers'
 import { filterThemableTokens } from '@/utils/themeTokens'
 import { readItemVariants, resolveItemVariant } from '@/utils/items'
 import { readThemeValue } from '@/utils/cosmetics/readers'
+import { readStored, writeStored } from '@/utils/storage'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface ThemeOption {
@@ -48,6 +51,10 @@ const BUILTIN_THEMES: ThemeCard[] = ['Dark', 'Light'].map((name) => ({
   options: [{ key: 'default', label: null, tokens: BUILTIN_PREVIEW_TOKENS[name.toLowerCase()], variantKey: null }],
 }))
 
+const SLOTS_KEY = 'accsaber:theme-slots'
+
+const loading = ref(true)
+const slots = ref(readStored(SLOTS_KEY, (raw) => (typeof raw === 'number' ? raw : null), 15))
 const themeCatalog = ref<ItemResponse[]>([])
 const ownedThemes = ref<UserItemResponse[]>([])
 const themeBusy = ref<string | null>(null)
@@ -125,6 +132,9 @@ async function loadThemes() {
   ])
   themeCatalog.value = catalog
   ownedThemes.value = owned
+  loading.value = false
+  slots.value = themeCards.value.reduce((n, card) => n + (card.options.length > 2 ? 2 : 1), 0)
+  writeStored(SLOTS_KEY, slots.value)
 }
 
 const rootRef = ref<HTMLElement | null>(null)
@@ -184,13 +194,22 @@ watch(() => authStore.userId, loadThemes)
 </script>
 
 <template>
-  <div ref="rootRef" class="theme-grid" role="radiogroup" aria-label="Theme">
-    <div v-for="card in themeCards" :key="card.id" class="theme-card" :class="{
+  <div ref="rootRef" role="radiogroup" aria-label="Theme">
+    <SwapList class="theme-grid" :items="themeCards" :item-key="(card) => card.id" :loading="loading"
+      :placeholders="slots">
+      <template #placeholder>
+        <div class="theme-card placeholder" aria-hidden="true">
+          <SkeletonLoader height="94px" />
+          <div class="theme-card__body theme-card__body--ghost" />
+        </div>
+      </template>
+      <template #default="{ item: card, swap }">
+    <div class="theme-card" :style="swap.style" :class="[swap.class, {
       'theme-card--active': card.options.some((o) => isActive(card, o)) || preview?.card.id === card.id,
       'theme-card--locked': !card.owned,
       'theme-card--multi': card.options.length > 1,
       'theme-card--wide': card.options.length > 2,
-    }">
+    }]">
       <button v-for="option in card.options" :key="option.key" type="button" class="theme-card__option"
         :class="{ 'theme-card__option--active': card.options.length > 1 && isShown(card, option) }" role="radio"
         :aria-checked="isActive(card, option)" :aria-label="option.label ? `${card.name} ${option.label}` : card.name"
@@ -215,6 +234,8 @@ watch(() => authStore.userId, loadThemes)
         </svg>
       </span>
     </div>
+      </template>
+    </SwapList>
   </div>
 </template>
 
@@ -257,6 +278,7 @@ watch(() => authStore.userId, loadThemes)
   align-items: stretch;
   gap: var(--space-xs);
   min-width: 0;
+  min-height: 94px;
   padding: 0;
   background: none;
   border: none;
@@ -283,7 +305,8 @@ watch(() => authStore.userId, loadThemes)
   flex-direction: column;
   justify-content: flex-end;
   gap: var(--space-xs);
-  height: 72px;
+  flex: 1;
+  min-height: 72px;
   padding: var(--space-sm);
   border: 1px solid transparent;
   border-radius: var(--radius-xs);
@@ -336,9 +359,14 @@ watch(() => authStore.userId, loadThemes)
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+  min-height: 2.8em;
   font-size: var(--text-caption);
   color: var(--text-secondary);
   line-height: 1.4;
+}
+
+.theme-card__body--ghost {
+  height: calc(var(--text-body) * 1.5 + 2px + var(--text-caption) * 2.8);
 }
 
 .theme-card__lock-tag {
