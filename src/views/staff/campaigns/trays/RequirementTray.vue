@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
 import type { CampaignTargetMode } from '@/types/enums'
 import { computed, ref } from 'vue'
@@ -9,9 +10,9 @@ import CampaignTrayIcon from '../CampaignTrayIcon.vue'
 import { useCampaignEditorContext } from '../campaignEditorContext'
 import { REQUIREMENT_TYPE_OPTIONS } from '../useCampaignTargets'
 
-const TARGET_MODES: Array<{ value: CampaignTargetMode; label: string }> = [
-  { value: 'AND', label: 'All of' },
-  { value: 'OR', label: 'Any of' },
+const TARGET_MODES: Array<{ key: CampaignTargetMode; label: string }> = [
+  { key: 'AND', label: 'All Of' },
+  { key: 'OR', label: 'Any Of' },
 ]
 
 const MODIFIER_STATE_WORD: Record<string, string> = {
@@ -76,25 +77,14 @@ function onTargetDrop() {
 <template>
   <fieldset class="campaign-editor__section" :disabled="!editable">
     <div v-if="isMultiTarget" class="campaign-editor__field">
-      <span>Clears when</span>
-      <div
-        class="campaign-editor__prereq-mode-toggle"
-        role="radiogroup"
-        aria-label="Objective mode"
-      >
-        <button
-          v-for="mode in TARGET_MODES"
-          :key="mode.value"
-          type="button"
-          role="radio"
-          :aria-checked="formTargetMode === mode.value"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{ 'campaign-editor__prereq-mode-btn--active': formTargetMode === mode.value }"
-          @click="setTargetMode(mode.value)"
-        >
-          {{ mode.label }}
-        </button>
-      </div>
+      <span>Clears When</span>
+      <BaseTabs
+        variant="segmented"
+        label="Objective mode"
+        :tabs="TARGET_MODES"
+        :model-value="formTargetMode"
+        @update:model-value="setTargetMode($event as typeof formTargetMode)"
+      />
     </div>
 
     <ul class="campaign-editor__targets">
@@ -132,7 +122,7 @@ function onTargetDrop() {
       @click="addTarget"
     >
       <CampaignTrayIcon name="plus" :size="12" />
-      Add objective
+      Add Objective
     </button>
 
     <p v-if="selectedNodeApRankBlocked" class="campaign-editor__hint">
@@ -180,10 +170,10 @@ function onTargetDrop() {
           :loading="actionPending"
           @click="refreshNodeVersion"
         >
-          Refresh version
+          Refresh Version
         </BaseButton>
         <BaseButton size="sm" @click="openRepoint(selectedDifficulty.id)">
-          Change map / version
+          Change Map / Version
         </BaseButton>
       </div>
     </div>
@@ -201,7 +191,7 @@ function onTargetDrop() {
 .campaign-editor__mod {
   padding: 3px var(--space-sm);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-tertiary);
   background: transparent;
@@ -209,9 +199,9 @@ function onTargetDrop() {
   border-radius: var(--radius-pill);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor__mod:hover {
@@ -245,10 +235,8 @@ function onTargetDrop() {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.18em;
   color: var(--text-tertiary);
 }
 

@@ -8,19 +8,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .campaign-editor .campaign-editor__field > span > small {
-  font-size: 0.625rem;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
+  font-size: inherit;
+  color: var(--text-tertiary);
 }
 
 .campaign-editor .campaign-editor__field--disabled {
@@ -32,14 +27,13 @@
 .campaign-editor .campaign-editor__color-row > input {
   width: 100%;
   padding: var(--space-sm) 10px;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor .campaign-editor__field > textarea {
@@ -100,27 +94,24 @@
 
 .campaign-editor .campaign-editor__field-error {
   margin: 2px 0 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--error);
   line-height: 1.4;
 }
 
 .campaign-editor .campaign-editor__inline-btn {
-  padding: 6px 10px;
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  min-height: var(--control-h);
+  padding: 0 var(--space-md);
+  font-size: var(--text-caption);
+  font-weight: 600;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor .campaign-editor__inline-btn:hover {
@@ -130,7 +121,6 @@
 
 .campaign-editor .campaign-editor__hint {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
@@ -145,55 +135,29 @@
 }
 
 .campaign-editor .campaign-editor__reward {
-  padding: 6px var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
+  padding: var(--space-sm);
+  background: var(--bg-elevated);
   border-radius: var(--radius-btn);
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
-}
-
-.campaign-editor .campaign-editor__reward-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-pill);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.campaign-editor .campaign-editor__reward-remove:hover {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
 }
 
 .campaign-editor .campaign-editor__add-reward {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  gap: var(--space-sm);
+  min-height: var(--control-h);
+  padding: 0 var(--space-md);
+  font-size: var(--text-caption);
+  font-weight: 600;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor .campaign-editor__add-reward:hover {

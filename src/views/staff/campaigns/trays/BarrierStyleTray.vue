@@ -16,7 +16,7 @@ const defaultBarrierColor = computed(() => cssToken('--warning'))
 <template>
   <fieldset v-if="selectedBarrier" class="campaign-editor__section" :disabled="!editable">
     <div class="campaign-editor__field">
-      <span>Gate length: {{ resolveSize(formBarrier.size, 48) }}px</span>
+      <span>Gate Length: {{ resolveSize(formBarrier.size, 48) }}px</span>
       <input
         type="range"
         min="32"
@@ -29,7 +29,7 @@ const defaultBarrierColor = computed(() => cssToken('--warning'))
     </div>
     <CampaignColorField
       v-model="formBarrier.borderColor"
-      label="Gate color"
+      label="Gate Color"
       :fallback="defaultBarrierColor"
       @commit="commitBarrierField('borderColor')"
       @reset="resetBarrierColor"
@@ -44,7 +44,7 @@ const defaultBarrierColor = computed(() => cssToken('--warning'))
       />
     </label>
     <div class="campaign-editor__field">
-      <span>Label position</span>
+      <span>Label Position</span>
       <CampaignLabelPositionPicker
         :model-value="formBarrier.checkpointLabelPosition"
         @select="selectBarrierLabelPosition"

@@ -38,7 +38,7 @@ const { uploadCheckpointAvatar, removeCheckpointAvatar } = assets
         />
       </label>
       <div class="campaign-editor__field">
-        <span>Label position</span>
+        <span>Label Position</span>
         <CampaignLabelPositionPicker
           :model-value="formNode.checkpointLabelPosition"
           @select="selectNodeLabelPosition"
@@ -58,13 +58,13 @@ const { uploadCheckpointAvatar, removeCheckpointAvatar } = assets
       <div class="campaign-editor__field-row">
         <CampaignColorField
           v-model="formNode.checkpointColor"
-          label="Band color"
+          label="Band Color"
           :fallback="defaultColorHex"
           @commit="commitNodeField('checkpointColor')"
           @reset="resetNodeColor('checkpointColor')"
         />
         <label class="campaign-editor__field">
-          <span>Band size: {{ resolveSize(formNode.checkpointSize, 30) }}px</span>
+          <span>Band Size: {{ resolveSize(formNode.checkpointSize, 30) }}px</span>
           <input
             type="range"
             min="14"

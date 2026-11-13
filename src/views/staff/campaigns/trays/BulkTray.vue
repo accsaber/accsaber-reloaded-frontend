@@ -16,7 +16,7 @@ const { applyBulkSize, applyBulkShape, removeSelectedNodes } = nodes
   <fieldset class="campaign-editor__section" :disabled="!editable">
     <p class="campaign-editor__hint">{{ selectedCount }} selected</p>
     <div class="campaign-editor__field">
-      <span>Node size</span>
+      <span>Node Size</span>
       <div class="campaign-editor__shape-row">
         <CampaignEditorTile
           v-for="t in SIZE_TILES"
@@ -29,7 +29,7 @@ const { applyBulkSize, applyBulkShape, removeSelectedNodes } = nodes
       </div>
     </div>
     <div class="campaign-editor__field">
-      <span>Border shape</span>
+      <span>Border Shape</span>
       <div class="campaign-editor__shape-row">
         <CampaignEditorTile
           v-for="t in SHAPE_TILES"

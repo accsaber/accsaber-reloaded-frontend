@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
 import { messageTimeMillis, type UseChatReturn } from '@/composables/useChat'
 import { useAuthStore } from '@/stores/auth'
@@ -216,7 +218,7 @@ if (!props.floating) void props.chat.loadHistory()
       >
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
-      <span class="chat-panel__toggle-label">Chat</span>
+      <span>Chat</span>
       <span
         v-if="unread > 0"
         :key="unread"
@@ -228,14 +230,8 @@ if (!props.floating) void props.chat.loadHistory()
 
     <div v-if="open" class="chat-panel__panel">
       <header class="chat-panel__head">
-        <slot name="title"><h2 class="chat-panel__title">{{ title }}</h2></slot>
-        <button
-          v-if="floating || closable"
-          type="button"
-          class="chat-panel__close"
-          aria-label="Close chat"
-          @click="close"
-        >
+        <slot name="title"><h2 class="card-title">{{ title }}</h2></slot>
+        <IconButton v-if="floating || closable" label="Close chat" @click="close">
           <svg
             width="16"
             height="16"
@@ -249,7 +245,7 @@ if (!props.floating) void props.chat.loadHistory()
           >
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-        </button>
+        </IconButton>
       </header>
 
       <div
@@ -259,9 +255,10 @@ if (!props.floating) void props.chat.loadHistory()
         aria-live="polite"
         @scroll.passive="onScroll"
       >
-        <div v-if="chat.loading.value && messages.length === 0" class="chat-panel__state">
-          Loading messages…
-        </div>
+        <template v-if="chat.loading.value && messages.length === 0">
+          <div class="chat-panel__spacer" aria-hidden="true" />
+          <SkeletonLoader v-for="i in 3" :key="i" class="chat-panel__ghost" height="52px" :width="`${50 + i * 10}%`" />
+        </template>
 
         <div v-if="messages.length > 0" class="chat-panel__spacer" aria-hidden="true" />
 
@@ -272,7 +269,7 @@ if (!props.floating) void props.chat.loadHistory()
 
         <p
           v-if="!chat.loading.value && messages.length === 0"
-          class="chat-panel__state chat-panel__state--empty"
+          class="chat-panel__state"
         >
           {{ emptyText }}
         </p>
@@ -339,7 +336,7 @@ if (!props.floating) void props.chat.loadHistory()
           />
           <button
             type="button"
-            class="chat-panel__send"
+            class="chat-panel__send pressable"
             aria-label="Send message"
             :disabled="chat.sending.value || draft.trim().length === 0"
             @click="onSend"
@@ -388,21 +385,18 @@ if (!props.floating) void props.chat.loadHistory()
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) 14px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
+  font-size: var(--text-body);
+  color: var(--text-primary);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-btn);
   cursor: pointer;
   pointer-events: auto;
   transition:
-    color 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .chat-panel__toggle:hover {
@@ -425,15 +419,14 @@ if (!props.floating) void props.chat.loadHistory()
   height: 18px;
   padding: 0 5px;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 500;
-  letter-spacing: 0;
   color: var(--bg-base);
   background: var(--page-accent, var(--accent));
   border: 2px solid var(--bg-base);
   border-radius: var(--radius-pill);
   transform-origin: center;
-  animation: chat-badge-pop 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: chat-badge-pop var(--dur-fast) var(--ease-out);
 }
 
 @keyframes chat-badge-pop {
@@ -464,6 +457,7 @@ if (!props.floating) void props.chat.loadHistory()
 }
 
 .chat-panel--floating .chat-panel__panel {
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
   width: min(340px, calc(100vw - var(--space-lg)));
   height: min(460px, 60vh);
 }
@@ -511,37 +505,7 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.chat-panel__title {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.chat-panel__close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.chat-panel__close:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
+  padding: var(--space-md) var(--space-md) 0;
 }
 
 .chat-panel__log {
@@ -565,6 +529,14 @@ if (!props.floating) void props.chat.loadHistory()
   border-radius: var(--radius-btn);
 }
 
+.chat-panel__ghost {
+  flex-shrink: 0;
+}
+
+.chat-panel__ghost:nth-of-type(even) {
+  align-self: flex-end;
+}
+
 .chat-panel__spacer {
   flex: 1 0 0;
 }
@@ -585,10 +557,8 @@ if (!props.floating) void props.chat.loadHistory()
   gap: var(--space-sm);
   padding: 2px 0 var(--space-xs);
   font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
@@ -613,6 +583,7 @@ if (!props.floating) void props.chat.loadHistory()
   align-items: flex-start;
   align-self: flex-start;
   max-width: 85%;
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 
 .chat-panel__msg--self {
@@ -643,7 +614,7 @@ if (!props.floating) void props.chat.loadHistory()
 
 .chat-panel__avatar-initial {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -654,14 +625,13 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 10px;
+  padding: var(--space-sm) var(--space-md);
   background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
 .chat-panel__msg--self .chat-panel__bubble {
-  border-color: color-mix(in srgb, var(--author-color, var(--bg-overlay)) 35%, var(--bg-overlay));
+  background: var(--bg-overlay);
 }
 
 .chat-panel__meta {
@@ -673,7 +643,7 @@ if (!props.floating) void props.chat.loadHistory()
 
 .chat-panel__author {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
   color: var(--author-color, var(--text-primary));
   overflow: hidden;
@@ -684,15 +654,14 @@ if (!props.floating) void props.chat.loadHistory()
 .chat-panel__time {
   flex-shrink: 0;
   font-family: var(--font-sans);
-  font-size: 0.5625rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
 .chat-panel__text {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  font-size: var(--text-body);
+  color: var(--text-primary);
   line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -701,9 +670,8 @@ if (!props.floating) void props.chat.loadHistory()
 .chat-panel__composer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md) var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .chat-panel__error {
@@ -716,18 +684,17 @@ if (!props.floating) void props.chat.loadHistory()
 
 .chat-panel__input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) var(--control-h);
+  gap: var(--space-sm);
   align-items: end;
 }
 
 .chat-panel__input {
   width: 100%;
-  min-height: 34px;
+  height: var(--control-h);
   max-height: 110px;
-  padding: var(--space-sm) 10px;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-body);
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
@@ -735,7 +702,7 @@ if (!props.floating) void props.chat.loadHistory()
   outline: none;
   resize: none;
   line-height: 1.4;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .chat-panel__input:focus {
@@ -751,17 +718,17 @@ if (!props.floating) void props.chat.loadHistory()
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: var(--control-h);
+  height: var(--control-h);
   color: var(--page-accent, var(--accent));
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .chat-panel__send:hover:not(:disabled) {

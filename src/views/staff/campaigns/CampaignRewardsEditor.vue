@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
 import CampaignRewardItem from '@/components/domain/CampaignRewardItem.vue'
 import type { CampaignItemAwardResponse } from '@/types/api/campaigns'
 import CampaignEditorNote from './CampaignEditorNote.vue'
@@ -49,14 +50,7 @@ const emit = defineEmits<{ commitXp: []; add: []; remove: [itemId: string] }>()
     <li v-for="item in items" :key="item.itemId" class="campaign-editor__reward">
       <CampaignRewardItem :name="item.itemName" :quantity="item.quantity" :item="item.item">
         <template v-if="editable" #action>
-          <button
-            type="button"
-            class="campaign-editor__reward-remove"
-            aria-label="Remove reward"
-            @click="emit('remove', item.itemId)"
-          >
-            <CampaignTrayIcon name="x" :size="12" />
-          </button>
+          <IconButton icon="close" label="Remove reward" @click="emit('remove', item.itemId)" />
         </template>
       </CampaignRewardItem>
     </li>
@@ -69,7 +63,7 @@ const emit = defineEmits<{ commitXp: []; add: []; remove: [itemId: string] }>()
     @click="emit('add')"
   >
     <CampaignTrayIcon name="plus" :size="12" />
-    Add reward
+    Add Reward
   </button>
   <p v-else-if="editable && limitText" class="campaign-editor__hint">{{ limitText }}</p>
 </template>

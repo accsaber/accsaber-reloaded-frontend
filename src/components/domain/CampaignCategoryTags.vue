@@ -47,15 +47,12 @@ function accentFor(tag: CampaignTagResponse): string {
 
 <style scoped>
 .campaign-tag {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  font-weight: 600;
 }
 
 .campaign-tag--more {
+  font-weight: 400;
   color: var(--text-tertiary);
-  letter-spacing: 0.08em;
 }
 </style>

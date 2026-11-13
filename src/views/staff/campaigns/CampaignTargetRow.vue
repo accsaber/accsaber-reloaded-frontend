@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
 import CampaignBoundsField from './CampaignBoundsField.vue'
@@ -71,28 +72,7 @@ function onDragStart(event: DragEvent) {
 
       <HintTooltip :text="row.hint" />
 
-      <button
-        v-if="multi"
-        type="button"
-        class="target-row__remove"
-        :disabled="disabled"
-        aria-label="Remove this objective"
-        @click="emit('remove')"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          aria-hidden="true"
-        >
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+      <IconButton v-if="multi" icon="close" label="Remove this objective" :disabled="disabled" @click="emit('remove')" />
     </div>
 
     <CampaignBoundsField
@@ -130,14 +110,6 @@ function onDragStart(event: DragEvent) {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-}
-
-.target-row--flagged {
-  border-color: color-mix(in srgb, var(--error) 45%, transparent);
 }
 
 .target-row__head {
@@ -163,8 +135,8 @@ function onDragStart(event: DragEvent) {
   border-radius: var(--radius-pill);
   cursor: grab;
   transition:
-    color 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .target-row__handle:hover:not(:disabled) {
@@ -183,31 +155,8 @@ function onDragStart(event: DragEvent) {
 
 .target-row__ordinal {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-}
-
-.target-row__remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  padding: 0;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.target-row__remove:hover:not(:disabled) {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
 }
 
 .target-row__equiv {
@@ -217,7 +166,7 @@ function onDragStart(event: DragEvent) {
   gap: var(--space-xs);
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
@@ -228,7 +177,6 @@ function onDragStart(event: DragEvent) {
 
 .target-row__invalid {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--error);
   line-height: 1.4;

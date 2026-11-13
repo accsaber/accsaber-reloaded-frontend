@@ -10,6 +10,8 @@ const props = defineProps<{
   tag?: string
   variant?: 'inline' | 'bare'
   as?: 'button' | 'span'
+  side?: 'above' | 'below'
+  align?: 'start' | 'center' | 'end'
 }>()
 
 const panelId = useId()
@@ -17,8 +19,8 @@ const panelId = useId()
 const { isOpen, locked, triggerRef, panelRef, panelStyle, open, close, toggle, onTriggerEnter, onTriggerLeave } =
   useFloatingPanel({
     maxWidth: props.width ?? 240,
-    side: 'above',
-    align: 'start',
+    side: props.side ?? 'above',
+    align: props.align ?? 'start',
     gap: 6,
     hover: { openDelay: 0, closeDelay: 0 },
   })

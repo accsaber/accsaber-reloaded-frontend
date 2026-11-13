@@ -16,7 +16,7 @@ const { hasBarriers } = barriers
 <template>
   <fieldset class="campaign-editor__section" :disabled="!editable">
     <div class="campaign-editor__field">
-      <span>Completion mode</span>
+      <span>Completion Mode</span>
       <BaseSelect
         :model-value="formMeta.completionMode"
         :options="completionModeOptions"
@@ -28,7 +28,7 @@ const { hasBarriers } = barriers
     </CampaignEditorNote>
     <CampaignEditorToggle
       :model-value="formMeta.progressionAgnostic"
-      label="Progression agnostic"
+      label="Progression Agnostic"
       on-text="Any order"
       off-text="Follows connections"
       :disabled="hasBarriers"
@@ -37,12 +37,12 @@ const { hasBarriers } = barriers
     <p v-if="hasBarriers" class="campaign-editor__hint">Remove the barriers first.</p>
     <CampaignEditorToggle
       :model-value="formMeta.playlistExportEnabled"
-      label="Playlist export"
+      label="Playlist Export"
       @update:model-value="setMetaFlag('playlistExportEnabled', $event)"
     />
     <CampaignColorField
       v-model="formMeta.backgroundColor"
-      label="Background color"
+      label="Background Color"
       text
       placeholder="#f5b800 · gold · rgb(…)"
       :fallback="defaultColorHex"

@@ -30,9 +30,9 @@ defineEmits<{ select: [] }>()
   color: var(--text-tertiary);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .editor-tile:hover {

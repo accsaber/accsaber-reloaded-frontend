@@ -22,7 +22,7 @@ const otherEndings = computed(() => {
   <fieldset v-if="selectedDifficulty" class="campaign-editor__section" :disabled="!editable">
     <CampaignEditorToggle
       :model-value="isTerminalNode"
-      label="Finishes the campaign"
+      label="Finishes the Campaign"
       @update:model-value="setNodeTerminal"
     >
       <template #glyph>

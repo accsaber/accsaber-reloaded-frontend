@@ -8,7 +8,7 @@ import type { TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import StatsCloseButton from './StatsCloseButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import { NO_VALUE } from './statsFormat'
 import { playerRoute } from './useStatsBoard'
 
@@ -81,7 +81,7 @@ watch(() => [props.eventKey, props.templateId, props.country, page.value].join('
   <section class="mission-lb">
     <header class="mission-lb__head">
       <h4 class="mission-lb__title">{{ missionName || 'Mission' }}</h4>
-      <StatsCloseButton label="Close mission leaderboard" @click="emit('close')" />
+      <IconButton icon="close" label="Close mission leaderboard" @click="emit('close')" />
     </header>
 
     <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="5" row-key="rank" row-clickable

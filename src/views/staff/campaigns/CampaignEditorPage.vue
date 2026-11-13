@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
 import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import Breadcrumbs from '@/components/common/Breadcrumbs.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignPresenceActionGlyph from '@/views/staff/campaigns/CampaignPresenceActionGlyph.vue'
 import ChatPanel from '@/components/domain/ChatPanel.vue'
@@ -18,6 +20,7 @@ import {
   type PresencePeer,
 } from '@/composables/useCampaignPresence'
 import { useChat } from '@/composables/useChat'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { pickCoverUrl } from '@/utils/media'
 import { useThemeStore } from '@/stores/theme'
@@ -40,7 +43,11 @@ const CampaignItemPicker = defineAsyncComponent(() => import('./CampaignItemPick
 const CampaignGlobalMapSearch = defineAsyncComponent(() => import('@/components/domain/CampaignGlobalMapSearch.vue'))
 const CampaignTutorialModal = defineAsyncComponent(() => import('./CampaignTutorialModal.vue'))
 
-const CANVAS_MODES = ['drag', 'connect', 'select'] as const
+const CANVAS_MODES = [
+  { key: 'drag', label: 'Drag' },
+  { key: 'connect', label: 'Connect' },
+  { key: 'select', label: 'Select' },
+]
 
 const editor = useCampaignEditor()
 provide(CAMPAIGN_EDITOR_KEY, editor)
@@ -55,13 +62,13 @@ usePageMeta({
 })
 
 const { doc, access, collaborators, selection, vertices, connections, nodes, barriers } = editor
-const { texts, mapSources, trays, lifecycle, rewards, accent, breadcrumbs } = editor
+const { texts, mapSources, trays, lifecycle, rewards, accent } = editor
 const { campaign, loading, error, actionPending, actionError, requirementDirtyIds } = doc
 const { isUnsavedDraft, reloadFromRemote, setChangeBroadcaster } = doc
 const { auth, isCurator, isCreator, canAccess, editable } = access
 const { isCollaborator, showCollaboratorPicker, existingCollaboratorIds } = collaborators
 const { handleCollaboratorPicked } = collaborators
-const { selectedId, selectedIdList } = selection
+const { selectedId, selectedIdList, selectedCount } = selection
 const { selectedDifficulty, selectedBarrier, selectedText, gridLock, toggleGridLock } = vertices
 const { handleMove, handleMoveMany, setViewCenterProvider, canvasFrame } = vertices
 const { selectedEdge, selectedEdgeEndpoints, hasConnections, handleConnect, handleDisconnect } =
@@ -74,7 +81,7 @@ const { showMapPicker, openMapPicker, closeMapPicker, handleMapsPicked, submitGl
   mapSources
 const { campaignGenreBeatsaverSlugs, usedMapDifficultyIds, showRepoint, closeRepoint } = mapSources
 const { submitRepoint } = mapSources
-const { activeTray, activeTrayIsNode, activeTrayIsBarrier, closeTray } = trays
+const { activeTray, activeTrayIsNode, activeTrayIsBarrier, closeTray, campaignTrays } = trays
 const { handleSelect, handleSelectMany, handleToggleSelect, handleDeselect } = trays
 const { handleEmptyClick, handleEdgeSelect } = trays
 const { showRepublishWarning, publishConfirm, performPublish, performUnpublish } = lifecycle
@@ -82,6 +89,31 @@ const { itemPickerFor, handleItemPicked } = rewards
 const { terminalMode } = editor.meta
 
 const canvasMode = ref<'drag' | 'connect' | 'select'>('drag')
+
+type TrayGroup = 'campaign' | 'node'
+
+const mobile = useMediaQuery('(max-width: 860px)')
+const menuGroup = ref<TrayGroup | null>(null)
+const hasSelection = computed(() => selectedCount.value > 0 || !!selectedEdge.value)
+
+function toggleMenu(group: TrayGroup) {
+  closeTray()
+  menuGroup.value = menuGroup.value === group ? null : group
+}
+
+function backToMenu() {
+  const group = campaignTrays.value.some((tray) => tray.id === activeTray.value) ? 'campaign' : 'node'
+  closeTray()
+  menuGroup.value = group
+}
+
+watch(activeTray, (tray) => {
+  if (tray) menuGroup.value = null
+})
+
+watch(hasSelection, (selected) => {
+  if (!selected && menuGroup.value === 'node') menuGroup.value = null
+})
 
 const roadmapRef = ref<InstanceType<typeof CampaignRoadmap> | null>(null)
 setViewCenterProvider(() => roadmapRef.value?.getViewCenterCell() ?? null)
@@ -99,6 +131,8 @@ watch(
 )
 onMounted(() => {
   if (activeTray.value === 'images') snapshotCanvasFrame()
+  void import('@/components/domain/MapPickerModal.vue')
+  void import('./CampaignTutorialModal.vue')
 })
 
 const themeStore = useThemeStore()
@@ -108,11 +142,11 @@ const selectedCover = computed(() => pickCoverUrl(selectedDifficulty.value))
 const trayHead = computed(() => {
   const barrier = selectedBarrier.value
   if (activeTrayIsBarrier.value && barrier) {
-    return { icon: 'gate', title: 'Barrier gate', grid: barrier, sub: '', action: 'Remove', run: removeSelectedBarrier }
+    return { icon: 'gate', title: 'Barrier Gate', grid: barrier, sub: '', action: 'Remove', run: removeSelectedBarrier }
   }
   const text = selectedText.value
   if (activeTray.value === 'text' && text) {
-    return { icon: 'type', title: 'Text element', grid: text, sub: '', action: 'Remove', run: removeSelectedText }
+    return { icon: 'type', title: 'Text Element', grid: text, sub: '', action: 'Remove', run: removeSelectedText }
   }
   const edge = selectedEdge.value
   const ends = selectedEdgeEndpoints.value
@@ -262,9 +296,8 @@ function peerActivity(p: PresencePeer): string {
     :style="{ '--page-accent': accent }"
   >
     <template v-if="loading">
-      <div class="campaign-editor__loading">
-        <SkeletonLoader variant="card" />
-        <SkeletonLoader variant="card" />
+      <div class="campaign-editor__ghost">
+        <SkeletonLoader height="100%" />
       </div>
     </template>
 
@@ -320,14 +353,12 @@ function peerActivity(p: PresencePeer): string {
           </template>
           <template #actions>
             <div v-if="editable" class="campaign-editor__add-cluster" aria-label="Add to roadmap">
-              <button type="button" class="campaign-editor__add-btn" @click="openMapPicker">
-                <CampaignTrayIcon name="plus" :size="14" />
-                Add node
-              </button>
-              <button
-                type="button"
-                class="campaign-editor__add-btn"
-                :class="{ 'campaign-editor__add-btn--barrier': barrierPlacementMode }"
+              <BaseButton variant="primary" @click="openMapPicker">
+                <CampaignTrayIcon name="plus" :size="16" />
+                Add Node
+              </BaseButton>
+              <BaseButton
+                :class="{ 'campaign-editor__picking': barrierPlacementMode }"
                 :disabled="!canAddBarrier"
                 :title="
                   campaign.progressionAgnostic
@@ -338,13 +369,13 @@ function peerActivity(p: PresencePeer): string {
                 "
                 @click="toggleBarrierPlacement"
               >
-                <CampaignTrayIcon name="gate" :size="14" />
-                {{ barrierPlacementMode ? 'Pick an arrow' : 'Add barrier' }}
-              </button>
-              <button type="button" class="campaign-editor__add-btn" @click="addText">
-                <CampaignTrayIcon name="type" :size="14" />
-                Add text
-              </button>
+                <CampaignTrayIcon name="gate" :size="16" />
+                {{ barrierPlacementMode ? 'Pick an Arrow' : 'Add Barrier' }}
+              </BaseButton>
+              <BaseButton @click="addText">
+                <CampaignTrayIcon name="type" :size="16" />
+                Add Text
+              </BaseButton>
             </div>
           </template>
         </CampaignRoadmap>
@@ -354,43 +385,48 @@ function peerActivity(p: PresencePeer): string {
           class="campaign-editor__presence"
           aria-label="Collaborators editing now"
         >
-          <span
+          <HintTooltip
             v-for="p in displayPeers.slice(0, 6)"
             :key="p.userId"
+            variant="bare"
+            as="span"
+            side="below"
+            align="end"
             class="campaign-editor__presence-avatar"
-            :class="{ 'campaign-editor__presence-avatar--typing': p.typing }"
             :style="{ '--peer-color': p.color }"
+            :text="`${p.userId === auth.userId ? 'You' : p.name}: ${peerActivity(p)}`"
           >
-            <img v-if="p.avatarUrl" :src="p.avatarUrl" :alt="p.name" />
-            <span v-else class="campaign-editor__presence-initial">{{ p.name.charAt(0) }}</span>
-            <span class="campaign-editor__presence-status" aria-hidden="true">
-              <span v-if="p.typing" class="campaign-editor__presence-dots">
-                <i></i><i></i><i></i>
+            <template #trigger>
+              <img v-if="p.avatarUrl" :src="p.avatarUrl" :alt="p.name" />
+              <span v-else class="campaign-editor__presence-initial">{{ p.name.charAt(0) }}</span>
+              <span class="campaign-editor__presence-status" aria-hidden="true">
+                <span v-if="p.typing" class="campaign-editor__presence-dots">
+                  <i></i><i></i><i></i>
+                </span>
+                <svg
+                  v-else
+                  class="campaign-editor__presence-glyph"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--text-primary)"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <CampaignPresenceActionGlyph :action="p.action" />
+                </svg>
               </span>
-              <svg
-                v-else
-                class="campaign-editor__presence-glyph"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--text-primary)"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <CampaignPresenceActionGlyph :action="p.action" />
-              </svg>
-            </span>
-            <span class="campaign-editor__presence-tip">
-              <strong>{{ p.userId === auth.userId ? 'You' : p.name }}</strong>
-              <span>{{ peerActivity(p) }}</span>
-            </span>
-          </span>
+            </template>
+          </HintTooltip>
           <span v-if="displayPeers.length > 6" class="campaign-editor__presence-more">
             +{{ displayPeers.length - 6 }}
           </span>
         </div>
 
-        <Breadcrumbs class="campaign-editor__breadcrumbs" :crumbs="breadcrumbs" />
+        <BaseButton class="campaign-editor__back" href="/campaigns">
+          <CampaignTrayIcon name="back" :size="16" />
+          <span class="campaign-editor__wide-label">Campaigns</span>
+        </BaseButton>
 
         <div class="campaign-editor__banners">
           <Transition name="campaign-editor__banner">
@@ -424,34 +460,26 @@ function peerActivity(p: PresencePeer): string {
         </div>
 
         <div v-if="editable" class="campaign-editor__toolbar">
-          <div class="campaign-editor__mode-toggle" role="radiogroup" aria-label="Canvas mode">
-            <button
-              v-for="mode in CANVAS_MODES"
-              :key="mode"
-              type="button"
-              role="radio"
-              :aria-checked="canvasMode === mode"
-              class="campaign-editor__mode-btn"
-              :class="{ 'campaign-editor__mode-btn--active': canvasMode === mode }"
-              @click="canvasMode = mode"
-            >
-              {{ mode }}
-            </button>
-          </div>
+          <BaseTabs
+            variant="segmented"
+            label="Canvas mode"
+            :tabs="CANVAS_MODES"
+            :model-value="canvasMode"
+            @update:model-value="canvasMode = $event as typeof canvasMode"
+          />
 
-          <button
-            type="button"
-            class="campaign-editor__grid-lock"
-            :class="{ 'campaign-editor__grid-lock--off': !gridLock }"
+          <BaseButton
+            :class="{ 'campaign-editor__picking': !gridLock }"
             :aria-pressed="gridLock"
+            :aria-label="gridLock ? 'Grid snapping on' : 'Grid snapping off'"
             :title="
               gridLock ? 'Snaps to the grid. Hold Alt to place freely.' : 'Free placement. Hold Alt to snap.'
             "
             @click="toggleGridLock"
           >
             <svg
-              width="14"
-              height="14"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -464,8 +492,8 @@ function peerActivity(p: PresencePeer): string {
               <path v-if="gridLock" d="M8 11V7a4 4 0 0 1 8 0v4" />
               <path v-else d="M8 11V7a4 4 0 0 1 7.5-2" />
             </svg>
-            {{ gridLock ? 'Grid' : 'Free' }}
-          </button>
+            <span class="campaign-editor__wide-label">{{ gridLock ? 'Grid' : 'Free' }}</span>
+          </BaseButton>
         </div>
 
         <ChatPanel
@@ -481,20 +509,46 @@ function peerActivity(p: PresencePeer): string {
         />
       </main>
 
-      <CampaignTrayRail @tutorial="openTutorial" />
+      <nav
+        v-if="mobile"
+        class="campaign-editor__dock"
+        :class="{ 'campaign-editor__dock--chat': canChat }"
+        aria-label="Editor tools"
+      >
+        <BaseButton
+          :class="{ 'campaign-editor__dock-active': menuGroup === 'campaign' }"
+          :aria-expanded="menuGroup === 'campaign'"
+          @click="toggleMenu('campaign')"
+        >
+          <CampaignTrayIcon name="flag" :size="16" />
+          Campaign
+        </BaseButton>
+        <BaseButton
+          :class="{ 'campaign-editor__dock-active': menuGroup === 'node' }"
+          :aria-expanded="menuGroup === 'node'"
+          :disabled="!hasSelection"
+          @click="toggleMenu('node')"
+        >
+          <CampaignTrayIcon name="target" :size="16" />
+          {{ hasSelection ? 'Node' : 'Select a Node' }}
+        </BaseButton>
+      </nav>
+
+      <Transition name="campaign-editor__tray" appear>
+        <CampaignTrayRail
+          v-if="!mobile || menuGroup"
+          :group="mobile ? menuGroup : null"
+          @tutorial="openTutorial"
+          @close="menuGroup = null"
+        />
+      </Transition>
 
       <Transition name="campaign-editor__tray">
         <section v-if="activeTray" class="campaign-editor__tray" aria-label="Editor tray">
           <header class="campaign-editor__tray-head">
-            <h2 class="campaign-editor__tray-title">{{ TRAY_TITLES[activeTray] }}</h2>
-            <button
-              type="button"
-              class="campaign-editor__tray-close"
-              aria-label="Close tray"
-              @click="closeTray"
-            >
-              <CampaignTrayIcon name="x" :size="16" />
-            </button>
+            <IconButton v-if="mobile" icon="back" label="Back to tools" @click="backToMenu" />
+            <h2 class="card-title">{{ TRAY_TITLES[activeTray] }}</h2>
+            <IconButton icon="close" label="Close tray" @click="closeTray" />
           </header>
 
           <div v-if="activeTrayIsNode && selectedDifficulty" class="campaign-editor__node-song">
@@ -519,10 +573,7 @@ function peerActivity(p: PresencePeer): string {
                   v-if="selectedDifficulty.complexity != null"
                   :complexity="selectedDifficulty.complexity"
                 />
-                <span class="campaign-editor__node-grid">
-                  · grid
-                  <code>{{ selectedDifficulty.positionX }},{{ selectedDifficulty.positionY }}</code>
-                </span>
+                <span>· Grid {{ selectedDifficulty.positionX }},{{ selectedDifficulty.positionY }}</span>
               </p>
             </div>
             <BaseButton
@@ -538,19 +589,12 @@ function peerActivity(p: PresencePeer): string {
           </div>
 
           <div v-if="trayHead" class="campaign-editor__barrier-head">
-            <span
-              class="campaign-editor__barrier-head-icon"
-              :class="{ 'campaign-editor__barrier-head-icon--text': trayHead.icon === 'type' }"
-              aria-hidden="true"
-            >
+            <span class="campaign-editor__barrier-head-icon" aria-hidden="true">
               <CampaignTrayIcon :name="trayHead.icon" />
             </span>
             <div class="campaign-editor__barrier-head-meta">
               <h3>{{ trayHead.title }}</h3>
-              <p v-if="trayHead.grid">
-                grid
-                <code>{{ trayHead.grid.positionX }},{{ trayHead.grid.positionY }}</code>
-              </p>
+              <p v-if="trayHead.grid">Grid {{ trayHead.grid.positionX }},{{ trayHead.grid.positionY }}</p>
               <p v-else>{{ trayHead.sub }}</p>
             </div>
             <BaseButton
@@ -572,10 +616,10 @@ function peerActivity(p: PresencePeer): string {
 
       <MapPickerModal
         v-if="showMapPicker"
-        title="Add nodes"
-        used-label="In campaign"
+        title="Add Nodes"
+        used-label="In Campaign"
         used-title="Already a node here"
-        :commit-label="(n) => `Add ${n} ${n === 1 ? 'node' : 'nodes'}`"
+        :commit-label="(n) => `Add ${n} ${n === 1 ? 'Node' : 'Nodes'}`"
         :loading="actionPending"
         :global-submit="submitGlobalAdd"
         :initial-genre-slugs="campaignGenreBeatsaverSlugs"
@@ -587,7 +631,7 @@ function peerActivity(p: PresencePeer): string {
       <BaseModal
         v-if="showRepoint"
         :open="true"
-        title="Change map / version"
+        title="Change Map / Version"
         max-width="900px"
         @close="closeRepoint"
       >
@@ -683,7 +727,7 @@ function peerActivity(p: PresencePeer): string {
             Cancel
           </BaseButton>
           <BaseButton variant="primary" :loading="actionPending" @click="performPublish">
-            Publish anyway
+            Publish Anyway
           </BaseButton>
         </template>
       </BaseModal>
@@ -704,22 +748,22 @@ function peerActivity(p: PresencePeer): string {
   background: transparent;
 }
 
-.campaign-editor__loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  max-width: 720px;
-  margin: var(--space-lg) auto;
-  padding: 0 var(--space-md);
+.campaign-editor__ghost {
+  position: absolute;
+  top: calc(var(--space-md) * 2 + var(--control-h));
+  left: var(--space-md);
+  bottom: var(--space-md);
+  width: 88px;
 }
 
 .campaign-editor__canvas {
   position: absolute;
   inset: 0;
   z-index: 1;
+  animation: placeholder-in var(--dur-enter) var(--ease-out) backwards;
 }
 
-.campaign-editor__breadcrumbs {
+.campaign-editor__back {
   position: absolute;
   top: var(--space-md);
   left: var(--space-md);
@@ -733,15 +777,15 @@ function peerActivity(p: PresencePeer): string {
   right: var(--space-md);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-sm);
   z-index: 4;
   pointer-events: none;
 }
 
-.campaign-editor__presence-avatar {
+.campaign-editor__presence .campaign-editor__presence-avatar {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: var(--control-h);
+  height: var(--control-h);
   border-radius: var(--radius-avatar);
   border: 2px solid var(--peer-color);
   background: var(--bg-elevated);
@@ -749,10 +793,12 @@ function peerActivity(p: PresencePeer): string {
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  transition: transform 120ms ease;
+  transition: transform var(--dur-fast) var(--ease-out);
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 
-.campaign-editor__presence-avatar:hover {
+.campaign-editor__presence .campaign-editor__presence-avatar:hover,
+.campaign-editor__presence .campaign-editor__presence-avatar:focus-visible {
   transform: translateY(2px) scale(1.08);
   z-index: 5;
 }
@@ -762,10 +808,6 @@ function peerActivity(p: PresencePeer): string {
   height: 100%;
   object-fit: cover;
   border-radius: var(--radius-card);
-}
-
-.campaign-editor__presence-avatar--typing {
-  border-color: var(--peer-color);
 }
 
 .campaign-editor__presence-status {
@@ -828,41 +870,10 @@ function peerActivity(p: PresencePeer): string {
   }
 }
 
-.campaign-editor__presence-tip {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  display: none;
-  flex-direction: column;
-  gap: 1px;
-  padding: 6px 10px;
-  white-space: nowrap;
-  background: var(--bg-elevated);
-  border: 1px solid var(--peer-color);
-  border-radius: var(--radius-card);
-  z-index: 10;
-}
-
-.campaign-editor__presence-avatar:hover .campaign-editor__presence-tip {
-  display: flex;
-}
-
-.campaign-editor__presence-tip strong {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.campaign-editor__presence-tip span {
-  font-size: 0.6875rem;
-  color: var(--peer-color);
-}
-
 .campaign-editor__presence-initial {
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-primary);
-  text-transform: uppercase;
 }
 
 .campaign-editor__presence-more {
@@ -897,8 +908,8 @@ function peerActivity(p: PresencePeer): string {
 .campaign-editor__banner-enter-active,
 .campaign-editor__banner-leave-active {
   transition:
-    opacity 160ms ease,
-    transform 160ms ease;
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor__banner-enter-from,
@@ -909,51 +920,14 @@ function peerActivity(p: PresencePeer): string {
 
 .campaign-editor__add-cluster {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  gap: var(--space-sm);
   pointer-events: auto;
 }
 
-.campaign-editor__add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--page-accent);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-}
-
-.campaign-editor__add-btn:hover {
-  background: var(--bg-elevated);
-}
-
-.campaign-editor__add-btn:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
-.campaign-editor__add-btn:disabled:hover {
-  background: transparent;
-}
-
-.campaign-editor__add-btn--barrier,
-.campaign-editor__add-btn--barrier:hover {
+.campaign-editor__picking,
+.campaign-editor__picking:hover:not(:disabled) {
   color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  border-color: var(--warning);
 }
 
 .campaign-editor__toolbar {
@@ -963,82 +937,14 @@ function peerActivity(p: PresencePeer): string {
   transform: translateX(-50%);
   z-index: 4;
   display: inline-flex;
-  align-items: stretch;
-  gap: 6px;
-}
-
-.campaign-editor__mode-toggle {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.campaign-editor__grid-lock {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease;
-}
-
-.campaign-editor__grid-lock:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.campaign-editor__grid-lock--off,
-.campaign-editor__grid-lock--off:hover {
-  color: var(--warning);
-  border-color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 12%, var(--bg-surface));
-}
-
-.campaign-editor__mode-btn {
-  padding: 6px 14px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.campaign-editor__mode-btn:hover {
-  color: var(--text-primary);
-}
-
-.campaign-editor__mode-btn--active {
-  color: var(--page-accent);
-  background: var(--bg-elevated);
+  gap: var(--space-sm);
 }
 
 .campaign-editor__tray {
   position: absolute;
-  top: calc(var(--space-md) + 44px);
-  left: calc(var(--space-md) + 76px + var(--space-sm));
+  top: calc(var(--space-md) * 2 + var(--control-h));
+  left: calc(var(--space-md) + 88px + var(--space-sm));
   bottom: var(--space-md);
   z-index: 5;
   display: flex;
@@ -1046,7 +952,7 @@ function peerActivity(p: PresencePeer): string {
   width: clamp(300px, 26vw, 360px);
   background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
+  border-radius: var(--radius-card);
   overflow: hidden;
   pointer-events: auto;
 }
@@ -1054,8 +960,8 @@ function peerActivity(p: PresencePeer): string {
 .campaign-editor__tray-enter-active,
 .campaign-editor__tray-leave-active {
   transition:
-    opacity 160ms ease,
-    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor__tray-enter-from,
@@ -1067,45 +973,18 @@ function peerActivity(p: PresencePeer): string {
 .campaign-editor__tray-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-md) var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
+  padding: var(--space-md) var(--space-md) 0;
 }
 
-.campaign-editor__tray-title {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--text-primary);
+.campaign-editor__tray-head h2 {
+  flex: 1;
+  min-width: 0;
 }
 
-.campaign-editor__tray-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.campaign-editor__tray-close:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
-.campaign-editor__tray > .campaign-editor__node-song {
-  padding: var(--space-md) var(--space-md) var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
+.campaign-editor__tray > .campaign-editor__node-song,
+.campaign-editor__tray > .campaign-editor__barrier-head {
+  padding: var(--space-md) var(--space-md) 0;
 }
 
 .campaign-editor__tray-body {
@@ -1156,8 +1035,7 @@ function peerActivity(p: PresencePeer): string {
 
 .campaign-editor__node-song-meta h3 {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.25;
@@ -1167,33 +1045,16 @@ function peerActivity(p: PresencePeer): string {
 
 .campaign-editor__node-song-meta p {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
 .campaign-editor__node-song-meta .campaign-editor__node-diff {
-  font-size: 0.6875rem;
   color: var(--text-tertiary);
-}
-
-.campaign-editor__node-grid {
-  color: var(--text-tertiary);
-}
-
-.campaign-editor__node-grid code {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
 }
 
 .campaign-editor__node-remove {
   align-self: start;
-}
-
-.campaign-editor__tray > .campaign-editor__barrier-head {
-  padding: var(--space-md) var(--space-md) var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
 }
 
 .campaign-editor__barrier-head {
@@ -1205,20 +1066,8 @@ function peerActivity(p: PresencePeer): string {
 
 .campaign-editor__barrier-head-icon {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
-  border-radius: var(--radius-card);
-}
-
-.campaign-editor__barrier-head-icon--text {
-  color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--page-accent) 40%, transparent);
+  color: var(--text-secondary);
 }
 
 .campaign-editor__barrier-head-meta {
@@ -1230,30 +1079,21 @@ function peerActivity(p: PresencePeer): string {
 
 .campaign-editor__barrier-head-meta h3 {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .campaign-editor__barrier-head-meta p {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
-}
-
-.campaign-editor__barrier-head-meta code {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
 }
 
 .campaign-editor__warn {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  font-family: var(--font-sans);
   font-size: var(--text-body);
   color: var(--text-secondary);
   line-height: 1.55;
@@ -1276,10 +1116,7 @@ function peerActivity(p: PresencePeer): string {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding: var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
-  background: color-mix(in srgb, var(--warning) 8%, transparent);
-  border-radius: var(--radius-card);
+  color: var(--warning);
 }
 
 .campaign-editor__warn-unranked ul {
@@ -1290,31 +1127,137 @@ function peerActivity(p: PresencePeer): string {
 
 @media (max-width: 860px) {
   .campaign-editor {
-    position: static;
-    inset: auto;
-    overflow: visible;
+    --dock-h: calc(var(--control-h) + var(--space-sm) * 2 + env(safe-area-inset-bottom));
+    --chat-w: 96px;
   }
 
   .campaign-editor__canvas {
-    position: relative;
-    height: clamp(360px, 55vh, 560px);
+    z-index: auto;
+    bottom: var(--dock-h);
+  }
+
+  .campaign-editor__ghost {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: var(--dock-h);
+  }
+
+  .campaign-editor__wide-label {
+    display: none;
+  }
+
+  .campaign-editor__toolbar {
+    left: calc(var(--space-md) + var(--control-h) + var(--space-sm));
+    transform: none;
+  }
+
+  .campaign-editor__back {
+    width: var(--control-h);
+    padding: 0;
+  }
+
+  .campaign-editor__toolbar :deep(.base-tabs__tab) {
+    padding: 0 var(--space-sm);
+  }
+
+  .campaign-editor__presence,
+  .campaign-editor__banners {
+    top: calc(var(--space-md) + var(--control-h) + var(--space-sm));
+  }
+
+  .campaign-editor__dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    gap: var(--space-sm);
+    height: var(--dock-h);
+    padding: var(--space-sm) var(--space-md) calc(var(--space-sm) + env(safe-area-inset-bottom));
+    background: var(--bg-surface);
+    border-top: 1px solid var(--bg-overlay);
+    animation: settle-in var(--dur-enter) var(--ease-out) backwards;
+  }
+
+  .campaign-editor__dock--chat {
+    padding-right: calc(var(--space-md) + var(--chat-w) + var(--space-sm));
+  }
+
+  .campaign-editor__dock > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .campaign-editor__dock-active,
+  .campaign-editor__dock-active:hover:not(:disabled) {
+    color: var(--page-accent);
+    border-color: var(--page-accent);
+  }
+
+  .campaign-editor__canvas :deep(.chat-panel--floating:not(.chat-panel--open)) {
+    position: absolute;
+    right: var(--space-md);
+    bottom: calc(-1 * (var(--control-h) + var(--space-sm)) - 1px);
+  }
+
+  .campaign-editor__canvas :deep(.chat-panel__toggle) {
+    width: var(--chat-w);
+    justify-content: center;
+  }
+
+  .campaign-editor__canvas :deep(.chat-panel--floating.chat-panel--open) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 8;
+  }
+
+  .campaign-editor__canvas :deep(.chat-panel--open .chat-panel__panel) {
+    width: 100%;
+    height: 60dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-bottom: none;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
   }
 
   .campaign-editor__tray {
-    position: relative;
+    position: fixed;
     top: auto;
-    left: auto;
-    bottom: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7;
     width: auto;
-    margin: var(--space-sm) var(--space-md) var(--space-md);
-    max-height: 70vh;
+    max-height: 70dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-bottom: none;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+  }
+
+  .campaign-editor__tray-enter-active {
+    transition: transform var(--dur-enter) var(--ease-out);
+  }
+
+  .campaign-editor__tray-leave-active {
+    transition: transform var(--dur-exit) var(--ease-in);
+  }
+
+  .campaign-editor__tray-enter-from,
+  .campaign-editor__tray-leave-to {
+    opacity: 1;
+    transform: translateY(100%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .campaign-editor__tray-enter-active,
   .campaign-editor__tray-leave-active {
-    transition: opacity 120ms ease;
+    transition: opacity var(--dur-fast) var(--ease-out);
   }
 
   .campaign-editor__tray-enter-from,

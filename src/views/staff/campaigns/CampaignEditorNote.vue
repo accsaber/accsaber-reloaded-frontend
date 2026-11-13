@@ -29,13 +29,10 @@ withDefaults(defineProps<{ tone?: 'warning' | 'error' }>(), { tone: 'warning' })
 .editor-note {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--space-sm);
   margin: 0;
-  padding: 7px 9px;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   line-height: 1.45;
-  border-radius: var(--radius-btn);
 }
 
 .editor-note svg {
@@ -45,13 +42,9 @@ withDefaults(defineProps<{ tone?: 'warning' | 'error' }>(), { tone: 'warning' })
 
 .editor-note--warning {
   color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
 }
 
 .editor-note--error {
   color: var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
-  border: 1px solid var(--error);
 }
 </style>

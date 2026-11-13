@@ -15,7 +15,7 @@ const credits = computed(() =>
       ? [
           {
             kind: badge.kind,
-            label: badge.kind === 'loved' ? 'Loved by' : 'Curated by',
+            label: badge.kind === 'loved' ? 'Loved By' : 'Curated By',
             user: toStaffUserDisplay(badge.by),
           },
         ]
@@ -27,7 +27,7 @@ const credits = computed(() =>
 <template>
   <ul v-if="credits.length > 0" class="curation-credits">
     <li v-for="credit in credits" :key="credit.kind" class="curation-credits__item">
-      <span class="curation-credits__label">{{ credit.label }}</span>
+      <span class="caption">{{ credit.label }}</span>
       <UserChip :user="credit.user" compact />
     </li>
   </ul>
@@ -47,16 +47,7 @@ const credits = computed(() =>
 .curation-credits__item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-sm);
   min-width: 0;
-}
-
-.curation-credits__label {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 </style>

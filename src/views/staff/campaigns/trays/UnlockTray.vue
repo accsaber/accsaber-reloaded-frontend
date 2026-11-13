@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { useCampaignEditorContext } from '../campaignEditorContext'
+import { PREREQ_TABS } from '../useCampaignNodes'
 
 const { access, vertices, nodes } = useCampaignEditorContext()
 const { editable } = access
@@ -9,44 +11,12 @@ const { setPrereqMode } = nodes
 
 <template>
   <fieldset v-if="selectedDifficulty" class="campaign-editor__section" :disabled="!editable">
-    <div class="campaign-editor__prereq-mode" role="radiogroup" aria-label="Unlock when">
-      <div class="campaign-editor__prereq-mode-toggle">
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="selectedDifficulty.prerequisiteMode !== 'AND'"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{
-            'campaign-editor__prereq-mode-btn--active':
-              selectedDifficulty.prerequisiteMode !== 'AND',
-          }"
-          @click="setPrereqMode('OR')"
-        >
-          any clears
-        </button>
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="selectedDifficulty.prerequisiteMode === 'AND'"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{
-            'campaign-editor__prereq-mode-btn--active':
-              selectedDifficulty.prerequisiteMode === 'AND',
-          }"
-          @click="setPrereqMode('AND')"
-        >
-          all clear
-        </button>
-      </div>
-    </div>
+    <BaseTabs
+      variant="segmented"
+      label="Unlock when"
+      :tabs="PREREQ_TABS"
+      :model-value="selectedDifficulty.prerequisiteMode === 'AND' ? 'AND' : 'OR'"
+      @update:model-value="setPrereqMode($event as 'AND' | 'OR')"
+    />
   </fieldset>
 </template>
-
-
-<style scoped>
-.campaign-editor__prereq-mode {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-</style>

@@ -46,34 +46,24 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: var(--space-sm) 12px;
+  min-height: var(--control-h);
+  padding: var(--space-sm);
   text-align: left;
   white-space: normal;
   color: var(--text-secondary);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--radius-btn);
   cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease,
-    border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .editor-toggle:hover:not(:disabled) {
   color: var(--text-primary);
-  background: var(--bg-elevated);
 }
 
 .editor-toggle:disabled {
   cursor: not-allowed;
-}
-
-.editor-toggle--on,
-.editor-toggle--on:hover:not(:disabled) {
-  color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 10%, transparent);
-  border-color: var(--page-accent);
 }
 
 .editor-toggle__glyph {
@@ -93,9 +83,8 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: var(--text-body);
+  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -104,8 +93,7 @@ const stateText = computed(() => (props.modelValue ? props.onText : props.offTex
 }
 
 .editor-toggle__state {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   line-height: 1.3;
 }

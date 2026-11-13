@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
@@ -38,15 +39,7 @@ const { collaboratorLimit, openCollaboratorPicker, removeCollaborator, leaveCamp
         >
           {{ c.status === 'PENDING' ? 'Invited' : 'Collaborator' }}
         </span>
-        <button
-          v-if="isCreator"
-          type="button"
-          class="campaign-editor__reward-remove"
-          :aria-label="`Remove ${c.user.name}`"
-          @click="removeCollaborator(c.user.id)"
-        >
-          <CampaignTrayIcon name="x" :size="12" />
-        </button>
+        <IconButton v-if="isCreator" icon="close" :label="`Remove ${c.user.name}`" @click="removeCollaborator(c.user.id)" />
       </li>
     </ul>
 
@@ -60,7 +53,7 @@ const { collaboratorLimit, openCollaboratorPicker, removeCollaborator, leaveCamp
       @click="openCollaboratorPicker"
     >
       <CampaignTrayIcon name="plus" :size="12" />
-      Invite collaborator
+      Invite Collaborator
     </button>
     <p v-else-if="isCreator" class="campaign-editor__hint">
       Limit of {{ collaboratorLimit }} reached.
@@ -92,17 +85,13 @@ const { collaboratorLimit, openCollaboratorPicker, removeCollaborator, leaveCamp
 
 .campaign-editor__collab-owner-tag {
   flex-shrink: 0;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
 .campaign-editor__collab-owner-name {
   min-width: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-primary);
@@ -142,11 +131,8 @@ const { collaboratorLimit, openCollaboratorPicker, removeCollaborator, leaveCamp
 }
 
 .campaign-editor__collab-status {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 
 .campaign-editor__collab-status--pending {

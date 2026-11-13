@@ -99,7 +99,7 @@ function pick(value: string) {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 
 .label-pos__btn:hover {

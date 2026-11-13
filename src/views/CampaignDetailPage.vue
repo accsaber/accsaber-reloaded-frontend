@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
+import StatusMark from '@/components/common/StatusMark.vue'
 import {
   abandonCampaign,
   getCampaignByIdOrSlug,
@@ -7,7 +9,6 @@ import {
   startCampaign,
 } from '@/api/campaigns'
 import { ApiError, parseApiError } from '@/api/client'
-import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignModifierBadges from '@/views/campaign/CampaignModifierBadges.vue'
@@ -19,6 +20,7 @@ import PseudoLoginModal from '@/components/domain/PseudoLoginModal.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { pickCoverUrl } from '@/utils/media'
 import { useCampaignAccent } from '@/composables/useCampaignAccent'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -97,9 +99,10 @@ const spectateName = computed(
   () => spectatePlayer.value?.name ?? (isSpectating.value ? 'this player' : ''),
 )
 
-const activeProgress = computed(() =>
-  isSpectating.value ? spectateProgress.value : myProgress.value,
-)
+const activeProgress = computed(() => {
+  if (!isSpectating.value) return myProgress.value
+  return spectateProgress.value ?? (spectateLoading.value ? myProgress.value : null)
+})
 
 let spectateSeq = 0
 
@@ -115,7 +118,6 @@ async function loadSpectatedProgress() {
   const seq = ++spectateSeq
   spectateLoading.value = true
   spectateError.value = null
-  spectateProgress.value = null
   try {
     const { getUser, getUserCampaignProgress } = await import('@/api/users')
     if (spectatePlayer.value?.id !== userId) {
@@ -137,6 +139,7 @@ async function loadSpectatedProgress() {
     spectateProgress.value = result
   } catch (err) {
     if (seq !== spectateSeq) return
+    spectateProgress.value = null
     spectateError.value = parseApiError(err, 'Failed to load this run').message
   } finally {
     if (seq === spectateSeq) spectateLoading.value = false
@@ -234,11 +237,6 @@ const totalCount = computed(
     ?? campaign.value?.difficultyCount
     ?? 0,
 )
-
-const completionPct = computed(() => {
-  if (!totalCount.value) return 0
-  return Math.round((completedCount.value / totalCount.value) * 100)
-})
 
 const isInProgress = computed(() => activeProgress.value?.progressStatus === 'IN_PROGRESS')
 const isCompleted = computed(() => activeProgress.value?.progressStatus === 'COMPLETED')
@@ -376,8 +374,8 @@ const isMultiObjective = computed(() => displayedTargets.value.length > 1)
 const objectiveModeLabel = computed(() => {
   if (!isMultiObjective.value) return 'Objective'
   return displayedDifficulty.value?.targetMode === 'OR'
-    ? 'Clear any one of these'
-    : 'Clear all of these'
+    ? 'Clear Any One of These'
+    : 'Clear All of These'
 })
 
 const displayedBarrierGoal = computed(() => {
@@ -409,7 +407,7 @@ const viewerPossessive = computed(() =>
 const barrierProgressLabel = computed(() =>
   displayedBarrier.value?.conditionType === 'COMPLETION_COUNT'
     ? 'Completed'
-    : `${viewerPossessive.value} best`,
+    : `${viewerPossessive.value} Best`,
 )
 
 const prereqsFor = computed(() =>
@@ -418,10 +416,8 @@ const prereqsFor = computed(() =>
     .filter((d): d is CampaignDifficultyResponse => !!d),
 )
 
-const breadcrumbs = computed<Crumb[]>(() => [
-  { label: 'Campaigns', to: '/campaigns' },
-  { label: campaign.value?.name || 'Campaign' },
-])
+const RAIL_INSET = 372
+const railBeside = useMediaQuery('(min-width: 861px)')
 
 const displayedCover = computed(() => pickCoverUrl(displayedDifficulty.value))
 
@@ -439,17 +435,14 @@ const displayedMapRoute = computed(() => {
   })
 })
 
-const focusNodeId = computed<string | null>(() => {
+const focusTarget = computed<string | null>(() => {
   const c = campaign.value
   if (!c || c.difficulties.length === 0) return null
 
   const cleared = activeProgress.value?.difficulties.filter((p) => p.completed) ?? []
-
-  const rootId = () =>
-    c.difficulties.find((d) => d.prerequisites.length === 0)?.id
-    ?? c.difficulties[0].id
-
-  if (cleared.length === 0) return rootId()
+  if (cleared.length === 0) {
+    return (c.difficulties.find((d) => d.prerequisites.length === 0) ?? c.difficulties[0]).id
+  }
 
   const byId = difficultiesById.value
   const depthMemo = new Map<string, number>()
@@ -471,30 +464,23 @@ const focusNodeId = computed<string | null>(() => {
     return max
   }
 
-  if (isInProgress.value && !c.progressionAgnostic) {
-    const frontier =
-      activeProgress.value?.difficulties.filter((p) => p.unlocked && !p.completed) ?? []
-    if (frontier.length > 0) {
-      let next = { id: frontier[0].node.id, depth: Infinity }
-      for (const f of frontier) {
-        const d = depthOf(f.node.id)
-        if (d < next.depth) next = { id: f.node.id, depth: d }
-      }
-      return next.id
-    }
-  }
-
-  if (c.completionMode === 'ALL' || c.progressionAgnostic) {
-    return cleared[cleared.length - 1].node.id
-  }
-
   let best = { id: cleared[0].node.id, depth: -1 }
-  for (const c2 of cleared) {
-    const d = depthOf(c2.node.id)
-    if (d > best.depth) best = { id: c2.node.id, depth: d }
+  for (const entry of cleared) {
+    const depth = depthOf(entry.node.id)
+    if (depth >= best.depth) best = { id: entry.node.id, depth }
   }
   return best.id
 })
+
+const focusNodeId = ref<string | null>(null)
+
+watch(
+  [focusTarget, spectateLoading],
+  ([target, switching]) => {
+    if (!switching) focusNodeId.value = target
+  },
+  { immediate: true },
+)
 
 let progressRefreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -654,9 +640,8 @@ function handleDeselect() {
     :style="{ '--page-accent': accent }"
   >
     <template v-if="loading">
-      <div class="campaign-detail__loading">
-        <SkeletonLoader variant="card" />
-        <SkeletonLoader variant="card" />
+      <div class="campaign-detail__floats">
+        <SkeletonLoader height="640px" />
       </div>
     </template>
 
@@ -670,12 +655,13 @@ function handleDeselect() {
 
     <template v-else>
       <main class="campaign-detail__canvas" aria-label="Campaign roadmap" @mousemove.passive="onCanvasMouseMove">
-        <CampaignRoadmap :difficulties="campaign.difficulties" :barriers="campaign.barriers"
+        <CampaignRoadmap :class="{ refreshing: spectateLoading }" :difficulties="campaign.difficulties" :barriers="campaign.barriers"
           :texts="campaign.texts" :progress="effectiveDifficultyProgress" :barrier-progress="effectiveBarrierProgress"
           :accent-color="accent" :background-url="campaign.backgroundUrl"
           :background-color="campaign.backgroundColor"
           :background-placement="campaign.background"
           :show-starfield="!campaign.backgroundUrl" :focus-id="focusNodeId" :default-scale="1.35"
+          :inset-left="railBeside ? RAIL_INSET : 0"
           :selected-id="selectedId" :highlight-barrier-id="selectedId"
           :show-terminal="campaign.completionMode === 'TERMINAL'"
           :mark-next="isInProgress && !campaign.progressionAgnostic"
@@ -683,12 +669,10 @@ function handleDeselect() {
           @deselect="handleDeselect" />
 
         <div class="campaign-detail__topbar">
-          <Breadcrumbs class="campaign-detail__breadcrumbs" :crumbs="breadcrumbs" />
-
           <Transition name="campaign-detail__spectate-fade">
             <CampaignSpectateBar v-if="isSpectating" :player="spectatePlayer" :name="spectateName"
               :user-id="spectateUserId" :loading="spectateLoading" :error="spectateError"
-              :completed="completedCount" :total="totalCount" :pct="completionPct"
+              :completed="completedCount" :total="totalCount"
               :status-label="spectateStatusLabel" :done="isCompleted" :logged-in="auth.isLoggedIn"
               @stop="stopSpectating" />
           </Transition>
@@ -708,7 +692,7 @@ function handleDeselect() {
         <CampaignOverviewRail :campaign="campaign" :accent="accent" :logged-in="auth.isLoggedIn"
           :my-status="myProgress?.progressStatus ?? null" :spectating="isSpectating" :spectate-name="spectateName"
           :spectate-loading="spectateLoading" :spectate-error="spectateError" :completed="completedCount"
-          :total="totalCount" :pct="completionPct" :status-label="spectateStatusLabel"
+          :total="totalCount" :status-label="spectateStatusLabel"
           :started-at="spectateStartedAt" :milestone="spectateMilestone" :starting="starting"
           :abandoning="abandoning" :action-error="actionError" :can-manage="canManage"
           @start="onStart" @abandon="onAbandon" @manage="goToEditor" @login="loginOpen = true" />
@@ -719,7 +703,6 @@ function handleDeselect() {
             class="campaign-detail__tooltip"
             :class="{
               'campaign-detail__tooltip--pinned': tooltipPinned,
-              'campaign-detail__tooltip--locked': tooltipState.tone === 'locked',
               'campaign-detail__tooltip--cleared': tooltipState.tone === 'done',
             }"
             :style="{
@@ -734,14 +717,7 @@ function handleDeselect() {
                   :style="tooltipState.tone ? undefined : { color: tooltipAccent }">
                   {{ tooltipState.label }}
                 </span>
-                <button v-if="tooltipPinned" type="button" class="campaign-detail__tooltip-close"
-                  aria-label="Unpin" @click="handleDeselect">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                  </svg>
-                </button>
+                <IconButton icon="close" v-if="tooltipPinned" label="Unpin" @click="handleDeselect" />
               </div>
             </header>
 
@@ -773,7 +749,7 @@ function handleDeselect() {
               </div>
 
               <div v-if="displayedTargets.length > 0" class="campaign-detail__objectives">
-                <h3 class="campaign-detail__section-label">{{ objectiveModeLabel }}</h3>
+                <h3 class="field-label campaign-detail__section-label">{{ objectiveModeLabel }}</h3>
                 <table class="campaign-detail__objective-table">
                   <thead>
                     <tr>
@@ -786,13 +762,7 @@ function handleDeselect() {
                     <tr v-for="t in displayedTargets" :key="t.key"
                       :class="{ 'campaign-detail__objective-row--met': t.met }">
                       <th scope="row">
-                        <span v-if="displayedProgress" class="campaign-detail__objective-tick"
-                          :class="{ 'campaign-detail__objective-tick--met': t.met }" aria-hidden="true">
-                          <svg v-if="t.met" width="10" height="10" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </span>
+                        <StatusMark v-if="displayedProgress" :done="t.met" />
                         {{ t.label }}
                       </th>
                       <td v-if="displayedProgress" class="campaign-detail__objective-you">{{ t.userValue }}</td>
@@ -803,7 +773,7 @@ function handleDeselect() {
               </div>
 
               <div v-if="displayedDifficulty.modifiers.length > 0" class="campaign-detail__mods">
-                <h3 class="campaign-detail__section-label">Modifiers</h3>
+                <h3 class="field-label campaign-detail__section-label">Modifiers</h3>
                 <CampaignModifierBadges :modifiers="displayedDifficulty.modifiers" />
               </div>
 
@@ -812,22 +782,16 @@ function handleDeselect() {
               <MarkdownText v-if="displayedDifficulty.description" :content="displayedDifficulty.description" />
 
               <div v-if="prereqsFor.length > 0 && !campaign.progressionAgnostic" class="campaign-detail__prereqs">
-                <h3 class="campaign-detail__section-label">
+                <h3 class="field-label campaign-detail__section-label">
                   {{ prereqsFor.length >= 2
-                    ? (displayedDifficulty.prerequisiteMode === 'AND' ? 'Requires all of' : 'Requires any of')
+                    ? (displayedDifficulty.prerequisiteMode === 'AND' ? 'Requires All Of' : 'Requires Any Of')
                     : 'Requires' }}
                 </h3>
                 <ul class="campaign-detail__prereq-list">
                   <li v-for="pr in prereqsFor" :key="pr.id" class="campaign-detail__prereq"
                     :class="{ 'campaign-detail__prereq--done': progressByDifficulty.get(pr.id)?.completed }"
                     @click="handleSelect(pr.id, $event)">
-                    <span class="campaign-detail__prereq-tick" aria-hidden="true">
-                      <svg v-if="progressByDifficulty.get(pr.id)?.completed" width="10" height="10"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </span>
+                    <StatusMark :done="!!progressByDifficulty.get(pr.id)?.completed" />
                     <SongTitle :name="pr.songName" :sub-name="pr.songSubName" />
                   </li>
                 </ul>
@@ -836,16 +800,14 @@ function handleDeselect() {
               <CampaignAwards v-if="displayedDifficulty.items.length > 0 || displayedDifficulty.xp > 0"
                 label="Awards" :items="displayedDifficulty.items" :xp="displayedDifficulty.xp"
                 :curated="campaign.status === 'CURATED'" :withheld="displayedRewardPending">
-                <div v-if="displayedRewardPending" class="campaign-detail__reward-pending" role="note">
-                  <p>Rewards held until the remaining maps are cleared</p>
-                  <p v-if="displayedMissingPrereqNames.length > 0">
-                    Still needed: {{ displayedMissingPrereqNames.join(', ') }}
-                  </p>
-                </div>
+                <p v-if="displayedRewardPending" class="caption campaign-detail__reward-pending" role="note">
+                  Rewards held until the remaining maps are cleared<template
+                    v-if="displayedMissingPrereqNames.length > 0">: {{ displayedMissingPrereqNames.join(', ') }}</template>
+                </p>
               </CampaignAwards>
 
               <router-link v-if="displayedMapRoute" :to="displayedMapRoute" class="campaign-detail__node-link">
-                Open map detail
+                Open Map
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="9 6 15 12 9 18" />
@@ -873,13 +835,13 @@ function handleDeselect() {
                 v-if="displayedBarrierGoal && displayedBarrier.conditionType !== 'FC' && displayedBarrier.conditionType !== 'PASS'"
                 class="campaign-detail__targets">
                 <div class="campaign-detail__target">
-                  <span class="campaign-detail__target-label">{{ displayedBarrierGoal.label }}</span>
+                  <span class="field-label">{{ displayedBarrierGoal.label }}</span>
                   <span class="campaign-detail__target-value" :style="{ color: barrierAccent }">
                     {{ displayedBarrierGoal.text }}
                   </span>
                 </div>
                 <div v-if="displayedBarrierProgress" class="campaign-detail__target">
-                  <span class="campaign-detail__target-label">{{ barrierProgressLabel }}</span>
+                  <span class="field-label">{{ barrierProgressLabel }}</span>
                   <span class="campaign-detail__target-value">
                     {{ barrierGoalValue(displayedBarrier.conditionType, displayedBarrierProgress.currentValue) }}
                   </span>
@@ -916,25 +878,21 @@ function handleDeselect() {
   background: transparent;
 }
 
-.campaign-detail__loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  max-width: 720px;
-  margin: var(--space-lg) auto;
-  padding: 0 var(--space-md);
-}
-
 .campaign-detail__canvas {
   position: absolute;
   inset: 0;
   z-index: 1;
+  animation: placeholder-in var(--dur-enter) var(--ease-out) backwards;
+}
+
+.campaign-detail__canvas > :first-child {
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .campaign-detail__topbar {
   position: absolute;
   top: var(--space-md);
-  left: var(--space-md);
+  left: calc(var(--space-md) * 2 + 340px);
   right: calc(var(--space-md) * 2 + 340px);
   z-index: 4;
   display: flex;
@@ -944,16 +902,11 @@ function handleDeselect() {
   pointer-events: none;
 }
 
-.campaign-detail__breadcrumbs {
-  flex-shrink: 0;
-  pointer-events: auto;
-}
-
 .campaign-detail__spectate-fade-enter-active,
 .campaign-detail__spectate-fade-leave-active {
   transition:
-    opacity 140ms ease,
-    transform 140ms ease;
+    opacity var(--dur-menu) var(--ease-out),
+    transform var(--dur-menu) var(--ease-out);
 }
 
 .campaign-detail__spectate-fade-enter-from,
@@ -964,7 +917,7 @@ function handleDeselect() {
 
 .campaign-detail__floats {
   position: absolute;
-  inset: calc(var(--space-md) + 40px) var(--space-md) var(--space-md);
+  inset: var(--space-md);
   display: grid;
   grid-template-columns: minmax(280px, 340px) 1fr;
   gap: var(--space-md);
@@ -1003,14 +956,7 @@ function handleDeselect() {
 
 .campaign-detail__barrier-icon {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  border-radius: var(--radius-card);
 }
 
 .campaign-detail__tooltip--pinned {
@@ -1021,39 +967,15 @@ function handleDeselect() {
   border-color: color-mix(in srgb, var(--success) 35%, var(--bg-overlay));
 }
 
-.campaign-detail__tooltip--locked {
-  opacity: 0.85;
-}
-
 .campaign-detail__tooltip-state {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
 }
 
-.campaign-detail__tooltip-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.campaign-detail__tooltip-close:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
 .campaign-detail__tooltip-fade-enter-active,
 .campaign-detail__tooltip-fade-leave-active {
-  transition: opacity 140ms ease, transform 140ms ease;
+  transition: opacity var(--dur-menu) var(--ease-out), transform var(--dur-menu) var(--ease-out);
 }
 
 .campaign-detail__tooltip-fade-enter-from,
@@ -1074,33 +996,10 @@ function handleDeselect() {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 
 .campaign-detail__reward-pending {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--warning) 8%, transparent);
-}
-
-.campaign-detail__reward-pending p {
-  margin: 0;
-  font-size: var(--text-caption);
-  line-height: 1.45;
-  color: var(--text-secondary);
-}
-
-.campaign-detail__reward-pending p:first-child {
-  color: var(--text-primary);
+  color: var(--warning);
 }
 
 .campaign-detail__node-head {
@@ -1110,11 +1009,8 @@ function handleDeselect() {
 }
 
 .campaign-detail__node-state {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  font-weight: 600;
 }
 
 .campaign-detail__node-state--done {
@@ -1157,8 +1053,7 @@ function handleDeselect() {
 
 .campaign-detail__node-title {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;
@@ -1170,7 +1065,6 @@ function handleDeselect() {
 
 .campaign-detail__node-artist {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;
@@ -1187,7 +1081,7 @@ function handleDeselect() {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--space-sm);
   margin-top: var(--space-xs);
   font-size: var(--text-caption);
 }
@@ -1197,11 +1091,7 @@ function handleDeselect() {
 }
 
 .campaign-detail__node-char {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
@@ -1209,8 +1099,6 @@ function handleDeselect() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
-  padding: var(--space-sm) 0 0;
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .campaign-detail__target {
@@ -1219,18 +1107,9 @@ function handleDeselect() {
   gap: 2px;
 }
 
-.campaign-detail__target-label {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-
 .campaign-detail__target-value {
   font-family: var(--font-mono);
-  font-size: 1.0625rem;
+  font-size: var(--text-card-title);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -1241,61 +1120,22 @@ function handleDeselect() {
   font-variant-numeric: tabular-nums;
 }
 
-.campaign-detail__objective-table thead th,
-.campaign-detail__objective-table thead td {
+.campaign-detail__objective-table thead th {
   padding: 0 0 var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
   text-align: right;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  font-weight: 500;
   color: var(--text-tertiary);
-}
-
-.campaign-detail__objective-table thead td {
-  padding-left: 0;
 }
 
 .campaign-detail__objective-table tbody th {
   width: 100%;
-  padding: 5px 0;
+  padding: var(--space-xs) 0;
   text-align: left;
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  font-weight: 500;
   color: var(--text-secondary);
   white-space: nowrap;
-}
-
-.campaign-detail__objective-table tbody tr + tr th,
-.campaign-detail__objective-table tbody tr + tr td {
-  border-top: 1px solid color-mix(in srgb, var(--bg-overlay) 55%, transparent);
-}
-
-.campaign-detail__objective-tick {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 12px;
-  margin-right: 5px;
-  vertical-align: -1px;
-  color: var(--success);
-}
-
-.campaign-detail__objective-tick::before {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-}
-
-.campaign-detail__objective-tick--met::before {
-  display: none;
 }
 
 .campaign-detail__objective-row--met th {
@@ -1304,7 +1144,7 @@ function handleDeselect() {
 
 .campaign-detail__objective-goal,
 .campaign-detail__objective-you {
-  padding: 5px 0 5px var(--space-sm);
+  padding: var(--space-xs) 0 var(--space-xs) var(--space-sm);
   text-align: right;
   font-family: var(--font-mono);
   white-space: nowrap;
@@ -1312,12 +1152,12 @@ function handleDeselect() {
 }
 
 .campaign-detail__objective-goal {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: var(--text-card-title);
+  font-weight: 600;
 }
 
 .campaign-detail__objective-you {
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -1331,7 +1171,7 @@ function handleDeselect() {
 .campaign-detail__prereqs {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-sm);
 }
 
 .campaign-detail__prereq-list {
@@ -1344,41 +1184,22 @@ function handleDeselect() {
 }
 
 .campaign-detail__prereq {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
+  gap: var(--space-sm);
+  min-height: var(--control-h);
+  padding: 0 var(--space-sm);
+  font-size: var(--text-caption);
   font-weight: 500;
   color: var(--text-secondary);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-elevated);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .campaign-detail__prereq:hover {
   color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.campaign-detail__prereq-tick {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  color: transparent;
-}
-
-.campaign-detail__prereq--done .campaign-detail__prereq-tick {
-  color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 50%, var(--bg-overlay));
-  background: color-mix(in srgb, var(--success) 10%, transparent);
 }
 
 .campaign-detail__prereq--done {
@@ -1388,23 +1209,17 @@ function handleDeselect() {
 .campaign-detail__node-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   align-self: flex-start;
-  padding: 6px 0;
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: var(--text-body);
+  font-weight: 600;
   color: var(--page-accent);
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--page-accent) 35%, transparent);
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .campaign-detail__node-link:hover {
   color: var(--text-primary);
-  border-bottom-color: var(--text-primary);
 }
 
 @media (max-width: 1100px) {
@@ -1420,9 +1235,12 @@ function handleDeselect() {
     position: static;
     inset: auto;
     overflow: visible;
+    display: flex;
+    flex-direction: column;
   }
 
   .campaign-detail__topbar {
+    left: var(--space-md);
     right: var(--space-md);
     flex-wrap: wrap;
     gap: var(--space-sm);
@@ -1430,16 +1248,13 @@ function handleDeselect() {
 
   .campaign-detail__canvas {
     position: relative;
-    height: clamp(360px, 55vh, 560px);
+    order: 2;
+    height: clamp(360px, 55svh, 560px);
+    margin-top: var(--space-md);
   }
 
   .campaign-detail__floats {
-    position: relative;
-    inset: auto;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-md);
-    padding: var(--space-md);
-    pointer-events: auto;
+    display: contents;
   }
 }
 

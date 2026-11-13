@@ -6,7 +6,7 @@ import CoverImage from '@/components/common/CoverImage.vue'
 import type { CampaignNodeDifficultyResponse } from '@/types/api/statistics'
 import { formatUserValue, requirementLabel } from '@/utils/campaignLayout'
 import { computed, ref, watch } from 'vue'
-import StatsCloseButton from './StatsCloseButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import { fmtDecimal, rateClass } from './statsFormat'
 
 const props = defineProps<{
@@ -60,7 +60,7 @@ watch(
       <div>
         <h3 class="card-title">{{ campaignName || 'Campaign' }}</h3>
       </div>
-      <StatsCloseButton label="Close campaign nodes" @click="emit('close')" />
+      <IconButton icon="close" label="Close campaign nodes" @click="emit('close')" />
     </header>
 
     <div v-if="loading" class="nodes__list">

@@ -37,8 +37,7 @@ const { tagsByKind, campaignTagIds, toggleTag } = meta
 }
 
 .campaign-editor__tag-label {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 500;
   color: var(--text-tertiary);
   text-transform: capitalize;

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import { computed } from 'vue'
-import CampaignTrayIcon from '../CampaignTrayIcon.vue'
 import { useCampaignEditorContext } from '../campaignEditorContext'
+import { PREREQ_TABS } from '../useCampaignNodes'
 
 const { access, vertices, barriers } = useCampaignEditorContext()
 const { editable } = access
@@ -30,50 +32,19 @@ const affectedNodeList = computed(() =>
     <ul v-if="affectedNodeList.length > 0" class="campaign-editor__affected-list">
       <li v-for="n in affectedNodeList" :key="n.id" class="campaign-editor__affected-item">
         <span class="campaign-editor__affected-name">{{ n.name }}</span>
-        <button
-          v-if="editable"
-          type="button"
-          class="campaign-editor__reward-remove"
-          :aria-label="`Remove ${n.name}`"
-          @click="toggleAffected(n.id)"
-        >
-          <CampaignTrayIcon name="x" :size="12" />
-        </button>
+        <IconButton v-if="editable" icon="close" :label="`Remove ${n.name}`" @click="toggleAffected(n.id)" />
       </li>
     </ul>
     <p v-else class="campaign-editor__hint">No affected nodes</p>
     <div class="campaign-editor__field">
-      <span>Opens when</span>
-      <div
-        class="campaign-editor__prereq-mode-toggle"
-        role="radiogroup"
-        aria-label="Gate opens when"
-      >
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="selectedBarrier.prerequisiteMode !== 'AND'"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{
-            'campaign-editor__prereq-mode-btn--active': selectedBarrier.prerequisiteMode !== 'AND',
-          }"
-          @click="setBarrierPrereqMode('OR')"
-        >
-          any clears
-        </button>
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="selectedBarrier.prerequisiteMode === 'AND'"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{
-            'campaign-editor__prereq-mode-btn--active': selectedBarrier.prerequisiteMode === 'AND',
-          }"
-          @click="setBarrierPrereqMode('AND')"
-        >
-          all clear
-        </button>
-      </div>
+      <span>Opens When</span>
+      <BaseTabs
+        variant="segmented"
+        label="Gate opens when"
+        :tabs="PREREQ_TABS"
+        :model-value="selectedBarrier.prerequisiteMode === 'AND' ? 'AND' : 'OR'"
+        @update:model-value="setBarrierPrereqMode($event as 'AND' | 'OR')"
+      />
     </div>
   </fieldset>
 </template>
@@ -86,20 +57,17 @@ const affectedNodeList = computed(() =>
   gap: var(--space-sm);
   align-self: flex-start;
   padding: 7px 12px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .campaign-editor__pick-toggle:hover {
@@ -164,7 +132,6 @@ const affectedNodeList = computed(() =>
 
 .campaign-editor__affected-name {
   min-width: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-primary);
   overflow: hidden;

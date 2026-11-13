@@ -75,13 +75,13 @@ export const REQUIREMENT_TYPE_OPTIONS: Array<{ value: CampaignRequirementType; l
   { value: 'AP', label: 'AP' },
   { value: 'SCORE', label: 'Score' },
   { value: 'STREAK_115', label: '115 Streak' },
-  { value: 'COMBO', label: 'Max combo' },
-  { value: 'BOMB_HITS', label: 'Bombs hit' },
+  { value: 'COMBO', label: 'Max Combo' },
+  { value: 'BOMB_HITS', label: 'Bombs Hit' },
   { value: 'MISTAKES', label: 'Mistakes' },
   { value: 'PAUSES', label: 'Pauses' },
   { value: 'FC', label: 'Full Combo' },
-  { value: 'PASS', label: 'Pass (no No-Fail)' },
-  { value: 'RANK', label: 'Leaderboard rank' },
+  { value: 'PASS', label: 'Pass (No No-Fail)' },
+  { value: 'RANK', label: 'Leaderboard Rank' },
 ]
 
 const NEXT_MODIFIER_REQUIREMENT: Record<string, CampaignModifierRequirement | null> = {

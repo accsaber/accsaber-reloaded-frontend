@@ -30,28 +30,25 @@ defineEmits<{ select: [id: string] }>()
 .issue-notes__refs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
-  margin-top: 6px;
+  gap: var(--space-xs) var(--space-sm);
+  margin-top: var(--space-xs);
 }
 
 .issue-notes__ref {
   max-width: 100%;
-  padding: 2px 6px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  padding: 0;
   font-weight: 600;
   color: inherit;
   background: transparent;
-  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
-  border-radius: var(--radius-pill);
+  border: none;
+  text-decoration: underline;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background 120ms ease;
 }
 
 .issue-notes__ref:hover {
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: var(--text-primary);
 }
 </style>

@@ -3,13 +3,9 @@ import type { CampaignResponse } from '@/types/api/campaigns'
 import { campaignBadges, type CampaignBadge, type CampaignBadgeKind } from '@/utils/campaignBadges'
 import { computed } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    campaign: CampaignResponse
-    size?: 'sm' | 'md'
-  }>(),
-  { size: 'sm' },
-)
+const props = defineProps<{
+  campaign: CampaignResponse
+}>()
 
 const GLYPHS: Record<CampaignBadgeKind, string> = {
   official: 'M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z',
@@ -43,7 +39,7 @@ function badgeTitle(badge: CampaignBadge): string {
       v-for="badge in badges"
       :key="badge.kind"
       class="campaign-badge"
-      :class="[`campaign-badge--${badge.kind}`, `campaign-badge--${size}`]"
+      :class="`campaign-badge--${badge.kind}`"
       :title="badgeTitle(badge)"
       :aria-label="badge.title"
     >
@@ -58,55 +54,35 @@ function badgeTitle(badge: CampaignBadge): string {
 <style scoped>
 .campaign-badges {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-shrink: 0;
   align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
+  gap: var(--space-sm);
 }
 
 .campaign-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 2px 6px;
-  font-family: var(--font-sans);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  font-weight: 600;
   white-space: nowrap;
-  border: 1px solid;
-  border-radius: var(--radius-xs);
-}
-
-.campaign-badge--sm {
-  font-size: 0.5625rem;
-}
-
-.campaign-badge--md {
-  font-size: 0.625rem;
 }
 
 .campaign-badge--curated {
   color: var(--success);
-  background: color-mix(in srgb, var(--success) 10%, transparent);
-  border-color: color-mix(in srgb, var(--success) 45%, transparent);
 }
 
 .campaign-badge--official {
   color: var(--tier-gold);
-  background: color-mix(in srgb, var(--tier-gold) 12%, transparent);
-  border-color: color-mix(in srgb, var(--tier-gold) 55%, transparent);
 }
 
 .campaign-badge--loved {
   color: var(--campaign-loved);
-  background: transparent;
-  border-color: color-mix(in srgb, var(--campaign-loved) 45%, transparent);
 }
 
 .campaign-badge__glyph {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
 }
 </style>

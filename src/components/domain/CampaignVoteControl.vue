@@ -130,8 +130,8 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
   color: var(--text-secondary);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .vote--sm .vote__btn {
@@ -189,7 +189,6 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
 
 .vote__count {
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
 
@@ -199,7 +198,6 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
   justify-content: center;
   min-width: 4ch;
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
   font-weight: 500;
   color: var(--text-tertiary);
   cursor: default;
@@ -207,20 +205,20 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
 
 .vote--sm .vote__score {
   padding: 3px 7px;
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
 }
 
 .vote--md .vote__score {
   padding: 5px 10px;
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
 }
 
 .vote--sm .vote__count {
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
 }
 
 .vote--md .vote__count {
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
 }
 
 .vote__btn--active .vote__count {
@@ -235,8 +233,7 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
   margin: 0;
   padding: var(--space-xs) var(--space-sm);
   max-width: 220px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   line-height: 1.35;
   color: var(--error);
   background: var(--bg-elevated);
@@ -247,12 +244,12 @@ function onVote(event: MouseEvent, direction: CampaignVoteDirection) {
 
 .vote-error-enter-active {
   transition:
-    opacity 150ms ease-out,
-    transform 150ms ease-out;
+    opacity var(--dur-menu) var(--ease-out),
+    transform var(--dur-menu) var(--ease-out);
 }
 
 .vote-error-leave-active {
-  transition: opacity 120ms ease-in;
+  transition: opacity var(--dur-menu-exit) var(--ease-in);
 }
 
 .vote-error-enter-from {

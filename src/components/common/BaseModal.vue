@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconButton from './IconButton.vue'
 import { onMounted, onUnmounted, watch } from 'vue';
 
 defineOptions({ inheritAttrs: false })
@@ -68,18 +69,9 @@ onUnmounted(() => {
         <div class="modal" :style="{ maxWidth: maxWidth ?? '560px' }" role="dialog" aria-modal="true">
           <div v-if="title" class="modal__header">
             <h2 class="section-title">{{ title }}</h2>
-            <button class="modal__close" aria-label="Close" @click="emit('close')">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-              </svg>
-            </button>
+            <IconButton icon="close" label="Close" @click="emit('close')" />
           </div>
-          <button v-else-if="closeButton" class="modal__close modal__close--floating" aria-label="Close"
-            @click="emit('close')">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
-          </button>
+          <IconButton icon="close" v-else-if="closeButton" class="modal__close--floating" label="Close" @click="emit('close')" />
           <div class="modal__body">
             <slot />
           </div>
@@ -117,7 +109,7 @@ onUnmounted(() => {
   position: relative;
 }
 
-.modal__close--floating {
+.modal .modal__close--floating {
   position: absolute;
   top: var(--space-sm);
   right: var(--space-sm);
@@ -130,23 +122,6 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: var(--space-lg);
   border-bottom: 1px solid var(--bg-overlay);
-}
-
-.modal__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-xs);
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: var(--radius-btn);
-  transition: color var(--dur-fast) var(--ease-out);
-}
-
-.modal__close:hover {
-  color: var(--text-primary);
 }
 
 .modal__body {

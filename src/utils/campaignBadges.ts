@@ -33,7 +33,7 @@ const BADGE_RULES: CampaignBadgeRule[] = [
     kind: 'curated',
     label: 'Curated',
     title:
-      'Rewards-eligible, not a quality verdict: the campaign team checked that the rewards are well laid out and the paths are clear. Clearing it pays out XP and items.',
+      'Rewards-eligible, not a quality verdict: the campaign team checked that the rewards are well laid out and the paths are clear. Clearing it gives XP and items.',
     applies: (c) => c.status === 'CURATED',
     at: (c) => c.curatedAt,
     by: (c) => c.curatedBy,
@@ -41,7 +41,7 @@ const BADGE_RULES: CampaignBadgeRule[] = [
   {
     kind: 'loved',
     label: 'Loved',
-    title: 'A community favourite picked out by the curators. It awards no XP or items.',
+    title: 'A community favourite picked out by the curators. It gives no XP or items.',
     applies: (c) => c.loved,
     at: (c) => c.lovedAt,
     by: (c) => c.lovedBy,

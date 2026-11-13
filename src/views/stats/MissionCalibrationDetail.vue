@@ -7,7 +7,7 @@ import type {
   MissionStatsParams,
 } from '@/types/api/statistics'
 import { computed, ref, watch } from 'vue'
-import StatsCloseButton from './StatsCloseButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import StatsHistogram from './StatsHistogram.vue'
 import {
   MISSION_TIER_LABELS,
@@ -71,7 +71,7 @@ watch(() => JSON.stringify([props.templateId, props.filters]), fetchDetail, { im
           <span v-if="missionType">{{ labelCase(missionType) }}</span>
         </p>
       </div>
-      <StatsCloseButton label="Close template breakdown" @click="emit('close')" />
+      <IconButton icon="close" label="Close template breakdown" @click="emit('close')" />
     </header>
 
     <div v-if="loading" class="calib-detail__panels">

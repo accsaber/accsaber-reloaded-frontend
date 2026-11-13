@@ -161,7 +161,7 @@ export function useCampaignTrays(ctx: TraysContext) {
     if ((d.prerequisites ?? []).length >= 2) {
       trays.push({ id: 'unlock', label: 'Unlock', icon: 'link' })
     }
-    trays.push({ id: 'rewards', label: 'Rewards', icon: 'package', count: d.items.length })
+    trays.push({ id: 'rewards', label: 'Node Rewards', icon: 'package', count: d.items.length })
     return trays
   })
 

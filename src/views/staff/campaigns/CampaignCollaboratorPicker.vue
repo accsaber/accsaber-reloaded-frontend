@@ -96,14 +96,13 @@ function rowClick(entry: LeaderboardResponse) {
 .collab-picker__search {
   width: 100%;
   padding: 10px 12px;
-  font-family: var(--font-sans);
   font-size: var(--text-body);
   color: var(--text-primary);
   background: var(--bg-base);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .collab-picker__search:focus {
@@ -113,7 +112,6 @@ function rowClick(entry: LeaderboardResponse) {
 
 .collab-picker__note {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
   line-height: 1.45;
@@ -177,8 +175,8 @@ function rowClick(entry: LeaderboardResponse) {
   text-align: left;
   color: inherit;
   transition:
-    background 120ms ease,
-    border-color 120ms ease;
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .collab-picker__row:hover {
@@ -209,11 +207,8 @@ function rowClick(entry: LeaderboardResponse) {
 }
 
 .collab-picker__on {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 

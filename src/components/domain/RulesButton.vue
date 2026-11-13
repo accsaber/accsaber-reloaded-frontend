@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { Rule } from '@/types/display'
 import { ref } from 'vue'
@@ -14,13 +15,13 @@ const open = ref(false)
 </script>
 
 <template>
-  <button type="button" class="rules-btn" @click="open = true">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  <BaseButton @click="open = true">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
     Rules
-  </button>
+  </BaseButton>
 
   <BaseModal :open="open" :title="title" max-width="480px" @close="open = false">
     <div class="rules">
@@ -42,28 +43,6 @@ const open = ref(false)
 </template>
 
 <style scoped>
-.rules-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: color 120ms ease;
-}
-
-.rules-btn:hover {
-  color: var(--text-primary);
-}
-
 .rules {
   display: flex;
   flex-direction: column;
@@ -72,7 +51,7 @@ const open = ref(false)
 
 .rules__lead {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-body);
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -96,13 +75,13 @@ const open = ref(false)
   flex-shrink: 0;
   min-width: 16px;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
   text-align: right;
 }
 
 .rules__text {
-  font-size: 0.875rem;
+  font-size: var(--text-body);
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -115,7 +94,7 @@ const open = ref(false)
 .rules__note {
   margin: var(--space-sm) 0 0;
   padding: var(--space-md);
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
   line-height: 1.5;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--error) 8%, transparent);
@@ -127,7 +106,7 @@ const open = ref(false)
   margin-top: var(--space-sm);
   padding-top: var(--space-md);
   border-top: 1px solid var(--bg-overlay);
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -138,7 +117,7 @@ const open = ref(false)
 
 .rules__aside :deep(h3) {
   margin: 0 0 var(--space-xs);
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
   font-weight: 600;
   color: var(--text-primary);
 }

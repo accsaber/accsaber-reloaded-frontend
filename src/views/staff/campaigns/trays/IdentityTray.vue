@@ -15,7 +15,7 @@ const { formMeta, commitMetaField } = meta
       <input v-model="formMeta.name" type="text" @blur="commitMetaField('name')" />
     </label>
     <label class="campaign-editor__field">
-      <span>Creator alias</span>
+      <span>Creator Alias</span>
       <input
         v-model="formMeta.creatorAlias"
         type="text"

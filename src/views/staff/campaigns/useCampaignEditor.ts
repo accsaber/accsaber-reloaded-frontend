@@ -1,4 +1,3 @@
-import type { Crumb } from '@/components/common/Breadcrumbs.vue'
 import { useCampaignAccent } from '@/composables/useCampaignAccent'
 import { auditCampaign, campaignPublishBlockers } from '@/utils/campaignAudit'
 import { computed, ref } from 'vue'
@@ -115,11 +114,6 @@ export function useCampaignEditor() {
 
   const accent = computed(() => campaignAccent(campaign.value?.tags))
 
-  const breadcrumbs = computed<Crumb[]>(() => {
-    const title = doc.isUnsavedDraft.value ? 'New campaign' : campaign.value?.name || 'Editor'
-    return [{ label: 'Campaigns', to: '/campaigns' }, { label: title }]
-  })
-
   return {
     doc,
     access,
@@ -140,6 +134,5 @@ export function useCampaignEditor() {
     campaignAudit,
     publishBlockers,
     accent,
-    breadcrumbs,
   }
 }

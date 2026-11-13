@@ -45,7 +45,7 @@ const bounds = computed(() =>
     value: key === 'lower' ? props.lower : props.upper,
     label:
       key === 'upper' ? 'At most' : isRange.value ? 'At least' : props.singleLabel,
-    addLabel: key === 'upper' ? 'Add upper bound' : 'Add lower bound',
+    addLabel: key === 'upper' ? 'Add Upper Bound' : 'Add Lower Bound',
     front: key === 'lower' && stackedAtCeiling.value,
   })),
 )
@@ -292,18 +292,13 @@ function removeBound(key: BoundKey) {
 }
 
 .bounds__label {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
 .bounds__label small {
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
   margin-left: var(--space-xs);
 }
 
@@ -324,7 +319,7 @@ function removeBound(key: BoundKey) {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .bounds__entry input:focus {
@@ -346,8 +341,8 @@ function removeBound(key: BoundKey) {
   color: var(--text-tertiary);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .bounds__drop:hover:not(:disabled) {
@@ -365,19 +360,16 @@ function removeBound(key: BoundKey) {
   align-items: center;
   gap: 5px;
   padding: var(--space-sm) 10px;
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-secondary);
   background: transparent;
   border: 1px dashed var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .bounds__add:hover:not(:disabled) {

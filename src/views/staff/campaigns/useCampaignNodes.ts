@@ -19,6 +19,11 @@ import type { CampaignVertices } from './useCampaignVertices'
 
 const DEFAULT_MILESTONE_LABEL = 'Milestone'
 
+export const PREREQ_TABS = [
+  { key: 'OR', label: 'Any Clears' },
+  { key: 'AND', label: 'All Clear' },
+]
+
 export const SHAPE_TILES = [
   { value: 'hex', label: 'Hex' },
   { value: 'square', label: 'Square' },

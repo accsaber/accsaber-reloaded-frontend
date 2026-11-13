@@ -321,11 +321,8 @@ function unpin() {
   bottom: 6px;
   transform: translateX(-50%);
   padding: 2px var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--bg-base) 78%, transparent);
   border-radius: var(--radius-pill);
@@ -333,11 +330,8 @@ function unpin() {
 }
 
 .placer__label {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
@@ -379,7 +373,7 @@ function unpin() {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .placer__field input:focus {
@@ -389,7 +383,6 @@ function unpin() {
 
 .placer__hint {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
   line-height: 1.4;
@@ -398,19 +391,16 @@ function unpin() {
 .placer__action {
   align-self: flex-start;
   padding: 7px 12px;
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .placer__action:hover:not(:disabled) {

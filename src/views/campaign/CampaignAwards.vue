@@ -18,7 +18,7 @@ withDefaults(
 
 <template>
   <section class="awards">
-    <component :is="heading" class="awards__label">
+    <component :is="heading" class="awards__label field-label">
       <span class="awards__notice">
         {{ label }}
         <CampaignRewardNotice :curated="curated" />
@@ -45,7 +45,7 @@ withDefaults(
 .awards {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-sm);
 }
 
 .awards__label {
@@ -53,27 +53,16 @@ withDefaults(
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 
 .awards__notice {
   display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  align-items: baseline;
+  gap: var(--space-sm);
 }
 
 .awards__xp {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 500;
   color: var(--page-accent);
-  text-transform: none;
-  letter-spacing: 0;
 }
 
 .awards__list {
@@ -88,14 +77,8 @@ withDefaults(
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 6px 0;
-  font-family: var(--font-sans);
+  padding: var(--space-xs) 0;
   font-size: var(--text-caption);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.awards__item:last-child {
-  border-bottom: none;
 }
 
 .awards__item--withheld {

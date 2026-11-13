@@ -13,7 +13,7 @@ const { commitConnectionColor, resetConnectionColor } = connections
   <fieldset v-if="selectedEdge" class="campaign-editor__section" :disabled="!editable">
     <CampaignColorField
       v-model="formConnection.color"
-      label="Connection color"
+      label="Connection Color"
       text
       placeholder="#f5b800 · gold"
       :maxlength="33"

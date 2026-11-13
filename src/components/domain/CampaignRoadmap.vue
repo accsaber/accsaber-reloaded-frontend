@@ -112,6 +112,8 @@ const props = withDefaults(
     backgroundPlacement?: CampaignBackgroundPlacement | null
     focusId?: string | null
     defaultScale?: number
+    insetLeft?: number
+    showOrigin?: boolean
     showStarfield?: boolean
     selectedId?: string | null
     selectedIds?: string[]
@@ -140,6 +142,8 @@ const props = withDefaults(
     backgroundPlacement: null,
     focusId: null,
     defaultScale: 1.25,
+    insetLeft: 0,
+    showOrigin: true,
     showStarfield: false,
     selectedId: null,
     selectedIds: () => [],
@@ -262,6 +266,7 @@ const {
   unit: computed(() => props.unit),
   projection: hexProjection,
   defaultScale: computed(() => props.defaultScale),
+  insetLeft: computed(() => props.insetLeft),
   editable: computed(() => props.editable),
   marqueeEnabled: computed(() => props.editable && props.mode === 'select'),
   dragEnabled: computed(() => props.editable && (props.mode === 'drag' || props.mode === 'select')),
@@ -937,7 +942,7 @@ watch(
 watch(
   () => props.focusId,
   (id) => {
-    if (id && didInitialPosition && props.followFocus) focusNode(id)
+    if (id && didInitialPosition && props.followFocus) focusNode(id, undefined, true)
   },
 )
 
@@ -1149,7 +1154,7 @@ const controls = computed(() => [
       />
 
       <g :transform="transformStyle">
-        <g v-if="editable" class="campaign-roadmap__origin" aria-hidden="true">
+        <g v-if="editable && showOrigin" class="campaign-roadmap__origin" aria-hidden="true">
           <line x1="-10" y1="0" x2="10" y2="0" stroke="var(--text-tertiary)" stroke-width="1" />
           <line x1="0" y1="-10" x2="0" y2="10" stroke="var(--text-tertiary)" stroke-width="1" />
           <circle cx="0" cy="0" r="3" fill="none" stroke="var(--text-tertiary)" stroke-width="1" />
@@ -1490,15 +1495,15 @@ const controls = computed(() => [
 
 .campaign-roadmap__node--connect-target {
   filter: brightness(1.18);
-  transition: filter 120ms ease;
+  transition: filter var(--dur-fast) var(--ease-out);
 }
 
 .campaign-roadmap__edge-line,
 .campaign-roadmap__edge-arrow {
   transition:
-    stroke 120ms ease,
-    fill 120ms ease,
-    opacity 120ms ease;
+    stroke var(--dur-fast) var(--ease-out),
+    fill var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
 }
 
 .campaign-roadmap__edge-group--highlight .campaign-roadmap__edge-line,
@@ -1569,7 +1574,7 @@ const controls = computed(() => [
 }
 
 .campaign-roadmap__grid {
-  transition: opacity 150ms ease;
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1606,8 +1611,8 @@ const controls = computed(() => [
   padding: 3px var(--space-sm);
   border-radius: var(--radius-card);
   transition:
-    background 120ms ease,
-    outline-color 120ms ease;
+    background var(--dur-fast) var(--ease-out),
+    outline-color var(--dur-fast) var(--ease-out);
   outline: 1px dashed transparent;
   outline-offset: 2px;
 }
@@ -1633,7 +1638,7 @@ const controls = computed(() => [
 
 .campaign-roadmap__snap {
   pointer-events: none;
-  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform var(--dur-fast) var(--ease-out);
   animation: snap-breathe 1.6s ease-in-out infinite;
   transform-box: fill-box;
 }
@@ -1772,8 +1777,8 @@ const controls = computed(() => [
   color: var(--text-secondary);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    background 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
 .campaign-roadmap__btn:hover {
@@ -1786,7 +1791,7 @@ const controls = computed(() => [
   margin: 0;
   padding: 3px 9px;
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
   color: var(--error);
   background: color-mix(in srgb, var(--error) 12%, var(--bg-surface));

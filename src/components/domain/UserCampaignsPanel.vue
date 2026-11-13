@@ -2,8 +2,8 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CampaignFilterBar from '@/components/domain/CampaignFilterBar.vue'
+import CampaignGrid from '@/components/domain/CampaignGrid.vue'
 import CampaignRow from '@/components/domain/CampaignRow.vue'
 import { useCampaignTags } from '@/composables/useCampaignTags'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
@@ -62,28 +62,23 @@ onMounted(loadTags)
 <template>
   <div class="user-campaigns">
     <div v-if="filtered || !empty" class="user-campaigns__controls">
-      <SearchBox v-model="controls.search" class="user-campaigns__search"
-        placeholder="Search title or creator..." />
+      <SearchBox v-model="controls.search" placeholder="Search title or creator..." />
       <CampaignFilterBar v-model="controls" :tags="tags"
         :sort-options="USER_CAMPAIGN_SORT_OPTIONS" show-curated show-progress />
     </div>
 
-    <div v-if="error" class="user-campaigns__error" role="alert">{{ error }}</div>
+    <p v-if="error" class="caption user-campaigns__error" role="alert">{{ error }}</p>
 
-    <div v-if="loading" class="user-campaigns__grid">
-      <SkeletonLoader v-for="i in 4" :key="i" variant="card" />
-    </div>
+    <EmptyState v-if="empty" :message="filtered ? 'No campaigns match these filters' : emptyMessage" />
 
-    <EmptyState v-else-if="empty" :message="filtered ? 'No campaigns match these filters' : emptyMessage" />
+    <CampaignGrid v-else :items="runs" :item-key="(run) => run.id" :loading="loading && runs.length === 0"
+      :refreshing="loading && runs.length > 0">
+      <template #default="{ item, swap }">
+        <CampaignRow :campaign="item.campaign" :progress="item" :viewing-user-id="viewingUserId" v-bind="swap" />
+      </template>
+    </CampaignGrid>
 
-    <div v-else class="user-campaigns__grid stagger" :style="{ '--n': runs.length }">
-      <CampaignRow v-for="(run, i) in runs" :key="run.id" :style="{ '--i': i }" :campaign="run.campaign"
-        :progress="run" :viewing-user-id="viewingUserId" />
-    </div>
-
-    <div v-if="totalPages > 1 && !loading" class="user-campaigns__pagination">
-      <PaginationControls v-model:page="page" :total-pages="totalPages" />
-    </div>
+    <PaginationControls v-if="totalPages > 1" v-model:page="page" :total-pages="totalPages" />
   </div>
 </template>
 
@@ -96,37 +91,23 @@ onMounted(loadTags)
 
 .user-campaigns__controls {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
-.user-campaigns__search {
-  max-width: 320px;
-}
-
-.user-campaigns__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-md);
-}
-
-.user-campaigns__pagination {
-  display: flex;
-  justify-content: center;
+.user-campaigns__controls :deep(.search-box) {
+  flex: 0 1 320px;
 }
 
 .user-campaigns__error {
-  padding: var(--space-md);
-  font-size: var(--text-caption);
   color: var(--error);
-  background: color-mix(in srgb, var(--error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: var(--radius-card);
 }
 
-@media (max-width: 640px) {
-  .user-campaigns__search {
-    max-width: 100%;
+@media (max-width: 767px) {
+  .user-campaigns__controls :deep(.search-box) {
+    flex: 1 1 100%;
   }
 }
 </style>

@@ -33,7 +33,7 @@ const { uploadBackground, removeBackground, uploadIcon, removeIcon } = assets
       />
     </div>
     <div v-if="campaign.backgroundUrl" class="campaign-editor__field">
-      <span>Background placement</span>
+      <span>Background Placement</span>
       <CampaignBackgroundPlacer
         :image-url="campaign.backgroundUrl"
         :placement="campaign.background"

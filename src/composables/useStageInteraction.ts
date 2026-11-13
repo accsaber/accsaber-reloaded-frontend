@@ -1,4 +1,5 @@
 import { clamp } from '@/utils/math'
+import { useRenderLoop } from '@/composables/useRenderLoop'
 import {
   computed,
   onMounted,
@@ -44,6 +45,7 @@ export interface StageInteractionOptions {
   unit: ComputedRef<number>
   projection?: GridProjection
   defaultScale?: ComputedRef<number>
+  insetLeft?: ComputedRef<number>
   minScale?: number
   maxScale?: number
   editable?: ComputedRef<boolean>
@@ -70,6 +72,8 @@ interface DragState {
   startCy: number
   moved: boolean
 }
+
+const GLIDE_MS = 450
 
 function prefersReducedMotion(): boolean {
   return (
@@ -111,10 +115,14 @@ export function useStageInteraction(
     return map
   })
 
+  const insetLeft = computed(() => options.insetLeft?.value ?? 0)
+  const viewWidth = computed(() => stageWidth.value - insetLeft.value)
+  const viewCenterX = computed(() => insetLeft.value + viewWidth.value / 2)
+
   const fitScale = computed(() => {
     const b = options.contentBounds.value
-    if (b.width <= 0 || b.height <= 0 || stageWidth.value <= 0 || stageHeight.value <= 0) return 1
-    return Math.min(stageWidth.value / b.width, stageHeight.value / b.height)
+    if (b.width <= 0 || b.height <= 0 || viewWidth.value <= 0 || stageHeight.value <= 0) return 1
+    return Math.min(viewWidth.value / b.width, stageHeight.value / b.height)
   })
 
   const minScale = computed(() => Math.min(comfortableMinScale, fitScale.value))
@@ -148,7 +156,7 @@ export function useStageInteraction(
     if (b.width === 0 || b.height === 0) return
     const s = Math.min(maxScale, fitScale.value)
     scale.value = s
-    translateX.value = stageWidth.value / 2 - (b.x + b.width / 2) * s
+    translateX.value = viewCenterX.value - (b.x + b.width / 2) * s
     translateY.value = stageHeight.value / 2 - (b.y + b.height / 2) * s
   }
 
@@ -163,6 +171,7 @@ export function useStageInteraction(
 
   function onWheel(e: WheelEvent) {
     if (!stage.value) return
+    stopGlide()
     e.preventDefault()
     const rect = stage.value.getBoundingClientRect()
     const factor = Math.exp(-e.deltaY * 0.0015)
@@ -174,19 +183,45 @@ export function useStageInteraction(
     zoomAround(stageWidth.value / 2, stageHeight.value / 2, scale.value * factor)
   }
 
-  function focusNode(id: string, targetScale?: number) {
-    const n = vertexById.value.get(id)
-    if (!n || !stage.value) return
-    focusPoint(n.cx, n.cy, targetScale)
+  let glide: { from: number[]; to: number[]; start: number } | null = null
+
+  const glideLoop = useRenderLoop((now) => {
+    if (!glide) return
+    const t = Math.min((now - glide.start) / GLIDE_MS, 1)
+    const eased = 1 - Math.pow(1 - t, 3)
+    const at = (i: number) => glide!.from[i]! + (glide!.to[i]! - glide!.from[i]!) * eased
+    translateX.value = at(0)
+    translateY.value = at(1)
+    scale.value = at(2)
+    if (t === 1) stopGlide()
+  })
+
+  function stopGlide() {
+    glide = null
+    glideLoop.stop()
   }
 
-  function focusPoint(cx: number, cy: number, targetScale?: number) {
+  function focusNode(id: string, targetScale?: number, animate = false) {
+    const n = vertexById.value.get(id)
+    if (!n || !stage.value) return
+    focusPoint(n.cx, n.cy, targetScale, animate)
+  }
+
+  function focusPoint(cx: number, cy: number, targetScale?: number, animate = false) {
     const s = targetScale ?? Math.max(scale.value, options.defaultScale?.value ?? 1)
     const clamped = Math.max(minScale.value, Math.min(maxScale, s))
-    translateX.value = stageWidth.value / 2 - cx * clamped
+    const from = [translateX.value, translateY.value, scale.value]
+    stopGlide()
+    translateX.value = viewCenterX.value - cx * clamped
     translateY.value = stageHeight.value / 2 - cy * clamped
     scale.value = clamped
     clampPan()
+    if (!animate || prefersReducedMotion()) return
+    glide = { from, to: [translateX.value, translateY.value, clamped], start: performance.now() }
+    translateX.value = from[0]!
+    translateY.value = from[1]!
+    scale.value = from[2]!
+    glideLoop.start()
   }
 
   function revealPoint(cx: number, cy: number, margin = 80) {
@@ -308,6 +343,7 @@ export function useStageInteraction(
       if (target?.closest?.(sel)) return
     }
     if (options.shouldIgnore?.(e)) return
+    stopGlide()
 
     const nodeId = nodeIdFromEvent(e.target)
     const node = nodeId ? (vertexById.value.get(nodeId) ?? null) : null

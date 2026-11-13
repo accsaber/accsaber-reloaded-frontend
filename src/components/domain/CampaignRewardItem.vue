@@ -64,7 +64,7 @@ const initial = computed(() => displayName.value.charAt(0).toUpperCase())
 .reward-item__initial {
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: var(--text-card-title);
   color: var(--text-secondary);
 }
 
@@ -87,11 +87,8 @@ const initial = computed(() => displayName.value.charAt(0).toUpperCase())
 }
 
 .reward-item__type {
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  text-transform: capitalize;
   color: var(--text-tertiary);
 }
 

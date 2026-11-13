@@ -122,8 +122,7 @@ function confirm() {
 
 .item-picker__name {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -133,8 +132,7 @@ function confirm() {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
@@ -145,8 +143,6 @@ function confirm() {
 .item-picker__rarity {
   color: var(--rarity-color, var(--text-tertiary));
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .item-picker__selected {
@@ -179,15 +175,14 @@ function confirm() {
 
 .item-picker__change {
   padding: var(--space-xs) 10px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .item-picker__change:hover {
@@ -202,11 +197,8 @@ function confirm() {
 }
 
 .item-picker__field > span {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
@@ -220,7 +212,7 @@ function confirm() {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .item-picker__field input[type="number"]:focus {
@@ -238,14 +230,11 @@ function confirm() {
 .item-picker__cancel,
 .item-picker__confirm {
   padding: var(--space-sm) var(--space-md);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: var(--text-caption);
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .item-picker__cancel {

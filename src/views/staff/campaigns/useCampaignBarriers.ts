@@ -26,21 +26,21 @@ import type { CampaignVertices } from './useCampaignVertices'
 const MAX_BARRIERS = 100
 
 export const BARRIER_CONDITION_OPTIONS: Array<{ value: BarrierConditionType; label: string }> = [
-  { value: 'AVERAGE_ACC', label: 'Average accuracy' },
-  { value: 'ACC_MAX', label: 'Best accuracy' },
+  { value: 'AVERAGE_ACC', label: 'Average Accuracy' },
+  { value: 'ACC_MAX', label: 'Best Accuracy' },
   { value: 'AVERAGE_AP', label: 'Average AP' },
   { value: 'AP_MAX', label: 'Best AP' },
-  { value: 'STREAK_115_AVERAGE', label: 'Average 115 streak' },
-  { value: 'STREAK_115_MAX', label: 'Best 115 streak' },
-  { value: 'AVERAGE_COMBO', label: 'Average combo' },
-  { value: 'AVERAGE_BOMB_HITS', label: 'Average bombs hit' },
-  { value: 'AVERAGE_MISTAKES', label: 'Average mistakes' },
-  { value: 'AVERAGE_PAUSES', label: 'Average pauses' },
-  { value: 'AVERAGE_RANK', label: 'Average rank' },
-  { value: 'MAX_RANK', label: 'Best rank' },
-  { value: 'FC', label: 'Full combo (all)' },
-  { value: 'PASS', label: 'Pass all (no No-Fail)' },
-  { value: 'COMPLETION_COUNT', label: 'Maps completed' },
+  { value: 'STREAK_115_AVERAGE', label: 'Average 115 Streak' },
+  { value: 'STREAK_115_MAX', label: 'Best 115 Streak' },
+  { value: 'AVERAGE_COMBO', label: 'Average Combo' },
+  { value: 'AVERAGE_BOMB_HITS', label: 'Average Bombs Hit' },
+  { value: 'AVERAGE_MISTAKES', label: 'Average Mistakes' },
+  { value: 'AVERAGE_PAUSES', label: 'Average Pauses' },
+  { value: 'AVERAGE_RANK', label: 'Average Rank' },
+  { value: 'MAX_RANK', label: 'Best Rank' },
+  { value: 'FC', label: 'Full Combo (All)' },
+  { value: 'PASS', label: 'Pass All (No No-Fail)' },
+  { value: 'COMPLETION_COUNT', label: 'Maps Completed' },
 ]
 
 interface BoundsDiff {

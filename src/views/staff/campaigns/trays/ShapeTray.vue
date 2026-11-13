@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import { resolveSize } from '@/utils/campaignLayout'
 import CampaignColorField from '../CampaignColorField.vue'
@@ -6,6 +7,11 @@ import CampaignEditorTile from '../CampaignEditorTile.vue'
 import CampaignShapeGlyph from '../CampaignShapeGlyph.vue'
 import { useCampaignEditorContext } from '../campaignEditorContext'
 import { SHAPE_TILES, SIZE_TILES } from '../useCampaignNodes'
+
+const BORDER_LAYER_TABS = [
+  { key: 'ABOVE', label: 'Over Cover' },
+  { key: 'BELOW', label: 'Behind Cover' },
+]
 
 const { access, vertices, meta, nodes, assets } = useCampaignEditorContext()
 const { editable } = access
@@ -19,7 +25,7 @@ const { uploadNodeBorder, removeNodeBorder } = assets
 <template>
   <fieldset class="campaign-editor__section" :disabled="!editable">
     <div class="campaign-editor__field">
-      <span>Border shape</span>
+      <span>Border Shape</span>
       <div class="campaign-editor__shape-row">
         <CampaignEditorTile
           v-for="t in SHAPE_TILES"
@@ -33,7 +39,7 @@ const { uploadNodeBorder, removeNodeBorder } = assets
       </div>
     </div>
     <div class="campaign-editor__field">
-      <span>Node size: {{ resolveSize(formNode.size, 48) }}px</span>
+      <span>Node Size: {{ resolveSize(formNode.size, 48) }}px</span>
       <div class="campaign-editor__shape-row">
         <CampaignEditorTile
           v-for="t in SIZE_TILES"
@@ -57,14 +63,14 @@ const { uploadNodeBorder, removeNodeBorder } = assets
     </div>
     <CampaignColorField
       v-model="formNode.borderColor"
-      label="Border color"
+      label="Border Color"
       :fallback="defaultColorHex"
       @commit="commitNodeField('borderColor')"
       @reset="resetNodeColor('borderColor')"
     />
     <div class="campaign-editor__avatar-upload">
       <ImageUploader
-        label="Border art"
+        label="Border Art"
         hint="Frame or GIF"
         aspect-ratio="1 / 1"
         :image-url="selectedDifficulty?.nodeBorderUrl || null"
@@ -74,33 +80,14 @@ const { uploadNodeBorder, removeNodeBorder } = assets
       />
     </div>
     <div v-if="selectedDifficulty?.nodeBorderUrl" class="campaign-editor__field">
-      <span>Border layer</span>
-      <div class="campaign-editor__prereq-mode-toggle" role="radiogroup" aria-label="Border layer">
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="formNode.nodeBorderLayer !== 'BELOW'"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{
-            'campaign-editor__prereq-mode-btn--active': formNode.nodeBorderLayer !== 'BELOW',
-          }"
-          @click="selectNodeBorderLayer('ABOVE')"
-        >
-          over cover
-        </button>
-        <button
-          type="button"
-          role="radio"
-          :aria-checked="formNode.nodeBorderLayer === 'BELOW'"
-          class="campaign-editor__prereq-mode-btn"
-          :class="{
-            'campaign-editor__prereq-mode-btn--active': formNode.nodeBorderLayer === 'BELOW',
-          }"
-          @click="selectNodeBorderLayer('BELOW')"
-        >
-          behind cover
-        </button>
-      </div>
+      <span>Border Layer</span>
+      <BaseTabs
+        variant="segmented"
+        label="Border layer"
+        :tabs="BORDER_LAYER_TABS"
+        :model-value="formNode.nodeBorderLayer === 'BELOW' ? 'BELOW' : 'ABOVE'"
+        @update:model-value="selectNodeBorderLayer($event as 'ABOVE' | 'BELOW')"
+      />
     </div>
   </fieldset>
 </template>

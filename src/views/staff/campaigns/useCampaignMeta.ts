@@ -159,8 +159,8 @@ export function useCampaignMeta(ctx: MetaContext) {
   }
 
   const completionModeOptions: Array<{ value: 'TERMINAL' | 'ALL'; label: string }> = [
-    { value: 'TERMINAL', label: 'Clear a flagged ending' },
-    { value: 'ALL', label: 'Clear every node' },
+    { value: 'TERMINAL', label: 'Clear a Flagged Ending' },
+    { value: 'ALL', label: 'Clear Every Node' },
   ]
 
   const terminalMode = computed(() => campaign.value?.completionMode === 'TERMINAL')

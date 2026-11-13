@@ -122,7 +122,7 @@ const peerCursors = computed(() => props.tools.peerCursors)
 .campaign-roadmap__edge-x {
   opacity: 0;
   cursor: pointer;
-  transition: opacity 140ms ease;
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .campaign-roadmap__edge-group:hover .campaign-roadmap__edge-x {

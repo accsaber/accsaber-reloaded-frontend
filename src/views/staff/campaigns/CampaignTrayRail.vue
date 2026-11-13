@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
 import CampaignTrayIcon from './CampaignTrayIcon.vue'
 import { useCampaignEditorContext } from './campaignEditorContext'
 
@@ -7,20 +8,31 @@ const { campaignTrays, nodeTrays, activeTray, toggleTray } = trays
 const { selectedCount } = selection
 const { selectedEdge } = connections
 
+defineProps<{
+  group?: 'campaign' | 'node' | null
+}>()
+
 const emit = defineEmits<{
   tutorial: []
+  close: []
 }>()
 </script>
 
 <template>
   <aside class="campaign-editor__tray-rail" aria-label="Editor trays">
-    <div class="campaign-editor__tray-group">
+    <header v-if="group" class="campaign-editor__tray-rail-head">
+      <h2 class="card-title">{{ group === 'node' ? 'Node' : 'Campaign' }}</h2>
+      <IconButton icon="close" label="Close" @click="emit('close')" />
+    </header>
+
+    <div v-if="group !== 'node'" class="campaign-editor__tray-group stagger" :style="{ '--n': campaignTrays.length }">
       <span class="campaign-editor__tray-group-label">Campaign</span>
       <button
-        v-for="tray in campaignTrays"
+        v-for="(tray, i) in campaignTrays"
         :key="tray.id"
         type="button"
-        class="campaign-editor__tray-btn"
+        class="campaign-editor__tray-btn pressable"
+        :style="{ '--i': i }"
         :class="[
           { 'campaign-editor__tray-btn--active': activeTray === tray.id },
           tray.id === 'status' && tray.tone ? `campaign-editor__tray-btn--${tray.tone}` : '',
@@ -34,17 +46,18 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <div class="campaign-editor__tray-group">
+    <div v-if="group !== 'campaign'" class="campaign-editor__tray-group stagger" :style="{ '--n': nodeTrays.length }">
       <span class="campaign-editor__tray-group-label">Node</span>
       <p v-if="selectedCount === 0 && !selectedEdge" class="campaign-editor__tray-empty">
         Select a node
       </p>
       <button
-        v-for="tray in nodeTrays"
+        v-for="(tray, i) in nodeTrays"
         v-else
         :key="tray.id"
         type="button"
-        class="campaign-editor__tray-btn"
+        class="campaign-editor__tray-btn pressable"
+        :style="{ '--i': i }"
         :class="{ 'campaign-editor__tray-btn--active': activeTray === tray.id }"
         :aria-pressed="activeTray === tray.id"
         @click="toggleTray(tray.id)"
@@ -55,9 +68,9 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <div class="campaign-editor__tray-group campaign-editor__tray-group--foot">
+    <div v-if="group !== 'node'" class="campaign-editor__tray-group campaign-editor__tray-group--foot">
       <span class="campaign-editor__tray-group-label">Help</span>
-      <button type="button" class="campaign-editor__tray-btn" @click="emit('tutorial')">
+      <button type="button" class="campaign-editor__tray-btn pressable" @click="emit('tutorial')">
         <CampaignTrayIcon name="compass" />
         <span class="campaign-editor__tray-btn-label">Tutorial</span>
       </button>
@@ -68,7 +81,7 @@ const emit = defineEmits<{
 <style scoped>
 .campaign-editor__tray-rail {
   position: absolute;
-  top: calc(var(--space-md) + 44px);
+  top: calc(var(--space-md) * 2 + var(--control-h));
   left: var(--space-md);
   bottom: var(--space-md);
   z-index: 5;
@@ -77,9 +90,9 @@ const emit = defineEmits<{
   gap: var(--space-md);
   width: 88px;
   padding: var(--space-sm);
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
+  border-radius: var(--radius-card);
   overflow-y: auto;
   overflow-x: hidden;
   pointer-events: auto;
@@ -87,37 +100,22 @@ const emit = defineEmits<{
   scrollbar-color: var(--bg-overlay) transparent;
 }
 
-.campaign-editor__tray-rail::-webkit-scrollbar {
-  width: 5px;
-}
-.campaign-editor__tray-rail::-webkit-scrollbar-thumb {
-  background: var(--bg-overlay);
-  border-radius: var(--radius-btn);
-}
-
 .campaign-editor__tray-group {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-
-.campaign-editor__tray-group + .campaign-editor__tray-group {
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--bg-overlay);
+  gap: var(--space-xs);
 }
 
 .campaign-editor__tray-group--foot {
   margin-top: auto;
 }
 
-.campaign-editor__tray-group-label {
-  padding: 0 2px 2px;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.campaign-editor__tray-group-label,
+.campaign-editor__tray-empty {
+  margin: 0;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
+  text-align: center;
 }
 
 .campaign-editor__tray-btn {
@@ -125,28 +123,27 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-xs);
+  gap: 2px;
+  flex-shrink: 0;
+  padding: var(--space-xs);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-card);
+  border: none;
+  border-radius: var(--radius-btn);
   color: var(--text-secondary);
   cursor: pointer;
   transition:
-    color 120ms ease,
-    background 120ms ease,
-    border-color 120ms ease;
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
-.campaign-editor__tray-btn--draft {
-  color: var(--text-secondary);
-}
 .campaign-editor__tray-btn--published {
   color: var(--info);
 }
+
 .campaign-editor__tray-btn--editing {
   color: var(--warning);
 }
+
 .campaign-editor__tray-btn--curated {
   color: var(--success);
 }
@@ -159,84 +156,79 @@ const emit = defineEmits<{
 .campaign-editor__tray-btn--active,
 .campaign-editor__tray-btn--active:hover {
   color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--page-accent) 45%, transparent);
+  background: var(--bg-elevated);
 }
 
 .campaign-editor__tray-btn-label {
-  max-width: 100%;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1.1;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  line-height: 1.2;
   text-align: center;
-  overflow-wrap: anywhere;
 }
 
 .campaign-editor__tray-count {
   position: absolute;
-  top: 4px;
-  right: 6px;
-  min-width: 15px;
-  height: 15px;
+  top: var(--space-xs);
+  right: var(--space-xs);
+  min-width: 16px;
   padding: 0 var(--space-xs);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  font-weight: 600;
+  font-size: var(--text-caption);
+  line-height: 16px;
+  text-align: center;
   color: var(--text-secondary);
   background: var(--bg-overlay);
   border-radius: var(--radius-pill);
 }
 
-.campaign-editor__tray-empty {
-  margin: 0;
-  padding: var(--space-xs) 2px;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  line-height: 1.3;
-  text-align: center;
+.campaign-editor__tray-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 @media (max-width: 860px) {
   .campaign-editor__tray-rail {
-    position: relative;
+    position: fixed;
     top: auto;
-    left: auto;
-    bottom: auto;
-    flex-direction: row;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7;
     width: auto;
-    margin: var(--space-md) var(--space-md) 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+    max-height: 70dvh;
+    padding: var(--space-md) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom));
+    border-bottom: none;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
   }
 
   .campaign-editor__tray-group {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .campaign-editor__tray-group + .campaign-editor__tray-group {
-    padding-top: 0;
-    padding-left: var(--space-sm);
-    border-top: none;
-    border-left: 1px solid var(--bg-overlay);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   }
 
   .campaign-editor__tray-group--foot {
     margin-top: 0;
-    margin-left: auto;
+  }
+
+  .campaign-editor__tray-btn {
+    min-height: 56px;
+    justify-content: center;
   }
 
   .campaign-editor__tray-group-label {
-    align-self: center;
-    padding: 0 var(--space-xs) 0 0;
+    display: none;
+  }
+
+  .campaign-editor__tray-group--foot .campaign-editor__tray-group-label {
+    display: block;
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .campaign-editor__tray-empty {
+    grid-column: 1 / -1;
+    text-align: left;
   }
 }
 </style>

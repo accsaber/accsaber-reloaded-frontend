@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import IconButton from '@/components/common/IconButton.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import CountryFlag from '@/components/domain/CountryFlag.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { onImageError, pickAvatarFallback, pickAvatarUrl } from '@/utils/media'
@@ -51,8 +54,8 @@ watch([open, isDesktop], ([o, desktop]) => {
 })
 
 const BOARD_TABS = [
-  { key: 'COMPLETIONS', label: 'First to finish' },
-  { key: 'AVG_ACCURACY', label: 'Avg acc' },
+  { key: 'COMPLETIONS', label: 'First to Finish' },
+  { key: 'AVG_ACCURACY', label: 'Avg Acc' },
   { key: 'AVG_AP', label: 'Avg AP' },
   { key: 'PROGRESS', label: 'Progress' },
 ]
@@ -160,7 +163,7 @@ interface BoardRow {
   player: PlayerRef
   rank: number | null
   sub: string | null
-  progress: { pct: number; count: string } | null
+  progress: { ratio: number; count: string } | null
   pill: { text: string; done: boolean } | null
   stat: string | null
   statTitle?: string
@@ -175,9 +178,9 @@ function boardRow(entry: CampaignLeaderboardEntry): BoardRow {
     const done = entry.completedNodes ?? 0
     return {
       ...base,
-      progress: { pct: total ? Math.min(100, Math.round((done / total) * 100)) : 0, count: `${done}/${total}` },
+      progress: { ratio: total ? done / total : 0, count: `${done}/${total}` },
       pill: {
-        text: entry.progressStatus === 'COMPLETED' ? 'Completed' : 'In progress',
+        text: entry.progressStatus === 'COMPLETED' ? 'Completed' : 'In Progress',
         done: entry.progressStatus === 'COMPLETED',
       },
     }
@@ -226,37 +229,22 @@ function isSpectating(player: PlayerRef): boolean {
 
 <template>
   <div class="lb" :class="{ 'lb--open': open, 'lb--desktop': isDesktop }">
-    <button
-      v-if="!open"
-      type="button"
-      class="lb__opener"
-      aria-label="Open leaderboard"
-      @click="open = true"
-    >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
+    <BaseButton v-if="!open" class="lb__opener" @click="open = true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <line x1="18" y1="20" x2="18" y2="10" />
         <line x1="12" y1="20" x2="12" y2="4" />
         <line x1="6" y1="20" x2="6" y2="14" />
       </svg>
       Leaderboard
-    </button>
+    </BaseButton>
 
     <div v-if="open && !isDesktop" class="lb__backdrop" aria-hidden="true" @click="open = false" />
 
     <aside v-if="open" class="lb__panel" aria-label="Campaign leaderboard">
       <header class="lb__head">
         <template v-if="drillNode">
-          <button type="button" class="lb__back" aria-label="Back to campaign boards" @click="goBack">
+          <IconButton label="Back to campaign boards" @click="goBack">
             <svg
               width="15"
               height="15"
@@ -271,21 +259,16 @@ function isSpectating(player: PlayerRef): boolean {
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
             </svg>
-          </button>
+          </IconButton>
           <div class="lb__head-meta">
             <h2 class="lb__title">
               <SongTitle :name="drillNode.songName" :sub-name="drillNode.songSubName" />
             </h2>
-            <p class="lb__subtitle">{{ formatDifficulty(drillNode.difficulty) }} · map scores</p>
+            <p class="caption">{{ formatDifficulty(drillNode.difficulty) }} · Map Scores</p>
           </div>
         </template>
         <h2 v-else class="lb__title">Leaderboard</h2>
-        <button
-          type="button"
-          class="lb__collapse"
-          :aria-label="isDesktop ? 'Collapse leaderboard' : 'Close leaderboard'"
-          @click="open = false"
-        >
+        <IconButton :label="isDesktop ? 'Collapse leaderboard' : 'Close leaderboard'" @click="open = false">
           <svg
             v-if="isDesktop"
             width="15"
@@ -315,7 +298,7 @@ function isSpectating(player: PlayerRef): boolean {
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
-        </button>
+        </IconButton>
       </header>
 
       <BaseTabs
@@ -335,61 +318,60 @@ function isSpectating(player: PlayerRef): boolean {
       />
 
       <div class="lb__list">
-        <template v-if="loading">
-          <SkeletonLoader v-for="i in 8" :key="i" variant="table-row" />
-        </template>
-
-        <div v-else-if="error" class="lb__error">
-          <p role="alert">{{ error }}</p>
+        <div v-if="error" class="lb__error">
+          <p class="caption" role="alert">{{ error }}</p>
           <BaseButton size="sm" @click="loadBoard">Retry</BaseButton>
         </div>
 
-        <EmptyState v-else-if="rows.length === 0" :message="emptyMessage" />
+        <EmptyState v-else-if="!loading && rows.length === 0" :message="emptyMessage" />
 
-        <button
-          v-for="row in rows"
-          v-else
-          :key="row.player.id"
-          type="button"
-          class="lb__row"
-          :class="{
-            'lb__row--tall': !!row.progress,
-            'lb__row--active': isSpectating(row.player),
-          }"
-          :aria-current="isSpectating(row.player) ? 'true' : undefined"
-          :title="`View ${row.player.name}'s run`"
-          @click="emit('spectate', row.player)"
-        >
-          <span v-if="row.rank != null" class="rank lb__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
-          <img
-            class="lb__avatar"
-            :src="pickAvatarUrl(row.player)"
-            :alt="row.player.name"
-            loading="lazy"
-            decoding="async"
-            @error="onImageError(pickAvatarFallback(row.player))($event)"
-          />
-          <span class="lb__who">
-            <span class="lb__name">
-              {{ row.player.name }}
-              <CountryFlag v-if="row.player.country" :country="row.player.country" />
-            </span>
-            <span v-if="row.sub" class="lb__sub">{{ row.sub }}</span>
-            <span v-if="row.progress" class="lb__progress">
-              <span class="lb__progress-track" aria-hidden="true">
-                <span class="lb__progress-fill" :style="{ transform: `scaleX(${row.progress.pct / 100})` }" />
+        <SwapList v-else :items="rows" :item-key="(row) => row.player.id" :loading="loading && rows.length === 0"
+          :refreshing="loading && rows.length > 0" :placeholders="8">
+          <template #placeholder>
+            <div class="lb__ghost placeholder">
+              <SkeletonLoader height="100%" />
+            </div>
+          </template>
+          <template #default="{ item: row, swap }">
+            <button
+              type="button"
+              class="lb__row"
+              :class="[swap.class, { 'lb__row--active': isSpectating(row.player) }]"
+              :style="swap.style"
+              :aria-current="isSpectating(row.player) ? 'true' : undefined"
+              :title="`View ${row.player.name}'s run`"
+              @click="emit('spectate', row.player)"
+            >
+              <span v-if="row.rank != null" class="rank lb__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
+              <img
+                class="lb__avatar"
+                :src="pickAvatarUrl(row.player)"
+                :alt="row.player.name"
+                loading="lazy"
+                decoding="async"
+                @error="onImageError(pickAvatarFallback(row.player))($event)"
+              />
+              <span class="lb__who">
+                <span class="lb__name">
+                  {{ row.player.name }}
+                  <CountryFlag v-if="row.player.country" :country="row.player.country" />
+                </span>
+                <span v-if="row.sub" class="lb__sub">{{ row.sub }}</span>
+                <span v-if="row.progress" class="lb__sub lb__progress">
+                  <ProgressBar :value="row.progress.ratio" />
+                  {{ row.progress.count }}
+                </span>
               </span>
-              <span class="lb__progress-count">{{ row.progress.count }}</span>
-            </span>
-          </span>
-          <span v-if="row.pill" class="lb__pill" :class="{ 'lb__pill--done': row.pill.done }">{{ row.pill.text }}</span>
-          <span v-else-if="row.secondary" class="lb__stat-col">
-            <span class="lb__stat">{{ row.stat }}</span>
-            <span class="lb__stat-secondary">{{ row.secondary }}</span>
-          </span>
-          <span v-else-if="row.stat" class="lb__stat" :class="{ 'lb__stat--date': row.statDate }"
-            :title="row.statTitle">{{ row.stat }}</span>
-        </button>
+              <span v-if="row.pill" class="lb__sub" :class="{ 'lb__done': row.pill.done }">{{ row.pill.text }}</span>
+              <span v-else-if="row.secondary" class="lb__stat-col">
+                <span class="lb__stat">{{ row.stat }}</span>
+                <span class="lb__sub">{{ row.secondary }}</span>
+              </span>
+              <span v-else-if="row.stat" :class="row.statDate ? 'lb__sub' : 'lb__stat'"
+                :title="row.statTitle">{{ row.stat }}</span>
+            </button>
+          </template>
+        </SwapList>
       </div>
 
       <footer v-if="!loading && !error && totalPages > 1" class="lb__foot">
@@ -409,29 +391,8 @@ function isSpectating(player: PlayerRef): boolean {
   top: var(--space-md);
   right: var(--space-md);
   z-index: 6;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--space-sm) 12px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  cursor: pointer;
   pointer-events: auto;
-  transition:
-    color 120ms ease,
-    border-color 120ms ease;
-}
-
-.lb__opener:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 
 .lb__panel {
@@ -447,7 +408,7 @@ function isSpectating(player: PlayerRef): boolean {
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   pointer-events: auto;
-  animation: lb-slide-in 200ms ease-out;
+  animation: lb-slide-in var(--dur-enter) var(--ease-out);
 }
 
 @keyframes lb-slide-in {
@@ -461,8 +422,7 @@ function isSpectating(player: PlayerRef): boolean {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
 }
 
 .lb__head-meta {
@@ -474,8 +434,7 @@ function isSpectating(player: PlayerRef): boolean {
   margin: 0;
   flex: 1;
   min-width: 0;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: var(--text-card-title);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -483,48 +442,13 @@ function isSpectating(player: PlayerRef): boolean {
   text-overflow: ellipsis;
 }
 
-.lb__head-meta .lb__title {
-  flex: none;
-}
-
-.lb__subtitle {
-  margin: 1px 0 0;
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-}
-
-.lb__back,
-.lb__collapse {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.lb__back:hover,
-.lb__collapse:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
 .lb__tabs {
   padding: 0 var(--space-sm);
 }
 
 .lb__tabs :deep(.base-tabs__tab) {
-  padding: var(--space-sm) 6px;
-  font-size: 0.6875rem;
-  font-weight: 600;
+  padding: var(--space-sm);
+  font-size: var(--text-caption);
 }
 
 .lb__search {
@@ -536,19 +460,17 @@ function isSpectating(player: PlayerRef): boolean {
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-sm) var(--space-sm) var(--space-md);
-  display: flex;
-  flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: var(--bg-overlay) transparent;
 }
 
-.lb__list::-webkit-scrollbar {
-  width: 5px;
+.lb__row,
+.lb__ghost {
+  height: 44px;
 }
 
-.lb__list::-webkit-scrollbar-thumb {
-  background: var(--bg-overlay);
-  border-radius: var(--radius-btn);
+.lb__ghost {
+  padding: 2px 0;
 }
 
 .lb__row {
@@ -556,7 +478,7 @@ function isSpectating(player: PlayerRef): boolean {
   width: 100%;
   align-items: center;
   gap: var(--space-sm);
-  padding: 6px var(--space-sm);
+  padding: 0 var(--space-sm);
   font: inherit;
   text-align: left;
   background: transparent;
@@ -565,12 +487,8 @@ function isSpectating(player: PlayerRef): boolean {
   color: inherit;
   cursor: pointer;
   transition:
-    background 120ms ease,
-    border-color 120ms ease;
-}
-
-.lb__row:nth-child(even) {
-  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .lb__row:hover {
@@ -582,8 +500,7 @@ function isSpectating(player: PlayerRef): boolean {
   border-color: var(--page-accent, var(--accent));
 }
 
-.lb__row--active,
-.lb__row--active:nth-child(even) {
+.lb__row--active {
   background: var(--bg-elevated);
   border-color: var(--page-accent, var(--accent));
 }
@@ -592,7 +509,7 @@ function isSpectating(player: PlayerRef): boolean {
   flex-shrink: 0;
   min-width: 30px;
   text-align: right;
-  font-size: 0.75rem;
+  font-size: var(--text-caption);
 }
 
 .lb__avatar {
@@ -609,15 +526,13 @@ function isSpectating(player: PlayerRef): boolean {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .lb__name {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  gap: var(--space-sm);
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -626,28 +541,22 @@ function isSpectating(player: PlayerRef): boolean {
 }
 
 .lb__sub {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
+  flex-shrink: 0;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.lb__done {
+  color: var(--success);
 }
 
 .lb__stat {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
+  font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-primary);
-}
-
-.lb__stat--date {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  color: var(--text-secondary);
 }
 
 .lb__stat-col {
@@ -655,63 +564,14 @@ function isSpectating(player: PlayerRef): boolean {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 1px;
-}
-
-.lb__stat-secondary {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
 }
 
 .lb__progress {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.lb__progress-track {
-  position: relative;
-  flex: 1;
-  max-width: 110px;
-  height: 3px;
-  background: var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-
-.lb__progress-fill {
-  position: absolute;
-  inset: 0;
-  background: var(--page-accent, var(--accent));
-  transform-origin: left center;
-}
-
-.lb__progress-count {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-}
-
-.lb__pill {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  font-family: var(--font-sans);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-}
-
-.lb__pill--done {
-  color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 45%, transparent);
-  background: color-mix(in srgb, var(--success) 10%, transparent);
+  max-width: 150px;
+  --bar-height: 4px;
 }
 
 .lb__error {
@@ -720,21 +580,17 @@ function isSpectating(player: PlayerRef): boolean {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-xl) var(--space-md);
+  text-align: center;
 }
 
 .lb__error p {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
-  text-align: center;
-  line-height: 1.4;
 }
 
 .lb__foot {
   display: flex;
   justify-content: center;
   padding: var(--space-sm);
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .lb__backdrop {
@@ -746,12 +602,15 @@ function isSpectating(player: PlayerRef): boolean {
 }
 
 @media (max-width: 860px) {
+  .lb {
+    order: 1;
+    display: flex;
+    margin-top: var(--space-sm);
+  }
+
   .lb__opener {
-    position: fixed;
-    top: auto;
-    right: var(--space-md);
-    bottom: var(--space-md);
-    z-index: 89;
+    position: static;
+    flex: 1;
   }
 
   .lb__panel {
@@ -762,11 +621,17 @@ function isSpectating(player: PlayerRef): boolean {
     bottom: 0;
     z-index: 91;
     width: auto;
-    height: min(75vh, 640px);
+    height: min(75dvh, 640px);
+    padding-bottom: env(safe-area-inset-bottom);
     border-radius: var(--radius-modal) var(--radius-modal) 0 0;
     border-bottom: none;
     background: var(--bg-elevated);
-    animation: lb-sheet-in 200ms ease-out;
+    animation-name: lb-sheet-in;
+  }
+
+  .lb__row:hover,
+  .lb__row--active {
+    background: var(--bg-overlay);
   }
 
   @keyframes lb-sheet-in {

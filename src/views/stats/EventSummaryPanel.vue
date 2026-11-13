@@ -10,7 +10,7 @@ import type {
 import type { TableColumn } from '@/types/display'
 import { computed, ref, watch } from 'vue'
 import EventMissionLeaderboard from './EventMissionLeaderboard.vue'
-import StatsCloseButton from './StatsCloseButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import StatsHistogram from './StatsHistogram.vue'
 import { fmtDecimal, labelCase, rateClass } from './statsFormat'
 
@@ -111,7 +111,7 @@ watch(weekOptions, (options) => {
           <span v-if="summary?.daysRan">({{ formatCount(summary.daysRan) }} days)</span>
         </p>
       </div>
-      <StatsCloseButton label="Close event summary" @click="emit('close')" />
+      <IconButton icon="close" label="Close event summary" @click="emit('close')" />
     </header>
 
     <div v-if="loading" class="event-summary__body">

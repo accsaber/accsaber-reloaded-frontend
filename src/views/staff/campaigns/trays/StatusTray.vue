@@ -47,18 +47,15 @@ const statusMeaning = computed(() => {
 
 <template>
   <header v-if="!isUnsavedDraft && campaign" class="campaign-editor__status">
-    <div class="campaign-editor__status-row">
-      <span
-        class="campaign-editor__status-pill"
-        :class="`campaign-editor__status-pill--${campaign.status.toLowerCase()}`"
-      >
+    <p class="campaign-editor__status-meaning">
+      <strong :class="`campaign-editor__status-name--${campaign.status.toLowerCase()}`">
         {{ STATUS_LABEL[campaign.status] }}
-      </span>
-    </div>
-    <p class="campaign-editor__status-meaning">{{ statusMeaning }}</p>
+      </strong>
+      {{ statusMeaning }}
+    </p>
 
     <section v-if="publishBlocked" class="campaign-editor__blockers">
-      <h3 class="campaign-editor__blockers-title">Before publishing</h3>
+      <h3 class="field-label">Before Publishing</h3>
       <CampaignIssueNotes :issues="publishBlockers" tone="error" @select="handleSelect" />
     </section>
 
@@ -75,7 +72,7 @@ const statusMeaning = computed(() => {
             Publish
           </BaseButton>
           <BaseButton size="sm" variant="destructive" :loading="actionPending" @click="deleteDraft">
-            Delete draft
+            Delete Draft
           </BaseButton>
         </template>
         <BaseButton
@@ -85,7 +82,7 @@ const statusMeaning = computed(() => {
           :loading="actionPending"
           @click="doPlayerUnpublish"
         >
-          Unpublish to edit
+          Unpublish to Edit
         </BaseButton>
       </template>
 
@@ -105,7 +102,7 @@ const statusMeaning = computed(() => {
           :loading="actionPending"
           @click="doReopen"
         >
-          Reopen for editing
+          Reopen for Editing
         </BaseButton>
         <BaseButton
           v-if="isCurator && curatable"
@@ -131,10 +128,10 @@ const statusMeaning = computed(() => {
           :loading="actionPending"
           @click="doToggleLoved"
         >
-          {{ campaign.loved ? 'Remove loved' : 'Mark loved' }}
+          {{ campaign.loved ? 'Remove Loved' : 'Mark Loved' }}
         </BaseButton>
         <BaseButton v-if="isAdmin" size="sm" :loading="actionPending" @click="doToggleOfficial">
-          {{ campaign.official ? 'Remove official' : 'Make official' }}
+          {{ campaign.official ? 'Remove Official' : 'Make Official' }}
         </BaseButton>
         <BaseButton
           v-if="isAdmin"
@@ -157,7 +154,7 @@ const statusMeaning = computed(() => {
       class="campaign-editor__audit"
     >
       <template v-if="campaignAudit.paysOut">
-        <h3 class="campaign-editor__audit-title">Payout</h3>
+        <h3 class="field-label">Payout</h3>
 
         <dl class="campaign-editor__audit-stats">
           <div>
@@ -173,11 +170,11 @@ const statusMeaning = computed(() => {
             <dd>{{ campaignAudit.barrierCount }}</dd>
           </div>
           <div>
-            <dt>Avg XP / node</dt>
+            <dt>Avg XP / Node</dt>
             <dd>{{ campaignAudit.avgXpPerNode.toLocaleString() }}</dd>
           </div>
           <div>
-            <dt>Node XP range</dt>
+            <dt>Node XP Range</dt>
             <dd>
               {{ campaignAudit.minNodeXp.toLocaleString() }} -
               {{ campaignAudit.maxNodeXp.toLocaleString() }}
@@ -196,7 +193,7 @@ const statusMeaning = computed(() => {
             </dd>
           </div>
           <div>
-            <dt>Item awards</dt>
+            <dt>Item Awards</dt>
             <dd
               :class="{
                 'campaign-editor__audit-over':
@@ -244,47 +241,24 @@ const statusMeaning = computed(() => {
   gap: var(--space-sm);
 }
 
-.campaign-editor__status-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+.campaign-editor__status-name--draft {
+  color: var(--text-primary);
 }
 
-.campaign-editor__status-pill {
-  display: inline-flex;
-  padding: var(--space-xs) 10px;
-  border-radius: var(--radius-btn);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border: 1px solid;
-}
-
-.campaign-editor__status-pill--draft {
-  color: var(--text-secondary);
-  border-color: var(--bg-overlay);
-}
-
-.campaign-editor__status-pill--published {
+.campaign-editor__status-name--published {
   color: var(--info);
-  border-color: color-mix(in srgb, var(--info) 50%, transparent);
 }
 
-.campaign-editor__status-pill--editing {
+.campaign-editor__status-name--editing {
   color: var(--warning);
-  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
 }
 
-.campaign-editor__status-pill--curated {
+.campaign-editor__status-name--curated {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 50%, transparent);
 }
 
 .campaign-editor__status-meaning {
   margin: 0;
-  font-family: var(--font-sans);
   font-size: var(--text-caption);
   color: var(--text-secondary);
   line-height: 1.5;
@@ -306,23 +280,15 @@ const statusMeaning = computed(() => {
   gap: 6px;
 }
 
-.campaign-editor__blockers-title,
-.campaign-editor__audit-title {
+.campaign-editor__status h3 {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 
 .campaign-editor__audit {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--bg-overlay);
+  padding-top: var(--space-md);
 }
 
 .campaign-editor__audit-stats {
@@ -333,8 +299,7 @@ const statusMeaning = computed(() => {
 }
 
 .campaign-editor__audit-stats dt {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
@@ -346,7 +311,7 @@ const statusMeaning = computed(() => {
 }
 
 .campaign-editor__audit-stats dd small {
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 

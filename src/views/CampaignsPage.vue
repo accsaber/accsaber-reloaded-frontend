@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import CampaignFilterBar from '@/components/domain/CampaignFilterBar.vue'
+import CampaignGrid from '@/components/domain/CampaignGrid.vue'
 import CampaignRow from '@/components/domain/CampaignRow.vue'
 import RulesButton from '@/components/domain/RulesButton.vue'
 import UserCampaignsPanel from '@/components/domain/UserCampaignsPanel.vue'
@@ -116,11 +118,11 @@ const CAMPAIGN_RULES: Rule[] = [
 
 const items = ref<CampaignResponse[]>([])
 const totalPages = ref(1)
-const loading = ref(false)
+const loading = ref(true)
 const error = ref<string | null>(null)
 
 const pendingInvites = ref<CampaignCollaboratorResponse[]>([])
-const invitesLoading = ref(false)
+const invitesLoading = ref(true)
 const respondingId = ref<string | null>(null)
 
 const { currentPage, paginationParams, setPage, sortState } = usePageableRoute({
@@ -170,6 +172,8 @@ function applyBrowseFilters(next: CampaignFilterState) {
   router.replace({ query })
 }
 
+const firstLoad = computed(() => loading.value && items.value.length === 0)
+
 function listParams(): CampaignListParams | null {
   const paging = { page: paginationParams.value.page, size: paginationParams.value.size }
   const search = searchTerm.value || undefined
@@ -204,6 +208,7 @@ async function loadCampaigns() {
   if (!params) {
     items.value = []
     totalPages.value = 1
+    loading.value = false
     return
   }
   loading.value = true
@@ -228,6 +233,7 @@ async function loadInvites() {
   const id = ++inviteRequest
   if (!auth.isLoggedIn) {
     pendingInvites.value = []
+    invitesLoading.value = false
     return
   }
   invitesLoading.value = true
@@ -257,7 +263,7 @@ async function respondToInvite(inv: CampaignCollaboratorResponse, accept: boolea
   }
 }
 
-function setPane(next: Pane) {
+function setPane(next: string) {
   if (next === pane.value) return
   const query = { ...route.query }
   if (next === defaultPane.value) delete query.pane
@@ -281,61 +287,58 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
 </script>
 
 <template>
-  <div class="campaigns-page" style="--page-accent: var(--accent-overall);">
-    <PageHeaderBleed title="Campaigns" />
+  <div class="campaigns-page">
+    <h1>Campaigns</h1>
 
-    <div class="campaigns-page__bar">
-      <nav class="campaigns-page__panes" aria-label="Campaign panes">
-        <button v-for="p in panes" :key="p.key" class="campaigns-page__pane"
-          :class="{ 'campaigns-page__pane--active': pane === p.key }" @click="setPane(p.key)">
-          {{ p.label }}
-          <span v-if="p.key === 'invites' && pendingInvites.length > 0" class="campaigns-page__pane-badge">
-            {{ pendingInvites.length }}
-          </span>
-        </button>
-      </nav>
+    <div class="campaigns-page__controls">
+      <div class="campaigns-page__controls-left">
+        <BaseTabs v-if="panes.length > 1" variant="segmented" label="Campaign lists" :tabs="panes"
+          :model-value="pane" @update:model-value="setPane">
+          <template #tab="{ tab }">
+            {{ tab.label }}
+            <span v-if="tab.key === 'invites' && pendingInvites.length > 0" class="campaigns-page__count">
+              {{ pendingInvites.length }}
+            </span>
+          </template>
+        </BaseTabs>
+        <SearchBox v-if="searchablePane" :model-value="searchTerm" placeholder="Search title or creator..."
+          @update:model-value="setSearch" />
+      </div>
 
-      <SearchBox v-if="searchablePane" class="campaigns-page__search" :model-value="searchTerm"
-        placeholder="Search title or creator..." @update:model-value="setSearch" />
-
-      <div class="campaigns-page__bar-actions">
+      <div class="campaigns-page__controls-right">
+        <CampaignFilterBar v-if="filterablePane" :model-value="browseFilters" :tags="tags"
+          :sort-options="BROWSE_SORT_OPTIONS" :show-curated="pane === 'all'"
+          @update:model-value="applyBrowseFilters" />
         <RulesButton
           title="Campaign rules"
           lead="Campaigns are player-made and public. Keep yours within these rules:"
           :rules="CAMPAIGN_RULES"
           note="By creating a campaign, you agree to these rules. Breaking them results in an automatic, indefinite suspension from every AccSaber feature."
         />
-        <button v-if="auth.isLoggedIn || isCurator" type="button" class="campaigns-page__new"
+        <BaseButton v-if="auth.isLoggedIn || isCurator" variant="primary"
           @click="router.push({ name: 'campaign-new' })">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          New campaign
-        </button>
+          New Campaign
+        </BaseButton>
       </div>
     </div>
 
-    <CampaignFilterBar v-if="filterablePane" class="campaigns-page__toolbar"
-      :model-value="browseFilters" :tags="tags" :sort-options="BROWSE_SORT_OPTIONS"
-      :show-curated="pane === 'all'" @update:model-value="applyBrowseFilters" />
-
-    <div v-if="error" class="campaigns-page__error" role="alert">{{ error }}</div>
+    <p v-if="error" class="caption campaigns-page__error" role="alert">{{ error }}</p>
 
     <template v-if="pane === 'invites'">
-      <div v-if="invitesLoading" class="campaigns-page__list">
-        <SkeletonLoader v-for="i in 3" :key="i" variant="card" />
-      </div>
-      <EmptyState v-else-if="pendingInvites.length === 0" message="No pending invites" />
-      <ul v-else class="campaigns-page__invites">
-        <li v-for="inv in pendingInvites" :key="inv.id" class="campaigns-page__invite">
-          <router-link class="campaigns-page__invite-main"
-            :to="{ name: 'campaign-detail', params: { campaignId: inv.campaignSlug || inv.campaignId } }">
-            <span class="campaigns-page__invite-name">{{ inv.campaignName }}</span>
-            <span class="campaigns-page__invite-sub">Invitation to collaborate</span>
-          </router-link>
-          <div class="campaigns-page__invite-actions">
+      <EmptyState v-if="!invitesLoading && pendingInvites.length === 0" message="No pending invites" />
+      <SwapList v-else as="ul" class="campaigns-page__invites" :items="pendingInvites" :item-key="(inv) => inv.id"
+        :loading="invitesLoading">
+        <template #placeholder>
+          <li class="placeholder">
+            <SkeletonLoader height="68px" />
+          </li>
+        </template>
+        <template #default="{ item: inv, swap }">
+          <li class="campaigns-page__invite" v-bind="swap">
+            <router-link class="campaigns-page__invite-name card-title"
+              :to="{ name: 'campaign-detail', params: { campaignId: inv.campaignSlug || inv.campaignId } }">
+              {{ inv.campaignName }}
+            </router-link>
             <BaseButton size="sm" variant="primary" :loading="respondingId === inv.id"
               @click="respondToInvite(inv, true)">
               Accept
@@ -343,9 +346,9 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
             <BaseButton size="sm" :disabled="respondingId === inv.id" @click="respondToInvite(inv, false)">
               Decline
             </BaseButton>
-          </div>
-        </li>
-      </ul>
+          </li>
+        </template>
+      </SwapList>
     </template>
 
     <template v-else-if="pane === 'runs'">
@@ -354,21 +357,17 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
     </template>
 
     <template v-else>
-      <div v-if="loading" class="campaigns-page__list">
-        <SkeletonLoader v-for="i in 4" :key="i" variant="card" />
-      </div>
+      <EmptyState v-if="!loading && items.length === 0" :message="emptyMessage" />
+      <CampaignGrid v-else :items="items" :item-key="(campaign) => campaign.id" :loading="firstLoad"
+        :refreshing="loading && !firstLoad">
+        <template #default="{ item, swap }">
+          <CampaignRow :campaign="item" :collab="pane === 'mine' && item.creatorId !== auth.userId"
+            :editor-link="pane === 'mine' || pane === 'review' || pane === 'drafts'" v-bind="swap" />
+        </template>
+      </CampaignGrid>
 
-      <EmptyState v-else-if="items.length === 0" :message="emptyMessage" />
-
-      <div v-else class="campaigns-page__list">
-        <CampaignRow v-for="campaign in items" :key="campaign.id" :campaign="campaign"
-          :collab="pane === 'mine' && campaign.creatorId !== auth.userId"
-          :editor-link="pane === 'mine' || pane === 'review' || pane === 'drafts'" />
-      </div>
-
-      <div v-if="totalPages > 1 && !loading" class="campaigns-page__pagination">
-        <PaginationControls :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
-      </div>
+      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
+        @update:page="setPage" />
     </template>
   </div>
 </template>
@@ -378,135 +377,46 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--space-md) var(--space-2xl);
+  width: 100%;
+  --page-accent: var(--accent-overall);
 }
 
-.campaigns-page__bar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.campaigns-page__controls {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-md);
 }
 
-.campaigns-page__panes {
+.campaigns-page__controls-left {
   display: flex;
+  align-items: center;
+  flex: 1;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 2px;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  grid-column: 1;
-  justify-self: start;
+  gap: var(--space-md);
+  min-width: 0;
 }
 
-.campaigns-page__new {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--space-sm) 14px;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--page-accent);
-  background: transparent;
-  border: 1px solid var(--page-accent);
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
+.campaigns-page__controls-left :deep(.search-box) {
+  flex: 0 1 320px;
 }
 
-.campaigns-page__new:hover {
-  background: color-mix(in srgb, var(--page-accent) 12%, transparent);
-}
-
-.campaigns-page__pane {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  padding: 6px var(--space-md);
-  background: none;
-  border: none;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.campaigns-page__pane-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 16%, transparent);
-  border-radius: var(--radius-pill);
-}
-
-.campaigns-page__pane:hover {
-  color: var(--text-primary);
-}
-
-.campaigns-page__pane--active {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
-.campaigns-page__bar-actions {
-  grid-column: 3;
-  justify-self: end;
+.campaigns-page__controls-right {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--space-sm);
 }
 
-.campaigns-page__search {
-  grid-column: 2;
-  justify-self: center;
-  width: 320px;
-  max-width: 100%;
-}
-
-.campaigns-page__toolbar {
-  margin-top: calc(-1 * var(--space-sm));
-}
-
-.campaigns-page__list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-md);
-}
-
-.campaigns-page__pagination {
-  display: flex;
-  justify-content: center;
+.campaigns-page__count {
+  margin-left: var(--space-xs);
+  color: var(--page-accent);
 }
 
 .campaigns-page__error {
-  padding: var(--space-md);
-  font-size: var(--text-caption);
   color: var(--error);
-  background: color-mix(in srgb, var(--error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: var(--radius-card);
 }
 
 .campaigns-page__invites {
@@ -521,83 +431,32 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
 .campaigns-page__invite {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   padding: var(--space-md);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
-.campaigns-page__invite-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  text-decoration: none;
-  color: inherit;
-}
-
 .campaigns-page__invite-name {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: color 120ms ease;
+  text-decoration: none;
 }
 
-.campaigns-page__invite-main:hover .campaigns-page__invite-name {
+.campaigns-page__invite-name:hover {
   color: var(--page-accent);
 }
 
-.campaigns-page__invite-sub {
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.campaigns-page__invite-actions {
-  display: inline-flex;
-  gap: var(--space-sm);
-  flex-shrink: 0;
-}
-
-@media (max-width: 860px) {
-  .campaigns-page__bar {
-    grid-template-columns: 1fr;
+@media (max-width: 767px) {
+  .campaigns-page__controls-left {
+    flex-basis: 100%;
   }
 
-  .campaigns-page__panes {
-    grid-column: 1;
-    justify-self: start;
-  }
-
-  .campaigns-page__search,
-  .campaigns-page__bar-actions {
-    grid-column: 1;
-    justify-self: stretch;
-  }
-
-  .campaigns-page__search {
-    width: 100%;
-  }
-
-  .campaigns-page__bar-actions {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 560px) {
-  .campaigns-page__invite {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .campaigns-page__invite-actions {
-    justify-content: flex-end;
+  .campaigns-page__controls-left :deep(.search-box) {
+    flex: 1 1 100%;
   }
 }
 </style>
