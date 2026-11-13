@@ -1,0 +1,37 @@
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.stats-table :is(td, dd, span).rate--critical { color: var(--error); }
+.stats-table :is(td, dd, span).rate--low { color: var(--xp-score); }
+.stats-table :is(td, dd, span).rate--mid { color: var(--warning); }
+.stats-table :is(td, dd, span).rate--high { color: var(--tier-platinum); }
+.stats-table :is(td, dd, span).rate--top { color: var(--success); }
+.stats-table :is(td, dd, span).rate--none { color: var(--text-tertiary); }
+
+.stats-table :is(td, dd, span).stats-strong {
+  font-weight: 600;
+  color: var(--page-accent, var(--accent));
+}
+
+.stats-table :is(td, dd, span).stats-essence {
+  font-weight: 600;
+  color: var(--tier-gold);
+}
+
+.stats-table :is(td, dd, span).stats-dim {
+  color: var(--text-secondary);
+}
+
+
+[data-theme='light'] .stats-table :is(td, dd, span)[class*='rate--']:not(.rate--none) {
+  color: color-mix(in srgb, var(--rate-color) 45%, var(--text-primary));
+}
+
+.rate--critical { --rate-color: var(--error); }
+.rate--low { --rate-color: var(--xp-score); }
+.rate--mid { --rate-color: var(--warning); }
+.rate--high { --rate-color: var(--tier-platinum); }
+.rate--top { --rate-color: var(--success); }

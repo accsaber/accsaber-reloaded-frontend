@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useItemTypeStore } from '@/stores/itemTypes'
-import { useQueryParams } from '@/composables/useQueryParams'
 import type { ItemResponse } from '@/types/api/items'
 import type { TableColumn } from '@/types/display'
-import { storeCountry } from '@/utils/statsCountry'
 import { computed, onMounted, ref, watch } from 'vue'
-import ItemStatsTable from './ItemStatsTable.vue'
-import LeaderboardPicker from './LeaderboardPicker.vue'
+import ItemHoldersTooltip from './ItemHoldersTooltip.vue'
+import ItemStatsItemCell from './ItemStatsItemCell.vue'
+import ItemStatsModifiers from './ItemStatsModifiers.vue'
+import StatsBar from './StatsBar.vue'
+import StatsBoardPicker from './StatsBoardPicker.vue'
+import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsTable from './StatsTable.vue'
+import { fmt, mainCol, numCol, playerCol, rankCol } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef } from './useStatsBoard'
-
-defineProps<{
-  accent: string
-  countryOptions: { value: string; label: string }[]
-}>()
 
 type ItemStatsBoard =
   | 'most-items'
@@ -42,84 +41,71 @@ interface BoardDef extends StatsBoardDef<ItemStatsBoard, BoardQuery> {
   filters: BoardFilter[]
 }
 
-const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
-const playerCol: TableColumn = { key: 'player', label: 'Player', align: 'left' }
 const itemCol: TableColumn = { key: 'item', label: 'Item', align: 'left' }
+const ownerCol = (label: string): TableColumn => ({ ...playerCol, label, width: '240px' })
 
 const BOARDS: BoardDef[] = [
   {
-    key: 'most-items', label: 'Most Items', icon: 'package',
-    columns: [rankCol, playerCol, { key: 'itemCount', label: 'Items', align: 'right', mono: true, width: '120px' }],
+    key: 'most-items', label: 'Most Items', icon: 'package', players: true,
+    columns: [rankCol, playerCol, mainCol('itemCount', 'Items', 120)],
     sort: 'itemCount,desc', country: true, filters: ['type', 'modifier'],
     fetch: (api, params, q) => api.getMostItems(params, q.type, q.modifier, q.country),
   },
   {
-    key: 'most-crates-opened', label: 'Most Crates Opened', icon: 'crate',
-    columns: [rankCol, playerCol, { key: 'crateCount', label: 'Crates', align: 'right', mono: true, width: '120px' }],
+    key: 'most-crates-opened', label: 'Most Crates Opened', icon: 'crate', players: true,
+    columns: [rankCol, playerCol, mainCol('crateCount', 'Crates', 120)],
     sort: 'crateCount,desc', country: true, filters: ['crate'],
     fetch: (api, params, q) => api.getMostCratesOpened(params, q.crate, q.country),
   },
   {
-    key: 'most-valuable-inventory', label: 'Most Valuable Inventory', icon: 'gem',
+    key: 'most-valuable-inventory', label: 'Most Valuable Inventory', icon: 'gem', players: true,
     columns: [
       rankCol, playerCol,
-      { key: 'itemsValue', label: 'Items', align: 'right', mono: true, width: '110px' },
-      { key: 'essenceBalance', label: 'Essence', align: 'right', mono: true, width: '110px' },
-      { key: 'totalValue', label: 'Total', align: 'right', mono: true, width: '120px' },
+      numCol('itemsValue', 'Items', 110, fmt.essence),
+      numCol('essenceBalance', 'Essence', 110, fmt.essence),
+      { ...numCol('totalValue', 'Total', 120, fmt.essence), primary: true, cellClass: () => 'stats-essence' },
     ],
     sort: 'totalValue,desc', country: true, filters: [],
     fetch: (api, params, q) => api.getMostValuableInventory(params, q.country),
   },
   {
-    key: 'first-editions', label: 'First Editions', icon: 'award',
-    columns: [rankCol, playerCol, { key: 'firstEditionCount', label: 'First Editions', align: 'right', mono: true, width: '150px' }],
+    key: 'first-editions', label: 'First Editions', icon: 'award', players: true,
+    columns: [rankCol, playerCol, mainCol('firstEditionCount', 'First Editions', 150)],
     sort: 'firstEditionCount,desc', country: true, filters: [],
     fetch: (api, params, q) => api.getFirstEditions(params, q.country),
   },
   {
-    key: 'most-complete-collection', label: 'Most Complete Collection', icon: 'layers',
+    key: 'most-complete-collection', label: 'Most Complete Collection', icon: 'layers', players: true,
     columns: [
       rankCol, playerCol,
-      { key: 'ownedCount', label: 'Owned', align: 'right', mono: true, width: '100px' },
-      { key: 'catalogTotal', label: 'Catalog', align: 'right', mono: true, width: '100px' },
-      { key: 'completionPercent', label: 'Complete', align: 'right', mono: true, width: '110px' },
+      numCol('ownedCount', 'Owned', 100),
+      numCol('catalogTotal', 'Catalog', 100),
+      mainCol('completionPercent', 'Complete', 110, fmt.percentPoint),
     ],
     sort: 'completionPercent,desc', country: true, filters: [],
     fetch: (api, params, q) => api.getMostCompleteCollection(params, q.country),
   },
   {
-    key: 'biggest-traders', label: 'Biggest Traders', icon: 'swap',
-    columns: [
-      rankCol, playerCol,
-      { key: 'tradeCount', label: 'Trades', align: 'right', mono: true, width: '110px' },
-      { key: 'itemsTraded', label: 'Items Traded', align: 'right', mono: true, width: '140px' },
-    ],
+    key: 'biggest-traders', label: 'Biggest Traders', icon: 'swap', players: true,
+    columns: [rankCol, playerCol, mainCol('tradeCount', 'Trades', 110), numCol('itemsTraded', 'Items Traded', 140)],
     sort: 'tradeCount,desc', country: true, filters: [],
     fetch: (api, params, q) => api.getBiggestTraders(params, q.country),
   },
   {
-    key: 'rarest-unboxed', label: 'Rarest Items Unboxed', icon: 'gift',
-    columns: [
-      rankCol, itemCol,
-      { key: 'modifiers', label: 'Modifiers', align: 'left' },
-      { key: 'owner', label: 'Owner', align: 'left', width: '220px' },
-    ],
+    key: 'rarest-unboxed', label: 'Rarest Items Unboxed', icon: 'gift', players: true,
+    columns: [rankCol, itemCol, { key: 'modifiers', label: 'Modifiers', align: 'left' }, ownerCol('Owner')],
     country: true, filters: [],
     fetch: (api, params, q) => api.getRarestUnboxed(params, q.country),
   },
   {
-    key: 'first-edition-holders', label: 'First Edition Holders', icon: 'medal',
-    columns: [rankCol, itemCol, { key: 'owner', label: 'Holder', align: 'left', width: '220px' }],
+    key: 'first-edition-holders', label: 'First Edition Holders', icon: 'medal', players: true,
+    columns: [rankCol, itemCol, ownerCol('Holder')],
     country: true, filters: [],
     fetch: (api, params, q) => api.getFirstEditionHolders(params, q.country),
   },
   {
     key: 'rarest-items', label: 'Item Scarcity', icon: 'gauge',
-    columns: [
-      rankCol, itemCol,
-      { key: 'ownerCount', label: 'Owners', align: 'right', mono: true, width: '110px' },
-      { key: 'instanceCount', label: 'Count', align: 'right', mono: true, width: '110px' },
-    ],
+    columns: [rankCol, itemCol, mainCol('ownerCount', 'Owners', 110), numCol('instanceCount', 'Copies', 110)],
     sort: 'instanceCount,asc', country: false, filters: [],
     fetch: (api, params) => api.getRarestItems(params),
   },
@@ -144,13 +130,9 @@ function boardFilters(def: BoardDef): BoardQuery {
 }
 
 const {
-  activeBoard, boardDef, pickerOptions, selectBoard, currentPage, setPage, loading, rows, totalPages, totalElements,
-} = useStatsBoard(BOARDS, { size: 50, filters: boardFilters })
-
-function setCountry(country: string) {
-  storeCountry(country)
-  countryFilter.value = country
-}
+  activeBoard, boardDef, boardOptions, selectBoard, rowTo, currentPage, setPage, loading, rows, totalPages,
+  totalElements,
+} = useStatsBoard(BOARDS, { filters: boardFilters })
 
 onMounted(() => {
   itemTypeStore.fetchItemTypes()
@@ -192,57 +174,33 @@ watch(activeBoard, (board) => {
 </script>
 
 <template>
-  <div class="item-stats" :style="{ '--accent': accent }">
-    <div class="item-stats__filters">
-      <BaseSelect v-if="boardDef.country" :model-value="countryFilter" :options="countryOptions"
-        placeholder="All Countries" searchable @update:model-value="setCountry" />
+  <div class="stats-section">
+    <StatsBoardPicker :model-value="activeBoard" :options="boardOptions"
+      @update:model-value="selectBoard($event, { type: undefined, modifier: undefined, crate: undefined })" />
+
+    <StatsBar :count="totalElements">
+      <StatsCountrySelect v-if="boardDef.country" />
       <BaseSelect v-if="boardDef.filters.includes('type')" :model-value="typeFilter" :options="typeOptions"
         placeholder="All Types" searchable @update:model-value="typeFilter = $event" />
       <BaseSelect v-if="boardDef.filters.includes('modifier')" :model-value="modifierFilter" :options="modifierOptions"
         placeholder="All Modifiers" searchable @update:model-value="modifierFilter = $event" />
       <BaseSelect v-if="boardDef.filters.includes('crate')" :model-value="crateFilter" :options="crateOptions"
         placeholder="All Crates" searchable @update:model-value="crateFilter = $event" />
-    </div>
+    </StatsBar>
 
-    <LeaderboardPicker :model-value="activeBoard" :options="pickerOptions"
-      @update:model-value="selectBoard($event, { type: undefined, modifier: undefined, crate: undefined })" />
-
-    <p v-if="totalElements > 0" class="item-stats__count">{{ totalElements.toLocaleString() }} records</p>
-
-    <div class="item-stats__table">
-      <ItemStatsTable :columns="boardDef.columns" :rows="rows" :loading="loading" :board="activeBoard" />
-    </div>
-
-    <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+    <StatsTable :columns="boardDef.columns" :rows="rows" :loading="loading" :page="currentPage"
+      :total-pages="totalPages" :row-to="rowTo" @update:page="setPage">
+      <template #cell-item="{ row }">
+        <ItemStatsItemCell :item="(row.item as ItemResponse | null | undefined) ?? null"
+          :serial="(row.serialNumber as number | null | undefined)">
+          <ItemHoldersTooltip v-if="activeBoard === 'rarest-items'" :item-id="(row.itemId as string)"
+            :item-name="(row.item as ItemResponse | null | undefined)?.name ?? ''"
+            :owner-count="(row.ownerCount as number)" />
+        </ItemStatsItemCell>
+      </template>
+      <template #cell-modifiers="{ row }">
+        <ItemStatsModifiers :modifiers="row.modifiers" :unusual-effect="(row.unusualEffect as string | null)" />
+      </template>
+    </StatsTable>
   </div>
 </template>
-
-<style scoped>
-.item-stats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  --page-accent: var(--accent);
-}
-
-.item-stats__filters {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.item-stats__count {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  letter-spacing: 0.02em;
-  text-align: right;
-  margin: 0;
-}
-
-.item-stats__table {
-  --accent: var(--page-accent);
-}
-</style>

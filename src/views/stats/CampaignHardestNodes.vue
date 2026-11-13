@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { formatAccuracy, formatCount } from '@/utils/formatters'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
-import CoverImage from '@/components/common/CoverImage.vue'
+import type { MapDifficultyRef } from '@/types/api/common'
 import type { CampaignNodeDifficultyResponse } from '@/types/api/statistics'
+import type { TableColumn } from '@/types/display'
 import { formatUserValue, requirementLabel } from '@/utils/campaignLayout'
-import { computed, ref, watch } from 'vue'
-import IconButton from '@/components/common/IconButton.vue'
-import { fmtDecimal, rateClass } from './statsFormat'
+import { ref, watch } from 'vue'
+import StatsDetail from './StatsDetail.vue'
+import StatsMapCell from './StatsMapCell.vue'
+import StatsTable from './StatsTable.vue'
+import { fmt, numCol, rateCol } from './statsFormat'
+import { useLocalPages } from './useStatsBoard'
 
 const props = defineProps<{
   campaignId: string
@@ -17,16 +18,35 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
+function requirement(node: CampaignNodeDifficultyResponse): string {
+  const parts = [
+    node.requirementType
+      ? `${requirementLabel(node.requirementType)} ${formatUserValue(node.requirementType, node.requirementValue)}`
+      : 'No requirement',
+  ]
+  if (node.barrier) parts.push('Gate')
+  if (node.terminal) parts.push('Final')
+  return parts.join(' · ')
+}
+
+const COLUMNS: TableColumn[] = [
+  { key: 'map', label: 'Map', align: 'left', noLink: true },
+  {
+    key: 'requirement', label: 'Requirement', align: 'left', width: '220px',
+    format: (_, row) => requirement(row as unknown as CampaignNodeDifficultyResponse),
+  },
+  numCol('xp', 'XP', 80),
+  numCol('unlocked', 'Unlocked', 110),
+  numCol('cleared', 'Cleared', 100),
+  { ...rateCol('clearRate', 'Clear Rate', 120), primary: true },
+  numCol('medianDaysToClear', 'Median Days', 140, fmt.decimal),
+]
+
 const loading = ref(false)
 const failed = ref(false)
 const nodes = ref<CampaignNodeDifficultyResponse[]>([])
 
-const maxUnlocked = computed(() => Math.max(...nodes.value.map((n) => n.unlocked), 1))
-
-function requirement(node: CampaignNodeDifficultyResponse): string {
-  if (!node.requirementType) return 'No requirement'
-  return `${requirementLabel(node.requirementType)} ${formatUserValue(node.requirementType, node.requirementValue)}`
-}
+const { page, totalPages, pageItems } = useLocalPages(() => nodes.value as unknown as Record<string, unknown>[])
 
 let requestId = 0
 
@@ -55,275 +75,14 @@ watch(
 </script>
 
 <template>
-  <section class="nodes">
-    <header class="nodes__head">
-      <div>
-        <h3 class="card-title">{{ campaignName || 'Campaign' }}</h3>
-      </div>
-      <IconButton icon="close" label="Close campaign nodes" @click="emit('close')" />
-    </header>
+  <StatsDetail :title="campaignName || 'Campaign'" back="Back to campaigns" :failed="failed" @close="emit('close')">
+    <template v-if="nodes.length" #meta>{{ nodes.length }} nodes, hardest first</template>
 
-    <div v-if="loading" class="nodes__list">
-      <SkeletonLoader v-for="i in 5" :key="i" variant="card" height="64px" />
-    </div>
-
-    <p v-else-if="failed" class="nodes__empty">Could not load this campaign's nodes.</p>
-
-    <p v-else-if="!nodes.length" class="nodes__empty">
-      No node data yet.
-    </p>
-
-    <ol v-else class="nodes__list">
-      <li v-for="node in nodes" :key="node.campaignDifficultyId" class="node">
-        <CoverImage :source="node.map" :alt="node.map.songName" :size="44" />
-
-        <div class="node__identity">
-          <span class="node__song">
-            {{ node.map.songName }}
-            <span v-if="node.map.songSubName" class="node__subname">{{ node.map.songSubName }}</span>
-          </span>
-          <span class="node__meta">
-            <DifficultyBadge :difficulty="node.map.difficulty" />
-            <span class="node__author">{{ node.map.songAuthor }}</span>
-            <span class="node__mapper">{{ node.map.mapAuthor }}</span>
-          </span>
-        </div>
-
-        <div class="node__requirement">
-          <span class="node__label">Requirement</span>
-          <span class="node__req-value">{{ requirement(node) }}</span>
-          <span class="node__flags">
-            <span v-if="node.barrier" class="node__flag node__flag--barrier">Gate</span>
-            <span v-if="node.terminal" class="node__flag">Final</span>
-            <span class="node__xp">{{ formatCount(node.xp) }} XP</span>
-          </span>
-        </div>
-
-        <div class="node__numbers">
-          <span class="node__stat">
-            <span class="node__label">Unlocked</span>
-            <span class="node__value">{{ formatCount(node.unlocked) }}</span>
-          </span>
-          <span class="node__stat">
-            <span class="node__label">Cleared</span>
-            <span class="node__value">{{ formatCount(node.cleared) }}</span>
-          </span>
-          <span class="node__stat">
-            <span class="node__label">Clear rate</span>
-            <span class="node__value" :class="rateClass(node.clearRate)">{{ formatAccuracy(node.clearRate, 1) }}</span>
-          </span>
-          <span class="node__stat">
-            <span class="node__label">Median days</span>
-            <span class="node__value">{{ fmtDecimal(node.medianDaysToClear) }}</span>
-          </span>
-        </div>
-
-        <span class="node__track" :title="formatCount(node.cleared) + ' cleared of ' + formatCount(node.unlocked) + ' unlocked'">
-          <span class="node__reach" :style="{ '--reach': ((node.unlocked / maxUnlocked) * 100) + '%' }">
-            <span class="node__clear" :class="rateClass(node.clearRate)"
-              :style="{ '--fill': ((node.clearRate ?? 0) * 100) + '%' }" />
-          </span>
-        </span>
-      </li>
-    </ol>
-  </section>
+    <StatsTable v-model:page="page" :columns="COLUMNS" :rows="pageItems" :loading="loading"
+      :total-pages="totalPages" row-key="campaignDifficultyId" empty-message="No node data yet">
+      <template #cell-map="{ row }">
+        <StatsMapCell :map="(row.map as MapDifficultyRef)" />
+      </template>
+    </StatsTable>
+  </StatsDetail>
 </template>
-
-<style scoped>
-.nodes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
-}
-
-.nodes__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.nodes__empty {
-  margin: 0;
-  padding: var(--space-lg) 0;
-  text-align: center;
-  font-size: var(--text-body);
-  color: var(--text-tertiary);
-}
-
-.nodes__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.node {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1.6fr) minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
-  align-items: center;
-  gap: var(--space-sm) var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.node__identity {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.node__song {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.node__subname {
-  color: var(--text-tertiary);
-  font-weight: 400;
-}
-
-.node__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-  font-size: var(--text-caption);
-}
-
-.node__author {
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.node__mapper {
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.node__requirement {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.node__req-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-}
-
-.node__flags {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-caption);
-}
-
-.node__flag {
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-tertiary);
-}
-
-.node__flag--barrier {
-  color: var(--warning);
-}
-
-.node__xp {
-  font-family: var(--font-mono);
-  color: var(--xp-campaign);
-}
-
-.node__numbers {
-  display: flex;
-  gap: var(--space-lg);
-}
-
-.node__stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: right;
-}
-
-.node__label {
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
-
-.node__value {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.node__track {
-  grid-column: 2 / -1;
-  height: 6px;
-  background: var(--bg-elevated);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.node__reach {
-  display: block;
-  width: var(--reach);
-  height: 100%;
-  background: var(--bg-overlay);
-}
-
-.node__clear {
-  display: block;
-  width: var(--fill);
-  height: 100%;
-  background: currentColor;
-}
-
-@media (max-width: 900px) {
-  .node {
-    grid-template-columns: 44px minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto;
-  }
-
-  .node__requirement,
-  .node__numbers,
-  .node__track {
-    grid-column: 1 / -1;
-  }
-
-  .node__numbers {
-    justify-content: space-between;
-    gap: var(--space-sm);
-  }
-
-  .node__stat {
-    text-align: left;
-  }
-}
-</style>
-
-<style scoped src="./statsRates.css"></style>

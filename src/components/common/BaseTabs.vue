@@ -170,6 +170,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .base-tabs--segmented {
+  flex-wrap: wrap;
   gap: 2px;
   padding: 2px;
   background: var(--bg-surface);

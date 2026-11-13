@@ -10,6 +10,7 @@ type TriggerTarget = HTMLElement | { $el: HTMLElement } | null
 export interface FloatingPanelOptions {
   minWidth?: number
   maxWidth?: number
+  maxHeight?: number
   width?: number | 'trigger' | 'auto'
   side?: 'below' | 'above'
   align?: MaybeRefOrGetter<'start' | 'center' | 'end'>
@@ -59,7 +60,7 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
   }
 
   function opensAbove(rect: DOMRect, gap: number): boolean {
-    const height = panelRef.value?.getBoundingClientRect().height ?? 0
+    const height = panelRef.value?.getBoundingClientRect().height || opts.maxHeight || 0
     const below = window.innerHeight - rect.bottom - gap
     const above = rect.top - gap
     const preferBelow = (opts.side ?? 'below') === 'below'
@@ -81,6 +82,10 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
     const above = opensAbove(rect, gap)
     if (above) style.bottom = `${window.innerHeight - rect.top + gap}px`
     else style.top = `${rect.bottom + gap}px`
+    if (opts.maxHeight) {
+      const free = (above ? rect.top : window.innerHeight - rect.bottom) - gap - VIEWPORT_EDGE
+      style.maxHeight = `${Math.min(opts.maxHeight, free)}px`
+    }
     style.transformOrigin = `${above ? 'bottom' : 'top'} ${align === 'end' ? 'right' : align === 'center' ? 'center' : 'left'}`
     panelStyle.value = style
   }

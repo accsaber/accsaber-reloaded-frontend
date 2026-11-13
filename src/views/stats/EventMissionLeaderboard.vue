@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { formatCount, formatShortDate } from '@/utils/formatters'
-import DataTable from '@/components/common/DataTable.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
-import UserChip from '@/components/domain/UserChip.vue'
+import type { PlayerRef } from '@/types/api/common'
 import type { EventMissionLeaderboardResponse } from '@/types/api/statistics'
-import type { TableColumn, UserRefDisplay } from '@/types/display'
+import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import IconButton from '@/components/common/IconButton.vue'
-import { NO_VALUE } from './statsFormat'
+import StatsDetail from './StatsDetail.vue'
+import StatsTable from './StatsTable.vue'
+import { STATS_PAGE_SIZE, dateCol, fmt, mainCol, numCol, playerCol, rankCol } from './statsFormat'
 import { playerRoute } from './useStatsBoard'
 
 const props = defineProps<{
@@ -22,29 +19,23 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const COLUMNS: TableColumn[] = [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' },
-  { key: 'player', label: 'Player', align: 'left' },
-  { key: 'completions', label: 'Completions', align: 'right', mono: true, width: '140px' },
-  { key: 'xpEarned', label: 'XP', align: 'right', mono: true, width: '100px' },
-  { key: 'itemsAwarded', label: 'Items', align: 'right', mono: true, width: '90px' },
-  { key: 'lastCompletedAt', label: 'Last done', align: 'right', width: '130px' },
+  playerCol,
+  mainCol('completions', 'Completions', 130),
+  numCol('xpEarned', 'XP', 100),
+  numCol('itemsAwarded', 'Items', 90),
+  dateCol('lastCompletedAt', 'Last Done', fmt.date),
 ]
-
-const router = useRouter()
-
-function onRowClick(row: Record<string, unknown>) {
-  const target = playerRoute(row)
-  if (target) router.push(target)
-}
 
 const page = ref(1)
 const loading = ref(false)
 const pageData = ref<Page<EventMissionLeaderboardResponse> | null>(null)
 
-const totalPages = computed(() => pageData.value?.totalPages ?? 0)
+const rows = computed(() => (pageData.value?.content ?? []) as unknown as Record<string, unknown>[])
+const columns = computed(() => (rows.value.every((row) => row.rank === 1) ? COLUMNS : [rankCol, ...COLUMNS]))
 
-const rows = computed<Record<string, unknown>[]>(() =>
-  (pageData.value?.content ?? []) as unknown as Record<string, unknown>[])
+function rowKey(row: Record<string, unknown>): string {
+  return (row.player as PlayerRef).id
+}
 
 let requestId = 0
 
@@ -55,7 +46,7 @@ async function fetchLeaderboard() {
     const { getEventMissionLeaderboard } = await import('@/api/statistics')
     const result = await getEventMissionLeaderboard(
       props.eventKey,
-      { page: page.value - 1, size: 20 },
+      { page: page.value - 1, size: STATS_PAGE_SIZE },
       props.templateId,
       props.country || undefined,
     )
@@ -78,69 +69,9 @@ watch(() => [props.eventKey, props.templateId, props.country, page.value].join('
 </script>
 
 <template>
-  <section class="mission-lb">
-    <header class="mission-lb__head">
-      <h4 class="mission-lb__title">{{ missionName || 'Mission' }}</h4>
-      <IconButton icon="close" label="Close mission leaderboard" @click="emit('close')" />
-    </header>
-
-    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="5" row-key="rank" row-clickable
-      :row-to="playerRoute" empty-message="Nobody has completed this mission yet." @row-click="onRowClick">
-      <template #cell-rank="{ value }"><span class="mission-lb__rank">#{{ formatCount(value as number | null) }}</span></template>
-      <template #cell-player="{ row }">
-        <UserChip :user="(row.player as UserRefDisplay)" tooltip />
-      </template>
-      <template #cell-completions="{ value }"><span class="mission-lb__strong">{{ formatCount(value as number | null) }}</span></template>
-      <template #cell-xpEarned="{ value }">{{ formatCount(value as number | null) }}</template>
-      <template #cell-itemsAwarded="{ value }">{{ formatCount(value as number | null) }}</template>
-      <template #cell-lastCompletedAt="{ value }">
-        <span class="mission-lb__dim">{{ formatShortDate(value as string | null, NO_VALUE) }}</span>
-      </template>
-    </DataTable>
-
-    <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="page = $event" />
-  </section>
+  <StatsDetail :title="missionName || 'Mission'" back="Back to the event" @close="emit('close')">
+    <StatsTable v-model:page="page" :columns="columns" :rows="rows" :loading="loading"
+      :total-pages="pageData?.totalPages ?? 0" :row-key="rowKey" :row-to="playerRoute"
+      empty-message="Nobody has completed this mission yet" />
+  </StatsDetail>
 </template>
-
-<style scoped>
-.mission-lb {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.mission-lb__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.mission-lb__title {
-  margin: 0;
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-}
-
-.mission-lb__rank {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
-.mission-lb__strong {
-  color: var(--page-accent);
-  font-weight: 600;
-}
-
-.mission-lb__dim {
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-</style>

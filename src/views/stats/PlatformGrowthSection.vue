@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import DistributionRanking from '@/views/stats/DistributionRanking.vue'
+import DistributionRanking from './DistributionRanking.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
 import type { DistributionEntryResponse, TimeSeriesPointResponse } from '@/types/api/statistics'
 import type { MetricType, TimeRange, TimeSeriesPoint } from '@/types/display'
@@ -8,8 +7,6 @@ import { TIME_RANGE_PARAMS } from '@/utils/constants'
 import { countryName } from '@/utils/countries'
 import { onMounted, ref } from 'vue'
 import { toChartPoints } from './statsFormat'
-
-defineProps<{ accent: string }>()
 
 const GROWTH_METRICS: { key: MetricType; label: string }[] = [
   { key: 'newPlayers', label: 'New Players' },
@@ -89,48 +86,31 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="growth">
-    <div class="growth__chart">
-      <TimeSeriesChart :data="growthChartData" metric-label="Platform Growth" :accent-color="accent"
-        :available-metrics="GROWTH_METRICS" :selected-metric="growthMetric" :selected-range="growthRange"
-        @update:selected-metric="onMetricChange" @update:selected-range="onRangeChange" />
-      <div v-if="growthLoading" class="growth__chart-skeleton">
-        <SkeletonLoader variant="card" height="300px" />
-      </div>
-    </div>
+  <div class="stats-section">
+    <TimeSeriesChart :data="growthChartData" :loading="growthLoading" metric-label="Platform Growth"
+      :available-metrics="GROWTH_METRICS" :selected-metric="growthMetric" :selected-range="growthRange"
+      @update:selected-metric="onMetricChange" @update:selected-range="onRangeChange" />
     <div class="growth__distributions">
-      <DistributionRanking title="Top Headsets" :entries="hmdData" :accent-color="accent" />
-      <DistributionRanking title="Top Countries" :entries="countryData" :accent-color="accent" />
-      <DistributionRanking title="Scores by Category" :entries="categoryData" :accent-color="accent" />
+      <DistributionRanking title="Top Headsets" :entries="hmdData" />
+      <DistributionRanking title="Top Countries" :entries="countryData" />
+      <DistributionRanking title="Scores by Category" :entries="categoryData" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.growth {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
-}
-
-.growth__chart {
-  position: relative;
-}
-
-.growth__chart-skeleton {
-  position: absolute;
-  inset: 0;
-}
-
 .growth__distributions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-md);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
 }
 
 @media (max-width: 767px) {
   .growth__distributions {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

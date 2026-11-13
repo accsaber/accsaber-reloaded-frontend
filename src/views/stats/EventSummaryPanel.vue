@@ -1,18 +1,17 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import StatBlock from '@/components/common/StatBlock.vue'
 import { formatAccuracy, formatCount, formatShortDate } from '@/utils/formatters'
-import DataTable from '@/components/common/DataTable.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import type {
-  DistributionEntryResponse,
-  EventMissionStatsResponse,
-  EventSummaryResponse,
-} from '@/types/api/statistics'
+import type { DistributionEntryResponse, EventSummaryResponse } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import { computed, ref, watch } from 'vue'
 import EventMissionLeaderboard from './EventMissionLeaderboard.vue'
-import IconButton from '@/components/common/IconButton.vue'
+import StatsDetail from './StatsDetail.vue'
 import StatsHistogram from './StatsHistogram.vue'
-import { fmtDecimal, labelCase, rateClass } from './statsFormat'
+import StatsNameCell from './StatsNameCell.vue'
+import StatsTable from './StatsTable.vue'
+import { fmt, labelCase, numCol, rateCol } from './statsFormat'
+import { useLocalPages } from './useStatsBoard'
 
 const props = defineProps<{
   eventKey: string
@@ -27,16 +26,16 @@ const emit = defineEmits<{
   'update:templateId': [value: string]
 }>()
 
-const WEEK_COLUMN: TableColumn = { key: 'week', label: 'Week', align: 'right', mono: true, width: '80px' }
+const WEEK_COLUMN = numCol('week', 'Week', 70)
 
 const BASE_COLUMNS: TableColumn[] = [
   { key: 'mission', label: 'Mission', align: 'left' },
-  { key: 'players', label: 'Players', align: 'right', mono: true, width: '100px' },
-  { key: 'playersCompleted', label: 'Done', align: 'right', mono: true, width: '90px' },
-  { key: 'playersExpired', label: 'Expired', align: 'right', mono: true, width: '100px' },
-  { key: 'completionRate', label: 'Rate', align: 'right', mono: true, width: '100px' },
-  { key: 'completions', label: 'Completions', align: 'right', mono: true, width: '140px' },
-  { key: 'xpPaid', label: 'XP Paid', align: 'right', mono: true, width: '110px' },
+  numCol('players', 'Players', 100),
+  numCol('playersCompleted', 'Done', 90),
+  numCol('playersExpired', 'Expired', 100),
+  { ...rateCol('completionRate', 'Rate', 100), primary: true },
+  numCol('completions', 'Completions', 130),
+  numCol('xpPaid', 'XP Paid', 110),
 ]
 
 const loading = ref(false)
@@ -45,21 +44,35 @@ const summary = ref<EventSummaryResponse | null>(null)
 
 const weekOptions = computed(() => (summary.value?.weeks ?? []).map((w) => w.week))
 
-const missionColumns = computed(() =>
-  (weekOptions.value.length ? [WEEK_COLUMN, ...BASE_COLUMNS] : BASE_COLUMNS))
+const weekTabs = computed(() => [
+  { key: '', label: 'All' },
+  ...weekOptions.value.map((w) => ({ key: String(w), label: String(w) })),
+])
 
-const missionRows = computed<Record<string, unknown>[]>(() => {
-  const missions: EventMissionStatsResponse[] = summary.value?.missions ?? []
-  const scoped = props.week === undefined ? missions : missions.filter((m) => m.week === props.week)
-  return scoped.map((m) => ({ ...m }))
+const missionColumns = computed(() => (weekOptions.value.length ? [WEEK_COLUMN, ...BASE_COLUMNS] : BASE_COLUMNS))
+
+const missions = computed(() => {
+  const all = summary.value?.missions ?? []
+  const scoped = props.week === undefined ? all : all.filter((m) => m.week === props.week)
+  return scoped as unknown as Record<string, unknown>[]
 })
+
+const { page, totalPages, pageItems } = useLocalPages(() => missions.value)
 
 const retention = computed<DistributionEntryResponse[]>(() =>
   (summary.value?.weeks ?? []).map((w) => ({ label: `Week ${w.week}`, count: w.participantsReached })))
 
-const dateRange = computed(() => {
-  if (!summary.value) return ''
-  return `${formatShortDate(summary.value.startsAt)} to ${formatShortDate(summary.value.endsAt)}`
+const stats = computed(() => {
+  const s = summary.value
+  if (!s) return []
+  return [
+    { label: 'Participants', value: s.participants },
+    { label: 'Finishers', value: s.finishers },
+    { label: 'Finish Rate', value: formatAccuracy(s.finishRate, 1) },
+    { label: 'Median Missions', value: fmt.decimal(s.medianMissionsCompleted) },
+    { label: 'Mission Rate', value: formatAccuracy(s.missionCompletionRate, 1) },
+    { label: 'XP Paid', value: s.totalXpPaid },
+  ]
 })
 
 const openMissionName = computed(
@@ -69,6 +82,14 @@ const openMissionName = computed(
 function openMission(row: Record<string, unknown>) {
   const templateId = row.templateId as string | undefined
   if (templateId) emit('update:templateId', templateId)
+}
+
+function missionKey(row: Record<string, unknown>): string {
+  return `${row.week}-${row.templateId}`
+}
+
+function missionMeta(row: Record<string, unknown>): string {
+  return row.repeatable ? `${labelCase(row.type)} · Repeatable` : labelCase(row.type)
 }
 
 let requestId = 0
@@ -102,243 +123,74 @@ watch(weekOptions, (options) => {
 </script>
 
 <template>
-  <section class="event-summary">
-    <header class="event-summary__head">
-      <div>
-        <h3 class="card-title">{{ summary?.title ?? 'Event' }}</h3>
-        <p v-if="dateRange" class="event-summary__dates">
-          {{ dateRange }}
-          <span v-if="summary?.daysRan">({{ formatCount(summary.daysRan) }} days)</span>
-        </p>
-      </div>
-      <IconButton icon="close" label="Close event summary" @click="emit('close')" />
-    </header>
+  <EventMissionLeaderboard v-if="templateId" :event-key="eventKey" :template-id="templateId"
+    :mission-name="openMissionName" :country="country" @close="emit('update:templateId', '')" />
 
-    <div v-if="loading" class="event-summary__body">
-      <SkeletonLoader variant="card" height="120px" />
-      <SkeletonLoader variant="card" height="200px" />
+  <StatsDetail v-else :title="summary?.title ?? 'Event'" back="Back to events" :failed="failed" @close="emit('close')">
+    <template v-if="summary" #meta>
+      {{ formatShortDate(summary.startsAt) }} to {{ formatShortDate(summary.endsAt) }}<template v-if="summary.daysRan">,
+        {{ formatCount(summary.daysRan) }} days</template>
+    </template>
+
+    <div class="event-summary__stats" :class="{ refreshing: loading }">
+      <StatBlock v-for="stat in stats" :key="stat.label" class="event-summary__stat" :label="stat.label"
+        :value="stat.value" :decimals="0" />
     </div>
 
-    <p v-else-if="failed || !summary" class="event-summary__empty">Could not load this event.</p>
+    <p v-if="summary" class="event-summary__line">
+      {{ formatCount(summary.missionsAssigned) }} missions given out:
+      {{ formatCount(summary.missionsCompleted) }} finished,
+      {{ formatCount(summary.missionsExpired) }} expired,
+      {{ formatCount(summary.missionsOpen) }} still open.
+      Of the XP, {{ formatCount(summary.missionXpPaid) }} came from missions and
+      {{ formatCount(summary.bonusXpPaid) }} from the completion bonus.
+    </p>
 
-    <div v-else class="event-summary__body">
-      <dl class="event-summary__stats">
-        <div class="event-summary__stat">
-          <dt>Participants</dt>
-          <dd>{{ formatCount(summary.participants) }}</dd>
-        </div>
-        <div class="event-summary__stat">
-          <dt>Finishers</dt>
-          <dd>{{ formatCount(summary.finishers) }}</dd>
-        </div>
-        <div class="event-summary__stat">
-          <dt>Finish rate</dt>
-          <dd :class="rateClass(summary.finishRate)">{{ formatAccuracy(summary.finishRate, 1) }}</dd>
-        </div>
-        <div class="event-summary__stat">
-          <dt>Median missions</dt>
-          <dd>{{ fmtDecimal(summary.medianMissionsCompleted) }}</dd>
-        </div>
-        <div class="event-summary__stat">
-          <dt>Mission rate</dt>
-          <dd :class="rateClass(summary.missionCompletionRate)">{{ formatAccuracy(summary.missionCompletionRate, 1) }}</dd>
-        </div>
-        <div class="event-summary__stat">
-          <dt>XP paid</dt>
-          <dd>{{ formatCount(summary.totalXpPaid) }}</dd>
-        </div>
-      </dl>
+    <StatsHistogram v-if="retention.length" title="Players Still Going" :entries="retention" />
 
-      <p class="event-summary__line">
-        {{ formatCount(summary.missionsAssigned) }} missions handed out:
-        {{ formatCount(summary.missionsCompleted) }} finished,
-        {{ formatCount(summary.missionsExpired) }} expired,
-        {{ formatCount(summary.missionsOpen) }} still open.
-        Of the XP, {{ formatCount(summary.missionXpPaid) }} came from missions and
-        {{ formatCount(summary.bonusXpPaid) }} from the completion bonus.
-      </p>
+    <BaseTabs v-if="weekOptions.length" class="event-summary__weeks" variant="segmented" label="Week"
+      :tabs="weekTabs" :model-value="week === undefined ? '' : String(week)"
+      @update:model-value="emit('update:week', $event ? Number($event) : undefined)" />
 
-      <StatsHistogram v-if="retention.length" title="Still going" :entries="retention" />
-
-      <div v-if="weekOptions.length" class="event-summary__weeks">
-        <span class="event-summary__weeks-label field-label">Week</span>
-        <button type="button" class="event-summary__week" :class="{ 'event-summary__week--active': week === undefined }"
-          @click="emit('update:week', undefined)">
-          All
-        </button>
-        <button v-for="option in weekOptions" :key="option" type="button" class="event-summary__week"
-          :class="{ 'event-summary__week--active': week === option }" @click="emit('update:week', option)">
-          {{ option }}
-        </button>
-      </div>
-
-      <DataTable :columns="missionColumns" :rows="missionRows" row-key="templateId" row-clickable
-        empty-message="No missions recorded for this week." @row-click="openMission">
-        <template #cell-mission="{ row }">
-          <span class="event-summary__mission">
-            <span class="event-summary__mission-name">{{ row.templateName }}</span>
-            <span class="event-summary__mission-meta">
-              <span>{{ labelCase(row.type) }}</span>
-              <span v-if="row.repeatable" class="event-summary__repeatable">Repeatable</span>
-            </span>
-          </span>
-        </template>
-        <template #cell-week="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-players="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-playersCompleted="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-playersExpired="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-completionRate="{ value }">
-          <span :class="rateClass(value as number | null)">{{ formatAccuracy(value as number | null, 1) }}</span>
-        </template>
-        <template #cell-completions="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-xpPaid="{ value }">{{ formatCount(value as number | null) }}</template>
-      </DataTable>
-
-      <EventMissionLeaderboard v-if="templateId" :event-key="eventKey" :template-id="templateId"
-        :mission-name="openMissionName" :country="country" @close="emit('update:templateId', '')" />
-    </div>
-  </section>
+    <StatsTable v-model:page="page" :columns="missionColumns" :rows="pageItems" :loading="loading"
+      :total-pages="totalPages" :row-key="missionKey" row-clickable
+      empty-message="No missions recorded for this week" @row-click="openMission">
+      <template #cell-mission="{ row }">
+        <StatsNameCell :name="(row.templateName as string)" :meta="missionMeta(row)" />
+      </template>
+    </StatsTable>
+  </StatsDetail>
 </template>
 
 <style scoped>
-.event-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
-}
-
-.event-summary__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.event-summary__dates {
-  margin: 2px 0 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.event-summary__empty {
-  margin: 0;
-  padding: var(--space-lg) 0;
-  text-align: center;
-  color: var(--text-tertiary);
-}
-
-.event-summary__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
 .event-summary__stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-md);
-  margin: 0;
+  min-height: 60px;
 }
 
-.event-summary__stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.event-summary__stat dt {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
-
-.event-summary__stat dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-lg);
-  font-weight: 500;
-  color: var(--text-primary);
+.event-summary__stats .event-summary__stat {
+  padding: 0;
 }
 
 .event-summary__line {
   margin: 0;
+  max-width: 65ch;
   font-size: var(--text-body);
+  line-height: 1.5;
   color: var(--text-secondary);
-  line-height: 1.6;
 }
 
 .event-summary__weeks {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xs);
+  align-self: flex-start;
+  max-width: 100%;
 }
 
-.event-summary__weeks-label {
-  margin-right: var(--space-xs);
-}
-
-.event-summary__week {
-  min-width: 32px;
-  padding: var(--space-xs) 10px;
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-}
-
-.event-summary__week:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.event-summary__week--active {
-  color: var(--page-accent);
-  border-color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 10%, transparent);
-}
-
-.event-summary__mission {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.event-summary__mission-name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.event-summary__mission-meta {
-  display: flex;
-  gap: var(--space-sm);
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-}
-
-.event-summary__repeatable {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
+@media (max-width: 767px) {
+  .event-summary__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: 136px;
+  }
 }
 </style>
-
-<style scoped src="./statsRates.css"></style>

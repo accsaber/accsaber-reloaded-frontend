@@ -28,6 +28,9 @@ export interface TableColumn {
   mono?: boolean
   noLink?: boolean
   icon?: string
+  format?: (value: unknown, row: Record<string, unknown>) => string
+  cellClass?: (value: unknown, row: Record<string, unknown>) => string | undefined
+  primary?: boolean
 }
 
 export type SortDirection = 'asc' | 'desc'

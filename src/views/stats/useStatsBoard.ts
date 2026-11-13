@@ -6,6 +6,7 @@ import type { Page, PaginationParams } from '@/types/pagination'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { useRouter } from 'vue-router'
+import { STATS_PAGE_SIZE } from './statsFormat'
 
 export type StatsApi = typeof import('@/api/statistics')
 export type StatsRow = Record<string, unknown>
@@ -25,9 +26,17 @@ export function playerRoute(row: StatsRow): RouteLocationRaw | undefined {
   return userId ? { name: 'player-profile', params: { userId } } : undefined
 }
 
+export function useLocalPages<T>(items: () => T[]) {
+  const page = ref(1)
+  const totalPages = computed(() => Math.ceil(items().length / STATS_PAGE_SIZE))
+  const pageItems = computed(() => items().slice((page.value - 1) * STATS_PAGE_SIZE, page.value * STATS_PAGE_SIZE))
+  watch(() => items().length, () => { page.value = 1 })
+  return { page, totalPages, pageItems }
+}
+
 export function useStatsBoard<K extends string, F, D extends StatsBoardDef<K, F>>(
   boards: D[],
-  options: { size: number; filters: (def: D) => F },
+  options: { filters: (def: D) => F; mapRow?: (row: StatsRow) => StatsRow },
 ) {
   const router = useRouter()
   const { setQuery, queryRef } = useQueryParams()
@@ -37,7 +46,7 @@ export function useStatsBoard<K extends string, F, D extends StatsBoardDef<K, F>
   const boardParam = queryRef<K>('board')
   const boardDef = computed<D>(() => boardMap.get(boardParam.value) ?? boards[0]!)
   const activeBoard = computed<K>(() => boardDef.value.key)
-  const pickerOptions = boards.map(({ key, label, icon }) => ({ key, label, icon }))
+  const boardOptions = boards.map(({ key, label, icon }) => ({ value: key, label, icon }))
 
   function selectBoard(board: K, reset: Record<string, undefined> = {}) {
     setQuery({ ...reset, board: board === boards[0]!.key ? undefined : board })
@@ -63,7 +72,10 @@ export function useStatsBoard<K extends string, F, D extends StatsBoardDef<K, F>
     const page = currentPageData.value
     if (!page) return []
     const offset = page.number * page.size
-    return page.content.map((raw, index) => ({ ...(raw as StatsRow), rank: offset + index + 1 }))
+    return page.content.map((raw, index) => {
+      const row = { ...(raw as StatsRow), rank: offset + index + 1 }
+      return options.mapRow ? options.mapRow(row) : row
+    })
   })
 
   const request = computed(() => {
@@ -81,7 +93,7 @@ export function useStatsBoard<K extends string, F, D extends StatsBoardDef<K, F>
     loading.value = true
     try {
       const api = await import('@/api/statistics')
-      const result = await def.fetch(api, { page: req.page - 1, size: options.size, sort: def.sort }, req.filters)
+      const result = await def.fetch(api, { page: req.page - 1, size: STATS_PAGE_SIZE, sort: def.sort }, req.filters)
       if (id !== requestId) return
       pageData.value = result
     } catch {
@@ -97,7 +109,7 @@ export function useStatsBoard<K extends string, F, D extends StatsBoardDef<K, F>
   return {
     activeBoard,
     boardDef,
-    pickerOptions,
+    boardOptions,
     selectBoard,
     rowTo,
     pushPlayer,

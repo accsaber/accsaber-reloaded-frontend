@@ -32,15 +32,8 @@ const resolved = computed(() => resolveModifierRefs(props.modifiers, modifierSto
 }
 
 .modifiers-cell__unusual {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.6875rem;
+  font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  border: 1px solid color-mix(in srgb, var(--tier-gold) 50%, transparent);
-  background: color-mix(in srgb, var(--tier-gold) 10%, transparent);
   color: var(--tier-gold);
 }
 

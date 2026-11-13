@@ -1,41 +1,37 @@
 <script setup lang="ts">
-import { formatAccuracy, formatCount } from '@/utils/formatters'
+import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import DataTable from '@/components/common/DataTable.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import DistributionRanking from '@/views/stats/DistributionRanking.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
-import UserChip from '@/components/domain/UserChip.vue'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useCategoryStore } from '@/stores/categories'
 import type { MissionBand, MissionPool, MissionType } from '@/types/api/missions'
 import type { DistributionEntryResponse, MissionStatsParams, MissionTier } from '@/types/api/statistics'
-import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
-import { TIME_RANGE_PARAMS } from '@/utils/constants'
-import { storeCountry } from '@/utils/statsCountry'
-import { computed, ref, watch, type WritableComputedRef } from 'vue'
-import LeaderboardPicker from './LeaderboardPicker.vue'
+import type { TableColumn } from '@/types/display'
+import { computed } from 'vue'
+import DistributionRanking from './DistributionRanking.vue'
 import MissionCalibrationDetail from './MissionCalibrationDetail.vue'
-import StatsFilterChips from './StatsFilterChips.vue'
+import StatsBar from './StatsBar.vue'
+import StatsBoardPicker from './StatsBoardPicker.vue'
+import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsFilters, { type StatsFilterGroup } from './StatsFilters.vue'
+import StatsNameCell from './StatsNameCell.vue'
+import StatsTable from './StatsTable.vue'
 import {
-  MISSION_TIER_HINTS,
   MISSION_TIER_LABELS,
   MISSION_TIER_ORDER,
   NO_VALUE,
-  fmtDecimal,
-  fmtPercentPoint,
+  fmt,
   labelCase,
-  plural,
-  rateClass,
-  toChartPoints,
+  mainCol,
+  numCol,
+  playerCol,
+  rankCol,
+  rateCol,
 } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
-
-defineProps<{
-  accent: string
-  countryOptions: { value: string; label: string }[]
-}>()
+import { useStatsTrends } from './useStatsTrends'
 
 type MissionBoard = 'calibration' | 'xp' | 'trends' | 'most-completed' | 'most-mission-xp'
 type MissionFilterKey = 'pool' | 'type' | 'band' | 'category' | 'tier' | 'skillRange' | 'minAssigned' | 'range'
@@ -53,77 +49,71 @@ const MISSION_TYPES: MissionType[] = [
   'SNIPE_RIVAL_ANY_MAP', 'AP_GAIN_OVERALL', 'BATCH_PLAY_N', 'PB_RANKED_BEFORE_N', 'CAMPAIGN_COMPLETE_N',
 ]
 
-const templateCol: TableColumn = { key: 'template', label: 'Template', align: 'left', width: '270px' }
-const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
-const playerCol: TableColumn = { key: 'player', label: 'Player', align: 'left' }
+const templateCol: TableColumn = { key: 'template', label: 'Template', align: 'left' }
 
 const BOARDS: MissionBoardDef[] = [
   {
     key: 'calibration',
-    label: 'Calibration',
-    icon: 'gauge',
+    label: 'Calibration', icon: 'gauge',
     filters: ['pool', 'type', 'band', 'category', 'tier', 'skillRange', 'minAssigned'],
     columns: [
       templateCol,
-      { key: 'tier', label: 'Tier', align: 'left', width: '110px' },
-      { key: 'assigned', label: 'Assigned', align: 'right', mono: true, width: '110px' },
-      { key: 'completed', label: 'Done', align: 'right', mono: true, width: '80px' },
-      { key: 'completionRate', label: 'Rate', align: 'right', mono: true, width: '120px' },
-      { key: 'progressed', label: 'Progressed', align: 'right', mono: true, width: '130px' },
-      { key: 'averageXpReward', label: 'Avg XP', align: 'right', mono: true, width: '100px' },
+      {
+        key: 'tier', label: 'Tier', align: 'left', width: '110px',
+        format: (value) => (value ? MISSION_TIER_LABELS[value as MissionTier] : NO_VALUE),
+        cellClass: (value) => (value === 'unknown' ? 'stats-dim' : undefined),
+      },
+      numCol('assigned', 'Assigned', 110),
+      numCol('completed', 'Done', 80),
+      { ...rateCol('completionRate', 'Rate', 90), primary: true },
+      numCol('progressed', 'Progressed', 120),
+      numCol('averageXpReward', 'Avg XP', 100, fmt.decimal),
     ],
     fetch: (api, params, filters) => api.getMissionCalibration(params, filters),
   },
   {
     key: 'xp',
-    label: 'XP Payouts',
-    icon: 'gem',
+    label: 'XP Payouts', icon: 'gem',
     filters: ['pool', 'type', 'band', 'category', 'tier', 'skillRange'],
     columns: [
       templateCol,
-      { key: 'completed', label: 'Done', align: 'right', mono: true, width: '80px' },
-      { key: 'xpPaid', label: 'XP Paid', align: 'right', mono: true, width: '110px' },
-      { key: 'averageXp', label: 'Avg', align: 'right', mono: true, width: '90px' },
-      { key: 'medianXp', label: 'Median', align: 'right', mono: true, width: '100px' },
-      { key: 'p90Xp', label: 'P90', align: 'right', mono: true, width: '90px' },
-      { key: 'shareOfMissionXp', label: 'Share', align: 'right', mono: true, width: '90px' },
-      { key: 'itemsAwarded', label: 'Items', align: 'right', mono: true, width: '90px' },
+      numCol('completed', 'Done', 80),
+      mainCol('xpPaid', 'XP Paid', 110),
+      numCol('averageXp', 'Avg', 90, fmt.decimal),
+      numCol('medianXp', 'Median', 100, fmt.decimal),
+      numCol('p90Xp', 'P90', 90, fmt.decimal),
+      numCol('shareOfMissionXp', 'Share', 90, fmt.rate),
+      numCol('itemsAwarded', 'Items', 90),
     ],
     fetch: (api, params, filters) => api.getMissionXpPayouts(params, filters),
   },
   {
     key: 'trends',
-    label: 'Trends',
-    icon: 'trending',
+    label: 'Trends', icon: 'trending',
     filters: ['pool', 'type', 'band', 'tier', 'range'],
     columns: [],
   },
   {
     key: 'most-completed',
-    label: 'Most Completed',
-    icon: 'trophy',
+    label: 'Most Completed', icon: 'trophy',
     filters: ['pool', 'type', 'tier'],
     players: true,
-    columns: [
-      rankCol, playerCol,
-      { key: 'missionsCompleted', label: 'Missions', align: 'right', mono: true, width: '120px' },
-      { key: 'missionXp', label: 'Mission XP', align: 'right', mono: true, width: '140px' },
-    ],
+    columns: [rankCol, playerCol, mainCol('missionsCompleted', 'Missions', 120), numCol('missionXp', 'Mission XP', 140, fmt.whole)],
     fetch: (api, params, filters) => api.getMostMissionsCompleted(params, filters),
   },
   {
     key: 'most-mission-xp',
-    label: 'Most Mission XP',
-    icon: 'star',
+    label: 'Most Mission XP', icon: 'star',
     filters: [],
     players: true,
-    columns: [
-      rankCol, playerCol,
-      { key: 'missionXp', label: 'Mission XP', align: 'right', mono: true, width: '140px' },
-      { key: 'missionsCompleted', label: 'Missions', align: 'right', mono: true, width: '120px' },
-    ],
+    columns: [rankCol, playerCol, mainCol('missionXp', 'Mission XP', 140, fmt.whole), numCol('missionsCompleted', 'Missions', 120)],
     fetch: (api, params, filters) => api.getMostMissionXp(params, filters.country),
   },
+]
+
+const SKILL_TABS = [
+  { key: 'tier', label: 'Tiers' },
+  { key: 'range', label: 'Skill Range' },
 ]
 
 const categoryStore = useCategoryStore()
@@ -140,8 +130,6 @@ const skillModeParam = queryRef('skillMode')
 const skillMinParam = queryRef('skillMin')
 const skillMaxParam = queryRef('skillMax')
 const minAssignedParam = queryRef('minAssigned')
-const rangeParam = queryRef<TimeRange>('range')
-const metricParam = queryRef<MetricType>('metric')
 
 function toNumber(raw: string): number | undefined {
   const value = Number(raw)
@@ -174,9 +162,9 @@ function boardFilters(def: MissionBoardDef): MissionStatsParams {
 }
 
 const {
-  activeBoard, boardDef, pickerOptions, selectBoard, rowTo, pushPlayer,
+  activeBoard, boardDef, boardOptions, selectBoard, rowTo, pushPlayer,
   currentPage, setPage, loading, rows, totalPages, totalElements,
-} = useStatsBoard(BOARDS, { size: 20, filters: boardFilters })
+} = useStatsBoard(BOARDS, { filters: boardFilters })
 
 const shows = (filter: MissionFilterKey) => boardDef.value.filters.includes(filter)
 const filters = computed(() => boardFilters(boardDef.value))
@@ -191,8 +179,6 @@ const detailFilters = computed<MissionStatsParams>(() => ({
   country: countryFilter.value || undefined,
 }))
 
-const chartRange = computed<TimeRange>(() => (rangeParam.value in TIME_RANGE_PARAMS ? rangeParam.value as TimeRange : '30d'))
-
 const categoryOptions = computed(() => [
   { value: '', label: 'All Categories' },
   ...categoryStore.categories.map((c) => ({ value: c.code, label: c.name })),
@@ -203,39 +189,47 @@ const typeOptions = [
   ...MISSION_TYPES.map((t) => ({ value: t, label: labelCase(t) })),
 ]
 
-const poolChips = POOLS.map((p) => ({ key: p, label: labelCase(p) }))
-const bandChips = BANDS.map((b) => ({ key: b, label: labelCase(b) }))
-const tierChips = MISSION_TIER_ORDER.map((t) => ({
-  key: t,
-  label: MISSION_TIER_LABELS[t],
-  hint: MISSION_TIER_HINTS[t],
-}))
+const TIER_TOGGLES = MISSION_TIER_ORDER.map((t) => ({ key: t, label: MISSION_TIER_LABELS[t] }))
 
-function setCountry(country: string) {
-  storeCountry(country)
-  countryFilter.value = country
+const filterGroups = computed<StatsFilterGroup[]>(() => [
+  ...(shows('pool')
+    ? [{ key: 'pool', label: 'Pool', options: POOLS.map((p) => ({ key: p, label: labelCase(p) })), selected: poolFilter.value }]
+    : []),
+  ...(shows('band')
+    ? [{ key: 'band', label: 'Band', options: BANDS.map((b) => ({ key: b, label: labelCase(b) })), selected: bandFilter.value }]
+    : []),
+])
+
+const extraFiltersActive = computed(
+  () =>
+    tierFilter.value.length > 0 || skillMin.value !== undefined || skillMax.value !== undefined || minAssigned.value !== 1,
+)
+
+function setGroup(key: string, selected: string[]) {
+  setQuery({ [key]: selected })
 }
 
-const chipLists = { pool: poolFilter, band: bandFilter, tier: tierFilter } as Record<string, WritableComputedRef<string[]>>
-
-function toggleChip(key: 'pool' | 'band' | 'tier', value: string) {
-  const list = chipLists[key]!
-  list.value = list.value.includes(value) ? list.value.filter((v) => v !== value) : [...list.value, value]
+function toggleTier(tier: string) {
+  const active = tierFilter.value as string[]
+  setQuery({ tier: active.includes(tier) ? active.filter((t) => t !== tier) : [...active, tier] })
 }
 
-function setSkillMode(mode: 'tier' | 'range') {
-  setQuery({
-    skillMode: mode === 'tier' ? undefined : mode,
-    tier: undefined,
-    skillMin: undefined,
-    skillMax: undefined,
-  })
+function setSkillMode(mode: string) {
+  setQuery({ skillMode: mode === 'tier' ? undefined : mode, tier: undefined, skillMin: undefined, skillMax: undefined })
+}
+
+function inputValue(event: Event): string {
+  return (event.target as HTMLInputElement).value.trim()
 }
 
 function onRowClick(row: StatsRow) {
   if (pushPlayer(row)) return
   const templateId = row.templateId as string | undefined
-  if (templateId) setQuery({ template: templateId }, { keepPage: true })
+  if (templateId && activeBoard.value === 'calibration') setQuery({ template: templateId }, { keepPage: true })
+}
+
+function templateMeta(row: StatsRow): string {
+  return [labelCase(row.pool), row.band ? labelCase(row.band) : '', row.categoryName].filter(Boolean).join(' · ')
 }
 
 const stillAccruing = computed(() => {
@@ -243,410 +237,97 @@ const stillAccruing = computed(() => {
   return rows.value.every((row) => Number(row.expired ?? 0) === 0)
 })
 
-const TREND_METRICS: { key: MetricType; label: string }[] = [
-  { key: 'missionCompletionRate', label: 'Completion Rate' },
-  { key: 'missionCompletions', label: 'Missions Completed' },
-]
-
-const chartMetric = computed<MetricType>(() =>
-  (TREND_METRICS.some((m) => m.key === metricParam.value) ? metricParam.value as MetricType : 'missionCompletionRate'))
-
-const isRateMetric = computed(() => chartMetric.value === 'missionCompletionRate')
-
-const chartLoading = ref(false)
-const chartPoints = ref<TimeSeriesPoint[]>([])
-const byType = ref<DistributionEntryResponse[]>([])
-
-let chartRequestId = 0
-
-async function fetchTrends() {
-  const id = ++chartRequestId
-  chartLoading.value = true
-  try {
-    const api = await import('@/api/statistics')
-    const range = TIME_RANGE_PARAMS[chartRange.value]
+const trends = useStatsTrends<DistributionEntryResponse[]>({
+  metrics: [
+    { key: 'missionCompletionRate', label: 'Completion Rate' },
+    { key: 'missionCompletions', label: 'Missions Completed' },
+  ],
+  active: () => activeBoard.value === 'trends',
+  filters: () => filters.value,
+  load: async (api, range, metric) => {
     const scope = filters.value
-    const series = isRateMetric.value
-      ? api.getMissionCompletionRate(range, scope)
-      : api.getMissionCompletionsPerDay(range, {
-        pool: scope.pool, type: scope.type, tier: scope.tier, country: scope.country,
-      })
     const [points, types] = await Promise.all([
-      series,
+      metric === 'missionCompletionRate'
+        ? api.getMissionCompletionRate(range, scope)
+        : api.getMissionCompletionsPerDay(range, {
+          pool: scope.pool, type: scope.type, tier: scope.tier, country: scope.country,
+        }),
       api.getMissionCompletionsByType({ pool: scope.pool, tier: scope.tier, country: scope.country }),
     ])
-    if (id !== chartRequestId) return
-    chartPoints.value = toChartPoints(points)
-    byType.value = types.map((entry) => ({ ...entry, label: labelCase(entry.label) }))
-  } catch {
-    if (id !== chartRequestId) return
-    chartPoints.value = []
-    byType.value = []
-  }
-  chartLoading.value = false
-}
+    return { points, extra: types.map((entry) => ({ ...entry, label: labelCase(entry.label) })) }
+  },
+})
 
-watch(
-  () => activeBoard.value === 'trends'
-    ? JSON.stringify([filters.value, chartRange.value, chartMetric.value])
-    : null,
-  (key) => { if (key) fetchTrends() },
-  { immediate: true },
-)
+const isRateMetric = computed(() => trends.metric.value.key === 'missionCompletionRate')
 </script>
 
 <template>
-  <div class="mission-stats" :style="{ '--accent': accent }">
-    <div class="mission-stats__filters">
-      <div class="mission-stats__row">
-        <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
-          @update:model-value="setCountry" />
-        <BaseSelect v-if="shows('type')" :model-value="typeFilter" :options="typeOptions" placeholder="All Types"
-          searchable @update:model-value="typeFilter = $event as MissionType" />
-        <BaseSelect v-if="shows('category')" :model-value="categoryFilter" :options="categoryOptions"
-          placeholder="All Categories" @update:model-value="categoryFilter = $event" />
-        <label v-if="shows('minAssigned')" class="mission-stats__number field-label">
-          <span>Min assigned</span>
-          <input type="number" min="1" inputmode="numeric" :value="minAssigned"
-            @change="minAssignedParam = ($event.target as HTMLInputElement).value.trim()" />
-        </label>
-      </div>
+  <MissionCalibrationDetail v-if="openTemplate && activeBoard === 'calibration'" :template-id="openTemplate"
+    :filters="detailFilters" @close="setQuery({ template: undefined }, { keepPage: true })" />
 
-      <StatsFilterChips v-if="shows('pool')" label="Pool" :options="poolChips" :selected="poolFilter"
-        empty-label="All pools" @toggle="toggleChip('pool', $event)" @clear="poolFilter = []" />
-
-      <StatsFilterChips v-if="shows('band')" label="Band" :options="bandChips" :selected="bandFilter"
-        empty-label="All bands" @toggle="toggleChip('band', $event)" @clear="bandFilter = []" />
-
-      <div v-if="shows('tier')" class="mission-stats__skill">
-        <div v-if="shows('skillRange')" class="mission-stats__mode">
-          <button type="button" class="mission-stats__mode-btn"
-            :class="{ 'mission-stats__mode-btn--active': skillMode === 'tier' }" @click="setSkillMode('tier')">
-            Tiers
-          </button>
-          <button type="button" class="mission-stats__mode-btn"
-            :class="{ 'mission-stats__mode-btn--active': skillMode === 'range' }" @click="setSkillMode('range')">
-            Skill range
-          </button>
-        </div>
-
-        <StatsFilterChips v-if="skillMode === 'tier'" label="Tier" :options="tierChips" :selected="tierFilter"
-          empty-label="All tiers" @toggle="toggleChip('tier', $event)" @clear="tierFilter = []" />
-
-        <div v-else class="mission-stats__range">
-          <label class="mission-stats__number field-label">
-            <span>Skill min</span>
-            <input type="number" inputmode="numeric" :value="skillMin ?? ''"
-              @change="skillMinParam = ($event.target as HTMLInputElement).value.trim()" />
-          </label>
-          <label class="mission-stats__number field-label">
-            <span>Skill max</span>
-            <input type="number" inputmode="numeric" :value="skillMax ?? ''"
-              @change="skillMaxParam = ($event.target as HTMLInputElement).value.trim()" />
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <LeaderboardPicker :model-value="activeBoard" :options="pickerOptions"
+  <div v-else class="stats-section">
+    <StatsBoardPicker :model-value="activeBoard" :options="boardOptions"
       @update:model-value="selectBoard($event, { template: undefined })" />
 
-    <template v-if="activeBoard === 'trends'">
-      <div class="mission-stats__chart">
-        <TimeSeriesChart :data="chartPoints" :accent-color="accent" :available-metrics="TREND_METRICS"
-          :selected-metric="chartMetric" :selected-range="chartRange"
-          :metric-label="isRateMetric ? 'Completion Rate' : 'Missions Completed'"
-          :format-value="isRateMetric ? fmtPercentPoint : undefined"
-          empty-message="Nothing recorded in this range yet."
-          @update:selected-metric="metricParam = $event"
-          @update:selected-range="rangeParam = $event" />
-        <div v-if="chartLoading" class="mission-stats__chart-skeleton">
-          <SkeletonLoader variant="card" height="300px" />
-        </div>
-      </div>
+    <StatsBar :count="activeBoard === 'trends' ? 0 : totalElements">
+      <StatsCountrySelect />
+      <BaseSelect v-if="shows('type')" :model-value="typeFilter" :options="typeOptions" placeholder="All Types"
+        searchable @update:model-value="typeFilter = $event as MissionType" />
+      <BaseSelect v-if="shows('category')" :model-value="categoryFilter" :options="categoryOptions"
+        placeholder="All Categories" @update:model-value="categoryFilter = $event" />
+      <StatsFilters v-if="shows('pool') || shows('tier')" :groups="filterGroups" :active="extraFiltersActive"
+        @change="setGroup">
+        <template v-if="shows('tier')">
+          <h4 class="field-label mission-stats__label">Skill</h4>
+          <BaseTabs v-if="shows('skillRange')" variant="segmented" label="Skill filter" :tabs="SKILL_TABS"
+            :model-value="skillMode" @update:model-value="setSkillMode" />
+          <ChartToggleGroup v-if="skillMode === 'tier' || !shows('skillRange')" :toggles="TIER_TOGGLES"
+            :active="tierFilter" label="Tier" @select="toggleTier" />
+          <div v-else class="mission-stats__range">
+            <BaseInput label="Skill Min" type="number" inputmode="numeric" :model-value="skillMin ?? ''"
+              @change="skillMinParam = inputValue($event)" />
+            <BaseInput label="Skill Max" type="number" inputmode="numeric" :model-value="skillMax ?? ''"
+              @change="skillMaxParam = inputValue($event)" />
+          </div>
+        </template>
+        <BaseInput v-if="shows('minAssigned')" label="Min Assigned" type="number" min="1" inputmode="numeric"
+          :model-value="minAssigned" @change="minAssignedParam = inputValue($event)" />
+      </StatsFilters>
+    </StatsBar>
 
-      <DistributionRanking title="Completions by Type" :entries="byType" :accent-color="accent" :max-entries="10" />
+    <template v-if="activeBoard === 'trends'">
+      <TimeSeriesChart :data="trends.points.value" :loading="trends.loading.value"
+        :available-metrics="trends.metrics" :selected-metric="trends.metric.value.key"
+        :selected-range="trends.range.value" :metric-label="trends.metric.value.label"
+        :format-value="isRateMetric ? fmt.percentPoint : undefined"
+        empty-message="Nothing recorded in this range yet"
+        @update:selected-metric="trends.setMetric" @update:selected-range="trends.setRange" />
+      <DistributionRanking title="Completions by Type" :entries="trends.extra.value ?? []" :max-entries="10" />
     </template>
 
     <template v-else>
-      <p v-if="totalElements > 0" class="mission-stats__count">{{ plural(totalElements, 'row') }}</p>
+      <p v-if="stillAccruing" class="caption">No missions in view have expired yet</p>
 
-      <p v-if="stillAccruing" class="mission-stats__note">No missions in view have expired yet.</p>
-
-      <DataTable :columns="boardDef.columns" :rows="rows" :loading="loading" :loading-rows="10" row-key="rank"
-        :row-clickable="activeBoard === 'calibration' || !!boardDef.players" :row-to="rowTo"
-        :empty-message="activeBoard === 'calibration' ? 'No missions match these filters yet.' : 'No records found.'"
-        @row-click="onRowClick">
-        <template #cell-rank="{ value }">
-          <span class="mission-stats__rank">#{{ value }}</span>
-        </template>
-
-        <template #cell-player="{ row }">
-          <UserChip :user="(row.player as UserRefDisplay)" tooltip />
-        </template>
-
+      <StatsTable :columns="boardDef.columns" :rows="rows" :loading="loading" :page="currentPage"
+        :total-pages="totalPages" :row-to="rowTo" :row-clickable="activeBoard === 'calibration'"
+        :empty-message="activeBoard === 'calibration' ? 'No missions match these filters yet' : 'No records found'"
+        @row-click="onRowClick" @update:page="setPage">
         <template #cell-template="{ row }">
-          <span class="mission-stats__template">
-            <span class="mission-stats__template-name">{{ row.templateName }}</span>
-            <span class="mission-stats__template-meta">
-              <span class="mission-stats__tag">{{ labelCase(row.pool) }}</span>
-              <span v-if="row.band" class="mission-stats__tag">{{ labelCase(row.band) }}</span>
-              <span v-if="row.categoryName" class="mission-stats__template-cat">{{ row.categoryName }}</span>
-            </span>
-          </span>
+          <StatsNameCell :name="(row.templateName as string)" :meta="templateMeta(row)" />
         </template>
-
-        <template #cell-tier="{ value }">
-          <span class="mission-stats__tag" :class="{ 'mission-stats__tag--dim': value === 'unknown' }">
-            {{ value ? MISSION_TIER_LABELS[value as MissionTier] : NO_VALUE }}
-          </span>
-        </template>
-
-        <template #cell-completionRate="{ row }">
-          <span class="mission-stats__rate" :class="rateClass(row.completionRate as number | null)">
-            <span class="mission-stats__rate-track">
-              <span class="mission-stats__rate-fill"
-                :style="{ '--fill': (((row.completionRate as number | null) ?? 0) * 100) + '%' }" />
-            </span>
-            {{ formatAccuracy(row.completionRate as number | null, 1) }}
-          </span>
-        </template>
-
-        <template #cell-progressed="{ row }">
-          <span v-if="row.progressed == null" class="mission-stats__dim">{{ NO_VALUE }}</span>
-          <span v-else>{{ formatCount(row.progressed as number) }}</span>
-        </template>
-
-        <template #cell-assigned="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-completed="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-itemsAwarded="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-averageXpReward="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-xpPaid="{ value }"><span class="mission-stats__strong">{{ formatCount(value as number | null) }}</span></template>
-        <template #cell-averageXp="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-medianXp="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-p90Xp="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-shareOfMissionXp="{ value }">{{ formatAccuracy(value as number | null, 1) }}</template>
-        <template #cell-missionsCompleted="{ value }">
-          <span class="mission-stats__strong">{{ formatCount(value as number | null) }}</span>
-        </template>
-        <template #cell-missionXp="{ value }">{{ fmtDecimal(value, 0) }}</template>
-      </DataTable>
-
-      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
-
-      <MissionCalibrationDetail v-if="openTemplate && activeBoard === 'calibration'" :template-id="openTemplate"
-        :filters="detailFilters" @close="setQuery({ template: undefined }, { keepPage: true })" />
+      </StatsTable>
     </template>
   </div>
 </template>
 
 <style scoped>
-.mission-stats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  min-width: 0;
-  --page-accent: var(--accent);
-}
-
-.mission-stats__filters {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.mission-stats__row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.mission-stats__number {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.mission-stats__number input {
-  width: 72px;
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-}
-
-.mission-stats__number input:focus {
-  outline: none;
-  border-color: var(--page-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent) 20%, transparent);
-}
-
-.mission-stats__skill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.mission-stats__mode {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-xs);
-}
-
-.mission-stats__mode-btn {
-  padding: var(--space-xs) 10px;
-  background: transparent;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-}
-
-.mission-stats__mode-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.mission-stats__mode-btn--active {
-  color: var(--page-accent);
-  border-color: var(--page-accent);
-  background: color-mix(in srgb, var(--page-accent) 10%, transparent);
+.mission-stats__label {
+  margin: 0 0 calc(-1 * var(--space-sm));
 }
 
 .mission-stats__range {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.mission-stats__chart {
-  position: relative;
-}
-
-.mission-stats__chart-skeleton {
-  position: absolute;
-  inset: 0;
-}
-
-.mission-stats__count {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-align: right;
-}
-
-.mission-stats__note {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-elevated);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.mission-stats__template {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.mission-stats__template-name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mission-stats__template-meta {
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
-  min-width: 0;
-  overflow: hidden;
-}
-
-.mission-stats__template-cat {
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mission-stats__tag {
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
-
-.mission-stats__tag--dim {
-  color: var(--text-tertiary);
-}
-
-.mission-stats__rank {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
-.mission-stats__strong {
-  color: var(--page-accent);
-  font-weight: 600;
-}
-
-.mission-stats__dim {
-  color: var(--text-tertiary);
-}
-
-.mission-stats__rate {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-sm);
-  font-weight: 600;
-}
-
-.mission-stats__rate-track {
-  width: 34px;
-  height: 6px;
-  background: var(--bg-elevated);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.mission-stats__rate-fill {
-  display: block;
-  width: var(--fill);
-  height: 100%;
-  background: currentColor;
-}
-
-@media (max-width: 767px) {
-  .mission-stats__row {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .mission-stats__number {
-    justify-content: space-between;
-  }
 }
 </style>
-
-<style scoped src="./statsRates.css"></style>

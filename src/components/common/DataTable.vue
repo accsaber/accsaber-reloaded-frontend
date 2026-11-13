@@ -81,6 +81,10 @@ function handleRowClick(row: Record<string, unknown>, index: number, event: Mous
   }
 }
 
+function cellText(col: TableColumn, row: Record<string, unknown>): unknown {
+  return col.format ? col.format(row[col.key], row) : row[col.key]
+}
+
 function handleSort(col: TableColumn) {
   if (col.sortable) emit('sort', col.key)
 }
@@ -139,18 +143,18 @@ function sortIcon(col: TableColumn): string {
               }, rowClass?.(row, index)]"
               :style="{ '--i': cascade ? index : 0 }"
               @click="handleRowClick(row, index, $event)">
-              <td v-for="col in columns" :key="col.key" class="data-table__td" :class="{
+              <td v-for="col in columns" :key="col.key" class="data-table__td" :class="[{
                 'data-table__td--mono': col.mono,
                 [`data-table__td--${col.align ?? 'left'}`]: true,
                 'data-table__td--linked': !!rowHrefs[index] && !col.noLink,
-              }">
+              }, col.cellClass?.(row[col.key], row)]">
                 <a v-if="rowHrefs[index] && !col.noLink" :href="rowHrefs[index]" class="data-table__cell-link" tabindex="-1">
                   <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="index">
-                    {{ row[col.key] }}
+                    {{ cellText(col, row) }}
                   </slot>
                 </a>
                 <slot v-else :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="index">
-                  {{ row[col.key] }}
+                  {{ cellText(col, row) }}
                 </slot>
               </td>
             </tr>
@@ -179,7 +183,7 @@ function sortIcon(col: TableColumn): string {
           @click="emit('rowClick', row, index)">
           <template v-for="col in columns" :key="col.key" #[`cell-${col.key}`]="slotProps">
             <slot :name="`cell-${col.key}`" :row="slotProps.row" :value="slotProps.value" :index="index">
-              {{ slotProps.value }}
+              {{ cellText(col, slotProps.row) }}
             </slot>
           </template>
         </DataTableCardFallback>

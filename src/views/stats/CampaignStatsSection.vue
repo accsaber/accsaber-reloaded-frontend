@@ -1,104 +1,75 @@
 <script setup lang="ts">
-import { formatAccuracy, formatCount } from '@/utils/formatters'
-import BaseSelect from '@/components/common/BaseSelect.vue'
-import DataTable from '@/components/common/DataTable.vue'
-import CoverImage from '@/components/common/CoverImage.vue'
-import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import BaseInput from '@/components/common/BaseInput.vue'
 import TimeSeriesChart from '@/components/domain/TimeSeriesChart.vue'
-import UserChip from '@/components/domain/UserChip.vue'
 import { useQueryParams } from '@/composables/useQueryParams'
 import type { CampaignStatsParams, CampaignStatsStatus } from '@/types/api/statistics'
-import type { MetricType, TableColumn, TimeRange, TimeSeriesPoint, UserRefDisplay } from '@/types/display'
-import { TIME_RANGE_PARAMS } from '@/utils/constants'
-import { storeCountry } from '@/utils/statsCountry'
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import CampaignHardestNodes from './CampaignHardestNodes.vue'
-import LeaderboardPicker from './LeaderboardPicker.vue'
-import StatsFilterChips from './StatsFilterChips.vue'
-import { fmtDecimal, labelCase, plural, rateClass, toChartPoints } from './statsFormat'
+import StatsBar from './StatsBar.vue'
+import StatsBoardPicker from './StatsBoardPicker.vue'
+import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsFilters, { type StatsFilterGroup } from './StatsFilters.vue'
+import StatsNameCell from './StatsNameCell.vue'
+import StatsTable from './StatsTable.vue'
+import { fmt, labelCase, mainCol, numCol, playerCol, rankCol, rateCol } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
-
-defineProps<{
-  accent: string
-  countryOptions: { value: string; label: string }[]
-}>()
+import { useStatsTrends } from './useStatsTrends'
 
 type CampaignBoard = 'funnel' | 'trends' | 'most-completed' | 'top-creators'
 
 interface CampaignBoardDef extends StatsBoardDef<CampaignBoard, CampaignStatsParams> {
-  minParticipants: boolean
-  creatorCountry: boolean
+  minParticipants?: boolean
 }
 
-const STATUS_CHIPS: { key: CampaignStatsStatus; label: string }[] = [
-  { key: 'published', label: 'Published' },
-  { key: 'editing', label: 'Editing' },
-  { key: 'curated', label: 'Curated' },
-  { key: 'official', label: 'Official' },
-  { key: 'loved', label: 'Loved' },
-]
+const STATUSES: CampaignStatsStatus[] = ['published', 'editing', 'curated', 'official', 'loved']
 
-const rankCol: TableColumn = { key: 'rank', label: '#', align: 'right', mono: true, width: '76px' }
-const playerCol: TableColumn = { key: 'player', label: 'Player', align: 'left' }
+function playingRate(_: unknown, row: StatsRow): string {
+  const total = Number(row.participants ?? 0)
+  return fmt.rate(total > 0 ? Number(row.inProgress ?? 0) / total : null)
+}
 
 const BOARDS: CampaignBoardDef[] = [
   {
     key: 'funnel',
-    label: 'Funnel',
-    icon: 'gauge',
+    label: 'Funnel', icon: 'gauge',
     minParticipants: true,
-    creatorCountry: false,
     columns: [
       { key: 'campaign', label: 'Campaign', align: 'left' },
-      { key: 'participants', label: 'Started', align: 'right', mono: true, width: '90px' },
-      { key: 'split', label: 'Split', align: 'left', width: '150px' },
-      { key: 'completionRate', label: 'Finished', align: 'right', mono: true, width: '100px' },
-      { key: 'abandonRate', label: 'Abandoned', align: 'right', mono: true, width: '125px' },
-      { key: 'medianDaysToComplete', label: 'Median days', align: 'right', mono: true, width: '140px' },
-      { key: 'nodeCount', label: 'Nodes', align: 'right', mono: true, width: '80px' },
+      numCol('participants', 'Started', 90),
+      { ...rateCol('completionRate', 'Finished', 100), primary: true },
+      numCol('inProgress', 'Playing', 100, playingRate),
+      numCol('abandonRate', 'Abandoned', 120, fmt.rate),
+      numCol('medianDaysToComplete', 'Median Days', 130, fmt.decimal),
+      numCol('nodeCount', 'Nodes', 80),
     ],
     fetch: (api, params, filters) => api.getCampaignFunnel(params, filters),
   },
-  {
-    key: 'trends',
-    label: 'Trends',
-    icon: 'trending',
-    minParticipants: false,
-    creatorCountry: false,
-    columns: [],
-  },
+  { key: 'trends', label: 'Trends', icon: 'trending', columns: [] },
   {
     key: 'most-completed',
-    label: 'Most Completed',
-    icon: 'trophy',
-    minParticipants: false,
-    creatorCountry: false,
+    label: 'Most Completed', icon: 'trophy',
     players: true,
     columns: [
       rankCol, playerCol,
-      { key: 'completed', label: 'Completed', align: 'right', mono: true, width: '125px' },
-      { key: 'inProgress', label: 'In Progress', align: 'right', mono: true, width: '135px' },
-      { key: 'nodesCleared', label: 'Nodes', align: 'right', mono: true, width: '100px' },
-      { key: 'campaignXp', label: 'Campaign XP', align: 'right', mono: true, width: '145px' },
+      mainCol('completed', 'Completed', 120),
+      numCol('inProgress', 'In Progress', 130),
+      numCol('nodesCleared', 'Nodes', 100),
+      numCol('campaignXp', 'Campaign XP', 140, fmt.whole),
     ],
     fetch: (api, params, filters) => api.getMostCampaignsCompleted(params, filters),
   },
   {
     key: 'top-creators',
-    label: 'Top Creators',
-    icon: 'award',
-    minParticipants: false,
-    creatorCountry: true,
+    label: 'Top Creators', icon: 'award',
     players: true,
     columns: [
       rankCol,
-      { key: 'player', label: 'Creator', align: 'left' },
-      { key: 'campaigns', label: 'Built', align: 'right', mono: true, width: '90px' },
-      { key: 'curatedCampaigns', label: 'Curated', align: 'right', mono: true, width: '100px' },
-      { key: 'participants', label: 'Players', align: 'right', mono: true, width: '100px' },
-      { key: 'completions', label: 'Completions', align: 'right', mono: true, width: '140px' },
-      { key: 'completionRate', label: 'Rate', align: 'right', mono: true, width: '90px' },
+      { ...playerCol, label: 'Creator' },
+      mainCol('campaigns', 'Built', 90),
+      numCol('curatedCampaigns', 'Curated', 100),
+      numCol('participants', 'Players', 100),
+      numCol('completions', 'Completions', 130),
+      rateCol('completionRate', 'Rate', 90),
     ],
     fetch: (api, params, filters) => api.getTopCampaignCreators(params, filters),
   },
@@ -110,8 +81,6 @@ const statusFilter = queryListRef<CampaignStatsStatus>('status')
 const countryFilter = queryRef('country')
 const minParticipantsParam = queryRef('minParticipants')
 const openCampaign = queryRef('campaign')
-const rangeParam = queryRef<TimeRange>('range')
-const metricParam = queryRef<MetricType>('metric')
 
 const minParticipants = computed(() => {
   const value = Number(minParticipantsParam.value)
@@ -127,318 +96,78 @@ function boardFilters(def: CampaignBoardDef): CampaignStatsParams {
 }
 
 const {
-  activeBoard, boardDef, pickerOptions, selectBoard, rowTo, pushPlayer,
+  activeBoard, boardDef, boardOptions, selectBoard, rowTo, pushPlayer,
   currentPage, setPage, loading, rows, totalPages, totalElements,
-} = useStatsBoard(BOARDS, { size: 20, filters: boardFilters })
+} = useStatsBoard(BOARDS, { filters: boardFilters })
 
 const filters = computed(() => boardFilters(boardDef.value))
+
+const filterGroups = computed<StatsFilterGroup[]>(() => [
+  { key: 'status', label: 'Status', options: STATUSES.map((s) => ({ key: s, label: labelCase(s) })), selected: statusFilter.value },
+])
 
 const openCampaignName = computed(
   () => (rows.value.find((r) => r.campaignId === openCampaign.value)?.name as string) ?? '',
 )
 
-const chartRange = computed<TimeRange>(() => (rangeParam.value in TIME_RANGE_PARAMS ? rangeParam.value as TimeRange : '30d'))
-
-function setCountry(country: string) {
-  storeCountry(country)
-  countryFilter.value = country
-}
-
-function toggleStatus(status: CampaignStatsStatus) {
-  const active = statusFilter.value
-  statusFilter.value = active.includes(status) ? active.filter((v) => v !== status) : [...active, status]
-}
-
 function onRowClick(row: StatsRow) {
   if (pushPlayer(row)) return
   const campaignId = row.campaignId as string | undefined
-  if (campaignId) setQuery({ campaign: campaignId }, { keepPage: true })
+  if (campaignId && activeBoard.value === 'funnel') setQuery({ campaign: campaignId }, { keepPage: true })
 }
 
-function segment(row: StatsRow, key: string): string {
-  const total = Number(row.participants ?? 0)
-  if (total <= 0) return '0%'
-  return `${(Number(row[key] ?? 0) / total) * 100}%`
+function campaignMeta(row: StatsRow): string {
+  return [labelCase(row.status), row.official ? 'Official' : '', row.loved ? 'Loved' : ''].filter(Boolean).join(' · ')
 }
 
-const TREND_METRICS: { key: MetricType; label: string }[] = [
-  { key: 'campaignStarts', label: 'Campaigns Started' },
-  { key: 'campaignCompletions', label: 'Campaigns Finished' },
-]
-
-const chartMetric = computed<MetricType>(() =>
-  (TREND_METRICS.some((m) => m.key === metricParam.value) ? metricParam.value as MetricType : 'campaignStarts'))
-
-const chartLoading = ref(false)
-const chartPoints = ref<TimeSeriesPoint[]>([])
-
-let chartRequestId = 0
-
-async function fetchTrends() {
-  const id = ++chartRequestId
-  chartLoading.value = true
-  try {
-    const api = await import('@/api/statistics')
-    const range = TIME_RANGE_PARAMS[chartRange.value]
-    const points = chartMetric.value === 'campaignStarts'
+const trends = useStatsTrends({
+  metrics: [
+    { key: 'campaignStarts', label: 'Campaigns Started' },
+    { key: 'campaignCompletions', label: 'Campaigns Finished' },
+  ],
+  active: () => activeBoard.value === 'trends',
+  filters: () => filters.value,
+  load: async (api, range, metric) => ({
+    points: metric === 'campaignStarts'
       ? await api.getCampaignStartsPerDay(range, filters.value)
-      : await api.getCampaignCompletionsPerDay(range, filters.value)
-    if (id !== chartRequestId) return
-    chartPoints.value = toChartPoints(points)
-  } catch {
-    if (id !== chartRequestId) return
-    chartPoints.value = []
-  }
-  chartLoading.value = false
-}
-
-watch(
-  () => activeBoard.value === 'trends'
-    ? JSON.stringify([filters.value, chartRange.value, chartMetric.value])
-    : null,
-  (key) => { if (key) fetchTrends() },
-  { immediate: true },
-)
+      : await api.getCampaignCompletionsPerDay(range, filters.value),
+  }),
+})
 </script>
 
 <template>
-  <div class="campaign-stats" :style="{ '--accent': accent }">
-    <div class="campaign-stats__filters">
-      <div class="campaign-stats__row">
-        <BaseSelect :model-value="countryFilter" :options="countryOptions" placeholder="All Countries" searchable
-          @update:model-value="setCountry" />
-        <label v-if="boardDef.minParticipants" class="campaign-stats__number field-label">
-          <span>Min participants</span>
-          <input type="number" min="0" inputmode="numeric" :value="minParticipants"
-            @change="minParticipantsParam = ($event.target as HTMLInputElement).value.trim()" />
-        </label>
-      </div>
+  <CampaignHardestNodes v-if="openCampaign && activeBoard === 'funnel'" :campaign-id="openCampaign"
+    :campaign-name="openCampaignName" :country="countryFilter"
+    @close="setQuery({ campaign: undefined }, { keepPage: true })" />
 
-      <StatsFilterChips label="Status" :options="STATUS_CHIPS" :selected="statusFilter" empty-label="All campaigns"
-        @toggle="toggleStatus" @clear="statusFilter = []" />
-    </div>
-
-    <LeaderboardPicker :model-value="activeBoard" :options="pickerOptions"
+  <div v-else class="stats-section">
+    <StatsBoardPicker :model-value="activeBoard" :options="boardOptions"
       @update:model-value="selectBoard($event, { campaign: undefined })" />
 
-    <template v-if="activeBoard === 'trends'">
-      <div class="campaign-stats__chart">
-        <TimeSeriesChart :data="chartPoints" :accent-color="accent" :available-metrics="TREND_METRICS"
-          :selected-metric="chartMetric" :selected-range="chartRange"
-          :metric-label="chartMetric === 'campaignStarts' ? 'Campaigns Started' : 'Campaigns Finished'"
-          empty-message="Nothing recorded in this range yet."
-          @update:selected-metric="metricParam = $event"
-          @update:selected-range="rangeParam = $event" />
-        <div v-if="chartLoading" class="campaign-stats__chart-skeleton">
-          <SkeletonLoader variant="card" height="300px" />
-        </div>
-      </div>
-    </template>
+    <StatsBar :count="activeBoard === 'trends' ? 0 : totalElements">
+      <StatsCountrySelect />
+      <StatsFilters :groups="filterGroups" :active="!!boardDef.minParticipants && minParticipants !== 3"
+        @change="(key, selected) => setQuery({ [key]: selected })">
+        <BaseInput v-if="boardDef.minParticipants" label="Min Participants" type="number" min="0"
+          inputmode="numeric" :model-value="minParticipants"
+          @change="minParticipantsParam = ($event.target as HTMLInputElement).value.trim()" />
+      </StatsFilters>
+    </StatsBar>
 
-    <template v-else>
-      <p v-if="totalElements > 0" class="campaign-stats__count">{{ plural(totalElements, 'row') }}</p>
+    <TimeSeriesChart v-if="activeBoard === 'trends'" :data="trends.points.value" :loading="trends.loading.value"
+      :available-metrics="trends.metrics" :selected-metric="trends.metric.value.key"
+      :selected-range="trends.range.value" :metric-label="trends.metric.value.label"
+      empty-message="Nothing recorded in this range yet"
+      @update:selected-metric="trends.setMetric" @update:selected-range="trends.setRange" />
 
-      <DataTable :columns="boardDef.columns" :rows="rows" :loading="loading" :loading-rows="10" row-key="rank"
-        :row-clickable="activeBoard === 'funnel' || !!boardDef.players" :row-to="rowTo"
-        :empty-message="activeBoard === 'funnel'
-          ? 'No campaigns match these filters.'
-          : 'No records found.'"
-        @row-click="onRowClick">
-        <template #cell-rank="{ value }">
-          <span class="campaign-stats__rank">#{{ value }}</span>
-        </template>
-
-        <template #cell-player="{ row }">
-          <UserChip :user="(row.player as UserRefDisplay)" tooltip />
-        </template>
-
-        <template #cell-campaign="{ row }">
-          <span class="campaign-cell">
-            <CoverImage v-if="row.iconUrl" :src="(row.iconUrl as string)" alt="" :size="28" hide-on-error />
-            <span class="campaign-cell__text">
-              <span class="campaign-cell__name">{{ row.name }}</span>
-              <span class="campaign-cell__flags">
-                <span class="campaign-cell__status">{{ labelCase(row.status) }}</span>
-                <span v-if="row.official" class="campaign-cell__flag">Official</span>
-                <span v-if="row.loved" class="campaign-cell__flag">Loved</span>
-              </span>
-            </span>
-          </span>
-        </template>
-
-        <template #cell-split="{ row }">
-          <span class="split"
-            :title="formatCount(row.completed as number) + ' finished, ' + formatCount(row.inProgress as number) + ' playing, ' + formatCount(row.abandoned as number) + ' abandoned'">
-            <span class="split__seg split__seg--done" :style="{ width: segment(row, 'completed') }" />
-            <span class="split__seg split__seg--playing" :style="{ width: segment(row, 'inProgress') }" />
-            <span class="split__seg split__seg--gone" :style="{ width: segment(row, 'abandoned') }" />
-          </span>
-        </template>
-
-        <template #cell-participants="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-nodeCount="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-completionRate="{ value }">
-          <span :class="rateClass(value as number | null)">{{ formatAccuracy(value as number | null, 1) }}</span>
-        </template>
-        <template #cell-abandonRate="{ value }">{{ formatAccuracy(value as number | null, 1) }}</template>
-        <template #cell-medianDaysToComplete="{ value }">{{ fmtDecimal(value) }}</template>
-        <template #cell-completed="{ value }"><span class="campaign-stats__strong">{{ formatCount(value as number | null) }}</span></template>
-        <template #cell-inProgress="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-nodesCleared="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-campaignXp="{ value }">{{ fmtDecimal(value, 0) }}</template>
-        <template #cell-campaigns="{ value }"><span class="campaign-stats__strong">{{ formatCount(value as number | null) }}</span></template>
-        <template #cell-curatedCampaigns="{ value }">{{ formatCount(value as number | null) }}</template>
-        <template #cell-completions="{ value }">{{ formatCount(value as number | null) }}</template>
-      </DataTable>
-
-      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
-
-      <CampaignHardestNodes v-if="openCampaign && activeBoard === 'funnel'" :campaign-id="openCampaign"
-        :campaign-name="openCampaignName" :country="countryFilter"
-        @close="setQuery({ campaign: undefined }, { keepPage: true })" />
-    </template>
+    <StatsTable v-else :columns="boardDef.columns" :rows="rows" :loading="loading" :page="currentPage"
+      :total-pages="totalPages" :row-to="rowTo" :row-clickable="activeBoard === 'funnel'"
+      :empty-message="activeBoard === 'funnel' ? 'No campaigns match these filters' : 'No records found'"
+      @row-click="onRowClick" @update:page="setPage">
+      <template #cell-campaign="{ row }">
+        <StatsNameCell :name="(row.name as string)" :meta="campaignMeta(row)" :icon="(row.iconUrl as string | null)"
+          icon-slot />
+      </template>
+    </StatsTable>
   </div>
 </template>
-
-<style scoped>
-.campaign-stats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  min-width: 0;
-  --page-accent: var(--accent);
-}
-
-.campaign-stats__filters {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.campaign-stats__row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.campaign-stats__number {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.campaign-stats__number input {
-  width: 72px;
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-}
-
-.campaign-stats__number input:focus {
-  outline: none;
-  border-color: var(--page-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent) 20%, transparent);
-}
-
-.campaign-stats__chart {
-  position: relative;
-}
-
-.campaign-stats__chart-skeleton {
-  position: absolute;
-  inset: 0;
-}
-
-.campaign-stats__count {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-align: right;
-}
-
-.campaign-stats__rank {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
-.campaign-stats__strong {
-  color: var(--page-accent);
-  font-weight: 600;
-}
-
-.campaign-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.campaign-cell__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.campaign-cell__name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.campaign-cell__flags {
-  display: flex;
-  gap: var(--space-sm);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.campaign-cell__status {
-  color: var(--text-tertiary);
-}
-
-.campaign-cell__flag {
-  color: var(--page-accent);
-}
-
-.split {
-  display: flex;
-  width: 100%;
-  height: 8px;
-  background: var(--bg-elevated);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.split__seg {
-  height: 100%;
-}
-
-.split__seg--done { background: var(--success); }
-.split__seg--playing { background: var(--info); }
-.split__seg--gone { background: var(--error); }
-
-@media (max-width: 767px) {
-  .campaign-stats__row {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .campaign-stats__number {
-    justify-content: space-between;
-  }
-}
-</style>
-
-<style scoped src="./statsRates.css"></style>
