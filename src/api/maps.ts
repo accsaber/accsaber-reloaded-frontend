@@ -9,6 +9,7 @@ import type {
 import type { ScoreResponse } from '@/types/api/users'
 import type { Page } from '@/types/pagination'
 import { get } from './client'
+import { isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { buildQuery } from './utils'
 
 export function getMap(mapId: string): Promise<PublicMapResponse> {
@@ -20,6 +21,18 @@ export function getMapByCode(
   params?: { difficulty?: string; characteristic?: string },
 ): Promise<PublicMapResponse> {
   return get<PublicMapResponse>(`/maps/by-code/${code}${buildQuery(params)}`)
+}
+
+export function getMapByRef(
+  ref: string,
+  difficultySlug?: string,
+  characteristic = 'Standard',
+): Promise<PublicMapResponse> {
+  if (isUuid(ref)) return getMap(ref)
+  return getMapByCode(
+    ref,
+    difficultySlug ? { difficulty: slugToDifficulty(difficultySlug), characteristic } : undefined,
+  )
 }
 
 export function getDifficulty(difficultyId: string): Promise<PublicMapDifficultyResponse> {

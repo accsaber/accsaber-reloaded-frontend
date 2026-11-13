@@ -166,19 +166,12 @@ async function fetchMap() {
   map.value = null
 
   try {
-    const { getMap, getMapByCode } = await import('@/api/maps')
-    let fetched
-    if (isUuid(routeParam.value)) {
-      fetched = await getMap(routeParam.value)
-    } else {
-      const qDifficulty = route.query.difficulty as string | undefined
-      const byCodeParams: { difficulty?: string; characteristic?: string } = {}
-      if (qDifficulty) {
-        byCodeParams.difficulty = slugToDifficulty(qDifficulty)
-        byCodeParams.characteristic = (route.query.characteristic as string | undefined) ?? 'Standard'
-      }
-      fetched = await getMapByCode(routeParam.value, byCodeParams)
-    }
+    const { getMapByRef } = await import('@/api/maps')
+    const fetched = await getMapByRef(
+      routeParam.value,
+      route.query.difficulty as string | undefined,
+      route.query.characteristic as string | undefined,
+    )
     if (request !== mapRequest) return
     map.value = fetched
 

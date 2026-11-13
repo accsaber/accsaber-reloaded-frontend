@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/stores/auth'
 import { useBackendStatusStore } from '@/stores/backendStatus'
-import { currentRealm } from '@/utils/subdomain'
+import { currentRealm, isStaffSubdomain } from '@/utils/subdomain'
 
 const GATEWAY_DOWN_STATUSES = new Set([502, 503, 504])
 
@@ -96,6 +96,54 @@ const NO_AUTO_AUTH_PATHS = [
   '/staff/auth/logout',
 ]
 
+const SEG = '[^/]+'
+const UUID = '[0-9a-f]{8}-[0-9a-f-]{27}'
+
+const ANONYMOUS_READS = new RegExp(
+  `^/(?:${[
+    `users/(?!me(?:/|$))${SEG}(?:/(?!relations(?:/|$)|campaigns$).+)?`,
+    'maps/.+',
+    'batches(?:/.*)?',
+    `leaderboards/${SEG}`,
+    'categories(?:/.*)?',
+    'curves(?:/.*)?',
+    'modifiers',
+    'milestones(?:/.*)?',
+    'levels',
+    'statistics/.+',
+    'news(?:/.*)?',
+    'playlists/.+',
+    'songsuggest/.+',
+    `supporters/${SEG}`,
+    'cdn/limits',
+    'quest/releases',
+    'practice-scores',
+    `items(?:/${SEG})?`,
+    'item-types',
+    'item-modifiers',
+    'unusual-effects(?:/.*)?',
+    `crates/${SEG}/.+`,
+    'market/listings(?:/.*)?',
+    `events(?:/${SEG}(?:/missions)?)?`,
+    `missions/community/${SEG}/contributors`,
+    'campaigns/tags',
+    `campaigns/${SEG}/leaderboard(?:/.*)?`,
+    `campaigns/slug/${SEG}/users/${SEG}/progress`,
+    'clans',
+    'clans/levels',
+    'clans/seasons(?:/.*)?',
+    'clans/wars(?:/aid)?',
+    `clans/wars/${SEG}/(?:hits|rewards)`,
+    `clans/${UUID}(?:/(?:members|alliances|rivals|level|xp|items|standing))?`,
+  ].join('|')})$`,
+)
+
+function isAnonymousRead(method: string, path: string): boolean {
+  if (method !== 'GET' || isStaffSubdomain) return false
+  const [route, query = ''] = path.split('?')
+  return !/(?:^|&)relation=/.test(query) && ANONYMOUS_READS.test(route!)
+}
+
 function isStaffPath(path: string): boolean {
   return path.startsWith('/staff/') || path.startsWith('/admin/') || path.startsWith('/ranking/')
 }
@@ -165,10 +213,8 @@ async function executeFetch<T>(
   const baseUrl = import.meta.env.VITE_API_BASE
   const url = `${baseUrl}${path}`
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...buildAuthHeaders(authHeader),
-  }
+  const headers = buildAuthHeaders(authHeader)
+  if (body !== undefined || method !== 'GET') headers['Content-Type'] = 'application/json'
 
   const res = await trackedFetch(url, {
     method,
@@ -213,7 +259,7 @@ function resyncStaffRoleOnForbidden(path: string, status: number, authHeader: st
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const authHeader = await resolveAuthHeader(path)
+  const authHeader = isAnonymousRead(method, path) ? null : await resolveAuthHeader(path)
 
   let { res, parsed } = await executeFetch<T>(method, path, body, authHeader)
 
@@ -245,13 +291,38 @@ function dedupKey(path: string): string {
   return `${token ? token.slice(-12) : 'anon'}:${path}`
 }
 
+const WARM_MS = 5000
+const warmedGets = new Map<string, Promise<unknown>>()
+let warming = false
+
+export function warm(run: () => void): void {
+  warming = true
+  try {
+    run()
+  } finally {
+    warming = false
+  }
+}
+
 export function get<T>(path: string): Promise<T> {
   const key = dedupKey(path)
-  const existing = inflightGets.get(key) as Promise<T> | undefined
+  const held = warmedGets.get(key) as Promise<T> | undefined
+  if (held && !warming) warmedGets.delete(key)
+  const existing = held ?? (inflightGets.get(key) as Promise<T> | undefined)
   if (existing) return existing
-  const promise = request<T>('GET', path).finally(() => {
+  const hold = warming
+  const promise = request<T>('GET', path)
+  const release = () => {
     inflightGets.delete(key)
-  })
+  }
+  promise.then(() => {
+    release()
+    if (!hold) return
+    warmedGets.set(key, promise)
+    setTimeout(() => {
+      if (warmedGets.get(key) === promise) warmedGets.delete(key)
+    }, WARM_MS)
+  }, release)
   inflightGets.set(key, promise)
   return promise
 }

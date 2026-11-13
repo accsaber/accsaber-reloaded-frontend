@@ -1,6 +1,7 @@
 import type {
   MyRelationsParams,
   RelationScoresParams,
+  UserRelationCounts,
   UserRelationRequest,
   UserRelationResponse,
   UserRelationsParams,
@@ -21,6 +22,10 @@ export function getUserRelations(
   params?: UserRelationsParams,
 ): Promise<Page<UserRelationResponse>> {
   return get<Page<UserRelationResponse>>(`/users/${userId}/relations${buildQuery(params)}`)
+}
+
+export function getUserRelationCounts(userId: string): Promise<UserRelationCounts> {
+  return get<UserRelationCounts>(`/users/${userId}/relations/counts`)
 }
 
 export function getRelationScores(

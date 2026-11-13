@@ -252,6 +252,11 @@ async function fetchProfile() {
       xpStats.value = value
       stats.value = value.categories
     })
+    if (authStore.isLoggedIn) {
+      late(import('@/api/relations').then((api) => api.getUserRelationCounts(id)), (relations) => {
+        if (user.value) user.value = { ...user.value, relations }
+      })
+    }
     fetchStatsDiff()
     fetchPinnedScores()
     fetchPinnedMilestones()
