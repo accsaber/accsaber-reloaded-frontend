@@ -853,7 +853,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'take off wars',
         ],
         related: ['clan-wars', 'war-math', 'coalitions', 'clan-standing', 'clan-ranks'],
-        updated: '2026-11-10',
+        updated: '2026-11-14',
         loader: () => import('@/wiki/pages/WarCombatPage.vue'),
       },
       {
@@ -861,6 +861,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
         title: 'War Math',
         summary: 'Every formula a clan war uses, with the current numbers.',
         keywords: [
+          'pot',
+          'ally share',
           'formula',
           'math',
           'war math',
@@ -885,7 +887,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'size share',
         ],
         related: ['war-combat', 'clan-wars', 'clan-standing'],
-        updated: '2026-11-10',
+        updated: '2026-11-14',
         loader: () => import('@/wiki/pages/WarMathPage.vue'),
       },
       {
@@ -915,6 +917,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
         title: 'Coalitions',
         summary: 'Calling in allies to fight on your team.',
         keywords: [
+          'ally worth',
+          '60%',
           'coalition',
           'coalitions',
           'allies',
@@ -931,7 +935,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'pacifism',
         ],
         related: ['alliances-and-rivals', 'clan-wars', 'war-combat'],
-        updated: '2026-10-26',
+        updated: '2026-11-14',
         loader: () => import('@/wiki/pages/CoalitionsPage.vue'),
       },
     ],

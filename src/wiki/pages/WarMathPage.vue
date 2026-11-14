@@ -20,7 +20,7 @@ const RULES = {
   bountyCap: 1.75,
   bountyDamageScale: 150,
   bountyCarry: 0.5,
-  allyRisk: 0.3,
+  allyBreakShare: 0.6,
   engagementFull: 0.5,
   engagementDays: 14,
   breakXp: 50,
@@ -71,10 +71,11 @@ const CHIP_PARAMS: WikiCompareRow[] = [
 ]
 
 const BREAK_PARAMS: WikiCompareRow[] = [
-  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once, at a bounty of 1, moves 40% of its stake. A weaker team loses a bit less per round"] },
-  { label: 'Break weight', values: ['', "Their skill squared, over the stronger team's total skill squared. Same pool for both teams"] },
+  { label: 'Pot', values: ['', "The smaller of the two lead clans' stakes. Same number for both teams. Allies joining don't change it"] },
+  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once, at a bounty of 1, moves 40% of the pot. A weaker team loses a bit less per round"] },
+  { label: 'Break weight', values: ['', `Their skill squared, over the stronger team's total skill squared. Same pool for both teams. An ally's players count at ${RULES.allyBreakShare} in that total`] },
   { label: 'Bounty', values: [`${RULES.bountyFloor} to ${RULES.bountyCap}`, 'Starts at 1. When they get broken, the next life starts halfway between the floor and what it was, then climbs toward the cap with the damage they deal, weighted by the bounty of whoever they hit'] },
-  { label: 'Risk', values: [`1 or ${RULES.allyRisk}`, `1 for the two lead clans, ${RULES.allyRisk} for allies`] },
+  { label: 'Ally share', values: [`1 or ${RULES.allyBreakShare}`, `1 for a player of the two lead clans, ${RULES.allyBreakShare} for an ally's player`] },
 ]
 
 const XP_PARAMS: WikiCompareRow[] = [
@@ -103,7 +104,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <p>
       If they already got hit on this map since their guard came back, the hit keeps
       {{ RULES.repeatMapShare }} of the streak bonus for every earlier hit on that map, so a 400% bonus becomes 160%, then 64%.
-      It only adds to the streak like a chip. If they have no score on the map, the streak doesn't count. The hit is a flat {{ RULES.baseDamage }}, times the map penalty, nothing else. It builds the streak
+      It only adds to the streak like a chip. If they have no score on the map, the streak doesn't count. The hit is a flat {{ RULES.baseDamage }}, times the map penalty and last stand, nothing else. It builds the streak
       the same as a chip. A hit never takes more than the guard they have left.
     </p>
     <WikiCompareTable :columns="COLUMNS" :rows="HIT_PARAMS" />
@@ -123,9 +124,9 @@ const XP_PARAMS: WikiCompareRow[] = [
 
     <WikiHeading id="break">Standing on a break</WikiHeading>
     <math display="block">
-      <mtext>standing</mtext><mo>=</mo><mtext>team stake</mtext><mo>x</mo><mn>{{ RULES.breakShare }}</mn>
+      <mtext>standing</mtext><mo>=</mo><mtext>pot</mtext><mo>x</mo><mn>{{ RULES.breakShare }}</mn>
       <mo>x</mo><mtext>break weight</mtext><mo>x</mo>
-      <mtext>bounty</mtext><mo>x</mo><mtext>risk</mtext>
+      <mtext>bounty</mtext><mo>x</mo><mtext>ally share</mtext>
     </math>
     <math display="block">
       <mtext>bounty</mtext><mo>=</mo><mn>{{ RULES.bountyCap }}</mn><mo>−</mo>
@@ -133,7 +134,7 @@ const XP_PARAMS: WikiCompareRow[] = [
       <msup><mi>e</mi><mrow><mo>−</mo><mtext>damage dealt</mtext><mo>/</mo><mn>{{ RULES.bountyDamageScale }}</mn></mrow></msup>
     </math>
     <p>
-      Team stake is their team's full stake. It can't move more than what's left in their clan's
+      The pot is one number for the whole war. The same skill costs the same on both teams. A break can't move more than what's left in their clan's
       slice. Your clan gets that amount times their team's engagement. Start is 1 if they've never
       been broken this war. After a break it's {{ RULES.bountyFloor }} plus {{ RULES.bountyCarry }} of whatever their
       bounty was above {{ RULES.bountyFloor }} when they went down. Damage dealt is everything they did since
@@ -185,7 +186,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <p>
       Two players with the same skill keep hitting one guy. The hits do 10, 13, 16.9, 21.97 and 28.56.
       The 6th would do 37.13. He only has 9.57 left. That hit breaks him. With no score on the map,
-      every hit would be 10, so it takes 10.
+      every hit would be 10, so it takes 10. On the last one standing they are 5 each. That takes 20.
     </p>
   </WikiProse>
 </template>

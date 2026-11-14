@@ -36,6 +36,11 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       When an ally joins, the stake goes up for both teams.
     </p>
     <p>
+      An ally joining doesn't change what anyone else's players are worth. Breaking an ally's
+      player moves 60% of what the same skill moves on the attacking or defending clan. Its stake
+      is smaller. An ally falls sooner than the clan it is helping.
+    </p>
+    <p>
       Each clan has its own slice of its team's stake. Breaks on your players only come out of
       your clan's slice. A clan whose slice hits 0 falls. Its players stop hitting and stop getting
       hit. A team loses once every clan on it has fallen or left.

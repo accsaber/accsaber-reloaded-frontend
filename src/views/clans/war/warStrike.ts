@@ -118,6 +118,7 @@ function noScoreLines(rules: ClanWarStrikeRulesResponse, preview: ClanWarStrikeP
   return [
     { label: 'Base damage', value: formatDamage(rules.baseDamage), detail: "they haven't played this map" },
     ...penaltyLines(preview),
+    ...lastStandLines(preview),
   ]
 }
 

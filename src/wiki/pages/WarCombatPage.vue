@@ -43,7 +43,7 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="hits">Hits</WikiHeading>
     <p>
       You hit someone by beating their score on a war map. If they have no score there, every hit
-      does a flat 10 (less on a map they've been broken on before). Only plays after the war starts count. You can hit the same
+      does a flat 10 (less on a map they've been broken on before or once under half their team is up). Only plays after the war starts count. You can hit the same
       person on the same map with every play, but replaying one map won't get you far. More on
       that below.
     </p>
@@ -124,7 +124,7 @@ const DAMAGE: WikiCompareRow[] = [
     </p>
     <p>
       Stronger players are worth more standing and the same skill is worth the same on both
-      teams, however deep either roster is. Players who sit out do not count. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. It is how much extra standing you are worth when broken. Get broken
+      teams, however deep either roster is. An ally joining doesn't change that. An ally's players are worth 60% of what the same skill is on the attacking or defending clan. Players who sit out do not count. A weaker team takes more breaks to drain. Everyone also has a bounty which starts at 1. It is how much extra standing you are worth when broken. Get broken
       and you come back with about half of it (a 1.7 comes back near 1). It grows with the damage you
       deal, weighted by the bounty of whoever you hit, up to 1.75. Hitting a low bounty player barely raises yours.
       Hitting a high bounty player raises it more. Around 100 damage on players at a bounty of 1 is enough to get from the bottom back to 1.
