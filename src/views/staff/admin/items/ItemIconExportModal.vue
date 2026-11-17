@@ -2,6 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import ItemIconCapture from '@/views/staff/admin/items/ItemIconCapture.vue'
 import { getAdminItems } from '@/api/admin/items'
@@ -223,13 +224,8 @@ watch(
       </div>
 
       <div class="icon-export__toggles">
-        <label class="icon-export__check">
-          <input v-model="includeInactive" type="checkbox" /> Include inactive
-        </label>
-        <label class="icon-export__check icon-export__check--warn">
-          <input v-model="includeImageBacked" type="checkbox" />
-          Include badges and backgrounds (overwrites their source asset, not just the icon)
-        </label>
+        <BaseSwitch v-model="includeInactive" label="Include Inactive" />
+        <BaseSwitch v-model="includeImageBacked" label="Include Badges and Backgrounds, Overwrites Their Source Asset" />
       </div>
 
       <div class="icon-export__bulk">
@@ -354,7 +350,6 @@ watch(
   gap: var(--space-md);
 }
 
-
 .icon-export__filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -365,19 +360,6 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
-}
-
-.icon-export__check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.icon-export__check--warn {
-  color: var(--warning);
 }
 
 .icon-export__bulk {

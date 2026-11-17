@@ -152,7 +152,7 @@ watch(
 
     <Teleport to="body">
       <div v-if="isOpen && showInput" ref="panelRef" class="resource-picker__panel" :style="panelStyle">
-        <div v-if="loading" class="resource-picker__status">Searching...</div>
+        <div v-if="loading" class="resource-picker__status">Searching</div>
         <div v-else-if="results.length === 0" class="resource-picker__status">No matches</div>
         <button v-for="(option, i) in results" :key="option.id" type="button" class="resource-picker__option"
           :class="{ 'resource-picker__option--focused': i === focusedIndex }" @mouseenter="focusedIndex = i"
@@ -187,7 +187,8 @@ watch(
   align-items: center;
   gap: var(--space-xs);
   max-width: 100%;
-  padding: var(--space-xs) var(--space-sm);
+  min-height: var(--control-h);
+  padding: 0 var(--space-sm);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
@@ -202,7 +203,6 @@ watch(
 }
 
 .resource-picker__chip-hint {
-  font-family: var(--font-mono);
   color: var(--text-tertiary);
 }
 
@@ -215,7 +215,7 @@ watch(
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .resource-picker__clear:hover:not(:disabled) {
@@ -228,7 +228,8 @@ watch(
 
 .resource-picker__input {
   width: 100%;
-  padding: var(--space-sm) var(--space-md);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
@@ -236,7 +237,7 @@ watch(
   font-family: var(--font-sans);
   font-size: var(--text-body);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .resource-picker__input:focus {
@@ -286,7 +287,7 @@ watch(
   font-size: var(--text-body);
   text-align: left;
   cursor: pointer;
-  transition: background-color 80ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .resource-picker__option--focused,
@@ -302,7 +303,6 @@ watch(
 }
 
 .resource-picker__option-hint {
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
   flex-shrink: 0;

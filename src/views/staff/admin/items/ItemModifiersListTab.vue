@@ -2,10 +2,13 @@
 import { patchAdminItemModifier } from '@/api/admin/items'
 import { getItemModifiers } from '@/api/items'
 import { parseApiError } from '@/api/client'
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import type { TableColumn } from '@/types/display'
 import type {
   ItemModifierResponse,
   PatchItemModifierRequest,
@@ -21,6 +24,14 @@ import {
   toMonthDay,
 } from '@/utils/modifiers'
 import { computed, onMounted, ref } from 'vue'
+
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name', primary: true },
+  { key: 'key', label: 'Key', width: '220px' },
+  { key: 'chance', label: 'Global Chance', align: 'right', mono: true, width: '150px' },
+  { key: 'season', label: 'Season', width: '220px' },
+  { key: 'actions', label: '', align: 'right', width: '90px', noLink: true },
+]
 
 const modifiers = ref<ItemModifierResponse[]>([])
 const loading = ref(false)
@@ -135,6 +146,22 @@ async function save() {
   }
 }
 
+const rows = computed<Record<string, unknown>[]>(() =>
+  modifiers.value.map((modifier) => ({
+    id: modifier.key,
+    modifier,
+    name: modifier.name,
+    key: modifier.key,
+    chance: modifier.globalDropChance != null ? formatChancePercent(modifier.globalDropChance) : 'Off',
+    season: modifier.globalDropChance != null ? formatSeasonWindow(modifier.seasonStart, modifier.seasonEnd) : '-',
+  })),
+)
+
+const SEASON_EDGES = [
+  { key: 'start', label: 'Season Start', month: 'startMonth', day: 'startDay', error: 'seasonStart' },
+  { key: 'end', label: 'Season End', month: 'endMonth', day: 'endDay', error: 'seasonEnd' },
+] as const
+
 const dayHint = computed(() => ({
   start: maxDayForMonth(Number(form.value.startMonth)),
   end: maxDayForMonth(Number(form.value.endMonth)),
@@ -145,271 +172,95 @@ onMounted(fetchModifiers)
 
 <template>
   <div class="modifiers-tab">
-    <p class="modifiers-tab__hint">
-      Configure each modifier's global seasonal roll. Global drops only apply when opening a crate.
-    </p>
-
-    <AdminTable :items="modifiers" :loading="loading" empty-message="No modifiers">
-      <template #head>
-        <th>Name</th>
-        <th>Key</th>
-        <th class="right">Global chance</th>
-        <th>Season</th>
-        <th></th>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="8" :row-height="56" row-key="id"
+      empty-message="No modifiers">
+      <template #cell-name="{ row }">
+        <span class="modifiers-tab__name" :style="{ color: (row.modifier as ItemModifierResponse).colorHex }">{{ row.name }}</span>
       </template>
-
-      <template #default="{ item }: { item: ItemModifierResponse }">
-        <td>
-          <span class="modifiers-tab__name">
-            <span
-              class="modifiers-tab__chip"
-              :style="{ background: item.colorHex }"
-              aria-hidden="true"
-            />
-            {{ item.name }}
-          </span>
-        </td>
-        <td class="mono">{{ item.key }}</td>
-        <td class="right mono">
-          <span v-if="item.globalDropChance != null">
-            {{ formatChancePercent(item.globalDropChance) }}
-          </span>
-          <span v-else class="muted">Off</span>
-        </td>
-        <td class="muted">
-          <span v-if="item.globalDropChance != null">
-            {{ formatSeasonWindow(item.seasonStart, item.seasonEnd) }}
-          </span>
-          <span v-else>-</span>
-        </td>
-        <td class="right">
-          <BaseButton size="sm" @click="openEdit(item)">Edit</BaseButton>
-        </td>
+      <template #cell-actions="{ row }">
+        <BaseButton size="sm" @click="openEdit(row.modifier as ItemModifierResponse)">Edit</BaseButton>
       </template>
-    </AdminTable>
+    </DataTable>
 
-    <BaseModal
-      :open="!!editing"
-      :title="editing ? `Edit ${editing.name}` : ''"
-      max-width="520px"
-      @close="closeEdit"
-    >
-      <div v-if="editing" class="modifiers-tab__form">
-        <label class="modifiers-tab__toggle">
-          <input v-model="form.rollsGlobally" type="checkbox" />
-          <span>Rolls globally</span>
-        </label>
-        <p class="modifiers-tab__note">
-          Global drops only apply when opening a crate. Turn this off to disable global rolling
-          entirely.
-        </p>
+    <BaseModal :open="!!editing" :title="editing ? `Edit ${editing.name}` : ''" max-width="520px" @close="closeEdit">
+      <form v-if="editing" class="modifiers-tab__form" @submit.prevent="save">
+        <BaseSwitch v-model="form.rollsGlobally" label="Rolls on Every Crate" />
 
-        <fieldset class="modifiers-tab__fieldset" :disabled="!form.rollsGlobally">
-          <label class="field-label" for="global-chance">Global drop chance (%)</label>
-          <input
-            id="global-chance"
-            v-model="form.chancePct"
-            type="number"
-            min="0"
-            max="100"
-            step="any"
-            class="modifiers-tab__number"
-            :class="{ 'modifiers-tab__number--error': fieldErrors.globalDropChance }"
-          />
-          <p v-if="fieldErrors.globalDropChance" class="modifiers-tab__field-error">
-            {{ fieldErrors.globalDropChance }}
-          </p>
+        <div class="modifiers-tab__group" :class="{ 'modifiers-tab__group--off': !form.rollsGlobally }">
+          <BaseInput v-model="form.chancePct" label="Global Drop Chance (%)" type="number" min="0" max="100" step="any"
+            :disabled="!form.rollsGlobally" :error="fieldErrors.globalDropChance" />
+          <BaseSwitch v-model="form.seasonal" label="Only Inside a Season Window" :disabled="!form.rollsGlobally" />
 
-          <label class="modifiers-tab__toggle modifiers-tab__toggle--sub">
-            <input v-model="form.seasonal" type="checkbox" />
-            <span>Limit to a season window</span>
-          </label>
-          <p class="modifiers-tab__note">
-            When off, the modifier rolls year-round. A window may wrap the year end
-            (e.g. Dec 20 → Jan 5).
-          </p>
-
-          <div v-if="form.seasonal" class="modifiers-tab__season">
-            <div class="modifiers-tab__season-row">
-              <span class="field-label">Season start</span>
-              <div class="modifiers-tab__md">
-                <BaseSelect v-model="form.startMonth" :options="MONTH_OPTIONS" />
-                <input
-                  v-model="form.startDay"
-                  type="number"
-                  min="1"
-                  :max="dayHint.start"
-                  class="modifiers-tab__day"
-                  aria-label="Start day"
-                />
+          <Transition name="collapse">
+            <div v-if="form.seasonal" class="collapsible">
+              <div class="modifiers-tab__season">
+                <div v-for="edge in SEASON_EDGES" :key="edge.key" class="modifiers-tab__edge">
+                  <span class="field-label">{{ edge.label }}</span>
+                  <span class="modifiers-tab__date">
+                    <BaseSelect v-model="form[edge.month]" :options="MONTH_OPTIONS" />
+                    <BaseInput v-model="form[edge.day]" class="modifiers-tab__day" type="number" min="1" :max="dayHint[edge.key]"
+                      :aria-label="`${edge.label} day`" :disabled="!form.rollsGlobally" />
+                  </span>
+                  <p v-if="fieldErrors[edge.error]" class="caption modifiers-tab__error" role="alert">{{ fieldErrors[edge.error] }}</p>
+                </div>
               </div>
-              <p v-if="fieldErrors.seasonStart" class="modifiers-tab__field-error">
-                {{ fieldErrors.seasonStart }}
-              </p>
             </div>
+          </Transition>
+        </div>
 
-            <div class="modifiers-tab__season-row">
-              <span class="field-label">Season end</span>
-              <div class="modifiers-tab__md">
-                <BaseSelect v-model="form.endMonth" :options="MONTH_OPTIONS" />
-                <input
-                  v-model="form.endDay"
-                  type="number"
-                  min="1"
-                  :max="dayHint.end"
-                  class="modifiers-tab__day"
-                  aria-label="End day"
-                />
-              </div>
-              <p v-if="fieldErrors.seasonEnd" class="modifiers-tab__field-error">
-                {{ fieldErrors.seasonEnd }}
-              </p>
-            </div>
-          </div>
-        </fieldset>
-
-        <p v-if="formError" class="modifiers-tab__error">{{ formError }}</p>
-      </div>
+        <p class="caption modifiers-tab__error modifiers-tab__form-error" role="alert">{{ formError }}</p>
+      </form>
 
       <template #footer>
-        <BaseButton size="sm" @click="closeEdit">Cancel</BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="saving" @click="save">
-          Save
-        </BaseButton>
+        <BaseButton @click="closeEdit">Cancel</BaseButton>
+        <BaseButton variant="primary" :loading="saving" @click="save">Save</BaseButton>
       </template>
     </BaseModal>
   </div>
 </template>
 
 <style scoped>
-.modifiers-tab {
+.modifiers-tab__name {
+  font-weight: 600;
+}
+
+.modifiers-tab__form,
+.modifiers-tab__group {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-.modifiers-tab__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.modifiers-tab__name {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-weight: 500;
-}
-
-.modifiers-tab__chip {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-badge);
-  border: 1px solid color-mix(in srgb, var(--text-primary) 20%, transparent);
-  flex-shrink: 0;
-}
-
-.modifiers-tab__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.modifiers-tab__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.modifiers-tab__toggle--sub {
-  margin-top: var(--space-sm);
-  font-size: var(--text-caption);
-}
-
-.modifiers-tab__note {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.4;
-}
-
-.modifiers-tab__fieldset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
-.modifiers-tab__fieldset:disabled {
+.modifiers-tab__group--off {
   opacity: 0.5;
 }
 
-.modifiers-tab__number,
-.modifiers-tab__day {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  background: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  outline: none;
-}
-
-.modifiers-tab__number {
-  width: 140px;
-}
-
-.modifiers-tab__number:focus,
-.modifiers-tab__day:focus {
-  border-color: var(--accent);
-}
-
-.modifiers-tab__number--error {
-  border-color: var(--error);
-}
-
 .modifiers-tab__season {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
-  margin-top: var(--space-xs);
 }
 
-.modifiers-tab__season-row {
+.modifiers-tab__edge {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.modifiers-tab__md {
+.modifiers-tab__date {
   display: flex;
-  align-items: flex-end;
   gap: var(--space-sm);
 }
 
 .modifiers-tab__day {
-  width: 80px;
-}
-
-.modifiers-tab__field-error {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--error);
+  width: 88px;
 }
 
 .modifiers-tab__error {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
   color: var(--error);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
+}
+
+.modifiers-tab__form-error {
+  min-height: 1lh;
 }
 </style>

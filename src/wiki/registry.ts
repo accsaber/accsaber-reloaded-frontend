@@ -808,7 +808,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'engagement',
         ],
         related: ['war-combat', 'war-math', 'coalitions', 'clan-standing', 'clan-seasons', 'alliances-and-rivals'],
-        updated: '2026-11-17',
+        updated: '2026-11-18',
         loader: () => import('@/wiki/pages/ClanWarsPage.vue'),
       },
       {

@@ -90,14 +90,14 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       its allies keep fighting on their own and no new help can join. If the attacking or defending clan disbands
       mid-war, the other team wins. After 28 days the team that drained more of the other's stake
       wins. A war with no hits for 10 days ends in a draw. Retreating or the season ending also
-      ends it with no winner.
+      ends it with no winner unless the retreating team already lost 80% of its stake.
     </p>
     <WikiHeading id="retreat">Retreating</WikiHeading>
     <p>
       Only the attacker's lead or Founder can retreat and defenders can't. Before the war goes
       active it ends right away. Once it's active a retreat takes 24 hours and for that day your
-      team's plays don't hit anyone but the defenders can still hit you. If they drain your stake
-      before it's up they win. Once you call it there's no taking it back.
+      team's plays don't hit anyone but the defenders can still hit you. If they've drained 80% of
+      your team's stake by the time it's up they win and anything under that ends the war with no winner. Once you call it there's no taking it back.
     </p>
     <p>Standing that was already taken stays taken.</p>
 

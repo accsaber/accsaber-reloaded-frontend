@@ -1,61 +1,15 @@
 <script setup lang="ts">
-import BaseTabs from '@/components/common/BaseTabs.vue'
-import { computed, defineAsyncComponent } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import AdminSubTabs, { type AdminSubTab } from '@/views/staff/admin/AdminSubTabs.vue'
 
-type ClansSubTab = 'clans' | 'seasons' | 'rewards' | 'banned' | 'levels'
-const VALID: ClansSubTab[] = ['clans', 'seasons', 'rewards', 'banned', 'levels']
-
-const route = useRoute()
-const router = useRouter()
-
-const tabs = [
-  { key: 'clans', label: 'Clans' },
-  { key: 'seasons', label: 'Seasons' },
-  { key: 'rewards', label: 'War rewards' },
-  { key: 'banned', label: 'Banned maps' },
-  { key: 'levels', label: 'Levels' },
+const TABS: AdminSubTab[] = [
+  { key: 'clans', label: 'Clans', load: () => import('./clans/ClanBrowserTab.vue') },
+  { key: 'seasons', label: 'Seasons', load: () => import('./clans/ClanSeasonsTab.vue') },
+  { key: 'rewards', label: 'War Rewards', load: () => import('./clans/ClanWarRewardsTab.vue') },
+  { key: 'banned', label: 'Banned Maps', load: () => import('./clans/ClanWarBannedMapsTab.vue') },
+  { key: 'levels', label: 'Levels', load: () => import('./clans/ClanLevelsTab.vue') },
 ]
-
-const subTab = computed<ClansSubTab>(() => {
-  const t = route.query.ctab as string
-  return (VALID.includes(t as ClansSubTab) ? t : 'clans') as ClansSubTab
-})
-
-function setSubTab(key: string) {
-  const query = { ...route.query }
-  delete query.clan
-  router.replace({ query: { ...query, ctab: key } })
-}
-
-const subComponents: Record<ClansSubTab, ReturnType<typeof defineAsyncComponent>> = {
-  clans: defineAsyncComponent(() => import('./clans/ClanBrowserTab.vue')),
-  seasons: defineAsyncComponent(() => import('./clans/ClanSeasonsTab.vue')),
-  rewards: defineAsyncComponent(() => import('./clans/ClanWarRewardsTab.vue')),
-  banned: defineAsyncComponent(() => import('./clans/ClanWarBannedMapsTab.vue')),
-  levels: defineAsyncComponent(() => import('./clans/ClanLevelsTab.vue')),
-}
-
-const activeComponent = computed(() => subComponents[subTab.value])
 </script>
 
 <template>
-  <div class="admin-clans">
-    <BaseTabs :tabs="tabs" :model-value="subTab" @update:model-value="setSubTab" />
-    <div class="admin-clans__body">
-      <component :is="activeComponent" :key="subTab" />
-    </div>
-  </div>
+  <AdminSubTabs :tabs="TABS" query-key="ctab" :clear-keys="['clan']" />
 </template>
-
-<style scoped>
-.admin-clans {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.admin-clans__body {
-  min-height: 400px;
-}
-</style>

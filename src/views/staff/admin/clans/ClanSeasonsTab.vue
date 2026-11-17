@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ApiError, parseApiError } from '@/api/client'
 import AdminItemPicker from '@/components/admin/AdminItemPicker.vue'
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -87,6 +87,11 @@ async function loadCurrent() {
     }
     current.value = null
   }
+}
+
+function pickReward(item: ItemResponse) {
+  rewardDraft.value.item = item
+  pickerOpen.value = false
 }
 
 function toggleStandings(season: ClanSeasonResponse) {
@@ -216,98 +221,84 @@ onMounted(() => {
 
 <template>
   <div class="clan-seasons">
-    <div class="clan-seasons__header">
-      <div>
-        <h2 class="section-title">Seasons</h2>
-        <p class="clan-seasons__meta">Seasons cannot overlap, and a closed season is read only.</p>
-      </div>
-      <BaseButton variant="primary" @click="openCreate">New season</BaseButton>
+    <div class="clan-seasons__head">
+      <p class="clan-seasons__current">
+        {{ current ? `${current.name} runs until ${formatFullDate(current.endsAt)}` : 'No active season, wars are closed' }}
+      </p>
+      <BaseButton variant="primary" @click="openCreate">New Season</BaseButton>
     </div>
 
-    <p class="clan-seasons__current">
-      <template v-if="current">{{ current.name }} is running until {{ formatFullDate(current.endsAt) }}.</template>
-      <template v-else>No active season, wars are closed.</template>
-    </p>
+    <p v-if="error" class="caption clan-seasons__error" role="alert">{{ error }}</p>
 
-    <p v-if="error" class="clan-seasons__error" role="alert">{{ error }}</p>
-
-    <AdminTable :items="seasons" :loading="loading" :loading-rows="3" empty-message="No seasons yet">
-      <template #head>
-        <th>Season</th>
-        <th style="width: 120px">State</th>
-        <th style="width: 170px">Starts</th>
-        <th style="width: 170px">Ends</th>
-        <th class="right" style="width: 300px">Actions</th>
-      </template>
-      <template #default="{ item: season }">
-        <td>
-          <span class="clan-seasons__name">{{ season.name }}</span>
-          <span class="clan-seasons__slug">/{{ season.slug }}</span>
-          <div v-if="standingsId === season.id" class="clan-seasons__rewards">
-            <ClanSeasonStandings :season-id="season.id" />
-          </div>
-          <div v-if="expandedId === season.id" class="clan-seasons__rewards">
-            <p v-if="rewardError" class="clan-seasons__error" role="alert">{{ rewardError }}</p>
-            <div v-if="rewardsLoading" class="clan-seasons__reward-list">
-              <SkeletonLoader v-for="i in 2" :key="i" variant="text" />
-            </div>
-            <p v-else-if="!rewards.length" class="clan-seasons__empty">No rewards yet.</p>
-            <ul v-else class="clan-seasons__reward-list">
-              <li v-for="reward in rewards" :key="reward.id" class="clan-seasons__reward">
-                <span class="mono">#{{ reward.rankFrom }}<template v-if="reward.rankTo !== reward.rankFrom"> to #{{ reward.rankTo }}</template></span>
-                <span>{{ reward.quantity }}x {{ reward.item.name }}</span>
-                <span class="clan-seasons__recipient">to {{ recipient(reward.item) }}</span>
-                <BaseButton v-if="!season.closedAt" size="sm" variant="destructive" :disabled="busy" @click="removeReward(reward)">Remove</BaseButton>
-              </li>
-            </ul>
-            <form v-if="!season.closedAt" class="clan-seasons__reward-form" @submit.prevent="addReward">
-              <BaseInput v-model="rewardDraft.rankFrom" type="number" label="From rank" />
-              <BaseInput v-model="rewardDraft.rankTo" type="number" label="To rank" />
-              <BaseInput v-model="rewardDraft.quantity" type="number" label="Quantity" />
-              <BaseButton size="sm" :disabled="busy" @click="pickerOpen = true">
-                {{ rewardDraft.item ? rewardDraft.item.name : 'Pick item' }}
-              </BaseButton>
-              <BaseButton size="sm" variant="primary" :loading="busy" :disabled="!rewardDraft.item">Add reward</BaseButton>
-            </form>
-            <p v-if="!season.closedAt" class="clan-seasons__empty">Clan cosmetics go to the clan. Any other item goes to each of the clan's contributing members.</p>
-          </div>
-        </td>
-        <td>{{ state(season) }}</td>
-        <td>{{ formatFullDate(season.startsAt) }}</td>
-        <td>{{ formatFullDate(season.endsAt) }}</td>
-        <td class="right">
-          <span class="clan-seasons__actions">
-            <BaseButton size="sm" @click="toggleStandings(season)">{{ standingsId === season.id ? 'Hide standings' : 'Standings' }}</BaseButton>
-            <BaseButton size="sm" @click="toggleRewards(season)">{{ expandedId === season.id ? 'Hide rewards' : 'Rewards' }}</BaseButton>
-            <BaseButton v-if="!season.closedAt" size="sm" @click="openEdit(season)">Edit</BaseButton>
+    <div v-if="loading && !seasons.length" class="clan-seasons__list">
+      <SkeletonLoader v-for="n in 3" :key="n" class="placeholder" height="68px" />
+    </div>
+    <p v-else-if="!seasons.length" class="caption">No seasons yet</p>
+    <ul v-else class="clan-seasons__list" :class="{ refreshing: loading }">
+      <li v-for="season in seasons" :key="season.id" class="clan-seasons__season">
+        <div class="clan-seasons__row">
+          <span class="clan-seasons__identity">
+            <span class="clan-seasons__name">{{ season.name }}</span>
+            <span class="caption">{{ state(season) }}, {{ formatFullDate(season.startsAt) }} to {{ formatFullDate(season.endsAt) }}</span>
           </span>
-        </td>
-      </template>
-    </AdminTable>
+          <BaseButton size="sm" :aria-expanded="standingsId === season.id" @click="toggleStandings(season)">Standings</BaseButton>
+          <BaseButton size="sm" :aria-expanded="expandedId === season.id" @click="toggleRewards(season)">Rewards</BaseButton>
+          <BaseButton v-if="!season.closedAt" size="sm" @click="openEdit(season)">Edit</BaseButton>
+        </div>
 
-    <PaginationControls :page="page" :total-pages="totalPages" @update:page="(p: number) => { page = p }" />
+        <Transition name="collapse">
+          <div v-if="standingsId === season.id" class="collapsible">
+            <div class="clan-seasons__panel">
+              <ClanSeasonStandings :season-id="season.id" />
+            </div>
+          </div>
+        </Transition>
 
-    <BaseModal :open="editorOpen" :title="editingId ? 'Edit season' : 'New season'" max-width="520px" @close="editorOpen = false">
-      <div class="clan-seasons__form">
-        <BaseInput :model-value="draft.name" label="Name" placeholder="Season 2" :error="fieldErrors.name" @update:model-value="setName" />
-        <BaseInput v-model="draft.slug" label="Slug" placeholder="season-2" :error="fieldErrors.slug" />
-        <BaseInput v-model="draft.startsAt" type="datetime-local" label="Starts at" :error="fieldErrors.startsAt" />
-        <BaseInput v-model="draft.endsAt" type="datetime-local" label="Ends at" :error="fieldErrors.endsAt" />
-        <p v-if="editorError" class="clan-seasons__error" role="alert">{{ editorError }}</p>
-      </div>
+        <Transition name="collapse">
+          <div v-if="expandedId === season.id" class="collapsible">
+            <div class="clan-seasons__panel">
+              <p v-if="rewardError" class="caption clan-seasons__error" role="alert">{{ rewardError }}</p>
+              <SkeletonLoader v-if="rewardsLoading" class="placeholder" height="var(--control-h)" />
+              <p v-else-if="!rewards.length" class="caption">No rewards yet</p>
+              <ul v-else class="clan-seasons__rewards">
+                <li v-for="reward in rewards" :key="reward.id" class="clan-seasons__reward">
+                  <span class="clan-seasons__rank">#{{ reward.rankFrom }}{{ reward.rankTo !== reward.rankFrom ? ` to #${reward.rankTo}` : '' }}</span>
+                  <span>{{ reward.quantity }}x {{ reward.item.name }}</span>
+                  <span class="caption">to {{ recipient(reward.item) }}</span>
+                  <IconButton v-if="!season.closedAt" icon="close" :label="`Remove ${reward.item.name}`" :disabled="busy"
+                    @click="removeReward(reward)" />
+                </li>
+              </ul>
+              <form v-if="!season.closedAt" class="clan-seasons__reward-form" @submit.prevent="addReward">
+                <BaseInput v-model="rewardDraft.rankFrom" class="clan-seasons__number" type="number" min="1" label="From Rank" />
+                <BaseInput v-model="rewardDraft.rankTo" class="clan-seasons__number" type="number" min="1" label="To Rank" />
+                <BaseInput v-model="rewardDraft.quantity" class="clan-seasons__number" type="number" min="1" label="Quantity" />
+                <BaseButton :disabled="busy" @click="pickerOpen = true">{{ rewardDraft.item ? rewardDraft.item.name : 'Pick Item' }}</BaseButton>
+                <BaseButton variant="primary" :loading="busy" :disabled="!rewardDraft.item" @click="addReward">Add Reward</BaseButton>
+              </form>
+            </div>
+          </div>
+        </Transition>
+      </li>
+    </ul>
+
+    <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="page = $event" />
+
+    <BaseModal :open="editorOpen" :title="editingId ? 'Edit Season' : 'New Season'" max-width="520px" @close="editorOpen = false">
+      <form class="clan-seasons__form" @submit.prevent="saveSeason">
+        <BaseInput :model-value="draft.name" label="Name" :error="fieldErrors.name" @update:model-value="setName" />
+        <BaseInput v-model="draft.slug" label="Slug" :error="fieldErrors.slug" />
+        <BaseInput v-model="draft.startsAt" type="datetime-local" label="Starts" :error="fieldErrors.startsAt" />
+        <BaseInput v-model="draft.endsAt" type="datetime-local" label="Ends" :error="fieldErrors.endsAt" />
+        <p class="caption clan-seasons__form-error" role="alert">{{ editorError }}</p>
+      </form>
       <template #footer>
         <BaseButton :disabled="busy" @click="editorOpen = false">Cancel</BaseButton>
         <BaseButton variant="primary" :loading="busy" :disabled="!draft.name || !draft.startsAt || !draft.endsAt" @click="saveSeason">Save</BaseButton>
       </template>
     </BaseModal>
 
-    <AdminItemPicker
-      v-if="pickerOpen"
-      title="Pick a season reward"
-      :exclude-ids="[]"
-      @close="pickerOpen = false"
-      @pick="(item) => { rewardDraft.item = item; pickerOpen = false }"
-    />
+    <AdminItemPicker v-if="pickerOpen" title="Pick a Season Reward" :exclude-ids="[]" @close="pickerOpen = false" @pick="pickReward" />
   </div>
 </template>
 
@@ -315,70 +306,34 @@ onMounted(() => {
 .clan-seasons {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
+  min-width: 0;
 }
 
-.clan-seasons__header {
+.clan-seasons__head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-lg);
   flex-wrap: wrap;
-}
-
-.clan-seasons__meta {
-  margin: 2px 0 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 
 .clan-seasons__current {
   margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
-.clan-seasons__error {
-  margin: 0;
-  font-size: var(--text-caption);
+.clan-seasons__error,
+.clan-seasons__form-error {
   color: var(--error);
 }
 
-.clan-seasons__empty {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+.clan-seasons__form-error {
+  min-height: 1lh;
 }
 
-.clan-seasons__name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.clan-seasons__slug {
-  margin-left: var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.clan-seasons__actions {
-  display: inline-flex;
-  gap: var(--space-xs);
-}
-
+.clan-seasons__list,
 .clan-seasons__rewards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.clan-seasons__reward-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -387,16 +342,49 @@ onMounted(() => {
   list-style: none;
 }
 
-.clan-seasons__reward {
+.clan-seasons__season {
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
+}
+
+.clan-seasons__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
-.clan-seasons__recipient {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.clan-seasons__identity {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.clan-seasons__name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.clan-seasons__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+}
+
+.clan-seasons__reward {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: var(--control-h);
+}
+
+.clan-seasons__rank {
+  min-width: 96px;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .clan-seasons__reward-form {
@@ -406,8 +394,8 @@ onMounted(() => {
   gap: var(--space-sm);
 }
 
-.clan-seasons__reward-form :deep(.base-input) {
-  width: 110px;
+.clan-seasons__number {
+  width: 120px;
 }
 
 .clan-seasons__form {

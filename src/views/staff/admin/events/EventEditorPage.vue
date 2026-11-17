@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatDateTime } from '@/utils/formatters'
+import { formatCount, formatDateTime } from '@/utils/formatters'
 import {
   deactivateEvent,
   deleteEventBackground,
@@ -14,9 +14,13 @@ import {
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { useNow } from '@/composables/useNow'
 import { usePageMeta } from '@/composables/usePageMeta'
 import type {
@@ -26,6 +30,7 @@ import type {
   MissionTemplateResponse,
 } from '@/types/api/events'
 import type { ItemResponse } from '@/types/api/items'
+import type { TableColumn } from '@/types/display'
 import { EVENT_STATE_ACCENT, EVENT_STATE_LABELS } from '@/utils/constants'
 import {
   eventState,
@@ -39,7 +44,18 @@ import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
-const now = useNow(30000)
+const NOW_TICK_MS = 30000
+const MISSION_COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Mission', primary: true },
+  { key: 'type', label: 'Type', width: '140px' },
+  { key: 'window', label: 'Window', width: '320px' },
+  { key: 'xp', label: 'XP', align: 'right', mono: true, width: '110px' },
+  { key: 'reward', label: 'Reward', width: '180px' },
+  { key: 'repeat', label: 'Repeat', align: 'right', width: '90px' },
+]
+
+const now = useNow(NOW_TICK_MS)
+const { confirmModal, ask } = useConfirmAction()
 
 const eventId = computed(() => String(route.params.eventId))
 
@@ -199,33 +215,35 @@ function removeBonusItem(id: string) {
   commitBonusItems(bonusItemIds.value.filter((x) => x !== id))
 }
 
-async function toggleActive() {
-  if (!event.value) return
-  if (event.value.active) {
-    if (!confirm('Deactivate this event? It will drop out of public lists.')) return
-    statusBusy.value = true
-    errorMsg.value = null
-    try {
-      await deactivateEvent(eventId.value)
-      event.value = await getAdminEvent(eventId.value)
-      syncForm()
-    } catch (e) {
-      errorMsg.value = parseApiError(e, 'Failed to deactivate event').message
-    } finally {
-      statusBusy.value = false
-    }
-  } else {
-    statusBusy.value = true
-    errorMsg.value = null
-    try {
-      event.value = await updateEvent(eventId.value, { active: true })
-      syncForm()
-    } catch (e) {
-      errorMsg.value = parseApiError(e, 'Failed to reactivate event').message
-    } finally {
-      statusBusy.value = false
-    }
+async function setActive(call: () => Promise<EventResponse>) {
+  statusBusy.value = true
+  errorMsg.value = null
+  try {
+    event.value = await call()
+    syncForm()
+  } finally {
+    statusBusy.value = false
   }
+}
+
+function toggleActive() {
+  if (!event.value) return
+  if (!event.value.active) {
+    setActive(() => updateEvent(eventId.value, { active: true })).catch((e) => {
+      errorMsg.value = parseApiError(e, 'Could not reactivate the event').message
+    })
+    return
+  }
+  ask({
+    title: 'Deactivate Event',
+    message: 'Deactivate this event? It drops out of the public lists.',
+    confirmLabel: 'Deactivate',
+    destructive: true,
+    run: () => setActive(async () => {
+      await deactivateEvent(eventId.value)
+      return getAdminEvent(eventId.value)
+    }),
+  })
 }
 
 async function rollout() {
@@ -242,268 +260,153 @@ async function rollout() {
   }
 }
 
-function missionWindow(m: MissionTemplateResponse): string {
-  const start = m.unlocksAt ? formatDateTime(m.unlocksAt) : 'Event start'
-  const end = m.completableUntil ? formatDateTime(m.completableUntil) : 'Event end'
-  return `${start} → ${end}`
-}
-
-function missionXp(m: MissionTemplateResponse): string {
-  return m.fixedXp != null ? `${m.fixedXp.toLocaleString()} XP` : '-'
-}
+const missionRows = computed<Record<string, unknown>[]>(() =>
+  missions.value.map((m) => ({
+    id: m.id,
+    name: m.name,
+    code: m.code,
+    type: m.type,
+    window: `${m.unlocksAt ? formatDateTime(m.unlocksAt) : 'Event start'} to ${m.completableUntil ? formatDateTime(m.completableUntil) : 'event end'}`,
+    xp: m.fixedXp != null ? formatCount(m.fixedXp) : '-',
+    reward: m.awardsItemName ?? '-',
+    repeat: !m.repeatable ? 'No' : m.maxCompletions ? `x${m.maxCompletions}` : 'Yes',
+  })),
+)
 </script>
 
 <template>
   <div class="event-editor">
     <header class="event-editor__header">
-      <BaseButton size="sm" @click="router.push({ name: 'admin', query: { tab: 'events' } })">
-        &larr; Back to events
-      </BaseButton>
-      <div class="event-editor__title">{{ event?.title || 'Event editor' }}</div>
-      <div class="event-editor__spacer" />
-      <div v-if="event" class="event-editor__status-group">
-        <span class="event-editor__badge"
-          :style="{ color: EVENT_STATE_ACCENT[timing], borderColor: EVENT_STATE_ACCENT[timing] }">
-          {{ EVENT_STATE_LABELS[timing] }}
-        </span>
-        <span class="event-editor__badge"
-          :style="event.active ? { color: 'var(--success)', borderColor: 'var(--success)' } : { color: 'var(--text-tertiary)' }">
-          {{ event.active ? 'Active' : 'Inactive' }}
-        </span>
-        <BaseButton size="sm" :variant="event.active ? 'destructive' : 'primary'" :loading="statusBusy"
-          @click="toggleActive">
+      <IconButton icon="back" label="Back to events" @click="router.push({ name: 'admin', query: { tab: 'events' } })" />
+      <h1 class="event-editor__title">{{ event?.title || 'Event' }}</h1>
+      <template v-if="event">
+        <span :style="{ color: EVENT_STATE_ACCENT[timing] }">{{ EVENT_STATE_LABELS[timing] }}</span>
+        <span :class="{ 'event-editor__off': !event.active }">{{ event.active ? 'Active' : 'Inactive, hidden from players' }}</span>
+        <BaseButton :variant="event.active ? 'destructive' : 'primary'" :loading="statusBusy" @click="toggleActive">
           {{ event.active ? 'Deactivate' : 'Reactivate' }}
         </BaseButton>
-      </div>
+      </template>
     </header>
 
-    <div v-if="errorMsg" class="event-editor__error">{{ errorMsg }}</div>
+    <p v-if="errorMsg" class="caption event-editor__error" role="alert">{{ errorMsg }}</p>
 
-    <div v-if="event && !event.active" class="event-editor__banner">
-      INACTIVE - not visible to players
-    </div>
-
-    <section v-if="loading" class="event-editor__loading">
-      <SkeletonLoader variant="card" />
-      <SkeletonLoader variant="card" />
-      <SkeletonLoader variant="card" />
-    </section>
+    <template v-if="loading">
+      <SkeletonLoader v-for="n in 3" :key="n" class="placeholder" height="260px" />
+    </template>
 
     <template v-else-if="event">
       <section class="event-editor__panel">
         <h2 class="section-title">Details</h2>
         <div class="event-editor__grid">
           <BaseInput v-model="form.title" label="Title" />
-          <BaseInput v-model="form.bonusXp" type="number" min="0" step="1" label="Completion bonus XP" />
-          <div class="event-editor__field event-editor__field--full">
-            <BaseInput v-model="form.slug" label="Slug (public URL)" placeholder="alphas-end" :error="slugError" />
-            <p class="event-editor__hint mono">/events/{{ slugPreview || '…' }}</p>
-          </div>
-          <BaseInput v-model="form.startsAt" type="datetime-local" label="Starts at" />
-          <BaseInput v-model="form.endsAt" type="datetime-local" label="Ends at" />
-          <div class="event-editor__field event-editor__field--full">
-            <label class="field-label">Description</label>
-            <textarea v-model="form.description" class="event-editor__textarea" rows="3"
-              placeholder="Short summary shown on the event card" />
-          </div>
-        </div>
-        <div class="event-editor__meta-info">
-          <span>Weeks: <span class="mono">{{ event.totalWeeks }}</span></span>
-          <span v-if="event.live && event.currentWeek">
-            Current week: <span class="mono">{{ event.currentWeek }}</span>
+          <BaseInput v-model="form.slug" label="Slug" :placeholder="slugPreview" :error="slugError" />
+          <BaseInput v-model="form.startsAt" type="datetime-local" label="Starts" />
+          <BaseInput v-model="form.endsAt" type="datetime-local" label="Ends" />
+          <BaseInput v-model="form.bonusXp" type="number" min="0" step="1" label="Completion Bonus XP" />
+          <span class="event-editor__weeks">
+            <span class="field-label">Weeks</span>
+            <span>{{ event.live && event.currentWeek ? `${event.currentWeek} of ${event.totalWeeks}` : event.totalWeeks }}</span>
           </span>
+          <BaseTextarea v-model="form.description" class="event-editor__full" label="Description" :rows="3" />
         </div>
-        <div class="event-editor__panel-actions">
-          <BaseButton variant="primary" size="sm" :loading="metaSaving" @click="saveMetadata">
-            Save details
-          </BaseButton>
-        </div>
+        <BaseButton class="event-editor__save" variant="primary" :loading="metaSaving" @click="saveMetadata">Save Details</BaseButton>
       </section>
 
       <section class="event-editor__panel">
         <h2 class="section-title">Images</h2>
-        <div class="event-editor__image-row">
-          <ImageUploader label="Background" hint="16:9 hero, stored as WEBP" :image-url="event.backgroundUrl ?? null"
-            :upload-handler="uploadBackground" :remove-handler="removeBackground" />
-          <ImageUploader label="Icon" hint="Square, stored as PNG" aspect-ratio="1 / 1"
-            :image-url="event.iconUrl ?? null" :upload-handler="uploadIcon" :remove-handler="removeIcon" />
+        <div class="event-editor__images">
+          <ImageUploader label="Background" :image-url="event.backgroundUrl ?? null" :upload-handler="uploadBackground"
+            :remove-handler="removeBackground" />
+          <ImageUploader label="Icon" aspect-ratio="1 / 1" :image-url="event.iconUrl ?? null" :upload-handler="uploadIcon"
+            :remove-handler="removeIcon" />
         </div>
       </section>
 
       <section class="event-editor__panel">
-        <header class="event-editor__panel-header">
-          <h2 class="section-title">Completion bonus items</h2>
-          <div class="event-editor__totals">
-            <span class="mono">{{ bonusItems.length }}</span> selected
-          </div>
+        <header class="event-editor__panel-head">
+          <h2 class="section-title">Completion Bonus Items</h2>
+          <BaseButton :loading="bonusBusy" @click="pickerOpen = true">Add Item</BaseButton>
         </header>
-        <div v-if="bonusItems.length" class="event-editor__chips">
-          <span v-for="item in bonusItems" :key="item.id" class="event-editor__chip">
+        <ul v-if="bonusItems.length" class="event-editor__items">
+          <li v-for="item in bonusItems" :key="item.id" class="event-editor__item">
             {{ item.name }}
-            <button type="button" class="event-editor__chip-remove" :disabled="bonusBusy"
-              :aria-label="`Remove ${item.name}`" @click="removeBonusItem(item.id)">
-              &times;
-            </button>
-          </span>
-        </div>
-        <div v-else class="event-editor__pool-empty">
-          <EmptyState message="No bonus items. Add one below." />
-        </div>
-        <div class="event-editor__panel-actions">
-          <BaseButton size="sm" :loading="bonusBusy" @click="pickerOpen = true">+ Add item</BaseButton>
-        </div>
+            <IconButton icon="close" :label="`Remove ${item.name}`" :disabled="bonusBusy" @click="removeBonusItem(item.id)" />
+          </li>
+        </ul>
+        <p v-else class="caption">No bonus items</p>
       </section>
 
       <section class="event-editor__panel">
-        <header class="event-editor__panel-header">
+        <header class="event-editor__panel-head">
           <h2 class="section-title">Missions</h2>
-          <div class="event-editor__totals">
-            <span class="mono">{{ missions.length }}</span> templates
-          </div>
-        </header>
-        <div class="event-editor__rollout">
-          <BaseButton size="sm" variant="primary" :loading="rolloutBusy" @click="rollout">
-            Roll out to players
-          </BaseButton>
-          <span v-if="rolloutDone" class="event-editor__rollout-done">
-            Rollout started. Progress is created in the background.
+          <span class="event-editor__rollout">
+            <span v-if="rolloutDone" class="caption" role="status">Rollout started</span>
+            <BaseButton variant="primary" :class="{ confirm: rolloutDone }" :loading="rolloutBusy" @click="rollout">
+              Roll Out to Players
+            </BaseButton>
           </span>
-        </div>
-
-        <div v-if="missions.length === 0" class="event-editor__pool-empty">
-          <EmptyState message="No mission templates for this event yet." />
-        </div>
-        <table v-else class="event-editor__table">
-          <thead>
-            <tr>
-              <th>Mission</th>
-              <th>Type</th>
-              <th>Window</th>
-              <th class="right">XP</th>
-              <th>Reward</th>
-              <th class="right">Repeat</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="m in missions" :key="m.id">
-              <td>
-                <div class="event-editor__mission-name">{{ m.name }}</div>
-                <div class="event-editor__mission-code">{{ m.code }}</div>
-              </td>
-              <td class="muted">{{ m.type }}</td>
-              <td class="muted mono">{{ missionWindow(m) }}</td>
-              <td class="right mono">{{ missionXp(m) }}</td>
-              <td class="muted">{{ m.awardsItemName ?? '-' }}</td>
-              <td class="right muted">
-                {{ m.repeatable ? (m.maxCompletions ? `x${m.maxCompletions}` : 'Yes') : 'No' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        </header>
+        <DataTable :columns="MISSION_COLUMNS" :rows="missionRows" row-key="id" empty-message="No mission templates yet">
+          <template #cell-name="{ row }">
+            <span class="event-editor__mission">
+              <span class="event-editor__mission-name">{{ row.name }}</span>
+              <span class="caption">{{ row.code }}</span>
+            </span>
+          </template>
+        </DataTable>
       </section>
     </template>
 
-    <AdminItemPicker v-if="pickerOpen" title="Add bonus item" :exclude-ids="bonusItemIds" @close="pickerOpen = false"
+    <AdminItemPicker v-if="pickerOpen" title="Add Bonus Item" :exclude-ids="bonusItemIds" @close="pickerOpen = false"
       @pick="onPickItem" />
+    <ConfirmModal v-bind="confirmModal" />
   </div>
 </template>
 
 <style scoped>
 .event-editor {
-  padding: var(--space-xl);
-  max-width: 1080px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  width: 100%;
+  max-width: 1280px;
+  min-width: 0;
+  margin: 0 auto;
 }
 
-.event-editor__header {
+.event-editor__header,
+.event-editor__panel-head,
+.event-editor__rollout {
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
 }
 
 .event-editor__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.event-editor__spacer {
   flex: 1;
+  min-width: 0;
 }
 
-.event-editor__status-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.event-editor__badge {
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-caption);
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  border: 1px solid var(--bg-overlay);
-  color: var(--text-secondary);
-}
-
-.event-editor__banner {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--warning);
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
+.event-editor__off {
   color: var(--warning);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 600;
 }
 
 .event-editor__error {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
   color: var(--error);
-  border-radius: var(--radius-card);
-  font-size: var(--text-body);
-}
-
-.event-editor__loading {
-  display: grid;
-  gap: var(--space-md);
 }
 
 .event-editor__panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
 }
 
-.event-editor__panel-header {
-  display: flex;
-  align-items: baseline;
+.event-editor__panel-head {
   justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.event-editor__totals {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.mono {
-  font-family: var(--font-mono);
 }
 
 .event-editor__grid {
@@ -512,181 +415,59 @@ function missionXp(m: MissionTemplateResponse): string {
   gap: var(--space-md);
 }
 
-.event-editor__field {
+.event-editor__full {
+  grid-column: 1 / -1;
+}
+
+.event-editor__weeks {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.event-editor__field--full {
-  grid-column: 1 / -1;
+.event-editor__save {
+  align-self: flex-start;
 }
 
-.event-editor__textarea {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  background: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  resize: vertical;
-  outline: none;
-  transition: border-color 120ms ease-in, box-shadow 120ms ease-in;
-}
-
-.event-editor__textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-.event-editor__meta-info {
-  display: flex;
-  gap: var(--space-lg);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.event-editor__panel-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (max-width: 720px) {
-  .event-editor__grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.event-editor__image-row {
+.event-editor__images {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 480px) minmax(0, 200px);
   gap: var(--space-lg);
+  align-items: start;
 }
 
-@media (max-width: 720px) {
-  .event-editor__image-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.event-editor__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.event-editor__chips {
+.event-editor__items {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: var(--space-xs) var(--space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.event-editor__chip {
+.event-editor__item {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-xs) 6px var(--space-xs) 10px;
-  font-size: var(--text-caption);
+  font-weight: 600;
   color: var(--text-primary);
-  background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
 }
 
-.event-editor__chip-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: none;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: var(--radius-btn);
-  transition: color 100ms ease, background-color 100ms ease;
-}
-
-.event-editor__chip-remove:hover:not(:disabled) {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-}
-
-.event-editor__chip-remove:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.event-editor__pool-empty {
-  padding: var(--space-md);
-  color: var(--text-tertiary);
-  text-align: center;
-}
-
-.event-editor__rollout {
+.event-editor__mission {
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.event-editor__rollout-done {
-  font-size: var(--text-caption);
-  color: var(--success);
-}
-
-.event-editor__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-body);
-}
-
-.event-editor__table th {
-  text-align: left;
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.event-editor__table th.right,
-.event-editor__table td.right {
-  text-align: right;
-}
-
-.event-editor__table td {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-  vertical-align: middle;
-}
-
-.event-editor__table td.muted {
-  color: var(--text-secondary);
-}
-
-.event-editor__table td.mono {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-}
-
-.event-editor__table tr:last-child td {
-  border-bottom: none;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .event-editor__mission-name {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.event-editor__mission-code {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
+@media (max-width: 767px) {
+  .event-editor__grid,
+  .event-editor__images {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

@@ -55,10 +55,6 @@ function humanize(value: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
-function select(type: JobTypeResponse) {
-  selectedType.value = type.type
-}
-
 watch(selected, (job) => {
   armed.value = false
   const next: Record<string, JobFieldValue> = {}
@@ -96,45 +92,38 @@ function run() {
   <section class="runner">
     <div class="runner__catalogue">
       <template v-if="loading && types.length === 0">
-        <SkeletonLoader v-for="n in 6" :key="n" variant="text" />
+        <SkeletonLoader v-for="n in 12" :key="n" class="placeholder" height="var(--control-h)" />
       </template>
       <div v-for="[group, jobs] in groups" :key="group" class="runner__group">
-        <h4 class="runner__group-title">{{ humanize(group) }}</h4>
-        <button v-for="job in jobs" :key="job.type" type="button" class="runner__job"
-          :class="{ 'runner__job--active': job.type === selectedType }" @click="select(job)">
+        <h4 class="field-label">{{ humanize(group) }}</h4>
+        <button v-for="job in jobs" :key="job.type" type="button" class="runner__job pressable"
+          :class="{ 'runner__job--active': job.type === selectedType }" :aria-pressed="job.type === selectedType"
+          @click="selectedType = job.type">
           <span class="runner__job-label">{{ job.label }}</span>
-          <span v-if="runningTypes.includes(job.type)" class="runner__job-running">running</span>
+          <span v-if="runningTypes.includes(job.type)" class="caption runner__running">Running</span>
         </button>
       </div>
     </div>
 
     <div class="runner__form">
-      <p v-if="!selected" class="runner__placeholder">
-        Pick a job on the left to see what it does and what it needs.
-      </p>
+      <p v-if="!selected" class="caption">Pick a job</p>
       <template v-else>
-        <div class="runner__head">
-          <h3 class="runner__title">{{ selected.label }}</h3>
-          <span class="runner__type">{{ selected.type }}</span>
-        </div>
+        <h3 class="card-title">{{ selected.label }}</h3>
         <p class="runner__desc">{{ selected.description }}</p>
 
         <JobFieldControl v-for="field in selected.fields" :key="field.key" :field="field"
           :model-value="values[field.key] ?? null" :disabled="submitting"
           @update:model-value="values[field.key] = $event" />
 
-        <p v-if="alreadyRunning" class="runner__warning">
-          A job of this type is already running. Nothing is queued, so starting it again runs it twice.
-        </p>
-        <p v-if="error" class="result result--err">{{ error }}</p>
-        <p v-else-if="notice" class="result result--ok">{{ notice }}</p>
-
         <div class="runner__actions">
-          <BaseButton :variant="armed ? 'destructive' : 'primary'" :loading="submitting" :disabled="!canRun"
-            @click="run">
-            {{ armed ? 'Run it anyway' : 'Run job' }}
+          <BaseButton :variant="armed ? 'destructive' : 'primary'" :loading="submitting" :disabled="!canRun" @click="run">
+            {{ armed ? 'Run It Anyway' : 'Run Job' }}
           </BaseButton>
-          <BaseButton v-if="armed" size="sm" @click="armed = false">Cancel</BaseButton>
+          <BaseButton v-if="armed" @click="armed = false">Cancel</BaseButton>
+          <span class="caption runner__status" :class="{ 'runner__status--error': error, 'runner__status--warn': !error && alreadyRunning }"
+            :role="error ? 'alert' : 'status'">
+            {{ error || (alreadyRunning ? 'Already running, starting it again runs it twice' : notice) }}
+          </span>
         </div>
       </template>
     </div>
@@ -144,22 +133,19 @@ function run() {
 <style scoped>
 .runner {
   display: grid;
-  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
-  gap: var(--space-lg);
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  padding: var(--space-lg);
 }
 
 .runner__catalogue {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  max-height: 520px;
+  max-height: 560px;
   overflow-y: auto;
-  padding-right: var(--space-xs);
-  border-right: 1px solid var(--bg-overlay);
 }
 
 .runner__group {
@@ -168,56 +154,37 @@ function run() {
   gap: 2px;
 }
 
-.runner__group-title {
-  margin: 0 0 var(--space-xs);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-}
-
 .runner__job {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  width: 100%;
-  padding: var(--space-sm);
-  border: 1px solid transparent;
-  border-radius: var(--radius-input);
-  background: transparent;
+  min-height: var(--control-h);
+  padding: var(--space-xs) var(--space-sm);
+  font: inherit;
   color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
   text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: background-color 100ms ease, color 100ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .runner__job:hover {
-  background: var(--bg-elevated);
   color: var(--text-primary);
+  background: var(--bg-elevated);
 }
 
 .runner__job--active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-overlay);
 }
 
-.runner__job-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.runner__job-running {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--info);
+.runner__running {
   flex-shrink: 0;
+  color: var(--info);
 }
 
 .runner__form {
@@ -225,67 +192,33 @@ function run() {
   flex-direction: column;
   gap: var(--space-md);
   min-width: 0;
-}
-
-.runner__placeholder {
-  margin: 0;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-
-.runner__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.runner__title {
-  margin: 0;
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.runner__type {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  max-width: 640px;
 }
 
 .runner__desc {
   margin: 0;
-  font-size: var(--text-caption);
+  line-height: 1.5;
   color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.runner__warning {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--warning);
 }
 
 .runner__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  margin-top: auto;
 }
 
-.result {
-  margin: 0;
-  font-size: var(--text-caption);
-  font-family: var(--font-mono);
+.runner__status {
+  min-height: 1lh;
   overflow-wrap: anywhere;
 }
 
-.result--ok {
-  color: var(--success);
+.runner__status--error {
+  color: var(--error);
 }
 
-.result--err {
-  color: var(--error);
+.runner__status--warn {
+  color: var(--warning);
 }
 
 @media (max-width: 900px) {
@@ -294,10 +227,7 @@ function run() {
   }
 
   .runner__catalogue {
-    max-height: 240px;
-    border-right: none;
-    border-bottom: 1px solid var(--bg-overlay);
-    padding-bottom: var(--space-md);
+    max-height: 260px;
   }
 }
 </style>

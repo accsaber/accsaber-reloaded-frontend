@@ -3,6 +3,7 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import ClanProfileForm from '@/components/domain/ClanProfileForm.vue'
 import type { ClanMediaKind, ClanResponse } from '@/types/api/clans'
 import { clanDraftFrom, type ClanProfileDraft } from '@/utils/clans'
@@ -17,6 +18,11 @@ const emit = defineEmits<{
   close: []
   saved: [clan: ClanResponse]
 }>()
+
+const MEDIA: { key: ClanMediaKind; field: 'iconUrl' | 'bannerUrl'; label: string }[] = [
+  { key: 'icon', field: 'iconUrl', label: 'Remove the Icon' },
+  { key: 'banner', field: 'bannerUrl', label: 'Remove the Banner' },
+]
 
 const draft = ref<ClanProfileDraft>(clanDraftFrom(props.clan.clan, props.clan.description))
 const removeMedia = ref<ClanMediaKind[]>([])
@@ -36,6 +42,10 @@ watch(
     fieldErrors.value = {}
   },
 )
+
+function toggleMedia(kind: ClanMediaKind, remove: boolean) {
+  removeMedia.value = remove ? [...removeMedia.value, kind] : removeMedia.value.filter((k) => k !== kind)
+}
 
 async function save() {
   if (!reason.value.trim()) return
@@ -58,7 +68,7 @@ async function save() {
     })
     emit('saved', saved)
   } catch (err) {
-    const parsed = parseApiError(err, 'Could not moderate that clan.')
+    const parsed = parseApiError(err, 'Could not moderate that clan')
     const errors: Record<string, string> = {}
     for (const fe of parsed.fieldErrors) errors[fe.field.replace(/^changes\./, '')] = fe.message
     fieldErrors.value = errors
@@ -73,18 +83,11 @@ async function save() {
   <BaseModal :open="open" :title="`Moderate ${clan.clan.name}`" max-width="560px" @close="emit('close')">
     <div class="moderate">
       <ClanProfileForm v-model="draft" :field-errors="fieldErrors" :equipped="clan.clan.equipped" :disabled="busy" />
-      <label v-if="clan.clan.iconUrl" class="moderate__toggle">
-        <input v-model="removeMedia" type="checkbox" value="icon" :disabled="busy" />
-        <span>Remove the icon</span>
-      </label>
-      <label v-if="clan.clan.bannerUrl" class="moderate__toggle">
-        <input v-model="removeMedia" type="checkbox" value="banner" :disabled="busy" />
-        <span>Remove the banner</span>
-      </label>
+      <BaseSwitch v-for="media in MEDIA.filter((m) => clan.clan[m.field])" :key="media.key" :model-value="removeMedia.includes(media.key)"
+        :label="media.label" :disabled="busy" @update:model-value="toggleMedia(media.key, $event)" />
       <BaseInput
         v-model="reason"
         label="Reason"
-        placeholder="Shown in the clan's audit log"
         maxlength="500"
         :error="fieldErrors.reason"
       />
@@ -104,22 +107,8 @@ async function save() {
   gap: var(--space-md);
 }
 
-.moderate__toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.moderate__toggle input {
-  accent-color: var(--page-accent, var(--accent));
-}
-
 .moderate__error {
   margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 </style>

@@ -108,22 +108,6 @@ export interface MergeDuplicateRequest {
   secondaryUserId: string
   reason?: string
 }
-export interface CreateCurveRequest {
-  name: string
-  type: 'FORMULA' | 'POINT_LOOKUP'
-  formula?: string
-  xParameterName?: string
-  xParameterValue?: number
-  yParameterName?: string
-  yParameterValue?: number
-  zParameterName?: string
-  zParameterValue?: number
-  scale?: number
-  shift?: number
-}
-
-export type UpdateCurveRequest = Partial<CreateCurveRequest>
-
 export type MilestoneProgressModel = 'LINEAR' | 'CURVE' | 'LOG'
 
 export interface MilestoneRewardRequest {

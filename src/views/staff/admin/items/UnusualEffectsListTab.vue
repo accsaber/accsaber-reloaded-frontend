@@ -6,10 +6,13 @@ import {
   updateAdminUnusualEffect,
 } from '@/api/admin/unusual-effects'
 import { parseApiError } from '@/api/client'
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import type { TableColumn } from '@/types/display'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import type { ModifierEffectSpec } from '@/types/cosmetics/effects'
 import type { UnusualEffectResponse } from '@/types/api/items'
@@ -19,6 +22,14 @@ const STARTER_SPEC = `{
   "contractVersion": 1,
   "compositions": []
 }`
+
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name', primary: true },
+  { key: 'key', label: 'Key', width: '200px' },
+  { key: 'compositions', label: 'Compositions', width: '320px' },
+  { key: 'active', label: 'Active', width: '90px', noLink: true },
+  { key: 'actions', label: '', align: 'right', width: '90px', noLink: true },
+]
 
 const effects = ref<UnusualEffectResponse[]>([])
 const loading = ref(false)
@@ -129,6 +140,10 @@ async function save() {
   }
 }
 
+const rows = computed<Record<string, unknown>[]>(() =>
+  effects.value.map((effect) => ({ ...effect, effect, compositions: compositionSummary(effect.effectSpec) })),
+)
+
 const togglingId = ref<string | null>(null)
 
 async function toggleActive(effect: UnusualEffectResponse) {
@@ -146,101 +161,46 @@ onMounted(fetchEffects)
 
 <template>
   <div class="ue-tab">
-    <div class="ue-tab__bar">
-      <p class="ue-tab__hint">
-        Unusual effects are the pool an Unusual roll draws from. Attach effects to a crate in its
-        editor to include them in that crate's equal-chance roll.
-      </p>
-      <BaseButton size="sm" variant="primary" @click="openCreate">New effect</BaseButton>
-    </div>
+    <BaseButton class="ue-tab__new" variant="primary" @click="openCreate">New Effect</BaseButton>
 
-    <AdminTable :items="effects" :loading="loading" empty-message="No unusual effects">
-      <template #head>
-        <th>Name</th>
-        <th>Key</th>
-        <th>Compositions</th>
-        <th>Status</th>
-        <th></th>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="8" :row-height="56" row-key="id"
+      empty-message="No unusual effects">
+      <template #cell-name="{ row }">
+        <span class="ue-tab__identity">
+          <span class="ue-tab__name">{{ row.name }}</span>
+          <span v-if="row.description" class="caption">{{ row.description }}</span>
+        </span>
       </template>
-
-      <template #default="{ item }: { item: UnusualEffectResponse }">
-        <td>
-          <span class="ue-tab__name">{{ item.name }}</span>
-          <span v-if="item.description" class="ue-tab__desc">{{ item.description }}</span>
-        </td>
-        <td class="mono">{{ item.key }}</td>
-        <td class="ue-tab__comp">{{ compositionSummary(item.effectSpec) }}</td>
-        <td>
-          <span class="ue-tab__status" :class="{ 'ue-tab__status--off': !item.active }">
-            {{ item.active ? 'Active' : 'Inactive' }}
-          </span>
-        </td>
-        <td class="right ue-tab__actions">
-          <BaseButton size="sm" @click="openEdit(item)">Edit</BaseButton>
-          <BaseButton
-            size="sm"
-            :variant="item.active ? 'destructive' : 'default'"
-            :loading="togglingId === item.id"
-            @click="toggleActive(item)"
-          >
-            {{ item.active ? 'Deactivate' : 'Reactivate' }}
-          </BaseButton>
-        </td>
+      <template #cell-active="{ row }">
+        <BaseSwitch :model-value="(row.active as boolean)" :aria-label="`${row.name} active`" :disabled="togglingId === row.id"
+          @update:model-value="toggleActive(row.effect as UnusualEffectResponse)" />
       </template>
-    </AdminTable>
+      <template #cell-actions="{ row }">
+        <BaseButton size="sm" @click="openEdit(row.effect as UnusualEffectResponse)">Edit</BaseButton>
+      </template>
+    </DataTable>
 
-    <BaseModal
-      :open="modalOpen"
-      :title="editing ? `Edit ${editing.name}` : 'New unusual effect'"
-      max-width="680px"
-      @close="closeModal"
-    >
-      <div class="ue-tab__form">
-        <BaseInput
-          v-if="!editing"
-          v-model="form.key"
-          label="Key"
-          :error="fieldErrors.key"
-          placeholder="e.g. fiery"
-        />
-        <div v-else class="ue-tab__readonly">
-          <span class="ue-tab__readonly-label">Key</span>
-          <span class="ue-tab__readonly-value mono">{{ form.key }}</span>
-        </div>
-
+    <BaseModal :open="modalOpen" :title="editing ? `Edit ${editing.name}` : 'New Unusual Effect'" max-width="680px" @close="closeModal">
+      <form class="ue-tab__form" @submit.prevent="save">
+        <BaseInput v-model="form.key" label="Key" :disabled="!!editing" :error="fieldErrors.key" />
         <BaseInput v-model="form.name" label="Name" :error="fieldErrors.name" />
-
-        <div class="ue-tab__field">
-          <label class="field-label">Description</label>
-          <textarea v-model="form.description" class="ue-tab__textarea" rows="2" placeholder="Optional" />
-        </div>
-
-        <div class="ue-tab__field">
-          <label class="field-label">Effect spec (JSON)</label>
-          <div class="ue-tab__spec">
-            <textarea
-              v-model="form.specText"
-              class="ue-tab__textarea ue-tab__textarea--code"
-              :class="{ 'ue-tab__textarea--error': fieldErrors.specText }"
-              rows="12"
-              spellcheck="false"
-            />
-            <div class="ue-tab__preview" aria-hidden="true">
-              <span class="field-label">Preview</span>
-              <div class="ue-tab__preview-tile">
-                <ModifierCompositions v-if="parsedSpec" :spec="parsedSpec" />
-              </div>
+        <BaseTextarea v-model="form.description" label="Description" :rows="2" />
+        <div class="ue-tab__spec">
+          <BaseTextarea v-model="form.specText" class="ue-tab__code" label="Effect Spec (JSON)" :rows="12" spellcheck="false"
+            :error="fieldErrors.specText" />
+          <div class="ue-tab__preview" aria-hidden="true">
+            <span class="field-label">Preview</span>
+            <div class="ue-tab__preview-tile">
+              <ModifierCompositions v-if="parsedSpec" :spec="parsedSpec" />
             </div>
           </div>
-          <p v-if="fieldErrors.specText" class="ue-tab__field-error">{{ fieldErrors.specText }}</p>
         </div>
-
-        <p v-if="formError" class="ue-tab__error">{{ formError }}</p>
-      </div>
+        <p class="caption ue-tab__error" role="alert">{{ formError }}</p>
+      </form>
 
       <template #footer>
-        <BaseButton size="sm" @click="closeModal">Cancel</BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="saving" @click="save">Save</BaseButton>
+        <BaseButton @click="closeModal">Cancel</BaseButton>
+        <BaseButton variant="primary" :loading="saving" @click="save">Save</BaseButton>
       </template>
     </BaseModal>
   </div>
@@ -251,53 +211,22 @@ onMounted(fetchEffects)
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
-.ue-tab__bar {
+.ue-tab__new {
+  align-self: flex-end;
+}
+
+.ue-tab__identity {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.ue-tab__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.4;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .ue-tab__name {
-  display: block;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
-}
-
-.ue-tab__desc {
-  display: block;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.ue-tab__comp {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.ue-tab__status {
-  font-size: var(--text-caption);
-  color: var(--success);
-}
-
-.ue-tab__status--off {
-  color: var(--text-tertiary);
-}
-
-.ue-tab__actions {
-  display: flex;
-  gap: var(--space-xs);
-  justify-content: flex-end;
 }
 
 .ue-tab__form {
@@ -306,54 +235,15 @@ onMounted(fetchEffects)
   gap: var(--space-md);
 }
 
-.ue-tab__readonly {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ue-tab__readonly-label,
-.ue-tab__readonly-value {
-  color: var(--text-primary);
-}
-
-.ue-tab__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.ue-tab__textarea {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  background: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  outline: none;
-  resize: vertical;
-}
-
-.ue-tab__textarea:focus {
-  border-color: var(--accent);
-}
-
-.ue-tab__textarea--code {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
-
-.ue-tab__textarea--error {
-  border-color: var(--error);
-}
-
 .ue-tab__spec {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) 160px;
   gap: var(--space-md);
   align-items: start;
+}
+
+.ue-tab__code :deep(textarea) {
+  font-family: var(--font-code);
 }
 
 .ue-tab__preview {
@@ -364,33 +254,15 @@ onMounted(fetchEffects)
 
 .ue-tab__preview-tile {
   position: relative;
-  width: 96px;
-  height: 96px;
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  width: 160px;
+  height: 160px;
   overflow: hidden;
-}
-
-.ue-tab__field-error {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--error);
+  background: var(--bg-base);
+  border-radius: var(--radius-card);
 }
 
 .ue-tab__error {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
+  min-height: 1lh;
   color: var(--error);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
-}
-
-@media (max-width: 640px) {
-  .ue-tab__spec {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

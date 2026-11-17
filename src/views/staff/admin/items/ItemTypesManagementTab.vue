@@ -1,22 +1,28 @@
 <script setup lang="ts">
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import {
   createItemType,
   setItemTypeActive,
   getAdminItemTypes,
   updateItemType,
 } from '@/api/admin/items'
+import { parseApiError } from '@/api/client'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type {
   CreateItemTypeRequest,
   ItemTypeResponse,
   UpdateItemTypeRequest,
 } from '@/types/api/items'
-import { computed, onMounted, ref } from 'vue'
+import type { TableColumn } from '@/types/display'
+import { computed, ref, watch } from 'vue'
 
 const itemTypeStore = useItemTypeStore()
 
@@ -40,11 +46,29 @@ const form = ref<ItemTypeForm>({
 })
 
 const parentOptions = computed(() => [
-  { value: '', label: 'No parent' },
+  { value: '', label: 'No Parent' },
   ...types.value.filter((t) => !t.parentTypeId).map((t) => ({ value: t.id, label: `${t.name} (${t.key})` })),
 ])
 
-const actionBusy = ref<Record<string, boolean>>({})
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name', primary: true },
+  { key: 'key', label: 'Key', width: '240px' },
+  { key: 'parent', label: 'Parent', width: '200px' },
+  { key: 'active', label: 'Active', width: '90px', noLink: true },
+  { key: 'actions', label: '', align: 'right', width: '90px', noLink: true },
+]
+
+const { confirmModal, ask } = useConfirmAction()
+const busyId = ref<string | null>(null)
+const formError = ref('')
+
+const rows = computed<Record<string, unknown>[]>(() =>
+  types.value.map((type) => ({
+    ...type,
+    type,
+    parent: type.parentTypeId ? (types.value.find((t) => t.id === type.parentTypeId)?.name ?? '?') : '-',
+  })),
+)
 
 async function fetchTypes() {
   loading.value = true
@@ -83,13 +107,13 @@ function parseSchema(): Record<string, unknown> | undefined | false {
   try {
     const parsed = JSON.parse(text)
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      schemaError.value = 'valueSchema must be a JSON object'
+      schemaError.value = 'The schema has to be a JSON object'
       return false
     }
     schemaError.value = null
     return parsed as Record<string, unknown>
   } catch (e) {
-    schemaError.value = (e as Error).message
+    schemaError.value = e instanceof Error ? e.message : 'This is not valid JSON'
     return false
   }
 }
@@ -98,6 +122,7 @@ async function submit() {
   const parsed = parseSchema()
   if (parsed === false) return
   submitting.value = true
+  formError.value = ''
   try {
     if (editing.value) {
       const req: UpdateItemTypeRequest = {
@@ -120,120 +145,80 @@ async function submit() {
     }
     await itemTypeStore.fetchItemTypes(true)
     modalOpen.value = false
+  } catch (err) {
+    formError.value = parseApiError(err, 'Could not save the type').message
   } finally {
     submitting.value = false
   }
 }
 
-async function withBusy(id: string, fn: () => Promise<void>) {
-  actionBusy.value[id] = true
-  try {
-    await fn()
-  } finally {
-    delete actionBusy.value[id]
-  }
+async function applyActive(type: ItemTypeResponse, active: boolean) {
+  const updated = await setItemTypeActive(type.id, active)
+  types.value = types.value.map((t) => (t.id === updated.id ? updated : t))
+  await itemTypeStore.fetchItemTypes(true)
 }
 
 async function setActive(type: ItemTypeResponse, active: boolean) {
-  await withBusy(type.id, async () => {
-    const updated = await setItemTypeActive(type.id, active)
-    const idx = types.value.findIndex((t) => t.id === updated.id)
-    if (idx >= 0) types.value[idx] = updated
-    await itemTypeStore.fetchItemTypes(true)
-  })
+  if (!active) {
+    ask({
+      title: 'Deactivate Type',
+      message: `Deactivate the type "${type.name}"?`,
+      confirmLabel: 'Deactivate',
+      destructive: true,
+      run: () => applyActive(type, false),
+    })
+    return
+  }
+  busyId.value = type.id
+  try {
+    await applyActive(type, true)
+  } finally {
+    busyId.value = null
+  }
 }
 
-async function handleDelete(type: ItemTypeResponse) {
-  if (!confirm(`Delete type "${type.name}"? This deactivates the type.`)) return
-  await setActive(type, false)
-}
-
-function handleReactivate(type: ItemTypeResponse) {
-  return setActive(type, true)
-}
-
-onMounted(fetchTypes)
+watch(includeInactive, fetchTypes, { immediate: true })
 </script>
 
 <template>
   <div class="types-mgmt">
-    <header class="types-mgmt__bar">
-      <label class="types-mgmt__check">
-        <input v-model="includeInactive" type="checkbox" @change="fetchTypes" /> Include inactive
-      </label>
-      <BaseButton variant="primary" size="sm" @click="openCreate">New type</BaseButton>
-    </header>
+    <div class="types-mgmt__bar">
+      <BaseSwitch v-model="includeInactive" label="Include Inactive" />
+      <BaseButton variant="primary" @click="openCreate">New Type</BaseButton>
+    </div>
 
-    <AdminTable :items="types" :loading="loading" empty-message="No item types">
-      <template #head>
-        <th>Key</th>
-        <th>Name</th>
-        <th>Parent</th>
-        <th>Status</th>
-        <th class="right">Actions</th>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading && !types.length" :refreshing="loading && types.length > 0"
+      :loading-rows="12" :row-height="56" row-key="id" empty-message="No item types">
+      <template #cell-name="{ row }">
+        <span class="types-mgmt__name">{{ row.name }}</span>
       </template>
-
-      <template #default="{ item }: { item: ItemTypeResponse }">
-        <td class="mono">{{ item.key }}</td>
-        <td>{{ item.name }}</td>
-        <td class="muted">
-          {{ item.parentTypeId ? (types.find((t) => t.id === item.parentTypeId)?.key ?? '?') : '-' }}
-        </td>
-        <td>{{ item.active ? 'Active' : 'Inactive' }}</td>
-        <td class="right">
-          <div class="types-mgmt__actions">
-            <BaseButton size="sm" :disabled="actionBusy[item.id]" @click="openEdit(item)">Edit</BaseButton>
-            <BaseButton
-              v-if="item.active"
-              size="sm"
-              variant="destructive"
-              :loading="actionBusy[item.id]"
-              @click="handleDelete(item)"
-            >Delete</BaseButton>
-            <BaseButton
-              v-else
-              size="sm"
-              variant="primary"
-              :loading="actionBusy[item.id]"
-              @click="handleReactivate(item)"
-            >Reactivate</BaseButton>
-          </div>
-        </td>
+      <template #cell-active="{ row }">
+        <BaseSwitch :model-value="(row.active as boolean)" :aria-label="`${row.name} active`" :disabled="busyId === row.id"
+          @update:model-value="setActive(row.type as ItemTypeResponse, $event)" />
       </template>
-    </AdminTable>
+      <template #cell-actions="{ row }">
+        <BaseButton size="sm" @click="openEdit(row.type as ItemTypeResponse)">Edit</BaseButton>
+      </template>
+    </DataTable>
 
-    <BaseModal :open="modalOpen" :title="editing ? 'Edit type' : 'New item type'" max-width="640px" @close="modalOpen = false">
-      <div class="types-mgmt__form">
-        <BaseSelect
-          :model-value="form.parentTypeId ?? ''"
-          :options="parentOptions"
-          label="Parent type"
-          @update:model-value="(v: string) => form.parentTypeId = v || undefined"
-        />
+    <BaseModal :open="modalOpen" :title="editing ? 'Edit Type' : 'New Item Type'" max-width="640px" @close="modalOpen = false">
+      <form class="types-mgmt__form" @submit.prevent="submit">
+        <BaseSelect :model-value="form.parentTypeId ?? ''" :options="parentOptions" label="Parent Type"
+          @update:model-value="(v: string) => form.parentTypeId = v || undefined" />
         <BaseInput v-model="form.key" label="Key" :disabled="!!editing" />
         <BaseInput v-model="form.name" label="Name" />
         <BaseInput v-model="form.description" label="Description" />
-
-        <div class="types-mgmt__schema">
-          <label class="field-label">Value schema (JSON)</label>
-          <textarea
-            v-model="schemaText"
-            class="types-mgmt__schema-input"
-            rows="8"
-            spellcheck="false"
-            placeholder="{}"
-          />
-          <div v-if="schemaError" class="types-mgmt__schema-error">{{ schemaError }}</div>
-        </div>
-      </div>
-
+        <BaseTextarea v-model="schemaText" class="types-mgmt__schema" label="Value Schema (JSON)" :rows="8" spellcheck="false"
+          :error="schemaError ?? undefined" />
+        <p class="caption types-mgmt__error" role="alert">{{ formError }}</p>
+      </form>
       <template #footer>
-        <BaseButton size="sm" @click="modalOpen = false">Cancel</BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="submitting" @click="submit">
-          {{ editing ? 'Save' : 'Create' }}
-        </BaseButton>
+        <BaseButton @click="modalOpen = false">Cancel</BaseButton>
+        <BaseButton variant="primary" :loading="submitting" @click="submit">{{ editing ? 'Save' : 'Create' }}</BaseButton>
       </template>
     </BaseModal>
+
+    <ConfirmModal v-bind="confirmModal" />
   </div>
 </template>
 
@@ -242,27 +227,20 @@ onMounted(fetchTypes)
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 .types-mgmt__bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 
-.types-mgmt__check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.types-mgmt__actions {
-  display: inline-flex;
-  gap: var(--space-xs);
-  justify-content: flex-end;
+.types-mgmt__name {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .types-mgmt__form {
@@ -271,31 +249,12 @@ onMounted(fetchTypes)
   gap: var(--space-md);
 }
 
-.types-mgmt__schema {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.types-mgmt__schema :deep(textarea) {
+  font-family: var(--font-code);
 }
 
-.types-mgmt__schema-input {
-  width: 100%;
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  resize: vertical;
-  outline: none;
-}
-
-.types-mgmt__schema-input:focus {
-  border-color: var(--accent);
-}
-
-.types-mgmt__schema-error {
-  font-size: var(--text-caption);
+.types-mgmt__error {
+  min-height: 1lh;
   color: var(--error);
 }
 </style>

@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import ItemIconExportModal from './ItemIconExportModal.vue'
 import SchemaValueForm from './value-form/SchemaValueForm.vue'
@@ -17,6 +20,7 @@ import {
   uploadItemIcon,
 } from '@/api/admin/items'
 import { parseApiError } from '@/api/client'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type {
   CreateItemRequest,
@@ -24,6 +28,7 @@ import type {
   ItemResponse,
   UpdateItemRequest,
 } from '@/types/api/items'
+import type { TableColumn } from '@/types/display'
 import { parseNullableNumber } from '@/utils/formatters'
 import { RARITY_ORDER } from '@/utils/items'
 import { cleanValue, type JsonSchema } from './value-form/schemaUtils'
@@ -87,7 +92,7 @@ const iconUrl = ref<string | null>(null)
 const stagedIcon = ref<File | null>(null)
 const stagedIconUrl = ref<string | null>(null)
 
-const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: r }))
+const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
 
 const typeOptions = computed(() => [
   { value: '', label: 'All types' },
@@ -355,43 +360,85 @@ async function submit() {
   }
 }
 
-const actionBusy = ref<Record<string, boolean>>({})
+const FLAGS: { key: 'tradeable' | 'welcomeGrant' | 'missionPoolable' | 'stackable'; label: string }[] = [
+  { key: 'tradeable', label: 'Tradeable' },
+  { key: 'welcomeGrant', label: 'Welcome grant' },
+  { key: 'missionPoolable', label: 'Mission reward' },
+  { key: 'stackable', label: 'Stackable' },
+]
+const FORM_SWITCHES: { key: 'tradeable' | 'visible' | 'stackable' | 'welcomeGrant' | 'missionPoolable'; label: string }[] = [
+  { key: 'tradeable', label: 'Tradeable' },
+  { key: 'visible', label: 'Visible' },
+  { key: 'stackable', label: 'Stackable' },
+  { key: 'welcomeGrant', label: 'Grant to Every New Player' },
+  { key: 'missionPoolable', label: 'Eligible Mission Reward' },
+]
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name', primary: true },
+  { key: 'type', label: 'Type', width: '200px' },
+  { key: 'rarity', label: 'Rarity', width: '130px' },
+  { key: 'flags', label: 'Flags', width: '300px' },
+  { key: 'status', label: 'Status', width: '120px' },
+  { key: 'actions', label: '', align: 'right', width: '250px', noLink: true },
+]
 
-async function withBusy(id: string, fn: () => Promise<void>) {
-  actionBusy.value[id] = true
+const { confirmModal, ask } = useConfirmAction()
+
+function statusOf(item: ItemResponse): string {
+  if (!item.active) return 'Inactive'
+  if (item.deprecated) return 'Deprecated'
+  return item.visible ? 'Active' : 'Hidden'
+}
+
+const rows = computed<Record<string, unknown>[]>(() =>
+  visibleItems.value.map((item) => ({
+    id: item.id,
+    item,
+    name: item.name,
+    type: itemTypeStore.typeLabel(item.typeKey),
+    rarity: item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1),
+    flags: FLAGS.filter((flag) => item[flag.key]).map((flag) => flag.label).join(', ') || '-',
+    status: statusOf(item),
+  })),
+)
+
+function itemOf(row: Record<string, unknown>): ItemResponse {
+  return row.item as ItemResponse
+}
+
+function askDeprecate(item: ItemResponse) {
+  ask({
+    title: 'Deprecate Item',
+    message: `Deprecate "${item.name}"? It cannot be undone, and every copy players own is marked vintage.`,
+    confirmLabel: 'Deprecate',
+    destructive: true,
+    run: async () => applyUpdatedItem(await deprecateItem(item.id)),
+  })
+}
+
+function askDelete(item: ItemResponse) {
+  ask({
+    title: 'Delete Item',
+    message: `Delete "${item.name}"? It becomes inactive and can be reactivated.`,
+    confirmLabel: 'Delete',
+    destructive: true,
+    run: async () => {
+      const updated = await setItemActive(item.id, false)
+      if (includeInactive.value) applyUpdatedItem(updated)
+      else items.value = items.value.filter((i) => i.id !== item.id)
+    },
+  })
+}
+
+const reactivating = ref<string | null>(null)
+
+async function reactivate(item: ItemResponse) {
+  reactivating.value = item.id
   try {
-    await fn()
-  } finally {
-    delete actionBusy.value[id]
-  }
-}
-
-async function handleDeprecate(item: ItemResponse) {
-  if (item.deprecated) return
-  if (
-    !confirm(
-      `Deprecate "${item.name}"? This is permanent and irreversible, and stamps a "vintage" modifier on every copy players already own. There is no un-deprecate.`,
-    )
-  )
-    return
-  await withBusy(item.id, async () => {
-    applyUpdatedItem(await deprecateItem(item.id))
-  })
-}
-
-async function handleDelete(item: ItemResponse) {
-  if (!confirm(`Delete "${item.name}"? This deactivates the item (reversible).`)) return
-  await withBusy(item.id, async () => {
-    const updated = await setItemActive(item.id, false)
-    if (includeInactive.value) applyUpdatedItem(updated)
-    else items.value = items.value.filter((i) => i.id !== item.id)
-  })
-}
-
-async function handleReactivate(item: ItemResponse) {
-  await withBusy(item.id, async () => {
     applyUpdatedItem(await setItemActive(item.id, true))
-  })
+  } finally {
+    reactivating.value = null
+  }
 }
 
 function onIconsExported(updated: ItemResponse[]) {
@@ -413,197 +460,80 @@ onMounted(async () => {
 
 <template>
   <div class="items-mgmt">
-    <header class="items-mgmt__bar">
-      <BaseSelect v-model="typeFilter" :options="typeOptions" />
-      <label class="items-mgmt__check">
-        <input v-model="includeInactive" type="checkbox" /> Include inactive
-      </label>
-      <BaseButton size="sm" @click="iconExportOpen = true">Export icons</BaseButton>
-      <BaseButton variant="primary" size="sm" @click="openCreate">New item</BaseButton>
-    </header>
+    <div class="items-mgmt__bar">
+      <BaseSelect v-model="typeFilter" class="items-mgmt__type" :options="typeOptions" />
+      <BaseSwitch v-model="includeInactive" label="Include Inactive" />
+      <span class="items-mgmt__right">
+        <BaseButton @click="iconExportOpen = true">Export Icons</BaseButton>
+        <BaseButton variant="primary" @click="openCreate">New Item</BaseButton>
+      </span>
+    </div>
 
-    <ItemIconExportModal
-      :open="iconExportOpen"
-      @close="iconExportOpen = false"
-      @updated="onIconsExported"
-    />
-
-    <AdminTable :items="visibleItems" :loading="loading" empty-message="No items">
-      <template #head>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Rarity</th>
-        <th>Flags</th>
-        <th>Status</th>
-        <th class="right">Actions</th>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading && !items.length" :refreshing="loading && items.length > 0"
+      :loading-rows="20" :row-height="56" row-key="id" empty-message="No items">
+      <template #cell-name="{ row }">
+        <span class="items-mgmt__name">{{ row.name }}</span>
       </template>
-
-      <template #default="{ item }: { item: ItemResponse }">
-        <td>
-          <span class="items-mgmt__name">{{ item.name }}</span>
-        </td>
-        <td class="muted">{{ item.typeKey }}</td>
-        <td>{{ item.rarity }}</td>
-        <td>
-          <div class="items-mgmt__flags">
-            <span v-if="item.tradeable" class="items-mgmt__flag" title="Tradeable">Trade</span>
-            <span v-if="item.welcomeGrant" class="items-mgmt__flag" title="Granted to new players">Welcome</span>
-            <span v-if="item.missionPoolable" class="items-mgmt__flag" title="Eligible mission reward">Mission</span>
-            <span v-if="item.stackable" class="items-mgmt__flag" title="Stackable">Stack</span>
-          </div>
-        </td>
-        <td>
-          <span v-if="!item.active">Inactive</span>
-          <span v-else-if="item.deprecated">Deprecated</span>
-          <span v-else-if="!item.visible">Hidden</span>
-          <span v-else>Active</span>
-        </td>
-        <td class="right">
-          <div class="items-mgmt__actions">
-            <BaseButton size="sm" :disabled="actionBusy[item.id]" @click="openEdit(item)">Edit</BaseButton>
-            <BaseButton
-              v-if="item.active && !item.deprecated"
-              size="sm"
-              :loading="actionBusy[item.id]"
-              @click="handleDeprecate(item)"
-            >Deprecate</BaseButton>
-            <BaseButton
-              v-if="item.active"
-              size="sm"
-              variant="destructive"
-              :loading="actionBusy[item.id]"
-              @click="handleDelete(item)"
-            >Delete</BaseButton>
-            <BaseButton
-              v-else
-              size="sm"
-              variant="primary"
-              :loading="actionBusy[item.id]"
-              @click="handleReactivate(item)"
-            >Reactivate</BaseButton>
-          </div>
-        </td>
+      <template #cell-actions="{ row }">
+        <span class="items-mgmt__actions">
+          <BaseButton size="sm" @click="openEdit(itemOf(row))">Edit</BaseButton>
+          <BaseButton v-if="itemOf(row).active && !itemOf(row).deprecated" size="sm" @click="askDeprecate(itemOf(row))">Deprecate</BaseButton>
+          <BaseButton v-if="itemOf(row).active" size="sm" variant="destructive" @click="askDelete(itemOf(row))">Delete</BaseButton>
+          <BaseButton v-else size="sm" variant="primary" :loading="reactivating === row.id" @click="reactivate(itemOf(row))">Reactivate</BaseButton>
+        </span>
       </template>
-    </AdminTable>
+    </DataTable>
 
-    <BaseModal :open="modalOpen" :title="editing ? 'Edit item' : 'New item'" max-width="680px" @close="closeModal">
-      <div class="items-mgmt__form">
-        <BaseSelect
-          v-if="!editing"
-          v-model="form.typeId"
-          :options="typeOptionsRequired"
-          label="Type"
-          searchable
-        />
-        <div v-else class="items-mgmt__readonly">
+    <ItemIconExportModal :open="iconExportOpen" @close="iconExportOpen = false" @updated="onIconsExported" />
+
+    <BaseModal :open="modalOpen" :title="editing ? 'Edit Item' : 'New Item'" max-width="680px" @close="closeModal">
+      <form class="items-mgmt__form" @submit.prevent="submit">
+        <BaseSelect v-if="!editing" v-model="form.typeId" :options="typeOptionsRequired" label="Type" searchable />
+        <span v-else class="items-mgmt__readonly">
           <span class="field-label">Type</span>
-          <span class="items-mgmt__readonly-value">{{ selectedTypeLabel }}</span>
-        </div>
+          <span>{{ selectedTypeLabel }}</span>
+        </span>
 
         <BaseInput v-model="form.name" label="Name" :error="nameError ?? undefined" />
+        <BaseTextarea v-model="form.description" label="Description" :rows="2" />
+        <BaseSelect :model-value="form.rarity" :options="rarityOptions" label="Rarity"
+          @update:model-value="(v: string) => form.rarity = v as ItemRarity" />
 
-        <div class="items-mgmt__field">
-          <label class="field-label">Description</label>
-          <textarea
-            v-model="form.description"
-            class="items-mgmt__textarea"
-            rows="2"
-            placeholder="Optional"
-          />
-        </div>
-
-        <BaseSelect
-          :model-value="form.rarity"
-          :options="rarityOptions"
-          label="Rarity"
-          @update:model-value="(v: string) => form.rarity = v as ItemRarity"
-        />
-
-        <ImageUploader
-          label="Icon"
-          aspect-ratio="1 / 1"
-          hint="PNG, WebP, etc. Stored on upload."
-          :image-url="iconPreview"
-          :upload-handler="onIconUpload"
-          :remove-handler="onIconRemove"
-        />
+        <ImageUploader label="Icon" aspect-ratio="1 / 1" :image-url="iconPreview" :upload-handler="onIconUpload"
+          :remove-handler="onIconRemove" />
 
         <div v-if="selectedTypeSchema" class="items-mgmt__value">
-          <label class="field-label">Value</label>
-          <SchemaValueForm
-            :key="form.typeId"
-            v-model="valueModel"
-            :schema="selectedTypeSchema"
-            :value-error="valueError"
-          />
+          <span class="field-label">Value</span>
+          <SchemaValueForm :key="form.typeId" v-model="valueModel" :schema="selectedTypeSchema" :value-error="valueError" />
         </div>
 
-        <div class="items-mgmt__check-grid">
-          <label class="items-mgmt__check">
-            <input v-model="form.tradeable" type="checkbox" /> Tradeable
-          </label>
-          <label class="items-mgmt__check">
-            <input v-model="form.visible" type="checkbox" /> Visible
-          </label>
-          <label class="items-mgmt__check">
-            <input v-model="form.stackable" type="checkbox" /> Stackable
-          </label>
-          <label class="items-mgmt__check">
-            <input v-model="form.welcomeGrant" type="checkbox" /> Grant to every new player
-          </label>
-          <label class="items-mgmt__check">
-            <input v-model="form.missionPoolable" type="checkbox" /> Eligible mission reward
-          </label>
-          <label v-if="!editing" class="items-mgmt__check">
-            <input v-model="form.active" type="checkbox" /> Active
-          </label>
-          <label v-else class="items-mgmt__check items-mgmt__check--toggle">
-            <input
-              type="checkbox"
-              :checked="editing.active"
-              :disabled="activeToggling"
-              @change="toggleActive"
-            />
-            Active <span class="items-mgmt__toggle-note">(applies immediately)</span>
-          </label>
+        <div class="items-mgmt__switches">
+          <BaseSwitch v-for="toggle in FORM_SWITCHES" :key="toggle.key" v-model="form[toggle.key]" :label="toggle.label" />
+          <BaseSwitch v-if="!editing" v-model="form.active" label="Active" />
+          <BaseSwitch v-else :model-value="editing.active" label="Active, Saves at Once" :disabled="activeToggling"
+            @update:model-value="toggleActive" />
         </div>
 
-        <div class="items-mgmt__num-grid">
-          <BaseInput
-            :model-value="form.worth == null ? '' : String(form.worth)"
-            label="Worth (optional)"
-            type="number"
-            step="any"
-            placeholder="e.g. 100"
-            @update:model-value="(v) => form.worth = parseNullableNumber(String(v))"
-          />
-          <BaseInput
-            :model-value="form.unlockLevel == null ? '' : String(form.unlockLevel)"
-            label="Unlock level (optional)"
-            type="number"
-            step="1"
-            placeholder="e.g. 50"
-            @update:model-value="(v) => onUnlockLevelInput(String(v))"
-          />
+        <div class="items-mgmt__numbers">
+          <BaseInput :model-value="form.worth == null ? '' : String(form.worth)" label="Worth" type="number" step="any"
+            @update:model-value="(v) => form.worth = parseNullableNumber(String(v))" />
+          <BaseInput :model-value="form.unlockLevel == null ? '' : String(form.unlockLevel)" label="Unlock Level" type="number" step="1"
+            @update:model-value="(v) => onUnlockLevelInput(String(v))" />
         </div>
 
-        <BaseInput
-          :model-value="form.requirement ?? ''"
-          label="Requirement (optional)"
-          placeholder="e.g. Reach level 50"
-          @update:model-value="(v) => form.requirement = String(v).trim() || null"
-        />
+        <BaseInput :model-value="form.requirement ?? ''" label="Requirement" placeholder="Reach level 50"
+          @update:model-value="(v) => form.requirement = String(v).trim() || null" />
 
-        <p v-if="formError" class="items-mgmt__form-error">{{ formError }}</p>
-      </div>
+        <p class="caption items-mgmt__form-error" role="alert">{{ formError }}</p>
+      </form>
 
       <template #footer>
-        <BaseButton size="sm" @click="closeModal">Cancel</BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="submitting" @click="submit">
-          {{ editing ? 'Save' : 'Create' }}
-        </BaseButton>
+        <BaseButton @click="closeModal">Cancel</BaseButton>
+        <BaseButton variant="primary" :loading="submitting" @click="submit">{{ editing ? 'Save' : 'Create' }}</BaseButton>
       </template>
     </BaseModal>
+
+    <ConfirmModal v-bind="confirmModal" />
   </div>
 </template>
 
@@ -612,63 +542,34 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 .items-mgmt__bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
-}
-
-.items-mgmt__check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.items-mgmt__check-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-sm) var(--space-md);
 }
 
-.items-mgmt__toggle-note {
-  color: var(--text-tertiary);
+.items-mgmt__type {
+  width: 240px;
 }
 
-.items-mgmt__num-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-md);
+.items-mgmt__right {
+  display: inline-flex;
+  gap: var(--space-sm);
+  margin-left: auto;
 }
 
 .items-mgmt__name {
-  font-weight: 500;
-}
-
-.items-mgmt__flags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.items-mgmt__flag {
-  padding: 1px var(--space-xs);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-tertiary);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .items-mgmt__actions {
   display: inline-flex;
   gap: var(--space-xs);
-  justify-content: flex-end;
 }
 
 .items-mgmt__form {
@@ -677,53 +578,26 @@ onMounted(async () => {
   gap: var(--space-md);
 }
 
-.items-mgmt__field,
+.items-mgmt__readonly,
 .items-mgmt__value {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.items-mgmt__textarea {
-  width: 100%;
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  resize: vertical;
-  outline: none;
+.items-mgmt__switches,
+.items-mgmt__numbers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm) var(--space-lg);
 }
 
-.items-mgmt__textarea:focus {
-  border-color: var(--accent);
-}
-
-.items-mgmt__readonly {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.items-mgmt__readonly-value {
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
+.items-mgmt__form :deep(.image-uploader) {
+  max-width: 200px;
 }
 
 .items-mgmt__form-error {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--error);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border-radius: var(--radius-input);
+  min-height: 1lh;
   color: var(--error);
-  font-size: var(--text-caption);
 }
 </style>

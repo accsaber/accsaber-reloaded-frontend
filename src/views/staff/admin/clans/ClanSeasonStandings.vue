@@ -1,30 +1,43 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
-import AdminTable from '@/components/admin/AdminTable.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { ClanStandingResponse } from '@/types/api/clans'
+import type { TableColumn } from '@/types/display'
 import { formatSignedStanding, formatStanding } from '@/utils/clans'
-import { ref, watch } from 'vue'
+import { getRankClass } from '@/utils/ranking'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{ seasonId: string }>()
 
-const rows = ref<ClanStandingResponse[]>([])
+const PAGE_SIZE = 20
+const COLUMNS: TableColumn[] = [
+  { key: 'rank', label: 'Rank', width: '80px' },
+  { key: 'clan', label: 'Clan', primary: true },
+  { key: 'standing', label: 'Standing', align: 'right', mono: true, width: '130px', format: (v) => formatStanding(v as number) },
+  { key: 'baseStanding', label: 'Base', align: 'right', mono: true, width: '130px', format: (v) => formatStanding(v as number) },
+  { key: 'earned', label: 'Earned', align: 'right', mono: true, width: '130px', format: (v) => formatSignedStanding(v as number) },
+]
+
+const standings = ref<ClanStandingResponse[]>([])
 const page = ref(1)
 const totalPages = ref(0)
 const loading = ref(true)
-const error = ref<string | null>(null)
+const error = ref('')
+
+const rows = computed<Record<string, unknown>[]>(() => standings.value.map((row) => ({ ...row, id: row.clan.id })))
 
 async function load() {
   loading.value = true
-  error.value = null
+  error.value = ''
   try {
     const { getClanSeasonStandings } = await import('@/api/clans')
-    const res = await getClanSeasonStandings(props.seasonId, { page: page.value - 1, size: 20 })
-    rows.value = res.content
+    const res = await getClanSeasonStandings(props.seasonId, { page: page.value - 1, size: PAGE_SIZE })
+    standings.value = res.content
     totalPages.value = res.totalPages
   } catch (err) {
-    error.value = parseApiError(err, 'Could not load the standings.').message
+    error.value = parseApiError(err, 'Could not load the standings').message
   } finally {
     loading.value = false
   }
@@ -35,24 +48,20 @@ watch(page, load, { immediate: true })
 
 <template>
   <div class="standings">
-    <p v-if="error" class="standings__error" role="alert">{{ error }}</p>
-    <AdminTable :items="rows" :loading="loading" :loading-rows="4" empty-message="No clans ranked yet">
-      <template #head>
-        <th style="width: 60px">Rank</th>
-        <th>Clan</th>
-        <th class="right" style="width: 110px">Standing</th>
-        <th class="right" style="width: 110px">Base</th>
-        <th class="right" style="width: 110px">Earned</th>
+    <p v-if="error" class="caption standings__error" role="alert">{{ error }}</p>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading && !standings.length" :refreshing="loading && standings.length > 0"
+      :loading-rows="4" row-key="id" empty-message="No clans ranked yet">
+      <template #cell-rank="{ value }">
+        <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
       </template>
-      <template #default="{ item: row }">
-        <td class="mono">#{{ row.rank }}</td>
-        <td><span class="standings__clan"><ClanTag :clan="row.clan" size="sm" /> {{ row.clan.name }}</span></td>
-        <td class="mono right">{{ formatStanding(row.standing) }}</td>
-        <td class="mono right">{{ formatStanding(row.baseStanding) }}</td>
-        <td class="mono right">{{ formatSignedStanding(row.earned) }}</td>
+      <template #cell-clan="{ row }">
+        <span class="standings__clan">
+          <ClanTag :clan="(row.clan as ClanStandingResponse['clan'])" size="sm" />
+          {{ (row.clan as ClanStandingResponse['clan']).name }}
+        </span>
       </template>
-    </AdminTable>
-    <PaginationControls :page="page" :total-pages="totalPages" @update:page="(p: number) => { page = p }" />
+    </DataTable>
+    <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="page = $event" />
   </div>
 </template>
 
@@ -61,17 +70,16 @@ watch(page, load, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  min-width: 0;
 }
 
 .standings__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 
 .standings__clan {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 </style>

@@ -3,6 +3,7 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import type { EventRequest, EventResponse } from '@/types/api/events'
 import { localInputToIso, slugify } from '@/utils/events'
 import { computed, ref, watch } from 'vue'
@@ -60,17 +61,17 @@ watch(
 
 function buildPayload(): EventRequest | null {
   if (!title.value.trim()) {
-    formError.value = 'Title is required.'
+    formError.value = 'A title is needed'
     return null
   }
   const startIso = localInputToIso(startsAt.value)
   const endIso = localInputToIso(endsAt.value)
   if (!startIso || !endIso) {
-    formError.value = 'Start and end dates are required.'
+    formError.value = 'Set both the start and the end'
     return null
   }
   if (new Date(endIso).getTime() <= new Date(startIso).getTime()) {
-    formError.value = 'End must be after start.'
+    formError.value = 'The end has to be after the start'
     return null
   }
   const payload: EventRequest = {
@@ -96,7 +97,7 @@ async function submit() {
     const created = await createEvent(payload)
     emit('created', created)
   } catch (e) {
-    const parsed = parseApiError(e, 'Failed to create the event.')
+    const parsed = parseApiError(e, 'Could not create the event')
     const slugField = parsed.fieldErrors.find((f) => f.field === 'slug')
     if (slugField) {
       slugError.value = slugField.message
@@ -112,38 +113,19 @@ async function submit() {
 </script>
 
 <template>
-  <BaseModal :open="open" title="New event" max-width="560px" @close="emit('close')">
-    <div class="event-create">
-      <BaseInput v-model="title" label="Title" placeholder="Event name" />
-
-      <div class="event-create__field">
-        <BaseInput :model-value="slug" label="Slug" placeholder="auto from title" :error="slugError"
-          @update:model-value="onSlugInput" />
-        <p class="event-create__hint">
-          Public link <code class="event-create__code">/events/{{ slugPreview || '…' }}</code>
-        </p>
-      </div>
-
-      <div class="event-create__field">
-        <label class="field-label">Description (optional)</label>
-        <textarea v-model="description" class="event-create__textarea" rows="3"
-          placeholder="Short summary shown on the event card" />
-      </div>
-
+  <BaseModal :open="open" title="New Event" max-width="560px" @close="emit('close')">
+    <form class="event-create" @submit.prevent="submit">
+      <BaseInput v-model="title" label="Title" />
+      <BaseInput :model-value="slug" label="Slug" :placeholder="slugPreview || 'Made from the title'" :error="slugError"
+        @update:model-value="onSlugInput" />
+      <BaseTextarea v-model="description" label="Description" :rows="3" />
       <div class="event-create__row">
-        <BaseInput v-model="startsAt" type="datetime-local" label="Starts at" />
-        <BaseInput v-model="endsAt" type="datetime-local" label="Ends at" />
+        <BaseInput v-model="startsAt" type="datetime-local" label="Starts" />
+        <BaseInput v-model="endsAt" type="datetime-local" label="Ends" />
       </div>
-
-      <BaseInput v-model="bonusXp" type="number" min="0" step="1" label="Completion bonus XP (optional)"
-        placeholder="0" />
-
-      <p class="event-create__hint">
-        Create the event first, then upload images and set bonus items in the editor.
-      </p>
-
-      <p v-if="formError" class="event-create__error">{{ formError }}</p>
-    </div>
+      <BaseInput v-model="bonusXp" type="number" min="0" step="1" label="Completion Bonus XP" placeholder="0" />
+      <p class="caption event-create__error" role="alert">{{ formError }}</p>
+    </form>
 
     <template #footer>
       <BaseButton @click="emit('close')">Cancel</BaseButton>
@@ -159,57 +141,14 @@ async function submit() {
   gap: var(--space-md);
 }
 
-.event-create__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.event-create__textarea {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  background: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  resize: vertical;
-  outline: none;
-  transition: border-color 120ms ease-in, box-shadow 120ms ease-in;
-}
-
-.event-create__textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
 .event-create__row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
 }
 
-@media (max-width: 520px) {
-  .event-create__row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.event-create__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.event-create__code {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
 .event-create__error {
-  margin: 0;
-  font-size: var(--text-caption);
+  min-height: 1lh;
   color: var(--error);
 }
 </style>

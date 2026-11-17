@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ApiError, parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
@@ -172,13 +173,14 @@ onMounted(load)
 
 <template>
   <div class="detail">
-    <BaseButton size="sm" class="detail__back" @click="emit('back')">Back to clans</BaseButton>
+    <IconButton class="detail__back" icon="back" label="Back to clans" @click="emit('back')" />
 
     <p v-if="error" class="detail__error" role="alert">{{ error }}</p>
 
     <div v-if="loading" class="detail__skeleton">
-      <SkeletonLoader variant="avatar" />
-      <SkeletonLoader v-for="i in 6" :key="i" variant="table-row" />
+      <SkeletonLoader class="placeholder" height="48px" />
+      <SkeletonLoader class="placeholder" height="120px" />
+      <SkeletonLoader class="placeholder" height="400px" />
     </div>
 
     <template v-else-if="clan && data">
@@ -189,8 +191,8 @@ onMounted(load)
           <h2 class="section-title">{{ clan.clan.name }}</h2>
         </div>
         <div class="detail__actions">
-          <BaseButton size="sm" @click="moderateOpen = true">Moderate</BaseButton>
-          <BaseButton size="sm" variant="destructive" @click="openDisband">Disband</BaseButton>
+          <BaseButton @click="moderateOpen = true">Moderate</BaseButton>
+          <BaseButton variant="destructive" @click="openDisband">Disband</BaseButton>
         </div>
       </header>
 
@@ -200,7 +202,7 @@ onMounted(load)
         <div><dt>Standing</dt><dd class="mono">{{ formatStanding(clan.standing) }}</dd></div>
         <div><dt>Founder</dt><dd><UserChip v-if="clan.founder" :user="clan.founder" link hide-clan /><template v-else>-</template></dd></div>
         <div><dt>Created</dt><dd>{{ formatFullDate(clan.createdAt) }}</dd></div>
-        <div><dt>Join requests</dt><dd>{{ clan.acceptingRequests ? 'Open' : 'Closed' }}</dd></div>
+        <div><dt>Join Requests</dt><dd>{{ clan.acceptingRequests ? 'Open' : 'Closed' }}</dd></div>
         <div class="detail__wide"><dt>Description</dt><dd>{{ clan.description || '-' }}</dd></div>
       </dl>
 
@@ -221,7 +223,7 @@ onMounted(load)
       <ConfirmModal
         :open="disbandOpen"
         :title="`Disband ${clan.clan.name}`"
-        message="This ends every membership, alliance, mission and war the clan has. Every member gets a notification with your reason."
+        message="This ends every membership, alliance, mission and war the clan has. Every member is sent your reason."
         confirm-label="Disband"
         destructive
         :typed-confirmation="clan.clan.tag"
@@ -232,7 +234,7 @@ onMounted(load)
         @close="disbandOpen = false"
       >
         <div class="detail__reason">
-          <BaseInput v-model="disbandReason" label="Reason" placeholder="Sent to every member" maxlength="500" />
+          <BaseInput v-model="disbandReason" label="Reason" maxlength="500" />
         </div>
       </ConfirmModal>
     </template>
@@ -252,7 +254,6 @@ onMounted(load)
 
 .detail__error {
   margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 
@@ -286,15 +287,13 @@ onMounted(load)
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-md);
   margin: 0;
-  padding: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
 .detail__overview dt {
   font-size: var(--text-caption);
-  text-transform: uppercase;
   color: var(--text-secondary);
 }
 

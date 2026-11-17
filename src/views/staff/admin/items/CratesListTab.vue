@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
-import {
-  getAdminCrateContents,
-  getAdminCrates,
-} from '@/api/admin/crates'
+import { getAdminCrates } from '@/api/admin/crates'
 import { createItem } from '@/api/admin/items'
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { CreateItemRequest, ItemRarity, ItemResponse } from '@/types/api/items'
+import type { TableColumn } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
 import { RARITY_ORDER } from '@/utils/items'
 import { computed, onMounted, ref } from 'vue'
@@ -21,8 +19,7 @@ const itemTypeStore = useItemTypeStore()
 const router = useRouter()
 
 const crates = ref<ItemResponse[]>([])
-const rewardCounts = ref<Record<string, number>>({})
-const loading = ref(false)
+const loading = ref(true)
 
 const modalOpen = ref(false)
 const submitting = ref(false)
@@ -32,7 +29,17 @@ const form = ref<{ name: string; rarity: ItemRarity }>({
 })
 const createError = ref<string | null>(null)
 
-const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: r }))
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+}
+
+const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: titleCase(r) }))
+const COLUMNS: TableColumn[] = [
+  { key: 'name', label: 'Name', primary: true },
+  { key: 'rarity', label: 'Rarity', width: '160px' },
+  { key: 'status', label: 'Status', width: '140px' },
+  { key: 'createdAt', label: 'Created', width: '160px', format: (v) => formatRelativeDate(v as string) },
+]
 
 const crateTypeId = computed(() => itemTypeStore.byKey.get('crate')?.id ?? null)
 
@@ -42,21 +49,24 @@ function statusOf(c: ItemResponse): 'Live' | 'Draft' | 'Deprecated' {
   return 'Live'
 }
 
+const rows = computed<Record<string, unknown>[]>(() =>
+  crates.value.map((crate) => ({
+    id: crate.id,
+    name: crate.name || 'Untitled Crate',
+    rarity: titleCase(crate.rarity),
+    rarityKey: crate.rarity,
+    status: statusOf(crate),
+    createdAt: crate.createdAt,
+  })),
+)
+
+function crateRoute(row: Record<string, unknown>) {
+  return { name: 'admin-crate-editor', params: { crateItemId: row.id as string } }
+}
+
 async function fetchCrates() {
-  loading.value = true
   try {
     crates.value = await getAdminCrates()
-    const entries = await Promise.all(
-      crates.value.map(async (c) => {
-        try {
-          const contents = await getAdminCrateContents(c.id)
-          return [c.id, contents.length] as const
-        } catch {
-          return [c.id, 0] as const
-        }
-      }),
-    )
-    rewardCounts.value = Object.fromEntries(entries)
   } finally {
     loading.value = false
   }
@@ -70,11 +80,11 @@ function openCreate() {
 
 async function submitCreate() {
   if (!crateTypeId.value) {
-    createError.value = 'Crate item type not found'
+    createError.value = 'There is no crate item type'
     return
   }
   if (!form.value.name.trim()) {
-    createError.value = 'Name is required'
+    createError.value = 'A name is needed'
     return
   }
   submitting.value = true
@@ -89,16 +99,12 @@ async function submitCreate() {
     }
     const created = await createItem(req)
     modalOpen.value = false
-    router.push({ name: 'admin-crate-editor', params: { crateItemId: created.id } })
+    void router.push(crateRoute({ id: created.id }))
   } catch (e) {
-    createError.value = parseApiError(e, 'Failed to create crate').message
+    createError.value = parseApiError(e, 'Could not create the crate').message
   } finally {
     submitting.value = false
   }
-}
-
-function openCrate(c: ItemResponse) {
-  router.push({ name: 'admin-crate-editor', params: { crateItemId: c.id } })
 }
 
 onMounted(async () => {
@@ -109,59 +115,31 @@ onMounted(async () => {
 
 <template>
   <div class="crates-list">
-    <header class="crates-list__bar">
-      <div class="section-title">All crates</div>
-      <BaseButton variant="primary" size="sm" :disabled="!crateTypeId" @click="openCreate">
-        + New Crate
-      </BaseButton>
-    </header>
+    <BaseButton class="crates-list__new" variant="primary" :disabled="!crateTypeId" @click="openCreate">New Crate</BaseButton>
 
-    <AdminTable :items="crates" :loading="loading" empty-message="No crates yet. Create one to get started.">
-      <template #head>
-        <th>Name</th>
-        <th>Rarity</th>
-        <th class="right">Rewards</th>
-        <th>Status</th>
-        <th>Created</th>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading" :loading-rows="8" :row-height="56" :row-to="crateRoute" row-key="id"
+      empty-message="No crates yet">
+      <template #cell-name="{ row }">
+        <span class="crates-list__name">{{ row.name }}</span>
       </template>
-
-      <template #default="{ item }: { item: ItemResponse }">
-        <td>
-          <button class="crates-list__row-name" @click="openCrate(item)">
-            {{ item.name || 'Untitled crate' }}
-          </button>
-        </td>
-        <td>
-          <span class="crates-list__rarity" :class="`rarity--${item.rarity}`">
-            {{ item.rarity }}
-          </span>
-        </td>
-        <td class="right mono">{{ rewardCounts[item.id] ?? '-' }}</td>
-        <td>
-          <span class="crates-list__status" :class="`crates-list__status--${statusOf(item).toLowerCase()}`">
-            {{ statusOf(item) }}
-          </span>
-        </td>
-        <td class="muted">{{ formatRelativeDate(item.createdAt) }}</td>
+      <template #cell-rarity="{ row }">
+        <span class="crates-list__rarity" :class="`rarity--${row.rarityKey}`">{{ row.rarity }}</span>
       </template>
-    </AdminTable>
+      <template #cell-status="{ row }">
+        <span :class="`crates-list__status--${(row.status as string).toLowerCase()}`">{{ row.status }}</span>
+      </template>
+    </DataTable>
 
-    <BaseModal :open="modalOpen" title="New crate" max-width="480px" @close="modalOpen = false">
-      <div class="crates-list__form">
-        <BaseInput v-model="form.name" label="Name" placeholder="e.g. Season 1 Crate" />
+    <BaseModal :open="modalOpen" title="New Crate" max-width="480px" @close="modalOpen = false">
+      <form class="crates-list__form" @submit.prevent="submitCreate">
+        <BaseInput v-model="form.name" label="Name" />
         <BaseSelect :model-value="form.rarity" :options="rarityOptions" label="Rarity"
           @update:model-value="(v: string) => (form.rarity = v as ItemRarity)" />
-        <p class="crates-list__hint">
-          The crate will be created as a draft (not visible to players). You can add rewards
-          on the next screen.
-        </p>
-        <p v-if="createError" class="crates-list__error">{{ createError }}</p>
-      </div>
+        <p class="caption crates-list__error" role="alert">{{ createError }}</p>
+      </form>
       <template #footer>
-        <BaseButton size="sm" @click="modalOpen = false">Cancel</BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="submitting" @click="submitCreate">
-          Create
-        </BaseButton>
+        <BaseButton @click="modalOpen = false">Cancel</BaseButton>
+        <BaseButton variant="primary" :loading="submitting" @click="submitCreate">Create Draft</BaseButton>
       </template>
     </BaseModal>
   </div>
@@ -172,60 +150,32 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
-.crates-list__bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
+.crates-list__new {
+  align-self: flex-end;
 }
 
-.crates-list__row-name {
-  background: transparent;
-  border: none;
-  padding: 0;
+.crates-list__name {
+  font-weight: 600;
   color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-}
-
-.crates-list__row-name:hover {
-  color: var(--accent);
-  text-decoration: underline;
 }
 
 .crates-list__rarity {
-  text-transform: capitalize;
-  color: var(--rarity-color, var(--text-primary));
-  font-weight: 500;
-}
-
-.crates-list__status {
-  display: inline-block;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  border: 1px solid var(--status-color, var(--bg-overlay));
-  color: var(--status-color, var(--text-secondary));
+  color: var(--rarity-color);
 }
 
 .crates-list__status--live {
-  --status-color: var(--success);
+  color: var(--success);
 }
 
 .crates-list__status--draft {
-  --status-color: var(--warning);
+  color: var(--text-secondary);
 }
 
 .crates-list__status--deprecated {
-  --status-color: var(--text-tertiary);
+  color: var(--warning);
 }
 
 .crates-list__form {
@@ -234,16 +184,8 @@ onMounted(async () => {
   gap: var(--space-md);
 }
 
-.crates-list__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
 .crates-list__error {
-  margin: 0;
-  font-size: var(--text-caption);
+  min-height: 1lh;
   color: var(--error);
 }
 </style>

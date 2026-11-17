@@ -244,8 +244,6 @@ const filterColumnType = (i: number) => {
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   margin-bottom: var(--space-xs);
 }
 
@@ -305,7 +303,7 @@ const filterColumnType = (i: number) => {
   border-radius: var(--radius-btn);
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: color 100ms, border-color 100ms;
+  transition: color var(--dur-fast) var(--ease-out), border-color 100ms;
 }
 .qb__remove-btn:hover {
   color: var(--error);

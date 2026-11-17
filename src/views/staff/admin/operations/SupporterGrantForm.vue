@@ -78,12 +78,12 @@ function submit() {
       <BaseSelect v-model="typeKey" label="Type" :options="typeOptions" />
     </div>
     <div class="grant__row">
-      <BaseInput v-model="fromName" label="From name" placeholder="Optional" />
-      <BaseInput v-model="email" label="Email" placeholder="Optional" />
-      <BaseInput v-model="note" label="Note" placeholder="Optional" />
+      <BaseInput v-model="fromName" label="From Name" />
+      <BaseInput v-model="email" label="Email" />
+      <BaseInput v-model="note" label="Note" />
     </div>
     <BaseButton variant="primary" :loading="submitting" :disabled="!canSubmit" @click="submit">
-      Grant supporter
+      Grant Supporter
     </BaseButton>
   </div>
 </template>

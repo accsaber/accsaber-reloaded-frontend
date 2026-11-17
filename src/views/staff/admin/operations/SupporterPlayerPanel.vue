@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import AdminTable from '@/components/admin/AdminTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import ResourcePicker from '@/views/staff/admin/operations/ResourcePicker.vue'
 import SupporterTierIcon from '@/components/domain/SupporterTierIcon.vue'
 import type { KofiEventResponse, SupporterStateResponse } from '@/types/api/supporters'
 import { KOFI_CLAIM_SOURCE_DISPLAY, KOFI_EVENT_TYPE_DISPLAY } from '@/types/api/supporters'
+import type { TableColumn } from '@/types/display'
 import { formatCents, formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
 import type { ResourceSource } from './resourceSources'
@@ -22,7 +22,25 @@ const emit = defineEmits<{
   claim: [kofiTransactionId: string]
 }>()
 
+const COLUMNS: TableColumn[] = [
+  { key: 'type', label: 'Type', primary: true },
+  { key: 'amount', label: 'Amount', align: 'right', mono: true, width: '110px' },
+  { key: 'tierName', label: 'Tier', width: '130px', format: (v) => (v as string | null) || '-' },
+  { key: 'receivedAt', label: 'Received', width: '130px', format: (v) => formatRelativeDate(v as string) },
+  { key: 'claimedAt', label: 'Claimed', width: '130px', format: (v) => (v ? formatRelativeDate(v as string) : '-') },
+  { key: 'source', label: 'Source', width: '150px' },
+]
+
 const pickedEvent = ref<string | null>(null)
+
+const rows = computed<Record<string, unknown>[]>(() =>
+  props.events.map((event) => ({
+    ...event,
+    type: KOFI_EVENT_TYPE_DISPLAY[event.type],
+    amount: formatCents(event.amountCents, event.currency),
+    source: event.claimSource ? KOFI_CLAIM_SOURCE_DISPLAY[event.claimSource] : '-',
+  })),
+)
 
 const tierLabel = computed(() => props.account?.currentTierDisplayName ?? 'No active tier')
 
@@ -32,8 +50,8 @@ const stats = computed(() => {
   return [
     { label: 'Balance', value: formatCents(state.balanceCents) },
     { label: 'Lifetime', value: formatCents(state.lifetimeSupportedCents) },
-    { label: 'Tier started', value: state.tierStartedAt ? formatRelativeDate(state.tierStartedAt) : '-' },
-    { label: 'Last debit', value: state.lastDebitAt ? formatRelativeDate(state.lastDebitAt) : '-' },
+    { label: 'Tier Started', value: state.tierStartedAt ? formatRelativeDate(state.tierStartedAt) : '-' },
+    { label: 'Last Debit', value: state.lastDebitAt ? formatRelativeDate(state.lastDebitAt) : '-' },
   ]
 })
 
@@ -44,46 +62,30 @@ function claimPicked() {
 
 <template>
   <div class="panel">
-    <SkeletonLoader v-if="loading && !account" variant="text" />
-    <div v-else-if="account" class="panel__summary">
-      <span class="panel__tier">
-        <SupporterTierIcon :tier="account.currentTier" :size="16" />
-        {{ tierLabel }}
+    <div class="panel__summary">
+      <span class="panel__fact">
+        <span class="field-label">Tier</span>
+        <span class="panel__value">
+          <SupporterTierIcon v-if="account" :tier="account.currentTier" :size="16" />
+          {{ account ? tierLabel : '-' }}
+        </span>
       </span>
-      <span v-for="stat in stats" :key="stat.label" class="panel__stat">
-        <span class="panel__stat-label">{{ stat.label }}</span>
-        <span class="panel__stat-value">{{ stat.value }}</span>
+      <span v-for="stat in stats" :key="stat.label" class="panel__fact">
+        <span class="field-label">{{ stat.label }}</span>
+        <span class="panel__value">{{ stat.value }}</span>
       </span>
     </div>
 
     <div class="panel__claim">
       <ResourcePicker v-model="pickedEvent" :search="eventSource.search" :resolve="eventSource.resolve"
         :placeholder="eventSource.placeholder" />
-      <BaseButton size="sm" :loading="!!pickedEvent && claiming[pickedEvent]" :disabled="!pickedEvent"
-        @click="claimPicked">
-        Claim for this player
+      <BaseButton :loading="!!pickedEvent && claiming[pickedEvent]" :disabled="!pickedEvent" @click="claimPicked">
+        Claim for This Player
       </BaseButton>
     </div>
 
-    <AdminTable :items="events" :loading="loading" :loading-rows="4"
-      empty-message="No Ko-fi events on this account.">
-      <template #head>
-        <th style="width: 140px">Type</th>
-        <th class="right" style="width: 90px">Amount</th>
-        <th style="width: 110px">Tier</th>
-        <th class="mono" style="width: 110px">Received</th>
-        <th class="mono" style="width: 110px">Claimed</th>
-        <th style="width: 130px">Source</th>
-      </template>
-      <template #default="{ item }">
-        <td class="muted">{{ KOFI_EVENT_TYPE_DISPLAY[item.type] }}</td>
-        <td class="mono right">{{ formatCents(item.amountCents, item.currency) }}</td>
-        <td class="muted">{{ item.tierName || '-' }}</td>
-        <td class="mono muted">{{ formatRelativeDate(item.receivedAt) }}</td>
-        <td class="mono muted">{{ item.claimedAt ? formatRelativeDate(item.claimedAt) : '-' }}</td>
-        <td class="muted">{{ item.claimSource ? KOFI_CLAIM_SOURCE_DISPLAY[item.claimSource] : '-' }}</td>
-      </template>
-    </AdminTable>
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading && !events.length" :refreshing="loading && events.length > 0"
+      :loading-rows="4" row-key="kofiTransactionId" empty-message="No Ko-fi payments on this account" />
   </div>
 </template>
 
@@ -92,47 +94,32 @@ function claimPicked() {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 .panel__summary {
   display: flex;
-  align-items: center;
-  gap: var(--space-lg);
   flex-wrap: wrap;
+  gap: var(--space-md) var(--space-2xl);
 }
 
-.panel__tier {
+.panel__fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.panel__value {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  font-size: var(--text-body);
   font-weight: 600;
-  color: var(--text-primary);
-}
-
-.panel__stat {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-}
-
-.panel__stat-label {
-  color: var(--text-secondary);
-}
-
-.panel__stat-value {
-  font-family: var(--font-mono);
   color: var(--text-primary);
 }
 
 .panel__claim {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-sm);
-}
-
-.panel__claim > :first-child {
-  max-width: 340px;
 }
 </style>

@@ -1,101 +1,98 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
-import AdminTable from '@/components/admin/AdminTable.vue'
-import BaseInput from '@/components/common/BaseInput.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
+import SearchBox from '@/components/common/SearchBox.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
-import { useDebouncedRef } from '@/composables/useDebouncedRef'
+import { useQueryParams } from '@/composables/useQueryParams'
 import type { ClanResponse } from '@/types/api/clans'
+import type { TableColumn } from '@/types/display'
 import { formatStanding } from '@/utils/clans'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 
 const ClanAdminDetail = defineAsyncComponent(() => import('./ClanAdminDetail.vue'))
 
 const PAGE_SIZE = 20
+const COLUMNS: TableColumn[] = [
+  { key: 'clan', label: 'Clan', primary: true },
+  { key: 'level', label: 'Level', align: 'right', mono: true, width: '100px' },
+  { key: 'members', label: 'Members', align: 'right', mono: true, width: '120px' },
+  { key: 'standing', label: 'Standing', align: 'right', mono: true, width: '140px' },
+]
 
-const route = useRoute()
-const router = useRouter()
+const { queryRef } = useQueryParams()
 
-const searchInput = ref('')
-const search = useDebouncedRef(searchInput, 300)
+const openClanId = queryRef('clan')
+const search = queryRef('q')
 const page = ref(1)
 const totalPages = ref(0)
 const clans = ref<ClanResponse[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
+const loading = ref(true)
+const error = ref('')
 
-const openClanId = computed(() => (typeof route.query.clan === 'string' ? route.query.clan : null))
+const rows = computed<Record<string, unknown>[]>(() =>
+  clans.value.map((row) => ({
+    id: row.clan.id,
+    clan: row.clan,
+    level: row.level.level,
+    members: `${row.memberCount}/${row.memberCap}`,
+    standing: formatStanding(row.standing),
+  })),
+)
 
-function setOpenClan(clanId: string | null) {
-  const query = { ...route.query }
-  delete query.clan
-  router.replace({ query: clanId ? { ...query, clan: clanId } : query })
-}
+let requestId = 0
 
 async function fetchClans() {
+  const id = ++requestId
   loading.value = true
-  error.value = null
+  error.value = ''
   try {
     const { getClans } = await import('@/api/clans')
     const res = await getClans({ page: page.value - 1, size: PAGE_SIZE, search: search.value.trim() || undefined })
+    if (id !== requestId) return
     clans.value = res.content
     totalPages.value = res.totalPages
   } catch (err) {
-    error.value = parseApiError(err, 'Could not load clans.').message
+    if (id === requestId) error.value = parseApiError(err, 'Could not load the clans').message
   } finally {
-    loading.value = false
+    if (id === requestId) loading.value = false
   }
 }
 
 function onDisbanded() {
-  setOpenClan(null)
+  openClanId.value = ''
   void fetchClans()
 }
 
 watch(search, () => {
-  page.value = 1
-  void fetchClans()
-}, { immediate: true })
-watch(page, fetchClans)
+  if (page.value === 1) void fetchClans()
+  else page.value = 1
+})
+watch(page, fetchClans, { immediate: true })
 </script>
 
 <template>
-  <ClanAdminDetail v-if="openClanId" :clan-id="openClanId" @back="setOpenClan(null)" @disbanded="onDisbanded" />
+  <ClanAdminDetail v-if="openClanId" :clan-id="openClanId" @back="openClanId = ''" @disbanded="onDisbanded" />
   <div v-else class="browser">
-    <div class="browser__header">
-      <div>
-        <h2 class="section-title">Clans</h2>
-        <p class="browser__meta">Open a clan to see everything about it, moderate it or disband it.</p>
-      </div>
-      <BaseInput v-model="searchInput" placeholder="Search by name or tag" class="browser__search" />
+    <SearchBox v-model="search" placeholder="Search name or tag" />
+    <p v-if="error" class="caption browser__error" role="alert">{{ error }}</p>
+
+    <DataTable :columns="COLUMNS" :rows="rows" :loading="loading && !clans.length" :refreshing="loading && clans.length > 0"
+      :loading-rows="PAGE_SIZE" :row-height="56" row-key="id" row-clickable empty-message="No clans match"
+      @row-click="(row) => (openClanId = row.id as string)">
+      <template #cell-clan="{ row }">
+        <span class="browser__clan">
+          <ClanIcon :clan="(row.clan as ClanResponse['clan'])" :size="28" />
+          <ClanTag :clan="(row.clan as ClanResponse['clan'])" size="sm" />
+          <span class="browser__name">{{ (row.clan as ClanResponse['clan']).name }}</span>
+        </span>
+      </template>
+    </DataTable>
+
+    <div class="browser__pages">
+      <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="page = $event" />
     </div>
-
-    <p v-if="error" class="browser__error" role="alert">{{ error }}</p>
-
-    <AdminTable :items="clans" :loading="loading" :loading-rows="6" empty-message="No clans match">
-      <template #head>
-        <th>Clan</th>
-        <th class="right" style="width: 80px">Level</th>
-        <th class="right" style="width: 100px">Members</th>
-        <th class="right" style="width: 120px">Standing</th>
-      </template>
-      <template #default="{ item: row }">
-        <td>
-          <button type="button" class="browser__clan" @click="setOpenClan(row.clan.id)">
-            <ClanIcon :clan="row.clan" :size="28" />
-            <ClanTag :clan="row.clan" size="sm" />
-            <span class="browser__name">{{ row.clan.name }}</span>
-          </button>
-        </td>
-        <td class="mono right">{{ row.level.level }}</td>
-        <td class="mono right">{{ row.memberCount }}/{{ row.memberCap }}</td>
-        <td class="mono right">{{ formatStanding(row.standing) }}</td>
-      </template>
-    </AdminTable>
-
-    <PaginationControls :page="page" :total-pages="totalPages" @update:page="(p: number) => { page = p }" />
   </div>
 </template>
 
@@ -103,30 +100,11 @@ watch(page, fetchClans)
 .browser {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.browser__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-lg);
-  flex-wrap: wrap;
-}
-
-.browser__meta {
-  margin: 2px 0 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.browser__search {
-  width: 260px;
+  gap: var(--space-md);
+  min-width: 0;
 }
 
 .browser__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 
@@ -134,11 +112,6 @@ watch(page, fetchClans)
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 0;
-  font: inherit;
-  background: transparent;
-  border: none;
-  cursor: pointer;
 }
 
 .browser__name {
@@ -146,7 +119,7 @@ watch(page, fetchClans)
   color: var(--text-primary);
 }
 
-.browser__clan:hover .browser__name {
-  color: var(--page-accent, var(--accent));
+.browser__pages {
+  min-height: var(--control-h);
 }
 </style>

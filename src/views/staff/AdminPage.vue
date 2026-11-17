@@ -13,15 +13,11 @@ const activeTab = computed<AdminTab>(() =>
 
 const tabComponents: Record<AdminTab, ReturnType<typeof defineAsyncComponent>> = {
   users: defineAsyncComponent(() => import('./admin/AdminUsersTab.vue')),
-  duplicates: defineAsyncComponent(() => import('./admin/AdminDuplicatesTab.vue')),
-  staff: defineAsyncComponent(() => import('./admin/AdminStaffTab.vue')),
   milestones: defineAsyncComponent(() => import('./admin/AdminMilestonesTab.vue')),
   campaigns: defineAsyncComponent(() => import('./admin/AdminCampaignsTab.vue')),
-  curves: defineAsyncComponent(() => import('./admin/AdminCurvesTab.vue')),
   news: defineAsyncComponent(() => import('./admin/AdminNewsTab.vue')),
   events: defineAsyncComponent(() => import('./admin/AdminEventsTab.vue')),
   clans: defineAsyncComponent(() => import('./admin/AdminClansTab.vue')),
-  broadcast: defineAsyncComponent(() => import('./admin/AdminBroadcastTab.vue')),
   operations: defineAsyncComponent(() => import('./admin/AdminOperationsTab.vue')),
   items: defineAsyncComponent(() => import('./admin/AdminItemsTab.vue')),
 }
@@ -39,9 +35,7 @@ usePageMeta({
     <Suspense>
       <component :is="activeComponent" :key="activeTab" />
       <template #fallback>
-        <div class="admin-loading">
-          <SkeletonLoader variant="table-row" v-for="i in 6" :key="i" style="margin-bottom: 8px" />
-        </div>
+        <SkeletonLoader class="placeholder" height="600px" />
       </template>
     </Suspense>
   </div>
@@ -49,11 +43,9 @@ usePageMeta({
 
 <style scoped>
 .admin-page {
-  min-height: 100vh;
-  padding: var(--space-xl);
-}
-
-.admin-loading {
-  padding: var(--space-xl);
+  width: 100%;
+  max-width: 1280px;
+  min-width: 0;
+  margin: 0 auto;
 }
 </style>

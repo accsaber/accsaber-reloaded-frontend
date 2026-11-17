@@ -26,11 +26,14 @@ import { ApiError, parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CrateOpenAnimation from '@/components/domain/CrateOpenAnimation.vue'
 import CratePreviewModal from '@/components/domain/CratePreviewModal.vue'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { usePageMeta } from '@/composables/usePageMeta'
 import type {
   CrateContentResponse,
@@ -96,7 +99,7 @@ const form = ref({
   obtainableUntil: '',
 })
 
-const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: r }))
+const rarityOptions = RARITY_ORDER.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
 
 const rewardIds = computed(() => new Set(contents.value.map((c) => c.rewardItem.id)))
 
@@ -215,24 +218,46 @@ async function onCrateIconRemove() {
   crate.value = await deleteItemIcon(crate.value.id)
 }
 
+const LOW_TOTAL_WEIGHT = 10
+const FLAGS: { key: 'tradeable' | 'visible' | 'stackable' | 'welcomeGrant' | 'missionPoolable'; label: string }[] = [
+  { key: 'tradeable', label: 'Tradeable' },
+  { key: 'visible', label: 'Visible' },
+  { key: 'stackable', label: 'Stackable' },
+  { key: 'welcomeGrant', label: 'Welcome Grant' },
+  { key: 'missionPoolable', label: 'Mission Reward' },
+]
+const { confirmModal, ask } = useConfirmAction()
+let publishConfirmed = false
+
 async function togglePublish() {
   if (!crate.value) return
   const target = !crate.value.active
-  if (target) {
-    if (contents.value.length === 0) {
-      if (!confirm('This crate has no rewards and cannot be opened. Publish anyway?')) {
-        return
-      }
-    }
-    if (!form.value.name.trim()) {
-      errorMsg.value = 'Name is required before publishing'
-      return
-    }
-    if (totalWeight.value > 0 && totalWeight.value < 10) {
-      if (!confirm(`Total weight is only ${totalWeight.value}. Publish anyway?`)) {
-        return
-      }
-    }
+  if (target && !form.value.name.trim()) {
+    errorMsg.value = 'A crate needs a name before it is published'
+    return
+  }
+  const warning = !target
+    ? ''
+    : contents.value.length === 0
+      ? 'This crate has no rewards and cannot be opened.'
+      : totalWeight.value < LOW_TOTAL_WEIGHT
+        ? `The total weight is only ${totalWeight.value}.`
+        : ''
+  if (warning && !publishConfirmed) {
+    ask({
+      title: 'Publish Crate',
+      message: `${warning} Publish anyway?`,
+      confirmLabel: 'Publish',
+      run: async () => {
+        publishConfirmed = true
+        try {
+          await togglePublish()
+        } finally {
+          publishConfirmed = false
+        }
+      },
+    })
+    return
   }
   statusBusy.value = true
   errorMsg.value = null
@@ -539,44 +564,31 @@ watch(crateId, refresh)
 <template>
   <div class="crate-editor">
     <header class="crate-editor__header">
-      <BaseButton size="sm" @click="router.push({ name: 'admin', query: { tab: 'items', itab: 'crates' } })">
-        &larr; Back to crates
-      </BaseButton>
-      <div class="crate-editor__title">
-        {{ crate?.name || 'Crate editor' }}
-      </div>
-      <div class="crate-editor__spacer" />
-      <div v-if="crate" class="crate-editor__status-group">
-        <BaseButton size="sm" @click="previewOpen = true">Preview</BaseButton>
-        <span class="crate-editor__status" :class="{
+      <IconButton icon="back" label="Back to crates" @click="router.push({ name: 'admin', query: { tab: 'items', itab: 'crates' } })" />
+      <h1 class="crate-editor__title">{{ crate?.name || 'Crate' }}</h1>
+      <template v-if="crate">
+        <span :class="{
           'crate-editor__status--live': crate.active && !crate.deprecated,
-          'crate-editor__status--draft': !crate.active,
           'crate-editor__status--deprecated': crate.deprecated,
         }">
-          {{ crate.deprecated ? 'Deprecated' : crate.active ? 'Live' : 'Draft' }}
+          {{ crate.deprecated ? 'Deprecated' : crate.active ? 'Live' : 'Draft, hidden from players' }}
         </span>
-        <BaseButton v-if="!crate.deprecated" size="sm" :variant="crate.active ? 'destructive' : 'primary'"
-          :loading="statusBusy" @click="togglePublish">
+        <BaseButton @click="previewOpen = true">Preview</BaseButton>
+        <BaseButton v-if="!crate.deprecated" :variant="crate.active ? 'destructive' : 'primary'" :loading="statusBusy" @click="togglePublish">
           {{ crate.active ? 'Retire to Draft' : 'Publish' }}
         </BaseButton>
-      </div>
+      </template>
     </header>
 
-    <div v-if="errorMsg" class="crate-editor__error">{{ errorMsg }}</div>
+    <p v-if="errorMsg" class="caption crate-editor__error" role="alert">{{ errorMsg }}</p>
 
-    <div v-if="crate && !crate.active" class="crate-editor__banner">
-      DRAFT - not visible to players
-    </div>
-
-    <section v-if="loading" class="crate-editor__loading">
-      <SkeletonLoader variant="card" />
-      <SkeletonLoader variant="card" />
-      <SkeletonLoader variant="card" />
-    </section>
+    <template v-if="loading">
+      <SkeletonLoader v-for="n in 3" :key="n" class="placeholder" height="280px" />
+    </template>
 
     <template v-else-if="crate">
       <section class="crate-editor__panel">
-        <h2 class="crate-editor__panel-title">Metadata</h2>
+        <h2 class="section-title">Metadata</h2>
         <div class="crate-editor__meta-grid">
           <BaseInput v-model="form.name" label="Name" />
           <BaseInput v-model="form.description" label="Description" />
@@ -584,35 +596,21 @@ watch(crateId, refresh)
             @update:model-value="(v: string) => (form.rarity = v as ItemRarity)" />
           <ImageUploader label="Icon" aspect-ratio="1 / 1" :image-url="crate?.iconUrl ?? null"
             :upload-handler="onCrateIconUpload" :remove-handler="onCrateIconRemove" />
-          <BaseInput v-model="form.obtainableUntil" type="datetime-local" label="Add to campaigns until" />
+          <BaseInput v-model="form.obtainableUntil" type="datetime-local" label="Add to Campaigns Until" />
           <div class="crate-editor__meta-checks">
-            <label class="crate-editor__check">
-              <input v-model="form.tradeable" type="checkbox" /> Tradeable
-            </label>
-            <label class="crate-editor__check">
-              <input v-model="form.visible" type="checkbox" /> Visible
-            </label>
-            <label class="crate-editor__check">
-              <input v-model="form.stackable" type="checkbox" /> Stackable
-            </label>
-            <label class="crate-editor__check">
-              <input v-model="form.welcomeGrant" type="checkbox" /> Welcome grant
-            </label>
-            <label class="crate-editor__check">
-              <input v-model="form.missionPoolable" type="checkbox" /> Mission reward
-            </label>
+            <BaseSwitch v-for="flag in FLAGS" :key="flag.key" v-model="form[flag.key]" :label="flag.label" />
           </div>
         </div>
         <div class="crate-editor__meta-actions">
           <BaseButton variant="primary" size="sm" :loading="metaSaving" @click="saveMetadata">
-            Save metadata
+            Save Metadata
           </BaseButton>
         </div>
       </section>
 
       <section class="crate-editor__panel">
         <header class="crate-editor__panel-header">
-          <h2 class="crate-editor__panel-title">Contents</h2>
+          <h2 class="section-title">Contents</h2>
           <div class="crate-editor__totals">
             Total weight: <span class="mono">{{ totalWeight }}</span> -
             Reward count: <span class="mono">{{ contents.length }}</span>
@@ -622,13 +620,9 @@ watch(crateId, refresh)
         <div class="crate-editor__split">
           <div class="crate-editor__pane crate-editor__pane--picker">
             <header class="crate-editor__pane-header">
-              <BaseInput v-model="search" placeholder="Search items..." aria-label="Search items" />
-              <label class="crate-editor__check crate-editor__check--inline">
-                <input v-model="allowNestedCrates" type="checkbox" /> Allow crates
-              </label>
-              <label class="crate-editor__check crate-editor__check--inline">
-                <input v-model="groupByType" type="checkbox" /> Group by type
-              </label>
+              <BaseInput v-model="search" placeholder="Search items" aria-label="Search items" />
+              <BaseSwitch v-model="allowNestedCrates" label="Allow Crates" />
+              <BaseSwitch v-model="groupByType" label="Group by Type" />
             </header>
             <div v-if="selectableCount > 0" class="crate-editor__bulk-bar">
               <span class="crate-editor__bulk-count">{{ selectableCount }} selected</span>
@@ -644,7 +638,7 @@ watch(crateId, refresh)
             </div>
             <div class="crate-editor__picker-list">
               <div v-if="filteredItems.length === 0" class="crate-editor__picker-empty">
-                No matching items.
+                No matching items
               </div>
               <div v-for="group in grouped" :key="String(group.key)" class="crate-editor__group">
                 <div v-if="groupByType" class="crate-editor__group-label">{{ group.key }}</div>
@@ -669,7 +663,7 @@ watch(crateId, refresh)
                       </div>
                     </div>
                     <div class="crate-editor__picker-action">
-                      {{ rewardIds.has(item.id) ? 'Already added' : '+ Add' }}
+                      {{ rewardIds.has(item.id) ? 'Added' : 'Add' }}
                     </div>
                   </button>
                 </div>
@@ -679,10 +673,10 @@ watch(crateId, refresh)
 
           <div class="crate-editor__pane crate-editor__pane--pool">
             <header class="crate-editor__pane-header">
-              <div class="field-label">Current pool</div>
+              <div class="field-label">Current Pool</div>
             </header>
             <div v-if="contents.length === 0" class="crate-editor__pool-empty">
-              <EmptyState message="Pick rewards from the left to get started" />
+              <p class="caption">Pick rewards on the left</p>
             </div>
             <table v-else class="crate-editor__pool-table">
               <thead>
@@ -728,10 +722,7 @@ watch(crateId, refresh)
                   </td>
                   <td class="right mono">{{ formatAccuracy(c.dropChance) }}</td>
                   <td class="right">
-                    <button type="button" class="crate-editor__remove" :disabled="rowBusy[c.rewardItem.id]"
-                      @click="removeReward(c.rewardItem.id)" aria-label="Remove">
-                      &times;
-                    </button>
+                    <IconButton icon="close" label="Remove" :disabled="rowBusy[c.rewardItem.id]" @click="removeReward(c.rewardItem.id)" />
                   </td>
                 </tr>
               </tbody>
@@ -746,7 +737,7 @@ watch(crateId, refresh)
 
       <section class="crate-editor__panel">
         <header class="crate-editor__panel-header">
-          <h2 class="crate-editor__panel-title">Modifiers</h2>
+          <h2 class="section-title">Modifiers</h2>
           <div class="crate-editor__totals">
             Attached: <span class="mono">{{ attachedModifiers.length }}</span>
           </div>
@@ -757,7 +748,7 @@ watch(crateId, refresh)
             <BaseSelect
               v-model="newModifierId"
               :options="modifierPickerOptions"
-              label="Add modifier"
+              label="Add Modifier"
               searchable
             />
           </div>
@@ -785,7 +776,7 @@ watch(crateId, refresh)
         <p v-if="modifierError" class="crate-editor__weight-err">{{ modifierError }}</p>
 
         <div v-if="attachedModifiers.length === 0" class="crate-editor__pool-empty">
-          <EmptyState message="No modifiers attached. Add one above." />
+          <p class="caption">No modifiers attached</p>
         </div>
         <table v-else class="crate-editor__pool-table">
           <thead>
@@ -833,15 +824,7 @@ watch(crateId, refresh)
                 </div>
               </td>
               <td class="right">
-                <button
-                  type="button"
-                  class="crate-editor__remove"
-                  :disabled="modRowBusy[m.modifier.id]"
-                  @click="detachModifier(m.modifier.id)"
-                  aria-label="Detach modifier"
-                >
-                  &times;
-                </button>
+                <IconButton icon="close" label="Detach modifier" :disabled="modRowBusy[m.modifier.id]" @click="detachModifier(m.modifier.id)" />
               </td>
             </tr>
           </tbody>
@@ -850,7 +833,7 @@ watch(crateId, refresh)
 
       <section class="crate-editor__panel">
         <header class="crate-editor__panel-header">
-          <h2 class="crate-editor__panel-title">Unusual effects</h2>
+          <h2 class="section-title">Unusual Effects</h2>
           <div class="crate-editor__totals">
             Attached: <span class="mono">{{ attachedEffects.length }}</span>
           </div>
@@ -859,7 +842,7 @@ watch(crateId, refresh)
           v-if="attachedEffects.length && !crateRollsUnusual"
           class="crate-editor__mod-season-hint"
         >
-          No Unusual modifier attached.
+          No Unusual modifier attached
         </p>
 
         <div class="crate-editor__mod-attach">
@@ -867,7 +850,7 @@ watch(crateId, refresh)
             <BaseSelect
               v-model="newEffectId"
               :options="effectPickerOptions"
-              label="Add effect"
+              label="Add Effect"
               searchable
             />
           </div>
@@ -884,7 +867,7 @@ watch(crateId, refresh)
         <p v-if="effectError" class="crate-editor__weight-err">{{ effectError }}</p>
 
         <div v-if="attachedEffects.length === 0" class="crate-editor__pool-empty">
-          <EmptyState message="No effects attached. The default Unusual sparkle will be used." />
+          <p class="caption">No effects attached, the default sparkle is used</p>
         </div>
         <table v-else class="crate-editor__pool-table">
           <thead>
@@ -900,15 +883,7 @@ watch(crateId, refresh)
                 <div class="crate-editor__pool-type">{{ e.description ?? e.key }}</div>
               </td>
               <td class="right">
-                <button
-                  type="button"
-                  class="crate-editor__remove"
-                  :disabled="effectRowBusy[e.id]"
-                  @click="detachEffect(e.id)"
-                  aria-label="Detach effect"
-                >
-                  &times;
-                </button>
+                <IconButton icon="close" label="Detach effect" :disabled="effectRowBusy[e.id]" @click="detachEffect(e.id)" />
               </td>
             </tr>
           </tbody>
@@ -916,10 +891,10 @@ watch(crateId, refresh)
       </section>
 
       <section class="crate-editor__panel">
-        <h2 class="crate-editor__panel-title">Test</h2>
+        <h2 class="section-title">Test</h2>
         <div class="crate-editor__test-actions">
           <BaseButton size="sm" :disabled="contents.length === 0" @click="doOpenOnce">
-            Open once
+            Open Once
           </BaseButton>
         </div>
 
@@ -941,6 +916,8 @@ watch(crateId, refresh)
 
       </section>
 
+      <ConfirmModal v-bind="confirmModal" />
+
       <CratePreviewModal
         :open="previewOpen"
         :crate="crate"
@@ -955,8 +932,9 @@ watch(crateId, refresh)
 
 <style scoped>
 .crate-editor {
-  padding: var(--space-xl);
+  width: 100%;
   max-width: 1280px;
+  min-width: 0;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -971,85 +949,29 @@ watch(crateId, refresh)
 }
 
 .crate-editor__title {
-  font-size: var(--text-page-title);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.crate-editor__spacer {
   flex: 1;
-}
-
-.crate-editor__status-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.crate-editor__status {
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-  border: 1px solid var(--status-color, var(--bg-overlay));
-  color: var(--status-color, var(--text-secondary));
+  min-width: 0;
 }
 
 .crate-editor__status--live {
-  --status-color: var(--success);
-}
-
-.crate-editor__status--draft {
-  --status-color: var(--warning);
+  color: var(--success);
 }
 
 .crate-editor__status--deprecated {
-  --status-color: var(--text-tertiary);
-}
-
-.crate-editor__banner {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--warning);
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
   color: var(--warning);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 600;
 }
 
 .crate-editor__error {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--error);
-  background: color-mix(in srgb, var(--error) 12%, transparent);
   color: var(--error);
-  border-radius: var(--radius-card);
-  font-size: var(--text-body);
-}
-
-.crate-editor__loading {
-  display: grid;
-  gap: var(--space-md);
 }
 
 .crate-editor__panel {
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  padding: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.crate-editor__panel-title {
-  margin: 0;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .crate-editor__panel-header {
@@ -1073,6 +995,10 @@ watch(crateId, refresh)
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
+}
+
+.crate-editor__meta-grid :deep(.image-uploader) {
+  max-width: 200px;
 }
 
 .crate-editor__meta-checks {
@@ -1138,19 +1064,6 @@ watch(crateId, refresh)
   min-width: 0;
 }
 
-.crate-editor__check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.crate-editor__check--inline {
-  flex-shrink: 0;
-}
-
 .crate-editor__meta-actions {
   display: flex;
   justify-content: flex-end;
@@ -1174,7 +1087,6 @@ watch(crateId, refresh)
 
 .crate-editor__pane {
   background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   display: flex;
   flex-direction: column;
@@ -1215,8 +1127,6 @@ watch(crateId, refresh)
 
 .crate-editor__group-label {
   font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--text-tertiary);
   padding: var(--space-xs) var(--space-sm);
 }
@@ -1235,7 +1145,7 @@ watch(crateId, refresh)
   font-family: var(--font-sans);
   cursor: pointer;
   text-align: left;
-  transition: background-color 100ms ease, border-color 100ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color 100ms ease;
 }
 
 .crate-editor__picker-item:not(:disabled):hover {
@@ -1295,8 +1205,6 @@ watch(crateId, refresh)
 .crate-editor__picker-action {
   font-size: var(--text-caption);
   color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   font-weight: 600;
 }
 
@@ -1319,8 +1227,6 @@ watch(crateId, refresh)
 .crate-editor__pool-table th {
   text-align: left;
   font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--text-secondary);
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--bg-overlay);
@@ -1382,13 +1288,13 @@ watch(crateId, refresh)
 .crate-editor__preset {
   padding: 2px var(--space-sm);
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-btn);
   background: transparent;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: color 100ms ease, border-color 100ms ease;
+  transition: color var(--dur-fast) var(--ease-out), border-color 100ms ease;
 }
 
 .crate-editor__preset:hover {
@@ -1405,23 +1311,6 @@ watch(crateId, refresh)
   margin-top: var(--space-xs);
   font-size: var(--text-caption);
   color: var(--error);
-}
-
-.crate-editor__remove {
-  border: none;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: var(--space-xs);
-  border-radius: var(--radius-btn);
-  transition: color 100ms ease, background-color 100ms ease;
-}
-
-.crate-editor__remove:hover {
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
 }
 
 .crate-editor__pool-footer {

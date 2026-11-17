@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import ResourcePicker from '@/views/staff/admin/operations/ResourcePicker.vue'
 import type { JobFieldKind, JobFieldResponse, JobFieldValue } from '@/types/api/jobs'
 import { computed } from 'vue'
@@ -69,43 +70,28 @@ function onInstantInput(value: string | number) {
   const parsed = new Date(text)
   emit('update:modelValue', Number.isNaN(parsed.getTime()) ? null : parsed.toISOString())
 }
-
-function onPlatformInput(value: string) {
-  emit('update:modelValue', value || null)
-}
-
-function onFlagInput(event: Event) {
-  emit('update:modelValue', (event.target as HTMLInputElement).checked)
-}
 </script>
 
 <template>
   <div class="job-field">
-    <label class="job-field__label field-label">
-      {{ field.label }}
-      <span v-if="field.required" class="job-field__required">required</span>
-    </label>
+    <span v-if="control !== 'flag'" class="field-label">{{ field.label }}{{ field.required ? '' : ' (optional)' }}</span>
 
     <ResourcePicker v-if="control === 'resource' && source" :model-value="resourceValue" :search="source.search"
       :resolve="source.resolve" :multiple="field.multiple" :placeholder="source.placeholder" :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)" />
 
-    <BaseInput v-else-if="control === 'instant'" :model-value="instantValue" type="datetime-local"
+    <BaseInput v-else-if="control === 'instant'" :model-value="instantValue" type="datetime-local" :aria-label="field.label"
       :disabled="disabled" @update:model-value="onInstantInput" />
 
     <BaseSelect v-else-if="control === 'platform'" :model-value="platformValue" :options="platformOptions"
-      @update:model-value="onPlatformInput" />
+      @update:model-value="emit('update:modelValue', $event || null)" />
 
-    <label v-else-if="control === 'flag'" class="job-field__flag">
-      <input type="checkbox" :checked="modelValue === true" :disabled="disabled" @change="onFlagInput" />
-      <span>{{ field.description ?? 'Enabled' }}</span>
-    </label>
+    <BaseSwitch v-else-if="control === 'flag'" :model-value="modelValue === true" :label="field.label" :disabled="disabled"
+      @update:model-value="emit('update:modelValue', $event)" />
 
-    <p v-else class="job-field__unsupported">
-      This build cannot render a "{{ field.kind }}" input, so {{ field.key }} has to be left empty.
-    </p>
+    <p v-else class="caption job-field__unsupported">This build has no input for {{ field.kind }}, leave {{ field.key }} empty</p>
 
-    <p v-if="field.description && control !== 'flag'" class="job-field__desc">{{ field.description }}</p>
+    <p v-if="field.description" class="caption">{{ field.description }}</p>
   </div>
 </template>
 
@@ -116,42 +102,7 @@ function onFlagInput(event: Event) {
   gap: var(--space-xs);
 }
 
-.job-field__label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.job-field__required {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: var(--warning);
-  text-transform: uppercase;
-}
-
-.job-field__flag {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.job-field__desc {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.5;
-}
-
 .job-field__unsupported {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--bg-overlay));
-  border-radius: var(--radius-input);
-  font-size: var(--text-caption);
   color: var(--warning);
 }
 </style>

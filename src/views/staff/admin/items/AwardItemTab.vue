@@ -3,6 +3,7 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
 import { awardItem, getAdminItems } from '@/api/admin/items'
 import { getUnusualEffects } from '@/api/items'
@@ -36,7 +37,7 @@ const submitting = ref(false)
 const status = ref<{ kind: 'success' | 'error'; message: string; awarded?: UserItemResponse } | null>(null)
 
 const typeOptions = computed(() => [
-  { value: '', label: 'All types' },
+  { value: '', label: 'All Types' },
   ...itemTypeStore.itemTypes.filter((t) => t.active).map((t) => ({ value: t.id, label: t.name })),
 ])
 
@@ -45,17 +46,19 @@ const itemOptions = computed(() => {
     ? items.value.filter((i) => i.typeId === typeFilter.value)
     : items.value
   return [
-    { value: '', label: 'Select an item...' },
+    { value: '', label: 'Pick an Item' },
     ...filtered.map((i) => ({ value: i.id, label: `${i.name} (${i.typeKey}, ${i.rarity})` })),
   ]
 })
 
 const activeModifiers = computed(() => modifierStore.modifiers.filter((m) => m.active))
 
+const modifierToggles = computed(() => activeModifiers.value.map((m) => ({ key: m.key, label: m.name, color: m.colorHex ?? undefined })))
+
 const unusualSelected = computed(() => modifierKeys.value.includes(UNUSUAL_MODIFIER_KEY))
 
 const unusualEffectOptions = computed(() => [
-  { value: '', label: 'None (default sparkle)' },
+  { value: '', label: 'Default Sparkle' },
   ...unusualEffects.value.map((e) => ({
     value: e.id,
     label: e.name || e.key,
@@ -149,99 +152,59 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="award-tab">
-    <div class="award-tab__form">
-      <div class="award-tab__field">
-        <label class="field-label">User</label>
-        <UserPicker v-model="userId" />
-      </div>
-
-      <BaseSelect
-        v-model="typeFilter"
-        :options="typeOptions"
-        label="Filter by type"
-      />
-
-      <BaseSelect
-        v-model="itemId"
-        :options="itemOptions"
-        label="Item"
-        searchable
-      />
-
-      <div class="award-tab__field">
-        <label class="field-label">Modifiers (leave empty to auto-resolve)</label>
-        <div class="award-tab__modifier-chips">
-          <button
-            v-for="m in activeModifiers"
-            :key="m.key"
-            type="button"
-            class="award-tab__modifier-chip"
-            :class="{ 'award-tab__modifier-chip--active': modifierKeys.includes(m.key) }"
-            :style="modifierKeys.includes(m.key) && m.colorHex ? { borderColor: m.colorHex, color: m.colorHex } : undefined"
-            @click="toggleModifier(m.key)"
-          >{{ m.name }}</button>
-        </div>
-      </div>
-
-      <div v-if="unusualSelected" class="award-tab__field">
-        <BaseSelect
-          v-model="unusualEffectId"
-          :options="unusualEffectOptions"
-          label="Unusual effect"
-          searchable
-        />
-      </div>
-
-      <div class="award-tab__field">
-        <label class="field-label">Quantity</label>
-        <input
-          v-model.number="quantity"
-          type="number"
-          min="1"
-          class="award-tab__qty-input"
-          :disabled="!isStackable"
-        />
-      </div>
-
-      <BaseInput v-model="reason" label="Reason (optional)" />
-
-      <div class="award-tab__actions">
-        <BaseButton variant="primary" :disabled="!canSubmit" :loading="submitting" @click="submit">
-          Award item
-        </BaseButton>
-      </div>
-
-      <div
-        v-if="status"
-        class="award-tab__status"
-        :class="status.kind === 'success' ? 'award-tab__status--ok' : 'award-tab__status--err'"
-      >
-        {{ status.message }}
-        <span v-if="status.awarded" class="award-tab__status-meta">
-          Link {{ status.awarded.linkId }}
-          <span v-if="status.awarded.serialNumber != null"> · #{{ status.awarded.serialNumber }}</span>
-          <span v-if="status.awarded.quantity > 1"> · x{{ status.awarded.quantity }}</span>
-        </span>
-      </div>
+  <form class="award-tab" @submit.prevent="canSubmit && submit()">
+    <div class="award-tab__field">
+      <span class="field-label">Player</span>
+      <UserPicker v-model="userId" />
     </div>
 
-    <p v-if="itemsLoading" class="award-tab__hint">Loading items...</p>
-  </div>
+    <div class="award-tab__row">
+      <BaseSelect v-model="typeFilter" :options="typeOptions" label="Type" />
+      <BaseSelect v-model="itemId" :options="itemOptions" label="Item" searchable
+        :placeholder="itemsLoading ? 'Loading items' : 'Pick an item'" />
+    </div>
+
+    <div class="award-tab__field">
+      <span class="field-label">Modifiers</span>
+      <ChartToggleGroup :toggles="modifierToggles" :active="modifierKeys" label="Modifiers" @select="toggleModifier" />
+    </div>
+
+    <Transition name="collapse">
+      <div v-if="unusualSelected" class="collapsible">
+        <BaseSelect v-model="unusualEffectId" :options="unusualEffectOptions" label="Unusual Effect" searchable />
+      </div>
+    </Transition>
+
+    <div class="award-tab__row">
+      <BaseInput v-model.number="quantity" class="award-tab__quantity" label="Quantity" type="number" min="1" :disabled="!isStackable" />
+      <BaseInput v-model="reason" label="Reason" />
+    </div>
+
+    <div class="award-tab__actions">
+      <BaseButton variant="primary" :class="{ confirm: status?.kind === 'success' }" :disabled="!canSubmit" :loading="submitting" @click="submit">
+        Award Item
+      </BaseButton>
+      <span class="caption award-tab__status" :class="{ 'award-tab__status--error': status?.kind === 'error' }"
+        :role="status?.kind === 'error' ? 'alert' : 'status'">
+        <template v-if="status">
+          {{ status.message }}
+          <template v-if="status.awarded?.serialNumber != null">, #{{ status.awarded.serialNumber }}</template>
+          <template v-if="status.awarded && status.awarded.quantity > 1">, x{{ status.awarded.quantity }}</template>
+        </template>
+      </span>
+    </div>
+  </form>
 </template>
 
 <style scoped>
 .award-tab {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-  max-width: 560px;
-}
-
-.award-tab__form {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-md);
+  max-width: 720px;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
 }
 
 .award-tab__field {
@@ -250,92 +213,30 @@ onMounted(async () => {
   gap: var(--space-xs);
 }
 
+.award-tab__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-md);
+}
+
 .award-tab__actions {
   display: flex;
-  justify-content: flex-end;
-  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
 }
 
 .award-tab__status {
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-card);
-  font-size: var(--text-caption);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+  min-height: 1lh;
 }
 
-.award-tab__status--ok {
-  background: color-mix(in srgb, var(--success) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-  color: var(--success);
-}
-
-.award-tab__status--err {
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+.award-tab__status--error {
   color: var(--error);
 }
 
-.award-tab__status-meta {
-  font-family: var(--font-mono);
-  color: var(--text-tertiary);
-}
-
-.award-tab__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.award-tab__modifier-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.award-tab__modifier-chip {
-  padding: var(--space-xs) 10px;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-}
-
-.award-tab__modifier-chip:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.award-tab__modifier-chip--active {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-.award-tab__qty-input {
-  width: 120px;
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  outline: none;
-}
-
-.award-tab__qty-input:focus {
-  border-color: var(--accent);
-}
-
-.award-tab__qty-input:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
+@media (max-width: 767px) {
+  .award-tab__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

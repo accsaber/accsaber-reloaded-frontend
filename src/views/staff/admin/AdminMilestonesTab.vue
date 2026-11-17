@@ -5,8 +5,11 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { useCategoryStore } from '@/stores/categories'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
 import CampaignItemPicker from '@/views/staff/campaigns/CampaignItemPicker.vue'
@@ -85,7 +88,6 @@ const milestones = ref<MilestoneResponse[]>([])
 const milestonesLoading = ref(false)
 const showMilestoneModal = ref(false)
 const milestoneActionLoading = ref<Record<string, boolean>>({})
-const bulkActivating = ref(false)
 
 const EMPTY_QUERY: QuerySpec = {
   select: { function: 'MAX', column: '*' },
@@ -253,28 +255,38 @@ async function saveMilestone() {
   }
 }
 
-async function deactivate(m: MilestoneResponse) {
-  if (!confirm(`Deactivate "${m.title}"?`)) return
-  milestoneActionLoading.value[m.id] = true
-  try {
-    const { deactivateMilestone } = await import('@/api/admin/milestones')
-    await deactivateMilestone(m.id)
-    milestones.value = milestones.value.filter((x) => x.id !== m.id)
-  } finally {
-    delete milestoneActionLoading.value[m.id]
-  }
+const { confirmModal, ask } = useConfirmAction()
+
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
 }
 
-async function removeMilestone(m: MilestoneResponse) {
-  if (!confirm(`Delete "${m.title}"?\n\nThis deactivates the milestone AND recalculates XP for every user who had it.`)) return
-  milestoneActionLoading.value[m.id] = true
-  try {
-    const { deleteMilestone } = await import('@/api/admin/milestones')
-    await deleteMilestone(m.id)
-    milestones.value = milestones.value.filter((x) => x.id !== m.id)
-  } finally {
-    delete milestoneActionLoading.value[m.id]
-  }
+function askDeactivate(m: MilestoneResponse) {
+  ask({
+    title: 'Deactivate Milestone',
+    message: `Deactivate "${m.title}"?`,
+    confirmLabel: 'Deactivate',
+    destructive: true,
+    run: async () => {
+      const { deactivateMilestone } = await import('@/api/admin/milestones')
+      await deactivateMilestone(m.id)
+      milestones.value = milestones.value.filter((x) => x.id !== m.id)
+    },
+  })
+}
+
+function askDelete(m: MilestoneResponse) {
+  ask({
+    title: 'Delete Milestone',
+    message: `Delete "${m.title}"? XP is recalculated for every player who completed it.`,
+    confirmLabel: 'Delete',
+    destructive: true,
+    run: async () => {
+      const { deleteMilestone } = await import('@/api/admin/milestones')
+      await deleteMilestone(m.id)
+      milestones.value = milestones.value.filter((x) => x.id !== m.id)
+    },
+  })
 }
 
 const showEditModal = ref(false)
@@ -374,21 +386,20 @@ const draftMilestoneIds = computed(() =>
   milestones.value.filter((m) => m.status === 'DRAFT').map((m) => m.id),
 )
 
-async function activateAll() {
-  if (!draftMilestoneIds.value.length) return
-  if (!confirm(`Activate all ${draftMilestoneIds.value.length} draft milestones in this set?`)) return
-  bulkActivating.value = true
-  try {
-    const { activateMilestones } = await import('@/api/admin/milestones')
-    await activateMilestones(draftMilestoneIds.value)
-    if (statusFilter.value === 'DRAFT') {
-      milestones.value = []
-    } else if (selectedSetId.value) {
-      await fetchMilestones(selectedSetId.value)
-    }
-  } finally {
-    bulkActivating.value = false
-  }
+function askActivateAll() {
+  const ids = draftMilestoneIds.value
+  if (!ids.length) return
+  ask({
+    title: 'Activate Drafts',
+    message: `Activate all ${ids.length} draft milestones in this set?`,
+    confirmLabel: 'Activate All',
+    run: async () => {
+      const { activateMilestones } = await import('@/api/admin/milestones')
+      await activateMilestones(ids)
+      if (statusFilter.value === 'DRAFT') milestones.value = []
+      else if (selectedSetId.value) await fetchMilestones(selectedSetId.value)
+    },
+  })
 }
 
 async function refreshStats() {
@@ -479,19 +490,24 @@ async function toggleBlocker(link: PrerequisiteLinkResponse) {
   } catch { }
 }
 
-async function removePrerequisite(link: PrerequisiteLinkResponse) {
-  if (!confirm(`Remove prerequisite "${link.prerequisiteTitle}"?`)) return
-  try {
-    const { deletePrerequisite } = await import('@/api/admin/milestones')
-    await deletePrerequisite(link.id)
-    prereqLinks.value = prereqLinks.value.filter((l) => l.id !== link.id)
-  } catch { }
+function askRemovePrerequisite(link: PrerequisiteLinkResponse) {
+  ask({
+    title: 'Remove Prerequisite',
+    message: `Remove the prerequisite "${link.prerequisiteTitle}"?`,
+    confirmLabel: 'Remove',
+    destructive: true,
+    run: async () => {
+      const { deletePrerequisite } = await import('@/api/admin/milestones')
+      await deletePrerequisite(link.id)
+      prereqLinks.value = prereqLinks.value.filter((l) => l.id !== link.id)
+    },
+  })
 }
 
 const selectedSet = computed(() => sets.value.find((s) => s.id === selectedSetId.value))
 
 const categoryOptions = computed(() => [
-  { value: '', label: 'All categories (global)' },
+  { value: '', label: 'Every Category' },
   ...categoryStore.categories.map((c: CategoryResponse) => ({ value: c.id, label: c.name })),
 ])
 
@@ -505,14 +521,9 @@ const STATUS_OPTIONS = [
 
 <template>
   <div class="tab">
-    <div class="tab__header">
-      <h2 class="section-title">Milestones</h2>
-      <div class="header-actions">
-        <BaseButton size="sm" @click="schemaOpen = !schemaOpen">
-          {{ schemaOpen ? 'Hide' : 'Show' }} Schema Reference
-        </BaseButton>
-        <BaseButton size="sm" @click="refreshStats">Refresh Stats</BaseButton>
-      </div>
+    <div class="header-actions">
+      <BaseButton :aria-expanded="schemaOpen" @click="schemaOpen = !schemaOpen">{{ schemaOpen ? 'Hide Schema' : 'Show Schema' }}</BaseButton>
+      <BaseButton @click="refreshStats">Refresh Stats</BaseButton>
     </div>
 
     <div v-if="schemaOpen" class="schema-panel">
@@ -557,7 +568,7 @@ const STATUS_OPTIONS = [
       </div>
 
       <div class="milestones-panel">
-        <div v-if="!selectedSetId" class="empty-hint">Select a set to view milestones</div>
+        <p v-if="!selectedSetId" class="caption">Pick a set</p>
         <template v-else>
           <div class="milestones-header">
             <div>
@@ -566,29 +577,27 @@ const STATUS_OPTIONS = [
             </div>
             <div class="milestones-header__actions">
               <BaseSelect v-model="statusFilter" :options="STATUS_OPTIONS" />
-              <BaseButton v-if="statusFilter === 'DRAFT' && draftMilestoneIds.length" size="sm" variant="primary"
-                :loading="bulkActivating" @click="activateAll">
+              <BaseButton v-if="statusFilter === 'DRAFT' && draftMilestoneIds.length" variant="primary" @click="askActivateAll">
                 Activate All ({{ draftMilestoneIds.length }})
               </BaseButton>
-              <BaseButton variant="primary" size="sm" @click="openCreateMilestone">New Milestone</BaseButton>
+              <BaseButton variant="primary" @click="openCreateMilestone">New Milestone</BaseButton>
             </div>
           </div>
 
           <div v-if="milestonesLoading" class="milestone-list">
             <SkeletonLoader v-for="i in 5" :key="i" variant="card" style="margin-bottom: 8px" />
           </div>
-          <EmptyState v-else-if="!milestones.length" message="No milestones in this set yet" />
+          <p v-else-if="!milestones.length" class="caption">No milestones in this set yet</p>
           <div v-else class="milestone-list">
             <div v-for="m in milestones" :key="m.id" class="milestone-card">
-              <div class="milestone-card__tier" :style="{ background: TIER_COLORS[m.tier.toUpperCase()] }" />
               <div class="milestone-card__body">
                 <div class="milestone-card__top">
                   <span class="milestone-card__title">{{ m.title }}</span>
-                  <span class="milestone-card__status"
-                    :class="m.status === 'DRAFT' ? 'milestone-card__status--draft' : 'milestone-card__status--active'">
-                    {{ m.status }}
+                  <span class="milestone-card__tier" :style="{ color: TIER_COLORS[m.tier.toUpperCase()] }">{{ titleCase(m.tier) }}</span>
+                  <span :class="m.status === 'DRAFT' ? 'milestone-card__status--draft' : 'milestone-card__status--active'">
+                    {{ titleCase(m.status) }}
                   </span>
-                  <span class="milestone-card__type">{{ m.type }}</span>
+                  <span class="caption">{{ titleCase(m.type) }}</span>
                   <span class="milestone-card__xp">+{{ m.xp }} XP</span>
                 </div>
                 <p v-if="m.description" class="milestone-card__desc">{{ m.description }}</p>
@@ -609,11 +618,10 @@ const STATUS_OPTIONS = [
                 <BaseButton size="sm" @click="openLinkMaps(m)">Link Maps</BaseButton>
                 <BaseButton size="sm" @click="openPrerequisites(m)">Prerequisites</BaseButton>
                 <BaseButton v-if="m.status === 'ACTIVE'" size="sm" variant="destructive"
-                  :loading="milestoneActionLoading[m.id]" @click="deactivate(m)">
+                  @click="askDeactivate(m)">
                   Deactivate
                 </BaseButton>
-                <BaseButton size="sm" variant="destructive"
-                  :loading="milestoneActionLoading[m.id]" @click="removeMilestone(m)">
+                <BaseButton size="sm" variant="destructive" @click="askDelete(m)">
                   Delete
                 </BaseButton>
               </div>
@@ -650,7 +658,7 @@ const STATUS_OPTIONS = [
       <div class="milestone-form__row">
         <div class="form-field">
           <label class="field-label">Type</label>
-          <BaseSelect v-model="milestoneForm.type" :options="TYPES.map((t) => ({ value: t, label: t }))" />
+          <BaseSelect v-model="milestoneForm.type" :options="TYPES.map((t) => ({ value: t, label: titleCase(t) }))" />
         </div>
         <div class="form-field">
           <label class="field-label">Tier</label>
@@ -661,11 +669,11 @@ const STATUS_OPTIONS = [
       </div>
       <div class="milestone-form__row">
         <div class="form-field" style="flex: 1">
-          <label class="field-label">Category (optional)</label>
+          <label class="field-label">Category</label>
           <BaseSelect v-model="milestoneForm.categoryId" :options="categoryOptions" />
         </div>
         <div class="form-field" style="flex: 1">
-          <label class="field-label">Icon group</label>
+          <label class="field-label">Icon Group</label>
           <BaseSelect v-model="milestoneForm.iconGroup" :options="iconGroupOptions" />
         </div>
       </div>
@@ -674,25 +682,25 @@ const STATUS_OPTIONS = [
         <BaseInput v-model.number="milestoneForm.positionX" label="Position X" type="number" />
         <BaseInput v-model.number="milestoneForm.positionY" label="Position Y" type="number" />
         <div class="form-field">
-          <label class="field-label">Progress model</label>
+          <label class="field-label">Progress Model</label>
           <BaseSelect v-model="milestoneForm.progressModel" :options="progressModelOptions" />
         </div>
-        <BaseInput v-model.number="milestoneForm.progressFloor" label="Progress floor" type="number" />
+        <BaseInput v-model.number="milestoneForm.progressFloor" label="Progress Floor" type="number" />
       </div>
 
       <div v-if="milestoneForm.progressModel === 'CURVE'" class="milestone-form__row">
         <div class="form-field" style="flex: 1">
-          <label class="field-label">Progress curve</label>
+          <label class="field-label">Progress Curve</label>
           <BaseSelect v-model="milestoneForm.progressCurveId" :options="curveOptions" />
         </div>
       </div>
 
       <div class="ms-admin__rewards">
         <div class="ms-admin__rewards-head">
-          <span class="field-label">Item rewards</span>
-          <BaseButton size="sm" @click="showRewardPicker = true">Add item</BaseButton>
+          <span class="field-label">Item Rewards</span>
+          <BaseButton size="sm" @click="showRewardPicker = true">Add Item</BaseButton>
         </div>
-        <p v-if="rewardDraft.length === 0" class="ms-admin__rewards-empty">No item rewards.</p>
+        <p v-if="rewardDraft.length === 0" class="caption">No item rewards</p>
         <ul v-else class="ms-admin__rewards-list">
           <li v-for="r in rewardDraft" :key="r.itemId" class="ms-admin__reward">
             <RewardItemTile v-if="itemsById.get(r.itemId)" :item="itemsById.get(r.itemId)!" :size="44" />
@@ -702,11 +710,8 @@ const STATUS_OPTIONS = [
         </ul>
       </div>
 
-      <div class="form-field">
-        <label class="field-label">Map Difficulty IDs (optional)</label>
-        <textarea v-model="milestoneForm._mapDifficultyIds" class="ids-input"
-          placeholder="Comma or newline separated UUIDs" rows="2" spellcheck="false" />
-      </div>
+      <BaseTextarea v-model="milestoneForm._mapDifficultyIds" label="Map Difficulty IDs" placeholder="Comma or newline separated"
+        :rows="2" spellcheck="false" />
 
       <div class="form-divider" />
 
@@ -714,7 +719,7 @@ const STATUS_OPTIONS = [
         <h4 class="form-section__title">Query Definition</h4>
         <MilestoneQueryBuilder v-if="Object.keys(schema.tables).length" :schema="schema"
           v-model="milestoneForm._query" />
-        <p v-else class="form-hint">Loading schema…</p>
+        <SkeletonLoader v-else class="placeholder" height="120px" />
       </div>
 
       <div class="form-divider" />
@@ -741,11 +746,8 @@ const STATUS_OPTIONS = [
 
   <BaseModal :open="showLinkModal" :title="`Link Maps - ${linkTarget?.title ?? ''}`" @close="showLinkModal = false">
     <div class="modal-form">
-      <div class="form-field">
-        <label class="field-label">Map Difficulty IDs</label>
-        <textarea v-model="linkMapIds" class="ids-input" placeholder="Comma or newline separated UUIDs" rows="4"
-          spellcheck="false" />
-      </div>
+      <BaseTextarea v-model="linkMapIds" label="Map Difficulty IDs" placeholder="Comma or newline separated" :rows="4"
+        spellcheck="false" />
       <p v-if="linkError" class="form-error">{{ linkError }}</p>
     </div>
     <template #footer>
@@ -768,23 +770,16 @@ const STATUS_OPTIONS = [
               {{ link.prerequisiteTier }}
             </span>
             <span class="prereq-item__title">{{ link.prerequisiteTitle }}</span>
-            <button class="prereq-item__blocker" :class="{ 'prereq-item__blocker--active': link.blocker }"
-              @click="toggleBlocker(link)"
-              :title="link.blocker ? 'Blocker (click to unset)' : 'Not blocking (click to set)'">
-              {{ link.blocker ? 'Blocker' : 'Soft' }}
-            </button>
-            <BaseButton size="sm" variant="destructive" @click="removePrerequisite(link)">Remove</BaseButton>
+            <BaseSwitch :model-value="link.blocker" label="Blocker" @update:model-value="toggleBlocker(link)" />
+            <BaseButton size="sm" variant="destructive" @click="askRemovePrerequisite(link)">Remove</BaseButton>
           </div>
         </div>
-        <p v-else class="prereq-empty">No prerequisites defined</p>
+        <p v-else class="caption">No prerequisites</p>
 
         <div class="prereq-add">
           <BaseSelect v-model="prereqForm.prerequisiteMilestoneId" :options="prereqCandidates"
-            placeholder="Select prerequisite..." style="flex: 1" />
-          <label class="prereq-blocker-label">
-            <input type="checkbox" v-model="prereqForm.blocker" />
-            Blocker
-          </label>
+            placeholder="Pick a prerequisite" style="flex: 1" />
+          <BaseSwitch v-model="prereqForm.blocker" label="Blocker" />
           <BaseButton size="sm" variant="primary" :disabled="!prereqForm.prerequisiteMilestoneId"
             @click="addPrerequisite">
             Add
@@ -804,25 +799,25 @@ const STATUS_OPTIONS = [
 
       <div class="ms-admin__grid">
         <BaseSelect v-model="editForm.tier" label="Tier"
-          :options="TIERS.map((t) => ({ value: t, label: t }))" />
-        <BaseSelect v-model="editForm.iconGroup" label="Icon group" :options="iconGroupOptions" />
+          :options="TIERS.map((t) => ({ value: t, label: titleCase(t) }))" />
+        <BaseSelect v-model="editForm.iconGroup" label="Icon Group" :options="iconGroupOptions" />
         <BaseInput v-model.number="editForm.xp" label="XP" type="number" />
-        <BaseInput v-model.number="editForm.targetValue" label="Target value" type="number" />
+        <BaseInput v-model.number="editForm.targetValue" label="Target Value" type="number" />
         <BaseInput v-model.number="editForm.positionX" label="Position X" type="number" />
         <BaseInput v-model.number="editForm.positionY" label="Position Y" type="number" />
-        <BaseSelect v-model="editForm.progressModel" label="Progress model"
+        <BaseSelect v-model="editForm.progressModel" label="Progress Model"
           :options="progressModelOptions" />
         <BaseSelect v-if="editForm.progressModel === 'CURVE'" v-model="editForm.progressCurveId"
-          label="Progress curve" :options="curveOptions" />
-        <BaseInput v-model.number="editForm.progressFloor" label="Progress floor" type="number" />
+          label="Progress Curve" :options="curveOptions" />
+        <BaseInput v-model.number="editForm.progressFloor" label="Progress Floor" type="number" />
       </div>
 
       <div class="ms-admin__rewards">
         <div class="ms-admin__rewards-head">
-          <span class="field-label">Item rewards</span>
-          <BaseButton size="sm" @click="showRewardPicker = true">Add item</BaseButton>
+          <span class="field-label">Item Rewards</span>
+          <BaseButton size="sm" @click="showRewardPicker = true">Add Item</BaseButton>
         </div>
-        <p v-if="rewardDraft.length === 0" class="ms-admin__rewards-empty">No item rewards.</p>
+        <p v-if="rewardDraft.length === 0" class="caption">No item rewards</p>
         <ul v-else class="ms-admin__rewards-list">
           <li v-for="r in rewardDraft" :key="r.itemId" class="ms-admin__reward">
             <RewardItemTile v-if="itemsById.get(r.itemId)" :item="itemsById.get(r.itemId)!" :size="44" />
@@ -837,6 +832,8 @@ const STATUS_OPTIONS = [
       <BaseButton variant="primary" :loading="editLoading" @click="saveEdit">Save</BaseButton>
     </template>
   </BaseModal>
+
+  <ConfirmModal v-bind="confirmModal" />
 
   <CampaignItemPicker v-if="showRewardPicker" unrestricted @close="showRewardPicker = false"
     @pick="addReward" />
@@ -863,12 +860,6 @@ const STATUS_OPTIONS = [
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.ms-admin__rewards-empty {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 
 .ms-admin__rewards-list {
@@ -899,12 +890,6 @@ const STATUS_OPTIONS = [
   gap: var(--space-lg);
 }
 
-.tab__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .header-actions {
   display: flex;
   gap: var(--space-sm);
@@ -912,7 +897,6 @@ const STATUS_OPTIONS = [
 
 .schema-panel {
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   padding: var(--space-md);
   max-height: 300px;
@@ -931,7 +915,6 @@ const STATUS_OPTIONS = [
   font-family: var(--font-mono);
   color: var(--accent);
   margin: 0 0 var(--space-xs);
-  text-transform: uppercase;
 }
 
 .schema-table__cols {
@@ -967,7 +950,6 @@ const STATUS_OPTIONS = [
 
 .sets-panel {
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   overflow: hidden;
 }
@@ -991,7 +973,7 @@ const STATUS_OPTIONS = [
   border-radius: var(--radius-btn);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 100ms;
+  transition: all var(--dur-fast) var(--ease-out);
 }
 
 .sets-panel__add:hover {
@@ -1014,7 +996,7 @@ const STATUS_OPTIONS = [
   text-align: left;
   cursor: pointer;
   position: relative;
-  transition: background-color 100ms;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .set-item:hover {
@@ -1022,11 +1004,11 @@ const STATUS_OPTIONS = [
 }
 
 .set-item--active {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--bg-overlay);
 }
 
 .set-item--active .set-item__title {
-  color: var(--accent);
+  font-weight: 600;
 }
 
 .set-item__title {
@@ -1045,13 +1027,6 @@ const STATUS_OPTIONS = [
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.empty-hint {
-  color: var(--text-tertiary);
-  font-size: var(--text-body);
-  padding: var(--space-xl);
-  text-align: center;
 }
 
 .milestones-header {
@@ -1083,10 +1058,9 @@ const STATUS_OPTIONS = [
   display: flex;
   align-items: stretch;
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   overflow: hidden;
-  transition: border-color 150ms;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .milestone-card:hover {
@@ -1119,10 +1093,8 @@ const STATUS_OPTIONS = [
 .milestone-card__status {
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   padding: 1px 6px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-btn);
 }
 
 .milestone-card__status--draft {
@@ -1133,12 +1105,6 @@ const STATUS_OPTIONS = [
 .milestone-card__status--active {
   background: color-mix(in srgb, var(--success) 15%, transparent);
   color: var(--success);
-}
-
-.milestone-card__type {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  text-transform: uppercase;
 }
 
 .milestone-card__xp {
@@ -1208,18 +1174,12 @@ const STATUS_OPTIONS = [
   margin: 0 0 var(--space-xs);
 }
 
-.form-hint {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
 .query-preview {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   font-family: var(--font-mono);
 }
@@ -1238,23 +1198,6 @@ const STATUS_OPTIONS = [
 .query-preview__value {
   font-size: var(--text-body);
   color: var(--text-primary);
-}
-
-.ids-input {
-  padding: var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  width: 100%;
-  resize: vertical;
-}
-
-.ids-input:focus {
-  border-color: var(--accent);
-  outline: none;
 }
 
 .form-error {
@@ -1288,8 +1231,6 @@ const STATUS_OPTIONS = [
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   flex-shrink: 0;
 }
 
@@ -1303,49 +1244,11 @@ const STATUS_OPTIONS = [
   white-space: nowrap;
 }
 
-.prereq-item__blocker {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--bg-overlay);
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: all 100ms;
-}
-
-.prereq-item__blocker--active {
-  background: color-mix(in srgb, var(--error) 15%, transparent);
-  border-color: var(--error);
-  color: var(--error);
-}
-
-.prereq-empty {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  text-align: center;
-  padding: var(--space-md);
-  margin: 0;
-}
-
 .prereq-add {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   padding-top: var(--space-sm);
   border-top: 1px solid var(--bg-overlay);
-}
-
-.prereq-blocker-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
 }
 </style>
