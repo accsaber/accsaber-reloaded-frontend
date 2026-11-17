@@ -198,35 +198,34 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
       <div v-if="loading && !alliances" class="diplomacy__skeleton">
         <SkeletonLoader v-for="i in 3" :key="i" variant="table-row" />
       </div>
-      <p v-else-if="activeAlliances.length === 0 && proposals.length === 0" class="diplomacy__empty">No allies.</p>
+      <p v-else-if="activeAlliances.length === 0 && proposals.length === 0" class="caption">No allies</p>
 
       <ul v-else class="diplomacy__list">
-        <li v-for="proposal in proposals" :key="proposal.id" class="diplomacy__row diplomacy__row--pending">
+        <li v-for="proposal in proposals" :key="proposal.id" class="diplomacy__row">
           <ClanLink :clan="proposal.ally" />
-          <span class="diplomacy__meta">{{ proposal.incoming ? 'Proposed to you' : 'Proposal sent' }}</span>
+          <span class="caption">{{ proposal.incoming ? 'Proposed to you' : 'Proposal sent' }}</span>
           <span class="diplomacy__actions">
             <template v-if="proposal.incoming">
-              <BaseButton variant="primary" size="sm" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'active')">Accept</BaseButton>
-              <BaseButton size="sm" :disabled="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Decline</BaseButton>
+              <BaseButton variant="primary" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'active')">Accept</BaseButton>
+              <BaseButton :disabled="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Decline</BaseButton>
             </template>
-            <BaseButton v-else size="sm" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Withdraw</BaseButton>
+            <BaseButton v-else :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Withdraw</BaseButton>
           </span>
         </li>
 
         <li v-for="alliance in activeAlliances" :key="alliance.id" class="diplomacy__row">
           <ClanLink :clan="alliance.ally" />
-          <span class="diplomacy__meta">
+          <span class="caption">
             {{ alliance.warsFoughtTogether }} {{ alliance.warsFoughtTogether === 1 ? 'war' : 'wars' }} together · since {{ formatFullDate(alliance.acceptedAt ?? alliance.createdAt) }}
           </span>
           <span class="diplomacy__actions">
             <BaseButton
               v-if="isFounder"
               variant="destructive"
-              size="sm"
               :loading="busyId === alliance.id"
               @click="resolveAlliance(alliance, 'ended')"
             >
-              End alliance
+              End Alliance
             </BaseButton>
           </span>
         </li>
@@ -247,16 +246,15 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
         />
       </header>
 
-      <p v-if="!loading && called.length === 0 && calledBy.length === 0" class="diplomacy__empty">No rivals.</p>
+      <p v-if="!loading && called.length === 0 && calledBy.length === 0" class="caption">No rivals</p>
 
       <ul v-if="rivals.length" class="diplomacy__list">
         <li v-for="rival in rivals" :key="rival.clan.id" class="diplomacy__row">
           <ClanLink :clan="rival.clan" />
-          <span class="diplomacy__meta">{{ rivalLine(rival) }}</span>
+          <span class="caption">{{ rivalLine(rival) }}</span>
           <span class="diplomacy__actions">
             <BaseButton
               v-if="isCommander && rival.called"
-              size="sm"
               :loading="busyId === rival.clan.id"
               @click="dropRival(rival.called)"
             >
@@ -309,12 +307,6 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
   gap: var(--space-xs);
 }
 
-.diplomacy__empty {
-  margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-tertiary);
-}
-
 .diplomacy__error {
   margin: 0;
   font-size: var(--text-caption);
@@ -324,11 +316,10 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
 .diplomacy__list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-xs);
   margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
 }
 
 .diplomacy__row {
@@ -338,21 +329,8 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
   gap: var(--space-md);
   min-height: 56px;
   padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.diplomacy__row:last-child {
-  border-bottom: none;
-}
-
-.diplomacy__row--pending {
   background: var(--bg-elevated);
-}
-
-.diplomacy__meta {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  border-radius: var(--radius-card);
 }
 
 .diplomacy__actions {
@@ -367,7 +345,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .diplomacy__meta {
+  .diplomacy__row > .caption {
     grid-column: 1 / -1;
     grid-row: 2;
   }

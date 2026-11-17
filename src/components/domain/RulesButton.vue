@@ -25,100 +25,41 @@ const open = ref(false)
 
   <BaseModal :open="open" :title="title" max-width="480px" @close="open = false">
     <div class="rules">
-      <p class="rules__lead">{{ lead }}</p>
-      <ol class="rules__list">
-        <li v-for="(rule, i) in rules" :key="rule.title" class="rules__rule">
-          <span class="rules__num" aria-hidden="true">{{ i + 1 }}</span>
-          <span class="rules__text">
-            <strong>{{ rule.title }}</strong> {{ rule.text }}
-          </span>
+      <p class="rules__text">{{ lead }}</p>
+      <ul class="rules__list">
+        <li v-for="rule in rules" :key="rule.title">
+          <h3 class="card-title">{{ rule.title }}</h3>
+          <p class="rules__text">{{ rule.text }}</p>
         </li>
-      </ol>
-      <p class="rules__note">{{ note }}</p>
-      <div v-if="$slots.default" class="rules__aside">
-        <slot />
-      </div>
+      </ul>
+      <p class="rules__text rules__note">{{ note }}</p>
     </div>
   </BaseModal>
 </template>
 
 <style scoped>
-.rules {
+.rules,
+.rules__list {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-.rules__lead {
-  margin: 0;
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
 .rules__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.rules__rule {
-  display: flex;
-  gap: var(--space-sm);
-  align-items: baseline;
-}
-
-.rules__num {
-  flex-shrink: 0;
-  min-width: 16px;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  text-align: right;
-}
-
 .rules__text {
+  margin: 0;
   font-size: var(--text-body);
   line-height: 1.5;
   color: var(--text-secondary);
-}
-
-.rules__text strong {
-  font-weight: 600;
-  color: var(--text-primary);
+  text-wrap: pretty;
 }
 
 .rules__note {
-  margin: var(--space-sm) 0 0;
-  padding: var(--space-md);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
-  border-radius: var(--radius-card);
-}
-
-.rules__aside {
-  margin-top: var(--space-sm);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.rules__aside :deep(p) {
-  margin: 0;
-}
-
-.rules__aside :deep(h3) {
-  margin: 0 0 var(--space-xs);
-  font-size: var(--text-body);
-  font-weight: 600;
   color: var(--text-primary);
 }
 </style>

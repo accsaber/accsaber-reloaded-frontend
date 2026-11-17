@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useNow } from '@/composables/useNow'
 import type { ClanRole } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
@@ -16,10 +15,9 @@ import {
   type RankSlot,
 } from '@/utils/clans'
 import { formatPercent, formatRelativeDate } from '@/utils/formatters'
+import { tableCardQuery } from '@/utils/tableLayout'
 import { computed, ref } from 'vue'
-import ClanLeaderTile from './ClanLeaderTile.vue'
 import ClanMemberMenu, { type MemberActions, type MemberPick } from './ClanMemberMenu.vue'
-import ClanRankSlot from './ClanRankSlot.vue'
 
 const props = defineProps<{
   members: PlayerRef[]
@@ -52,7 +50,7 @@ const COLUMNS: TableColumn[] = [
     width: '120px',
   },
   { key: 'skill', label: 'Skill', align: 'right', mono: true, sortable: true, width: '88px' },
-  { key: 'played', label: 'Last played', align: 'right', sortable: true, width: '144px' },
+  { key: 'played', label: 'Last Played', align: 'right', sortable: true, width: '144px' },
   { key: 'actions', label: '', align: 'right', noLink: true, width: '48px' },
 ]
 
@@ -72,67 +70,82 @@ const canClaim = computed(() => {
   const lastPlayed = founder?.membership?.lastPlayedAt
   return !lastPlayed || now.value - new Date(lastPlayed).getTime() > FOUNDER_INACTIVITY_MS
 })
-const sortState = ref<SortState>({ key: 'xp', direction: 'desc' })
-const split = computed(() => sortState.value.key === 'xp' && sortState.value.direction === 'desc')
+const BY_ROLE: SortState = { key: 'rank', direction: 'asc' }
+const sortState = ref<SortState>(BY_ROLE)
+const split = computed(() => sortState.value.key === BY_ROLE.key)
 
-function seasonXp(member: PlayerRef): number {
-  return member.membership?.seasonPlayXp ?? 0
+const mobile = useMediaQuery(tableCardQuery(COLUMNS))
+
+type Tier = 'founder' | 'leader' | null
+
+function tierOf(role: ClanRole | undefined): Tier {
+  if (!split.value || !role || role === 'member') return null
+  return role === 'founder' ? 'founder' : 'leader'
 }
-
-function seatsFor(role: ClanRole, held: number): RankSlot[] {
-  const seats = props.slots.filter((s) => s.role === role)
-  return [...seats.filter((s) => s.open).slice(held), ...seats.filter((s) => !s.open)]
-}
-
-const leaderGroups = computed(() => {
-  if (!split.value) return []
-  return CLAN_ROLE_ORDER.filter((role) => role !== 'member')
-    .map((role) => {
-      const members = props.members
-        .filter((m) => m.membership?.role === role)
-        .sort((a, b) => seasonXp(b) - seasonXp(a))
-      return { role, members, seats: seatsFor(role, members.length) }
-    })
-    .filter((g) => g.members.length || g.seats.length)
-})
-
-const leaderColumns = computed(() =>
-  [
-    leaderGroups.value.filter((g) => g.role === 'founder'),
-    leaderGroups.value.filter((g) => g.role !== 'founder'),
-  ].filter((column) => column.length),
-)
 
 const rows = computed(() => {
-  const list = props.members
-    .filter((m) => !split.value || !m.membership || m.membership.role === 'member')
-    .map((member) => {
-      const m = member.membership
-      return {
-        id: member.id,
-        player: member,
-        role: m && m.role !== 'member' ? CLAN_ROLE_LABEL[m.role] : null,
-        xp: m?.seasonPlayXp ?? 0,
-        hits: m?.seasonHits ?? 0,
-        breaks: m?.seasonBreaks ?? 0,
-        strength: m?.strengthShare ?? 0,
-        skill: m?.skill ?? 0,
-        played: m?.lastPlayedAt ? new Date(m.lastPlayedAt).getTime() : 0,
-      }
-    })
+  const list = props.members.map((member) => {
+    const m = member.membership
+    return {
+      id: member.id,
+      player: member,
+      role: m && m.role !== 'member' ? CLAN_ROLE_LABEL[m.role] : null,
+      tier: tierOf(m?.role),
+      rank: CLAN_ROLE_ORDER.indexOf(m?.role ?? 'member'),
+      xp: m?.seasonPlayXp ?? 0,
+      hits: m?.seasonHits ?? 0,
+      breaks: m?.seasonBreaks ?? 0,
+      strength: m?.strengthShare ?? 0,
+      skill: m?.skill ?? 0,
+      played: m?.lastPlayedAt ? new Date(m.lastPlayedAt).getTime() : 0,
+    }
+  })
   const { key, direction } = sortState.value
   const sign = direction === 'asc' ? 1 : -1
   return list.sort(
-    (a, b) => sign * ((a[key as keyof typeof a] as number) - (b[key as keyof typeof b] as number)),
+    (a, b) =>
+      sign * ((a[key as keyof typeof a] as number) - (b[key as keyof typeof b] as number)) || b.xp - a.xp,
   )
+})
+
+function tierAt(index: number): Tier {
+  if (rows.value.length) return rows.value[index]?.tier ?? null
+  return index === 0 ? 'founder' : null
+}
+
+function rowHeight(index: number): number {
+  const tier = tierAt(index)
+  if (mobile.value) return tier ? 112 : 64
+  if (tier === 'founder') return 112
+  return tier ? 88 : 56
+}
+
+function rowClass(row: Record<string, unknown>) {
+  return {
+    'roster-row--self': row.id === props.viewerId,
+    'roster-row--founder': row.tier === 'founder',
+    'roster-row--leader': row.tier === 'leader',
+  }
+}
+
+const slotNote = computed(() => {
+  const notes: string[] = []
+  for (const role of ['commander', 'officer'] as const) {
+    const seats = props.slots.filter((s) => s.role === role)
+    const held = props.members.filter((m) => m.membership?.role === role).length
+    const free = seats.filter((s) => s.open).length - held
+    const label = CLAN_ROLE_LABEL[role]
+    if (free > 0) notes.push(`${free} open ${label.toLowerCase()} ${free === 1 ? 'slot' : 'slots'}`)
+    const next = seats.find((s) => !s.open)
+    if (next) notes.push(`${label} slot at level ${next.level}`)
+  }
+  return notes.join(' · ')
 })
 
 function onSort(key: string) {
   const current = sortState.value
-  sortState.value = {
-    key,
-    direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc',
-  }
+  if (current.key !== key) sortState.value = { key, direction: 'desc' }
+  else sortState.value = current.direction === 'desc' ? { key, direction: 'asc' } : BY_ROLE
 }
 
 const offWars = computed(() => {
@@ -167,17 +180,6 @@ const memberActions = computed(() => {
   return map
 })
 
-const candidates = computed(() => {
-  const byRole: Partial<Record<ClanRole, PlayerRef[]>> = {}
-  for (const member of props.members) {
-    const current = member.membership?.role
-    for (const role of memberActions.value.get(member.id)?.roles ?? []) {
-      if (current && outranks(role, current)) (byRole[role] ??= []).push(member)
-    }
-  }
-  return byRole
-})
-
 function onPick(member: PlayerRef, action: MemberPick) {
   if (action === 'kick') emit('kick', member)
   else if (action === 'wars') emit('wars', member)
@@ -198,110 +200,67 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 
 <template>
   <section class="roster">
-    <template v-if="loading">
-      <div class="roster__mosaic">
-        <SkeletonLoader variant="card" class="roster__column" />
-        <div class="roster__column">
-          <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="120px" />
-        </div>
-      </div>
-      <SkeletonLoader v-for="i in 6" :key="`row-${i}`" variant="table-row" />
-    </template>
-
-    <EmptyState v-else-if="members.length === 0" message="Nobody is in this clan yet." />
-
-    <template v-else>
-      <div v-if="leaderGroups.length" class="roster__mosaic">
-        <div v-for="(column, c) in leaderColumns" :key="c" class="roster__column">
-          <template v-for="group in column" :key="group.role">
-            <ClanLeaderTile
-              v-for="member in group.members"
-              :key="member.id"
-              :member="member"
-              :last-played="lastPlayed(member)"
-              :self="member.id === viewerId"
-            >
-              <ClanMemberMenu
-                v-if="memberActions.has(member.id)"
-                :member="member"
-                :actions="memberActions.get(member.id)!"
-                @pick="onPick(member, $event)"
-              />
-            </ClanLeaderTile>
-            <ClanRankSlot
-              v-for="(seat, i) in group.seats"
-              :key="`${group.role}-${i}`"
-              :seat="seat"
-              :candidates="candidates[group.role] ?? []"
-              @pick="emit('change-role', $event, group.role)"
-            />
-          </template>
-        </div>
-      </div>
-
-      <section v-if="rows.length" class="roster__members">
-        <h2 class="section-title">
-          Members <span class="roster__count">{{ rows.length }}</span>
-        </h2>
-        <p v-if="viewerRole && offWars" class="caption">
-          {{ offWars.off }} / {{ offWars.limit }} off wars. Up to half the clan can sit out of wars.
-        </p>
-        <DataTable
-          :columns="COLUMNS"
-          :rows="rows"
-          :sort-state="sortState"
-          row-key="id"
-          :row-class="(row) => ({ 'roster__row--self': row.id === viewerId })"
-          @sort="onSort"
-        >
-          <template #cell-member="{ row }">
+    <DataTable
+      :columns="COLUMNS"
+      :rows="rows"
+      :sort-state="sortState"
+      :loading="loading"
+      :loading-rows="memberCount"
+      :row-height="rowHeight"
+      :row-class="rowClass"
+      row-key="id"
+      empty-message="Nobody is in this clan yet"
+      @sort="onSort"
+    >
+      <template #cell-member="{ row }">
+        <span class="roster__who">
+          <UserChip :user="asPlayer(row)" :size="row.tier ? 'lg' : 'md'" link tooltip hide-clan />
+          <span v-if="row.role" class="caption">{{ row.role }}</span>
+          <span v-if="asPlayer(row).membership?.online" class="caption roster__online">online</span>
+          <span v-if="asPlayer(row).membership?.warParticipation === false" class="caption">off wars</span>
+        </span>
+      </template>
+      <template #cell-xp="{ value }">{{ Math.round(value as number).toLocaleString() }}</template>
+      <template #cell-strength="{ value }">{{ formatPercent((value as number) * 100, 2) }}%</template>
+      <template #cell-skill="{ value }">{{ (value as number).toFixed(1) }}</template>
+      <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
+      <template #cell-actions="{ row }">
+        <ClanMemberMenu
+          v-if="memberActions.has(asPlayer(row).id)"
+          :member="asPlayer(row)"
+          :actions="memberActions.get(asPlayer(row).id)!"
+          @pick="onPick(asPlayer(row), $event)"
+        />
+      </template>
+      <template #mobile-card="{ row }">
+        <div class="member-card" :class="rowClass(row)">
+          <div class="member-card__grid">
             <span class="roster__who">
-              <UserChip :user="asPlayer(row)" link tooltip hide-clan />
-              <span v-if="row.role" class="roster__role">{{ row.role }}</span>
-              <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
-              <span v-if="asPlayer(row).membership?.warParticipation === false" class="roster__role">off wars</span>
+              <UserChip :user="asPlayer(row)" :size="row.tier ? 'lg' : 'sm'" link hide-clan />
+              <span v-if="asPlayer(row).membership?.online" class="caption roster__online">online</span>
             </span>
-          </template>
-          <template #cell-xp="{ value }">{{
-            Math.round(value as number).toLocaleString()
-          }}</template>
-          <template #cell-strength="{ value }">{{ formatPercent((value as number) * 100, 2) }}%</template>
-          <template #cell-skill="{ value }">{{ (value as number).toFixed(1) }}</template>
-          <template #cell-played="{ row }">{{ lastPlayed(asPlayer(row)) }}</template>
-          <template #cell-actions="{ row }">
-            <ClanMemberMenu
-              v-if="memberActions.has(asPlayer(row).id)"
-              :member="asPlayer(row)"
-              :actions="memberActions.get(asPlayer(row).id)!"
-              @pick="onPick(asPlayer(row), $event)"
-            />
-          </template>
-          <template #mobile-card="{ row }">
-            <div class="member-card" :class="{ 'member-card--self': row.id === viewerId }">
-              <div class="member-card__grid">
-                <span class="roster__who">
-                  <UserChip :user="asPlayer(row)" size="sm" link hide-clan />
-                  <span v-if="row.role" class="roster__role">{{ row.role }}</span>
-                  <span v-if="asPlayer(row).membership?.online" class="roster__online">online</span>
-              <span v-if="asPlayer(row).membership?.warParticipation === false" class="roster__role">off wars</span>
-                </span>
-                <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
-                <span class="member-card__played">{{ lastPlayed(asPlayer(row)) }}</span>
-                <span class="member-card__stats">
-                  {{ row.hits }} hits · {{ row.breaks }} breaks · {{ formatPercent((row.strength as number) * 100, 2) }}% · {{ (row.skill as number).toFixed(1) }} skill
-                </span>
-              </div>
-              <ClanMemberMenu
-                v-if="memberActions.has(asPlayer(row).id)"
-                :member="asPlayer(row)"
-                :actions="memberActions.get(asPlayer(row).id)!"
-                @pick="onPick(asPlayer(row), $event)"
-              />
-            </div>
-          </template>
-        </DataTable>
-      </section>
-    </template>
+            <span class="member-card__xp">{{ Math.round(row.xp as number).toLocaleString() }} XP</span>
+            <span class="caption member-card__stats">
+              <template v-if="row.role">{{ row.role }} · </template>
+              <template v-if="asPlayer(row).membership?.warParticipation === false">off wars · </template>
+              {{ row.hits }} hits · {{ row.breaks }} breaks · {{ formatPercent((row.strength as number) * 100, 2) }}% ·
+              {{ (row.skill as number).toFixed(1) }} skill · {{ lastPlayed(asPlayer(row)) }}
+            </span>
+          </div>
+          <ClanMemberMenu
+            v-if="memberActions.has(asPlayer(row).id)"
+            :member="asPlayer(row)"
+            :actions="memberActions.get(asPlayer(row).id)!"
+            @pick="onPick(asPlayer(row), $event)"
+          />
+        </div>
+      </template>
+    </DataTable>
+
+    <p v-if="slotNote || (viewerRole && offWars)" class="caption roster__notes">
+      <span v-if="slotNote">{{ slotNote }}</span>
+      <span v-if="viewerRole && offWars">{{ offWars.off }} / {{ offWars.limit }} off wars</span>
+    </p>
   </section>
 </template>
 
@@ -309,38 +268,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
 .roster {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
-}
-
-.roster__mosaic {
-  display: flex;
   gap: var(--space-md);
-}
-
-.roster__column {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  gap: var(--space-md);
-  min-width: 0;
-  min-height: 260px;
-}
-
-.roster__column > :only-child {
-  flex: 1;
-}
-
-.roster__members {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.roster__count {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--text-tertiary);
 }
 
 .roster__who {
@@ -350,44 +278,50 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   min-width: 0;
 }
 
-.roster__role {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .roster__online {
-  font-size: var(--text-caption);
   color: var(--success);
 }
 
-:deep(.roster__row--self) {
-  background: color-mix(in srgb, var(--clan-accent) 6%, transparent);
+.roster__notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-lg);
 }
 
-@media (max-width: 767px) {
-  .roster__mosaic {
-    flex-direction: column;
-  }
+.roster :deep(.roster-row--self) {
+  background: color-mix(in srgb, var(--clan-accent) 6%, var(--bg-surface));
+}
 
-  .roster__column {
-    flex: none;
-    min-height: 0;
-  }
+.roster :deep(:is(.roster-row--founder, .roster-row--leader) .data-table__td) {
+  font-size: var(--text-card-title);
+}
+
+.roster :deep(.roster-row--leader .user-chip__avatar) {
+  width: 56px;
+  height: 56px;
+}
+
+.roster :deep(.roster-row--founder .user-chip__avatar) {
+  width: 80px;
+  height: 80px;
+}
+
+.roster :deep(.roster-row--founder .user-chip) {
+  font-size: var(--text-section-heading);
 }
 
 .member-card {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  min-height: 48px;
+  min-height: 64px;
   padding: var(--space-sm) var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-elevated);
   border-radius: var(--radius-card);
 }
 
-.member-card--self {
-  background: color-mix(in srgb, var(--clan-accent) 6%, var(--bg-surface));
+.member-card:is(.roster-row--founder, .roster-row--leader) {
+  min-height: 112px;
 }
 
 .member-card__grid {
@@ -395,7 +329,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   flex: 1;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 2px var(--space-sm);
+  gap: var(--space-xs) var(--space-sm);
   min-width: 0;
 }
 
@@ -406,16 +340,18 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
   white-space: nowrap;
 }
 
-.member-card__played,
 .member-card__stats {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  white-space: nowrap;
+  grid-column: 1 / -1;
 }
 
-.member-card__stats {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-  justify-self: end;
+@media (max-width: 767px) {
+  .roster :deep(.roster-row--founder .user-chip__avatar) {
+    width: 56px;
+    height: 56px;
+  }
+
+  .roster :deep(.roster-row--founder .user-chip) {
+    font-size: var(--text-card-title);
+  }
 }
 </style>

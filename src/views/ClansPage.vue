@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseSelect from '@/components/common/BaseSelect.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import RulesButton from '@/components/domain/RulesButton.vue'
 import UserChip from '@/components/domain/UserChip.vue'
@@ -11,7 +12,6 @@ import { useAuthStore } from '@/stores/auth'
 import type {
   ClanJoinRequestResponse,
   ClanJoinStatus,
-  ClanResponse,
   ClanWarAidResponse,
   ClanWarAidStatus,
 } from '@/types/api/clans'
@@ -22,6 +22,7 @@ import {
   CLAN_RULES,
   CLAN_RULES_LEAD,
   CLAN_RULES_NOTE,
+  formatSignedStanding,
   formatStanding,
   hasClanRole,
   isPacifist,
@@ -41,9 +42,28 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const { season, upcoming } = useCurrentClanSeason()
+const { seasons, season, upcoming } = useCurrentClanSeason()
 const now = useNow()
+
+const closedSeasons = computed(() => (seasons.value ?? []).filter((s) => s.closedAt))
+const past = computed(() => {
+  const key = route.query.season
+  return closedSeasons.value.find((s) => s.slug === key || s.id === key) ?? null
+})
+const seasonView = computed(() => !!route.query.season && (!seasons.value || !!past.value))
+const seasonKey = computed(() => (route.query.season && !seasons.value ? null : (past.value?.slug ?? '')))
+const seasonOptions = computed(() => [
+  { value: '', label: season.value?.name ?? 'Now' },
+  ...closedSeasons.value.map((s) => ({ value: s.slug, label: s.name })),
+])
+
+async function setSeason(slug: string) {
+  await router.replace({ query: slug ? { season: slug } : {} })
+  searchQuery.value = ''
+}
+
 const title = computed(() => {
+  if (past.value) return `Clans: ${past.value.name}`
   if (season.value) return `Clans: ${season.value.name}`
   if (upcoming.value) {
     return `Clans: ${upcoming.value.name} Starting in ${formatDuration(new Date(upcoming.value.startsAt).getTime() - now.value, { zero: 'now' })}`
@@ -66,10 +86,10 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 })
 
 const searchQuery = ref((route.query.search as string) || '')
-const pageData = ref<Page<ClanResponse> | null>(null)
+const pageData = ref<Page<StandingsRow> | null>(null)
 const loading = ref(true)
 
-const columns: TableColumn[] = [
+const LIST_COLUMNS: TableColumn[] = [
   { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '80px' },
   { key: 'clan', label: 'Clan', align: 'left' },
   { key: 'level', label: 'Level', sortable: true, align: 'right', mono: true, width: '100px' },
@@ -78,44 +98,75 @@ const columns: TableColumn[] = [
   { key: 'founder', label: 'Founder', align: 'left', width: '220px' },
 ]
 
-const podiumEligible = computed(
+const SEASON_COLUMNS: TableColumn[] = [
+  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '80px' },
+  { key: 'clan', label: 'Clan', align: 'left' },
+  { key: 'base', label: 'Base', align: 'right', mono: true, width: '120px' },
+  { key: 'earned', label: 'Earned', align: 'right', mono: true, width: '120px' },
+  { key: 'standing', label: 'Standing', align: 'right', mono: true, width: '140px' },
+  { key: 'pages', label: '', width: '128px' },
+]
+
+const columns = computed(() => (seasonView.value ? SEASON_COLUMNS : LIST_COLUMNS))
+
+const showTop = computed(
   () =>
     currentPage.value === 1 &&
-    sortState.value.key === 'standing' &&
-    sortState.value.direction === 'desc' &&
-    searchQuery.value.trim() === '',
+    (seasonView.value ||
+      (sortState.value.key === 'standing' &&
+        sortState.value.direction === 'desc' &&
+        searchQuery.value.trim() === '')),
 )
-
-const rows = computed<StandingsRow[]>(() => {
-  const content = pageData.value?.content ?? []
-  const offset = (currentPage.value - 1) * PAGE_SIZE
-  return content.map((entry, i) => ({
-    rank: offset + i + 1,
-    clan: entry.clan,
-    level: entry.level.level,
-    members: `${entry.memberCount}/${entry.memberCap}`,
-    standing: formatStanding(entry.standing),
-    founder: entry.founder,
-    pacifist: isPacifist(entry),
-    meta: `Lv ${entry.level.level} · ${entry.memberCount}/${entry.memberCap}`,
-  }))
-})
 
 const totalPages = computed(() => pageData.value?.totalPages ?? 0)
 const totalClans = computed(() => pageData.value?.totalElements ?? 0)
 
+async function fetchSeasonRows(slug: string): Promise<Page<StandingsRow>> {
+  const { getClanSeasonStandings } = await import('@/api/clans')
+  const page = await getClanSeasonStandings(slug, { page: paginationParams.value.page, size: PAGE_SIZE })
+  return {
+    ...page,
+    content: page.content.map((entry) => ({
+      rank: entry.rank,
+      clan: entry.clan,
+      base: formatStanding(entry.baseStanding),
+      earned: formatSignedStanding(entry.earned),
+      standing: formatStanding(entry.standing),
+      meta: `Earned ${formatSignedStanding(entry.earned)}`,
+    })),
+  }
+}
+
+async function fetchListRows(): Promise<Page<StandingsRow>> {
+  const { getClans } = await import('@/api/clans')
+  const params = paginationParams.value
+  const page = await getClans({ ...params, search: searchQuery.value.trim() || undefined })
+  const offset = (params.page ?? 0) * PAGE_SIZE
+  return {
+    ...page,
+    content: page.content.map((entry, i) => ({
+      rank: offset + i + 1,
+      clan: entry.clan,
+      level: entry.level.level,
+      members: `${entry.memberCount}/${entry.memberCap}`,
+      standing: formatStanding(entry.standing),
+      founder: entry.founder,
+      pacifist: isPacifist(entry),
+      meta: `Level ${entry.level.level} · ${entry.memberCount}/${entry.memberCap} members`,
+    })),
+  }
+}
+
 let clansRequest = 0
 
 async function fetchClans() {
+  const slug = seasonKey.value
+  if (slug === null) return
   const request = ++clansRequest
   loading.value = true
   let next: typeof pageData.value = null
   try {
-    const { getClans } = await import('@/api/clans')
-    next = await getClans({
-      ...paginationParams.value,
-      search: searchQuery.value.trim() || undefined,
-    })
+    next = await (slug ? fetchSeasonRows(slug) : fetchListRows())
   } catch {
     next = null
   }
@@ -204,12 +255,13 @@ watch(() => auth.isLoggedIn, fetchMyRequests, { immediate: true })
 watch(() => myClan.value?.id, fetchMyAid, { immediate: true })
 
 watch(searchQuery, (value) => {
+  if (value.trim() === (route.query.search ?? '')) return
   const query: LocationQueryRaw = { ...route.query, search: value.trim() || undefined }
   delete query.page
   router.replace({ query })
 })
 
-watch(() => [route.query.page, route.query.sort, route.query.order, route.query.search], fetchClans, {
+watch(() => [route.query.page, route.query.sort, route.query.order, route.query.search, seasonKey.value], fetchClans, {
   immediate: true,
 })
 </script>
@@ -217,13 +269,28 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
 <template>
   <div class="clans">
     <header class="clans__header">
-      <h1 class="clans__title">{{ title }}</h1>
-      <p v-if="totalClans > 0" class="clans__subtitle">{{ totalClans.toLocaleString() }} clans ranked</p>
+      <div class="clans__heading">
+        <h1>{{ title }}</h1>
+        <span v-if="totalClans > 0" class="caption">{{ totalClans.toLocaleString() }} clans</span>
+      </div>
+      <div class="clans__controls">
+        <SearchBox v-if="!seasonView" v-model="searchQuery" class="clans__search" placeholder="Search clans" />
+        <BaseSelect v-if="closedSeasons.length" :model-value="past?.slug ?? ''" :options="seasonOptions"
+          placeholder="Season" @update:model-value="setSeason" />
+        <RulesButton title="Clan Rules" :lead="CLAN_RULES_LEAD" :rules="CLAN_RULES" :note="CLAN_RULES_NOTE" />
+        <BaseButton @click="router.push({ name: 'clan-wars' })">Wars</BaseButton>
+        <template v-if="auth.isLoggedIn">
+          <BaseButton v-if="myClan" @click="router.push({ name: 'clan-detail', params: { slugOrId: myClan.slug } })">
+            Your Clan
+          </BaseButton>
+          <BaseButton v-else variant="primary" @click="router.push({ name: 'clan-create' })">Create Clan</BaseButton>
+        </template>
+      </div>
     </header>
 
     <section v-if="myRequests.length" class="clans__requests">
-      <h2 class="clans__section-title">Requests</h2>
-      <p v-if="requestError" class="clans__error" role="alert">{{ requestError }}</p>
+      <h2 class="card-title">Requests</h2>
+      <p v-if="requestError" class="caption clans__error" role="alert">{{ requestError }}</p>
       <ClanRequestList
         :requests="myRequests"
         perspective="player"
@@ -233,8 +300,8 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
     </section>
 
     <section v-if="myAid.length" class="clans__requests">
-      <h2 class="clans__section-title">War help</h2>
-      <p v-if="aidError" class="clans__error" role="alert">{{ aidError }}</p>
+      <h2 class="card-title">War Help</h2>
+      <p v-if="aidError" class="caption clans__error" role="alert">{{ aidError }}</p>
       <ClanAidList
         :aids="myAid"
         :busy-id="aidBusyId"
@@ -245,33 +312,17 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
       />
     </section>
 
-    <div class="clans__controls">
-      <RulesButton title="Clan rules" :lead="CLAN_RULES_LEAD" :rules="CLAN_RULES" :note="CLAN_RULES_NOTE" />
-      <BaseButton size="sm" @click="router.push({ name: 'clan-wars' })">Wars</BaseButton>
-      <template v-if="auth.isLoggedIn">
-        <BaseButton
-          v-if="myClan"
-          size="sm"
-          @click="router.push({ name: 'clan-detail', params: { slugOrId: myClan.slug } })"
-        >
-          Your clan
-        </BaseButton>
-        <BaseButton v-else variant="primary" size="sm" @click="router.push({ name: 'clan-create' })">
-          Create clan
-        </BaseButton>
-      </template>
-      <SearchBox v-model="searchQuery" placeholder="Search clans..." />
-    </div>
-
     <ClanStandingsTable
       :columns="columns"
-      :rows="rows"
-      :loading="loading"
-      :podium="podiumEligible"
+      :rows="pageData?.content ?? []"
+      :loading="loading && !pageData"
+      :refreshing="loading && !!pageData"
+      :top="showTop"
+      :page-size="PAGE_SIZE"
       :page="currentPage"
       :total-pages="totalPages"
       :sort-state="sortState"
-      empty-message="No clans found"
+      :empty-message="past ? 'No clans placed this season' : 'No clans found'"
       @page="setPage"
       @sort="setSort"
     >
@@ -292,23 +343,22 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
   margin: 0 auto;
 }
 
-.clans__header {
-  text-align: center;
-  padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.clans__subtitle {
-  margin: var(--space-xs) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  letter-spacing: 0.02em;
-  color: var(--text-secondary);
-}
-
+.clans__header,
 .clans__controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.clans__header {
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.clans__heading {
+  display: flex;
+  align-items: baseline;
   gap: var(--space-sm);
 }
 
@@ -318,19 +368,14 @@ watch(() => [route.query.page, route.query.sort, route.query.order, route.query.
   gap: var(--space-sm);
 }
 
-.clans__section-title {
-  margin: 0;
-  font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .clans__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 
+@media (max-width: 767px) {
+  .clans__controls,
+  .clans__search {
+    flex: 1 1 100%;
+  }
+}
 </style>

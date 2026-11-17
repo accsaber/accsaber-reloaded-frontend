@@ -153,7 +153,8 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
           <template #below>
             <p v-if="p" class="target__plan">
               <template v-if="p.noScore">
-                They haven't played it<template v-if="p.damage != null">: any play does <span class="target__lands">{{ formatDamage(p.damage) }}</span></template>
+                <template v-if="p.damage != null">Any play does <span class="target__lands">{{ formatDamage(p.damage) }}</span></template>
+                <template v-else>No score</template>
               </template>
               <template v-else>
                 <template v-if="p.hit">

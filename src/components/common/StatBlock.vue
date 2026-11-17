@@ -50,6 +50,7 @@ const { displayValue } = useCountUp(numericRef, { decimals: props.decimals ?? 2 
 }
 
 .stat-block__value {
+  min-height: 1lh;
   font-family: var(--font-mono);
   font-size: var(--text-section-heading);
   font-weight: 500;

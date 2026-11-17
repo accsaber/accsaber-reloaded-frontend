@@ -66,13 +66,13 @@ const scale = computed(() => (props.max <= 0 ? 0 : clamp01(props.value / props.m
 
 .clan-bar__fill {
   background: var(--clan-bar-fill, var(--clan-accent, var(--page-accent)));
-  transition: transform 200ms ease-out;
+  transition: transform var(--dur-exit) var(--ease-out);
 }
 
 .clan-bar__chip {
   background: var(--text-primary);
   opacity: 0.55;
-  transition: transform 500ms ease-in 400ms;
+  transition: transform var(--dur-move) var(--ease-in) var(--dur-move);
 }
 
 @media (prefers-reduced-motion: reduce) {

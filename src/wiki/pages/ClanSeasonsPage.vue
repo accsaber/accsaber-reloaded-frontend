@@ -25,7 +25,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
     <p>When a season ends:</p>
     <ul>
       <li>Open wars end with no winner.</li>
-      <li>The final ranking gets saved on the season's page.</li>
+      <li>The final ranking gets saved. You can pick the season on the clans page to see it.</li>
       <li>Rewards go out.</li>
     </ul>
     <p>

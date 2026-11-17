@@ -120,7 +120,7 @@ watch(() => props.editing, (editing) => {
       <div class="profile-hero__top-row">
         <div class="profile-hero__name-col">
           <template v-if="editing">
-            <input v-model="nameDraft" type="text" maxlength="64" class="profile-hero__name profile-hero__name-input"
+            <input v-model="nameDraft" type="text" maxlength="64" class="inline-edit profile-hero__name profile-hero__name-input"
               :disabled="saving" aria-label="Display name" @keydown.enter.prevent="emit('save')"
               @keydown.escape.prevent="emit('cancel')" />
             <template v-for="sync in syncs" :key="sync.label">
@@ -275,17 +275,7 @@ watch(() => props.editing, (editing) => {
 
 .profile-hero__name-input {
   width: min(100%, 420px);
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid var(--bg-overlay);
   font-family: var(--font-sans);
-  outline: none;
-  transition: border-color var(--dur-fast) var(--ease-out);
-}
-
-.profile-hero__name-input:focus {
-  border-bottom-color: var(--accent);
 }
 
 .profile-hero__meta {

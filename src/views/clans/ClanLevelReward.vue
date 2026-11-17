@@ -41,8 +41,7 @@ const status = computed(() =>
   gap: var(--space-sm);
   min-width: 0;
   padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-elevated);
   border-radius: var(--radius-card);
 }
 

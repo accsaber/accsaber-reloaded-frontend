@@ -5,6 +5,7 @@ import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { ClanJoinRequestResponse, ClanJoinStatus } from '@/types/api/clans'
 import { formatRelativeDate } from '@/utils/formatters'
+import './actionList.css'
 
 defineProps<{
   requests: ClanJoinRequestResponse[]
@@ -18,9 +19,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <ul class="request-list">
-    <li v-for="request in requests" :key="request.id" class="request-list__row">
-      <span class="request-list__kind">
+  <ul class="action-list">
+    <li v-for="request in requests" :key="request.id" class="action-list__row">
+      <span class="field-label">
         {{ request.direction === 'invite' ? 'Invite' : 'Request' }}
       </span>
 
@@ -34,23 +35,22 @@ const emit = defineEmits<{
       </span>
       <UserChip v-else :user="request.player" link tooltip class="request-list__subject" />
 
-      <span class="request-list__when">{{ formatRelativeDate(request.createdAt) }}</span>
+      <span class="caption action-list__when">{{ formatRelativeDate(request.createdAt) }}</span>
 
-      <span class="request-list__actions">
+      <span class="action-list__actions">
         <template v-if="(perspective === 'player') === (request.direction === 'invite')">
           <BaseButton
             variant="primary"
-            size="sm"
             :loading="busyId === request.id"
             @click="emit('resolve', request, 'accepted')"
           >
             Accept
           </BaseButton>
-          <BaseButton size="sm" :disabled="busyId === request.id" @click="emit('resolve', request, 'declined')">
+          <BaseButton :disabled="busyId === request.id" @click="emit('resolve', request, 'declined')">
             Decline
           </BaseButton>
         </template>
-        <BaseButton v-else size="sm" :loading="busyId === request.id" @click="emit('resolve', request, 'cancelled')">
+        <BaseButton v-else :loading="busyId === request.id" @click="emit('resolve', request, 'cancelled')">
           Cancel
         </BaseButton>
       </span>
@@ -59,84 +59,24 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.request-list {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: hidden;
-}
-
-.request-list__row {
-  display: grid;
-  grid-template-columns: 80px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-md);
-  min-height: 56px;
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.request-list__row:last-child {
-  border-bottom: none;
-}
-
-.request-list__row:nth-child(even) {
-  background: var(--bg-elevated);
-}
-
-.request-list__kind {
-  font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .request-list__subject {
-  font-size: var(--text-card-title);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   min-width: 0;
+  font-size: var(--text-card-title);
 }
 
 .request-list__clan {
+  overflow: hidden;
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .request-list__clan:hover {
   color: var(--page-accent, var(--accent));
-}
-
-.request-list__when {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.request-list__actions {
-  display: flex;
-  gap: var(--space-xs);
-}
-
-@media (max-width: 767px) {
-  .request-list__row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .request-list__kind,
-  .request-list__when {
-    display: none;
-  }
 }
 </style>

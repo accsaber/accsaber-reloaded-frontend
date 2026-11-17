@@ -87,31 +87,31 @@ void loadTags()
 
 const CAMPAIGN_RULES: Rule[] = [
   {
-    title: 'No impersonation.',
+    title: 'No Impersonation',
     text: 'Do not use aliases to pass yourself off as another person.',
   },
   {
-    title: 'Keep artwork clean.',
+    title: 'Keep Artwork Clean',
     text: 'No NSFW or questionable imagery in campaign icons or backgrounds.',
   },
   {
-    title: 'No AI.',
+    title: 'No AI',
     text: 'No AI-generated icons, backgrounds, or text.',
   },
   {
-    title: 'No discriminatory language.',
+    title: 'No Discriminatory Language',
     text: 'Anywhere: names, summaries, descriptions, or text labels.',
   },
   {
-    title: 'No harassment.',
+    title: 'No Harassment',
     text: 'Do not use a campaign to target, call out, or shame other players.',
   },
   {
-    title: 'No spam or advertising.',
+    title: 'No Spam or Advertising',
     text: 'Campaigns are for playing, not for promoting unrelated services or links.',
   },
   {
-    title: 'No plagiarism.',
+    title: 'No Plagiarism',
     text: "Do not republish another creator's campaign or artwork as your own.",
   },
 ]
@@ -310,7 +310,7 @@ watch(() => pane.value === 'invites', (open) => { if (open) loadInvites() })
           :sort-options="BROWSE_SORT_OPTIONS" :show-curated="pane === 'all'"
           @update:model-value="applyBrowseFilters" />
         <RulesButton
-          title="Campaign rules"
+          title="Campaign Rules"
           lead="Campaigns are player-made and public. Keep yours within these rules:"
           :rules="CAMPAIGN_RULES"
           note="By creating a campaign, you agree to these rules. Breaking them results in an automatic, indefinite suspension from every AccSaber feature."

@@ -16,8 +16,8 @@ const bodyId = useId()
 
 <template>
   <section class="war-section">
-    <div class="war-section__head">
-      <h2 class="war-section__title section-title">
+    <div v-if="title || $slots.title || $slots.actions" class="war-section__head">
+      <h2 v-if="title || $slots.title" class="war-section__title section-title">
         <slot v-if="fixed" name="title">{{ title }}</slot>
         <button v-else type="button" class="war-section__toggle" :aria-expanded="open" :aria-controls="bodyId" @click="open = !open">
           <svg class="war-section__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -29,7 +29,11 @@ const bodyId = useId()
       </h2>
       <span v-if="$slots.actions" class="war-section__actions"><slot name="actions" /></span>
     </div>
-    <div v-show="fixed || open" :id="bodyId" class="war-section__body"><slot /></div>
+    <Transition name="collapse">
+      <div v-if="fixed || open" :id="bodyId" class="collapsible">
+        <div class="war-section__body"><slot /></div>
+      </div>
+    </Transition>
   </section>
 </template>
 
@@ -37,7 +41,6 @@ const bodyId = useId()
 .war-section {
   padding: var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
@@ -67,7 +70,7 @@ const bodyId = useId()
 .war-section__chevron {
   flex-shrink: 0;
   color: var(--text-secondary);
-  transition: transform 150ms ease-out;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .war-section__toggle[aria-expanded='false'] .war-section__chevron {
@@ -85,12 +88,9 @@ const bodyId = useId()
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  margin-top: var(--space-sm);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .war-section__chevron {
-    transition: none;
-  }
+.war-section__head + .collapsible > .war-section__body {
+  padding-top: var(--space-sm);
 }
 </style>

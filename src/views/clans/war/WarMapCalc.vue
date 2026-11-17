@@ -19,7 +19,7 @@ const props = defineProps<{
   viewerScore: number | null
 }>()
 
-const KIND_LABEL: Record<StrikeKind, string> = { damage: 'Hit', chip: 'Chip', none: 'Nothing lands' }
+const KIND_LABEL: Record<StrikeKind, string> = { damage: 'Hit', chip: 'Chip', none: 'No hit' }
 
 const accuracy = ref(
   (props.viewerScore ?? (props.targetScore === null ? props.maxScore : Math.min(props.maxScore, props.targetScore + 1))) /
@@ -38,9 +38,9 @@ const outcome = computed(() =>
 </script>
 
 <template>
-  <HintTooltip text="Try a score" label="this map" :width="300" more>
+  <HintTooltip text="Try a score" label="this map" :width="300" side="below" more>
     <template #default="{ locked }">
-      <span v-if="!locked">Click to try a score on this map.</span>
+      <span v-if="!locked">Click to try a score on this map</span>
       <div v-else class="calc">
         <span class="calc__acc">{{ formatAccuracy(accuracy) }}</span>
         <AccuracySlider v-model="accuracy" />
@@ -65,7 +65,6 @@ const outcome = computed(() =>
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  min-height: 196px;
 }
 
 .calc__acc {

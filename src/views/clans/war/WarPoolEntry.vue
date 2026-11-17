@@ -35,7 +35,7 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
     <button
       v-if="expandable && !link"
       type="button"
-      class="war-entry__expand"
+      class="war-entry__expand pressable"
       :aria-expanded="expanded === entry.difficulty.id"
       :aria-label="`War leaderboard for ${entry.difficulty.songName}`"
       @click="emit('toggle', entry.difficulty.id)"
@@ -56,15 +56,20 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
   >
     {{ expanded === entry.difficulty.id ? 'Hide leaderboard' : 'Full leaderboard' }}
   </button>
-  <WarMapBoardView
-    v-if="expandable && expanded === entry.difficulty.id && entry.difficulty.maxScore != null"
-    :war="war"
-    :rules="rules"
-    :board="boards[entry.difficulty.id]"
-    :max-score="entry.difficulty.maxScore"
-    :viewer="viewer"
-    :wipe="wipe"
-  />
+  <Transition name="collapse">
+    <div v-if="expandable && expanded === entry.difficulty.id && entry.difficulty.maxScore != null" class="collapsible">
+      <div>
+        <WarMapBoardView
+          :war="war"
+          :rules="rules"
+          :board="boards[entry.difficulty.id]"
+          :max-score="entry.difficulty.maxScore"
+          :viewer="viewer"
+          :wipe="wipe"
+        />
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -80,7 +85,10 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease-out, border-color 120ms ease-out;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .war-entry__expand:hover,
@@ -105,17 +113,10 @@ const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
 }
 
 .war-entry__expand svg {
-  transition: transform 150ms ease-out;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .war-entry__expand[aria-expanded='true'] svg {
   transform: rotate(180deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .war-entry__expand,
-  .war-entry__expand svg {
-    transition: none;
-  }
 }
 </style>

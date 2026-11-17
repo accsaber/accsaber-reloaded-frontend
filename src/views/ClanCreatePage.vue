@@ -119,7 +119,7 @@ async function submit() {
       <p v-if="error" class="clan-create__error" role="alert">{{ error }}</p>
       <div class="clan-create__footer">
         <span class="clan-create__rules">
-          <RulesButton title="Clan rules" :lead="CLAN_RULES_LEAD" :rules="CLAN_RULES" :note="CLAN_RULES_NOTE" />
+          <RulesButton title="Clan Rules" :lead="CLAN_RULES_LEAD" :rules="CLAN_RULES" :note="CLAN_RULES_NOTE" />
         </span>
         <BaseButton :disabled="saving" @click="router.push({ name: 'clans' })">Cancel</BaseButton>
         <BaseButton variant="primary" :loading="saving" :disabled="!ready" @click="submit">Create clan</BaseButton>

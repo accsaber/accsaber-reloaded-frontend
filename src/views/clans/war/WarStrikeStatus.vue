@@ -10,7 +10,7 @@ defineProps<{
 
 <template>
   <span class="strike-status" :class="`strike-status--${outcome.kind}`">
-    {{ outcome.kind === 'damage' ? 'Lands' : 'Chips' }} {{ formatDamage(outcome.damage) }}
+    {{ outcome.kind === 'damage' ? 'Hits' : 'Chips' }} {{ formatDamage(outcome.damage) }}
     <HintTooltip text="Damage breakdown" label="this damage" :width="320">
       <StrikeLines :lines="outcome.lines" />
     </HintTooltip>

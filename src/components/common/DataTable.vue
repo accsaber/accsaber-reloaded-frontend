@@ -19,7 +19,7 @@ const props = defineProps<{
   rowKey?: string | ((row: Record<string, unknown>, index: number) => string | number)
   loading?: boolean
   loadingRows?: number
-  rowHeight?: number
+  rowHeight?: number | ((index: number) => number)
   emptyMessage?: string
   rowClass?: (row: Record<string, unknown>, index: number) => string | Record<string, boolean> | undefined
   dense?: boolean
@@ -81,6 +81,10 @@ function handleRowClick(row: Record<string, unknown>, index: number, event: Mous
   }
 }
 
+function heightOf(index: number): string | undefined {
+  return typeof props.rowHeight === 'function' ? `${props.rowHeight(index)}px` : undefined
+}
+
 function cellText(col: TableColumn, row: Record<string, unknown>): unknown {
   return col.format ? col.format(row[col.key], row) : row[col.key]
 }
@@ -97,7 +101,7 @@ function sortIcon(col: TableColumn): string {
 
 <template>
   <div class="data-table-wrapper" :aria-busy="loading"
-    :style="rowHeight ? { '--row-h': `${rowHeight}px` } : undefined">
+    :style="typeof rowHeight === 'number' ? { '--row-h': `${rowHeight}px` } : undefined">
     <div v-if="!mobile" class="data-table-scroll">
       <table class="data-table" :class="{ 'data-table--dense': dense }" :style="{ minWidth }">
         <thead>
@@ -130,7 +134,8 @@ function sortIcon(col: TableColumn): string {
           </template>
           <template v-for="(row, index) in shown" v-else :key="renderKey(row, index)">
             <tr v-if="isPlaceholder(row)" class="data-table__row placeholder"
-              :class="{ 'data-table__row--alt': index % 2 === 1 }" aria-hidden="true">
+              :class="{ 'data-table__row--alt': index % 2 === 1 }" :style="{ '--row-h': heightOf(index) }"
+              aria-hidden="true">
               <td v-for="col in columns" :key="col.key" class="data-table__td">
                 <SkeletonLoader variant="text" />
               </td>
@@ -141,7 +146,7 @@ function sortIcon(col: TableColumn): string {
                 'data-table__row--alt': index % 2 === 1,
                 stale: isStale(index),
               }, rowClass?.(row, index)]"
-              :style="{ '--i': cascade ? index : 0 }"
+              :style="{ '--i': cascade ? index : 0, '--row-h': heightOf(index) }"
               @click="handleRowClick(row, index, $event)">
               <td v-for="col in columns" :key="col.key" class="data-table__td" :class="[{
                 'data-table__td--mono': col.mono,
@@ -163,23 +168,19 @@ function sortIcon(col: TableColumn): string {
       </table>
     </div>
 
-    <div v-else class="data-table-cards">
+    <div v-else class="data-table-cards stagger" :style="{ '--n': shown.length }">
       <div v-if="shown.length === 0" class="data-table__empty-card">
         <slot name="empty">{{ emptyMessage ?? 'No data available' }}</slot>
       </div>
-      <template v-else-if="shown.some(isPlaceholder)">
-        <SkeletonLoader v-for="(row, index) in shown" :key="renderKey(row, index)" class="placeholder"
+      <template v-for="(row, index) in shown" v-else :key="renderKey(row, index)">
+        <SkeletonLoader v-if="isPlaceholder(row)" class="placeholder" :style="{ '--row-h': heightOf(index) }"
           height="var(--row-h)" />
-      </template>
-      <template v-else-if="slots['mobile-card']">
-        <div v-for="(row, index) in shown" :key="renderKey(row, index)" class="data-table-cards__custom"
-          :class="{ stale: isStale(index) }">
+        <div v-else-if="slots['mobile-card']" class="data-table-cards__custom" :class="{ stale: isStale(index) }"
+          :style="{ '--i': cascade ? index : 0 }">
           <slot name="mobile-card" :row="row" :index="index" />
         </div>
-      </template>
-      <template v-else>
-        <DataTableCardFallback v-for="(row, index) in shown" :key="renderKey(row, index)" :columns="columns"
-          :row="row" :clickable="rowClickable" :class="{ stale: isStale(index) }"
+        <DataTableCardFallback v-else :columns="columns" :row="row" :clickable="rowClickable"
+          :class="{ stale: isStale(index) }" :style="{ '--i': cascade ? index : 0 }"
           @click="emit('rowClick', row, index)">
           <template v-for="col in columns" :key="col.key" #[`cell-${col.key}`]="slotProps">
             <slot :name="`cell-${col.key}`" :row="slotProps.row" :value="slotProps.value" :index="index">

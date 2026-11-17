@@ -378,6 +378,18 @@ export interface ClanProfileDraft {
   secondaryColor: string
 }
 
+export type ClanColorKey = 'tagColor' | 'primaryColor' | 'secondaryColor'
+
+export const CLAN_COLOR_FIELDS: { key: ClanColorKey; label: string }[] = [
+  { key: 'tagColor', label: 'Tag Color' },
+  { key: 'primaryColor', label: 'Primary' },
+  { key: 'secondaryColor', label: 'Secondary' },
+]
+
+export function cleanClanTag(value: string | number): string {
+  return String(value).replace(/[^a-z0-9]/gi, '').slice(0, 5).toUpperCase()
+}
+
 export function emptyClanDraft(): ClanProfileDraft {
   return { name: '', tag: '', description: '', tagColor: '', primaryColor: '', secondaryColor: '' }
 }
@@ -435,9 +447,9 @@ export function warSideStyles(war: ClanWarResponse): WarSideStyles {
 
 export function warHeadline(war: ClanWarResponse): string | null {
   if (!war.outcome) return null
-  if (war.outcome === 'attacker_won') return `${war.attack.lead.tag} wins`
-  if (war.outcome === 'defender_won') return `${war.defend.lead.tag} wins`
-  if (war.outcome === 'retreated') return `${war.attack.lead.tag} retreated`
+  if (war.outcome === 'attacker_won') return `${war.attack.lead.tag} Wins`
+  if (war.outcome === 'defender_won') return `${war.defend.lead.tag} Wins`
+  if (war.outcome === 'retreated') return `${war.attack.lead.tag} Retreated`
   return CLAN_WAR_OUTCOME_LABEL[war.outcome]
 }
 
@@ -462,19 +474,19 @@ export const CLAN_RULES_NOTE =
 
 export const CLAN_RULES: Rule[] = [
   {
-    title: 'Keep artwork clean.',
+    title: 'Keep Artwork Clean',
     text: 'No NSFW or questionable imagery in clan icons, banners, or names.',
   },
   {
-    title: 'No AI.',
+    title: 'No AI',
     text: 'No AI-generated icons, banners, or text.',
   },
   {
-    title: 'No hate.',
+    title: 'No Hate',
     text: 'No homophobia, racism, or slurs anywhere: names, tags, descriptions, or chat.',
   },
   {
-    title: 'No mocking.',
+    title: 'No Mocking',
     text: 'Do not build a clan to make fun of, call out, or disrespect other players or clans.',
   },
 ]

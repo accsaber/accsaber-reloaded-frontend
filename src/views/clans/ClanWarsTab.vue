@@ -39,7 +39,7 @@ function onDeclared(detail: ClanWarDetailResponse) {
 <template>
   <section class="clan-wars">
     <div v-if="canDeclare" class="clan-wars__actions">
-      <BaseButton variant="destructive" size="sm" @click="declareOpen = true">Declare war</BaseButton>
+      <BaseButton variant="destructive" @click="declareOpen = true">Declare War</BaseButton>
     </div>
     <ClanWarList :clan-id="clan.clan.id" :latest-war="recentWar" :season-running="seasonRunning" />
     <DeclareWarModal :open="declareOpen" :own-clan="clan" @close="declareOpen = false" @declared="onDeclared" />

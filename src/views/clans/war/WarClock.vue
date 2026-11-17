@@ -40,8 +40,6 @@ const headline = computed(() => warHeadline(props.war))
 .war-clock__headline {
   font-size: var(--text-card-title);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .war-clock__label {
@@ -62,7 +60,6 @@ const headline = computed(() => warHeadline(props.war))
 .war-clock--large .war-clock__headline {
   font-size: var(--text-page-title);
   line-height: 1.1;
-  letter-spacing: 0.02em;
 }
 
 .war-clock--large .war-clock__clock {

@@ -97,10 +97,8 @@ watch(() => route.query.page, fetchAudit, { immediate: true })
   flex-direction: column;
   margin: 0;
   padding: 0;
+  gap: var(--space-xs);
   list-style: none;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: hidden;
 }
 
 .audit__row {
@@ -110,15 +108,8 @@ watch(() => route.query.page, fetchAudit, { immediate: true })
   gap: var(--space-md);
   min-height: 48px;
   padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.audit__row:last-child {
-  border-bottom: none;
-}
-
-.audit__row:nth-child(even) {
   background: var(--bg-elevated);
+  border-radius: var(--radius-card);
 }
 
 .audit__action {
@@ -140,9 +131,7 @@ watch(() => route.query.page, fetchAudit, { immediate: true })
 
 .audit__staff {
   font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
@@ -157,7 +146,6 @@ watch(() => route.query.page, fetchAudit, { immediate: true })
 }
 
 .audit__when {
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-secondary);
   white-space: nowrap;

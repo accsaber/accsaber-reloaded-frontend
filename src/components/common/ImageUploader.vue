@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
+import IconButton from '@/components/common/IconButton.vue'
 import ImageCropModal from '@/components/common/ImageCropModal.vue'
 import { IMAGE_ACCEPT, useImagePick } from '@/composables/useImagePick'
 import { computed, ref } from 'vue'
@@ -11,6 +12,7 @@ const props = withDefaults(defineProps<{
   aspectRatio?: string
   disabled?: boolean
   crop?: boolean
+  bare?: boolean
   uploadHandler: (file: File) => Promise<void>
   removeHandler?: () => Promise<void>
 }>(), {
@@ -49,13 +51,13 @@ async function onRemove() {
 </script>
 
 <template>
-  <div class="image-uploader" :class="{ 'image-uploader--disabled': disabled }">
-    <div class="image-uploader__head">
-      <span class="image-uploader__label">{{ label }}</span>
+  <div class="image-uploader" :class="{ 'image-uploader--disabled': disabled, 'image-uploader--bare': bare }">
+    <div v-if="!bare" class="image-uploader__head">
+      <span class="field-label">{{ label }}</span>
       <small v-if="hint" class="image-uploader__hint">{{ hint }}</small>
     </div>
 
-    <div class="image-uploader__preview" :style="{ aspectRatio }">
+    <div v-if="!bare" class="image-uploader__preview" :style="{ aspectRatio }">
       <img v-if="imageUrl" :src="imageUrl" :alt="label" loading="lazy" />
       <div v-else class="image-uploader__empty">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -71,7 +73,18 @@ async function onRemove() {
       </div>
     </div>
 
-    <div class="image-uploader__actions">
+    <div v-if="bare" class="image-uploader__actions">
+      <IconButton :label="`${imageUrl ? 'Replace' : 'Upload'} ${label}`" :disabled="disabled || busy" @click="trigger">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
+        </svg>
+      </IconButton>
+      <IconButton v-if="imageUrl && removeHandler" :label="`Remove ${label}`" :disabled="disabled || busy"
+        @click="onRemove" />
+    </div>
+    <div v-else class="image-uploader__actions">
       <button type="button" class="image-uploader__btn" :disabled="disabled || busy"
         @click="trigger">
         {{ imageUrl ? 'Replace' : 'Upload' }}
@@ -99,6 +112,13 @@ async function onRemove() {
   gap: 6px;
 }
 
+.image-uploader--bare {
+  width: fit-content;
+  padding: var(--space-xs);
+  background: var(--bg-surface);
+  border-radius: var(--radius-btn);
+}
+
 .image-uploader--disabled {
   opacity: 0.6;
   pointer-events: none;
@@ -109,15 +129,6 @@ async function onRemove() {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-sm);
-}
-
-.image-uploader__label {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 
 .image-uploader__hint {
@@ -186,18 +197,19 @@ async function onRemove() {
 }
 
 .image-uploader__btn {
-  padding: 6px 12px;
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--text-body);
+  font-weight: 500;
   color: var(--text-primary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .image-uploader__btn:hover:not(:disabled) {

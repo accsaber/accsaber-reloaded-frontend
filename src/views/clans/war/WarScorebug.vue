@@ -26,7 +26,7 @@ const lead = computed(() => {
   const gap = left('attack') - left('defend')
   const leader = props.war[gap > 0 ? 'attack' : 'defend']
   const margin = Math.round(Math.abs(gap) * leader.stake)
-  return margin > 0 ? `${leader.lead.name} ahead by ${formatStanding(margin)}` : null
+  return margin > 0 ? `${leader.lead.name} Ahead by ${formatStanding(margin)}` : null
 })
 </script>
 
@@ -34,7 +34,7 @@ const lead = computed(() => {
   <component
     :is="hud ? 'header' : RouterLink"
     class="scorebug"
-    :class="{ 'scorebug--hud': hud }"
+    :class="hud ? 'scorebug--hud' : 'scorebug--card pressable'"
     :to="hud ? undefined : { name: 'clan-war', params: { warId: war.id } }"
   >
     <span
@@ -47,27 +47,28 @@ const lead = computed(() => {
       <span class="scorebug__identity">
         <ClanIcon :clan="entry.data.lead" :size="40" />
         <span class="scorebug__titles">
-          <ClanTag :clan="entry.data.lead" size="sm" effects />
-          <ClanName class="scorebug__name" :clan="entry.data.lead" />
-          <span v-if="!hud && entry.data.sides.length > 1" class="scorebug__allies">
-            +{{ entry.data.sides.length - 1 }} {{ entry.data.sides.length === 2 ? 'ally' : 'allies' }}
+          <span class="scorebug__tagline">
+            <ClanTag :clan="entry.data.lead" size="sm" effects />
+            <span v-if="!hud && entry.data.sides.length > 1" class="caption">
+              +{{ entry.data.sides.length - 1 }} {{ entry.data.sides.length === 2 ? 'ally' : 'allies' }}
+            </span>
           </span>
+          <ClanName class="scorebug__name" :clan="entry.data.lead" />
         </span>
       </span>
-      <span v-if="hud" class="scorebug__label">Standing at stake</span>
       <ClanBar :value="entry.data.stakeRemaining" :max="entry.data.stake" :mirror="entry.team === 'defend'" />
       <span class="scorebug__stake">
-        {{ formatStanding(entry.data.stakeRemaining) }}<span class="scorebug__total"> / {{ formatStanding(entry.data.stake) }}</span>
+        {{ formatStanding(entry.data.stakeRemaining) }}<span class="scorebug__total"> / {{ formatStanding(entry.data.stake) }}{{ hud ? ' Standing left' : '' }}</span>
       </span>
       <ul v-if="hud && entry.data.sides.length > 1" class="scorebug__sides">
-        <ClanWarSideRow v-for="side in entry.data.sides" :key="side.clan.id" :side="side" :now="now" />
+        <ClanWarSideRow v-for="side in entry.data.sides" :key="side.clan.id" :side="side" />
       </ul>
       <slot name="team" :team="entry.team" />
     </span>
 
     <span class="scorebug__middle">
-      <WarClock :war="war" :now="now" :viewer-team="viewerTeam" :large="hud" />
       <strong v-if="hud && lead" class="scorebug__lead">{{ lead }}</strong>
+      <WarClock :war="war" :now="now" :viewer-team="viewerTeam" :large="hud && !lead" />
       <slot name="middle" />
     </span>
   </component>
@@ -84,13 +85,18 @@ const lead = computed(() => {
   color: var(--text-primary);
   text-decoration: none;
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  transition: border-color 120ms ease-out;
 }
 
-.scorebug:hover {
-  border-color: var(--text-tertiary);
+.scorebug--card {
+  min-height: var(--scorebug-h);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.scorebug--card:hover {
+  background: var(--bg-elevated);
 }
 
 .scorebug:focus-visible {
@@ -140,7 +146,18 @@ const lead = computed(() => {
   align-items: flex-end;
 }
 
+.scorebug__tagline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.scorebug__side--defend .scorebug__tagline {
+  flex-direction: row-reverse;
+}
+
 .scorebug__name {
+  max-width: 100%;
   font-size: var(--text-body);
   font-weight: 600;
 }
@@ -156,11 +173,6 @@ const lead = computed(() => {
   color: var(--text-tertiary);
 }
 
-.scorebug__allies {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .scorebug__middle {
   grid-area: middle;
   display: flex;
@@ -170,30 +182,26 @@ const lead = computed(() => {
 }
 
 .scorebug__lead {
-  font-size: var(--text-body);
-  font-weight: 600;
+  font-size: var(--text-section-heading);
+  font-weight: 700;
   text-align: center;
+  text-wrap: balance;
 }
 
 .scorebug--hud {
+  grid-template-columns: minmax(0, 1fr) 240px minmax(0, 1fr);
   align-items: start;
 }
 
-.scorebug--hud:hover {
-  border-color: var(--bg-overlay);
-}
-
 .scorebug__sides {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
   align-self: stretch;
-  margin: 0;
+  margin: var(--space-sm) 0 0;
   padding: 0;
   text-align: left;
   list-style: none;
-}
-
-.scorebug__label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .scorebug--hud .scorebug__stake {
@@ -212,7 +220,7 @@ const lead = computed(() => {
   font-weight: 700;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .scorebug {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
@@ -220,6 +228,36 @@ const lead = computed(() => {
       'attack defend';
     gap: var(--space-md);
     padding: var(--space-md);
+  }
+
+  .scorebug--card .scorebug__identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-self: stretch;
+  }
+
+  .scorebug--card .scorebug__titles {
+    display: contents;
+  }
+
+  .scorebug--card .scorebug__name {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scorebug--card .scorebug__side--defend .scorebug__identity {
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-items: end;
+  }
+
+  .scorebug--card .scorebug__side--defend .clan-icon {
+    grid-area: 1 / 2;
+  }
+
+  .scorebug--card .scorebug__side--defend .scorebug__tagline {
+    grid-area: 1 / 1;
   }
 
   .scorebug--hud {

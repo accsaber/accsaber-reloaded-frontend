@@ -23,11 +23,14 @@ const props = withDefaults(
     size?: ClanTagSize
     effects?: boolean
     preview?: boolean
+    editable?: boolean
   }>(),
   { size: 'md' },
 )
 
 const card = computed(() => readClanEquipped(props.clan.equipped, 'clan_tag_card', readClanTagCardValue))
+defineEmits<{ 'update:tag': [tag: string] }>()
+
 const live = computed(() => !!props.effects && (props.size === 'lg' || !!props.preview))
 const fx = computed(() => (live.value ? annotateEffectLayerStacks(valueFxLayers(card.value)) : []))
 
@@ -86,8 +89,8 @@ const style = computed<Record<string, string> | undefined>(() => {
 
 <template>
   <component
-    :is="preview ? 'span' : RouterLink"
-    v-bind="preview ? {} : { to: { name: 'clan-detail', params: { slugOrId: clan.slug } }, title: clan.name, 'aria-label': `Clan ${clan.name}` }"
+    :is="preview || editable ? 'span' : RouterLink"
+    v-bind="preview || editable ? {} : { to: { name: 'clan-detail', params: { slugOrId: clan.slug } }, title: clan.name, 'aria-label': `Clan ${clan.name}` }"
     class="clan-tag"
     :class="[`clan-tag--${size}`, { 'clan-tag--shaped': card, 'clan-tag--still': !live }]"
     :style="style"
@@ -111,7 +114,20 @@ const style = computed<Record<string, string> | undefined>(() => {
     >
       <BorderDecals :decals="[asBorderDecal(decal)]" />
     </span>
-    <span class="clan-tag__text">{{ clan.tag }}</span>
+    <label v-if="editable" class="clan-tag__text clan-tag__edit">
+      <span aria-hidden="true">{{ clan.tag || 'TAG' }}</span>
+      <input
+        :value="clan.tag"
+        placeholder="TAG"
+        size="1"
+        maxlength="5"
+        aria-label="Tag"
+        autocapitalize="characters"
+        autocomplete="off"
+        @input="$emit('update:tag', ($event.target as HTMLInputElement).value)"
+      />
+    </label>
+    <span v-else class="clan-tag__text">{{ clan.tag }}</span>
     <ModifierCompositions
       v-for="layer in fx"
       :key="layer.key"
@@ -181,6 +197,33 @@ const style = computed<Record<string, string> | undefined>(() => {
 
 .clan-tag__text {
   position: relative;
+}
+
+.clan-tag__edit {
+  display: inline-grid;
+  cursor: text;
+}
+
+.clan-tag__edit > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.clan-tag__edit > span {
+  visibility: hidden;
+  white-space: pre;
+}
+
+.clan-tag__edit > input {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
 }
 
 .clan-tag--still :deep(.border-decals__pulse),

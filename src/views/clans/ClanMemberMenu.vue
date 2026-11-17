@@ -52,7 +52,7 @@ function pick(action: MemberPick) {
         role="menuitem"
         @click="pick(role)"
       >
-        Make {{ CLAN_ROLE_LABEL[role].toLowerCase() }}
+        Make {{ CLAN_ROLE_LABEL[role] }}
       </button>
       <button
         v-if="actions.wars"
@@ -62,14 +62,14 @@ function pick(action: MemberPick) {
         :disabled="actions.warsFull"
         @click="pick('wars')"
       >
-        {{ member.membership?.warParticipation ? 'Take off wars' : 'Put back in wars' }}
+        {{ member.membership?.warParticipation ? 'Take Off Wars' : 'Put Back in Wars' }}
         <span v-if="actions.warsFull" class="member-menu__reason">Half the clan is already out</span>
       </button>
       <button v-if="actions.transfer" type="button" class="member-menu__item" role="menuitem" @click="pick('transfer')">
-        Transfer founder
+        Transfer Founder
       </button>
       <button v-if="actions.claim" type="button" class="member-menu__item" role="menuitem" @click="pick('claim')">
-        Claim clan
+        Claim Clan
       </button>
       <button
         v-if="actions.kick"

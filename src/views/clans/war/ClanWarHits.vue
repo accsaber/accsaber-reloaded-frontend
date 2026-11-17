@@ -79,7 +79,7 @@ function kind(hit: ClanWarHitResponse): keyof typeof VERB {
 }
 
 function detail(hit: ClanWarHitResponse): string {
-  if (hit.broke) return `−${formatStanding(hit.standingMoved)} Standing, safe until they play or their timer runs out`
+  if (hit.broke) return `−${formatStanding(hit.standingMoved)} Standing`
   return `${formatDamage(hit.guardAfter)} guard left`
 }
 
@@ -137,7 +137,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
 </script>
 
 <template>
-  <WarSection title="Battle log">
+  <WarSection fixed>
     <template #actions>
       <span class="war-hits__filters">
         <BaseTabs v-model="damageKind" :tabs="KIND_TABS" variant="segmented" label="Damage type" />
@@ -153,7 +153,7 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
       </span>
     </template>
     <p v-if="error" class="war-hits__error" role="alert">{{ error }}</p>
-    <BaseButton v-if="pending.length" class="war-hits__new" size="sm" @click="showPending">
+    <BaseButton v-if="pending.length" class="war-hits__new" @click="showPending">
       {{ pending.length }} new {{ pending.length === 1 ? 'hit' : 'hits' }}
     </BaseButton>
 

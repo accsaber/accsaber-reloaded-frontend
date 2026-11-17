@@ -1,20 +1,12 @@
 <script setup lang="ts">
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseTextarea from '@/components/common/BaseTextarea.vue'
-import BaseButton from '@/components/common/BaseButton.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
+import ClanColorField from '@/components/domain/ClanColorField.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import type { ItemResponse } from '@/types/api/items'
-import type { ClanProfileDraft } from '@/utils/clans'
+import { CLAN_COLOR_FIELDS, cleanClanTag, type ClanProfileDraft } from '@/utils/clans'
 import { computed } from 'vue'
-
-type ColorKey = 'tagColor' | 'primaryColor' | 'secondaryColor'
-
-const COLOR_FIELDS: { key: ColorKey; label: string }[] = [
-  { key: 'tagColor', label: 'Tag colour' },
-  { key: 'primaryColor', label: 'Primary colour' },
-  { key: 'secondaryColor', label: 'Secondary colour' },
-]
 
 const draft = defineModel<ClanProfileDraft>({ required: true })
 
@@ -30,7 +22,6 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 
-const neutral = getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()
 const tagPreview = computed(() => ({
   slug: '',
   name: draft.value.name,
@@ -38,14 +29,6 @@ const tagPreview = computed(() => ({
   tagColor: draft.value.tagColor || null,
   equipped: props.equipped ?? [],
 }))
-
-function setColor(key: ColorKey, value: string) {
-  draft.value = { ...draft.value, [key]: value.toLowerCase() }
-}
-
-function setTag(value: string | number) {
-  draft.value = { ...draft.value, tag: String(value).replace(/[^a-z0-9]/gi, '').slice(0, 5).toUpperCase() }
-}
 </script>
 
 <template>
@@ -90,25 +73,19 @@ function setTag(value: string | number) {
       :disabled="disabled"
       :error="fieldErrors.tag"
       class="clan-form__tag"
-      @update:model-value="setTag"
+      @update:model-value="draft = { ...draft, tag: cleanClanTag($event) }"
     />
-    <div v-for="field in COLOR_FIELDS" :key="field.key" class="clan-form__color">
-      <span class="field-label">{{ field.label }}</span>
-      <div class="clan-form__color-row">
-        <input
-          type="color"
-          :aria-label="field.label"
-          :value="draft[field.key] || neutral"
-          :disabled="disabled"
-          @input="setColor(field.key, ($event.target as HTMLInputElement).value)"
-        />
-        <span v-if="field.key === 'tagColor'" class="clan-form__preview"><ClanTag :clan="tagPreview" preview /></span>
-        <BaseButton v-if="draft[field.key]" size="sm" :disabled="disabled" @click="setColor(field.key, '')">
-          Clear
-        </BaseButton>
-      </div>
-      <p v-if="fieldErrors[field.key]" class="clan-form__error" role="alert">{{ fieldErrors[field.key] }}</p>
-    </div>
+    <ClanColorField
+      v-for="field in CLAN_COLOR_FIELDS"
+      :key="field.key"
+      :model-value="draft[field.key]"
+      :label="field.label"
+      :disabled="disabled"
+      :error="fieldErrors[field.key]"
+      @update:model-value="draft = { ...draft, [field.key]: $event }"
+    >
+      <span v-if="field.key === 'tagColor'" class="clan-form__preview"><ClanTag :clan="tagPreview" preview /></span>
+    </ClanColorField>
     <BaseTextarea
       :model-value="draft.description"
       label="Description"
@@ -136,36 +113,8 @@ function setTag(value: string | number) {
   max-width: 160px;
 }
 
-.clan-form__color {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.clan-form__color-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.clan-form__color-row input {
-  width: 48px;
-  height: 32px;
-  padding: 0;
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  cursor: pointer;
-}
-
 .clan-form__preview {
   font-size: var(--text-section-heading);
-}
-
-.clan-form__error {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--error);
 }
 
 .clan-form__tag :deep(.base-input__field) {

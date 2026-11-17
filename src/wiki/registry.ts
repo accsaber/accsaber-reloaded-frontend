@@ -736,7 +736,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'starting in',
         ],
         related: ['clan-standing', 'clan-wars', 'clan-cosmetics'],
-        updated: '2026-10-26',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanSeasonsPage.vue'),
       },
       {
@@ -853,7 +853,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'take off wars',
         ],
         related: ['clan-wars', 'war-math', 'coalitions', 'clan-standing', 'clan-ranks'],
-        updated: '2026-11-14',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/WarCombatPage.vue'),
       },
       {

@@ -36,8 +36,8 @@ const DAMAGE: WikiCompareRow[] = [
     <p>
       Every full play on a war map counts, even one worse than your PB. What matters is beating
       their score. Fails and quits don't count. Neither do plays with Faster Song or Super Fast
-      Song, since a shorter map is just a quicker hit. In Duels a play lands on one enemy. In Berserker it
-      lands on everyone it beats.
+      Song, since a shorter map is just a quicker hit. In Duels a play hits one enemy. In Berserker it
+      hits everyone it beats.
     </p>
 
     <WikiHeading id="hits">Hits</WikiHeading>
@@ -51,7 +51,7 @@ const DAMAGE: WikiCompareRow[] = [
     <WikiHeading id="damage">Damage</WikiHeading>
     <p>
       Every map a player gets hit on makes the next hit on them stronger, no matter who on your
-      team lands it. Hits on someone with no score never get stronger and only bump the
+      team hits them. Hits on someone with no score never get stronger and only bump the
       next real hit as much as a chip does. Hitting them again on a map they already got hit on only keeps 40% of the streak bonus, and
       40% of that again the time after. It only builds the streak as much as a chip. Spamming one map
       fades out fast, so spread your hits across maps. The streak starts over once their guard comes back.

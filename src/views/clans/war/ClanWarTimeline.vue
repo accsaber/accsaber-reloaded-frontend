@@ -123,7 +123,7 @@ const summary = computed(() =>
 </script>
 
 <template>
-  <WarSection title="Timeline">
+  <WarSection fixed>
     <p v-if="!points.length" class="timeline__empty">No hits yet.</p>
     <p v-else class="timeline__summary">
       {{ summary }}.
@@ -230,7 +230,7 @@ const summary = computed(() =>
   fill: var(--war-side);
   fill-opacity: 0.45;
   cursor: default;
-  transition: fill-opacity 120ms ease-out;
+  transition: fill-opacity var(--dur-fast) var(--ease-out);
 }
 
 .timeline__hit--break {

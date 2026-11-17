@@ -140,22 +140,21 @@ watch(() => (mayOffer.value ? props.ownClanId : null), fetchAllies, { immediate:
 </script>
 
 <template>
-  <WarSection v-if="canAsk || canLeave || canOffer || aids.length" title="Allies" fixed>
+  <WarSection v-if="canAsk || canLeave || canOffer || aids.length" fixed>
     <template #actions>
-      <BaseButton v-if="canAsk && !asking" size="sm" @click="asking = true">Ask an ally</BaseButton>
+      <BaseButton v-if="canAsk && !asking" @click="asking = true">Ask an Ally</BaseButton>
       <template v-if="canOffer">
         <BaseButton
           v-for="team in offerTeams"
           :key="team"
-          size="sm"
           :loading="busyId === `offer-${team}`"
           :disabled="!!busyId"
           @click="offer(team)"
         >
-          Help {{ CLAN_WAR_TEAM_LABEL[team].toLowerCase() }}
+          Help {{ CLAN_WAR_TEAM_LABEL[team] }}
         </BaseButton>
       </template>
-      <BaseButton v-if="canLeave" variant="destructive" size="sm" @click="leaveOpen = true">Leave the war</BaseButton>
+      <BaseButton v-if="canLeave" variant="destructive" @click="leaveOpen = true">Leave the War</BaseButton>
     </template>
 
     <div v-if="asking" class="war-aid__form">
@@ -165,7 +164,7 @@ watch(() => (mayOffer.value ? props.ownClanId : null), fetchAllies, { immediate:
         placeholder="Search an ally..."
         @select="ask"
       />
-      <BaseButton size="sm" :disabled="busyId === 'ask'" @click="asking = false">Cancel</BaseButton>
+      <BaseButton :disabled="busyId === 'ask'" @click="asking = false">Cancel</BaseButton>
     </div>
 
     <p v-if="error" class="war-aid__error" role="alert">{{ error }}</p>

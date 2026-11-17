@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { ClanWarParticipantResponse, ClanWarResponse, ClanWarTargeting, PublicClanResponse } from '@/types/api/clans'
 import { CLAN_WAR_TARGETING_LABEL, warAim, type WarAimReason } from '@/utils/clans'
 import { computed } from 'vue'
 import { useWarPlaylist } from './useWarPlaylist'
-import WarOptionTiles from './WarOptionTiles.vue'
 
 const props = defineProps<{
   war: ClanWarResponse
@@ -22,17 +22,11 @@ const emit = defineEmits<{
 }>()
 
 const REASON: Record<WarAimReason, string> = {
-  commander: 'following your commander',
-  pick: 'your pick',
-  auto: 'auto: whoever your play hurts most',
-  unpicked: 'tap someone in the roster to pick them, until then auto',
+  commander: 'your commander picked them',
+  pick: '',
+  auto: 'whoever your play does the most damage to',
+  unpicked: 'whoever your play does the most damage to, until you pick someone in Fighters',
   halt: '',
-}
-
-const TARGETING_NOTE: Record<ClanWarTargeting, string> = {
-  follow: 'Your commanders choose who you hit',
-  auto: 'You hit whoever your play hurts most',
-  manual: 'You choose who you hit',
 }
 
 const playlist = useWarPlaylist(() => props.war)
@@ -40,44 +34,46 @@ const preparing = computed(() => props.war.status === 'preparing')
 const options = computed(() =>
   (Object.keys(CLAN_WAR_TARGETING_LABEL) as ClanWarTargeting[])
     .filter((key) => key !== 'manual' || props.war.ruleset === 'duel')
-    .map((key) => ({ key, label: CLAN_WAR_TARGETING_LABEL[key], note: TARGETING_NOTE[key] })),
+    .map((key) => ({ key, label: CLAN_WAR_TARGETING_LABEL[key] })),
 )
 const aim = computed(() => warAim(props.viewer))
+const waiting = computed(() => (props.viewer.orders?.targeting ?? 'follow') === 'follow' && aim.value.reason === 'auto')
 const down = computed(() => props.war.status === 'active' && props.viewer.guard <= 0)
 </script>
 
 <template>
   <section class="war-you" aria-label="Your targeting">
-    <WarOptionTiles
-      class="war-you__tiles"
-      :model-value="viewer.orders?.targeting ?? 'follow'"
-      :options="options"
-      label="Targeting"
-      :disabled="saving"
-      @update:model-value="emit('targeting', $event as ClanWarTargeting)"
-    />
-
-    <p v-if="aim.reason === 'halt'" class="war-you__line war-you__line--halt">
-      Your commander halted your attacks. Your plays won't hit anyone until they lift it.
-      <BaseButton size="sm" :loading="saving" @click="emit('targeting', 'auto')">Switch to auto</BaseButton>
-    </p>
-    <p v-else class="war-you__line">
-      Aiming at:
-      <UserChip v-if="aim.target" :user="aim.target" size="sm" tooltip hide-clan />
-      <span class="war-you__why">{{ REASON[aim.reason] }}</span>
-    </p>
+    <div class="war-you__aim">
+      <BaseTabs
+        variant="segmented"
+        label="Targeting"
+        :tabs="options"
+        :model-value="viewer.orders?.targeting ?? 'follow'"
+        :disabled-keys="saving ? options.map((o) => o.key) : []"
+        @update:model-value="emit('targeting', $event as ClanWarTargeting)"
+      />
+      <p v-if="aim.reason === 'halt'" class="war-you__line war-you__line--halt">
+        Your commander halted your attacks
+        <BaseButton :loading="saving" @click="emit('targeting', 'auto')">Switch to Auto</BaseButton>
+      </p>
+      <p v-else class="war-you__line">
+        You hit
+        <UserChip v-if="aim.target" :user="aim.target" size="sm" tooltip hide-clan />
+        <span class="war-you__why">{{ waiting ? 'no order yet, so ' : '' }}{{ REASON[aim.reason] }}</span>
+      </p>
+    </div>
     <p v-if="down" class="war-you__line war-you__line--down">
-      You're down. One play on a war map gets you back up and lands a hit.
+      You are broken. One play on a war map brings you back and hits
     </p>
 
     <ol v-if="preparing" class="war-you__steps">
       <li class="war-you__step">
         <span>Download the playlist</span>
-        <BaseButton size="sm" :loading="playlist.downloading.value" @click="playlist.download">Download</BaseButton>
+        <BaseButton :loading="playlist.downloading.value" @click="playlist.download">Download</BaseButton>
       </li>
       <li v-if="canPush" class="war-you__step">
         <span>Push your PBs where enemies are close</span>
-        <BaseButton size="sm" @click="emit('push')">Show map</BaseButton>
+        <BaseButton @click="emit('push')">Show Map</BaseButton>
       </li>
       <li v-if="ownClan" class="war-you__step">
         <span>Plan with your clan</span>
@@ -100,14 +96,16 @@ const down = computed(() => props.war.status === 'active' && props.viewer.guard 
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
-.war-you .war-you__tiles {
-  --page-accent: var(--text-primary);
+.war-you__aim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-lg);
 }
 
 .war-you__line {
@@ -148,11 +146,6 @@ const down = computed(() => props.war.status === 'active' && props.viewer.guard 
   gap: var(--space-sm) var(--space-md);
   min-height: 48px;
   font-size: var(--text-body);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.war-you__step:last-child {
-  border-bottom: none;
 }
 
 .war-you__link {

@@ -15,12 +15,15 @@ const props = defineProps<{
   busy: boolean
   canDeclare: boolean
   error: string | null
+  editing: boolean
 }>()
 
 const emit = defineEmits<{
   request: []
   resolve: [status: 'accepted' | 'declined' | 'cancelled']
   edit: []
+  cancel: []
+  save: []
   leave: []
   disband: []
   'propose-alliance': []
@@ -46,8 +49,13 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
 
 <template>
   <div v-if="signedIn" class="clan-actions">
-    <template v-if="viewerRole">
-      <BaseButton v-if="isFounder" size="sm" @click="emit('edit')">Edit</BaseButton>
+    <template v-if="editing">
+      <BaseButton :disabled="busy" @click="emit('cancel')">Cancel</BaseButton>
+      <BaseButton variant="primary" :loading="busy" @click="emit('save')">Save</BaseButton>
+    </template>
+
+    <template v-else-if="viewerRole">
+      <BaseButton v-if="isFounder" @click="emit('edit')">Edit</BaseButton>
       <BaseDropdown :open="menuOpen" position="bottom-right" @update:open="menuOpen = $event">
         <template #trigger>
           <button type="button" class="clan-actions__menu-btn" aria-label="Clan menu" :aria-expanded="menuOpen">
@@ -60,7 +68,7 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
           </button>
         </template>
         <div class="clan-actions__menu" role="menu">
-          <button type="button" class="clan-actions__item" role="menuitem" @click="pick('leave')">Leave clan</button>
+          <button type="button" class="clan-actions__item" role="menuitem" @click="pick('leave')">Leave Clan</button>
           <button
             v-if="isFounder"
             type="button"
@@ -68,20 +76,20 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
             role="menuitem"
             @click="pick('disband')"
           >
-            Disband clan
+            Disband Clan
           </button>
         </div>
       </BaseDropdown>
     </template>
 
     <template v-else-if="invite">
-      <BaseButton variant="primary" size="sm" :loading="busy" @click="emit('resolve', 'accepted')">Accept invite</BaseButton>
-      <BaseButton size="sm" :disabled="busy" @click="emit('resolve', 'declined')">Decline</BaseButton>
+      <BaseButton variant="primary" :loading="busy" @click="emit('resolve', 'accepted')">Accept Invite</BaseButton>
+      <BaseButton :disabled="busy" @click="emit('resolve', 'declined')">Decline</BaseButton>
     </template>
 
     <template v-else-if="pendingRequest">
       <span class="field-label">Request sent</span>
-      <BaseButton size="sm" :loading="busy" @click="emit('resolve', 'cancelled')">Cancel</BaseButton>
+      <BaseButton :loading="busy" @click="emit('resolve', 'cancelled')">Cancel</BaseButton>
     </template>
 
     <BaseDropdown
@@ -91,7 +99,7 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
       @update:open="menuOpen = $event"
     >
       <template #trigger>
-        <BaseButton size="sm" :loading="busy">Diplomacy</BaseButton>
+        <BaseButton :loading="busy">Diplomacy</BaseButton>
       </template>
       <div class="clan-actions__menu" role="menu">
         <button
@@ -101,10 +109,10 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
           role="menuitem"
           @click="pick('propose-alliance')"
         >
-          Propose alliance
+          Propose Alliance
         </button>
         <button type="button" class="clan-actions__item" role="menuitem" @click="pick('call-rival')">
-          Call rival
+          Call Rival
         </button>
         <button
           v-if="canDeclare"
@@ -113,16 +121,16 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
           role="menuitem"
           @click="pick('declare-war')"
         >
-          Declare war
+          Declare War
         </button>
       </div>
     </BaseDropdown>
 
     <template v-else-if="!viewerInOtherClan">
-      <BaseButton v-if="acceptingRequests" variant="primary" size="sm" :loading="busy" @click="emit('request')">
-        Request to join
+      <BaseButton v-if="acceptingRequests" variant="primary" :loading="busy" @click="emit('request')">
+        Request to Join
       </BaseButton>
-      <BaseButton v-else size="sm" disabled>Not taking requests</BaseButton>
+      <BaseButton v-else disabled>Not Taking Requests</BaseButton>
     </template>
 
     <p v-if="error" class="clan-actions__error" role="alert">{{ error }}</p>
@@ -142,15 +150,18 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--control-h);
+  height: var(--control-h);
   padding: 0;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 .clan-actions__menu-btn:hover,
@@ -197,11 +208,5 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
   font-size: var(--text-caption);
   text-align: right;
   color: var(--error);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .clan-actions__menu-btn {
-    transition: none;
-  }
 }
 </style>

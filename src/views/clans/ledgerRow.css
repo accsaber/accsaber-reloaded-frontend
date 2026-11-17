@@ -1,0 +1,13 @@
+.ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 64px;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-body);
+  color: var(--text-primary);
+}
+
+.ledger-row > :last-child {
+  text-align: right;
+}

@@ -2,24 +2,31 @@
 import { parseApiError } from '@/api/client'
 import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
-import type { ClanLevelStepResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
+import type { ClanLevelStepResponse, ClanResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
 import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
-import { CLAN_ROLE_LABEL, clanColorVars, hasClanRole, isPacifist, rankSlots } from '@/utils/clans'
+import {
+  CLAN_ROLE_LABEL,
+  clanColorVars,
+  clanDraftFrom,
+  emptyClanDraft,
+  hasClanRole,
+  isPacifist,
+  rankSlots,
+  type ClanProfileDraft,
+} from '@/utils/clans'
 import { isUuid } from '@/utils/mapRoute'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
-import ClanEditModal from './clans/ClanEditModal.vue'
 import ClanHeader from './clans/ClanHeader.vue'
+import ClanHeaderEditor from './clans/ClanHeaderEditor.vue'
 import ClanHeaderActions from './clans/ClanHeaderActions.vue'
-import ClanNowStrip from './clans/ClanNowStrip.vue'
 import ClanRosterTab from './clans/ClanRosterTab.vue'
 import { loadClanLevels } from './clans/clanLevels'
 import { useClanChat } from '@/composables/useClanChat'
@@ -114,21 +121,18 @@ const activeTab = computed<ClanTab>(() => {
   const requested = route.query.tab
   return [...tabs.value, ...manageTabs.value].some((t) => t.key === requested) ? (requested as ClanTab) : 'roster'
 })
+const HEADER_GHOST_HEIGHT = 280
+const ROSTER_GHOST_ROWS = 10
+const BARE_TABS: string[] = ['wars', 'chat', 'requests']
 const levelSteps = ref<ClanLevelStepResponse[]>([])
+const maxLevel = computed(() => Math.max(0, ...levelSteps.value.map((s) => s.level)))
 const slots = computed(() => (clan.value ? rankSlots(levelSteps.value, clan.value.level.level) : []))
 
-watch(
-  () => activeTab.value === 'roster',
-  async (onRoster) => {
-    if (!onRoster || levelSteps.value.length) return
-    try {
-      levelSteps.value = await loadClanLevels()
-    } catch {
-      levelSteps.value = []
-    }
-  },
-  { immediate: true },
-)
+loadClanLevels()
+  .then((steps) => {
+    levelSteps.value = steps
+  })
+  .catch(() => {})
 
 const activeManage = computed(() => manageTabs.value.find((t) => t.key === activeTab.value) ?? null)
 const manageOpen = ref(false)
@@ -139,10 +143,6 @@ function pickManage(tab: string) {
 }
 
 const isFounder = computed(() => hasClanRole(viewerRole.value, 'founder'))
-const breadcrumbs = computed<Crumb[]>(() => [
-  { label: 'Clans', to: { name: 'clans' } },
-  { label: clan.value?.clan.name ?? 'Clan' },
-])
 
 const chatClanId = computed(() => clan.value?.clan.id ?? null)
 const isMember = computed(() => viewerRole.value !== null)
@@ -174,7 +174,7 @@ async function loadRecentWar(clanId: string | null) {
 watch(chatClanId, loadRecentWar, { immediate: true })
 
 const declareOpen = ref(false)
-const { running: seasonRunning } = useCurrentClanSeason()
+const { seasons, running: seasonRunning } = useCurrentClanSeason()
 const canDeclare = computed(
   () => seasonRunning.value && !!clan.value && !isPacifist(clan.value) && !ownPacifist.value,
 )
@@ -189,7 +189,62 @@ const actionError = ref<string | null>(null)
 const actionNotice = ref<string | null>(null)
 const confirm = ref<PendingConfirm | null>(null)
 const confirmError = ref<string | null>(null)
-const editOpen = ref(false)
+const editing = ref(false)
+const draft = ref<ClanProfileDraft>(emptyClanDraft())
+const draftRequests = ref(true)
+const draftPacifism = ref(false)
+
+function startEdit() {
+  if (!clan.value) return
+  draft.value = clanDraftFrom(clan.value.clan, clan.value.description)
+  draftRequests.value = clan.value.acceptingRequests
+  draftPacifism.value = !!clan.value.pacifistFrom
+  editError.value = null
+  editFieldErrors.value = {}
+  editing.value = true
+}
+
+const shownClan = computed<ClanResponse | null>(() => {
+  const current = clan.value
+  if (!current || !editing.value) return current
+  const d = draft.value
+  return {
+    ...current,
+    description: d.description,
+    clan: {
+      ...current.clan,
+      name: d.name,
+      tag: d.tag,
+      tagColor: d.tagColor || null,
+      primaryColor: d.primaryColor || null,
+      secondaryColor: d.secondaryColor || null,
+    },
+  }
+})
+
+const headerDraft = computed({
+  get: () => (editing.value ? draft.value : undefined),
+  set: (value) => {
+    if (value) draft.value = value
+  },
+})
+
+async function saveDraft() {
+  if (draftPacifism.value !== !!clan.value?.pacifistFrom) {
+    await setPacifism(draftPacifism.value)
+    if (editError.value) return
+  }
+  const d = draft.value
+  await saveProfile({
+    name: d.name.trim(),
+    tag: d.tag,
+    description: d.description,
+    tagColor: d.tagColor,
+    primaryColor: d.primaryColor,
+    secondaryColor: d.secondaryColor,
+    acceptingRequests: draftRequests.value,
+  })
+}
 const editError = ref<string | null>(null)
 const editFieldErrors = ref<Record<string, string>>({})
 
@@ -398,7 +453,7 @@ async function saveProfile(request: UpdateClanRequest) {
   try {
     const { updateClan } = await import('@/api/clans')
     clan.value = await updateClan(clan.value!.clan.id, request)
-    editOpen.value = false
+    editing.value = false
     if (clan.value.clan.slug !== slugOrId.value) {
       await router.replace({ params: { slugOrId: clan.value.clan.slug }, query: route.query })
     }
@@ -472,18 +527,35 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
 </script>
 
 <template>
-  <div class="clan-page clan-colors" :style="clan ? clanColorVars(clan.clan) : undefined">
-    <template v-if="loading">
-      <SkeletonLoader variant="card" height="260px" />
-      <SkeletonLoader variant="text" :lines="4" />
-    </template>
-
-    <EmptyState v-else-if="error || !clan" :message="error ?? 'Clan not found.'" />
+  <div class="clan-page clan-colors" :style="shownClan ? clanColorVars(shownClan.clan) : undefined">
+    <EmptyState v-if="!loading && (error || !clan)" :message="error ?? 'Clan not found'" />
 
     <template v-else>
-      <ClanHeader :clan="clan" :standing="standing">
-        <template #top>
-          <Breadcrumbs :crumbs="breadcrumbs" />
+      <SkeletonLoader v-if="!clan" :height="`${HEADER_GHOST_HEIGHT}px`" />
+      <ClanHeader
+        v-else
+        :clan="shownClan ?? clan"
+        :standing="standing"
+        :max-level="maxLevel"
+        v-model:draft="headerDraft"
+        :editing="editing"
+        :upload-icon="uploadIcon"
+        :remove-icon="removeIcon"
+        :upload-banner="uploadBanner"
+        :remove-banner="removeBanner"
+        @save="saveDraft"
+        @cancel="editing = false"
+      >
+        <template #editor>
+          <ClanHeaderEditor
+            v-model="draft"
+            v-model:accepting-requests="draftRequests"
+            v-model:pacifism="draftPacifism"
+            :clan="shownClan ?? clan"
+            :field-errors="editFieldErrors"
+            :error="editError"
+            :disabled="busy"
+          />
         </template>
         <template #actions>
           <ClanHeaderActions
@@ -498,7 +570,10 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
             :error="actionError"
             @request="requestJoin"
             @resolve="resolveRequest"
-            @edit="editOpen = true"
+            :editing="editing"
+            @edit="startEdit"
+            @cancel="editing = false"
+            @save="saveDraft"
             @leave="askLeave"
             @disband="askDisband"
             @propose-alliance="actAsOwnClan('ally')"
@@ -508,8 +583,6 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           <p v-if="actionNotice" class="clan-page__notice" role="status">{{ actionNotice }}</p>
         </template>
       </ClanHeader>
-
-      <ClanNowStrip :clan-id="clan.clan.id" :war="recentWar" :level="clan.level" :show-level="activeTab !== 'level'" />
 
       <div class="clan-page__tabs">
         <BaseTabs :tabs="tabs" :model-value="activeTab" @update:model-value="setTab" />
@@ -548,13 +621,14 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         </BaseDropdown>
       </div>
 
-      <div class="clan-page__panel">
+      <div class="clan-page__panel" :class="{ 'clan-page__panel--bare': BARE_TABS.includes(activeTab) }">
         <ClanRosterTab
           v-if="activeTab === 'roster'"
+          :key="clan?.clan.id ?? 'ghost'"
           :members="members"
-          :member-count="clan.memberCount"
+          :member-count="clan?.memberCount ?? ROSTER_GHOST_ROWS"
           :slots="slots"
-          :loading="rosterLoading && members.length === 0"
+          :loading="!clan || (rosterLoading && members.length === 0)"
           :viewer-role="viewerRole"
           :viewer-id="auth.userId"
           @change-role="changeRole"
@@ -563,44 +637,32 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           @transfer="askTransfer"
           @claim="claimClan"
         />
-        <ClanChatTab v-else-if="activeTab === 'chat'" :chat="chat" :feed="feed" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
-        <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" />
-        <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
-        <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
-        <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
-        <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" :standing="standing" />
-        <ClanCosmeticsTab
-          v-else-if="activeTab === 'cosmetics'"
-          :clan="clan"
-          :can-customize="isFounder"
-          @equipped="onEquipped"
-        />
-        <ClanRequestsTab v-else-if="activeTab === 'requests'" :clan="clan" @changed="onMembershipChanged" />
-        <ClanAuditTab v-else-if="activeTab === 'audit'" :clan="clan" />
+        <template v-else-if="clan">
+          <ClanChatTab v-if="activeTab === 'chat'" :chat="chat" :feed="feed" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
+          <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" />
+          <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
+          <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
+          <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
+          <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" :standing="standing" :seasons="seasons" />
+          <ClanCosmeticsTab
+            v-else-if="activeTab === 'cosmetics'"
+            :clan="clan"
+            :can-customize="isFounder"
+            @equipped="onEquipped"
+          />
+          <ClanRequestsTab v-else-if="activeTab === 'requests'" :clan="clan" @changed="onMembershipChanged" />
+          <ClanAuditTab v-else-if="activeTab === 'audit'" :clan="clan" />
+        </template>
+        <SkeletonLoader v-else variant="text" :lines="6" />
       </div>
 
       <DeclareWarModal
-        v-if="ownClan && viewerInOtherClan"
+        v-if="clan && ownClan && viewerInOtherClan"
         :open="declareOpen"
         :own-clan="ownClan"
         :preselected="clan"
         @close="declareOpen = false"
         @declared="onDeclared"
-      />
-
-      <ClanEditModal
-        :open="editOpen"
-        :clan="clan"
-        :saving="busy"
-        :error="editError"
-        :field-errors="editFieldErrors"
-        :upload-icon="uploadIcon"
-        :remove-icon="removeIcon"
-        :upload-banner="uploadBanner"
-        :remove-banner="removeBanner"
-        @save="saveProfile"
-        @pacifism="setPacifism"
-        @close="editOpen = false"
       />
 
       <ConfirmModal
@@ -634,8 +696,12 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
 .clan-page__panel {
   padding: var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+}
+
+.clan-page__panel--bare {
+  padding: 0;
+  background: none;
 }
 
 .clan-page__tabs {

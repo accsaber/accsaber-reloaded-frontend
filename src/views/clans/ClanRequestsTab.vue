@@ -99,7 +99,7 @@ watch(() => route.query.page, fetchRequests, { immediate: true })
     <div v-if="loading" class="requests-tab__skeleton">
       <SkeletonLoader v-for="i in 4" :key="i" variant="table-row" />
     </div>
-    <EmptyState v-else-if="pending.length === 0" message="No requests or invites waiting." />
+    <EmptyState v-else-if="pending.length === 0" message="No requests or invites waiting" />
     <ClanRequestList v-else :requests="pending" perspective="clan" :busy-id="busyId" @resolve="resolve" />
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
@@ -116,6 +116,7 @@ watch(() => route.query.page, fetchRequests, { immediate: true })
 .requests-tab__invite {
   display: grid;
   grid-template-columns: minmax(0, 360px) auto;
+  justify-content: start;
   gap: var(--space-sm);
   align-items: center;
 }

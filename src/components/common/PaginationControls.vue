@@ -1,117 +1,87 @@
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
+import { computed, nextTick, ref } from 'vue'
 
-const props = defineProps<{
+type Gap = 'left' | 'right'
+
+const props = withDefaults(defineProps<{
   page: number
   totalPages: number
   siblingCount?: number
-}>()
+  compact?: boolean
+}>(), { siblingCount: 1 })
 
 const emit = defineEmits<{
   'update:page': [page: number]
 }>()
 
-const siblings = computed(() => props.siblingCount ?? 1)
-
-const editingLeft = ref(false)
-const editingRight = ref(false)
+const narrow = useMediaQuery('(max-width: 767px)')
+const jumping = ref<Gap | null>(null)
 const jumpInput = ref('')
-const leftInputRef = ref<HTMLInputElement | null>(null)
-const rightInputRef = ref<HTMLInputElement | null>(null)
+const jumpRef = ref<HTMLInputElement[]>([])
 
-const range = computed(() => {
-  const current = props.page
+function span(from: number, to: number): number[] {
+  return Array.from({ length: to - from + 1 }, (_, i) => from + i)
+}
+
+const slots = computed<(number | Gap)[]>(() => {
   const total = props.totalPages
-  const s = siblings.value
-
-  if (total <= 0) return { start: 1, end: 1, showLeftEllipsis: false, showRightEllipsis: false }
-
-  const start = Math.max(1, current - s)
-  const end = Math.min(total, current + s)
-
-  return {
-    start,
-    end,
-    showLeftEllipsis: start > 1,
-    showRightEllipsis: end < total,
-  }
+  const s = narrow.value ? 0 : props.siblingCount
+  const count = 2 * s + 5
+  if (total <= count) return span(1, total)
+  if (props.page <= s + 3) return [...span(1, count - 2), 'right', total]
+  if (props.page >= total - s - 2) return [1, 'left', ...span(total - count + 3, total)]
+  return [1, 'left', ...span(props.page - s, props.page + s), 'right', total]
 })
 
-const pageNumbers = computed(() => {
-  const nums: number[] = []
-  for (let i = range.value.start; i <= range.value.end; i++) {
-    nums.push(i)
-  }
-  return nums
-})
+function go(page: number) {
+  if (page >= 1 && page <= props.totalPages && page !== props.page) emit('update:page', page)
+}
 
-function openJump(side: 'left' | 'right') {
+function openJump(side: Gap) {
   jumpInput.value = ''
-  if (side === 'left') {
-    editingLeft.value = true
-    nextTick(() => leftInputRef.value?.focus())
-  } else {
-    editingRight.value = true
-    nextTick(() => rightInputRef.value?.focus())
-  }
+  jumping.value = side
+  nextTick(() => jumpRef.value[0]?.focus())
 }
 
 function submitJump() {
-  const target = parseInt(jumpInput.value, 10)
-  if (!isNaN(target) && target >= 1 && target <= props.totalPages) {
-    emit('update:page', target)
-  }
-  editingLeft.value = false
-  editingRight.value = false
-  jumpInput.value = ''
-}
-
-function cancelJump() {
-  editingLeft.value = false
-  editingRight.value = false
-  jumpInput.value = ''
+  go(parseInt(jumpInput.value.replace(/\D/g, ''), 10))
+  jumping.value = null
 }
 </script>
 
 <template>
   <nav v-if="totalPages > 1" class="pagination" aria-label="Pagination">
-    <button class="pagination__nav pressable" :disabled="page <= 1" aria-label="First page" @click="emit('update:page', 1)">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="7 3 2 8 7 13" />
-        <polyline points="13 3 8 8 13 13" />
+    <button type="button" class="pagination__btn pressable" :disabled="page <= 1" aria-label="Previous page"
+      @click="go(page - 1)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 6 9 12 15 18" />
       </svg>
     </button>
 
-    <template v-if="range.showLeftEllipsis">
-      <input v-if="editingLeft" ref="leftInputRef" v-model="jumpInput" class="pagination__jump-input" type="number"
-        :min="1" :max="totalPages" :placeholder="`1-${totalPages}`" @keydown.enter="submitJump"
-        @keydown.escape="cancelJump" @blur="cancelJump" />
-      <button v-else class="pagination__ellipsis pressable" aria-label="Jump to page" @click="openJump('left')">
+    <span v-if="compact" class="pagination__count">{{ page }} / {{ totalPages }}</span>
+
+    <template v-for="slot in slots" v-else :key="slot">
+      <button v-if="typeof slot === 'number'" type="button" class="pagination__btn pressable"
+        :class="{ 'pagination__btn--active': slot === page }" :aria-current="slot === page ? 'page' : undefined"
+        @click="go(slot)">
+        {{ slot }}
+      </button>
+      <input v-else-if="jumping === slot" ref="jumpRef" v-model="jumpInput" class="pagination__btn pagination__jump"
+        inputmode="numeric" aria-label="Page number" @keydown.enter="submitJump" @keydown.escape="jumping = null"
+        @blur="jumping = null" />
+      <button v-else type="button" class="pagination__btn pressable" aria-label="Jump to page"
+        @click="openJump(slot)">
         &hellip;
       </button>
     </template>
 
-    <button v-for="p in pageNumbers" :key="p" class="pagination__page pressable"
-      :class="{ 'pagination__page--active': p === page }" @click="emit('update:page', p)">
-      {{ p }}
-    </button>
-
-    <template v-if="range.showRightEllipsis">
-      <input v-if="editingRight" ref="rightInputRef" v-model="jumpInput" class="pagination__jump-input" type="number"
-        :min="1" :max="totalPages" :placeholder="`1-${totalPages}`" @keydown.enter="submitJump"
-        @keydown.escape="cancelJump" @blur="cancelJump" />
-      <button v-else class="pagination__ellipsis pressable" aria-label="Jump to page" @click="openJump('right')">
-        &hellip;
-      </button>
-    </template>
-
-    <button class="pagination__nav pressable" :disabled="page >= totalPages" aria-label="Last page"
-      @click="emit('update:page', totalPages)">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="3 3 8 8 3 13" />
-        <polyline points="9 3 14 8 9 13" />
+    <button type="button" class="pagination__btn pressable" :disabled="page >= totalPages" aria-label="Next page"
+      @click="go(page + 1)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="9 6 15 12 9 18" />
       </svg>
     </button>
   </nav>
@@ -121,106 +91,60 @@ function cancelJump() {
 .pagination {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-xs);
-  justify-content: center;
 }
 
-.pagination__nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-h);
-  height: var(--control-h);
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-}
-
-.pagination__nav:hover:not(:disabled) {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.pagination__nav:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
-.pagination__page {
+.pagination__btn {
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: var(--control-h);
   height: var(--control-h);
-  padding: 0 var(--space-sm);
-  border: 1px solid transparent;
+  padding: 0 var(--space-xs);
+  border: none;
   border-radius: var(--radius-btn);
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
-.pagination__page:hover {
+.pagination__btn:hover:not(:disabled, .pagination__btn--active) {
   background: var(--bg-elevated);
   color: var(--text-primary);
 }
 
-.pagination__page--active {
+.pagination__btn:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.pagination__btn--active {
   background: var(--page-accent, var(--accent));
   color: var(--bg-base);
   font-weight: 600;
 }
 
-.pagination__page--active:hover {
-  background: var(--page-accent, var(--accent));
-  color: var(--bg-base);
-}
-
-.pagination__ellipsis {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--control-h);
-  height: var(--control-h);
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-}
-
-.pagination__ellipsis:hover {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-}
-
-.pagination__jump-input {
-  width: 56px;
-  height: var(--control-h);
-  padding: 0 var(--space-xs);
-  border: 1px solid var(--page-accent, var(--accent));
-  border-radius: var(--radius-btn);
+.pagination__jump {
+  width: var(--control-h);
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
   text-align: center;
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent, var(--accent)) 20%, transparent);
-  -moz-appearance: textfield;
+  cursor: text;
+  outline: 1px solid var(--page-accent, var(--accent));
 }
 
-.pagination__jump-input::-webkit-inner-spin-button,
-.pagination__jump-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.pagination__count {
+  min-width: 48px;
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  text-align: center;
 }
 </style>

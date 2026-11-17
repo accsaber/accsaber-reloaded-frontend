@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import ClanBar from './ClanBar.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
@@ -15,7 +14,7 @@ import { loadClanLevels } from './clanLevels'
 import ClanLevelReward from './ClanLevelReward.vue'
 import ClanLevelTrail from './ClanLevelTrail.vue'
 import ClanTotals, { type ClanTotalsRow } from './ClanTotals.vue'
-import { clamp } from '@/utils/math'
+import './ledgerRow.css'
 
 const props = defineProps<{ clan: ClanResponse; seasonRunning: boolean }>()
 
@@ -37,14 +36,6 @@ const xpLoading = ref(false)
 
 const progress = computed(() => level.value?.progress ?? props.clan.level)
 const maxLevel = computed(() => Math.max(0, ...steps.value.map((s) => s.level)))
-const atMax = computed(() => steps.value.length > 0 && progress.value.level >= maxLevel.value)
-const xpToNext = computed(() => Math.max(0, Math.ceil(progress.value.xpForNextLevel - progress.value.xpForCurrentLevel)))
-const percent = computed(() => clamp(progress.value.progressPercent, 0, 100))
-const headline = computed(() =>
-  atMax.value
-    ? `Level ${progress.value.level}, every reward unlocked.`
-    : `Level ${progress.value.level}, ${xpToNext.value.toLocaleString()} XP to level ${progress.value.level + 1}.`,
-)
 const scaling = computed(() => {
   const factor = level.value?.rosterFactor ?? 1
   return factor > 1 ? `x${factor.toFixed(1)}` : null
@@ -63,6 +54,11 @@ const sourceRows = computed<ClanTotalsRow[]>(() =>
     .map(([source, xp]) => ({ key: source, label: CLAN_XP_SOURCE_LABEL[source], value: xp, text: formatClanXp(xp) })),
 )
 const seasonXp = computed(() => sourceRows.value.reduce((sum, row) => sum + row.value, 0))
+const seasonNote = computed(() =>
+  [sourceRows.value.length ? `${formatClanXp(seasonXp.value)} XP` : null, scaling.value ? `clan size scaling ${scaling.value}` : null]
+    .filter(Boolean)
+    .join(' · '),
+)
 
 const xpColumns: TableColumn[] = [
   { key: 'source', label: 'Source', align: 'left' },
@@ -123,14 +119,6 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
 
 <template>
   <section class="level-tab">
-    <div class="level-tab__now">
-      <p class="section-title">{{ headline }}</p>
-      <ClanBar v-if="!atMax" class="level-tab__bar" :value="percent" :max="100" />
-      <p v-if="scaling" class="level-tab__scaling">
-        Clan size scaling {{ scaling }}
-      </p>
-    </div>
-
     <div v-if="loading" class="level-tab__next">
       <SkeletonLoader v-for="i in 2" :key="i" variant="card" height="220px" />
     </div>
@@ -148,15 +136,15 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
     <ClanLevelTrail v-else-if="steps.length" :steps="steps" :max-level="maxLevel" :current-level="progress.level" :total-xp="progress.totalXp" />
 
     <div class="level-tab__xp">
-      <h2 class="section-title">XP this season</h2>
+      <h2 class="section-title level-tab__heading">
+        XP This Season
+        <span v-if="seasonRunning && seasonNote" class="caption">{{ seasonNote }}</span>
+      </h2>
       <SkeletonLoader v-if="loading" variant="text" :lines="3" />
-      <ClanTotals v-else-if="seasonRunning" :rows="sourceRows">
-        <template v-if="sourceRows.length">{{ formatClanXp(seasonXp) }} XP this season.</template>
-        <template v-else>No XP this season yet.</template>
-      </ClanTotals>
-      <p v-else class="level-tab__no-season">No season running.</p>
-      <BaseButton class="level-tab__toggle" size="sm" :aria-expanded="showAll" @click="toggleAll">
-        {{ showAll ? 'Hide grants' : 'Show all grants' }}
+      <ClanTotals v-else-if="seasonRunning && sourceRows.length" :rows="sourceRows" />
+      <p v-else class="caption">{{ seasonRunning ? 'No XP this season yet' : 'No season running' }}</p>
+      <BaseButton class="level-tab__toggle" :aria-expanded="showAll" @click="toggleAll">
+        {{ showAll ? 'Hide Grants' : 'Show All Grants' }}
       </BaseButton>
       <template v-if="showAll">
         <DataTable :columns="xpColumns" :rows="xpRows" :loading="xpLoading" :loading-rows="6" row-key="key" empty-message="No XP yet">
@@ -164,10 +152,10 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
             <span :title="String(row.detail)">{{ row.amount }}</span>
           </template>
           <template #mobile-card="{ row }">
-            <span class="level-tab__grant">
+            <span class="ledger-row">
               <span>{{ row.source }}</span>
-              <span class="level-tab__grant-value" :title="String(row.detail)">{{ row.amount }} XP</span>
-              <span class="level-tab__grant-when">{{ row.createdAt }}</span>
+              <span :title="String(row.detail)">{{ row.amount }} XP</span>
+              <span class="caption">{{ row.createdAt }}</span>
             </span>
           </template>
         </DataTable>
@@ -184,25 +172,6 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
   gap: var(--space-xl);
 }
 
-.level-tab__now {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.level-tab__bar {
-  max-width: 560px;
-}
-
-.level-tab__scaling {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .level-tab__next {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -215,34 +184,15 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
   gap: var(--space-md);
 }
 
-.level-tab__no-season {
-  margin: 0;
-  font-size: var(--text-body);
-  color: var(--text-secondary);
+.level-tab__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
 }
 
 .level-tab__toggle {
   align-self: flex-start;
-}
-
-.level-tab__grant {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--space-md);
-  align-items: baseline;
-  padding: var(--space-sm) var(--space-md);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-}
-
-.level-tab__grant-value {
-  font-family: var(--font-mono);
-}
-
-.level-tab__grant-when {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 @media (max-width: 767px) {

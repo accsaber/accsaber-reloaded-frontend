@@ -2,7 +2,6 @@
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import Breadcrumbs, { type Crumb } from '@/components/common/Breadcrumbs.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
@@ -51,7 +50,7 @@ import { targetValue } from './clans/war/warStrike'
 const FIGHTERS_SIZE = 100
 const HOUR = 3_600_000
 
-type WarTab = 'log' | 'rewards' | 'allies'
+type WarTab = 'fighters' | 'maps' | 'log' | 'rewards' | 'allies'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -146,16 +145,12 @@ const canRetreat = computed(
 )
 const attackLeadId = computed(() => war.value?.attack.lead.id ?? null)
 const matchup = computed(() => (war.value ? `${war.value.attack.lead.tag} vs ${war.value.defend.lead.tag}` : null))
-const breadcrumbs = computed<Crumb[]>(() => [
-  { label: 'Clans', to: { name: 'clans' } },
-  { label: 'Wars', to: { name: 'clan-wars' } },
-  { label: matchup.value ?? 'War' },
-])
-
 const tabs = computed(() =>
   [
-    war.value?.status === 'active' && { key: 'log', label: 'Battle log' },
-    !ended.value && { key: 'rewards', label: 'Rewards' },
+    rosterShown.value && { key: 'fighters', label: 'Fighters' },
+    { key: 'maps', label: 'Maps' },
+    (war.value?.status === 'active' || ended.value) && { key: 'log', label: 'Log' },
+    { key: 'rewards', label: 'Rewards' },
     { key: 'allies', label: 'Allies' },
   ].filter((tab): tab is { key: WarTab; label: string } => !!tab),
 )
@@ -337,7 +332,6 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
 
 <template>
   <div class="war-page">
-    <Breadcrumbs :crumbs="breadcrumbs" />
     <p class="war-page__live" aria-live="polite">{{ announcement }}</p>
 
     <template v-if="loading">
@@ -356,93 +350,83 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
         </template>
         <template #middle>
           <span v-if="wipe && wipeIn" class="war-page__team-line war-page__team-line--last-stand">
-            Wiped! Everyone who was down is back in
+            Wiped! Every broken fighter is back in
             <HintTooltip variant="inline" :text="formatDateTime(wipe.at, true)"><template #trigger>{{ wipeIn }}</template></HintTooltip>
           </span>
           <BaseButton v-if="canRetreat" variant="destructive" size="sm" @click="retreatOpen = true">Retreat</BaseButton>
         </template>
       </WarScorebug>
 
-      <ClanWarPool
+      <WarYouCard
+        v-if="rosterOpen && viewer"
         :war="war"
-        :pool="detail.pool"
-        :rules="detail.strikeRules"
         :viewer="viewer"
-        :expanded="boards.expanded.value"
-        :boards="boards.boards.value"
-        :wipe="wipe"
-        :can-submit-picks="canSubmitPicks"
-        :signed-in="auth.isLoggedIn"
-        @toggle="boards.toggle"
-        @submit-picks="picksOpen = true"
+        :own-clan="own.clan.value"
+        :can-push="!!pushMapId"
+        :saving="picking"
+        :error="pickError"
+        @targeting="setTargeting"
+        @push="pushPbs"
       />
 
-      <ClanWarRewards v-if="ended" :war="war" :rewards="rewards" :error="rewardsError" :viewer-id="auth.userId" />
-
-      <template v-if="ended">
-        <ClanWarTimeline :war="war" :points="detail.timeline" />
-        <ClanWarHits :war="war" :participants="participants" :incoming="lastHit" :now="now" />
-      </template>
-
-
-      <template v-if="rosterOpen && viewer">
-        <WarYouCard
-          :war="war"
-          :viewer="viewer"
-          :own-clan="own.clan.value"
-          :can-push="!!pushMapId"
-          :saving="picking"
-          :error="pickError"
-          @targeting="setTargeting"
-          @push="pushPbs"
-        />
-      </template>
-
-      <ClanWarFighters
-        v-if="rosterShown"
-        :war="war"
-        :rules="detail.strikeRules"
-        :participants="participants"
-        :error="participantsError"
-        :viewer="ended ? null : viewer"
-        :wipe="wipe"
-        :focus-id="previewHidden ? null : focusId"
-        :best-id="bestTarget?.player.id ?? null"
-        :aim-id="aimId"
-        :can-aim="canAim"
-        :saving="picking"
-        :own-clan-id="ownClanId"
-        :viewer-team="ended ? null : viewerTeam"
-        :can-order="canOrder && rosterOpen"
-        :last-stand="ended ? undefined : detail.lastStand"
-        @focus="togglePreview"
-        @aim="setTargeting('manual', $event)"
-        @saved="applyOrders"
-      >
-        <template v-if="rosterOpen && viewerTeam" #detail="{ fighter }">
-          <WarTargetCard
+      <div class="war-page__tabs">
+        <BaseTabs v-model="activeTab" :tabs="tabs" label="War details" id-prefix="war" />
+        <div :id="`war-panel-${activeTab}`" :key="activeTab" class="war-page__panel" role="tabpanel" :aria-labelledby="`war-tab-${activeTab}`">
+          <ClanWarFighters
+            v-if="activeTab === 'fighters'"
             :war="war"
             :rules="detail.strikeRules"
-            :fighter="fighter"
-            :pool="detail.pool"
-            :aimed="fighter.player.id === aimId"
+            :participants="participants"
+            :error="participantsError"
+            :viewer="ended ? null : viewer"
+            :wipe="wipe"
+            :focus-id="previewHidden ? null : focusId"
+            :best-id="bestTarget?.player.id ?? null"
+            :aim-id="aimId"
             :can-aim="canAim"
             :saving="picking"
+            :own-clan-id="ownClanId"
+            :viewer-team="ended ? null : viewerTeam"
+            :can-order="canOrder && rosterOpen"
+            :last-stand="ended ? undefined : detail.lastStand"
+            @focus="togglePreview"
+            @aim="setTargeting('manual', $event)"
+            @saved="applyOrders"
+          >
+            <template v-if="rosterOpen && viewerTeam" #detail="{ fighter }">
+              <WarTargetCard
+                :war="war"
+                :rules="detail.strikeRules"
+                :fighter="fighter"
+                :pool="detail.pool"
+                :aimed="fighter.player.id === aimId"
+                :can-aim="canAim"
+                :saving="picking"
+                :viewer="viewer"
+                :expanded="boards.expanded.value"
+                :boards="boards.boards.value"
+                :wipe="wipe"
+                :now="now"
+                @aim="setTargeting('manual', $event)"
+                @toggle="boards.toggle"
+              />
+            </template>
+          </ClanWarFighters>
+          <ClanWarPool
+            v-else-if="activeTab === 'maps'"
+            :war="war"
+            :pool="detail.pool"
+            :rules="detail.strikeRules"
             :viewer="viewer"
             :expanded="boards.expanded.value"
             :boards="boards.boards.value"
             :wipe="wipe"
-            :now="now"
-            @aim="setTargeting('manual', $event)"
+            :can-submit-picks="canSubmitPicks"
+            :signed-in="auth.isLoggedIn"
             @toggle="boards.toggle"
+            @submit-picks="picksOpen = true"
           />
-        </template>
-      </ClanWarFighters>
-
-      <div class="war-page__tabs">
-        <BaseTabs v-model="activeTab" :tabs="tabs" label="War details" id-prefix="war" />
-        <div :id="`war-panel-${activeTab}`" class="war-page__panel" role="tabpanel" :aria-labelledby="`war-tab-${activeTab}`">
-          <template v-if="activeTab === 'log'">
+          <template v-else-if="activeTab === 'log'">
             <ClanWarTimeline :war="war" :points="detail.timeline" />
             <ClanWarHits :war="war" :participants="participants" :incoming="lastHit" :now="now" />
           </template>
@@ -530,5 +514,6 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 </style>

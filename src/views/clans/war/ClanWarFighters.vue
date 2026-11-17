@@ -172,7 +172,7 @@ function lastStandLine(team: ClanWarTeam): string | null {
   if (!stand) return null
   const parts = [
     stand.damage < 1 && `hits on them -${Math.round((1 - stand.damage) * 100)}% damage`,
-    stand.reviveSpeed > 1 && `back up ${formatFixed(stand.reviveSpeed, 1)}x faster`,
+    stand.reviveSpeed > 1 && `back ${formatFixed(stand.reviveSpeed, 1)}x faster`,
   ].filter(Boolean)
   return parts.length ? `Last stand: ${parts.join(', ')}` : null
 }
@@ -236,7 +236,7 @@ function everyone(next: ClanWarOrder) {
         <SkeletonLoader v-for="j in 6" :key="j" variant="table-row" />
       </div>
     </div>
-    <p v-else-if="!participants.length" class="roster__empty">Nobody enrolled.</p>
+    <p v-else-if="!participants.length" class="roster__empty">Nobody enrolled</p>
     <div v-else class="roster__sides">
       <WarSection
         v-for="t in teams"
@@ -250,11 +250,11 @@ function everyone(next: ClanWarOrder) {
           <span v-if="t.atRisk" class="roster__tag">{{ t.atRisk }}</span>
           <span v-if="t.lastStand" class="roster__last-stand">{{ t.lastStand }}</span>
           <span v-if="t.orders" class="roster__bulk">
-            <BaseButton size="sm" :loading="busy === 'all-auto'" :disabled="!!busy || !following.length" @click="everyone('auto')">
-              Everyone auto
+            <BaseButton :loading="busy === 'all-auto'" :disabled="!!busy || !following.length" @click="everyone('auto')">
+              Everyone Auto
             </BaseButton>
-            <BaseButton size="sm" :loading="busy === 'all-halt'" :disabled="!!busy || !following.length" @click="everyone('halt')">
-              Halt everyone
+            <BaseButton :loading="busy === 'all-halt'" :disabled="!!busy || !following.length" @click="everyone('halt')">
+              Halt Everyone
             </BaseButton>
           </span>
         </template>
@@ -271,7 +271,7 @@ function everyone(next: ClanWarOrder) {
                 <button type="button" class="roster__sort" @click="toggleSort(t.team, 'bounty')">Bounty</button>
               </th>
               <th v-if="t.strikes" scope="col" class="roster__num" :aria-sort="ariaSort(t.team, 'hits')">
-                <button type="button" class="roster__sort" @click="toggleSort(t.team, 'hits')">Hits to break</button>
+                <button type="button" class="roster__sort" @click="toggleSort(t.team, 'hits')">Hits to Break</button>
               </th>
               <th v-if="t.aim" scope="col"><span class="roster__sr">Aim</span></th>
               <th v-if="t.orders" scope="col">Orders</th>
@@ -354,7 +354,13 @@ function everyone(next: ClanWarOrder) {
               </td>
             </tr>
             <tr v-if="t.enemy && fighter.player.id === focusId && $slots.detail" class="roster__detail">
-              <td :colspan="t.columns"><slot name="detail" :fighter="fighter" /></td>
+              <td :colspan="t.columns">
+                <Transition name="collapse" appear>
+                  <div class="collapsible">
+                    <div><slot name="detail" :fighter="fighter" /></div>
+                  </div>
+                </Transition>
+              </td>
             </tr>
             </template>
           </tbody>
@@ -414,8 +420,7 @@ function everyone(next: ClanWarOrder) {
 
 .roster__last-stand {
   align-self: center;
-  font-size: var(--text-section-heading);
-  font-weight: 600;
+  font-size: var(--text-caption);
   color: var(--warning);
 }
 
@@ -436,7 +441,10 @@ function everyone(next: ClanWarOrder) {
   padding: var(--space-sm) var(--space-md);
   text-align: left;
   vertical-align: middle;
-  border-top: 1px solid var(--bg-overlay);
+}
+
+.roster__table tbody tr:nth-child(even) {
+  background: var(--bg-elevated);
 }
 
 .roster__table thead th {

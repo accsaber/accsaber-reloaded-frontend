@@ -146,7 +146,9 @@ function toggle(level: number) {
   clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
   isolation: isolate;
   cursor: pointer;
-  transition: background-color 150ms ease-out, color 150ms ease-out;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .trail__node:hover {
@@ -218,11 +220,5 @@ function toggle(level: number) {
   top: 18px;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .trail__node {
-    transition: none;
-  }
 }
 </style>

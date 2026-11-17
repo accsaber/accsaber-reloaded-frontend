@@ -28,7 +28,7 @@ const boost = computed(() => {
 })
 const streakTitle = computed(
   () =>
-    `Every new map they get hit on makes the next hit ${percent(props.rules.escalation)}% stronger, no matter who on your team lands it. ` +
+    `Every new map they get hit on makes the next hit ${percent(props.rules.escalation)}% stronger, no matter who on your team hits them. ` +
     `A chip, a hit while they had no score or a hit on a map they were already hit on adds ${percent(props.rules.chipEscalation)}%. ` +
     "It resets once they're broken.",
 )
@@ -42,9 +42,8 @@ const backIn = computed(() => {
 
 <template>
   <span v-if="fighter.guard <= 0" class="war-guard war-guard--down">
-    <HintTooltip variant="inline" :text="DOWN_TITLE">
-      <template #trigger>Broken<span v-if="backIn" class="war-guard__back">back in {{ backIn }}</span></template>
-    </HintTooltip>
+    <HintTooltip variant="inline" :text="DOWN_TITLE"><template #trigger>Broken</template></HintTooltip><template
+      v-if="backIn">, <span class="war-guard__back">back in {{ backIn }}</span></template>
   </span>
   <span v-else class="war-guard">
     <span class="war-guard__bar">
@@ -94,11 +93,12 @@ const backIn = computed(() => {
 }
 
 .war-guard--down {
+  display: block;
   color: var(--error);
+  white-space: normal;
 }
 
 .war-guard__back {
-  display: block;
   color: var(--text-secondary);
   white-space: nowrap;
 }

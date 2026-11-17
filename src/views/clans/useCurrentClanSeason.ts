@@ -10,6 +10,7 @@ function soonestUpcoming(seasons: ClanSeasonResponse[], now: number): ClanSeason
 }
 
 export function useCurrentClanSeason() {
+  const seasons = ref<ClanSeasonResponse[] | null>(null)
   const season = ref<ClanSeasonResponse | null>(null)
   const upcoming = ref<ClanSeasonResponse | null>(null)
   const running = computed(() => season.value !== null)
@@ -21,12 +22,14 @@ export function useCurrentClanSeason() {
       const now = Date.now()
       season.value = content.find((s) => isSeasonRunning(s, now)) ?? null
       upcoming.value = season.value ? null : soonestUpcoming(content, now)
+      seasons.value = content
     } catch {
+      seasons.value = []
       season.value = null
       upcoming.value = null
     }
   }
 
   load()
-  return { season, upcoming, running }
+  return { seasons, season, upcoming, running }
 }

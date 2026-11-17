@@ -39,13 +39,10 @@ const picking = computed(() => props.war.status === 'picking')
 </script>
 
 <template>
-  <WarSection storage-key="pool">
-    <template #title>
-      Map pool
-      <span class="war-pool__count">{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : `${pool.length} maps` }}</span>
-    </template>
+  <WarSection fixed>
+    <template #title>{{ picking ? `${pool.length}/${war.arenaSpec.poolSize}` : pool.length }} Maps</template>
     <template #actions>
-      <BaseButton v-if="!picking" size="sm" :loading="playlist.downloading.value" @click="playlist.download">Download playlist</BaseButton>
+      <BaseButton v-if="!picking" :loading="playlist.downloading.value" @click="playlist.download">Download Playlist</BaseButton>
     </template>
 
     <BaseButton
@@ -86,13 +83,6 @@ const picking = computed(() => props.war.status === 'picking')
 </template>
 
 <style scoped>
-.war-pool__count {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
 .war-pool__cta {
   --accent: var(--warning);
   width: 100%;

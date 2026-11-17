@@ -148,14 +148,8 @@ const router = createRouter({
       component: () => import('@/views/ClanCreatePage.vue'),
     },
     {
-      path: '/clans/seasons',
-      name: 'clan-seasons',
-      component: () => import('@/views/ClanSeasonsPage.vue'),
-    },
-    {
-      path: '/clans/seasons/:slugOrId',
-      name: 'clan-season',
-      component: () => import('@/views/ClanSeasonPage.vue'),
+      path: '/clans/seasons/:slugOrId?',
+      redirect: (to) => ({ name: 'clans', query: { season: to.params.slugOrId || undefined } }),
     },
     {
       path: '/clans/wars',

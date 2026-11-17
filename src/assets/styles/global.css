@@ -178,6 +178,19 @@ h1 {
   min-height: 0;
 }
 
+.inline-edit {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--bg-overlay);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.inline-edit:focus {
+  border-bottom-color: var(--page-accent, var(--accent));
+}
+
 .collapse-enter-active > *,
 .collapse-leave-active > * {
   overflow: clip;

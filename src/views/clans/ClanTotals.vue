@@ -7,7 +7,6 @@ export interface ClanTotalsRow {
   label: string
   value: number
   text: string
-  down?: boolean
 }
 
 const props = defineProps<{ rows: ClanTotalsRow[] }>()
@@ -16,35 +15,18 @@ const top = computed(() => Math.max(1, ...props.rows.map((row) => row.value)))
 </script>
 
 <template>
-  <div class="totals">
-    <p v-if="$slots.default" class="totals__line"><slot /></p>
-    <dl v-if="rows.length" class="totals__rows">
-      <div v-for="row in rows" :key="row.key" class="totals__row">
-        <dt>{{ row.label }}</dt>
-        <dd>
-          <ClanBar class="totals__bar" :value="Math.max(0, row.value)" :max="top" />
-          <span class="totals__value" :class="{ 'totals__value--down': row.down }">{{ row.text }}</span>
-        </dd>
-      </div>
-    </dl>
-  </div>
+  <dl class="totals__rows">
+    <div v-for="row in rows" :key="row.key" class="totals__row">
+      <dt>{{ row.label }}</dt>
+      <dd>
+        <ClanBar class="totals__bar" :value="Math.max(0, row.value)" :max="top" />
+        <span class="totals__value">{{ row.text }}</span>
+      </dd>
+    </div>
+  </dl>
 </template>
 
 <style scoped>
-.totals {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.totals__line {
-  margin: 0;
-  max-width: 65ch;
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
 .totals__rows {
   display: flex;
   flex-direction: column;
@@ -82,9 +64,5 @@ const top = computed(() => Math.max(1, ...props.rows.map((row) => row.value)))
   font-size: var(--text-body);
   text-align: right;
   color: var(--text-primary);
-}
-
-.totals__value--down {
-  color: var(--error);
 }
 </style>
