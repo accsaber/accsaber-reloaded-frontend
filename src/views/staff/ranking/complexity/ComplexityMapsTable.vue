@@ -5,7 +5,7 @@ import type { ComparisonScenario, ComplexityDifficultyRow } from '@/types/api/co
 import type { TableColumn } from '@/types/display'
 import { AP_DECIMALS, CX_DECIMALS, isBigMove } from '@/utils/complexity'
 import { formatCount } from '@/utils/formatters'
-import ComplexityPin from './ComplexityPin.vue'
+import ComplexityPin from '@/components/domain/ComplexityPin.vue'
 import MapIdentityCell from './MapIdentityCell.vue'
 import ScenarioCell from './ScenarioCell.vue'
 import SortBasisTabs from './SortBasisTabs.vue'

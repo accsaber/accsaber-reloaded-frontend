@@ -7,6 +7,7 @@ import PageHeaderBleed from '@/components/common/PageHeaderBleed.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
+import ComplexityPin from '@/components/domain/ComplexityPin.vue'
 import CriteriaVerdict from '@/components/domain/CriteriaVerdict.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
@@ -15,23 +16,33 @@ import QueueVotes from '@/components/domain/QueueVotes.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useCategoryStore } from '@/stores/categories'
-import { useRankingQueueStore } from '@/stores/rankingQueue'
+import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import type { PublicStaffUserResponse } from '@/types/api/staff'
-import type { MapDifficultyResponse } from '@/types/api/maps'
+import type { MapDifficultyResponse, PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { TableColumn } from '@/types/display'
+import type { Page } from '@/types/pagination'
 import { scriptNote } from '@/utils/complexity'
 import { formatRelativeDate } from '@/utils/formatters'
 import { knownCount, rememberCount } from '@/utils/knownCount'
 import { pickAvatarUrl } from '@/utils/media'
-import ComplexityPin from '@/views/staff/ranking/complexity/ComplexityPin.vue'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
+
+type StaffFields = 'complexityPinned' | 'scriptComplexity' | 'scriptVersion' | 'commentCount' | 'createdBy'
+  | 'lastUpdatedBy' | 'criteriaUpvotes' | 'criteriaDownvotes' | 'headCriteriaVote'
+
+export type QueueEntry = PublicMapDifficultyResponse & Partial<Pick<MapDifficultyResponse, StaffFields>>
+
+type Variant = 'staff' | 'deactivated' | 'public'
 
 const props = defineProps<{
   title: string
   countLabel: string
   emptyMessage: string
-  deactivated?: boolean
+  variant: Variant
+  baseParams: Record<string, unknown>
+  fetchPage: (params: Record<string, unknown>) => Promise<Page<QueueEntry>>
+  rowRoute?: (entry: QueueEntry) => RouteLocationRaw
 }>()
 
 const PAGE_SIZE = 20
@@ -52,6 +63,12 @@ const QUEUE_COLUMNS: TableColumn[] = [
   { key: 'comments', label: 'Comments', sortable: true, align: 'right', mono: true, width: '80px', icon: COMMENTS_ICON },
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'left', width: '180px' },
 ]
+const PUBLIC_COLUMNS: TableColumn[] = [
+  ...MAP_COLUMNS,
+  { key: 'criteria', label: 'Criteria', align: 'left', width: '140px' },
+  { key: 'rating', label: 'Votes', sortable: true, align: 'left', width: '132px' },
+  { key: 'submitted', label: 'Added', sortable: true, align: 'left', width: '140px' },
+]
 const DEACTIVATED_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
   { key: 'complexity', label: 'Complexity', align: 'left', width: '148px' },
@@ -62,10 +79,11 @@ const DEACTIVATED_COLUMNS: TableColumn[] = [
 const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
-const queueCache = useRankingQueueStore()
+const queueCache = useLeaderboardCacheStore()
 const { queryRef } = useQueryParams()
 
-const columns = props.deactivated ? DEACTIVATED_COLUMNS : QUEUE_COLUMNS
+const columns = { staff: QUEUE_COLUMNS, deactivated: DEACTIVATED_COLUMNS, public: PUBLIC_COLUMNS }[props.variant]
+const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T18:00:00Z')
 
 const searchQuery = queryRef('q')
 const categoryParam = queryRef('category')
@@ -93,7 +111,7 @@ const hasActiveFilters = computed(
 )
 
 const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
-  defaultSort: props.deactivated ? 'submitted' : 'rating',
+  defaultSort: props.variant === 'deactivated' ? 'submitted' : 'rating',
   defaultOrder: 'desc',
   defaultSize: PAGE_SIZE,
   sortFieldMap: {
@@ -103,13 +121,13 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   secondarySort: null,
 })
 
-const difficulties = ref<MapDifficultyResponse[]>([])
+const difficulties = ref<QueueEntry[]>([])
 const totalPages = ref(0)
 const totalElements = ref(0)
 const loading = ref(true)
 
 const subtitle = computed(() => (totalElements.value ? `${totalElements.value} ${props.countLabel}` : '\u00a0'))
-const countKey = `ranking-maps:${props.deactivated ? 'deactivated' : 'queue'}`
+const countKey = `queue-maps:${props.variant}`
 
 const rows = computed<Record<string, unknown>[]>(() =>
   difficulties.value.map((d) => {
@@ -123,13 +141,16 @@ const rows = computed<Record<string, unknown>[]>(() =>
   }),
 )
 
-function entryOf(row: Record<string, unknown>): MapDifficultyResponse {
-  return row.entry as MapDifficultyResponse
+function entryOf(row: Record<string, unknown>): QueueEntry {
+  return row.entry as QueueEntry
 }
 
 function rowTo(row: Record<string, unknown>) {
-  if (props.deactivated) return undefined
-  return { name: 'ranking-map-detail', params: { difficultyId: row.id as string } }
+  return props.rowRoute?.(entryOf(row))
+}
+
+function addedLabel(entry: QueueEntry): string {
+  return props.variant === 'public' && Date.parse(entry.createdAt) < IMPORT_CUTOFF_MS ? 'Imported' : formatRelativeDate(entry.createdAt)
 }
 
 function staffOf(row: Record<string, unknown>, key: string): PublicStaffUserResponse | undefined {
@@ -138,7 +159,7 @@ function staffOf(row: Record<string, unknown>, key: string): PublicStaffUserResp
 
 const request = computed<Record<string, unknown>>(() => ({
   ...paginationParams.value,
-  ...(props.deactivated ? { active: false } : { status: 'QUEUE,QUALIFIED' }),
+  ...props.baseParams,
   categoryId: selectedCategory.value ? categoryStore.getCategoryId(selectedCategory.value) : undefined,
   complexityMin: complexityRange.value[0] > 0 ? complexityRange.value[0] : undefined,
   complexityMax: complexityRange.value[1] < COMPLEXITY_MAX ? complexityRange.value[1] : undefined,
@@ -147,25 +168,24 @@ const request = computed<Record<string, unknown>>(() => ({
 
 let requestId = 0
 
+function show(page: Page<QueueEntry>) {
+  difficulties.value = page.content
+  totalPages.value = page.totalPages
+  totalElements.value = page.totalElements
+}
+
 async function fetchDifficulties() {
   const params = request.value
+  const cacheKey = { _type: `queue-maps:${props.variant}`, ...params }
   const id = ++requestId
-  const cached = queueCache.getCached(params)
-  if (cached) {
-    difficulties.value = cached.content
-    totalPages.value = cached.totalPages
-    totalElements.value = cached.totalElements
-  }
+  const cached = queueCache.getCached<Page<QueueEntry>>(cacheKey)
+  if (cached) show(cached)
   loading.value = true
   try {
-    const { getRankingDifficulties } = await import('@/api/ranking/maps')
-    const res = await getRankingDifficulties(params as never)
-    queueCache.setCache(params, res.content, res.totalPages, res.totalElements)
+    const res = await props.fetchPage(params)
+    queueCache.setCache(cacheKey, res)
     rememberCount(countKey, res.content.length)
-    if (id !== requestId) return
-    difficulties.value = res.content
-    totalPages.value = res.totalPages
-    totalElements.value = res.totalElements
+    if (id === requestId) show(res)
   } catch {
     if (id !== requestId || cached) return
     difficulties.value = []
@@ -193,6 +213,7 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
         <MapFilterSidebar
           v-model:selected-category="selectedCategory"
           v-model:complexity-range="complexityRange"
+          :show-complexity="variant !== 'public'"
         />
       </FilterPopover>
     </div>
@@ -250,16 +271,16 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
       </template>
 
       <template #cell-rating="{ row }">
-        <QueueVotes :up="entryOf(row).rankUpvotes" :down="entryOf(row).rankDownvotes" :neutral="entryOf(row).rankNeutrals" />
+        <QueueVotes :up="entryOf(row).rankUpvotes ?? 0" :down="entryOf(row).rankDownvotes ?? 0" :neutral="entryOf(row).rankNeutrals ?? 0" />
       </template>
 
       <template #cell-comments="{ row }">
-        <span :class="{ queue__none: entryOf(row).commentCount === 0 }">{{ entryOf(row).commentCount }}</span>
+        <span :class="{ queue__none: !entryOf(row).commentCount }">{{ entryOf(row).commentCount ?? 0 }}</span>
       </template>
 
       <template v-for="key in ['submitted', 'edited']" :key="key" #[`cell-${key}`]="{ row }">
         <span class="queue__stack">
-          <span v-if="key === 'submitted'">{{ formatRelativeDate(entryOf(row).createdAt) }}</span>
+          <span v-if="key === 'submitted'">{{ addedLabel(entryOf(row)) }}</span>
           <span v-if="staffOf(row, key)?.username" class="queue__by" :class="{ caption: key === 'submitted' }">
             <img v-if="pickAvatarUrl(staffOf(row, key))" class="queue__avatar" :src="pickAvatarUrl(staffOf(row, key))"
               alt="" loading="lazy" decoding="async" />
@@ -270,7 +291,7 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
       </template>
 
       <template #mobile-card="{ row }">
-        <component :is="deactivated ? 'div' : 'RouterLink'" class="queue__card" :to="rowTo(row)">
+        <component :is="rowRoute ? 'RouterLink' : 'div'" class="queue__card" :to="rowTo(row)">
           <CoverImage :source="entryOf(row)" :alt="entryOf(row).songName" :size="48" />
           <span class="queue__card-body">
             <MapNameCell
@@ -285,12 +306,12 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
               <ComplexityBadge v-if="entryOf(row).complexity != null" :complexity="entryOf(row).complexity!" />
               <span v-if="entryOf(row).status === 'QUALIFIED'" class="caption queue__qualified">Qualified</span>
             </span>
-            <span v-if="deactivated" class="queue__card-line caption">
-              {{ formatRelativeDate(entryOf(row).createdAt) }}
+            <span v-if="variant === 'deactivated'" class="queue__card-line caption">
+              {{ addedLabel(entryOf(row)) }}
             </span>
             <span v-else class="queue__card-line">
-              <CriteriaVerdict :source="entryOf(row)" />
-              <QueueVotes :up="entryOf(row).rankUpvotes" :down="entryOf(row).rankDownvotes" :neutral="entryOf(row).rankNeutrals" />
+              <CriteriaVerdict :source="entryOf(row)" prefix="criteria" />
+              <QueueVotes :up="entryOf(row).rankUpvotes ?? 0" :down="entryOf(row).rankDownvotes ?? 0" :neutral="entryOf(row).rankNeutrals ?? 0" />
             </span>
           </span>
         </component>

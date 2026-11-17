@@ -5,7 +5,7 @@ import IconButton from '@/components/common/IconButton.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import { useConfirmAction } from '@/composables/useConfirmAction'
 import type { MapDifficultyResponse } from '@/types/api/maps'
-import ComplexityPin from '@/views/staff/ranking/complexity/ComplexityPin.vue'
+import ComplexityPin from '@/components/domain/ComplexityPin.vue'
 import { nextTick, ref, watch } from 'vue'
 
 const props = defineProps<{
