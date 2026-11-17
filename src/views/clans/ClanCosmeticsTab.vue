@@ -8,6 +8,7 @@ import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import InventoryLayout, { INVENTORY_NARROW_QUERY } from '@/components/domain/InventoryLayout.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ClanItemResponse, ClanResponse } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
 import type { Page } from '@/types/pagination'
@@ -19,6 +20,8 @@ import { useRoute } from 'vue-router'
 const props = defineProps<{ clan: ClanResponse; canCustomize?: boolean }>()
 
 const emit = defineEmits<{ equipped: [items: ItemResponse[]] }>()
+
+useItemTypeStore().fetchItemTypes()
 
 const route = useRoute()
 

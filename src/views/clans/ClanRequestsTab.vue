@@ -3,7 +3,6 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanJoinRequestResponse, ClanJoinStatus, ClanResponse } from '@/types/api/clans'
@@ -96,11 +95,8 @@ watch(() => route.query.page, fetchRequests, { immediate: true })
 
     <p v-if="error" class="requests-tab__error" role="alert">{{ error }}</p>
 
-    <div v-if="loading" class="requests-tab__skeleton">
-      <SkeletonLoader v-for="i in 4" :key="i" variant="table-row" />
-    </div>
-    <EmptyState v-else-if="pending.length === 0" message="No requests or invites waiting" />
-    <ClanRequestList v-else :requests="pending" perspective="clan" :busy-id="busyId" @resolve="resolve" />
+    <EmptyState v-if="!loading && pending.length === 0" message="No requests or invites waiting" />
+    <ClanRequestList v-else :requests="pending" perspective="clan" :busy-id="busyId" :loading="loading" @resolve="resolve" />
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
   </section>
@@ -125,12 +121,6 @@ watch(() => route.query.page, fetchRequests, { immediate: true })
   margin: 0;
   font-size: var(--text-caption);
   color: var(--error);
-}
-
-.requests-tab__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
 }
 
 @media (max-width: 767px) {

@@ -41,13 +41,14 @@ import ClanWarPool from './clans/war/ClanWarPool.vue'
 import ClanWarRewards from './clans/war/ClanWarRewards.vue'
 import ClanWarTimeline from './clans/war/ClanWarTimeline.vue'
 import { useWarMapBoards } from './clans/war/useWarMapBoards'
-import WarPicksModal from './clans/war/WarPicksModal.vue'
+import WarPicksForm from './clans/war/WarPicksForm.vue'
 import WarScorebug from './clans/war/WarScorebug.vue'
 import WarTargetCard from './clans/war/WarTargetCard.vue'
 import WarYouCard from './clans/war/WarYouCard.vue'
 import { targetValue } from './clans/war/warStrike'
 
 const FIGHTERS_SIZE = 100
+const YOU_CARD_HEIGHT = 68
 const HOUR = 3_600_000
 
 type WarTab = 'fighters' | 'maps' | 'log' | 'rewards' | 'allies'
@@ -77,7 +78,6 @@ let rewardsRequest = 0
 let participantsRequest = 0
 const picking = ref(false)
 const pickError = ref<string | null>(null)
-const picksOpen = ref(false)
 const retreatOpen = ref(false)
 const retreating = ref(false)
 const retreatError = ref<string | null>(null)
@@ -250,7 +250,6 @@ useClanFeed(attackLeadId, {
 })
 
 function onPicksSubmitted(next: ClanWarDetailResponse) {
-  picksOpen.value = false
   detail.value = next
   reloadKey.value += 1
 }
@@ -353,7 +352,7 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
             Wiped! Every broken fighter is back in
             <HintTooltip variant="inline" :text="formatDateTime(wipe.at, true)"><template #trigger>{{ wipeIn }}</template></HintTooltip>
           </span>
-          <BaseButton v-if="canRetreat" variant="destructive" size="sm" @click="retreatOpen = true">Retreat</BaseButton>
+          <BaseButton v-if="canRetreat" variant="destructive" @click="retreatOpen = true">Retreat</BaseButton>
         </template>
       </WarScorebug>
 
@@ -368,6 +367,7 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
         @targeting="setTargeting"
         @push="pushPbs"
       />
+      <SkeletonLoader v-else-if="rosterOpen && viewerTeam && !participants" :height="`${YOU_CARD_HEIGHT}px`" />
 
       <div class="war-page__tabs">
         <BaseTabs v-model="activeTab" :tabs="tabs" label="War details" id-prefix="war" />
@@ -412,23 +412,23 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
               />
             </template>
           </ClanWarFighters>
-          <ClanWarPool
-            v-else-if="activeTab === 'maps'"
-            :war="war"
-            :pool="detail.pool"
-            :rules="detail.strikeRules"
-            :viewer="viewer"
-            :expanded="boards.expanded.value"
-            :boards="boards.boards.value"
-            :wipe="wipe"
-            :can-submit-picks="canSubmitPicks"
-            :signed-in="auth.isLoggedIn"
-            @toggle="boards.toggle"
-            @submit-picks="picksOpen = true"
-          />
+          <template v-else-if="activeTab === 'maps'">
+            <WarPicksForm v-if="canSubmitPicks" :war="war" :pool="detail.pool" @submitted="onPicksSubmitted" />
+            <ClanWarPool
+              :war="war"
+              :pool="detail.pool"
+              :rules="detail.strikeRules"
+              :viewer="viewer"
+              :expanded="boards.expanded.value"
+              :boards="boards.boards.value"
+              :wipe="wipe"
+              :signed-in="auth.isLoggedIn"
+              @toggle="boards.toggle"
+            />
+          </template>
           <template v-else-if="activeTab === 'log'">
             <ClanWarTimeline :war="war" :points="detail.timeline" />
-            <ClanWarHits :war="war" :participants="participants" :incoming="lastHit" :now="now" />
+            <ClanWarHits :war="war" :participants="participants" :incoming="lastHit" :now="now" :total="detail.timeline.length" />
           </template>
           <ClanWarRewards
             v-else-if="activeTab === 'rewards'"
@@ -448,8 +448,6 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
           />
         </div>
       </div>
-
-      <WarPicksModal :open="picksOpen" :war="war" :pool="detail.pool" @close="picksOpen = false" @submitted="onPicksSubmitted" />
 
       <ConfirmModal
         :open="retreatOpen"

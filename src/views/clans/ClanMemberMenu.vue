@@ -4,6 +4,7 @@ import type { ClanRole } from '@/types/api/clans'
 import type { PlayerRef } from '@/types/api/common'
 import { CLAN_ROLE_LABEL } from '@/utils/clans'
 import { ref } from 'vue'
+import './menuList.css'
 
 export interface MemberActions {
   roles: ClanRole[]
@@ -43,12 +44,12 @@ function pick(action: MemberPick) {
         </svg>
       </button>
     </template>
-    <div class="member-menu" role="menu">
+    <div class="menu-list" role="menu">
       <button
         v-for="role in actions.roles"
         :key="role"
         type="button"
-        class="member-menu__item"
+        class="menu-list__item"
         role="menuitem"
         @click="pick(role)"
       >
@@ -57,24 +58,24 @@ function pick(action: MemberPick) {
       <button
         v-if="actions.wars"
         type="button"
-        class="member-menu__item"
+        class="menu-list__item"
         role="menuitem"
         :disabled="actions.warsFull"
         @click="pick('wars')"
       >
         {{ member.membership?.warParticipation ? 'Take Off Wars' : 'Put Back in Wars' }}
-        <span v-if="actions.warsFull" class="member-menu__reason">Half the clan is already out</span>
+        <span v-if="actions.warsFull" class="menu-list__note">Half the clan is already out</span>
       </button>
-      <button v-if="actions.transfer" type="button" class="member-menu__item" role="menuitem" @click="pick('transfer')">
+      <button v-if="actions.transfer" type="button" class="menu-list__item" role="menuitem" @click="pick('transfer')">
         Transfer Founder
       </button>
-      <button v-if="actions.claim" type="button" class="member-menu__item" role="menuitem" @click="pick('claim')">
+      <button v-if="actions.claim" type="button" class="menu-list__item" role="menuitem" @click="pick('claim')">
         Claim Clan
       </button>
       <button
         v-if="actions.kick"
         type="button"
-        class="member-menu__item member-menu__item--danger"
+        class="menu-list__item menu-list__item--danger"
         role="menuitem"
         @click="pick('kick')"
       >
@@ -106,44 +107,4 @@ function pick(action: MemberPick) {
   background: var(--bg-surface);
 }
 
-.member-menu {
-  display: flex;
-  flex-direction: column;
-  min-width: 180px;
-  padding: var(--space-xs);
-}
-
-.member-menu__item {
-  padding: var(--space-sm) var(--space-md);
-  font: inherit;
-  font-size: var(--text-body);
-  text-align: left;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.member-menu__item:hover:not(:disabled) {
-  background: var(--bg-overlay);
-}
-
-.member-menu__item:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
-.member-menu__reason {
-  display: block;
-  font-size: var(--text-caption);
-}
-
-.member-menu__item--danger {
-  color: var(--error);
-}
-
-.member-menu__item--danger:hover {
-  background: color-mix(in srgb, var(--error) 12%, transparent);
-}
 </style>

@@ -5,6 +5,7 @@ import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import { buildMapRoute } from '@/utils/mapRoute'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
@@ -25,6 +26,7 @@ const props = defineProps<{
   participants: ClanWarParticipantResponse[] | null
   incoming: ClanWarHitResponse | null
   now: number
+  total: number
 }>()
 
 type DamageKind = 'hits' | 'chips'
@@ -157,46 +159,57 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
       {{ pending.length }} new {{ pending.length === 1 ? 'hit' : 'hits' }}
     </BaseButton>
 
-    <div v-if="loading && !hits" class="war-hits__list">
-      <SkeletonLoader v-for="i in 4" :key="i" variant="table-row" />
-    </div>
-    <p v-else-if="!hits?.content.length" class="war-hits__empty">{{ filtered ? 'Nothing matches these filters.' : 'No damage yet.' }}</p>
-    <ul v-else class="war-hits__list">
-      <li
-        v-for="hit in hits.content"
-        :key="hit.id"
-        class="war-hits__row clan-colors"
-        :class="`war-hits__row--${kind(hit)}`"
-        :style="rowStyle(hit)"
-      >
-        <span class="war-hits__clan">
-          <ClanTag v-if="actingClan(hit)" :clan="actingClan(hit)!" size="sm" />
-        </span>
-        <span class="war-hits__who">
-          <UserChip :user="hit.attacker" size="xs" link tooltip hide-clan />
-          <span class="war-hits__verb">{{ VERB[kind(hit)] }}</span>
-          <UserChip :user="hit.victim" size="xs" compact link tooltip hide-clan />
-          <template v-if="!hit.broke">
-            <span class="war-hits__verb">for</span>
-            <span class="war-hits__damage">{{ formatDamage(hit.damage) }}</span>
-          </template>
-        </span>
-        <RouterLink class="war-hits__map" :to="buildMapRoute(hit.map)">
-          <img class="war-hits__cover" :src="pickCoverUrl(hit.map)" alt="" loading="lazy" decoding="async" />
-          <span class="war-hits__song">{{ hit.map.songName }}</span>
-          <span v-if="hit.missingScore" class="war-hits__flag">no score</span>
-        </RouterLink>
-        <span class="war-hits__result" :title="breakTitle(hit)">{{ detail(hit) }}</span>
-        <span class="war-hits__when">{{ formatRelativeDate(hit.createdAt, now) }}</span>
-      </li>
-    </ul>
+    <p v-if="!loading && !hits?.content.length" class="war-hits__empty">{{ filtered ? 'Nothing matches these filters' : 'No damage yet' }}</p>
+    <SwapList
+      v-else
+      as="ul"
+      class="war-hits__list"
+      :items="hits?.content ?? []"
+      :item-key="(hit) => hit.id"
+      :loading="loading && !hits"
+      :refreshing="loading && !!hits"
+      :placeholders="Math.min(PAGE_SIZE, total)"
+    >
+      <template #placeholder>
+        <li class="placeholder"><SkeletonLoader height="40px" /></li>
+      </template>
+      <template #default="{ item: hit, swap }">
+        <li
+          class="war-hits__row clan-colors"
+          :class="[swap.class, `war-hits__row--${kind(hit)}`]"
+          :style="[rowStyle(hit), swap.style]"
+        >
+          <span class="war-hits__clan">
+            <ClanTag v-if="actingClan(hit)" :clan="actingClan(hit)!" size="sm" />
+          </span>
+          <span class="war-hits__who">
+            <UserChip :user="hit.attacker" size="xs" link tooltip hide-clan />
+            <span class="war-hits__verb">{{ VERB[kind(hit)] }}</span>
+            <UserChip :user="hit.victim" size="xs" compact link tooltip hide-clan />
+            <template v-if="!hit.broke">
+              <span class="war-hits__verb">for</span>
+              <span class="war-hits__damage">{{ formatDamage(hit.damage) }}</span>
+            </template>
+          </span>
+          <RouterLink class="war-hits__map" :to="buildMapRoute(hit.map)">
+            <img class="war-hits__cover" :src="pickCoverUrl(hit.map)" alt="" loading="lazy" decoding="async" />
+            <span class="war-hits__song">{{ hit.map.songName }}</span>
+            <span v-if="hit.missingScore" class="war-hits__flag">no score</span>
+          </RouterLink>
+          <span class="war-hits__result" :title="breakTitle(hit)">{{ detail(hit) }}</span>
+          <span class="war-hits__when">{{ formatRelativeDate(hit.createdAt, now) }}</span>
+        </li>
+      </template>
+    </SwapList>
 
-    <PaginationControls
-      v-if="(hits?.totalPages ?? 0) > 1"
-      :page="page"
-      :total-pages="hits!.totalPages"
-      @update:page="page = $event"
-    />
+    <div v-if="total > PAGE_SIZE" class="war-hits__pages">
+      <PaginationControls
+        v-if="(hits?.totalPages ?? 0) > 1"
+        :page="page"
+        :total-pages="hits!.totalPages"
+        @update:page="page = $event"
+      />
+    </div>
   </WarSection>
 </template>
 
@@ -231,9 +244,10 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
   margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: hidden;
+}
+
+.war-hits__pages {
+  min-height: var(--control-h);
 }
 
 .war-hits__row {
@@ -243,13 +257,9 @@ watch([page, () => props.war.id], fetchHits, { immediate: true })
   align-items: center;
   min-height: 40px;
   padding: var(--space-xs) var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
   font-size: var(--text-body);
 }
 
-.war-hits__row:last-child {
-  border-bottom: none;
-}
 
 .war-hits__row:nth-child(even) {
   background: var(--bg-elevated);

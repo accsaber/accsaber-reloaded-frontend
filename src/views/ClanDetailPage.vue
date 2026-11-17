@@ -25,6 +25,7 @@ import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import ClanHeader from './clans/ClanHeader.vue'
+import './clans/menuList.css'
 import ClanHeaderEditor from './clans/ClanHeaderEditor.vue'
 import ClanHeaderActions from './clans/ClanHeaderActions.vue'
 import ClanRosterTab from './clans/ClanRosterTab.vue'
@@ -606,12 +607,12 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
               </svg>
             </button>
           </template>
-          <div class="clan-page__manage-menu" role="menu">
+          <div class="menu-list" role="menu">
             <button
               v-for="tab in manageTabs"
               :key="tab.key"
               type="button"
-              class="clan-page__manage-item"
+              class="menu-list__item"
               role="menuitem"
               @click="pickManage(tab.key)"
             >
@@ -753,29 +754,6 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
   left: 0;
   height: 3px;
   background: var(--clan-accent);
-}
-
-.clan-page__manage-menu {
-  display: flex;
-  flex-direction: column;
-  min-width: 160px;
-  padding: var(--space-xs);
-}
-
-.clan-page__manage-item {
-  padding: var(--space-sm) var(--space-md);
-  font: inherit;
-  font-size: var(--text-body);
-  text-align: left;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.clan-page__manage-item:hover {
-  background: var(--bg-overlay);
 }
 
 .clan-page__notice {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import type {
   ClanWarParticipantResponse,
   ClanWarPoolEntryResponse,
@@ -9,11 +10,11 @@ import type {
 } from '@/types/api/clans'
 import { formatStanding, warSideStyles, warTeamOf, type WarWipe } from '@/utils/clans'
 import { formatAccuracy, formatDuration, formatSigned } from '@/utils/formatters'
-import { computed, ref } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import StrikeLines from './StrikeLines.vue'
 import type { WarMapBoard } from './useWarMapBoards'
 import WarMapCalc from './WarMapCalc.vue'
-import WarPoolEntry from './WarPoolEntry.vue'
+import WarMapRow from './WarMapRow.vue'
 import { formatDamage, hitBreakdown, minChip, minHit, penaltyPercent, repeatShare, repeatTitle } from './warStrike'
 
 const props = defineProps<{
@@ -35,6 +36,8 @@ const emit = defineEmits<{
   aim: [userId: string]
   toggle: [mapId: string]
 }>()
+
+const WarMapBoardView = defineAsyncComponent(() => import('./WarMapBoard.vue'))
 
 const CHIP_TITLE = 'Score just under them and you still chip their guard. The closer you get, the more it does.'
 
@@ -83,11 +86,9 @@ function scores(entry: ClanWarPoolEntryResponse) {
   const mine = entry.viewerScore
   const gap = mine && theirs ? (mine.accuracy - theirs.accuracy) * 100 : null
   return {
-    them: theirs ? formatAccuracy(theirs.accuracy) : '-',
     you: mine ? formatAccuracy(mine.accuracy) : '-',
     diff: gap === null ? '-' : `${formatSigned(gap, 2, '-')}%`,
     gap: gap === null ? 0 : Math.sign(gap),
-    ahead: !!mine && entry.target?.id === props.fighter.player.id && (!theirs || mine.score > theirs.score),
   }
 }
 
@@ -99,10 +100,10 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
     <div class="target__top">
       <div class="target__left">
         <header v-if="!aimed && canAim" class="target__head">
-          <span class="target__preview">Not your target yet</span>
-          <BaseButton size="sm" :loading="saving" @click="emit('aim', fighter.player.id)">Aim at them</BaseButton>
+          <span class="caption">Not your target yet</span>
+          <BaseButton :loading="saving" @click="emit('aim', fighter.player.id)">Aim at Them</BaseButton>
         </header>
-        <p v-if="startsIn" class="target__line">Starts in {{ startsIn }}. Hits count from then.</p>
+        <p v-if="startsIn" class="target__line">Starts in {{ startsIn }}, hits count from then</p>
         <div v-if="preview" class="target__how">
           <span class="target__line">Next hit {{ formatDamage(nextHit) }} <span class="target__soft">on a new map</span></span>
           <button type="button" class="target__how-toggle" :aria-expanded="howOpen" aria-controls="war-target-how" @click="howOpen = !howOpen">
@@ -115,62 +116,57 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
         </div>
       </div>
       <div v-if="preview" class="target__worth">
-        <span class="target__label">Breaking them takes</span>
+        <span class="field-label">Breaking them takes</span>
         <span class="target__standing">{{ formatStanding(preview.standingTaken) }} Standing</span>
       </div>
     </div>
-    <StrikeLines v-if="preview && howOpen" id="war-target-how" class="target__lines" :lines="breakdown" />
+    <Transition name="collapse">
+      <div v-if="preview && howOpen" id="war-target-how" class="collapsible">
+        <div><StrikeLines class="target__lines" :lines="breakdown" /></div>
+      </div>
+    </Transition>
 
-    <h3 class="target__label target__where">Where to hit them</h3>
-    <ul class="target__maps">
-      <li v-for="{ entry, plan: p, scores: sc } in rows" :key="entry.difficulty.id" class="target__map">
-        <WarPoolEntry
-          :entry="entry"
-          :war="war"
-          :rules="rules"
-          :viewer="viewer"
-          :expanded="expanded"
-          :boards="boards"
-          :wipe="wipe"
-          expandable
-          link
-          @toggle="emit('toggle', $event)"
-        >
-          <span class="target__scores">
-            <span class="target__score">
-              <span class="target__label">Them</span>
-              {{ sc.them }}
-            </span>
-            <span class="target__score" :class="{ 'target__score--ahead': sc.gap > 0, 'target__score--behind': sc.gap < 0 }">
-              <span class="target__label">Diff</span>
-              {{ sc.diff }}
-            </span>
-            <span class="target__score" :class="{ 'target__score--ahead': sc.ahead }">
-              <span class="target__label">You</span>
+    <table class="target__table">
+      <thead>
+        <tr>
+          <th scope="col">Map</th>
+          <th scope="col" class="target__num">Hit At</th>
+          <th scope="col" class="target__num">Damage</th>
+          <th scope="col" class="target__num">
+            <HintTooltip variant="inline" :text="CHIP_TITLE"><template #trigger>Chip At</template></HintTooltip>
+          </th>
+          <th scope="col" class="target__num">Your PB</th>
+          <th scope="col" aria-label="Tools" />
+        </tr>
+      </thead>
+      <tbody>
+        <template v-for="({ entry, plan: p, scores: sc }, index) in rows" :key="entry.difficulty.id">
+          <tr class="target__row" :class="{ 'target__row--alt': index % 2 === 1 }" @click="emit('toggle', entry.difficulty.id)">
+            <th scope="row" class="target__map"><WarMapRow :difficulty="entry.difficulty" plain /></th>
+            <td class="target__num" data-label="Hit At">
+              <template v-if="p">{{ p.noScore ? 'Any play' : (p.hit ?? '-') }}</template>
+            </td>
+            <td class="target__num" data-label="Damage">
+              <template v-if="p">
+                <span class="target__damage">{{ p.damage != null ? formatDamage(p.damage) : '-' }}</span>
+                <span v-if="!p.noScore && p.hit === null" class="caption target__note">cannot be beaten</span>
+                <span v-if="p.breaks" class="caption target__note target__note--break">breaks them</span>
+                <span v-if="p.penalty !== null" class="caption target__note target__note--penalty">{{ p.penalty }}%, broken here before</span>
+                <HintTooltip v-if="p.repeat" variant="inline" class="caption target__note" :text="repeatTitle(rules)">
+                  <template #trigger>already hit here, {{ repeatShare(rules) }}% streak</template>
+                </HintTooltip>
+              </template>
+            </td>
+            <td class="target__num target__chip" data-label="Chip At">
+              <template v-if="p && !p.noScore">{{ p.chip === 'any play' ? 'Any play' : p.chip }}</template>
+            </td>
+            <td class="target__num" data-label="Your PB">
               {{ sc.you }}
-            </span>
-          </span>
-          <template #below>
-            <p v-if="p" class="target__plan">
-              <template v-if="p.noScore">
-                <template v-if="p.damage != null">Any play does <span class="target__lands">{{ formatDamage(p.damage) }}</span></template>
-                <template v-else>No score</template>
-              </template>
-              <template v-else>
-                <template v-if="p.hit">
-                  Beat {{ p.hit }}<template v-if="p.damage != null"> → <span class="target__lands">{{ formatDamage(p.damage) }} dmg</span></template>
-                </template>
-                <template v-else>Nobody can beat their score here</template>
-                · Get {{ p.chip }} to <HintTooltip variant="inline" :text="CHIP_TITLE"><template #trigger>chip</template></HintTooltip>
-              </template>
-              <span v-if="p.penalty !== null" class="target__penalty">(broken here before: {{ p.penalty }}% damage)</span>
-              <span v-if="p.breaks" class="target__lands">· Breaks them</span>
-              <span v-if="p.repeat" class="target__repeat">
-                · <HintTooltip variant="inline" :text="repeatTitle(rules)"><template #trigger>Already hit here: repeat hits keep {{ repeatShare(rules) }}% of the streak bonus</template></HintTooltip>
-              </span>
+              <span v-if="sc.gap" class="caption target__gap" :class="sc.gap > 0 ? 'target__ahead' : 'target__behind'">{{ sc.diff }}</span>
+            </td>
+            <td class="target__tools" @click.stop>
               <WarMapCalc
                 v-if="preview && entry.targetDamage != null && entry.difficulty.maxScore != null"
-                class="target__calc"
                 :rules="rules"
                 :preview="preview"
                 :guard="guard"
@@ -181,11 +177,40 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
                 :repeat-map="!!entry.targetRepeatMap"
                 :viewer-score="entry.viewerScore?.score ?? null"
               />
-            </p>
-          </template>
-        </WarPoolEntry>
-      </li>
-    </ul>
+              <IconButton
+                class="target__expand"
+                :label="`Leaderboard for ${entry.difficulty.songName}`"
+                :aria-expanded="expanded === entry.difficulty.id"
+                @click="emit('toggle', entry.difficulty.id)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </IconButton>
+            </td>
+          </tr>
+          <tr v-if="expanded === entry.difficulty.id && entry.difficulty.maxScore != null" class="target__board">
+            <td colspan="7">
+              <Transition name="collapse" appear>
+                <div class="collapsible">
+                  <div>
+                    <WarMapBoardView
+                      :war="war"
+                      :rules="rules"
+                      :board="boards[entry.difficulty.id]"
+                      :max-score="entry.difficulty.maxScore"
+                      :viewer="viewer"
+                      :wipe="wipe"
+                    />
+                  </div>
+                </div>
+              </Transition>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
   </section>
 </template>
 
@@ -197,22 +222,10 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
   gap: var(--space-md);
   padding: var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
-.target__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm) var(--space-md);
-}
-
-.target__preview {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
+.target__head,
 .target__how {
   display: flex;
   flex-wrap: wrap;
@@ -220,23 +233,13 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
   gap: var(--space-sm) var(--space-md);
 }
 
-.target__label {
-  margin: 0;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.target__line,
-.target__plan {
+.target__line {
   margin: 0;
   font-size: var(--text-body);
-  line-height: 1.6;
   color: var(--text-primary);
 }
 
 .target__soft {
-  font-size: var(--text-body);
   color: var(--text-secondary);
 }
 
@@ -253,7 +256,13 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
   cursor: pointer;
 }
 
-.target__how-toggle[aria-expanded='true'] svg {
+.target__how-toggle svg,
+.target__expand svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.target__how-toggle[aria-expanded='true'] svg,
+.target__expand[aria-expanded='true'] svg {
   transform: rotate(180deg);
 }
 
@@ -281,7 +290,7 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
 
 .target__standing {
   font-family: var(--font-mono);
-  font-size: 2rem;
+  font-size: var(--text-stat-lg);
   line-height: 1;
   font-weight: 600;
   color: var(--tier-gold);
@@ -292,76 +301,98 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
   font-size: var(--text-body);
 }
 
-.target__where {
-  margin-top: var(--space-sm);
+.target__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
 }
 
-.target__maps {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.target__map {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--bg-overlay);
-}
-
-.target__map:last-child {
-  border-bottom: none;
-}
-
-.target__calc {
-  margin-left: var(--space-xs);
+.target__table th,
+.target__table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
   vertical-align: middle;
 }
 
-.target__scores {
-  display: flex;
-  gap: var(--space-md);
-}
-
-.target__score {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-}
-
-.target__score--ahead {
-  color: var(--success);
-}
-
-.target__score--behind {
-  color: var(--error);
-}
-
-.target__lands {
+.target__table thead th {
+  font-size: var(--text-caption);
   font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.target__table .target__num {
+  font-family: var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.target__row {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.target__row--alt {
+  background: var(--bg-elevated);
+}
+
+.target__row:hover {
+  background: var(--bg-overlay);
+}
+
+.target__map {
+  font-weight: 400;
+}
+
+.target__ahead {
   color: var(--success);
 }
 
-.target__repeat {
-  margin-left: var(--space-xs);
+.target__damage {
+  font-weight: 600;
+}
+
+.target__table .target__chip {
   color: var(--text-secondary);
 }
 
-.target__penalty {
-  margin-left: var(--space-xs);
-  font-weight: 600;
+.target__gap {
+  display: inline-block;
+  min-width: 7ch;
+  font-family: var(--font-mono);
+}
+
+.target__behind {
+  color: var(--error);
+}
+
+.target__note {
+  display: block;
+  font-family: var(--font-sans);
+}
+
+.target__note--break {
+  color: var(--success);
+}
+
+.target__note--penalty {
   color: var(--warning);
 }
 
-@media (max-width: 600px) {
+.target__table .target__tools {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.target__tools > * {
+  vertical-align: middle;
+}
+
+.target__table .target__board td {
+  padding: 0 0 var(--space-sm);
+}
+
+@media (max-width: 767px) {
   .target {
     padding: var(--space-md);
   }
@@ -372,6 +403,47 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
 
   .target__worth {
     align-items: flex-start;
+  }
+
+  .target__table thead {
+    display: none;
+  }
+
+  .target__table,
+  .target__table tbody,
+  .target__table .target__board,
+  .target__table .target__board td {
+    display: block;
+  }
+
+  .target__row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xs) var(--space-sm);
+    padding: var(--space-sm);
+  }
+
+  .target__table .target__row > * {
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .target__row > .target__map {
+    grid-column: 1 / 3;
+  }
+
+  .target__table .target__row > .target__tools {
+    width: auto;
+    text-align: right;
+  }
+
+  .target__row > td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    color: var(--text-secondary);
   }
 }
 </style>

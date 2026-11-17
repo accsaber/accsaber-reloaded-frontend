@@ -2,6 +2,7 @@
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { ClanAuditEntryResponse, ClanResponse } from '@/types/api/clans'
@@ -12,6 +13,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const PAGE_SIZE = 50
+const FIRST_LOAD_ROWS = 15
 
 const props = defineProps<{ clan: ClanResponse }>()
 
@@ -47,33 +49,43 @@ watch(() => route.query.page, fetchAudit, { immediate: true })
 
 <template>
   <section class="audit">
-    <div v-if="loading" class="audit__skeleton">
-      <SkeletonLoader v-for="i in 6" :key="i" variant="table-row" />
-    </div>
+    <EmptyState v-if="!loading && entries.length === 0" message="Nothing logged yet" />
 
-    <EmptyState v-else-if="entries.length === 0" message="Nothing logged yet." />
-
-    <ol v-else class="audit__list">
-      <li v-for="entry in entries" :key="entry.id" class="audit__row">
-        <span class="audit__action">{{ CLAN_AUDIT_LABEL[entry.action] }}</span>
-        <span class="audit__people">
-          <UserChip v-if="entry.actor" :user="entry.actor" size="sm" link />
-          <span v-else class="audit__staff">Staff</span>
-          <template v-if="entry.target">
-            <svg class="audit__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-            <UserChip :user="entry.target" size="sm" link />
-          </template>
-        </span>
-        <span class="audit__details">
-          <span v-for="line in auditDetailLines(entry)" :key="line">{{ line }}</span>
-        </span>
-        <time class="audit__when" :datetime="entry.createdAt">{{ formatRelativeDate(entry.createdAt) }}</time>
-      </li>
-    </ol>
+    <SwapList
+      v-else
+      as="ol"
+      class="audit__list"
+      :items="entries"
+      :item-key="(entry) => entry.id"
+      :loading="loading && !pageData"
+      :refreshing="loading && !!pageData"
+      :placeholders="FIRST_LOAD_ROWS"
+    >
+      <template #placeholder>
+        <li class="placeholder"><SkeletonLoader height="48px" /></li>
+      </template>
+      <template #default="{ item: entry, swap }">
+        <li v-bind="swap" class="audit__row">
+          <span class="audit__action">{{ CLAN_AUDIT_LABEL[entry.action] }}</span>
+          <span class="audit__people">
+            <UserChip v-if="entry.actor" :user="entry.actor" size="sm" link />
+            <span v-else class="audit__staff">Staff</span>
+            <template v-if="entry.target">
+              <svg class="audit__arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+              <UserChip :user="entry.target" size="sm" link />
+            </template>
+          </span>
+          <span class="audit__details">
+            <span v-for="line in auditDetailLines(entry)" :key="line">{{ line }}</span>
+          </span>
+          <time class="audit__when" :datetime="entry.createdAt">{{ formatRelativeDate(entry.createdAt) }}</time>
+        </li>
+      </template>
+    </SwapList>
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
   </section>
@@ -84,12 +96,6 @@ watch(() => route.query.page, fetchAudit, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-}
-
-.audit__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
 }
 
 .audit__list {

@@ -3,6 +3,7 @@ import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type {
   ClanAllianceResponse,
@@ -50,6 +51,10 @@ const isFounder = computed(() => hasClanRole(props.viewerRole, 'founder'))
 const isCommander = computed(() => hasClanRole(props.viewerRole, 'commander'))
 const clanId = computed(() => props.clan.clan.id)
 const activeAlliances = computed(() => alliances.value?.content ?? [])
+const allyRows = computed(() => [
+  ...proposals.value.map((alliance) => ({ alliance, pending: true })),
+  ...activeAlliances.value.map((alliance) => ({ alliance, pending: false })),
+])
 const totalPages = computed(() => alliances.value?.totalPages ?? 0)
 const takenIds = computed(() => [
   clanId.value,
@@ -195,41 +200,44 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
         />
       </header>
 
-      <div v-if="loading && !alliances" class="diplomacy__skeleton">
-        <SkeletonLoader v-for="i in 3" :key="i" variant="table-row" />
-      </div>
-      <p v-else-if="activeAlliances.length === 0 && proposals.length === 0" class="caption">No allies</p>
-
-      <ul v-else class="diplomacy__list">
-        <li v-for="proposal in proposals" :key="proposal.id" class="diplomacy__row">
-          <ClanLink :clan="proposal.ally" />
-          <span class="caption">{{ proposal.incoming ? 'Proposed to you' : 'Proposal sent' }}</span>
-          <span class="diplomacy__actions">
-            <template v-if="proposal.incoming">
-              <BaseButton variant="primary" :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'active')">Accept</BaseButton>
-              <BaseButton :disabled="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Decline</BaseButton>
-            </template>
-            <BaseButton v-else :loading="busyId === proposal.id" @click="resolveAlliance(proposal, 'declined')">Withdraw</BaseButton>
-          </span>
-        </li>
-
-        <li v-for="alliance in activeAlliances" :key="alliance.id" class="diplomacy__row">
-          <ClanLink :clan="alliance.ally" />
-          <span class="caption">
-            {{ alliance.warsFoughtTogether }} {{ alliance.warsFoughtTogether === 1 ? 'war' : 'wars' }} together · since {{ formatFullDate(alliance.acceptedAt ?? alliance.createdAt) }}
-          </span>
-          <span class="diplomacy__actions">
-            <BaseButton
-              v-if="isFounder"
-              variant="destructive"
-              :loading="busyId === alliance.id"
-              @click="resolveAlliance(alliance, 'ended')"
-            >
-              End Alliance
-            </BaseButton>
-          </span>
-        </li>
-      </ul>
+      <p v-if="!loading && allyRows.length === 0" class="caption">No allies</p>
+      <SwapList
+        v-else
+        as="ul"
+        class="diplomacy__list"
+        :items="allyRows"
+        :item-key="(row) => row.alliance.id"
+        :loading="loading && !alliances"
+        :refreshing="loading && !!alliances"
+      >
+        <template #placeholder>
+          <li class="placeholder"><SkeletonLoader height="56px" /></li>
+        </template>
+        <template #default="{ item: { alliance, pending: waiting }, swap }">
+          <li v-bind="swap" class="diplomacy__row">
+            <ClanLink :clan="alliance.ally" />
+            <span v-if="waiting" class="caption">{{ alliance.incoming ? 'Proposed to you' : 'Proposal sent' }}</span>
+            <span v-else class="caption">
+              {{ alliance.warsFoughtTogether }} {{ alliance.warsFoughtTogether === 1 ? 'war' : 'wars' }} together · since {{ formatFullDate(alliance.acceptedAt ?? alliance.createdAt) }}
+            </span>
+            <span class="diplomacy__actions">
+              <template v-if="waiting && alliance.incoming">
+                <BaseButton variant="primary" :loading="busyId === alliance.id" @click="resolveAlliance(alliance, 'active')">Accept</BaseButton>
+                <BaseButton :disabled="busyId === alliance.id" @click="resolveAlliance(alliance, 'declined')">Decline</BaseButton>
+              </template>
+              <BaseButton v-else-if="waiting" :loading="busyId === alliance.id" @click="resolveAlliance(alliance, 'declined')">Withdraw</BaseButton>
+              <BaseButton
+                v-else-if="isFounder"
+                variant="destructive"
+                :loading="busyId === alliance.id"
+                @click="resolveAlliance(alliance, 'ended')"
+              >
+                End Alliance
+              </BaseButton>
+            </span>
+          </li>
+        </template>
+      </SwapList>
 
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
     </div>
@@ -246,23 +254,35 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
         />
       </header>
 
-      <p v-if="!loading && called.length === 0 && calledBy.length === 0" class="caption">No rivals</p>
-
-      <ul v-if="rivals.length" class="diplomacy__list">
-        <li v-for="rival in rivals" :key="rival.clan.id" class="diplomacy__row">
-          <ClanLink :clan="rival.clan" />
-          <span class="caption">{{ rivalLine(rival) }}</span>
-          <span class="diplomacy__actions">
-            <BaseButton
-              v-if="isCommander && rival.called"
-              :loading="busyId === rival.clan.id"
-              @click="dropRival(rival.called)"
-            >
-              Drop
-            </BaseButton>
-          </span>
-        </li>
-      </ul>
+      <p v-if="!loading && rivals.length === 0" class="caption">No rivals</p>
+      <SwapList
+        v-else
+        as="ul"
+        class="diplomacy__list"
+        :items="rivals"
+        :item-key="(rival) => rival.clan.id"
+        :loading="loading && rivals.length === 0"
+        :placeholders="1"
+      >
+        <template #placeholder>
+          <li class="placeholder"><SkeletonLoader height="56px" /></li>
+        </template>
+        <template #default="{ item: rival, swap }">
+          <li v-bind="swap" class="diplomacy__row">
+            <ClanLink :clan="rival.clan" />
+            <span class="caption">{{ rivalLine(rival) }}</span>
+            <span class="diplomacy__actions">
+              <BaseButton
+                v-if="isCommander && rival.called"
+                :loading="busyId === rival.clan.id"
+                @click="dropRival(rival.called)"
+              >
+                Drop
+              </BaseButton>
+            </span>
+          </li>
+        </template>
+      </SwapList>
     </div>
   </section>
 </template>
@@ -299,12 +319,6 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
   font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-secondary);
-}
-
-.diplomacy__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
 }
 
 .diplomacy__error {

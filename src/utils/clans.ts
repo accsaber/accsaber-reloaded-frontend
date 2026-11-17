@@ -66,11 +66,11 @@ export const CLAN_CAPACITY_LABEL: Record<ClanCapacity, string> = {
 }
 
 export const CLAN_ARENA_LABEL: Record<ClanArena, string> = {
-  mixed: 'Mixed pools',
-  random: 'Random pools',
-  modern_random: 'Modern random',
-  category_turf: 'Category turf',
-  complexity_turf: 'Complexity turf',
+  mixed: 'Mixed Pools',
+  random: 'Random Pools',
+  modern_random: 'Modern Random',
+  category_turf: 'Category Turf',
+  complexity_turf: 'Complexity Turf',
 }
 
 export function isRandomArena(arena: ClanArena): boolean {
@@ -83,7 +83,7 @@ export const CLAN_RULESET_LABEL: Record<ClanRuleset, string> = {
 }
 
 export const CLAN_WAR_TARGETING_LABEL: Record<ClanWarTargeting, string> = {
-  follow: 'Follow commands',
+  follow: 'Follow Commands',
   auto: 'Auto',
   manual: 'Pick',
 }

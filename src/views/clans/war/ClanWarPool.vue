@@ -13,6 +13,7 @@ import { formatAccuracy } from '@/utils/formatters'
 import { computed } from 'vue'
 import type { WarMapBoard } from './useWarMapBoards'
 import { useWarPlaylist } from './useWarPlaylist'
+import SwapList from '@/components/common/SwapList.vue'
 import WarPoolEntry from './WarPoolEntry.vue'
 import WarSection from './WarSection.vue'
 
@@ -20,7 +21,6 @@ const props = defineProps<{
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
   rules: ClanWarStrikeRulesResponse
-  canSubmitPicks: boolean
   signedIn: boolean
   viewer: ClanWarParticipantResponse | null
   expanded: string | null
@@ -29,7 +29,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'submit-picks': []
   toggle: [mapId: string]
 }>()
 
@@ -45,66 +44,36 @@ const picking = computed(() => props.war.status === 'picking')
       <BaseButton v-if="!picking" :loading="playlist.downloading.value" @click="playlist.download">Download Playlist</BaseButton>
     </template>
 
-    <BaseButton
-      v-if="canSubmitPicks"
-      class="war-pool__cta"
-      variant="primary"
-      size="lg"
-      @click="emit('submit-picks')"
-    >
-      {{ war.arenaSpec.defenderPicks ? 'Submit picks' : 'Answer offer' }}
-    </BaseButton>
-
     <p v-if="playlist.error.value" class="war-pool__error" role="alert">{{ playlist.error.value }}</p>
 
-    <p v-if="pool.length === 0" class="war-pool__empty">No maps to show yet.</p>
-    <ul v-else class="war-pool__list">
-      <li v-for="entry in pool" :id="`war-pool-${entry.difficulty.id}`" :key="entry.difficulty.id" class="war-pool__row">
-        <WarPoolEntry
-          :entry="entry"
-          :war="war"
-          :rules="rules"
-          :viewer="viewer"
-          :expanded="expanded"
-          :boards="boards"
-          :wipe="wipe"
-          :expandable="open"
-          @toggle="emit('toggle', $event)"
-        >
-          <span v-if="entry.viewerScore" class="war-pool__own">
-            Your PB {{ formatAccuracy(entry.viewerScore.accuracy) }} · {{ Math.round(entry.viewerScore.ap) }} AP
-          </span>
-          <span v-else-if="signedIn && open" class="war-pool__own">Not played</span>
-          <ClanTag v-if="entry.pickedBy" :clan="entry.pickedBy" size="sm" />
-        </WarPoolEntry>
-      </li>
-    </ul>
+    <p v-if="pool.length === 0" class="war-pool__empty">No maps to show yet</p>
+    <SwapList v-else as="ul" class="war-pool__list" :items="pool" :item-key="(entry) => entry.difficulty.id">
+      <template #default="{ item: entry, swap }">
+        <li v-bind="swap" :id="`war-pool-${entry.difficulty.id}`" class="war-pool__row">
+          <WarPoolEntry
+            :entry="entry"
+            :war="war"
+            :rules="rules"
+            :viewer="viewer"
+            :expanded="expanded"
+            :boards="boards"
+            :wipe="wipe"
+            :expandable="open"
+            @toggle="emit('toggle', $event)"
+          >
+            <span v-if="entry.viewerScore" class="war-pool__own">
+              Your PB {{ formatAccuracy(entry.viewerScore.accuracy) }} · {{ Math.round(entry.viewerScore.ap) }} AP
+            </span>
+            <span v-else-if="signedIn && open" class="war-pool__own">Not played</span>
+            <ClanTag v-if="entry.pickedBy" :clan="entry.pickedBy" size="sm" />
+          </WarPoolEntry>
+        </li>
+      </template>
+    </SwapList>
   </WarSection>
 </template>
 
 <style scoped>
-.war-pool__cta {
-  --accent: var(--warning);
-  width: 100%;
-  padding: var(--space-md) var(--space-lg);
-  font-size: 1.25rem;
-  font-weight: 700;
-  background: color-mix(in srgb, var(--warning) 10%, transparent);
-  animation: war-pool-cta 1.6s ease-in-out infinite;
-}
-
-@keyframes war-pool-cta {
-  50% {
-    background: color-mix(in srgb, var(--warning) 22%, transparent);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .war-pool__cta {
-    animation: none;
-  }
-}
-
 .war-pool__empty {
   margin: 0;
   font-size: var(--text-body);

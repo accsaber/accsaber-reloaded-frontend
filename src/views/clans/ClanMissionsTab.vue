@@ -1,21 +1,22 @@
 <script setup lang="ts">
-import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import MissionContributorsModal from '@/components/domain/MissionContributorsModal.vue'
 import SharedMissionRow from '@/components/domain/SharedMissionRow.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useNow } from '@/composables/useNow'
 import type { ClanResponse } from '@/types/api/clans'
 import type { MissionResponse } from '@/types/api/missions'
-import type { ChartToggle } from '@/types/display'
+import type { Tab } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 
 const PAGE_SIZE = 20
-const VIEW_TOGGLES: ChartToggle[] = [
+const VIEW_TABS: Tab[] = [
   { key: 'active', label: 'Active' },
   { key: 'history', label: 'History' },
 ]
@@ -89,29 +90,36 @@ watch(() => props.isMember, fetchOwnRows, { immediate: true })
 
 <template>
   <section class="clan-missions">
-    <ChartToggleGroup :toggles="VIEW_TOGGLES" :active="[showHistory ? 'history' : 'active']" label="Missions"
-      @select="setView" />
-
-    <div v-if="loading && missions.length === 0" class="clan-missions__list">
-      <SkeletonLoader v-for="i in 3" :key="i" variant="card" height="96px" />
-    </div>
+    <BaseTabs variant="segmented" label="Missions" :tabs="VIEW_TABS" :model-value="showHistory ? 'history' : 'active'"
+      @update:model-value="setView" />
 
     <EmptyState
-      v-else-if="missions.length === 0"
-      :message="showHistory ? 'No finished missions yet.' : 'New missions arrive with the weekly reset.'"
+      v-if="!loading && missions.length === 0"
+      :message="showHistory ? 'No finished missions yet' : 'New missions arrive with the weekly reset'"
     />
 
-    <div v-else class="clan-missions__list">
-      <SharedMissionRow
-        v-for="mission in missions"
-        :key="mission.id"
-        :mission="mission"
-        :locked="false"
-        :now="now"
-        :member-row="ownByParent.get(mission.id)"
-        @contributors="openId = mission.id"
-      />
-    </div>
+    <SwapList
+      v-else
+      class="clan-missions__list"
+      :items="missions"
+      :item-key="(mission) => mission.id"
+      :loading="loading && !pageData"
+      :refreshing="loading && !!pageData"
+    >
+      <template #placeholder>
+        <SkeletonLoader class="placeholder" height="126px" />
+      </template>
+      <template #default="{ item: mission, swap }">
+        <SharedMissionRow
+          v-bind="swap"
+          :mission="mission"
+          :locked="false"
+          :now="now"
+          :member-row="ownByParent.get(mission.id)"
+          @contributors="openId = mission.id"
+        />
+      </template>
+    </SwapList>
 
     <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
 

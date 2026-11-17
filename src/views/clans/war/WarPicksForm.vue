@@ -1,22 +1,20 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
-import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import type { ClanWarDetailResponse, ClanWarPoolEntryResponse, ClanWarResponse } from '@/types/api/clans'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
 import { CLAN_RULESET_LABEL, isBerserkerOffer } from '@/utils/clans'
 import { computed, ref, watch } from 'vue'
 import WarMapPicker from './WarMapPicker.vue'
+import WarSection from './WarSection.vue'
 
 const props = defineProps<{
-  open: boolean
   war: ClanWarResponse
   pool: ClanWarPoolEntryResponse[]
 }>()
 
 const emit = defineEmits<{
-  close: []
   submitted: [detail: ClanWarDetailResponse]
 }>()
 
@@ -58,26 +56,24 @@ watch(
     berserker.value = false
   },
 )
-
-watch(
-  () => props.open,
-  (open) => {
-    if (open) error.value = null
-  },
-)
 </script>
 
 <template>
-  <BaseModal :open="open" persistent :title="count ? 'Submit picks' : 'Answer offer'" max-width="640px" @close="emit('close')">
+  <WarSection :title="count ? 'Your Picks' : 'Answer Offer'" fixed>
+    <template #actions>
+      <BaseButton variant="primary" :loading="saving" :disabled="!ready" @click="submit">
+        {{ count ? 'Lock Picks' : 'Send Answer' }}
+      </BaseButton>
+    </template>
     <div class="picks">
-      <template v-if="offer">
-        <ChartToggleGroup
-          :toggles="CHOICES"
-          :active="[berserker ? 'berserker' : 'duel']"
-          label="Ruleset"
-          @select="berserker = $event === 'berserker'"
-        />
-      </template>
+      <BaseTabs
+        v-if="offer"
+        variant="segmented"
+        label="Ruleset"
+        :tabs="CHOICES"
+        :model-value="berserker ? 'berserker' : 'duel'"
+        @update:model-value="berserker = $event === 'berserker'"
+      />
       <WarMapPicker
         v-if="count"
         v-model="picks"
@@ -88,16 +84,9 @@ watch(
         :disabled="saving"
         :taken-ids="takenIds"
       />
-      <p v-if="error" class="picks__error" role="alert">{{ error }}</p>
+      <p v-if="error" class="caption picks__error" role="alert">{{ error }}</p>
     </div>
-
-    <template #footer>
-      <BaseButton :disabled="saving" @click="emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" :loading="saving" :disabled="!ready" @click="submit">
-        {{ count ? 'Lock picks' : 'Send answer' }}
-      </BaseButton>
-    </template>
-  </BaseModal>
+  </WarSection>
 </template>
 
 <style scoped>
@@ -108,8 +97,6 @@ watch(
 }
 
 .picks__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 </style>

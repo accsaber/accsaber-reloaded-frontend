@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import ClanIcon from '@/components/domain/ClanIcon.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import UserChip from '@/components/domain/UserChip.vue'
@@ -11,6 +13,7 @@ defineProps<{
   requests: ClanJoinRequestResponse[]
   perspective: 'player' | 'clan'
   busyId: string | null
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,43 +22,48 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <ul class="action-list">
-    <li v-for="request in requests" :key="request.id" class="action-list__row">
-      <span class="field-label">
-        {{ request.direction === 'invite' ? 'Invite' : 'Request' }}
-      </span>
+  <SwapList as="ul" class="action-list" :items="requests" :item-key="(request) => request.id" :loading="loading">
+    <template #placeholder>
+      <li class="placeholder"><SkeletonLoader height="56px" /></li>
+    </template>
+    <template #default="{ item: request, swap }">
+      <li v-bind="swap" class="action-list__row">
+        <span class="field-label">
+          {{ request.direction === 'invite' ? 'Invite' : 'Request' }}
+        </span>
 
-      <span v-if="perspective === 'player'" class="request-list__subject">
-        <ClanIcon :clan="request.clan" :size="32" />
-        <ClanTag :clan="request.clan" size="md" effects />
-        <RouterLink
-          class="request-list__clan"
-          :to="{ name: 'clan-detail', params: { slugOrId: request.clan.slug } }"
-        >{{ request.clan.name }}</RouterLink>
-      </span>
-      <UserChip v-else :user="request.player" link tooltip class="request-list__subject" />
+        <span v-if="perspective === 'player'" class="request-list__subject">
+          <ClanIcon :clan="request.clan" :size="32" />
+          <ClanTag :clan="request.clan" size="md" effects />
+          <RouterLink
+            class="request-list__clan"
+            :to="{ name: 'clan-detail', params: { slugOrId: request.clan.slug } }"
+          >{{ request.clan.name }}</RouterLink>
+        </span>
+        <UserChip v-else :user="request.player" link tooltip class="request-list__subject" />
 
-      <span class="caption action-list__when">{{ formatRelativeDate(request.createdAt) }}</span>
+        <span class="caption action-list__when">{{ formatRelativeDate(request.createdAt) }}</span>
 
-      <span class="action-list__actions">
-        <template v-if="(perspective === 'player') === (request.direction === 'invite')">
-          <BaseButton
-            variant="primary"
-            :loading="busyId === request.id"
-            @click="emit('resolve', request, 'accepted')"
-          >
-            Accept
+        <span class="action-list__actions">
+          <template v-if="(perspective === 'player') === (request.direction === 'invite')">
+            <BaseButton
+              variant="primary"
+              :loading="busyId === request.id"
+              @click="emit('resolve', request, 'accepted')"
+            >
+              Accept
+            </BaseButton>
+            <BaseButton :disabled="busyId === request.id" @click="emit('resolve', request, 'declined')">
+              Decline
+            </BaseButton>
+          </template>
+          <BaseButton v-else :loading="busyId === request.id" @click="emit('resolve', request, 'cancelled')">
+            Cancel
           </BaseButton>
-          <BaseButton :disabled="busyId === request.id" @click="emit('resolve', request, 'declined')">
-            Decline
-          </BaseButton>
-        </template>
-        <BaseButton v-else :loading="busyId === request.id" @click="emit('resolve', request, 'cancelled')">
-          Cancel
-        </BaseButton>
-      </span>
-    </li>
-  </ul>
+        </span>
+      </li>
+    </template>
+  </SwapList>
 </template>
 
 <style scoped>

@@ -80,6 +80,7 @@ const bodyId = useId()
 .war-section__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-xs);
   margin-left: auto;
 }

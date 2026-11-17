@@ -155,7 +155,7 @@ watch(arena, () => {
 </script>
 
 <template>
-  <BaseModal :open="open" title="Declare war" max-width="640px" @close="emit('close')">
+  <BaseModal :open="open" title="Declare War" max-width="640px" @close="emit('close')">
     <div v-if="loading" class="declare__skeleton">
       <SkeletonLoader variant="text" :lines="3" />
       <SkeletonLoader variant="card" height="120px" />
@@ -168,7 +168,7 @@ watch(arena, () => {
           <ClanIcon :clan="target.clan" :size="32" />
           <ClanTag :clan="target.clan" size="md" />
           <span class="declare__target-name">{{ target.clan.name }}</span>
-          <BaseButton size="sm" :disabled="saving" @click="target = null">Change</BaseButton>
+          <BaseButton :disabled="saving" @click="target = null">Change</BaseButton>
         </div>
         <ClanPicker
           v-else
@@ -202,7 +202,7 @@ watch(arena, () => {
         <RangeSlider
           v-if="arena === 'complexity_turf'"
           v-model="complexity"
-          label="Complexity range"
+          label="Complexity Range"
           :min="0"
           :max="COMPLEXITY_MAX"
           :step="0.5"
@@ -222,8 +222,8 @@ watch(arena, () => {
       </section>
 
       <section v-if="!isRandomArena(arena)" class="declare__step">
-        <h3 class="declare__label field-label">Your picks</h3>
-        <p v-if="!target" class="declare__hint">Pick a target first.</p>
+        <h3 class="declare__label field-label">Your Picks</h3>
+        <p v-if="!target" class="caption">Pick a target first</p>
         <WarMapPicker
           v-else
           v-model="picks"
@@ -243,7 +243,7 @@ watch(arena, () => {
 
     <template #footer>
       <BaseButton :disabled="saving" @click="emit('close')">Cancel</BaseButton>
-      <BaseButton variant="destructive" :loading="saving" :disabled="!ready" @click="submit">Declare war</BaseButton>
+      <BaseButton variant="destructive" :loading="saving" :disabled="!ready" @click="submit">Declare War</BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -281,12 +281,6 @@ watch(arena, () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.declare__hint {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .declare__error {

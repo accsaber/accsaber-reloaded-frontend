@@ -62,6 +62,13 @@ const LATER_TITLE = "What they'll be worth once they're back."
 
 const sorts = ref<Partial<Record<ClanWarTeam, { key: SortKey; direction: SortDirection }>>>({})
 const busy = ref<string | null>(null)
+const leftOpen = ref(new Set<ClanWarTeam>())
+
+function toggleLeft(team: ClanWarTeam) {
+  const next = new Set(leftOpen.value)
+  if (!next.delete(team)) next.add(team)
+  leftOpen.value = next
+}
 const orderError = ref<string | null>(null)
 const choosing = ref<string | null>(null)
 
@@ -233,7 +240,7 @@ function everyone(next: ClanWarOrder) {
 
     <div v-if="!participants" class="roster__sides">
       <div v-for="i in 2" :key="i" class="roster__side">
-        <SkeletonLoader v-for="j in 6" :key="j" variant="table-row" />
+        <SkeletonLoader v-for="j in 8" :key="j" class="placeholder" height="40px" />
       </div>
     </div>
     <p v-else-if="!participants.length" class="roster__empty">Nobody enrolled</p>
@@ -365,15 +372,30 @@ function everyone(next: ClanWarOrder) {
             </template>
           </tbody>
         </table>
-        <details v-if="t.left.length" class="roster__left">
-          <summary class="roster__left-toggle">Left the war ({{ t.left.length }})</summary>
-          <ul class="roster__left-list">
-            <li v-for="fighter in t.left" :key="fighter.player.id" class="roster__left-row">
-              <UserChip :user="fighter.player" size="sm" link tooltip hide-clan />
-              <span class="roster__tag">Left {{ formatRelativeDate(fighter.leftAt!, now) }}</span>
-            </li>
-          </ul>
-        </details>
+        <template v-if="t.left.length">
+          <button
+            type="button"
+            class="roster__left-toggle pressable"
+            :aria-expanded="leftOpen.has(t.team)"
+            @click="toggleLeft(t.team)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            Left the War ({{ t.left.length }})
+          </button>
+          <Transition name="collapse">
+            <div v-if="leftOpen.has(t.team)" class="collapsible">
+              <ul class="roster__left-list">
+                <li v-for="fighter in t.left" :key="fighter.player.id" class="roster__left-row">
+                  <UserChip :user="fighter.player" size="sm" link tooltip hide-clan />
+                  <span class="roster__tag">Left {{ formatRelativeDate(fighter.leftAt!, now) }}</span>
+                </li>
+              </ul>
+            </div>
+          </Transition>
+        </template>
         </div>
       </WarSection>
     </div>
@@ -537,15 +559,27 @@ function everyone(next: ClanWarOrder) {
   background: color-mix(in srgb, var(--war-side) 10%, transparent);
 }
 
-.roster__left {
-  border-top: 1px solid var(--bg-overlay);
-}
-
 .roster__left-toggle {
-  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--control-h);
+  padding: 0 var(--space-md);
+  font: inherit;
   font-size: var(--text-body);
   color: var(--text-secondary);
+  background: none;
+  border: none;
   cursor: pointer;
+}
+
+.roster__left-toggle svg {
+  transform: rotate(-90deg);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.roster__left-toggle[aria-expanded='true'] svg {
+  transform: none;
 }
 
 .roster__left-list {

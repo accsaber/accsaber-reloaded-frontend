@@ -674,7 +674,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           '50 members',
         ],
         related: ['clans', 'clan-ranks', 'clan-cosmetics', 'clan-wars', 'xp-and-levels'],
-        updated: '2026-10-19',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanLevelsPage.vue'),
       },
       {
@@ -808,7 +808,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'engagement',
         ],
         related: ['war-combat', 'war-math', 'coalitions', 'clan-standing', 'clan-seasons', 'alliances-and-rivals'],
-        updated: '2026-10-26',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanWarsPage.vue'),
       },
       {

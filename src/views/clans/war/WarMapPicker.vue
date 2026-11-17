@@ -62,8 +62,8 @@ function remove(id: string) {
       <span class="map-picks__count" :class="{ 'map-picks__count--full': full }">
         {{ picks.length }}/{{ count }} picked
       </span>
-      <BaseButton v-if="!full" size="sm" :disabled="disabled" @click="pickerOpen = true">
-        {{ picks.length ? 'Add more' : 'Pick maps' }}
+      <BaseButton v-if="!full" :disabled="disabled" @click="pickerOpen = true">
+        {{ picks.length ? 'Add More' : 'Pick Maps' }}
       </BaseButton>
     </div>
 
@@ -71,15 +71,15 @@ function remove(id: string) {
       <li v-for="row in rows" :key="row.diff.id" class="map-picks__row">
         <WarMapRow :difficulty="row.diff">
           <span v-if="row.flag" class="map-picks__flag" role="alert">{{ row.flag }}</span>
-          <BaseButton size="sm" :disabled="disabled" @click="remove(row.diff.id)">Remove</BaseButton>
+          <BaseButton :disabled="disabled" @click="remove(row.diff.id)">Remove</BaseButton>
         </WarMapRow>
       </li>
     </ul>
-    <p v-else class="map-picks__empty">No maps picked yet.</p>
+    <p v-else class="caption">No maps picked yet</p>
 
     <MapPickerModal
       v-if="pickerOpen"
-      title="Pick war maps"
+      title="Pick War Maps"
       ranked-only
       initial-multi
       :mode-toggle="false"
@@ -152,9 +152,4 @@ function remove(id: string) {
   color: var(--error);
 }
 
-.map-picks__empty {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
 </style>

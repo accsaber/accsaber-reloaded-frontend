@@ -1,16 +1,15 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import BaseModal from '@/components/common/BaseModal.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import type { MissionContributorResponse, MissionResponse } from '@/types/api/missions'
-import type { UserRefDisplay } from '@/types/display'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page, PaginationParams } from '@/types/pagination'
-import { getRankClass } from '@/utils/ranking'
 import { missionUnitLabel } from '@/utils/missions'
+import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
-import { parseApiError } from '@/api/client'
 
 const props = defineProps<{
   mission: MissionResponse
@@ -22,45 +21,48 @@ const emit = defineEmits<{
   navigate: []
 }>()
 
-interface ContributorRow {
-  rank: number
-  player: UserRefDisplay
-  rewarded: boolean
-  amount: string
-}
+const PAGE_SIZE = 10
 
-const PAGE_SIZE = 20
-
-const rows = ref<ContributorRow[]>([])
+const pageData = ref<Page<MissionContributorResponse> | null>(null)
 const page = ref(1)
-const totalPages = ref(0)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const paid = computed(() => props.mission.status === 'completed')
+const totalPages = computed(() => pageData.value?.totalPages ?? Math.ceil((props.mission.contributors ?? 0) / PAGE_SIZE))
 
-function toRow(row: MissionContributorResponse): ContributorRow {
-  return {
+const columns = computed<TableColumn[]>(() => [
+  { key: 'rank', label: 'Rank', align: 'right', mono: true, width: '72px' },
+  { key: 'player', label: 'Player', align: 'left', primary: true },
+  ...(paid.value ? [{ key: 'status', label: 'Reward', align: 'left', width: '120px' } as TableColumn] : []),
+  { key: 'amount', label: 'Contributed', align: 'right', mono: true, width: '160px' },
+])
+
+const rows = computed(() =>
+  (pageData.value?.content ?? []).map((row) => ({
+    id: row.player.id,
     rank: row.rank,
     player: row.player,
-    rewarded: row.rewardedAt != null,
+    status: row.rewardedAt != null ? 'Rewarded' : 'Pending',
     amount: missionUnitLabel(props.mission.type, row.contribution),
-  }
-}
+  })),
+)
+
+let request = 0
 
 async function load(missionId: string, target: number) {
+  const current = ++request
   loading.value = true
   error.value = null
   try {
-    const res = await props.loadPage(missionId, { page: target - 1, size: PAGE_SIZE })
-    rows.value = res.content.map(toRow)
-    totalPages.value = res.totalPages
+    const next = await props.loadPage(missionId, { page: target - 1, size: PAGE_SIZE })
+    if (current === request) pageData.value = next
   } catch (err) {
-    rows.value = []
-    totalPages.value = 0
+    if (current !== request) return
+    pageData.value = null
     error.value = parseApiError(err, 'Could not load contributors').message
   } finally {
-    loading.value = false
+    if (current === request) loading.value = false
   }
 }
 
@@ -73,25 +75,33 @@ watch(
 
 <template>
   <BaseModal open :title="mission.name" max-width="620px" @close="emit('close')">
-
-    <div v-if="loading && !rows.length" class="contrib__skeletons">
-      <SkeletonLoader v-for="n in 6" :key="n" variant="table-row" />
-    </div>
-
-    <p v-else-if="error" class="contrib__error" role="alert">{{ error }}</p>
-
-    <EmptyState v-else-if="!rows.length" icon="🤝" message="Nobody has contributed yet." />
-
-    <ol v-else class="contrib__list">
-      <li v-for="row in rows" :key="row.player.id" class="contrib__row">
-        <span class="rank contrib__rank" :class="getRankClass(row.rank)">#{{ row.rank }}</span>
-        <UserChip :user="row.player" link class="contrib__player" @click="emit('navigate')" />
-        <span v-if="paid" class="contrib__reward" :class="{ 'contrib__reward--pending': !row.rewarded }">
-          {{ row.rewarded ? 'Rewarded' : 'Paying out' }}
+    <p v-if="error" class="caption contrib__error" role="alert">{{ error }}</p>
+    <DataTable
+      v-else
+      class="contrib__table"
+      :columns="columns"
+      :rows="rows"
+      :loading="loading && !pageData"
+      :refreshing="loading && !!pageData"
+      :loading-rows="PAGE_SIZE"
+      row-key="id"
+      empty-message="Nobody has contributed yet"
+    >
+      <template #cell-rank="{ value }">
+        <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
+      </template>
+      <template #cell-player="{ value }">
+        <UserChip :user="(value as UserRefDisplay)" link @click="emit('navigate')" />
+      </template>
+      <template #mobile-card="{ row }">
+        <span class="contrib__card">
+          <span class="rank" :class="getRankClass(row.rank as number)">#{{ row.rank }}</span>
+          <UserChip :user="(row.player as UserRefDisplay)" size="sm" link @click="emit('navigate')" />
+          <span class="contrib__amount">{{ row.amount }}</span>
+          <span v-if="paid" class="caption contrib__status">{{ row.status }}</span>
         </span>
-        <span class="contrib__value">{{ row.amount }}</span>
-      </li>
-    </ol>
+      </template>
+    </DataTable>
 
     <template v-if="totalPages > 1" #footer>
       <PaginationControls :page="page" :total-pages="totalPages" @update:page="page = $event" />
@@ -100,64 +110,30 @@ watch(
 </template>
 
 <style scoped>
-.contrib__skeletons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
 .contrib__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 
-.contrib__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.contrib__error,
+.contrib__table {
+  min-height: calc(34px + 10 * 48px);
 }
 
-.contrib__row {
-  display: flex;
+.contrib__card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--bg-overlay);
+  gap: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
 }
 
-.contrib__row:last-child {
-  border-bottom: none;
-}
-
-.contrib__rank {
-  min-width: 40px;
-  text-align: right;
-  font-size: var(--text-body);
-}
-
-.contrib__player {
-  flex: 1;
-}
-
-.contrib__reward {
-  flex-shrink: 0;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--success);
-}
-
-.contrib__reward--pending {
-  color: var(--text-tertiary);
-}
-
-.contrib__value {
-  flex-shrink: 0;
+.contrib__amount {
   font-family: var(--font-mono);
   font-size: var(--text-body);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.contrib__status {
+  grid-column: 2 / -1;
 }
 </style>

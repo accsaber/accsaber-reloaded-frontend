@@ -49,17 +49,17 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       <RouterLink to="/wiki/clan-levels">clan levels up</RouterLink>.
     </p>
     <ul>
-      <li>Mixed pools can use any ranked map.</li>
-      <li>Random pools are 10 random ranked maps that nobody picks.</li>
-      <li>Modern random is the same thing, but only maps ranked in 2024 or later.</li>
-      <li>Category turf only uses maps from one category.</li>
-      <li>Complexity turf only uses maps in a complexity range.</li>
+      <li>Mixed Pools can use any ranked map.</li>
+      <li>Random Pools are 10 random ranked maps that nobody picks.</li>
+      <li>Modern Random is the same thing, but only maps ranked in 2024 or later.</li>
+      <li>Category Turf only uses maps from one category.</li>
+      <li>Complexity Turf only uses maps in a complexity range.</li>
     </ul>
     <p>Some songs are war-banned and never show up in pools.</p>
 
     <WikiHeading id="picks">Picks</WikiHeading>
     <p>
-      Unless it is Random pools, both clans pick maps. The clan with less standing gets more
+      Unless it is Random Pools, both clans pick maps. The clan with less standing gets more
       picks. Two equal clans get 5 each. A clan with half the other's standing gets 7. One
       with a quarter gets 8.
     </p>
@@ -71,7 +71,7 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="phases">Phases</WikiHeading>
     <p>
-      Random pools and Modern random skip picking unless the attacker offered Berserker. Once the pool locks in, prep
+      Random Pools and Modern Random skip picking unless the attacker offered Berserker. Once the pool locks in, prep
       runs for somewhere between 24 and 48 hours, picked at random. The war page shows the exact start as soon as it's set, and your clan
       chat gets a message when the pool locks in.
     </p>

@@ -4,6 +4,7 @@ import BaseDropdown from '@/components/common/BaseDropdown.vue'
 import type { ClanJoinRequestResponse, ClanRole } from '@/types/api/clans'
 import { hasClanRole } from '@/utils/clans'
 import { computed, ref } from 'vue'
+import './menuList.css'
 
 const props = defineProps<{
   signedIn: boolean
@@ -67,12 +68,12 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
             </svg>
           </button>
         </template>
-        <div class="clan-actions__menu" role="menu">
-          <button type="button" class="clan-actions__item" role="menuitem" @click="pick('leave')">Leave Clan</button>
+        <div class="menu-list" role="menu">
+          <button type="button" class="menu-list__item" role="menuitem" @click="pick('leave')">Leave Clan</button>
           <button
             v-if="isFounder"
             type="button"
-            class="clan-actions__item clan-actions__item--danger"
+            class="menu-list__item menu-list__item--danger"
             role="menuitem"
             @click="pick('disband')"
           >
@@ -101,23 +102,23 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
       <template #trigger>
         <BaseButton :loading="busy">Diplomacy</BaseButton>
       </template>
-      <div class="clan-actions__menu" role="menu">
+      <div class="menu-list" role="menu">
         <button
           v-if="canPropose"
           type="button"
-          class="clan-actions__item"
+          class="menu-list__item"
           role="menuitem"
           @click="pick('propose-alliance')"
         >
           Propose Alliance
         </button>
-        <button type="button" class="clan-actions__item" role="menuitem" @click="pick('call-rival')">
+        <button type="button" class="menu-list__item" role="menuitem" @click="pick('call-rival')">
           Call Rival
         </button>
         <button
           v-if="canDeclare"
           type="button"
-          class="clan-actions__item clan-actions__item--danger"
+          class="menu-list__item menu-list__item--danger"
           role="menuitem"
           @click="pick('declare-war')"
         >
@@ -169,37 +170,6 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
   color: var(--text-primary);
   border-color: var(--text-tertiary);
   background: var(--bg-elevated);
-}
-
-.clan-actions__menu {
-  display: flex;
-  flex-direction: column;
-  min-width: 180px;
-  padding: var(--space-xs);
-}
-
-.clan-actions__item {
-  padding: var(--space-sm) var(--space-md);
-  font: inherit;
-  font-size: var(--text-body);
-  text-align: left;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-}
-
-.clan-actions__item:hover {
-  background: var(--bg-overlay);
-}
-
-.clan-actions__item--danger {
-  color: var(--error);
-}
-
-.clan-actions__item--danger:hover {
-  background: color-mix(in srgb, var(--error) 12%, transparent);
 }
 
 .clan-actions__error {

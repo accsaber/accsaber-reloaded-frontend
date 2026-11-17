@@ -25,7 +25,7 @@ const emit = defineEmits<{
       :key="option.key"
       type="button"
       role="radio"
-      class="war-tiles__tile"
+      class="war-tiles__tile pressable"
       :class="{ 'war-tiles__tile--active': modelValue === option.key }"
       :aria-checked="modelValue === option.key"
       :disabled="disabled || option.disabled"
@@ -40,7 +40,8 @@ const emit = defineEmits<{
 <style scoped>
 .war-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-auto-rows: 1fr;
   gap: var(--space-sm);
 }
 
@@ -48,8 +49,10 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  padding: var(--space-sm) var(--space-md);
+  min-height: var(--control-h);
+  padding: var(--space-xs) var(--space-md);
   font: inherit;
   font-size: var(--text-body);
   font-weight: 600;
@@ -58,7 +61,12 @@ const emit = defineEmits<{
   background: transparent;
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .war-tiles__tile:hover:not(:disabled) {

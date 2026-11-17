@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import SwapList from '@/components/common/SwapList.vue'
 import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import RewardAmountTile from '@/components/domain/RewardAmountTile.vue'
@@ -57,56 +58,68 @@ function toggle(clanId: string) {
 
   <WarSection v-else fixed>
     <p v-if="error" class="war-rewards__error" role="alert">{{ error }}</p>
-    <SkeletonLoader v-else-if="!rewards" variant="table-row" />
-    <ul v-else class="war-rewards__clans">
-      <li v-for="group in groups" :key="group.clan.id">
-        <button
-          type="button"
-          class="war-rewards__row war-rewards__row--clan pressable"
-          :aria-expanded="open.has(group.clan.id)"
-          :disabled="!group.players.length"
-          @click="toggle(group.clan.id)"
-        >
-          <span class="war-rewards__who">
-            <svg class="war-rewards__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-            <ClanTag :clan="group.clan" size="sm" preview />
-            <ClanName :clan="group.clan" />
-            <span class="caption">{{ group.players.length }} {{ group.players.length === 1 ? 'player' : 'players' }}</span>
-          </span>
-          <span class="war-rewards__xp">
-              +{{ formatClanXp(group.clanXp) }} clan XP
-              <span
-                v-if="Math.round(group.standing)"
-                :class="group.standing > 0 ? 'war-rewards__standing--gain' : 'war-rewards__standing--loss'"
-              >
-                {{ formatSignedStanding(group.standing) }} Standing
-              </span>
+    <SwapList
+      v-else
+      as="ul"
+      class="war-rewards__clans"
+      :items="groups"
+      :item-key="(group) => group.clan.id"
+      :loading="!rewards"
+      :placeholders="war.attack.sides.length + war.defend.sides.length"
+    >
+      <template #placeholder>
+        <li class="placeholder"><SkeletonLoader height="48px" /></li>
+      </template>
+      <template #default="{ item: group, swap }">
+        <li v-bind="swap">
+          <button
+            type="button"
+            class="war-rewards__row war-rewards__row--clan pressable"
+            :aria-expanded="open.has(group.clan.id)"
+            :disabled="!group.players.length"
+            @click="toggle(group.clan.id)"
+          >
+            <span class="war-rewards__who">
+              <svg class="war-rewards__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+              <ClanTag :clan="group.clan" size="sm" preview />
+              <ClanName :clan="group.clan" />
+              <span class="caption">{{ group.players.length }} {{ group.players.length === 1 ? 'player' : 'players' }}</span>
             </span>
-          <WarRewardItems :items="group.items" />
-        </button>
-        <Transition name="collapse">
-          <div v-if="open.has(group.clan.id)" class="collapsible">
-            <ul class="war-rewards__list">
-              <li
-                v-for="row in group.players"
-                :key="row.player.id"
-                class="war-rewards__row"
-                :class="{ 'war-rewards__row--viewer': row.player.id === viewerId }"
-              >
-                <span class="war-rewards__who">
-                  <UserChip :user="row.player" size="sm" link tooltip hide-clan />
+            <span class="war-rewards__xp">
+                +{{ formatClanXp(group.clanXp) }} clan XP
+                <span
+                  v-if="Math.round(group.standing)"
+                  :class="group.standing > 0 ? 'war-rewards__standing--gain' : 'war-rewards__standing--loss'"
+                >
+                  {{ formatSignedStanding(group.standing) }} Standing
                 </span>
-                <span class="war-rewards__xp">+{{ formatClanXp(row.xp) }} XP</span>
-                <WarRewardItems :items="row.items" />
-              </li>
-            </ul>
-          </div>
-        </Transition>
-      </li>
-    </ul>
+              </span>
+            <WarRewardItems :items="group.items" />
+          </button>
+          <Transition name="collapse">
+            <div v-if="open.has(group.clan.id)" class="collapsible">
+              <ul class="war-rewards__list">
+                <li
+                  v-for="row in group.players"
+                  :key="row.player.id"
+                  class="war-rewards__row"
+                  :class="{ 'war-rewards__row--viewer': row.player.id === viewerId }"
+                >
+                  <span class="war-rewards__who">
+                    <UserChip :user="row.player" size="sm" link tooltip hide-clan />
+                  </span>
+                  <span class="war-rewards__xp">+{{ formatClanXp(row.xp) }} XP</span>
+                  <WarRewardItems :items="row.items" />
+                </li>
+              </ul>
+            </div>
+          </Transition>
+        </li>
+      </template>
+    </SwapList>
   </WarSection>
 </template>
 

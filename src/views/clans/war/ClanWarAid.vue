@@ -2,7 +2,6 @@
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
-import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type {
   ClanWarAidResponse,
   ClanResponse,
@@ -169,12 +168,10 @@ watch(() => (mayOffer.value ? props.ownClanId : null), fetchAllies, { immediate:
 
     <p v-if="error" class="war-aid__error" role="alert">{{ error }}</p>
 
-    <div v-if="loading && !aids.length" class="war-aid__skeleton">
-      <SkeletonLoader v-for="i in 2" :key="i" variant="table-row" />
-    </div>
     <ClanAidList
-      v-else-if="aids.length"
+      v-if="loading || aids.length"
       :aids="aids"
+      :loading="loading && !aids.length"
       :busy-id="busyId"
       :own-clan-id="ownClanId"
       :can-act="canAct"
@@ -217,11 +214,5 @@ watch(() => (mayOffer.value ? props.ownClanId : null), fetchAllies, { immediate:
   margin: 0;
   font-size: var(--text-caption);
   color: var(--error);
-}
-
-.war-aid__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
 }
 </style>

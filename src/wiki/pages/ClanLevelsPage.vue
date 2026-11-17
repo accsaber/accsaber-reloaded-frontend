@@ -4,14 +4,14 @@ import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const UNLOCKS: WikiCompareRow[] = [
-  { label: 'New clan', values: ['0', '10 member spots, Mixed pools, Duels'] },
+  { label: 'New clan', values: ['0', '10 member spots, Mixed Pools, Duels'] },
   { label: 'Level 2', values: ['171', '+5 member spots'] },
-  { label: 'Level 3', values: ['365', '+2 Officers, Random pools'] },
-  { label: 'Level 4', values: ['639', 'Modern random'] },
+  { label: 'Level 3', values: ['365', '+2 Officers, Random Pools'] },
+  { label: 'Level 4', values: ['639', 'Modern Random'] },
   { label: 'Level 5', values: ['997', '+5 member spots, +1 ally, Berserker'] },
-  { label: 'Level 6', values: ['1,443', '+1 Commander, Category turf'] },
+  { label: 'Level 6', values: ['1,443', '+1 Commander, Category Turf'] },
   { label: 'Level 8', values: ['2,610', '+5 member spots'] },
-  { label: 'Level 9', values: ['3,336', 'Complexity turf'] },
+  { label: 'Level 9', values: ['3,336', 'Complexity Turf'] },
   { label: 'Level 10', values: ['4,160', '+5 member spots, +1 ally'] },
   { label: 'Level 12', values: ['6,109', '+5 member spots, +1 Officer'] },
   { label: 'Level 14', values: ['8,472', '+1 Commander'] },
