@@ -105,7 +105,7 @@ const formatTick = (value: number) =>
         {{ formatTick(tick.value) }}
       </span>
     </div>
-    <p class="window__axis">{{ axisLabel }}</p>
+    <p class="caption window__axis">{{ axisLabel }}</p>
   </div>
 </template>
 
@@ -120,14 +120,13 @@ const formatTick = (value: number) =>
 .window__track {
   position: relative;
   height: 46px;
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   background: var(--bg-base);
 }
 
 .window__track--empty {
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--error) 50%, var(--bg-overlay));
+  outline: 1px solid var(--error);
+  outline-offset: -1px;
 }
 
 .window__band {
@@ -168,7 +167,7 @@ const formatTick = (value: number) =>
   transform: translateX(-50%);
   white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
@@ -182,9 +181,9 @@ const formatTick = (value: number) =>
 
 .window__scale {
   position: relative;
-  height: 12px;
+  height: 16px;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   color: var(--text-tertiary);
 }
 
@@ -204,7 +203,5 @@ const formatTick = (value: number) =>
 
 .window__axis {
   margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 </style>

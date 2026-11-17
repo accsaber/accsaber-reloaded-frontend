@@ -44,7 +44,7 @@ defineProps<{
   display: flex;
   align-items: stretch;
   gap: var(--space-sm);
-  margin: 0 0 var(--space-md);
+  margin: 0 0 var(--space-lg);
 }
 
 .wiki-flow__step {
@@ -54,9 +54,8 @@ defineProps<{
   flex-direction: column;
   gap: 2px;
   padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  background: var(--bg-surface);
+  background: var(--bg-base);
 }
 
 .wiki-flow__label {

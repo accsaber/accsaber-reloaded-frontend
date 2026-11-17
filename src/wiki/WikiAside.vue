@@ -12,7 +12,7 @@ defineProps<{
 <template>
   <aside class="wiki-aside">
     <nav v-if="toc.length" class="wiki-aside__toc" aria-label="On this page">
-      <span class="wiki-aside__label field-label">On this page</span>
+      <span class="field-label">On This Page</span>
       <a
         v-for="item in toc"
         :key="item.id"
@@ -28,8 +28,8 @@ defineProps<{
     </nav>
 
     <nav v-if="related.length" class="wiki-aside__related" aria-label="Related documents">
-      <span class="wiki-aside__label field-label">Related</span>
-      <WikiDocCard v-for="entry in related" :key="entry.slug" :entry="entry" class="wiki-aside__doc" />
+      <span class="field-label">Related</span>
+      <WikiDocCard v-for="entry in related" :key="entry.slug" :entry="entry" />
     </nav>
   </aside>
 </template>
@@ -38,26 +38,29 @@ defineProps<{
 .wiki-aside {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
 }
 
-.wiki-aside__label {
-  display: block;
-  margin-bottom: var(--space-sm);
+.wiki-aside__toc,
+.wiki-aside__related {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.wiki-aside__related {
+  gap: var(--space-md);
 }
 
 .wiki-aside__anchor {
-  display: block;
-  padding: var(--space-xs) var(--space-sm);
-  border-left: 1px solid var(--bg-overlay);
   color: var(--text-secondary);
   font-size: var(--text-caption);
   text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .wiki-aside__anchor--sub {
-  padding-left: var(--space-lg);
+  padding-left: var(--space-md);
 }
 
 .wiki-aside__anchor:hover {
@@ -65,17 +68,7 @@ defineProps<{
 }
 
 .wiki-aside__anchor--active {
-  color: var(--text-primary);
+  color: var(--page-accent, var(--accent));
   font-weight: 600;
-  border-left-color: var(--accent);
-}
-
-.wiki-aside__related {
-  display: flex;
-  flex-direction: column;
-}
-
-.wiki-aside__doc {
-  margin-bottom: var(--space-sm);
 }
 </style>

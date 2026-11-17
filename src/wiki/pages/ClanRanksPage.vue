@@ -28,32 +28,33 @@ const PERMISSIONS: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      A clan has four ranks, from Member up to Founder. Each rank can do everything the ones below
-      it can.
+      There are four ranks in a clan and each one can do everything the ranks under it can, plus
+      a bit more.
     </p>
     <WikiCompareTable :columns="RANKS" :rows="PERMISSIONS" />
     <p>You can only promote, demote or kick people ranked below you.</p>
 
-    <WikiHeading id="seats">Seats</WikiHeading>
+    <WikiHeading id="seats">How many of each rank</WikiHeading>
     <p>
-      There is only one Founder. A new clan has no Officer or Commander seats yet. They come with
-      the <RouterLink to="/wiki/clan-levels">clan's level</RouterLink>, 2 Officers at level 3, a
-      Commander at 6, a third Officer at 12 and a second Commander at 14.
+      There's only one Founder. A new clan has no Officer or Commander seats yet and you get them
+      as <RouterLink to="/wiki/clan-levels">your clan levels up</RouterLink>: 2 Officers at level
+      3, a Commander at 6, a third Officer at 12 and a second Commander at 14.
     </p>
 
-    <WikiHeading id="handing-over">Handing over</WikiHeading>
+    <WikiHeading id="handing-over">Giving the clan to someone else</WikiHeading>
     <p>
-      The Founder can hand the clan to anyone in it. The two of them swap ranks. Only the new Founder can give it back.
+      The Founder can give the clan to anyone in it and the two of them swap ranks. After that
+      only the new Founder can give it back.
     </p>
 
-    <WikiHeading id="claiming">Claiming</WikiHeading>
+    <WikiHeading id="claiming">When the Founder is gone</WikiHeading>
     <p>
-      If the Founder has not set a score in a year, your longest-serving Commander can take the
-      clan over. The old Founder becomes a Commander.
+      If the Founder hasn't set a score in a year your longest-serving Commander can take over
+      the clan and the old Founder becomes a Commander.
     </p>
     <p>
-      If a Founder gets banned, the highest rank who has been around the longest takes over. If
-      nobody is left, the clan is disbanded.
+      If a Founder gets banned the highest rank who's been in the clan the longest takes over. If
+      nobody's left the clan is disbanded.
     </p>
   </WikiProse>
 </template>

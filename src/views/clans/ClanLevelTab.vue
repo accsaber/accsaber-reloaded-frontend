@@ -8,17 +8,18 @@ import type { ClanLevelResponse, ClanLevelStepResponse, ClanResponse, ClanXpGran
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { CLAN_XP_SOURCE_LABEL, clanXpGrantLabel, clanXpGrantWhen, formatClanXp, hasUnlocks } from '@/utils/clans'
+import { knownCount, rememberCount } from '@/utils/knownCount'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { loadClanLevels } from './clanLevels'
 import ClanLevelReward from './ClanLevelReward.vue'
 import ClanLevelTrail from './ClanLevelTrail.vue'
 import ClanTotals, { type ClanTotalsRow } from './ClanTotals.vue'
 import './ledgerRow.css'
 
-const props = defineProps<{ clan: ClanResponse; seasonRunning: boolean }>()
+const props = defineProps<{ clan: ClanResponse; steps: ClanLevelStepResponse[]; seasonRunning: boolean }>()
 
 const route = useRoute()
+const sourcesKey = `xp-sources:${props.clan.clan.id}`
 
 const { currentPage, paginationParams, setPage } = usePageableRoute({
   defaultSort: 'createdAt',
@@ -27,21 +28,24 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
   secondarySort: null,
 })
 
+const FIRST_LOAD_SOURCES = 3
+const SOURCE_ROW_STEP = 29
+const SOURCE_ROW_GAP = 8
+
 const level = ref<ClanLevelResponse | null>(null)
-const steps = ref<ClanLevelStepResponse[]>([])
 const loading = ref(true)
 const showAll = ref(route.query.page !== undefined)
 const xpPage = ref<Page<ClanXpGrantResponse> | null>(null)
 const xpLoading = ref(false)
 
 const progress = computed(() => level.value?.progress ?? props.clan.level)
-const maxLevel = computed(() => Math.max(0, ...steps.value.map((s) => s.level)))
+const maxLevel = computed(() => Math.max(0, ...props.steps.map((s) => s.level)))
 const scaling = computed(() => {
   const factor = level.value?.rosterFactor ?? 1
   return factor > 1 ? `x${factor.toFixed(1)}` : null
 })
 const nextRewards = computed(() =>
-  steps.value
+  props.steps
     .filter((s) => s.level > progress.value.level && hasUnlocks(s.unlocks))
     .sort((a, b) => a.level - b.level)
     .slice(0, 2),
@@ -84,12 +88,10 @@ async function fetchLevel() {
   loading.value = true
   try {
     const { getClanLevel } = await import('@/api/clans')
-    const [current, table] = await Promise.all([getClanLevel(props.clan.clan.id), loadClanLevels()])
-    level.value = current
-    steps.value = table
+    level.value = await getClanLevel(props.clan.clan.id)
+    rememberCount(sourcesKey, sourceRows.value.length)
   } catch {
     level.value = null
-    steps.value = []
   } finally {
     loading.value = false
   }
@@ -119,8 +121,8 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
 
 <template>
   <section class="level-tab">
-    <div v-if="loading" class="level-tab__next">
-      <SkeletonLoader v-for="i in 2" :key="i" variant="card" height="220px" />
+    <div v-if="!steps.length" class="level-tab__next">
+      <SkeletonLoader v-for="i in 2" :key="i" class="placeholder" height="220px" />
     </div>
     <div v-else-if="nextRewards.length" class="level-tab__next">
       <ClanLevelReward
@@ -132,15 +134,19 @@ watch([() => route.query.page, showAll], fetchXp, { immediate: true })
       />
     </div>
 
-    <SkeletonLoader v-if="loading" variant="text" height="48px" />
-    <ClanLevelTrail v-else-if="steps.length" :steps="steps" :max-level="maxLevel" :current-level="progress.level" :total-xp="progress.totalXp" />
+    <SkeletonLoader v-if="!steps.length" class="placeholder" height="48px" />
+    <ClanLevelTrail v-else :steps="steps" :max-level="maxLevel" :current-level="progress.level" :total-xp="progress.totalXp" />
 
     <div class="level-tab__xp">
       <h2 class="section-title level-tab__heading">
         XP This Season
         <span v-if="seasonRunning && seasonNote" class="caption">{{ seasonNote }}</span>
       </h2>
-      <SkeletonLoader v-if="loading" variant="text" :lines="3" />
+      <SkeletonLoader
+        v-if="loading"
+        class="placeholder"
+        :height="`${knownCount(sourcesKey, FIRST_LOAD_SOURCES) * SOURCE_ROW_STEP - SOURCE_ROW_GAP}px`"
+      />
       <ClanTotals v-else-if="seasonRunning && sourceRows.length" :rows="sourceRows" />
       <p v-else class="caption">{{ seasonRunning ? 'No XP this season yet' : 'No season running' }}</p>
       <BaseButton class="level-tab__toggle" :aria-expanded="showAll" @click="toggleAll">

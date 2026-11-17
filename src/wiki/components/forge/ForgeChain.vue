@@ -52,12 +52,12 @@ function delta(index: number): number | null {
         <div class="chain__track">
           <span class="chain__fill" :style="{ width: `${barPercent(step.value)}%` }" />
         </div>
-        <p class="chain__detail">{{ step.detail }}</p>
+        <p class="caption chain__detail">{{ step.detail }}</p>
       </li>
     </ol>
 
     <p class="chain__final">
-      <span class="chain__final-label">Lands on</span>
+      <span class="field-label">Final Target</span>
       <span class="chain__final-value">
         <template v-if="accuracy !== null">{{ formatAccuracy(accuracy) }}</template>
         <template v-else>{{ Math.round(final).toLocaleString() }} AP</template>
@@ -107,14 +107,14 @@ function delta(index: number): number | null {
 
 .chain__value {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: var(--text-body);
   color: var(--text-primary);
   white-space: nowrap;
 }
 
 .chain__delta {
-  margin-left: 6px;
-  font-size: 0.6875rem;
+  margin-left: var(--space-xs);
+  font-size: var(--text-caption);
 }
 
 .chain__delta--up {
@@ -136,7 +136,7 @@ function delta(index: number): number | null {
   display: block;
   height: 100%;
   background: var(--text-tertiary);
-  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width var(--dur-enter) var(--ease-out);
 }
 
 .chain__step--changed .chain__fill {
@@ -145,9 +145,6 @@ function delta(index: number): number | null {
 
 .chain__detail {
   margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.5;
 }
 
 .chain__final {
@@ -156,28 +153,12 @@ function delta(index: number): number | null {
   justify-content: space-between;
   gap: var(--space-sm);
   margin: 0;
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
-}
-
-.chain__final-label {
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  color: var(--text-secondary);
 }
 
 .chain__final-value {
   font-family: var(--font-mono);
-  font-size: 1.25rem;
+  font-size: var(--text-stat-lg);
   font-weight: 600;
   color: var(--accent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chain__fill {
-    transition: none;
-  }
 }
 </style>

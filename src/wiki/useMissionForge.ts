@@ -198,7 +198,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       key: 'template',
       title: 'Roll a template',
       receipt: `${template.name} (${pool})`,
-      note: `Every slot starts with a weighted roll across the ${pool} pool. Heavier templates come up more often. This one carries a weight of ${template.weight} out of ${total}, so on any given roll you have about a ${Math.round(odds * 100)}% chance of landing on this kind of mission.`,
+      note: `Every slot starts with a weighted roll across the ${pool} pool and heavier templates come up more often. This one has a weight of ${template.weight} out of ${total} so you have about a ${Math.round(odds * 100)}% chance of getting this kind of mission on any roll.`,
       data: {
         kind: 'template',
         pool,
@@ -218,8 +218,8 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       title: 'Pick a category',
       receipt: chosen ? chosen.categoryName : 'No category',
       note: chosen
-        ? `Only the categories you have actually played can be picked, and a daily slot avoids repeating a category the other slot already used. ${profile.name} has ${profile.categories.length} in play, and this roll landed on ${chosen.categoryName}.`
-        : 'This mission type is not tied to a category, so nothing is picked here. It counts whatever you play.',
+        ? `Only the categories you've actually played can be picked and a daily slot avoids repeating a category the other slot already used. ${profile.name} has played ${profile.categories.length} and this roll picked ${chosen.categoryName}.`
+        : "This mission type isn't tied to a category so nothing is picked here. It counts whatever you play.",
       data: {
         kind: 'category',
         options: profile.categories.map((c) => ({
@@ -239,7 +239,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       receipt: band,
       note: forced
         ? `${forced} This slot is locked to ${band}.`
-        : `The band decides how hard the mission is allowed to get. A daily roll is weighted 30 / 40 / 25 / 5 across easy, medium, hard and extreme, so extreme shows up on roughly one slot in twenty. This roll landed on ${band}.`,
+        : `The band decides how hard the mission is allowed to get. A daily roll is weighted 30 / 40 / 25 / 5 across easy, medium, hard and extreme so extreme shows up on roughly 1 in 20 slots. This roll picked ${band}.`,
       data: { kind: 'band', band, forced, weights: BAND_WEIGHTS, roll },
     }
   }
@@ -252,15 +252,15 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     snipe: boolean,
   ): ForgeStage {
     const ceiling = topApCeiling(band, skill.topAp, skill.skillLevel)
-    const opening = `Everything starts from the AP you would need to raise your total AP in this category by one, which for ${skill.categoryName} is ${fmtAp(skill.rawApForOneGain)}.`
+    const opening = `Everything starts from the AP you'd need to raise your total AP in this category by 1 which for ${skill.categoryName} is ${fmtAp(skill.rawApForOneGain)}.`
     const liftNote = lift.lifted
-      ? ` You are noticeably stronger in ${lift.fromCategory}, so that number gets pulled up to ${fmtAp(lift.threshold)} to stop an under-played category from handing you free missions.`
+      ? ` You're noticeably stronger in ${lift.fromCategory} so that number gets pulled up to ${fmtAp(lift.threshold)} to stop an under-played category from giving you free missions.`
       : ''
     const shape = snipe
-      ? ` Snipes settle a little under it rather than over, ${Math.round(SNIPE_BAND_FRACTION[band] * 100)}% of it on ${band}, because the mission ends up pointing you at a real score somebody actually set instead of a number chosen in the abstract.`
+      ? ` Snipes go a little under it instead of over, ${Math.round(SNIPE_BAND_FRACTION[band] * 100)}% of it on ${band}, because the mission points you at a real score somebody actually set instead of a made up number.`
       : ceiling === null
-        ? ` You have no ranked play on record here yet, so it stands as the starting point on its own.`
-        : ` A ${band} mission is never allowed to ask for more than ${fmtAp(ceiling)}, which is measured off your ${fmtAp(skill.topAp)} best play, so the starting point steps ${Math.round(ANCHOR_FRACTION[band] * 100)}% of the way into the room between the two. It can never open above where the mission is allowed to end.`
+        ? ` You have no ranked play here yet so that number is the starting point as it is.`
+        : ` A ${band} mission can never ask for more than ${fmtAp(ceiling)} which comes from your ${fmtAp(skill.topAp)} best play so the starting point goes ${Math.round(ANCHOR_FRACTION[band] * 100)}% of the way between the two. It can never start above where the mission is allowed to end.`
     return {
       key: 'anchor',
       title: 'Find your starting point',
@@ -291,16 +291,16 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     const accLo = `${(accuracyForNormalized(NORM_AP_MIN) * 100).toFixed(1)}%`
     const accHi = `${(accuracyForNormalized(NORM_AP_MAX) * 100).toFixed(1)}%`
     const empty = qualified === 0
-    const priced = `A map only qualifies if hitting the starting point on it would cost between roughly ${accLo} and ${accHi} accuracy, anywhere from a proper run up to the edge of what is humanly possible.`
+    const priced = `A map only qualifies if getting the starting point on it would need between roughly ${accLo} and ${accHi} accuracy which is anywhere from a proper play up to the edge of what's humanly possible.`
     return {
       key: 'window',
       title: 'Mark the complexity range',
       receipt: empty ? 'No maps qualify' : `${qualified} of ${total} maps`,
       note: empty
         ? range.max < spread.min
-          ? `${priced} Every ranked map in ${categoryName} would hand you your starting point of ${fmtAp(target)} below ${accLo}, which counts as free, so nothing qualifies and this mission cannot be built. On a young account that is the usual reason a map mission quietly sits the day out, and it opens up on its own as you set scores.`
-          : `${priced} Your starting point of ${fmtAp(target)} would need more than ${accHi} on every ranked map in ${categoryName}, which is past what anyone holds, so nothing qualifies and this mission cannot be built.`
-        : `${priced} ${qualified} of the ${total} ranked maps in ${categoryName} weight ${fmtAp(target)} inside that window, running from complexity ${fmtComplexity(Math.max(spread.min, range.min))} to ${fmtComplexity(Math.min(spread.max, range.max))}. On the rest it would either be out of reach or come close to free.`,
+          ? `${priced} Every ranked map in ${categoryName} would give you your starting point of ${fmtAp(target)} below ${accLo} which counts as free so nothing qualifies and this mission can't be built. On a new account that's the usual reason there's no map mission for the day and it fixes itself as you set scores.`
+          : `${priced} Your starting point of ${fmtAp(target)} would need more than ${accHi} on every ranked map in ${categoryName} which is more than anyone has so nothing qualifies and this mission can't be built.`
+        : `${priced} ${qualified} of the ${total} ranked maps in ${categoryName} weight ${fmtAp(target)} inside that window from complexity ${fmtComplexity(Math.max(spread.min, range.min))} to ${fmtComplexity(Math.min(spread.max, range.max))}. On the rest it would either be out of reach or close to free.`,
       data: {
         kind: 'window',
         min: range.min,
@@ -324,15 +324,15 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     rejected: number,
   ): ForgeStage {
     const opening = coversAll
-      ? `Every one of the ${qualified} ranked maps in this category weights your starting point sensibly, so all of them are in play.`
-      : `These are the ${qualified} ranked maps sitting inside that range.`
+      ? `Every one of the ${qualified} ranked maps in this category weights your starting point sensibly so all of them can be picked.`
+      : `These are the ${qualified} ranked maps inside that range.`
     return {
       key: 'pool',
       title: 'Sample a map',
       receipt: picked ? `${picked.songName} (${picked.difficulty})` : 'No map found',
       note: picked
-        ? `${opening} They are pulled live. One gets picked at random, and any map whose world record sits too far below your own best play gets thrown back, because a map nobody has scored well on cannot produce a meaningful target.${rejected > 0 ? ` ${rejected} were rejected that way before this one stuck.` : ''}`
-        : 'Nothing in the ranked pool fits this range, so the slot moves on and tries a different template.',
+        ? `${opening} They're pulled live. One gets picked at random and any map whose world record is too far below your own best play gets thrown back because a map nobody has scored well on can't give a meaningful target.${rejected > 0 ? ` ${rejected} were rejected that way before this one was kept.` : ''}`
+        : 'Nothing in the ranked pool fits this range so the slot tries a different template.',
       data: {
         kind: 'pool',
         total: qualified,
@@ -356,9 +356,9 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
   ): ForgeStage {
     return {
       key: 'reward',
-      title: 'Price the reward',
+      title: 'Work out the reward',
       receipt: `${total.toLocaleString()} XP`,
-      note: `XP comes off a curve keyed to your skill level in this category, so stronger players are paid more for the same shape of mission. Your skill of ${Math.round(skillLevel)} pays a base of ${Math.round(base)}, the template multiplies by ${template.xpMultiplier.toFixed(2)}x, and the band multiplies by ${bandMultiplier(template, band).toFixed(2)}x.${boostLabel ? ` ${boostLabel}` : ''}`,
+      note: `XP comes from a curve based on your skill level in this category so stronger players get more for the same kind of mission. Your skill of ${Math.round(skillLevel)} gives a base of ${Math.round(base)}, the template multiplies by ${template.xpMultiplier.toFixed(2)}x and the band multiplies by ${bandMultiplier(template, band).toFixed(2)}x.${boostLabel ? ` ${boostLabel}` : ''}`,
       data: {
         kind: 'reward',
         base,
@@ -414,7 +414,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       key: 'result',
       title: 'The mission',
       receipt: input.description,
-      note: 'That is the whole derivation. What you see below is the same card the site renders in your missions dropdown, built from the numbers this run just produced.',
+      note: "That's everything. The card above is the same one the site shows in your missions menu and it's built from the numbers this run just got.",
       data: { kind: 'result', mission },
     }
   }
@@ -531,7 +531,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       const blended = blendSkillAndMap(anchored, map.target)
       steps.push({
         label: 'Blend with the map',
-        detail: `the leaderboard says players at your level sit around rank ${map.naturalIdx + 1}; this band aims at rank ${map.targetIdx + 1} (${fmtAp(map.target)}), weighted 70% map to 30% starting point`,
+        detail: `the leaderboard says players at your level are around rank ${map.naturalIdx + 1}; this band aims at rank ${map.targetIdx + 1} (${fmtAp(map.target)}), weighted 70% map to 30% starting point`,
         value: blended,
         changed: Math.abs(blended - value) > 0.5,
       })
@@ -547,14 +547,14 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     if (existingAp && existingAp > 0) {
       const lifted = bandLiftedFloorAp(existingAp, complexity, band)
       if (lifted > value) {
-        steps.push({ label: 'Beat your own play', detail: `you already have ${fmtAp(existingAp)} here, so the target has to clear it by a real step`, value: lifted, changed: true })
+        steps.push({ label: 'Beat your own play', detail: `you already have ${fmtAp(existingAp)} here so the target has to beat it by a real step`, value: lifted, changed: true })
         value = lifted
       }
     }
 
     const topCapped = capAtTopAp(value, band, skill.topAp, skill.skillLevel)
     if (topCapped < value) {
-      steps.push({ label: 'Cap against your best', detail: `${band} is not allowed past ${(TOP_AP_CAP_FACTOR[band] * 100).toFixed(1)}% of your ${fmtAp(skill.topAp)} top play${skill.skillLevel < 70 ? ', shaded down further because you are still climbing' : ''}`, value: topCapped, changed: true })
+      steps.push({ label: 'Cap against your best', detail: `${band} can't go past ${(TOP_AP_CAP_FACTOR[band] * 100).toFixed(1)}% of your ${fmtAp(skill.topAp)} top play${skill.skillLevel < 70 ? ", lowered further because you're still climbing" : ''}`, value: topCapped, changed: true })
       value = topCapped
     }
 
@@ -566,7 +566,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
 
     const dampened = densityDampener(value, band, wr, existingAp)
     if (dampened < value) {
-      steps.push({ label: 'Ease off a crowded top', detail: 'the top of this leaderboard is packed tight, so the climb gets shortened', value: dampened, changed: true })
+      steps.push({ label: 'Ease off a crowded top', detail: 'the top of this leaderboard is packed tight so the climb gets shortened', value: dampened, changed: true })
       value = dampened
     }
 
@@ -577,8 +577,8 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       steps.push({
         label: 'Cap against how you play maps this hard',
         detail: representative?.fromBand
-          ? `on maps between ${fmtComplexity(lo)} and ${fmtComplexity(hi)} complexity you usually land around ${formatAccuracy(accuracyForNormalized(representative.value))}, and ${band} allows ${((COMPLEXITY_CAP_MULTIPLIER[band] - 1) * 100).toFixed(0)}% past that`
-          : `you have no history at this complexity, so the ask is sized off how you score across the category instead`,
+          ? `on maps between ${fmtComplexity(lo)} and ${fmtComplexity(hi)} complexity you usually get around ${formatAccuracy(accuracyForNormalized(representative.value))}, and ${band} allows ${((COMPLEXITY_CAP_MULTIPLIER[band] - 1) * 100).toFixed(0)}% past that`
+          : `you have no history at this complexity so it uses how you score across the category instead`,
         value: complexityCapped,
         changed: true,
       })
@@ -632,7 +632,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'xpwindow',
         title: 'Size the XP goal',
         receipt: `${target.toLocaleString()} XP`,
-        note: `This one is measured against you rather than a map. Your lifetime XP spread across a year gives a rough daily pace of ${Math.round(rolling).toLocaleString()} XP, the band scales that by ${multiplier.toFixed(2)}x, and the result never drops below 100. Play at your usual rate and it clears itself.`,
+        note: `This one is measured against you instead of a map. Your lifetime XP spread across a year gives a rough daily pace of ${Math.round(rolling).toLocaleString()} XP, the band scales that by ${multiplier.toFixed(2)}x and the result never goes below 100. Play like you usually do and you'll clear it.`,
         data: { kind: 'xpwindow', rolling, multiplier, target },
       })
       const base = computeXpReward(template, skillLevel, band, null) / (template.xpMultiplier * bandMultiplier(template, band))
@@ -662,7 +662,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'count',
         title: 'Roll a count',
         receipt: String(count),
-        note: `The template allows anywhere from ${min} to ${max}. The band decides where in that range to sit, ${band} centering on ${center}, and a small jitter keeps it from being the same number every day.`,
+        note: `The template allows anywhere from ${min} to ${max}. The band decides where in that range it goes, ${band} is centered on ${center} and a small random nudge stops it from being the same number every day.`,
         data: { kind: 'count', min, max, center, jitter, count },
       })
       const base = computeXpReward(template, skillLevel, band, null) / (template.xpMultiplier * bandMultiplier(template, band))
@@ -719,7 +719,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'percentile',
         title: 'Read your own history',
         receipt: fmtAp(capped),
-        note: `No map gets picked here. Your ${aps.length} scores in ${chosenCategory.categoryName} get sorted, and ${band} reaches ${Math.round(percentile * 100)}% of the way down your best ${pool} of them to find a threshold you have already cleared ${qualifying} times. Nudged by ${shift.toFixed(3)}x and capped below your top play, that lands on ${fmtAp(capped)}. The mission is then to beat any one of those.`,
+        note: `No map gets picked here. Your ${aps.length} scores in ${chosenCategory.categoryName} get sorted and ${band} goes ${Math.round(percentile * 100)}% of the way down your best ${pool} of them to find a threshold you've already cleared ${qualifying} times. After a nudge of ${shift.toFixed(3)}x and a cap below your top play that comes out at ${fmtAp(capped)}. The mission is then to beat any one of those.`,
         data: { kind: 'percentile', scores: aps.slice(0, 40), index: idx, anchor, shift, threshold: capped, qualifying },
       })
       const min = template.targetCountMin ?? 1
@@ -775,7 +775,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'streak',
         title: 'Read your streaks',
         receipt: `${target}-note streak`,
-        note: `Your best 115 streaks in ${chosenCategory.categoryName} get sampled. ${streakBasis(rep)} One lucky night is not allowed to inflate every streak mission you get, and ${band} asks for ${Math.round((band === 'extreme' ? 1 : band === 'hard' ? 0.9 : band === 'medium' ? 0.7 : 0.5) * 100)}% of it.`,
+        note: `Your best 115 streaks in ${chosenCategory.categoryName} get sampled. ${streakBasis(rep)} One lucky night can't inflate every streak mission you get and ${band} asks for ${Math.round((band === 'extreme' ? 1 : band === 'hard' ? 0.9 : band === 'medium' ? 0.7 : 0.5) * 100)}% of it.`,
         data: { kind: 'streak', sample: streaks.slice(0, 12), reference, ability: reference, target, fromBand: false, complexityBand: null, pickIndex: rep.index },
       })
       const min = template.targetCountMin ?? 2
@@ -826,7 +826,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'existing',
         title: 'Dust off an old score',
         receipt: `${chosen.songName} (${fmtAp(chosen.ap)})`,
-        note: `Comeback missions skip the map pool and the target math entirely. One of your scores older than a year gets picked, and beating it at all finishes the mission, so there is no number to hit beyond the one you already set on ${new Date(chosen.timeSet).toLocaleDateString()}. The band only decides what it pays, and it comes off the AP you would need for one gain in ${chosenCategory.categoryName}, because clawing back an old play is more work the higher you already sit.`,
+        note: `Comeback missions skip the map pool and the target math entirely. One of your scores older than a year gets picked and beating it at all finishes the mission so there's no number to hit other than the one you already set on ${new Date(chosen.timeSet).toLocaleDateString()}. The band only decides the reward and it comes from the AP you'd need for one gain in ${chosenCategory.categoryName} because beating an old play is more work the higher you already are.`,
         data: {
           kind: 'existing',
           score: null,
@@ -870,7 +870,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'existing',
         title: 'Check your own score',
         receipt: effectiveBand === band ? `still ${band}` : `${band} to ${effectiveBand}`,
-        note: `You already have ${fmtAp(existingAp)} on this map, and the mission has to beat it. That earns the band a second opinion: the rolled band and the one your existing score implies get blended 60 / 40. Topping one of your best plays is never easy work no matter what was rolled, and a modest step up never deserves the extreme tag.`,
+        note: `You already have ${fmtAp(existingAp)} on this map and the mission has to beat it. So the band gets checked again: the rolled band and the one your existing score implies get blended 60 / 40. Beating one of your best plays is never easy no matter what was rolled and a small step up never deserves the extreme tag.`,
         data: {
           kind: 'existing',
           score: null,
@@ -888,7 +888,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'existing',
         title: 'First time on this map',
         receipt: `${band} to easy`,
-        note: `Personal best missions on a map you have never played only ever ask you to put a score on the board, because there is nothing of yours to beat yet. Leaving the ${band} tag on that would pay ${band} XP for a first attempt, so the band drops to easy and the target, the ceilings and the reward all get rebuilt from there.`,
+        note: `Personal best missions on a map you've never played only ask you to set a score because there's nothing of yours to beat yet. Leaving the ${band} tag on that would give ${band} XP for a first attempt so the band drops to easy and the target, the ceilings and the reward all get rebuilt from there.`,
         data: {
           kind: 'existing',
           score: null,
@@ -966,7 +966,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
           key: 'board',
           title: 'Find someone to beat',
           receipt: 'No candidate fits',
-          note: `The range on this map is empty. Every score is either too far above the target, not enough of a climb to be worth setting, or held by someone too far outside your tier. The slot gives up on this map and tries another one.`,
+          note: `The range on this map is empty. Every score is either too far above the target, not enough of a climb to be worth setting or set by someone too far from your skill. The slot gives up on this map and tries another one.`,
           data: { kind: 'board', entries: boardSlice(annotated, nearestIdx), target, floor, cap, maxSkillDistance: maxDistance, userSkill: chosenCategory.skillLevel },
         })
         fail('no-snipe-candidate-within-band')
@@ -979,7 +979,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'board',
         title: 'Find someone to beat',
         receipt: `${chosen.name} at ${fmtAp(chosen.ap)}`,
-        note: `Now it needs a real person. The target AP opens a range: a floor at ${(SNIPE_FLOOR_FRACTION[band] * 100).toFixed(0)}% of it so the snipe is a genuine climb rather than two AP, and a ceiling so it stays reachable. On top of that, anyone more than ${maxDistance} skill points away from you is filtered out, which is what stops you being told to snipe someone two tiers up. Whatever survives gets ranked by closeness to the target, and one of the top three is taken.`,
+        note: `Now it needs a real person. The target AP opens a range with a floor at ${(SNIPE_FLOOR_FRACTION[band] * 100).toFixed(0)}% of it so the snipe is a real climb and not 2 AP and a ceiling so it stays reachable. On top of that anyone more than ${maxDistance} skill points away from you is removed so you never get told to snipe someone way above you. Whoever is left gets ranked by how close they are to the target and one of the top three is picked.`,
         data: { kind: 'board', entries: boardSlice(marked, marked.findIndex((e) => e.picked)), target, floor, cap, maxSkillDistance: maxDistance, userSkill: chosenCategory.skillLevel },
       })
       const snipeDistance = existingAp && existingAp > 0
@@ -1038,7 +1038,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
           key: 'streak',
           title: 'Read your streaks',
           receipt: 'Not enough streak history here',
-          note: `Streak targets are read from how you streak on maps of this difficulty specifically, complexity ${lo} to ${hi}, not from one blended number. You do not have enough there yet, so this map gets resampled rather than the mission being dropped.`,
+          note: `Streak targets come from how you streak on maps of this complexity specifically (${lo} to ${hi}) and not from one blended number. You don't have enough there yet so another map gets picked instead of dropping the mission.`,
           data: { kind: 'streak', sample: userStreaks.slice(0, 12), reference: 0, ability, target: 0, fromBand: true, complexityBand: [lo, hi], pickIndex: -1 },
         })
         fail('user-streak-too-low-for-complexity')
@@ -1051,7 +1051,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
         key: 'streak',
         title: 'Read your streaks',
         receipt: `${target}-note streak`,
-        note: `This is measured against maps like this one rather than your whole category. Complexity ${complexity.toFixed(1)} puts it in the ${lo} to ${hi} band. ${streakBasis(abilityRep)} The map's own top five streaks give ${reference}, ${band} asks for a share of that, and the whole thing is capped at one above what you have actually managed on maps this hard.`,
+        note: `This is measured against maps like this one instead of your whole category. Complexity ${complexity.toFixed(1)} puts it in the ${lo} to ${hi} band. ${streakBasis(abilityRep)} The map's own top five streaks give ${reference}, ${band} asks for a share of that and the whole thing is capped at one above what you've actually done on maps this hard.`,
         data: { kind: 'streak', sample: userStreaks.slice(0, 12), reference, ability, target, fromBand: true, complexityBand: [lo, hi], pickIndex: abilityRep.index },
       })
       const base = computeXpReward(template, chosenCategory.skillLevel, band, null) / (template.xpMultiplier * bandMultiplier(template, band))
@@ -1073,7 +1073,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     }
 
     if (existingAp && final <= existingAp) {
-      out.push({ ...chainStage(steps, final, null), receipt: 'Target lands below your own score' })
+      out.push({ ...chainStage(steps, final, null), receipt: 'Target is below your own score' })
       fail('target-below-existing-after-caps')
       return out
     }
@@ -1118,7 +1118,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
       key: 'chain',
       title: 'Settle on a number',
       receipt: accuracy !== null ? formatAccuracy(accuracy) : fmtAp(final),
-      note: 'Here is the part nobody gets to see. The starting point is only an opening bid. It gets blended with what the leaderboard says players at your level actually score on this map, then pushed up by floors and pulled down by ceilings until it lands somewhere that is a real climb without being a fantasy.',
+      note: "The starting point is only where it begins. It gets blended with what the leaderboard says players at your level actually score on this map and then floors push it up and ceilings pull it down until it's a real climb that you can still reach.",
       data: { kind: 'chain', steps, final, accuracy },
     }
   }
@@ -1153,8 +1153,8 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
 
   function streakBasis(rep: StreakReference): string {
     return rep.outlierGuarded
-      ? `Your best run of ${rep.max} is a spike next to the ${rep.median} you typically land, so the reference gets built from the middle of your list instead and comes out at ${rep.value}.`
-      : `The reference is your ${formatOrdinal(rep.index + 1)} best, ${rep.value}, deliberately not your top run.`
+      ? `Your best run of ${rep.max} is a spike next to the ${rep.median} you usually get so the reference gets built from the middle of your list instead and comes out at ${rep.value}.`
+      : `The reference is your ${formatOrdinal(rep.index + 1)} best (${rep.value}) and not your top one on purpose.`
   }
 
   async function run(type: ForgeMissionType, pool: 'daily' | 'weekly', seed: number) {
@@ -1164,7 +1164,7 @@ export function useMissionForge(profileRef: () => ForgeProfile | null) {
     try {
       stages.value = await build(type, pool, seed)
     } catch {
-      error.value = 'Could not reach the leaderboards to build this one. Try again in a moment.'
+      error.value = "Couldn't reach the leaderboards to build this one. Try again in a moment."
     } finally {
       loading.value = false
     }

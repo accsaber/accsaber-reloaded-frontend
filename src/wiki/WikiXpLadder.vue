@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
+import '@/wiki/components/demo.css'
 import logoUrl from '@/assets/logo.png'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
@@ -120,21 +122,16 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 </script>
 
 <template>
-  <div class="ladder">
+  <div class="wiki-demo">
     <div class="ladder__readouts">
-      <span class="ladder__level">Level {{ level }}</span>
+      <span class="wiki-demo__value ladder__level">Level {{ level }}</span>
       <span v-if="currentTier" class="ladder__tier" :style="{ color: tierColor(currentTier) }">
         {{ currentTier }}
       </span>
-      <span class="ladder__cost">this level asks for {{ xpForLevel(level).toLocaleString() }} XP</span>
-      <button
-        v-if="personalLevel && level !== personalLevel"
-        type="button"
-        class="ladder__jump"
-        @click="level = personalLevel"
-      >
-        Jump to my level ({{ personalLevel }})
-      </button>
+      <span class="caption">this level asks for {{ xpForLevel(level).toLocaleString() }} XP</span>
+      <BaseButton v-if="personalLevel && level !== personalLevel" class="ladder__jump" @click="level = personalLevel">
+        Jump to My Level ({{ personalLevel }})
+      </BaseButton>
     </div>
 
     <div class="ladder__track" aria-hidden="true">
@@ -165,7 +162,7 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
     </div>
     <input
       v-model.number="level"
-      class="ladder__slider"
+      class="slider ladder__slider"
       type="range"
       :min="1"
       :max="maxLevel"
@@ -205,7 +202,7 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
         <div class="ladder__reward-items">
           <div v-for="item in focusAwards.items" :key="item.id" class="ladder__reward-entry">
             <RewardItemTile :item="item" :size="72" />
-            <span class="ladder__reward-name">{{ item.name }}</span>
+            <span class="caption ladder__reward-name">{{ item.name }}</span>
           </div>
         </div>
       </div>
@@ -214,27 +211,16 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 </template>
 
 <style scoped>
-.ladder {
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
-  padding: var(--space-md);
-  margin: 0 0 var(--space-md);
-}
-
 .ladder__readouts {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-md);
   flex-wrap: wrap;
+  min-height: var(--control-h);
   margin-bottom: var(--space-md);
 }
 
 .ladder__level {
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-lg);
-  font-weight: 500;
-  color: var(--text-primary);
   display: inline-block;
   min-width: 9ch;
 }
@@ -242,38 +228,16 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 .ladder__tier {
   font-size: var(--text-card-title);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ladder__cost {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .ladder__jump {
   margin-left: auto;
-  padding: var(--space-xs) 10px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.ladder__jump:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
 }
 
 .ladder__track {
   position: relative;
   height: 14px;
-  margin-bottom: 2px;
+  margin-bottom: var(--space-xs);
 }
 
 .ladder__band {
@@ -281,7 +245,6 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
   top: 5px;
   height: 4px;
   border-radius: var(--radius-xs);
-  opacity: 0.9;
 }
 
 .ladder__dot {
@@ -312,8 +275,8 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 }
 
 .ladder__slider {
+  display: block;
   width: 100%;
-  accent-color: var(--accent);
 }
 
 .ladder__stage {
@@ -331,9 +294,8 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 .ladder__card {
   position: relative;
   width: 220px;
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  background: var(--bg-surface);
+  background: var(--bg-base);
   overflow: hidden;
 }
 
@@ -379,8 +341,6 @@ const levelPct = (l: number) => ((l - 1) / (maxLevel.value - 1)) * 100
 }
 
 .ladder__reward-name {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
   text-align: center;
   max-width: 140px;
 }

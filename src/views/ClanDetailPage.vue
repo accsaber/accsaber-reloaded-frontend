@@ -17,11 +17,12 @@ import {
   emptyClanDraft,
   hasClanRole,
   isPacifist,
+  knownClan,
   rankSlots,
   type ClanProfileDraft,
 } from '@/utils/clans'
 import { isUuid } from '@/utils/mapRoute'
-import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import ClanHeader from './clans/ClanHeader.vue'
@@ -48,15 +49,26 @@ type ClanTab =
   | 'requests'
   | 'audit'
 
-const ClanLevelTab = defineAsyncComponent(() => import('./clans/ClanLevelTab.vue'))
-const ClanStandingTab = defineAsyncComponent(() => import('./clans/ClanStandingTab.vue'))
-const ClanCosmeticsTab = defineAsyncComponent(() => import('./clans/ClanCosmeticsTab.vue'))
-const ClanRequestsTab = defineAsyncComponent(() => import('./clans/ClanRequestsTab.vue'))
-const ClanAuditTab = defineAsyncComponent(() => import('./clans/ClanAuditTab.vue'))
-const ClanChatTab = defineAsyncComponent(() => import('@/components/domain/ClanChatTab.vue'))
-const ClanDiplomacyTab = defineAsyncComponent(() => import('./clans/ClanDiplomacyTab.vue'))
-const ClanMissionsTab = defineAsyncComponent(() => import('./clans/ClanMissionsTab.vue'))
-const ClanWarsTab = defineAsyncComponent(() => import('./clans/ClanWarsTab.vue'))
+const TAB_LOADERS = {
+  ClanLevelTab: () => import('./clans/ClanLevelTab.vue'),
+  ClanStandingTab: () => import('./clans/ClanStandingTab.vue'),
+  ClanCosmeticsTab: () => import('./clans/ClanCosmeticsTab.vue'),
+  ClanRequestsTab: () => import('./clans/ClanRequestsTab.vue'),
+  ClanAuditTab: () => import('./clans/ClanAuditTab.vue'),
+  ClanChatTab: () => import('@/components/domain/ClanChatTab.vue'),
+  ClanDiplomacyTab: () => import('./clans/ClanDiplomacyTab.vue'),
+  ClanMissionsTab: () => import('./clans/ClanMissionsTab.vue'),
+  ClanWarsTab: () => import('./clans/ClanWarsTab.vue'),
+}
+const ClanLevelTab = defineAsyncComponent(TAB_LOADERS.ClanLevelTab)
+const ClanStandingTab = defineAsyncComponent(TAB_LOADERS.ClanStandingTab)
+const ClanCosmeticsTab = defineAsyncComponent(TAB_LOADERS.ClanCosmeticsTab)
+const ClanRequestsTab = defineAsyncComponent(TAB_LOADERS.ClanRequestsTab)
+const ClanAuditTab = defineAsyncComponent(TAB_LOADERS.ClanAuditTab)
+const ClanChatTab = defineAsyncComponent(TAB_LOADERS.ClanChatTab)
+const ClanDiplomacyTab = defineAsyncComponent(TAB_LOADERS.ClanDiplomacyTab)
+const ClanMissionsTab = defineAsyncComponent(TAB_LOADERS.ClanMissionsTab)
+const ClanWarsTab = defineAsyncComponent(TAB_LOADERS.ClanWarsTab)
 const DeclareWarModal = defineAsyncComponent(() => import('./clans/war/DeclareWarModal.vue'))
 
 interface PendingConfirm {
@@ -128,6 +140,12 @@ const BARE_TABS: string[] = ['wars', 'chat', 'requests']
 const levelSteps = ref<ClanLevelStepResponse[]>([])
 const maxLevel = computed(() => Math.max(0, ...levelSteps.value.map((s) => s.level)))
 const slots = computed(() => (clan.value ? rankSlots(levelSteps.value, clan.value.level.level) : []))
+
+onMounted(() => {
+  const warm = () => Object.values(TAB_LOADERS).forEach((loadTab) => void loadTab())
+  if ('requestIdleCallback' in window) requestIdleCallback(warm)
+  else warm()
+})
 
 loadClanLevels()
   .then((steps) => {
@@ -222,6 +240,8 @@ const shownClan = computed<ClanResponse | null>(() => {
     },
   }
 })
+
+const identity = computed(() => shownClan.value?.clan ?? knownClan(slugOrId.value))
 
 const headerDraft = computed({
   get: () => (editing.value ? draft.value : undefined),
@@ -528,14 +548,15 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
 </script>
 
 <template>
-  <div class="clan-page clan-colors" :style="shownClan ? clanColorVars(shownClan.clan) : undefined">
+  <div class="clan-page clan-colors" :style="identity ? clanColorVars(identity) : undefined">
     <EmptyState v-if="!loading && (error || !clan)" :message="error ?? 'Clan not found'" />
 
     <template v-else>
-      <SkeletonLoader v-if="!clan" :height="`${HEADER_GHOST_HEIGHT}px`" />
+      <SkeletonLoader v-if="!identity" :height="`${HEADER_GHOST_HEIGHT}px`" />
       <ClanHeader
         v-else
-        :clan="shownClan ?? clan"
+        :identity="identity"
+        :clan="shownClan"
         :standing="standing"
         :max-level="maxLevel"
         v-model:draft="headerDraft"
@@ -547,7 +568,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         @save="saveDraft"
         @cancel="editing = false"
       >
-        <template #editor>
+        <template v-if="clan" #editor>
           <ClanHeaderEditor
             v-model="draft"
             v-model:accepting-requests="draftRequests"
@@ -558,7 +579,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
             :disabled="busy"
           />
         </template>
-        <template #actions>
+        <template v-if="clan" #actions>
           <ClanHeaderActions
             :signed-in="auth.isLoggedIn"
             :viewer-role="viewerRole"
@@ -622,7 +643,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         </BaseDropdown>
       </div>
 
-      <div class="clan-page__panel" :class="{ 'clan-page__panel--bare': BARE_TABS.includes(activeTab) }">
+      <div :key="activeTab" class="clan-page__panel" :class="{ 'clan-page__panel--bare': BARE_TABS.includes(activeTab) }">
         <ClanRosterTab
           v-if="activeTab === 'roster'"
           :key="clan?.clan.id ?? 'ghost'"
@@ -643,7 +664,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" />
           <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
           <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
-          <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :season-running="seasonRunning" />
+          <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :steps="levelSteps" :season-running="seasonRunning" />
           <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" :standing="standing" :seasons="seasons" />
           <ClanCosmeticsTab
             v-else-if="activeTab === 'cosmetics'"
@@ -695,6 +716,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
 }
 
 .clan-page__panel {
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
   padding: var(--space-lg);
   background: var(--bg-surface);
   border-radius: var(--radius-card);

@@ -39,68 +39,69 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      Essence is the currency the item economy runs on. Your balance can be viewed in your inventory.
-      It has no effect on your AP, your rank or your level. It only touches items.
+      Essence is the currency for everything item related. You can see your balance in your
+      inventory. It has no effect on your AP, your rank or your level and it's only for items.
     </p>
 
     <WikiHeading id="sources">Where it comes from</WikiHeading>
     <p>
-      Breaking an item down is the reliable way to make essence. It gives whatever that
-      item is worth. Selling something on the market is the other way. When a listing settles
-      the winner's essence lands in your balance. A trade can carry essence on either side too.
+      Breaking an item down is the reliable way to get essence and it gives whatever that item is
+      worth. Selling something on the market is the other way. When a listing ends the winner's
+      essence goes into your balance. A trade can have essence on either side too.
     </p>
 
     <WikiHeading id="spending">What it buys</WikiHeading>
     <p>
-      Nothing on AccSaber is sold to you for essence. There is no way to turn it into AP, XP
-      or a level either.
+      Nothing on AccSaber is sold to you for essence and there's no way to turn it into AP, XP or a
+      level either.
     </p>
     <p>
-      That makes the whole economy player to player. It means the price of a thing is whatever
-      somebody else will pay for it on the day.
+      That makes the whole economy player to player so the price of a thing is whatever somebody
+      else will pay for it that day.
     </p>
 
     <WikiHeading id="disintegrating">Breaking items down</WikiHeading>
     <p>
-      Disintegrating an item destroys it and credits you its worth. Worth follows rarity, which
-      the <RouterLink to="/wiki/items-and-inventory">items page</RouterLink> covers. The
-      number never moves for any other reason. Stack a few together and watch what they add up to:
+      Disintegrating an item destroys it and gives you its worth. Worth depends on rarity which the
+      <RouterLink to="/wiki/items-and-inventory">items page</RouterLink> explains and it never
+      changes for any other reason. Stack a few together and watch what they add up to:
     </p>
     <WikiEssenceCalculator v-if="catalogReady" :items="grinderItems" />
     <p v-else-if="grinderFailed" class="essence-page__error">
-      The calculator could not load right now. Every item lists its worth in your inventory.
+      The calculator couldn't load right now. Every item lists its worth in your inventory.
     </p>
     <SkeletonLoader v-else variant="card" />
     <p>
-      Untradeable items have no essence value at all, which rules out level unlocks, milestone
-      rewards, official campaign rewards and event rewards. Anything currently equipped has to
-      come off first.
+      Untradeable items have no essence value at all which rules out level unlocks, milestone
+      rewards, official campaign rewards and event rewards. Anything you have equipped has to be
+      unequipped first.
     </p>
     <p>
-      None of it comes back. The item is gone and the serial number that came with it is gone.
+      None of it comes back. The item is gone and so is the serial number that came with it.
     </p>
 
-    <WikiHeading id="held">Held essence</WikiHeading>
+    <WikiHeading id="held">Reserved essence</WikiHeading>
     <p>
-      The market never spends your essence at the moment you bid, it holds it instead. A held
-      amount is still yours and still counted in your balance. It simply cannot be spent twice
-      while the bid stands. Get outbid and the hold lifts immediately with the full amount back in
-      play, win the auction and the hold turns into the payment.
+      The market never spends your essence at the moment you bid, it reserves it instead. A reserved
+      amount is still yours and still counted in your balance but you can't spend it twice while the
+      bid is up. If you get outbid you get the full amount back right away and if you win the
+      auction it becomes the payment.
     </p>
     <p>
-      Essence you attach to a trade offer you sent works the same way, held while the offer is
-      open and released the moment it is declined or cancelled.
+      Essence you attach to a trade offer you sent works the same way. It's reserved while the offer
+      is open and released the moment it's declined or cancelled.
     </p>
 
     <WikiHeading id="two-numbers">Market price and essence value</WikiHeading>
     <p>
-      A Holographic Black Hole and the plainest Black Hole anybody owns disintegrate for exactly
-      the same amount, because essence value is set by the item's rarity and nothing else reads
-      the modifiers.
+      A Holographic Black Hole and the plainest Black Hole anybody owns disintegrate for exactly the
+      same amount because essence value only depends on the item's rarity and modifiers don't change
+      it.
     </p>
     <p>
-      What the modifiers move is what another player will pay you. A rare modifier on a mythic item
-      can be worth a fortune on the market and it is still worth the same essence in the disintegration chamber.
+      What the modifiers change is what another player will pay you. A rare modifier on a mythic
+      item can be worth a fortune on the market and it's still worth the same essence when you
+      disintegrate it.
     </p>
   </WikiProse>
 </template>

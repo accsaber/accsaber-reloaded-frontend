@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import '@/wiki/components/demo.css'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import IconButton from '@/components/common/IconButton.vue'
 import UserPicker from '@/components/domain/UserPicker.vue'
 import MissionCard from '@/components/domain/MissionCard.vue'
 import { useReducedMotion } from '@/composables/useReducedMotion'
@@ -86,8 +88,8 @@ const NON_RETRYABLE = new Set(['needs-real-profile', 'no-category', 'unsupported
 const FAILURE_LABELS: Record<string, string> = {
   'no-eligible-map': 'no map fit the complexity range',
   'map-wr-below-user-tier': 'every sampled map had a world record below your tier',
-  'no-snipe-candidate-within-band': 'no snipe target survived the filters',
-  'target-below-existing-after-caps': 'the target landed under a score already on the board',
+  'no-snipe-candidate-within-band': 'no snipe target was left after the filters',
+  'target-below-existing-after-caps': 'the target was under a score already on the board',
   'target-below-min-meaningful': 'the target came out too small to be worth setting',
   'user-streak-too-low': 'not enough streak history in the rolled category',
   'user-streak-too-low-for-complexity': 'not enough streak history at that map difficulty',
@@ -95,7 +97,7 @@ const FAILURE_LABELS: Record<string, string> = {
   'no-old-scores-for-comeback': 'no plays old enough for a comeback',
   'needs-real-profile': 'this type needs a logged-in score history',
   'no-category': 'no playable category to build against',
-  'unsupported-type': 'this type cannot be simulated',
+  'unsupported-type': "this type can't be simulated",
 }
 
 const choice = ref('random')
@@ -260,14 +262,13 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
       <BaseButton
         class="forge__cta"
         variant="primary"
-        size="sm"
         :disabled="loading || !profile"
         @click="forge"
       >
-        {{ loading ? 'Forging' : stages.length ? 'Forge another' : 'Forge a mission' }}
+        {{ loading ? 'Forging' : stages.length ? 'Forge Another' : 'Forge a Mission' }}
       </BaseButton>
       <BaseSelect v-model="choice" :options="selectOptions" placeholder="Mission type" />
-      <span class="forge__against">against</span>
+      <span class="caption">against</span>
       <UserPicker
         class="forge__picker"
         :model-value="target"
@@ -277,10 +278,10 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
       />
     </header>
 
-    <p v-if="targetNotice" class="forge__notice">{{ targetNotice }}</p>
-    <p v-if="!profile" class="forge__notice">Loading a profile to build against.</p>
-    <p v-else-if="error" class="forge__notice forge__notice--bad">{{ error }}</p>
-    <p v-else-if="historyBlocked" class="forge__notice">
+    <p v-if="targetNotice" class="caption">{{ targetNotice }}</p>
+    <p v-if="!profile" class="caption">Loading a profile to build against.</p>
+    <p v-else-if="error" class="caption forge__notice--bad">{{ error }}</p>
+    <p v-else-if="historyBlocked" class="caption">
       This one reads a real score history. Log in and it will build against yours.
     </p>
 
@@ -293,10 +294,10 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
       @click="forge"
     >
       <span class="poster__ghost" aria-hidden="true">
-        <span class="poster__rail">
-          <span v-for="(label, i) in GHOST_STATIONS" :key="label" class="poster__station">
-            <span class="poster__node">{{ i + 1 }}</span>
-            <span class="poster__station-label">{{ label }}</span>
+        <span class="chainrail">
+          <span v-for="label in GHOST_STATIONS" :key="label" class="chainrail__station">
+            <span class="chainrail__bar" />
+            <span class="chainrail__label">{{ label }}</span>
           </span>
         </span>
         <span class="poster__readout">
@@ -320,25 +321,11 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
         </svg>
       </span>
       <span class="poster__hint" aria-hidden="true">
-        {{ loading ? 'Forging' : 'Forge a mission' }}
+        {{ loading ? 'Forging' : 'Forge a Mission' }}
       </span>
     </button>
 
     <template v-if="stages.length">
-      <p v-if="failure && !historyBlocked" class="forge__notice forge__notice--bad">
-        {{
-          attemptCount > 1
-            ? `Rolled ${attemptCount} times and every build died, the last one because ${failureLabel}.`
-            : `This build died mid-forge: ${failureLabel}.`
-        }}
-        The stages below show exactly where it stopped. That is the system refusing to hand out a
-        junk mission, hit forge and roll again.
-      </p>
-      <p v-else-if="discarded.length" class="forge__notice">
-        Landed on roll {{ attemptCount }}. Thrown out on the way: {{ discarded.join('; ') }}. The
-        real assigner sifts exactly the same way every morning.
-      </p>
-
       <nav class="chainrail" aria-label="Build stages">
         <button
           v-for="station in stations"
@@ -353,14 +340,14 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
           :aria-current="station.current ? 'step' : undefined"
           @click="goTo(station.index)"
         >
-          <span class="chainrail__node">{{ station.index + 1 }}</span>
+          <span class="chainrail__bar" />
           <span class="chainrail__label">{{ station.label }}</span>
         </button>
       </nav>
 
       <div v-if="stage" class="readout">
         <div class="readout__body">
-          <h4 class="readout__title">{{ stage.title }}</h4>
+          <h4 class="card-title">{{ stage.title }}</h4>
 
           <div class="readout__visual">
             <ForgeRoll
@@ -369,18 +356,18 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
               :caption="`weighted against every other ${stage.data.pool} template`"
             />
 
-            <div v-else-if="stage.data.kind === 'category'" class="chips">
-              <span
+            <ul v-else-if="stage.data.kind === 'category'" class="chips">
+              <li
                 v-for="option in stage.data.options"
                 :key="option.code"
                 class="chips__chip"
                 :class="{ 'chips__chip--active': option.chosen }"
               >
                 {{ option.name }}
-                <span class="chips__meta">{{ option.plays }} plays</span>
-              </span>
-              <span v-if="!stage.data.options.length" class="chips__chip">No category</span>
-            </div>
+                <span class="caption">{{ option.plays }} plays</span>
+              </li>
+              <li v-if="!stage.data.options.length" class="chips__chip">No category</li>
+            </ul>
 
             <ForgeRoll
               v-else-if="stage.data.kind === 'band'"
@@ -389,20 +376,20 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
             />
 
             <div v-else-if="stage.data.kind === 'anchor'" class="figures">
-              <span class="figures__item">
-                <span class="figures__label">AP for one gain</span>
+              <span class="wiki-demo__field">
+                <span class="field-label">AP for one gain</span>
                 <span class="figures__value">{{ Math.round(stage.data.base).toLocaleString() }}</span>
               </span>
-              <span v-if="stage.data.lifted !== stage.data.base" class="figures__item">
-                <span class="figures__label">Lifted from {{ stage.data.fromCategory }}</span>
+              <span v-if="stage.data.lifted !== stage.data.base" class="wiki-demo__field">
+                <span class="field-label">Lifted from {{ stage.data.fromCategory }}</span>
                 <span class="figures__value">{{ Math.round(stage.data.lifted).toLocaleString() }}</span>
               </span>
-              <span v-if="stage.data.ceiling !== null" class="figures__item">
-                <span class="figures__label">Ceiling for this band</span>
+              <span v-if="stage.data.ceiling !== null" class="wiki-demo__field">
+                <span class="field-label">Ceiling for this band</span>
                 <span class="figures__value">{{ Math.round(stage.data.ceiling).toLocaleString() }}</span>
               </span>
-              <span class="figures__item figures__item--strong">
-                <span class="figures__label">Starting point</span>
+              <span class="wiki-demo__field figures__item--strong">
+                <span class="field-label">Starting point</span>
                 <span class="figures__value">{{ Math.round(stage.data.anchored).toLocaleString() }} AP</span>
               </span>
             </div>
@@ -484,39 +471,39 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
             />
 
             <div v-else-if="stage.data.kind === 'xpwindow'" class="figures">
-              <span class="figures__item">
-                <span class="figures__label">Your daily pace</span>
+              <span class="wiki-demo__field">
+                <span class="field-label">Your daily pace</span>
                 <span class="figures__value">{{ Math.round(stage.data.rolling).toLocaleString() }} XP</span>
               </span>
-              <span class="figures__item">
-                <span class="figures__label">Band multiplier</span>
+              <span class="wiki-demo__field">
+                <span class="field-label">Band multiplier</span>
                 <span class="figures__value">{{ stage.data.multiplier.toFixed(2) }}x</span>
               </span>
-              <span class="figures__item figures__item--strong">
-                <span class="figures__label">Goal</span>
+              <span class="wiki-demo__field figures__item--strong">
+                <span class="field-label">Goal</span>
                 <span class="figures__value">{{ stage.data.target.toLocaleString() }} XP</span>
               </span>
             </div>
 
             <div v-else-if="stage.data.kind === 'reward'" class="figures">
-              <span class="figures__item">
-                <span class="figures__label">Skill curve</span>
+              <span class="wiki-demo__field">
+                <span class="field-label">Skill curve</span>
                 <span class="figures__value">{{ Math.round(stage.data.base).toLocaleString() }}</span>
               </span>
-              <span class="figures__item">
-                <span class="figures__label">Template</span>
+              <span class="wiki-demo__field">
+                <span class="field-label">Template</span>
                 <span class="figures__value">{{ stage.data.xpMultiplier.toFixed(2) }}x</span>
               </span>
-              <span class="figures__item">
-                <span class="figures__label">Band</span>
+              <span class="wiki-demo__field">
+                <span class="field-label">Band</span>
                 <span class="figures__value">{{ stage.data.bandMultiplier.toFixed(2) }}x</span>
               </span>
-              <span v-if="stage.data.boost > 1" class="figures__item">
-                <span class="figures__label">Distance</span>
+              <span v-if="stage.data.boost > 1" class="wiki-demo__field">
+                <span class="field-label">Distance</span>
                 <span class="figures__value">{{ stage.data.boost.toFixed(2) }}x</span>
               </span>
-              <span class="figures__item figures__item--strong">
-                <span class="figures__label">Pays</span>
+              <span class="wiki-demo__field figures__item--strong">
+                <span class="field-label">Reward</span>
                 <span class="figures__value">{{ stage.data.total.toLocaleString() }} XP</span>
               </span>
             </div>
@@ -537,23 +524,8 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
             :style="{ animationDuration: `${AUTO_MS}ms` }"
           />
           <div class="controls__row">
-            <button
-              type="button"
-              class="controls__btn"
-              aria-label="Previous stage"
-              :disabled="atStart"
-              @click="goTo(index - 1)"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="controls__btn controls__btn--wide"
-              :disabled="atEnd"
-              @click="togglePlay"
-            >
+            <IconButton icon="back" label="Previous stage" :disabled="atStart" @click="goTo(index - 1)" />
+            <IconButton :label="playing ? 'Pause' : 'Play'" :disabled="atEnd" @click="togglePlay">
               <svg v-if="playing" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <rect x="6" y="5" width="4" height="14" rx="1" />
                 <rect x="14" y="5" width="4" height="14" rx="1" />
@@ -561,31 +533,33 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
               <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <polygon points="7 4 20 12 7 20" />
               </svg>
-              {{ playing ? 'Pause' : 'Play' }}
-            </button>
-            <button
-              type="button"
-              class="controls__btn"
-              aria-label="Next stage"
-              :disabled="atEnd"
-              @click="goTo(index + 1)"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="9 18 15 12 9 6" />
+            </IconButton>
+            <IconButton label="Next stage" :disabled="atEnd" @click="goTo(index + 1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 6 15 12 9 18" />
               </svg>
-            </button>
+            </IconButton>
             <span class="controls__count">{{ index + 1 }} / {{ stages.length }}</span>
           </div>
         </div>
       </div>
+
+      <p v-if="failure && !historyBlocked" class="caption forge__notice--bad">
+        {{
+          attemptCount > 1
+            ? `Rolled ${attemptCount} times and every build died, the last one because ${failureLabel}.`
+            : `This build died mid-forge: ${failureLabel}.`
+        }}
+        The stages above show exactly where it stopped. That's the system refusing to give you a junk mission so hit forge and roll again.
+      </p>
+      <p v-else-if="discarded.length" class="caption">
+        Got one on roll {{ attemptCount }}. Thrown out on the way: {{ discarded.join('; ') }}. The real thing filters missions the same way every morning.
+      </p>
     </template>
 
-
-    <p class="forge__aside">
-      The map pool, the leaderboards, the world records and the covers above are fetched live as it
-      runs, and the maths is the same maths the server uses. The dice are the one exception: this
-      rolls its own instead of replaying the roll behind today's missions, so two runs give you two
-      different missions.
+    <p class="caption">
+      The map pool, the leaderboards, the world records and the covers above are fetched live as it runs and the maths is the same maths the server uses. The dice are the one exception because this rolls its own instead of replaying the roll behind today's missions so two runs give you two different missions.
     </p>
   </section>
 </template>
@@ -606,33 +580,17 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 }
 
 .forge__head :deep(.forge__cta) {
-  min-width: 138px;
+  min-width: 150px;
   justify-content: center;
 }
 
 .forge__head :deep(.base-select__trigger) {
-  min-width: 264px;
-}
-
-.forge__against {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  min-width: 240px;
 }
 
 .forge__head :deep(.forge__picker) {
-  width: 240px;
-}
-
-.forge__head :deep(.forge__picker .user-picker__input),
-.forge__head :deep(.forge__picker .user-picker__selected) {
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
-.forge__notice {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  flex: 1;
+  min-width: 200px;
 }
 
 .forge__notice--bad {
@@ -641,111 +599,52 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 
 .chainrail {
   display: flex;
-  align-items: flex-start;
-  gap: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.chainrail::-webkit-scrollbar {
-  display: none;
+  gap: var(--space-xs);
 }
 
 .chainrail__station {
-  flex: 1 0 auto;
-  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 58px;
-  padding: 0;
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
   border: none;
   background: none;
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--text-tertiary);
-}
-
-.chainrail__station::before,
-.chainrail__station::after {
-  content: '';
-  position: absolute;
-  top: 11px;
-  width: 50%;
-  height: 1px;
-  background: var(--bg-overlay);
-}
-
-.chainrail__station::before {
-  left: 0;
-}
-
-.chainrail__station::after {
-  left: 50%;
-}
-
-.chainrail__station:first-child::before,
-.chainrail__station:last-child::after {
-  display: none;
-}
-
-.chainrail__station--done::before,
-.chainrail__station--current::before,
-.chainrail__station--done::after {
-  background: var(--accent);
-}
-
-.chainrail__node {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--bg-overlay);
-  background: var(--bg-base);
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: inherit;
-  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
-}
-
-.chainrail__label {
-  font-size: 0.625rem;
-  letter-spacing: 0.04em;
-  text-align: center;
+  font: inherit;
+  font-size: var(--text-caption);
   line-height: 1.3;
-  transition: color 140ms ease;
+  text-align: left;
+  color: var(--text-tertiary);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+button.chainrail__station {
+  cursor: pointer;
+}
+
+.chainrail__bar {
+  height: 4px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-overlay);
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .chainrail__station--done {
   color: var(--text-secondary);
 }
 
-.chainrail__station--done .chainrail__node {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .chainrail__station--current {
   color: var(--text-primary);
+  font-weight: 600;
 }
 
-.chainrail__station--current .chainrail__node {
-  border-color: var(--accent);
+.chainrail__station--done .chainrail__bar,
+.chainrail__station--current .chainrail__bar {
   background: var(--accent);
-  color: var(--bg-base);
-  font-weight: 700;
 }
 
-.chainrail__station--ahead {
-  color: var(--text-tertiary);
-  opacity: 0.55;
-}
-
-.chainrail__station:hover .chainrail__label {
+button.chainrail__station:hover {
   color: var(--text-primary);
 }
 
@@ -759,9 +658,6 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   display: flex;
   flex-direction: column;
   min-height: 340px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
 }
 
 .readout__body {
@@ -769,22 +665,12 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   flex-direction: column;
   gap: var(--space-md);
   flex: 1;
-  padding: var(--space-lg);
   padding-bottom: var(--space-sm);
-}
-
-.readout__title {
-  margin: 0;
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent);
 }
 
 .readout__note {
   margin: 0;
-  max-width: 68ch;
+  max-width: 50ch;
   font-size: var(--text-body);
   line-height: 1.65;
   color: var(--text-secondary);
@@ -799,7 +685,6 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-xs);
-  margin: 0 var(--space-md) var(--space-md);
 }
 
 .controls__tick {
@@ -821,84 +706,41 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 .controls__row {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--bg-overlay);
+  gap: var(--space-xs);
+  padding: var(--space-xs);
   border-radius: var(--radius-btn);
   background: var(--bg-elevated);
 }
 
-.controls__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-width: 28px;
-  height: 26px;
-  padding: 0 7px;
-  border: none;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
-}
-
-.controls__btn--wide {
-  min-width: 62px;
-}
-
-.controls__btn:hover:not(:disabled) {
-  background: var(--bg-overlay);
-}
-
-.controls__btn:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
-.controls__btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-}
-
 .controls__count {
-  padding: 0 var(--space-sm) 0 6px;
+  padding: 0 var(--space-sm);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: var(--space-xs) var(--space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .chips__chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  font-size: var(--text-caption);
+  gap: var(--space-sm);
+  margin: 0;
+  font-size: var(--text-body);
   color: var(--text-tertiary);
 }
 
 .chips__chip--active {
-  color: var(--text-primary);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-.chips__meta {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .figures {
@@ -907,42 +749,20 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   gap: var(--space-lg);
 }
 
-.figures__item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.figures__label {
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-tertiary);
-}
-
 .figures__value {
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: var(--text-card-title);
   color: var(--text-primary);
 }
 
 .figures__item--strong .figures__value {
   color: var(--accent);
-  font-size: 1.375rem;
   font-weight: 600;
 }
 
 .result {
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   background: var(--bg-base);
-}
-
-.forge__aside {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  line-height: 1.6;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -950,47 +770,47 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
     animation: none;
     transform: scaleX(1);
   }
-
-  .chainrail__node,
-  .chainrail__label,
-  .controls__btn {
-    transition: none;
-  }
 }
 
 @media (max-width: 640px) {
-  .readout__body {
-    padding: var(--space-md);
-    padding-bottom: var(--space-sm);
+  .chainrail__label {
+    display: none;
   }
 
-  .controls {
-    margin: 0 var(--space-sm) var(--space-sm);
+  .forge__head :deep(.forge__cta),
+  .forge__head :deep(.forge__picker) {
+    flex: 1 1 100%;
   }
+
+  .forge__head :deep(.base-select) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .forge__head :deep(.base-select__trigger) {
+    min-width: 0;
+    width: 100%;
+  }
+
 }
 
 .poster {
   position: relative;
   display: block;
   width: 100%;
-  min-height: 420px;
+  min-height: 396px;
   padding: 0;
-  border: 1px solid var(--bg-overlay);
+  border: none;
   border-radius: var(--radius-card);
-  background: var(--bg-surface);
+  background: none;
+  font: inherit;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 120ms ease;
-}
-
-.poster:hover:not(:disabled) {
-  border-color: var(--text-tertiary);
 }
 
 .poster:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .poster:disabled {
@@ -1003,41 +823,10 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-md);
   filter: blur(5px);
   opacity: 0.45;
   pointer-events: none;
   user-select: none;
-}
-
-.poster__rail {
-  display: flex;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.poster__station {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.poster__node {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--text-tertiary);
-  border-radius: 50%;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-}
-
-.poster__station-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .poster__readout {
@@ -1046,7 +835,6 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
   background: var(--bg-base);
 }
@@ -1073,7 +861,7 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 .poster__bar {
   flex: 1;
   background: var(--bg-overlay);
-  border-radius: 1px 1px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
 }
 
 .poster__play {
@@ -1086,11 +874,12 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   justify-content: center;
   width: 64px;
   height: 64px;
-  border: 1px solid var(--text-secondary);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--bg-base) 85%, transparent);
+  background: var(--bg-elevated);
   color: var(--text-primary);
-  transition: border-color 120ms ease, color 120ms ease, transform 120ms ease;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .poster__play svg {
@@ -1098,9 +887,11 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
 }
 
 .poster:hover:not(:disabled) .poster__play {
-  border-color: var(--accent);
   color: var(--accent);
-  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.poster:active:not(:disabled) .poster__play {
+  transform: translate(-50%, -50%) scale(var(--press-scale));
 }
 
 .poster__hint {
@@ -1108,23 +899,13 @@ function templateSegments(data: Extract<(typeof stages.value)[number]['data'], {
   top: calc(50% + 34px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: var(--text-caption);
+  font-size: var(--text-body);
   font-weight: 600;
   color: var(--text-secondary);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .poster:hover:not(:disabled) .poster__hint {
   color: var(--text-primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .poster__play,
-  .poster {
-    transition: none;
-  }
-
-  .poster:hover:not(:disabled) .poster__play {
-    transform: translate(-50%, -50%);
-  }
 }
 </style>

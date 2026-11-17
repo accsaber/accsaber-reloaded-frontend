@@ -59,7 +59,7 @@ const showLabel = (index: number) =>
         <span class="bars__marker-label">{{ markerLabel }}</span>
       </span>
     </div>
-    <p class="bars__caption">{{ caption }}</p>
+    <p class="caption bars__caption">{{ caption }}</p>
   </div>
 </template>
 
@@ -77,7 +77,6 @@ const showLabel = (index: number) =>
   gap: 3px;
   height: 104px;
   padding: 0 var(--space-sm);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   background: var(--bg-base);
 }
@@ -93,7 +92,7 @@ const showLabel = (index: number) =>
 .bars__bar {
   width: 100%;
   background: var(--bg-overlay);
-  border-radius: 1px 1px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
 }
 
 .bars__bar--highlight {
@@ -107,7 +106,7 @@ const showLabel = (index: number) =>
   margin-bottom: 2px;
   padding: 0 2px;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   line-height: 1;
   color: var(--text-tertiary);
   white-space: nowrap;
@@ -134,14 +133,12 @@ const showLabel = (index: number) =>
   bottom: 2px;
   padding: 0 3px;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
   background: var(--bg-base);
 }
 
 .bars__caption {
   margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 </style>

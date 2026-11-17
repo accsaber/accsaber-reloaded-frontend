@@ -17,11 +17,11 @@ const FOUNDERS_SERIAL = 5
 const MAX_SERIAL = 40
 
 const SLOTS = [
-  { slot: 'Title', changes: 'The line that sits under your name' },
+  { slot: 'Title', changes: 'The line under your name' },
   { slot: 'Border shape', changes: 'The frame cut around your avatar' },
   { slot: 'Border color', changes: 'What that frame is filled with' },
-  { slot: 'Badge', changes: 'All your badges show on your profile, and the equipped one leads the row' },
-  { slot: 'Theme', changes: 'The colors of the whole site while you are logged in' },
+  { slot: 'Badge', changes: 'All your badges show on your profile and the equipped one is first in the row' },
+  { slot: 'Theme', changes: "The colors of the whole site while you're logged in" },
   { slot: 'Profile background', changes: 'The image behind your profile page' },
   { slot: 'Thumbnail background', changes: 'The scene behind your small player card' },
 ]
@@ -107,16 +107,16 @@ onMounted(async () => {
       </tbody>
     </table>
     <p>
-      Swapping is free and instant. Some items have variants, which are alternate looks of the
-      same item. You pick one when you equip it. Sabers and pedestals do not use a slot,
-      because they are files you install into Beat Saber by hand.
+      Swapping is free and instant. Some items have variants which are alternate looks of the same
+      item and you pick one when you equip it. Sabers and pedestals don't use a slot because they're
+      files you install into Beat Saber by hand.
     </p>
-    <p>You can preview themes you do not own from your settings.</p>
+    <p>You can preview themes you don't own from your settings.</p>
 
     <WikiHeading id="rarity">Rarity</WikiHeading>
     <p>
-      There are six rarities from common up to mythic. Rarer items come out of crates less
-      often. They give more essence when you break them down.
+      There are six rarities from common up to mythic. Rarer items come out of crates less often and
+      they give more essence when you break them down.
     </p>
     <table>
       <thead>
@@ -135,31 +135,30 @@ onMounted(async () => {
 
     <WikiHeading id="modifiers">Modifiers</WikiHeading>
     <p>
-      A modifier is attached to your particular copy of an item. It changes how that copy
-      looks and what it is called. Most of them roll out of a crate on a chance separate from
-      the item itself. <RouterLink to="/wiki/modifiers-and-effects">Item Modifiers &amp;
-      Effects</RouterLink> goes through every modifier, where each one comes from and what it
-      does.
+      A modifier is attached to your particular copy of an item and it changes how that copy looks
+      and what it's called. Most of them come from a crate on a chance separate from the item
+      itself. <RouterLink to="/wiki/modifiers-and-effects">Item Modifiers &amp; Effects</RouterLink>
+      lists every modifier, where each one comes from and what it does.
     </p>
 
     <WikiHeading id="serials">Serials</WikiHeading>
     <p>
-      A serialized item gives out its numbers in the order players get it. If you are the
-      eleventh person to ever get a title, your copy is number 11 for good.
+      A serialized item gives out its numbers in the order players get it. If you're the 11th person
+      to ever get a title your copy is number 11 for good.
     </p>
     <p>
-      The first five copies of anything get Founder's for free. It attaches on its own the
+      The first five copies of anything get Founder's for free and it's added automatically the
       moment you get your serial.
     </p>
     <p>
-      A Strange item counts every ranked personal best you set while it is equipped. The count
-      stays on that copy permanently. Taking the item off freezes the number.
+      A Strange item counts every ranked personal best you set while it's equipped. The count stays
+      on that copy permanently and taking the item off freezes the number.
     </p>
 
     <WikiHeading id="bench">Try it</WikiHeading>
     <p>
-      Here is a real item off the live catalog. Switch items to go through the rarities, stack
-      modifiers on, and drag the serial through 5 to watch Founder's attach itself:
+      Here's a real item from the live catalog. Switch items to see the rarities, stack modifiers on
+      and drag the serial to 5 or lower to watch Founder's get added:
     </p>
     <WikiItemBench
       v-if="benchReady"
@@ -169,16 +168,16 @@ onMounted(async () => {
       :max-serial="MAX_SERIAL"
     />
     <p v-else-if="benchFailed" class="items-page__error">
-      The item bench could not load right now. Your own inventory shows the same thing.
+      The item bench couldn't load right now. Your own inventory shows the same thing.
     </p>
     <SkeletonLoader v-else variant="card" />
 
     <WikiHeading id="bound">Locked to you</WikiHeading>
     <p>
-      Level unlocks, milestone rewards, official campaign rewards and event rewards are bound to
-      the account that got them. You cannot trade them, you cannot list them on the market, and
-      breaking them down gives nothing. Everything that comes out of a crate can move between
-      players and is worth its full rarity value.
+      Level unlocks, milestone rewards, official campaign rewards and event rewards are bound to the
+      account that got them. You can't trade them, you can't list them on the market and breaking
+      them down gives nothing. Everything that comes out of a crate can be traded between players
+      and is worth its full rarity value.
     </p>
   </WikiProse>
 </template>

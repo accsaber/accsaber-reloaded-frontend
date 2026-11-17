@@ -6,9 +6,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 const WEEK_CYCLE: WikiFlowStep[] = [
   { label: 'You join', detail: 'everybody starts at week one' },
   { label: 'The week opens', detail: 'its date has arrived' },
-  { label: 'You clear every mission in it', detail: 'community ones do not count' },
+  { label: 'You clear every mission in it', detail: "community ones don't count" },
   { label: 'The next week opens', detail: 'and the cycle repeats' },
-  { label: 'The bonus lands', detail: 'once every week is done', accent: 'var(--accent-overall)' },
+  { label: 'You get the bonus', detail: 'once every week is done', accent: 'var(--accent-overall)' },
 ]
 </script>
 
@@ -21,43 +21,41 @@ const WEEK_CYCLE: WikiFlowStep[] = [
 
     <WikiHeading id="joining">Joining</WikiHeading>
     <p>
-      An event does not start tracking you until you press the button on its page. Anything
-      you played before that counts for nothing toward it.
+      An event doesn't start tracking you until you press the button on its page and nothing you
+      played before that counts for it.
     </p>
     <p>
-      Joining late costs you nothing else, because everybody starts at week one whenever they
-      arrive and a player showing up three weeks in gets the first week's missions handed to them
-      and works forward from there.
+      Joining late doesn't cost you anything else because everybody starts at week one whenever they
+      join. A player who shows up three weeks in gets the first week's missions and works forward
+      from there.
     </p>
 
     <WikiHeading id="weeks">Weeks</WikiHeading>
     <WikiFlowDiagram :steps="WEEK_CYCLE" />
     <p>
-      A week whose date passed while you were
-      still stuck on the one before it stays shut and it opens the moment you clear what you left
-      behind.
+      If a week's date passed while you were still stuck on the one before it that week stays locked
+      and opens the moment you clear what you had left.
     </p>
 
     <WikiHeading id="missions">The missions</WikiHeading>
     <p>
-      Event missions are built by hand instead of being rolled for you, which means the target on
-      one is the same number for everybody playing. They do not rotate and they do not expire at
-      4am.
+      Event missions are built by hand instead of being rolled for you so the target is the same
+      number for everybody. They don't rotate and they don't expire at 4am.
     </p>
     <p>
-      Some of them only exist inside events at all, like clearing a campaign or playing maps out
-      of the newest batch.
+      Some of them only exist in events, like clearing a campaign or playing maps from the newest
+      batch.
     </p>
     <p>
-      A repeatable mission comes straight back the moment you finish it, up to whatever cap it
-      carries. Every run gives the reward again.
+      A repeatable mission comes right back the moment you finish it until it reaches its cap and
+      every time you finish it you get the reward again.
     </p>
 
     <WikiHeading id="community">Community missions</WikiHeading>
     <p>
       A community mission is one goal shared by everybody on the site. It fills up from every
-      contribution at once instead of tracking you on your own. When it lands, every player who
-      put something into it gets the full reward.
+      contribution at once instead of tracking you on your own and when it's complete every player
+      who contributed gets the full reward.
     </p>
 
     <WikiHeading id="finishing">Finishing it</WikiHeading>

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import '@/wiki/components/demo.css'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import MilestoneRow from '@/components/domain/MilestoneRow.vue'
 import { useCountUp } from '@/composables/useCountUp'
@@ -24,6 +27,8 @@ const playing = ref(false)
 
 const listRef = ref<HTMLElement | null>(null)
 let timer: number | null = null
+
+const setTabs = computed(() => orderedSets.value.map((set) => ({ key: set.id, label: set.title })))
 
 const orderedSets = computed(() =>
   [...sets.value].sort(
@@ -138,92 +143,34 @@ onUnmounted(stopTimer)
 </script>
 
 <template>
-  <figure class="walk" data-wiki-raw>
+  <figure class="wiki-demo walk" data-wiki-raw>
     <SkeletonLoader v-if="loading" variant="card" height="420px" />
 
-    <p v-else-if="failed || !selectedSet" class="walk__error">
-      The live sets could not load right now. You will find them all on the milestones page.
+    <p v-else-if="failed || !selectedSet" class="caption">
+      The live sets couldn't load right now. You can find them all on the milestones page.
     </p>
 
     <template v-else>
-      <div class="walk__sets" role="tablist" aria-label="Milestone sets">
-        <button
-          v-for="set in orderedSets"
-          :key="set.id"
-          class="walk__set"
-          :class="{ 'walk__set--active': set.id === selectedSetId }"
-          role="tab"
-          :aria-selected="set.id === selectedSetId"
-          @click="selectSet(set.id)"
-        >
-          {{ set.title }}
-        </button>
-      </div>
+      <BaseTabs
+        variant="segmented"
+        label="Milestone sets"
+        :tabs="setTabs"
+        :model-value="selectedSetId ?? ''"
+        @update:model-value="selectSet"
+      />
 
       <div class="walk__head">
         <div class="walk__intro">
           <h4 class="card-title">{{ selectedSet.title }}</h4>
-          <p class="walk__desc">{{ selectedSet.description }}</p>
+          <p class="caption">{{ selectedSet.description }}</p>
         </div>
-        <button
-          class="walk__play"
-          :aria-label="bonusLanded ? 'Replay the set' : playing ? 'Pause' : 'Play'"
-          @click="toggle"
-        >
-          <svg
-            v-if="bonusLanded"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M3 12a9 9 0 1 0 3-6.7" />
-            <path d="M3 4v5h5" />
-          </svg>
-          <svg
-            v-else-if="playing"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="9" y1="5" x2="9" y2="19" />
-            <line x1="15" y1="5" x2="15" y2="19" />
-          </svg>
-          <svg
-            v-else
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M6 4l14 8-14 8z" />
-          </svg>
-          <span>{{ bonusLanded ? 'Replay' : playing ? 'Pause' : 'Play' }}</span>
-        </button>
+        <BaseButton @click="toggle">{{ bonusLanded ? 'Replay' : playing ? 'Pause' : 'Play' }}</BaseButton>
       </div>
 
       <div class="walk__readout">
-        <span class="walk__counter">
-          <strong>{{ xpDisplay }}</strong> XP
-        </span>
-        <span class="walk__meta">{{ step }} of {{ rows.length }} cleared in this run</span>
-        <span class="walk__meta walk__meta--player">
+        <span class="wiki-demo__value walk__counter">{{ xpDisplay }} XP</span>
+        <span class="caption">{{ step }} of {{ rows.length }} cleared in this run</span>
+        <span class="caption walk__player">
           {{ progressLabel }} {{ clearedByPlayer }} of {{ rows.length }}
         </span>
       </div>
@@ -244,7 +191,7 @@ onUnmounted(stopTimer)
       </div>
 
       <div class="walk__bonus" :class="{ 'walk__bonus--landed': bonusLanded }">
-        <span class="field-label">Set bonus</span>
+        <span class="field-label">Set Bonus</span>
         <span class="walk__bonus-value">
           {{ bonusLanded ? `+${selectedSet.setBonusXp.toLocaleString()} XP` : `${selectedSet.setBonusXp.toLocaleString()} XP once every one is done` }}
         </span>
@@ -258,45 +205,6 @@ onUnmounted(stopTimer)
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  margin: 0 0 var(--space-md);
-  padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
-}
-
-.walk__error {
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.walk__sets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.walk__set {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: none;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-}
-
-.walk__set:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.walk__set--active {
-  color: var(--accent);
-  border-color: var(--accent);
-  font-weight: 600;
 }
 
 .walk__head {
@@ -306,60 +214,19 @@ onUnmounted(stopTimer)
   gap: var(--space-md);
 }
 
-.walk__desc {
-  margin: 2px 0 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.walk__play {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: none;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-}
-
-.walk__play:hover {
-  background: var(--bg-elevated);
-  border-color: var(--text-tertiary);
-}
-
 .walk__readout {
   display: flex;
   align-items: baseline;
   gap: var(--space-md);
   flex-wrap: wrap;
-  padding-bottom: var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
 }
 
 .walk__counter {
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-lg);
   color: var(--accent);
 }
 
-.walk__counter strong {
-  font-weight: 600;
-}
-
-.walk__meta {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.walk__meta--player {
+.walk__player {
   margin-left: auto;
-  color: var(--text-tertiary);
 }
 
 .walk__list {
@@ -369,21 +236,22 @@ onUnmounted(stopTimer)
   gap: var(--space-xs);
   max-height: 360px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-overlay) transparent;
 }
 
 .walk__row {
   cursor: pointer;
-  background: var(--bg-surface);
   border-radius: var(--radius-card);
   transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .walk__row--pending {
-  opacity: 0.32;
+  opacity: 0.4;
 }
 
 .walk__row--current {
-  outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline: 1px solid var(--accent);
   outline-offset: -1px;
 }
 
@@ -393,21 +261,15 @@ onUnmounted(stopTimer)
   justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  opacity: 0.5;
-  transition: opacity var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-}
-
-.walk__bonus--landed {
-  opacity: 1;
-  border-color: var(--accent);
+  background: var(--bg-base);
 }
 
 .walk__bonus-value {
   font-family: var(--font-mono);
   font-size: var(--text-body);
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .walk__bonus--landed .walk__bonus-value {
@@ -415,23 +277,12 @@ onUnmounted(stopTimer)
 }
 
 @media (max-width: 560px) {
-  .walk__head {
-    flex-direction: column;
-  }
-
-  .walk__meta--player {
+  .walk__player {
     margin-left: 0;
   }
 
   .walk__list {
     max-height: 420px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .walk__row,
-  .walk__bonus {
-    transition: none;
   }
 }
 </style>

@@ -53,7 +53,7 @@ const HIT_PARAMS: WikiCompareRow[] = [
   },
   {
     label: 'Map penalty',
-    values: [`${RULES.mapBreakDecay} per break`, `For each time a hit on this map broke them this war (a chip break counts on the last map a hit landed on), never below ${RULES.mapBreakFloor}`],
+    values: [`${RULES.mapBreakDecay} per break`, `For each time a hit on this map broke them this war (a chip break counts on the last map they got hit on), never below ${RULES.mapBreakFloor}`],
   },
   {
     label: 'Last stand',
@@ -103,7 +103,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     </math>
     <p>
       If they already got hit on this map since their guard came back, the hit keeps
-      {{ RULES.repeatMapShare }} of the streak bonus for every earlier hit on that map, so a 400% bonus becomes 160%, then 64%.
+      {{ RULES.repeatMapShare }} of the streak bonus for every earlier hit on that map so a 400% bonus becomes 160%, then 64%.
       It only adds to the streak like a chip. If they have no score on the map, the streak doesn't count. The hit is a flat {{ RULES.baseDamage }}, times the map penalty and last stand, nothing else. It builds the streak
       the same as a chip. A hit never takes more than the guard they have left.
     </p>
@@ -119,7 +119,7 @@ const XP_PARAMS: WikiCompareRow[] = [
         <mn>{{ RULES.chipSkillExponent }}</mn>
       </msup>
     </math>
-    <p>The last stand factor scales chips too. There is no minimum. A chip near the edge of the window does almost nothing.</p>
+    <p>The last stand factor scales chips too. There's no minimum. A chip near the edge of the window does almost nothing.</p>
     <WikiCompareTable :columns="COLUMNS" :rows="CHIP_PARAMS" />
 
     <WikiHeading id="break">Standing on a break</WikiHeading>
@@ -148,8 +148,8 @@ const XP_PARAMS: WikiCompareRow[] = [
       <mfrac><mtext>share who played</mtext><mn>{{ RULES.engagementFull }}</mn></mfrac><mo>)</mo>
     </math>
     <p>
-      Share who played is how much of the team played a ranked map in the
-      {{ RULES.engagementDays }} days before the war started. A normal clan sits at 1.
+      Share who played is how much of the team played a ranked map in the {{ RULES.engagementDays }}
+      days before the war started. A normal clan is at 1.
     </p>
 
     <WikiHeading id="xp">XP</WikiHeading>
@@ -186,7 +186,7 @@ const XP_PARAMS: WikiCompareRow[] = [
     <p>
       Two players with the same skill keep hitting one guy. The hits do 10, 13, 16.9, 21.97 and 28.56.
       The 6th would do 37.13. He only has 9.57 left. That hit breaks him. With no score on the map,
-      every hit would be 10, so it takes 10. On the last one standing they are 5 each. That takes 20.
+      every hit would be 10 so it takes 10. On the last one standing they are 5 each. That takes 20.
     </p>
   </WikiProse>
 </template>

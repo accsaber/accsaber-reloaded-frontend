@@ -12,7 +12,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'what-is-accsaber',
         title: 'What is AccSaber',
-        summary: 'The accuracy niche this platform is built on and the points that come out of it.',
+        summary: "Leaderboards for Beat Saber where the only thing that matters is how accurate you are.",
         keywords: [
           'accsaber',
           'accuracy',
@@ -34,13 +34,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'what is',
         ],
         related: ['getting-your-scores-counted', 'accuracy-and-ap', 'categories'],
-        updated: '2026-08-03',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/WhatIsAccsaberPage.vue'),
       },
       {
         slug: 'getting-your-scores-counted',
         title: 'Getting Your Scores Counted',
-        summary: 'A play leaves your headset and turns up on a leaderboard. What to check when it does not.',
+        summary: "Played a ranked map and nothing showed up? Here's how a score gets to AccSaber and what to check.",
         keywords: [
           'scores',
           'score not counting',
@@ -63,7 +63,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'troubleshooting',
         ],
         related: ['what-is-accsaber', 'accuracy-and-ap', 'modifiers', 'score-history'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/GettingYourScoresCountedPage.vue'),
       },
     ],
@@ -76,7 +76,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'accuracy-and-ap',
         title: 'Accuracy & AP',
-        summary: 'The two numbers behind every AP value and the curve they go through.',
+        summary: "Your accuracy and the map's complexity are all it takes to get AP. Drag the curve and watch it happen.",
         keywords: [
           'ap',
           'accuracy points',
@@ -92,13 +92,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'formula',
         ],
         related: ['weighted-ap', 'what-is-accsaber', 'score-history', 'complexity-and-reweights'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/AccuracyAndApPage.vue'),
       },
       {
         slug: 'weighted-ap',
         title: 'Weighted AP',
-        summary: 'Why a 500 AP score can move you twelve spots and a 400 AP score moves you almost nothing.',
+        summary: "Why did that 500 AP play barely move your rank?",
         keywords: [
           'weighted ap',
           'weight',
@@ -115,13 +115,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'per category',
         ],
         related: ['accuracy-and-ap', 'leaderboards', 'score-history', 'missions'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/WeightedApPage.vue'),
       },
       {
         slug: 'categories',
         title: 'Categories',
-        summary: 'Three categories test three different kinds of accuracy, and Overall adds them up.',
+        summary: "True Acc, Standard Acc and Tech Acc each test a different kind of accuracy and Overall adds them all up.",
         keywords: [
           'categories',
           'category',
@@ -137,13 +137,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'fine line',
         ],
         related: ['accuracy-and-ap', 'weighted-ap', 'leaderboards'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/CategoriesPage.vue'),
       },
       {
         slug: 'modifiers',
         title: 'Modifiers',
-        summary: 'Which modifiers are allowed and which ones void a ranked play.',
+        summary: "Which modifiers can you play with and which ones stop a play from counting?",
         keywords: [
           'modifiers',
           'banned',
@@ -167,13 +167,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'score not counting',
         ],
         related: ['getting-your-scores-counted', 'accuracy-and-ap', 'score-history'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ModifiersPage.vue'),
       },
       {
         slug: 'leaderboards',
         title: 'Leaderboards',
-        summary: 'How your global and country ranks get worked out, plus every other board on the site.',
+        summary: "How your global and country rank are worked out plus every other board you can climb.",
         keywords: [
           'leaderboard',
           'leaderboards',
@@ -201,13 +201,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'gaps in ranks',
         ],
         related: ['weighted-ap', 'categories', 'score-history', 'snipes'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/LeaderboardsPage.vue'),
       },
       {
         slug: 'score-history',
         title: 'Score History & Rewards',
-        summary: 'Only one play on a map counts for AP. The rest still give XP.',
+        summary: "Only your best play on a map counts for AP but every play still gives you XP.",
         keywords: [
           'score history',
           'history',
@@ -248,13 +248,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'missing attempts',
         ],
         related: ['weighted-ap', 'xp-and-levels', 'accuracy-and-ap', 'snipes', 'milestones-and-achievements', 'complexity-and-reweights'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ScoreHistoryPage.vue'),
       },
       {
         slug: 'snipes',
         title: 'Snipes',
-        summary: 'Finds the maps you are closest to taking off another player and gives you the playlist.',
+        summary: "Find the maps where you're closest to beating another player and get them as a playlist!",
         keywords: [
           'snipe',
           'snipes',
@@ -282,7 +282,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'biggest gap',
         ],
         related: ['leaderboards', 'score-history', 'weighted-ap'],
-        updated: '2026-10-14',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/SnipesPage.vue'),
       },
     ],
@@ -295,7 +295,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'how-maps-get-ranked',
         title: 'How Maps Get Ranked',
-        summary: 'From a Discord suggestion to a batch release, with a vote and a criteria check on the way.',
+        summary: "What happens between someone suggesting a map in Discord and it getting ranked?",
         keywords: [
           'how do maps get ranked',
           'ranked',
@@ -316,7 +316,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'pipeline',
         ],
         related: ['categories', 'accuracy-and-ap', 'ranking-criteria', 'complexity-and-reweights'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/HowMapsGetRankedPage.vue'),
       },
       {
@@ -368,7 +368,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'complexity-and-reweights',
         title: 'Complexity & Reweights',
-        summary: 'The complexity number decides what accuracy on a map is worth, and it moves.',
+        summary: "Complexity decides how much your accuracy on a map is worth and yes, it can change.",
         keywords: [
           'complexity',
           'complex',
@@ -399,7 +399,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'batch reweight',
         ],
         related: ['accuracy-and-ap', 'how-maps-get-ranked', 'score-history'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ComplexityAndReweightsPage.vue'),
       },
     ],
@@ -412,7 +412,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'xp-and-levels',
         title: 'XP & Levels',
-        summary: 'Seven sources of XP and the levels that unlock items.',
+        summary: "All sources of XP to help you grind to new levels and unlock new items.",
         keywords: [
           'xp',
           'experience',
@@ -436,13 +436,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'clan xp',
         ],
         related: ['missions', 'events', 'clan-missions', 'score-history', 'leaderboards', 'milestones-and-achievements', 'items-and-inventory'],
-        updated: '2026-10-08',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/XpAndLevelsPage.vue'),
       },
       {
         slug: 'missions',
         title: 'Missions',
-        summary: 'Where your daily and weekly missions come from and why the targets are the numbers they are.',
+        summary: "Where do your daily and weekly missions come from and why are the targets so specific to you?",
         keywords: [
           'missions',
           'daily',
@@ -479,13 +479,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'map too hard',
         ],
         related: ['xp-and-levels', 'weighted-ap', 'score-history', 'milestones-and-achievements', 'crates', 'events', 'clan-missions'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/MissionsPage.vue'),
       },
       {
         slug: 'events',
         title: 'Events',
-        summary: 'A few weeks of hand-built missions, and a week that will not open until you finish the last one.',
+        summary: "A few weeks of hand-built missions where the last week stays locked until you finish the one before it.",
         keywords: [
           'event',
           'events',
@@ -520,13 +520,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'newest batch',
         ],
         related: ['missions', 'xp-and-levels', 'crates'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/EventsPage.vue'),
       },
       {
         slug: 'milestones-and-achievements',
         title: 'Milestones & Achievements',
-        summary: 'Milestones are the ones you run into by playing. Achievements ask for something stupid on purpose.',
+        summary: "Milestones are the ones you get just by playing. Achievements ask you to do something stupid on purpose!",
         keywords: [
           'milestones',
           'milestone',
@@ -576,7 +576,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'the map',
         ],
         related: ['xp-and-levels', 'missions', 'score-history', 'items-and-inventory'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/MilestonesAndAchievementsPage.vue'),
       },
     ],
@@ -589,7 +589,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'clans',
         title: 'Clans',
-        summary: 'Making a clan, joining one and leaving it.',
+        summary: "How to make a clan, join one or leave when you've had enough.",
         keywords: [
           'clan',
           'clans',
@@ -616,13 +616,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'not taking requests',
         ],
         related: ['clan-ranks', 'clan-levels', 'clan-standing', 'clan-wars'],
-        updated: '2026-10-19',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClansPage.vue'),
       },
       {
         slug: 'clan-ranks',
         title: 'Clan Ranks',
-        summary: 'Who can do what in a clan.',
+        summary: "Every clan rank and what it's allowed to do.",
         keywords: [
           'ranks',
           'roles',
@@ -647,13 +647,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'take off wars',
         ],
         related: ['clans', 'clan-levels', 'alliances-and-rivals', 'war-combat'],
-        updated: '2026-11-10',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanRanksPage.vue'),
       },
       {
         slug: 'clan-levels',
         title: 'Clan Levels',
-        summary: 'How clans get XP and what each level unlocks.',
+        summary: "How your clan gets XP and what you unlock every time it levels up.",
         keywords: [
           'clan level',
           'clan xp',
@@ -680,7 +680,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'clan-cosmetics',
         title: 'Clan Cosmetics',
-        summary: 'Three slots that change how your clan looks to everyone.',
+        summary: "Three slots to change how your clan looks to everyone else.",
         keywords: [
           'clan cosmetics',
           'tag card',
@@ -693,13 +693,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'clan items',
         ],
         related: ['clan-levels', 'clan-seasons', 'items-and-inventory'],
-        updated: '2026-10-19',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanCosmeticsPage.vue'),
       },
       {
         slug: 'clan-standing',
         title: 'Standing',
-        summary: 'What clans get ranked by.',
+        summary: "The one number every clan is ranked by.",
         keywords: [
           'standing',
           'clan ranking',
@@ -715,13 +715,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'tied',
         ],
         related: ['clan-seasons', 'clan-wars', 'war-combat', 'war-math', 'clan-missions', 'weighted-ap'],
-        updated: '2026-10-21',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanStandingPage.vue'),
       },
       {
         slug: 'clan-seasons',
         title: 'Clan Seasons',
-        summary: 'How seasons rank clans and who gets the rewards at the end.',
+        summary: "How a season ranks clans and who gets the rewards when it ends.",
         keywords: [
           'season',
           'clan season',
@@ -742,7 +742,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'clan-missions',
         title: 'Clan Missions',
-        summary: 'Missions in a week the whole clan works on together.',
+        summary: "Weekly missions the whole clan works on together.",
         keywords: [
           'clan missions',
           'weekly',
@@ -762,13 +762,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'monday',
         ],
         related: ['missions', 'clan-levels', 'clan-standing', 'xp-and-levels'],
-        updated: '2026-10-19',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ClanMissionsPage.vue'),
       },
       {
         slug: 'clan-wars',
         title: 'Clan Wars',
-        summary: 'One clan attacks another with standing on the line.',
+        summary: "One clan attacks another and both put their standing on the line.",
         keywords: [
           'war',
           'wars',
@@ -814,7 +814,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'war-combat',
         title: 'Hits & Breaks',
-        summary: 'How a play hits or breaks someone and who auto goes for.',
+        summary: "How does a play hit or break someone and who does auto go after?",
         keywords: [
           'hits',
           'hit',
@@ -859,7 +859,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'war-math',
         title: 'War Math',
-        summary: 'Every formula a clan war uses, with the current numbers.',
+        summary: "Every formula a clan war uses with the numbers it's using right now.",
         keywords: [
           'pot',
           'ally share',
@@ -887,13 +887,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'size share',
         ],
         related: ['war-combat', 'clan-wars', 'clan-standing'],
-        updated: '2026-11-14',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/WarMathPage.vue'),
       },
       {
         slug: 'alliances-and-rivals',
         title: 'Alliances & Rivals',
-        summary: 'Allies can fight in each other\'s wars and cannot attack each other. Rivals are only a label.',
+        summary: "Allies can fight in each other's wars and can't attack each other. Rivals are just a label.",
         keywords: [
           'alliance',
           'alliances',
@@ -909,13 +909,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'wars fought together',
         ],
         related: ['coalitions', 'clan-wars', 'clan-standing'],
-        updated: '2026-10-13',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/AlliancesAndRivalsPage.vue'),
       },
       {
         slug: 'coalitions',
         title: 'Coalitions',
-        summary: 'Calling in allies to fight on your team.',
+        summary: "Need backup? Call your allies in to fight on your team.",
         keywords: [
           'ally worth',
           '60%',
@@ -935,7 +935,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'pacifism',
         ],
         related: ['alliances-and-rivals', 'clan-wars', 'war-combat'],
-        updated: '2026-11-14',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/CoalitionsPage.vue'),
       },
     ],
@@ -948,7 +948,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'items-and-inventory',
         title: 'Items & Inventory',
-        summary: 'Everything in your Inventory tab down to the serial number on your own copy.',
+        summary: "Everything in your Inventory tab, right down to the serial number on your own copy.",
         keywords: [
           'items',
           'item',
@@ -1007,13 +1007,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'theme preview',
         ],
         related: ['xp-and-levels', 'milestones-and-achievements', 'crates', 'essence', 'modifiers-and-effects'],
-        updated: '2026-11-10',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ItemsAndInventoryPage.vue'),
       },
       {
         slug: 'crates',
         title: 'Crates',
-        summary: 'Everything inside one is public before you open it. The weights are the part worth reading.',
+        summary: "Everything inside a crate is public before you open it and so are the odds.",
         keywords: [
           'crate',
           'crates',
@@ -1055,13 +1055,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'can i still get',
         ],
         related: ['items-and-inventory', 'missions', 'essence', 'events', 'modifiers-and-effects'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/CratesPage.vue'),
       },
       {
         slug: 'essence',
         title: 'Essence',
-        summary: 'The currency the item economy runs on. A bid holds it instead of spending it.',
+        summary: "The currency behind every item. A bid only reserves it until you actually win.",
         keywords: [
           'essence',
           'currency',
@@ -1099,13 +1099,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'stack',
         ],
         related: ['items-and-inventory', 'crates', 'market-and-trading'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/EssencePage.vue'),
       },
       {
         slug: 'modifiers-and-effects',
         title: 'Item Modifiers & Effects',
-        summary: 'The modifiers that can land on your copy of an item. Most come out of a crate.',
+        summary: "The modifiers your copy of an item can get. Most of them come from crates.",
         keywords: [
           'item modifier',
           'item modifiers',
@@ -1144,13 +1144,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'why does my item look different',
         ],
         related: ['items-and-inventory', 'crates'],
-        updated: '2026-09-24',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/ModifiersAndEffectsPage.vue'),
       },
       {
         slug: 'market-and-trading',
         title: 'The Market & Trading',
-        summary: 'Selling to whoever bids highest, or dealing directly with one player you picked.',
+        summary: "Sell to the highest bidder or trade directly with one player you picked.",
         keywords: [
           'market',
           'marketplace',
@@ -1193,7 +1193,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'untradeable',
         ],
         related: ['essence', 'items-and-inventory'],
-        updated: '2026-09-07',
+        updated: '2026-11-17',
         loader: () => import('@/wiki/pages/MarketAndTradingPage.vue'),
       },
     ],

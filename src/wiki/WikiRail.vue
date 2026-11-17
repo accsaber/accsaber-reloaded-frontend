@@ -19,7 +19,7 @@ const emit = defineEmits<{
 const navigate = inject(WIKI_NAVIGATE_KEY, () => {})
 
 const emptyMessage = computed(() =>
-  props.search.trim() ? 'No documents match your search.' : 'The wiki has no documents yet.',
+  props.search.trim() ? 'No pages match your search' : 'The wiki has no pages yet',
 )
 </script>
 
@@ -66,28 +66,28 @@ const emptyMessage = computed(() =>
   gap: var(--space-md);
 }
 
+.wiki-rail > * {
+  flex-shrink: 0;
+}
+
 .wiki-rail__home {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+  min-height: var(--control-h);
   color: var(--text-secondary);
   font-size: var(--text-body);
   font-weight: 600;
   text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .wiki-rail__home:hover {
   color: var(--text-primary);
-  border-color: var(--text-tertiary);
 }
 
 .wiki-rail__home--active {
-  color: var(--text-primary);
-  border-color: var(--accent);
+  color: var(--page-accent, var(--accent));
 }
 
 .wiki-rail__sections {

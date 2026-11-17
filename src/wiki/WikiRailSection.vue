@@ -47,23 +47,26 @@ const expanded = computed(() => open.value || props.searching)
       >
         <polyline points="9 18 15 12 9 6" />
       </svg>
-      <span class="rs__title">{{ section.title }}</span>
-      <span class="rs__count">{{ section.entries.length }}</span>
+      {{ section.title }}
     </button>
 
-    <div v-if="expanded" class="rs__body">
-      <RouterLink
-        v-for="entry in section.entries"
-        :key="entry.slug"
-        :to="`/wiki/${entry.slug}`"
-        class="rs__entry"
-        :class="{ 'rs__entry--active': entry.slug === activeSlug }"
-        @click="navigate()"
-        @mouseenter="prefetchWikiEntry(entry.slug)"
-      >
-        {{ entry.title }}
-      </RouterLink>
-    </div>
+    <Transition name="collapse">
+      <div v-if="expanded" class="collapsible">
+        <div class="rs__body">
+          <RouterLink
+            v-for="entry in section.entries"
+            :key="entry.slug"
+            :to="`/wiki/${entry.slug}`"
+            class="rs__entry"
+            :class="{ 'rs__entry--active': entry.slug === activeSlug }"
+            @click="navigate()"
+            @mouseenter="prefetchWikiEntry(entry.slug)"
+          >
+            {{ entry.title }}
+          </RouterLink>
+        </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
@@ -78,10 +81,11 @@ const expanded = computed(() => open.value || props.searching)
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: var(--space-sm) 0;
+  min-height: var(--control-h);
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--section-accent, var(--text-primary));
   font-family: var(--font-sans);
   font-size: var(--text-body);
   font-weight: 600;
@@ -92,38 +96,29 @@ const expanded = computed(() => open.value || props.searching)
 .rs__chevron {
   flex-shrink: 0;
   color: var(--text-tertiary);
-  transition: transform 150ms ease;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .rs__chevron--open {
   transform: rotate(90deg);
 }
 
-.rs__title {
-  flex: 1;
-  min-width: 0;
-  color: var(--section-accent, var(--text-primary));
-}
-
-.rs__count {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
 .rs__body {
   display: flex;
   flex-direction: column;
+  padding-left: calc(12px + var(--space-sm));
 }
 
 .rs__entry {
-  padding: 6px var(--space-sm);
-  margin-left: var(--space-md);
-  border-left: 1px solid var(--bg-overlay);
+  padding: var(--space-xs) var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
+  border-radius: var(--radius-btn);
   color: var(--text-secondary);
   font-size: var(--text-body);
   text-decoration: none;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 .rs__entry:hover {
@@ -132,9 +127,7 @@ const expanded = computed(() => open.value || props.searching)
 }
 
 .rs__entry--active {
-  color: var(--text-primary);
+  color: var(--section-accent, var(--accent));
   font-weight: 600;
-  border-left-color: var(--section-accent, var(--accent));
-  background: var(--bg-surface);
 }
 </style>

@@ -178,6 +178,57 @@ h1 {
   min-height: 0;
 }
 
+.slider {
+  height: 4px;
+  appearance: none;
+  background: var(--bg-overlay);
+  border-radius: var(--radius-xs);
+  outline: none;
+  cursor: pointer;
+}
+
+.slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent, var(--text-primary));
+  border: 2px solid var(--bg-elevated);
+  cursor: inherit;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent, var(--text-primary));
+  border: 2px solid var(--bg-elevated);
+  cursor: inherit;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.slider:active::-webkit-slider-thumb {
+  transform: scaleX(1.12);
+}
+
+.slider:active::-moz-range-thumb {
+  transform: scaleX(1.12);
+}
+
+.slider:focus-visible::-webkit-slider-thumb {
+  border-color: var(--text-primary);
+}
+
+.slider:focus-visible::-moz-range-thumb {
+  border-color: var(--text-primary);
+}
+
 .inline-edit {
   padding: 0;
   background: transparent;
@@ -193,7 +244,7 @@ h1 {
 
 .collapse-enter-active > *,
 .collapse-leave-active > * {
-  overflow: clip;
+  overflow-y: clip;
 }
 
 .collapse-enter-active {

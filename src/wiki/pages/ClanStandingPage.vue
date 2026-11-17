@@ -5,12 +5,12 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
 <template>
   <WikiProse>
-    <p>Standing is what clans get ranked by. It has two parts, base and earned.</p>
+    <p>Standing is what clans get ranked by and it has two parts: base and earned.</p>
 
     <WikiHeading id="base">Base</WikiHeading>
     <p>
       Base is about how good your members are. It uses everyone's Overall skill level from the
-      Statistics tab on their profile. Your best player counts fully. Everyone after them counts
+      Statistics tab on their profile. Your best player counts fully and everyone after them counts
       a bit less, like <RouterLink to="/wiki/weighted-ap">weighted AP</RouterLink>.
     </p>
     <p>
@@ -21,20 +21,20 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="earned">Earned</WikiHeading>
     <p>
-      Earned standing starts at 0 every season. Finishing a clan mission gives 100. Breaking
-      someone in a war takes standing from their clan and gives it to yours. Winning a war gives
-      up to 1000 more.
+      Earned standing starts at 0 every season. Finishing a clan mission gives 100, breaking someone
+      in a war takes standing from their clan and gives it to yours and winning a war gives up to
+      1000 more.
     </p>
     <p>
-      Earned standing is the only part you can lose. It never goes below 0. If your clan is
-      already at 0 when it gets broken, you lose nothing. The attacker still gets theirs,
-      depending on how active your team is. The numbers are on
-      <RouterLink to="/wiki/war-math#break">War Math</RouterLink>.
+      Earned standing is the only part you can lose and it never goes below 0. If your clan is
+      already at 0 when it gets broken you lose nothing but the attacker still gets theirs depending
+      on how active your team is. The numbers are on <RouterLink to="/wiki/war-math#break">War
+      Math</RouterLink>.
     </p>
 
     <WikiHeading id="ranking">The ranking</WikiHeading>
     <p>
-      Clans are ranked by total standing. If two clans are tied, the one that was made first goes
+      Clans are ranked by total standing. If two clans are tied the one that was made first goes
       higher.
     </p>
   </WikiProse>

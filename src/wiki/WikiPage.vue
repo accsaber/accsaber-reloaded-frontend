@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
@@ -170,19 +171,12 @@ onUnmounted(() => observer?.disconnect())
       class="wiki__main"
       :class="{ 'wiki__main--wide': !activeEntry }"
     >
-      <button v-if="isMobile" type="button" class="wiki__back" @click="mobileView = 'rail'">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="19" y1="12" x2="5" y2="12" />
-          <polyline points="12 19 5 12 12 5" />
-        </svg>
-        Index
-      </button>
+      <BaseButton v-if="isMobile" class="wiki__back" @click="mobileView = 'rail'">All Pages</BaseButton>
 
       <EmptyState
         v-if="notFound"
-        message="No document lives at this address."
-        action-label="Open the wiki"
+        message="No page at this address"
+        action-label="Open the Wiki"
         @action="router.push('/wiki')"
       />
 
@@ -192,15 +186,15 @@ onUnmounted(() => observer?.disconnect())
         <header class="wiki__header">
           <h1 class="wiki__title">{{ activeEntry.title }}</h1>
           <p class="wiki__summary">{{ activeEntry.summary }}</p>
-          <p class="wiki__updated">Updated {{ formatFullDate(activeEntry.updated) }}</p>
+          <p class="caption">Updated {{ formatFullDate(activeEntry.updated) }}</p>
         </header>
 
         <div v-if="loading" class="wiki__skeleton">
-          <SkeletonLoader variant="text" width="90%" />
-          <SkeletonLoader variant="text" width="100%" />
-          <SkeletonLoader variant="text" width="75%" />
-          <SkeletonLoader variant="card" />
-          <SkeletonLoader variant="text" width="85%" />
+          <SkeletonLoader variant="text" :lines="3" />
+          <SkeletonLoader width="40%" height="28px" />
+          <SkeletonLoader variant="text" :lines="4" />
+          <SkeletonLoader width="50%" height="28px" />
+          <SkeletonLoader variant="text" :lines="3" />
         </div>
 
         <div v-else ref="articleHost">
@@ -223,23 +217,24 @@ onUnmounted(() => observer?.disconnect())
 <style scoped>
 .wiki {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 260px;
+  grid-template-columns: 280px minmax(0, 760px) 260px;
+  justify-content: center;
   gap: var(--space-2xl);
-  max-width: 1600px;
-  margin: 0 auto;
   align-items: start;
 }
 
-.wiki__rail {
+.wiki__rail,
+.wiki__aside {
   position: sticky;
   top: calc(var(--navbar-height) + var(--space-md));
   align-self: start;
   max-height: calc(100vh - var(--navbar-height) - var(--space-lg));
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-overlay) transparent;
   padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+  background: var(--bg-surface);
 }
 
 .wiki__main {
@@ -253,85 +248,53 @@ onUnmounted(() => observer?.disconnect())
   grid-column: 2 / -1;
 }
 
-.wiki__aside {
-  position: sticky;
-  top: calc(var(--navbar-height) + var(--space-md));
-  align-self: start;
-  max-height: calc(100vh - var(--navbar-height) - var(--space-lg));
-  overflow-y: auto;
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
 .wiki__back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
   align-self: flex-start;
-  padding: 6px 12px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
 }
 
-.wiki__back:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
+.wiki__article,
+.wiki__main--wide > :deep(.home) {
+  padding: var(--space-xl);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
 }
 
 .wiki__article {
-  max-width: 760px;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  padding: var(--space-xl);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
 }
 
 .wiki__header {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding-bottom: var(--space-lg);
-  border-bottom: 1px solid var(--bg-overlay);
 }
 
 .wiki__title {
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 .wiki__summary {
   margin: 0;
-  font-size: 1.05rem;
+  max-width: 50ch;
+  font-size: var(--text-card-title);
   color: var(--text-secondary);
   line-height: 1.5;
-}
-
-.wiki__updated {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  text-wrap: pretty;
 }
 
 .wiki__skeleton {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-lg);
+  max-width: 50ch;
 }
 
 @media (max-width: 1279px) {
   .wiki {
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 760px);
   }
 
   .wiki__rail {
@@ -351,7 +314,7 @@ onUnmounted(() => observer?.disconnect())
 
 @media (max-width: 959px) {
   .wiki {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-lg);
   }
 
@@ -366,12 +329,13 @@ onUnmounted(() => observer?.disconnect())
     overflow: visible;
   }
 
-  .wiki__article {
-    padding: var(--space-md);
-  }
-
   .wiki__aside {
     grid-column: 1;
+  }
+
+  .wiki__article,
+  .wiki__main--wide > :deep(.home) {
+    padding: var(--space-md);
   }
 }
 </style>

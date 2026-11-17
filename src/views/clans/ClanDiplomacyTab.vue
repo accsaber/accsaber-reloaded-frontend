@@ -16,6 +16,7 @@ import type {
 import type { Page } from '@/types/pagination'
 import { hasClanRole } from '@/utils/clans'
 import { formatFullDate } from '@/utils/formatters'
+import { knownCount, rememberCount } from '@/utils/knownCount'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ClanLink from './ClanLink.vue'
@@ -50,6 +51,8 @@ const error = ref<string | null>(null)
 const isFounder = computed(() => hasClanRole(props.viewerRole, 'founder'))
 const isCommander = computed(() => hasClanRole(props.viewerRole, 'commander'))
 const clanId = computed(() => props.clan.clan.id)
+const alliesKey = computed(() => `allies:${clanId.value}`)
+const rivalsKey = computed(() => `rivals:${clanId.value}`)
 const activeAlliances = computed(() => alliances.value?.content ?? [])
 const allyRows = computed(() => [
   ...proposals.value.map((alliance) => ({ alliance, pending: true })),
@@ -73,6 +76,7 @@ async function fetchAlliances() {
   ])
   alliances.value = allies
   proposals.value = pending?.content ?? []
+  rememberCount(alliesKey.value, allyRows.value.length)
 }
 
 async function fetchRivals() {
@@ -83,6 +87,7 @@ async function fetchRivals() {
   ])
   called.value = outgoing.content
   calledBy.value = incoming.content
+  rememberCount(rivalsKey.value, rivals.value.length)
 }
 
 async function fetchAllySlots() {
@@ -209,6 +214,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
         :item-key="(row) => row.alliance.id"
         :loading="loading && !alliances"
         :refreshing="loading && !!alliances"
+        :placeholders="knownCount(alliesKey, 1)"
       >
         <template #placeholder>
           <li class="placeholder"><SkeletonLoader height="56px" /></li>
@@ -262,7 +268,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
         :items="rivals"
         :item-key="(rival) => rival.clan.id"
         :loading="loading && rivals.length === 0"
-        :placeholders="1"
+        :placeholders="knownCount(rivalsKey, 1)"
       >
         <template #placeholder>
           <li class="placeholder"><SkeletonLoader height="56px" /></li>

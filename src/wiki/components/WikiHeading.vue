@@ -39,7 +39,7 @@ const tag = computed(() => `h${props.level ?? 2}`)
 }
 
 .wiki-heading--3 {
-  font-size: 1.05rem;
+  font-size: var(--text-card-title);
 }
 
 .wiki-heading__anchor {
@@ -47,7 +47,7 @@ const tag = computed(() => `h${props.level ?? 2}`)
   font-weight: 500;
   text-decoration: none;
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .wiki-heading:hover .wiki-heading__anchor,

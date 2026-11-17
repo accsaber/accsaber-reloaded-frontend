@@ -407,6 +407,16 @@ export function clanDraftFrom(clan: PublicClanResponse, description: string | nu
 
 type ClanColors = Pick<PublicClanResponse, 'tagColor' | 'primaryColor' | 'secondaryColor'>
 
+const knownClans = new Map<string, PublicClanResponse>()
+
+export function rememberClan(clan: PublicClanResponse) {
+  knownClans.set(clan.slug, clan)
+}
+
+export function knownClan(slug: string): PublicClanResponse | null {
+  return knownClans.get(slug) ?? null
+}
+
 export function clanColorVars(clan: ClanColors): Record<string, string> {
   const vars: Record<string, string> = {}
   const primary = clan.primaryColor ?? clan.tagColor

@@ -9,6 +9,7 @@ import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
 import { CLAN_STANDING_SOURCE_LABEL, formatSignedStanding, formatStanding, isSeasonRunning } from '@/utils/clans'
 import { formatRelativeDate } from '@/utils/formatters'
+import { knownCount, rememberCount } from '@/utils/knownCount'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import './ledgerRow.css'
@@ -32,6 +33,7 @@ const { currentPage, paginationParams, setPage } = usePageableRoute({
 const pastStanding = ref<ClanStandingResponse | null>(null)
 const events = ref<Page<ClanStandingEventResponse> | null>(null)
 const eventsLoading = ref(true)
+const FIRST_LOAD_ROWS = 10
 
 const runningSlug = computed(() => props.seasons?.find((s) => isSeasonRunning(s))?.slug ?? '')
 const selectedSeason = computed(() => {
@@ -85,11 +87,13 @@ async function fetchEvents() {
   eventsLoading.value = true
   try {
     const { getClanStandingEvents } = await import('@/api/clans')
+    const key = eventsKey.value
     events.value = await getClanStandingEvents(props.clan.clan.id, {
       page: paginationParams.value.page,
       size: 25,
       season: pastSeason.value || undefined,
     })
+    rememberCount(key, events.value.content.length)
   } catch {
     events.value = null
   } finally {
@@ -98,6 +102,8 @@ async function fetchEvents() {
 }
 
 const seasonKey = computed(() => (props.seasons ? pastSeason.value : null))
+const eventsKey = computed(() => `standing:${props.clan.clan.id}:${pastSeason.value}`)
+const loadingRows = computed(() => knownCount(eventsKey.value, FIRST_LOAD_ROWS))
 
 watch(closedSeason, fetchStanding, { immediate: true })
 watch(() => [seasonKey.value, route.query.page], () => { if (seasonKey.value !== null) fetchEvents() }, { immediate: true })
@@ -106,12 +112,10 @@ watch(() => [seasonKey.value, route.query.page], () => { if (seasonKey.value !==
 <template>
   <section class="standing-tab">
     <div class="standing-tab__totals">
-      <template v-if="shown">
-        <StatBlock v-if="pastSeason" label="Finished" :value="`#${shown.rank}`" />
-        <StatBlock v-if="pastSeason" label="Standing" :value="formatStanding(shown.standing)" />
-        <StatBlock label="Base" :value="formatStanding(shown.baseStanding)" />
-        <StatBlock label="Earned" :value="formatSignedStanding(shown.earned)" />
-      </template>
+      <StatBlock v-if="pastSeason" label="Finished" :value="shown ? `#${shown.rank}` : ''" />
+      <StatBlock v-if="pastSeason" label="Standing" :value="shown ? formatStanding(shown.standing) : ''" />
+      <StatBlock label="Base" :value="shown ? formatStanding(shown.baseStanding) : ''" />
+      <StatBlock label="Earned" :value="shown ? formatSignedStanding(shown.earned) : ''" />
       <BaseSelect
         v-if="seasonOptions.length > 1"
         class="standing-tab__season"
@@ -126,7 +130,7 @@ watch(() => [seasonKey.value, route.query.page], () => { if (seasonKey.value !==
       :columns="columns"
       :rows="rows"
       :loading="eventsLoading"
-      :loading-rows="6"
+      :loading-rows="loadingRows"
       row-key="id"
       empty-message="No Standing moved yet this season"
     >

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/wiki/components/demo.css'
 import { positionWeight, weightedTotal } from '@/wiki/apCurve'
 import { computed, ref } from 'vue'
 import { formatFixed } from '@/utils/formatters'
@@ -35,16 +36,16 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
 </script>
 
 <template>
-  <figure class="sandbox">
+  <figure class="wiki-demo">
     <div class="sandbox__controls">
-      <label class="sandbox__slider">
-        <span class="field-label">New play, raw AP</span>
-        <input v-model.number="newAp" type="range" min="0" :max="max" step="5" />
-        <span class="sandbox__slider-value">{{ newAp }}</span>
+      <label class="wiki-demo__field sandbox__slider">
+        <span class="field-label">New Play, Raw AP</span>
+        <span class="wiki-demo__value">{{ newAp }}</span>
+        <input v-model.number="newAp" class="slider" type="range" min="0" :max="max" step="5" />
       </label>
-      <div class="sandbox__totals">
-        <span class="field-label">Your total</span>
-        <span class="sandbox__total">
+      <div class="wiki-demo__field">
+        <span class="field-label">Your Total</span>
+        <span class="wiki-demo__value sandbox__total">
           <span class="sandbox__num">{{ formatFixed(totalBefore, 1) }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -62,7 +63,7 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
         <tr>
           <th>#</th>
           <th>Raw AP</th>
-          <th>Counts for</th>
+          <th>Counts For</th>
           <th>Adds</th>
         </tr>
       </thead>
@@ -76,22 +77,13 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
       </tbody>
     </table>
 
-    <figcaption class="sandbox__breakdown">
-      The new play brings {{ formatFixed(direct, 1) }} at its landing spot, and nudging everything
-      below it one place down costs {{ formatFixed(slideCost, 1) }}, leaving +{{ formatFixed(delta, 1) }}.
+    <figcaption class="caption">
+      The new play adds {{ formatFixed(direct, 1) }} at its spot and pushing everything below it one place down costs {{ formatFixed(slideCost, 1) }} so you end up with +{{ formatFixed(delta, 1) }}.
     </figcaption>
   </figure>
 </template>
 
 <style scoped>
-.sandbox {
-  margin: 0 0 var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
-  padding: var(--space-md);
-}
-
 .sandbox__controls {
   display: flex;
   align-items: flex-end;
@@ -101,38 +93,14 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
 }
 
 .sandbox__slider {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   flex: 1;
   min-width: 200px;
-}
-
-.sandbox__slider input {
-  accent-color: var(--accent);
-}
-
-.sandbox__slider-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-lg);
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.sandbox__totals {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .sandbox__total {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-lg);
-  font-weight: 500;
-  color: var(--text-primary);
 }
 
 .sandbox__total svg {
@@ -150,40 +118,22 @@ const formatWeight = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`
   min-width: 7ch;
 }
 
-.sandbox__table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.sandbox__table th {
-  padding: var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
+.wiki-demo .sandbox__table th,
+.wiki-demo .sandbox__table td {
+  padding: var(--space-xs) var(--space-md);
   text-align: right;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
 }
 
 .sandbox__table td {
-  padding: 3px var(--space-sm);
-  border-bottom: 1px solid color-mix(in srgb, var(--bg-overlay) 40%, transparent);
-  text-align: right;
   font-family: var(--font-mono);
   font-size: var(--text-caption);
   color: var(--text-primary);
 }
 
-.sandbox__row--new td {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+.sandbox__table tbody tr.sandbox__row--new td {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-surface));
   color: var(--accent);
   font-weight: 600;
 }
 
-.sandbox__breakdown {
-  margin-top: var(--space-sm);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
 </style>

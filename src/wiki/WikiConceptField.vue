@@ -406,7 +406,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--chip-color) 35%, var(--bg-overlay));
   border-radius: var(--radius-pill);
   background: var(--bg-surface);
   color: var(--chip-color);
@@ -415,7 +414,7 @@ onUnmounted(() => {
 }
 
 .chip--in .chip__face {
-  animation: chip-pop 240ms ease-out;
+  animation: chip-pop var(--dur-enter) var(--ease-out);
 }
 
 .chip__half {
@@ -436,7 +435,7 @@ onUnmounted(() => {
     color-mix(in srgb, var(--chip-color) 40%, var(--text-primary)),
     var(--chip-color)
   );
-  animation: edge-cool 480ms ease-out forwards;
+  animation: edge-cool var(--dur-move) var(--ease-out) forwards;
 }
 
 @keyframes edge-cool {

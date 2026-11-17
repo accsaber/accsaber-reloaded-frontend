@@ -11,12 +11,14 @@ import { useNow } from '@/composables/useNow'
 import type { ClanWarResponse } from '@/types/api/clans'
 import type { Tab } from '@/types/display'
 import type { Page } from '@/types/pagination'
+import { knownCount, rememberCount } from '@/utils/knownCount'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import WarScorebug from './WarScorebug.vue'
 
 const PAGE_SIZE = 20
 const FIRST_LOAD_ROWS = 6
+const FIRST_LOAD_CLAN_ROWS = 3
 const FILTER_TABS: Tab[] = [
   { key: 'all', label: 'All' },
   { key: 'open', label: 'Open' },
@@ -46,6 +48,11 @@ const error = ref<string | null>(null)
 const openOnly = computed(() => route.query.open === '1')
 const search = ref(String(route.query.search ?? ''))
 const totalPages = computed(() => wars.value?.totalPages ?? 0)
+const countKey = computed(() => `wars:${props.clanId ?? ''}:${openOnly.value}`)
+const pagesExpected = computed(() => knownCount(`${countKey.value}:pages`, props.clanId ? 1 : 2))
+const placeholders = computed(() =>
+  knownCount(countKey.value, props.clanId ? FIRST_LOAD_CLAN_ROWS : FIRST_LOAD_ROWS),
+)
 const emptyMessage = computed(() => {
   if (!props.seasonRunning) return 'No season is running'
   return openOnly.value ? 'No open wars' : 'No wars yet'
@@ -66,6 +73,7 @@ async function fetchWars() {
   error.value = null
   try {
     const { getClanWars } = await import('@/api/clans')
+    const key = countKey.value
     wars.value = await getClanWars({
       page: paginationParams.value.page,
       size: PAGE_SIZE,
@@ -73,6 +81,8 @@ async function fetchWars() {
       open: openOnly.value || undefined,
       search: String(route.query.search ?? '').trim() || undefined,
     })
+    rememberCount(key, wars.value.content.length)
+    rememberCount(`${key}:pages`, wars.value.totalPages)
   } catch (err) {
     error.value = parseApiError(err, 'Could not load wars').message
   } finally {
@@ -111,7 +121,7 @@ watch(() => [route.query.page, route.query.open, route.query.search, props.clanI
 
     <EmptyState v-if="!loading && !wars?.content.length" :message="emptyMessage" />
     <SwapList v-else class="war-list__rows" :items="wars?.content ?? []" :item-key="(war) => war.id"
-      :loading="loading && !wars" :refreshing="loading && !!wars" :placeholders="FIRST_LOAD_ROWS">
+      :loading="loading && !wars" :refreshing="loading && !!wars" :placeholders="placeholders">
       <template #placeholder>
         <SkeletonLoader class="placeholder" height="var(--scorebug-h)" />
       </template>
@@ -120,7 +130,7 @@ watch(() => [route.query.page, route.query.open, route.query.search, props.clanI
       </template>
     </SwapList>
 
-    <div v-if="totalPages > 1 || loading" class="war-list__pages">
+    <div v-if="totalPages > 1 || (loading && pagesExpected > 1)" class="war-list__pages">
       <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages"
         @update:page="setPage" />
     </div>

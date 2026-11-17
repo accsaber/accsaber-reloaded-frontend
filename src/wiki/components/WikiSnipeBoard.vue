@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/wiki/components/demo.css'
 import { buildSnipePlaylistUrl, getClosestScores } from '@/api/snipe'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -115,7 +116,7 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
 </script>
 
 <template>
-  <figure class="board" data-wiki-raw>
+  <figure class="wiki-demo board" data-wiki-raw>
     <div class="board__head">
       <div class="board__pair">
         <span class="field-label">Sniping</span>
@@ -137,12 +138,12 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
 
     <EmptyState
       v-else-if="samePlayer"
-      message="Pick somebody other than yourself, since you cannot snipe your own scores."
+      message="Pick somebody other than yourself because you can't snipe your own scores."
     />
 
     <EmptyState
       v-else-if="failed"
-      message="Could not load this matchup right now. The real thing lives on any player's profile."
+      message="Couldn't load this matchup right now. You can find the real one on any player's profile."
     />
 
     <EmptyState
@@ -189,11 +190,6 @@ watch([() => props.sniperId, activeTargetId], load, { immediate: true })
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  margin: 0 0 var(--space-md);
-  padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
 }
 
 .board__head {

@@ -57,20 +57,19 @@ const mostAsked = MOST_ASKED
     <div class="home__below">
       <div class="home__blurb">
         <p>
-          How a score turns into AP, how maps get ranked, what every system on the platform
-          actually does. It is written for players first, and plain words and real examples beat
-          technical vocabulary everywhere except the developer corner.
+          Every single bit of information about every single system in AccSaber, all in one
+          place. It's written for players first so you'll find plain words and real examples
+          everywhere except the developer corner.
         </p>
         <p>
-          The mechanics run deep, and for too long the answers lived scattered across Discord
-          threads where you had to know the right person to ask. This exists because guessing
-          sucks, and now the answers live here, maintained right alongside the platform itself,
-          where they never get the chance to drift from the truth.
+          AccSaber has a lot going on and for way too long the answers were spread across Discord
+          threads where you had to know the right person to ask. Guessing sucks so now everything
+          is here and it gets updated together with the site.
         </p>
       </div>
 
       <section class="home__section">
-        <h2 class="home__section-title section-title">Most asked</h2>
+        <h2 class="home__section-title section-title">Most Asked</h2>
         <div class="home__cards">
           <WikiDocCard v-for="entry in mostAsked" :key="entry.slug" :entry="entry" />
         </div>
@@ -108,7 +107,7 @@ const mostAsked = MOST_ASKED
 
 .home__tagline {
   margin: var(--space-sm) 0 0;
-  font-size: 1.05rem;
+  font-size: var(--text-card-title);
   color: var(--text-secondary);
 }
 
@@ -120,8 +119,8 @@ const mostAsked = MOST_ASKED
 }
 
 .home__blurb {
-  max-width: 68ch;
-  font-size: 1rem;
+  max-width: 50ch;
+  font-size: var(--text-card-title);
   line-height: 1.7;
   color: var(--text-primary);
 }

@@ -69,12 +69,12 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      The snipe page gives you a Beat Saber playlist of the maps you are closest to taking off
+      The snipe page gives you a Beat Saber playlist of the maps where you're closest to beating
       somebody.
     </p>
     <p>
-      Here is a preview running on live scores. If you are logged in it is your own profile
-      against the top player. You can point it at anybody else instead.
+      Here's a preview using live scores. If you're logged in it's your own profile against the top
+      player and you can point it at anybody else instead.
     </p>
 
     <WikiSnipeBoard
@@ -85,48 +85,44 @@ onMounted(async () => {
       :target-name="target.name"
     />
     <p v-else-if="resolveFailed" class="board-error">
-      The live example could not load right now. You will find the real one on any player's
-      profile.
+      The live example couldn't load right now. You can find the real one on any player's profile.
     </p>
     <SkeletonLoader v-else variant="card" height="320px" />
 
-    <WikiHeading id="what-it-shows">What lands on the list</WikiHeading>
+    <WikiHeading id="what-it-shows">Which maps make the list</WikiHeading>
     <p>
-      You open it from any player's profile, from the button next to their ScoreSaber and
-      BeatLeader links. The site looks for maps where you both have a score and they are ahead
-      of you.
+      You open it from any player's profile with the button next to their ScoreSaber and BeatLeader
+      links. The site looks for maps where you both have a score and they're ahead of you.
     </p>
 
     <WikiHeading id="order">How close counts as close</WikiHeading>
     <p>
-      By default the list runs closest first. It measures closeness in accuracy instead of
-      raw points. Five thousand points is nothing on a long map and a lot on a short one.
+      By default the list starts with the closest ones. It measures closeness in accuracy instead of
+      raw points because 5,000 points is nothing on a long map and a lot on a short one.
     </p>
 
     <WikiHeading id="sorting">Sorting the list</WikiHeading>
     <p>
-      Closest first is the right order for taking a score off somebody. It is a poor one for
-      planning where your next AP comes from, because the map you are two hundredths of a
-      percent away from can be worth almost nothing. The sort dropdown has five orders and the
-      arrow beside it flips any of them around.
+      Closest first is the right order for beating somebody's score. It's a bad one for planning
+      where your next AP comes from because the map where you're 0.02% away can be worth almost
+      nothing. The sort dropdown has five orders and the arrow next to it reverses any of them.
     </p>
 
     <WikiCompareTable :columns="SORT_COLUMNS" :rows="SORT_ROWS" />
 
     <p>
-      Most AP to gain is the one to use when you are chasing your own total. Leaderboard gap
-      shows where they sit furthest ahead on the map's leaderboard. A handful of old scores have
-      no rank stored and those drop to the bottom whichever way you flip it. The sort goes into
-      the address bar. You can share the link with the exact view you were looking at.
+      Most AP to gain is the one to use when you're chasing your own total. Leaderboard gap shows
+      where they're furthest ahead of you on the map's leaderboard. A handful of old scores have no
+      rank stored and those go to the bottom whichever way you sort. The sort is saved in the
+      address bar so you can share the link with the exact view you were looking at.
     </p>
 
     <WikiHeading id="playlist">The playlist</WikiHeading>
     <p>
-      The filters and sort all carry into the file. A playlist you built on Most AP to gain
-      arrives in the game in that order and keeps it when Beat Saber resyncs. All snipes gives
-      you the entire list, which gets long against somebody far ahead of you. Capping it at
-      twenty or fifty gives you the top of whatever order you picked. You can sync the playlist
-      in-game.
+      The filters and sort are all kept in the file. A playlist you built on Most AP to gain shows
+      up in the game in that order and keeps it when Beat Saber resyncs. All snipes gives you the
+      entire list which gets long against somebody far ahead of you. Capping it at 20 or 50 gives
+      you the top of whatever order you picked. You can sync the playlist in-game.
     </p>
   </WikiProse>
 </template>

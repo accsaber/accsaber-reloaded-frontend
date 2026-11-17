@@ -64,12 +64,12 @@ const wholeTrack = computed({
   <div class="acc-slider">
     <label class="acc-slider__row">
       <span class="acc-slider__label">Whole %</span>
-      <input v-model.number="wholeTrack" type="range" class="acc-slider__input"
+      <input v-model.number="wholeTrack" type="range" class="slider acc-slider__input"
         :style="{ backgroundImage: WHOLE_TICKS }" min="0" :max="WHOLE_TRACK" step="1" />
     </label>
     <label class="acc-slider__row">
       <span class="acc-slider__label">Decimal</span>
-      <input v-model.number="decimal" type="range" class="acc-slider__input" min="0" :max="whole >= 100 ? 0 : 99"
+      <input v-model.number="decimal" type="range" class="slider acc-slider__input" min="0" :max="whole >= 100 ? 0 : 99"
         step="1" :disabled="whole >= 100" />
     </label>
   </div>
@@ -97,49 +97,5 @@ const wholeTrack = computed({
 
 .acc-slider__input {
   flex: 1;
-  height: 4px;
-  appearance: none;
-  background: var(--bg-base);
-  border-radius: var(--radius-xs);
-  outline: none;
-  cursor: pointer;
-}
-
-.acc-slider__input:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.acc-slider__input::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent, var(--text-primary));
-  border: 2px solid var(--bg-elevated);
-  cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-out);
-}
-
-.acc-slider__input:active::-webkit-slider-thumb {
-  transform: scaleX(1.12);
-}
-
-.acc-slider__input:disabled::-webkit-slider-thumb {
-  cursor: not-allowed;
-}
-
-.acc-slider__input::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent, var(--text-primary));
-  border: 2px solid var(--bg-elevated);
-  cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-out);
-}
-
-.acc-slider__input:active::-moz-range-thumb {
-  transform: scaleX(1.12);
 }
 </style>

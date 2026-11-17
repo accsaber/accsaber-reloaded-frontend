@@ -198,8 +198,8 @@ const PATTERN_ROWS: WikiCompareRow[] = [
         </tr>
       </tbody>
     </table>
-    <p class="footnote">* True Acc counts doubles as one swing.</p>
-    <p class="footnote">
+    <p class="caption footnote">* True Acc counts doubles as one swing.</p>
+    <p class="caption footnote">
       ** Only applies when the bomb is in the swing path of the note before it.
     </p>
 
@@ -213,7 +213,7 @@ const PATTERN_ROWS: WikiCompareRow[] = [
       A check means the pattern is allowed in that category.
     </p>
     <WikiCompareTable :columns="PATTERN_COLUMNS" :rows="PATTERN_ROWS" />
-    <p class="footnote">
+    <p class="caption footnote">
       *** Middle-row diagonals into the outer lane are allowed in Standard Acc when they are rare, at least 500ms
       from any other note and on a clear musical emphasis.
     </p>
@@ -245,7 +245,6 @@ const PATTERN_ROWS: WikiCompareRow[] = [
 
 <style scoped>
 .footnote {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  margin: 0 0 var(--space-md);
 }
 </style>

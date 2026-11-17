@@ -20,27 +20,24 @@ const EXAMPLES = [
 <template>
   <WikiProse>
     <p>
-      Every ranked score you set gets a number attached to it, its AP, short for Accuracy
-      Points. There is no randomness in it and nothing hidden, just two numbers and one
-      curve. It might be a little confusing at first, but this page will walk you through the process.
+      Every ranked score you set gets AP which is short for Accuracy Points. Nothing about it is
+      random or hidden, it's just two numbers on one curve.
     </p>
 
-    <WikiHeading id="numbers">The two numbers</WikiHeading>
+    <WikiHeading id="numbers">The two numbers behind your AP</WikiHeading>
     <p>
-      The first number is your accuracy, your score divided by the maximum score the map
-      allows.
+      The first one is your accuracy which is your score divided by the max score the map allows.
     </p>
     <p>
-      The second is the map's complexity, which is AccSaber's own measure of how hard a map
-      is to acc on, on a scale from 0 to 14. It is assigned when a map gets ranked and can be
-      reweighted after a month or during a global reweight.
+      The second one is the map's complexity. That's AccSaber's own measure of how hard a map is to
+      acc on and it goes from 0 to 14. A map gets it when it's ranked and it can be reweighted after
+      a month or during a global reweight.
     </p>
 
-    <WikiHeading id="the-curve">The curve</WikiHeading>
+    <WikiHeading id="the-curve">How accuracy becomes AP</WikiHeading>
     <p>
-      Accuracy does not turn into AP in a straight line. It runs through a curve. Drag the point around and the
-      climb from 97% to 98% gives several times more than the climb from 90% to 91%. That is the
-      whole design.
+      Accuracy doesn't become AP in a straight line because it's on a curve. Drag the point around
+      and you'll see that going from 97% to 98% gives several times more than going from 90% to 91%.
     </p>
     <WikiCurveExplorer
       :fn="rawAp"
@@ -60,15 +57,14 @@ const EXAMPLES = [
       :initial-param="7"
     />
     <p>
-      The complexity slider moves the same curve up and down. The same accuracy on a higher
+      The complexity slider pushes the same curve up or down so the same accuracy on a higher
       complexity gets more AP.
     </p>
 
-    <WikiHeading id="two-roads">Two roads to big AP</WikiHeading>
+    <WikiHeading id="two-roads">Two ways to get big AP</WikiHeading>
     <p>
-      Because both numbers multiply together, a monster accuracy on a low-complexity map can
-      be worth less than a good accuracy on a high-complexity one. The curve compensates for both.
-      Real numbers, straight from the actual curve:
+      Both numbers multiply together so a monster accuracy on a low complexity map can be worth less
+      than a good accuracy on a high complexity one. Here are real numbers from the actual curve:
     </p>
     <table>
       <thead>
@@ -87,20 +83,19 @@ const EXAMPLES = [
       </tbody>
     </table>
     <p>
-      The 98% on complexity 10 beats the 99% on complexity 3. Raw accuracy does not carry
-      a score, and yet the last row squeezes that same easy map up to 99.5% and beats everything
-      else on the table.
+      The 98% on complexity 10 beats the 99% on complexity 3 so raw accuracy alone doesn't decide
+      it. But look at the last row where that same easy map at 99.5% beats everything else on the
+      table.
     </p>
 
     <WikiHeading id="ap-vs-weighted">Two kinds of AP</WikiHeading>
     <p>
-      The AP on a
-      score and the AP total on your profile are related but different numbers. Each score
-      carries the raw AP everything above works out. Your profile total then weighs all of your
-      scores, counts your best plays at nearly full value and fades the rest out the further
-      down your list they sit. That is why a shiny new 40th-best play barely nudges your total
-      while improving your number one means way more. How that weighting works is covered in
-      <RouterLink to="/wiki/weighted-ap">Weighted AP</RouterLink>.
+      The AP on a score and the AP total on your profile are related but they're not the same
+      number. Each score has the raw AP from everything above. Your profile total then weights all
+      your scores so your best plays count for almost everything and the rest count less the further
+      down your list they are. That's why a shiny new 40th best play barely changes your total while
+      improving your number one means way more. <RouterLink to="/wiki/weighted-ap">Weighted
+      AP</RouterLink> explains how that works.
     </p>
   </WikiProse>
 </template>

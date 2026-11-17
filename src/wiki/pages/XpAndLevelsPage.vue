@@ -26,13 +26,13 @@ const XP_SOURCES = [
     key: 'score',
     color: 'var(--xp-score)',
     label: 'Ranked plays',
-    body: 'Every completed play on a ranked map gives XP. Better accuracy and higher complexity give more.',
+    body: 'Every play you finish on a ranked map gives XP and you get more for better accuracy and higher complexity.',
   },
   {
     key: 'milestone',
     color: 'var(--xp-milestone)',
     label: 'Milestones',
-    body: 'Complete one once and you keep its XP.',
+    body: 'Complete one and its XP is yours for good.',
   },
   {
     key: 'set-bonus',
@@ -44,19 +44,19 @@ const XP_SOURCES = [
     key: 'mission',
     color: 'var(--xp-mission)',
     label: 'Missions',
-    body: 'Daily and weekly objectives sized to your skill. Attempts count toward some of them.',
+    body: 'Daily and weekly goals made for your skill level. For some of them even your attempts count.',
   },
   {
     key: 'campaign',
     color: 'var(--xp-campaign)',
     label: 'Campaigns',
-    body: 'Clearing campaign challenges gives XP on top of what the play itself gave.',
+    body: 'Clearing campaign challenges gives XP on top of what the play already gave you.',
   },
   {
     key: 'event',
     color: 'var(--xp-event)',
     label: 'Events',
-    body: 'Missions and bonuses from a live event.',
+    body: 'Missions and bonuses from whatever event is live.',
   },
   {
     key: 'clan',
@@ -95,14 +95,14 @@ onMounted(async () => {
 <template>
   <WikiProse>
     <p>
-      AP measures how good you are. XP measures how much you have played. Everything you do on
-      AccSaber gives XP, levels never cap, and some levels give you items.
+      AP is about how good you are and XP is about how much you play. Pretty much everything you
+      do on AccSaber gives XP, levels never stop and some of them give you items.
     </p>
 
-    <WikiHeading id="sources">Seven sources</WikiHeading>
+    <WikiHeading id="sources">Where XP comes from</WikiHeading>
     <p>
-      XP comes from seven sources. Each has its own color, the same colors your profile uses to
-      show where yours came from:
+      XP comes from seven places and each one has its own color. They're the same colors your
+      profile uses to show where your XP came from:
     </p>
     <div class="sources">
       <div
@@ -118,9 +118,8 @@ onMounted(async () => {
 
     <WikiHeading id="score-xp">XP from a play</WikiHeading>
     <p>
-      Every completed play starts at a flat 25 XP. A bonus goes on top based on your
-      accuracy and the map's complexity. The bonus curve is even steeper near the top than the
-      AP curve:
+      Every play you finish starts at 25 XP and you get a bonus on top for your accuracy and the
+      map's complexity. That bonus gets even steeper near the top than the AP curve does:
     </p>
     <WikiCurveExplorer
       :fn="scoreXp"
@@ -140,15 +139,15 @@ onMounted(async () => {
       :initial-param="8"
     />
     <p>
-      Improving a personal best gives the same base plus one and a half times the bonus you
-      gained over your old play. A worse score than your best still gives the flat 25.
+      Beating your own best gives the same 25 plus 1.5x the bonus you gained over your old play.
+      A score that's worse than your best still gives the flat 25.
     </p>
 
-    <WikiHeading id="ladder">The ladder</WikiHeading>
+    <WikiHeading id="ladder">Levels and what they unlock</WikiHeading>
     <p>
-      Each level costs more XP than the last until level 100, where the cost stays flat. Every
-      stretch of levels has a named tier. Some levels unlock items. Drag through it, this is
-      live data:
+      Every level costs more XP than the one before it until level 100 and from there the cost
+      stays the same. Each stretch of levels has its own tier name and some levels unlock items.
+      Drag through it, this is live data:
     </p>
     <WikiXpLadder
       v-if="ladderReady"
@@ -159,8 +158,8 @@ onMounted(async () => {
       :avatar-url="authStore.userProfile?.avatarUrl"
       :avatar-fallback-url="authStore.userProfile?.avatarFallbackUrl"
     />
-    <p v-else-if="ladderFailed" class="ladder-error">
-      The ladder could not load right now. It lives on your profile too.
+    <p v-else-if="ladderFailed">
+      The ladder couldn't load right now but you can also find it on your profile.
     </p>
     <SkeletonLoader v-else variant="card" />
   </WikiProse>
@@ -179,16 +178,13 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-xs);
   padding: var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--source-color) 40%, var(--bg-overlay));
   border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--source-color) 5%, var(--bg-surface));
+  background: var(--bg-base);
 }
 
 .sources__label {
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--text-body);
+  font-weight: 600;
   color: var(--source-color);
 }
 
@@ -196,9 +192,5 @@ onMounted(async () => {
   font-size: var(--text-caption);
   color: var(--text-primary);
   line-height: 1.6;
-}
-
-.ladder-error {
-  color: var(--text-secondary);
 }
 </style>

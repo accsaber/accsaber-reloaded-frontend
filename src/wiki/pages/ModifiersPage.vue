@@ -24,9 +24,8 @@ const MODIFIER_ROWS: WikiCompareRow[] = [
 <template>
   <WikiProse>
     <p>
-      A modifier on AccSaber can never raise your score. No Fail cuts it in half and the rest
-      leave it as it was. Faster Song, Ghost Notes and the others are there for your own
-      enjoyment.
+      A modifier on AccSaber can never raise your score. No Fail cuts it in half and the rest leave
+      it as it was. Faster Song, Ghost Notes and the others are only there for your own enjoyment.
     </p>
 
     <WikiHeading id="the-list">Every modifier</WikiHeading>
@@ -34,14 +33,14 @@ const MODIFIER_ROWS: WikiCompareRow[] = [
 
     <WikiHeading id="banned">Why four of them are banned</WikiHeading>
     <p>
-      No Obstacles, No Bombs, Slower Song and Small Notes either make accuracy easier than the
-      map intends or change what a clean cut means. Plays with any of these get no AP and no
-      leaderboard entry.
+      No Obstacles, No Bombs, Slower Song and Small Notes either make accuracy easier than the map
+      intends or change what a clean cut means. Plays with any of these get no AP and don't show on
+      a leaderboard.
     </p>
     <p>
-      Campaigns are the one exception. Some campaign challenges ask you to play with modifiers
-      that ranked play forbids. Those plays are recorded for the campaign and never touch a
-      leaderboard.
+      Campaigns are the one exception because some campaign challenges ask you to play with
+      modifiers that ranked play doesn't allow. Those plays are recorded for the campaign and never
+      count for a leaderboard.
     </p>
   </WikiProse>
 </template>

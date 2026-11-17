@@ -2,6 +2,7 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import HintTooltip from '@/components/common/HintTooltip.vue'
 import IconButton from '@/components/common/IconButton.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import type {
   ClanWarParticipantResponse,
   ClanWarPoolEntryResponse,
@@ -22,6 +23,7 @@ const props = defineProps<{
   rules: ClanWarStrikeRulesResponse
   fighter: ClanWarParticipantResponse
   pool: ClanWarPoolEntryResponse[]
+  pending: boolean
   aimed: boolean
   canAim: boolean
   saving: boolean
@@ -144,10 +146,12 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
           <tr class="target__row" :class="{ 'target__row--alt': index % 2 === 1 }" @click="emit('toggle', entry.difficulty.id)">
             <th scope="row" class="target__map"><WarMapRow :difficulty="entry.difficulty" plain /></th>
             <td class="target__num" data-label="Hit At">
-              <template v-if="p">{{ p.noScore ? 'Any play' : (p.hit ?? '-') }}</template>
+              <SkeletonLoader v-if="pending" class="target__ghost" width="56px" height="14px" />
+              <template v-else-if="p">{{ p.noScore ? 'Any play' : (p.hit ?? '-') }}</template>
             </td>
             <td class="target__num" data-label="Damage">
-              <template v-if="p">
+              <SkeletonLoader v-if="pending" class="target__ghost" width="32px" height="14px" />
+              <template v-else-if="p">
                 <span class="target__damage">{{ p.damage != null ? formatDamage(p.damage) : '-' }}</span>
                 <span v-if="!p.noScore && p.hit === null" class="caption target__note">cannot be beaten</span>
                 <span v-if="p.breaks" class="caption target__note target__note--break">breaks them</span>
@@ -158,7 +162,8 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
               </template>
             </td>
             <td class="target__num target__chip" data-label="Chip At">
-              <template v-if="p && !p.noScore">{{ p.chip === 'any play' ? 'Any play' : p.chip }}</template>
+              <SkeletonLoader v-if="pending" class="target__ghost" width="56px" height="14px" />
+              <template v-else-if="p && !p.noScore">{{ p.chip === 'any play' ? 'Any play' : p.chip }}</template>
             </td>
             <td class="target__num" data-label="Your PB">
               {{ sc.you }}
@@ -190,11 +195,11 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
               </IconButton>
             </td>
           </tr>
-          <tr v-if="expanded === entry.difficulty.id && entry.difficulty.maxScore != null" class="target__board">
+          <tr v-if="entry.difficulty.maxScore != null" class="target__board">
             <td colspan="7">
-              <Transition name="collapse" appear>
-                <div class="collapsible">
-                  <div>
+              <Transition name="collapse">
+                <div v-if="expanded === entry.difficulty.id" class="collapsible">
+                  <div class="target__board-body">
                     <WarMapBoardView
                       :war="war"
                       :rules="rules"
@@ -389,7 +394,16 @@ const rows = computed(() => props.pool.map((entry) => ({ entry, plan: plan(entry
 }
 
 .target__table .target__board td {
-  padding: 0 0 var(--space-sm);
+  padding: 0;
+}
+
+.target__board-body {
+  padding-bottom: var(--space-sm);
+}
+
+.target__ghost {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 @media (max-width: 767px) {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/wiki/components/demo.css'
 import { computed, ref } from 'vue'
 import { clamp } from '@/utils/math'
 
@@ -111,28 +112,29 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <figure class="explorer">
+  <figure class="wiki-demo">
     <div class="explorer__readouts">
-      <div class="explorer__readout">
+      <div class="wiki-demo__field">
         <span class="field-label">{{ xLabel }}</span>
-        <span class="explorer__readout-value">{{ formatX(x) }}</span>
+        <span class="wiki-demo__value">{{ formatX(x) }}</span>
       </div>
-      <div class="explorer__readout">
+      <div class="wiki-demo__field">
         <span class="field-label">{{ yLabel }}</span>
-        <span class="explorer__readout-value explorer__readout-value--accent">
+        <span class="wiki-demo__value explorer__readout-value--accent">
           {{ formatY(pointY) }}
         </span>
       </div>
-      <label v-if="hasParam" class="explorer__param">
+      <label v-if="hasParam" class="wiki-demo__field explorer__param">
         <span class="field-label">{{ paramLabel }}</span>
+        <span class="wiki-demo__value">{{ param }}</span>
         <input
           v-model.number="param"
+          class="slider"
           type="range"
           :min="paramMin"
           :max="paramMax"
           :step="paramStep ?? 1"
         />
-        <span class="explorer__param-value">{{ param }}</span>
       </label>
     </div>
 
@@ -199,38 +201,17 @@ function onKeydown(event: KeyboardEvent) {
         <circle class="explorer__point" :cx="pointSvgX" :cy="pointSvgY" r="6" />
       </g>
     </svg>
-    <figcaption class="explorer__hint">Drag the point or use arrow keys.</figcaption>
+    <figcaption class="caption explorer__hint">Drag the point or use the arrow keys</figcaption>
   </figure>
 </template>
 
 <style scoped>
-.explorer {
-  margin: 0 0 var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
-  padding: var(--space-md);
-}
-
 .explorer__readouts {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-xl);
   flex-wrap: wrap;
   margin-bottom: var(--space-md);
-}
-
-.explorer__readout {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.explorer__readout-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-lg);
-  font-weight: 500;
-  color: var(--text-primary);
 }
 
 .explorer__readout-value--accent {
@@ -238,21 +219,8 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 .explorer__param {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   margin-left: auto;
   min-width: 160px;
-}
-
-.explorer__param input {
-  accent-color: var(--accent);
-}
-
-.explorer__param-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-stat-inline);
-  color: var(--text-primary);
 }
 
 .explorer__chart {
@@ -304,7 +272,5 @@ function onKeydown(event: KeyboardEvent) {
 
 .explorer__hint {
   margin-top: var(--space-xs);
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 </style>

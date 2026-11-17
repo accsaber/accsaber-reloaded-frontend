@@ -37,7 +37,7 @@ const activeLabel = computed(() => props.segments.find((s) => s.active)?.label ?
         :title="`${segment.label} · ${segment.weight}`"
       />
     </div>
-    <p class="roll__caption">
+    <p class="caption roll__caption">
       <span v-if="activeLabel" class="roll__chosen">{{ activeLabel }}</span>
       {{ caption }}
     </p>
@@ -54,7 +54,6 @@ const activeLabel = computed(() => props.segments.find((s) => s.active)?.label ?
 .roll__bar {
   display: flex;
   height: 34px;
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   overflow: hidden;
   background: var(--bg-base);
@@ -68,7 +67,7 @@ const activeLabel = computed(() => props.segments.find((s) => s.active)?.label ?
   min-width: 2px;
   background: var(--bg-elevated);
   border-right: 1px solid var(--bg-base);
-  transition: background-color 160ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .roll__segment:last-child {
@@ -81,8 +80,6 @@ const activeLabel = computed(() => props.segments.find((s) => s.active)?.label ?
 
 .roll__caption {
   margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 
 .roll__chosen {
@@ -94,11 +91,5 @@ const activeLabel = computed(() => props.segments.find((s) => s.active)?.label ?
   content: ' · ';
   color: var(--text-tertiary);
   font-weight: 400;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .roll__segment {
-    transition: none;
-  }
 }
 </style>

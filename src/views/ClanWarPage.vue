@@ -109,6 +109,7 @@ const focused = computed(() => {
   return enemies.value.find((p) => p.player.id === id) ?? bestTarget.value
 })
 const focusId = computed(() => (rosterOpen.value ? (focused.value?.player.id ?? null) : null))
+const poolFocus = ref<string | null>(null)
 
 const wipe = computed(() => (war.value?.status === 'active' && detail.value ? warWipe(war.value, detail.value.strikeRules) : null))
 const wipeIn = computed(() => (wipe.value && wipe.value.at > now.value ? formatDuration(wipe.value.at - now.value) : ''))
@@ -170,8 +171,12 @@ async function load() {
   error.value = null
   try {
     const { getClanWar } = await import('@/api/clans')
-    const next = await getClanWar(warId.value, { focus: focusId.value ?? undefined })
-    if (request === detailRequest) detail.value = next
+    const focus = focusId.value
+    const next = await getClanWar(warId.value, { focus: focus ?? undefined })
+    if (request === detailRequest) {
+      detail.value = next
+      poolFocus.value = focus
+    }
   } catch {
     if (request !== detailRequest) return
     detail.value = null
@@ -399,6 +404,7 @@ watch([warId, () => auth.userId], loadParticipants, { immediate: true })
                 :rules="detail.strikeRules"
                 :fighter="fighter"
                 :pool="detail.pool"
+                :pending="poolFocus !== fighter.player.id"
                 :aimed="fighter.player.id === aimId"
                 :can-aim="canAim"
                 :saving="picking"

@@ -294,10 +294,11 @@ function everyone(next: ClanWarOrder) {
                 </span>
               </th>
             </tr>
-            <template v-for="fighter in group.fighters" :key="fighter.player.id">
+            <template v-for="(fighter, index) in group.fighters" :key="fighter.player.id">
             <tr
               @click="t.enemy && emit('focus', fighter.player.id)"
               :class="{
+                'roster__row--alt': index % 2 === 1,
                 'roster__row--focus': fighter.player.id === focusId,
                 'roster__row--pickable': t.enemy,
                 'roster__row--self': fighter.player.id === viewer?.player.id,
@@ -360,11 +361,11 @@ function everyone(next: ClanWarOrder) {
                 <span v-else class="roster__tag">Takes orders from their own clan</span>
               </td>
             </tr>
-            <tr v-if="t.enemy && fighter.player.id === focusId && $slots.detail" class="roster__detail">
+            <tr v-if="t.enemy && $slots.detail" class="roster__detail">
               <td :colspan="t.columns">
-                <Transition name="collapse" appear>
-                  <div class="collapsible">
-                    <div><slot name="detail" :fighter="fighter" /></div>
+                <Transition name="collapse">
+                  <div v-if="fighter.player.id === focusId" class="collapsible">
+                    <div class="roster__detail-body"><slot name="detail" :fighter="fighter" /></div>
                   </div>
                 </Transition>
               </td>
@@ -465,7 +466,7 @@ function everyone(next: ClanWarOrder) {
   vertical-align: middle;
 }
 
-.roster__table tbody tr:nth-child(even) {
+.roster__table .roster__row--alt {
   background: var(--bg-elevated);
 }
 
@@ -554,9 +555,13 @@ function everyone(next: ClanWarOrder) {
 }
 
 .roster__table .roster__detail td {
-  padding: 0 var(--space-sm) var(--space-sm);
+  padding: 0;
   border-top: none;
   background: color-mix(in srgb, var(--war-side) 10%, transparent);
+}
+
+.roster__detail-body {
+  padding: 0 var(--space-sm) var(--space-sm);
 }
 
 .roster__left-toggle {
@@ -703,8 +708,12 @@ function everyone(next: ClanWarOrder) {
   }
 
   .roster__table tr.roster__detail {
-    padding: 0 var(--space-xs) var(--space-xs);
+    padding: 0;
     border-top: none;
+  }
+
+  .roster__detail-body {
+    padding: 0 var(--space-xs) var(--space-xs);
   }
 }
 </style>

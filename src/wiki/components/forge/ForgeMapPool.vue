@@ -57,10 +57,10 @@ const overflow = computed(() => Math.max(0, props.total - tiles.value.length))
       />
       <span class="pool__picked-text">
         <span class="pool__picked-song">{{ picked.songName }}</span>
-        <span class="pool__picked-meta">
+        <span class="caption">
           {{ picked.songAuthor }} · mapped by {{ picked.mapAuthor }}
         </span>
-        <span class="pool__picked-stats">
+        <span class="caption pool__picked-stats">
           {{ picked.difficulty }} · complexity {{ (picked.complexity ?? 0).toFixed(2) }}
           <template v-if="picked.statistics?.maxAp">
             · best on record {{ Math.round(picked.statistics.maxAp).toLocaleString() }} AP
@@ -88,17 +88,15 @@ const overflow = computed(() => Math.max(0, props.total - tiles.value.length))
   width: 34px;
   height: 34px;
   border-radius: var(--radius-btn);
-  border: 1px solid var(--bg-overlay);
   background: var(--bg-elevated);
   overflow: hidden;
   opacity: 0.4;
-  transition: opacity 160ms ease, border-color 160ms ease;
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .pool__tile--chosen {
   opacity: 1;
-  border-color: var(--accent);
-  outline: 1px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -114,11 +112,9 @@ const overflow = computed(() => Math.max(0, props.total - tiles.value.length))
   align-items: center;
   padding: 0 var(--space-sm);
   height: 34px;
-  border-radius: var(--radius-btn);
-  border: 1px dashed var(--bg-overlay);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .pool__picked {
@@ -126,9 +122,8 @@ const overflow = computed(() => Math.max(0, props.total - tiles.value.length))
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
-  background: var(--bg-surface);
+  background: var(--bg-base);
 }
 
 .pool__picked-cover {
@@ -151,21 +146,7 @@ const overflow = computed(() => Math.max(0, props.total - tiles.value.length))
   color: var(--text-primary);
 }
 
-.pool__picked-meta,
-.pool__picked-stats {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .pool__picked-stats {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-tertiary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pool__tile {
-    transition: none;
-  }
 }
 </style>

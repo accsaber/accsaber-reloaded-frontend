@@ -17,15 +17,15 @@ const formatWeight = (position: number) => {
 <template>
   <WikiProse>
     <p>
-      Two numbers share the name AP. Each score has its raw AP, straight from <RouterLink
-      to="/wiki/accuracy-and-ap">the curve</RouterLink>. Your profile total is a weighted sum of
-      all your plays, where your best plays count the most.
+      There are actually two kinds of AP. Every score has its own raw AP from <RouterLink
+      to="/wiki/accuracy-and-ap">the curve</RouterLink> and your profile total is all of them
+      added up but your best plays count way more than the rest.
     </p>
 
     <WikiHeading id="how-it-works">Your best plays count the most</WikiHeading>
     <p>
-      Picture your plays in a category lined up from best raw AP to worst. The play at the top
-      counts at full value. Each spot down the line counts a little less:
+      Picture your plays in a category lined up from best raw AP to worst. The one at the top
+      counts in full and each spot under it counts a bit less:
     </p>
     <table>
       <thead>
@@ -42,35 +42,35 @@ const formatWeight = (position: number) => {
       </tbody>
     </table>
     <p>
-      By the mid-twenties a play adds almost nothing. Your total is the sum of every play times
-      its multiplier.
+      Once you're around your 25th best play it adds almost nothing. Your total is every play
+      multiplied by what its spot counts for and then all of that added together.
     </p>
 
-    <WikiHeading id="sandbox">Watch a new play land</WikiHeading>
+    <WikiHeading id="sandbox">Add a play and watch your total</WikiHeading>
     <p>
-      Here is a sample profile. Slide the raw AP of an incoming play and watch what happens to
-      the total. A play landing mid-list only counts at its landing spot's multiplier. It
-      pushes every play below it one spot down.
+      Here's a sample profile. Slide the raw AP of a new play and watch what happens to the
+      total. A play that ends up in the middle of your list only counts for what that spot is
+      worth and it pushes every play under it one spot down.
     </p>
     <WikiWeightSandbox :plays="SAMPLE_PLAYS" :max="900" :initial="560" />
     <p>
-      This is why a 500 AP score can move your total by 12. The play landed low on your list,
-      where the multiplier is small. The small ? next to the total AP on your profile tells you
-      how much raw AP a single new play needs to lift your total by one point.
+      That's why a 500 AP score can add only 12 to your total. It ended up low on your list
+      where the multiplier is small. The little ? next to Total AP on your profile tells you how
+      much raw AP one new play needs to raise your total by 1.
     </p>
 
-    <WikiHeading id="per-category">Each category keeps its own list</WikiHeading>
+    <WikiHeading id="per-category">Each category has its own list</WikiHeading>
     <p>
-      Your True Acc plays compete for spots on your True Acc list and your Tech Acc plays on
-      your Tech Acc list. The same 900 raw AP play can slot in fifth on a stacked True Acc list
-      and add a few hundred, or land at number one on a nearly empty Tech Acc list and add all
-      900. Your Overall total is the three category totals added together.
+      Your True Acc plays only compete with your other True Acc plays and it's the same for
+      Tech Acc. The same 900 raw AP play can be fifth on a stacked True Acc list and add a few
+      hundred or be number one on a nearly empty Tech Acc list and add all 900. Your Overall
+      total is the three category totals added together.
     </p>
 
     <WikiHeading id="never-down">Your total never goes down</WikiHeading>
     <p>
-      A worse score than your best on a map is saved in your history and still gives XP. It
-      never replaces the better play and never lowers your total.
+      A score that's worse than your best on a map is saved in your history and still gives XP.
+      It never replaces your better play and it can't lower your total.
     </p>
   </WikiProse>
 </template>

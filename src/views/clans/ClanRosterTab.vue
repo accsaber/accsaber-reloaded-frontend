@@ -244,7 +244,7 @@ function asPlayer(row: Record<string, unknown>): PlayerRef {
               <template v-if="row.role">{{ row.role }} · </template>
               <template v-if="asPlayer(row).membership?.warParticipation === false">off wars · </template>
               {{ row.hits }} hits · {{ row.breaks }} breaks · {{ formatPercent((row.strength as number) * 100, 2) }}% ·
-              {{ (row.skill as number).toFixed(1) }} skill · {{ lastPlayed(asPlayer(row)) }}
+              {{ (row.skill as number).toFixed(1) }} skill · {{ asPlayer(row).membership?.lastPlayedAt ? `played ${lastPlayed(asPlayer(row))}` : 'never played' }}
             </span>
           </div>
           <ClanMemberMenu

@@ -69,8 +69,6 @@ defineProps<{
 }
 
 .compare th.compare__label {
-  text-transform: none;
-  letter-spacing: normal;
   font-size: var(--text-body);
   font-weight: 500;
   color: var(--text-primary);

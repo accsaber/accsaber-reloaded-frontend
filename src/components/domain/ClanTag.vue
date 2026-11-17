@@ -4,6 +4,7 @@ import type { BorderShapePathValue } from '@/types/cosmetics/border'
 import type { ClanTagCap, ClanTagDecal } from '@/types/cosmetics/clan'
 import { fillMeanLuminance } from '@/utils/cosmetics/overlayCanvas'
 import { annotateEffectLayerStacks, valueFxLayers } from '@/utils/cosmetics/effectLayers'
+import { rememberClan } from '@/utils/clans'
 import { readClanEquipped } from '@/utils/items'
 import { readClanTagCardValue } from '@/utils/cosmetics/readers'
 import { computed, defineAsyncComponent } from 'vue'
@@ -27,6 +28,8 @@ const props = withDefaults(
   }>(),
   { size: 'md' },
 )
+
+if ('id' in props.clan) rememberClan(props.clan as PublicClanResponse)
 
 const card = computed(() => readClanEquipped(props.clan.equipped, 'clan_tag_card', readClanTagCardValue))
 defineEmits<{ 'update:tag': [tag: string] }>()
@@ -92,6 +95,7 @@ const style = computed<Record<string, string> | undefined>(() => {
     :is="preview || editable ? 'span' : RouterLink"
     v-bind="preview || editable ? {} : { to: { name: 'clan-detail', params: { slugOrId: clan.slug } }, title: clan.name, 'aria-label': `Clan ${clan.name}` }"
     class="clan-tag"
+    :data-shared="preview || editable ? undefined : 'clan'"
     :class="[`clan-tag--${size}`, { 'clan-tag--shaped': card, 'clan-tag--still': !live }]"
     :style="style"
     @click.stop

@@ -20,7 +20,7 @@ let pickSeq = 0
 
 const pickNotice = computed(() =>
   pickFailedName.value
-    ? `${pickFailedName.value} has no ranked plays to build from, so the forge went back to the default profile.`
+    ? `${pickFailedName.value} has no ranked plays to build from so the forge went back to the default profile.`
     : null,
 )
 
@@ -124,35 +124,34 @@ onMounted(resolveProfile)
 <template>
   <WikiProse>
     <p>
-      Missions are built around what you can do and ask for slightly more than that. You will
-      find them in the missions menu in the navbar and during a live event on the event page.
+      Missions are built around what you can do and ask for slightly more than that. You'll find
+      them in the missions menu in the navbar and on the event page during a live event.
     </p>
     <p>
-      A mission only shows you a number, like "Score 812 AP on this map." Nothing tells you
-      where 812 came from, why a friend at your skill got 640 on the same map, or why the tag
-      says extreme.
+      A mission only shows you a number like "Score 812 AP on this map." Nothing tells you where 812
+      came from, why a friend at your skill got 640 on the same map or why the tag says extreme.
     </p>
 
-    <WikiHeading id="rhythm">The rhythm</WikiHeading>
+    <WikiHeading id="rhythm">Dailies and weeklies</WikiHeading>
     <p>
-      You get two daily missions. They reset at 4am UTC. The first of the two uses templates
-      that can always be built. A day with no playable daily is very rare.
+      You get two daily missions and they reset at 4am UTC. The first of the two uses templates that
+      can always be built so a day with no playable daily is very rare.
     </p>
     <p>
-      You get one weekly per category you have played. They reset on Monday at 4am UTC. One
-      of them is always extreme. If you only play Tech, you get one weekly.
+      You get one weekly per category you've played and they reset on Monday at 4am UTC. One of them
+      is always extreme. If you only play Tech you get one weekly.
     </p>
     <p>
-      At reset, anything you finished stays finished and you keep what it gave you. Anything
-      unfinished is replaced, with no progress carried over. The roll is seeded from your
-      account and the date. Logging out and back in will not change your missions.
+      At reset anything you finished stays finished and you keep what it gave you. Anything
+      unfinished is replaced and its progress is gone. The roll is seeded from your account and the
+      date so logging out and back in won't change your missions.
     </p>
 
     <WikiHeading id="forge">Watch one get built</WikiHeading>
     <p>
-      Hit forge and it builds a mission the way the game would, one stage at a time. You can
-      step through it, jump back to any stage and pick a specific mission type. It builds
-      against your own profile by default, but you can point it at anyone.
+      Hit forge and it builds a mission the way the game would, one stage at a time. You can step
+      through it, jump back to any stage and pick a specific mission type. It builds against your
+      own profile by default but you can point it at anyone.
     </p>
     <WikiMissionForge
       v-model:target="pickedUserId"
@@ -163,9 +162,9 @@ onMounted(resolveProfile)
 
     <WikiHeading id="bands">Bands</WikiHeading>
     <p>
-      The word under a mission's reward reading easy, medium, hard or extreme is its band. It is the
-      mission's own difficulty. We call it a band to keep it apart from map difficulties
-      like Expert+.
+      The word under a mission's reward that says easy, medium, hard or extreme is its band. It's
+      the mission's own difficulty and we call it a band so you don't mix it up with map
+      difficulties like Expert+.
     </p>
     <p>
       The band decides where on the leaderboard the target aims, how far above your current best
@@ -177,25 +176,25 @@ onMounted(resolveProfile)
     />
     <p>
       Extreme is the only band that can ask for slightly more than your best play has ever been
-      worth. It shows up on about one daily slot in twenty, plus one guaranteed weekly slot.
+      worth. It shows up on about 1 in 20 daily slots plus one guaranteed weekly slot.
     </p>
     <p>
-      Three corrections run on top of the table. If you are under about 70 skill in a category,
-      the easy, medium and hard ceilings get lowered. Extreme does not.
+      There are three corrections on top of the table. If you're under about 70 skill in a category
+      the easy, medium and hard ceilings get lowered but extreme doesn't.
     </p>
     <p>
       A second ceiling comes from the map instead of your best play. The game looks at how you
-      usually score on maps around that complexity and will not ask for much more than that.
+      usually score on maps around that complexity and won't ask for much more than that.
     </p>
     <p>
-      On AP and accuracy missions, if the map is one you already have a score on, the game
-      compares that score to your best in the category and blends it into the rolled band. A
-      mission that has to beat one of your best plays gets pulled up toward extreme. An
-      extreme roll on a map you barely tried goes back down.
+      On AP and accuracy missions, if you already have a score on the map the game compares that
+      score to your best in the category and blends it into the rolled band. A mission that has to
+      beat one of your best plays gets pulled up toward extreme and an extreme roll on a map you
+      barely tried goes back down.
     </p>
     <p>
-      Personal best missions go the other way. If the map is one you have never played, the band
-      drops to easy whatever was rolled, because any score on it is a personal best.
+      Personal best missions go the other way. If you've never played the map the band drops to easy
+      whatever was rolled because any score on it is a personal best.
     </p>
 
     <WikiHeading id="snipes">Snipes</WikiHeading>
@@ -203,18 +202,18 @@ onMounted(resolveProfile)
       Snipe missions are the only ones that put another player in front of you.
     </p>
     <p>
-      A target AP gets worked out first, the same way it would for any other map mission. That
-      number then opens a range. The floor keeps the snipe from being a two AP gap. The
-      ceiling keeps it inside what you could hit today. Anyone whose skill is too far from yours
-      is also removed, five points on easy and up to eighteen on extreme.
+      A target AP gets worked out first the same way it would for any other map mission and that
+      number then opens a range. The floor stops the snipe from being a 2 AP gap and the ceiling
+      keeps it inside what you could hit today. Anyone whose skill is too far from yours is also
+      removed, which is 5 points on easy and up to 18 on extreme.
     </p>
     <p>
-      Whoever is left gets ranked by how close they sit to the target. One of the closest
-      three is picked at random. If nobody is left, the map is dropped and another one is tried.
+      Whoever is left gets ranked by how close they are to the target and one of the closest three
+      is picked at random. If nobody is left the map is dropped and another one is tried.
     </p>
     <p>
-      The bigger the gap a snipe asks for, the bigger the XP bonus on top, up to half again the
-      normal reward.
+      The bigger the gap a snipe asks for the bigger the XP bonus on top, up to 1.5x the normal
+      reward.
     </p>
 
     <WikiHeading id="rewards">Rewards</WikiHeading>
@@ -225,36 +224,35 @@ onMounted(resolveProfile)
       another. Weeklies use a much steeper curve than dailies.
     </p>
     <p>
-      Missions can also give an item, but only while a live event is running. During one,
-      roughly one mission in seven comes with an item. Difficulty has nothing to do with
-      which ones. Before that, about one in five rolls the event's crate instead.
+      Missions can also give an item but only while a live event is running. During one roughly 1 in
+      7 missions comes with an item and difficulty has nothing to do with which ones. Before that
+      about 1 in 5 rolls the event's crate instead.
     </p>
 
     <WikiHeading id="fewer">When a slot comes up empty</WikiHeading>
     <p>
-      The most common reason is that you have not played in the past 3 months.
+      The most common reason is that you haven't played in the past 3 months.
     </p>
     <p>
-      The other reason affects newer accounts. Every map mission starts from the AP you would
-      need to move your total by one point. That number decides which part of the ranked pool
-      the map gets picked from. Early on that part sits below the easiest ranked map and no map
-      missions can be built. This fixes itself as you set scores. You can see where the edge is
-      in the builder above.
+      The other reason affects newer accounts. Every map mission starts from the AP you'd need to
+      raise your total by 1 and that number decides which part of the ranked pool the map gets
+      picked from. Early on that part is below the easiest ranked map so no map missions can be
+      built. This fixes itself as you set scores and you can see where the edge is in the builder
+      above.
     </p>
     <p>
-      A slot will also refuse to give you something pointless. A target under a score you
-      already have gets thrown out. So does one that is too small, and so does a map whose world
-      record sits far below your level. Streak missions compare you against maps of similar
-      complexity. A map in a range you have never streaked on gets rerolled. When a template
-      fails another one gets a turn. If they all fail the slot stays empty. This happens
-      extremely rarely.
+      A slot also won't give you something pointless. A target under a score you already have gets
+      thrown out and so does one that's too small or a map whose world record is far below your
+      level. Streak missions compare you against maps of similar complexity so a map in a range
+      you've never streaked on gets rerolled. When a template fails another one gets a turn and if
+      they all fail the slot stays empty, which happens extremely rarely.
     </p>
 
     <WikiHeading id="events">Events work differently</WikiHeading>
     <p>
-      Missions that show up during a live event do not go through any of this. Their targets are
-      fixed by whoever built the event and identical for everyone. They unlock in weeks on a
-      schedule. <RouterLink to="/wiki/events">Events</RouterLink> covers how the weeks work.
+      Missions that show up during a live event skip all of this. Their targets are fixed by whoever
+      built the event and they're the same for everyone. They unlock in weeks on a schedule and
+      <RouterLink to="/wiki/events">Events</RouterLink> explains how the weeks work.
     </p>
   </WikiProse>
 </template>

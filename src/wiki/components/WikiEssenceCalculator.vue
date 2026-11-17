@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import BaseButton from '@/components/common/BaseButton.vue'
+import IconButton from '@/components/common/IconButton.vue'
+import '@/wiki/components/demo.css'
 import type { ItemResponse } from '@/types/api/items'
 import { formatEssence } from '@/utils/essence'
 import { computed, ref } from 'vue'
@@ -29,46 +32,41 @@ function clear() {
 </script>
 
 <template>
-  <figure class="grinder">
+  <figure class="wiki-demo">
     <ul class="grinder__list">
       <li v-for="item in items" :key="item.id" class="grinder__row" :class="`rarity--${item.rarity}`">
         <span class="grinder__name">{{ item.name }}</span>
         <span class="grinder__rarity">{{ item.rarity }}</span>
         <span class="grinder__worth">{{ formatEssence(item.worth ?? 0) }}</span>
         <span class="grinder__stepper">
-          <button
-            type="button"
-            :disabled="!counts[item.id]"
-            :aria-label="`One fewer ${item.name}`"
-            @click="step(item, -1)"
-          >
-            &minus;
-          </button>
+          <IconButton :disabled="!counts[item.id]" :label="`One fewer ${item.name}`" @click="step(item, -1)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" aria-hidden="true">
+              <path d="M5 12h14" />
+            </svg>
+          </IconButton>
           <span class="grinder__count">{{ counts[item.id] ?? 0 }}</span>
-          <button type="button" :aria-label="`One more ${item.name}`" @click="step(item, 1)">+</button>
+          <IconButton :label="`One more ${item.name}`" @click="step(item, 1)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </IconButton>
         </span>
       </li>
     </ul>
 
     <div class="grinder__footer">
-      <span class="grinder__destroyed">
+      <span class="caption">
         {{ destroyed === 1 ? '1 item destroyed' : `${destroyed} items destroyed` }}
       </span>
-      <span class="grinder__total">{{ formatEssence(total) }}</span>
-      <button type="button" class="grinder__clear" :disabled="!destroyed" @click="clear">Clear</button>
+      <span class="wiki-demo__value grinder__total">{{ formatEssence(total) }}</span>
+      <BaseButton :disabled="!destroyed" @click="clear">Clear</BaseButton>
     </div>
   </figure>
 </template>
 
 <style scoped>
-.grinder {
-  margin: 0 0 var(--space-md);
-  padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  background: var(--bg-surface);
-}
-
 .grinder__list {
   margin: 0;
   padding: 0;
@@ -80,8 +78,12 @@ function clear() {
   grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--bg-overlay);
+  min-height: 48px;
+  padding: 0 var(--space-md);
+}
+
+.grinder__row:nth-child(odd) {
+  background: var(--bg-elevated);
 }
 
 .grinder__name {
@@ -90,10 +92,8 @@ function clear() {
 }
 
 .grinder__rarity {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
+  text-transform: capitalize;
   color: var(--rarity-color, var(--text-tertiary));
 }
 
@@ -101,7 +101,6 @@ function clear() {
   min-width: 6ch;
   text-align: right;
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }
 
@@ -111,78 +110,34 @@ function clear() {
   gap: var(--space-xs);
 }
 
-.grinder__stepper button,
-.grinder__clear {
-  padding: 2px 9px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-btn);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.grinder__stepper button:hover:not(:disabled),
-.grinder__clear:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.grinder__stepper button:disabled,
-.grinder__clear:disabled {
-  color: var(--text-tertiary);
-  cursor: default;
-}
-
 .grinder__count {
   min-width: 3ch;
   text-align: center;
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
 }
 
 .grinder__footer {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-md);
   padding-top: var(--space-md);
 }
 
-.grinder__destroyed {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
 .grinder__total {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--text-stat-lg);
   color: var(--accent);
-}
-
-.grinder__clear {
-  align-self: center;
 }
 
 @media (max-width: 560px) {
   .grinder__row {
     grid-template-columns: 1fr auto;
-    row-gap: var(--space-xs);
+    row-gap: 0;
+    padding: var(--space-sm) var(--space-md);
   }
 
   .grinder__worth {
     text-align: left;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .grinder__stepper button,
-  .grinder__clear {
-    transition: none;
   }
 }
 </style>

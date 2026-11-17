@@ -51,7 +51,7 @@ defineProps<{
           <template v-if="entry.skillLevel !== null">skill {{ Math.round(entry.skillLevel) }}</template>
         </span>
         <span class="board__verdict">
-          <template v-if="entry.picked">picked</template>
+          <template v-if="entry.picked">Picked</template>
           <template v-else-if="entry.viable">in range</template>
           <template v-else>{{ entry.reason }}</template>
         </span>
@@ -85,9 +85,6 @@ defineProps<{
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  overflow: hidden;
 }
 
 .board__row {
@@ -98,11 +95,7 @@ defineProps<{
   padding: 6px var(--space-md);
   font-size: var(--text-caption);
   color: var(--text-tertiary);
-  background: var(--bg-surface);
-}
-
-.board__row + .board__row {
-  border-top: 1px solid var(--bg-overlay);
+  border-radius: var(--radius-btn);
 }
 
 .board__row--viable {
@@ -129,13 +122,11 @@ defineProps<{
 .board__skill,
 .board__rank {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
   white-space: nowrap;
 }
 
 .board__verdict {
   text-align: right;
-  font-size: 0.6875rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -144,8 +135,6 @@ defineProps<{
 .board__row--picked .board__verdict {
   color: var(--accent);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 @media (max-width: 640px) {

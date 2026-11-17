@@ -1,0 +1,16 @@
+.wiki-demo {
+  margin: 0 0 var(--space-lg);
+}
+
+.wiki-demo__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-stat-lg);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.wiki-demo__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}

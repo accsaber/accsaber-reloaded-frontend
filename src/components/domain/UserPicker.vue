@@ -136,7 +136,8 @@ watch(() => props.modelValue, async (val) => {
 
 .user-picker__input {
   width: 100%;
-  padding: var(--space-sm) var(--space-md);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
@@ -144,7 +145,7 @@ watch(() => props.modelValue, async (val) => {
   font-family: var(--font-sans);
   font-size: var(--text-body);
   outline: none;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .user-picker__input:focus {
@@ -159,7 +160,8 @@ watch(() => props.modelValue, async (val) => {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  min-height: var(--control-h);
+  padding: 0 var(--space-md);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
@@ -179,7 +181,7 @@ watch(() => props.modelValue, async (val) => {
   color: var(--text-tertiary);
   cursor: pointer;
   border-radius: var(--radius-btn);
-  transition: color 120ms ease;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .user-picker__clear:hover:not(:disabled) {
@@ -219,7 +221,7 @@ watch(() => props.modelValue, async (val) => {
   font-size: var(--text-body);
   cursor: pointer;
   text-align: left;
-  transition: background-color 80ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .user-picker__option--focused,

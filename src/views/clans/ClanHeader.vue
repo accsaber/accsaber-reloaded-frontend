@@ -4,7 +4,7 @@ import ClanName from '@/components/domain/ClanName.vue'
 import ClanTag from '@/components/domain/ClanTag.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
-import type { ClanResponse, ClanStandingResponse } from '@/types/api/clans'
+import type { ClanResponse, ClanStandingResponse, PublicClanResponse } from '@/types/api/clans'
 import { cleanClanTag, formatStanding, isPacifist, type ClanProfileDraft } from '@/utils/clans'
 import { clamp } from '@/utils/math'
 import { computed } from 'vue'
@@ -14,7 +14,8 @@ import ClanPacifistBadge from './ClanPacifistBadge.vue'
 const draft = defineModel<ClanProfileDraft>('draft')
 
 const props = defineProps<{
-  clan: ClanResponse
+  identity: PublicClanResponse
+  clan: ClanResponse | null
   standing: ClanStandingResponse | null
   maxLevel: number
   editing?: boolean
@@ -31,22 +32,23 @@ function patch(change: Partial<ClanProfileDraft>) {
 }
 
 const founded = computed(() =>
-  new Date(props.clan.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+  props.clan ? new Date(props.clan.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '',
 )
-const atMax = computed(() => props.maxLevel > 0 && props.clan.level.level >= props.maxLevel)
-const progress = computed(() => (atMax.value ? 100 : clamp(props.clan.level.progressPercent, 0, 100)))
+const level = computed(() => props.clan?.level ?? null)
+const atMax = computed(() => !!level.value && props.maxLevel > 0 && level.value.level >= props.maxLevel)
+const progress = computed(() => (atMax.value ? 100 : clamp(level.value?.progressPercent ?? 0, 0, 100)))
 const xpLeft = computed(() =>
-  Math.max(0, Math.round(props.clan.level.xpForNextLevel - props.clan.level.xpForCurrentLevel)),
+  level.value ? Math.max(0, Math.round(level.value.xpForNextLevel - level.value.xpForCurrentLevel)) : 0,
 )
 </script>
 
 <template>
   <header class="clan-header">
-    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !clan.clan.bannerUrl }">
+    <div class="clan-header__band" :class="{ 'clan-header__band--plain': !identity.bannerUrl }">
       <div
-        v-if="clan.clan.bannerUrl"
+        v-if="identity.bannerUrl"
         class="clan-header__banner"
-        :style="{ backgroundImage: `url(${clan.clan.bannerUrl})` }"
+        :style="{ backgroundImage: `url(${identity.bannerUrl})` }"
         aria-hidden="true"
       />
       <Transition name="fade">
@@ -57,7 +59,7 @@ const xpLeft = computed(() =>
           crop
           label="Banner"
           aspect-ratio="4 / 1"
-          :image-url="clan.clan.bannerUrl ?? null"
+          :image-url="identity.bannerUrl ?? null"
           :upload-handler="uploadBanner"
           :remove-handler="removeBanner"
         />
@@ -66,7 +68,7 @@ const xpLeft = computed(() =>
 
     <div class="clan-header__identity">
       <div class="clan-header__crest">
-        <ClanIcon :clan="clan.clan" :size="120" class="clan-header__icon" />
+        <ClanIcon :clan="identity" :size="120" class="clan-header__icon" />
         <Transition name="fade">
           <ImageUploader
             v-if="editing && uploadIcon"
@@ -75,7 +77,7 @@ const xpLeft = computed(() =>
             crop
             label="Icon"
             aspect-ratio="1 / 1"
-            :image-url="clan.clan.iconUrl ?? null"
+            :image-url="identity.iconUrl ?? null"
             :upload-handler="uploadIcon"
             :remove-handler="removeIcon"
           />
@@ -84,9 +86,10 @@ const xpLeft = computed(() =>
       <div class="clan-header__titles">
         <h1 class="clan-header__title">
           <ClanTag
-            :clan="clan.clan"
+            :clan="identity"
             size="lg"
             effects
+            data-shared-target
             class="clan-header__tag"
             :editable="!!draft"
             @update:tag="patch({ tag: cleanClanTag($event) })"
@@ -102,9 +105,12 @@ const xpLeft = computed(() =>
             @keydown.enter.prevent="emit('save')"
             @keydown.escape.prevent="emit('cancel')"
           />
-          <ClanName v-else class="clan-header__name" :clan="clan.clan" />
-          <ClanPacifistBadge v-if="isPacifist(clan)" />
+          <ClanName v-else class="clan-header__name" :clan="identity" />
+          <ClanPacifistBadge v-if="clan && isPacifist(clan)" />
         </h1>
+        <p class="caption clan-header__line">
+          <template v-if="clan">Est. {{ founded }}</template><template v-if="draft"> · {{ draft.description.length }} / 500</template>
+        </p>
         <label v-if="draft" class="clan-header__description clan-header__description-edit">
           <span aria-hidden="true">{{ draft.description }} </span>
           <textarea
@@ -117,10 +123,7 @@ const xpLeft = computed(() =>
             @input="patch({ description: ($event.target as HTMLTextAreaElement).value })"
           />
         </label>
-        <p v-else-if="clan.description" class="clan-header__description">{{ clan.description }}</p>
-        <p class="caption">
-          Est. {{ founded }}<template v-if="draft"> · {{ draft.description.length }} / 500</template>
-        </p>
+        <p v-else class="clan-header__description">{{ clan?.description }}</p>
       </div>
       <div class="clan-header__actions">
         <slot name="actions" />
@@ -134,13 +137,15 @@ const xpLeft = computed(() =>
     </Transition>
 
     <div class="clan-header__stats">
-      <StatBlock label="Level" :value="clan.level.level" :decimals="0">
+      <StatBlock label="Level" :value="clan ? clan.level.level : ''" :decimals="0">
         <ClanBar :value="progress" :max="100" />
-        <span class="caption">{{ atMax ? 'Max level' : `${xpLeft.toLocaleString()} XP to level ${clan.level.level + 1}` }}</span>
+        <span class="caption clan-header__line">
+          <template v-if="clan">{{ atMax ? 'Max level' : `${xpLeft.toLocaleString()} XP to level ${clan.level.level + 1}` }}</template>
+        </span>
       </StatBlock>
-      <StatBlock label="Rank" :value="standing ? `#${standing.rank}` : '-'" />
-      <StatBlock label="Standing" :value="formatStanding(clan.standing)" />
-      <StatBlock label="Members" :value="`${clan.memberCount} / ${clan.memberCap}`" />
+      <StatBlock label="Rank" :value="standing ? `#${standing.rank}` : clan ? '-' : ''" />
+      <StatBlock label="Standing" :value="clan ? formatStanding(clan.standing) : ''" />
+      <StatBlock label="Members" :value="clan ? `${clan.memberCount} / ${clan.memberCap}` : ''" />
     </div>
   </header>
 </template>
@@ -252,7 +257,9 @@ const xpLeft = computed(() =>
   flex: 1;
   flex-direction: column;
   gap: var(--space-xs);
+  align-self: flex-start;
   min-width: 0;
+  padding-top: var(--space-lg);
   padding-bottom: var(--space-xs);
 }
 
@@ -269,6 +276,7 @@ const xpLeft = computed(() =>
   min-width: 0;
   font-size: calc(var(--text-page-title) * 1.35);
   line-height: 1.15;
+  min-height: 1.22em;
 }
 
 .clan-header__tag {
@@ -285,7 +293,13 @@ const xpLeft = computed(() =>
   max-width: 65ch;
   font-size: var(--text-body);
   line-height: 1.5;
+  min-height: 2lh;
   color: var(--text-secondary);
+}
+
+.clan-header__line {
+  display: block;
+  min-height: 1lh;
 }
 
 .clan-header__stats {
@@ -327,6 +341,7 @@ const xpLeft = computed(() =>
 
   .clan-header__titles {
     flex-basis: 100%;
+    padding-top: 0;
   }
 
   .clan-header__actions {

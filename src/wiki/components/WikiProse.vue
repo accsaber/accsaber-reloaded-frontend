@@ -11,9 +11,10 @@
   line-height: 1.7;
 }
 
-.wiki-prose :deep(p) {
+.wiki-prose :deep(p:not([class])) {
   margin: 0 0 var(--space-md);
-  max-width: 72ch;
+  max-width: 50ch;
+  text-wrap: pretty;
 }
 
 .wiki-prose :deep(a:not([data-wiki-raw] a)) {
@@ -26,14 +27,14 @@
   filter: brightness(1.15);
 }
 
-.wiki-prose :deep(ul),
-.wiki-prose :deep(ol) {
+.wiki-prose :deep(ul:not([class])),
+.wiki-prose :deep(ol:not([class])) {
   margin: 0 0 var(--space-md);
   padding-left: var(--space-lg);
-  max-width: 72ch;
+  max-width: 50ch;
 }
 
-.wiki-prose :deep(li) {
+.wiki-prose :deep(li:not([class])) {
   margin-bottom: var(--space-xs);
 }
 
@@ -47,7 +48,6 @@
   padding: 1px 6px;
   border-radius: var(--radius-btn);
   background: var(--bg-elevated);
-  border: 1px solid var(--bg-overlay);
 }
 
 .wiki-prose :deep(math[display='block']) {
@@ -56,8 +56,7 @@
   overflow-x: auto;
   font-size: 1.15em;
   color: var(--text-primary);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
+  background: var(--bg-base);
   border-radius: var(--radius-card);
 }
 
@@ -79,16 +78,30 @@
 
 .wiki-prose :deep(th),
 .wiki-prose :deep(td) {
-  padding: var(--space-sm);
-  border-bottom: 1px solid var(--bg-overlay);
+  padding: var(--space-sm) var(--space-md);
   text-align: left;
 }
 
-.wiki-prose :deep(th) {
+.wiki-prose :deep(thead th) {
   color: var(--text-secondary);
   font-weight: 600;
   font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+}
+
+.wiki-prose :deep(tbody tr:nth-child(odd)) {
+  background: var(--bg-elevated);
+}
+
+@media (max-width: 639px) {
+  .wiki-prose :deep(table) {
+    font-size: var(--text-body);
+    line-height: 1.4;
+  }
+
+  .wiki-prose :deep(th),
+  .wiki-prose :deep(td) {
+    padding: var(--space-sm) var(--space-xs);
+    overflow-wrap: anywhere;
+  }
 }
 </style>

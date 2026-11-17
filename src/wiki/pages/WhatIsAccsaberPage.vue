@@ -8,10 +8,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 const SCORE_FLOW: WikiFlowStep[] = [
   { label: 'Play a ranked map', detail: 'any map in the AccSaber pool counts automatically' },
   { label: 'Your score comes in', detail: 'the score you hit against the maximum possible' },
-  { label: 'It turns into AP', detail: 'harder maps give more for the same accuracy' },
+  { label: 'It becomes AP', detail: 'harder maps give more for the same accuracy' },
   {
     label: 'You climb',
-    detail: 'your best plays stack up into your rank',
+    detail: 'your best plays add up to your rank',
     accent: 'var(--accent-overall)',
   },
 ]
@@ -27,10 +27,9 @@ const CATEGORY_FEELS: { code: CategoryCode; feel: string }[] = [
 <template>
   <WikiProse>
     <p>
-      AccSaber is a Beat Saber platform built around one question, which is how precisely you
-      can cut. Most ranked ladders reward many different styles of play and accuracy ends up as
-      an afterthought. AccSaber has a hand-picked pool of ranked maps where precision is the
-      entire point.
+      AccSaber is a Beat Saber platform built around one question: how precisely can you cut? Most
+      ranked ladders reward many different styles of play and accuracy ends up as an afterthought.
+      AccSaber has a hand-picked pool of ranked maps where precision is the entire point.
     </p>
     <p>
       There are leaderboards for every flavor of accuracy, campaigns that guide you through
@@ -38,20 +37,20 @@ const CATEGORY_FEELS: { code: CategoryCode; feel: string }[] = [
       on.
     </p>
     <p>
-      AccSaber has been part of the community for years. This site is a ground-up rebuild of the
+      AccSaber has been part of the community for years and this site is a ground-up rebuild of the
       original project.
     </p>
 
     <WikiHeading id="how-it-works">From a play to the leaderboard</WikiHeading>
     <WikiFlowDiagram :steps="SCORE_FLOW" />
     <p>
-      AP stands for Accuracy Points. Two things feed it, how accurate your play was and how hard
-      the map is to acc. Your total is weighted so that your best plays matter the most.
+      AP stands for Accuracy Points. It comes from two things: how accurate your play was and how
+      hard the map is to acc. Your total is weighted so your best plays matter the most.
     </p>
 
     <WikiHeading id="categories">The categories</WikiHeading>
     <p>
-      Ranked maps are split into three categories, each with its own leaderboard. Overall
+      Ranked maps are split into three categories and each one has its own leaderboard. Overall
       combines all three.
     </p>
     <table>
@@ -73,9 +72,9 @@ const CATEGORY_FEELS: { code: CategoryCode; feel: string }[] = [
 
     <WikiHeading id="jumping-in">Jumping in</WikiHeading>
     <p>
-      Getting set up takes a few minutes and one mod. The <RouterLink
-      to="/getting-started">Getting Started</RouterLink> page walks you through it in three
-      steps. Once you are linked, every ranked map you play counts on its own.
+      Getting set up takes a few minutes and one mod. The <RouterLink to="/getting-started">Getting
+      Started</RouterLink> page takes you through it in three steps and once you're linked every
+      ranked map you play counts automatically.
     </p>
   </WikiProse>
 </template>

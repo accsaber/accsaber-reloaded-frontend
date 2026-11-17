@@ -107,7 +107,7 @@ watch(() => props.isMember, fetchOwnRows, { immediate: true })
       :refreshing="loading && !!pageData"
     >
       <template #placeholder>
-        <SkeletonLoader class="placeholder" height="126px" />
+        <SkeletonLoader class="placeholder" height="127px" />
       </template>
       <template #default="{ item: mission, swap }">
         <SharedMissionRow
