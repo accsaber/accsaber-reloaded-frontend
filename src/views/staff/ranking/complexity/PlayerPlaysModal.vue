@@ -1,17 +1,13 @@
 <script setup lang="ts">
+import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import HintTooltip from '@/components/common/HintTooltip.vue'
-import type {
-  ComparisonScenario,
-  ComplexityPlayerCategory,
-  ComplexityPlayerPlays,
-  ComplexityScenario,
-} from '@/types/api/complexity'
+import type { ComparisonScenario, ComplexityPlayerCategory, ComplexityPlayerPlays } from '@/types/api/complexity'
 import type { CategoryCode } from '@/types/display'
-import { AP_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
+import { AP_DECIMALS } from '@/utils/complexity'
 import { CATEGORY_ORDER } from '@/utils/constants'
 import PlayerPlaysTable from './PlayerPlaysTable.vue'
 import ScenarioCell from './ScenarioCell.vue'
@@ -21,7 +17,6 @@ const props = defineProps<{
   open: boolean
   player: ComplexityPlayerPlays | null
   scenario: ComparisonScenario
-  columns: readonly ComplexityScenario[]
   limit: number
   loading?: boolean
   error?: string
@@ -33,23 +28,19 @@ const emit = defineEmits<{
 }>()
 
 const LIMIT_HINT = 'How many of the best plays each scenario contributes. The table lists the union of those, so it can hold more rows than this.'
+const LIST_HINT = "List is where the play sits in this player's own list, which sets how much of its AP counts. Rank is where it sits on the map."
+const MAX_LIMIT = 50
 
 const category = ref<CategoryCode>('overall')
 
 const ordered = computed<ComplexityPlayerCategory[]>(() => {
   const order = CATEGORY_ORDER as readonly string[]
-  return [...(props.player?.categories ?? [])].sort(
-    (a, b) => order.indexOf(a.categoryCode) - order.indexOf(b.categoryCode),
-  )
+  return [...(props.player?.categories ?? [])].sort((a, b) => order.indexOf(a.categoryCode) - order.indexOf(b.categoryCode))
 })
 
 const excluded = computed<CategoryCode[]>(() => {
   const played = ordered.value.map((entry) => entry.categoryCode)
-  const skip: CategoryCode[] = ['xp', 'low_mid']
-  for (const code of CATEGORY_ORDER as readonly string[]) {
-    if (code !== 'overall' && !played.includes(code)) skip.push(code)
-  }
-  return skip
+  return ['xp', 'low_mid', ...(CATEGORY_ORDER as readonly string[]).filter((code) => code !== 'overall' && !played.includes(code))]
 })
 
 watch(() => props.player?.player.id, () => {
@@ -57,83 +48,46 @@ watch(() => props.player?.player.id, () => {
 })
 
 const active = computed(() => ordered.value.find((entry) => entry.categoryCode === category.value))
-
-const plays = computed(() =>
-  active.value ? active.value.plays : ordered.value.flatMap((entry) => entry.plays),
-)
-
-const totals = computed(() => {
-  const source = active.value
-  if (!source) return []
-  return props.columns.map((scenario) => ({
-    key: scenario,
-    label: SCENARIO_LABELS[scenario],
-    ap: source.scenarios[scenario]?.ap ?? null,
-    rank: source.scenarios[scenario]?.rank ?? null,
-    apDelta: scenario === 'CURRENT' ? null : source.deltas[scenario]?.ap ?? null,
-    rankDelta: scenario === 'CURRENT' ? null : source.deltas[scenario]?.rank ?? null,
-  }))
-})
-
+const plays = computed(() => (active.value ? active.value.plays : ordered.value.flatMap((entry) => entry.plays)))
 </script>
 
 <template>
-  <BaseModal :open="open" :title="player?.player.name ?? 'Player plays'" max-width="1200px"
-    @close="emit('close')">
+  <BaseModal :open="open" :title="player?.player.name ?? 'Player Plays'" max-width="1200px" @close="emit('close')">
     <div class="plays-modal">
-      <header class="plays-modal__head">
-        <div v-if="player" class="plays-modal__identity">
-          <UserChip :user="player.player" size="lg" />
-          <span class="plays-modal__meta">
-            Best plays under {{ SCENARIO_LABELS[scenario].toLowerCase() }} next to today
-          </span>
-        </div>
-        <label class="plays-modal__limit">
-          <span class="plays-modal__limit-label">
-            Top plays
-            <HintTooltip :text="LIMIT_HINT" label="top plays" />
-          </span>
-          <input class="plays-modal__limit-input" type="number" min="1" max="50" step="1"
-            :value="limit"
-            @change="emit('update:limit', Number(($event.target as HTMLInputElement).value))" />
-        </label>
-      </header>
+      <p v-if="error" class="caption plays-modal__error" role="alert">{{ error }}</p>
 
-      <p v-if="error" class="plays-modal__error">{{ error }}</p>
-
-      <template v-if="loading">
-        <SkeletonLoader variant="card" />
-        <SkeletonLoader variant="card" />
+      <template v-if="loading || !player">
+        <SkeletonLoader class="placeholder" height="var(--control-h)" />
+        <SkeletonLoader v-for="n in 8" :key="n" class="placeholder" height="64px" />
       </template>
 
-      <p v-else-if="player && ordered.length === 0" class="plays-modal__empty">
-        This player has no ranked plays.
-      </p>
+      <p v-else-if="!ordered.length" class="caption">This player has no ranked plays</p>
 
-      <template v-else-if="player">
-        <div class="plays-modal__controls">
-          <CategoryTabs :model-value="category" :exclude="excluded"
-            @update:model-value="category = $event" />
-          <div v-if="totals.length" class="plays-modal__totals">
-            <div v-for="total in totals" :key="total.key" class="plays-modal__total">
-              <span class="plays-modal__total-label">{{ total.label }}</span>
-              <ScenarioCell :value="total.ap" :delta="total.apDelta" :decimals="AP_DECIMALS"
-                :emphasis="total.key === scenario" />
-              <span class="plays-modal__total-rank">
-                {{ total.rank != null ? `#${total.rank}` : '–' }}
-                <ScenarioCell delta-only invert :value="total.rankDelta" :delta="total.rankDelta"
-                  :decimals="0" />
-              </span>
-            </div>
+      <template v-else>
+        <header class="plays-modal__head">
+          <UserChip :user="player.player" size="lg" />
+          <div v-if="active" class="plays-modal__fact">
+            <span class="field-label">AP</span>
+            <ScenarioCell :entry="active" field="ap" :scenario="scenario" :decimals="AP_DECIMALS" emphasis />
           </div>
+          <div v-if="active" class="plays-modal__fact">
+            <span class="field-label">Rank</span>
+            <ScenarioCell :entry="active" field="rank" :scenario="scenario" :decimals="0" invert emphasis />
+          </div>
+        </header>
+
+        <div class="plays-modal__controls">
+          <CategoryTabs :model-value="category" :exclude="excluded" @update:model-value="category = $event" />
+          <HintTooltip :text="LIST_HINT" label="List and rank" />
+          <span class="plays-modal__limit">
+            <span class="field-label">Top Plays</span>
+            <HintTooltip :text="LIMIT_HINT" label="Top plays" />
+            <BaseInput class="plays-modal__limit-input" type="number" min="1" :max="MAX_LIMIT" step="1" :model-value="limit"
+              aria-label="Top plays" @change="emit('update:limit', Number(($event.target as HTMLInputElement).value))" />
+          </span>
         </div>
 
-        <p class="caption">
-          List is where the play sits in this player's own list, which sets how much of its AP
-          counts. Rank is where it sits on the map.
-        </p>
-
-        <PlayerPlaysTable :plays="plays" :scenario="scenario" :columns="columns" />
+        <PlayerPlaysTable :plays="plays" :scenario="scenario" />
       </template>
     </div>
   </BaseModal>
@@ -143,116 +97,48 @@ const totals = computed(() => {
 .plays-modal {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-  min-width: 0;
+  gap: var(--space-md);
+  min-height: 70vh;
 }
 
 .plays-modal__head {
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md) var(--space-2xl);
 }
 
-.plays-modal__identity {
+.plays-modal__head > :first-child {
+  flex: 1;
+  min-width: 200px;
+}
+
+.plays-modal__fact {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 160px;
+  align-items: flex-end;
+  gap: var(--space-xs);
 }
 
-.plays-modal__meta {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
+.plays-modal__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .plays-modal__limit {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.plays-modal__limit-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  margin-left: auto;
 }
 
 .plays-modal__limit-input {
-  width: 64px;
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  text-align: right;
-  outline: none;
+  width: 88px;
 }
-
-.plays-modal__limit-input:focus {
-  border-color: var(--page-accent, var(--accent));
-}
-
 
 .plays-modal__error {
-  margin: 0;
   color: var(--error);
-  font-size: var(--text-body);
-}
-
-.plays-modal__empty {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-body);
-}
-
-.plays-modal__controls {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-lg);
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.plays-modal__controls > :first-child {
-  flex: 1;
-  min-width: 220px;
-}
-
-.plays-modal__totals {
-  display: flex;
-  gap: var(--space-lg);
-  flex-wrap: wrap;
-}
-
-.plays-modal__total {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.plays-modal__total-label {
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.plays-modal__total-rank {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
 }
 </style>

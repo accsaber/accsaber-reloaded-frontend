@@ -3,7 +3,7 @@ import DataTable from '@/components/common/DataTable.vue'
 import CoverImage from '@/components/common/CoverImage.vue'
 import ComplexityBadge from '@/components/domain/ComplexityBadge.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
-import SongTitle from '@/components/domain/SongTitle.vue'
+import MapNameCell from '@/components/domain/MapNameCell.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { MapDisplay, SortState, TableColumn } from '@/types/display'
 import { formatRelativeDate } from '@/utils/formatters'
@@ -26,17 +26,12 @@ const listColumns: TableColumn[] = [
   { key: 'cover', label: '', width: '76px' },
   { key: 'name', label: 'Name', sortable: true, align: 'left' },
   { key: 'category', label: 'Category', sortable: true, align: 'center', width: '112px' },
-  { key: 'difficulty', label: 'Difficulty', align: 'center', width: '104px' },
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'center', width: '124px' },
   { key: 'totalScores', label: 'Scores', sortable: true, align: 'right', mono: true, width: '96px' },
   { key: 'releaseDate', label: 'Released', sortable: true, align: 'right', width: '112px' },
 ]
 
 const rows = computed<Record<string, unknown>[]>(() => props.maps.map((m) => ({ ...m })))
-
-function categoryLabel(code: string): string {
-  return (categoryStore.getCategoryInfo(code)?.name ?? code).replace(/ Acc$/, '')
-}
 
 function rowTo(row: Record<string, unknown>): RouteLocationRaw {
   return props.mapRouteTo(row as unknown as MapDisplay)
@@ -52,19 +47,19 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
         :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
     </template>
     <template #cell-name="{ row }">
-      <div class="name-cell">
-        <SongTitle class="name" :name="(row.songName as string)"
-          :sub-name="(row.songSubName as string | null)" />
-        <span class="credits">{{ row.artistName }} · {{ row.mapperName }}</span>
-      </div>
+      <MapNameCell
+        :name="(row.songName as string)"
+        :sub-name="(row.songSubName as string | null)"
+        :artist="(row.artistName as string)"
+        :mapper="(row.mapperName as string)"
+      >
+        <DifficultyBadge :difficulty="(row.difficulty as string)" />
+      </MapNameCell>
     </template>
     <template #cell-category="{ row }">
       <span class="category" :style="{ '--cat-accent': categoryStore.getAccent(row.categoryCode as string) }">
-        {{ categoryLabel(row.categoryCode as string) }}
+        {{ categoryStore.getShortName(row.categoryCode as string) }}
       </span>
-    </template>
-    <template #cell-difficulty="{ row }">
-      <DifficultyBadge :difficulty="row.difficulty as string" />
     </template>
     <template #cell-complexity="{ row }">
       <ComplexityBadge :complexity="row.complexity as number" />
@@ -81,13 +76,16 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
         <CoverImage v-if="row.coverUrl" :src="(row.coverUrl as string)" :alt="(row.songName as string)" :size="48"
           class="list-card-cover" :fallback-src="(row.coverFallbackUrl as string | null | undefined) ?? null" />
         <div v-else class="list-card-cover-placeholder" />
-        <div class="list-card-info">
-          <SongTitle class="name" :name="(row.songName as string)"
-            :sub-name="(row.songSubName as string | null)" />
-          <span class="credits">{{ row.artistName }} · {{ row.mapperName }}</span>
-        </div>
-        <div class="list-card-badges">
+        <MapNameCell
+          class="list-card-info"
+          :name="(row.songName as string)"
+          :sub-name="(row.songSubName as string | null)"
+          :artist="(row.artistName as string)"
+          :mapper="(row.mapperName as string)"
+        >
           <DifficultyBadge :difficulty="(row.difficulty as string)" />
+        </MapNameCell>
+        <div class="list-card-badges">
           <ComplexityBadge :complexity="row.complexity as number" />
         </div>
       </router-link>
@@ -96,27 +94,8 @@ function rowTo(row: Record<string, unknown>): RouteLocationRaw {
 </template>
 
 <style scoped>
-.name-cell {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
 
-.name {
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
-.credits {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .category {
   color: var(--cat-accent);

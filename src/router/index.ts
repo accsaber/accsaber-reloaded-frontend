@@ -300,12 +300,6 @@ const router = createRouter({
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
     },
     {
-      path: isRankingSubdomain ? '/vote-reweight' : '/staff/ranking/vote-reweight',
-      name: 'staff-ranking-vote-reweight',
-      component: () => import('@/views/staff/ranking/VoteReweightPage.vue'),
-      meta: { requiresStaff: true, requiredRole: 'RANKING_HEAD' as StaffRole },
-    },
-    {
       path: isRankingSubdomain ? '/batches/build/:batchId?' : '/staff/ranking/batches/build/:batchId?',
       name: 'ranking-batch-builder',
       component: () => import('@/views/staff/ranking/BatchBuilderPage.vue'),

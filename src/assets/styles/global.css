@@ -363,58 +363,6 @@ h1 {
   font-weight: 700;
 }
 
-.status-pill {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.status-pill--queue {
-  background: color-mix(in srgb, var(--warning) 15%, transparent);
-  color: var(--warning);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-}
-
-.status-pill--qualified {
-  background: color-mix(in srgb, var(--info) 15%, transparent);
-  color: var(--info);
-  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
-}
-
-.status-pill--ranked {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-}
-
-.criteria-badge {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-}
-
-.criteria-badge--passed {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-}
-
-.criteria-badge--failed {
-  background: color-mix(in srgb, var(--error) 15%, transparent);
-  color: var(--error);
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
-}
-
-.criteria-badge--pending {
-  background: color-mix(in srgb, var(--warning) 15%, transparent);
-  color: var(--warning);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-}
-
 .criteria-text--passed {
   color: var(--success);
 }
@@ -426,12 +374,6 @@ h1 {
 }
 .criteria-text--unavailable {
   color: var(--text-tertiary);
-}
-.criteria-text--head {
-  font-style: italic;
-}
-.criteria-text--auto {
-  opacity: 0.75;
 }
 
 .glow {

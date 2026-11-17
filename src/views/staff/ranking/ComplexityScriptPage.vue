@@ -3,7 +3,7 @@ import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import ChartToggleGroup from '@/components/common/ChartToggleGroup.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
 import SearchBox from '@/components/common/SearchBox.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import { useDebouncedRef } from '@/composables/useDebouncedRef'
@@ -19,15 +19,14 @@ import type {
   ComplexityPlayerBoard,
   ComplexityPlayerPlays,
   ComplexityPreviewParams,
-  ComplexityScenario,
   ComparisonScenario,
   ScenarioLadderValues,
   ScenarioPageParams,
 } from '@/types/api/complexity'
-import type { CategoryCode, ChartToggle, Tab } from '@/types/display'
+import type { CategoryCode, Tab } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
 import { parseApiError } from '@/api/client'
-import { PREVIEW_SCENARIOS, SCRIPT_SCENARIO } from '@/utils/complexity'
+import { SCRIPT_SCENARIO } from '@/utils/complexity'
 import { saveBlob } from '@/utils/download'
 import { formatCount, formatRelativeDate } from '@/utils/formatters'
 import ApplyScriptModal from './complexity/ApplyScriptModal.vue'
@@ -75,23 +74,19 @@ const PREVIEW_LADDER: (keyof ScenarioLadderValues)[] = [
   'topPlayAp',
 ]
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  RANKED: { label: 'Ranked', color: 'var(--success)' },
-  QUALIFIED: { label: 'Qualified', color: 'var(--info)' },
-  QUEUE: { label: 'In queue', color: 'var(--warning)' },
+const STATUS_LABELS: Record<MapDifficultyStatus, string> = {
+  RANKED: 'Ranked',
+  QUALIFIED: 'Qualified',
+  QUEUE: 'In Queue',
+  CAMPAIGN: 'Campaign',
 }
 
-const statusToggles: ChartToggle[] = STATUSES.map((status) => ({
-  key: status,
-  ...STATUS_LABELS[status],
-}))
+const STATUS_TABS: Tab[] = STATUSES.map((key) => ({ key, label: STATUS_LABELS[key] }))
 
-const previewViewToggles: ChartToggle[] = [
-  { key: 'maps', label: 'Maps', color: 'var(--page-accent, var(--accent))' },
-  { key: 'players', label: 'Players', color: 'var(--page-accent, var(--accent))' },
+const PREVIEW_VIEW_TABS: Tab[] = [
+  { key: 'maps', label: 'Maps' },
+  { key: 'players', label: 'Players' },
 ]
-
-const pinnedToggles: ChartToggle[] = [{ key: 'pinned', label: 'Pinned only' }]
 
 const headForbidden = ref(false)
 const isHead = computed(() => authStore.hasRole('RANKING_HEAD') && !headForbidden.value)
@@ -217,7 +212,6 @@ const mapsPage = ref(1)
 const mapsSort = ref<ScenarioSortRequest>(DEFAULT_MAP_SORT)
 
 const drillScenario = ref<ComparisonScenario>(SCRIPT_SCENARIO)
-const drillColumns = computed<ComplexityScenario[]>(() => ['CURRENT', drillScenario.value])
 
 const selectedRow = ref<ComplexityDifficultyRow | null>(null)
 const leaderboard = ref<ComplexityMapLeaderboard | null>(null)
@@ -277,7 +271,7 @@ const estimateNotice = computed(() => {
 
 const subtitle = computed(() => {
   const health = roundSummary.value
-  if (difficultiesLoading.value || !health) return 'Loading this round'
+  if (!health) return '\u00a0'
   const total = health.difficulties
   const count = formatCount(total)
   const noun = total === 1 ? 'difficulty' : 'difficulties'
@@ -573,7 +567,7 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
       }
       : {
         variant: 'success',
-        text: `${STATUS_LABELS[applyStatus.value].label} maps in ${scope} now carry the script value.`,
+        text: `${STATUS_LABELS[applyStatus.value]} maps in ${scope} now carry the script value.`,
       }
     loadDifficulties()
   } catch (err) {
@@ -699,126 +693,85 @@ watch(previewKey, () => {
 </script>
 
 <template>
-  <div class="script-page" :style="{ '--page-accent': accent, '--accent': accent }">
+  <div class="script-page" :style="{ '--page-accent': accent }">
     <header class="script-page__head">
-      <div class="script-page__title-block">
-        <h1 class="script-page__title">Complexity Script</h1>
-        <p class="script-page__subtitle">{{ subtitle }}</p>
+      <div class="script-page__titles">
+        <h1>Complexity Script</h1>
+        <p class="caption">{{ subtitle }}</p>
       </div>
-      <div class="script-page__actions">
-        <BaseButton size="sm" :disabled="!reportReady" :loading="exporting"
-          @click="exportReport">
-          Export report
-        </BaseButton>
-        <template v-if="isHead">
-          <BaseButton size="sm" :loading="preparingApply === 'QUEUE'" @click="openApply('QUEUE')">
-            Set queue
-          </BaseButton>
-          <BaseButton size="sm" :loading="preparingApply === 'QUALIFIED'"
-            @click="openApply('QUALIFIED')">
-            Set qualified
-          </BaseButton>
-          <BaseButton variant="primary" size="sm" :loading="preparingApply === 'RANKED'"
-            @click="openApply('RANKED')">
-            Apply this round
-          </BaseButton>
-        </template>
-      </div>
+      <BaseButton :disabled="!reportReady" :loading="exporting" @click="exportReport">Export Report</BaseButton>
+      <BaseButton v-if="isHead" variant="primary" :loading="preparingApply !== null && !applyOpen"
+        @click="openApply('RANKED')">
+        Apply Script
+      </BaseButton>
     </header>
 
-    <BaseBanner v-if="feedback" :variant="feedback.variant" @close="feedback = null">
-      {{ feedback.text }}
-    </BaseBanner>
+    <BaseBanner v-if="feedback" :variant="feedback.variant" @close="feedback = null">{{ feedback.text }}</BaseBanner>
 
     <BaseTabs :tabs="tabs" :model-value="tab" @update:model-value="tab = $event as PanelTab" />
 
     <div class="script-page__controls">
-      <CategoryTabs :model-value="category" :exclude="['xp', 'low_mid']"
-        @update:model-value="category = $event" />
-      <div class="script-page__control-actions">
-        <BaseSelect v-if="tab !== 'tuning' && tab !== 'players'" class="script-page__batch"
-          :model-value="batchId" :options="batchOptions"
-          @update:model-value="batchId = $event" />
-        <BaseButton v-if="filtersActive" size="sm" @click="clearFilters">Clear filters</BaseButton>
-      </div>
+      <CategoryTabs :model-value="category" :exclude="['xp', 'low_mid']" @update:model-value="category = $event" />
+      <BaseSelect v-if="tab === 'maps'" class="script-page__batch" :model-value="batchId" :options="batchOptions"
+        @update:model-value="batchId = $event" />
+      <BaseButton v-if="filtersActive" @click="clearFilters">Clear Filters</BaseButton>
     </div>
 
-    <BaseBanner v-if="estimateNotice && tab !== 'tuning'" variant="warning" :dismissible="false">
-      {{ estimateNotice }}
-    </BaseBanner>
-
-    <template v-if="tab === 'tuning'">
-      <RaterForm :loading="raterLoading" />
-
-      <p v-if="previewError" class="script-page__error">{{ previewError }}</p>
-
-      <LadderStrip :ladders="previewBoard?.ladders ?? {}" scenario="PREVIEW"
-        :columns="PREVIEW_SCENARIOS" :metrics="PREVIEW_LADDER" :loading="previewLoading" />
-
-      <div class="script-page__filters">
-        <SearchBox :model-value="mapSearch" placeholder="Search song, artist or mapper"
-          @update:model-value="mapSearch = $event" />
-        <ChartToggleGroup :toggles="statusToggles" :active="[status]" label="Map status"
-          @select="status = $event as MapDifficultyStatus" />
-        <ChartToggleGroup :toggles="pinnedToggles" :active="pinnedOnly ? ['pinned'] : []"
-          label="Pin filter" @select="pinnedOnly = !pinnedOnly" />
-        <ChartToggleGroup :toggles="previewViewToggles" :active="[previewView]" label="Preview board"
-          @select="previewView = $event as 'maps' | 'players'" />
+    <Transition name="collapse">
+      <div v-if="estimateNotice && !tuningTab" class="collapsible">
+        <BaseBanner variant="warning" :dismissible="false">{{ estimateNotice }}</BaseBanner>
       </div>
+    </Transition>
 
-      <ComplexityMapsTable v-if="previewView === 'maps'" :rows="preview?.rows ?? []"
-        scenario="PREVIEW" :columns="PREVIEW_SCENARIOS" :loading="previewLoading"
-        :page="mapsPage" :total-pages="preview?.totalPages ?? 0"
-        empty-message="No difficulties weighted under these constants" @select="openMap"
-        @update:page="setMapsPage" @update:sort="setMapsSort" />
-      <ComplexityPlayersTable v-else :rows="previewBoard?.rows ?? []" scenario="PREVIEW"
-        :columns="PREVIEW_SCENARIOS" :loading="previewLoading" @select="openPlayer" />
-    </template>
+    <div :key="tab" class="script-page__panel">
+      <template v-if="tuningTab">
+        <RaterForm :category="category" :loading="raterLoading" />
+        <p v-if="previewError" class="caption script-page__error" role="alert">{{ previewError }}</p>
+      </template>
 
-    <template v-else>
-      <LadderStrip :ladders="board?.ladders ?? {}" :scenario="SCRIPT_SCENARIO"
-        :loading="boardLoading" />
+      <LadderStrip :ladders="(tuningTab ? previewBoard : board)?.ladders ?? {}" :scenario="reportScenario"
+        :metrics="tuningTab ? PREVIEW_LADDER : undefined" />
 
-      <div v-if="tab === 'maps'" class="script-page__view">
-        <div class="script-page__filters">
-          <SearchBox :model-value="mapSearch" placeholder="Search song, artist or mapper"
+      <ComplexityPlayersTable v-if="tab === 'players' || (tuningTab && previewView === 'players')"
+        :rows="reportBoard?.rows ?? []" :scenario="reportScenario" :loading="tuningTab ? previewLoading : boardLoading"
+        @select="openPlayer">
+        <template #filters>
+          <SearchBox v-if="!tuningTab" class="script-page__search" :model-value="playerSearch"
+            placeholder="Search a player, current or past name" @update:model-value="playerSearch = $event" />
+          <BaseTabs v-else variant="segmented" label="Preview board" :tabs="PREVIEW_VIEW_TABS" :model-value="previewView"
+            @update:model-value="previewView = $event as 'maps' | 'players'" />
+        </template>
+      </ComplexityPlayersTable>
+
+      <ComplexityMapsTable v-else :rows="(tuningTab ? preview : round)?.rows ?? []" :scenario="reportScenario"
+        :loading="tuningTab ? previewLoading : difficultiesLoading" :page="mapsPage"
+        :total-pages="(tuningTab ? preview : round)?.totalPages ?? 0" @select="openMap" @update:page="setMapsPage"
+        @update:sort="setMapsSort">
+        <template #filters>
+          <SearchBox class="script-page__search" :model-value="mapSearch" placeholder="Search song, artist or mapper"
             @update:model-value="mapSearch = $event" />
-          <ChartToggleGroup :toggles="statusToggles" :active="[status]" label="Map status"
-            @select="status = $event as MapDifficultyStatus" />
-          <ChartToggleGroup :toggles="pinnedToggles" :active="pinnedOnly ? ['pinned'] : []"
-            label="Pin filter" @select="pinnedOnly = !pinnedOnly" />
-        </div>
-        <ComplexityMapsTable :rows="round?.rows ?? []" :scenario="SCRIPT_SCENARIO"
-          :loading="difficultiesLoading" :page="mapsPage" :total-pages="round?.totalPages ?? 0"
-          @select="openMap" @update:page="setMapsPage" @update:sort="setMapsSort" />
-      </div>
+          <BaseTabs variant="segmented" label="Map status" :tabs="STATUS_TABS" :model-value="status"
+            @update:model-value="status = $event as MapDifficultyStatus" />
+          <BaseSwitch v-model="pinnedOnly" label="Pinned Only" />
+          <BaseTabs v-if="tuningTab" variant="segmented" label="Preview board" :tabs="PREVIEW_VIEW_TABS"
+            :model-value="previewView" @update:model-value="previewView = $event as 'maps' | 'players'" />
+        </template>
+      </ComplexityMapsTable>
+    </div>
 
-      <div v-else class="script-page__view">
-        <div class="script-page__filters">
-          <SearchBox :model-value="playerSearch" placeholder="Search a player, current or past name"
-            @update:model-value="playerSearch = $event" />
-        </div>
-        <ComplexityPlayersTable :rows="board?.rows ?? []" :scenario="SCRIPT_SCENARIO"
-          :loading="boardLoading" @select="openPlayer" />
-      </div>
-    </template>
-
-    <ComplexityMapModal :open="!!selectedRow" :row="selectedRow" :leaderboard="leaderboard"
-      :scenario="drillScenario" :model-hash="summary?.modelHash ?? null" :max-nudge="maxNudge"
-      :page="leaderboardPage" :total-pages="leaderboard?.totalPages ?? 0"
-      :loading="leaderboardLoading" :error="leaderboardError" @close="closeMap"
-      @select-player="openPlayer" @update:page="setLeaderboardPage"
-      @update:sort="setLeaderboardSort" />
+    <ComplexityMapModal :open="!!selectedRow" :row="selectedRow" :leaderboard="leaderboard" :scenario="drillScenario"
+      :model-hash="summary?.modelHash ?? null" :max-nudge="maxNudge" :page="leaderboardPage"
+      :total-pages="leaderboard?.totalPages ?? 0" :loading="leaderboardLoading" :error="leaderboardError"
+      @close="closeMap" @select-player="openPlayer" @update:page="setLeaderboardPage" @update:sort="setLeaderboardSort" />
 
     <PlayerPlaysModal :open="playsOpen" :player="playsPlayer" :scenario="drillScenario"
-      :columns="drillColumns" :limit="playsLimit" :loading="playsLoading" :error="playsError"
-      @close="closePlays" @update:limit="setPlaysLimit" />
+      :limit="playsLimit" :loading="playsLoading" :error="playsError" @close="closePlays" @update:limit="setPlaysLimit" />
 
-    <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen" :status="applyStatus"
-      :batch-name="activeBatch?.name ?? null" :moving="applyScope.moving" :total="applyScope.total"
-      :pinned="applyScope.pinned"
-      :version="roundSummary?.scriptVersion ?? null" :submitting="applying" :error="applyError"
-      @close="applyOpen = false" @confirm="confirmApply" />
+    <ApplyScriptModal v-if="isHead && applyScope" :open="applyOpen" :status="applyStatus" :statuses="STATUS_TABS"
+      :counting="preparingApply !== null" :batch-name="activeBatch?.name ?? null" :moving="applyScope.moving"
+      :total="applyScope.total" :pinned="applyScope.pinned" :version="roundSummary?.scriptVersion ?? null"
+      :submitting="applying" :error="applyError" @close="applyOpen = false" @confirm="confirmApply"
+      @update:status="openApply($event)" />
   </div>
 </template>
 
@@ -827,84 +780,69 @@ watch(previewKey, () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  min-width: 0;
   width: 100%;
-  max-width: 1760px;
+  max-width: 1280px;
+  min-width: 0;
   margin: 0 auto;
-}
-
-.script-page :deep(.banner) {
-  margin-inline: 0 auto;
 }
 
 .script-page__head {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-lg);
   flex-wrap: wrap;
-  padding-top: var(--space-lg);
-}
-
-.script-page__subtitle {
-  margin: var(--space-xs) 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.script-page__actions,
-.script-page__filters,
-.script-page__control-actions {
-  display: flex;
   align-items: center;
   gap: var(--space-sm);
-  flex-wrap: wrap;
 }
 
-.script-page__filters > :first-child {
+.script-page__titles {
+  display: flex;
   flex: 1;
-  min-width: 220px;
-}
-
-.script-page__batch {
-  min-width: 260px;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
 }
 
 .script-page__controls {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-lg);
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--control-h);
 }
 
-.script-page__controls > :first-child {
-  flex: 1;
-  min-width: 260px;
+.script-page__batch {
+  width: 280px;
+  margin-left: auto;
 }
 
-.script-page__view {
+.script-page__panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
+  min-width: 0;
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 
-.script-page__note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-body);
+.script-page__search {
+  flex: 1;
+  min-width: 240px;
 }
 
 .script-page__error {
-  margin: 0;
   color: var(--error);
-  font-size: var(--text-body);
 }
 
 @media (max-width: 767px) {
-  .script-page__head {
-    align-items: flex-start;
+  .script-page__titles {
+    flex-basis: 100%;
+  }
+
+  .script-page__batch {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .script-page__search {
+    flex-basis: 100%;
   }
 }
 </style>

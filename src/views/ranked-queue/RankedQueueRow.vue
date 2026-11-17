@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import CoverImage from '@/components/common/CoverImage.vue'
+import CriteriaVerdict from '@/components/domain/CriteriaVerdict.vue'
+import QueueVotes from '@/components/domain/QueueVotes.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
@@ -28,26 +30,6 @@ const to = computed(() => buildMapRoute({
   characteristic: props.entry.characteristic,
 }))
 
-const rating = computed(() => (props.entry.rankUpvotes ?? 0) - (props.entry.rankDownvotes ?? 0))
-const ratingTone = computed(() => (rating.value > 0 ? 'up' : rating.value < 0 ? 'down' : 'neutral'))
-
-const VERDICTS = {
-  PASSED: { label: 'Criteria Pass', tone: 'up' },
-  FAILED: { label: 'Criteria Fail', tone: 'down' },
-  UNAVAILABLE: { label: 'Criteria Unavailable', tone: 'warn' },
-  PENDING: { label: 'Criteria Pending', tone: 'neutral' },
-} as const
-
-const criteria = computed(() => {
-  const staff = props.entry.criteriaStatus
-  if (staff === 'PASSED' || staff === 'FAILED') return VERDICTS[staff]
-  const auto = props.entry.autoCriteriaStatus
-  if (auto === 'PASSED' || auto === 'FAILED' || auto === 'UNAVAILABLE') {
-    return { label: `Auto ${VERDICTS[auto].label}`, tone: VERDICTS[auto].tone }
-  }
-  return VERDICTS.PENDING
-})
-
 const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T18:00:00Z')
 
 const dateLabel = computed(() =>
@@ -74,37 +56,12 @@ const dateLabel = computed(() =>
         <span class="queue-row__dot" />
         <span class="queue-row__category">{{ categoryName }}</span>
         <span class="queue-row__dot" />
-        <span class="queue-row__criteria" :class="`queue-row--${criteria.tone}`">{{ criteria.label }}</span>
+        <CriteriaVerdict :source="entry" prefix="criteria" />
       </div>
     </div>
 
     <div class="queue-row__right">
-      <div class="queue-row__votes">
-        <span class="queue-row__rating" :class="`queue-row--${ratingTone}`">
-          {{ rating > 0 ? '+' : '' }}{{ rating }}
-        </span>
-        <span class="queue-row__vote queue-row--up">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-          {{ entry.rankUpvotes ?? 0 }}
-        </span>
-        <span v-if="entry.rankNeutrals != null" class="queue-row__vote queue-row--neutral">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="6 12 18 12" />
-          </svg>
-          {{ entry.rankNeutrals }}
-        </span>
-        <span class="queue-row__vote queue-row--down">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-          {{ entry.rankDownvotes ?? 0 }}
-        </span>
-      </div>
+      <QueueVotes :up="entry.rankUpvotes ?? 0" :down="entry.rankDownvotes ?? 0" :neutral="entry.rankNeutrals" />
       <span class="queue-row__date">{{ dateLabel }}</span>
     </div>
   </RouterLink>
@@ -123,7 +80,7 @@ const dateLabel = computed(() =>
   color: inherit;
   text-decoration: none;
   min-height: 88px;
-  transition: border-color 120ms ease;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .queue-row:hover {
@@ -192,30 +149,14 @@ const dateLabel = computed(() =>
   background: var(--text-tertiary);
 }
 
-.queue-row__category,
-.queue-row__criteria {
-  font-weight: 500;
-}
-
 .queue-row__category {
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
-.queue-row--up {
-  color: var(--success);
-}
 
-.queue-row--down {
-  color: var(--error);
-}
 
-.queue-row--warn {
-  color: var(--warning);
-}
 
-.queue-row--neutral {
-  color: var(--text-tertiary);
-}
 
 .queue-row__right {
   display: flex;
@@ -224,26 +165,8 @@ const dateLabel = computed(() =>
   gap: 2px;
 }
 
-.queue-row__votes {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
 
-.queue-row__rating {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 600;
-}
 
-.queue-row__vote {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  font-weight: 500;
-}
 
 .queue-row__date {
   font-size: var(--text-caption);

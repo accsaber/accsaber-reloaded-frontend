@@ -130,7 +130,7 @@ const rows = computed(() =>
   scores.value.map((s) => ({
     ...s,
     beatsaverCode: s.beatsaverCode ?? null,
-    category: (categoryStore.getCategoryInfo(s.categoryCode)?.name ?? s.categoryCode).replace(/ Acc$/, ''),
+    category: categoryStore.getShortName(s.categoryCode),
     weighted: s.weightedAp,
     lastPlayedAt: s.lastPlayedAt ?? null,
     replay: resolveReplay(

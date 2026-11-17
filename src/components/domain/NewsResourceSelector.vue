@@ -1,20 +1,13 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import type { Tab } from '@/types/display'
 import type { NewsType } from '@/types/enums'
-import {
-  NEWS_TYPE_ACCENT,
-  NEWS_TYPE_LABELS,
-  NEWS_TYPE_ORDER,
-  STANDALONE_NEWS_TYPES,
-} from '@/utils/constants'
+import { NEWS_TYPE_LABELS, NEWS_TYPE_ORDER, STANDALONE_NEWS_TYPES } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
 
 export type ResourceKind = Exclude<NewsType, 'GENERAL' | 'ITEMS' | 'PLUGIN'>
-
-interface ResourceOption {
-  value: string
-  label: string
-}
 
 const props = defineProps<{
   allowed: ResourceKind[]
@@ -28,101 +21,85 @@ const emit = defineEmits<{
   'update:resourceId': [value: string | null]
 }>()
 
-const choices = computed<{ key: NewsType; label: string }[]>(() => {
-  const standalone = props.allowedStandalone ?? ['GENERAL']
-  const allowedSet = new Set<NewsType>([...standalone, ...props.allowed])
-  return NEWS_TYPE_ORDER
-    .filter((t) => allowedSet.has(t))
-    .map((t) => ({ key: t, label: NEWS_TYPE_LABELS[t] }))
+const OPTIONS_SIZE = 200
+
+const tabs = computed<Tab[]>(() => {
+  const allowed = new Set<NewsType>([...(props.allowedStandalone ?? ['GENERAL']), ...props.allowed])
+  return NEWS_TYPE_ORDER.filter((t) => allowed.has(t)).map((t) => ({ key: t, label: NEWS_TYPE_LABELS[t] }))
 })
 
 const isStandalone = computed(() => STANDALONE_NEWS_TYPES.includes(props.resourceType))
 
-const options = ref<ResourceOption[]>([])
+const options = ref<{ value: string; label: string }[]>([])
 const loading = ref(false)
 const error = ref('')
+
+const LOADERS: Record<ResourceKind, () => Promise<{ value: string; label: string }[]>> = {
+  BATCH: async () => {
+    const { getBatches } = await import('@/api/batches')
+    return (await getBatches({ size: OPTIONS_SIZE, sort: 'releasedAt,desc' })).content.map((b) => ({ value: b.id, label: b.name }))
+  },
+  CAMPAIGN: async () => {
+    const { getCampaigns } = await import('@/api/campaigns')
+    return (await getCampaigns({ size: OPTIONS_SIZE })).content.map((c) => ({ value: c.id, label: c.name }))
+  },
+  MILESTONE_SET: async () => {
+    const { getMilestoneSets } = await import('@/api/milestones')
+    return (await getMilestoneSets({ size: OPTIONS_SIZE })).content.map((s) => ({ value: s.id, label: s.title }))
+  },
+  CURVE: async () => {
+    const { getCurves } = await import('@/api/admin/curves')
+    return (await getCurves()).map((c) => ({ value: c.id, label: c.name }))
+  },
+}
 
 async function loadOptions(kind: NewsType) {
   options.value = []
   error.value = ''
-  if (STANDALONE_NEWS_TYPES.includes(kind)) return
+  const loader = LOADERS[kind as ResourceKind]
+  if (!loader) return
   loading.value = true
   try {
-    if (kind === 'BATCH') {
-      const { getBatches } = await import('@/api/batches')
-      const res = await getBatches({ size: 200, sort: 'releasedAt,desc' })
-      options.value = res.content.map((b) => ({ value: b.id, label: b.name }))
-    } else if (kind === 'CAMPAIGN') {
-      const { getCampaigns } = await import('@/api/campaigns')
-      const res = await getCampaigns({ size: 200 })
-      options.value = res.content.map((c) => ({ value: c.id, label: c.name }))
-    } else if (kind === 'MILESTONE_SET') {
-      const { getMilestoneSets } = await import('@/api/milestones')
-      const res = await getMilestoneSets({ size: 200 })
-      options.value = res.content.map((s) => ({ value: s.id, label: s.title }))
-    } else if (kind === 'CURVE') {
-      const { getCurves } = await import('@/api/admin/curves')
-      const res = await getCurves()
-      options.value = res.map((c) => ({ value: c.id, label: c.name }))
-    }
+    const loadedOptions = await loader()
+    if (kind === props.resourceType) options.value = loadedOptions
   } catch {
-    error.value = `Failed to load ${NEWS_TYPE_LABELS[kind].toLowerCase()} list.`
+    if (kind === props.resourceType) error.value = `Could not load the ${NEWS_TYPE_LABELS[kind].toLowerCase()} list`
   } finally {
-    loading.value = false
+    if (kind === props.resourceType) loading.value = false
   }
 }
 
-watch(
-  () => props.resourceType,
-  (kind) => {
-    loadOptions(kind)
-  },
-  { immediate: true },
-)
+watch(() => props.resourceType, loadOptions, { immediate: true })
 
-function selectKind(kind: NewsType) {
+function selectKind(kind: string) {
   if (kind === props.resourceType) return
-  emit('update:resourceType', kind)
+  emit('update:resourceType', kind as NewsType)
   emit('update:resourceId', null)
-}
-
-function selectId(id: string) {
-  emit('update:resourceId', id || null)
 }
 </script>
 
 <template>
   <div class="resource-selector">
-    <label class="field-label">Type</label>
-    <div class="resource-selector__chips" role="radiogroup">
-      <button
-        v-for="choice in choices"
-        :key="choice.key"
-        type="button"
-        role="radio"
-        :aria-checked="resourceType === choice.key"
-        class="resource-selector__chip"
-        :class="{ 'resource-selector__chip--active': resourceType === choice.key }"
-        :style="{ '--chip-accent': NEWS_TYPE_ACCENT[choice.key] }"
-        @click="selectKind(choice.key)"
-      >
-        {{ choice.label }}
-      </button>
-    </div>
+    <span class="field-label">Type</span>
+    <BaseTabs variant="segmented" label="Type" :tabs="tabs" :model-value="resourceType" @update:model-value="selectKind" />
 
-    <div v-if="!isStandalone" class="resource-selector__picker">
-      <BaseSelect
-        v-if="!loading && options.length"
-        :model-value="resourceId ?? ''"
-        :options="options"
-        searchable
-        :placeholder="`Select a ${NEWS_TYPE_LABELS[resourceType].toLowerCase()}`"
-        @update:model-value="selectId"
-      />
-      <p v-else-if="loading" class="resource-selector__hint">Loading…</p>
-      <p v-else-if="error" class="resource-selector__error">{{ error }}</p>
-      <p v-else class="resource-selector__hint">No options available.</p>
-    </div>
+    <Transition name="collapse">
+      <div v-if="!isStandalone" class="collapsible">
+        <div class="resource-selector__picker">
+          <SkeletonLoader v-if="loading" class="placeholder" height="var(--control-h)" />
+          <p v-else-if="error" class="caption resource-selector__error" role="alert">{{ error }}</p>
+          <BaseSelect
+            v-else
+            :model-value="resourceId ?? ''"
+            :options="options"
+            :disabled="!options.length"
+            searchable
+            :placeholder="options.length ? `Select a ${NEWS_TYPE_LABELS[resourceType].toLowerCase()}` : 'Nothing to pick'"
+            @update:model-value="emit('update:resourceId', $event || null)"
+          />
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -130,51 +107,26 @@ function selectId(id: string) {
 .resource-selector {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.resource-selector__chips {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--space-xs);
 }
 
-.resource-selector__chip {
-  padding: var(--space-xs) 12px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
-}
-
-.resource-selector__chip:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.resource-selector__chip--active {
-  border-color: var(--chip-accent);
-  color: var(--chip-accent);
-  background: color-mix(in srgb, var(--chip-accent) 10%, transparent);
+.resource-selector > .collapsible {
+  align-self: stretch;
 }
 
 .resource-selector__picker {
-  margin-top: var(--space-xs);
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h);
+  padding-top: var(--space-xs);
 }
 
-.resource-selector__hint {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  margin: 0;
+.resource-selector__picker > * {
+  flex: 1;
 }
 
 .resource-selector__error {
-  font-size: var(--text-caption);
   color: var(--error);
-  margin: 0;
 }
 </style>

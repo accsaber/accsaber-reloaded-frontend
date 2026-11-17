@@ -96,6 +96,10 @@ export const useCategoryStore = defineStore('categories', () => {
     return categoryInfoByCode.value.get(code)
   }
 
+  function getShortName(code: string): string {
+    return (categoryInfoByCode.value.get(code)?.name ?? code.replace(/_/g, ' ')).replace(/ acc$/i, '')
+  }
+
   function getAccent(code: string): string {
     const known = categoryInfoByCode.value.get(code)
     if (known) return known.accent
@@ -132,6 +136,7 @@ export const useCategoryStore = defineStore('categories', () => {
     getCategoryId,
     getCategoryCode,
     getCategoryInfo,
+    getShortName,
     getAccent,
     fetchCategories,
   }

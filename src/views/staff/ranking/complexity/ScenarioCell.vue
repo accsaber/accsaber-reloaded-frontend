@@ -1,49 +1,64 @@
 <script setup lang="ts">
+import type { ComparisonScenario, ComplexityScenario } from '@/types/api/complexity'
 import { deltaTone, isBigMove } from '@/utils/complexity'
 import { formatFixed, formatSigned } from '@/utils/formatters'
 import { computed } from 'vue'
 
+interface ScenarioEntry {
+  scenarios: Partial<Record<ComplexityScenario, object>>
+  deltas: Partial<Record<ComparisonScenario, object>>
+}
+
 const props = withDefaults(defineProps<{
-  value: number | null | undefined
-  delta?: number | null
+  entry: ScenarioEntry
+  field: string
+  scenario: ComparisonScenario
   decimals?: number
   invert?: boolean
   emphasis?: boolean
   bigThreshold?: boolean
-  deltaOnly?: boolean
 }>(), {
-  delta: null,
   decimals: 2,
   invert: false,
   emphasis: false,
   bigThreshold: false,
-  deltaOnly: false,
 })
 
-const display = computed(() => formatFixed(props.value, props.decimals))
-const missing = computed(() => props.value == null || !Number.isFinite(props.value))
-const tone = computed(() => deltaTone(props.delta, props.invert))
-const big = computed(() => props.bigThreshold && isBigMove(props.delta))
+function read(values: object | undefined): number | null {
+  return (values as Record<string, number | null | undefined> | undefined)?.[props.field] ?? null
+}
 
-const deltaText = computed(() => {
-  const signed = props.delta != null && props.invert ? -props.delta : props.delta
-  return formatSigned(signed, props.decimals)
-})
+const from = computed(() => read(props.entry.scenarios.CURRENT))
+const value = computed(() => read(props.entry.scenarios[props.scenario]) ?? from.value)
+const delta = computed(() => read(props.entry.deltas[props.scenario]))
 
+const display = computed(() => formatFixed(value.value, props.decimals))
+const fromText = computed(() =>
+  from.value != null && value.value != null && deltaTone(value.value - from.value) !== 'flat'
+    ? formatFixed(from.value, props.decimals)
+    : '',
+)
+const missing = computed(() => value.value == null)
+const tone = computed(() => deltaTone(delta.value, props.invert))
+const big = computed(() => props.bigThreshold && isBigMove(delta.value))
+const deltaText = computed(() => formatSigned(delta.value != null && props.invert ? -delta.value : delta.value, props.decimals))
 const showDelta = computed(
-  () => props.delta != null && (props.deltaOnly || tone.value !== 'flat'),
+  () => delta.value != null && tone.value !== 'flat',
 )
 </script>
 
 <template>
   <span class="scenario-cell">
-    <span v-if="!deltaOnly" class="scenario-cell__value"
-      :class="{ 'scenario-cell__value--emphasis': emphasis, 'scenario-cell__value--missing': missing }">
-      {{ display }}
+    <span class="scenario-cell__line">
+      <span v-if="fromText" class="scenario-cell__from">{{ fromText }} &rarr;</span>
+      <span class="scenario-cell__value"
+        :class="{ 'scenario-cell__value--emphasis': emphasis, 'scenario-cell__value--missing': missing }">
+        {{ display }}
+      </span>
     </span>
     <span v-if="showDelta" class="scenario-cell__delta" :class="[
       `scenario-cell__delta--${tone}`,
-      { 'scenario-cell__delta--big': big, 'scenario-cell__delta--solo': deltaOnly },
+      { 'scenario-cell__delta--big': big },
     ]">
       {{ deltaText }}
     </span>
@@ -57,6 +72,19 @@ const showDelta = computed(
   align-items: flex-end;
   gap: 1px;
   line-height: 1.25;
+}
+
+.scenario-cell__line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  white-space: nowrap;
+}
+
+.scenario-cell__from {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--text-tertiary);
 }
 
 .scenario-cell__value {
@@ -80,38 +108,18 @@ const showDelta = computed(
 }
 
 .scenario-cell__delta--up {
-  color: color-mix(in srgb, var(--xp-up) 80%, var(--text-secondary));
+  color: var(--xp-up);
 }
 
 .scenario-cell__delta--down {
-  color: color-mix(in srgb, var(--xp-down) 80%, var(--text-secondary));
+  color: var(--xp-down);
 }
 
 .scenario-cell__delta--flat {
   color: var(--text-tertiary);
 }
 
-.scenario-cell__delta--solo {
-  font-size: var(--text-body);
-}
-
-.scenario-cell__delta--solo.scenario-cell__delta--up {
-  color: var(--xp-up);
-}
-
-.scenario-cell__delta--solo.scenario-cell__delta--down {
-  color: var(--xp-down);
-}
-
 .scenario-cell__delta--big {
   font-weight: 700;
-}
-
-.scenario-cell__delta--big.scenario-cell__delta--up {
-  color: var(--xp-up);
-}
-
-.scenario-cell__delta--big.scenario-cell__delta--down {
-  color: var(--xp-down);
 }
 </style>

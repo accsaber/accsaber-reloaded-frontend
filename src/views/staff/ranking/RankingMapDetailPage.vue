@@ -1,37 +1,42 @@
 <script setup lang="ts">
 import BaseBanner from '@/components/common/BaseBanner.vue'
-import BaseButton from '@/components/common/BaseButton.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import LeaderboardPreviewPanel from '@/views/staff/ranking/LeaderboardPreviewPanel.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { rankingDashboardRoute } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
-import { useRankingQueueStore } from '@/stores/rankingQueue'
 import { useThemeStore } from '@/stores/theme'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { Tab } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { pickCoverUrl } from '@/utils/media'
-import CategoryModal from '@/views/staff/ranking/detail/CategoryModal.vue'
-import ComplexityModal from '@/views/staff/ranking/detail/ComplexityModal.vue'
+import LeaderboardPreviewPanel from '@/views/staff/ranking/LeaderboardPreviewPanel.vue'
 import RankDetailHero from '@/views/staff/ranking/detail/RankDetailHero.vue'
 import RankDetailManagement from '@/views/staff/ranking/detail/RankDetailManagement.vue'
 import RankDetailVoteForm from '@/views/staff/ranking/detail/RankDetailVoteForm.vue'
 import RankDetailVoteList from '@/views/staff/ranking/detail/RankDetailVoteList.vue'
-import RefreshModal from '@/views/staff/ranking/detail/RefreshModal.vue'
 import { useDifficultyDrift } from '@/views/staff/ranking/detail/useDifficultyDrift'
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+type DetailTab = 'voting' | 'leaderboard'
+
+const RefreshModal = defineAsyncComponent(() => import('@/views/staff/ranking/detail/RefreshModal.vue'))
+
+const TABS: Tab[] = [
+  { key: 'voting', label: 'Voting' },
+  { key: 'leaderboard', label: 'Leaderboard Preview' },
+]
+const HEAD_FORM_GHOST = 601
+const FORM_GHOST = 514
+const REWEIGHT_NOTICE = 'Complexity saved and the reweight is running. Scores, statistics, rankings, milestones, XP and skills adjust in the background, so the numbers here stay behind until it finishes.'
 
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const themeStore = useThemeStore()
-const queueCache = useRankingQueueStore()
 
 const difficultyId = computed(() => route.params.difficultyId as string)
 
@@ -43,268 +48,198 @@ const voteLoading = ref(true)
 const coverUrl = computed(() => pickCoverUrl(difficulty.value))
 const { dominantColor } = useColorExtract(coverUrl)
 
-const categoryCode = computed(() => {
-  if (!difficulty.value) return 'overall'
-  return categoryStore.getCategoryCode(difficulty.value.categoryId) ?? 'overall'
-})
+const categoryCode = computed(() =>
+  difficulty.value ? (categoryStore.getCategoryCode(difficulty.value.categoryId) ?? 'overall') : 'overall',
+)
 
-const resolvedAccent = computed(() => {
+const accent = computed(() => {
   const raw = dominantColor.value
   if (!raw) return categoryStore.getAccent(categoryCode.value)
   return themeStore.resolvedBase === 'dark' ? brightenRgb(raw, 60) : raw
 })
 
-const metaTitle = computed(() => {
-  if (!difficulty.value) return 'Map Detail | Ranking'
-  return `${difficulty.value.songAuthor} - ${difficulty.value.songName} | Ranking`
+usePageMeta({
+  title: computed(() =>
+    difficulty.value ? `${difficulty.value.songAuthor} - ${difficulty.value.songName} | Ranking` : 'Map Detail | Ranking',
+  ),
 })
-
-usePageMeta({ title: metaTitle })
 
 const isHeadRanking = computed(() => authStore.hasRole('RANKING_HEAD'))
 const isRanking = computed(() => authStore.hasRole('RANKING'))
 
-const canRefreshFromBeatSaver = computed(
-  () =>
-    isHeadRanking.value &&
-    !!difficulty.value &&
-    difficulty.value.status !== 'RANKED' &&
-    !!difficulty.value.beatsaverCode,
+const canRefresh = computed(
+  () => isHeadRanking.value && !!difficulty.value && difficulty.value.status !== 'RANKED' && !!difficulty.value.beatsaverCode,
 )
-const { driftInfo, checking: driftChecking, recheck: recheckDrift } = useDifficultyDrift(
-  difficulty,
-  canRefreshFromBeatSaver,
-)
+const { driftInfo, checking: driftChecking, recheck: recheckDrift } = useDifficultyDrift(difficulty, canRefresh)
 
-const activeTab = ref<'voting' | 'leaderboard'>('voting')
-const detailTabs: Tab[] = [
-  { key: 'voting', label: 'Voting' },
-  { key: 'leaderboard', label: 'Leaderboard Preview' },
-]
+const activeTab = ref<DetailTab>('voting')
+const refreshOpen = ref(false)
+const refreshMounted = ref(false)
+const notice = ref('')
 
-const activeModal = ref<'complexity' | 'category' | 'refresh' | null>(null)
-const complexityNotice = ref('')
-
-const REWEIGHT_NOTICE = 'Complexity saved and the reweight is now running on this map. Scores, statistics, rankings, milestones, XP and skills adjust in the background, and the numbers on this page stay behind until it lands.'
-
-function goBackToQueue() {
-  router.push(queueCache.lastReturnUrl || { name: rankingDashboardRoute })
+function openRefresh() {
+  refreshMounted.value = true
+  refreshOpen.value = true
 }
 
 async function fetchDifficulty() {
   const id = difficultyId.value
-  const silent = difficulty.value?.id === id
-  if (!silent) loading.value = true
+  if (difficulty.value?.id !== id) loading.value = true
   try {
     const { getRankingDifficulty } = await import('@/api/ranking/maps')
-    const res = await getRankingDifficulty(id)
-    if (id === difficultyId.value) difficulty.value = res
+    const fetched = await getRankingDifficulty(id)
+    if (id === difficultyId.value) difficulty.value = fetched
   } catch {
-    if (id === difficultyId.value && !silent) difficulty.value = null
+    if (id === difficultyId.value && loading.value) difficulty.value = null
+  } finally {
+    if (id === difficultyId.value) loading.value = false
   }
-  if (id === difficultyId.value) loading.value = false
 }
 
 async function fetchVotes() {
+  const id = difficultyId.value
   voteLoading.value = true
   try {
     const { listVotes } = await import('@/api/ranking/voting')
-    const type = difficulty.value?.status === 'RANKED' ? 'REWEIGHT' : 'RANK'
-    voteData.value = await listVotes(difficultyId.value, type)
+    const fetched = await listVotes(id, difficulty.value?.status === 'RANKED' ? 'REWEIGHT' : 'RANK')
+    if (id === difficultyId.value) voteData.value = fetched
   } catch {
-    voteData.value = null
+    if (id === difficultyId.value) voteData.value = null
+  } finally {
+    if (id === difficultyId.value) voteLoading.value = false
   }
-  voteLoading.value = false
 }
 
-watch(difficultyId, async () => {
-  complexityNotice.value = ''
-  await fetchDifficulty()
-  fetchVotes()
-}, { immediate: true })
+watch(
+  difficultyId,
+  async () => {
+    notice.value = ''
+    voteData.value = null
+    await fetchDifficulty()
+    void fetchVotes()
+  },
+  { immediate: true },
+)
 
-function onComplexitySaved(updated: MapDifficultyResponse, wasRanked: boolean) {
+function onUpdated(updated: MapDifficultyResponse, reweighting: boolean) {
   difficulty.value = updated
-  activeModal.value = null
-  complexityNotice.value = wasRanked ? REWEIGHT_NOTICE : ''
-}
-
-async function onCategorySaved() {
-  activeModal.value = null
-  await fetchDifficulty()
+  if (reweighting) notice.value = REWEIGHT_NOTICE
 }
 
 async function onRefreshed() {
-  activeModal.value = null
+  refreshOpen.value = false
   await fetchDifficulty()
   await recheckDrift()
 }
 </script>
 
 <template>
-  <div class="rank-detail" :style="{ '--page-accent': resolvedAccent }">
-    <template v-if="loading">
-      <div class="rank-detail__loading">
-        <SkeletonLoader variant="card" />
-      </div>
-    </template>
+  <div class="rank-detail" :style="{ '--page-accent': accent }">
+    <div class="rank-detail__content">
+      <EmptyState v-if="!loading && !difficulty" message="Difficulty not found" />
 
-    <template v-else-if="difficulty">
-      <div class="rank-detail__bg">
-        <div class="rank-detail__bg-image" :style="{ backgroundImage: `url(${coverUrl})` }" />
-      </div>
+      <template v-else>
+        <BaseBanner v-if="notice" variant="info" @close="notice = ''">{{ notice }}</BaseBanner>
 
-      <div class="rank-detail__content"
-        :class="{ 'rank-detail__content--wide': activeTab === 'leaderboard' }">
-        <div class="rank-detail__nav">
-          <button class="rank-detail__back" @click="goBackToQueue"
-            aria-label="Back to queue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Back to Queue
-          </button>
+        <RankDetailHero
+          :difficulty="difficulty"
+          :vote-data="voteData"
+          :cover-url="coverUrl"
+          :category-code="categoryCode"
+          :is-head-ranking="isHeadRanking"
+          :is-ranking="isRanking"
+          @updated="onUpdated"
+        />
+
+        <BaseTabs v-model="activeTab" :tabs="TABS" />
+
+        <div :key="activeTab" class="rank-detail__panel">
+          <LeaderboardPreviewPanel
+            v-if="activeTab === 'leaderboard' && difficulty"
+            :map-difficulty-id="difficulty.id"
+            :script-complexity="difficulty.scriptComplexity"
+            :script-version="difficulty.scriptVersion"
+          />
+          <div v-else-if="difficulty" class="rank-detail__voting">
+            <div class="rank-detail__column">
+              <RankDetailVoteForm :difficulty="difficulty" :vote-data="voteData" :is-head-ranking="isHeadRanking" @voted="fetchVotes" />
+              <RankDetailManagement
+                v-if="isHeadRanking"
+                :difficulty="difficulty"
+                :can-refresh="canRefresh"
+                :drift-info="driftInfo"
+                :drift-checking="driftChecking"
+                @refresh="openRefresh"
+              />
+            </div>
+            <RankDetailVoteList
+              :difficulty-id="difficultyId"
+              :vote-data="voteData"
+              :loading="voteLoading"
+              :is-head-ranking="isHeadRanking"
+              @changed="fetchVotes"
+            />
+          </div>
+          <div v-else class="rank-detail__voting">
+            <SkeletonLoader class="placeholder" :height="`${isHeadRanking ? HEAD_FORM_GHOST : FORM_GHOST}px`" />
+            <SkeletonLoader class="placeholder" height="134px" />
+          </div>
         </div>
+      </template>
+    </div>
 
-        <BaseBanner v-if="complexityNotice" variant="info" @close="complexityNotice = ''">
-          {{ complexityNotice }}
-        </BaseBanner>
-
-        <RankDetailHero :difficulty="difficulty" :vote-data="voteData" :cover-url="coverUrl"
-          :category-code="categoryCode" :is-head-ranking="isHeadRanking" :is-ranking="isRanking"
-          @edit-category="activeModal = 'category'" @edit-complexity="activeModal = 'complexity'" />
-
-        <div class="rank-detail__tabs">
-          <BaseTabs :tabs="detailTabs" :model-value="activeTab"
-            @update:model-value="(v: string) => activeTab = v as 'voting' | 'leaderboard'" />
-        </div>
-
-        <LeaderboardPreviewPanel v-if="activeTab === 'leaderboard'"
-          :map-difficulty-id="difficulty.id" :script-complexity="difficulty.scriptComplexity"
-          :script-version="difficulty.scriptVersion" />
-
-        <div v-show="activeTab === 'voting'">
-          <RankDetailManagement v-if="isHeadRanking" :difficulty="difficulty"
-            :can-refresh="canRefreshFromBeatSaver" :drift-info="driftInfo" :drift-checking="driftChecking"
-            @updated="difficulty = $event" @refresh="activeModal = 'refresh'" />
-          <RankDetailVoteForm :difficulty="difficulty" :vote-data="voteData" :is-head-ranking="isHeadRanking"
-            @voted="fetchVotes" />
-          <RankDetailVoteList :difficulty-id="difficultyId" :vote-data="voteData" :loading="voteLoading"
-            :is-head-ranking="isHeadRanking" @changed="fetchVotes" />
-        </div>
-      </div>
-
-      <ComplexityModal :open="activeModal === 'complexity'" :difficulty="difficulty"
-        @close="activeModal = null" @saved="onComplexitySaved" />
-      <CategoryModal :open="activeModal === 'category'" :difficulty="difficulty"
-        @close="activeModal = null" @saved="onCategorySaved" />
-      <RefreshModal :open="activeModal === 'refresh'" :difficulty-id="difficultyId" :drift-info="driftInfo"
-        @close="activeModal = null" @refreshed="onRefreshed" />
-    </template>
-
-    <template v-else>
-      <div class="rank-detail__not-found">
-        <h2>Difficulty not found</h2>
-        <BaseButton @click="goBackToQueue">Back to Queue</BaseButton>
-      </div>
-    </template>
+    <RefreshModal
+      v-if="difficulty && refreshMounted"
+      :open="refreshOpen"
+      :difficulty-id="difficultyId"
+      :drift-info="driftInfo"
+      @close="refreshOpen = false"
+      @refreshed="onRefreshed"
+    />
   </div>
 </template>
 
 <style scoped>
 .rank-detail {
   position: relative;
-  min-height: 100vh;
 }
 
-.rank-detail>*:not(.rank-detail__bg) {
+.rank-detail__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 1280px;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.rank-detail__content > *:not(.map-hero) {
   position: relative;
   z-index: 1;
 }
 
-.rank-detail__bg {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50vh;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 100%);
-  mask-image: linear-gradient(180deg, black 0%, transparent 100%);
+.rank-detail__panel {
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 
-.rank-detail__bg-image {
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center 20%;
-  filter: blur(40px);
-  opacity: 0.3;
-  transform: scale(1.1);
+.rank-detail__voting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
 }
 
-.rank-detail__loading {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: var(--space-3xl) var(--space-xl);
-}
-
-.rank-detail__not-found {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: var(--space-3xl) var(--space-xl);
-  text-align: center;
-  color: var(--text-secondary);
+.rank-detail__column {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--space-lg);
-}
-
-.rank-detail__content {
   min-width: 0;
-  max-width: var(--rank-detail-column, 800px);
-  margin: 0 auto;
-  padding: var(--space-lg) var(--space-xl) var(--space-3xl);
 }
 
-.rank-detail__content--wide {
-  --rank-detail-column: 1280px;
-}
-
-.rank-detail__nav {
-  margin-bottom: var(--space-lg);
-}
-
-.rank-detail__back {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-caption);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-btn);
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.rank-detail__back:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
-.rank-detail__tabs {
-  margin-bottom: var(--space-lg);
-}
-
-@media (max-width: 767px) {
-  .rank-detail__content {
-    padding: var(--space-md) var(--space-md) var(--space-2xl);
+@media (max-width: 1023px) {
+  .rank-detail__voting {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

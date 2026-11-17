@@ -15,6 +15,7 @@ import type {
 } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
 import { CLAN_ARENA_LABEL, CLAN_CAPACITY_LABEL, CLAN_RULESET_LABEL } from '@/utils/clans'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { computed, onMounted, ref } from 'vue'
 
 const CAPACITIES: ClanCapacity[] = [
@@ -25,14 +26,6 @@ const CAPACITIES: ClanCapacity[] = [
 ]
 const ARENAS = Object.keys(CLAN_ARENA_LABEL) as ClanArena[]
 const RULESETS = Object.keys(CLAN_RULESET_LABEL) as ClanRuleset[]
-
-interface PendingConfirm {
-  title: string
-  message: string
-  confirmLabel: string
-  destructive: boolean
-  run: () => Promise<ClanLevelStepResponse[]>
-}
 
 const steps = ref<ClanLevelStepResponse[]>([])
 const loading = ref(true)
@@ -46,8 +39,7 @@ const modeAxis = ref<ClanWarModeAxis>('arena')
 const modeKey = ref<string>('mixed')
 const modeLevel = ref('')
 const pickerLevel = ref<number | null>(null)
-const confirm = ref<PendingConfirm | null>(null)
-const confirmError = ref<string | null>(null)
+const { confirmModal, ask } = useConfirmAction(busy)
 
 const rows = computed(() => {
   const byLevel = new Map(steps.value.map((s) => [s.level, s]))
@@ -151,7 +143,9 @@ function askAddItem(item: ItemResponse) {
     message: `Every clan already at level ${level} or past it gets ${item.name} straight away, and new clans get it the moment they reach it.`,
     confirmLabel: 'Add reward',
     destructive: false,
-    run: async () => (await import('@/api/admin/clans')).setClanLevelItem(level, item.id),
+    run: async () => {
+      steps.value = await (await import('@/api/admin/clans')).setClanLevelItem(level, item.id)
+    },
   })
 }
 
@@ -161,28 +155,10 @@ function askRemoveItem(item: ItemResponse) {
     message: `${item.name} stops being a level reward. Clans that already own it keep it.`,
     confirmLabel: 'Remove reward',
     destructive: true,
-    run: async () => (await import('@/api/admin/clans')).removeClanLevelItem(item.id),
+    run: async () => {
+      steps.value = await (await import('@/api/admin/clans')).removeClanLevelItem(item.id)
+    },
   })
-}
-
-function ask(pending: PendingConfirm) {
-  confirmError.value = null
-  confirm.value = pending
-}
-
-async function runConfirm() {
-  const pending = confirm.value
-  if (!pending) return
-  busy.value = true
-  confirmError.value = null
-  try {
-    steps.value = await pending.run()
-    confirm.value = null
-  } catch (err) {
-    confirmError.value = parseApiError(err, 'That did not go through.').message
-  } finally {
-    busy.value = false
-  }
 }
 
 onMounted(load)
@@ -295,17 +271,7 @@ onMounted(load)
       @pick="askAddItem"
     />
 
-    <ConfirmModal
-      :open="confirm !== null"
-      :title="confirm?.title ?? ''"
-      :message="confirm?.message ?? ''"
-      :confirm-label="confirm?.confirmLabel ?? ''"
-      :destructive="confirm?.destructive"
-      :loading="busy"
-      :error="confirmError"
-      @confirm="runConfirm"
-      @close="confirm = null"
-    />
+    <ConfirmModal v-bind="confirmModal" />
   </div>
 </template>
 

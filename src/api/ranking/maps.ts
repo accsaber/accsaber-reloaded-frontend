@@ -1,5 +1,4 @@
 import type {
-  BulkReweightRequest,
   ImportMapFromLeaderboardIdsRequest,
   UpdateMapComplexityRequest,
 } from '@/types/api/admin'
@@ -45,13 +44,6 @@ export function getRankingDifficulties(
   params?: DifficultyListParams,
 ): Promise<Page<MapDifficultyResponse>> {
   return get<Page<MapDifficultyResponse>>(`/ranking/maps/difficulties${buildQuery(params)}`)
-}
-
-export function getDeactivatedDifficulties(
-  params?: DifficultyListParams,
-): Promise<Page<MapDifficultyResponse>> {
-  const query = buildQuery({ sort: 'updatedAt,desc', ...params, active: false })
-  return get<Page<MapDifficultyResponse>>(`/ranking/maps/difficulties${query}`)
 }
 
 export function importMap(req: ImportMapFromLeaderboardIdsRequest): Promise<MapDifficultyResponse> {
@@ -100,6 +92,3 @@ export function deactivateMapDifficulty(difficultyId: string): Promise<void> {
   return patch<void>(`/ranking/maps/difficulties/${difficultyId}/deactivate`)
 }
 
-export function bulkReweight(req: BulkReweightRequest): Promise<void> {
-  return post<void>('/ranking/maps/difficulties/bulk-reweight', req)
-}

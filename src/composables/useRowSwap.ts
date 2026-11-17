@@ -8,6 +8,7 @@ interface RowSwapOptions<T> {
   refreshing?: () => boolean | undefined
   loading?: () => boolean | undefined
   placeholders?: () => number
+  slides?: boolean
 }
 
 function token(name: string): number {
@@ -105,7 +106,8 @@ export function useRowSwap<T extends object>(source: () => T[], options: RowSwap
     const positions = next.map((row, index) => previous.get(keyOf(row, index)))
     const kept = positions.filter((position) => position !== undefined).length
     const moved = positions.filter((position, index) => position !== undefined && position !== index).length
-    const replaced = kept * 2 < next.length || moved > MAX_SLIDING_ROWS
+    const slides = options.slides ?? true
+    const replaced = slides ? kept * 2 < next.length || moved > MAX_SLIDING_ROWS : !sameRows(prev, next)
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const restart = options.restart?.() ?? false
     if (restart || !replaced || still || !prev.length || !next.length) {

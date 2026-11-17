@@ -137,7 +137,7 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
       <span v-if="estimate" class="estimate-inputs__meta">
         {{ estimate.version }} · {{ formatRelativeDate(estimate.updatedAt) }}
       </span>
-      <span v-if="stale" class="estimate-inputs__flag">behind the model</span>
+      <span v-if="stale" class="estimate-inputs__flag">Behind the model</span>
     </header>
 
     <p v-if="!estimate" class="estimate-inputs__empty">
@@ -170,7 +170,7 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
       <template v-if="boardLine">
         <p class="estimate-inputs__formula">{{ boardLine }}</p>
         <details v-if="chartLine" class="estimate-inputs__fold">
-          <summary class="estimate-inputs__fold-head">Chart line</summary>
+          <summary class="estimate-inputs__fold-head">Chart Line</summary>
           <p class="estimate-inputs__formula">{{ chartLine }}</p>
         </details>
       </template>
@@ -215,13 +215,8 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 }
 
 .estimate-inputs__flag {
-  padding: 1px 6px;
-  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
-  border-radius: var(--radius-pill);
   color: var(--warning);
   font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .estimate-inputs__empty {
@@ -300,8 +295,6 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
   list-style: none;
   color: var(--text-tertiary);
   font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .estimate-inputs__fold-head::-webkit-details-marker {
@@ -310,8 +303,6 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 
 .estimate-inputs__fold-head::after {
   content: ' · show';
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 .estimate-inputs__fold[open] .estimate-inputs__fold-head::after {

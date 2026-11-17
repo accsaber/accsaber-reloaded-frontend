@@ -1,27 +1,30 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
-import BaseSelect from '@/components/common/BaseSelect.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import MapCardCompact from '@/components/domain/MapCardCompact.vue'
+import BatchListView from '@/components/domain/BatchListView.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
-import { usePlaylistDownload } from '@/composables/usePlaylistDownload'
+import { usePageableRoute } from '@/composables/usePageableRoute'
+import { useQueryParams } from '@/composables/useQueryParams'
 import { useAuthStore } from '@/stores/auth'
-import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
-import type { CategoryCode, MapDisplay } from '@/types/display'
-import { CATEGORY_ORDER } from '@/utils/constants'
-import { formatRelativeDate } from '@/utils/formatters'
-import { toMapDisplay } from '@/utils/mappers'
+import type { MapDisplay, Tab } from '@/types/display'
+import type { BatchStatus } from '@/types/enums'
+import { knownCount, rememberCount } from '@/utils/knownCount'
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 
-const route = useRoute()
-const router = useRouter()
+const PAGE_SIZE = 20
+const STATUS_TABS: Tab[] = [
+  { key: '', label: 'All' },
+  { key: 'DRAFT', label: 'Draft' },
+  { key: 'RELEASE_READY', label: 'Release Ready' },
+  { key: 'RELEASED', label: 'Released' },
+]
+
 const authStore = useAuthStore()
-const categoryStore = useCategoryStore()
-const { downloadBatchPlaylist } = usePlaylistDownload()
+const { queryRef } = useQueryParams()
 
 usePageMeta({
   title: 'Batches | AccSaber Ranking',
@@ -29,420 +32,154 @@ usePageMeta({
 })
 
 const isHead = computed(() => authStore.hasRole('RANKING_HEAD'))
+const status = queryRef<BatchStatus>('status')
+
+const { currentPage, setPage } = usePageableRoute({
+  defaultSort: 'createdAt',
+  defaultOrder: 'desc',
+  defaultSize: PAGE_SIZE,
+  secondarySort: null,
+})
 
 const batches = ref<BatchResponse[]>([])
 const totalPages = ref(0)
 const loading = ref(true)
-const page = ref(1)
 
-const statusFilter = computed<string>({
-  get() { return (route.query.status as string) || '' },
-  set(val) {
-    const query = { ...route.query }
-    if (!val) { delete query.status } else { query.status = val }
-    delete query.page
-    router.replace({ query })
-  },
-})
+function setStatus(value: string) {
+  if (currentPage.value !== 1) setPage(1)
+  status.value = value as BatchStatus | ''
+}
 
-const statusOptions = [
-  { value: '', label: 'All Statuses' },
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'RELEASE_READY', label: 'Release Ready' },
-  { value: 'RELEASED', label: 'Released' },
-]
+const countKey = computed(() => `ranking-batches:${status.value}:${currentPage.value}`)
+
+let requestId = 0
 
 async function fetchBatches() {
+  const id = ++requestId
   loading.value = true
   try {
     const { listBatches } = await import('@/api/ranking/batches')
-    const params: Record<string, unknown> = {
-      page: page.value - 1,
-      size: 20,
+    const res = await listBatches({
+      page: currentPage.value - 1,
+      size: PAGE_SIZE,
       sort: 'createdAt,desc',
-    }
-    if (statusFilter.value) params.status = statusFilter.value
-    const res = await listBatches(params)
+      status: status.value || undefined,
+    })
+    rememberCount(countKey.value, res.content.length)
+    if (id !== requestId) return
     batches.value = res.content
     totalPages.value = res.totalPages
   } catch {
+    if (id !== requestId) return
     batches.value = []
     totalPages.value = 0
-  }
-  loading.value = false
-}
-
-watch([statusFilter, page], fetchBatches, { immediate: true })
-
-
-function batchDiffsByCategory(batch: BatchResponse) {
-  const groups = new Map<
-    CategoryCode,
-    { code: CategoryCode; name: string; accent: string; maps: MapDisplay[] }
-  >()
-
-  for (const diff of batch.difficulties) {
-    const code = categoryStore.getCategoryCode(diff.categoryId) ?? 'overall'
-    if (!groups.has(code)) {
-      const info = categoryStore.getCategoryInfo(code)
-      groups.set(code, {
-        code,
-        name: info?.name ?? code,
-        accent: categoryStore.getAccent(code),
-        maps: [],
-      })
-    }
-    groups.get(code)!.maps.push(toMapDisplay(diff, (id) => categoryStore.getCategoryCode(id)))
-  }
-
-  return [...groups.values()].sort(
-    (a, b) =>
-      (CATEGORY_ORDER as readonly string[]).indexOf(a.code) -
-      (CATEGORY_ORDER as readonly string[]).indexOf(b.code),
-  )
-}
-
-const showReleaseConfirm = ref(false)
-const releaseBatchTarget = ref<BatchResponse | null>(null)
-const releaseLoading = ref(false)
-
-async function handleRelease() {
-  if (!releaseBatchTarget.value) return
-  releaseLoading.value = true
-  try {
-    const { releaseBatch } = await import('@/api/ranking/batches')
-    await releaseBatch(releaseBatchTarget.value.id)
-    showReleaseConfirm.value = false
-    releaseBatchTarget.value = null
-    await fetchBatches()
-  } catch {
   } finally {
-    releaseLoading.value = false
+    if (id === requestId) loading.value = false
   }
 }
 
-function openBuilder(batchId?: string) {
-  router.push({ name: 'ranking-batch-builder', params: batchId ? { batchId } : {} })
-}
+watch([status, currentPage], fetchBatches, { immediate: true })
 
-function mapRouteTo(map: MapDisplay) {
+function mapRouteTo(map: Pick<MapDisplay, 'difficultyId'>) {
   return { name: 'ranking-map-detail', params: { difficultyId: map.difficultyId } }
 }
 
-const expandedBatch = ref<string | null>(null)
-
-function toggleBatch(batchId: string) {
-  expandedBatch.value = expandedBatch.value === batchId ? null : batchId
+function builderRoute(batchId?: string) {
+  return { name: 'ranking-batch-builder', params: batchId ? { batchId } : {} }
 }
 
-function batchStatusClass(status: string): string {
-  if (status === 'RELEASED') return 'batch-status--released'
-  if (status === 'RELEASE_READY') return 'batch-status--ready'
-  return 'batch-status--draft'
+const releasing = ref<{ id: string; name: string; count: number } | null>(null)
+const releaseBusy = ref(false)
+const releaseError = ref<string | null>(null)
+
+function askRelease(batch: { id: string; name: string; difficulties: unknown[] }) {
+  releaseError.value = null
+  releasing.value = { id: batch.id, name: batch.name, count: batch.difficulties.length }
+}
+
+async function release() {
+  if (!releasing.value) return
+  releaseBusy.value = true
+  releaseError.value = null
+  try {
+    const { releaseBatch } = await import('@/api/ranking/batches')
+    await releaseBatch(releasing.value.id)
+    releasing.value = null
+    await fetchBatches()
+  } catch (err) {
+    releaseError.value = parseApiError(err, 'Could not release the batch').message
+  } finally {
+    releaseBusy.value = false
+  }
 }
 </script>
 
 <template>
   <div class="batches-page">
-    <div class="batches-page__header">
-      <h1 class="batches-page__title">Batches</h1>
-      <div class="batches-page__controls">
-        <BaseSelect v-model="statusFilter" :options="statusOptions" />
-        <BaseButton v-if="isHead" variant="primary" size="sm" @click="openBuilder()">
-          Create Batch
+    <header class="batches-page__header">
+      <h1>Batches</h1>
+      <BaseButton v-if="isHead" variant="primary" :href="$router.resolve(builderRoute()).href">Create Batch</BaseButton>
+    </header>
+
+    <BaseTabs class="batches-page__status" variant="segmented" label="Batch status" :tabs="STATUS_TABS" :model-value="status" @update:model-value="setStatus" />
+
+    <BatchListView
+      :batches="batches"
+      :loading="loading && batches.length === 0"
+      :refreshing="loading && batches.length > 0"
+      :map-route-to="mapRouteTo"
+      empty-message="No batches found"
+      collapsible
+      :placeholders="knownCount(countKey, PAGE_SIZE)"
+    >
+      <template v-if="isHead" #actions="{ batch }">
+        <BaseButton v-if="batch.status === 'RELEASE_READY'" variant="primary" @click="askRelease(batch)">Release</BaseButton>
+        <BaseButton :href="$router.resolve(builderRoute(batch.id)).href">
+          {{ batch.status === 'DRAFT' ? 'Edit' : 'Rename' }}
         </BaseButton>
-      </div>
-    </div>
-
-    <div v-if="loading" class="batches-page__loading">
-      <div v-for="i in 4" :key="i" class="batches-page__skeleton" />
-    </div>
-
-    <EmptyState v-else-if="batches.length === 0" message="No batches found" />
-
-    <div v-else class="batches-page__list">
-      <div
-        v-for="batch in batches"
-        :key="batch.id"
-        class="batches-page__batch"
-      >
-        <div class="batches-page__batch-header" @click="toggleBatch(batch.id)">
-          <div class="batches-page__batch-info">
-            <h2 class="batches-page__batch-name">{{ batch.name }}</h2>
-            <div class="batches-page__batch-meta">
-              <span>{{ batch.difficulties.length }} difficulties</span>
-              <span v-if="batch.releasedAt">{{ formatRelativeDate(batch.releasedAt) }}</span>
-              <span v-else>{{ formatRelativeDate(batch.createdAt) }}</span>
-            </div>
-          </div>
-          <span class="batches-page__batch-status" :class="batchStatusClass(batch.status)">
-            {{ batch.status.replace('_', ' ') }}
-          </span>
-          <div class="batches-page__batch-actions" @click.stop>
-            <BaseButton
-              v-if="batch.difficulties.length"
-              size="sm"
-              class="batches-page__batch-download"
-              :aria-label="`Download ${batch.name} playlist`"
-              @click="downloadBatchPlaylist(batch.id, batch.name)"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Playlist</span>
-            </BaseButton>
-            <template v-if="isHead">
-              <BaseButton size="sm" @click="openBuilder(batch.id)">
-                {{ batch.status === 'DRAFT' ? 'Edit' : 'Rename' }}
-              </BaseButton>
-              <BaseButton
-                v-if="batch.status === 'RELEASE_READY'"
-                size="sm"
-                variant="primary"
-                @click="releaseBatchTarget = batch; showReleaseConfirm = true"
-              >
-                Release
-              </BaseButton>
-            </template>
-          </div>
-          <svg
-            class="batches-page__chevron"
-            :class="{ 'batches-page__chevron--open': expandedBatch === batch.id }"
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
-
-        <div v-if="expandedBatch === batch.id && batch.difficulties.length" class="batches-page__batch-categories">
-          <div
-            v-for="group in batchDiffsByCategory(batch)"
-            :key="group.code"
-            class="batches-page__cat-group"
-          >
-            <div class="batches-page__cat-header">
-              <span class="batches-page__cat-dot" :style="{ background: group.accent }" />
-              <span class="field-label">{{ group.name }}</span>
-            </div>
-            <div class="batches-page__cat-cards">
-              <MapCardCompact
-                v-for="map in group.maps"
-                :key="map.difficultyId"
-                :map="map"
-                :to="mapRouteTo(map)"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <PaginationControls
-      v-if="totalPages > 1"
-      :page="page"
-      :total-pages="totalPages"
-      @update:page="page = $event"
-    />
-
-    <BaseModal :open="showReleaseConfirm" title="Release Batch" max-width="420px" @close="showReleaseConfirm = false">
-      <p style="color: var(--text-secondary); margin: 0">
-        Release <strong>{{ releaseBatchTarget?.name }}</strong> with {{ releaseBatchTarget?.difficulties.length }} difficulties?
-        This will rank all maps in the batch and trigger score backfill. This action is irreversible.
-      </p>
-      <template #footer>
-        <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
-          <BaseButton @click="showReleaseConfirm = false">Cancel</BaseButton>
-          <BaseButton variant="destructive" :loading="releaseLoading" @click="handleRelease">Release</BaseButton>
-        </div>
       </template>
-    </BaseModal>
+    </BatchListView>
+
+    <div class="batches-page__pages">
+      <PaginationControls v-if="totalPages > 1" :page="currentPage" :total-pages="totalPages" @update:page="setPage" />
+    </div>
+
+    <ConfirmModal
+      :open="releasing !== null"
+      title="Release Batch"
+      :message="`Release ${releasing?.name} with ${releasing?.count} difficulties? Every map in it gets ranked and scores are backfilled. This cannot be undone.`"
+      confirm-label="Release"
+      destructive
+      :loading="releaseBusy"
+      :error="releaseError"
+      @confirm="release"
+      @close="releasing = null"
+    />
   </div>
 </template>
 
 <style scoped>
 .batches-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: var(--space-xl) var(--space-xl) var(--space-3xl);
 }
 
 .batches-page__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-lg);
-  flex-wrap: wrap;
   gap: var(--space-md);
 }
 
-.batches-page__controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+.batches-page__status {
+  align-self: flex-start;
 }
 
-.batches-page__loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.batches-page__skeleton {
-  height: 80px;
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-.batches-page__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
-}
-
-.batches-page__batch {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.batches-page__batch-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-
-.batches-page__batch-header:hover {
-  background: var(--bg-elevated);
-}
-
-.batches-page__chevron {
-  color: var(--text-tertiary);
-  transition: transform 150ms ease;
-  flex-shrink: 0;
-}
-
-.batches-page__chevron--open {
-  transform: rotate(180deg);
-}
-
-.batches-page__batch-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.batches-page__batch-name {
-  font-size: var(--text-section);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.batches-page__batch-meta {
-  display: flex;
-  gap: var(--space-md);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-
-.batches-page__batch-status {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-}
-
-.batch-status--draft {
-  background: color-mix(in srgb, var(--text-tertiary) 15%, transparent);
-  color: var(--text-secondary);
-}
-
-.batch-status--ready {
-  background: color-mix(in srgb, var(--info) 15%, transparent);
-  color: var(--info);
-}
-
-.batch-status--released {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-}
-
-.batches-page__batch-actions {
-  display: flex;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-}
-
-.batches-page__batch-download {
-  flex-shrink: 0;
-}
-
-.batches-page__batch-categories {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.batches-page__cat-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.batches-page__cat-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.batches-page__cat-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.batches-page__cat-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-sm);
-}
-
-@media (max-width: 767px) {
-  .batches-page {
-    padding: var(--space-md) var(--space-md) var(--space-2xl);
-  }
-
-  .batches-page__header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .batches-page__batch-header {
-    flex-direction: column;
-    padding: var(--space-md);
-  }
-
-  .batches-page__cat-cards {
-    grid-template-columns: 1fr;
-  }
+.batches-page__pages {
+  min-height: var(--control-h);
 }
 </style>

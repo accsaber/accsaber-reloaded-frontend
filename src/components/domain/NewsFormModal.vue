@@ -2,11 +2,15 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import ImageUploader from '@/components/common/ImageUploader.vue'
 import NewsResourceSelector, { type ResourceKind } from '@/components/domain/NewsResourceSelector.vue'
 import type { CreateNewsRequest, NewsResponse } from '@/types/api/news'
+import type { Tab } from '@/types/display'
 import type { NewsStatus, NewsType } from '@/types/enums'
-import { STANDALONE_NEWS_TYPES } from '@/utils/constants'
+import { NEWS_STATUS_LABELS, STANDALONE_NEWS_TYPES } from '@/utils/constants'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -15,6 +19,7 @@ const props = defineProps<{
   allowed: ResourceKind[]
   allowedStandalone?: NewsType[]
   loading?: boolean
+  error?: string
   uploadImage?: (id: string, file: File) => Promise<NewsResponse>
   deleteImage?: (id: string) => Promise<NewsResponse>
 }>()
@@ -25,7 +30,10 @@ const emit = defineEmits<{
   imageChanged: [news: NewsResponse]
 }>()
 
-const STATUS_OPTIONS: NewsStatus[] = ['DRAFT', 'PUBLISHED', 'ARCHIVED']
+const STATUS_TABS: Tab[] = (Object.keys(NEWS_STATUS_LABELS) as NewsStatus[]).map((key) => ({
+  key,
+  label: NEWS_STATUS_LABELS[key],
+}))
 
 const title = ref('')
 const slug = ref('')
@@ -38,16 +46,6 @@ const resourceType = ref<NewsType>('GENERAL')
 const resourceId = ref<string | null>(null)
 const formError = ref('')
 
-const isEdit = computed(() => props.editing !== null)
-const titleLabel = computed(() => (isEdit.value ? 'Edit News' : 'New News'))
-const submitLabel = computed(() => (isEdit.value ? 'Save' : 'Create'))
-
-function deriveResourceFromNews(n: NewsResponse | null): { type: NewsType; id: string | null } {
-  if (!n) return { type: 'GENERAL', id: null }
-  const id = n.batchId ?? n.campaignId ?? n.milestoneSetId ?? n.curveId ?? null
-  return { type: n.type, id }
-}
-
 function reset() {
   const n = props.editing
   title.value = n?.title ?? ''
@@ -57,36 +55,27 @@ function reset() {
   imageUrl.value = n?.imageUrl ?? ''
   status.value = n?.status ?? 'DRAFT'
   pinned.value = n?.pinned ?? false
-  const { type, id } = deriveResourceFromNews(n)
-  resourceType.value = type
-  resourceId.value = id
+  resourceType.value = n?.type ?? 'GENERAL'
+  resourceId.value = n?.batchId ?? n?.campaignId ?? n?.milestoneSetId ?? n?.curveId ?? null
   formError.value = ''
 }
 
-watch(
-  () => [props.open, props.editing],
-  ([open]) => {
-    if (open) reset()
-  },
-  { immediate: true },
-)
+watch(() => [props.open, props.editing], ([open]) => { if (open) reset() }, { immediate: true })
 
-function buildPayload(): CreateNewsRequest | null {
-  if (!title.value.trim()) {
-    formError.value = 'Title is required.'
-    return null
+function validate(): string {
+  if (!title.value.trim()) return 'A title is needed'
+  if (!content.value.trim()) return 'The content is empty'
+  if (!STANDALONE_NEWS_TYPES.includes(resourceType.value) && !resourceId.value) {
+    return 'Pick what this article is about, or a type that stands alone'
   }
-  if (!content.value.trim()) {
-    formError.value = 'Content is required.'
-    return null
-  }
-  const standalone = STANDALONE_NEWS_TYPES.includes(resourceType.value)
-  if (!standalone && !resourceId.value) {
-    formError.value = 'Pick a specific resource or choose a standalone type.'
-    return null
-  }
+  return ''
+}
 
-  const payload: CreateNewsRequest = {
+function submit() {
+  formError.value = validate()
+  if (formError.value) return
+  const linked = (type: NewsType) => (resourceType.value === type ? resourceId.value : null)
+  emit('submit', {
     title: title.value.trim(),
     slug: slug.value.trim() || undefined,
     description: description.value.trim() || undefined,
@@ -95,22 +84,14 @@ function buildPayload(): CreateNewsRequest | null {
     status: status.value,
     pinned: pinned.value,
     type: resourceType.value,
-    batchId: resourceType.value === 'BATCH' ? resourceId.value : null,
-    campaignId: resourceType.value === 'CAMPAIGN' ? resourceId.value : null,
-    milestoneSetId: resourceType.value === 'MILESTONE_SET' ? resourceId.value : null,
-    curveId: resourceType.value === 'CURVE' ? resourceId.value : null,
-  }
-  return payload
+    batchId: linked('BATCH'),
+    campaignId: linked('CAMPAIGN'),
+    milestoneSetId: linked('MILESTONE_SET'),
+    curveId: linked('CURVE'),
+  })
 }
 
-function submit() {
-  formError.value = ''
-  const payload = buildPayload()
-  if (!payload) return
-  emit('submit', payload)
-}
-
-const canUploadImage = computed(() => isEdit.value && !!props.uploadImage)
+const canUploadImage = computed(() => props.editing !== null && !!props.uploadImage)
 
 async function handleImageUpload(file: File) {
   if (!props.editing || !props.uploadImage) return
@@ -128,23 +109,17 @@ async function handleImageRemove() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="titleLabel" max-width="640px" @close="emit('close')">
-    <div class="news-form">
-      <BaseInput v-model="title" label="Title" placeholder="Headline" />
-      <BaseInput v-model="slug" label="Slug (optional)" placeholder="auto-generated from title if blank" />
-      <BaseInput v-model="description" label="Description (optional)" placeholder="One-line summary" />
-
-      <div class="news-form__field">
-        <label class="field-label">Content (Markdown)</label>
-        <textarea v-model="content" class="news-form__textarea" rows="10" placeholder="Body of the article…" />
-      </div>
-
-      <BaseInput v-model="imageUrl" label="Image URL (optional)" placeholder="https://…" />
+  <BaseModal :open="open" :title="editing ? 'Edit Article' : 'New Article'" max-width="640px" @close="emit('close')">
+    <form class="news-form" @submit.prevent="submit">
+      <BaseInput v-model="title" label="Title" />
+      <BaseInput v-model="slug" label="Slug" placeholder="Made from the title when blank" />
+      <BaseInput v-model="description" label="Description" />
+      <BaseTextarea v-model="content" label="Content (Markdown)" :rows="10" />
+      <BaseInput v-model="imageUrl" label="Image URL" placeholder="https://" />
 
       <ImageUploader
         v-if="canUploadImage"
         label="Cover Image"
-        hint="Uploaded to the CDN, stored as WEBP"
         :image-url="imageUrl || null"
         :upload-handler="handleImageUpload"
         :remove-handler="deleteImage ? handleImageRemove : undefined"
@@ -152,33 +127,25 @@ async function handleImageRemove() {
 
       <div class="news-form__row">
         <div class="news-form__field">
-          <label class="field-label">Status</label>
-          <select v-model="status" class="news-form__native-select">
-            <option v-for="s in STATUS_OPTIONS" :key="s" :value="s">{{ s }}</option>
-          </select>
+          <span class="field-label">Status</span>
+          <BaseTabs v-model="status" variant="segmented" label="Status" :tabs="STATUS_TABS" />
         </div>
-
-        <label class="news-form__checkbox">
-          <input v-model="pinned" type="checkbox" />
-          Pinned
-        </label>
+        <BaseSwitch v-model="pinned" label="Pinned" />
       </div>
 
       <NewsResourceSelector
+        v-model:resource-type="resourceType"
+        v-model:resource-id="resourceId"
         :allowed="allowed"
         :allowed-standalone="allowedStandalone"
-        :resource-type="resourceType"
-        :resource-id="resourceId"
-        @update:resource-type="resourceType = $event"
-        @update:resource-id="resourceId = $event"
       />
 
-      <p v-if="formError" class="news-form__error">{{ formError }}</p>
-    </div>
+      <p class="caption news-form__error" role="alert">{{ formError || error }}</p>
+    </form>
 
     <template #footer>
       <BaseButton @click="emit('close')">Cancel</BaseButton>
-      <BaseButton variant="primary" :loading="loading" @click="submit">{{ submitLabel }}</BaseButton>
+      <BaseButton variant="primary" :loading="loading" @click="submit">{{ editing ? 'Save' : 'Create' }}</BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -190,66 +157,25 @@ async function handleImageRemove() {
   gap: var(--space-md);
 }
 
+.news-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-md) var(--space-lg);
+}
+
 .news-form__field {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.news-form__textarea {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  background: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  resize: vertical;
-  min-height: 180px;
-  outline: none;
-  transition: border-color 120ms ease-in, box-shadow 120ms ease-in;
-}
-
-.news-form__textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-.news-form__native-select {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  background: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  outline: none;
-}
-
-.news-form__native-select:focus {
-  border-color: var(--accent);
-}
-
-.news-form__row {
-  display: flex;
-  gap: var(--space-lg);
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
-.news-form__checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--text-body);
-  color: var(--text-primary);
-  cursor: pointer;
+.news-form__row :deep(.base-switch) {
+  height: var(--control-h);
 }
 
 .news-form__error {
-  margin: 0;
-  font-size: var(--text-caption);
+  min-height: 1lh;
   color: var(--error);
 }
 </style>

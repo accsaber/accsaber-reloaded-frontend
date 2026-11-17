@@ -24,6 +24,7 @@ const { shown, cascade, isStale, isPlaceholder, renderKey } = useRowSwap(() => p
   loading: () => props.loading,
   refreshing: () => props.refreshing,
   placeholders: () => props.placeholders,
+  slides: false,
 })
 </script>
 

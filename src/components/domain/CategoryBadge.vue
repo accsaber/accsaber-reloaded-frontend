@@ -10,11 +10,7 @@ const props = defineProps<{
 
 const categoryStore = useCategoryStore()
 
-const label = computed(() => {
-  const name =
-    categoryStore.getCategoryInfo(props.category)?.name ?? props.category.replace(/_/g, ' ')
-  return name.replace(/ acc$/i, '').toUpperCase()
-})
+const label = computed(() => categoryStore.getShortName(props.category).toUpperCase())
 
 const color = computed(() => categoryStore.getAccent(props.category))
 </script>

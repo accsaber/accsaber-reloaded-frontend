@@ -2,6 +2,9 @@
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import type { Tab } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
 import { CX_DECIMALS } from '@/utils/complexity'
 import { formatCount, formatFixed } from '@/utils/formatters'
@@ -12,6 +15,8 @@ const DEFAULT_STEP = 0.5
 const props = defineProps<{
   open: boolean
   status: MapDifficultyStatus
+  statuses: Tab[]
+  counting?: boolean
   batchName: string | null
   moving: number
   total: number
@@ -24,47 +29,57 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   confirm: [reason: string, maxStep: number | undefined]
+  'update:status': [status: MapDifficultyStatus]
 }>()
+
+const SCOPE: Record<string, string> = {
+  RANKED: 'the whole ranked pool',
+  QUALIFIED: 'the qualified maps',
+  QUEUE: 'the queue',
+}
+const REASON: Record<string, string> = {
+  RANKED: 'Full ranked pool',
+  QUALIFIED: 'Qualified maps',
+  QUEUE: 'Queue maps',
+}
 
 const reason = ref('')
 const maxStep = ref(DEFAULT_STEP)
 const capped = ref(true)
 
-const STATUS_WORD: Record<string, string> = {
-  RANKED: 'ranked pool',
-  QUALIFIED: 'qualified maps',
-  QUEUE: 'queue maps',
-}
-
 const scoreless = computed(() => props.status !== 'RANKED')
 
-const pinnedNote = computed(() => {
-  if (props.pinned === 0) return ''
-  if (props.pinned === 1) {
-    return "One pinned map is in scope, and the script's apply leaves it alone."
-  }
-  return `${formatCount(props.pinned)} pinned maps are in scope, and the script's apply leaves them alone.`
-})
-
-const title = computed(() =>
-  scoreless.value ? `Set ${STATUS_WORD[props.status]} to the script` : 'Apply the script',
-)
-
 const defaultReason = computed(() => {
-  const scope = props.batchName ? `${props.batchName} round` : `Full ${STATUS_WORD[props.status]}`
+  const scope = props.batchName ? `${props.batchName} round` : REASON[props.status]
   return props.version ? `${scope} (${props.version})` : scope
 })
 
 watch(() => props.open, (open) => {
   if (!open) return
-  reason.value = defaultReason.value
   maxStep.value = DEFAULT_STEP
   capped.value = true
 })
 
+watch([() => props.open, defaultReason], ([open]) => {
+  if (open) reason.value = defaultReason.value
+})
+
+const summary = computed(() => {
+  const scope = props.batchName ?? SCOPE[props.status]
+  const pinned = props.pinned ? `, ${formatCount(props.pinned)} pinned left alone` : ''
+  return `${formatCount(props.moving)} of ${formatCount(props.total)} maps in ${scope} change${pinned}`
+})
+
+const effect = computed(() => {
+  if (scoreless.value) return 'These maps have no scores, nothing is recalculated'
+  const step = capped.value
+    ? `No map moves more than ${formatFixed(maxStep.value, CX_DECIMALS)} this round`
+    : 'Every map goes straight to the script number'
+  return `${step}. Scores, statistics, rankings, milestones and XP update in the background`
+})
+
 const canConfirm = computed(
-  () => reason.value.trim().length > 0
-    && props.moving > 0
+  () => !props.counting && reason.value.trim().length > 0 && props.moving > 0
     && (scoreless.value || !capped.value || maxStep.value > 0),
 )
 
@@ -74,63 +89,28 @@ function confirm() {
 </script>
 
 <template>
-  <BaseModal :open="open" :title="title" max-width="560px" @close="emit('close')">
-    <div class="apply-script">
-      <p class="apply-script__summary">
-        <template v-if="batchName">
-          This sets <strong>{{ formatCount(moving) }}</strong> of the {{ formatCount(total) }} maps
-          in {{ batchName }} to what the script says.
-        </template>
-        <template v-else>
-          No batch is selected, so this sets <strong>{{ formatCount(moving) }}</strong> of the
-          {{ formatCount(total) }} maps in the whole {{ STATUS_WORD[status] }} to what the script
-          says.
-        </template>
-      </p>
+  <BaseModal :open="open" title="Apply Script" max-width="560px" @close="emit('close')">
+    <form class="apply-script" @submit.prevent="canConfirm && confirm()">
+      <BaseTabs variant="segmented" label="Maps to set" :tabs="statuses" :model-value="status"
+        @update:model-value="emit('update:status', $event as MapDifficultyStatus)" />
 
-      <p v-if="pinnedNote" class="apply-script__pinned">{{ pinnedNote }}</p>
+      <p class="apply-script__summary" :class="{ refreshing: counting }">{{ summary }}</p>
 
-      <BaseInput v-model="reason" label="Reason" placeholder="Lands on every complexity history row" />
+      <BaseInput v-model="reason" label="Reason" />
 
-      <div v-if="!scoreless" class="apply-script__step">
-        <BaseInput v-if="capped" class="apply-script__step-field" label="Step limit" type="number"
-          step="0.1" min="0.1" :model-value="maxStep"
-          @update:model-value="maxStep = Number($event)" />
-        <label class="apply-script__switch">
-          <input v-model="capped" type="checkbox" />
-          Limit how far a map moves
-        </label>
-        <p class="caption">
-          <template v-if="capped">
-            No map moves more than {{ formatFixed(maxStep, CX_DECIMALS) }} complexity this round, so
-            a map whose leaderboard keeps grinding settles over several rounds.
-          </template>
-          <template v-else>
-            Every map goes straight to the number the script gives it.
-          </template>
-        </p>
+      <div class="apply-script__step" :class="{ 'apply-script__step--off': scoreless }">
+        <BaseSwitch v-model="capped" label="Limit How Far a Map Moves" :disabled="scoreless" />
+        <BaseInput class="apply-script__step-field" label="Step Limit" type="number" step="0.1" min="0.1"
+          :disabled="scoreless || !capped" :model-value="maxStep" @update:model-value="maxStep = Number($event)" />
       </div>
 
-      <p class="apply-script__effect">
-        <template v-if="scoreless">
-          These maps carry no scores yet, so the change lands right away and nothing is recalculated.
-        </template>
-        <template v-else>
-          Applying adjusts every affected player's scores, statistics, rankings, milestones and XP
-          in the background.
-        </template>
-      </p>
-
-      <p v-if="error" class="apply-script__error">{{ error }}</p>
-    </div>
+      <p class="caption apply-script__effect">{{ effect }}</p>
+      <p class="caption apply-script__error" role="alert">{{ error }}</p>
+    </form>
 
     <template #footer>
-      <div class="apply-script__actions">
-        <BaseButton @click="emit('close')">Cancel</BaseButton>
-        <BaseButton variant="primary" :disabled="!canConfirm" :loading="submitting" @click="confirm">
-          Apply to the site
-        </BaseButton>
-      </div>
+      <BaseButton @click="emit('close')">Cancel</BaseButton>
+      <BaseButton variant="primary" :disabled="!canConfirm" :loading="submitting" @click="confirm">Apply</BaseButton>
     </template>
   </BaseModal>
 </template>
@@ -139,59 +119,44 @@ function confirm() {
 .apply-script {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  align-items: flex-start;
+  gap: var(--space-md);
 }
 
-.apply-script__summary,
-.apply-script__pinned,
-.apply-script__effect {
+.apply-script > :deep(.base-input) {
+  align-self: stretch;
+}
+
+.apply-script__summary {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-body);
-  line-height: 1.6;
-}
-
-.apply-script__summary strong {
+  font-size: var(--text-card-title);
+  font-weight: 600;
   color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-
-.apply-script__effect {
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
 }
 
 .apply-script__step {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  align-self: stretch;
+  gap: var(--space-md);
+}
+
+.apply-script__step :deep(.base-switch) {
+  height: var(--control-h);
 }
 
 .apply-script__step-field {
-  max-width: 160px;
+  width: 140px;
 }
 
-.apply-script__switch {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  color: var(--text-primary);
-  font-size: var(--text-body);
-  cursor: pointer;
+.apply-script__effect {
+  min-height: 2lh;
 }
-
 
 .apply-script__error {
-  margin: 0;
+  min-height: 1lh;
   color: var(--error);
-  font-size: var(--text-body);
-}
-
-.apply-script__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-sm);
 }
 </style>

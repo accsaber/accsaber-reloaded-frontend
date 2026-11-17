@@ -1,29 +1,21 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
-import CoverImage from '@/components/common/CoverImage.vue'
-import CategoryBadge from '@/components/domain/CategoryBadge.vue'
-import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import ScoreTable from '@/components/domain/ScoreTable.vue'
-import { pickAvatarFallback, pickAvatarUrl, pickCoverFallback, pickCoverUrl } from '@/utils/media'
+import UserChip from '@/components/domain/UserChip.vue'
 import type {
   ComparisonScenario,
   ComplexityDifficultyRow,
   ComplexityMapLeaderboard,
-  ComplexityScenario,
   ComplexityScoreRow,
 } from '@/types/api/complexity'
-import type { CategoryCode, TableColumn } from '@/types/display'
-import {
-  AP_DECIMALS,
-  CX_DECIMALS,
-  SCENARIO_LABELS,
-  SCENARIO_SHORT,
-  SCRIPT_SCENARIO,
-} from '@/utils/complexity'
+import type { TableColumn, UserRefDisplay } from '@/types/display'
+import { AP_DECIMALS, CX_DECIMALS, SCRIPT_SCENARIO } from '@/utils/complexity'
 import { formatAccuracy, formatCount } from '@/utils/formatters'
 import EstimateInputs from './EstimateInputs.vue'
+import MapIdentityCell from './MapIdentityCell.vue'
 import ScenarioCell from './ScenarioCell.vue'
+import SortBasisTabs from './SortBasisTabs.vue'
 import { isStaleEstimate } from './estimates'
 import {
   LEADERBOARD_ASCENDING_KEYS,
@@ -32,7 +24,7 @@ import {
   leaderboardSortRequest,
   type ScenarioSortRequest,
 } from './scenarioKeys'
-import { useSortState } from './useScenarioSort'
+import { useSortBasis, useSortState } from './useScenarioSort'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -55,6 +47,12 @@ const emit = defineEmits<{
   'update:sort': [request: ScenarioSortRequest]
 }>()
 
+const PAGE_ROWS = 50
+const METRICS = [
+  { name: 'ap', field: 'ap', label: 'AP', width: '200px' },
+  { name: 'weighted', field: 'weightedAp', label: 'Weighted', width: '200px' },
+] as const
+
 const inputsOpen = ref(false)
 
 watch(() => props.row?.map.id, () => {
@@ -65,141 +63,93 @@ const difficulty = computed(() => props.leaderboard?.difficulty ?? props.row)
 
 const title = computed(() => {
   const source = difficulty.value
-  return source ? `${source.map.songAuthor} - ${source.map.songName}` : 'Map calibration'
+  return source ? `${source.map.songAuthor} - ${source.map.songName}` : 'Map'
 })
 
-const scoreRows = computed<ComplexityScoreRow[]>(() => props.leaderboard?.rows ?? [])
-
-function apOf(row: ComplexityScoreRow, scenario: ComplexityScenario): number | null {
-  return row.scenarios[scenario]?.ap ?? null
-}
-
-const { sortKey, sortDirection, deltaMode, sortState, absolute, onSort } = useSortState({
+const sort = useSortState({
   deltaKeys: LEADERBOARD_DELTA_KEYS,
   defaultKey: LEADERBOARD_SORT_KEY,
   ascendingKeys: LEADERBOARD_ASCENDING_KEYS,
 })
+const { sortKey, sortDirection, sortState, absolute, onSort } = sort
+
+const { basis, keyOf, setBasis, label } = useSortBasis(
+  () => ({
+    ap: { change: 'apMove', now: 'apCurrent', after: 'apScenario' },
+    weighted: { change: 'weightedMove', now: 'weightedCurrent', after: 'weightedScenario' },
+  }),
+  sort,
+)
 
 watch([sortKey, sortDirection, absolute], () => {
   emit('update:sort', leaderboardSortRequest(sortKey.value, sortDirection.value, absolute.value))
 }, { immediate: true })
 
-function deltaLabel(key: string, label: string): string {
-  return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
-}
+const columns = computed<TableColumn[]>(() => [
+  { key: 'rank', label: 'Rank', sortable: true, align: 'right', width: '84px' },
+  { key: 'player', label: 'Player', primary: true },
+  { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right', mono: true, width: '112px', format: (v) => formatAccuracy(v as number) },
+  ...METRICS.map((m) => ({ key: keyOf(m.name), label: label(m.name, m.label), sortable: true, align: 'right' as const, width: m.width })),
+])
 
-const columns = computed<TableColumn[]>(() => {
-  const tag = SCENARIO_SHORT[props.scenario]
-  return [
-    { key: 'rank', label: 'Rank', sortable: true, align: 'right', width: '84px' },
-    { key: 'player', label: 'Player', width: '180px', flex: true },
-    { key: 'accuracy', label: 'Accuracy', sortable: true, align: 'right', width: '104px' },
-    { key: 'apCurrent', label: 'AP now', sortable: true, align: 'right', width: '96px' },
-    { key: 'apScenario', label: `AP ${tag}`, sortable: true, align: 'right', width: '100px' },
-    {
-      key: 'apMove',
-      label: deltaLabel('apMove', 'Δ AP'),
-      sortable: true,
-      align: 'right',
-      width: '112px',
-    },
-    { key: 'weightedCurrent', label: 'Wgt now', sortable: true, align: 'right', width: '100px' },
-    { key: 'weightedScenario', label: `Wgt ${tag}`, sortable: true, align: 'right', width: '104px' },
-    {
-      key: 'weightedMove',
-      label: deltaLabel('weightedMove', 'Δ wgt'),
-      sortable: true,
-      align: 'right',
-      width: '124px',
-    },
-  ]
-})
-
-const tableRows = computed(() =>
-  scoreRows.value.map((row) => ({
+const tableRows = computed<Record<string, unknown>[]>(() =>
+  (props.leaderboard?.rows ?? []).map((row) => ({
     id: row.player.id,
-    userId: row.player.id,
-    name: row.player.name,
-    country: row.player.country,
-    avatarUrl: pickAvatarUrl(row.player),
-    avatarFallbackUrl: pickAvatarFallback(row.player),
     rank: row.scenarios.CURRENT?.rank ?? null,
     accuracy: row.accuracy,
-    apCurrent: apOf(row, 'CURRENT'),
-    apScenario: apOf(row, props.scenario),
-    apMove: row.deltas[props.scenario]?.ap ?? null,
-    weightedCurrent: row.scenarios.CURRENT?.weightedAp ?? null,
-    weightedScenario: row.scenarios[props.scenario]?.weightedAp ?? null,
-    weightedMove: row.deltas[props.scenario]?.weightedAp ?? null,
+    score: row,
   })),
 )
 
-const complexities = computed(() => {
-  const source = difficulty.value
-  if (!source) return []
-  return [
-    { key: 'CURRENT', label: 'Now', value: source.scenarios.CURRENT?.complexity ?? null, delta: null },
-    {
-      key: props.scenario,
-      label: SCENARIO_LABELS[props.scenario],
-      value: source.scenarios[props.scenario]?.complexity ?? null,
-      delta: source.deltas[props.scenario]?.complexity ?? null,
-    },
-  ]
-})
-
-const coverUrl = computed(() => pickCoverUrl(difficulty.value?.map))
-const coverFallback = computed(() => pickCoverFallback(difficulty.value?.map))
-
-function selectPlayer(row: Record<string, unknown>) {
-  emit('selectPlayer', row.userId as string)
+function scoreOf(row: Record<string, unknown>): ComplexityScoreRow {
+  return row.score as ComplexityScoreRow
 }
 </script>
 
 <template>
-  <BaseModal :open="open" :title="title" max-width="1320px" @close="emit('close')">
+  <BaseModal :open="open" :title="title" max-width="1100px" @close="emit('close')">
     <div v-if="difficulty" class="map-modal">
       <header class="map-modal__head">
-        <CoverImage :src="coverUrl" alt="" :size="64" :fallback-src="coverFallback" />
-        <div class="map-modal__identity">
-          <div class="map-modal__badges">
-            <CategoryBadge :category="(difficulty.categoryCode as CategoryCode)" />
-            <DifficultyBadge :difficulty="difficulty.map.difficulty" />
-            <span v-if="difficulty.status !== 'RANKED'" class="status-pill"
-              :class="`status-pill--${difficulty.status.toLowerCase()}`">{{ difficulty.status }}</span>
-          </div>
-          <span class="map-modal__mapper">{{ difficulty.map.mapAuthor }}</span>
-          <span class="map-modal__scores">{{ formatCount(difficulty.scores) }} active scores</span>
+        <MapIdentityCell class="map-modal__identity" :row="difficulty" :size="56" />
+        <div class="map-modal__fact">
+          <span class="field-label">Complexity</span>
+          <ScenarioCell
+            :entry="difficulty" field="complexity" :scenario="scenario"
+            :decimals="CX_DECIMALS"
+            big-threshold
+            emphasis
+          />
         </div>
-        <div class="map-modal__complexities">
-          <div v-for="entry in complexities" :key="entry.key" class="map-modal__complexity">
-            <span class="map-modal__complexity-label">{{ entry.label }}</span>
-            <ScenarioCell :value="entry.value" :delta="entry.delta" :decimals="CX_DECIMALS"
-              big-threshold :emphasis="entry.key === 'CURRENT' || entry.key === scenario" />
-          </div>
+        <div class="map-modal__fact">
+          <span class="field-label">Scores</span>
+          <span class="map-modal__count">{{ formatCount(difficulty.scores) }}</span>
         </div>
       </header>
 
-      <div class="map-modal__inputs">
-        <BaseButton size="sm" @click="inputsOpen = !inputsOpen">
-          {{ inputsOpen ? 'Hide estimate inputs' : 'Show estimate inputs' }}
+      <div class="map-modal__bar">
+        <BaseButton :aria-expanded="inputsOpen" @click="inputsOpen = !inputsOpen">
+          {{ inputsOpen ? 'Hide Estimate Inputs' : 'Show Estimate Inputs' }}
         </BaseButton>
-        <div v-if="inputsOpen" class="map-modal__inputs-body">
-          <EstimateInputs :scenario="SCRIPT_SCENARIO"
-            :estimate="difficulty.estimates[SCRIPT_SCENARIO]" :max-nudge="maxNudge"
-            :stale="isStaleEstimate(difficulty.estimates[SCRIPT_SCENARIO], modelHash)" />
-        </div>
+        <SortBasisTabs :basis="basis" @change="setBasis" />
       </div>
 
-      <p v-if="error" class="map-modal__error">{{ error }}</p>
+      <Transition name="collapse">
+        <div v-if="inputsOpen" class="collapsible">
+          <EstimateInputs :scenario="SCRIPT_SCENARIO" :estimate="difficulty.estimates[SCRIPT_SCENARIO]" :max-nudge="maxNudge"
+            :stale="isStaleEstimate(difficulty.estimates[SCRIPT_SCENARIO], modelHash)" />
+        </div>
+      </Transition>
+
+      <p v-if="error" class="caption map-modal__error" role="alert">{{ error }}</p>
 
       <ScoreTable
         medal-ranks
         :columns="columns"
         :rows="tableRows"
         :sort-state="sortState"
-        :loading="loading"
-        :loading-rows="8"
+        :loading="loading && !tableRows.length"
+        :refreshing="loading && tableRows.length > 0"
+        :loading-rows="Math.min(difficulty.scores, PAGE_ROWS)"
         :page="page"
         :total-pages="totalPages"
         row-key="id"
@@ -207,47 +157,18 @@ function selectPlayer(row: Record<string, unknown>) {
         empty-message="No active scores on this difficulty"
         @sort="onSort"
         @update:page="emit('update:page', $event)"
-        @row-click="selectPlayer"
+        @row-click="(row) => emit('selectPlayer', row.id as string)"
       >
         <template #cell-player="{ row }">
-          <div class="map-modal__player">
-            <CoverImage :src="row.avatarUrl as string" :alt="(row.name as string)" :size="28"
-              :fallback-src="(row.avatarFallbackUrl as string | null)" />
-            <span class="map-modal__player-name">{{ row.name }}</span>
-          </div>
+          <UserChip :user="(scoreOf(row).player as UserRefDisplay)" size="sm" />
         </template>
-
-        <template #cell-accuracy="{ row }">
-          <span class="map-modal__accuracy">{{ formatAccuracy(row.accuracy as number) }}</span>
+        <template v-for="m in METRICS" :key="m.name" #[`cell-${keyOf(m.name)}`]="{ row }">
+          <ScenarioCell
+            :entry="scoreOf(row)" :field="m.field" :scenario="scenario"
+            :decimals="AP_DECIMALS"
+            emphasis
+          />
         </template>
-
-        <template #cell-apCurrent="{ row }">
-          <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" />
-        </template>
-
-        <template #cell-apScenario="{ row }">
-          <ScenarioCell :value="(row.apScenario as number | null)" :decimals="AP_DECIMALS" emphasis />
-        </template>
-
-        <template #cell-apMove="{ row }">
-          <ScenarioCell delta-only :value="(row.apMove as number | null)"
-            :delta="(row.apMove as number | null)" :decimals="AP_DECIMALS" />
-        </template>
-
-        <template #cell-weightedCurrent="{ row }">
-          <ScenarioCell :value="(row.weightedCurrent as number | null)" :decimals="AP_DECIMALS" />
-        </template>
-
-        <template #cell-weightedScenario="{ row }">
-          <ScenarioCell :value="(row.weightedScenario as number | null)" :decimals="AP_DECIMALS"
-            emphasis />
-        </template>
-
-        <template #cell-weightedMove="{ row }">
-          <ScenarioCell delta-only :value="(row.weightedMove as number | null)"
-            :delta="(row.weightedMove as number | null)" :decimals="AP_DECIMALS" />
-        </template>
-
       </ScoreTable>
     </div>
   </BaseModal>
@@ -257,108 +178,45 @@ function selectPlayer(row: Record<string, unknown>) {
 .map-modal {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
+  min-height: 70vh;
 }
 
 .map-modal__head {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-md);
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md) var(--space-2xl);
 }
 
 .map-modal__identity {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
   flex: 1;
-  min-width: 180px;
+  min-width: 240px;
 }
 
-.map-modal__badges {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
-.map-modal__mapper {
-  color: var(--text-primary);
-  font-size: var(--text-body);
-}
-
-.map-modal__scores {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.map-modal__complexities {
-  display: flex;
-  gap: var(--space-lg);
-}
-
-.map-modal__complexity {
+.map-modal__fact {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-xs);
 }
 
-.map-modal__complexity-label {
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.map-modal__count {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.map-modal__inputs {
+.map-modal__bar {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-md);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 
-.map-modal__inputs-body {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
-  gap: var(--space-lg);
-}
 
 .map-modal__error {
-  margin: 0;
   color: var(--error);
-  font-size: var(--text-body);
-}
-
-.map-modal__player {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-}
-
-.map-modal__player-name {
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.map-modal__accuracy,
-.map-modal__rank {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
-@media (max-width: 767px) {
-  .map-modal__complexities {
-    gap: var(--space-md);
-    width: 100%;
-    justify-content: space-between;
-  }
 }
 </style>

@@ -5,6 +5,40 @@ export const DELTA_MODES = ['size', 'up', 'down'] as const
 
 export type DeltaMode = (typeof DELTA_MODES)[number]
 
+export type SortBasis = 'change' | 'now' | 'after'
+
+export const BASIS_TABS: { key: SortBasis; label: string }[] = [
+  { key: 'change', label: 'Change' },
+  { key: 'now', label: 'Now' },
+  { key: 'after', label: 'After' },
+]
+
+export type BasisKeys = Record<string, Record<SortBasis, string>>
+
+export function useSortBasis(
+  metrics: () => BasisKeys,
+  sort: { sortKey: Ref<string>; deltaMode: Ref<DeltaMode>; setKey: (key: string) => void },
+  initial: SortBasis = 'change',
+) {
+  const basis = ref<SortBasis>(initial)
+
+  function keyOf(metric: string): string {
+    return metrics()[metric][basis.value]
+  }
+
+  function setBasis(next: string) {
+    const held = Object.values(metrics()).find((keys) => Object.values(keys).includes(sort.sortKey.value))
+    basis.value = next as SortBasis
+    if (held) sort.setKey(held[basis.value])
+  }
+
+  function label(metric: string, text: string): string {
+    return basis.value === 'change' && sort.sortKey.value === keyOf(metric) ? `${text} (${sort.deltaMode.value})` : text
+  }
+
+  return { basis, keyOf, setBasis, label }
+}
+
 export type SortAccessor<T> = (row: T) => number | string | null
 
 interface SortStateOptions {
@@ -55,12 +89,18 @@ export function useSortState(options: SortStateOptions) {
     sortDirection.value = options.ascendingKeys?.includes(key) ? 'asc' : 'desc'
   }
 
-  return { sortKey, sortDirection, deltaMode, sortState, absolute, onSort }
+  function setKey(key: string) {
+    sortKey.value = key
+    deltaMode.value = 'size'
+    sortDirection.value = options.ascendingKeys?.includes(key) ? 'asc' : 'desc'
+  }
+
+  return { sortKey, sortDirection, deltaMode, sortState, absolute, onSort, setKey }
 }
 
 export function useScenarioSort<T>(options: ScenarioSortOptions<T>) {
   const pageSize = options.pageSize ?? 50
-  const { sortKey, sortDirection, deltaMode, sortState, onSort } = useSortState(options)
+  const { sortKey, sortDirection, deltaMode, sortState, onSort, setKey } = useSortState(options)
   const page = ref(1)
 
   function readSortValue(row: T): number | string | null {
@@ -111,6 +151,7 @@ export function useScenarioSort<T>(options: ScenarioSortOptions<T>) {
     totalPages,
     visible,
     onSort,
+    setKey,
     setPage,
   }
 }

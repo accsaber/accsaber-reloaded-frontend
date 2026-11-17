@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
-import BaseInput from '@/components/common/BaseInput.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import IconButton from '@/components/common/IconButton.vue'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useCategoryStore } from '@/stores/categories'
 import type { BatchResponse } from '@/types/api/batches'
@@ -15,6 +16,9 @@ import { useRoute, useRouter } from 'vue-router'
 import BatchCategoryColumns from './BatchCategoryColumns.vue'
 import BatchMapCard from './BatchMapCard.vue'
 
+const QUEUE_PAGE_SIZE = 200
+const OTHER_BATCHES_SIZE = 100
+
 const route = useRoute()
 const router = useRouter()
 const categoryStore = useCategoryStore()
@@ -22,559 +26,386 @@ const categoryStore = useCategoryStore()
 const batchId = computed(() => (route.params.batchId as string) || null)
 const isNew = computed(() => !batchId.value)
 
-usePageMeta({ title: computed(() => isNew.value ? 'New Batch | Ranking' : 'Edit Batch | Ranking') })
+usePageMeta({ title: computed(() => (isNew.value ? 'New Batch | Ranking' : 'Edit Batch | Ranking')) })
 
 const batch = ref<BatchResponse | null>(null)
-const batchName = ref('')
-const batchDescription = ref('')
+const name = ref('')
+const description = ref('')
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 
-const queueDifficulties = ref<MapDifficultyResponse[]>([])
+const queue = ref<MapDifficultyResponse[]>([])
 const queueLoading = ref(true)
-
-const batchDifficultyIds = ref<Set<string>>(new Set())
+const selectedIds = ref<Set<string>>(new Set())
+const otherBatchOf = ref<Map<string, string>>(new Map())
 
 const isDraft = computed(() => !batch.value || batch.value.status === 'DRAFT')
 const isReleaseReady = computed(() => batch.value?.status === 'RELEASE_READY')
+const trimmedName = computed(() => name.value.trim())
+const trimmedDescription = computed(() => description.value.trim())
 
-const trimmedName = computed(() => batchName.value.trim())
-const trimmedDescription = computed(() => batchDescription.value.trim())
-
-const detailsDirty = computed(() => {
-  if (!batch.value) return false
-  return (
-    trimmedName.value !== batch.value.name ||
-    trimmedDescription.value !== (batch.value.description ?? '')
-  )
-})
-
-const difficultiesDirty = computed(() => {
-  if (!batch.value) return batchDifficultyIds.value.size > 0
-  const current = batch.value.difficulties
-  if (current.length !== batchDifficultyIds.value.size) return true
-  return current.some((d) => !batchDifficultyIds.value.has(d.id))
-})
-
-const hasChanges = computed(() =>
-  isNew.value || detailsDirty.value || (isDraft.value && difficultiesDirty.value)
+const detailsDirty = computed(
+  () => !!batch.value && (trimmedName.value !== batch.value.name || trimmedDescription.value !== (batch.value.description ?? '')),
 )
 
-const canSave = computed(() => !!trimmedName.value && hasChanges.value)
+const mapsDirty = computed(() => {
+  const current = batch.value?.difficulties ?? []
+  return current.length !== selectedIds.value.size || current.some((d) => !selectedIds.value.has(d.id))
+})
 
-const activeCategories = computed<CategoryInfo[]>(() =>
+const canSave = computed(
+  () => !!trimmedName.value && (isNew.value || detailsDirty.value || (isDraft.value && mapsDirty.value)),
+)
+
+const categories = computed<CategoryInfo[]>(() =>
   categoryStore.categoryInfoList
     .filter((c) => c.code !== 'xp' && c.code !== 'overall')
-    .sort((a, b) => CATEGORY_ORDER.indexOf(a.code as typeof CATEGORY_ORDER[number]) - CATEGORY_ORDER.indexOf(b.code as typeof CATEGORY_ORDER[number]))
+    .sort((a, b) => (CATEGORY_ORDER as readonly string[]).indexOf(a.code) - (CATEGORY_ORDER as readonly string[]).indexOf(b.code)),
 )
 
 function groupByCategory(difficulties: MapDifficultyResponse[]) {
-  const groups = new Map<string, MapDifficultyResponse[]>()
-  for (const cat of activeCategories.value) groups.set(cat.code, [])
-
-  const fallback = activeCategories.value[0]?.code ?? 'overall'
+  const groups = new Map<string, MapDifficultyResponse[]>(categories.value.map((c) => [c.code, []]))
+  const fallback = categories.value[0]?.code ?? 'overall'
   for (const diff of difficulties) {
     const code = categoryStore.getCategoryCode(diff.categoryId) ?? fallback
-    const key = groups.has(code) ? code : fallback
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(diff)
+    groups.get(groups.has(code) ? code : fallback)?.push(diff)
   }
-
   return groups
 }
 
-const selectedDifficulties = computed(() => {
-  const seen = new Set<string>()
-  const selected: MapDifficultyResponse[] = []
-  for (const diff of [...queueDifficulties.value, ...(batch.value?.difficulties ?? [])]) {
-    if (!batchDifficultyIds.value.has(diff.id) || seen.has(diff.id)) continue
-    seen.add(diff.id)
-    selected.push(diff)
+const selected = computed(() => {
+  const byId = new Map<string, MapDifficultyResponse>()
+  for (const diff of [...queue.value, ...(batch.value?.difficulties ?? [])]) {
+    if (selectedIds.value.has(diff.id)) byId.set(diff.id, diff)
   }
-  return selected
+  return [...byId.values()]
 })
 
-const availableQualified = computed(() =>
-  queueDifficulties.value.filter((d) => !batchDifficultyIds.value.has(d.id) && d.status === 'QUALIFIED')
-)
+const qualified = computed(() => queue.value.filter((d) => !selectedIds.value.has(d.id) && d.status === 'QUALIFIED'))
+const queued = computed(() => queue.value.filter((d) => !selectedIds.value.has(d.id) && d.status === 'QUEUE'))
 
-const availableQueued = computed(() =>
-  queueDifficulties.value.filter((d) => !batchDifficultyIds.value.has(d.id) && d.status === 'QUEUE')
-)
+const selectedGroups = computed(() => groupByCategory(selected.value))
+const qualifiedGroups = computed(() => groupByCategory(qualified.value))
+const queuedGroups = computed(() => groupByCategory(queued.value))
 
-const batchByCategory = computed(() => groupByCategory(selectedDifficulties.value))
-const qualifiedByCategory = computed(() => groupByCategory(availableQualified.value))
-const queuedByCategory = computed(() => groupByCategory(availableQueued.value))
-
-const totalSelected = computed(() => batchDifficultyIds.value.size)
+let loadId = 0
 
 async function fetchBatch() {
-  if (!batchId.value) {
+  const id = batchId.value
+  if (!id) {
     loading.value = false
     return
   }
-  loading.value = true
   try {
     const { getBatch } = await import('@/api/ranking/batches')
-    const b = await getBatch(batchId.value)
-    batch.value = b
-    batchName.value = b.name
-    batchDescription.value = b.description ?? ''
-    batchDifficultyIds.value = new Set(b.difficulties.map((d) => d.id))
-  } catch {
-    error.value = 'Failed to load batch.'
+    const fetched = await getBatch(id)
+    if (id !== batchId.value) return
+    batch.value = fetched
+    name.value = fetched.name
+    description.value = fetched.description ?? ''
+    selectedIds.value = new Set(fetched.difficulties.map((d) => d.id))
+  } catch (err) {
+    if (id === batchId.value) error.value = parseApiError(err, 'Could not load the batch').message
+  } finally {
+    if (id === batchId.value) loading.value = false
   }
-  loading.value = false
 }
 
-const diffBatchMap = ref<Map<string, string>>(new Map())
-
 async function fetchQueue() {
-  queueLoading.value = true
+  const request = loadId
   try {
     const { getRankingDifficulties } = await import('@/api/ranking/maps')
-    const [qualifiedRes, queueRes] = await Promise.all([
-      getRankingDifficulties({ page: 0, size: 200, status: 'QUALIFIED', sort: 'createdAt,desc' } as never),
-      getRankingDifficulties({ page: 0, size: 200, status: 'QUEUE', sort: 'createdAt,desc' } as never),
+    const [qualifiedPage, queuePage] = await Promise.all([
+      getRankingDifficulties({ page: 0, size: QUEUE_PAGE_SIZE, status: 'QUALIFIED', sort: 'createdAt,desc' } as never),
+      getRankingDifficulties({ page: 0, size: QUEUE_PAGE_SIZE, status: 'QUEUE', sort: 'createdAt,desc' } as never),
     ])
-    queueDifficulties.value = [...qualifiedRes.content, ...queueRes.content]
+    if (request === loadId) queue.value = [...qualifiedPage.content, ...queuePage.content]
   } catch {
-    queueDifficulties.value = []
+    if (request === loadId) queue.value = []
+  } finally {
+    if (request === loadId) queueLoading.value = false
   }
-  queueLoading.value = false
 }
 
 async function fetchOtherBatches() {
+  const request = loadId
   try {
     const { listBatches } = await import('@/api/ranking/batches')
-    const [draftRes, readyRes] = await Promise.all([
-      listBatches({ status: 'DRAFT', page: 0, size: 100 }),
-      listBatches({ status: 'RELEASE_READY', page: 0, size: 100 }),
+    const [drafts, ready] = await Promise.all([
+      listBatches({ status: 'DRAFT', page: 0, size: OTHER_BATCHES_SIZE }),
+      listBatches({ status: 'RELEASE_READY', page: 0, size: OTHER_BATCHES_SIZE }),
     ])
-    const map = new Map<string, string>()
-    for (const b of [...draftRes.content, ...readyRes.content]) {
-      if (b.id === batchId.value) continue
-      for (const d of b.difficulties) {
-        map.set(d.id, b.name)
-      }
+    if (request !== loadId) return
+    const owners = new Map<string, string>()
+    for (const other of [...drafts.content, ...ready.content]) {
+      if (other.id === batchId.value) continue
+      for (const diff of other.difficulties) owners.set(diff.id, other.name)
     }
-    diffBatchMap.value = map
+    otherBatchOf.value = owners
   } catch {
-    diffBatchMap.value = new Map()
+    if (request === loadId) otherBatchOf.value = new Map()
   }
 }
 
-watch(batchId, () => {
-  fetchBatch()
-  fetchQueue()
-  fetchOtherBatches()
-}, { immediate: true })
+watch(
+  batchId,
+  () => {
+    loadId++
+    loading.value = !!batchId.value
+    queueLoading.value = true
+    void Promise.all([fetchBatch(), fetchQueue(), fetchOtherBatches()])
+  },
+  { immediate: true },
+)
 
-const pendingAdd = ref<string | null>(null)
-const pendingAddWarning = ref('')
+const { confirmModal, ask } = useConfirmAction()
+
+function addWarnings(diff: MapDifficultyResponse): string[] {
+  const warnings: string[] = []
+  if (diff.status === 'QUEUE') warnings.push('This map is still in the queue and is not qualified yet.')
+  if (diff.headCriteriaVote === 'DOWNVOTE') warnings.push('A head ranker voted criteria fail on it.')
+  else if (diff.criteriaDownvotes > diff.criteriaUpvotes) warnings.push('Its criteria votes are negative, so it may need a head override.')
+  else if (!diff.criteriaUpvotes && !diff.criteriaDownvotes && diff.criteriaStatus !== 'PASSED') warnings.push('It has no criteria votes yet.')
+  const owner = otherBatchOf.value.get(diff.id)
+  if (owner) warnings.push(`It is already in ${owner}.`)
+  return warnings
+}
+
+function add(diffId: string) {
+  selectedIds.value = new Set([...selectedIds.value, diffId])
+}
 
 function requestAdd(diffId: string) {
+  const diff = queue.value.find((d) => d.id === diffId)
+  if (!diff || !isDraft.value) return
+  const warnings = addWarnings(diff)
+  if (!warnings.length) return add(diffId)
+  ask({
+    title: 'Add Anyway?',
+    message: warnings.join(' '),
+    confirmLabel: 'Add Anyway',
+    run: () => add(diffId),
+  })
+}
+
+function remove(diffId: string) {
   if (!isDraft.value) return
-
-  const diff = queueDifficulties.value.find((d) => d.id === diffId)
-  if (!diff) return
-
-  const warnings: string[] = []
-
-  if (diff.status === 'QUEUE') {
-    warnings.push('This map is still in QUEUE and has not been qualified yet.')
-  }
-
-  if (diff.headCriteriaVote === 'DOWNVOTE') {
-    warnings.push('Head ranker voted criteria fail on this map.')
-  } else if (diff.criteriaDownvotes > diff.criteriaUpvotes) {
-    warnings.push('Criteria votes are negative - may require a RANKING_HEAD override.')
-  } else if (diff.criteriaUpvotes === 0 && diff.criteriaDownvotes === 0 && diff.criteriaStatus !== 'PASSED') {
-    warnings.push('No criteria votes yet.')
-  }
-
-  const otherBatch = diffBatchMap.value.get(diffId)
-  if (otherBatch) {
-    warnings.push(`This map is already in batch "${otherBatch}".`)
-  }
-
-  if (warnings.length > 0) {
-    pendingAdd.value = diffId
-    pendingAddWarning.value = warnings.join(' ')
-    return
-  }
-
-  addToBatch(diffId)
-}
-
-function confirmAdd() {
-  if (pendingAdd.value) {
-    addToBatch(pendingAdd.value)
-    pendingAdd.value = null
-    pendingAddWarning.value = ''
-  }
-}
-
-function cancelAdd() {
-  pendingAdd.value = null
-  pendingAddWarning.value = ''
-}
-
-function addToBatch(diffId: string) {
-  batchDifficultyIds.value = new Set([...batchDifficultyIds.value, diffId])
-}
-
-function removeFromBatch(diffId: string) {
-  if (!isDraft.value) return
-  const next = new Set(batchDifficultyIds.value)
+  const next = new Set(selectedIds.value)
   next.delete(diffId)
-  batchDifficultyIds.value = next
+  selectedIds.value = next
 }
 
-async function saveBatch() {
+async function syncMaps(id: string) {
+  const { addDifficultyToBatch, removeDifficultyFromBatch } = await import('@/api/ranking/batches')
+  const current = new Set(batch.value?.difficulties.map((d) => d.id) ?? [])
+  for (const diffId of current) {
+    if (!selectedIds.value.has(diffId)) await removeDifficultyFromBatch(id, diffId)
+  }
+  for (const diffId of selectedIds.value) {
+    if (!current.has(diffId)) await addDifficultyToBatch(id, diffId)
+  }
+}
+
+async function save() {
   if (!canSave.value) return
   saving.value = true
   error.value = ''
-
   try {
     const api = await import('@/api/ranking/batches')
     let id = batchId.value
-
     if (!id) {
-      const created = await api.createBatch({
-        name: trimmedName.value,
-        description: trimmedDescription.value,
-      })
+      const created = await api.createBatch({ name: trimmedName.value, description: trimmedDescription.value })
       id = created.id
-      batch.value = created
-      batchDescription.value = created.description ?? ''
-      router.replace({ name: 'ranking-batch-builder', params: { batchId: id } })
-    } else if (detailsDirty.value) {
-      await api.updateBatch(id, {
-        name: trimmedName.value,
-        description: trimmedDescription.value || null,
-      })
+      await syncMaps(id)
+      await router.replace({ name: 'ranking-batch-builder', params: { batchId: id } })
+      return
     }
-
-    if (isDraft.value) {
-      await syncDifficulties(id)
+    if (detailsDirty.value) {
+      await api.updateBatch(id, { name: trimmedName.value, description: trimmedDescription.value || null })
     }
-
+    if (isDraft.value) await syncMaps(id)
     await fetchBatch()
-  } catch (e) {
-    error.value = parseApiError(e, 'Failed to save batch.').message
+  } catch (err) {
+    error.value = parseApiError(err, 'Could not save the batch').message
   } finally {
     saving.value = false
   }
 }
 
-async function syncDifficulties(id: string) {
-  const { addDifficultyToBatch, removeDifficultyFromBatch } = await import('@/api/ranking/batches')
-
-  const currentIds = new Set(batch.value?.difficulties.map((d) => d.id) ?? [])
-  const targetIds = batchDifficultyIds.value
-
-  const toRemove = [...currentIds].filter((diffId) => !targetIds.has(diffId))
-  const toAdd = [...targetIds].filter((diffId) => !currentIds.has(diffId))
-
-  for (const diffId of toRemove) {
-    await removeDifficultyFromBatch(id, diffId)
-  }
-  for (const diffId of toAdd) {
-    await addDifficultyToBatch(id, diffId)
-  }
+function askMarkReady() {
+  ask({
+    title: 'Mark Ready',
+    message: 'Mark this batch as release ready? Its maps get locked.',
+    confirmLabel: 'Mark Ready',
+    run: async () => {
+      const { updateBatchStatus } = await import('@/api/ranking/batches')
+      await updateBatchStatus(batchId.value!, { status: 'RELEASE_READY' })
+      await fetchBatch()
+    },
+  })
 }
 
-const showMarkReady = ref(false)
-const markReadyLoading = ref(false)
-
-async function handleMarkReady() {
-  if (!batchId.value) return
-  markReadyLoading.value = true
-  try {
-    const { updateBatchStatus } = await import('@/api/ranking/batches')
-    await updateBatchStatus(batchId.value, { status: 'RELEASE_READY' })
-    showMarkReady.value = false
-    await fetchBatch()
-  } catch {
-  } finally {
-    markReadyLoading.value = false
-  }
+function askRelease() {
+  ask({
+    title: 'Release Batch',
+    message: `Release ${trimmedName.value} with ${selectedIds.value.size} difficulties? Every map in it gets ranked and scores are backfilled. This cannot be undone.`,
+    confirmLabel: 'Release',
+    destructive: true,
+    run: async () => {
+      const { releaseBatch } = await import('@/api/ranking/batches')
+      await releaseBatch(batchId.value!)
+      await router.push({ name: 'staff-ranking-head' })
+    },
+  })
 }
-
-const showRelease = ref(false)
-const releaseLoading = ref(false)
-
-async function handleRelease() {
-  if (!batchId.value) return
-  releaseLoading.value = true
-  try {
-    const { releaseBatch } = await import('@/api/ranking/batches')
-    await releaseBatch(batchId.value)
-    showRelease.value = false
-    router.push({ name: 'staff-ranking-head' })
-  } catch {
-  } finally {
-    releaseLoading.value = false
-  }
-}
-
-function goBack() {
-  router.push({ name: 'staff-ranking-head' })
-}
-
-function goToDetail(diffId: string) {
-  router.push({ name: 'ranking-map-detail', params: { difficultyId: diffId } })
-}
-
-const editingComplexity = ref<string | null>(null)
 
 async function saveComplexity(diffId: string, complexity: number) {
+  error.value = ''
   try {
     const { updateMapComplexity } = await import('@/api/ranking/maps')
     await updateMapComplexity(diffId, { complexity })
-    editingComplexity.value = null
-    await fetchQueue()
-    await fetchBatch()
-  } catch {
+    await Promise.all([fetchQueue(), fetchBatch()])
+  } catch (err) {
+    error.value = parseApiError(err, 'Could not change the complexity').message
   }
 }
 </script>
 
 <template>
   <div class="batch-builder">
-    <div class="batch-builder__header">
-      <button class="batch-builder__back" @click="goBack" aria-label="Back to batches">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <h1 class="batch-builder__title">{{ isNew ? 'New Batch' : (trimmedName || 'Untitled Batch') }}</h1>
-      <div class="batch-builder__header-actions">
-        <BaseButton size="sm" :loading="saving" :disabled="!canSave" @click="saveBatch">
-          Save
-        </BaseButton>
-        <BaseButton v-if="isDraft && !isNew && totalSelected > 0" size="sm" variant="primary" @click="showMarkReady = true">
-          Mark Ready
-        </BaseButton>
-        <BaseButton v-if="isReleaseReady" size="sm" variant="primary" @click="showRelease = true">
-          Release
-        </BaseButton>
+    <header class="batch-builder__header">
+      <IconButton icon="back" label="Back to batches" @click="router.push({ name: 'staff-ranking-head' })" />
+      <div class="batch-builder__titles">
+        <input v-model="name" class="inline-edit batch-builder__name" placeholder="Batch name" aria-label="Name" maxlength="100" />
+        <input v-model="description" class="inline-edit batch-builder__description" placeholder="Description" aria-label="Description" />
       </div>
-    </div>
+      <div class="batch-builder__actions">
+        <BaseButton v-if="isDraft && !isNew && selectedIds.size > 0" :disabled="canSave" @click="askMarkReady">Mark Ready</BaseButton>
+        <BaseButton v-if="isReleaseReady" variant="destructive" @click="askRelease">Release</BaseButton>
+        <BaseButton variant="primary" :loading="saving" :disabled="!canSave" @click="save">Save</BaseButton>
+      </div>
+    </header>
 
-    <div class="batch-builder__name-row">
-      <BaseInput v-model="batchName" label="Name" placeholder="Batch name" />
-      <BaseInput v-model="batchDescription" label="Description" placeholder="Description (optional)" />
-    </div>
-    <p v-if="!isDraft" class="batch-builder__name-hint">
-      Maps are locked for this batch - only the name and description can be edited.
+    <p class="caption batch-builder__status" :class="{ 'batch-builder__status--error': error }" :role="error ? 'alert' : undefined">
+      {{ error || (isDraft ? '' : 'Maps are locked') }}
     </p>
 
-    <div v-if="error" class="batch-builder__error">{{ error }}</div>
-
-    <BatchCategoryColumns :categories="activeCategories" :groups="batchByCategory">
-      <template #card="{ diff }">
-        <BatchMapCard
-          :diff="diff"
-          selected
-          :action="isDraft ? 'remove' : null"
-          :editing-complexity="editingComplexity === diff.id"
-          @open="goToDetail"
-          @act="removeFromBatch"
-          @start-edit="editingComplexity = $event"
-          @cancel-edit="editingComplexity = null"
-          @save-complexity="saveComplexity"
-        />
-      </template>
-    </BatchCategoryColumns>
+    <section class="batch-builder__section">
+      <h2 class="section-title">In This Batch <span class="caption">{{ selectedIds.size }}</span></h2>
+      <BatchCategoryColumns :categories="categories" :groups="selectedGroups" :loading="loading">
+        <template #card="{ diff }">
+          <BatchMapCard :diff="diff" :action="isDraft ? 'remove' : null" :editable="isDraft" @act="remove" @save-complexity="saveComplexity" />
+        </template>
+      </BatchCategoryColumns>
+    </section>
 
     <template v-if="isDraft">
-      <div v-if="queueLoading" class="batch-builder__queue-section">
-        <div class="batch-builder__queue-loading">Loading maps...</div>
-      </div>
-
-      <div v-if="!queueLoading && availableQualified.length > 0" class="batch-builder__queue-section">
-        <h2 class="batch-builder__queue-title">
-          Qualified
-          <span class="batch-builder__queue-count">{{ availableQualified.length }}</span>
-        </h2>
-        <BatchCategoryColumns :categories="activeCategories" :groups="qualifiedByCategory">
+      <section v-if="queueLoading || qualified.length" class="batch-builder__section">
+        <h2 class="section-title">Qualified <span v-if="!queueLoading" class="caption">{{ qualified.length }}</span></h2>
+        <BatchCategoryColumns :categories="categories" :groups="qualifiedGroups" :loading="queueLoading">
           <template #card="{ diff }">
-            <BatchMapCard
-              :diff="diff"
-              action="add"
-              :batch-label="diffBatchMap.get(diff.id) ?? null"
-              @open="goToDetail"
-              @act="requestAdd"
-            />
+            <BatchMapCard :diff="diff" action="add" :batch-label="otherBatchOf.get(diff.id) ?? null" @act="requestAdd" />
           </template>
         </BatchCategoryColumns>
-      </div>
+      </section>
 
-      <div v-if="!queueLoading && availableQueued.length > 0" class="batch-builder__queue-section">
-        <h2 class="batch-builder__queue-title">
-          Queued
-          <span class="batch-builder__queue-count">{{ availableQueued.length }}</span>
-        </h2>
-        <BatchCategoryColumns :categories="activeCategories" :groups="queuedByCategory">
+      <section v-if="!queueLoading && queued.length" class="batch-builder__section">
+        <h2 class="section-title">Queued <span class="caption">{{ queued.length }}</span></h2>
+        <BatchCategoryColumns :categories="categories" :groups="queuedGroups">
           <template #card="{ diff }">
-            <BatchMapCard
-              :diff="diff"
-              action="add"
-              :batch-label="diffBatchMap.get(diff.id) ?? null"
-              @open="goToDetail"
-              @act="requestAdd"
-            />
+            <BatchMapCard :diff="diff" action="add" :batch-label="otherBatchOf.get(diff.id) ?? null" @act="requestAdd" />
           </template>
         </BatchCategoryColumns>
-      </div>
+      </section>
 
-      <EmptyState v-if="!queueLoading && availableQualified.length === 0 && availableQueued.length === 0" message="No maps available" />
+      <EmptyState v-if="!queueLoading && !qualified.length && !queued.length" message="No maps left to add" />
     </template>
 
-    <BaseModal :open="showMarkReady" title="Mark Ready" max-width="400px" @close="showMarkReady = false">
-      <p style="color: var(--text-secondary); margin: 0">
-        Mark this batch as release ready? Editing will be locked.
-      </p>
-      <template #footer>
-        <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
-          <BaseButton @click="showMarkReady = false">Cancel</BaseButton>
-          <BaseButton variant="primary" :loading="markReadyLoading" @click="handleMarkReady">Confirm</BaseButton>
-        </div>
-      </template>
-    </BaseModal>
-
-    <BaseModal :open="showRelease" title="Release Batch" max-width="420px" @close="showRelease = false">
-      <p style="color: var(--text-secondary); margin: 0">
-        Release <strong>{{ batchName }}</strong> with {{ totalSelected }} difficulties?
-        This will rank all maps in the batch and trigger score backfill. This action is irreversible.
-      </p>
-      <template #footer>
-        <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
-          <BaseButton @click="showRelease = false">Cancel</BaseButton>
-          <BaseButton variant="destructive" :loading="releaseLoading" @click="handleRelease">Release</BaseButton>
-        </div>
-      </template>
-    </BaseModal>
-
-    <BaseModal :open="!!pendingAdd" title="Warning" max-width="420px" @close="cancelAdd">
-      <p style="color: var(--warning); margin: 0">{{ pendingAddWarning }}</p>
-      <p style="color: var(--text-secondary); margin: var(--space-sm) 0 0">Add to batch anyway?</p>
-      <template #footer>
-        <div style="display: flex; gap: var(--space-sm); justify-content: flex-end">
-          <BaseButton @click="cancelAdd">Cancel</BaseButton>
-          <BaseButton variant="primary" @click="confirmAdd">Add Anyway</BaseButton>
-        </div>
-      </template>
-    </BaseModal>
+    <ConfirmModal v-bind="confirmModal" />
   </div>
 </template>
 
 <style scoped>
 .batch-builder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: var(--space-xl) var(--space-xl) var(--space-3xl);
 }
 
 .batch-builder__header {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
+  align-items: flex-start;
+  gap: var(--space-md);
 }
 
-.batch-builder__back {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: var(--space-xs);
-  border-radius: var(--radius-btn);
+.batch-builder__header > .icon-button {
+  margin-top: var(--space-sm);
+}
+
+.batch-builder__titles {
   display: flex;
-  align-items: center;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.batch-builder__back:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-}
-
-.batch-builder__title {
   flex: 1;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
 }
 
-.batch-builder__header-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.batch-builder__name-row {
-  display: flex;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
-}
-
-.batch-builder__name-row > * {
-  flex: 1;
-}
-
-.batch-builder__name-hint {
-  margin: calc(-1 * var(--space-md)) 0 var(--space-lg);
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-
-.batch-builder__error {
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
-  border-radius: var(--radius-btn);
-  color: var(--error);
-  font-size: var(--text-caption);
-  margin-bottom: var(--space-lg);
-}
-
-.batch-builder__queue-section {
-  border-top: 1px solid var(--bg-overlay);
-  margin-top: var(--space-xl);
-  padding-top: var(--space-xl);
-}
-
-.batch-builder__queue-title {
-  font-size: var(--text-section);
+.batch-builder__name {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-page-title);
   font-weight: 700;
+  line-height: 1.2;
   color: var(--text-primary);
-  margin: 0 0 var(--space-md);
+}
+
+.batch-builder__description {
+  width: 100%;
+  font: inherit;
+  font-size: var(--text-body);
+  color: var(--text-secondary);
+}
+
+.batch-builder__actions {
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
   gap: var(--space-sm);
 }
 
-.batch-builder__queue-count {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-weight: 400;
+.batch-builder__status {
+  min-height: 1lh;
+  margin-top: calc(-1 * var(--space-md));
 }
 
-.batch-builder__queue-loading {
-  color: var(--text-secondary);
-  font-size: var(--text-body);
-  padding: var(--space-xl);
-  text-align: center;
+.batch-builder__status--error {
+  color: var(--error);
+}
+
+.batch-builder__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.batch-builder__section .section-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: 0;
 }
 
 @media (max-width: 767px) {
-  .batch-builder {
-    padding: var(--space-md) var(--space-md) var(--space-2xl);
+  .batch-builder__header {
+    flex-wrap: wrap;
   }
 
-  .batch-builder__name-row {
-    flex-direction: column;
+  .batch-builder__actions {
+    flex-basis: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

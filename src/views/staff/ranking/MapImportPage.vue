@@ -2,13 +2,17 @@
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
-import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseSwitch from '@/components/common/BaseSwitch.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import CoverImage from '@/components/common/CoverImage.vue'
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import StatusMark from '@/components/common/StatusMark.vue'
+import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
-import { useColorExtract } from '@/composables/useColorExtract'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { rankingDashboardRoute } from '@/router'
 import { useCategoryStore } from '@/stores/categories'
+import type { Tab } from '@/types/display'
 import type { Difficulty } from '@/types/enums'
 import {
   type BeatSaverMapResponse,
@@ -16,15 +20,14 @@ import {
   fetchBeatLeaderMapInfo,
   fetchBeatSaverMap,
   fetchScoreSaberLeaderboards,
-  formatBsDifficulty,
   parseBeatSaverCode,
 } from '@/utils/beatsaver'
 import { formatChartDuration, formatChartNumber } from '@/utils/chartMetadata'
-import { brightenRgb } from '@/utils/color'
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
+const GHOST_ROWS = 3
+const EXISTING_ID = /ID: ([0-9a-f-]{36})/i
+
 const categoryStore = useCategoryStore()
 
 usePageMeta({
@@ -32,25 +35,10 @@ usePageMeta({
   description: 'Import a map from BeatSaver into the AccSaber ranking queue.',
 })
 
-const input = ref('')
-const fetchError = ref('')
-const fetchLoading = ref(false)
-const bsMap = ref<BeatSaverMapResponse | null>(null)
-const blCoverUrl = ref<string | null>(null)
-
-const coverUrl = computed(
-  () => blCoverUrl.value ?? bsMap.value?.versions[0]?.coverURL ?? '',
-)
-const { dominantColor } = useColorExtract(coverUrl)
-
-const pageAccent = computed(() => {
-  if (!dominantColor.value) return undefined
-  return brightenRgb(dominantColor.value, 60)
-})
-
 interface DiffSelection {
+  key: string
   characteristic: string
-  difficulty: string
+  difficulty: Difficulty
   njs: number
   notes: number
   selected: boolean
@@ -58,437 +46,336 @@ interface DiffSelection {
   blLeaderboardId: string | null
   ssLeaderboardId: number | null
   importing: boolean
-  imported: boolean
-  importError: string
-  importedDifficultyId: string | null
+  importedId: string | null
+  existingId: string | null
+  error: string
 }
 
-const diffSelections = ref<DiffSelection[]>([])
+const input = ref('')
+const fetchError = ref('')
+const fetching = ref(false)
+const bsMap = ref<BeatSaverMapResponse | null>(null)
+const blCoverUrl = ref<string | null>(null)
+const diffs = ref<DiffSelection[]>([])
 
-const selectableCategories = computed(() =>
-  categoryStore.categories.filter((c) => c.code !== 'overall'),
+const coverUrl = computed(() => blCoverUrl.value ?? bsMap.value?.versions[0]?.coverURL ?? '')
+
+const categoryTabs = computed<Tab[]>(() =>
+  categoryStore.categories
+    .filter((c) => c.code !== 'overall')
+    .map((c) => ({ key: c.id, label: categoryStore.getShortName(c.code), accentColor: categoryStore.getAccent(c.code) })),
 )
 
-const categoryOptions = computed(() =>
-  selectableCategories.value.map((c) => ({ value: c.id, label: c.name })),
-)
+const pending = computed(() => diffs.value.filter((d) => d.selected && !d.importedId))
+const importing = computed(() => diffs.value.some((d) => d.importing))
+const anyImported = computed(() => diffs.value.some((d) => d.importedId))
 
-const hasSelections = computed(() => diffSelections.value.some((d) => d.selected))
-const allImported = computed(() =>
-  diffSelections.value.filter((d) => d.selected).every((d) => d.imported)
-)
-const isImporting = computed(() => diffSelections.value.some((d) => d.importing))
+let fetchId = 0
 
-async function handleFetch() {
+async function fetchMap() {
   const code = parseBeatSaverCode(input.value)
   if (!code) {
-    fetchError.value = 'Invalid BeatSaver code or URL.'
+    fetchError.value = 'Not a BeatSaver code or URL'
     return
   }
-
-  fetchLoading.value = true
+  const id = ++fetchId
+  fetching.value = true
   fetchError.value = ''
   bsMap.value = null
   blCoverUrl.value = null
-  diffSelections.value = []
-
+  diffs.value = []
   try {
     const map = await fetchBeatSaverMap(code)
+    const version = map.versions[0]
+    const hash = version?.hash ?? ''
+    const [bl, ss] = await Promise.all([fetchBeatLeaderMapInfo(hash), fetchScoreSaberLeaderboards(hash)])
+    if (id !== fetchId) return
     bsMap.value = map
-
-    const hash = map.versions[0]?.hash ?? ''
-    const [blInfo, ssMap] = await Promise.all([
-      fetchBeatLeaderMapInfo(hash),
-      fetchScoreSaberLeaderboards(hash),
-    ])
-    blCoverUrl.value = blInfo.coverUrl
-    const blMap = blInfo.leaderboards
-
-    const diffs = map.versions[0]?.diffs ?? []
-    diffSelections.value = diffs.map((d) => {
+    blCoverUrl.value = bl.coverUrl
+    diffs.value = (version?.diffs ?? []).map((d) => {
       const key = `${d.difficulty}-${d.characteristic}`
       return {
+        key,
         characteristic: d.characteristic,
-        difficulty: d.difficulty,
+        difficulty: difficultyToEnum(d.difficulty) as Difficulty,
         njs: d.njs,
         notes: d.notes,
         selected: false,
-        categoryId: selectableCategories.value[0]?.id ?? '',
-        blLeaderboardId: blMap.get(key) ?? null,
-        ssLeaderboardId: ssMap.get(key) ?? null,
+        categoryId: categoryTabs.value[0]?.key ?? '',
+        blLeaderboardId: bl.leaderboards.get(key) ?? null,
+        ssLeaderboardId: ss.get(key) ?? null,
         importing: false,
-        imported: false,
-        importError: '',
-        importedDifficultyId: null,
+        importedId: null,
+        existingId: null,
+        error: '',
       }
     })
   } catch {
-    fetchError.value = 'Map not found. Check the code and try again.'
+    if (id === fetchId) fetchError.value = 'Map not found'
   } finally {
-    fetchLoading.value = false
+    if (id === fetchId) fetching.value = false
   }
 }
 
-async function handleSubmit() {
-  if (!bsMap.value) return
-
-  const selected = diffSelections.value.filter((d) => d.selected)
-  const { importMap } = await import('@/api/ranking/maps')
-  const { castVote } = await import('@/api/ranking/voting')
-
-  for (const diff of selected) {
-    diff.importing = true
-    diff.importError = ''
-    try {
-      if (!diff.blLeaderboardId) {
-        throw new Error('Missing BeatLeader leaderboard ID. BeatLeader may not have this difficulty.')
-      }
-      const result = await importMap({
-        blLeaderboardId: diff.blLeaderboardId,
-        ssLeaderboardId: diff.ssLeaderboardId != null ? String(diff.ssLeaderboardId) : undefined,
-        categoryId: diff.categoryId,
-        difficulty: difficultyToEnum(diff.difficulty) as Difficulty,
-        characteristic: diff.characteristic,
-      })
-      diff.imported = true
-      diff.importedDifficultyId = result.id
-      try {
-        await castVote(result.id, { vote: 'UPVOTE', type: 'RANK' })
-      } catch {
-      }
-    } catch (e) {
-      diff.importError = parseApiError(e, 'Import failed').message
-    } finally {
-      diff.importing = false
+async function importOne(diff: DiffSelection) {
+  diff.importing = true
+  diff.error = ''
+  try {
+    const [{ importMap }, { castVote }] = await Promise.all([import('@/api/ranking/maps'), import('@/api/ranking/voting')])
+    const result = await importMap({
+      blLeaderboardId: diff.blLeaderboardId!,
+      ssLeaderboardId: diff.ssLeaderboardId != null ? String(diff.ssLeaderboardId) : undefined,
+      categoryId: diff.categoryId,
+      difficulty: diff.difficulty,
+      characteristic: diff.characteristic,
+    })
+    diff.importedId = result.id
+    await castVote(result.id, { vote: 'UPVOTE', type: 'RANK' }).catch(() => undefined)
+  } catch (err) {
+    const parsed = parseApiError(err, 'Import failed')
+    if (parsed.code === 'CONFLICT') {
+      diff.existingId = parsed.message.match(EXISTING_ID)?.[1] ?? null
+      diff.selected = false
+      diff.error = 'Already imported'
+    } else {
+      diff.error = parsed.message
     }
+  } finally {
+    diff.importing = false
   }
 }
 
-function goToDashboard() {
-  router.push({ name: rankingDashboardRoute })
-}
-
-function goToDetail(difficultyId: string) {
-  router.push({ name: 'ranking-map-detail', params: { difficultyId } })
+async function importSelected() {
+  for (const diff of pending.value) await importOne(diff)
 }
 </script>
 
 <template>
   <div class="map-import">
-    <h1 class="map-import__title">Import Map</h1>
+    <h1>Import Map</h1>
 
-    <div class="map-import__input-row">
-      <BaseInput v-model="input" placeholder="BeatSaver code or URL (e.g. 4fdd2)" :disabled="fetchLoading"
-        @keydown.enter="handleFetch" />
-      <BaseButton variant="primary" :loading="fetchLoading" :disabled="!input.trim()" @click="handleFetch">
-        Fetch
-      </BaseButton>
-    </div>
+    <form class="map-import__lookup" @submit.prevent="fetchMap">
+      <BaseInput
+        v-model="input"
+        label="BeatSaver Code or URL"
+        placeholder="4fdd2"
+        :disabled="fetching"
+      />
+      <BaseButton variant="primary" :loading="fetching" :disabled="!input.trim()" @click="fetchMap">Fetch</BaseButton>
+      <p class="caption map-import__error map-import__lookup-error" role="alert">{{ fetchError }}</p>
+    </form>
 
-    <div v-if="fetchError" class="map-import__error">
-      {{ fetchError }}
-    </div>
-
-    <div v-if="bsMap" class="map-import__preview" :style="pageAccent ? { '--page-accent': pageAccent } : {}">
+    <section v-if="fetching || bsMap" class="map-import__map" :aria-busy="fetching">
       <div class="map-import__hero">
-        <CoverImage :src="coverUrl" alt="" :size="96" />
-        <div class="map-import__hero-info">
-          <h2 class="map-import__song-name">
-            <SongTitle layout="stacked" :name="bsMap.metadata.songName"
-              :sub-name="bsMap.metadata.songSubName" />
-          </h2>
-          <p class="map-import__song-meta">
-            {{ bsMap.metadata.songAuthorName }} - Mapped by {{ bsMap.metadata.levelAuthorName }}
-          </p>
-          <p class="map-import__song-stats">
-            {{ formatChartNumber(bsMap.metadata.bpm) }} BPM - {{ formatChartDuration(bsMap.metadata.duration) }}
-          </p>
+        <SkeletonLoader v-if="!bsMap" class="placeholder" width="120px" height="120px" />
+        <CoverImage v-else :src="coverUrl" :alt="bsMap.metadata.songName" :size="120" />
+        <div class="map-import__identity">
+          <template v-if="bsMap">
+            <h2 class="map-import__song">
+              <SongTitle layout="stacked" :name="bsMap.metadata.songName" :sub-name="bsMap.metadata.songSubName" />
+            </h2>
+            <p class="map-import__credits">{{ bsMap.metadata.songAuthorName }} · {{ bsMap.metadata.levelAuthorName }}</p>
+            <p class="caption">{{ formatChartNumber(bsMap.metadata.bpm) }} BPM · {{ formatChartDuration(bsMap.metadata.duration) }}</p>
+          </template>
+          <SkeletonLoader v-else class="placeholder" variant="text" :lines="3" width="240px" />
         </div>
       </div>
 
-      <div class="map-import__diffs">
-        <h3 class="map-import__section-title field-label">Difficulties</h3>
-
-        <div class="map-import__diff-list">
-          <div class="map-import__diff-header">
-            <span class="map-import__diff-col map-import__diff-col--name">Difficulty</span>
-            <span class="map-import__diff-col map-import__diff-col--cat">Category</span>
-          </div>
-          <div v-for="diff in diffSelections" :key="`${diff.characteristic}-${diff.difficulty}`"
-            class="map-import__diff-row" :class="{
-              'map-import__diff-row--selected': diff.selected,
-              'map-import__diff-row--imported': diff.imported,
-              'map-import__diff-row--clickable': !diff.imported && !isImporting,
-            }" @click="!diff.imported && !isImporting && (diff.selected = !diff.selected)">
-            <div class="map-import__diff-col map-import__diff-col--name">
-              <span class="map-import__diff-name">
-                {{ formatBsDifficulty(diff.difficulty) }}
-                <span v-if="diff.characteristic !== 'Standard'" class="map-import__diff-char">{{ diff.characteristic
-                  }}</span>
+      <ul class="map-import__diffs">
+        <template v-if="!bsMap">
+          <li v-for="i in GHOST_ROWS" :key="i" class="placeholder"><SkeletonLoader height="56px" /></li>
+        </template>
+        <li
+          v-for="diff in diffs"
+          :key="diff.key"
+          class="map-import__diff"
+        >
+          <StatusMark v-if="diff.importedId || diff.existingId" done />
+          <BaseSwitch
+            v-else
+            v-model="diff.selected"
+            :disabled="importing || !diff.blLeaderboardId"
+            :aria-label="`Import ${diff.difficulty}`"
+          />
+          <span class="map-import__diff-name">
+            <DifficultyBadge :difficulty="diff.difficulty" />
+            <span v-if="diff.characteristic !== 'Standard'" class="caption">{{ diff.characteristic }}</span>
+          </span>
+          <span class="caption map-import__diff-meta">NJS {{ diff.njs }} · {{ diff.notes }} notes</span>
+          <span class="map-import__diff-end">
+            <span v-if="diff.error && !diff.existingId" class="caption map-import__error" role="alert">{{ diff.error }}</span>
+            <span v-else-if="!diff.blLeaderboardId" class="caption map-import__error">Not on BeatLeader</span>
+            <template v-else-if="diff.importedId || diff.existingId">
+              <span class="caption" role="status">{{ diff.importedId ? 'Imported' : diff.error }}</span>
+              <BaseButton
+                size="sm"
+                :href="$router.resolve({ name: 'ranking-map-detail', params: { difficultyId: (diff.importedId ?? diff.existingId)! } }).href"
+              >
+                View
+              </BaseButton>
+            </template>
+            <Transition v-else name="collapse">
+              <span v-if="diff.selected" class="collapsible">
+                <BaseTabs
+                  v-model="diff.categoryId"
+                  variant="segmented"
+                  :label="`Category for ${diff.difficulty}`"
+                  :tabs="categoryTabs"
+                  :disabled-keys="importing ? categoryTabs.map((t) => t.key) : []"
+                />
               </span>
-              <span class="map-import__diff-meta">
-                NJS {{ diff.njs }} - {{ diff.notes }} notes
-                <span v-if="!diff.blLeaderboardId" class="map-import__diff-warn">
-                  No BL ID
-                </span>
-              </span>
-            </div>
-
-            <div class="map-import__diff-col map-import__diff-col--cat" @click.stop>
-              <BaseSelect v-if="diff.selected && !diff.imported" v-model="diff.categoryId" :options="categoryOptions"
-                :disabled="isImporting" />
-            </div>
-
-            <div v-if="diff.imported" class="map-import__diff-status map-import__diff-status--success">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Imported
-              <BaseButton size="sm" @click.stop="goToDetail(diff.importedDifficultyId!)">View</BaseButton>
-            </div>
-
-            <div v-if="diff.importing" class="map-import__diff-status">
-              Importing...
-            </div>
-
-            <div v-if="diff.importError" class="map-import__diff-status map-import__diff-status--error">
-              {{ diff.importError }}
-            </div>
-          </div>
-        </div>
-      </div>
+            </Transition>
+          </span>
+        </li>
+      </ul>
 
       <div class="map-import__actions">
-        <BaseButton v-if="!allImported" variant="primary" size="lg" :loading="isImporting" :disabled="!hasSelections"
-          @click="handleSubmit">
-          Import Selected
-        </BaseButton>
-        <BaseButton v-else @click="goToDashboard">
+        <BaseButton v-if="anyImported && !pending.length" :href="$router.resolve({ name: rankingDashboardRoute }).href">
           Back to Queue
         </BaseButton>
+        <BaseButton v-else variant="primary" :loading="importing" :disabled="!pending.length" @click="importSelected">
+          {{ pending.length > 1 ? `Import ${pending.length} Difficulties` : 'Import' }}
+        </BaseButton>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
 .map-import {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: var(--space-xl) var(--space-xl) var(--space-3xl);
-}
-
-.map-import__title {
-  margin-bottom: var(--space-xl);
-}
-
-.map-import__input-row {
   display: flex;
-  gap: var(--space-sm);
-  align-items: flex-end;
-  margin-bottom: var(--space-lg);
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
 }
 
-.map-import__input-row> :first-child {
+.map-import__lookup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-xs) var(--space-sm);
+}
+
+.map-import__lookup-error {
+  flex-basis: 100%;
+  min-height: 1lh;
+}
+
+.map-import__lookup :deep(.base-input) {
   flex: 1;
 }
 
-.map-import__error {
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
-  border-radius: var(--radius-btn);
-  color: var(--error);
-  font-size: var(--text-caption);
-  margin-bottom: var(--space-lg);
-}
-
-.map-import__preview {
-  position: relative;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
+.map-import__map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
   background: var(--bg-surface);
+  border-radius: var(--radius-card);
+  animation: settle-in var(--dur-enter) var(--ease-out) backwards;
 }
 
 .map-import__hero {
-  position: relative;
-  z-index: 1;
   display: flex;
-  gap: var(--space-lg);
-  padding: var(--space-xl);
   align-items: center;
+  gap: var(--space-lg);
 }
 
-.map-import__hero-info {
+.map-import__identity {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
-.map-import__song-name {
-  font-size: var(--text-section);
-  font-weight: 700;
-  color: var(--text-primary);
+.map-import__song {
   margin: 0;
+  font-size: var(--text-page-title);
+  line-height: 1.2;
+  text-wrap: balance;
 }
 
-.map-import__song-meta {
-  font-size: var(--text-caption);
+.map-import__credits {
+  margin: 0;
+  font-size: var(--text-card-title);
   color: var(--text-secondary);
-  margin: 0;
-}
-
-.map-import__song-stats {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  margin: 0;
 }
 
 .map-import__diffs {
-  position: relative;
-  z-index: 1;
-  padding: 0 var(--space-xl) var(--space-lg);
-}
-
-.map-import__section-title {
-  margin: 0 0 var(--space-md);
-}
-
-.map-import__diff-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.map-import__diff-header {
+.map-import__diff {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  min-height: 56px;
   padding: 0 var(--space-md);
-}
-
-.map-import__diff-header .map-import__diff-col {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.map-import__diff-col--name {
-  flex: 1;
-  min-width: 0;
-}
-
-.map-import__diff-col--cat {
-  width: 160px;
-  flex-shrink: 0;
-}
-
-.map-import__diff-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-btn);
+}
+
+.map-import__diff:nth-child(odd) {
   background: var(--bg-elevated);
-  border: 2px solid transparent;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-
-.map-import__diff-row--clickable {
-  cursor: pointer;
-}
-
-.map-import__diff-row--clickable:hover {
-  background: var(--bg-overlay);
-}
-
-.map-import__diff-row--selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 5%, var(--bg-elevated));
-}
-
-.map-import__diff-row--imported {
-  border-color: color-mix(in srgb, var(--success) 30%, transparent);
-  opacity: 0.8;
-  cursor: default;
 }
 
 .map-import__diff-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: var(--text-body);
-}
-
-.map-import__diff-char {
-  font-weight: 400;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  margin-left: var(--space-xs);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  min-width: 96px;
+  font-size: var(--text-card-title);
 }
 
 .map-import__diff-meta {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
   font-family: var(--font-mono);
 }
 
-.map-import__diff-warn {
-  color: var(--error);
-  font-weight: 600;
-}
-
-.map-import__diff-status {
-  margin-left: auto;
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+.map-import__diff-end {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
+  margin-left: auto;
 }
 
-.map-import__diff-status--success {
-  color: var(--success);
-}
-
-.map-import__diff-status--error {
+.map-import__error {
   color: var(--error);
 }
 
 .map-import__actions {
-  position: relative;
-  z-index: 1;
-  padding: 0 var(--space-xl) var(--space-xl);
   display: flex;
   justify-content: flex-end;
 }
 
 @media (max-width: 767px) {
-  .map-import {
-    padding: var(--space-md) var(--space-md) var(--space-2xl);
-  }
-
   .map-import__hero {
-    flex-direction: column;
     align-items: flex-start;
-    padding: var(--space-md);
+    gap: var(--space-md);
   }
 
-  .map-import__diff-header {
-    display: none;
+  .map-import__song {
+    font-size: var(--text-section-heading);
   }
 
-  .map-import__diff-row {
+  .map-import__diff {
     flex-wrap: wrap;
+    gap: 0 var(--space-md);
+    padding: var(--space-sm) var(--space-md);
   }
 
-  .map-import__diff-col--cat {
-    width: auto;
-    flex: 1;
+  .map-import__diff-end .collapsible > * {
+    margin-top: var(--space-sm);
   }
+
+  .map-import__diff-end {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
 }
 </style>

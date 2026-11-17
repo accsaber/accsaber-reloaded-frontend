@@ -2,11 +2,7 @@
 import NewsManagementView from '@/components/domain/NewsManagementView.vue'
 import type { ResourceKind } from '@/components/domain/NewsResourceSelector.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
-import type {
-  CreateNewsRequest,
-  StaffNewsListParams,
-  UpdateNewsRequest,
-} from '@/types/api/news'
+import type { CreateNewsRequest, StaffNewsListParams, UpdateNewsRequest } from '@/types/api/news'
 
 const ALLOWED: ResourceKind[] = ['BATCH']
 
@@ -43,13 +39,12 @@ async function onDeleteImage(id: string) {
 
 <template>
   <div class="ranking-news">
+    <h1>My News</h1>
     <NewsManagementView
-      title="My News"
       :allowed="ALLOWED"
       :fetch-page="fetchPage"
       :on-create="onCreate"
       :on-update="onUpdate"
-      :on-delete="null"
       :on-upload-image="onUploadImage"
       :on-delete-image="onDeleteImage"
     />
@@ -58,12 +53,11 @@ async function onDeleteImage(id: string) {
 
 <style scoped>
 .ranking-news {
-  padding: var(--space-xl);
-}
-
-@media (max-width: 767px) {
-  .ranking-news {
-    padding: var(--space-md);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 </style>

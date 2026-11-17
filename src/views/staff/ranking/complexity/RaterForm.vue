@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import BaseButton from '@/components/common/BaseButton.vue'
-import CategoryBadge from '@/components/domain/CategoryBadge.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import HintTooltip from '@/components/common/HintTooltip.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
-import type { RaterCoefficients } from '@/types/api/complexity'
-import type { CategoryCode } from '@/types/display'
+import StoredFold from '@/components/common/StoredFold.vue'
+import { useCategoryStore } from '@/stores/categories'
+import type { Tab } from '@/types/display'
 import { formatFixed } from '@/utils/formatters'
 import RaterField from './RaterField.vue'
 import {
@@ -14,170 +16,113 @@ import {
   categoryCodes,
   nearestBand,
   useTuningState,
-  type CoefficientKey,
-  type GateKey,
 } from './tuning'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
-defineProps<{
+const props = defineProps<{
+  category: string
   loading?: boolean
 }>()
 
-const { live, edited, bands, version, reset, dirty } = useTuningState()
-
 type LineKey = 'categories' | 'boardCategories'
 
-const BOARD_LINE = {
-  key: 'boardCategories' as LineKey,
-  title: 'Board line',
-  hint: 'Weights every map that clears the gate from what players score on it.',
-}
+const LINES: { key: LineKey; title: string; hint: string; fold: string; collapsed: boolean }[] = [
+  {
+    key: 'boardCategories',
+    title: 'Board Line',
+    hint: 'Weights every map that clears the gate from what players score on it.',
+    fold: 'script-board-line',
+    collapsed: false,
+  },
+  {
+    key: 'categories',
+    title: 'Chart Line',
+    hint: 'The baseline read from the notes. A map is weighted from it until enough scores come in, then the board line moves it from there.',
+    fold: 'script-chart-line',
+    collapsed: true,
+  },
+]
+const SNAP_MATCH = 0.0001
 
-const CHART_LINE = {
-  key: 'categories' as LineKey,
-  title: 'Chart line',
-  hint: 'The baseline read from the notes. A map is weighted from it until enough scores come in, then the board line moves it from there.',
-}
-
-const chartDirty = computed(
-  () => !!live.value && !!edited.value
-    && JSON.stringify(live.value.categories) !== JSON.stringify(edited.value.categories),
-)
-
-const chartOpen = ref(false)
-
-watch(chartDirty, (value) => {
-  if (value) chartOpen.value = true
-})
-
-function syncChartOpen(event: Event) {
-  chartOpen.value = (event.target as HTMLDetailsElement).open
-}
+const categoryStore = useCategoryStore()
+const { live, edited, bands, version, reset, dirty } = useTuningState()
 
 const codes = computed(() => (edited.value ? categoryCodes(edited.value) : []))
+const picked = ref('')
+const followsPage = computed(() => codes.value.includes(props.category))
+const code = computed(() => {
+  if (followsPage.value) return props.category
+  return codes.value.includes(picked.value) ? picked.value : (codes.value[0] ?? '')
+})
+
+const tabs = computed<Tab[]>(() =>
+  codes.value.map((key) => ({ key, label: categoryStore.getShortName(key), accentColor: categoryStore.getAccent(key) })),
+)
+
+function lineEdited(key: string): boolean {
+  return LINES.some((line) => JSON.stringify(live.value?.[line.key][key]) !== JSON.stringify(edited.value?.[line.key][key]))
+}
+
+const editedElsewhere = computed(() =>
+  codes.value.filter((key) => key !== code.value && lineEdited(key)).map((key) => categoryStore.getShortName(key)).join(', '),
+)
 
 const snapped = computed(() => {
   if (!edited.value) return null
   const band = nearestBand(edited.value.worstShare, bands.value)
-  if (band == null) return null
-  return Math.abs(band - edited.value.worstShare) < 0.0001 ? null : band
+  return band == null || Math.abs(band - edited.value.worstShare) < SNAP_MATCH ? null : band
 })
 
-const bandList = computed(() => bands.value.map((band) => formatFixed(band, 3)).join('  '))
-
-function coefficients(line: LineKey, code: string): RaterCoefficients | undefined {
-  return edited.value?.[line][code]
-}
-
-function liveCoefficient(line: LineKey, code: string, key: CoefficientKey): number {
-  return live.value?.[line][code]?.[key] ?? 0
-}
-
-function setCoefficient(line: LineKey, code: string, key: CoefficientKey, value: number) {
-  const target = coefficients(line, code)
-  if (!target) return
-  target[key] = value
-}
-
-function setGate(key: GateKey, value: number) {
-  if (!edited.value) return
-  edited.value.board[key] = value
-}
-
-function setWorstShare(value: number) {
-  if (!edited.value) return
-  edited.value.worstShare = value
-}
+const bandNote = computed(() => {
+  const list = bands.value.map((band) => formatFixed(band, 3)).join(', ')
+  return snapped.value == null ? `Weights exactly at ${list}` : `Weights exactly at ${list}. Snaps to ${formatFixed(snapped.value, 3)}`
+})
 </script>
 
 <template>
   <div class="rater-form">
     <template v-if="loading || !edited">
-      <SkeletonLoader variant="card" />
-      <SkeletonLoader variant="card" />
+      <SkeletonLoader class="placeholder" height="var(--control-h)" />
+      <SkeletonLoader v-for="n in 3" :key="n" class="placeholder" height="52px" />
+      <SkeletonLoader class="placeholder" height="300px" />
     </template>
 
     <template v-else>
-      <header class="rater-form__head">
-        <div class="rater-form__intro">
-          <h3 class="rater-form__title">Constants</h3>
-          <p class="caption">
-            Editing these reweights the whole pool below. Nothing here is saved.
-          </p>
-        </div>
-        <div class="rater-form__head-actions">
-          <span class="rater-form__version">{{ version }}</span>
-          <BaseButton size="sm" :disabled="!dirty" @click="reset">Reset to live</BaseButton>
-        </div>
-      </header>
-
-      <div class="rater-form__top">
-        <section class="rater-form__group">
-          <h4 class="rater-form__group-title field-label">Worst share</h4>
-          <RaterField label="Share of notes" :hint="WORST_SHARE_HINT" kind="share"
-            :live="live?.worstShare ?? edited.worstShare" :model-value="edited.worstShare"
-            @update:model-value="setWorstShare" />
-          <p class="rater-form__bands">
-            Weights exactly at <span class="rater-form__code">{{ bandList }}</span>
-            <template v-if="snapped">. Snaps to {{ formatFixed(snapped, 3) }}.</template>
-          </p>
-        </section>
-
-        <section class="rater-form__group">
-          <h4 class="rater-form__group-title field-label">Board gate</h4>
-          <div class="rater-form__gate">
-            <RaterField v-for="field in GATE_FIELDS" :key="field.key" :label="field.label"
-              :hint="field.hint" :kind="field.kind" :deferred="field.slow"
-              :live="live?.board[field.key] ?? 0" :model-value="edited.board[field.key]"
-              @update:model-value="setGate(field.key, $event)" />
-          </div>
-          <p class="rater-form__bands">{{ SLOW_GATE_NOTE }}</p>
-        </section>
+      <div class="rater-form__head">
+        <BaseTabs v-if="!followsPage" variant="segmented" label="Category" :tabs="tabs" :model-value="code" @update:model-value="picked = $event" />
+        <span class="caption rater-form__note">
+          {{ version }}, nothing here is saved<template v-if="editedElsewhere">. Also edited: {{ editedElsewhere }}</template>
+        </span>
+        <BaseButton :disabled="!dirty" @click="reset">Reset to Live</BaseButton>
       </div>
 
-      <section class="rater-form__section">
-        <div class="rater-form__section-head">
-          <h4 class="rater-form__group-title field-label">{{ BOARD_LINE.title }}</h4>
-          <span class="caption">{{ BOARD_LINE.hint }}</span>
+      <StoredFold class="rater-form__fold" label="Worst Share" storage-key="script-worst-share">
+        <template #meta><HintTooltip :text="bandNote" label="Worst share" /></template>
+        <div class="rater-form__fields">
+          <RaterField label="Share of Notes" :hint="WORST_SHARE_HINT" kind="share" :live="live?.worstShare ?? edited.worstShare"
+            :model-value="edited.worstShare" @update:model-value="edited.worstShare = $event" />
         </div>
+      </StoredFold>
 
-        <div class="rater-form__lines">
-          <div v-for="code in codes" :key="code" class="rater-form__line">
-            <CategoryBadge :category="(code as CategoryCode)" />
-            <template v-if="coefficients(BOARD_LINE.key, code)">
-              <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label"
-                :hint="field.hint" :kind="field.kind"
-                :live="liveCoefficient(BOARD_LINE.key, code, field.key)"
-                :model-value="coefficients(BOARD_LINE.key, code)![field.key]"
-                @update:model-value="setCoefficient(BOARD_LINE.key, code, field.key, $event)" />
-            </template>
-            <p v-else class="rater-form__absent">This category has no board line.</p>
-          </div>
+      <StoredFold class="rater-form__fold" label="Board Gate" storage-key="script-board-gate">
+        <template #meta><HintTooltip :text="SLOW_GATE_NOTE" label="Board gate" /></template>
+        <div class="rater-form__fields">
+          <RaterField v-for="field in GATE_FIELDS" :key="field.key" :label="field.label" :hint="field.hint" :kind="field.kind"
+            :deferred="field.slow" :live="live?.board[field.key] ?? 0" :model-value="edited.board[field.key]"
+            @update:model-value="edited.board[field.key] = $event" />
         </div>
-      </section>
+      </StoredFold>
 
-      <details class="rater-form__section rater-form__fold" :open="chartOpen"
-        @toggle="syncChartOpen">
-        <summary class="rater-form__section-head rater-form__fold-head">
-          <h4 class="rater-form__group-title field-label">{{ CHART_LINE.title }}</h4>
-          <span class="caption">{{ CHART_LINE.hint }}</span>
-          <span class="rater-form__fold-toggle" aria-hidden="true"></span>
-        </summary>
-
-        <div class="rater-form__lines">
-          <div v-for="code in codes" :key="code" class="rater-form__line">
-            <CategoryBadge :category="(code as CategoryCode)" />
-            <template v-if="coefficients(CHART_LINE.key, code)">
-              <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label"
-                :hint="field.hint" :kind="field.kind"
-                :live="liveCoefficient(CHART_LINE.key, code, field.key)"
-                :model-value="coefficients(CHART_LINE.key, code)![field.key]"
-                @update:model-value="setCoefficient(CHART_LINE.key, code, field.key, $event)" />
-            </template>
-            <p v-else class="rater-form__absent">This category has no chart line.</p>
-          </div>
+      <StoredFold v-for="line in LINES" :key="line.key" class="rater-form__fold" :label="line.title" :storage-key="line.fold"
+        :default-collapsed="line.collapsed">
+        <template #meta><HintTooltip :text="line.hint" :label="line.title" /></template>
+        <div v-if="edited[line.key][code]" :key="code" class="rater-form__fields">
+          <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label" :hint="field.hint" :kind="field.kind"
+            :live="live?.[line.key][code]?.[field.key] ?? 0" :model-value="edited[line.key][code][field.key]"
+            @update:model-value="edited[line.key][code][field.key] = $event" />
         </div>
-      </details>
+        <p v-else class="caption">This category has no {{ line.title.toLowerCase() }}</p>
+      </StoredFold>
     </template>
   </div>
 </template>
@@ -186,169 +131,45 @@ function setWorstShare(value: number) {
 .rater-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
-  min-width: 0;
-  padding: var(--space-xl);
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
 }
 
 .rater-form__head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-lg);
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
 }
 
-.rater-form__intro {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.rater-form__note {
+  flex: 1;
+  min-width: 200px;
 }
 
-.rater-form__title {
-  margin: 0;
+.rater-form__head :deep(.base-tabs__tab--active) {
+  color: var(--tab-accent);
+}
+
+.rater-form__fold :deep(.stored-fold__label) {
+  font-size: var(--text-card-title);
+}
+
+.rater-form__fold :deep(.stored-fold__toggle) {
   color: var(--text-primary);
-  font-size: var(--text-section-heading);
-  font-weight: 600;
 }
 
-
-.rater-form__head-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.rater-form__version {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.rater-form__top {
+.rater-form__fields {
   display: grid;
-  grid-template-columns: minmax(min(280px, 100%), 1fr) minmax(min(420px, 100%), 2fr);
-  gap: var(--space-xl);
-  padding-top: var(--space-lg);
-  border-top: 1px solid var(--bg-overlay);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-2xl);
 }
 
-.rater-form__group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  min-width: 0;
-}
-
-.rater-form__group-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin: 0;
-}
-
-.rater-form__gate {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
-  gap: var(--space-md) var(--space-xl);
-}
-
-.rater-form__bands {
-  margin: 0;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-  line-height: 1.5;
-}
-
-.rater-form__code {
-  font-family: var(--font-code);
-  color: var(--text-secondary);
-}
-
-.rater-form__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  min-width: 0;
-  padding-top: var(--space-lg);
-  border-top: 1px solid var(--bg-overlay);
-}
-
-.rater-form__section-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.rater-form__fold-head {
-  cursor: pointer;
-  list-style: none;
-}
-
-.rater-form__fold-head::-webkit-details-marker {
-  display: none;
-}
-
-.rater-form__fold-head:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--page-accent, var(--accent)) 20%, transparent);
-}
-
-.rater-form__fold-toggle {
-  margin-left: auto;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-
-.rater-form__fold-toggle::before {
-  content: 'Show';
-}
-
-.rater-form__fold[open] .rater-form__fold-toggle::before {
-  content: 'Hide';
-}
-
-.rater-form__fold-head:hover .rater-form__fold-toggle {
-  color: var(--text-secondary);
-}
-
-.rater-form__lines {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
-  gap: var(--space-lg) var(--space-xl);
-}
-
-.rater-form__line {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  min-width: 0;
-  padding: var(--space-md);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-}
-
-.rater-form__absent {
-  margin: 0;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-
-@media (max-width: 1100px) {
-  .rater-form__top {
+@media (max-width: 1023px) {
+  .rater-form__fields {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 767px) {
-  .rater-form {
-    gap: var(--space-lg);
-    padding: var(--space-md);
   }
 }
 </style>

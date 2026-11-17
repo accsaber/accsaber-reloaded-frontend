@@ -38,17 +38,11 @@ export const DIFF_COLOR: Record<string, string> = {
   EXPERT_PLUS: 'var(--diff-expert-plus)',
 }
 
-export const MAP_STATUS_ACCENT: Record<string, string> = {
-  QUEUE: 'var(--accent-overall)',
-  QUALIFIED: 'var(--accent-low-mid)',
-  RANKED: 'var(--accent-standard-acc)',
-}
-
 import type { MapDifficultyStatus } from '@/types/enums'
 
 export const QUEUE_STATUSES: MapDifficultyStatus[] = ['QUEUE', 'QUALIFIED']
 
-import type { NewsType } from '@/types/enums'
+import type { NewsStatus, NewsType } from '@/types/enums'
 
 export const NEWS_TYPE_LABELS: Record<NewsType, string> = {
   GENERAL: 'General',
@@ -81,6 +75,12 @@ export const NEWS_TYPE_ORDER: NewsType[] = [
 ]
 
 export const STANDALONE_NEWS_TYPES: NewsType[] = ['GENERAL', 'ITEMS', 'PLUGIN']
+
+export const NEWS_STATUS_LABELS: Record<NewsStatus, string> = {
+  DRAFT: 'Draft',
+  PUBLISHED: 'Published',
+  ARCHIVED: 'Archived',
+}
 
 import type { EventState } from '@/types/api/events'
 

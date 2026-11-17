@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { formatFixed } from '@/utils/formatters'
 import HintTooltip from '@/components/common/HintTooltip.vue'
+import { formatFixed } from '@/utils/formatters'
 import { fieldRange, type FieldKind, type FieldRange } from './tuning'
 import { computed, ref, watch } from 'vue'
 
@@ -17,15 +17,11 @@ const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
 
-const decimals = computed(() => {
-  if (props.kind === 'count') return 0
-  if (props.kind === 'share') return 3
-  if (props.kind === 'nudge') return 2
-  return 3
-})
+const DECIMALS: Record<FieldKind, number> = { count: 0, share: 3, nudge: 2, intercept: 3, slope: 3 }
+const SAME = 1e-9
 
+const decimals = computed(() => DECIMALS[props.kind])
 const range = ref<FieldRange>(fieldRange(props.kind, props.live, props.modelValue))
-
 const typed = ref(formatFixed(props.modelValue, decimals.value))
 
 watch(() => props.live, (live) => {
@@ -34,9 +30,7 @@ watch(() => props.live, (live) => {
 
 watch(() => props.modelValue, (value) => {
   if (Number(typed.value) !== value) typed.value = formatFixed(value, decimals.value)
-  if (value < range.value.min || value > range.value.max) {
-    range.value = fieldRange(props.kind, props.live, value)
-  }
+  if (value < range.value.min || value > range.value.max) range.value = fieldRange(props.kind, props.live, value)
 })
 
 function commit(raw: string) {
@@ -58,7 +52,7 @@ function slide(event: Event, settled: boolean) {
   if (settled || !props.deferred) emit('update:modelValue', parsed)
 }
 
-const changed = computed(() => Math.abs(props.modelValue - props.live) > 1e-9)
+const changed = computed(() => Math.abs(props.modelValue - props.live) > SAME)
 </script>
 
 <template>
@@ -67,13 +61,11 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > 1e-9)
       {{ label }}
       <HintTooltip :text="hint" :label="label" />
     </span>
-    <input class="rater-field__slider" type="range" :min="range.min" :max="range.max"
-      :step="range.step" :value="modelValue" :aria-label="label" @input="slide($event, false)"
-      @change="slide($event, true)" />
-    <input class="rater-field__value" type="text" inputmode="decimal" :value="typed"
+    <input class="slider rater-field__slider" type="range" :min="range.min" :max="range.max" :step="range.step"
+      :value="modelValue" :aria-label="label" @input="slide($event, false)" @change="slide($event, true)" />
+    <input class="inline-edit rater-field__value" type="text" inputmode="decimal" :value="typed"
       :aria-label="`${label} value`" @input="type(($event.target as HTMLInputElement).value)"
       @change="commit(($event.target as HTMLInputElement).value)"
-      @blur="commit(($event.target as HTMLInputElement).value)"
       @keyup.enter="commit(($event.target as HTMLInputElement).value)" />
   </div>
 </template>
@@ -81,10 +73,11 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > 1e-9)
 <style scoped>
 .rater-field {
   display: grid;
-  grid-template-columns: minmax(96px, 132px) minmax(80px, 1fr) 86px;
+  grid-template-columns: 220px minmax(80px, 1fr) 72px;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-md);
   min-width: 0;
+  height: var(--control-h);
 }
 
 .rater-field__label {
@@ -92,39 +85,41 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > 1e-9)
   align-items: center;
   gap: var(--space-xs);
   color: var(--text-secondary);
-  font-size: var(--text-caption);
 }
 
 .rater-field--changed .rater-field__label {
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .rater-field__slider {
   width: 100%;
   min-width: 0;
-  height: 18px;
-  accent-color: var(--page-accent, var(--accent));
-  cursor: pointer;
 }
 
 .rater-field__value {
   width: 100%;
-  padding: 3px var(--space-sm);
-  background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-input);
-  color: var(--text-primary);
+  font: inherit;
   font-family: var(--font-mono);
-  font-size: var(--text-caption);
+  color: var(--text-primary);
   text-align: right;
-  outline: none;
 }
 
 .rater-field--changed .rater-field__value {
-  border-color: color-mix(in srgb, var(--page-accent, var(--accent)) 45%, var(--bg-overlay));
+  border-bottom-color: var(--page-accent, var(--accent));
 }
 
-.rater-field__value:focus {
-  border-color: var(--page-accent, var(--accent));
+@media (max-width: 767px) {
+  .rater-field {
+    grid-template-columns: minmax(0, 1fr) 72px;
+    height: auto;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-sm) 0;
+  }
+
+  .rater-field__slider {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 </style>

@@ -31,10 +31,6 @@ export function isRecentDate(dateString: string, withinDays = 7): boolean {
   return days < withinDays
 }
 
-export function truncate(str: string, max: number): string {
-  return str.length > max ? str.slice(0, max) + '...' : str
-}
-
 export function digitsOnly(value: string | number): string {
   return String(value).replace(/\D/g, '')
 }

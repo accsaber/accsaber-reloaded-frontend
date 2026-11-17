@@ -80,7 +80,6 @@ const activityPath = isRankingSubdomain ? '/activity' : '/staff/ranking/activity
 const deactivatedPath = isRankingSubdomain ? '/deactivated' : '/staff/ranking/deactivated'
 
 const scriptPath = isRankingSubdomain ? '/script' : '/staff/ranking/script'
-const voteReweightPath = isRankingSubdomain ? '/vote-reweight' : '/staff/ranking/vote-reweight'
 const newsPath = isRankingSubdomain ? '/news' : '/staff/ranking/news'
 
 const rankingNavItems = computed<NavItem[]>(() => {
@@ -91,7 +90,6 @@ const rankingNavItems = computed<NavItem[]>(() => {
     { to: scriptPath, label: 'Complexity Script' },
   ]
   if (authStore.hasRole('RANKING_HEAD')) {
-    items.push({ to: voteReweightPath, label: 'Vote Reweight' })
     items.push({ to: newsPath, label: 'News' })
   }
   items.push({ to: activityPath, label: 'Activity' })

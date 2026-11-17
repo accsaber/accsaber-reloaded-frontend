@@ -53,16 +53,6 @@ export const SCENARIO_LABELS: Record<ComplexityScenario, string> = {
   PREVIEW: 'Preview',
 }
 
-export const SCENARIO_ORDER: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT']
-
-export const SCENARIO_SHORT: Record<ComplexityScenario, string> = {
-  CURRENT: 'now',
-  NEW_SCRIPT: 'after',
-  PREVIEW: 'after',
-}
-
-export const PREVIEW_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'PREVIEW']
-
 export const SCRIPT_SCENARIO: EstimateScenario = 'NEW_SCRIPT'
 
 export const PIN_HINT = "The script's apply leaves this map alone."
@@ -72,6 +62,15 @@ export const AP_DECIMALS = 1
 export const BIG_MOVE = 1
 
 const EPSILON = 0.005
+const SCRIPT_MATCH = 0.05
+
+export function scriptNote(entry: { scriptComplexity?: number | null; complexity: number | null }): string | null {
+  const { scriptComplexity: script, complexity } = entry
+  if (script == null) return null
+  const value = script.toFixed(1)
+  if (complexity == null || Math.abs(script - complexity) < SCRIPT_MATCH) return value
+  return `${value} (${script > complexity ? '+' : '-'}${Math.abs(script - complexity).toFixed(1)})`
+}
 
 export type DeltaTone = 'up' | 'down' | 'flat'
 

@@ -32,6 +32,7 @@ import ClanHeaderActions from './clans/ClanHeaderActions.vue'
 import ClanRosterTab from './clans/ClanRosterTab.vue'
 import { loadClanLevels } from './clans/clanLevels'
 import { useClanChat } from '@/composables/useClanChat'
+import { useConfirmAction } from '@/composables/useConfirmAction'
 import { useClanFeed } from './clans/useClanFeed'
 import { formatShortDate } from '@/utils/formatters'
 import { useClanPage } from './clans/useClanPage'
@@ -70,16 +71,6 @@ const ClanDiplomacyTab = defineAsyncComponent(TAB_LOADERS.ClanDiplomacyTab)
 const ClanMissionsTab = defineAsyncComponent(TAB_LOADERS.ClanMissionsTab)
 const ClanWarsTab = defineAsyncComponent(TAB_LOADERS.ClanWarsTab)
 const DeclareWarModal = defineAsyncComponent(() => import('./clans/war/DeclareWarModal.vue'))
-
-interface PendingConfirm {
-  title: string
-  message: string
-  confirmLabel: string
-  destructive: boolean
-  typedConfirmation?: string
-  blocked?: boolean
-  run: () => Promise<void>
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -206,8 +197,7 @@ function onDeclared(detail: ClanWarDetailResponse) {
 const busy = ref(false)
 const actionError = ref<string | null>(null)
 const actionNotice = ref<string | null>(null)
-const confirm = ref<PendingConfirm | null>(null)
-const confirmError = ref<string | null>(null)
+const { confirmModal, ask } = useConfirmAction(busy)
 const editing = ref(false)
 const draft = ref<ClanProfileDraft>(emptyClanDraft())
 const draftRequests = ref(true)
@@ -319,26 +309,6 @@ function resolveRequest(status: 'accepted' | 'declined' | 'cancelled') {
     await refreshViewer()
     if (status === 'accepted') await reload()
   }, 'Could not answer that.')
-}
-
-function ask(pending: PendingConfirm) {
-  confirmError.value = null
-  confirm.value = pending
-}
-
-async function runConfirm() {
-  const pending = confirm.value
-  if (!pending) return
-  busy.value = true
-  confirmError.value = null
-  try {
-    await pending.run()
-    confirm.value = null
-  } catch (err) {
-    confirmError.value = parseApiError(err, 'That did not go through.').message
-  } finally {
-    busy.value = false
-  }
 }
 
 function askLeave() {
@@ -687,19 +657,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         @declared="onDeclared"
       />
 
-      <ConfirmModal
-        :open="confirm !== null"
-        :title="confirm?.title ?? ''"
-        :message="confirm?.message ?? ''"
-        :confirm-label="confirm?.confirmLabel ?? ''"
-        :destructive="confirm?.destructive"
-        :typed-confirmation="confirm?.typedConfirmation"
-        :blocked="confirm?.blocked"
-        :loading="busy"
-        :error="confirmError"
-        @confirm="runConfirm"
-        @close="confirm = null"
-      />
+      <ConfirmModal v-bind="confirmModal" />
     </template>
   </div>
 </template>

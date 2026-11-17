@@ -1,26 +1,25 @@
 <script setup lang="ts">
-import AdminTable from '@/components/admin/AdminTable.vue'
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
-import NewsFormModal from '@/components/domain/NewsFormModal.vue'
-import NewsTypeBadge from '@/components/domain/NewsTypeBadge.vue'
 import type { ResourceKind } from '@/components/domain/NewsResourceSelector.vue'
-import type {
-  CreateNewsRequest,
-  NewsResponse,
-  StaffNewsListParams,
-  UpdateNewsRequest,
-} from '@/types/api/news'
-import type { Page } from '@/types/pagination'
+import NewsTypeBadge from '@/components/domain/NewsTypeBadge.vue'
+import { useConfirmAction } from '@/composables/useConfirmAction'
+import type { CreateNewsRequest, NewsResponse, StaffNewsListParams, UpdateNewsRequest } from '@/types/api/news'
+import type { TableColumn, Tab } from '@/types/display'
 import type { NewsStatus, NewsType } from '@/types/enums'
-import { NEWS_TYPE_LABELS, NEWS_TYPE_ORDER } from '@/utils/constants'
-import { computed, ref, watch } from 'vue'
+import type { Page } from '@/types/pagination'
+import { NEWS_STATUS_LABELS, NEWS_TYPE_LABELS, NEWS_TYPE_ORDER } from '@/utils/constants'
 import { formatShortDate } from '@/utils/formatters'
+import { knownCount, rememberCount } from '@/utils/knownCount'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 
 const props = defineProps<{
-  title: string
-  meta?: string
+  title?: string
   allowed: ResourceKind[]
   allowedStandalone?: NewsType[]
   fetchPage: (params: StaffNewsListParams) => Promise<Page<NewsResponse>>
@@ -31,220 +30,196 @@ const props = defineProps<{
   onDeleteImage?: (id: string) => Promise<NewsResponse>
 }>()
 
-const items = ref<NewsResponse[]>([])
-const loading = ref(false)
-const totalPages = ref(0)
-const totalElements = ref(0)
-const page = ref(1)
-const size = 15
+const NewsFormModal = defineAsyncComponent(() => import('@/components/domain/NewsFormModal.vue'))
 
-const statusFilter = ref<NewsStatus | ''>('')
-const typeFilter = ref<NewsType | ''>('')
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'All statuses' },
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'PUBLISHED', label: 'Published' },
-  { value: 'ARCHIVED', label: 'Archived' },
+const PAGE_SIZE = 15
+const STATUS_TABS: Tab[] = [
+  { key: '', label: 'All' },
+  ...(Object.keys(NEWS_STATUS_LABELS) as NewsStatus[]).map((key) => ({ key, label: NEWS_STATUS_LABELS[key] })),
+]
+const COLUMNS: TableColumn[] = [
+  { key: 'title', label: 'Title', primary: true },
+  { key: 'type', label: 'Type', width: '120px' },
+  { key: 'status', label: 'Status', width: '112px' },
+  { key: 'author', label: 'Author', width: '160px' },
+  { key: 'publishedAt', label: 'Published', width: '128px', format: (v) => formatShortDate(v as string | null, '-') },
+  { key: 'updatedAt', label: 'Updated', width: '128px', format: (v) => formatShortDate(v as string, '-') },
+  { key: 'actions', label: '', align: 'right', width: '160px', noLink: true },
 ]
 
+const { confirmModal, ask } = useConfirmAction()
+
+const items = ref<NewsResponse[]>([])
+const loading = ref(true)
+const loaded = ref(false)
+const totalPages = ref(0)
+const page = ref(1)
+const statusFilter = ref<NewsStatus | ''>('')
+const typeFilter = ref<NewsType | ''>('')
+const listError = ref('')
+
 const typeOptions = computed(() => {
-  const standalone = props.allowedStandalone ?? ['GENERAL']
-  const allowedSet = new Set<NewsType>([...standalone, ...props.allowed])
+  const allowed = new Set<NewsType>([...(props.allowedStandalone ?? ['GENERAL']), ...props.allowed])
   return [
-    { value: '', label: 'All types' },
-    ...NEWS_TYPE_ORDER
-      .filter((t) => allowedSet.has(t))
-      .map((t) => ({ value: t, label: NEWS_TYPE_LABELS[t] })),
+    { value: '', label: 'All Types' },
+    ...NEWS_TYPE_ORDER.filter((t) => allowed.has(t)).map((t) => ({ value: t, label: NEWS_TYPE_LABELS[t] })),
   ]
 })
 
-const showModal = ref(false)
-const editing = ref<NewsResponse | null>(null)
-const submitting = ref(false)
-const errorMessage = ref('')
-const actionLoading = ref<Record<string, boolean>>({})
+const rows = computed<Record<string, unknown>[]>(() =>
+  items.value.map((item) => ({ ...item, author: item.author.username ?? '-', entry: item })),
+)
+const countKey = computed(() => `news-admin:${statusFilter.value}:${typeFilter.value}:${page.value}`)
+
+let requestId = 0
 
 async function fetchList() {
+  const id = ++requestId
   loading.value = true
-  errorMessage.value = ''
+  listError.value = ''
   try {
-    const params: StaffNewsListParams = {
+    const res = await props.fetchPage({
       page: page.value - 1,
-      size,
+      size: PAGE_SIZE,
       sort: 'updatedAt,desc',
-    }
-    if (statusFilter.value) params.status = statusFilter.value
-    if (typeFilter.value) params.type = typeFilter.value as NewsType
-    const res = await props.fetchPage(params)
+      status: statusFilter.value || undefined,
+      type: typeFilter.value || undefined,
+    })
+    rememberCount(countKey.value, res.content.length)
+    if (id !== requestId) return
     items.value = res.content
     totalPages.value = res.totalPages
-    totalElements.value = res.totalElements
-  } catch {
-    errorMessage.value = 'Failed to load news.'
+  } catch (err) {
+    if (id === requestId) listError.value = parseApiError(err, 'Could not load the news').message
   } finally {
-    loading.value = false
+    if (id === requestId) {
+      loading.value = false
+      loaded.value = true
+    }
   }
 }
 
 watch([statusFilter, typeFilter], () => {
-  page.value = 1
-  fetchList()
-}, { immediate: true })
-
-watch(page, () => {
-  fetchList()
+  if (page.value === 1) void fetchList()
+  else page.value = 1
 })
+watch(page, fetchList, { immediate: true })
 
-function openCreate() {
-  editing.value = null
-  showModal.value = true
-}
+const formMounted = ref(false)
+const formOpen = ref(false)
+const editing = ref<NewsResponse | null>(null)
+const submitting = ref(false)
+const formError = ref('')
 
-function openEdit(news: NewsResponse) {
+function openForm(news: NewsResponse | null) {
   editing.value = news
-  showModal.value = true
+  formError.value = ''
+  formMounted.value = true
+  formOpen.value = true
 }
 
-async function handleSubmit(payload: CreateNewsRequest) {
+async function submit(payload: CreateNewsRequest) {
   submitting.value = true
+  formError.value = ''
   try {
-    if (editing.value) {
-      await props.onUpdate(editing.value.id, payload as UpdateNewsRequest)
-    } else {
-      await props.onCreate(payload)
-    }
-    showModal.value = false
-    fetchList()
-  } catch {
-    errorMessage.value = 'Failed to save the news article.'
+    if (editing.value) await props.onUpdate(editing.value.id, payload as UpdateNewsRequest)
+    else await props.onCreate(payload)
+    formOpen.value = false
+    void fetchList()
+  } catch (err) {
+    formError.value = parseApiError(err, 'Could not save the article').message
   } finally {
     submitting.value = false
   }
 }
 
-async function handleDelete(news: NewsResponse, hard: boolean) {
-  if (!props.onDelete) return
-  const message = hard
-    ? `Permanently delete "${news.title}"? This cannot be undone.`
-    : `Delete "${news.title}"? It will be hidden from all views.`
-  if (!confirm(message)) return
-  actionLoading.value[news.id] = true
-  try {
-    await props.onDelete(news.id, hard)
-    items.value = items.value.filter((n) => n.id !== news.id)
-  } catch {
-    errorMessage.value = 'Failed to delete the news article.'
-  } finally {
-    delete actionLoading.value[news.id]
-  }
+function askDelete(news: NewsResponse) {
+  ask({
+    title: 'Delete Article',
+    message: `Delete "${news.title}"? It is hidden from every view.`,
+    confirmLabel: 'Delete',
+    destructive: true,
+    run: async () => {
+      await props.onDelete?.(news.id, false)
+      void fetchList()
+    },
+  })
 }
 
 function onImageChanged(updated: NewsResponse) {
-  const idx = items.value.findIndex((n) => n.id === updated.id)
-  if (idx !== -1) items.value[idx] = updated
-}
-
-const STATUS_STYLE: Record<NewsStatus, string> = {
-  DRAFT: 'var(--text-tertiary)',
-  PUBLISHED: 'var(--success)',
-  ARCHIVED: 'var(--warning)',
+  items.value = items.value.map((n) => (n.id === updated.id ? updated : n))
 }
 </script>
 
 <template>
   <div class="news-mgmt">
-    <div class="news-mgmt__header">
-      <div>
-        <h2 class="section-title">{{ title }}</h2>
-        <p class="news-mgmt__meta">{{ meta ?? `${totalElements} articles` }}</p>
-      </div>
-      <div class="news-mgmt__actions">
-        <BaseSelect v-model="typeFilter" :options="typeOptions" style="width: 160px" />
-        <BaseSelect v-model="statusFilter" :options="STATUS_OPTIONS" style="width: 160px" />
-        <BaseButton variant="primary" @click="openCreate">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          New Article
-        </BaseButton>
-      </div>
+    <h2 v-if="title" class="section-title">{{ title }}</h2>
+
+    <div class="news-mgmt__controls">
+      <BaseTabs v-model="statusFilter" variant="segmented" label="Status" :tabs="STATUS_TABS" />
+      <BaseSelect v-model="typeFilter" class="news-mgmt__type" :options="typeOptions" />
+      <BaseButton class="news-mgmt__new" variant="primary" @click="openForm(null)">New Article</BaseButton>
     </div>
 
-    <p v-if="errorMessage" class="news-mgmt__error">{{ errorMessage }}</p>
+    <p v-if="listError" class="caption news-mgmt__error" role="alert">{{ listError }}</p>
 
-    <AdminTable :items="items" :loading="loading" :loading-rows="size" empty-message="No articles found">
-      <template #head>
-        <th>Title</th>
-        <th style="width: 120px">Type</th>
-        <th style="width: 110px">Status</th>
-        <th style="width: 60px" class="right">Pinned</th>
-        <th>Author</th>
-        <th class="mono" style="width: 130px">Published</th>
-        <th class="mono" style="width: 130px">Updated</th>
-        <th class="right" style="width: 200px" />
+    <DataTable
+      :columns="COLUMNS"
+      :rows="rows"
+      :loading="!loaded"
+      :refreshing="loaded && loading"
+      :loading-rows="knownCount(countKey, PAGE_SIZE)"
+      :row-height="56"
+      row-key="id"
+      empty-message="No articles"
+    >
+      <template #cell-title="{ row }">
+        <span class="news-mgmt__title">
+          <span class="news-mgmt__name">{{ row.title }}</span>
+          <svg v-if="row.pinned" class="news-mgmt__pin" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"
+            role="img" aria-label="Pinned">
+            <title>Pinned</title>
+            <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+          </svg>
+        </span>
       </template>
-      <template #default="{ item }">
-        <td>
-          <div class="news-mgmt__title-cell">
-            <span class="news-mgmt__name">{{ item.title }}</span>
-            <span class="news-mgmt__slug">/{{ item.slug }}</span>
-          </div>
-        </td>
-        <td>
-          <NewsTypeBadge :type="item.type" />
-        </td>
-        <td>
-          <span class="news-mgmt__status" :style="{ color: STATUS_STYLE[item.status], borderColor: STATUS_STYLE[item.status] }">
-            {{ item.status }}
-          </span>
-        </td>
-        <td class="right">
-          <span v-if="item.pinned" class="news-mgmt__pinned" aria-label="Pinned">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-            </svg>
-          </span>
-        </td>
-        <td class="muted">{{ item.author.username ?? '-' }}</td>
-        <td class="mono muted">{{ formatShortDate(item.publishedAt, '-') }}</td>
-        <td class="mono muted">{{ formatShortDate(item.updatedAt, '-') }}</td>
-        <td class="right">
-          <div class="news-mgmt__row-actions">
-            <BaseButton size="sm" @click="openEdit(item)">Edit</BaseButton>
-            <BaseButton
-              v-if="onDelete"
-              size="sm"
-              variant="destructive"
-              :loading="actionLoading[item.id]"
-              @click="handleDelete(item, false)"
-            >
-              Delete
-            </BaseButton>
-          </div>
-        </td>
+      <template #cell-type="{ row }">
+        <NewsTypeBadge :type="(row.type as NewsType)" />
       </template>
-    </AdminTable>
+      <template #cell-status="{ row }">
+        <span :class="`news-mgmt__status--${(row.status as string).toLowerCase()}`">
+          {{ NEWS_STATUS_LABELS[row.status as NewsStatus] }}
+        </span>
+      </template>
+      <template #cell-actions="{ row }">
+        <span class="news-mgmt__actions">
+          <BaseButton size="sm" @click="openForm(row.entry as NewsResponse)">Edit</BaseButton>
+          <BaseButton v-if="onDelete" size="sm" variant="destructive" @click="askDelete(row.entry as NewsResponse)">
+            Delete
+          </BaseButton>
+        </span>
+      </template>
+    </DataTable>
 
-    <PaginationControls
-      v-if="totalPages > 1"
-      :page="page"
-      :total-pages="totalPages"
-      @update:page="(p: number) => { page = p }"
-    />
+    <div class="news-mgmt__pages">
+      <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="page = $event" />
+    </div>
 
     <NewsFormModal
-      :open="showModal"
+      v-if="formMounted"
+      :open="formOpen"
       :editing="editing"
       :allowed="allowed"
       :allowed-standalone="allowedStandalone"
       :loading="submitting"
+      :error="formError"
       :upload-image="onUploadImage"
       :delete-image="onDeleteImage"
-      @close="showModal = false"
-      @submit="handleSubmit"
+      @close="formOpen = false"
+      @submit="submit"
       @image-changed="onImageChanged"
     />
+    <ConfirmModal v-bind="confirmModal" />
   </div>
 </template>
 
@@ -253,71 +228,66 @@ const STATUS_STYLE: Record<NewsStatus, string> = {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  min-width: 0;
 }
 
-.news-mgmt__header {
+.news-mgmt__controls {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-lg);
   flex-wrap: wrap;
-}
-
-.news-mgmt__meta {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  margin: 2px 0 0;
-}
-
-.news-mgmt__actions {
-  display: flex;
   align-items: center;
   gap: var(--space-sm);
-  flex-wrap: wrap;
+}
+
+.news-mgmt__type {
+  width: 160px;
+}
+
+.news-mgmt__new {
+  margin-left: auto;
 }
 
 .news-mgmt__error {
-  margin: 0;
-  font-size: var(--text-caption);
   color: var(--error);
 }
 
-.news-mgmt__title-cell {
+.news-mgmt__title {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
 }
 
 .news-mgmt__name {
+  overflow: hidden;
+  font-weight: 600;
   color: var(--text-primary);
-  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.news-mgmt__slug {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
+.news-mgmt__pin {
+  flex-shrink: 0;
+  color: var(--page-accent, var(--accent));
 }
 
-.news-mgmt__status {
-  font-size: var(--text-caption);
-  font-family: var(--font-mono);
-  font-weight: 500;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-pill);
-  border: 1px solid;
-  background: transparent;
+.news-mgmt__status--draft {
+  color: var(--text-secondary);
 }
 
-.news-mgmt__pinned {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
+.news-mgmt__status--published {
+  color: var(--success);
 }
 
-.news-mgmt__row-actions {
+.news-mgmt__status--archived {
+  color: var(--warning);
+}
+
+.news-mgmt__actions {
   display: inline-flex;
   gap: var(--space-xs);
-  justify-content: flex-end;
+}
+
+.news-mgmt__pages {
+  min-height: var(--control-h);
 }
 </style>

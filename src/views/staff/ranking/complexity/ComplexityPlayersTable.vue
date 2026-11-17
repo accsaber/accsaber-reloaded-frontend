@@ -1,28 +1,21 @@
 <script setup lang="ts">
 import DataTable from '@/components/common/DataTable.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import type {
-  ComparisonScenario,
-  ComplexityPlayerRow,
-  ComplexityScenario,
-} from '@/types/api/complexity'
+import type { ComparisonScenario, ComplexityPlayerRow, ComplexityScenario } from '@/types/api/complexity'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
-import { AP_DECIMALS, SCENARIO_ORDER, SCENARIO_SHORT } from '@/utils/complexity'
-import { getRankClass } from '@/utils/ranking'
+import { AP_DECIMALS } from '@/utils/complexity'
 import ScenarioCell from './ScenarioCell.vue'
+import SortBasisTabs from './SortBasisTabs.vue'
 import { apKey } from './scenarioKeys'
-import { useScenarioSort } from './useScenarioSort'
+import { useScenarioSort, useSortBasis } from './useScenarioSort'
 import { computed, toRef } from 'vue'
 
 const props = withDefaults(defineProps<{
   rows: ComplexityPlayerRow[]
   scenario: ComparisonScenario
-  columns?: readonly ComplexityScenario[]
   loading?: boolean
 }>(), {
-  columns: () => SCENARIO_ORDER,
   loading: false,
 })
 
@@ -30,163 +23,97 @@ const emit = defineEmits<{
   select: [userId: string]
 }>()
 
+const PAGE_ROWS = 50
 const ALL_SCENARIOS: readonly ComplexityScenario[] = ['CURRENT', 'NEW_SCRIPT', 'PREVIEW']
 
-function apOf(row: ComplexityPlayerRow, scenario: ComplexityScenario): number | null {
-  return row.scenarios[scenario]?.ap ?? null
-}
-
-function rankOf(row: ComplexityPlayerRow, scenario: ComplexityScenario): number | null {
-  return row.scenarios[scenario]?.rank ?? null
-}
-
 const accessors: Record<string, (row: ComplexityPlayerRow) => number | string | null> = {
-  rankCurrent: (row) => rankOf(row, 'CURRENT'),
-  name: (row) => row.player.name.toLowerCase(),
-  apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
-  rankScenario: (row) => rankOf(row, props.scenario),
+  rankCurrent: (row) => row.scenarios.CURRENT?.rank ?? null,
+  rankScenario: (row) => row.scenarios[props.scenario]?.rank ?? null,
   rankMove: (row) => row.deltas[props.scenario]?.rank ?? null,
+  apMove: (row) => row.deltas[props.scenario]?.ap ?? null,
+  ...Object.fromEntries(ALL_SCENARIOS.map((key) => [apKey(key), (row: ComplexityPlayerRow) => row.scenarios[key]?.ap ?? null])),
 }
 
-for (const key of ALL_SCENARIOS) {
-  accessors[apKey(key)] = (row) => apOf(row, key)
-}
-
-const { sortState, deltaMode, page, totalPages, visible, onSort, setPage } = useScenarioSort({
+const sort = useScenarioSort({
   rows: toRef(props, 'rows'),
   deltaKeys: ['apMove', 'rankMove'],
   defaultKey: 'rankCurrent',
-  ascendingKeys: ['rankCurrent', 'rankScenario', 'name'],
+  ascendingKeys: ['rankCurrent', 'rankScenario'],
+  pageSize: PAGE_ROWS,
   revision: () => props.scenario,
   accessors,
 })
+const { sortState, page, totalPages, visible, onSort, setPage } = sort
 
-function deltaLabel(key: string, label: string): string {
-  return sortState.value.key === key ? `${label} ${deltaMode.value}` : label
-}
-
-const tableColumns = computed<TableColumn[]>(() => {
-  const tag = SCENARIO_SHORT[props.scenario]
-  return [
-    { key: 'rankCurrent', label: 'Rank now', sortable: true, align: 'right', width: '108px' },
-    { key: 'player', label: 'Player', width: '240px', flex: true },
-    ...props.columns.map((scenario) => ({
-      key: apKey(scenario),
-      label: `AP ${SCENARIO_SHORT[scenario]}`,
-      sortable: true,
-      align: 'right' as const,
-      width: '124px',
-    })),
-    {
-      key: 'apMove',
-      label: deltaLabel('apMove', 'Δ AP'),
-      sortable: true,
-      align: 'right',
-      width: '118px',
-    },
-    { key: 'rankScenario', label: `Rank ${tag}`, sortable: true, align: 'right', width: '112px' },
-    {
-      key: 'rankMove',
-      label: deltaLabel('rankMove', 'Δ rank'),
-      sortable: true,
-      align: 'right',
-      width: '128px',
-    },
-  ]
-})
-
-const tableRows = computed(() =>
-  visible.value.map((row) => ({
-    ...Object.fromEntries(props.columns.map((scenario) => [apKey(scenario), apOf(row, scenario)])),
-    id: row.player.id,
-    userId: row.player.id,
-    name: row.player.name,
-    player: row.player,
-    rankCurrent: rankOf(row, 'CURRENT'),
-    apCurrent: apOf(row, 'CURRENT'),
-    apScenario: apOf(row, props.scenario),
-    apMove: row.deltas[props.scenario]?.ap ?? null,
-    rankScenario: rankOf(row, props.scenario),
-    rankMove: row.deltas[props.scenario]?.rank ?? null,
-  })),
+const { basis, keyOf, setBasis, label } = useSortBasis(
+  () => ({
+    rank: { change: 'rankMove', now: 'rankCurrent', after: 'rankScenario' },
+    ap: { change: 'apMove', now: apKey('CURRENT'), after: apKey(props.scenario) },
+  }),
+  sort,
+  'now',
 )
 
-function selectPlayer(row: Record<string, unknown>) {
-  emit('select', row.userId as string)
+const rankColumn = computed(() => keyOf('rank'))
+const apColumn = computed(() => keyOf('ap'))
+
+const columns = computed<TableColumn[]>(() => [
+  { key: rankColumn.value, label: label('rank', 'Rank'), sortable: true, align: 'right', width: '160px' },
+  { key: 'player', label: 'Player', primary: true },
+  { key: apColumn.value, label: label('ap', 'AP'), sortable: true, align: 'right', width: '260px' },
+])
+
+const tableRows = computed<Record<string, unknown>[]>(() => visible.value.map((row) => ({ id: row.player.id, source: row })))
+
+function sourceOf(row: Record<string, unknown>): ComplexityPlayerRow {
+  return row.source as ComplexityPlayerRow
 }
 </script>
 
 <template>
   <div class="complexity-players">
+    <div class="complexity-players__bar">
+      <slot name="filters" />
+      <SortBasisTabs :basis="basis" @change="setBasis" />
+    </div>
+
     <DataTable
-      dense
-      :columns="tableColumns"
+      :columns="columns"
       :rows="tableRows"
       :sort-state="sortState"
-      :loading="loading"
-      :loading-rows="10"
+      :loading="loading && !rows.length"
+      :refreshing="loading && rows.length > 0"
+      :loading-rows="PAGE_ROWS"
+      :row-height="56"
       row-key="id"
       row-clickable
       empty-message="No players on this board yet"
       @sort="onSort"
-      @row-click="selectPlayer"
+      @row-click="(row) => emit('select', row.id as string)"
     >
-      <template #cell-rankCurrent="{ row }">
-        <span class="rank complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
-          {{ row.rankCurrent != null ? `#${row.rankCurrent}` : '–' }}
-        </span>
+      <template #[`cell-${rankColumn}`]="{ row }">
+        <ScenarioCell
+          :entry="sourceOf(row)" field="rank" :scenario="scenario"
+          :decimals="0"
+          invert
+          emphasis
+        />
       </template>
-
       <template #cell-player="{ row }">
-        <UserChip :user="(row.player as UserRefDisplay)" />
+        <UserChip :user="(sourceOf(row).player as UserRefDisplay)" />
       </template>
-
-      <template v-for="key in columns" :key="key" #[`cell-${apKey(key)}`]="{ row }">
-        <ScenarioCell :value="(row[apKey(key)] as number | null)" :decimals="AP_DECIMALS"
-          :emphasis="key === 'CURRENT' || key === scenario" />
-      </template>
-
-      <template #cell-apMove="{ row }">
-        <ScenarioCell delta-only :value="(row.apMove as number | null)"
-          :delta="(row.apMove as number | null)" :decimals="AP_DECIMALS" />
-      </template>
-
-      <template #cell-rankScenario="{ row }">
-        <span class="rank complexity-players__rank">
-          {{ row.rankScenario != null ? `#${row.rankScenario}` : '–' }}
-        </span>
-      </template>
-
-      <template #cell-rankMove="{ row }">
-        <ScenarioCell delta-only invert :value="(row.rankMove as number | null)"
-          :delta="(row.rankMove as number | null)" :decimals="0" />
-      </template>
-
-      <template #mobile-card="{ row }">
-        <button type="button" class="complexity-players__card" @click="selectPlayer(row)">
-          <span class="rank complexity-players__rank" :class="getRankClass(row.rankCurrent as number)">
-            {{ row.rankCurrent != null ? `#${row.rankCurrent}` : '–' }}
-          </span>
-          <div class="complexity-players__card-body">
-            <UserChip :user="(row.player as UserRefDisplay)" />
-            <div class="complexity-players__card-values">
-              <ScenarioCell :value="(row.apCurrent as number | null)" :decimals="AP_DECIMALS" emphasis />
-              <ScenarioCell :value="(row.apScenario as number | null)"
-                :delta="(row.apMove as number | null)" :decimals="AP_DECIMALS" emphasis />
-              <ScenarioCell delta-only invert :value="(row.rankMove as number | null)"
-                :delta="(row.rankMove as number | null)" :decimals="0" />
-            </div>
-          </div>
-        </button>
-      </template>
-
-      <template #empty>
-        <EmptyState message="No players on this board yet." />
+      <template #[`cell-${apColumn}`]="{ row }">
+        <ScenarioCell
+          :entry="sourceOf(row)" field="ap" :scenario="scenario"
+          :decimals="AP_DECIMALS"
+          emphasis
+        />
       </template>
     </DataTable>
 
-    <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages"
-      @update:page="setPage" />
+    <div class="complexity-players__pages">
+      <PaginationControls v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="setPage" />
+    </div>
   </div>
 </template>
 
@@ -194,36 +121,19 @@ function selectPlayer(row: Record<string, unknown>) {
 .complexity-players {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.complexity-players__rank {
-  font-size: var(--text-body);
-}
-
-.complexity-players__card {
-  display: flex;
-  align-items: center;
   gap: var(--space-md);
-  width: 100%;
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
-  text-align: left;
-  cursor: pointer;
-}
-
-.complexity-players__card-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
   min-width: 0;
 }
 
-.complexity-players__card-values {
+.complexity-players__bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
+}
+
+
+.complexity-players__pages {
+  min-height: var(--control-h);
 }
 </style>

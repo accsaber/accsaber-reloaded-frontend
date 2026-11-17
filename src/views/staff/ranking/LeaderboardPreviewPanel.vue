@@ -1,16 +1,16 @@
 <script setup lang="ts">
+import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import DataTable from '@/components/common/DataTable.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
 import UserChip from '@/components/domain/UserChip.vue'
-import { parseApiError } from '@/api/client'
 import { useCategoryStore } from '@/stores/categories'
 import type { CurveResponse } from '@/types/api/categories'
 import type { LeaderboardPreviewResponse } from '@/types/api/maps'
 import type { TableColumn, UserRefDisplay } from '@/types/display'
 import { calculateAp } from '@/utils/curveEval'
 import { formatAccuracy, formatCount, formatFixed } from '@/utils/formatters'
+import { getRankClass } from '@/utils/ranking'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -20,23 +20,23 @@ const props = defineProps<{
 }>()
 
 const PREVIEW_LIMIT = 100
+const LOADING_ROWS = 20
 const SLIDER_SPAN = 7
+const PLATFORM_NAME: Record<string, string> = {
+  beatleader: 'BL',
+  scoresaber: 'SS',
+}
 
 const categoryStore = useCategoryStore()
 
 const preview = ref<LeaderboardPreviewResponse | null>(null)
-const loading = ref(false)
+const loading = ref(true)
 const error = ref('')
 const curve = ref<CurveResponse | null>(null)
-
-const priced = computed(() => preview.value?.complexity ?? null)
-
-const base = computed(() => priced.value ?? props.scriptComplexity ?? 0)
-
 const complexity = ref(0)
 
+const base = computed(() => preview.value?.complexity ?? props.scriptComplexity ?? 0)
 const atBase = computed(() => Math.abs(complexity.value - base.value) < 0.005)
-
 const sliderMin = computed(() => Math.max(0, base.value - SLIDER_SPAN))
 const sliderMax = computed(() => base.value + SLIDER_SPAN)
 
@@ -46,69 +46,64 @@ function setComplexity(value: string | number) {
 }
 
 const columns: TableColumn[] = [
-  { key: 'rank', label: '#', align: 'right', mono: true, width: '64px' },
-  { key: 'player', label: 'Player', width: '220px', flex: true },
-  { key: 'accuracy', label: 'Accuracy', align: 'right', width: '104px' },
-  { key: 'ap', label: 'AP', align: 'right', width: '96px' },
-  { key: 'platform', label: 'From', align: 'center', width: '72px' },
-  { key: 'modifiers', label: 'Modifiers', width: '130px' },
+  { key: 'rank', label: '#', align: 'right', width: '64px' },
+  { key: 'player', label: 'Player', flex: true, primary: true },
+  { key: 'accuracy', label: 'Accuracy', align: 'right', width: '112px', mono: true, format: (v) => formatAccuracy(v as number) },
+  { key: 'ap', label: 'AP', align: 'right', width: '96px', mono: true, format: (v) => formatFixed(v as number, 1) },
+  { key: 'platform', label: 'From', width: '72px' },
+  { key: 'modifiers', label: 'Modifiers', width: '130px', format: (v) => (v as string) || '-' },
 ]
-
-const PLATFORM_SHORT: Record<string, string> = {
-  beatleader: 'BL',
-  scoresaber: 'SS',
-}
 
 const rows = computed(() =>
   (preview.value?.rows ?? []).map((row) => ({
     key: `${row.platform}-${row.player.id}`,
     rank: row.rank,
-    userId: row.player.id,
     player: row.player,
     accuracy: row.accuracy,
-    ap: atBase.value || !curve.value
-      ? row.ap
-      : calculateAp(curve.value, row.accuracy, complexity.value),
-    platform: PLATFORM_SHORT[row.platform.toLowerCase()] ?? row.platform,
-    platformName: row.platform,
+    ap: atBase.value || !curve.value ? row.ap : calculateAp(curve.value, row.accuracy, complexity.value),
+    platform: PLATFORM_NAME[row.platform.toLowerCase()] ?? row.platform,
     modifiers: row.modifiers,
   })),
 )
 
-const sliderNote = computed(() => {
-  if (atBase.value) return ''
-  if (!curve.value) return 'This category has no curve loaded, so AP cannot be repriced here.'
-  return `Showing AP at ${formatFixed(complexity.value, 2)}, not what the map pays today.`
+const note = computed(() => {
+  if (error.value) return error.value
+  if (!preview.value) return ''
+  if (!atBase.value) return curve.value ? `Showing AP at ${formatFixed(complexity.value, 2)}` : 'No curve loaded for this category'
+  if (!preview.value.complexitySource) return 'No complexity yet, every play reads 0 AP'
+  return `${formatCount(preview.value.fetched)} players, best play each`
 })
 
-async function loadCurve(code: string) {
+async function loadCurve(code: string): Promise<CurveResponse | null> {
   const id = categoryStore.byCode.get(code)?.scoreCurve?.id
-  if (!id) {
-    curve.value = null
-    return
-  }
+  if (!id) return null
   try {
     const { getCurve } = await import('@/api/curves')
-    curve.value = await getCurve(id)
+    return await getCurve(id)
   } catch {
-    curve.value = null
+    return null
   }
 }
 
 async function load() {
+  const id = props.mapDifficultyId
   loading.value = true
   error.value = ''
   try {
     const { getLeaderboardPreview } = await import('@/api/ranking/maps')
-    const result = await getLeaderboardPreview(props.mapDifficultyId, PREVIEW_LIMIT)
+    const result = await getLeaderboardPreview(id, PREVIEW_LIMIT)
+    const loadedCurve = await loadCurve(result.categoryCode)
+    if (id !== props.mapDifficultyId) return
     preview.value = result
+    curve.value = loadedCurve
     complexity.value = result.complexity ?? 0
-    await loadCurve(result.categoryCode)
   } catch (err) {
+    if (id !== props.mapDifficultyId) return
     preview.value = null
-    error.value = parseApiError(err, 'Could not read the platform boards.').message
+    error.value = parseApiError(err, 'Could not read the platform boards').message
+  } finally {
+    if (id === props.mapDifficultyId) loading.value = false
   }
-  loading.value = false
 }
 
 watch(() => props.mapDifficultyId, load, { immediate: true })
@@ -116,79 +111,36 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
 
 <template>
   <div class="lb-preview">
-    <header class="lb-preview__head">
-      <div class="lb-preview__summary">
-        <p v-if="loading" class="lb-preview__meta">Reading BeatLeader and ScoreSaber.</p>
-        <p v-else-if="preview && !preview.complexitySource" class="lb-preview__line--warn">
-          This map has no complexity yet, so every play reads 0 AP.
-        </p>
-        <p v-if="preview" class="lb-preview__meta">
-          {{ formatCount(preview.fetched) }} players read, best play each, BeatLeader first.
-        </p>
-      </div>
-
-      <div v-if="scriptComplexity != null" class="lb-preview__estimate">
-        <BaseButton size="sm" :disabled="complexity === scriptComplexity"
-          @click="complexity = scriptComplexity">
-          Use the script number
-        </BaseButton>
-        <span class="lb-preview__estimate-value" :title="scriptVersion ?? undefined">
-          {{ formatFixed(scriptComplexity, 1) }}
-          <span class="lb-preview__estimate-version">{{ scriptVersion }}</span>
-        </span>
-      </div>
-    </header>
-
     <div class="lb-preview__controls">
       <BaseInput class="lb-preview__value" label="Complexity" type="number" step="0.1" min="0"
         :model-value="complexity" @update:model-value="setComplexity" />
-      <input class="lb-preview__slider" type="range" :min="sliderMin" :max="sliderMax" step="0.1"
+      <input class="slider lb-preview__slider" type="range" :min="sliderMin" :max="sliderMax" step="0.1"
         :value="complexity" aria-label="Complexity"
         @input="setComplexity(($event.target as HTMLInputElement).value)" />
-      <BaseButton size="sm" :disabled="atBase" @click="complexity = base">Reset</BaseButton>
+      <BaseButton :disabled="atBase" @click="complexity = base">Reset</BaseButton>
+      <BaseButton v-if="scriptComplexity != null" :disabled="complexity === scriptComplexity"
+        :title="scriptVersion ?? undefined" @click="complexity = scriptComplexity">
+        Script {{ formatFixed(scriptComplexity, 1) }}
+      </BaseButton>
     </div>
 
-    <p v-if="sliderNote" class="lb-preview__meta">{{ sliderNote }}</p>
-    <p v-if="error" class="lb-preview__error">{{ error }}</p>
+    <p class="caption lb-preview__note" :class="{ 'lb-preview__note--error': error }" :role="error ? 'alert' : 'status'">
+      {{ note }}
+    </p>
 
     <DataTable
-      dense
       :columns="columns"
       :rows="rows"
       :loading="loading"
-      :loading-rows="8"
+      :loading-rows="LOADING_ROWS"
       row-key="key"
       empty-message="No plays on either platform yet"
     >
-      <template #cell-rank="{ row }">
-        <span class="lb-preview__rank">#{{ row.rank }}</span>
+      <template #cell-rank="{ value }">
+        <span class="rank" :class="getRankClass(value as number)">#{{ value }}</span>
       </template>
-
       <template #cell-player="{ row }">
         <UserChip :user="(row.player as UserRefDisplay)" size="sm" />
-      </template>
-
-      <template #cell-accuracy="{ row }">
-        <span class="lb-preview__mono">{{ formatAccuracy(row.accuracy as number) }}</span>
-      </template>
-
-      <template #cell-ap="{ row }">
-        <span class="lb-preview__ap">{{ formatFixed(row.ap as number, 1) }}</span>
-      </template>
-
-      <template #cell-platform="{ row }">
-        <span class="lb-preview__platform" :title="(row.platformName as string)">
-          {{ row.platform }}
-        </span>
-      </template>
-
-      <template #cell-modifiers="{ row }">
-        <span v-if="row.modifiers" class="lb-preview__mods">{{ row.modifiers }}</span>
-        <span v-else class="lb-preview__mono">–</span>
-      </template>
-
-      <template #empty>
-        <EmptyState message="No plays on either platform yet." />
       </template>
     </DataTable>
   </div>
@@ -198,64 +150,18 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
 .lb-preview {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  min-width: 0;
-}
-
-.lb-preview__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-lg);
-  flex-wrap: wrap;
-}
-
-.lb-preview__summary {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.lb-preview__line--warn {
-  margin: 0;
-  color: var(--warning);
-  font-size: var(--text-body);
-}
-
-.lb-preview__meta {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-}
-
-.lb-preview__estimate {
-  display: flex;
-  align-items: center;
   gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
-.lb-preview__estimate-value {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-}
-
-.lb-preview__estimate-version {
-  color: var(--text-tertiary);
-  font-family: var(--font-code);
-  font-size: var(--text-caption);
+  min-width: 0;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
 }
 
 .lb-preview__controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--space-md);
-  flex-wrap: wrap;
 }
 
 .lb-preview__value {
@@ -265,35 +171,14 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
 .lb-preview__slider {
   flex: 1;
   min-width: 200px;
-  height: 18px;
-  accent-color: var(--page-accent, var(--accent));
-  cursor: pointer;
+  margin-bottom: calc((var(--control-h) - 4px) / 2);
 }
 
-.lb-preview__error {
-  margin: 0;
+.lb-preview__note {
+  min-height: 1lh;
+}
+
+.lb-preview__note--error {
   color: var(--error);
-  font-size: var(--text-caption);
-}
-
-.lb-preview__rank,
-.lb-preview__mono {
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-}
-
-.lb-preview__ap {
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.lb-preview__platform,
-.lb-preview__mods {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 </style>

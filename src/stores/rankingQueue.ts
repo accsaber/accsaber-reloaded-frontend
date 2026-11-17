@@ -12,11 +12,6 @@ interface CachedPage {
 
 export const useRankingQueueStore = defineStore('rankingQueue', () => {
   const cache = ref<Map<string, CachedPage>>(new Map())
-  const lastReturnUrl = ref<string | null>(null)
-
-  function rememberReturnUrl(fullPath: string) {
-    lastReturnUrl.value = fullPath
-  }
 
   function buildKey(params: Record<string, unknown>): string {
     const sorted = Object.keys(params)
@@ -64,5 +59,5 @@ export const useRankingQueueStore = defineStore('rankingQueue', () => {
     cache.value.clear()
   }
 
-  return { getCached, setCache, invalidateStatus, clear, lastReturnUrl, rememberReturnUrl }
+  return { getCached, setCache, invalidateStatus, clear }
 })

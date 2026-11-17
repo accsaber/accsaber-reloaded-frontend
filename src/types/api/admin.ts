@@ -79,11 +79,6 @@ export interface CastVoteRequest {
   reason?: string
 }
 
-export interface BulkReweightRequest {
-  items: { mapDifficultyId: string; complexity: number }[]
-  reason: string
-}
-
 export interface DuplicateCandidateResponse {
   primary: PlayerRef
   secondary: PlayerRef
