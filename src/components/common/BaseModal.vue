@@ -30,10 +30,15 @@ function folding(el: HTMLElement) {
     .some((a) => a instanceof CSSTransition && a.transitionProperty === 'grid-template-rows')
 }
 
-function onContentResize() {
+function onResize(entries: ResizeObserverEntry[]) {
   const el = body.value
   if (!el || !content.value) return
-  const from = resize?.playState === 'running' ? el.offsetHeight : bodyHeight
+  const running = resize?.playState === 'running'
+  if (!entries.some((entry) => entry.target === content.value)) {
+    if (!running) bodyHeight = el.offsetHeight
+    return
+  }
+  const from = running ? el.offsetHeight : bodyHeight
   resize?.cancel()
   bodyHeight = el.offsetHeight
   if (!from || from === bodyHeight || prefersReducedMotion() || folding(content.value)) return
@@ -44,13 +49,16 @@ function onContentResize() {
   )
 }
 
-const observer = new ResizeObserver(onContentResize)
+let observer: ResizeObserver | null = null
 
-watch(content, (el, _, onCleanup) => {
+watch(content, (el) => {
+  observer?.disconnect()
   bodyHeight = 0
-  if (!el) return
+  resize = null
+  if (!el || !body.value) return
+  observer ??= new ResizeObserver(onResize)
   observer.observe(el)
-  onCleanup(() => observer.unobserve(el))
+  observer.observe(body.value)
 })
 
 function onEnter(el: Element) {
@@ -93,7 +101,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
-  observer.disconnect()
+  observer?.disconnect()
   document.body.style.overflow = ''
 })
 </script>
