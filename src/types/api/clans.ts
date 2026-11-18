@@ -304,6 +304,11 @@ export interface ClanWarDetailResponse {
 export interface ClanWarLastStandResponse {
   damage: number
   reviveSpeed: number
+  worth: number
+}
+
+export interface ClanWarForecastResponse {
+  worth: Record<ClanWarTeam, number>
 }
 
 export interface ClanWarStrikeRulesResponse {

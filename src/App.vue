@@ -92,14 +92,26 @@ watch(
   <template v-else>
     <AppNavbar />
     <main class="main-content">
-      <BaseBanner v-if="showRestrictedBanner" variant="error" @close="dismissRestrictedBanner">
-        Your account is restricted. You can still browse, but creating or changing content is
-        disabled. Contact staff if you think this is a mistake.
-      </BaseBanner>
-      <BaseBanner v-if="showLegacyBanner" variant="info" @close="dismissLegacyBanner">
-        We've upgraded login. Please log in again with Discord, BeatLeader, or Steam to restore your
-        personalized experience.
-      </BaseBanner>
+      <Transition name="collapse">
+        <div v-if="showRestrictedBanner" class="collapsible">
+          <div>
+            <BaseBanner variant="error" @close="dismissRestrictedBanner">
+              Your account is restricted. You can still browse, but creating or changing content is
+              disabled. Contact staff if you think this is a mistake.
+            </BaseBanner>
+          </div>
+        </div>
+      </Transition>
+      <Transition name="collapse">
+        <div v-if="showLegacyBanner" class="collapsible">
+          <div>
+            <BaseBanner variant="info" @close="dismissLegacyBanner">
+              We've upgraded login. Please log in again with Discord, BeatLeader, or Steam to restore your
+              personalized experience.
+            </BaseBanner>
+          </div>
+        </div>
+      </Transition>
       <router-view v-slot="{ Component }">
         <transition name="page" @before-leave="pinLeavingPage">
           <component :is="Component" />

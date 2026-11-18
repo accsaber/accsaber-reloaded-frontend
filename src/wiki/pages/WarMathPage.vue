@@ -21,6 +21,7 @@ const RULES = {
   bountyDamageScale: 150,
   bountyCarry: 0.5,
   allyBreakShare: 0.6,
+  minLeadWeight: 0.45,
   engagementFull: 0.5,
   engagementDays: 14,
   breakXp: 50,
@@ -72,8 +73,8 @@ const CHIP_PARAMS: WikiCompareRow[] = [
 
 const BREAK_PARAMS: WikiCompareRow[] = [
   { label: 'Pot', values: ['', "The smaller of the two lead clans' stakes. Same number for both teams. Allies joining don't change it"] },
-  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once, at a bounty of 1, moves 40% of the pot. A weaker team loses a bit less per round"] },
-  { label: 'Break weight', values: ['', `Their skill squared, over the stronger team's total skill squared. Same pool for both teams. An ally's players count at ${RULES.allyBreakShare} in that total`] },
+  { label: 'Break share', values: [`${RULES.breakShare}`, "Breaking every player on the stronger team once, at a bounty of 1, moves 40% of the pot. A weaker team loses less per round"] },
+  { label: 'Break weight', values: ['', `Their skill squared, over the stronger team's total skill squared. Same pool for both teams. An ally's players count at ${RULES.allyBreakShare} in that total. If one lead clan's players add up to less than ${RULES.minLeadWeight} of the other lead clan's they all get scaled up to it. Allies don't count for that and don't get scaled`] },
   { label: 'Bounty', values: [`${RULES.bountyFloor} to ${RULES.bountyCap}`, 'Starts at 1. When they get broken, the next life starts halfway between the floor and what it was, then climbs toward the cap with the damage they deal, weighted by the bounty of whoever they hit'] },
   { label: 'Ally share', values: [`1 or ${RULES.allyBreakShare}`, `1 for a player of the two lead clans, ${RULES.allyBreakShare} for an ally's player`] },
 ]
@@ -134,7 +135,7 @@ const XP_PARAMS: WikiCompareRow[] = [
       <msup><mi>e</mi><mrow><mo>−</mo><mtext>damage dealt</mtext><mo>/</mo><mn>{{ RULES.bountyDamageScale }}</mn></mrow></msup>
     </math>
     <p>
-      The pot is one number for the whole war. The same skill costs the same on both teams. A break can't move more than what's left in their clan's
+      The pot is one number for the whole war. The same skill costs the same on both teams unless one lead clan is under the {{ RULES.minLeadWeight }} floor. A break can't move more than what's left in their clan's
       slice. Your clan gets that amount times their team's engagement. Start is 1 if they've never
       been broken this war. After a break it's {{ RULES.bountyFloor }} plus {{ RULES.bountyCarry }} of whatever their
       bounty was above {{ RULES.bountyFloor }} when they went down. Damage dealt is everything they did since

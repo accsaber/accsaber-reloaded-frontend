@@ -108,22 +108,24 @@ watch(() => props.modelValue, async (val) => {
     />
 
     <Teleport to="body">
-      <div v-if="showResults" ref="panelRef" class="user-picker__panel" :style="panelStyle">
-        <div v-if="loading" class="user-picker__status">Searching...</div>
-        <div v-else-if="results.length === 0" class="user-picker__status">No players found</div>
-        <button
-          v-for="(user, i) in results"
-          :key="user.userId"
-          type="button"
-          class="user-picker__option"
-          :class="{ 'user-picker__option--focused': i === focusedIndex }"
-          @mouseenter="focusedIndex = i"
-          @click="pick(user)"
-        >
-          <UserChip :user="toUserRef(user)" size="sm" class="user-picker__option-name" />
-          <span class="user-picker__option-rank">#{{ user.ranking }}</span>
-        </button>
-      </div>
+      <Transition name="pop">
+        <div v-if="showResults" ref="panelRef" class="user-picker__panel" :style="panelStyle">
+          <div v-if="loading" class="user-picker__status">Searching...</div>
+          <div v-else-if="results.length === 0" class="user-picker__status">No players found</div>
+          <button
+            v-for="(user, i) in results"
+            :key="user.userId"
+            type="button"
+            class="user-picker__option"
+            :class="{ 'user-picker__option--focused': i === focusedIndex }"
+            @mouseenter="focusedIndex = i"
+            @click="pick(user)"
+          >
+            <UserChip :user="toUserRef(user)" size="sm" class="user-picker__option-name" />
+            <span class="user-picker__option-rank">#{{ user.ranking }}</span>
+          </button>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

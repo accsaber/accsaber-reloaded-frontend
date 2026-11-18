@@ -47,9 +47,11 @@ onMounted(() => {
   >
     {{ modifier.name }}
     <Teleport to="body">
-      <span v-if="isOpen" :id="tipId" ref="panelRef" class="modifier-chip__tip" :style="panelStyle" role="tooltip">
-        {{ description }}
-      </span>
+      <Transition name="pop">
+        <span v-if="isOpen" :id="tipId" ref="panelRef" class="modifier-chip__tip" :style="panelStyle" role="tooltip">
+          {{ description }}
+        </span>
+      </Transition>
     </Teleport>
   </span>
 </template>

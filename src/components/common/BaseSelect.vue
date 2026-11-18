@@ -69,21 +69,23 @@ function select(value: string) {
       </svg>
     </button>
     <Teleport to="body">
-      <div v-if="isOpen" ref="panelRef" class="base-select__panel" :style="panelStyle">
-        <input v-if="searchable" ref="searchRef" v-model="search" class="base-select__search" placeholder="Search..."
-          @click.stop />
-        <div class="base-select__options">
-          <button v-for="opt in filteredOptions" :key="opt.value" class="base-select__option"
-            :class="{ 'base-select__option--selected': opt.value === modelValue }" @click="select(opt.value)">
-            <span v-if="opt.icon" class="base-select__option-icon">{{ opt.icon }}</span>
-            <span class="base-select__option-text">
-              <span class="base-select__option-label">{{ opt.label }}</span>
-              <span v-if="opt.description" class="base-select__option-desc">{{ opt.description }}</span>
-            </span>
-          </button>
-          <div v-if="filteredOptions.length === 0" class="base-select__empty">No results</div>
+      <Transition name="pop">
+        <div v-if="isOpen" ref="panelRef" class="base-select__panel" :style="panelStyle">
+          <input v-if="searchable" ref="searchRef" v-model="search" class="base-select__search" placeholder="Search..."
+            @click.stop />
+          <div class="base-select__options">
+            <button v-for="opt in filteredOptions" :key="opt.value" class="base-select__option"
+              :class="{ 'base-select__option--selected': opt.value === modelValue }" @click="select(opt.value)">
+              <span v-if="opt.icon" class="base-select__option-icon">{{ opt.icon }}</span>
+              <span class="base-select__option-text">
+                <span class="base-select__option-label">{{ opt.label }}</span>
+                <span v-if="opt.description" class="base-select__option-desc">{{ opt.description }}</span>
+              </span>
+            </button>
+            <div v-if="filteredOptions.length === 0" class="base-select__empty">No results</div>
+          </div>
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

@@ -163,6 +163,11 @@ export function isPacifist(clan: ClanResponse, now = Date.now()): boolean {
 const WAR_POOL_SIZE = 10
 const WAR_MAX_UNDERDOG_SHARE = 0.85
 
+export function outmatchedWorth(worth: number | undefined): number | null {
+  const rounded = Math.round((worth ?? 1) * 100) / 100
+  return rounded > 1 ? rounded : null
+}
+
 export function attackerPickCount(attackerStanding: number, defenderStanding: number): number {
   const stronger = Math.max(attackerStanding, defenderStanding)
   const ratio = stronger > 0 ? Math.min(attackerStanding, defenderStanding) / stronger : 1

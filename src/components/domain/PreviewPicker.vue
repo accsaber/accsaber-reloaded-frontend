@@ -95,22 +95,24 @@ function pick(value: string) {
     </button>
 
     <Teleport to="body">
-      <div v-if="isOpen" ref="panelRef" class="preview-picker__panel" :style="panelStyle">
-        <input ref="searchRef" v-model="search" class="preview-picker__search" placeholder="Search..." @click.stop />
-        <div class="preview-picker__options">
-          <button v-for="opt in filteredOptions" :key="opt.value" type="button" class="preview-picker__option"
-            :class="{ 'preview-picker__option--selected': opt.value === modelValue }" @click="pick(opt.value)">
-            <span class="preview-picker__thumb">
-              <ItemPreview v-if="opt.item" :item="opt.item" />
-              <UnusualEffectTile v-else-if="opt.effect" :name="opt.effect.name || opt.effect.key"
-                :effect-spec="opt.effect.effectSpec" :size="30" />
-            </span>
-            <span class="preview-picker__option-label">{{ opt.label }}</span>
-            <span v-if="opt.rarity" class="preview-picker__rarity" :class="`rarity--${opt.rarity}`">{{ opt.rarity }}</span>
-          </button>
-          <div v-if="filteredOptions.length === 0" class="preview-picker__empty">No results</div>
+      <Transition name="pop">
+        <div v-if="isOpen" ref="panelRef" class="preview-picker__panel" :style="panelStyle">
+          <input ref="searchRef" v-model="search" class="preview-picker__search" placeholder="Search..." @click.stop />
+          <div class="preview-picker__options">
+            <button v-for="opt in filteredOptions" :key="opt.value" type="button" class="preview-picker__option"
+              :class="{ 'preview-picker__option--selected': opt.value === modelValue }" @click="pick(opt.value)">
+              <span class="preview-picker__thumb">
+                <ItemPreview v-if="opt.item" :item="opt.item" />
+                <UnusualEffectTile v-else-if="opt.effect" :name="opt.effect.name || opt.effect.key"
+                  :effect-spec="opt.effect.effectSpec" :size="30" />
+              </span>
+              <span class="preview-picker__option-label">{{ opt.label }}</span>
+              <span v-if="opt.rarity" class="preview-picker__rarity" :class="`rarity--${opt.rarity}`">{{ opt.rarity }}</span>
+            </button>
+            <div v-if="filteredOptions.length === 0" class="preview-picker__empty">No results</div>
+          </div>
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

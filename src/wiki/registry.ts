@@ -853,7 +853,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'take off wars',
         ],
         related: ['clan-wars', 'war-math', 'coalitions', 'clan-standing', 'clan-ranks'],
-        updated: '2026-11-17',
+        updated: '2026-11-18',
         loader: () => import('@/wiki/pages/WarCombatPage.vue'),
       },
       {
@@ -887,7 +887,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'size share',
         ],
         related: ['war-combat', 'clan-wars', 'clan-standing'],
-        updated: '2026-11-17',
+        updated: '2026-11-18',
         loader: () => import('@/wiki/pages/WarMathPage.vue'),
       },
       {
@@ -935,7 +935,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'pacifism',
         ],
         related: ['alliances-and-rivals', 'clan-wars', 'war-combat'],
-        updated: '2026-11-17',
+        updated: '2026-11-18',
         loader: () => import('@/wiki/pages/CoalitionsPage.vue'),
       },
     ],

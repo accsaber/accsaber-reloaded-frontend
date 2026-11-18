@@ -17,7 +17,7 @@ import type {
   ClanWarTeam,
 } from '@/types/api/clans'
 import type { SortDirection } from '@/types/display'
-import { CLAN_WAR_TEAM_LABEL, formatStanding, guardBackAt, OPPOSING_TEAM, WAR_TEAMS, warSideStyles, warTeamOf, type WarWipe } from '@/utils/clans'
+import { CLAN_WAR_TEAM_LABEL, formatStanding, guardBackAt, OPPOSING_TEAM, outmatchedWorth, WAR_TEAMS, warSideStyles, warTeamOf, type WarWipe } from '@/utils/clans'
 import { useNow } from '@/composables/useNow'
 import { formatFixed, formatRelativeDate } from '@/utils/formatters'
 import { computed, ref } from 'vue'
@@ -181,7 +181,12 @@ function lastStandLine(team: ClanWarTeam): string | null {
     stand.damage < 1 && `hits on them -${Math.round((1 - stand.damage) * 100)}% damage`,
     stand.reviveSpeed > 1 && `back ${formatFixed(stand.reviveSpeed, 1)}x faster`,
   ].filter(Boolean)
-  return parts.length ? `Last stand: ${parts.join(', ')}` : null
+  const worth = outmatchedWorth(stand.worth)
+  const lines = [
+    parts.length && `Last stand: ${parts.join(', ')}`,
+    worth && `Outmatched: fighters worth ${worth}x`,
+  ].filter(Boolean)
+  return lines.length ? lines.join(' · ') : null
 }
 
 function toggleSort(team: ClanWarTeam, key: SortKey) {

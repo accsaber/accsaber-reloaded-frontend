@@ -20,6 +20,10 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
       <li>The ally has to be allied with the clan it's helping.</li>
       <li>It can't be allied with anyone on the other team.</li>
       <li>It can only help in one war at a time. Its own wars don't count toward that.</li>
+      <li>
+        A team gets as many allies per war as its attacking or defending clan has ally slots and an
+        ally that fell or left still counts.
+      </li>
       <li>Clans joining the attack need less standing than the defending clan.</li>
       <li>Pacifist clans can't join.</li>
       <li>A clan counting down to pacifism can't join the attack.</li>
@@ -32,8 +36,9 @@ import WikiProse from '@/wiki/components/WikiProse.vue'
 
     <WikiHeading id="stake">The stake</WikiHeading>
     <p>
-      An ally only puts 30% of its standing on the line. Both teams still risk the same total so
-      when an ally joins the stake goes up for both teams.
+      An ally puts at most 30% of its standing on the line and that's added on top of what its team
+      already staked. The attacking and defending clans always stake the same as each other so a
+      team with allies has more on the line than a team without.
     </p>
     <p>
       An ally joining doesn't change what anyone else's players are worth. Breaking an ally's player

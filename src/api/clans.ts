@@ -21,6 +21,7 @@ import type {
   ClanWarAidListParams,
   ClanWarAidResponse,
   ClanWarDetailResponse,
+  ClanWarForecastResponse,
   ClanWarHitResponse,
   ClanWarListParams,
   ClanWarParticipantResponse,
@@ -301,6 +302,10 @@ export function declareClanWar(
   req: DeclareClanWarRequest,
 ): Promise<ClanWarDetailResponse> {
   return post<ClanWarDetailResponse>(`/clans/${clanId}/wars`, req)
+}
+
+export function getClanWarForecast(attackerClanId: string, defenderClanId: string): Promise<ClanWarForecastResponse> {
+  return get<ClanWarForecastResponse>(`/clans/wars/forecast${buildQuery({ attackerClanId, defenderClanId })}`)
 }
 
 export function getClanWar(warId: string, params?: { focus?: string }): Promise<ClanWarDetailResponse> {

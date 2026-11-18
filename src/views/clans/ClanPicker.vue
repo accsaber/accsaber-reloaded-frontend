@@ -67,17 +67,19 @@ watch(debounced, (value) => {
       :disabled="disabled"
       aria-label="Search clans"
     />
-    <ul v-if="search.trim().length >= MIN_CHARS" class="clan-picker__results">
-      <li v-if="loading" class="clan-picker__status">Searching...</li>
-      <li v-else-if="results.length === 0" class="clan-picker__status">No clans found</li>
-      <li v-for="result in results" v-else :key="result.clan.id">
-        <button type="button" class="clan-picker__option" :disabled="disabled" @click="pick(result)">
-          <ClanIcon :clan="result.clan" :size="24" />
-          <ClanTag :clan="result.clan" size="md" />
-          <span class="clan-picker__name">{{ result.clan.name }}</span>
-        </button>
-      </li>
-    </ul>
+    <Transition name="pop">
+      <ul v-if="search.trim().length >= MIN_CHARS" class="clan-picker__results">
+        <li v-if="loading" class="clan-picker__status">Searching...</li>
+        <li v-else-if="results.length === 0" class="clan-picker__status">No clans found</li>
+        <li v-for="result in results" v-else :key="result.clan.id">
+          <button type="button" class="clan-picker__option" :disabled="disabled" @click="pick(result)">
+            <ClanIcon :clan="result.clan" :size="24" />
+            <ClanTag :clan="result.clan" size="md" />
+            <span class="clan-picker__name">{{ result.clan.name }}</span>
+          </button>
+        </li>
+      </ul>
+    </Transition>
   </div>
 </template>
 
@@ -90,7 +92,8 @@ watch(debounced, (value) => {
 
 .clan-picker__input {
   width: 100%;
-  padding: var(--space-sm) var(--space-md);
+  height: var(--control-h);
+  padding: 0 var(--space-md);
   font: inherit;
   font-size: var(--text-body);
   color: var(--text-primary);
@@ -117,6 +120,7 @@ watch(debounced, (value) => {
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-card);
+  transform-origin: top left;
 }
 
 .clan-picker__status {

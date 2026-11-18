@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import IconButton from './IconButton.vue'
-import { onMounted, onUnmounted, watch } from 'vue';
+import { prefersReducedMotion } from '@/composables/useReducedMotion'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
@@ -8,6 +9,7 @@ const props = defineProps<{
   open: boolean
   title?: string
   maxWidth?: string
+  height?: string
   persistent?: boolean
   closeButton?: boolean
 }>()
@@ -16,7 +18,40 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const body = ref<HTMLElement | null>(null)
+const content = ref<HTMLElement | null>(null)
 let trigger: DOMRect | null = null
+let bodyHeight = 0
+let resize: Animation | null = null
+
+function folding(el: HTMLElement) {
+  return el
+    .getAnimations({ subtree: true })
+    .some((a) => a instanceof CSSTransition && a.transitionProperty === 'grid-template-rows')
+}
+
+function onContentResize() {
+  const el = body.value
+  if (!el || !content.value) return
+  const from = resize?.playState === 'running' ? el.offsetHeight : bodyHeight
+  resize?.cancel()
+  bodyHeight = el.offsetHeight
+  if (!from || from === bodyHeight || prefersReducedMotion() || folding(content.value)) return
+  const style = getComputedStyle(el)
+  resize = el.animate(
+    { height: [`${from}px`, `${bodyHeight}px`], overflowY: ['hidden', 'hidden'] },
+    { duration: parseFloat(style.getPropertyValue('--dur-enter')), easing: style.getPropertyValue('--ease-in-out').trim() },
+  )
+}
+
+const observer = new ResizeObserver(onContentResize)
+
+watch(content, (el, _, onCleanup) => {
+  bodyHeight = 0
+  if (!el) return
+  observer.observe(el)
+  onCleanup(() => observer.unobserve(el))
+})
 
 function onEnter(el: Element) {
   const modal = el.firstElementChild
@@ -58,6 +93,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
+  observer.disconnect()
   document.body.style.overflow = ''
 })
 </script>
@@ -66,14 +102,16 @@ onUnmounted(() => {
   <Teleport to="body">
     <Transition name="modal" @enter="onEnter">
       <div v-if="open" class="modal-backdrop" @click.self="onBackdropClick">
-        <div class="modal" :style="{ maxWidth: maxWidth ?? '560px' }" role="dialog" aria-modal="true">
+        <div class="modal" :style="{ maxWidth: maxWidth ?? '560px', height }" role="dialog" aria-modal="true">
           <div v-if="title" class="modal__header">
             <h2 class="section-title">{{ title }}</h2>
             <IconButton icon="close" label="Close" @click="emit('close')" />
           </div>
           <IconButton icon="close" v-else-if="closeButton" class="modal__close--floating" label="Close" @click="emit('close')" />
-          <div class="modal__body">
-            <slot />
+          <div ref="body" class="modal__body">
+            <div ref="content">
+              <slot />
+            </div>
           </div>
           <div v-if="$slots.footer" class="modal__footer">
             <slot name="footer" />
@@ -125,6 +163,7 @@ onUnmounted(() => {
 }
 
 .modal__body {
+  flex: 1 1 auto;
   padding: var(--space-lg);
   overflow-y: auto;
   min-height: 0;

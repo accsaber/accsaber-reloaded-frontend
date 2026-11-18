@@ -121,10 +121,14 @@ const DAMAGE: WikiCompareRow[] = [
       lose nothing but you still get yours.
     </p>
     <p>
-      Stronger players are worth more standing and the same skill is worth the same on both teams
-      however deep either roster is. An ally joining doesn't change that. An ally's players are
+      Stronger players are worth more standing and in a close war the same skill is worth the same
+      on both teams however deep either roster is. An ally joining doesn't change that. An ally's players are
       worth 60% of what the same skill is on the attacking or defending clan. Players who are out of
-      the war don't count. A weaker team takes more breaks to drain. Everyone also has a bounty
+      the war don't count. A weaker team takes more breaks to drain but if the attacking or defending clan
+      is way weaker than the other one its players are worth more so breaking all of them once is
+      always at least 45% of breaking the whole other clan. The war page shows it above that
+      team's players as Outmatched with how many times more they're worth. Allies don't count for
+      that and their players never get it. Everyone also has a bounty
       which starts at 1 and it's how much extra standing you're worth when broken. Get broken and
       you come back with about half of it (a 1.7 comes back near 1). It grows with the damage you
       deal, weighted by the bounty of whoever you hit, up to 1.75. Hitting a low bounty player

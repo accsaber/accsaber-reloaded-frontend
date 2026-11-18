@@ -49,25 +49,27 @@ function toggleModifier(m: ItemModifierResponse) {
     </button>
 
     <Teleport to="body">
-      <div v-if="isOpen" ref="panelRef" class="mod-picker__panel" :style="panelStyle">
-        <div v-if="!modifiers.length" class="mod-picker__empty">No modifiers available</div>
-        <button
-          v-for="m in modifiers"
-          :key="m.id"
-          type="button"
-          class="mod-picker__option"
-          :class="{ 'mod-picker__option--on': isOn(m.id) }"
-          @click="toggleModifier(m)"
-        >
-          <span class="mod-picker__check" aria-hidden="true">
-            <svg v-if="isOn(m.id)" width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.5 6.5L5 9L9.5 3.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
-          </span>
-          <span class="mod-picker__name">{{ m.name }}</span>
-        </button>
-      </div>
+      <Transition name="pop">
+        <div v-if="isOpen" ref="panelRef" class="mod-picker__panel" :style="panelStyle">
+          <div v-if="!modifiers.length" class="mod-picker__empty">No modifiers available</div>
+          <button
+            v-for="m in modifiers"
+            :key="m.id"
+            type="button"
+            class="mod-picker__option"
+            :class="{ 'mod-picker__option--on': isOn(m.id) }"
+            @click="toggleModifier(m)"
+          >
+            <span class="mod-picker__check" aria-hidden="true">
+              <svg v-if="isOn(m.id)" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6.5L5 9L9.5 3.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="mod-picker__name">{{ m.name }}</span>
+          </button>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

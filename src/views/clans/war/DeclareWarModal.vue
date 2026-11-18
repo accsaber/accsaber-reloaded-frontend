@@ -15,9 +15,10 @@ import type {
   ClanRuleset,
   ClanUnlocksResponse,
   ClanWarDetailResponse,
+  ClanWarTeam,
 } from '@/types/api/clans'
 import type { PublicMapDifficultyResponse } from '@/types/api/maps'
-import { attackerPickCount, CLAN_ARENA_LABEL, CLAN_RULESET_LABEL, isRandomArena } from '@/utils/clans'
+import { attackerPickCount, CLAN_ARENA_LABEL, CLAN_RULESET_LABEL, isRandomArena, outmatchedWorth } from '@/utils/clans'
 import { COMPLEXITY_MAX } from '@/utils/complexity'
 import { computed, ref, watch } from 'vue'
 import ClanPicker from '../ClanPicker.vue'
@@ -49,6 +50,7 @@ const ruleset = ref<ClanRuleset>('duel')
 const categoryId = ref('')
 const complexity = ref<[number, number]>([0, COMPLEXITY_MAX])
 const picks = ref<PublicMapDifficultyResponse[]>([])
+const forecast = ref<Record<ClanWarTeam, number> | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 const error = ref<string | null>(null)
@@ -63,6 +65,14 @@ const pickCount = computed(() => {
   return attackerPickCount(props.ownClan.standing, target.value.standing)
 })
 
+const outmatched = computed(() => {
+  const own = outmatchedWorth(forecast.value?.attack)
+  const theirs = outmatchedWorth(forecast.value?.defend)
+  if (own) return `Outmatched: your fighters would be worth about ${own}x`
+  return theirs ? `Outmatched: their fighters would be worth about ${theirs}x` : null
+})
+
+const turf = computed(() => arena.value === 'category_turf' || arena.value === 'complexity_turf')
 const turfCategoryId = computed(() => (arena.value === 'category_turf' ? categoryId.value || null : null))
 const turfMin = computed(() => (arena.value === 'complexity_turf' ? complexity.value[0] : null))
 const turfMax = computed(() => (arena.value === 'complexity_turf' ? complexity.value[1] : null))
@@ -104,6 +114,18 @@ async function load() {
     error.value = parseApiError(err, 'Could not load your clan.').message
   } finally {
     loading.value = false
+  }
+}
+
+async function loadForecast(defenderId: string | undefined) {
+  forecast.value = null
+  if (!defenderId) return
+  try {
+    const { getClanWarForecast } = await import('@/api/clans')
+    const { worth } = await getClanWarForecast(props.ownClan.clan.id, defenderId)
+    if (target.value?.clan.id === defenderId) forecast.value = worth
+  } catch {
+    forecast.value = null
   }
 }
 
@@ -149,13 +171,15 @@ watch(
   { immediate: true },
 )
 
+watch(() => target.value?.clan.id, loadForecast, { immediate: true })
+
 watch(arena, () => {
   picks.value = []
 })
 </script>
 
 <template>
-  <BaseModal :open="open" title="Declare War" max-width="640px" @close="emit('close')">
+  <BaseModal :open="open" title="Declare War" max-width="640px" height="700px" @close="emit('close')">
     <div v-if="loading" class="declare__skeleton">
       <SkeletonLoader variant="text" :lines="3" />
       <SkeletonLoader variant="card" height="120px" />
@@ -176,6 +200,11 @@ watch(arena, () => {
           placeholder="Search a clan to attack..."
           @select="target = $event"
         />
+        <Transition name="collapse">
+          <div v-if="outmatched" class="collapsible">
+            <p class="declare__outmatched">{{ outmatched }}</p>
+          </div>
+        </Transition>
         <p v-if="fieldErrors.clanId" class="declare__error" role="alert">{{ fieldErrors.clanId }}</p>
       </section>
 
@@ -190,23 +219,28 @@ watch(arena, () => {
         />
         <p v-if="fieldErrors.arena" class="declare__error" role="alert">{{ fieldErrors.arena }}</p>
 
-        <BaseSelect
-          v-if="arena === 'category_turf'"
-          v-model="categoryId"
-          label="Category"
-          placeholder="Pick a category"
-          :options="categoryOptions"
-        />
+        <Transition name="collapse">
+          <div v-if="turf" class="collapsible">
+            <div class="declare__turf">
+              <BaseSelect
+                v-model="categoryId"
+                label="Category"
+                placeholder="Pick a category"
+                :options="categoryOptions"
+                :inert="arena !== 'category_turf'"
+              />
+              <RangeSlider
+                v-model="complexity"
+                label="Complexity Range"
+                :min="0"
+                :max="COMPLEXITY_MAX"
+                :step="0.5"
+                :inert="arena !== 'complexity_turf'"
+              />
+            </div>
+          </div>
+        </Transition>
         <p v-if="fieldErrors.categoryId" class="declare__error" role="alert">{{ fieldErrors.categoryId }}</p>
-
-        <RangeSlider
-          v-if="arena === 'complexity_turf'"
-          v-model="complexity"
-          label="Complexity Range"
-          :min="0"
-          :max="COMPLEXITY_MAX"
-          :step="0.5"
-        />
         <p v-if="fieldErrors.complexityMin" class="declare__error" role="alert">{{ fieldErrors.complexityMin }}</p>
       </section>
 
@@ -221,9 +255,10 @@ watch(arena, () => {
         />
       </section>
 
-      <section v-if="!isRandomArena(arena)" class="declare__step">
+      <section class="declare__step">
         <h3 class="declare__label field-label">Your Picks</h3>
-        <p v-if="!target" class="caption">Pick a target first</p>
+        <p v-if="isRandomArena(arena)" class="caption">Drawn at random</p>
+        <p v-else-if="!target" class="caption">Pick a target first</p>
         <WarMapPicker
           v-else
           v-model="picks"
@@ -266,6 +301,29 @@ watch(arena, () => {
   margin: 0;
 }
 
+.declare__step > .collapsible {
+  margin-top: calc(var(--space-sm) * -1);
+}
+
+.declare__turf,
+.declare__outmatched {
+  padding-top: var(--space-sm);
+}
+
+.declare__turf {
+  display: grid;
+}
+
+.declare__turf > * {
+  grid-area: 1 / 1;
+  align-self: start;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.declare__turf > [inert] {
+  opacity: 0;
+}
+
 .declare__target {
   display: flex;
   align-items: center;
@@ -283,9 +341,14 @@ watch(arena, () => {
   text-overflow: ellipsis;
 }
 
-.declare__error {
+.declare__error,
+.declare__outmatched {
   margin: 0;
   font-size: var(--text-caption);
   color: var(--error);
+}
+
+.declare__outmatched {
+  color: var(--warning);
 }
 </style>
