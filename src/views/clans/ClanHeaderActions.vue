@@ -9,12 +9,10 @@ import './menuList.css'
 const props = defineProps<{
   signedIn: boolean
   viewerRole: ClanRole | null
-  ownRole: ClanRole | null
   viewerInOtherClan: boolean
   acceptingRequests: boolean
   pendingRequest: ClanJoinRequestResponse | null
   busy: boolean
-  canDeclare: boolean
   error: string | null
   editing: boolean
 }>()
@@ -27,24 +25,16 @@ const emit = defineEmits<{
   save: []
   leave: []
   disband: []
-  'propose-alliance': []
-  'call-rival': []
-  'declare-war': []
 }>()
 
 const menuOpen = ref(false)
 const isFounder = computed(() => hasClanRole(props.viewerRole, 'founder'))
 const invite = computed(() => props.pendingRequest?.direction === 'invite')
-const canPropose = computed(() => hasClanRole(props.ownRole, 'founder'))
-const canRival = computed(() => hasClanRole(props.ownRole, 'commander'))
 
-function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 'declare-war') {
+function pick(action: 'leave' | 'disband') {
   menuOpen.value = false
   if (action === 'leave') emit('leave')
-  else if (action === 'disband') emit('disband')
-  else if (action === 'propose-alliance') emit('propose-alliance')
-  else if (action === 'call-rival') emit('call-rival')
-  else emit('declare-war')
+  else emit('disband')
 }
 </script>
 
@@ -92,40 +82,6 @@ function pick(action: 'leave' | 'disband' | 'propose-alliance' | 'call-rival' | 
       <span class="field-label">Request sent</span>
       <BaseButton :loading="busy" @click="emit('resolve', 'cancelled')">Cancel</BaseButton>
     </template>
-
-    <BaseDropdown
-      v-else-if="canRival"
-      :open="menuOpen"
-      position="bottom-right"
-      @update:open="menuOpen = $event"
-    >
-      <template #trigger>
-        <BaseButton :loading="busy">Diplomacy</BaseButton>
-      </template>
-      <div class="menu-list" role="menu">
-        <button
-          v-if="canPropose"
-          type="button"
-          class="menu-list__item"
-          role="menuitem"
-          @click="pick('propose-alliance')"
-        >
-          Propose Alliance
-        </button>
-        <button type="button" class="menu-list__item" role="menuitem" @click="pick('call-rival')">
-          Call Rival
-        </button>
-        <button
-          v-if="canDeclare"
-          type="button"
-          class="menu-list__item menu-list__item--danger"
-          role="menuitem"
-          @click="pick('declare-war')"
-        >
-          Declare War
-        </button>
-      </div>
-    </BaseDropdown>
 
     <template v-else-if="!viewerInOtherClan">
       <BaseButton v-if="acceptingRequests" variant="primary" :loading="busy" @click="emit('request')">

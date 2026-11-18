@@ -6,7 +6,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
-import type { ClanLevelStepResponse, ClanResponse, ClanRole, ClanWarDetailResponse, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
+import type { ClanLevelStepResponse, ClanResponse, ClanRole, ClanWarResponse, UpdateClanRequest } from '@/types/api/clans'
 import type { ItemResponse } from '@/types/api/items'
 import type { PlayerRef } from '@/types/api/common'
 import type { Tab } from '@/types/display'
@@ -70,7 +70,6 @@ const ClanChatTab = defineAsyncComponent(TAB_LOADERS.ClanChatTab)
 const ClanDiplomacyTab = defineAsyncComponent(TAB_LOADERS.ClanDiplomacyTab)
 const ClanMissionsTab = defineAsyncComponent(TAB_LOADERS.ClanMissionsTab)
 const ClanWarsTab = defineAsyncComponent(TAB_LOADERS.ClanWarsTab)
-const DeclareWarModal = defineAsyncComponent(() => import('./clans/war/DeclareWarModal.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -183,20 +182,14 @@ async function loadRecentWar(clanId: string | null) {
 
 watch(chatClanId, loadRecentWar, { immediate: true })
 
-const declareOpen = ref(false)
 const { seasons, running: seasonRunning } = useCurrentClanSeason()
-const canDeclare = computed(
-  () => seasonRunning.value && !!clan.value && !isPacifist(clan.value) && !ownPacifist.value,
-)
-
-function onDeclared(detail: ClanWarDetailResponse) {
-  declareOpen.value = false
-  router.push({ name: 'clan-war', params: { warId: detail.war.id } })
-}
+const attacker = computed(() => {
+  const open = seasonRunning.value && !!clan.value && !isPacifist(clan.value) && !ownPacifist.value
+  return open && hasClanRole(ownRole.value, 'commander') ? ownClan.value : null
+})
 
 const busy = ref(false)
 const actionError = ref<string | null>(null)
-const actionNotice = ref<string | null>(null)
 const { confirmModal, ask } = useConfirmAction(busy)
 const editing = ref(false)
 const draft = ref<ClanProfileDraft>(emptyClanDraft())
@@ -282,7 +275,6 @@ async function reload() {
 async function runAction(action: () => Promise<void>, fallback: string) {
   busy.value = true
   actionError.value = null
-  actionNotice.value = null
   try {
     await action()
   } catch (err) {
@@ -402,21 +394,6 @@ function askTransfer(member: PlayerRef) {
       await Promise.all([reload(), refreshViewer()])
     },
   })
-}
-
-function actAsOwnClan(action: 'ally' | 'rival') {
-  const ownClanId = viewerClanId.value
-  const target = clan.value!.clan
-  if (!ownClanId) return
-  return runAction(
-    async () => {
-      const api = await import('@/api/clans')
-      if (action === 'ally') await api.proposeClanAlliance(ownClanId, { clanId: target.id })
-      else await api.declareClanRival(ownClanId, { clanId: target.id })
-      actionNotice.value = action === 'ally' ? `Alliance proposed to ${target.name}.` : `${target.name} is now a rival.`
-    },
-    action === 'ally' ? 'Could not propose that alliance.' : 'Could not call that rival.',
-  )
 }
 
 function changeRole(member: PlayerRef, role: ClanRole) {
@@ -553,12 +530,10 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
           <ClanHeaderActions
             :signed-in="auth.isLoggedIn"
             :viewer-role="viewerRole"
-            :own-role="ownRole"
             :viewer-in-other-clan="viewerInOtherClan"
             :accepting-requests="clan.acceptingRequests"
             :pending-request="pendingRequest"
             :busy="busy"
-            :can-declare="canDeclare"
             :error="actionError"
             @request="requestJoin"
             @resolve="resolveRequest"
@@ -568,11 +543,7 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
             @save="saveDraft"
             @leave="askLeave"
             @disband="askDisband"
-            @propose-alliance="actAsOwnClan('ally')"
-            @call-rival="actAsOwnClan('rival')"
-            @declare-war="declareOpen = true"
           />
-          <p v-if="actionNotice" class="clan-page__notice" role="status">{{ actionNotice }}</p>
         </template>
       </ClanHeader>
 
@@ -631,9 +602,9 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         />
         <template v-else-if="clan">
           <ClanChatTab v-if="activeTab === 'chat'" :chat="chat" :feed="feed" :notices="notices" :status="chatStatus" :clan-slug="clan.clan.slug" />
-          <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" />
+          <ClanWarsTab v-else-if="activeTab === 'wars'" :clan="clan" :viewer-role="viewerRole" :recent-war="recentWar" :season-running="seasonRunning" :attacker="attacker" />
           <ClanMissionsTab v-else-if="activeTab === 'missions'" :clan="clan" :is-member="isMember" />
-          <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" />
+          <ClanDiplomacyTab v-else-if="activeTab === 'diplomacy'" :clan="clan" :viewer-role="viewerRole" :own-clan-id="viewerClanId" :own-role="ownRole" />
           <ClanLevelTab v-else-if="activeTab === 'level'" :clan="clan" :steps="levelSteps" :season-running="seasonRunning" />
           <ClanStandingTab v-else-if="activeTab === 'standing'" :clan="clan" :standing="standing" :seasons="seasons" />
           <ClanCosmeticsTab
@@ -647,15 +618,6 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
         </template>
         <SkeletonLoader v-else variant="text" :lines="6" />
       </div>
-
-      <DeclareWarModal
-        v-if="clan && ownClan && viewerInOtherClan"
-        :open="declareOpen"
-        :own-clan="ownClan"
-        :preselected="clan"
-        @close="declareOpen = false"
-        @declared="onDeclared"
-      />
 
       <ConfirmModal v-bind="confirmModal" />
     </template>
@@ -736,10 +698,4 @@ watch(() => auth.isLoggedIn, () => { if (clan.value) void load() })
   background: var(--clan-accent);
 }
 
-.clan-page__notice {
-  margin: var(--space-xs) 0 0;
-  font-size: var(--text-caption);
-  text-align: right;
-  color: var(--text-secondary);
-}
 </style>

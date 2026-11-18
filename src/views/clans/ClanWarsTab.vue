@@ -12,6 +12,7 @@ const props = defineProps<{
   viewerRole: ClanRole | null
   recentWar: ClanWarResponse | null
   seasonRunning: boolean
+  attacker: ClanResponse | null
 }>()
 
 const router = useRouter()
@@ -38,11 +39,17 @@ function onDeclared(detail: ClanWarDetailResponse) {
 
 <template>
   <section class="clan-wars">
-    <div v-if="canDeclare" class="clan-wars__actions">
+    <div v-if="canDeclare || attacker" class="clan-wars__actions">
       <BaseButton variant="destructive" @click="declareOpen = true">Declare War</BaseButton>
     </div>
     <ClanWarList :clan-id="clan.clan.id" :latest-war="recentWar" :season-running="seasonRunning" />
-    <DeclareWarModal :open="declareOpen" :own-clan="clan" @close="declareOpen = false" @declared="onDeclared" />
+    <DeclareWarModal
+      :open="declareOpen"
+      :own-clan="attacker ?? clan"
+      :preselected="attacker ? clan : null"
+      @close="declareOpen = false"
+      @declared="onDeclared"
+    />
   </section>
 </template>
 

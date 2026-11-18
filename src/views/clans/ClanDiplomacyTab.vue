@@ -27,6 +27,8 @@ const PAGE_SIZE = 20
 const props = defineProps<{
   clan: ClanResponse
   viewerRole: ClanRole | null
+  ownClanId: string | null
+  ownRole: ClanRole | null
 }>()
 
 const route = useRoute()
@@ -43,6 +45,8 @@ const proposals = ref<ClanAllianceResponse[]>([])
 const called = ref<ClanRivalResponse[]>([])
 const calledBy = ref<ClanRivalResponse[]>([])
 const allySlots = ref<number | null>(null)
+const rivalsLoaded = ref(false)
+const proposed = ref(false)
 const pending = ref(0)
 const loading = computed(() => pending.value > 0)
 const busyId = ref<string | null>(null)
@@ -50,6 +54,8 @@ const error = ref<string | null>(null)
 
 const isFounder = computed(() => hasClanRole(props.viewerRole, 'founder'))
 const isCommander = computed(() => hasClanRole(props.viewerRole, 'commander'))
+const canPropose = computed(() => !!props.ownClanId && hasClanRole(props.ownRole, 'founder'))
+const canRival = computed(() => !!props.ownClanId && hasClanRole(props.ownRole, 'commander'))
 const clanId = computed(() => props.clan.clan.id)
 const alliesKey = computed(() => `allies:${clanId.value}`)
 const rivalsKey = computed(() => `rivals:${clanId.value}`)
@@ -58,6 +64,8 @@ const allyRows = computed(() => [
   ...proposals.value.map((alliance) => ({ alliance, pending: true })),
   ...activeAlliances.value.map((alliance) => ({ alliance, pending: false })),
 ])
+const allied = computed(() => activeAlliances.value.some((a) => a.ally.id === props.ownClanId))
+const ownCall = computed(() => calledBy.value.some((r) => r.clan.id === props.ownClanId))
 const totalPages = computed(() => alliances.value?.totalPages ?? 0)
 const takenIds = computed(() => [
   clanId.value,
@@ -87,6 +95,7 @@ async function fetchRivals() {
   ])
   called.value = outgoing.content
   calledBy.value = incoming.content
+  rivalsLoaded.value = true
   rememberCount(rivalsKey.value, rivals.value.length)
 }
 
@@ -129,22 +138,35 @@ function resolveAlliance(alliance: ClanAllianceResponse, status: ClanAllianceSta
   )
 }
 
-function propose(target: PublicClanResponse) {
+function propose(actorId: string, targetId: string) {
   return run(
     'propose',
-    async () => (await import('@/api/clans')).proposeClanAlliance(clanId.value, { clanId: target.id }),
+    async () => {
+      await (await import('@/api/clans')).proposeClanAlliance(actorId, { clanId: targetId })
+      proposed.value = true
+    },
     fetchAlliances,
     'Could not propose that alliance.',
   )
 }
 
-function callRival(target: PublicClanResponse) {
+function callRival(actorId: string, targetId: string) {
   return run(
     'rival',
-    async () => (await import('@/api/clans')).declareClanRival(clanId.value, { clanId: target.id }),
+    async () => (await import('@/api/clans')).declareClanRival(actorId, { clanId: targetId }),
     fetchRivals,
     'Could not call that rival.',
   )
+}
+
+function proposeAsOwnClan() {
+  if (props.ownClanId) return propose(props.ownClanId, clanId.value)
+}
+
+function toggleOwnRival() {
+  const own = props.ownClanId
+  if (!own) return
+  return ownCall.value ? dropRival(own, clanId.value, 'rival') : callRival(own, clanId.value)
 }
 
 interface RivalRow {
@@ -173,10 +195,10 @@ function rivalLine(row: RivalRow): string {
   return `Called this clan ${formatFullDate(row.calledBy!.since)}`
 }
 
-function dropRival(rival: ClanRivalResponse) {
+function dropRival(actorId: string, targetId: string, busyKey: string) {
   return run(
-    rival.clan.id,
-    async () => (await import('@/api/clans')).dropClanRival(clanId.value, rival.clan.id),
+    busyKey,
+    async () => (await import('@/api/clans')).dropClanRival(actorId, targetId),
     fetchRivals,
     'Could not drop that rival.',
   )
@@ -201,8 +223,12 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
           :exclude-ids="takenIds"
           :disabled="busyId === 'propose'"
           placeholder="Propose an alliance..."
-          @select="propose($event.clan)"
+          @select="propose(clanId, $event.clan.id)"
         />
+        <span v-else-if="proposed" class="caption">Proposal sent</span>
+        <BaseButton v-else-if="canPropose && alliances && !allied" :loading="busyId === 'propose'" @click="proposeAsOwnClan">
+          Propose Alliance
+        </BaseButton>
       </header>
 
       <p v-if="!loading && allyRows.length === 0" class="caption">No allies</p>
@@ -256,8 +282,11 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
           :exclude-ids="takenIds"
           :disabled="busyId === 'rival'"
           placeholder="Call a rival..."
-          @select="callRival($event.clan)"
+          @select="callRival(clanId, $event.clan.id)"
         />
+        <BaseButton v-else-if="canRival && rivalsLoaded" :loading="busyId === 'rival'" @click="toggleOwnRival">
+          {{ ownCall ? 'Drop Rival' : 'Call Rival' }}
+        </BaseButton>
       </header>
 
       <p v-if="!loading && rivals.length === 0" class="caption">No rivals</p>
@@ -281,7 +310,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
               <BaseButton
                 v-if="isCommander && rival.called"
                 :loading="busyId === rival.clan.id"
-                @click="dropRival(rival.called)"
+                @click="dropRival(clanId, rival.clan.id, rival.clan.id)"
               >
                 Drop
               </BaseButton>
@@ -312,6 +341,7 @@ watch(() => [route.query.page, props.viewerRole], () => load(fetchAlliances()), 
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
+  min-height: var(--control-h);
 }
 
 .diplomacy__title {
