@@ -295,7 +295,7 @@ const missionRows = computed<Record<string, unknown>[]>(() =>
     </template>
 
     <template v-else-if="event">
-      <section class="event-editor__panel">
+      <section class="surface-card event-editor__panel">
         <h2 class="section-title">Details</h2>
         <div class="event-editor__grid">
           <BaseInput v-model="form.title" label="Title" />
@@ -312,7 +312,7 @@ const missionRows = computed<Record<string, unknown>[]>(() =>
         <BaseButton class="event-editor__save" variant="primary" :loading="metaSaving" @click="saveMetadata">Save Details</BaseButton>
       </section>
 
-      <section class="event-editor__panel">
+      <section class="surface-card event-editor__panel">
         <h2 class="section-title">Images</h2>
         <div class="event-editor__images">
           <ImageUploader label="Background" :image-url="event.backgroundUrl ?? null" :upload-handler="uploadBackground"
@@ -322,7 +322,7 @@ const missionRows = computed<Record<string, unknown>[]>(() =>
         </div>
       </section>
 
-      <section class="event-editor__panel">
+      <section class="surface-card event-editor__panel">
         <header class="event-editor__panel-head">
           <h2 class="section-title">Completion Bonus Items</h2>
           <BaseButton :loading="bonusBusy" @click="pickerOpen = true">Add Item</BaseButton>
@@ -336,7 +336,7 @@ const missionRows = computed<Record<string, unknown>[]>(() =>
         <p v-else class="caption">No bonus items</p>
       </section>
 
-      <section class="event-editor__panel">
+      <section class="surface-card event-editor__panel">
         <header class="event-editor__panel-head">
           <h2 class="section-title">Missions</h2>
           <span class="event-editor__rollout">
@@ -400,9 +400,6 @@ const missionRows = computed<Record<string, unknown>[]>(() =>
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .event-editor__panel-head {

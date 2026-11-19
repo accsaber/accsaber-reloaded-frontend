@@ -41,6 +41,24 @@ export const DIFF_COLOR: Record<string, string> = {
 import type { MapDifficultyStatus } from '@/types/enums'
 
 export const QUEUE_STATUSES: MapDifficultyStatus[] = ['QUEUE', 'QUALIFIED']
+export const HUB_STATUSES: MapDifficultyStatus[] = ['SUGGESTED', ...QUEUE_STATUSES]
+
+export const AUTO_CRITERIA_LABELS = {
+  PASSED: 'Passed',
+  FAILED: 'Failed',
+  UNAVAILABLE: 'Unavailable',
+  PENDING: 'Pending',
+} as const
+
+export const REJECT_REASON_MAX = 2000
+
+export const MAP_STATUS_LABELS: Record<MapDifficultyStatus, string> = {
+  SUGGESTED: 'Suggested',
+  QUEUE: 'In Queue',
+  QUALIFIED: 'Qualified',
+  RANKED: 'Ranked',
+  CAMPAIGN: 'Campaign',
+}
 
 import type { NewsStatus, NewsType } from '@/types/enums'
 

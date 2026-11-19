@@ -3,7 +3,10 @@ import BaseBanner from '@/components/common/BaseBanner.vue'
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import MapComments from '@/components/domain/MapComments.vue'
 import { useColorExtract } from '@/composables/useColorExtract'
+import { useAutoCheckPoll } from '@/composables/useAutoCheckPoll'
+import { useMapComments } from '@/composables/useMapComments'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
@@ -15,19 +18,21 @@ import { pickCoverUrl } from '@/utils/media'
 import LeaderboardPreviewPanel from '@/views/staff/ranking/LeaderboardPreviewPanel.vue'
 import RankDetailHero from '@/views/staff/ranking/detail/RankDetailHero.vue'
 import RankDetailManagement from '@/views/staff/ranking/detail/RankDetailManagement.vue'
+import RankDetailSuggestion from '@/views/staff/ranking/detail/RankDetailSuggestion.vue'
 import RankDetailVoteForm from '@/views/staff/ranking/detail/RankDetailVoteForm.vue'
 import RankDetailVoteList from '@/views/staff/ranking/detail/RankDetailVoteList.vue'
 import { useDifficultyDrift } from '@/views/staff/ranking/detail/useDifficultyDrift'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-type DetailTab = 'voting' | 'leaderboard'
+type DetailTab = 'voting' | 'leaderboard' | 'comments'
 
 const RefreshModal = defineAsyncComponent(() => import('@/views/staff/ranking/detail/RefreshModal.vue'))
 
 const TABS: Tab[] = [
   { key: 'voting', label: 'Voting' },
   { key: 'leaderboard', label: 'Leaderboard Preview' },
+  { key: 'comments', label: 'Public Comments' },
 ]
 const HEAD_FORM_GHOST = 601
 const FORM_GHOST = 514
@@ -67,12 +72,18 @@ usePageMeta({
 const isHeadRanking = computed(() => authStore.hasRole('RANKING_HEAD'))
 const isRanking = computed(() => authStore.hasRole('RANKING'))
 
-const canRefresh = computed(
-  () => isHeadRanking.value && !!difficulty.value && difficulty.value.status !== 'RANKED' && !!difficulty.value.beatsaverCode,
+const refreshable = computed(
+  () => !!difficulty.value?.active && difficulty.value.status !== 'RANKED' && !!difficulty.value.beatsaverCode,
 )
-const { driftInfo, checking: driftChecking, recheck: recheckDrift } = useDifficultyDrift(difficulty, canRefresh)
+const canRefresh = computed(() => isHeadRanking.value && refreshable.value)
+const { driftInfo, checking: driftChecking, recheck: recheckDrift } = useDifficultyDrift(difficulty, refreshable)
 
 const activeTab = ref<DetailTab>('voting')
+const tab = computed<DetailTab>(() =>
+  difficulty.value?.active === false && activeTab.value === 'leaderboard' ? 'voting' : activeTab.value,
+)
+const comments = useMapComments(difficultyId)
+const pollAutoCheck = useAutoCheckPoll()
 const refreshOpen = ref(false)
 const refreshMounted = ref(false)
 const notice = ref('')
@@ -88,7 +99,9 @@ async function fetchDifficulty() {
   try {
     const { getRankingDifficulty } = await import('@/api/ranking/maps')
     const fetched = await getRankingDifficulty(id)
-    if (id === difficultyId.value) difficulty.value = fetched
+    if (id !== difficultyId.value) return
+    difficulty.value = fetched
+    pollAutoCheck(fetched, () => getRankingDifficulty(id), (fresh) => { if (id === difficultyId.value) difficulty.value = fresh })
   } catch {
     if (id === difficultyId.value && loading.value) difficulty.value = null
   } finally {
@@ -135,7 +148,7 @@ async function onRefreshed() {
 
 <template>
   <div class="rank-detail" :style="{ '--page-accent': accent }">
-    <div class="rank-detail__content">
+    <div class="hero-column">
       <EmptyState v-if="!loading && !difficulty" message="Difficulty not found" />
 
       <template v-else>
@@ -148,21 +161,26 @@ async function onRefreshed() {
           :category-code="categoryCode"
           :is-head-ranking="isHeadRanking"
           :is-ranking="isRanking"
+          :outdated="!!driftInfo"
           @updated="onUpdated"
         />
 
-        <BaseTabs v-model="activeTab" :tabs="TABS" />
+        <BaseTabs :model-value="tab" :tabs="TABS" :disabled-keys="difficulty?.active === false ? ['leaderboard'] : []"
+          @update:model-value="activeTab = $event as DetailTab" />
 
-        <div :key="activeTab" class="rank-detail__panel">
+        <div :key="tab" class="rank-detail__panel">
           <LeaderboardPreviewPanel
-            v-if="activeTab === 'leaderboard' && difficulty"
+            v-if="tab === 'leaderboard' && difficulty"
             :map-difficulty-id="difficulty.id"
             :script-complexity="difficulty.scriptComplexity"
             :script-version="difficulty.scriptVersion"
           />
+          <MapComments v-else-if="tab === 'comments' && difficulty" :difficulty-id="difficulty.id" :chat="comments"
+            title="Public Comments" warning="Players see these comments with your name on them. They cannot be deleted!" />
           <div v-else-if="difficulty" class="rank-detail__voting">
-            <div class="rank-detail__column">
-              <RankDetailVoteForm :difficulty="difficulty" :vote-data="voteData" :is-head-ranking="isHeadRanking" @voted="fetchVotes" />
+            <div v-if="difficulty.active" class="rank-detail__column">
+              <RankDetailSuggestion v-if="difficulty.status === 'SUGGESTED'" :difficulty="difficulty" @updated="onUpdated($event, false)" />
+              <RankDetailVoteForm v-else :difficulty="difficulty" :vote-data="voteData" :is-head-ranking="isHeadRanking" @voted="fetchVotes" />
               <RankDetailManagement
                 v-if="isHeadRanking"
                 :difficulty="difficulty"
@@ -202,21 +220,6 @@ async function onRefreshed() {
 <style scoped>
 .rank-detail {
   position: relative;
-}
-
-.rank-detail__content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  width: 100%;
-  max-width: 1280px;
-  min-width: 0;
-  margin: 0 auto;
-}
-
-.rank-detail__content > *:not(.map-hero) {
-  position: relative;
-  z-index: 1;
 }
 
 .rank-detail__panel {

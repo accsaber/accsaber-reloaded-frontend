@@ -114,6 +114,27 @@ h1 {
   pointer-events: none;
 }
 
+.surface-card {
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
+}
+
+.hero-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 1280px;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.hero-column > *:not(.map-hero) {
+  position: relative;
+  z-index: 1;
+}
+
 .card-ghost {
   padding-bottom: var(--ghost-body);
   background: var(--bg-surface);
@@ -375,6 +396,15 @@ h1 {
 }
 .criteria-text--unavailable {
   color: var(--text-tertiary);
+}
+
+.criteria-failures {
+  margin: 0;
+  padding: 0 0 0 var(--space-lg);
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 .glow {

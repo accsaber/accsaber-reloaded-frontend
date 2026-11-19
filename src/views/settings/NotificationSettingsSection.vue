@@ -16,6 +16,7 @@ const NOTIFICATION_DEFAULTS: NotificationSettings = {
   'notifications.clanAlliance': true,
   'notifications.clanWar': true,
   'notifications.campaignInvite': true,
+  'notifications.mapFollowed': true,
 }
 
 const CONTROLS: { key: keyof NotificationSettings & string; title: string }[] = [
@@ -58,6 +59,10 @@ const CONTROLS: { key: keyof NotificationSettings & string; title: string }[] = 
   {
     key: 'notifications.campaignInvite',
     title: 'Campaign invites',
+  },
+  {
+    key: 'notifications.mapFollowed',
+    title: 'Maps you follow in the Ranking Hub',
   },
   {
     key: 'notifications.server',

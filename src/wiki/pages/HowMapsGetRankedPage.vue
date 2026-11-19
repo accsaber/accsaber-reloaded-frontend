@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { DISCORD_URL } from '@/utils/constants'
 import WikiFlowDiagram, { type WikiFlowStep } from '@/wiki/components/WikiFlowDiagram.vue'
 import WikiHeading from '@/wiki/components/WikiHeading.vue'
 import WikiProse from '@/wiki/components/WikiProse.vue'
 
 const PIPELINE: WikiFlowStep[] = [
-  { label: 'Someone suggests it', detail: 'anyone can, in our Discord' },
-  { label: 'It enters the queue', detail: 'the team imports it and voting opens' },
+  { label: 'Someone suggests it', detail: 'anyone can, in the Ranking Hub' },
+  { label: 'It enters the queue', detail: 'the team adds it and voting opens' },
   { label: 'The team votes', detail: 'per difficulty, out in the open' },
   { label: 'Qualified', detail: 'enough votes and a criteria pass' },
   { label: 'Ranked', detail: 'released with the next batch', accent: 'var(--accent)' },
@@ -17,15 +16,30 @@ const PIPELINE: WikiFlowStep[] = [
   <WikiProse>
     <p>
       Every ranked map goes through the same steps. The <RouterLink to="/ranked-queue">Ranking
-      Queue</RouterLink> page shows every map being considered and its live vote count.
+      Hub</RouterLink> shows every map that's been suggested, queued or rejected and its live vote
+      count.
     </p>
     <WikiFlowDiagram :steps="PIPELINE" />
 
     <WikiHeading id="suggesting">Suggesting a map</WikiHeading>
     <p>
-      Map suggestions happen in <a :href="DISCORD_URL" target="_blank" rel="noopener noreferrer">our
-      Discord</a> and anyone can make one. If a map looks like a well-built accuracy map the ranking
-      team imports it into the queue.
+      Anyone who's logged in can <RouterLink to="/ranked-queue/suggest">suggest a map</RouterLink>
+      from the Ranking Hub. You paste its BeatSaver code and pick the difficulty and category and
+      it shows up in the Suggested tab for everyone to see. You can have 5 open suggestions at a
+      time and you can withdraw one any time before the team queues it.
+    </p>
+    <p>
+      If it looks like a well-built accuracy map the ranking team adds it to the queue and if it
+      doesn't they reject it with a reason you can read. The hub also has a Criteria Checker where
+      you paste a BeatSaver code or upload a zip and see if the map would fail the criteria before
+      you suggest it.
+    </p>
+
+    <WikiHeading id="following">Following and commenting on a map</WikiHeading>
+    <p>
+      Every map in the hub has comments and anyone logged in can write one. If you follow a map
+      you get a notification when it's queued, qualified, ranked or rejected and also when the team
+      votes on it or new comments come in. You follow your own suggestions automatically.
     </p>
 
     <WikiHeading id="the-vote">The vote</WikiHeading>
@@ -35,6 +49,10 @@ const PIPELINE: WikiFlowStep[] = [
       three more upvotes than downvotes and passes the criteria check. The criteria check is a
       separate vote on whether the map follows the <RouterLink to="/wiki/ranking-criteria">ranking
       criteria</RouterLink>. It's decided by simple majority and the ranking heads can override it.
+    </p>
+    <p>
+      You can read every vote and its reason in the hub but each voter shows up under a random
+      nickname and gets a different one on every map. You may suggest new, funny nicknames in the Discord.
     </p>
     <p>
       A difficulty qualifies automatically the moment both conditions are met. If votes change and a

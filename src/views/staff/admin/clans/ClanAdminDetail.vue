@@ -196,7 +196,7 @@ onMounted(load)
         </div>
       </header>
 
-      <dl class="detail__overview">
+      <dl class="surface-card detail__overview">
         <div><dt>Level</dt><dd class="mono">{{ clan.level.level }}</dd></div>
         <div><dt>Members</dt><dd class="mono">{{ clan.memberCount }}/{{ clan.memberCap }}</dd></div>
         <div><dt>Standing</dt><dd class="mono">{{ formatStanding(clan.standing) }}</dd></div>
@@ -287,9 +287,6 @@ onMounted(load)
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--space-md);
   margin: 0;
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .detail__overview dt {

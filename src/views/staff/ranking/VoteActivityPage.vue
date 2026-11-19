@@ -11,7 +11,7 @@ import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { VoteResponse } from '@/types/api/maps'
 import { formatRelativeDate } from '@/utils/formatters'
 import { knownCount, rememberCount } from '@/utils/knownCount'
-import VoteBody from '@/views/staff/ranking/detail/VoteBody.vue'
+import VoteBody from '@/components/domain/VoteBody.vue'
 import { computed, ref, watch } from 'vue'
 
 const PAGE_SIZE = 20

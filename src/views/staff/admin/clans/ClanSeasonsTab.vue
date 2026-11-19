@@ -235,7 +235,7 @@ onMounted(() => {
     </div>
     <p v-else-if="!seasons.length" class="caption">No seasons yet</p>
     <ul v-else class="clan-seasons__list" :class="{ refreshing: loading }">
-      <li v-for="season in seasons" :key="season.id" class="clan-seasons__season">
+      <li v-for="season in seasons" :key="season.id" class="surface-card">
         <div class="clan-seasons__row">
           <span class="clan-seasons__identity">
             <span class="clan-seasons__name">{{ season.name }}</span>
@@ -340,12 +340,6 @@ onMounted(() => {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.clan-seasons__season {
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .clan-seasons__row {

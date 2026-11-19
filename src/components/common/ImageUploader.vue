@@ -182,7 +182,7 @@ async function onRemove() {
   border: 2px solid var(--bg-overlay);
   border-top-color: var(--page-accent, var(--accent));
   border-radius: 50%;
-  animation: spin 800ms linear infinite;
+  animation: spin var(--dur-spin) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

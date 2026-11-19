@@ -27,6 +27,7 @@ import type { CategoryCode, Tab } from '@/types/display'
 import type { MapDifficultyStatus } from '@/types/enums'
 import { parseApiError } from '@/api/client'
 import { SCRIPT_SCENARIO } from '@/utils/complexity'
+import { MAP_STATUS_LABELS } from '@/utils/constants'
 import { saveBlob } from '@/utils/download'
 import { formatCount, formatRelativeDate } from '@/utils/formatters'
 import ApplyScriptModal from './complexity/ApplyScriptModal.vue'
@@ -74,14 +75,7 @@ const PREVIEW_LADDER: (keyof ScenarioLadderValues)[] = [
   'topPlayAp',
 ]
 
-const STATUS_LABELS: Record<MapDifficultyStatus, string> = {
-  RANKED: 'Ranked',
-  QUALIFIED: 'Qualified',
-  QUEUE: 'In Queue',
-  CAMPAIGN: 'Campaign',
-}
-
-const STATUS_TABS: Tab[] = STATUSES.map((key) => ({ key, label: STATUS_LABELS[key] }))
+const STATUS_TABS: Tab[] = STATUSES.map((key) => ({ key, label: MAP_STATUS_LABELS[key] }))
 
 const PREVIEW_VIEW_TABS: Tab[] = [
   { key: 'maps', label: 'Maps' },
@@ -567,7 +561,7 @@ async function confirmApply(reason: string, maxStep: number | undefined) {
       }
       : {
         variant: 'success',
-        text: `${STATUS_LABELS[applyStatus.value]} maps in ${scope} now carry the script value.`,
+        text: `${MAP_STATUS_LABELS[applyStatus.value]} maps in ${scope} now carry the script value.`,
       }
     loadDifficulties()
   } catch (err) {

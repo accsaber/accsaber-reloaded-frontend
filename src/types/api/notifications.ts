@@ -9,6 +9,7 @@ export type NotificationType =
   | 'market_outbid'
   | 'item_earned'
   | 'campaign_invite'
+  | 'map_followed'
   | 'server'
 
 export interface NotificationResponse {

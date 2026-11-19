@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { Tab } from '@/types/display'
 import type { MapVoteAction, VoteType } from '@/types/enums'
-import VoteIcon from '@/views/staff/ranking/detail/VoteIcon.vue'
+import VoteIcon from '@/components/domain/VoteIcon.vue'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -54,7 +54,7 @@ const sent = ref(false)
 function prefill() {
   const staffId = authStore.staffId
   if (!props.voteData || !staffId) return
-  const existing = props.voteData.votes.find((v) => v.staff.id === staffId && v.type === voteAction.value)
+  const existing = props.voteData.votes.find((v) => v.staff?.id === staffId && v.type === voteAction.value)
   if (!existing) {
     if (isRanked.value && props.difficulty.scriptComplexity != null) suggestedComplexity.value = props.difficulty.scriptComplexity
     return
@@ -97,7 +97,7 @@ async function submit() {
 </script>
 
 <template>
-  <StoredFold class="vote-form" :label="isRanked ? 'Cast Reweight Vote' : 'Cast Rank Vote'" storage-key="rank-vote-form">
+  <StoredFold class="surface-card vote-form" :label="isRanked ? 'Cast Reweight Vote' : 'Cast Rank Vote'" storage-key="rank-vote-form">
     <form class="vote-form__fields" @submit.prevent="submit">
       <div class="vote-form__field">
         <span class="field-label">Vote</span>
@@ -137,12 +137,6 @@ async function submit() {
 </template>
 
 <style scoped>
-.vote-form {
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
-}
-
 .vote-form :deep(.stored-fold__label) {
   font-size: var(--text-section-heading);
 }

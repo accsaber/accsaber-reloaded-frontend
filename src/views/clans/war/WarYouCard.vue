@@ -42,7 +42,7 @@ const down = computed(() => props.war.status === 'active' && props.viewer.guard 
 </script>
 
 <template>
-  <section class="war-you" aria-label="Your targeting">
+  <section class="surface-card war-you" aria-label="Your targeting">
     <div class="war-you__aim">
       <BaseTabs
         variant="segmented"
@@ -96,9 +96,6 @@ const down = computed(() => props.war.status === 'active' && props.viewer.guard 
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .war-you__aim {

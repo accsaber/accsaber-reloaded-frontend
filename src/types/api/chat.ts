@@ -28,6 +28,7 @@ export interface ChatMessageResponse {
   subject: PlayerRef | null
   clan: PublicClanResponse | null
   war: ClanWarRefResponse | null
+  rankingTeam?: boolean
   createdAt: string
 }
 

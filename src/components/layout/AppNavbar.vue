@@ -64,7 +64,7 @@ const morePublicNavItems: NavItem[] = [
   { to: '/market', label: 'Market Hub' },
   { to: '/milestones', label: 'Milestones' },
   { to: '/stats', label: 'Stats' },
-  { to: '/ranked-queue', label: 'Ranking Queue' },
+  { to: '/ranked-queue', label: 'Ranking Hub' },
   { to: '/wiki', label: 'Wiki' },
 ]
 
@@ -93,7 +93,7 @@ const rankingNavItems = computed<NavItem[]>(() => {
     items.push({ to: newsPath, label: 'News' })
   }
   items.push({ to: activityPath, label: 'Activity' })
-  items.push({ to: deactivatedPath, label: 'Deactivated' })
+  items.push({ to: deactivatedPath, label: 'Rejected' })
   return items
 })
 

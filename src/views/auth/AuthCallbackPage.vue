@@ -218,7 +218,7 @@ function goMainSite() {
   border: 2px solid var(--bg-overlay);
   border-top-color: var(--accent, var(--text-primary));
   border-radius: 50%;
-  animation: spin 700ms linear infinite;
+  animation: spin var(--dur-spin) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

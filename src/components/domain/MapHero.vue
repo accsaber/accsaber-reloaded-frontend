@@ -145,6 +145,11 @@ onUnmounted(() => clearTimeout(bsrCopiedTimer))
               <ApTweaker :open="tweakerOpen" :curve-id="curveId!" :anchor-el="tweakerAnchor"
                 :complexity="tweakerComplexity ?? undefined" :show-weighted="false" @update:open="onTweakerOpen" />
             </template>
+            <slot name="actions" />
+          </div>
+
+          <div v-if="$slots.facts" class="map-hero__facts">
+            <slot name="facts" />
           </div>
 
           <slot name="side" />
@@ -280,6 +285,14 @@ onUnmounted(() => clearTimeout(bsrCopiedTimer))
   height: 18px;
 }
 
+.map-hero__facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-sm) var(--space-xl);
+  text-align: left;
+}
+
 .map-hero__site-icon {
   border-radius: var(--radius-btn);
 }
@@ -362,6 +375,7 @@ onUnmounted(() => clearTimeout(bsrCopiedTimer))
   }
 
   .map-hero__links,
+  .map-hero__facts,
   .map-hero__meta {
     justify-content: center;
   }

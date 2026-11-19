@@ -4,6 +4,7 @@ import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapNameCell from '@/components/domain/MapNameCell.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { ComplexityDifficultyRow } from '@/types/api/complexity'
+import { MAP_STATUS_LABELS } from '@/utils/constants'
 
 withDefaults(defineProps<{
   row: ComplexityDifficultyRow
@@ -11,8 +12,6 @@ withDefaults(defineProps<{
 }>(), {
   size: 44,
 })
-
-const STATUS_NOTE: Record<string, string> = { QUALIFIED: 'Qualified', QUEUE: 'In Queue' }
 
 const categoryStore = useCategoryStore()
 </script>
@@ -26,7 +25,7 @@ const categoryStore = useCategoryStore()
       <span class="map-identity__category" :style="{ color: categoryStore.getAccent(row.categoryCode) }">
         {{ categoryStore.getShortName(row.categoryCode) }}
       </span>
-      <span v-if="STATUS_NOTE[row.status]" class="caption">{{ STATUS_NOTE[row.status] }}</span>
+      <span v-if="row.status !== 'RANKED'" class="caption">{{ MAP_STATUS_LABELS[row.status] }}</span>
     </MapNameCell>
   </div>
 </template>

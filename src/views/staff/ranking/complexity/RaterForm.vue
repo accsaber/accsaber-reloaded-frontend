@@ -80,7 +80,7 @@ const bandNote = computed(() => {
 </script>
 
 <template>
-  <div class="rater-form">
+  <div class="surface-card rater-form">
     <template v-if="loading || !edited">
       <SkeletonLoader class="placeholder" height="var(--control-h)" />
       <SkeletonLoader v-for="n in 3" :key="n" class="placeholder" height="52px" />
@@ -132,9 +132,6 @@ const bandNote = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .rater-form__head {

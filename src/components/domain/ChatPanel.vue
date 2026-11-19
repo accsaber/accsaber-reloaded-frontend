@@ -304,6 +304,7 @@ if (!props.floating) void props.chat.loadHistory()
           <div class="chat-panel__bubble">
             <div class="chat-panel__meta">
               <span class="chat-panel__author">{{ entry.message.author.name }}</span>
+              <span v-if="entry.message.rankingTeam" class="chat-panel__role" title="Ranking Team" aria-label="Ranking Team">RT</span>
               <time class="chat-panel__time" :datetime="isoTime(entry.message)">
                 {{ displayTime(entry.message) }}
               </time>
@@ -450,8 +451,8 @@ if (!props.floating) void props.chat.loadHistory()
   width: 100%;
   height: var(--chat-panel-height, min(620px, 70vh));
   background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-modal);
+  border: var(--chat-panel-border, 1px solid var(--bg-overlay));
+  border-radius: var(--chat-panel-radius, var(--radius-modal));
   overflow: hidden;
   pointer-events: auto;
 }
@@ -505,7 +506,7 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-md) var(--space-md) 0;
+  padding: var(--space-md) var(--chat-panel-inset, var(--space-md)) 0;
 }
 
 .chat-panel__log {
@@ -515,7 +516,7 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding: var(--space-md);
+  padding: var(--space-md) var(--chat-panel-inset, var(--space-md));
   scrollbar-width: thin;
   scrollbar-color: var(--bg-overlay) transparent;
 }
@@ -568,7 +569,7 @@ if (!props.floating) void props.chat.loadHistory()
   border: 2px solid var(--bg-overlay);
   border-top-color: var(--page-accent, var(--accent));
   border-radius: 50%;
-  animation: spin 700ms linear infinite;
+  animation: spin var(--dur-spin) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -651,6 +652,14 @@ if (!props.floating) void props.chat.loadHistory()
   white-space: nowrap;
 }
 
+.chat-panel__role {
+  flex-shrink: 0;
+  margin-right: auto;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--role-ranking);
+}
+
 .chat-panel__time {
   flex-shrink: 0;
   font-family: var(--font-sans);
@@ -671,7 +680,7 @@ if (!props.floating) void props.chat.loadHistory()
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md) var(--space-md);
+  padding: var(--space-sm) var(--chat-panel-inset, var(--space-md)) var(--space-md);
 }
 
 .chat-panel__error {

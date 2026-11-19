@@ -122,6 +122,7 @@
   --dur-enter: 250ms;
   --dur-exit: 200ms;
   --dur-move: 450ms;
+  --dur-spin: 700ms;
   --dur-menu: 180ms;
   --dur-menu-exit: 150ms;
   --stagger: 30ms;

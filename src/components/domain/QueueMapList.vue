@@ -13,11 +13,12 @@ import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import MapFilterSidebar from '@/components/domain/MapFilterSidebar.vue'
 import MapNameCell from '@/components/domain/MapNameCell.vue'
 import QueueVotes from '@/components/domain/QueueVotes.vue'
+import ReasonEdit from '@/components/domain/ReasonEdit.vue'
+import UserChip from '@/components/domain/UserChip.vue'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useQueryParams } from '@/composables/useQueryParams'
 import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
-import type { PublicStaffUserResponse } from '@/types/api/staff'
 import type { MapDifficultyResponse, PublicMapDifficultyResponse } from '@/types/api/maps'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -33,16 +34,19 @@ type StaffFields = 'complexityPinned' | 'scriptComplexity' | 'scriptVersion' | '
 
 export type QueueEntry = PublicMapDifficultyResponse & Partial<Pick<MapDifficultyResponse, StaffFields>>
 
-type Variant = 'staff' | 'deactivated' | 'public'
+type QueueList = 'queue' | 'suggested' | 'deactivated'
 
 const props = defineProps<{
   title: string
   countLabel: string
   emptyMessage: string
-  variant: Variant
+  list: QueueList
+  staff?: boolean
   baseParams: Record<string, unknown>
   fetchPage: (params: Record<string, unknown>) => Promise<Page<QueueEntry>>
   rowRoute?: (entry: QueueEntry) => RouteLocationRaw
+  saveReason?: (entry: QueueEntry, reason: string) => Promise<void>
+  rowAction?: (entry: QueueEntry) => boolean
 }>()
 
 const PAGE_SIZE = 20
@@ -55,7 +59,7 @@ const MAP_COLUMNS: TableColumn[] = [
   { key: 'map', label: 'Map', align: 'left', primary: true },
   { key: 'category', label: 'Category', align: 'left', width: '112px' },
 ]
-const QUEUE_COLUMNS: TableColumn[] = [
+const STAFF_QUEUE_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'left', width: '148px' },
   { key: 'criteria', label: 'Criteria', align: 'left', width: '120px' },
@@ -63,18 +67,25 @@ const QUEUE_COLUMNS: TableColumn[] = [
   { key: 'comments', label: 'Comments', sortable: true, align: 'right', mono: true, width: '80px', icon: COMMENTS_ICON },
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'left', width: '180px' },
 ]
-const PUBLIC_COLUMNS: TableColumn[] = [
+const PUBLIC_QUEUE_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
   { key: 'criteria', label: 'Criteria', align: 'left', width: '140px' },
   { key: 'rating', label: 'Votes', sortable: true, align: 'left', width: '132px' },
   { key: 'submitted', label: 'Added', sortable: true, align: 'left', width: '140px' },
 ]
+const SUGGESTED_COLUMNS: TableColumn[] = [
+  ...MAP_COLUMNS,
+  { key: 'criteria', label: 'Criteria', align: 'left', width: '140px' },
+  { key: 'suggester', label: 'Suggested By', align: 'left', width: '220px' },
+  { key: 'submitted', label: 'Added', sortable: true, align: 'left', width: '140px' },
+]
 const DEACTIVATED_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
-  { key: 'complexity', label: 'Complexity', align: 'left', width: '148px' },
-  { key: 'submitted', label: 'Submitted', sortable: true, align: 'left', width: '180px' },
-  { key: 'edited', label: 'Last Edited By', align: 'left', width: '180px' },
+  { key: 'reason', label: 'Reason', align: 'left', width: '360px', noLink: !!props.saveReason },
+  { key: 'deactivated', label: 'Rejected', sortable: true, align: 'left', width: '180px' },
 ]
+const ACTION_COLUMN: TableColumn = { key: 'action', label: '', align: 'right', width: '120px', noLink: true }
+const DEFAULT_SORT: Record<QueueList, string> = { queue: 'rating', suggested: 'submitted', deactivated: 'deactivated' }
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +93,11 @@ const categoryStore = useCategoryStore()
 const queueCache = useLeaderboardCacheStore()
 const { queryRef } = useQueryParams()
 
-const columns = { staff: QUEUE_COLUMNS, deactivated: DEACTIVATED_COLUMNS, public: PUBLIC_COLUMNS }[props.variant]
+const listColumns = computed(() => {
+  if (props.list === 'suggested') return SUGGESTED_COLUMNS
+  if (props.list === 'deactivated') return DEACTIVATED_COLUMNS
+  return props.staff ? STAFF_QUEUE_COLUMNS : PUBLIC_QUEUE_COLUMNS
+})
 const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T18:00:00Z')
 
 const searchQuery = queryRef('q')
@@ -111,11 +126,12 @@ const hasActiveFilters = computed(
 )
 
 const { currentPage, sortState, paginationParams, setPage, setSort } = usePageableRoute({
-  defaultSort: props.variant === 'deactivated' ? 'submitted' : 'rating',
+  defaultSort: () => DEFAULT_SORT[props.list],
   defaultOrder: 'desc',
   defaultSize: PAGE_SIZE,
   sortFieldMap: {
     submitted: 'createdAt',
+    deactivated: 'updatedAt',
     comments: 'commentCount',
   },
   secondarySort: null,
@@ -127,7 +143,16 @@ const totalElements = ref(0)
 const loading = ref(true)
 
 const subtitle = computed(() => (totalElements.value ? `${totalElements.value} ${props.countLabel}` : '\u00a0'))
-const countKey = `queue-maps:${props.variant}`
+const countKey = computed(
+  () => `queue-maps:${props.staff ? 'staff' : 'public'}:${props.list}:${String(props.baseParams.status ?? '')}`,
+)
+const actionKey = computed(() => `${countKey.value}:action`)
+const hasAction = computed(() => {
+  const act = props.rowAction
+  if (!act) return false
+  return difficulties.value.length ? difficulties.value.some(act) : knownCount(actionKey.value, 0) > 0
+})
+const columns = computed(() => (hasAction.value ? [...listColumns.value, ACTION_COLUMN] : listColumns.value))
 
 const rows = computed<Record<string, unknown>[]>(() =>
   difficulties.value.map((d) => {
@@ -149,12 +174,24 @@ function rowTo(row: Record<string, unknown>) {
   return props.rowRoute?.(entryOf(row))
 }
 
-function addedLabel(entry: QueueEntry): string {
-  return props.variant === 'public' && Date.parse(entry.createdAt) < IMPORT_CUTOFF_MS ? 'Imported' : formatRelativeDate(entry.createdAt)
+function removeRow(id: string) {
+  const index = difficulties.value.findIndex((d) => d.id === id)
+  if (index === -1) return
+  difficulties.value.splice(index, 1)
+  totalElements.value -= 1
+  if (!difficulties.value.length && totalElements.value > 0) void fetchDifficulties()
 }
 
-function staffOf(row: Record<string, unknown>, key: string): PublicStaffUserResponse | undefined {
-  return key === 'edited' ? entryOf(row).lastUpdatedBy : entryOf(row).createdBy
+function addedLabel(entry: QueueEntry): string {
+  return !props.staff && Date.parse(entry.createdAt) < IMPORT_CUTOFF_MS ? 'Imported' : formatRelativeDate(entry.createdAt)
+}
+
+const DATED = {
+  submitted: { when: addedLabel, by: (entry: QueueEntry) => entry.createdBy },
+  deactivated: {
+    when: (entry: QueueEntry) => (entry.deactivatedAt ? formatRelativeDate(entry.deactivatedAt) : '-'),
+    by: (entry: QueueEntry) => entry.lastUpdatedBy,
+  },
 }
 
 const request = computed<Record<string, unknown>>(() => ({
@@ -176,7 +213,8 @@ function show(page: Page<QueueEntry>) {
 
 async function fetchDifficulties() {
   const params = request.value
-  const cacheKey = { _type: `queue-maps:${props.variant}`, ...params }
+  const key = countKey.value
+  const cacheKey = { _type: key, ...params }
   const id = ++requestId
   const cached = queueCache.getCached<Page<QueueEntry>>(cacheKey)
   if (cached) show(cached)
@@ -184,7 +222,8 @@ async function fetchDifficulties() {
   try {
     const res = await props.fetchPage(params)
     queueCache.setCache(cacheKey, res)
-    rememberCount(countKey, res.content.length)
+    rememberCount(key, res.content.length)
+    if (props.rowAction) rememberCount(`${key}:action`, res.content.some(props.rowAction) ? 1 : 0)
     if (id === requestId) show(res)
   } catch {
     if (id !== requestId || cached) return
@@ -203,6 +242,8 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
   <div class="queue">
     <PageHeaderBleed :title="title" :subtitle="subtitle" />
 
+    <slot name="tabs" />
+
     <div class="queue__controls">
       <SearchBox v-model="searchQuery" class="queue__search" placeholder="Search song, artist or mapper" />
       <slot name="actions" />
@@ -213,7 +254,7 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
         <MapFilterSidebar
           v-model:selected-category="selectedCategory"
           v-model:complexity-range="complexityRange"
-          :show-complexity="variant !== 'public'"
+          :show-complexity="staff"
         />
       </FilterPopover>
     </div>
@@ -278,15 +319,31 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
         <span :class="{ queue__none: !entryOf(row).commentCount }">{{ entryOf(row).commentCount ?? 0 }}</span>
       </template>
 
-      <template v-for="key in ['submitted', 'edited']" :key="key" #[`cell-${key}`]="{ row }">
+      <template #cell-suggester="{ row }">
+        <UserChip v-if="entryOf(row).importedBy" :user="entryOf(row).importedBy!" size="sm" tooltip hide-clan hide-flag />
+        <span v-else class="queue__none">-</span>
+      </template>
+
+      <template #cell-action="{ row }">
+        <span v-if="rowAction?.(entryOf(row))" @click.stop>
+          <slot name="row-action" :entry="entryOf(row)" :remove="() => removeRow(entryOf(row).id)" />
+        </span>
+      </template>
+
+      <template #cell-reason="{ row }">
+        <ReasonEdit :reason="entryOf(row).deactivationReason" clamp
+          :save="saveReason && ((reason: string) => saveReason!(entryOf(row), reason))"
+          @click="saveReason && $event.stopPropagation()" />
+      </template>
+
+      <template v-for="(cell, key) in DATED" :key="key" #[`cell-${key}`]="{ row }">
         <span class="queue__stack">
-          <span v-if="key === 'submitted'">{{ addedLabel(entryOf(row)) }}</span>
-          <span v-if="staffOf(row, key)?.username" class="queue__by" :class="{ caption: key === 'submitted' }">
-            <img v-if="pickAvatarUrl(staffOf(row, key))" class="queue__avatar" :src="pickAvatarUrl(staffOf(row, key))"
+          <span>{{ cell.when(entryOf(row)) }}</span>
+          <span v-if="cell.by(entryOf(row))?.username" class="caption queue__by">
+            <img v-if="pickAvatarUrl(cell.by(entryOf(row)))" class="queue__avatar" :src="pickAvatarUrl(cell.by(entryOf(row)))"
               alt="" loading="lazy" decoding="async" />
-            {{ staffOf(row, key)?.username }}
+            {{ cell.by(entryOf(row))?.username }}
           </span>
-          <span v-else-if="key === 'edited'" class="queue__none">-</span>
         </span>
       </template>
 
@@ -306,12 +363,13 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
               <ComplexityBadge v-if="entryOf(row).complexity != null" :complexity="entryOf(row).complexity!" />
               <span v-if="entryOf(row).status === 'QUALIFIED'" class="caption queue__qualified">Qualified</span>
             </span>
-            <span v-if="variant === 'deactivated'" class="queue__card-line caption">
-              {{ addedLabel(entryOf(row)) }}
+            <span v-if="list === 'deactivated'" class="queue__card-line caption">
+              <span class="queue__reason">{{ entryOf(row).deactivationReason ?? DATED.deactivated.when(entryOf(row)) }}</span>
             </span>
             <span v-else class="queue__card-line">
               <CriteriaVerdict :source="entryOf(row)" prefix="criteria" />
-              <QueueVotes :up="entryOf(row).rankUpvotes ?? 0" :down="entryOf(row).rankDownvotes ?? 0" :neutral="entryOf(row).rankNeutrals ?? 0" />
+              <span v-if="list === 'suggested'" class="caption">{{ entryOf(row).importedBy?.name }}</span>
+              <QueueVotes v-else :up="entryOf(row).rankUpvotes ?? 0" :down="entryOf(row).rankDownvotes ?? 0" :neutral="entryOf(row).rankNeutrals ?? 0" />
             </span>
           </span>
         </component>
@@ -370,6 +428,14 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
 
 .queue__none {
   color: var(--text-tertiary);
+}
+
+.queue__reason {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .queue__by {

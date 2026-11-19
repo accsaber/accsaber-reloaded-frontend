@@ -2,13 +2,15 @@
 import { parseApiError } from '@/api/client'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseSelect from '@/components/common/BaseSelect.vue'
+import BaseTextarea from '@/components/common/BaseTextarea.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import StoredFold from '@/components/common/StoredFold.vue'
 import { useConfirmAction } from '@/composables/useConfirmAction'
 import { rankingDashboardRoute } from '@/router'
 import type { MapDifficultyResponse } from '@/types/api/maps'
+import { REJECT_REASON_MAX } from '@/utils/constants'
 import type { DifficultyDrift } from '@/views/staff/ranking/detail/useDifficultyDrift'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps<{
@@ -25,12 +27,16 @@ const emit = defineEmits<{
 const DRAFT_BATCHES_SIZE = 50
 
 const router = useRouter()
-const { confirmModal, ask } = useConfirmAction()
 
 const adding = ref(false)
 const notice = ref('')
 const error = ref('')
 const batches = ref<{ value: string; label: string }[]>([])
+const reason = ref('')
+const { confirmModal, ask } = useConfirmAction()
+
+const suggested = computed(() => props.difficulty.status === 'SUGGESTED')
+const removeLabel = computed(() => (suggested.value ? 'Reject Suggestion' : 'Reject'))
 
 async function loadBatches() {
   if (batches.value.length) return
@@ -64,15 +70,16 @@ async function addToBatch(batchId: string) {
   }
 }
 
-function askDeactivate() {
+function askReject() {
+  reason.value = ''
   ask({
-    title: 'Deactivate Difficulty',
-    message: `Deactivate ${props.difficulty.songName}? It leaves the queue.`,
-    confirmLabel: 'Deactivate',
+    title: removeLabel.value,
+    message: `${props.difficulty.songName} leaves the ${suggested.value ? 'suggestions' : 'queue'}. Players can read the reason.`,
+    confirmLabel: removeLabel.value,
     destructive: true,
     run: async () => {
       const { deactivateMapDifficulty } = await import('@/api/ranking/maps')
-      await deactivateMapDifficulty(props.difficulty.id)
+      await deactivateMapDifficulty(props.difficulty.id, reason.value.trim())
       await router.push({ name: rankingDashboardRoute })
     },
   })
@@ -80,30 +87,26 @@ function askDeactivate() {
 </script>
 
 <template>
-  <StoredFold class="management" label="Management" storage-key="rank-management" default-collapsed>
+  <StoredFold class="surface-card" label="Management" storage-key="rank-management" default-collapsed>
     <div class="management__actions" @vue:mounted="loadBatches">
-      <BaseSelect v-if="batches.length" :options="batches" model-value="" placeholder="Add to Batch"
+      <BaseSelect v-if="batches.length && !suggested" :options="batches" model-value="" placeholder="Add to Batch"
         :disabled="adding" @update:model-value="addToBatch" />
       <BaseButton v-if="canRefresh" :disabled="!driftInfo" :loading="driftChecking" @click="emit('refresh')">
         {{ driftChecking || driftInfo ? 'Refresh from BeatSaver' : 'Up to Date with BeatSaver' }}
       </BaseButton>
-      <BaseButton variant="destructive" @click="askDeactivate">Deactivate</BaseButton>
+      <BaseButton variant="destructive" @click="askReject">{{ removeLabel }}</BaseButton>
     </div>
     <p class="caption management__status" :class="{ 'management__status--error': error }" :role="error ? 'alert' : 'status'">
       {{ error || notice }}
     </p>
 
-    <ConfirmModal v-bind="confirmModal" />
+    <ConfirmModal v-bind="confirmModal" :disabled="!reason.trim()">
+      <BaseTextarea v-model="reason" label="Reason" :rows="3" :maxlength="REJECT_REASON_MAX" />
+    </ConfirmModal>
   </StoredFold>
 </template>
 
 <style scoped>
-.management {
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
-}
-
 .management__actions {
   display: flex;
   flex-wrap: wrap;

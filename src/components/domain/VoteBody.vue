@@ -2,10 +2,11 @@
 import type { VoteResponse } from '@/types/api/maps'
 import type { VoteType } from '@/types/enums'
 import { pickAvatarUrl } from '@/utils/media'
-import VoteIcon from '@/views/staff/ranking/detail/VoteIcon.vue'
+import VoteIcon from '@/components/domain/VoteIcon.vue'
 
 defineProps<{
   vote: VoteResponse
+  nickname?: string
   clamp?: boolean
 }>()
 
@@ -20,11 +21,17 @@ const VOTE: Record<VoteType, { label: string; criteria: string; tone: string }> 
   <div class="vote-body">
     <img v-if="pickAvatarUrl(vote.staff)" class="vote-body__avatar" :src="pickAvatarUrl(vote.staff)" alt=""
       loading="lazy" decoding="async" />
-    <span v-else class="vote-body__avatar" />
+    <span v-else class="vote-body__avatar">
+      <svg v-if="!vote.staff" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    </span>
     <div class="vote-body__text">
       <div class="vote-body__line">
-        <span class="vote-body__name">{{ vote.staff.username ?? 'Unknown' }}</span>
-        <span v-if="vote.staff.role === 'RANKING_HEAD'" class="caption">Head</span>
+        <span class="vote-body__name">{{ vote.staff ? (vote.staff.username ?? 'Unknown') : `Anonymous ${nickname}` }}</span>
+        <span v-if="vote.staff?.role === 'RANKING_HEAD'" class="caption">Head</span>
         <VoteIcon class="vote-body__icon" :vote="vote.vote" :label="VOTE[vote.vote].label" />
         <span v-if="vote.criteriaVote" class="vote-body__criteria" :class="`vote-body--${VOTE[vote.criteriaVote].tone}`">
           {{ VOTE[vote.criteriaVote].criteria }}
@@ -48,9 +55,12 @@ const VOTE: Record<VoteType, { label: string; criteria: string; tone: string }> 
 }
 
 .vote-body__avatar {
+  display: grid;
+  place-items: center;
   width: 32px;
   height: 32px;
   object-fit: cover;
+  color: var(--text-secondary);
   background: var(--bg-overlay);
   border-radius: var(--radius-avatar);
 }

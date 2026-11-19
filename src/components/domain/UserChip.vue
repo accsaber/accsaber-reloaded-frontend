@@ -21,6 +21,7 @@ const props = withDefaults(
     nameTag?: string
     clanEffects?: boolean
     hideClan?: boolean
+    hideFlag?: boolean
   }>(),
   { size: 'md', nameTag: 'span' },
 )
@@ -60,7 +61,7 @@ const iconSize = computed(() => (props.size === 'lg' ? 16 : props.size === 'xs' 
     </template>
     <component :is="nameTag" class="user-chip__name" :title="tooltip ? undefined : user.name">{{ user.name }}</component>
     <ClanTag v-if="user.clan && !hideClan" class="user-chip__clan" :clan="user.clan" :size="size" :effects="clanEffects" />
-    <CountryFlag v-if="user.country" class="user-chip__flag" :country="user.country" />
+    <CountryFlag v-if="user.country && !hideFlag" class="user-chip__flag" :country="user.country" />
     <SupporterTierIcon v-if="user.supporterTier" :tier="user.supporterTier" :size="iconSize" />
     <slot />
   </component>

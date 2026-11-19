@@ -110,7 +110,7 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
 </script>
 
 <template>
-  <div class="lb-preview">
+  <div class="surface-card lb-preview">
     <div class="lb-preview__controls">
       <BaseInput class="lb-preview__value" label="Complexity" type="number" step="0.1" min="0"
         :model-value="complexity" @update:model-value="setComplexity" />
@@ -152,9 +152,6 @@ watch(() => props.mapDifficultyId, load, { immediate: true })
   flex-direction: column;
   gap: var(--space-sm);
   min-width: 0;
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .lb-preview__controls {

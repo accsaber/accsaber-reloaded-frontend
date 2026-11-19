@@ -12,6 +12,15 @@ export interface AutoCriteriaCheckResponse {
   failures: string[]
 }
 
+export interface CriteriaCheck {
+  difficulty: Difficulty
+  categoryId: string
+}
+
+export type CriteriaCheckSource = { songHash: string } | { zip: Blob }
+
+export interface CriteriaCheckResult extends AutoCriteriaCheckResponse, CriteriaCheck {}
+
 export interface MapChartMetadata {
   bpm: number | null
   notes: number | null
@@ -70,6 +79,9 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   difficulty: Difficulty
   characteristic: string
   active: boolean
+  deactivatedAt?: string
+  deactivationReason?: string
+  importedBy?: PlayerRef
   status: MapDifficultyStatus
   criteriaStatus: CriteriaStatus
   autoCriteriaStatus: AutoCriteriaStatus
@@ -127,6 +139,9 @@ export interface PublicMapDifficultyResponse extends MapChartStatsSource {
   rankNeutrals: number | null
   statistics: MapDifficultyStatisticsResponse | null
   warBanned: boolean
+  deactivatedAt?: string
+  deactivationReason?: string
+  importedBy?: PlayerRef
 }
 
 export interface TopScoreSnapshot {
@@ -166,7 +181,7 @@ export interface MapComplexityHistoryResponse {
 export interface VoteResponse {
   id: string
   map: MapDifficultyRef
-  staff: PublicStaffUserResponse
+  staff?: PublicStaffUserResponse
   vote: VoteType
   type: MapVoteAction
   suggestedComplexity: number | null
@@ -203,6 +218,7 @@ export interface DifficultyListParams extends PaginationParams {
   complexityMax?: number
   search?: string
   batchId?: string
+  active?: boolean
 }
 
 export interface DifficultyScoreParams extends PaginationParams {
@@ -236,3 +252,12 @@ export interface RefreshDifficultyRequest {
   ssLeaderboardId?: string
 }
 
+export interface SuggestMapRequest {
+  blLeaderboardId: string
+  ssLeaderboardId?: string
+  categoryId: string
+}
+
+export interface MapSubscriptionResponse {
+  subscribed: boolean
+}

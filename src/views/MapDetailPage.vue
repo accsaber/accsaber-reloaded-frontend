@@ -11,7 +11,7 @@ import { useThemeStore } from '@/stores/theme'
 import type { PublicMapDifficultyResponse, PublicMapResponse } from '@/types/api/maps'
 import type { DifficultyScoreDisplay } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
-import { DIFFICULTY_ORDER } from '@/utils/constants'
+import { DIFFICULTY_ORDER, HUB_STATUSES } from '@/utils/constants'
 import { formatDifficulty } from '@/utils/mappers'
 import { buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
@@ -72,11 +72,6 @@ const activeDifficulty = computed(() =>
 const diffStats = computed(() => activeDifficulty.value?.statistics ?? null)
 
 const isActiveDifficultyRanked = computed(() => activeDifficulty.value?.status === 'RANKED')
-
-const showApStats = computed(() => {
-  const status = activeDifficulty.value?.status
-  return status !== 'CAMPAIGN' && status !== 'QUEUE'
-})
 
 const hasCategory = computed(() => activeDifficulty.value?.categoryId != null)
 
@@ -149,6 +144,10 @@ async function fetchMap() {
 
     const all = fetched.difficulties
     const fallback = resolveQueryDifficulty(all) ?? rankedDifficulties.value[0] ?? all[0]
+    if (fallback && HUB_STATUSES.includes(fallback.status)) {
+      void router.replace({ name: 'ranking-hub-detail', params: { difficultyId: fallback.id } })
+      return
+    }
     if (fallback) activeDifficultyId.value = fallback.id
   } catch {
     if (request !== mapRequest) return
@@ -232,7 +231,7 @@ function sameQuery(a: Record<string, string>, b: Record<string, unknown>): boole
               <ComplexityBadge v-if="isActiveDifficultyRanked" :complexity="activeDifficulty.complexity ?? 0" />
               <span v-if="hasCategory" class="map-detail__category-name" :style="{ color: categoryAccent }">{{ categoryName }}</span>
         </template>
-        <template v-if="showApStats && diffStats" #side>
+        <template v-if="isActiveDifficultyRanked && diffStats" #side>
           <div class="map-detail__stats">
             <StatBlock label="Scores" :value="diffStats.totalScores" :decimals="0" />
             <StatBlock label="Average AP" :value="diffStats.averageAp ?? '-'" />

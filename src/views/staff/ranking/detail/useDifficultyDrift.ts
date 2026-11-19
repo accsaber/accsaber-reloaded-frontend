@@ -12,7 +12,7 @@ export interface DifficultyDrift {
 
 export function useDifficultyDrift(
   difficulty: Ref<MapDifficultyResponse | null>,
-  canRefresh: Ref<boolean>,
+  checkable: Ref<boolean>,
 ) {
   const driftInfo = ref<DifficultyDrift | null>(null)
   const checking = ref(false)
@@ -56,12 +56,12 @@ export function useDifficultyDrift(
   async function recheck() {
     driftInfo.value = null
     const d = difficulty.value
-    if (!d?.beatsaverCode || !canRefresh.value) return
+    if (!d?.beatsaverCode || !checkable.value) return
     const songHash = await fetchSongHash(d)
     if (songHash) await detect(d, d.beatsaverCode, songHash)
   }
 
-  watch(() => difficulty.value?.id, recheck)
+  watch([() => difficulty.value?.id, checkable], recheck)
 
   return { driftInfo, checking, recheck }
 }

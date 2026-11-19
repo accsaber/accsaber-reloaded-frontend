@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import BaseTabs from '@/components/common/BaseTabs.vue'
+import { useRankingCategoryTabs } from '@/composables/useRankingCategoryTabs'
 import { useCategoryStore } from '@/stores/categories'
 import type { MapDifficultyResponse } from '@/types/api/maps'
-import type { Tab } from '@/types/display'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -24,11 +24,7 @@ const error = ref('')
 
 const name = computed(() => categoryStore.getCategoryInfo(props.categoryCode)?.name ?? props.categoryCode)
 
-const tabs = computed<Tab[]>(() =>
-  categoryStore.categories
-    .filter((c) => c.code !== 'overall')
-    .map((c) => ({ key: c.id, label: categoryStore.getShortName(c.code), accentColor: categoryStore.getAccent(c.code) })),
-)
+const tabs = useRankingCategoryTabs()
 
 watch(() => props.difficulty.id, () => {
   picking.value = false

@@ -16,7 +16,7 @@ function pct(value: number): string {
 </script>
 
 <template>
-  <section class="tug" aria-label="Map win standings">
+  <section class="surface-card tug" aria-label="Map win standings">
     <header class="tug__header">
       <div class="tug__side tug__side--sniper">
         <span class="tug__count tug__count--sniper">
@@ -54,10 +54,7 @@ function pct(value: number): string {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
   border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
 }
 
 .tug__header {

@@ -89,7 +89,7 @@ function run() {
 </script>
 
 <template>
-  <section class="runner">
+  <section class="surface-card runner">
     <div class="runner__catalogue">
       <template v-if="loading && types.length === 0">
         <SkeletonLoader v-for="n in 12" :key="n" class="placeholder" height="var(--control-h)" />
@@ -135,9 +135,6 @@ function run() {
   display: grid;
   grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
   gap: var(--space-xl);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .runner__catalogue {

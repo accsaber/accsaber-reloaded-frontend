@@ -8,7 +8,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="tool-card">
+  <section class="surface-card tool-card">
     <header class="tool-card__head">
       <h3 class="card-title">{{ title }}</h3>
       <slot name="head" />
@@ -31,9 +31,6 @@ defineProps<{
   flex-direction: column;
   gap: var(--space-md);
   min-width: 0;
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .tool-card__head,

@@ -88,7 +88,10 @@ export function updateMapCategory(
   return patch<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/category`, req)
 }
 
-export function deactivateMapDifficulty(difficultyId: string): Promise<void> {
-  return patch<void>(`/ranking/maps/difficulties/${difficultyId}/deactivate`)
+export function deactivateMapDifficulty(difficultyId: string, reason: string): Promise<void> {
+  return patch<void>(`/ranking/maps/difficulties/${difficultyId}/deactivate`, { reason })
 }
 
+export function queueSuggestion(difficultyId: string): Promise<MapDifficultyResponse> {
+  return post<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}/queue`)
+}

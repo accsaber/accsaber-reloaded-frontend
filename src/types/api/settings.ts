@@ -57,4 +57,5 @@ export interface NotificationSettings extends SettingsBag {
   'notifications.clanAlliance': boolean
   'notifications.clanWar': boolean
   'notifications.campaignInvite': boolean
+  'notifications.mapFollowed': boolean
 }

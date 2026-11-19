@@ -137,7 +137,7 @@ const linkAttrs = computed(() =>
   border: 2px solid var(--text-tertiary);
   border-top-color: var(--text-primary);
   border-radius: 50%;
-  animation: spin 600ms linear infinite;
+  animation: spin var(--dur-spin) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

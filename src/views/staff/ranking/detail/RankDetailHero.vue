@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import BaseTabs from '@/components/common/BaseTabs.vue'
-import CriteriaVerdict from '@/components/domain/CriteriaVerdict.vue'
+import DeactivationNote from '@/components/domain/DeactivationNote.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
+import FollowButton from '@/components/domain/FollowButton.vue'
+import HeroFact from '@/components/domain/HeroFact.vue'
 import MapHero from '@/components/domain/MapHero.vue'
+import RankingFacts from '@/components/domain/RankingFacts.vue'
+import { useMapFollow } from '@/composables/useMapFollow'
+import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
-import type { MapDifficultyStatus } from '@/types/enums'
 import { scriptNote } from '@/utils/complexity'
 import { pickCoverFallback } from '@/utils/media'
 import RankDetailCategory from '@/views/staff/ranking/detail/RankDetailCategory.vue'
 import RankDetailComplexity from '@/views/staff/ranking/detail/RankDetailComplexity.vue'
-import RankDetailAutoCheck from '@/views/staff/ranking/detail/RankDetailAutoCheck.vue'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -20,35 +23,34 @@ const props = defineProps<{
   categoryCode: string
   isHeadRanking: boolean
   isRanking: boolean
+  outdated: boolean
 }>()
 
 const emit = defineEmits<{
   updated: [difficulty: MapDifficultyResponse, reweighting: boolean]
 }>()
 
-const STATUS_LABEL: Record<MapDifficultyStatus, string> = {
-  QUEUE: 'In Queue',
-  QUALIFIED: 'Qualified',
-  RANKED: 'Ranked',
-  CAMPAIGN: 'Campaign',
-}
-
+const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
+
+const follow = useMapFollow(computed(() => props.difficulty?.id))
+
+async function saveReason(reason: string) {
+  const target = props.difficulty
+  if (!target) return
+  const { deactivateMapDifficulty } = await import('@/api/ranking/maps')
+  await deactivateMapDifficulty(target.id, reason)
+  emit('updated', { ...target, deactivationReason: reason }, false)
+}
 
 const scoreCurveId = computed(() => categoryStore.byCode.get(props.categoryCode)?.scoreCurve?.id ?? null)
 
-const criteriaSource = computed(() => {
-  const d = props.difficulty
-  return d && {
-    criteriaStatus: d.criteriaStatus,
-    autoCriteriaStatus: null,
-    criteriaUpvotes: props.voteData?.criteriaUpvotes ?? d.criteriaUpvotes,
-    criteriaDownvotes: props.voteData?.criteriaDownvotes ?? d.criteriaDownvotes,
-    headCriteriaVote: props.voteData?.headCriteriaVote ?? d.headCriteriaVote,
-  }
-})
-
 const script = computed(() => props.difficulty && scriptNote(props.difficulty))
+
+async function runCheck() {
+  const { runAutoCriteriaCheck } = await import('@/api/ranking/maps')
+  return runAutoCriteriaCheck(props.difficulty!.id)
+}
 </script>
 
 <template>
@@ -73,54 +75,46 @@ const script = computed(() => props.difficulty && scriptNote(props.difficulty))
         @updated="(d, reweighting) => emit('updated', d, reweighting)" />
       <RankDetailCategory :difficulty="difficulty" :category-code="categoryCode" :editable="isHeadRanking"
         @updated="emit('updated', $event, false)" />
+      <DeactivationNote v-if="difficulty.deactivatedAt" :at="difficulty.deactivatedAt" :reason="difficulty.deactivationReason"
+        :save="isHeadRanking ? saveReason : undefined" />
+      <Transition name="collapse">
+        <div v-if="outdated" class="collapsible hero-outdated" role="status">
+          <p>BeatSaver has a newer version of this map</p>
+        </div>
+      </Transition>
     </template>
 
-    <template v-if="difficulty" #side>
-      <div class="hero-facts">
-        <div v-if="script" class="hero-facts__fact">
-          <span class="field-label">Script</span>
-          <span class="hero-facts__value" :title="difficulty.scriptVersion ?? undefined">{{ script }}</span>
-        </div>
-        <div class="hero-facts__fact">
-          <span class="field-label">Status</span>
-          <span class="hero-facts__value">{{ STATUS_LABEL[difficulty.status] }}</span>
-        </div>
-        <template v-if="difficulty.status !== 'RANKED'">
-          <div class="hero-facts__fact">
-            <span class="field-label">Criteria</span>
-            <span class="hero-facts__value"><CriteriaVerdict v-if="criteriaSource" :source="criteriaSource" /></span>
-          </div>
-          <RankDetailAutoCheck :difficulty="difficulty" :can-run="isRanking" />
+    <template v-if="difficulty && authStore.userId" #actions>
+      <FollowButton :following="follow.following.value" :busy="follow.busy.value" @toggle="follow.toggle" />
+    </template>
+
+    <template v-if="follow.error.value" #side>
+      <span class="caption hero-error" role="alert">{{ follow.error.value }}</span>
+    </template>
+
+    <template v-if="difficulty" #facts>
+      <RankingFacts :difficulty="difficulty" :vote-data="voteData" :run="isRanking ? runCheck : undefined" >
+        <HeroFact v-if="script" label="Script" :title="difficulty.scriptVersion ?? undefined">{{ script }}</HeroFact>
+        <template v-if="difficulty.status === 'RANKED' && voteData" #end>
+          <HeroFact label="Reweight">{{ voteData.reweightReady ? 'Ready' : 'Not Ready' }}</HeroFact>
         </template>
-        <div v-else-if="voteData" class="hero-facts__fact">
-          <span class="field-label">Reweight</span>
-          <span class="hero-facts__value">{{ voteData.reweightReady ? 'Ready' : 'Not Ready' }}</span>
-        </div>
-      </div>
+      </RankingFacts>
     </template>
   </MapHero>
 </template>
 
 <style scoped>
-.hero-facts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-sm) var(--space-xl);
-  text-align: left;
+.hero-error {
+  color: var(--error);
 }
 
-.hero-facts__fact {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.hero-outdated {
+  flex-basis: 100%;
+  font-size: var(--text-body);
+  color: var(--warning);
 }
 
-.hero-facts__value {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  font-weight: 600;
-  color: var(--text-primary);
+.hero-outdated > p {
+  margin: 0;
 }
 </style>

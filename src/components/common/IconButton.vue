@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   label: string
-  icon?: 'close' | 'back'
+  icon?: 'close' | 'back' | 'edit'
 }>()
 </script>
 
@@ -11,6 +11,7 @@ defineProps<{
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline v-if="icon === 'back'" points="15 6 9 12 15 18" />
+        <path v-else-if="icon === 'edit'" d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
         <path v-else d="M18 6 6 18M6 6l12 12" />
       </svg>
     </slot>

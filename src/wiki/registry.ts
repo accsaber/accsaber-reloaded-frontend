@@ -295,7 +295,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       {
         slug: 'how-maps-get-ranked',
         title: 'How Maps Get Ranked',
-        summary: "What happens between someone suggesting a map in Discord and it getting ranked?",
+        summary: "What happens between someone suggesting a map and it getting ranked?",
         keywords: [
           'how do maps get ranked',
           'ranked',
@@ -307,6 +307,13 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'batches',
           'suggest a map',
           'map suggestion',
+          'suggested',
+          'ranking hub',
+          'rejected',
+          'follow a map',
+          'comments',
+          'criteria checker',
+          'anonymous votes',
           'nominate',
           'complexity',
           'reweight',
@@ -316,7 +323,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           'pipeline',
         ],
         related: ['categories', 'accuracy-and-ap', 'ranking-criteria', 'complexity-and-reweights'],
-        updated: '2026-11-17',
+        updated: '2026-11-19',
         loader: () => import('@/wiki/pages/HowMapsGetRankedPage.vue'),
       },
       {

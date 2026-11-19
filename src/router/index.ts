@@ -123,6 +123,23 @@ const router = createRouter({
       component: () => import('@/views/RankedQueuePage.vue'),
     },
     {
+      path: '/ranked-queue/suggest',
+      name: 'ranking-hub-suggest',
+      component: () => import('@/views/MapImportPage.vue'),
+      props: { mode: 'suggest' },
+    },
+    {
+      path: '/ranked-queue/criteria',
+      name: 'ranking-hub-criteria',
+      component: () => import('@/views/MapImportPage.vue'),
+      props: { mode: 'check' },
+    },
+    {
+      path: '/ranked-queue/:difficultyId',
+      name: 'ranking-hub-detail',
+      component: () => import('@/views/RankingHubDetailPage.vue'),
+    },
+    {
       path: '/stats',
       name: 'stats',
       component: () => import('@/views/StatsPage.vue'),
@@ -266,7 +283,7 @@ const router = createRouter({
     {
       path: isRankingSubdomain ? '/import' : '/staff/ranking/import',
       name: 'ranking-import',
-      component: () => import('@/views/staff/ranking/MapImportPage.vue'),
+      component: () => import('@/views/MapImportPage.vue'),
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
     },
     {

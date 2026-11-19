@@ -84,7 +84,7 @@ function detectBannedWrite(method: string, status: number, body: string): void {
       useAuthStore().markRestricted()
     }
   } catch {
-    /* non-JSON body */
+    return
   }
 }
 
@@ -102,7 +102,7 @@ const UUID = '[0-9a-f]{8}-[0-9a-f-]{27}'
 const ANONYMOUS_READS = new RegExp(
   `^/(?:${[
     `users/(?!me(?:/|$))${SEG}(?:/(?!relations(?:/|$)|campaigns$).+)?`,
-    'maps/.+',
+    'maps/(?!.+/subscription$).+',
     'batches(?:/.*)?',
     `leaderboards/${SEG}`,
     'categories(?:/.*)?',

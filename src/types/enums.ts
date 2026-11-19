@@ -11,7 +11,7 @@ export type StaffRole =
 
 export type StaffUserStatus = 'REQUESTED' | 'ACCEPTED' | 'DENIED'
 
-export type MapDifficultyStatus = 'QUEUE' | 'QUALIFIED' | 'RANKED' | 'CAMPAIGN'
+export type MapDifficultyStatus = 'SUGGESTED' | 'QUEUE' | 'QUALIFIED' | 'RANKED' | 'CAMPAIGN'
 
 export type BatchStatus = 'DRAFT' | 'RELEASE_READY' | 'RELEASED'
 

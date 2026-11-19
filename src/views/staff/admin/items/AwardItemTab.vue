@@ -152,7 +152,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <form class="award-tab" @submit.prevent="canSubmit && submit()">
+  <form class="surface-card award-tab" @submit.prevent="canSubmit && submit()">
     <div class="award-tab__field">
       <span class="field-label">Player</span>
       <UserPicker v-model="userId" />
@@ -202,9 +202,6 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-md);
   max-width: 720px;
-  padding: var(--space-md) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-card);
 }
 
 .award-tab__field {
