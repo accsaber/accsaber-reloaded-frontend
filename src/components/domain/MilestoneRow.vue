@@ -112,8 +112,17 @@ function toggle() {
 
 <style scoped>
 .milestone-row {
+  --row-columns: 44px minmax(0, 1fr) 88px 64px 136px;
   border-radius: var(--radius-btn);
   transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.milestone-row--tracked {
+  --row-columns: 44px minmax(0, 1fr) 88px 64px 136px 120px 16px;
+}
+
+.milestone-row--tracked.milestone-row--pins {
+  --row-columns: 44px minmax(0, 1fr) 88px 64px 136px 120px 28px 16px;
 }
 
 .milestone-row--apex {
@@ -126,19 +135,11 @@ function toggle() {
 
 .milestone-row__main {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 88px 64px 136px;
+  grid-template-columns: var(--row-columns);
   align-items: center;
   gap: var(--space-xs) var(--space-md);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-btn);
-}
-
-.milestone-row--tracked .milestone-row__main {
-  grid-template-columns: 44px minmax(0, 1fr) 88px 64px 136px 120px 16px;
-}
-
-.milestone-row--tracked.milestone-row--pins .milestone-row__main {
-  grid-template-columns: 44px minmax(0, 1fr) 88px 64px 136px 120px 28px 16px;
 }
 
 .milestone-row--expandable .milestone-row__main {
