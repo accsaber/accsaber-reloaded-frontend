@@ -29,7 +29,7 @@ import { pickAvatarUrl } from '@/utils/media'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 
-type StaffFields = 'complexityPinned' | 'scriptComplexity' | 'scriptVersion' | 'commentCount' | 'createdBy'
+type StaffFields = 'complexityPinned' | 'scriptComplexity' | 'scriptVersion' | 'createdBy'
   | 'lastUpdatedBy' | 'criteriaUpvotes' | 'criteriaDownvotes' | 'headCriteriaVote'
 
 export type QueueEntry = PublicMapDifficultyResponse & Partial<Pick<MapDifficultyResponse, StaffFields>>
@@ -44,7 +44,7 @@ const props = defineProps<{
   staff?: boolean
   baseParams: Record<string, unknown>
   fetchPage: (params: Record<string, unknown>) => Promise<Page<QueueEntry>>
-  rowRoute?: (entry: QueueEntry) => RouteLocationRaw
+  rowRoute?: (entry: QueueEntry, superseded: boolean) => RouteLocationRaw
   saveReason?: (entry: QueueEntry, reason: string) => Promise<void>
   rowAction?: (entry: QueueEntry) => boolean
 }>()
@@ -59,31 +59,43 @@ const MAP_COLUMNS: TableColumn[] = [
   { key: 'map', label: 'Map', align: 'left', primary: true },
   { key: 'category', label: 'Category', align: 'left', width: '112px' },
 ]
+const COMMENTS_COLUMN: TableColumn = {
+  key: 'comments',
+  label: 'Comments',
+  sortable: true,
+  align: 'right',
+  mono: true,
+  width: '80px',
+  icon: COMMENTS_ICON,
+}
 const STAFF_QUEUE_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
   { key: 'complexity', label: 'Complexity', sortable: true, align: 'left', width: '148px' },
   { key: 'criteria', label: 'Criteria', align: 'left', width: '120px' },
   { key: 'rating', label: 'Votes', sortable: true, align: 'left', width: '132px' },
-  { key: 'comments', label: 'Comments', sortable: true, align: 'right', mono: true, width: '80px', icon: COMMENTS_ICON },
+  { key: 'reasons', label: 'Reasons', sortable: true, align: 'right', mono: true, width: '96px' },
+  COMMENTS_COLUMN,
   { key: 'submitted', label: 'Submitted', sortable: true, align: 'left', width: '180px' },
 ]
 const PUBLIC_QUEUE_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
   { key: 'criteria', label: 'Criteria', align: 'left', width: '140px' },
   { key: 'rating', label: 'Votes', sortable: true, align: 'left', width: '132px' },
+  COMMENTS_COLUMN,
   { key: 'submitted', label: 'Added', sortable: true, align: 'left', width: '140px' },
 ]
 const SUGGESTED_COLUMNS: TableColumn[] = [
   ...MAP_COLUMNS,
   { key: 'criteria', label: 'Criteria', align: 'left', width: '140px' },
   { key: 'suggester', label: 'Suggested By', align: 'left', width: '220px' },
+  COMMENTS_COLUMN,
   { key: 'submitted', label: 'Added', sortable: true, align: 'left', width: '140px' },
 ]
-const DEACTIVATED_COLUMNS: TableColumn[] = [
+const deactivatedColumns = computed<TableColumn[]>(() => [
   ...MAP_COLUMNS,
   { key: 'reason', label: 'Reason', align: 'left', width: '360px', noLink: !!props.saveReason },
   { key: 'deactivated', label: 'Rejected', sortable: true, align: 'left', width: '180px' },
-]
+])
 const ACTION_COLUMN: TableColumn = { key: 'action', label: '', align: 'right', width: '120px', noLink: true }
 const DEFAULT_SORT: Record<QueueList, string> = { queue: 'rating', suggested: 'submitted', deactivated: 'deactivated' }
 
@@ -95,7 +107,7 @@ const { queryRef } = useQueryParams()
 
 const listColumns = computed(() => {
   if (props.list === 'suggested') return SUGGESTED_COLUMNS
-  if (props.list === 'deactivated') return DEACTIVATED_COLUMNS
+  if (props.list === 'deactivated') return deactivatedColumns.value
   return props.staff ? STAFF_QUEUE_COLUMNS : PUBLIC_QUEUE_COLUMNS
 })
 const IMPORT_CUTOFF_MS = Date.parse('2026-04-19T18:00:00Z')
@@ -131,8 +143,9 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
   defaultSize: PAGE_SIZE,
   sortFieldMap: {
     submitted: 'createdAt',
-    deactivated: 'updatedAt',
+    deactivated: 'deactivatedAt',
     comments: 'commentCount',
+    reasons: 'voteReasonCount',
   },
   secondarySort: null,
 })
@@ -170,8 +183,20 @@ function entryOf(row: Record<string, unknown>): QueueEntry {
   return row.entry as QueueEntry
 }
 
+const superseded = computed(() => {
+  const latest = new Map<string, QueueEntry>()
+  for (const d of difficulties.value) {
+    if (!d.deactivatedAt) continue
+    const key = `${d.beatsaverCode}|${d.difficulty}|${d.characteristic}`
+    const seen = latest.get(key)
+    if (!seen || d.deactivatedAt > seen.deactivatedAt!) latest.set(key, d)
+  }
+  const current = new Set([...latest.values()].map((d) => d.id))
+  return new Set(difficulties.value.filter((d) => d.deactivatedAt && !current.has(d.id)).map((d) => d.id))
+})
+
 function rowTo(row: Record<string, unknown>) {
-  return props.rowRoute?.(entryOf(row))
+  return props.rowRoute?.(entryOf(row), superseded.value.has(entryOf(row).id))
 }
 
 function removeRow(id: string) {
@@ -184,6 +209,11 @@ function removeRow(id: string) {
 
 function addedLabel(entry: QueueEntry): string {
   return !props.staff && Date.parse(entry.createdAt) < IMPORT_CUTOFF_MS ? 'Imported' : formatRelativeDate(entry.createdAt)
+}
+
+const COUNTS = {
+  comments: (entry: QueueEntry) => entry.commentCount ?? 0,
+  reasons: (entry: QueueEntry) => entry.voteReasonCount ?? 0,
 }
 
 const DATED = {
@@ -315,8 +345,8 @@ watch(() => JSON.stringify(request.value), fetchDifficulties, { immediate: true 
         <QueueVotes :up="entryOf(row).rankUpvotes ?? 0" :down="entryOf(row).rankDownvotes ?? 0" :neutral="entryOf(row).rankNeutrals ?? 0" />
       </template>
 
-      <template #cell-comments="{ row }">
-        <span :class="{ queue__none: !entryOf(row).commentCount }">{{ entryOf(row).commentCount ?? 0 }}</span>
+      <template v-for="(count, key) in COUNTS" :key="key" #[`cell-${key}`]="{ row }">
+        <span :class="{ queue__none: !count(entryOf(row)) }">{{ count(entryOf(row)) }}</span>
       </template>
 
       <template #cell-suggester="{ row }">

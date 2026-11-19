@@ -1,6 +1,6 @@
 import { parseApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import { ref, watch, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 
 export function useMapFollow(difficultyId: Ref<string | undefined>, onLoggedOut?: () => void) {
   const auth = useAuthStore()
@@ -8,18 +8,10 @@ export function useMapFollow(difficultyId: Ref<string | undefined>, onLoggedOut?
   const busy = ref(false)
   const error = ref('')
 
-  watch(
-    difficultyId,
-    async (id) => {
-      following.value = false
-      error.value = ''
-      if (!id || !auth.userId) return
-      const { getDifficultySubscription } = await import('@/api/maps')
-      const subscription = await getDifficultySubscription(id).catch(() => null)
-      if (id === difficultyId.value) following.value = subscription?.subscribed ?? false
-    },
-    { immediate: true },
-  )
+  function set(subscribed: boolean | undefined) {
+    following.value = !!subscribed
+    error.value = ''
+  }
 
   async function toggle() {
     const id = difficultyId.value
@@ -43,5 +35,5 @@ export function useMapFollow(difficultyId: Ref<string | undefined>, onLoggedOut?
     }
   }
 
-  return { following, busy, error, toggle }
+  return { following, busy, error, set, toggle }
 }

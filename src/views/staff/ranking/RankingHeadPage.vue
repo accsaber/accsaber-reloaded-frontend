@@ -81,7 +81,7 @@ async function fetchBatches() {
 watch([status, currentPage], fetchBatches, { immediate: true })
 
 function mapRouteTo(map: Pick<MapDisplay, 'difficultyId'>) {
-  return { name: 'ranking-map-detail', params: { difficultyId: map.difficultyId } }
+  return { name: 'ranking-map-detail', params: { ref: map.difficultyId } }
 }
 
 function builderRoute(batchId?: string) {

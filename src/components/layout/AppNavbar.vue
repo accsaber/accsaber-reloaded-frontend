@@ -58,13 +58,13 @@ const publicNavItems: NavItem[] = [
   { to: '/maps', label: 'Maps', mobileIcon: 'map' },
   { to: '/campaigns', label: 'Campaigns' },
   { to: '/clans', label: 'Clans' },
+  { to: '/ranked-queue', label: 'Ranking Hub' },
 ]
 
 const morePublicNavItems: NavItem[] = [
   { to: '/market', label: 'Market Hub' },
   { to: '/milestones', label: 'Milestones' },
   { to: '/stats', label: 'Stats' },
-  { to: '/ranked-queue', label: 'Ranking Hub' },
   { to: '/wiki', label: 'Wiki' },
 ]
 
@@ -77,7 +77,6 @@ const rankingPrefix = isRankingSubdomain ? '' : '/staff/ranking'
 
 const batchesPath = isRankingSubdomain ? '/batches' : '/staff/ranking/batches'
 const activityPath = isRankingSubdomain ? '/activity' : '/staff/ranking/activity'
-const deactivatedPath = isRankingSubdomain ? '/deactivated' : '/staff/ranking/deactivated'
 
 const scriptPath = isRankingSubdomain ? '/script' : '/staff/ranking/script'
 const newsPath = isRankingSubdomain ? '/news' : '/staff/ranking/news'
@@ -85,7 +84,6 @@ const newsPath = isRankingSubdomain ? '/news' : '/staff/ranking/news'
 const rankingNavItems = computed<NavItem[]>(() => {
   const items: NavItem[] = [
     { to: rankingPrefix || '/', label: 'Queue' },
-    { to: `${rankingPrefix}/import`, label: 'Import' },
     { to: batchesPath, label: 'Batches' },
     { to: scriptPath, label: 'Complexity Script' },
   ]
@@ -93,7 +91,6 @@ const rankingNavItems = computed<NavItem[]>(() => {
     items.push({ to: newsPath, label: 'News' })
   }
   items.push({ to: activityPath, label: 'Activity' })
-  items.push({ to: deactivatedPath, label: 'Rejected' })
   return items
 })
 
@@ -615,7 +612,16 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1099px) {
+  .navbar__inner {
+    padding: 0 var(--space-lg);
+    gap: var(--space-md);
+  }
+
+  .navbar__link {
+    padding: 0 var(--space-sm);
+  }
+
   .navbar__search {
     width: 160px;
   }

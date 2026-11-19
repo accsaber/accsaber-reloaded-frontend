@@ -1,6 +1,7 @@
+import type { ChatMessageResponse } from './chat'
 import type { PublicClanResponse } from './clans'
 import type { CriteriaStatus, Difficulty, MapDifficultyStatus, MapVoteAction, VoteType } from '../enums'
-import type { PaginationParams } from '../pagination'
+import type { Page, PaginationParams } from '../pagination'
 import type { MapDifficultyRef, PlayerRef } from './common'
 import type { PublicStaffUserResponse } from './staff'
 import type { UserRelationType } from './relations'
@@ -94,6 +95,7 @@ export interface MapDifficultyResponse extends MapChartStatsSource {
   scriptVersion: string | null
   averageVoteComplexity: number | null
   commentCount: number
+  voteReasonCount: number
   rankedAt: string | null
   createdAt: string
   createdBy?: PublicStaffUserResponse
@@ -137,6 +139,8 @@ export interface PublicMapDifficultyResponse extends MapChartStatsSource {
   rankUpvotes: number | null
   rankDownvotes: number | null
   rankNeutrals: number | null
+  commentCount?: number
+  voteReasonCount?: number
   statistics: MapDifficultyStatisticsResponse | null
   warBanned: boolean
   deactivatedAt?: string
@@ -204,6 +208,18 @@ export interface VoteListResponse {
   headCriteriaVote: VoteType | null
 }
 
+export interface DifficultyHubResponse<D = PublicMapDifficultyResponse> {
+  difficulty: D
+  votes: VoteListResponse
+  comments: Page<ChatMessageResponse>
+  subscribed?: boolean
+}
+
+export interface DifficultyHubLookup {
+  difficulty?: string
+  characteristic?: string
+}
+
 export interface MapListParams extends PaginationParams {
   categoryId?: string
   status?: MapDifficultyStatus
@@ -256,8 +272,4 @@ export interface SuggestMapRequest {
   blLeaderboardId: string
   ssLeaderboardId?: string
   categoryId: string
-}
-
-export interface MapSubscriptionResponse {
-  subscribed: boolean
 }

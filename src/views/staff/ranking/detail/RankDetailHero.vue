@@ -14,7 +14,7 @@ import { scriptNote } from '@/utils/complexity'
 import { pickCoverFallback } from '@/utils/media'
 import RankDetailCategory from '@/views/staff/ranking/detail/RankDetailCategory.vue'
 import RankDetailComplexity from '@/views/staff/ranking/detail/RankDetailComplexity.vue'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const props = defineProps<{
   difficulty: MapDifficultyResponse | null
@@ -24,6 +24,7 @@ const props = defineProps<{
   isHeadRanking: boolean
   isRanking: boolean
   outdated: boolean
+  subscribed: boolean
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +35,12 @@ const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 
 const follow = useMapFollow(computed(() => props.difficulty?.id))
+
+watch(
+  () => [props.difficulty?.id, props.subscribed] as const,
+  ([, subscribed]) => follow.set(subscribed),
+  { immediate: true },
+)
 
 async function saveReason(reason: string) {
   const target = props.difficulty

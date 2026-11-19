@@ -4,15 +4,15 @@ import type {
   CriteriaCheck,
   CriteriaCheckResult,
   CriteriaCheckSource,
+  DifficultyHubLookup,
+  DifficultyHubResponse,
   DifficultyListParams,
   DifficultyScoreParams,
   MapComplexityHistoryResponse,
   MapDifficultyStatisticsResponse,
-  MapSubscriptionResponse,
   PublicMapDifficultyResponse,
   PublicMapResponse,
   SuggestMapRequest,
-  VoteListResponse,
 } from '@/types/api/maps'
 import type { ScoreResponse } from '@/types/api/users'
 import type { Page, PaginationParams } from '@/types/pagination'
@@ -47,6 +47,14 @@ export function getDifficulty(difficultyId: string): Promise<PublicMapDifficulty
   return get<PublicMapDifficultyResponse>(`/maps/difficulties/${difficultyId}`)
 }
 
+export function getDifficultyHub(difficultyId: string): Promise<DifficultyHubResponse> {
+  return get<DifficultyHubResponse>(`/maps/difficulties/${difficultyId}/hub`)
+}
+
+export function getDifficultyHubByCode(code: string, lookup: DifficultyHubLookup): Promise<DifficultyHubResponse> {
+  return get<DifficultyHubResponse>(`/maps/difficulties/by-code/${code}/hub${buildQuery(lookup)}`)
+}
+
 export function getDifficulties(params?: DifficultyListParams): Promise<Page<PublicMapDifficultyResponse>> {
   return get<Page<PublicMapDifficultyResponse>>(`/maps/difficulties${buildQuery(params)}`)
 }
@@ -71,10 +79,6 @@ export function getComplexityHistory(mapId: string): Promise<MapComplexityHistor
   return get<MapComplexityHistoryResponse[]>(`/maps/${mapId}/complexity-history`)
 }
 
-export function getDifficultyVotes(difficultyId: string): Promise<VoteListResponse> {
-  return get<VoteListResponse>(`/maps/difficulties/${difficultyId}/votes`)
-}
-
 export function getDifficultyComments(
   difficultyId: string,
   params: PaginationParams,
@@ -87,10 +91,6 @@ export function postDifficultyComment(
   req: SendChatMessageRequest,
 ): Promise<ChatMessageResponse> {
   return post<ChatMessageResponse>(`/maps/difficulties/${difficultyId}/comments`, req)
-}
-
-export function getDifficultySubscription(difficultyId: string): Promise<MapSubscriptionResponse> {
-  return get<MapSubscriptionResponse>(`/maps/difficulties/${difficultyId}/subscription`)
 }
 
 export function setDifficultySubscription(difficultyId: string, subscribed: boolean): Promise<void> {

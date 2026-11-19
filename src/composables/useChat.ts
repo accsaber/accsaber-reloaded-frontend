@@ -24,7 +24,7 @@ export function messageTimeMillis(createdAt: unknown): number {
   return 0
 }
 
-export function useChat(channelId: Ref<string | null | undefined>, api: ChatChannelApi) {
+export function useChat(channelId: Ref<string | null | undefined>, api: ChatChannelApi, pageSize = PAGE_SIZE) {
   const byId = ref(new Map<string, ChatMessageResponse>())
   let seqById = new Map<string, number>()
   let headSeq = 0
@@ -96,7 +96,7 @@ export function useChat(channelId: Ref<string | null | undefined>, api: ChatChan
     loading.value = true
     error.value = null
     try {
-      const page = await api.load(id, { page: 0, size: PAGE_SIZE })
+      const page = await api.load(id, { page: 0, size: pageSize })
       addMany(page.content)
       hasMore.value = !page.last
       nextPage = 1
@@ -114,7 +114,7 @@ export function useChat(channelId: Ref<string | null | undefined>, api: ChatChan
     loadingMore.value = true
     error.value = null
     try {
-      const page = await api.load(id, { page: nextPage, size: PAGE_SIZE })
+      const page = await api.load(id, { page: nextPage, size: pageSize })
       addMany(page.content)
       hasMore.value = !page.last
       nextPage += 1
@@ -161,7 +161,7 @@ export function useChat(channelId: Ref<string | null | undefined>, api: ChatChan
     }
     byId.value = next
     hasMore.value = true
-    nextPage = Math.floor(next.size / PAGE_SIZE)
+    nextPage = Math.floor(next.size / pageSize)
   }
 
   watch(channelId, reset)

@@ -4,6 +4,8 @@ import type {
 } from '@/types/api/admin'
 import type {
   AutoCriteriaCheckResponse,
+  DifficultyHubLookup,
+  DifficultyHubResponse,
   DifficultyListParams,
   LeaderboardPreviewResponse,
   MapDifficultyResponse,
@@ -11,6 +13,7 @@ import type {
   MapResponse,
   RefreshDifficultyRequest,
 } from '@/types/api/maps'
+import type { MapVoteAction } from '@/types/enums'
 import type { Page } from '@/types/pagination'
 import { get, patch, post } from '../client'
 import { buildQuery } from '../utils'
@@ -38,6 +41,20 @@ export function getRankingMap(mapId: string): Promise<MapResponse> {
 
 export function getRankingDifficulty(difficultyId: string): Promise<MapDifficultyResponse> {
   return get<MapDifficultyResponse>(`/ranking/maps/difficulties/${difficultyId}`)
+}
+
+type StaffHub = DifficultyHubResponse<MapDifficultyResponse>
+
+export function getRankingDifficultyHub(difficultyId: string, type: MapVoteAction): Promise<StaffHub> {
+  return get<StaffHub>(`/ranking/maps/difficulties/${difficultyId}/hub${buildQuery({ type })}`)
+}
+
+export function getRankingDifficultyHubByCode(
+  code: string,
+  lookup: DifficultyHubLookup,
+  type: MapVoteAction,
+): Promise<StaffHub> {
+  return get<StaffHub>(`/ranking/maps/difficulties/by-code/${code}/hub${buildQuery({ ...lookup, type })}`)
 }
 
 export function getRankingDifficulties(

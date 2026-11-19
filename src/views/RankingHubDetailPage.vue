@@ -18,7 +18,7 @@ import { useWithdrawSuggestion } from '@/composables/useWithdrawSuggestion'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import type { PublicMapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
-import { buildMapRoute } from '@/utils/mapRoute'
+import { buildHubRoute, buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -30,16 +30,15 @@ const router = useRouter()
 const auth = useAuthStore()
 const categoryStore = useCategoryStore()
 
-const difficultyId = computed(() => route.params.difficultyId as string)
-
 const difficulty = ref<PublicMapDifficultyResponse | null>(null)
+const difficultyId = computed(() => difficulty.value?.id)
 const voteData = ref<VoteListResponse | null>(null)
 const loading = ref(true)
 const loginMounted = ref(false)
 const loginOpen = ref(false)
 const pollAutoCheck = useAutoCheckPoll()
 const { confirmModal, canWithdraw, askWithdraw } = useWithdrawSuggestion()
-const { following, busy: followBusy, error: followError, toggle: toggleFollow } = useMapFollow(difficultyId, openLogin)
+const { following, busy: followBusy, error: followError, set: setFollowing, toggle: toggleFollow } = useMapFollow(difficultyId, openLogin)
 
 const categoryCode = computed(() =>
   difficulty.value ? (categoryStore.getCategoryCode(difficulty.value.categoryId) ?? 'overall') : 'overall',
@@ -53,35 +52,59 @@ usePageMeta({
   ),
 })
 
-const chat = useMapComments(difficultyId)
+const { chat, prime } = useMapComments(difficultyId)
 
 function openLogin() {
   loginMounted.value = true
   loginOpen.value = true
 }
 
+type MapsApi = typeof import('@/api/maps')
+
+function fetchHub(api: MapsApi) {
+  const ref = route.params.ref as string
+  if (isUuid(ref)) return api.getDifficultyHub(ref)
+  const slug = route.query.difficulty as string | undefined
+  return api.getDifficultyHubByCode(ref, {
+    difficulty: slug && slugToDifficulty(slug),
+    characteristic: route.query.characteristic as string | undefined,
+  })
+}
+
 async function load() {
-  const id = difficultyId.value
+  const path = route.fullPath
   loading.value = true
   difficulty.value = null
   voteData.value = null
   const api = await import('@/api/maps')
-  const [fetched, votes] = await Promise.all([
-    api.getDifficulty(id).catch(() => null),
-    api.getDifficultyVotes(id).catch(() => null),
-  ])
-  if (id !== difficultyId.value) return
+  const hub = await fetchHub(api).catch(() => null)
+  if (path !== route.fullPath) return
+  const fetched = hub?.difficulty ?? null
   if (fetched && !fetched.deactivatedAt && (fetched.status === 'RANKED' || fetched.status === 'CAMPAIGN')) {
     void router.replace(buildMapRoute({ ...fetched, difficultyId: fetched.id }))
     return
   }
+  if (hub) {
+    prime(hub.difficulty.id, hub.comments)
+    setFollowing(hub.subscribed)
+    voteData.value = hub.votes
+  }
   difficulty.value = fetched
-  voteData.value = votes
   loading.value = false
-  if (fetched) pollAutoCheck(fetched, () => api.getDifficulty(id), (fresh) => { if (id === difficultyId.value) difficulty.value = fresh })
+  if (!fetched) return
+  const { id } = fetched
+  if (isUuid(route.params.ref as string) && !fetched.deactivatedAt) void router.replace(buildHubRoute(fetched))
+  pollAutoCheck(fetched, () => api.getDifficulty(id), (fresh) => { if (id === difficultyId.value) difficulty.value = fresh })
 }
 
-watch(difficultyId, load, { immediate: true })
+watch(
+  () => route.fullPath,
+  (path) => {
+    if (difficulty.value && router.resolve(buildHubRoute(difficulty.value)).fullPath === path) return
+    void load()
+  },
+  { immediate: true },
+)
 
 function leave() {
   void router.replace({ name: 'ranked-queue', query: { tab: 'suggested' } })
@@ -89,7 +112,7 @@ function leave() {
 
 async function runCheck() {
   const { refreshCriteriaCheck } = await import('@/api/maps')
-  return refreshCriteriaCheck(difficultyId.value)
+  return refreshCriteriaCheck(difficultyId.value!)
 }
 </script>
 

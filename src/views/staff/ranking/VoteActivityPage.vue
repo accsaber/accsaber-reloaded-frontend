@@ -10,6 +10,7 @@ import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { VoteResponse } from '@/types/api/maps'
 import { formatRelativeDate } from '@/utils/formatters'
+import { buildRankingMapRoute } from '@/utils/mapRoute'
 import { knownCount, rememberCount } from '@/utils/knownCount'
 import VoteBody from '@/components/domain/VoteBody.vue'
 import { computed, ref, watch } from 'vue'
@@ -84,7 +85,7 @@ watch(currentPage, fetchActivity, { immediate: true })
       </template>
       <template #default="{ item: vote, swap }">
         <li v-bind="swap">
-          <RouterLink class="activity__row" :to="{ name: 'ranking-map-detail', params: { difficultyId: vote.map.id } }">
+          <RouterLink class="activity__row" :to="buildRankingMapRoute(vote.map)">
             <CoverImage :source="vote.map" :size="56" />
             <MapNameCell :name="vote.map.songName" :sub-name="vote.map.songSubName" :artist="vote.map.songAuthor ?? ''"
               :mapper="vote.map.mapAuthor ?? ''">

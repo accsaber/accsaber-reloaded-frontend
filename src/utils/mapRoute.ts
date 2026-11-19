@@ -22,17 +22,33 @@ export interface MapRouteInput {
   characteristic?: string | null
 }
 
-export function buildMapRoute(input: MapRouteInput): RouteLocationRaw {
+function difficultyQuery(input: { difficulty?: string | null; characteristic?: string | null }): Record<string, string> {
   const query: Record<string, string> = {}
-
-  if (input.beatsaverCode) {
-    if (input.difficulty) query.difficulty = difficultyToSlug(input.difficulty)
-    if (input.characteristic && input.characteristic.toLowerCase() !== 'standard') {
-      query.characteristic = input.characteristic
-    }
-    return { path: `/maps/${input.beatsaverCode}`, query }
+  if (input.difficulty) query.difficulty = difficultyToSlug(input.difficulty)
+  if (input.characteristic && input.characteristic.toLowerCase() !== 'standard') {
+    query.characteristic = input.characteristic
   }
+  return query
+}
 
-  if (input.difficultyId) query.difficultyId = input.difficultyId
-  return { path: `/maps/${input.mapId}`, query }
+export function buildMapRoute(input: MapRouteInput): RouteLocationRaw {
+  if (input.beatsaverCode) return { path: `/maps/${input.beatsaverCode}`, query: difficultyQuery(input) }
+  return { path: `/maps/${input.mapId}`, query: input.difficultyId ? { difficultyId: input.difficultyId } : {} }
+}
+
+export interface HubRouteInput {
+  id: string
+  beatsaverCode?: string | null
+  difficulty: string
+  characteristic: string
+}
+
+export function buildHubRoute(input: HubRouteInput, byId = false): RouteLocationRaw {
+  if (!input.beatsaverCode || byId) return { path: `/ranked-queue/${input.id}` }
+  return { path: `/ranked-queue/${input.beatsaverCode}`, query: difficultyQuery(input) }
+}
+
+export function buildRankingMapRoute(input: HubRouteInput, byId = false): RouteLocationRaw {
+  if (!input.beatsaverCode || byId) return { name: 'ranking-map-detail', params: { ref: input.id } }
+  return { name: 'ranking-map-detail', params: { ref: input.beatsaverCode }, query: difficultyQuery(input) }
 }

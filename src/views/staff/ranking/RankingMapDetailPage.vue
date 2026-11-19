@@ -14,6 +14,7 @@ import { useThemeStore } from '@/stores/theme'
 import type { MapDifficultyResponse, VoteListResponse } from '@/types/api/maps'
 import type { Tab } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
+import { buildRankingMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { pickCoverUrl } from '@/utils/media'
 import LeaderboardPreviewPanel from '@/views/staff/ranking/LeaderboardPreviewPanel.vue'
 import RankDetailHero from '@/views/staff/ranking/detail/RankDetailHero.vue'
@@ -23,7 +24,7 @@ import RankDetailVoteForm from '@/views/staff/ranking/detail/RankDetailVoteForm.
 import RankDetailVoteList from '@/views/staff/ranking/detail/RankDetailVoteList.vue'
 import { useDifficultyDrift } from '@/views/staff/ranking/detail/useDifficultyDrift'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 type DetailTab = 'voting' | 'leaderboard' | 'comments'
 
@@ -39,13 +40,14 @@ const FORM_GHOST = 514
 const REWEIGHT_NOTICE = 'Complexity saved and the reweight is running. Scores, statistics, rankings, milestones, XP and skills adjust in the background, so the numbers here stay behind until it finishes.'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 const themeStore = useThemeStore()
 
-const difficultyId = computed(() => route.params.difficultyId as string)
-
 const difficulty = ref<MapDifficultyResponse | null>(null)
+const difficultyId = computed(() => difficulty.value?.id ?? '')
+const subscribed = ref(false)
 const voteData = ref<VoteListResponse | null>(null)
 const loading = ref(true)
 const voteLoading = ref(true)
@@ -82,7 +84,7 @@ const activeTab = ref<DetailTab>('voting')
 const tab = computed<DetailTab>(() =>
   difficulty.value?.active === false && activeTab.value === 'leaderboard' ? 'voting' : activeTab.value,
 )
-const comments = useMapComments(difficultyId)
+const { chat: comments, prime } = useMapComments(difficultyId)
 const pollAutoCheck = useAutoCheckPoll()
 const refreshOpen = ref(false)
 const refreshMounted = ref(false)
@@ -95,17 +97,12 @@ function openRefresh() {
 
 async function fetchDifficulty() {
   const id = difficultyId.value
-  if (difficulty.value?.id !== id) loading.value = true
   try {
     const { getRankingDifficulty } = await import('@/api/ranking/maps')
     const fetched = await getRankingDifficulty(id)
-    if (id !== difficultyId.value) return
-    difficulty.value = fetched
-    pollAutoCheck(fetched, () => getRankingDifficulty(id), (fresh) => { if (id === difficultyId.value) difficulty.value = fresh })
+    if (id === difficultyId.value) difficulty.value = fetched
   } catch {
-    if (id === difficultyId.value && loading.value) difficulty.value = null
-  } finally {
-    if (id === difficultyId.value) loading.value = false
+    return
   }
 }
 
@@ -123,13 +120,48 @@ async function fetchVotes() {
   }
 }
 
+async function fetchHub() {
+  const api = await import('@/api/ranking/maps')
+  const ref = route.params.ref as string
+  if (isUuid(ref)) return api.getRankingDifficultyHub(ref, 'RANK')
+  const slug = route.query.difficulty as string | undefined
+  return api.getRankingDifficultyHubByCode(
+    ref,
+    { difficulty: slug && slugToDifficulty(slug), characteristic: route.query.characteristic as string | undefined },
+    'RANK',
+  )
+}
+
+async function load() {
+  const path = route.fullPath
+  notice.value = ''
+  loading.value = true
+  voteLoading.value = true
+  difficulty.value = null
+  voteData.value = null
+  const hub = await fetchHub().catch(() => null)
+  if (path !== route.fullPath) return
+  if (hub) {
+    prime(hub.difficulty.id, hub.comments)
+    subscribed.value = !!hub.subscribed
+  }
+  difficulty.value = hub?.difficulty ?? null
+  loading.value = false
+  if (!hub) return
+  const fetched = hub.difficulty
+  if (isUuid(route.params.ref as string) && fetched.active) void router.replace(buildRankingMapRoute(fetched))
+  const { getRankingDifficulty } = await import('@/api/ranking/maps')
+  pollAutoCheck(fetched, () => getRankingDifficulty(fetched.id), (fresh) => { if (fresh.id === difficultyId.value) difficulty.value = fresh })
+  if (fetched.status === 'RANKED') return void fetchVotes()
+  voteData.value = hub.votes
+  voteLoading.value = false
+}
+
 watch(
-  difficultyId,
-  async () => {
-    notice.value = ''
-    voteData.value = null
-    await fetchDifficulty()
-    void fetchVotes()
+  () => route.fullPath,
+  (path) => {
+    if (difficulty.value && router.resolve(buildRankingMapRoute(difficulty.value)).fullPath === path) return
+    void load()
   },
   { immediate: true },
 )
@@ -162,6 +194,7 @@ async function onRefreshed() {
           :is-head-ranking="isHeadRanking"
           :is-ranking="isRanking"
           :outdated="!!driftInfo"
+          :subscribed="subscribed"
           @updated="onUpdated"
         />
 

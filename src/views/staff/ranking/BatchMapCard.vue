@@ -7,6 +7,7 @@ import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import type { MapDifficultyResponse } from '@/types/api/maps'
 import { nextTick, ref } from 'vue'
+import { buildRankingMapRoute } from '@/utils/mapRoute'
 
 const props = defineProps<{
   diff: MapDifficultyResponse
@@ -42,7 +43,7 @@ function commit() {
 
 <template>
   <div class="batch-card">
-    <RouterLink class="batch-card__map" :to="{ name: 'ranking-map-detail', params: { difficultyId: diff.id } }">
+    <RouterLink class="batch-card__map" :to="buildRankingMapRoute(diff)">
       <CoverImage :source="diff" :alt="diff.songName" :size="40" />
       <span class="batch-card__name">
         <SongTitle class="batch-card__song" :name="diff.songName" :sub-name="diff.songSubName" />

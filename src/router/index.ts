@@ -135,7 +135,7 @@ const router = createRouter({
       props: { mode: 'check' },
     },
     {
-      path: '/ranked-queue/:difficultyId',
+      path: '/ranked-queue/:ref',
       name: 'ranking-hub-detail',
       component: () => import('@/views/RankingHubDetailPage.vue'),
     },
@@ -275,7 +275,7 @@ const router = createRouter({
       },
     ] : []),
     {
-      path: isRankingSubdomain ? '/map/:difficultyId' : '/staff/ranking/map/:difficultyId',
+      path: isRankingSubdomain ? '/map/:ref' : '/staff/ranking/map/:ref',
       name: 'ranking-map-detail',
       component: () => import('@/views/staff/ranking/RankingMapDetailPage.vue'),
       meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
@@ -294,9 +294,7 @@ const router = createRouter({
     },
     {
       path: isRankingSubdomain ? '/deactivated' : '/staff/ranking/deactivated',
-      name: 'ranking-deactivated',
-      component: () => import('@/views/staff/ranking/DeactivatedMapsPage.vue'),
-      meta: { requiresStaff: true, requiredRole: 'RANKING' as StaffRole },
+      redirect: { name: isRankingSubdomain ? 'home' : 'staff-ranking', query: { tab: 'rejected' } },
     },
     {
       path: isRankingSubdomain ? '/batches' : '/staff/ranking/batches',

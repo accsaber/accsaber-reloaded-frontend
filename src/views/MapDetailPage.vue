@@ -13,7 +13,7 @@ import type { DifficultyScoreDisplay } from '@/types/display'
 import { brightenRgb } from '@/utils/color'
 import { DIFFICULTY_ORDER, HUB_STATUSES } from '@/utils/constants'
 import { formatDifficulty } from '@/utils/mappers'
-import { buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
+import { buildHubRoute, buildMapRoute, isUuid, slugToDifficulty } from '@/utils/mapRoute'
 import { pickCoverFallback, pickCoverUrl } from '@/utils/media'
 import { tableNaturalWidth } from '@/utils/tableLayout'
 import { computed, ref, watch } from 'vue'
@@ -145,7 +145,7 @@ async function fetchMap() {
     const all = fetched.difficulties
     const fallback = resolveQueryDifficulty(all) ?? rankedDifficulties.value[0] ?? all[0]
     if (fallback && HUB_STATUSES.includes(fallback.status)) {
-      void router.replace({ name: 'ranking-hub-detail', params: { difficultyId: fallback.id } })
+      void router.replace(buildHubRoute({ ...fallback, beatsaverCode: fetched.beatsaverCode }))
       return
     }
     if (fallback) activeDifficultyId.value = fallback.id

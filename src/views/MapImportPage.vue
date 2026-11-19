@@ -218,7 +218,7 @@ function run() {
               <span class="caption" role="status">{{ diff.importedId ? SAVED.done : diff.error }}</span>
               <BaseButton
                 size="sm"
-                :href="$router.resolve({ name: SAVED.detail, params: { difficultyId: (diff.importedId ?? diff.existingId)! } }).href"
+                :href="$router.resolve({ name: SAVED.detail, params: { ref: (diff.importedId ?? diff.existingId)! } }).href"
               >
                 View
               </BaseButton>

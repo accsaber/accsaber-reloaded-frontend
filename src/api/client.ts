@@ -102,7 +102,7 @@ const UUID = '[0-9a-f]{8}-[0-9a-f-]{27}'
 const ANONYMOUS_READS = new RegExp(
   `^/(?:${[
     `users/(?!me(?:/|$))${SEG}(?:/(?!relations(?:/|$)|campaigns$).+)?`,
-    'maps/(?!.+/subscription$).+',
+    'maps/(?!.+/hub$).+',
     'batches(?:/.*)?',
     `leaderboards/${SEG}`,
     'categories(?:/.*)?',
