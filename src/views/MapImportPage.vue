@@ -370,6 +370,7 @@ function run() {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-height: 56px;
   margin-left: auto;
 }
 
@@ -414,6 +415,7 @@ function run() {
 
   .map-import__diff-end {
     flex-basis: 100%;
+    min-height: 0;
     margin-left: 0;
   }
 
