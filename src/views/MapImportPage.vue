@@ -148,7 +148,10 @@ function run() {
 
 <template>
   <div class="map-import">
-    <h1>{{ COPY.title }}</h1>
+    <div class="map-import__head">
+      <h1>{{ COPY.title }}</h1>
+      <BaseButton href="/wiki/ranking-criteria">Ranking Criteria</BaseButton>
+    </div>
 
     <form class="map-import__lookup" @submit.prevent="loadCode(input)">
       <BaseInput
@@ -267,6 +270,14 @@ function run() {
   width: 100%;
   max-width: 880px;
   margin: 0 auto;
+}
+
+.map-import__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
 }
 
 .map-import__lookup {
