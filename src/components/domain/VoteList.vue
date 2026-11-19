@@ -2,8 +2,8 @@
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import SwapList from '@/components/common/SwapList.vue'
 import VoteBody from '@/components/domain/VoteBody.vue'
+import VoteTime from '@/components/domain/VoteTime.vue'
 import type { VoteListResponse, VoteResponse } from '@/types/api/maps'
-import { formatRelativeDate } from '@/utils/formatters'
 import { knownCount, rememberCount } from '@/utils/knownCount'
 import { voteNicknames } from '@/utils/voteNickname'
 import { computed, watch } from 'vue'
@@ -55,7 +55,7 @@ watch(
       <template #default="{ item: vote, swap }">
         <li v-bind="swap" class="vote">
           <VoteBody :vote="vote" :nickname="nicknames.get(vote.id)" />
-          <span class="caption vote__date">{{ formatRelativeDate(vote.createdAt) }}</span>
+          <VoteTime :vote="vote" />
           <slot name="action" :vote="vote" />
         </li>
       </template>
@@ -104,9 +104,5 @@ watch(
 
 .vote > :first-child {
   flex: 1;
-}
-
-.vote__date {
-  white-space: nowrap;
 }
 </style>

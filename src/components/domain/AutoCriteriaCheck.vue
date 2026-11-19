@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { parseApiError } from '@/api/client'
 import IconButton from '@/components/common/IconButton.vue'
+import CriteriaFailures from '@/components/domain/CriteriaFailures.vue'
 import HeroFact from '@/components/domain/HeroFact.vue'
 import type { AutoCriteriaCheckResponse, AutoCriteriaStatus } from '@/types/api/maps'
 import { AUTO_CRITERIA_LABELS } from '@/utils/constants'
@@ -60,9 +61,7 @@ async function check() {
   <p v-if="error" class="caption auto-check__wide auto-check__error" role="alert">{{ error }}</p>
   <Transition name="collapse">
     <div v-if="failures.length" class="collapsible auto-check__wide">
-      <ul class="criteria-failures">
-        <li v-for="(failure, i) in failures" :key="i">{{ failure }}</li>
-      </ul>
+      <CriteriaFailures :failures="failures" />
     </div>
   </Transition>
 </template>

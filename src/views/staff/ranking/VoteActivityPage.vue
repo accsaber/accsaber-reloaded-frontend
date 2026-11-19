@@ -9,10 +9,10 @@ import MapNameCell from '@/components/domain/MapNameCell.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import type { VoteResponse } from '@/types/api/maps'
-import { formatRelativeDate } from '@/utils/formatters'
 import { buildRankingMapRoute } from '@/utils/mapRoute'
 import { knownCount, rememberCount } from '@/utils/knownCount'
 import VoteBody from '@/components/domain/VoteBody.vue'
+import VoteTime from '@/components/domain/VoteTime.vue'
 import { computed, ref, watch } from 'vue'
 
 const PAGE_SIZE = 20
@@ -92,7 +92,7 @@ watch(currentPage, fetchActivity, { immediate: true })
               <DifficultyBadge :difficulty="vote.map.difficulty" />
             </MapNameCell>
             <VoteBody :vote="vote" clamp />
-            <span class="caption activity__date">{{ formatRelativeDate(vote.updatedAt) }}</span>
+            <VoteTime class="activity__date" :vote="vote" />
           </RouterLink>
         </li>
       </template>
@@ -145,7 +145,6 @@ watch(currentPage, fetchActivity, { immediate: true })
 
 .activity__date {
   text-align: right;
-  white-space: nowrap;
 }
 
 @media (max-width: 767px) {

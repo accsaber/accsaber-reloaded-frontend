@@ -7,6 +7,7 @@ import BaseTabs from '@/components/common/BaseTabs.vue'
 import CoverImage from '@/components/common/CoverImage.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StatusMark from '@/components/common/StatusMark.vue'
+import CriteriaFailures from '@/components/domain/CriteriaFailures.vue'
 import DifficultyBadge from '@/components/domain/DifficultyBadge.vue'
 import SongTitle from '@/components/domain/SongTitle.vue'
 import { useAutoCheckPoll } from '@/composables/useAutoCheckPoll'
@@ -188,7 +189,7 @@ function run() {
 
       <ul class="map-import__diffs">
         <template v-if="!header">
-          <li v-for="i in GHOST_ROWS" :key="i" class="placeholder"><SkeletonLoader height="56px" /></li>
+          <li v-for="i in GHOST_ROWS" :key="i" class="placeholder"><SkeletonLoader height="var(--diff-row)" /></li>
         </template>
         <li
           v-for="diff in diffs"
@@ -240,9 +241,9 @@ function run() {
           </span>
           <Transition name="collapse">
             <div v-if="diff.result?.failures.length" class="collapsible map-import__failures">
-              <ul class="criteria-failures">
-                <li v-for="(failure, i) in diff.result.failures" :key="i">{{ failure }}</li>
-              </ul>
+              <div class="map-import__failure-list">
+                <CriteriaFailures :failures="diff.result.failures" />
+              </div>
             </div>
           </Transition>
         </li>
@@ -333,6 +334,7 @@ function run() {
 }
 
 .map-import__diffs {
+  --diff-row: 56px;
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -345,7 +347,7 @@ function run() {
   flex-wrap: wrap;
   align-items: center;
   gap: 0 var(--space-md);
-  min-height: 56px;
+  min-height: var(--diff-row);
   padding: 0 var(--space-md);
   border-radius: var(--radius-btn);
 }
@@ -370,7 +372,7 @@ function run() {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  min-height: 56px;
+  min-height: var(--diff-row);
   margin-left: auto;
 }
 
@@ -382,7 +384,7 @@ function run() {
   flex-basis: 100%;
 }
 
-.map-import__failures > * {
+.map-import__failure-list {
   padding-bottom: var(--space-sm);
 }
 
