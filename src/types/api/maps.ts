@@ -4,7 +4,7 @@ import type { CriteriaStatus, Difficulty, MapDifficultyStatus, MapVoteAction, Vo
 import type { Page, PaginationParams } from '../pagination'
 import type { MapDifficultyRef, PlayerRef } from './common'
 import type { PublicStaffUserResponse } from './staff'
-import type { RelationFilterType } from './relations'
+import type { PlayerScope } from './relations'
 
 export type AutoCriteriaStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'UNAVAILABLE'
 
@@ -237,9 +237,7 @@ export interface DifficultyListParams extends PaginationParams {
   active?: boolean
 }
 
-export interface DifficultyScoreParams extends PaginationParams {
-  country?: string
-  relation?: RelationFilterType
+export interface DifficultyScoreParams extends PaginationParams, PlayerScope {
   warId?: string
 }
 

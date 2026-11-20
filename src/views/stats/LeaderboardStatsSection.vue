@@ -6,6 +6,7 @@ import { useQueryParams } from '@/composables/useQueryParams'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
 import type { MapDifficultyRef } from '@/types/api/common'
+import type { PlayerScope } from '@/types/api/relations'
 import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, TableColumn } from '@/types/display'
 import { toScoreDisplay, toUserRef, type FlatUserRef } from '@/utils/mappers'
@@ -14,17 +15,18 @@ import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import StatsBar from './StatsBar.vue'
 import StatsBoardPicker from './StatsBoardPicker.vue'
-import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsScopeSelect from './StatsScopeSelect.vue'
 import StatsMapCell from './StatsMapCell.vue'
 import StatsTable from './StatsTable.vue'
 import { dateCol, fmt, mainCol, numCol, playerCol, rankCol } from './statsFormat'
+import { useStatsScope } from './useStatsScope'
 import { playerRoute, useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
 
 type Board = 'streaks' | 'max-ap' | 'avg-ap' | 'most-retried' | 'grinders' | 'dedication' | 'collectors'
 
 interface Filters {
   categoryId?: string
-  country?: string
+  scope: PlayerScope
 }
 
 interface BoardDef extends StatsBoardDef<Board, Filters> {
@@ -54,7 +56,7 @@ const BOARDS: BoardDef[] = [
       rankCol, playerCol, mapCol, mainCol('streak115', 'Streak', 90),
       numCol('accuracy', 'Accuracy', 100, fmt.accuracy), numCol('ap', 'AP', 100, fmt.fixed2), scoreDateCol, detailCol,
     ],
-    fetch: (api, params, f) => api.getStreakLeaderboard(params, f.categoryId, f.country),
+    fetch: (api, params, f) => api.getStreakLeaderboard(params, f.categoryId, f.scope),
   },
   {
     key: 'max-ap', label: 'Highest AP', icon: 'star', category: true, scores: true, players: true, sort: 'ap,desc',
@@ -62,7 +64,7 @@ const BOARDS: BoardDef[] = [
       rankCol, playerCol, mapCol, mainCol('ap', 'AP', 100, fmt.fixed2),
       numCol('accuracy', 'Accuracy', 100, fmt.accuracy), scoreDateCol, detailCol,
     ],
-    fetch: (api, params, f) => api.getMaxApLeaderboard(params, f.categoryId, f.country),
+    fetch: (api, params, f) => api.getMaxApLeaderboard(params, f.categoryId, f.scope),
   },
   {
     key: 'avg-ap', label: 'Most Worth Maps', icon: 'mountain', category: true, sort: 'averageWeightedAp,desc',
@@ -70,27 +72,27 @@ const BOARDS: BoardDef[] = [
       rankCol, mapCol, categoryCol, mainCol('averageWeightedAp', 'Avg AP', 110, fmt.fixed2),
       numCol('scoreCount', 'Scores', 100), latestCol,
     ],
-    fetch: (api, params, f) => api.getHighestAvgApMaps(params, f.categoryId, undefined, f.country),
+    fetch: (api, params, f) => api.getHighestAvgApMaps(params, f.categoryId, undefined, f.scope),
   },
   {
     key: 'most-retried', label: 'Most Grinded Maps', icon: 'repeat', category: true, sort: 'supersededCount,desc',
     columns: [rankCol, mapCol, categoryCol, mainCol('supersededCount', 'Retries', 110), latestCol],
-    fetch: (api, params, f) => api.getMostRetriedMaps(params, f.categoryId, f.country),
+    fetch: (api, params, f) => api.getMostRetriedMaps(params, f.categoryId, f.scope),
   },
   {
     key: 'grinders', label: 'Top Grinders', icon: 'trending', category: true, players: true, sort: 'improvementCount,desc',
     columns: [rankCol, playerCol, mainCol('improvementCount', 'Improvements', 140), latestCol],
-    fetch: (api, params, f) => api.getMostImprovements(params, f.categoryId, f.country),
+    fetch: (api, params, f) => api.getMostImprovements(params, f.categoryId, f.scope),
   },
   {
     key: 'dedication', label: 'Map Dedication', icon: 'target', category: true, players: true, sort: 'improvementCount,desc',
     columns: [rankCol, playerCol, mapCol, mainCol('improvementCount', 'Improvements', 140), latestCol],
-    fetch: (api, params, f) => api.getMostMapImprovements(params, f.categoryId, f.country),
+    fetch: (api, params, f) => api.getMostMapImprovements(params, f.categoryId, f.scope),
   },
   {
     key: 'collectors', label: 'Milestone Collectors', icon: 'trophy', category: false, players: true, sort: 'milestoneCount,desc',
     columns: [rankCol, playerCol, mainCol('milestoneCount', 'Milestones', 140)],
-    fetch: (api, params, f) => api.getMilestoneCollectors(params, f.country),
+    fetch: (api, params, f) => api.getMilestoneCollectors(params, f.scope),
   },
 ]
 
@@ -104,7 +106,7 @@ if (typeof route.query.tab === 'string') {
 }
 
 const categoryParam = queryRef<CategoryCode>('category')
-const countryFilter = queryRef('country')
+const scope = useStatsScope()
 const category = computed<CategoryCode>(() => categoryParam.value || 'overall')
 
 function setCategory(code: CategoryCode) {
@@ -123,7 +125,7 @@ function mapRow(row: StatsRow): StatsRow {
 function boardFilters(def: BoardDef): Filters {
   return {
     categoryId: def.category && category.value !== 'overall' ? categoryStore.getCategoryId(category.value) : undefined,
-    country: countryFilter.value || undefined,
+    scope: scope.value,
   }
 }
 
@@ -165,7 +167,7 @@ function openScoreDetail(row: StatsRow) {
       @update:model-value="selectBoard($event)" />
 
     <StatsBar :count="totalElements">
-      <StatsCountrySelect />
+      <StatsScopeSelect />
       <CategoryTabs v-if="boardDef.category" :model-value="category" :exclude="['xp']"
         @update:model-value="setCategory" />
     </StatsBar>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlayerRef } from '@/types/api/common'
+import type { PlayerScope } from '@/types/api/relations'
 import type { EventMissionLeaderboardResponse } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -13,7 +14,7 @@ const props = defineProps<{
   eventKey: string
   templateId: string
   missionName: string
-  country: string
+  scope: PlayerScope
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -48,7 +49,7 @@ async function fetchLeaderboard() {
       props.eventKey,
       { page: page.value - 1, size: STATS_PAGE_SIZE },
       props.templateId,
-      props.country || undefined,
+      props.scope,
     )
     if (id !== requestId) return
     pageData.value = result
@@ -59,13 +60,13 @@ async function fetchLeaderboard() {
   loading.value = false
 }
 
-watch(() => [props.eventKey, props.templateId, props.country].join('|'), () => {
+const board = computed(() => JSON.stringify([props.eventKey, props.templateId, props.scope]))
+
+watch(board, () => {
   page.value = 1
 })
 
-watch(() => [props.eventKey, props.templateId, props.country, page.value].join('|'), fetchLeaderboard, {
-  immediate: true,
-})
+watch(() => board.value + page.value, fetchLeaderboard, { immediate: true })
 </script>
 
 <template>

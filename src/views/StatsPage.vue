@@ -53,6 +53,7 @@ async function setSection(section: string) {
   const query: Record<string, string> = {}
   if (section !== 'leaderboards') query.section = section
   if (typeof route.query.country === 'string') query.country = route.query.country
+  if (typeof route.query.relation === 'string') query.relation = route.query.relation
 
   const loaded = await LOADERS[section as SectionKey]().then(() => true, () => false)
   if (!loaded || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {

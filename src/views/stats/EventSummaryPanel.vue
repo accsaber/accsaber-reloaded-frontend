@@ -2,6 +2,7 @@
 import BaseTabs from '@/components/common/BaseTabs.vue'
 import StatBlock from '@/components/common/StatBlock.vue'
 import { formatAccuracy, formatCount, formatShortDate } from '@/utils/formatters'
+import type { PlayerScope } from '@/types/api/relations'
 import type { DistributionEntryResponse, EventSummaryResponse } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import { computed, ref, watch } from 'vue'
@@ -15,7 +16,7 @@ import { useLocalPages } from './useStatsBoard'
 
 const props = defineProps<{
   eventKey: string
-  country: string
+  scope: PlayerScope
   week: number | undefined
   templateId: string
 }>()
@@ -94,13 +95,13 @@ function missionMeta(row: Record<string, unknown>): string {
 
 let requestId = 0
 
-async function fetchSummary(eventKey: string, country: string) {
+async function fetchSummary() {
   const id = ++requestId
   loading.value = true
   failed.value = false
   try {
     const { getEventSummary } = await import('@/api/statistics')
-    const result = await getEventSummary(eventKey, undefined, country || undefined)
+    const result = await getEventSummary(props.eventKey, undefined, props.scope)
     if (id !== requestId) return
     summary.value = result
   } catch {
@@ -111,11 +112,7 @@ async function fetchSummary(eventKey: string, country: string) {
   loading.value = false
 }
 
-watch(
-  () => [props.eventKey, props.country] as const,
-  ([eventKey, country]) => fetchSummary(eventKey, country),
-  { immediate: true },
-)
+watch(() => JSON.stringify([props.eventKey, props.scope]), fetchSummary, { immediate: true })
 
 watch(weekOptions, (options) => {
   if (props.week !== undefined && !options.includes(props.week)) emit('update:week', undefined)
@@ -124,7 +121,7 @@ watch(weekOptions, (options) => {
 
 <template>
   <EventMissionLeaderboard v-if="templateId" :event-key="eventKey" :template-id="templateId"
-    :mission-name="openMissionName" :country="country" @close="emit('update:templateId', '')" />
+    :mission-name="openMissionName" :scope="scope" @close="emit('update:templateId', '')" />
 
   <StatsDetail v-else :title="summary?.title ?? 'Event'" back="Back to events" :failed="failed" @close="emit('close')">
     <template v-if="summary" #meta>

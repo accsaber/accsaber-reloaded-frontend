@@ -2,6 +2,7 @@ import type { CampaignRequirementType } from '../enums'
 import type { MapDifficultyRef, PlayerRef } from './common'
 import type { ItemResponse } from './items'
 import type { MissionBand, MissionPool, MissionType } from './missions'
+import type { PlayerScope } from './relations'
 
 export interface MapAvgApResponse {
   map: MapDifficultyRef
@@ -297,7 +298,8 @@ export interface EventParticipationResponse {
   averageMissionsPerParticipant: number | null
 }
 
-export interface MissionStatsParams {
+
+export interface MissionStatsParams extends PlayerScope {
   pool?: MissionPool[]
   type?: MissionType[]
   templateId?: string
@@ -306,15 +308,13 @@ export interface MissionStatsParams {
   tier?: MissionTier[]
   skillMin?: number
   skillMax?: number
-  country?: string
   from?: string
   to?: string
   minAssigned?: number
 }
 
-export interface CampaignStatsParams {
+export interface CampaignStatsParams extends PlayerScope {
   status?: CampaignStatsStatus[]
-  country?: string
   minParticipants?: number
 }
 

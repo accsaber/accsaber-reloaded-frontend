@@ -48,3 +48,8 @@ export interface RelationScoresParams extends PaginationParams {
   search?: string
   includePrincipal?: boolean
 }
+
+export interface PlayerScope {
+  country?: string
+  relation?: RelationFilterType
+}

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MapDifficultyRef } from '@/types/api/common'
+import type { PlayerScope } from '@/types/api/relations'
 import type { CampaignNodeDifficultyResponse } from '@/types/api/statistics'
 import type { TableColumn } from '@/types/display'
 import { formatUserValue, requirementLabel } from '@/utils/campaignLayout'
@@ -13,7 +14,7 @@ import { useLocalPages } from './useStatsBoard'
 const props = defineProps<{
   campaignId: string
   campaignName: string
-  country: string
+  scope: PlayerScope
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -50,13 +51,13 @@ const { page, totalPages, pageItems } = useLocalPages(() => nodes.value as unkno
 
 let requestId = 0
 
-async function fetchNodes(campaignId: string, country: string) {
+async function fetchNodes() {
   const id = ++requestId
   loading.value = true
   failed.value = false
   try {
     const { getCampaignHardestNodes } = await import('@/api/statistics')
-    const result = await getCampaignHardestNodes(campaignId, country || undefined)
+    const result = await getCampaignHardestNodes(props.campaignId, props.scope)
     if (id !== requestId) return
     nodes.value = result
   } catch {
@@ -67,11 +68,7 @@ async function fetchNodes(campaignId: string, country: string) {
   loading.value = false
 }
 
-watch(
-  () => [props.campaignId, props.country] as const,
-  ([campaignId, country]) => fetchNodes(campaignId, country),
-  { immediate: true },
-)
+watch(() => JSON.stringify([props.campaignId, props.scope]), fetchNodes, { immediate: true })
 </script>
 
 <template>

@@ -4,6 +4,7 @@ import { useQueryParams } from '@/composables/useQueryParams'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
+import type { PlayerScope } from '@/types/api/relations'
 import type { TableColumn } from '@/types/display'
 import { computed, onMounted, ref, watch } from 'vue'
 import ItemHoldersTooltip from './ItemHoldersTooltip.vue'
@@ -11,10 +12,11 @@ import ItemStatsItemCell from './ItemStatsItemCell.vue'
 import ItemStatsModifiers from './ItemStatsModifiers.vue'
 import StatsBar from './StatsBar.vue'
 import StatsBoardPicker from './StatsBoardPicker.vue'
-import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsScopeSelect from './StatsScopeSelect.vue'
 import StatsTable from './StatsTable.vue'
 import { fmt, mainCol, numCol, playerCol, rankCol } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef } from './useStatsBoard'
+import { useStatsScope } from './useStatsScope'
 
 type ItemStatsBoard =
   | 'most-items'
@@ -30,7 +32,7 @@ type ItemStatsBoard =
 type BoardFilter = 'type' | 'modifier' | 'crate'
 
 interface BoardQuery {
-  country?: string
+  scope?: PlayerScope
   type?: string
   modifier?: string
   crate?: string
@@ -49,13 +51,13 @@ const BOARDS: BoardDef[] = [
     key: 'most-items', label: 'Most Items', icon: 'package', players: true,
     columns: [rankCol, playerCol, mainCol('itemCount', 'Items', 120)],
     sort: 'itemCount,desc', country: true, filters: ['type', 'modifier'],
-    fetch: (api, params, q) => api.getMostItems(params, q.type, q.modifier, q.country),
+    fetch: (api, params, q) => api.getMostItems(params, q.type, q.modifier, q.scope),
   },
   {
     key: 'most-crates-opened', label: 'Most Crates Opened', icon: 'crate', players: true,
     columns: [rankCol, playerCol, mainCol('crateCount', 'Crates', 120)],
     sort: 'crateCount,desc', country: true, filters: ['crate'],
-    fetch: (api, params, q) => api.getMostCratesOpened(params, q.crate, q.country),
+    fetch: (api, params, q) => api.getMostCratesOpened(params, q.crate, q.scope),
   },
   {
     key: 'most-valuable-inventory', label: 'Most Valuable Inventory', icon: 'gem', players: true,
@@ -66,13 +68,13 @@ const BOARDS: BoardDef[] = [
       { ...numCol('totalValue', 'Total', 120, fmt.essence), primary: true, cellClass: () => 'stats-essence' },
     ],
     sort: 'totalValue,desc', country: true, filters: [],
-    fetch: (api, params, q) => api.getMostValuableInventory(params, q.country),
+    fetch: (api, params, q) => api.getMostValuableInventory(params, q.scope),
   },
   {
     key: 'first-editions', label: 'First Editions', icon: 'award', players: true,
     columns: [rankCol, playerCol, mainCol('firstEditionCount', 'First Editions', 150)],
     sort: 'firstEditionCount,desc', country: true, filters: [],
-    fetch: (api, params, q) => api.getFirstEditions(params, q.country),
+    fetch: (api, params, q) => api.getFirstEditions(params, q.scope),
   },
   {
     key: 'most-complete-collection', label: 'Most Complete Collection', icon: 'layers', players: true,
@@ -83,25 +85,25 @@ const BOARDS: BoardDef[] = [
       mainCol('completionPercent', 'Complete', 110, fmt.percentPoint),
     ],
     sort: 'completionPercent,desc', country: true, filters: [],
-    fetch: (api, params, q) => api.getMostCompleteCollection(params, q.country),
+    fetch: (api, params, q) => api.getMostCompleteCollection(params, q.scope),
   },
   {
     key: 'biggest-traders', label: 'Biggest Traders', icon: 'swap', players: true,
     columns: [rankCol, playerCol, mainCol('tradeCount', 'Trades', 110), numCol('itemsTraded', 'Items Traded', 140)],
     sort: 'tradeCount,desc', country: true, filters: [],
-    fetch: (api, params, q) => api.getBiggestTraders(params, q.country),
+    fetch: (api, params, q) => api.getBiggestTraders(params, q.scope),
   },
   {
     key: 'rarest-unboxed', label: 'Rarest Items Unboxed', icon: 'gift', players: true,
     columns: [rankCol, itemCol, { key: 'modifiers', label: 'Modifiers', align: 'left' }, ownerCol('Owner')],
     country: true, filters: [],
-    fetch: (api, params, q) => api.getRarestUnboxed(params, q.country),
+    fetch: (api, params, q) => api.getRarestUnboxed(params, q.scope),
   },
   {
     key: 'first-edition-holders', label: 'First Edition Holders', icon: 'medal', players: true,
     columns: [rankCol, itemCol, ownerCol('Holder')],
     country: true, filters: [],
-    fetch: (api, params, q) => api.getFirstEditionHolders(params, q.country),
+    fetch: (api, params, q) => api.getFirstEditionHolders(params, q.scope),
   },
   {
     key: 'rarest-items', label: 'Item Scarcity', icon: 'gauge',
@@ -115,14 +117,14 @@ const itemTypeStore = useItemTypeStore()
 const modifierStore = useItemModifierStore()
 const { queryRef } = useQueryParams()
 
-const countryFilter = queryRef('country')
+const scope = useStatsScope()
 const typeFilter = queryRef('type')
 const modifierFilter = queryRef('modifier')
 const crateFilter = queryRef('crate')
 
 function boardFilters(def: BoardDef): BoardQuery {
   return {
-    country: def.country ? countryFilter.value || undefined : undefined,
+    scope: def.country ? scope.value : undefined,
     type: typeFilter.value || undefined,
     modifier: modifierFilter.value || undefined,
     crate: crateFilter.value || undefined,
@@ -179,7 +181,7 @@ watch(activeBoard, (board) => {
       @update:model-value="selectBoard($event, { type: undefined, modifier: undefined, crate: undefined })" />
 
     <StatsBar :count="totalElements">
-      <StatsCountrySelect v-if="boardDef.country" />
+      <StatsScopeSelect v-if="boardDef.country" />
       <BaseSelect v-if="boardDef.filters.includes('type')" :model-value="typeFilter" :options="typeOptions"
         placeholder="All Types" searchable @update:model-value="typeFilter = $event" />
       <BaseSelect v-if="boardDef.filters.includes('modifier')" :model-value="modifierFilter" :options="modifierOptions"

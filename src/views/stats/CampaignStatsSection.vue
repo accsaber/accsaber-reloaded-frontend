@@ -7,12 +7,13 @@ import { computed } from 'vue'
 import CampaignHardestNodes from './CampaignHardestNodes.vue'
 import StatsBar from './StatsBar.vue'
 import StatsBoardPicker from './StatsBoardPicker.vue'
-import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsScopeSelect from './StatsScopeSelect.vue'
 import StatsFilters, { type StatsFilterGroup } from './StatsFilters.vue'
 import StatsNameCell from './StatsNameCell.vue'
 import StatsTable from './StatsTable.vue'
 import { fmt, labelCase, mainCol, numCol, playerCol, rankCol, rateCol } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
+import { useStatsScope } from './useStatsScope'
 import { useStatsTrends } from './useStatsTrends'
 
 type CampaignBoard = 'funnel' | 'trends' | 'most-completed' | 'top-creators'
@@ -78,7 +79,7 @@ const BOARDS: CampaignBoardDef[] = [
 const { setQuery, queryRef, queryListRef } = useQueryParams()
 
 const statusFilter = queryListRef<CampaignStatsStatus>('status')
-const countryFilter = queryRef('country')
+const scope = useStatsScope()
 const minParticipantsParam = queryRef('minParticipants')
 const openCampaign = queryRef('campaign')
 
@@ -90,7 +91,7 @@ const minParticipants = computed(() => {
 function boardFilters(def: CampaignBoardDef): CampaignStatsParams {
   return {
     status: statusFilter.value,
-    country: countryFilter.value || undefined,
+    ...scope.value,
     minParticipants: def.minParticipants ? minParticipants.value : undefined,
   }
 }
@@ -137,7 +138,7 @@ const trends = useStatsTrends({
 
 <template>
   <CampaignHardestNodes v-if="openCampaign && activeBoard === 'funnel'" :campaign-id="openCampaign"
-    :campaign-name="openCampaignName" :country="countryFilter"
+    :campaign-name="openCampaignName" :scope="scope"
     @close="setQuery({ campaign: undefined }, { keepPage: true })" />
 
   <div v-else class="stats-section">
@@ -145,7 +146,7 @@ const trends = useStatsTrends({
       @update:model-value="selectBoard($event, { campaign: undefined })" />
 
     <StatsBar :count="activeBoard === 'trends' ? 0 : totalElements">
-      <StatsCountrySelect />
+      <StatsScopeSelect />
       <StatsFilters :groups="filterGroups" :active="!!boardDef.minParticipants && minParticipants !== 3"
         @change="(key, selected) => setQuery({ [key]: selected })">
         <BaseInput v-if="boardDef.minParticipants" label="Min Participants" type="number" min="0"

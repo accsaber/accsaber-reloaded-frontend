@@ -14,7 +14,7 @@ import DistributionRanking from './DistributionRanking.vue'
 import MissionCalibrationDetail from './MissionCalibrationDetail.vue'
 import StatsBar from './StatsBar.vue'
 import StatsBoardPicker from './StatsBoardPicker.vue'
-import StatsCountrySelect from './StatsCountrySelect.vue'
+import StatsScopeSelect from './StatsScopeSelect.vue'
 import StatsFilters, { type StatsFilterGroup } from './StatsFilters.vue'
 import StatsNameCell from './StatsNameCell.vue'
 import StatsTable from './StatsTable.vue'
@@ -31,6 +31,7 @@ import {
   rateCol,
 } from './statsFormat'
 import { useStatsBoard, type StatsBoardDef, type StatsRow } from './useStatsBoard'
+import { useStatsScope } from './useStatsScope'
 import { useStatsTrends } from './useStatsTrends'
 
 type MissionBoard = 'calibration' | 'xp' | 'trends' | 'most-completed' | 'most-mission-xp'
@@ -107,7 +108,7 @@ const BOARDS: MissionBoardDef[] = [
     filters: [],
     players: true,
     columns: [rankCol, playerCol, mainCol('missionXp', 'Mission XP', 140, fmt.whole), numCol('missionsCompleted', 'Missions', 120)],
-    fetch: (api, params, filters) => api.getMostMissionXp(params, filters.country),
+    fetch: (api, params, filters) => api.getMostMissionXp(params, filters),
   },
 ]
 
@@ -124,7 +125,7 @@ const bandFilter = queryListRef<MissionBand>('band')
 const tierFilter = queryListRef<MissionTier>('tier')
 const typeFilter = queryRef<MissionType>('type')
 const categoryFilter = queryRef('category')
-const countryFilter = queryRef('country')
+const scope = useStatsScope()
 const openTemplate = queryRef('template')
 const skillModeParam = queryRef('skillMode')
 const skillMinParam = queryRef('skillMin')
@@ -156,7 +157,7 @@ function boardFilters(def: MissionBoardDef): MissionStatsParams {
     tier: has('tier') && useTiers ? tierFilter.value : undefined,
     skillMin: has('skillRange') && !useTiers ? skillMin.value : undefined,
     skillMax: has('skillRange') && !useTiers ? skillMax.value : undefined,
-    country: countryFilter.value || undefined,
+    ...scope.value,
     minAssigned: has('minAssigned') ? minAssigned.value : undefined,
   }
 }
@@ -176,7 +177,7 @@ const detailFilters = computed<MissionStatsParams>(() => ({
   tier: skillMode.value === 'tier' ? tierFilter.value : undefined,
   skillMin: skillMode.value === 'range' ? skillMin.value : undefined,
   skillMax: skillMode.value === 'range' ? skillMax.value : undefined,
-  country: countryFilter.value || undefined,
+  ...scope.value,
 }))
 
 const categoryOptions = computed(() => [
@@ -245,14 +246,12 @@ const trends = useStatsTrends<DistributionEntryResponse[]>({
   active: () => activeBoard.value === 'trends',
   filters: () => filters.value,
   load: async (api, range, metric) => {
-    const scope = filters.value
+    const { pool, type, tier } = filters.value
     const [points, types] = await Promise.all([
       metric === 'missionCompletionRate'
-        ? api.getMissionCompletionRate(range, scope)
-        : api.getMissionCompletionsPerDay(range, {
-          pool: scope.pool, type: scope.type, tier: scope.tier, country: scope.country,
-        }),
-      api.getMissionCompletionsByType({ pool: scope.pool, tier: scope.tier, country: scope.country }),
+        ? api.getMissionCompletionRate(range, filters.value)
+        : api.getMissionCompletionsPerDay(range, { pool, type, tier, ...scope.value }),
+      api.getMissionCompletionsByType({ pool, tier, ...scope.value }),
     ])
     return { points, extra: types.map((entry) => ({ ...entry, label: labelCase(entry.label) })) }
   },
@@ -270,7 +269,7 @@ const isRateMetric = computed(() => trends.metric.value.key === 'missionCompleti
       @update:model-value="selectBoard($event, { template: undefined })" />
 
     <StatsBar :count="activeBoard === 'trends' ? 0 : totalElements">
-      <StatsCountrySelect />
+      <StatsScopeSelect />
       <BaseSelect v-if="shows('type')" :model-value="typeFilter" :options="typeOptions" placeholder="All Types"
         searchable @update:model-value="typeFilter = $event as MissionType" />
       <BaseSelect v-if="shows('category')" :model-value="categoryFilter" :options="categoryOptions"
