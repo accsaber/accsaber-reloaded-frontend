@@ -7,13 +7,7 @@ import { useModifierColor } from '@/composables/useModifierColor'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemModifierRef, UserItemResponse } from '@/types/api/items'
 import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
-import {
-  displayItemName,
-  isBorderTypeKey,
-  rarityClass,
-  sortModifiersByKey,
-  userItemTokenContext,
-} from '@/utils/items'
+import { displayItemName, isBorderTypeKey, isTitleItem, rarityClass, sortModifiersByKey, userItemTokenContext } from '@/utils/items'
 import { computed, onMounted, ref, useId, watch } from 'vue'
 
 const props = defineProps<{
@@ -94,7 +88,7 @@ onMounted(() => {
           confirm: confirmed,
           'inventory-cell--deprecated': item.deprecated,
           'inventory-cell--locked': locked,
-          'inventory-cell--title-fx': item.typeKey === 'title' || item.typeKey === 'clan_title_effect',
+          'inventory-cell--title-fx': isTitleItem(item.typeKey),
           'inventory-cell--checked': selectMode && checked,
           'inventory-cell--unselectable': selectMode && !selectable,
         },

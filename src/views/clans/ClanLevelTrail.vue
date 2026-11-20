@@ -30,12 +30,11 @@ const stops = computed<TrailStop[]>(() =>
   }),
 )
 
-const selectedLevel = ref<number | null>(null)
-const selected = computed(() => (selectedLevel.value === null ? null : byLevel.value.get(selectedLevel.value) ?? null))
-
-function toggle(level: number) {
-  selectedLevel.value = selectedLevel.value === level ? null : level
-}
+const rewards = computed(() => stops.value.flatMap((stop) => stop.step ?? []))
+const picked = ref<number | null>(null)
+const selectedLevel = computed(
+  () => picked.value ?? (rewards.value.find((step) => step.level > props.currentLevel) ?? rewards.value[rewards.value.length - 1])?.level ?? null,
+)
 </script>
 
 <template>
@@ -54,7 +53,7 @@ function toggle(level: number) {
           :aria-pressed="selectedLevel === stop.level"
           :aria-current="stop.state === 'current' ? 'step' : undefined"
           :aria-label="`Level ${stop.level} rewards`"
-          @click="toggle(stop.level)"
+          @click="picked = stop.level"
         >
           {{ stop.level }}
         </button>
@@ -63,7 +62,17 @@ function toggle(level: number) {
         </span>
       </li>
     </ol>
-    <ClanLevelReward v-if="selected" :step="selected" :xp-to-go="selected.totalXpRequired - totalXp" />
+    <div class="trail__panel">
+      <ClanLevelReward
+        v-for="step in rewards"
+        :key="step.level"
+        :class="{ 'trail__reward--hidden': step.level !== selectedLevel }"
+        :step="step"
+        :xp-to-go="step.totalXpRequired - totalXp"
+        :ghost="step.level !== selectedLevel"
+        :inert="step.level !== selectedLevel"
+      />
+    </div>
   </div>
 </template>
 
@@ -72,6 +81,18 @@ function toggle(level: number) {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.trail__panel {
+  display: grid;
+}
+
+.trail__panel > * {
+  grid-area: 1 / 1;
+}
+
+.trail__reward--hidden {
+  visibility: hidden;
 }
 
 .trail__track {

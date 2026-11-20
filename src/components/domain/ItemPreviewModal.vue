@@ -5,7 +5,7 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
-import { itemVariantPreviews, rarityClass } from '@/utils/items'
+import { isTitleItem, itemVariantPreviews, rarityClass } from '@/utils/items'
 import { readBorderColorValue, readBorderShapeValue } from '@/utils/cosmetics/readers'
 import { computed, ref, watch } from 'vue'
 
@@ -43,7 +43,7 @@ const isBorder = computed(
     previewItem.value?.typeKey === 'profile_border_color',
 )
 
-const isTitle = computed(() => previewItem.value?.typeKey === 'title' || previewItem.value?.typeKey === 'clan_title_effect')
+const isTitle = computed(() => isTitleItem(previewItem.value?.typeKey))
 
 const shapeValue = computed(() =>
   previewItem.value?.typeKey === 'profile_border_shape'

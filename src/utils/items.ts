@@ -297,3 +297,7 @@ export function userItemTokenContext(
 ): TokenContext {
   return { serial: userItem.serialNumber, stats: userItem.counters ?? undefined }
 }
+
+export function isTitleItem(typeKey: string | null | undefined): boolean {
+  return typeKey === 'title' || typeKey === 'clan_title_effect'
+}

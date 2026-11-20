@@ -24,7 +24,7 @@ import {
   readThumbnailBackgroundValue,
   readTitleValue,
 } from '@/utils/cosmetics/readers'
-import { rarityClass, type TokenContext } from '@/utils/items'
+import { isTitleItem, rarityClass, type TokenContext } from '@/utils/items'
 import { tokenize } from '@/utils/themeTokens'
 import { type EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { TITLE_AURA_PAD } from '@/utils/cosmetics/titleAura'
@@ -108,7 +108,7 @@ const borderPreview = computed<{ shape: BorderShapeValue | null; color: BorderCo
 const pedestalBeamId = `ip-beam-${Math.random().toString(36).slice(2, 9)}`
 
 const isBadge = computed(() => typeKey.value === 'badge')
-const isTitle = computed(() => typeKey.value === 'title' || typeKey.value === 'clan_title_effect')
+const isTitle = computed(() => isTitleItem(typeKey.value))
 const isBackground = computed(() => typeKey.value === 'profile_background')
 
 const badgeValue = computed(() => (isBadge.value ? readBadgeValue(props.item.value) : null))

@@ -2,14 +2,17 @@
 import RewardItemTile from '@/components/domain/RewardItemTile.vue'
 import type { ClanLevelStepResponse } from '@/types/api/clans'
 import { unlockLines } from '@/utils/clans'
+import { isTitleItem } from '@/utils/items'
 import { computed } from 'vue'
 
 const props = defineProps<{
   step: ClanLevelStepResponse
   xpToGo: number
   large?: boolean
+  ghost?: boolean
 }>()
 
+const tileSize = computed(() => (props.large ? 120 : 88))
 const lines = computed(() => unlockLines(props.step.unlocks))
 const status = computed(() =>
   props.xpToGo > 0 ? `${Math.ceil(props.xpToGo).toLocaleString()} XP to go` : 'Unlocked',
@@ -17,7 +20,7 @@ const status = computed(() =>
 </script>
 
 <template>
-  <article class="reward" :class="{ 'reward--large': large }">
+  <article class="reward" :class="{ 'reward--large': large }" :style="{ '--reward-tile': `${tileSize}px` }">
     <header class="reward__head">
       <h3 class="reward__level">Level {{ step.level }}</h3>
       <span class="reward__status">{{ status }}</span>
@@ -27,7 +30,8 @@ const status = computed(() =>
     </ul>
     <ul v-if="step.unlocks.cosmetics.length" class="reward__items">
       <li v-for="item in step.unlocks.cosmetics" :key="item.id" class="reward__item">
-        <RewardItemTile :item="item" :size="large ? 120 : 88" />
+        <span v-if="ghost && !isTitleItem(item.typeKey)" class="reward__ghost" />
+        <RewardItemTile v-else :item="item" :size="tileSize" />
         <span class="reward__name">{{ item.name }}</span>
       </li>
     </ul>
@@ -95,12 +99,13 @@ const status = computed(() =>
   flex-direction: column;
   align-items: center;
   gap: var(--space-xs);
-  min-width: 88px;
+  min-width: var(--reward-tile);
   max-width: 280px;
 }
 
-.reward--large .reward__item {
-  min-width: 120px;
+.reward__ghost {
+  width: var(--reward-tile);
+  height: var(--reward-tile);
 }
 
 .reward__name {

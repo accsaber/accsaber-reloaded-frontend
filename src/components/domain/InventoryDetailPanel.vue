@@ -24,17 +24,7 @@ import type { ItemVariant } from '@/types/cosmetics/common'
 import { formatEssence } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
 import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
-import {
-  displayItemName,
-  isBorderTypeKey,
-  isEquippableTypeKey,
-  obtainableUntilSentence,
-  rarityClass,
-  readItemVariants,
-  resolveItemVariant,
-  sortModifiersByKey,
-  userItemTokenContext,
-} from '@/utils/items'
+import { displayItemName, isBorderTypeKey, isEquippableTypeKey, isTitleItem, obtainableUntilSentence, rarityClass, readItemVariants, resolveItemVariant, sortModifiersByKey, userItemTokenContext } from '@/utils/items'
 import {
   readBorderColorValue,
   readBorderShapeValue,
@@ -262,7 +252,7 @@ const sourceLabel = computed(() => {
   <div v-if="userItem && item" class="inv-detail">
     <div
       class="inv-detail__art"
-      :class="[rarityClass(item.rarity), { 'inv-detail__art--title-fx': item.typeKey === 'title' || item.typeKey === 'clan_title_effect' }]"
+      :class="[rarityClass(item.rarity), { 'inv-detail__art--title-fx': isTitleItem(item.typeKey) }]"
     >
       <BorderComposition
         v-if="showComposition"

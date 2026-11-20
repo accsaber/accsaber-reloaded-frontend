@@ -2,6 +2,8 @@ import { onMounted, onUnmounted, type Ref } from 'vue'
 import { prefersReducedMotion } from '@/composables/useReducedMotion'
 
 export interface StackPointer {
+  x: number
+  y: number
   nx: number
   ny: number
 }
@@ -31,10 +33,9 @@ export function useStackPointer(el: Readonly<Ref<HTMLElement | null>>, margin: n
     }
     const rect = el.value.getBoundingClientRect()
     const stack = 100 / (100 + margin * 2)
-    state = {
-      nx: Math.abs(pointer.x - (rect.left + rect.width / 2)) / (rect.width * stack),
-      ny: Math.abs(pointer.y - (rect.top + rect.height / 2)) / (rect.height * stack),
-    }
+    const x = (pointer.x - (rect.left + rect.width / 2)) / (rect.width * stack)
+    const y = (pointer.y - (rect.top + rect.height / 2)) / (rect.height * stack)
+    state = { x, y, nx: Math.abs(x), ny: Math.abs(y) }
     return state
   }
 

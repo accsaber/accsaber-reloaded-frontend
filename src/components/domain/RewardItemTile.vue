@@ -5,7 +5,7 @@ import VariantSplitPreview from '@/components/domain/VariantSplitPreview.vue'
 import ItemPreviewModal from '@/components/domain/ItemPreviewModal.vue'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
-import { itemVariantPreviews, rarityClass } from '@/utils/items'
+import { isTitleItem, itemVariantPreviews, rarityClass } from '@/utils/items'
 import { computed, ref } from 'vue'
 
 const props = withDefaults(
@@ -20,7 +20,7 @@ const itemTypeStore = useItemTypeStore()
 const open = ref(false)
 
 const isCrate = computed(() => props.item.typeKey === 'crate')
-const isTitle = computed(() => props.item.typeKey === 'title' || props.item.typeKey === 'clan_title_effect')
+const isTitle = computed(() => isTitleItem(props.item.typeKey))
 const variants = computed(() => itemVariantPreviews(props.item))
 
 const hoverTitle = computed(() => {
