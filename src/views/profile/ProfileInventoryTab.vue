@@ -72,6 +72,8 @@ const typeKeys = ref<string[]>([])
 const rarities = ref<ItemRarity[]>([])
 const modifierKeys = ref<string[]>([])
 const collectionIds = ref<string[]>([])
+const duplicates = ref(false)
+const equipped = ref(false)
 const search = ref('')
 
 const unownedParam = queryRef<'1'>('unowned')
@@ -230,6 +232,8 @@ const request = computed(() => ({
     rarity: rarities.value.length > 0 ? rarities.value : undefined,
     modifierKey: modifierKeys.value.length > 0 ? modifierKeys.value : undefined,
     crateItemId: collectionIds.value.length > 0 ? collectionIds.value : undefined,
+    duplicates: duplicates.value || undefined,
+    equipped: equipped.value || undefined,
     search: search.value.trim() || undefined,
     includeUnowned: showUnowned.value,
   },
@@ -522,7 +526,7 @@ async function handleDisintegrateConfirm(entries: DisintegrateEntryRequest[]) {
   }
 }
 
-watch([typeKeys, rarities, modifierKeys, collectionIds, search], () => resetPage())
+watch([typeKeys, rarities, modifierKeys, collectionIds, duplicates, equipped, search], () => resetPage())
 
 watch(() => JSON.stringify(request.value), () => fetchInventory(), { immediate: true })
 
@@ -566,6 +570,8 @@ onUnmounted(() => {
       v-model:rarities="rarities"
       v-model:modifier-keys="modifierKeys"
       v-model:collection-ids="collectionIds"
+      v-model:duplicates="duplicates"
+      v-model:equipped="equipped"
       :user-id="userId"
       :sort-state="sortState"
       :collections="collections"

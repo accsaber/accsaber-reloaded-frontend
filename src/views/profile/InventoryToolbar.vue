@@ -35,6 +35,8 @@ const typeKeys = defineModel<string[]>('typeKeys', { required: true })
 const rarities = defineModel<ItemRarity[]>('rarities', { required: true })
 const modifierKeys = defineModel<string[]>('modifierKeys', { required: true })
 const collectionIds = defineModel<string[]>('collectionIds', { required: true })
+const duplicates = defineModel<boolean>('duplicates', { required: true })
+const equipped = defineModel<boolean>('equipped', { required: true })
 
 const sortOptions = [
   { value: 'date', label: 'Newest' },
@@ -60,7 +62,9 @@ const hasActiveFilters = computed(
     typeKeys.value.length > 0 ||
     rarities.value.length > 0 ||
     modifierKeys.value.length > 0 ||
-    collectionIds.value.length > 0,
+    collectionIds.value.length > 0 ||
+    duplicates.value ||
+    equipped.value,
 )
 
 function clearFilters() {
@@ -68,6 +72,8 @@ function clearFilters() {
   rarities.value = []
   modifierKeys.value = []
   collectionIds.value = []
+  duplicates.value = false
+  equipped.value = false
 }
 </script>
 
@@ -94,7 +100,8 @@ function clearFilters() {
           <FilterButton :active="filtersOpen || hasActiveFilters" />
         </template>
         <ItemFilterPanel v-model:rarities="rarities" v-model:type-keys="typeKeys"
-          v-model:modifier-keys="modifierKeys" v-model:collection-ids="collectionIds" :type-groups="typeGroups"
+          v-model:modifier-keys="modifierKeys" v-model:collection-ids="collectionIds" v-model:duplicates="duplicates"
+          v-model:equipped="equipped" show-held :type-groups="typeGroups"
           :modifier-options="modifierOptions" :collection-options="collectionOptions"
           :has-active-filters="hasActiveFilters" @clear="clearFilters" />
       </FilterPopover>

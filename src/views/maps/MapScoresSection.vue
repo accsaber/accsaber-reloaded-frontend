@@ -10,7 +10,7 @@ import { useAppearance } from '@/composables/useAppearance'
 import { usePageableRoute } from '@/composables/usePageableRoute'
 import { useAuthStore } from '@/stores/auth'
 import { useModifierStore } from '@/stores/modifiers'
-import type { UserRelationType } from '@/types/api/relations'
+import type { RelationFilterType } from '@/types/api/relations'
 import type { CategoryCode, DifficultyScoreDisplay, ScoreDisplay, UserRefDisplay } from '@/types/display'
 import { countryOptionsFor } from '@/utils/countries'
 import { formatAccuracy, formatPlayCount, formatRelativeDate } from '@/utils/formatters'
@@ -77,7 +77,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort, resetPage } 
 
 const searchQuery = ref('')
 const countryFilter = ref('')
-const relationFilter = ref<UserRelationType | ''>('')
+const relationFilter = ref<RelationFilterType | ''>('')
 
 const scores = ref<DifficultyScoreDisplay[]>([])
 const totalPages = ref(0)

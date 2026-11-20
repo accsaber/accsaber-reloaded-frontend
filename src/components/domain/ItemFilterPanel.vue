@@ -45,6 +45,9 @@ withDefaults(
     showPrice?: boolean
     minPrice?: number | null
     maxPrice?: number | null
+    showHeld?: boolean
+    duplicates?: boolean
+    equipped?: boolean
     hasActiveFilters: boolean
   }>(),
   {
@@ -56,6 +59,9 @@ withDefaults(
     showPrice: false,
     minPrice: null,
     maxPrice: null,
+    showHeld: false,
+    duplicates: false,
+    equipped: false,
   },
 )
 
@@ -67,6 +73,8 @@ const emit = defineEmits<{
   'update:collectionIds': [value: string[]]
   'update:minPrice': [value: number | null]
   'update:maxPrice': [value: number | null]
+  'update:duplicates': [value: boolean]
+  'update:equipped': [value: boolean]
   clear: []
 }>()
 
@@ -84,6 +92,18 @@ function commitPrice(edge: 'min' | 'max', event: Event) {
 
 <template>
   <div class="item-filters">
+    <fieldset v-if="showHeld" class="item-filters__group">
+      <legend class="item-filters__legend">Show only</legend>
+      <label class="item-filters__option">
+        <input type="checkbox" :checked="duplicates" @change="emit('update:duplicates', !duplicates)" />
+        <span class="item-filters__option-label item-filters__option-label--plain">Duplicates</span>
+      </label>
+      <label class="item-filters__option">
+        <input type="checkbox" :checked="equipped" @change="emit('update:equipped', !equipped)" />
+        <span class="item-filters__option-label item-filters__option-label--plain">Equipped</span>
+      </label>
+    </fieldset>
+
     <fieldset class="item-filters__group">
       <legend class="item-filters__legend">Rarity</legend>
       <label

@@ -4,7 +4,7 @@ import DataTable from '@/components/common/DataTable.vue'
 import PaginationControls from '@/components/common/PaginationControls.vue'
 import UserChip from '@/components/domain/UserChip.vue'
 import { useCategoryStore } from '@/stores/categories'
-import type { ScoreRelationType } from '@/types/api/relations'
+import type { RelationFilterType } from '@/types/api/relations'
 import type { LeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -15,7 +15,7 @@ import { computed, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 const props = withDefaults(defineProps<{
-  relation?: ScoreRelationType
+  relation?: RelationFilterType
   category?: CategoryCode
 }>(), {
   relation: undefined,
@@ -43,6 +43,7 @@ const rows = computed<Record<string, unknown>[]>(
 const emptyMessage = computed(() => {
   if (props.relation === 'follower') return 'No followed players ranked'
   if (props.relation === 'rival') return 'No rivals ranked'
+  if (props.relation === 'clan') return 'No clanmates ranked'
   return 'No players ranked'
 })
 

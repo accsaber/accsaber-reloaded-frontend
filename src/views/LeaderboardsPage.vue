@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
 import { useLeaderboardCacheStore } from '@/stores/leaderboardCache'
 import { useLevelStore } from '@/stores/levels'
-import type { UserRelationType } from '@/types/api/relations'
+import type { RelationFilterType } from '@/types/api/relations'
 import type { LeaderboardResponse, XpLeaderboardResponse } from '@/types/api/users'
 import type { CategoryCode, TableColumn, UserRefDisplay } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -65,7 +65,7 @@ const { currentPage, sortState, paginationParams, setPage, setSort } = usePageab
 const { queryRef } = useQueryParams()
 
 const countryFilter = queryRef('country')
-const relationFilter = queryRef<UserRelationType>('relation')
+const relationFilter = queryRef<RelationFilterType>('relation')
 const searchQuery = queryRef('search')
 const showInactive = ref(true)
 const loading = ref(true)

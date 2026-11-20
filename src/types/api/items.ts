@@ -245,6 +245,8 @@ export interface InventoryListParams extends PaginationParams {
   modifierKey?: string | string[]
   crateItemId?: string | string[]
   tradeable?: boolean
+  duplicates?: boolean
+  equipped?: boolean
   search?: string
 }
 

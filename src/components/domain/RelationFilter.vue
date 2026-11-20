@@ -1,29 +1,30 @@
 <script setup lang="ts">
 import BaseSelect from '@/components/common/BaseSelect.vue'
 import { useAuthStore } from '@/stores/auth'
-import type { UserRelationType } from '@/types/api/relations'
+import type { RelationFilterType } from '@/types/api/relations'
 import { computed } from 'vue'
 
 defineProps<{
-  modelValue: UserRelationType | ''
+  modelValue: RelationFilterType | ''
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: UserRelationType | '']
+  'update:modelValue': [value: RelationFilterType | '']
 }>()
 
 const authStore = useAuthStore()
 
 const visible = computed(() => authStore.isLoggedIn)
 
-const options = [
+const options = computed(() => [
   { value: '', label: 'Everyone' },
   { value: 'follower', label: 'Following' },
   { value: 'rival', label: 'Rivaling' },
-]
+  ...(authStore.userProfile?.clan ? [{ value: 'clan', label: 'Clan' }] : []),
+])
 
 function handleChange(value: string) {
-  emit('update:modelValue', value as UserRelationType | '')
+  emit('update:modelValue', value as RelationFilterType | '')
 }
 </script>
 

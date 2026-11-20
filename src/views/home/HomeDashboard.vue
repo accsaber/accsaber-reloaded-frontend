@@ -3,7 +3,7 @@ import BaseTabs from '@/components/common/BaseTabs.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/categories'
-import type { ScoreRelationType } from '@/types/api/relations'
+import type { RelationFilterType } from '@/types/api/relations'
 import type { CategoryCode, Tab } from '@/types/display'
 import { computed, ref } from 'vue'
 import HomeActions from './HomeActions.vue'
@@ -12,14 +12,15 @@ import HomeRanking from './HomeRanking.vue'
 
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
-const relation = ref<ScoreRelationType>('follower')
+const relation = ref<RelationFilterType>('follower')
 const category = ref<CategoryCode>('overall')
 const accent = computed(() => categoryStore.getAccent(category.value))
 
-const relationTabs: Tab[] = [
+const relationTabs = computed<Tab[]>(() => [
   { key: 'follower', label: 'Following' },
   { key: 'rival', label: 'Rivals' },
-]
+  ...(authStore.userProfile?.clan ? [{ key: 'clan', label: 'Clan' }] : []),
+])
 </script>
 
 <template>

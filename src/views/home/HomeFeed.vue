@@ -8,7 +8,7 @@ import ScoreFeedCard from '@/components/domain/ScoreFeedCard.vue'
 import { useNow } from '@/composables/useNow'
 import { useCategoryStore } from '@/stores/categories'
 import { useModifierStore } from '@/stores/modifiers'
-import type { ScoreRelationType } from '@/types/api/relations'
+import type { RelationFilterType } from '@/types/api/relations'
 import type { ScoreResponse } from '@/types/api/users'
 import type { CategoryCode, ScoreDisplay, ScoreFeedEntry } from '@/types/display'
 import type { Page } from '@/types/pagination'
@@ -18,7 +18,7 @@ import { computed, ref, watch } from 'vue'
 const SIZE = 6
 
 const props = defineProps<{
-  relation: ScoreRelationType
+  relation: RelationFilterType
   category: CategoryCode
 }>()
 
