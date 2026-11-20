@@ -8,6 +8,7 @@ const TARGET_WAIT_MS = 500
 const IMAGE_KIND_BY_ROUTE: Record<string, string> = {
   'map-detail': 'cover',
   'ranking-map-detail': 'cover',
+  'ranking-hub-detail': 'cover',
   'player-profile': 'avatar',
   'clan-detail': 'clan',
 }
