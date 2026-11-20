@@ -1,4 +1,5 @@
 import { computed, onUnmounted, ref, toValue, watch, type MaybeRefOrGetter, type Ref } from 'vue'
+import { readNavbarHeight } from '@/utils/navbar'
 import { useClickOutside } from './useClickOutside'
 
 const VIEWPORT_EDGE = 8
@@ -36,9 +37,10 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
   let openTimer: ReturnType<typeof setTimeout> | null = null
   let closeTimer: ReturnType<typeof setTimeout> | null = null
   let resizeObserver: ResizeObserver | null = null
+  let topEdge = 0
 
   function widthStyle(rect: DOMRect, style: Record<string, string>): number {
-    const panelWidth = panelRef.value?.getBoundingClientRect().width ?? 0
+    const panelWidth = panelRef.value?.offsetWidth ?? 0
     if (opts.width === 'trigger') {
       style.width = `${rect.width}px`
       return rect.width
@@ -60,9 +62,9 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
   }
 
   function opensAbove(rect: DOMRect, gap: number): boolean {
-    const height = panelRef.value?.getBoundingClientRect().height || opts.maxHeight || 0
+    const height = panelRef.value?.offsetHeight || opts.maxHeight || 0
     const below = window.innerHeight - rect.bottom - gap
-    const above = rect.top - gap
+    const above = rect.top - gap - topEdge
     const preferBelow = (opts.side ?? 'below') === 'below'
     const [primary, secondary] = preferBelow ? [below, above] : [above, below]
     const flip = height > 0 && primary < height && secondary > primary
@@ -83,7 +85,7 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
     if (above) style.bottom = `${window.innerHeight - rect.top + gap}px`
     else style.top = `${rect.bottom + gap}px`
     if (opts.maxHeight) {
-      const free = (above ? rect.top : window.innerHeight - rect.bottom) - gap - VIEWPORT_EDGE
+      const free = (above ? rect.top - topEdge : window.innerHeight - rect.bottom) - gap - VIEWPORT_EDGE
       style.maxHeight = `${Math.min(opts.maxHeight, free)}px`
     }
     style.transformOrigin = `${above ? 'bottom' : 'top'} ${align === 'end' ? 'right' : align === 'center' ? 'center' : 'left'}`
@@ -146,6 +148,7 @@ export function useFloatingPanel(opts: FloatingPanelOptions = {}) {
 
   watch(isOpen, (value) => {
     if (value) {
+      topEdge = readNavbarHeight()
       updatePosition()
       window.addEventListener('scroll', onReposition, SCROLL_OPTS)
       window.addEventListener('resize', onReposition, { passive: true })

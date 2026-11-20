@@ -1,3 +1,4 @@
+import { readNavbarHeight } from '@/utils/navbar'
 import { readStored, writeStored } from '@/utils/storage'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
@@ -20,11 +21,6 @@ function readPosition(key: string): StoredPosition | null {
   return readStored(key, parsePosition, null)
 }
 
-function topInset(inset: number): number {
-  const navbar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'))
-  return (Number.isFinite(navbar) ? navbar : 0) + inset
-}
-
 export function useWallSnap(storageKey: string, size: number, inset: number) {
   const stored = readPosition(storageKey)
   const viewport = ref({ width: window.innerWidth, height: window.innerHeight })
@@ -33,10 +29,11 @@ export function useWallSnap(storageKey: string, size: number, inset: number) {
 
   let start: { pointerX: number; pointerY: number; x: number; y: number } | null = null
   let swallowClick = false
+  let top = readNavbarHeight() + inset
 
   function clampY(value: number): number {
     const max = viewport.value.height - size - inset
-    return Math.max(topInset(inset), Math.min(max, value))
+    return Math.max(top, Math.min(max, value))
   }
 
   const y = ref(clampY(stored?.y ?? Number.POSITIVE_INFINITY))
@@ -80,6 +77,7 @@ export function useWallSnap(storageKey: string, size: number, inset: number) {
 
   function onResize() {
     viewport.value = { width: window.innerWidth, height: window.innerHeight }
+    top = readNavbarHeight() + inset
     y.value = clampY(y.value)
   }
 

@@ -3,6 +3,7 @@ import StatBlock from '@/components/common/StatBlock.vue'
 import CategoryTabs from '@/components/domain/CategoryTabs.vue'
 import type { StatsDiffResponse, UserCategoryStatisticsResponse } from '@/types/api/users'
 import type { CategoryCode } from '@/types/display'
+import { readNavbarHeight } from '@/utils/navbar'
 import ApToNextTooltip from '@/views/profile/ApToNextTooltip.vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -60,8 +61,7 @@ function observeTabs() {
     emit('tabs-hidden', false)
     return
   }
-  const navbarHeight
-    = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 64
+  const navbarHeight = readNavbarHeight()
   observer = new IntersectionObserver(
     ([entry]) => emit('tabs-hidden', entry.boundingClientRect.bottom <= navbarHeight),
     { rootMargin: `-${navbarHeight}px 0px 0px 0px` },

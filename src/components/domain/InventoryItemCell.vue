@@ -2,6 +2,7 @@
 import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
+import { useFloatingPanel } from '@/composables/useFloatingPanel'
 import { useModifierColor } from '@/composables/useModifierColor'
 import { useItemModifierStore } from '@/stores/itemModifiers'
 import type { ItemModifierRef, UserItemResponse } from '@/types/api/items'
@@ -13,7 +14,7 @@ import {
   sortModifiersByKey,
   userItemTokenContext,
 } from '@/utils/items'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useId, watch } from 'vue'
 
 const props = defineProps<{
   userItem: UserItemResponse
@@ -59,6 +60,16 @@ const cellAccentStyle = computed(() => (accent.value ? { '--cell-accent': accent
 const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))
 const fullItemName = computed(() => displayItemName(modifiers.value, item.value.name))
 
+const tipId = useId()
+const { isOpen, triggerRef, panelRef, panelStyle, onTriggerEnter, onTriggerLeave } = useFloatingPanel({
+  minWidth: 180,
+  maxWidth: 260,
+  side: 'above',
+  align: 'center',
+  gap: 8,
+  hover: { openDelay: 0, closeDelay: 0 },
+})
+
 const confirmed = ref(false)
 
 watch(() => props.equipped || (props.selectMode && props.checked), (now, was) => { confirmed.value = !!now && !was })
@@ -69,7 +80,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="inventory-cell-wrap">
+  <div ref="triggerRef" class="inventory-cell-wrap" @mouseenter="onTriggerEnter" @mouseleave="onTriggerLeave">
     <button
       type="button"
       class="inventory-cell"
@@ -90,6 +101,7 @@ onMounted(() => {
       ]"
       :style="cellAccentStyle"
       :aria-label="item.name"
+      :aria-describedby="isOpen ? tipId : undefined"
       :aria-pressed="selectMode ? !!checked : selected"
       :disabled="selectMode && !selectable"
       @click="onClick"
@@ -140,14 +152,25 @@ onMounted(() => {
       </span>
     </button>
 
-    <div class="inventory-cell-tooltip" role="tooltip" :style="cellAccentStyle">
-      <span class="inventory-cell-tooltip__name" :style="itemNameStyle">{{ fullItemName }}</span>
-      <p v-if="item.description" class="inventory-cell-tooltip__desc">{{ item.description }}</p>
-      <span class="inventory-cell-tooltip__meta">
-        <span class="inventory-cell-tooltip__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
-        <template v-if="!locked && userItem.serialNumber != null"> · #{{ userItem.serialNumber }}</template>
-      </span>
-    </div>
+    <Teleport to="body">
+      <Transition name="pop">
+        <div
+          v-if="isOpen"
+          :id="tipId"
+          ref="panelRef"
+          class="inventory-cell-tooltip"
+          :style="[panelStyle, cellAccentStyle]"
+          role="tooltip"
+        >
+          <span class="inventory-cell-tooltip__name" :style="itemNameStyle">{{ fullItemName }}</span>
+          <p v-if="item.description" class="caption">{{ item.description }}</p>
+          <span class="inventory-cell-tooltip__meta">
+            <span class="inventory-cell-tooltip__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
+            <template v-if="!locked && userItem.serialNumber != null"> · #{{ userItem.serialNumber }}</template>
+          </span>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -160,45 +183,22 @@ onMounted(() => {
   container-name: inv-cell;
 }
 
-.inventory-cell-wrap:hover .inventory-cell-tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 .inventory-cell-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translate(-50%, 4px);
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  min-width: 180px;
-  max-width: 260px;
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-elevated);
   border: 1px solid var(--cell-accent, var(--bg-overlay));
   border-radius: var(--radius-card);
   pointer-events: none;
-  opacity: 0;
-  z-index: 30;
+  z-index: 10000;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .inventory-cell-tooltip__name {
-  font-family: var(--font-sans);
   font-size: var(--text-body);
   font-weight: 600;
-  color: var(--text-primary);
-}
-
-.inventory-cell-tooltip__desc {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  line-height: 1.4;
 }
 
 .inventory-cell-tooltip__meta {
