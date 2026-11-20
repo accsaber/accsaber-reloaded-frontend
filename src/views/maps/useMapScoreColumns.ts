@@ -13,12 +13,12 @@ const FIELD_COLUMNS: Partial<Record<ScoreRowField, TableColumn>> = {
   ap: { key: 'ap', label: 'AP', sortable: true, align: 'right', mono: true, width: '118px' },
 }
 
-export function useMapScoreColumns(filtering: () => boolean) {
+export function useMapScoreColumns() {
   const { scoreRowFields } = useAppearance()
   return computed(() =>
     buildScoreColumns(scoreRowFields.value, {
       leading: [
-        { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: filtering() ? '150px' : '80px' },
+        { key: 'rank', label: '#', sortable: true, align: 'right', mono: true, width: '80px' },
         { key: 'player', label: 'Player', align: 'left', width: '240px', flex: true },
         { key: 'score', label: 'Score', sortable: true, align: 'right', mono: true, width: '108px' },
       ],

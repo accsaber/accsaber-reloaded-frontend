@@ -90,7 +90,7 @@ const detailUserId = ref('')
 
 const filtering = computed(() => !!countryFilter.value || !!relationFilter.value)
 
-const columns = useMapScoreColumns(() => filtering.value)
+const columns = useMapScoreColumns()
 
 const rows = computed(() => {
   const pageOffset = (paginationParams.value.page ?? 0) * (paginationParams.value.size ?? 50)
@@ -337,6 +337,11 @@ watch(() => JSON.stringify(scoresRequest.value), () => {
   font-size: var(--text-caption);
   color: var(--text-secondary);
   font-weight: 400;
+  display: block;
+}
+
+.ms-card__rank .map-scores__rank-global {
+  display: inline;
   margin-left: 2px;
 }
 

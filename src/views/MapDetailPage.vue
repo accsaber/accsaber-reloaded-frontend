@@ -41,7 +41,7 @@ const error = ref(false)
 
 const activeTab = ref('leaderboard')
 const statsVisited = ref(false)
-const scoreColumns = useMapScoreColumns(() => false)
+const scoreColumns = useMapScoreColumns()
 const scoresTableWidth = computed(() => tableNaturalWidth(scoreColumns.value))
 const contentTabs = [
   { key: 'leaderboard', label: 'Leaderboard' },
