@@ -1,9 +1,6 @@
 import { env } from 'cloudflare:workers'
 
-const CRAWLER_PATTERN =
-  /discordbot|twitterbot|facebookexternalhit|slackbot|telegrambot|whatsapp|linkedinbot|redditbot|embedly|pinterest|vkshare|skypeuripreview/i
-
-const OG_PATH_PATTERN = /^\/(players|maps|campaigns)\/([^/]+)$/
+const OG_PATH_PATTERN = /^\/og\/(players|maps|campaigns)\/([^/]+)$/
 
 const OG_CACHE_SECONDS = 300
 
@@ -41,10 +38,9 @@ function applyGate(headers: Headers, gated: boolean) {
   if (gated && env.STAGING_GATE_KEY) headers.set(GATE_HEADER, env.STAGING_GATE_KEY)
 }
 
-async function renderOpenGraph(url: URL, request: Request): Promise<Response | null> {
+async function renderOpenGraph(url: URL): Promise<Response | null> {
   const match = OG_PATH_PATTERN.exec(url.pathname)
   if (!match) return null
-  if (!CRAWLER_PATTERN.test(request.headers.get('user-agent') || '')) return null
 
   const [, resource, id] = match
   const upstream = new URL(`og/${resource}/${id}`, apiBase())
@@ -84,7 +80,7 @@ export default {
       createProxy('/proxy/beatsaver/', 'https://api.beatsaver.com') ||
       createProxy('/proxy/beatleader/', 'https://api.beatleader.com') ||
       createProxy('/proxy/scoresaber/', 'https://scoresaber.com') ||
-      (await renderOpenGraph(url, request)) ||
+      (await renderOpenGraph(url)) ||
       env.ASSETS.fetch(request)
     )
   },
