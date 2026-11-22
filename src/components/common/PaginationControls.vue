@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useMediaQuery } from '@/composables/useMediaQuery'
+import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { computed, nextTick, ref } from 'vue'
 
 type Gap = 'left' | 'right'
@@ -15,7 +15,7 @@ const emit = defineEmits<{
   'update:page': [page: number]
 }>()
 
-const narrow = useMediaQuery('(max-width: 767px)')
+const narrow = useMediaQuery(PHONE_MEDIA_QUERY)
 const jumping = ref<Gap | null>(null)
 const jumpInput = ref('')
 const jumpRef = ref<HTMLInputElement[]>([])

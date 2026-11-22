@@ -26,6 +26,7 @@ import {
   type BrewSplash,
 } from '@/utils/cosmetics/titleEffects'
 import { hauntCharStyle } from '@/utils/cosmetics/titleHaunt'
+import { starlitCharStyle } from '@/utils/cosmetics/starPass'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
 import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle, torchCharStyle, torchFlameStyle, warcryArcStyles, warcryCharStyle } from '@/utils/cosmetics/titleSchools'
@@ -36,7 +37,7 @@ import {
   pickInterpolatedState,
 } from '@/utils/cosmetics/interpolate'
 import { randBetween as rand, sinHash01 } from '@/utils/random'
-import { computed, ref, useId, watch } from 'vue'
+import { computed, ref, useId, useTemplateRef, watch } from 'vue'
 import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
@@ -49,7 +50,7 @@ type GlyphKey =
   | 'brew' | 'sprout' | 'ascent' | 'slice' | 'tick' | 'metronome' | 'scrawl' | 'reel' | 'restart'
   | 'punch' | 'hammer' | 'excavate' | 'quest' | 'scales'
   | 'quake' | 'warcry' | 'torch' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
-  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune'
+  | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune' | 'starlit'
 
 type GlyphFx<K extends GlyphKey> = (
   tMs: number,
@@ -182,6 +183,7 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('lantern', lanternCharStyle),
   glyph('eclipse', (t, i, n, spec, light) => eclipseCharStyle(t, i, n, spec, light, state.value.color)),
   glyph('transmute', (t, i, n, spec, light) => transmuteCharStyle(t, i, n, spec, light, state.value.color)),
+  glyph('starlit', starlitCharStyle),
   glyph('rune', (t, i, _n, spec, light) => (runeActive(t, i, props.value.text, spec) ? runeCharStyle(spec, light) : {})),
   boilGlyph,
   liftGlyph,
@@ -244,7 +246,8 @@ const needsTimeline = computed(() => {
   return isAnimated(props.value) || props.value.states.some((s) => s.glisten?.enabled) || fxEnabled.value
 })
 
-const { tMs } = useTimeline({ active: () => needsTimeline.value })
+const rootRef = useTemplateRef<HTMLElement>('root')
+const { tMs } = useTimeline({ active: () => needsTimeline.value, el: rootRef })
 
 const state = computed<TitleStateValue>(() =>
   pickInterpolatedState(
@@ -416,6 +419,7 @@ const auraLinks = computed<TitleAuraLinks>(() => ({
   bleed: props.value.bleed,
   lantern: props.value.lantern,
   boil: props.value.boil,
+  starlit: props.value.starlit,
 }))
 
 const auraKey = computed(() =>
@@ -783,6 +787,7 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 
 <template>
   <span
+    ref="root"
     class="title-renderer"
     :class="fontClass"
     :style="textStyle"

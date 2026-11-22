@@ -1,61 +1,43 @@
-import { onUnmounted, ref, watchEffect, type Ref } from 'vue'
+import { onMounted, ref, watch, type Ref } from 'vue'
 import { useReducedMotion } from '@/composables/useReducedMotion'
+import { useRenderLoop } from '@/composables/useRenderLoop'
+import { observeVisible } from '@/utils/observe'
 
-export interface UseTimelineOptions {
+const MAX_GAP_MS = 100
+
+interface UseTimelineOptions {
   active: () => boolean
-  reducedMotion?: boolean
+  el?: Readonly<Ref<Element | null>>
 }
 
 export function useTimeline(options: UseTimelineOptions): { tMs: Ref<number> } {
   const tMs = ref(0)
+  const reduced = useReducedMotion()
+  const visible = ref(true)
+  let last = 0
 
-  const reducedRef = useReducedMotion()
-  const reduced = () => options.reducedMotion ?? reducedRef.value
+  const running = () => visible.value && !reduced.value && options.active()
 
-  let rafId: number | null = null
-  let baseTime = 0
-  const docVisible = ref(typeof document === 'undefined' || !document.hidden)
-
-  function tick(now: number) {
-    tMs.value = now - baseTime
-    rafId = requestAnimationFrame(tick)
-  }
+  const loop = useRenderLoop((now) => {
+    if (last) tMs.value += Math.min(now - last, MAX_GAP_MS)
+    last = now
+  }, running)
 
   function start() {
-    if (rafId !== null) return
-    baseTime = performance.now() - tMs.value
-    rafId = requestAnimationFrame(tick)
+    last = 0
+    loop.start()
   }
 
-  function stop() {
-    if (rafId === null) return
-    cancelAnimationFrame(rafId)
-    rafId = null
-  }
+  watch(running, start)
+  onMounted(start)
 
-  const onVisibilityChange = () => {
-    docVisible.value = !document.hidden
-  }
-
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', onVisibilityChange)
-  }
-
-  watchEffect(() => {
-    if (reduced()) {
-      stop()
-      return
-    }
-    if (docVisible.value && options.active()) start()
-    else stop()
-  })
-
-  onUnmounted(() => {
-    stop()
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-    }
-  })
+  watch(
+    () => options.el?.value,
+    (el, _old, onCleanup) => {
+      if (el) onCleanup(observeVisible(el, (v) => { visible.value = v }))
+    },
+    { immediate: true, flush: 'post' },
+  )
 
   return { tMs }
 }

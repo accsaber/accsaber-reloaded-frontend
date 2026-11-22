@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TitleAscensionAura from '@/components/cosmetics/titles/TitleAscensionAura.vue'
+import TitleAuroraAura from '@/components/cosmetics/titles/TitleAuroraAura.vue'
 import TitleBloodAura from '@/components/cosmetics/titles/TitleBloodAura.vue'
 import TitleConstellationAura from '@/components/cosmetics/titles/TitleConstellationAura.vue'
 import TitleCoronaAura from '@/components/cosmetics/titles/TitleCoronaAura.vue'
@@ -46,6 +47,7 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   sigil: TitleSigilAura,
   ghosts: TitleGhostsAura,
   lantern: TitleLanternAura,
+  aurora: TitleAuroraAura,
   corona: TitleCoronaAura,
   earth: TitleEarthAura,
   wind: TitleWindAura,
@@ -76,6 +78,7 @@ const LINKED: Partial<Record<TitleAuraType, keyof TitleAuraLinks>> = {
   blood: 'bleed',
   lantern: 'lantern',
   graffiti: 'boil',
+  aurora: 'starlit',
 }
 
 const props = defineProps<{

@@ -1,6 +1,8 @@
 export interface ShapeTrace {
   ds: string[]
   viewBox: string
+  wall?: string
+  hole?: string
 }
 
 export interface TraceLoop {
@@ -23,7 +25,7 @@ export interface TracedShape {
 
 const SAMPLES = 150
 
-function readBox(viewBox: string): TraceBox {
+export function traceBox(viewBox: string): TraceBox {
   const nums = viewBox.split(' ').map(Number)
   const ok = nums.length === 4 && nums.every((n) => Number.isFinite(n)) && nums[2] > 0 && nums[3] > 0
   return ok ? { x: nums[0], y: nums[1], w: nums[2], h: nums[3] } : { x: 0, y: 0, w: 100, h: 100 }
@@ -56,7 +58,16 @@ export function traceShape(trace: ShapeTrace | null | undefined): TracedShape {
   loops.forEach((lp, i) => {
     if (lp.len > loops[main].len) main = i
   })
-  return { loops, main, vb: readBox(trace.viewBox) }
+  return { loops, main, vb: traceBox(trace.viewBox) }
+}
+
+const JUMP = 4
+
+export function onEdge(lp: TraceLoop, u: number): boolean {
+  const n = lp.pts.length - 1
+  const i = Math.min(n - 1, Math.floor(u * n))
+  const seg = Math.hypot(lp.pts[i + 1].x - lp.pts[i].x, lp.pts[i + 1].y - lp.pts[i].y)
+  return seg < (lp.len / n) * JUMP
 }
 
 export function loopPoint(lp: TraceLoop, u: number, vb: TraceBox, w: number, h: number): { x: number; y: number } {

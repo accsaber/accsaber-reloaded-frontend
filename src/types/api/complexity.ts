@@ -131,24 +131,28 @@ export interface RaterCoefficients {
   resetSlope: number
   dotSlope: number
   bottomUpSlope: number
+  crossoverSlope: number
+  topRowSlope: number
+  diagonalSlope: number
+  verticalStackSlope: number
+  outerSlope: number
   notesSlope: number
   njsSlope: number
-  boardSlope: number
 }
 
-export interface RaterBoardGate {
+export interface RaterPayFair {
+  minPlayerPlays: number
+  topPlays: number
+  usualPlays: number
+  minPlays: number
   minScores: number
   fullScores: number
-  topPlays: number
-  minPlayers: number
-  minPlayerPlays: number
-  maxNudge: number
+  maxWeight: number
 }
 
 export interface ComplexityRaterSpec {
-  board: RaterBoardGate
+  payFair: RaterPayFair
   categories: Record<string, RaterCoefficients>
-  boardCategories: Record<string, RaterCoefficients>
 }
 
 export interface ComplexityRaterResponse {

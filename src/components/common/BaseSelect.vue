@@ -27,10 +27,7 @@ const { isOpen, containerRef, triggerRef, panelRef, panelStyle, toggle: togglePa
 const search = ref('')
 const searchRef = ref<HTMLInputElement | null>(null)
 
-const selectedLabel = computed(() => {
-  const opt = props.options.find((o) => o.value === props.modelValue)
-  return opt?.label ?? props.placeholder ?? 'Select...'
-})
+const selected = computed(() => props.options.find((o) => o.value === props.modelValue))
 
 const filteredOptions = computed(() => {
   if (!search.value) return props.options
@@ -61,7 +58,9 @@ function select(value: string) {
     <label v-if="label" class="field-label">{{ label }}</label>
     <button ref="triggerRef" class="base-select__trigger" :class="{ 'base-select__trigger--open': isOpen }"
       @click="toggle">
-      <span class="base-select__value">{{ selectedLabel }}</span>
+      <span class="base-select__value">
+        <slot name="value" :option="selected">{{ selected?.label ?? placeholder ?? 'Select...' }}</slot>
+      </span>
       <svg class="base-select__chevron" :class="{ 'base-select__chevron--open': isOpen }" width="12" height="12"
         viewBox="0 0 12 12" fill="none">
         <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
@@ -76,11 +75,13 @@ function select(value: string) {
           <div class="base-select__options">
             <button v-for="opt in filteredOptions" :key="opt.value" class="base-select__option"
               :class="{ 'base-select__option--selected': opt.value === modelValue }" @click="select(opt.value)">
-              <span v-if="opt.icon" class="base-select__option-icon">{{ opt.icon }}</span>
-              <span class="base-select__option-text">
-                <span class="base-select__option-label">{{ opt.label }}</span>
-                <span v-if="opt.description" class="base-select__option-desc">{{ opt.description }}</span>
-              </span>
+              <slot name="option" :option="opt">
+                <span v-if="opt.icon" class="base-select__option-icon">{{ opt.icon }}</span>
+                <span class="base-select__option-text">
+                  <span class="base-select__option-label">{{ opt.label }}</span>
+                  <span v-if="opt.description" class="base-select__option-desc">{{ opt.description }}</span>
+                </span>
+              </slot>
             </button>
             <div v-if="filteredOptions.length === 0" class="base-select__empty">No results</div>
           </div>
@@ -112,9 +113,18 @@ function select(value: string) {
   font-family: var(--font-sans);
   font-size: var(--text-body);
   cursor: pointer;
-  transition: border-color 120ms ease-in;
+  transition: border-color var(--dur-fast) var(--ease-out);
   min-width: 140px;
   white-space: nowrap;
+}
+
+.base-select__value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .base-select__trigger:focus {
@@ -132,7 +142,8 @@ function select(value: string) {
 
 .base-select__chevron {
   color: var(--text-secondary);
-  transition: transform 150ms ease;
+  flex-shrink: 0;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .base-select__chevron--open {
@@ -190,7 +201,7 @@ function select(value: string) {
   font-size: var(--text-body);
   cursor: pointer;
   text-align: left;
-  transition: background-color 80ms ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .base-select__option:hover {

@@ -12,6 +12,12 @@ export interface Glint {
 const TAU = Math.PI * 2
 const GLINT_SHOWN = 0.45
 
+export function glitterLevel(t: number, rate: number, phase: number, gap: number, width: number): { lit: number; twinkle: number; alpha: number } {
+  const lit = Math.max(0, 1 - Math.min(gap, 1 - gap) / width)
+  const twinkle = Math.max(0, Math.sin(t * rate + phase)) ** 3
+  return { lit, twinkle, alpha: Math.min(1, 0.15 + twinkle * 0.85 + lit) }
+}
+
 export function makeGlints(count: number, size: [number, number]): Glint[] {
   return Array.from({ length: count }, (_, i) => ({
     period: rand(3.6, 6.8),

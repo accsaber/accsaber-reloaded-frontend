@@ -12,6 +12,7 @@ const BUBBLE_GLINT = 'rgba(255, 255, 255, 0.4)'
 export interface BrewDrop {
   kind: BrewIngredientKind
   color: string
+  ink?: string
   x: number
   y: number
   vy: number
@@ -241,9 +242,56 @@ function drawSpider(ctx: Ctx, s: number, body: string): void {
   }
 }
 
+export function marshmallowShape(ctx: Ctx, s: number): void {
+  ctx.beginPath()
+  ctx.roundRect(-s * 0.85, -s * 0.62, s * 1.7, s * 1.24, s * 0.32)
+  ctx.fill()
+}
+
+function drawMarshmallow(ctx: Ctx, s: number, body: string): void {
+  ctx.fillStyle = body
+  marshmallowShape(ctx, s)
+}
+
+function caneHook(ctx: Ctx, s: number): void {
+  ctx.beginPath()
+  ctx.moveTo(-s * 0.35, s * 1.3)
+  ctx.lineTo(-s * 0.35, -s * 0.5)
+  ctx.arc(s * 0.2, -s * 0.5, s * 0.55, Math.PI, 0)
+  ctx.stroke()
+}
+
+function drawCandyCane(ctx: Ctx, s: number, body: string, bone: string): void {
+  ctx.lineCap = 'round'
+  ctx.lineWidth = s * 0.42
+  ctx.strokeStyle = bone
+  caneHook(ctx, s)
+  ctx.lineCap = 'butt'
+  ctx.strokeStyle = body
+  ctx.setLineDash([s * 0.32, s * 0.36])
+  caneHook(ctx, s)
+  ctx.setLineDash([])
+}
+
+function drawCinnamon(ctx: Ctx, s: number, body: string): void {
+  ctx.fillStyle = body
+  ctx.beginPath()
+  ctx.roundRect(-s * 1.3, -s * 0.26, s * 2.6, s * 0.52, s * 0.12)
+  ctx.fill()
+  ctx.fillStyle = darken(body, 0.4)
+  ctx.fillRect(-s * 1.1, -s * 0.05, s * 2.2, s * 0.1)
+}
+
+const INGREDIENTS: Record<BrewIngredientKind, (ctx: Ctx, s: number, body: string, bone: string) => void> = {
+  eye: drawEye,
+  mushroom: drawMushroom,
+  newt: drawNewt,
+  spider: drawSpider,
+  marshmallow: drawMarshmallow,
+  candy_cane: drawCandyCane,
+  cinnamon: drawCinnamon,
+}
+
 export function drawIngredient(ctx: Ctx, kind: BrewIngredientKind, s: number, body: string, bone: string): void {
-  if (kind === 'eye') drawEye(ctx, s, body, bone)
-  else if (kind === 'mushroom') drawMushroom(ctx, s, body, bone)
-  else if (kind === 'newt') drawNewt(ctx, s, body)
-  else drawSpider(ctx, s, body)
+  INGREDIENTS[kind](ctx, s, body, bone)
 }

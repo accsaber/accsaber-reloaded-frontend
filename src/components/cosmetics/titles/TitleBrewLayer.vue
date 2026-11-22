@@ -10,6 +10,7 @@ import {
   brewState,
   drawBubble,
   drawIngredient,
+  marshmallowShape,
   skullShape,
   stepBrew,
   type BrewInk,
@@ -73,7 +74,8 @@ const rules: BrewRules = {
   gap: () => rand(props.brew.dropMinS ?? 4, props.brew.dropMaxS ?? 9),
   spawn: () => {
     ingredientIdx += 1
-    return { kind: ingredientAt(ingredientIdx)?.kind ?? 'eye', color: ingredientColor(ingredientIdx), x: rand(0.1, 0.9), y: -1.4, vy: 1.5, land: 0, splash: -1 }
+    const ing = ingredientAt(ingredientIdx)
+    return { kind: ing?.kind ?? 'eye', color: ingredientColor(ingredientIdx), ink: ing?.ink, x: rand(0.1, 0.9), y: -1.4, vy: 1.5, land: 0, splash: -1 }
   },
   rise: (b, dt, clock) => {
     b.y -= b.vy * dt
@@ -191,7 +193,8 @@ function drawBones(ctx: Ctx, t: number, color: string): void {
     ctx.translate(rect.x + rect.w * bn.x, surfaceAt(bn.x, t) + rect.fs * 0.06 + bob)
     ctx.rotate(Math.sin(t * 0.8 + bn.phase) * 0.25)
     ctx.fillStyle = props.brew.bone
-    if (bn.skull) skullShape(ctx, size, color)
+    if (props.brew.floats === 'marshmallows') marshmallowShape(ctx, size * (bn.skull ? 1.3 : 0.9))
+    else if (bn.skull) skullShape(ctx, size, color)
     else boneShape(ctx, size)
     ctx.fillStyle = shade
     ctx.fillRect(-size * 1.4, size * 0.05 + bob * 0.5, size * 2.8, size * 1.6)
@@ -237,7 +240,7 @@ function drawDrops(ctx: Ctx, t: number, ink: BrewInk): void {
     ctx.translate(rect.x + rect.w * d.x, surfaceAt(d.x, t) + d.y * rect.fs + sink * rect.fs * 0.35)
     ctx.globalAlpha = 1 - sink
     ctx.rotate(sink * 1.2 + (d.splash < 0 ? d.y * 0.4 : 0))
-    drawIngredient(ctx, d.kind, rect.fs * 0.17, d.color, props.brew.bone)
+    drawIngredient(ctx, d.kind, rect.fs * 0.17, d.ink ?? d.color, props.brew.bone)
     ctx.restore()
   }
 }

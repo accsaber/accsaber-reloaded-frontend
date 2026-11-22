@@ -8,7 +8,7 @@ import { hash01, randBetween as rand } from '@/utils/random'
 import { createRadialSprite, offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import type { ChurchBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { useTemplateRef } from 'vue'
-import { clamp01 } from '@/utils/math'
+import { smoothstep01 } from '@/utils/math'
 
 const props = defineProps<{
   config: ChurchBackdropConfig
@@ -715,11 +715,6 @@ function aboveBackClip(row: number): FigureClip {
 
 const PEEK_X = 0.42
 
-function smooth(u: number): number {
-  const c = clamp01(u)
-  return c * c * (3 - 2 * c)
-}
-
 interface Hop {
   row: number
   side: number
@@ -770,14 +765,14 @@ function hopFrame(u: number, n: number): FigureFrame | null {
   const downStart = upEnd + hop.stare
   const downEnd = downStart + 0.35
   if (peek < downEnd) {
-    const rise = peek < upEnd ? smooth(peek / upEnd) : peek < downStart ? 1 : 1 - smooth((peek - downStart) / 0.35)
+    const rise = peek < upEnd ? smoothstep01(peek / upEnd) : peek < downStart ? 1 : 1 - smoothstep01((peek - downStart) / 0.35)
     const clip = aboveBackClip(hop.row)
     const shownY = clip.y1 + k * 21
     const hiddenY = clip.y1 + k * 36
     return { x: pos[0], y: hiddenY + (shownY - hiddenY) * rise, k, alpha: 1, crouch: true, clip, streak: 0 }
   }
   if (!next) return null
-  const dash = smooth((peek - downEnd) / 0.3)
+  const dash = smoothstep01((peek - downEnd) / 0.3)
   if (dash >= 1) return hidden
   const nz = rowZ(next.row) + 0.3
   const to = project(next.side * PEEK_X, 0.5, nz)
@@ -791,7 +786,7 @@ function standFrame(u: number, n: number): FigureFrame {
   const ks = figScale(zStand)
   const clip = aboveBackClip(PEW_ROWS - 1)
   if (u < 3.2) return { x: ax, y: ay, k: ks, alpha: Math.min(1, u / 1.1) * 0.95, crouch: false, clip, streak: 0 }
-  const p = smooth((u - 3.2) / 1.1)
+  const p = smoothstep01((u - 3.2) / 1.1)
   const side = sinkSide(n)
   const zTo = rowZ(PEW_ROWS - 1) + 0.3
   const to = project(side * PEEK_X, 0.5, zTo)

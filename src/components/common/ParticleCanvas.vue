@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useMediaQuery } from '@/composables/useMediaQuery'
+import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useRenderLoop } from '@/composables/useRenderLoop'
 import { subscribeWindowPointer } from '@/utils/windowPointer'
@@ -27,7 +27,7 @@ const count = props.particleCount ?? 170
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const reduced = useReducedMotion()
-const mobile = useMediaQuery('(max-width: 767px)')
+const mobile = useMediaQuery(PHONE_MEDIA_QUERY)
 let particles: Star[] = []
 let mouseX = -1000
 let mouseY = -1000

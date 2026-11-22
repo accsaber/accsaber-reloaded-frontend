@@ -113,6 +113,10 @@ function isThumbnailScene(v: unknown): boolean {
       && isString(v.moon) && isString(v.fog) && isString(v.wisp) && isString(v.candle)
   }
   if (v.type === 'pumpkin_patch') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.ground) && isString(v.pumpkin) && isString(v.pumpkinLit) && isString(v.vine) && isString(v.moon) && isString(v.candle)
+  if (v.type === 'borealis') {
+    return isString(v.skyTop) && isString(v.skyBottom) && isString(v.star) && isString(v.ridge)
+      && Array.isArray(v.colors) && v.colors.every(isString)
+  }
   if (v.type === 'full_moon') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.moon) && isString(v.crater) && isString(v.cloud) && isString(v.bat)
   return false
 }
@@ -136,6 +140,7 @@ export function thumbnailSceneInk(scene: ThumbnailScene): string {
     case 'graveyard': return scene.skyTop
     case 'pumpkin_patch': return scene.skyTop
     case 'full_moon': return scene.skyTop
+    case 'borealis': return scene.skyTop
   }
 }
 

@@ -20,10 +20,10 @@ export function usePreviewTheme() {
   const themeStore = useThemeStore()
 
   watch(
-    () => [preview.theme, preview.themeVariant, preview.themeEffect, preview.themeModifiers] as const,
-    ([themeItem, variantKey, effect, modifiers]) => {
+    () => ({ ...preview.slots.theme }),
+    ({ item, variant, effect, modifiers }) => {
       if (!isCreativesSubdomain) return
-      const tokens = themeItem ? resolveThemeTokens(themeItem, variantKey) : null
+      const tokens = item ? resolveThemeTokens(item, variant) : null
       const effects = buildEffectLayers(modifiers, effect)
       if (tokens || effects.length) themeStore.previewThemeTokens(tokens, effects)
       else themeStore.stopPreview()

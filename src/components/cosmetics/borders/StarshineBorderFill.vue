@@ -3,15 +3,18 @@ import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { StarshineFill, StarshineFlow } from '@/types/cosmetics/border'
 import { parseHex } from '@/utils/color'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
-import { framePoint, overlaySpace, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { overlaySpace, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { createRadialSprite } from '@/utils/cosmetics/sceneLayer'
+import { bandToCanvas, shapeBand, type ShapeBand } from '@/utils/cosmetics/shapeBand'
+import type { ShapeTrace } from '@/utils/cosmetics/shapeTrace'
 import { drawGlint, glintPhase, makeGlints } from '@/utils/cosmetics/starshine'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
+import { useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   fill: StarshineFill
   margin?: number
+  trace?: ShapeTrace | null
 }>()
 
 const MARGIN = props.margin ?? 25
@@ -53,6 +56,7 @@ const lights = fallers(props.fill.lights ?? 24, [3, 8.5], [1.6, 4.2])
 const specks = fallers(SPECKS, [0.3, 0.7], [5, 11])
 const glints = makeGlints(props.fill.glints ?? 9, [2, 3.6])
 
+let band = shapeBand(props.trace)
 let lightSprite: HTMLCanvasElement | null = null
 let poolSprite: HTMLCanvasElement | null = null
 let startTime = 0
@@ -115,41 +119,52 @@ function drawSpecks(ctx: Ctx, sp: OverlaySpace, t: number): void {
   }
 }
 
-function drawGlints(ctx: Ctx, sp: OverlaySpace, t: number): void {
+function drawGlints(ctx: Ctx, walk: ShapeBand, w: number, h: number, t: number): void {
+  const unit = w / walk.vb.w
   ctx.fillStyle = props.fill.glint
   ctx.strokeStyle = props.fill.glint
   for (const g of glints) {
     const phase = glintPhase(g, t)
-    if (!phase) continue
-    const at = framePoint(hash01(g.seed + phase.cycle * 3.1), 1 + 7 * hash01(g.seed * 1.9 + phase.cycle))
+    const spot = phase && walk.at(hash01(g.seed + phase.cycle * 3.1))
+    if (!phase || !spot) continue
+    const across = (hash01(g.seed * 1.9 + phase.cycle) - 0.5) * spot.thick * 0.6
+    const at = bandToCanvas(walk, { x: spot.x + spot.nx * across, y: spot.y + spot.ny * across }, w, h)
     const swell = Math.sin(Math.PI * phase.u) ** 0.6
     ctx.globalAlpha = Math.min(1, swell * 1.2)
-    drawGlint(ctx, props.fill.glintShape ?? 'star', sp.toX(at.x), sp.toY(at.y), g.size * sp.s * swell, phase.u * 0.6 - 0.3)
+    drawGlint(ctx, props.fill.glintShape ?? 'star', at.x, at.y, g.size * unit * swell, phase.u * 0.6 - 0.3)
   }
 }
 
-function drawStreak(ctx: Ctx, sp: OverlaySpace, t: number): void {
+function drawStreak(ctx: Ctx, walk: ShapeBand, w: number, h: number, t: number): void {
   const cycle = Math.floor(t / STREAK_PERIOD_S)
   const u = (t - cycle * STREAK_PERIOD_S) / STREAK_S
-  if (u >= 1) return
-  const from = framePoint(hash01(cycle * 5.3), 4)
+  const spot = u < 1 ? walk.at(hash01(cycle * 5.3)) : null
+  if (!spot) return
+  const unit = w / walk.vb.w
   const angle = 0.5 + hash01(cycle * 9.1) * 0.6
-  const reach = 46 * (1 - (1 - u) ** 2)
+  const from = bandToCanvas(walk, spot, w, h)
+  const reach = 46 * unit * (1 - (1 - u) ** 2)
+  const tail = 12 * unit * Math.sin(Math.PI * u)
   const x = from.x + Math.cos(angle) * reach
   const y = from.y + Math.sin(angle) * reach
-  const tail = 12 * Math.sin(Math.PI * u)
-  const grad = ctx.createLinearGradient(sp.toX(x), sp.toY(y), sp.toX(x - Math.cos(angle) * tail), sp.toY(y - Math.sin(angle) * tail))
+  const tx = x - Math.cos(angle) * tail
+  const ty = y - Math.sin(angle) * tail
+  const grad = ctx.createLinearGradient(x, y, tx, ty)
   grad.addColorStop(0, props.fill.glint)
   grad.addColorStop(1, 'transparent')
   ctx.globalAlpha = Math.sin(Math.PI * u)
   ctx.strokeStyle = grad
-  ctx.lineWidth = Math.max(0.8, 0.7 * sp.s)
+  ctx.lineWidth = Math.max(0.8, 0.7 * unit)
   ctx.lineCap = 'round'
   ctx.beginPath()
-  ctx.moveTo(sp.toX(x), sp.toY(y))
-  ctx.lineTo(sp.toX(x - Math.cos(angle) * tail), sp.toY(y - Math.sin(angle) * tail))
+  ctx.moveTo(x, y)
+  ctx.lineTo(tx, ty)
   ctx.stroke()
 }
+
+watch(() => props.trace, (trace) => {
+  band = shapeBand(trace)
+})
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
@@ -168,8 +183,8 @@ useElementCanvas(canvasRef, {
     ctx.globalCompositeOperation = 'lighter'
     drawLights(ctx, sp, t, light)
     drawSpecks(ctx, sp, t)
-    drawGlints(ctx, sp, t)
-    if (props.fill.streaks && !reduced) drawStreak(ctx, sp, t)
+    if (band) drawGlints(ctx, band, w, h, t)
+    if (band && props.fill.streaks && !reduced) drawStreak(ctx, band, w, h, t)
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
   },

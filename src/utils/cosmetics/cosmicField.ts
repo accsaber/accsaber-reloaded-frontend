@@ -1,16 +1,11 @@
 import { darken, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { drawGlow } from '@/utils/cosmetics/sceneLayer'
 
 export function drawCosmicStar(ctx: Ctx, x: number, y: number, r: number, color: string, twinkle: number, bright: boolean, alpha: number): void {
   if (bright) {
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 3.5)
-    grad.addColorStop(0, withAlpha(color, 0.9 * twinkle * alpha))
-    grad.addColorStop(1, withAlpha(color, 0))
-    ctx.fillStyle = grad
-    ctx.beginPath()
-    ctx.arc(x, y, r * 3.5, 0, Math.PI * 2)
-    ctx.fill()
+    drawGlow(ctx, x, y, r * 3.5, withAlpha(color, 0.9 * twinkle * alpha), withAlpha(color, 0))
   }
   ctx.globalAlpha = (0.35 + 0.65 * twinkle) * alpha
   ctx.fillStyle = color
@@ -21,13 +16,7 @@ export function drawCosmicStar(ctx: Ctx, x: number, y: number, r: number, color:
 }
 
 export function drawCosmicNebula(ctx: Ctx, x: number, y: number, radius: number, color: string, breathe: number, alpha: number): void {
-  const grad = ctx.createRadialGradient(x, y, 0, x, y, radius)
-  grad.addColorStop(0, withAlpha(color, breathe * alpha))
-  grad.addColorStop(1, withAlpha(color, 0))
-  ctx.fillStyle = grad
-  ctx.beginPath()
-  ctx.arc(x, y, radius, 0, Math.PI * 2)
-  ctx.fill()
+  drawGlow(ctx, x, y, radius, withAlpha(color, breathe * alpha), withAlpha(color, 0))
 }
 
 export function drawCosmicPlanet(ctx: Ctx, x: number, y: number, radius: number, color: string, ringed: boolean, alpha: number): void {

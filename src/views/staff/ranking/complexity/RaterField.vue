@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import HintTooltip from '@/components/common/HintTooltip.vue'
 import { formatFixed } from '@/utils/formatters'
-import { fieldRange, type FieldKind, type FieldRange } from './tuning'
-import { computed, ref, watch } from 'vue'
+import { countFloor, fieldRange, type FieldKind, type FieldRange } from './tuning'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps<{
   label: string
@@ -11,13 +11,15 @@ const props = defineProps<{
   live: number
   modelValue: number
   deferred?: boolean
+  plain?: boolean
+  end?: string
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
 
-const DECIMALS: Record<FieldKind, number> = { count: 0, nudge: 2, intercept: 3, slope: 3 }
+const DECIMALS: Record<FieldKind, number> = { count: 0, threshold: 0, percent: 0, intercept: 3, slope: 3 }
 const SAME = 1e-9
 
 const decimals = computed(() => DECIMALS[props.kind])
@@ -37,7 +39,16 @@ function commit(raw: string) {
   typed.value = raw
   const parsed = Number(raw)
   if (raw.trim() === '' || !Number.isFinite(parsed)) return
-  emit('update:modelValue', parsed)
+  const floor = countFloor(props.kind)
+  const value = floor == null ? parsed : Math.max(floor, Math.round(parsed))
+  if (value !== parsed) typed.value = formatFixed(value, decimals.value)
+  emit('update:modelValue', value)
+}
+
+async function settle(raw: string) {
+  commit(raw)
+  await nextTick()
+  typed.value = formatFixed(props.modelValue, decimals.value)
 }
 
 function type(raw: string) {
@@ -56,17 +67,18 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > SAME)
 </script>
 
 <template>
-  <div class="rater-field" :class="{ 'rater-field--changed': changed }">
+  <div class="rater-field" :class="{ 'rater-field--changed': changed, 'rater-field--plain': plain }">
     <span class="rater-field__label">
       {{ label }}
       <HintTooltip :text="hint" :label="label" />
     </span>
-    <input class="slider rater-field__slider" type="range" :min="range.min" :max="range.max" :step="range.step"
+    <input v-if="!plain" class="slider rater-field__slider" type="range" :min="range.min" :max="range.max" :step="range.step"
       :value="modelValue" :aria-label="label" @input="slide($event, false)" @change="slide($event, true)" />
-    <input class="inline-edit rater-field__value" type="text" inputmode="decimal" :value="typed"
+    <span v-if="end" class="rater-field__end">{{ end }}</span>
+    <input v-else class="inline-edit rater-field__value" type="text" inputmode="decimal" :value="typed"
       :aria-label="`${label} value`" @input="type(($event.target as HTMLInputElement).value)"
-      @change="commit(($event.target as HTMLInputElement).value)"
-      @keyup.enter="commit(($event.target as HTMLInputElement).value)" />
+      @change="settle(($event.target as HTMLInputElement).value)"
+      @keyup.enter="settle(($event.target as HTMLInputElement).value)" />
   </div>
 </template>
 
@@ -75,9 +87,25 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > SAME)
   display: grid;
   grid-template-columns: 220px minmax(80px, 1fr) 72px;
   align-items: center;
+  align-content: center;
   gap: var(--space-md);
   min-width: 0;
-  height: var(--control-h);
+  height: var(--rater-row-h);
+}
+
+.rater-field--plain {
+  grid-template-columns: minmax(0, 1fr) 72px;
+}
+
+.rater-field__end {
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rater-field--changed .rater-field__end {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .rater-field__label {
@@ -112,9 +140,7 @@ const changed = computed(() => Math.abs(props.modelValue - props.live) > SAME)
 @media (max-width: 767px) {
   .rater-field {
     grid-template-columns: minmax(0, 1fr) 72px;
-    height: auto;
     gap: var(--space-xs) var(--space-md);
-    padding: var(--space-sm) 0;
   }
 
   .rater-field__slider {

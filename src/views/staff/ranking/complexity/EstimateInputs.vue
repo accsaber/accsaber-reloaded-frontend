@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/complexity'
+import StoredFold from '@/components/common/StoredFold.vue'
 import { CX_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
 import { formatAccuracy, formatCount, formatFixed, formatRelativeDate } from '@/utils/formatters'
-import { clamp } from '@/utils/math'
 import {
-  COEFFICIENT_SETS,
   ESTIMATE_GROUPS,
   type EstimateField,
+  hasPayFairReading,
+  mixLabel,
   readNumber,
   readObject,
   readString,
@@ -17,94 +18,107 @@ import { computed } from 'vue'
 const props = defineProps<{
   scenario: EstimateScenario
   estimate: ComplexityEstimateInfo | null | undefined
-  maxNudge?: number | null
+  complexity: number | null | undefined
   stale?: boolean
 }>()
 
 const inputs = computed(() => props.estimate?.inputs)
+const reading = computed(() => hasPayFairReading(inputs.value))
 
 function blank(field: EstimateField): string | null {
   return field.always ? formatFixed(null, 0) : null
 }
 
 function formatField(field: EstimateField): string | null {
-  const value = readNumber(inputs.value, field.key)
+  if (field.reading && !reading.value) return null
+  const value = input(field.key)
   if (value == null) return blank(field)
+  if (field.format === 'mix') return mixLabel(value)
   if (field.format === 'percent') return formatAccuracy(value)
   if (field.format === 'count') return formatCount(value)
   return formatFixed(value, field.decimals ?? 3)
 }
 
+const chart = computed(() => readObject(inputs.value, 'chart') ?? undefined)
+
 const groups = computed(() =>
-  ESTIMATE_GROUPS[props.scenario]
-    .map((group) => ({
+  [
+    ...ESTIMATE_GROUPS[props.scenario].map((group) => ({
       key: group.key,
       title: group.title,
       fields: group.fields
         .map((field) => ({ key: field.key, label: field.label, value: formatField(field) }))
         .filter((field): field is { key: string; label: string; value: string } => !!field.value),
-    }))
-    .filter((group) => group.fields.length > 0),
+    })),
+    {
+      key: 'coefficients',
+      title: 'Coefficients',
+      fields: chart.value
+        ? COEFFICIENT_FIELDS.map((row) => ({
+            key: row.key,
+            label: row.label,
+            value: formatFixed(readNumber(chart.value, row.key), 3),
+          }))
+        : [],
+    },
+  ].filter((group) => group.fields.length > 0),
 )
 
-const coefficientSets = computed(() =>
-  COEFFICIENT_SETS.map((set) => {
-    const values = readObject(inputs.value, set.key)
-    return {
-      key: set.key,
-      title: set.title,
-      rows: COEFFICIENT_FIELDS.map((row) => ({
-        key: row.key,
-        label: row.label,
-        value: formatFixed(readNumber(values ?? undefined, row.key), 3),
-      })),
-      present: !!values,
-    }
-  }).filter((set) => set.present),
-)
+const TERMS: [slope: string, term: string][] = [
+  ['meanSlope', 'meanTerm'],
+  ['resetSlope', 'resetShare'],
+  ['dotSlope', 'dotShare'],
+  ['bottomUpSlope', 'bottomUpShare'],
+  ['crossoverSlope', 'crossoverShare'],
+  ['topRowSlope', 'topRowShare'],
+  ['diagonalSlope', 'diagonalShare'],
+  ['verticalStackSlope', 'verticalStackShare'],
+  ['outerSlope', 'outerShare'],
+  ['notesSlope', 'notesTerm'],
+  ['njsSlope', 'njs'],
+]
 
-const chartLine = computed(() => {
-  const chart = readObject(inputs.value, 'chart')
-  const chartComplexity = readNumber(inputs.value, 'chartComplexity')
-  if (!chart || chartComplexity == null) return null
-  const terms: [string, number | null][] = [
-    ['meanSlope', readNumber(inputs.value, 'meanTerm')],
-    ['resetSlope', readNumber(inputs.value, 'resetShare')],
-    ['dotSlope', readNumber(inputs.value, 'dotShare')],
-    ['bottomUpSlope', readNumber(inputs.value, 'bottomUpShare')],
-    ['notesSlope', readNumber(inputs.value, 'notesTerm')],
-    ['njsSlope', readNumber(inputs.value, 'njs')],
-    ['boardSlope', readNumber(inputs.value, 'boardEase')],
-  ]
-  const parts = terms
-    .map(([slopeKey, term]) => {
-      const slope = readNumber(chart, slopeKey)
+const botLine = computed(() => {
+  const botEstimate = input('botEstimate')
+  if (!chart.value || botEstimate == null) return null
+  const parts = TERMS
+    .map(([slopeKey, termKey]) => {
+      const slope = readNumber(chart.value, slopeKey)
+      const term = input(termKey)
       if (slope == null || term == null || slope === 0) return null
       return `(${formatFixed(slope, 3)} x ${formatFixed(term, 4)})`
     })
     .filter((part): part is string => !!part)
-  const intercept = formatFixed(readNumber(chart, 'intercept'), 3)
-  return `${[intercept, ...parts].join(' + ')} = ${formatFixed(chartComplexity, CX_DECIMALS)}`
+  const intercept = formatFixed(readNumber(chart.value, 'intercept'), 3)
+  return `${[intercept, ...parts].join(' + ')} = ${formatFixed(botEstimate, CX_DECIMALS)}`
 })
 
-const boardLine = computed(() => {
-  const weight = readNumber(inputs.value, 'boardWeight')
-  const chartComplexity = readNumber(inputs.value, 'chartComplexity')
-  const boardComplexity = readNumber(inputs.value, 'boardComplexity')
-  if (!weight || weight <= 0 || chartComplexity == null || boardComplexity == null) return null
-  const move = weight * (boardComplexity - chartComplexity)
-  const bound = props.maxNudge || null
-  const clamped = bound == null ? move : clamp(move, -bound, bound)
-  const inner = `${formatFixed(weight, 2)} x (${formatFixed(boardComplexity, CX_DECIMALS)} − ${formatFixed(chartComplexity, CX_DECIMALS)})`
-  const nudge = bound == null ? inner : `clamp(${inner}, ±${formatFixed(bound, 2)})`
-  const final = formatFixed(chartComplexity + clamped, CX_DECIMALS)
-  return `${formatFixed(chartComplexity, CX_DECIMALS)} + ${nudge} = ${final}`
-})
+function input(key: string): number | null {
+  return readNumber(inputs.value, key)
+}
 
-const nudgeNote = computed(() => {
-  const weight = readNumber(inputs.value, 'boardWeight')
-  if (weight != null && weight > 0) return null
-  return 'The board line did not apply here.'
+function payFairParts(): string[] {
+  if (!reading.value) return ['no pay-fair reading yet', mixLabel(0)]
+  const share = Math.round((input('payWeight') ?? 0) * 100)
+  const adjustment = input('payAdjustment') ?? 0
+  const earned = `top plays earn ${formatAccuracy(input('payRatio'), 1)} of usual`
+  const payFair = `pay-fair ${formatFixed(input('payFair'), CX_DECIMALS)}`
+  if (share <= 0) return [earned, `${payFair} doesn't count yet at ${formatCount(input('scores'))} scores`, mixLabel(0)]
+  return [
+    earned,
+    `${payFair} counts ${share}% and the bot ${100 - share}%`,
+    `adjustment ${adjustment > 0 ? '+' : ''}${formatFixed(adjustment, 2)}`,
+  ]
+}
+
+const summary = computed(() => {
+  const botEstimate = input('botEstimate')
+  if (botEstimate == null) return null
+  return [
+    `Bot Complexity Estimate ${formatFixed(botEstimate, CX_DECIMALS)}`,
+    ...payFairParts(),
+    ...(props.complexity == null ? [] : [`complexity ${formatFixed(props.complexity, CX_DECIMALS)}`]),
+  ].join(', ')
 })
 
 const meta = computed(() => {
@@ -131,6 +145,8 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
     </p>
 
     <template v-else>
+      <p v-if="summary" class="estimate-inputs__summary">{{ summary }}</p>
+
       <div v-for="group in groups" :key="group.key" class="estimate-inputs__group">
         <h5 class="estimate-inputs__group-title field-label">{{ group.title }}</h5>
         <dl class="estimate-inputs__grid">
@@ -141,31 +157,9 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
         </dl>
       </div>
 
-      <div v-if="coefficientSets.length" class="estimate-inputs__coefficients">
-        <div v-for="set in coefficientSets" :key="set.key" class="estimate-inputs__group">
-          <h5 class="estimate-inputs__group-title field-label">{{ set.title }}</h5>
-          <dl class="estimate-inputs__grid">
-            <div v-for="row in set.rows" :key="row.key" class="estimate-inputs__field">
-              <dt class="estimate-inputs__label">{{ row.label }}</dt>
-              <dd class="estimate-inputs__value">{{ row.value }}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      <template v-if="boardLine">
-        <p class="estimate-inputs__formula">{{ boardLine }}</p>
-        <details v-if="chartLine" class="estimate-inputs__fold">
-          <summary class="estimate-inputs__fold-head">Chart Line</summary>
-          <p class="estimate-inputs__formula">{{ chartLine }}</p>
-        </details>
-      </template>
-      <template v-else>
-        <p v-if="chartLine" class="estimate-inputs__formula">{{ chartLine }}</p>
-        <p v-if="nudgeNote && scenario === 'NEW_SCRIPT'" class="estimate-inputs__hash">
-          {{ nudgeNote }}
-        </p>
-      </template>
+      <StoredFold v-if="botLine" label="Formula" storage-key="script-bot-formula" default-collapsed>
+        <p class="estimate-inputs__formula">{{ botLine }}</p>
+      </StoredFold>
       <p v-if="meta || modelHash" class="estimate-inputs__hash">
         {{ [meta, modelHash].filter(Boolean).join(' · ') }}
       </p>
@@ -221,10 +215,10 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
   margin: 0;
 }
 
-.estimate-inputs__coefficients {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-  gap: var(--space-lg);
+.estimate-inputs__summary {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-body);
 }
 
 .estimate-inputs__grid {
@@ -239,8 +233,6 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding-bottom: 2px;
-  border-bottom: 1px solid var(--bg-overlay);
 }
 
 .estimate-inputs__label {
@@ -268,34 +260,5 @@ const modelHash = computed(() => readString(inputs.value, 'modelHash'))
 .estimate-inputs__hash {
   color: var(--text-tertiary);
   white-space: normal;
-}
-
-.estimate-inputs__fold {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.estimate-inputs__fold-head {
-  cursor: pointer;
-  list-style: none;
-  color: var(--text-tertiary);
-  font-size: var(--text-caption);
-}
-
-.estimate-inputs__fold-head::-webkit-details-marker {
-  display: none;
-}
-
-.estimate-inputs__fold-head::after {
-  content: ' · show';
-}
-
-.estimate-inputs__fold[open] .estimate-inputs__fold-head::after {
-  content: ' · hide';
-}
-
-.estimate-inputs__fold-head:hover {
-  color: var(--text-secondary);
 }
 </style>

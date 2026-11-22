@@ -243,8 +243,6 @@ const summary = computed(() => (tuningTab.value ? preview.value : round.value)?.
 
 const roundSummary = computed(() => round.value?.summary ?? null)
 
-const maxNudge = computed(() => tuning.live.value?.board.maxNudge ?? null)
-
 const estimateNotice = computed(() => {
   const health = roundSummary.value
   if (difficultiesLoading.value || !health || !health.difficulties) return ''
@@ -754,7 +752,7 @@ watch(previewKey, () => {
     </div>
 
     <ComplexityMapModal :open="!!selectedRow" :row="selectedRow" :leaderboard="leaderboard" :scenario="drillScenario"
-      :model-hash="summary?.modelHash ?? null" :max-nudge="maxNudge" :page="leaderboardPage"
+      :model-hash="summary?.modelHash ?? null" :page="leaderboardPage"
       :total-pages="leaderboard?.totalPages ?? 0" :loading="leaderboardLoading" :error="leaderboardError"
       @close="closeMap" @select-player="openPlayer" @update:page="setLeaderboardPage" @update:sort="setLeaderboardSort" />
 

@@ -1,4 +1,6 @@
 import { clamp } from '@/utils/math'
+export const AVATAR_STACK_SCALE = 0.886
+
 export const DEFAULT_AVATAR_MASK
   = 'M14,0 L86,0 Q100,0 100,14 L100,86 Q100,100 86,100 L14,100 Q0,100 0,86 L0,14 Q0,0 14,0 Z'
 

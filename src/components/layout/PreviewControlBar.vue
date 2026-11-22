@@ -1,19 +1,19 @@
 <script setup lang="ts">
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import LevelBadge from '@/components/domain/LevelBadge.vue'
 import PreviewModifierPicker from '@/components/domain/PreviewModifierPicker.vue'
 import PreviewPicker from '@/components/domain/PreviewPicker.vue'
-import PreviewVariantRow from '@/components/domain/PreviewVariantRow.vue'
 import ThumbnailBackdrop from '@/components/cosmetics/thumbnails/ThumbnailBackdrop.vue'
 import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps'
+import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { usePreviewTheme } from '@/composables/usePreviewTheme'
 import { useAuthStore } from '@/stores/auth'
 import { useItemModifierStore } from '@/stores/itemModifiers'
-import { usePreviewStore } from '@/stores/preview'
+import { PREVIEW_SLOTS, usePreviewStore, type PreviewSlotKey } from '@/stores/preview'
 import type { ItemResponse, UnusualEffectResponse } from '@/types/api/items'
-import { itemVariantPreviews, readItemVariants } from '@/utils/items'
+import { itemVariantPreviews, variantColumns } from '@/utils/items'
 import { thumbnailHostAttrs } from '@/utils/cosmetics/readers'
-import { isCreativesSubdomain } from '@/utils/subdomain'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const preview = usePreviewStore()
 const authStore = useAuthStore()
@@ -21,17 +21,12 @@ const modifierStore = useItemModifierStore()
 
 usePreviewTheme()
 
-const visible = computed(() => isCreativesSubdomain)
 const expanded = ref(false)
-
-const loaded = ref(false)
-const loading = ref(false)
+const phone = useMediaQuery(PHONE_MEDIA_QUERY)
 const items = ref<ItemResponse[]>([])
 const effects = ref<UnusualEffectResponse[]>([])
 
-async function loadCatalog() {
-  if (loaded.value || loading.value) return
-  loading.value = true
+onMounted(async () => {
   try {
     const [{ getAdminItems }, { getAdminUnusualEffects }] = await Promise.all([
       import('@/api/admin/items'),
@@ -44,87 +39,33 @@ async function loadCatalog() {
     ])
     items.value = itemList
     effects.value = effectList
-    loaded.value = true
   } catch {
     items.value = []
     effects.value = []
-  } finally {
-    loading.value = false
   }
-}
-
-watch(visible, (v) => { if (v) loadCatalog() }, { immediate: true })
-
-function itemsOfType(typeKey: string): ItemResponse[] {
-  return items.value.filter((i) => i.typeKey === typeKey)
-}
-
-const borderShapes = computed(() => itemsOfType('profile_border_shape'))
-const borderColors = computed(() => itemsOfType('profile_border_color'))
-const titles = computed(() => itemsOfType('title'))
-const thumbnails = computed(() => itemsOfType('profile_thumbnail_background'))
-const themes = computed(() => itemsOfType('theme'))
-
-function findItem(id: string): ItemResponse | null {
-  return items.value.find((i) => i.id === id) ?? null
-}
-function findEffect(id: string): UnusualEffectResponse | null {
-  return effects.value.find((e) => e.id === id) ?? null
-}
-
-const borderShapeId = computed({
-  get: () => preview.borderShape?.id ?? '',
-  set: (id: string) => { preview.borderShape = findItem(id); preview.borderShapeVariant = null },
-})
-const borderShapeEffectId = computed({
-  get: () => preview.borderShapeEffect?.id ?? '',
-  set: (id: string) => { preview.borderShapeEffect = findEffect(id) },
-})
-const borderColorId = computed({
-  get: () => preview.borderColor?.id ?? '',
-  set: (id: string) => { preview.borderColor = findItem(id); preview.borderColorVariant = null },
-})
-const borderColorEffectId = computed({
-  get: () => preview.borderColorEffect?.id ?? '',
-  set: (id: string) => { preview.borderColorEffect = findEffect(id) },
-})
-const titleId = computed({
-  get: () => preview.title?.id ?? '',
-  set: (id: string) => { preview.title = findItem(id); preview.titleVariant = null },
-})
-const titleEffectId = computed({
-  get: () => preview.titleEffect?.id ?? '',
-  set: (id: string) => { preview.titleEffect = findEffect(id) },
-})
-const thumbnailId = computed({
-  get: () => preview.thumbnail?.id ?? '',
-  set: (id: string) => { preview.thumbnail = findItem(id); preview.thumbnailVariant = null },
-})
-const thumbnailEffectId = computed({
-  get: () => preview.thumbnailEffect?.id ?? '',
-  set: (id: string) => { preview.thumbnailEffect = findEffect(id) },
-})
-const themeId = computed({
-  get: () => preview.theme?.id ?? '',
-  set: (id: string) => { preview.theme = findItem(id); preview.themeVariant = null },
-})
-const themeEffectId = computed({
-  get: () => preview.themeEffect?.id ?? '',
-  set: (id: string) => { preview.themeEffect = findEffect(id) },
 })
 
-const themeVariants = computed(() =>
-  preview.theme ? itemVariantPreviews(preview.theme) ?? [] : [],
+const rows = computed(() =>
+  PREVIEW_SLOTS.map((slot) => {
+    const state = preview.slots[slot.key]
+    return {
+      ...slot,
+      state,
+      items: items.value.filter((item) => item.typeKey === slot.typeKey),
+      variants: (state.item && itemVariantPreviews(state.item)) || [],
+    }
+  }),
 )
 
-function variantsOf(item: ItemResponse | null) {
-  return item ? readItemVariants(item.value) ?? [] : []
+function pickItem(key: PreviewSlotKey, id: string) {
+  const item = items.value.find((candidate) => candidate.id === id) ?? null
+  preview.slots[key].item = item
+  preview.slots[key].variant = (item && itemVariantPreviews(item)?.[0]?.key) ?? null
 }
 
-const borderShapeVariants = computed(() => variantsOf(preview.borderShape))
-const borderColorVariants = computed(() => variantsOf(preview.borderColor))
-const titleVariants = computed(() => variantsOf(preview.title))
-const thumbnailVariants = computed(() => variantsOf(preview.thumbnail))
+function pickEffect(key: PreviewSlotKey, id: string) {
+  preview.slots[key].effect = effects.value.find((effect) => effect.id === id) ?? null
+}
 
 const availableModifiers = computed(() =>
   modifierStore.modifiers.filter((m) => m.key !== 'unusual'),
@@ -142,120 +83,64 @@ const {
 
 const thumbAttrs = computed(() => thumbnailHostAttrs(thumbnailValue.value))
 
-const sampleAvatar = computed(() => authStore.userProfile?.avatarUrl || undefined)
-
-const chips = computed(() => {
-  const list: string[] = []
-  if (preview.borderShape) list.push(preview.borderShape.name || 'Border shape')
-  if (preview.borderColor) list.push(preview.borderColor.name || 'Border color')
-  if (preview.title) list.push(preview.title.name || 'Title')
-  if (preview.thumbnail) list.push(preview.thumbnail.name || 'Thumbnail')
-  if (preview.theme) list.push(preview.theme.name || 'Theme')
-  for (const e of [preview.borderShapeEffect, preview.borderColorEffect, preview.titleEffect, preview.thumbnailEffect, preview.themeEffect]) {
-    if (e) list.push(e.name || e.key)
-  }
-  for (const m of [
-    ...preview.borderShapeModifiers,
-    ...preview.borderColorModifiers,
-    ...preview.titleModifiers,
-    ...preview.thumbnailModifiers,
-    ...preview.themeModifiers,
-  ]) {
-    list.push(m.name)
-  }
-  return list
-})
+const summary = computed(() =>
+  rows.value
+    .flatMap(({ state }) => [
+      state.item?.name,
+      state.effect && (state.effect.name || state.effect.key),
+      ...state.modifiers.map((m) => m.name),
+    ])
+    .filter(Boolean)
+    .join(', '),
+)
 </script>
 
 <template>
-  <div v-if="visible" class="preview-dock" role="region" aria-label="Cosmetic preview controls">
-    <button
-      type="button"
-      class="preview-dock__toggle"
-      :class="{ 'preview-dock__toggle--collapsed': !expanded }"
-      :aria-label="expanded ? 'Hide settings' : 'Show settings'"
-      :aria-expanded="expanded"
-      @click="expanded = !expanded"
-    >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+  <div class="preview-dock" role="region" aria-label="Cosmetic preview">
+    <Transition name="collapse">
+      <div v-if="expanded" class="collapsible">
+        <div class="preview-dock__panel">
+          <div class="preview-dock__stage" v-bind="thumbAttrs">
+            <ThumbnailBackdrop :value="thumbnailValue" :effects="thumbnailEffects" />
+            <LevelBadge :level="30" :current-xp="600" :required-xp="1000"
+              :avatar-url="authStore.userProfile?.avatarUrl || undefined" fallback-title="Preview"
+              :equipped-title="titleValue" :equipped-border-shape="borderShapeValue"
+              :equipped-border-color="borderColorValue" :title-effects="titleEffects" :border-effects="borderEffects"
+              hide-progress />
+          </div>
+
+          <div class="preview-dock__rows">
+            <template v-for="row in rows" :key="row.key">
+              <span class="field-label">{{ row.label }}</span>
+              <PreviewPicker class="preview-dock__item" :model-value="row.state.item?.id ?? ''" :items="row.items"
+                placeholder="None" @update:model-value="pickItem(row.key, $event)" />
+              <PreviewPicker :model-value="row.state.effect?.id ?? ''" :effects="effects" placeholder="No effect"
+                @update:model-value="pickEffect(row.key, $event)" />
+              <PreviewModifierPicker v-model="row.state.modifiers" :modifiers="availableModifiers" />
+              <Transition name="collapse">
+                <div v-if="row.variants.length" class="preview-dock__variants collapsible">
+                  <div>
+                    <BaseTabs variant="segmented" :columns="variantColumns(row.variants.length, phone)"
+                      :label="`${row.label} variant`" :tabs="row.variants" :model-value="row.state.variant ?? ''"
+                      @update:model-value="row.state.variant = $event" />
+                  </div>
+                </div>
+              </Transition>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <button type="button" class="preview-dock__bar" :aria-expanded="expanded" @click="expanded = !expanded">
+      <span class="card-title">Preview</span>
+      <span class="preview-dock__summary caption">{{ summary }}</span>
+      <svg class="preview-dock__chevron" :class="{ 'preview-dock__chevron--open': expanded }" width="16" height="16"
+        viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M4 10L8 6L12 10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
           stroke-linejoin="round" />
       </svg>
     </button>
-
-    <div class="preview-dock__reveal" :class="{ 'preview-dock__reveal--open': expanded }">
-      <div class="preview-dock__reveal-clip">
-        <div class="preview-dock__panel">
-          <div class="preview-dock__stage" v-bind="thumbAttrs">
-        <ThumbnailBackdrop :value="thumbnailValue" :effects="thumbnailEffects" />
-        <LevelBadge
-          :level="30"
-          :current-xp="600"
-          :required-xp="1000"
-          :avatar-url="sampleAvatar"
-          fallback-title="Preview"
-          :equipped-title="titleValue"
-          :equipped-border-shape="borderShapeValue"
-          :equipped-border-color="borderColorValue"
-          :title-effects="titleEffects"
-          :border-effects="borderEffects"
-          hide-progress
-        />
-      </div>
-
-      <div class="preview-dock__controls">
-        <div class="preview-dock__group">
-          <span class="field-label">Border shape</span>
-          <PreviewPicker v-model="borderShapeId" :items="borderShapes" placeholder="None" />
-          <PreviewVariantRow :variants="borderShapeVariants" v-model="preview.borderShapeVariant" />
-          <PreviewPicker v-model="borderShapeEffectId" :effects="effects" placeholder="No effect" />
-          <PreviewModifierPicker v-model="preview.borderShapeModifiers" :modifiers="availableModifiers" />
-        </div>
-
-        <div class="preview-dock__group">
-          <span class="field-label">Border color</span>
-          <PreviewPicker v-model="borderColorId" :items="borderColors" placeholder="None" />
-          <PreviewVariantRow :variants="borderColorVariants" v-model="preview.borderColorVariant" />
-          <PreviewPicker v-model="borderColorEffectId" :effects="effects" placeholder="No effect" />
-          <PreviewModifierPicker v-model="preview.borderColorModifiers" :modifiers="availableModifiers" />
-        </div>
-
-        <div class="preview-dock__group">
-          <span class="field-label">Title</span>
-          <PreviewPicker v-model="titleId" :items="titles" placeholder="None" />
-          <PreviewVariantRow :variants="titleVariants" v-model="preview.titleVariant" />
-          <PreviewPicker v-model="titleEffectId" :effects="effects" placeholder="No effect" />
-          <PreviewModifierPicker v-model="preview.titleModifiers" :modifiers="availableModifiers" />
-        </div>
-
-        <div class="preview-dock__group">
-          <span class="field-label">Thumbnail</span>
-          <PreviewPicker v-model="thumbnailId" :items="thumbnails" placeholder="None" />
-          <PreviewVariantRow :variants="thumbnailVariants" v-model="preview.thumbnailVariant" />
-          <PreviewPicker v-model="thumbnailEffectId" :effects="effects" placeholder="No effect" />
-          <PreviewModifierPicker v-model="preview.thumbnailModifiers" :modifiers="availableModifiers" />
-        </div>
-
-        <div class="preview-dock__group">
-          <span class="field-label">Theme</span>
-          <PreviewPicker v-model="themeId" :items="themes" placeholder="None" />
-          <PreviewVariantRow :variants="themeVariants" v-model="preview.themeVariant" />
-          <PreviewPicker v-model="themeEffectId" :effects="effects" placeholder="No effect" />
-          <PreviewModifierPicker v-model="preview.themeModifiers" :modifiers="availableModifiers" />
-        </div>
-        </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="preview-dock__bar">
-      <span class="preview-dock__dot" aria-hidden="true"></span>
-      <span class="preview-dock__label">Preview mode</span>
-      <div class="preview-dock__chips">
-        <span v-if="!chips.length" class="preview-dock__empty">No overrides selected</span>
-        <span v-for="chip in chips" :key="chip" class="preview-dock__chip">{{ chip }}</span>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -266,9 +151,7 @@ const chips = computed(() => {
   transform: translateX(-50%);
   bottom: 0;
   z-index: 95;
-  width: min(680px, calc(100vw - 2 * var(--space-md)));
-  display: flex;
-  flex-direction: column;
+  width: min(880px, calc(100vw - 2 * var(--space-md)));
   background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
   border-bottom: none;
@@ -276,57 +159,13 @@ const chips = computed(() => {
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
 }
 
-.preview-dock__toggle {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: var(--radius-btn);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.preview-dock__toggle:hover {
-  color: var(--text-primary);
-  background: var(--bg-surface);
-}
-
-.preview-dock__toggle svg {
-  transition: transform 240ms ease;
-}
-
-.preview-dock__toggle--collapsed svg {
-  transform: rotate(180deg);
-}
-
-.preview-dock__reveal {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 240ms ease;
-}
-
-.preview-dock__reveal--open {
-  grid-template-rows: 1fr;
-}
-
-.preview-dock__reveal-clip {
-  overflow: hidden;
-  min-height: 0;
-}
-
 .preview-dock__panel {
   display: flex;
-  gap: var(--space-lg);
-  padding: var(--space-lg) var(--space-2xl) var(--space-md) var(--space-lg);
   align-items: flex-start;
+  gap: var(--space-lg);
+  max-height: calc(100vh - 160px);
+  padding: var(--space-md) var(--space-lg) var(--space-sm);
+  overflow-y: auto;
 }
 
 .preview-dock__stage {
@@ -334,103 +173,98 @@ const chips = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 96px;
   flex-shrink: 0;
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
   border-radius: var(--radius-card);
   overflow: hidden;
-}
-
-.preview-dock__stage[data-thumb-base] {
-  padding: var(--space-md);
-  border: 1px solid var(--bg-overlay);
 }
 
 .preview-dock__stage :deep(.level-badge) {
   position: relative;
 }
 
-.preview-dock__controls {
+.preview-dock__rows {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-md) var(--space-lg);
+  grid-template-columns: max-content minmax(0, 3fr) minmax(0, 3fr) minmax(0, 2fr);
+  align-items: center;
+  column-gap: var(--space-sm);
   flex: 1;
+  min-width: 0;
 }
 
-.preview-dock__group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.preview-dock__rows > :not(.preview-dock__variants) {
+  margin-top: var(--space-sm);
+}
+
+.preview-dock__variants > div {
+  padding-top: var(--space-sm);
+}
+
+.preview-dock__rows :deep(.base-select__trigger) {
   min-width: 0;
+  padding-inline: var(--space-sm);
+}
+
+.preview-dock__variants {
+  grid-column: 2 / -1;
 }
 
 .preview-dock__bar {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-2xl) var(--space-sm) var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
+  gap: var(--space-md);
+  width: 100%;
+  height: calc(var(--control-h) + var(--space-sm));
+  padding: 0 var(--space-lg);
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.preview-dock__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--info);
-  flex-shrink: 0;
-}
-
-.preview-dock__label {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.preview-dock__chips {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
+.preview-dock__summary {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-}
-
-.preview-dock__empty {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.preview-dock__chip {
-  padding: 2px var(--space-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .preview-dock__reveal {
-    transition: none;
-  }
-  .preview-dock__toggle svg {
-    transition: none;
-  }
+.preview-dock__chevron {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform var(--dur-enter) var(--ease-in-out);
+}
+
+.preview-dock__chevron--open {
+  transform: rotate(180deg);
+}
+
+.preview-dock__bar:hover .preview-dock__chevron {
+  color: var(--text-primary);
 }
 
 @media (max-width: 767px) {
   .preview-dock__stage {
     display: none;
   }
-  .preview-dock__controls {
-    grid-template-columns: 1fr;
+
+  .preview-dock__rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .preview-dock__chips {
-    display: none;
+
+  .preview-dock__rows > .field-label,
+  .preview-dock__item,
+  .preview-dock__variants {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-dock__chevron {
+    transition: none;
   }
 }
 </style>

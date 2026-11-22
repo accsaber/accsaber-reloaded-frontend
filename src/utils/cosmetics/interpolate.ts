@@ -42,6 +42,10 @@ export function fillToCss(fill: BorderColorFill): string {
   if (fill.type === 'wood') {
     return `repeating-linear-gradient(180deg, ${fill.base} 0px, ${fill.light} 5px, ${fill.base} 9px, ${fill.dark} 11px, ${fill.dark} 12px)`
   }
+  if (fill.type === 'lights') {
+    const dots = fill.colors.map((c, i) => `radial-gradient(circle at ${Math.round(((i + 0.5) / fill.colors.length) * 100)}% 50%, ${c} 0 12%, transparent 13%)`)
+    return `${dots.join(', ')}, ${fill.base}`
+  }
   if (fill.type === 'starshine') {
     return `radial-gradient(circle at 30% 30%, ${fill.light} 0%, ${fill.base} 45%, ${fill.deep} 100%)`
   }
@@ -144,7 +148,7 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
 
 const CANVAS_FILL_LIST = [
   'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion', 'eclipse', 'candle', 'wood', 'brew',
-  'starshine',
+  'starshine', 'lights',
   'confetti', 'jewel', 'laser', 'chart', 'hazard', 'warp',
 ] as const
 

@@ -1,10 +1,12 @@
-import { onMounted, onUnmounted, type Ref } from 'vue'
+import { onMounted, onUnmounted, watch, type Ref } from 'vue'
+import { mediaMatches, PHONE_MEDIA_QUERY } from '@/composables/useMediaQuery'
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useRenderLoop } from '@/composables/useRenderLoop'
+import { observeSize, observeVisible } from '@/utils/observe'
 
 export interface CanvasScene {
   animated?: boolean
-  init: (w: number, h: number, nowMs: number, scale: number) => void
+  init?: (w: number, h: number, nowMs: number, scale: number) => void
   resize?: (w: number, h: number, nowMs: number, scale: number) => void
   draw: (
     ctx: CanvasRenderingContext2D,
@@ -13,11 +15,6 @@ export interface CanvasScene {
     nowMs: number,
     reduced: boolean,
   ) => void
-}
-
-interface SceneSizing {
-  measure: (canvas: HTMLCanvasElement) => { w: number; h: number; scale: number }
-  observe?: (canvas: HTMLCanvasElement, onChange: () => void) => () => void
 }
 
 const OVERSCAN_BUDGET = 2
@@ -38,57 +35,46 @@ function inlineZoom(host: HTMLElement): number {
 function useSceneCanvas(
   canvasRef: Ref<HTMLCanvasElement | null>,
   scene: CanvasScene,
-  sizing: SceneSizing,
+  measure: (canvas: HTMLCanvasElement) => { w: number; h: number; scale: number },
 ): void {
   const reduced = useReducedMotion()
-  let stopObserving: (() => void) | null = null
+  const phone = mediaMatches(PHONE_MEDIA_QUERY)
+  const stops: Array<() => void> = []
+  let ctx: CanvasRenderingContext2D | null = null
+  let staticHost = false
   let logicalW = 0
   let logicalH = 0
   let logicalScale = 0
   let initialized = false
   let pendingLayout = 0
   let onScreen = true
-  let visibility: IntersectionObserver | null = null
 
   function isStatic(): boolean {
-    return reduced.value || !!canvasRef.value?.closest('[data-fx-static]')
+    return staticHost || reduced.value || phone.value
   }
 
   function render(now: number) {
-    if (!canvasRef.value || logicalW <= 0 || logicalH <= 0) return
-    const ctx = canvasRef.value.getContext('2d')
-    if (!ctx) return
-    scene.draw(ctx, logicalW, logicalH, now, isStatic())
+    if (ctx && logicalW > 0 && logicalH > 0) scene.draw(ctx, logicalW, logicalH, now, isStatic())
   }
 
   const loop = useRenderLoop(render, () => onScreen && scene.animated !== false && !isStatic())
 
-  function watchVisibility(canvas: HTMLCanvasElement) {
-    visibility = new IntersectionObserver(
-      (entries) => {
-        onScreen = entries.some((e) => e.isIntersecting)
-        if (onScreen) loop.start()
-      },
-      { rootMargin: '64px' },
-    )
-    visibility.observe(canvas)
-  }
-
   function layout() {
-    if (!canvasRef.value) return
-    const { w, h, scale } = sizing.measure(canvasRef.value)
+    const canvas = canvasRef.value
+    if (!canvas) return
+    const { w, h, scale } = measure(canvas)
     if (w <= 0 || h <= 0) return
     if (w === logicalW && h === logicalH && scale === logicalScale) return
-    canvasRef.value.width = w * scale
-    canvasRef.value.height = h * scale
-    const ctx = canvasRef.value.getContext('2d')
-    if (ctx) ctx.setTransform(scale, 0, 0, scale, 0, 0)
+    canvas.width = w * scale
+    canvas.height = h * scale
+    ctx = canvas.getContext('2d')
+    ctx?.setTransform(scale, 0, 0, scale, 0, 0)
     logicalW = w
     logicalH = h
     logicalScale = scale
     const now = performance.now()
-    if (initialized) (scene.resize ?? scene.init)(w, h, now, scale)
-    else scene.init(w, h, now, scale)
+    if (initialized) (scene.resize ?? scene.init)?.(w, h, now, scale)
+    else scene.init?.(w, h, now, scale)
     initialized = true
     if (isStatic() || scene.animated === false) render(now)
   }
@@ -101,12 +87,23 @@ function useSceneCanvas(
     })
   }
 
+  watch([reduced, phone], () => {
+    if (isStatic()) render(performance.now())
+    else loop.start()
+  })
+
   onMounted(() => {
+    const canvas = canvasRef.value
+    if (!canvas) return
+    staticHost = !!canvas.closest('[data-fx-static]')
     layout()
-    if (canvasRef.value && sizing.observe) {
-      stopObserving = sizing.observe(canvasRef.value, scheduleLayout)
-    }
-    if (canvasRef.value) watchVisibility(canvasRef.value)
+    stops.push(
+      observeSize(canvas, scheduleLayout),
+      observeVisible(canvas, (visible) => {
+        onScreen = visible
+        if (visible) loop.start()
+      }),
+    )
     loop.start()
   })
 
@@ -114,40 +111,28 @@ function useSceneCanvas(
     loop.stop()
     if (pendingLayout) cancelAnimationFrame(pendingLayout)
     pendingLayout = 0
-    stopObserving?.()
-    stopObserving = null
-    visibility?.disconnect()
-    visibility = null
+    for (const stop of stops) stop()
   })
-}
-
-function observeElement(canvas: HTMLCanvasElement, onChange: () => void): () => void {
-  const observer = new ResizeObserver(onChange)
-  observer.observe(canvas)
-  return () => observer.disconnect()
 }
 
 export function useBackdropCanvas(
   canvasRef: Ref<HTMLCanvasElement | null>,
   scene: CanvasScene,
 ): void {
-  useSceneCanvas(canvasRef, scene, {
-    measure: (canvas) => {
-      const host = inlineHost(canvas)
-      if (host) {
-        const zoom = inlineZoom(host)
-        return {
-          w: canvas.clientWidth * zoom,
-          h: canvas.clientHeight * zoom,
-          scale: deviceScale() / zoom,
-        }
+  useSceneCanvas(canvasRef, scene, (canvas) => {
+    const host = inlineHost(canvas)
+    if (host) {
+      const zoom = inlineZoom(host)
+      return {
+        w: canvas.clientWidth * zoom,
+        h: canvas.clientHeight * zoom,
+        scale: deviceScale() / zoom,
       }
-      const w = canvas.clientWidth
-      const h = canvas.clientHeight
-      const overscan = (w * h) / (window.innerWidth * window.innerHeight)
-      return { w, h, scale: deviceScale() * Math.min(1, Math.sqrt(OVERSCAN_BUDGET / overscan)) }
-    },
-    observe: observeElement,
+    }
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    const overscan = (w * h) / (window.innerWidth * window.innerHeight)
+    return { w, h, scale: deviceScale() * Math.min(1, Math.sqrt(OVERSCAN_BUDGET / overscan)) }
   })
 }
 
@@ -155,8 +140,5 @@ export function useElementCanvas(
   canvasRef: Ref<HTMLCanvasElement | null>,
   scene: CanvasScene,
 ): void {
-  useSceneCanvas(canvasRef, scene, {
-    measure: (canvas) => ({ w: canvas.clientWidth, h: canvas.clientHeight, scale: deviceScale() }),
-    observe: observeElement,
-  })
+  useSceneCanvas(canvasRef, scene, (canvas) => ({ w: canvas.clientWidth, h: canvas.clientHeight, scale: deviceScale() }))
 }

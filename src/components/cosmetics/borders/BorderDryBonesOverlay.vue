@@ -7,7 +7,7 @@ import type {
   DryBonesPart,
   DryBonesPathKind,
 } from '@/types/cosmetics/border'
-import { frameDelta, overlaySpace, primaryFillHex, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { enterUnitSpace, frameDelta, primaryFillHex, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
 import { clamp01 } from '@/utils/math'
@@ -340,12 +340,10 @@ function drawPuffs(ctx: CanvasRenderingContext2D): void {
 }
 
 function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
   const lit = socketHex.value
   const amp = jitterAmp()
   ctx.save()
-  ctx.translate(toX(0), toY(0))
-  ctx.scale(sx, sy)
+  enterUnitSpace(ctx, w, h, MARGIN)
   drawPuffs(ctx)
   if (phase === 'collapse' || phase === 'pile') {
     let i = 0

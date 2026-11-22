@@ -116,6 +116,22 @@ export interface HarvestBackdropConfig {
   stars: boolean
 }
 
+export interface SnowfieldBackdropConfig {
+  type: 'snowfield'
+  opacity: number
+  skyColors: string[]
+  snowColor: string
+  driftColor: string
+  pineColor: string
+  cabinColor: string
+  roofColor: string
+  capColor: string
+  lightColor: string
+  smokeColor: string
+  starColor: string
+  flakeColor: string
+}
+
 export interface WatchersBackdropConfig {
   type: 'watchers'
   opacity: number
@@ -130,6 +146,7 @@ export type ThemeBackdropConfig =
   | WatchersBackdropConfig
   | DarkHourBackdropConfig
   | HarvestBackdropConfig
+  | SnowfieldBackdropConfig
   | PixelFieldBackdropConfig
   | ForestBackdropConfig
 
@@ -298,6 +315,24 @@ function parseHarvest(tokens: Record<string, string>): HarvestBackdropConfig {
   }
 }
 
+function parseSnowfield(tokens: Record<string, string>): SnowfieldBackdropConfig {
+  return {
+    type: 'snowfield',
+    opacity: readOpacity(tokens),
+    skyColors: readHexList(tokens, 'fx-snow-sky-colors', ['#070b16', '#111a2c']),
+    snowColor: readHex(tokens, 'fx-snow-ground-color', '#1b2740'),
+    driftColor: readHex(tokens, 'fx-snow-drift-color', '#131c30'),
+    pineColor: readHex(tokens, 'fx-snow-pine-color', '#0c1420'),
+    cabinColor: readHex(tokens, 'fx-snow-cabin-color', '#0a0f19'),
+    roofColor: readHex(tokens, 'fx-snow-roof-color', '#141c2c'),
+    capColor: readHex(tokens, 'fx-snow-cap-color', '#3a4a66'),
+    lightColor: readHex(tokens, 'fx-snow-light-color', '#f5b556'),
+    smokeColor: readHex(tokens, 'fx-snow-smoke-color', '#6c7a94'),
+    starColor: readHex(tokens, 'fx-snow-star-color', '#c9d6ee'),
+    flakeColor: readHex(tokens, 'fx-snow-flake-color', '#dfe8f5'),
+  }
+}
+
 function parseWatchers(tokens: Record<string, string>): WatchersBackdropConfig {
   return {
     type: 'watchers',
@@ -316,6 +351,7 @@ const BACKDROP_PARSERS: Record<string, (tokens: Record<string, string>) => Theme
   watchers: parseWatchers,
   dark_hour: parseDarkHour,
   harvest: parseHarvest,
+  snowfield: parseSnowfield,
 }
 
 export function readBackdropConfig(

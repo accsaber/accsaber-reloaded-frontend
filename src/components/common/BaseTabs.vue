@@ -6,11 +6,13 @@ const props = withDefaults(defineProps<{
   tabs: Tab[]
   modelValue: string
   variant?: 'underline' | 'segmented'
+  columns?: number
   label?: string
   idPrefix?: string
   disabledKeys?: string[]
 }>(), {
   variant: 'underline',
+  columns: undefined,
   label: undefined,
   idPrefix: undefined,
   disabledKeys: () => [],
@@ -86,8 +88,9 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div ref="listRef" class="base-tabs" :class="[`base-tabs--${variant}`, { 'base-tabs--settled': settled }]"
-    :style="{ '--tab-accent': activeAccent }" role="tablist" :aria-label="label" @keydown="onKeydown">
+  <div ref="listRef" class="base-tabs"
+    :class="[`base-tabs--${variant}`, { 'base-tabs--settled': settled, 'base-tabs--grid': columns }]"
+    :style="{ '--tab-accent': activeAccent, '--tab-columns': columns }" role="tablist" :aria-label="label" @keydown="onKeydown">
     <span v-if="indicator" class="base-tabs__indicator" :style="indicator" aria-hidden="true" />
     <button v-for="tab in tabs" :id="idPrefix && `${idPrefix}-tab-${tab.key}`" :key="tab.key"
       type="button" class="base-tabs__tab" :class="{ 'base-tabs__tab--active': modelValue === tab.key }"
@@ -196,6 +199,17 @@ function onKeydown(e: KeyboardEvent) {
 
 .base-tabs--segmented .base-tabs__tab--active {
   color: var(--text-primary);
+}
+
+.base-tabs--grid {
+  display: grid;
+  grid-template-columns: repeat(var(--tab-columns), auto);
+}
+
+.base-tabs--grid .base-tabs__tab {
+  justify-content: center;
+  padding-inline: var(--space-sm);
+  text-align: center;
 }
 
 @media (max-width: 767px) {

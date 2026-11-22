@@ -61,6 +61,12 @@ export const RARITY_ORDER: ItemRarity[] = [
   'mythic',
 ]
 
+export function variantColumns(count: number, phone: boolean): number {
+  if (phone) return Math.min(count, 2)
+  if (count <= 5) return count
+  return [7, 6, 5, 4, 3].find((columns) => count % columns === 0) ?? 5
+}
+
 export function rarityClass(rarity: ItemRarity): string {
   return `rarity--${rarity}`
 }

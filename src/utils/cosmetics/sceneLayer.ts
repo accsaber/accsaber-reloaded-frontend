@@ -1,4 +1,5 @@
 import type { RGB } from '@/utils/color'
+import { hash01 } from '@/utils/random'
 
 export function createSceneLayer(ctx: CanvasRenderingContext2D): HTMLCanvasElement {
   const layer = document.createElement('canvas')
@@ -64,6 +65,23 @@ export function createRadialSprite(
   return sprite
 }
 
+export function drawGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  inner: string,
+  outer: string,
+): void {
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, r)
+  grad.addColorStop(0, inner)
+  grad.addColorStop(1, outer)
+  ctx.fillStyle = grad
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 export function offscreenLayer(
   w: number,
   h: number,
@@ -108,6 +126,38 @@ export function softPuff(
   ctx.fillStyle = g
   ctx.fillRect(-1, -1, 2, 2)
   ctx.restore()
+}
+
+export interface FieldStar {
+  x: number
+  y: number
+  r: number
+  phase: number
+  rate: number
+}
+
+export function starField(count: number, w: number, h: number, unit: number): FieldStar[] {
+  return Array.from({ length: count }, (_, i) => {
+    const bright = hash01(i * 61 + 14)
+    return {
+      x: hash01(i * 41 + 9) * w,
+      y: hash01(i * 43 + 10) * h,
+      r: unit * (0.25 + bright * bright * 0.6),
+      phase: hash01(i * 53 + 12) * 6.28,
+      rate: 0.6 + hash01(i * 59 + 13) * 1.2,
+    }
+  })
+}
+
+export function drawStarField(ctx: CanvasRenderingContext2D, stars: FieldStar[], t: number, color: string): void {
+  ctx.fillStyle = color
+  for (const st of stars) {
+    ctx.globalAlpha = 0.18 + 0.5 * (0.5 + 0.5 * Math.sin(t * st.rate + st.phase))
+    ctx.beginPath()
+    ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
 }
 
 export function layeredWave(x: number, seed: number): number {

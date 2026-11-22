@@ -18,6 +18,7 @@ import {
   pickInterpolatedState,
 } from '@/utils/cosmetics/interpolate'
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { observeSize, observeVisible } from '@/utils/observe'
 import { clamp, clamp01 } from '@/utils/math'
 
 const props = defineProps<{
@@ -30,37 +31,23 @@ const reducedMotion = useReducedMotion()
 const visible = ref(true)
 const rootEl = ref<HTMLDivElement | null>(null)
 const containerSize = ref({ w: 100, h: 100 })
-let observer: IntersectionObserver | null = null
-let resizeObserver: ResizeObserver | null = null
+let stops: Array<() => void> = []
 
 onMounted(() => {
-  if (!rootEl.value) return
-  if (typeof IntersectionObserver !== 'undefined') {
-    observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) visible.value = entry.isIntersecting
-      },
-      { threshold: 0.01 },
-    )
-    observer.observe(rootEl.value)
-  }
-  if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        containerSize.value = { w: entry.contentRect.width, h: entry.contentRect.height }
-      }
-    })
-    resizeObserver.observe(rootEl.value)
-  }
-  const r = rootEl.value.getBoundingClientRect()
+  const el = rootEl.value
+  if (!el) return
+  stops = [
+    observeVisible(el, (v) => { visible.value = v }),
+    observeSize(el, (entry) => {
+      containerSize.value = { w: entry.contentRect.width, h: entry.contentRect.height }
+    }),
+  ]
+  const r = el.getBoundingClientRect()
   containerSize.value = { w: r.width, h: r.height }
 })
 
 onUnmounted(() => {
-  observer?.disconnect()
-  observer = null
-  resizeObserver?.disconnect()
-  resizeObserver = null
+  for (const stop of stops) stop()
 })
 
 interface MetalRamp {
@@ -156,6 +143,7 @@ function fillTriple(fill: BorderColorFill): MetalTriple | null {
     case 'cosmic': return [fill.space, fill.nebulas[0] ?? fill.accent, lighten(fill.star, 0.1)]
     case 'toon': return [darken(fill.ink, 0.3), fill.ink, fill.line]
     case 'laser': return [fill.dark, fill.glow, fill.core]
+    case 'lights': return [fill.base, fill.colors[0] ?? fill.wire, fill.colors[1] ?? fill.wire]
     case 'starshine': return [fill.deep, fill.base, fill.light]
     case 'candle': return tripleFromColors([fill.dark, fill.glow, fill.flame])
     case 'wood': return [fill.dark, fill.base, fill.light]

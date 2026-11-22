@@ -11,6 +11,7 @@ export const BACKDROP_RENDERERS: Record<ThemeBackdropType, Component> = {
   watchers: defineAsyncComponent(() => import('@/components/cosmetics/backdrops/WatchersBackdrop.vue')),
   dark_hour: defineAsyncComponent(() => import('@/components/cosmetics/backdrops/DarkHourBackdrop.vue')),
   harvest: defineAsyncComponent(() => import('@/components/cosmetics/backdrops/HarvestBackdrop.vue')),
+  snowfield: defineAsyncComponent(() => import('@/components/cosmetics/backdrops/SnowfieldBackdrop.vue')),
 }
 
 export const LANDSCAPE_BACKDROPS: ReadonlySet<ThemeBackdropType> = new Set([
@@ -20,4 +21,5 @@ export const LANDSCAPE_BACKDROPS: ReadonlySet<ThemeBackdropType> = new Set([
   'mineshaft',
   'dark_hour',
   'harvest',
+  'snowfield',
 ])

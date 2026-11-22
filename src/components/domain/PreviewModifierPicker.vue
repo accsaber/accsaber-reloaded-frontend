@@ -85,8 +85,8 @@ function toggleModifier(m: ItemModifierResponse) {
   justify-content: space-between;
   gap: var(--space-sm);
   width: 100%;
-  min-width: 160px;
-  padding: 5px var(--space-sm);
+  height: var(--control-h);
+  padding: 0 var(--space-sm);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-input);
   background: var(--bg-base);
@@ -95,7 +95,9 @@ function toggleModifier(m: ItemModifierResponse) {
   font-size: var(--text-body);
   cursor: pointer;
   text-align: left;
-  transition: border-color 120ms ease, color 120ms ease;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .mod-picker__trigger:hover {
@@ -115,7 +117,7 @@ function toggleModifier(m: ItemModifierResponse) {
 
 .mod-picker__chevron {
   color: var(--text-secondary);
-  transition: transform 150ms ease;
+  transition: transform var(--dur-fast) var(--ease-out);
   flex-shrink: 0;
 }
 
@@ -148,7 +150,7 @@ function toggleModifier(m: ItemModifierResponse) {
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: 6px var(--space-sm);
+  padding: var(--space-sm);
   border: none;
   background: transparent;
   color: var(--text-primary);

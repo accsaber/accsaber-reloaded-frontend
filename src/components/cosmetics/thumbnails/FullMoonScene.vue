@@ -5,7 +5,7 @@ import { lerpHex } from '@/utils/color'
 import { fillCircle as circle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { batFlight, drawBat } from '@/utils/cosmetics/graveyardScenery'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { cloudMask, offscreenLayer, tintLayer, wrapX } from '@/utils/cosmetics/sceneLayer'
+import { cloudMask, drawStarField, offscreenLayer, starField, tintLayer, wrapX, type FieldStar } from '@/utils/cosmetics/sceneLayer'
 import { hash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 
@@ -20,14 +20,6 @@ interface Cloud {
   x0: number
   speed: number
   alpha: number
-}
-
-interface Star {
-  x: number
-  y: number
-  r: number
-  phase: number
-  rate: number
 }
 
 const STATIC_T = 3
@@ -54,7 +46,7 @@ const MARIA: [number, number, number, number][] = [
 let unit = 1
 let base: HTMLCanvasElement | null = null
 let clouds: Cloud[] = []
-let stars: Star[] = []
+let stars: FieldStar[] = []
 let litLayer: HTMLCanvasElement | null = null
 let litMask: HTMLCanvasElement | null = null
 let litBox = { x: 0, y: 0, size: 0 }
@@ -74,18 +66,6 @@ function buildCloud(i: number, w: number, h: number, scale: number): Cloud {
     speed: (w / 70) * (0.6 + hash01(i * 19 + 6) * 0.8) * (i % 2 === 0 ? 1 : 0.7),
     alpha: 0.72 + hash01(i * 23 + 8) * 0.24,
   }
-}
-
-function buildStars(w: number, h: number): Star[] {
-  const out: Star[] = []
-  for (let i = 0; i < STARS; i++) {
-    const x = hash01(i * 41 + 9) * w
-    const y = hash01(i * 43 + 10) * h
-    if (Math.hypot(x - w * MOON_X, y - h * MOON_Y) < MOON_R * unit * 1.7) continue
-    const bright = hash01(i * 61 + 14)
-    out.push({ x, y, r: unit * (0.25 + bright * bright * 0.6), phase: hash01(i * 53 + 12) * 6.28, rate: 0.6 + hash01(i * 59 + 13) * 1.2 })
-  }
-  return out
 }
 
 function blob(ctx: Ctx, cx: number, cy: number, r: number, seed: number): void {
@@ -170,15 +150,6 @@ function buildLitLayers(w: number, h: number, scale: number): void {
   mctx.fillRect(0, 0, size, size)
 }
 
-function drawStars(ctx: Ctx, t: number): void {
-  ctx.fillStyle = props.scene.moon
-  for (const st of stars) {
-    ctx.globalAlpha = 0.18 + 0.5 * (0.5 + 0.5 * Math.sin(t * st.rate + st.phase))
-    circle(ctx, st.x, st.y, st.r)
-  }
-  ctx.globalAlpha = 1
-}
-
 function drawLitClouds(ctx: Ctx, w: number, t: number): void {
   const lctx = litLayer?.getContext('2d')
   if (!litLayer || !litMask || !lctx) return
@@ -223,7 +194,7 @@ useElementCanvas(canvasRef, {
   init(w, h, _nowMs, scale) {
     unit = Math.min(w, h) / 110
     clouds = Array.from({ length: CLOUDS }, (_, i) => buildCloud(i, w, h, scale))
-    stars = buildStars(w, h)
+    stars = starField(STARS, w, h, unit).filter((st) => Math.hypot(st.x - w * MOON_X, st.y - h * MOON_Y) >= MOON_R * unit * 1.7)
     const [layer, lctx] = offscreenLayer(w, h, scale)
     if (lctx) {
       paintSky(lctx, w, h)
@@ -236,7 +207,7 @@ useElementCanvas(canvasRef, {
     const t = reduced ? STATIC_T : now / 1000
     ctx.clearRect(0, 0, w, h)
     if (base) ctx.drawImage(base, 0, 0, w, h)
-    drawStars(ctx, t)
+    drawStarField(ctx, stars, t, props.scene.moon)
     drawClouds(ctx, w, t)
     if (!reduced) drawBatCrossing(ctx, w, h, t)
   },

@@ -250,9 +250,11 @@ useElementCanvas(canvasRef, {
       return 1
     }
 
+    const starColor = props.fill.star
+
     function drawStar(star: Star, px: number, py: number, alpha: number) {
       const tw = reduced ? 0.75 : 0.55 + 0.45 * Math.sin(t * star.speed + star.phase)
-      drawCosmicStar(ctx, px, py, star.size * s, props.fill.star, tw, !!star.bright, alpha)
+      drawCosmicStar(ctx, px, py, star.size * s, starColor, tw, !!star.bright, alpha)
     }
 
     function drawNebula(n: Nebula, px: number, py: number, alpha: number, radius = n.r * s) {

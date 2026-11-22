@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useClickOutside } from '@/composables/useClickOutside'
-import { useMediaQuery } from '@/composables/useMediaQuery'
+import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 
 const open = defineModel<boolean>('open', { required: true })
 
-const sheet = useMediaQuery('(max-width: 767px)')
+const sheet = useMediaQuery(PHONE_MEDIA_QUERY)
 const containerRef = ref<HTMLElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 

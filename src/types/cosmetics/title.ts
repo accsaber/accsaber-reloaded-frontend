@@ -116,6 +116,18 @@ export interface TitleCoronaAuraSpec {
   annular?: boolean
 }
 
+export interface TitleAuroraAuraSpec {
+  type: 'aurora'
+  enabled: boolean
+  colors: string[]
+  lightColors?: string[]
+  star?: string
+  lightStar?: string
+  curtains?: number
+  stars?: number
+  speed?: number
+}
+
 export interface TitleLanternAuraSpec {
   type: 'lantern'
   enabled: boolean
@@ -457,6 +469,7 @@ export type TitleAuraSpec =
   | TitleAscensionAuraSpec
   | TitleGhostsAuraSpec
   | TitleLanternAuraSpec
+  | TitleAuroraAuraSpec
   | TitleCoronaAuraSpec
 
 export type TitleAuraType = TitleAuraSpec['type']
@@ -551,6 +564,20 @@ export interface TitleFrostSpec {
   thawMs?: number
 }
 
+export interface TitleStarlitSpec {
+  enabled: boolean
+  flash?: string
+  lightFlash?: string
+  tint?: string
+  lightTint?: string
+  ink?: string
+  lightInk?: string
+  intervalMs?: number
+  travelMs?: number
+  floatEm?: number
+  floatMs?: number
+}
+
 export interface TitleTransmuteSpec {
   enabled: boolean
   lead?: string
@@ -593,18 +620,20 @@ export interface TitleLanternSpec {
   gutterS?: number
 }
 
-export type BrewIngredientKind = 'eye' | 'mushroom' | 'newt' | 'spider'
+export type BrewIngredientKind = 'eye' | 'mushroom' | 'newt' | 'spider' | 'marshmallow' | 'candy_cane' | 'cinnamon'
 
 export interface TitleBrewIngredient {
   kind: BrewIngredientKind
   color: string
   lightColor?: string
+  ink?: string
 }
 
 export interface TitleBrewSpec {
   enabled: boolean
   ingredients: TitleBrewIngredient[]
   bone: string
+  floats?: 'bones' | 'marshmallows'
   bubbles?: number
   dropMinS?: number
   dropMaxS?: number
@@ -900,6 +929,7 @@ export interface TitleValue {
   sear?: TitleSearSpec
   frost?: TitleFrostSpec
   transmute?: TitleTransmuteSpec
+  starlit?: TitleStarlitSpec
   rune?: TitleRuneSpec
   sprout?: TitleSproutSpec
   ascent?: TitleAscentSpec

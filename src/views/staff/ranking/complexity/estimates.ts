@@ -3,9 +3,10 @@ import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/compl
 export interface EstimateField {
   key: string
   label: string
-  format: 'percent' | 'number' | 'count'
+  format: 'percent' | 'number' | 'count' | 'mix'
   decimals?: number
   always?: boolean
+  reading?: boolean
 }
 
 export interface EstimateGroup {
@@ -28,33 +29,43 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
       ],
     },
     {
-      key: 'swings',
-      title: 'Swing shares',
+      key: 'shares',
+      title: 'Chart shares',
       fields: [
         { key: 'resetShare', label: 'Resets', format: 'percent' },
         { key: 'dotShare', label: 'Dots', format: 'percent' },
         { key: 'bottomUpShare', label: 'Bottom-row ups', format: 'percent', always: true },
+        { key: 'crossoverShare', label: 'Crossovers', format: 'percent' },
+        { key: 'topRowShare', label: 'Top row', format: 'percent' },
+        { key: 'diagonalShare', label: 'Diagonals', format: 'percent' },
+        { key: 'verticalStackShare', label: 'Vertical stacks', format: 'percent' },
+        { key: 'outerShare', label: 'Outer notes', format: 'percent' },
       ],
     },
     {
-      key: 'board',
-      title: 'Board',
+      key: 'payFair',
+      title: 'Pay-fair',
       fields: [
-        { key: 'boardEase', label: 'Board ease', format: 'number', decimals: 4 },
-        { key: 'boardPlayers', label: 'Top players on map', format: 'count' },
+        { key: 'botEstimate', label: 'Bot Complexity Estimate', format: 'number', decimals: 1 },
         { key: 'scores', label: 'Scores', format: 'count' },
-        { key: 'boardWeight', label: 'Board weight', format: 'percent' },
-        { key: 'chartComplexity', label: 'Chart complexity', format: 'number', decimals: 2 },
-        { key: 'boardComplexity', label: 'Board complexity', format: 'number', decimals: 2 },
+        { key: 'payPlays', label: 'Top plays used', format: 'count' },
+        { key: 'payRatio', label: 'Top plays vs usual', format: 'percent', reading: true },
+        { key: 'payFair', label: 'Pay-fair', format: 'number', decimals: 3, reading: true },
+        { key: 'payWeight', label: 'Mix', format: 'mix' },
+        { key: 'payAdjustment', label: 'Adjustment', format: 'number', decimals: 2, reading: true },
       ],
     },
   ],
 }
 
-export const COEFFICIENT_SETS: { key: 'chart' | 'board'; title: string }[] = [
-  { key: 'board', title: 'Board coefficients' },
-  { key: 'chart', title: 'Chart coefficients' },
-]
+export function mixLabel(payWeight: number): string {
+  const share = Math.round(payWeight * 100)
+  return share > 0 ? `Pay-fair ${share}%, Bot ${100 - share}%` : 'Bot 100%'
+}
+
+export function hasPayFairReading(inputs: Record<string, unknown> | undefined): boolean {
+  return (readNumber(inputs, 'payRatio') ?? 0) > 0
+}
 
 export function readNumber(
   inputs: Record<string, unknown> | undefined,

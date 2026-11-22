@@ -209,7 +209,10 @@ function signedArea(pts: Vec[]): number {
 }
 
 export function ringGeometry(measure: EffectMeasure, box: ContentBox = measure.box): RingGeometry {
-  const ring = measure.host?.ring
+  return ringFrom(measure.host?.ring, box)
+}
+
+export function ringFrom(ring: ShapeRing | null | undefined, box: ContentBox): RingGeometry {
   const minD = Math.min(box.w, box.h)
   if (!ring) {
     const outer = rectPoly(box, 0)

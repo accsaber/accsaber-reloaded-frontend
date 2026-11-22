@@ -1,5 +1,4 @@
 import type { BorderGingerbreadOverlaySpec } from '@/types/cosmetics/border'
-import { darken } from '@/utils/color'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 import { framePoint } from '@/utils/cosmetics/overlayCanvas'
 import { hash01 } from '@/utils/random'
@@ -27,11 +26,11 @@ export const GINGERBREAD_BITES: [number, number, number][] = [
   [16, 95, 17], [50, 97, 18], [84, 95, 17],
 ]
 
-function silhouette(ctx: Ctx, color: string, grow: number): void {
+function silhouette(ctx: Ctx, color: string): void {
   ctx.fillStyle = color
   ctx.strokeStyle = color
   ctx.lineCap = 'round'
-  ctx.lineWidth = LIMB_WIDTH + grow * 2
+  ctx.lineWidth = LIMB_WIDTH
   for (const [ax, ay, bx, by] of LIMBS) {
     ctx.beginPath()
     ctx.moveTo(ax, ay)
@@ -39,8 +38,8 @@ function silhouette(ctx: Ctx, color: string, grow: number): void {
     ctx.stroke()
   }
   ctx.beginPath()
-  ctx.roundRect(-grow, -grow, 100 + grow * 2, 100 + grow * 2, 16 + grow)
-  ctx.arc(HEAD.x, HEAD.y, HEAD.r + grow, 0, TAU)
+  ctx.roundRect(0, 0, 100, 100, 16)
+  ctx.arc(HEAD.x, HEAD.y, HEAD.r, 0, TAU)
   ctx.fill()
 }
 
@@ -94,7 +93,7 @@ function face(ctx: Ctx, o: BorderGingerbreadOverlaySpec, icing: string): void {
   ctx.stroke()
 }
 
-function bow(ctx: Ctx, color: string): void {
+function bow(ctx: Ctx, color: string, knot: string): void {
   ctx.fillStyle = color
   for (const side of [-1, 1]) {
     ctx.beginPath()
@@ -104,7 +103,7 @@ function bow(ctx: Ctx, color: string): void {
     ctx.closePath()
     ctx.fill()
   }
-  ctx.fillStyle = darken(color, 0.25)
+  ctx.fillStyle = knot
   ctx.beginPath()
   ctx.arc(50, 5.4, 1.5, 0, TAU)
   ctx.fill()
@@ -116,11 +115,6 @@ function gumdrops(ctx: Ctx, colors: string[]): void {
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.arc(x, 95.4, 2.3, 0, TAU)
-    ctx.fill()
-    ctx.fillStyle = darken(color, 0.22)
-    ctx.beginPath()
-    ctx.arc(x, 95.4, 2.3, 0.15, Math.PI - 0.15)
-    ctx.closePath()
     ctx.fill()
   })
 }
@@ -140,8 +134,7 @@ function sprinkles(ctx: Ctx, colors: string[]): void {
 }
 
 export function paintGingerbread(ctx: Ctx, o: BorderGingerbreadOverlaySpec, icing: string): void {
-  silhouette(ctx, o.edge, 0.9)
-  silhouette(ctx, o.cookie, 0)
+  silhouette(ctx, o.cookie)
   ctx.globalCompositeOperation = 'source-atop'
   ctx.strokeStyle = icing
   ctx.lineWidth = 0.9
@@ -153,18 +146,13 @@ export function paintGingerbread(ctx: Ctx, o: BorderGingerbreadOverlaySpec, icin
   ctx.lineWidth = 1
   for (const [ax, ay, bx, by] of CUFFS) zigzag(ctx, ax, ay, bx, by)
   face(ctx, o, icing)
-  bow(ctx, o.bow)
+  bow(ctx, o.bow, icing)
   gumdrops(ctx, o.gumdrops)
   ctx.globalCompositeOperation = 'destination-out'
   ctx.beginPath()
   ctx.roundRect(9, 9, 82, 82, 11)
   ctx.fill()
   ctx.globalCompositeOperation = 'source-over'
-  ctx.strokeStyle = o.edge
-  ctx.lineWidth = 0.8
-  ctx.beginPath()
-  ctx.roundRect(9, 9, 82, 82, 11)
-  ctx.stroke()
 }
 
 export function biteMark(ctx: Ctx, x: number, y: number, r: number): void {

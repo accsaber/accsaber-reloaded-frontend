@@ -1,15 +1,13 @@
 import type {
   ComplexityRaterSpec,
-  RaterBoardGate,
+  RaterPayFair,
   RaterCoefficients,
 } from '@/types/api/complexity'
 import { computed, type ComputedRef, ref, type Ref } from 'vue'
 
-export type CoefficientKey = keyof RaterCoefficients
+export type FieldKind = 'intercept' | 'slope' | 'count' | 'threshold' | 'percent'
 
-export type GateKey = keyof RaterBoardGate
-
-export type FieldKind = 'intercept' | 'slope' | 'count' | 'nudge'
+type CountKind = 'count' | 'threshold'
 
 export interface FieldRange {
   min: number
@@ -18,7 +16,7 @@ export interface FieldRange {
 }
 
 export const COEFFICIENT_FIELDS: {
-  key: CoefficientKey
+  key: keyof RaterCoefficients
   label: string
   kind: FieldKind
   hint: string
@@ -27,104 +25,140 @@ export const COEFFICIENT_FIELDS: {
     key: 'intercept',
     label: 'Intercept',
     kind: 'intercept',
-    hint: 'The number every map in this category starts from. Raise it and every map here gets more complexity.',
+    hint: 'Where every map in this category starts. Raise it and they all go up.',
   },
   {
     key: 'meanSlope',
     label: 'Mean',
     kind: 'slope',
-    hint: 'How much the average note counts. The model guesses how accurately each note gets hit, and this weights that average.',
+    hint: 'The bot guesses how accurately every note gets hit. This is how much that average counts.',
   },
   {
     key: 'resetSlope',
     label: 'Resets',
     kind: 'slope',
-    hint: 'How much wrist resets count. More resets usually means a map is harder to hit clean.',
+    hint: 'How much wrist resets count.',
   },
   {
     key: 'dotSlope',
     label: 'Dots',
     kind: 'slope',
-    hint: 'How much dot notes count, the ones with no arrow telling you which way to swing.',
+    hint: 'Dot notes are the ones with no arrow. Higher gives more complexity to maps full of them.',
   },
   {
     key: 'bottomUpSlope',
     label: 'Bottom-Row Ups',
     kind: 'slope',
-    hint: 'How much bottom-row notes cut upward count. The model reads those as harder than they play, so a negative value pulls those maps back down.',
+    hint: 'Upswings on the bottom row. The bot reads them harder than they play so a negative number brings those maps back down.',
+  },
+  {
+    key: 'crossoverSlope',
+    label: 'Crossovers',
+    kind: 'slope',
+    hint: 'How much notes you hit with your arms crossed count.',
+  },
+  {
+    key: 'topRowSlope',
+    label: 'Top Row',
+    kind: 'slope',
+    hint: 'Higher gives more complexity to maps with lots of top row notes.',
+  },
+  {
+    key: 'diagonalSlope',
+    label: 'Diagonals',
+    kind: 'slope',
+    hint: 'How much diagonal cuts count.',
+  },
+  {
+    key: 'verticalStackSlope',
+    label: 'Vertical Stacks',
+    kind: 'slope',
+    hint: 'Notes stacked on top of each other and how much they count.',
+  },
+  {
+    key: 'outerSlope',
+    label: 'Outer Notes',
+    kind: 'slope',
+    hint: 'How much notes in the two outer columns count.',
   },
   {
     key: 'notesSlope',
     label: 'Notes',
     kind: 'slope',
-    hint: 'How much the map length counts. Doubling the notes moves it by a fixed step, so a long map is not twice a short one.',
+    hint: "How much the map's length counts. Twice the notes adds a fixed amount so a long map isn't worth double a short one.",
   },
   {
     key: 'njsSlope',
     label: 'NJS',
     kind: 'slope',
-    hint: 'How much note jump speed counts, meaning how fast notes fly at you.',
-  },
-  {
-    key: 'boardSlope',
-    label: 'Board Ease',
-    kind: 'slope',
-    hint: 'How much the real scores count. Board ease is how easily the top players hit this map.',
+    hint: 'How much it counts when notes come at you faster.',
   },
 ]
 
-export const GATE_FIELDS: {
-  key: GateKey
+interface PayFairField {
+  key: Exclude<keyof RaterPayFair, 'maxWeight'>
   label: string
   kind: FieldKind
   hint: string
-  slow?: boolean
-}[] = [
+}
+
+export const WEIGHT_HINT = "How much of a map's complexity comes from pay-fair once it has enough scores. The bot gets the rest."
+
+export const SCORE_FIELDS: PayFairField[] = [
   {
     key: 'minScores',
     label: 'Min Scores',
-    kind: 'count',
-    hint: 'Scores a map needs before its leaderboard counts.',
+    kind: 'threshold',
+    hint: 'Pay-fair starts counting when a map has this many scores.',
   },
   {
     key: 'fullScores',
     label: 'Full Scores',
     kind: 'count',
-    hint: 'Scores at which the leaderboard counts in full.',
+    hint: "Pay-fair gets to the slider's share at this many scores and stays there.",
+  },
+]
+
+export const PLAY_FIELDS: PayFairField[] = [
+  {
+    key: 'minPlayerPlays',
+    label: 'Min Plays per Player',
+    kind: 'count',
+    hint: 'A player needs this many plays in the category before we know what they usually get.',
   },
   {
     key: 'topPlays',
     label: 'Top Plays',
     kind: 'count',
-    hint: "How many of the map's best plays the ease is read from, each one adjusted for how good the player is.",
-    slow: true,
+    hint: "How many of a map's best plays we look at.",
   },
   {
-    key: 'minPlayers',
+    key: 'usualPlays',
+    label: 'Usual Plays',
+    kind: 'count',
+    hint: "A player's usual is the middle one of this many of their best plays on other maps.",
+  },
+  {
+    key: 'minPlays',
     label: 'Min Plays',
     kind: 'count',
-    hint: 'How many of those plays the map needs before its leaderboard counts.',
-  },
-  {
-    key: 'minPlayerPlays',
-    label: 'Min Plays per Player',
-    kind: 'count',
-    hint: "Ranked plays in the category a player needs before their scores count toward any player's level.",
-    slow: true,
-  },
-  {
-    key: 'maxNudge',
-    label: 'Max Nudge',
-    kind: 'nudge',
-    hint: 'Furthest the leaderboard may move a map from the chart line, either way. 0 removes the limit.',
+    hint: "A map needs this many top plays from players with a usual or it doesn't get a reading.",
   },
 ]
 
-export const SLOW_GATE_NOTE = 'Top plays and min plays per player re-read every leaderboard, so they weight on release and take a moment the first time.'
+export const BOT_ESTIMATE_HINT = "What the bot thinks a map's complexity is from the chart alone. It's all a new map has."
+
+export const PAY_FAIR_HINT = "Checks if a map's best plays give more or less AP than those players usually get and adjusts the map to even it out. The four play settings take a moment to preview."
 
 const NICE_STEPS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
 
 const BASE_SPAN = { intercept: 5, slope: 2 }
+
+const COUNT_FLOOR: Record<CountKind, number> = { count: 1, threshold: 0 }
+
+export function countFloor(kind: FieldKind): number | null {
+  return kind in COUNT_FLOOR ? COUNT_FLOOR[kind as CountKind] : null
+}
 
 function niceCeil(value: number): number {
   return NICE_STEPS.find((step) => step >= value) ?? NICE_STEPS[NICE_STEPS.length - 1]
@@ -135,11 +169,9 @@ function onStep(value: number, step: number): number {
 }
 
 export function fieldRange(kind: FieldKind, live: number, current: number): FieldRange {
-  if (kind === 'count') {
-    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 4), step: 1 }
-  }
-  if (kind === 'nudge') {
-    return { min: 0, max: niceCeil(Math.max(live, current, 1) * 4), step: 0.05 }
+  if (kind === 'percent') return { min: 0, max: 100, step: 5 }
+  if (kind === 'count' || kind === 'threshold') {
+    return { min: COUNT_FLOOR[kind], max: niceCeil(Math.max(live, current, 1) * 4), step: 1 }
   }
   const span = niceCeil(
     Math.max(BASE_SPAN[kind], Math.abs(live) * 0.5, Math.abs(current - live) * 1.2),
@@ -159,12 +191,9 @@ const dirty = computed(
 
 function cloneRater(rater: ComplexityRaterSpec): ComplexityRaterSpec {
   return {
-    board: { ...rater.board },
+    payFair: { ...rater.payFair },
     categories: Object.fromEntries(
       Object.entries(rater.categories).map(([code, values]) => [code, { ...values }]),
-    ),
-    boardCategories: Object.fromEntries(
-      Object.entries(rater.boardCategories).map(([code, values]) => [code, { ...values }]),
     ),
   }
 }
@@ -188,12 +217,4 @@ export function useTuningState(): {
   }
 
   return { live, edited, version, adopt, reset, dirty }
-}
-
-export function categoryCodes(rater: ComplexityRaterSpec): string[] {
-  const codes = new Set([
-    ...Object.keys(rater.categories),
-    ...Object.keys(rater.boardCategories),
-  ])
-  return [...codes]
 }

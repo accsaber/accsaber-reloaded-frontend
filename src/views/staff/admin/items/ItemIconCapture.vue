@@ -2,7 +2,7 @@
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { provideThemeBase } from '@/composables/useThemeBase'
 import type { ItemResponse } from '@/types/api/items'
-import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
+import { DEFAULT_AVATAR_MASK, AVATAR_STACK_SCALE } from '@/utils/avatarBox'
 import { readBorderShapeValue, readTitleValue } from '@/utils/cosmetics/readers'
 import { computed } from 'vue'
 
@@ -15,7 +15,6 @@ const props = defineProps<{
 }>()
 
 const BORDER_WRAP_PCT = 60
-const AVATAR_OF_WRAP = 0.886
 const GEAR_NATIVE_PCT = 74
 const ICON_IMG_MAX = 0.8
 const GEAR_CAPTURE_PCT = GEAR_NATIVE_PCT / ICON_IMG_MAX
@@ -34,7 +33,7 @@ const shapeValue = computed(() =>
 
 const avatarHoleMask = computed<string | null>(() => {
   if (!isBorder.value) return null
-  const span = BORDER_WRAP_PCT * AVATAR_OF_WRAP
+  const span = BORDER_WRAP_PCT * AVATAR_STACK_SCALE
   const inset = (100 - span) / 2
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">`

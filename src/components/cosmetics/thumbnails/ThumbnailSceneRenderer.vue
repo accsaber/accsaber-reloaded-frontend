@@ -5,6 +5,7 @@ import TorchlitScene from '@/components/cosmetics/thumbnails/TorchlitScene.vue'
 import HallwayScene from '@/components/cosmetics/thumbnails/HallwayScene.vue'
 import GraveyardScene from '@/components/cosmetics/thumbnails/GraveyardScene.vue'
 import PumpkinPatchScene from '@/components/cosmetics/thumbnails/PumpkinPatchScene.vue'
+import BorealisScene from '@/components/cosmetics/thumbnails/BorealisScene.vue'
 import FullMoonScene from '@/components/cosmetics/thumbnails/FullMoonScene.vue'
 import FacetVaultScene from '@/components/cosmetics/thumbnails/FacetVaultScene.vue'
 import FusionScene from '@/components/cosmetics/thumbnails/FusionScene.vue'
@@ -23,6 +24,7 @@ const SCENE_RENDERERS: Record<ThumbnailScene['type'], Component> = {
   graveyard: GraveyardScene,
   pumpkin_patch: PumpkinPatchScene,
   full_moon: FullMoonScene,
+  borealis: BorealisScene,
 }
 
 defineProps<{ scene: ThumbnailScene }>()

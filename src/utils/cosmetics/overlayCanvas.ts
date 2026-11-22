@@ -22,6 +22,12 @@ export function overlaySpace(w: number, h: number, margin: number): OverlaySpace
   }
 }
 
+export function enterUnitSpace(ctx: CanvasRenderingContext2D, w: number, h: number, margin: number): void {
+  const { sx, sy, toX, toY } = overlaySpace(w, h, margin)
+  ctx.translate(toX(0), toY(0))
+  ctx.scale(sx, sy)
+}
+
 export function framePoint(u: number, inset: number): { x: number; y: number; angle: number } {
   const lo = inset
   const hi = 100 - inset
@@ -62,5 +68,6 @@ export function primaryFillHex(fill: BorderColorFill | undefined): string | null
   if (fill.type === 'cosmic') return fill.star
   if (fill.type === 'toon') return fill.line
   if (fill.type === 'starshine') return fill.light
+  if (fill.type === 'lights') return fill.colors[0] ?? null
   return null
 }

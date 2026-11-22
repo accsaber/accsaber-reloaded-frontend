@@ -6,9 +6,10 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
-import { isTitleItem, itemVariantPreviews, rarityClass } from '@/utils/items'
+import { isTitleItem, itemVariantPreviews, rarityClass, variantColumns } from '@/utils/items'
 import { readBorderColorValue, readBorderShapeValue } from '@/utils/cosmetics/readers'
 import { computed, ref, watch } from 'vue'
+import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 
 const props = defineProps<{
   open: boolean
@@ -22,6 +23,7 @@ const avatarUrl = computed(() => authStore.userProfile?.avatarUrl ?? null)
 
 const variants = computed(() => (props.item ? itemVariantPreviews(props.item) : null))
 const activeVariant = ref('')
+const phone = useMediaQuery(PHONE_MEDIA_QUERY)
 
 watch(
   () => [props.item, props.open] as const,
@@ -62,7 +64,7 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 </script>
 
 <template>
-  <BaseModal :open="open" :title="item?.name" max-width="460px" @close="emit('close')">
+  <BaseModal :open="open" :title="item?.name" max-width="520px" @close="emit('close')">
     <div v-if="item" class="ipm">
       <div class="ipm__art"
         :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle, 'ipm__art--border': isBorder }]">
@@ -76,12 +78,12 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
       </div>
 
       <span class="caption">
-        <span class="rarity-text" :class="rarityClass(item.rarity)">{{ item.rarity }}</span> · {{ typeLabel }}
+        <span class="rarity-text" :class="rarityClass(item.rarity)">{{ item.rarity }}</span> {{ typeLabel }}
       </span>
       <p v-if="item.description" class="ipm__desc">{{ item.description }}</p>
 
       <BaseTabs v-if="variants" v-model="activeVariant" class="ipm__variants" :tabs="variants" variant="segmented"
-        label="Variants" />
+        :columns="variantColumns(variants.length, phone)" label="Variants" />
 
       <p v-if="isBorder && !avatarUrl" class="caption">Log in to preview this on your profile picture</p>
     </div>
@@ -141,6 +143,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 }
 
 .ipm__variants {
-  justify-content: center;
+  width: 100%;
 }
 </style>

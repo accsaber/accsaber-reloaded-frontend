@@ -99,10 +99,10 @@ const newsTypeTabs = [
         </template>
         <div class="rail__filters">
           <span class="field-label">Events</span>
-          <BaseTabs variant="segmented" label="Event state" :tabs="eventStateTabs" :model-value="eventFilter ?? ALL"
+          <BaseTabs variant="segmented" :columns="4" label="Event state" :tabs="eventStateTabs" :model-value="eventFilter ?? ALL"
             @update:model-value="emit('update:eventFilter', $event === ALL ? null : ($event as EventState))" />
           <span class="field-label">News</span>
-          <BaseTabs variant="segmented" label="News type" :tabs="newsTypeTabs" :model-value="newsFilter ?? ALL"
+          <BaseTabs variant="segmented" :columns="4" label="News type" :tabs="newsTypeTabs" :model-value="newsFilter ?? ALL"
             @update:model-value="emit('update:newsFilter', $event === ALL ? null : ($event as NewsType))" />
         </div>
       </FilterPopover>
@@ -200,17 +200,6 @@ const newsTypeTabs = [
   gap: var(--space-sm);
   width: max-content;
   max-width: 100%;
-}
-
-.rail__filters :deep(.base-tabs) {
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-}
-
-.rail__filters :deep(.base-tabs__tab) {
-  justify-content: center;
-  padding-inline: var(--space-sm);
-  text-align: center;
 }
 
 @media (max-width: 767px) {

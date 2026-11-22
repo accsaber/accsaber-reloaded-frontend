@@ -21,8 +21,10 @@ import {
   trackPathD,
 } from '@/utils/cosmetics/interpolate'
 import { randBetween as rand } from '@/utils/random'
-import { shapeFrameBounds, shapeFrameMargin, type FrameBounds } from '@/utils/shapeSilhouette'
-import { computed, ref, watch } from 'vue'
+import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
+import { ringFrom, ringPathD } from '@/utils/cosmetics/effects'
+import { outerWall, shapeFrameBounds, shapeFrameMargin, shapeRing, type FrameBounds } from '@/utils/shapeSilhouette'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import PixelBorderRenderer from '@/components/cosmetics/borders/PixelBorderRenderer.vue'
 import { clamp } from '@/utils/math'
 
@@ -102,7 +104,8 @@ const needsTimeline = computed(
     || (!!dominionFill.value && !reducedMotion.value),
 )
 
-const { tMs } = useTimeline({ active: () => needsTimeline.value })
+const frameRef = useTemplateRef<Element>('frame')
+const { tMs } = useTimeline({ active: () => needsTimeline.value, el: frameRef })
 
 const colorState = computed<BorderColorStateValue | null>(() => {
   const cv = props.color
@@ -466,7 +469,11 @@ const fillTrace = computed<ShapeTrace | null>(() => {
         .filter((p) => p.trace !== false && !p.transform && ((!!p.fill && isThemedRef(p.fill)) || (!!p.stroke && isThemedRef(p.stroke))))
         .map((p) => p.d)
     : [DEFAULT_RING_D]
-  return ds.length ? { ds, viewBox: cosmicViewBox.value } : null
+  if (!ds.length) return null
+  if (mode !== 'wall') return { ds, viewBox: cosmicViewBox.value }
+  const vb = vbBounds.value
+  const wall = ringFrom(outerWall(shapeRing(shape.value)), { x: vb.minX, y: vb.minY, w: vb.w, h: vb.h }).outer
+  return { ds, viewBox: cosmicViewBox.value, wall: ringPathD(wall), hole: shape.value?.avatarMask ?? DEFAULT_AVATAR_MASK }
 })
 
 const cosmicMaskId = `pbr-cmask-${Math.random().toString(36).slice(2, 9)}`
@@ -573,6 +580,7 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
   />
   <template v-else-if="canvasFillActive && cosmicMaskStyle">
   <div
+    ref="frame"
     class="profile-border__cosmic"
     :style="cosmicMaskStyle"
     aria-hidden="true"
@@ -682,6 +690,7 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
   </template>
   <div
     v-else-if="basePaths.length && colorIsConic"
+    ref="frame"
     class="profile-border__conic"
     :style="conicMaskStyle"
     aria-hidden="true"
@@ -717,6 +726,7 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
   </div>
   <svg
     v-else-if="basePaths.length"
+    ref="frame"
     class="profile-border__shape"
     :viewBox="shape?.viewBox ?? '0 0 100 100'"
     preserveAspectRatio="none"

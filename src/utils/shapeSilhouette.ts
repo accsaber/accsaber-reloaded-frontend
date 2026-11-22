@@ -244,6 +244,24 @@ function runArea(run: RingVec[]): number {
   return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys))
 }
 
+const WALL_BINS = 144
+
+export function outerWall(ring: ShapeRing | null): ShapeRing | null {
+  if (!ring) return null
+  const far: (RingVec | undefined)[] = new Array(WALL_BINS)
+  const reach: number[] = new Array(WALL_BINS).fill(0)
+  for (const p of ring.outer) {
+    const dx = p.x - 0.5
+    const dy = p.y - 0.5
+    const bin = Math.floor(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * WALL_BINS) % WALL_BINS
+    const d = dx * dx + dy * dy
+    if (d <= reach[bin]) continue
+    reach[bin] = d
+    far[bin] = p
+  }
+  return { outer: far.filter((p): p is RingVec => !!p), inner: ring.inner }
+}
+
 export function shapeRing(shape: BorderShapeValue | null | undefined): ShapeRing | null {
   if (!shape || shape.renderMode === 'pixel' || typeof document === 'undefined') return null
   const viewBox = shapeViewBox(shape)

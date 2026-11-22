@@ -3,6 +3,7 @@ import type {
   TitleBoilSpec,
   TitleFrostSpec,
   TitleLanternSpec,
+  TitleStarlitSpec,
 } from '@/types/cosmetics/title'
 
 export interface TitleAuraLinks {
@@ -10,6 +11,7 @@ export interface TitleAuraLinks {
   bleed?: TitleBleedSpec
   lantern?: TitleLanternSpec
   boil?: TitleBoilSpec
+  starlit?: TitleStarlitSpec
 }
 
 export const TITLE_AURA_PAD = { x: 0.9, top: 1.7, bottom: 1.05 } as const

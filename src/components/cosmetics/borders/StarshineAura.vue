@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
-import { prefersReducedMotion } from '@/composables/useReducedMotion'
+import { useStackPointer } from '@/composables/useStackPointer'
 import type { StarshineFill } from '@/types/cosmetics/border'
 import { sparkle, type Ctx } from '@/utils/cosmetics/canvasShapes'
-import { loopPoint, traceShape, type ShapeTrace, type TraceLoop } from '@/utils/cosmetics/shapeTrace'
-import { drawGlint, glintPhase, makeGlints } from '@/utils/cosmetics/starshine'
+import { loopPoint, onEdge, traceShape, type ShapeTrace } from '@/utils/cosmetics/shapeTrace'
+import { drawGlint, glintPhase, glitterLevel, makeGlints } from '@/utils/cosmetics/starshine'
+import { smoothstep01 } from '@/utils/math'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { subscribeWindowPointer } from '@/utils/windowPointer'
-import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
+import { useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   fill: StarshineFill
@@ -15,10 +15,11 @@ const props = defineProps<{
   trace?: ShapeTrace | null
 }>()
 
+const MARGIN = props.margin ?? 25
+const STACK_SHARE = 100 / (100 + MARGIN * 2)
 const TAU = Math.PI * 2
 const STATIC_T = 3
 const RIM_STEP = 1.4
-const RIM_JUMP = 4
 const GLEAM_PERIOD_S = 7
 const GLEAM_WIDTH = 0.07
 const POPS = 6
@@ -36,6 +37,8 @@ interface RimSpeck {
   r: number
   phase: number
   rate: number
+  x: number
+  y: number
 }
 
 interface TrailBit {
@@ -50,56 +53,50 @@ interface TrailBit {
 const pops = makeGlints(POPS, [3.2, 5.2])
 let traced = traceShape(props.trace)
 let rim: RimSpeck[] = []
+let laidFor = ''
 let trail: TrailBit[] = []
 let lastSpawn: { x: number; y: number } | null = null
 let startTime = 0
 let clock = 0
 let lastT = 0
-let stopPointer: (() => void) | null = null
-
-function onEdge(lp: TraceLoop, u: number): boolean {
-  const n = lp.pts.length - 1
-  const i = Math.min(n - 1, Math.floor(u * n))
-  const seg = Math.hypot(lp.pts[i + 1].x - lp.pts[i].x, lp.pts[i + 1].y - lp.pts[i].y)
-  return seg < (lp.len / n) * RIM_JUMP
-}
 
 function buildRim(): void {
   traced = traceShape(props.trace)
+  laidFor = ''
   rim = traced.loops.flatMap((lp, loop) =>
     Array.from({ length: Math.round(lp.len / RIM_STEP) }, () => rand(0, 1))
       .filter((u) => onEdge(lp, u))
-      .map((u) => ({ loop, u, dx: rand(-0.9, 0.9), dy: rand(-0.9, 0.9), r: rand(0.25, 0.6), phase: rand(0, TAU), rate: rand(1.4, 3.6) })),
+      .map((u) => ({ loop, u, dx: rand(-0.9, 0.9), dy: rand(-0.9, 0.9), r: rand(0.25, 0.6), phase: rand(0, TAU), rate: rand(1.4, 3.6), x: 0, y: 0 })),
   )
 }
 
 buildRim()
 watch(() => props.trace, buildRim)
 
-function gleamAt(loop: number, t: number): number {
-  const f = (t / GLEAM_PERIOD_S + loop * 0.37) % 1
-  return f * f * (3 - 2 * f)
+function layRim(w: number, h: number, unit: number): void {
+  const size = `${w}x${h}`
+  if (laidFor === size) return
+  laidFor = size
+  for (const s of rim) {
+    const p = loopPoint(traced.loops[s.loop], s.u, traced.vb, w, h)
+    s.x = p.x + s.dx * unit
+    s.y = p.y + s.dy * unit
+  }
 }
 
-function drawRim(ctx: Ctx, w: number, h: number, t: number): void {
-  const unit = w / traced.vb.w
+function drawRim(ctx: Ctx, unit: number, t: number): void {
   ctx.fillStyle = props.fill.glint
   for (const s of rim) {
-    const lp = traced.loops[s.loop]
-    const gap = Math.abs(s.u - gleamAt(s.loop, t))
-    const lit = Math.max(0, 1 - Math.min(gap, 1 - gap) / GLEAM_WIDTH)
-    const twinkle = Math.max(0, Math.sin(t * s.rate + s.phase)) ** 3
-    const p = loopPoint(lp, s.u, traced.vb, w, h)
-    const x = p.x + s.dx * unit
-    const y = p.y + s.dy * unit
+    const gleam = smoothstep01((t / GLEAM_PERIOD_S + s.loop * 0.37) % 1)
+    const { lit, twinkle, alpha } = glitterLevel(t, s.rate, s.phase, Math.abs(s.u - gleam), GLEAM_WIDTH)
     const r = Math.max(0.5, s.r * unit * (1 + lit * 1.2))
-    ctx.globalAlpha = Math.min(1, 0.15 + twinkle * 0.85 + lit)
+    ctx.globalAlpha = alpha
     if (twinkle > 0.85 || lit > 0.6) {
-      sparkle(ctx, x, y, r * 2.4)
+      sparkle(ctx, s.x, s.y, r * 2.4)
       continue
     }
     ctx.beginPath()
-    ctx.arc(x, y, r, 0, TAU)
+    ctx.arc(s.x, s.y, r, 0, TAU)
     ctx.fill()
   }
 }
@@ -117,10 +114,9 @@ function drawBurst(ctx: Ctx, x: number, y: number, r: number, u: number, seed: n
   }
 }
 
-function drawPops(ctx: Ctx, w: number, h: number, t: number): void {
+function drawPops(ctx: Ctx, w: number, h: number, unit: number, t: number): void {
   const lp = traced.loops[traced.main]
   if (!lp) return
-  const unit = w / traced.vb.w
   ctx.fillStyle = props.fill.light
   ctx.strokeStyle = props.fill.light
   for (const g of pops) {
@@ -135,8 +131,7 @@ function drawPops(ctx: Ctx, w: number, h: number, t: number): void {
   }
 }
 
-function drawTrail(ctx: Ctx, w: number, dt: number): void {
-  const unit = w / traced.vb.w
+function drawTrail(ctx: Ctx, unit: number, dt: number): void {
   trail = trail.filter((b) => clock - b.born < TRAIL_LIFE_S)
   ctx.fillStyle = props.fill.glint
   ctx.strokeStyle = props.fill.glint
@@ -150,34 +145,22 @@ function drawTrail(ctx: Ctx, w: number, dt: number): void {
   }
 }
 
-function spawnTrail(x: number, y: number): void {
+const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
+const pointer = useStackPointer(canvasRef, MARGIN, () => true)
+
+function spawnTrail(w: number, h: number): void {
+  const p = pointer.read()
+  const x = p ? (0.5 + p.x * STACK_SHARE) * w : -1
+  const y = p ? (0.5 + p.y * STACK_SHARE) * h : -1
+  if (x < 0 || x > w || y < 0 || y > h) {
+    lastSpawn = null
+    return
+  }
   if (lastSpawn && Math.hypot(x - lastSpawn.x, y - lastSpawn.y) < TRAIL_STEP_PX) return
   lastSpawn = { x, y }
   if (trail.length >= TRAIL_MAX) return
   trail.push({ x: x + rand(-3, 3), y: y + rand(-3, 3), vx: rand(-10, 10), vy: rand(-14, 4), born: clock, size: rand(1.2, 2.2) })
 }
-
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-onMounted(() => {
-  if (prefersReducedMotion() || !window.matchMedia('(hover: hover)').matches) return
-  stopPointer = subscribeWindowPointer({
-    measure: () => canvasRef.value?.getBoundingClientRect() ?? null,
-    apply(rect, x, y) {
-      const canvas = canvasRef.value
-      const fx = (x - rect.left) / rect.width
-      const fy = (y - rect.top) / rect.height
-      if (!canvas || fx < 0 || fx > 1 || fy < 0 || fy > 1) {
-        lastSpawn = null
-        return
-      }
-      spawnTrail(fx * canvas.clientWidth, fy * canvas.clientHeight)
-    },
-    idle() {},
-  })
-})
-
-onUnmounted(() => stopPointer?.())
 
 useElementCanvas(canvasRef, {
   init(_w, _h, now) {
@@ -189,11 +172,14 @@ useElementCanvas(canvasRef, {
     clock = (now - startTime) / 1000
     const t = reduced ? STATIC_T : clock * (props.fill.speed ?? 1)
     const dt = reduced ? 0 : Math.min(0.05, clock - lastT)
+    const unit = w / traced.vb.w
     lastT = clock
     ctx.clearRect(0, 0, w, h)
-    drawRim(ctx, w, h, t)
-    drawPops(ctx, w, h, t)
-    drawTrail(ctx, w, dt)
+    layRim(w, h, unit)
+    drawRim(ctx, unit, t)
+    drawPops(ctx, w, h, unit, t)
+    if (!reduced) spawnTrail(w, h)
+    drawTrail(ctx, unit, dt)
     ctx.globalAlpha = 1
   },
 })

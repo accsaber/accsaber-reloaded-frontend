@@ -12,7 +12,19 @@ export type RGB = [number, number, number]
 
 type RGBA = [number, number, number, number]
 
+const PARSED_LIMIT = 4096
+const parsed = new Map<string, RGBA | null>()
+
 function parseRgba(hex: string): RGBA | null {
+  const hit = parsed.get(hex)
+  if (hit !== undefined) return hit
+  const rgba = readRgba(hex)
+  if (parsed.size >= PARSED_LIMIT) parsed.clear()
+  parsed.set(hex, rgba)
+  return rgba
+}
+
+function readRgba(hex: string): RGBA | null {
   const m = hex.match(/^#([0-9a-fA-F]{3,8})$/)
   if (!m) return null
   let s = m[1]

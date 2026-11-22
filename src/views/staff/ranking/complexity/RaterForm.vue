@@ -8,10 +8,12 @@ import { useCategoryStore } from '@/stores/categories'
 import type { Tab } from '@/types/display'
 import RaterField from './RaterField.vue'
 import {
+  BOT_ESTIMATE_HINT,
   COEFFICIENT_FIELDS,
-  GATE_FIELDS,
-  SLOW_GATE_NOTE,
-  categoryCodes,
+  PAY_FAIR_HINT,
+  PLAY_FIELDS,
+  SCORE_FIELDS,
+  WEIGHT_HINT,
   useTuningState,
 } from './tuning'
 import { computed, ref } from 'vue'
@@ -21,29 +23,10 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-type LineKey = 'categories' | 'boardCategories'
-
-const LINES: { key: LineKey; title: string; hint: string; fold: string; collapsed: boolean }[] = [
-  {
-    key: 'boardCategories',
-    title: 'Board Line',
-    hint: 'Weights every map that clears the gate from what players score on it.',
-    fold: 'script-board-line',
-    collapsed: false,
-  },
-  {
-    key: 'categories',
-    title: 'Chart Line',
-    hint: 'The baseline read from the notes. A map is weighted from it until enough scores come in, then the board line moves it from there.',
-    fold: 'script-chart-line',
-    collapsed: true,
-  },
-]
-
 const categoryStore = useCategoryStore()
 const { live, edited, version, reset, dirty } = useTuningState()
 
-const codes = computed(() => (edited.value ? categoryCodes(edited.value) : []))
+const codes = computed(() => Object.keys(edited.value?.categories ?? {}))
 const picked = ref('')
 const followsPage = computed(() => codes.value.includes(props.category))
 const code = computed(() => {
@@ -55,21 +38,37 @@ const tabs = computed<Tab[]>(() =>
   codes.value.map((key) => ({ key, label: categoryStore.getShortName(key), accentColor: categoryStore.getAccent(key) })),
 )
 
-function lineEdited(key: string): boolean {
-  return LINES.some((line) => JSON.stringify(live.value?.[line.key][key]) !== JSON.stringify(edited.value?.[line.key][key]))
+const expectsTabs = computed(() => (edited.value ? !followsPage.value : props.category === 'overall'))
+
+const weight = computed(() => Math.round((edited.value?.payFair.maxWeight ?? 0) * 100))
+const liveWeight = computed(() => Math.round((live.value?.payFair.maxWeight ?? 0) * 100))
+
+function setScores(key: 'minScores' | 'fullScores', value: number) {
+  const payFair = edited.value?.payFair
+  if (!payFair) return
+  payFair[key] = value
+  if (payFair.fullScores <= payFair.minScores) payFair.fullScores = payFair.minScores + 1
+}
+
+const FOLD_FIELDS = [`${COEFFICIENT_FIELDS.length}`, `calc(${PLAY_FIELDS.length + 1} + var(--rater-pair-rows))`]
+
+const FOLD_HEIGHT = 'calc(1lh + var(--space-xs) + var(--space-sm) + var(--rater-row-h) * var(--fields) / var(--rater-per-row))'
+
+function categoryEdited(key: string): boolean {
+  return JSON.stringify(live.value?.categories[key]) !== JSON.stringify(edited.value?.categories[key])
 }
 
 const editedElsewhere = computed(() =>
-  codes.value.filter((key) => key !== code.value && lineEdited(key)).map((key) => categoryStore.getShortName(key)).join(', '),
+  codes.value.filter((key) => key !== code.value && categoryEdited(key)).map((key) => categoryStore.getShortName(key)).join(', '),
 )
 </script>
 
 <template>
-  <div class="surface-card rater-form">
+  <div class="surface-card rater-form" :class="{ 'rater-form--tabs': expectsTabs }">
     <template v-if="loading || !edited">
-      <SkeletonLoader class="placeholder" height="var(--control-h)" />
-      <SkeletonLoader v-for="n in 3" :key="n" class="placeholder" height="52px" />
-      <SkeletonLoader class="placeholder" height="300px" />
+      <SkeletonLoader class="placeholder" height="var(--rater-head-h)" />
+      <SkeletonLoader v-for="fields in FOLD_FIELDS" :key="fields" class="placeholder"
+        :height="FOLD_HEIGHT" :style="{ '--fields': fields }" />
     </template>
 
     <template v-else>
@@ -81,24 +80,29 @@ const editedElsewhere = computed(() =>
         <BaseButton :disabled="!dirty" @click="reset">Reset to Live</BaseButton>
       </div>
 
-      <StoredFold class="rater-form__fold" label="Board Gate" storage-key="script-board-gate">
-        <template #meta><HintTooltip :text="SLOW_GATE_NOTE" label="Board gate" /></template>
-        <div class="rater-form__fields">
-          <RaterField v-for="field in GATE_FIELDS" :key="field.key" :label="field.label" :hint="field.hint" :kind="field.kind"
-            :deferred="field.slow" :live="live?.board[field.key] ?? 0" :model-value="edited.board[field.key]"
-            @update:model-value="edited.board[field.key] = $event" />
+      <StoredFold class="rater-form__fold" label="Bot Complexity Estimate" storage-key="script-bot-estimate">
+        <template #meta><HintTooltip :text="BOT_ESTIMATE_HINT" label="Bot Complexity Estimate" /></template>
+        <div v-if="edited.categories[code]" :key="code" class="rater-form__fields">
+          <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label" :hint="field.hint" :kind="field.kind"
+            :live="live?.categories[code]?.[field.key] ?? 0" :model-value="edited.categories[code][field.key]"
+            @update:model-value="edited.categories[code][field.key] = $event" />
         </div>
       </StoredFold>
 
-      <StoredFold v-for="line in LINES" :key="line.key" class="rater-form__fold" :label="line.title" :storage-key="line.fold"
-        :default-collapsed="line.collapsed">
-        <template #meta><HintTooltip :text="line.hint" :label="line.title" /></template>
-        <div v-if="edited[line.key][code]" :key="code" class="rater-form__fields">
-          <RaterField v-for="field in COEFFICIENT_FIELDS" :key="field.key" :label="field.label" :hint="field.hint" :kind="field.kind"
-            :live="live?.[line.key][code]?.[field.key] ?? 0" :model-value="edited[line.key][code][field.key]"
-            @update:model-value="edited[line.key][code][field.key] = $event" />
+      <StoredFold class="rater-form__fold" label="Pay-fair" storage-key="script-pay-fair">
+        <template #meta><HintTooltip :text="PAY_FAIR_HINT" label="Pay-fair" /></template>
+        <div class="rater-form__fields">
+          <RaterField :label="`Pay-fair ${weight}%`" :hint="WEIGHT_HINT" kind="percent" :end="`Bot ${100 - weight}%`"
+            :live="liveWeight" :model-value="weight" @update:model-value="edited.payFair.maxWeight = $event / 100" />
+          <div class="rater-form__pair">
+            <RaterField v-for="field in SCORE_FIELDS" :key="field.key" plain :label="field.label" :hint="field.hint"
+              :kind="field.kind" :live="live?.payFair[field.key] ?? 0" :model-value="edited.payFair[field.key]"
+              @update:model-value="setScores(field.key as 'minScores' | 'fullScores', $event)" />
+          </div>
+          <RaterField v-for="field in PLAY_FIELDS" :key="field.key" deferred :label="field.label" :hint="field.hint"
+            :kind="field.kind" :live="live?.payFair[field.key] ?? 0" :model-value="edited.payFair[field.key]"
+            @update:model-value="edited.payFair[field.key] = $event" />
         </div>
-        <p v-else class="caption">This category has no {{ line.title.toLowerCase() }}</p>
       </StoredFold>
     </template>
   </div>
@@ -106,6 +110,10 @@ const editedElsewhere = computed(() =>
 
 <style scoped>
 .rater-form {
+  --rater-row-h: var(--control-h);
+  --rater-per-row: 2;
+  --rater-pair-rows: 1;
+  --rater-head-h: var(--control-h);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
@@ -141,9 +149,34 @@ const editedElsewhere = computed(() =>
   gap: 0 var(--space-2xl);
 }
 
+.rater-form__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-lg);
+}
+
 @media (max-width: 1023px) {
+  .rater-form {
+    --rater-per-row: 1;
+  }
+
   .rater-form__fields {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .rater-form {
+    --rater-row-h: calc(var(--control-h) + var(--space-sm));
+    --rater-pair-rows: 2;
+  }
+
+  .rater-form__pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rater-form--tabs {
+    --rater-head-h: calc(var(--control-h) * 2 + var(--space-sm) * 2 + var(--text-caption) * 1.5);
   }
 }
 </style>

@@ -35,7 +35,6 @@ const props = defineProps<{
   modelHash: string | null
   page: number
   totalPages: number
-  maxNudge?: number | null
   loading?: boolean
   error?: string
 }>()
@@ -135,7 +134,7 @@ function scoreOf(row: Record<string, unknown>): ComplexityScoreRow {
 
       <Transition name="collapse">
         <div v-if="inputsOpen" class="collapsible">
-          <EstimateInputs :scenario="SCRIPT_SCENARIO" :estimate="difficulty.estimates[SCRIPT_SCENARIO]" :max-nudge="maxNudge"
+          <EstimateInputs :scenario="SCRIPT_SCENARIO" :estimate="difficulty.estimates[SCRIPT_SCENARIO]" :complexity="difficulty.scenarios[SCRIPT_SCENARIO]?.complexity"
             :stale="isStaleEstimate(difficulty.estimates[SCRIPT_SCENARIO], modelHash)" />
         </div>
       </Transition>

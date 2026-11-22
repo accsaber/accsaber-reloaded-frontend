@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import StatBlock from '@/components/common/StatBlock.vue'
 import ClanTag from '@/components/domain/ClanTag.vue';
 import CountryFlag from '@/components/domain/CountryFlag.vue';
 import LevelBadge from '@/components/domain/LevelBadge.vue';
@@ -9,6 +11,7 @@ import { useEquippedRenderProps } from '@/composables/useEquippedRenderProps';
 import { useMiniProfile } from '@/composables/useMiniProfile';
 import type { UserRefDisplay } from '@/types/display';
 import { fillToCss } from '@/utils/cosmetics/interpolate'
+import { formatFixed } from '@/utils/formatters'
 import { thumbnailHostAttrs } from '@/utils/cosmetics/readers';
 import { computed } from 'vue';
 
@@ -18,7 +21,11 @@ const props = defineProps<{
 
 const { profile, loading } = useMiniProfile(() => props.user.id)
 
-const stats = computed(() => profile.value?.stats ?? null)
+const stats = computed(() => {
+  const loaded = profile.value?.stats
+  if (!loaded) return loading.value ? { ap: '', global: '', country: '' } : null
+  return { ap: formatFixed(loaded.ap, 2), global: `#${loaded.ranking}`, country: `#${loaded.countryRanking}` }
+})
 const level = computed(() => profile.value?.level ?? null)
 
 const {
@@ -61,9 +68,9 @@ const cardBorder = computed(() => {
   >
     <ThumbnailBackdrop :value="equippedThumbnail" :effects="equippedThumbnailEffects" />
     <div class="player-tooltip__content">
-      <div v-if="loading" class="player-tooltip__badge-skeleton" aria-hidden="true">
-        <div class="player-tooltip__badge-skeleton-stack" />
-        <div class="player-tooltip__badge-skeleton-line" />
+      <div v-if="loading" class="player-tooltip__badge player-tooltip__badge--loading" aria-hidden="true">
+        <SkeletonLoader width="96px" height="96px" />
+        <SkeletonLoader width="104px" height="21px" />
       </div>
       <div v-else class="player-tooltip__badge">
         <LevelBadge
@@ -83,33 +90,18 @@ const cardBorder = computed(() => {
       </div>
 
       <div class="player-tooltip__info">
-        <span class="player-tooltip__name">{{ user.name }}</span>
-        <span class="player-tooltip__country">
+        <div class="player-tooltip__identity">
+          <span class="player-tooltip__name">{{ user.name }}</span>
           <CountryFlag :country="user.country" />
-        </span>
-      </div>
-      <div v-if="user.clan" class="player-tooltip__clan">
-        <ClanTag :clan="user.clan" size="sm" />
-        <span class="player-tooltip__clan-name">{{ user.clan.name }}</span>
-      </div>
-
-      <div v-if="loading" class="player-tooltip__stats">
-        <div class="player-tooltip__stat player-tooltip__stat--loading" />
-        <div class="player-tooltip__stat player-tooltip__stat--loading" />
-        <div class="player-tooltip__stat player-tooltip__stat--loading" />
-      </div>
-      <div v-else-if="stats" class="player-tooltip__stats">
-        <div class="player-tooltip__stat">
-          <span class="player-tooltip__stat-label">Total AP</span>
-          <span class="player-tooltip__stat-value">{{ stats.ap.toFixed(2) }}</span>
         </div>
-        <div class="player-tooltip__stat">
-          <span class="player-tooltip__stat-label">Global</span>
-          <span class="player-tooltip__stat-value">#{{ stats.ranking }}</span>
+        <div v-if="user.clan" class="player-tooltip__identity">
+          <ClanTag :clan="user.clan" size="sm" />
+          <span class="player-tooltip__clan-name caption">{{ user.clan.name }}</span>
         </div>
-        <div class="player-tooltip__stat">
-          <span class="player-tooltip__stat-label">Country</span>
-          <span class="player-tooltip__stat-value">#{{ stats.countryRanking }}</span>
+        <div v-if="stats" class="player-tooltip__stats">
+          <StatBlock label="Total AP" :value="stats.ap" />
+          <StatBlock label="Global" :value="stats.global" />
+          <StatBlock label="Country" :value="stats.country" />
         </div>
       </div>
 
@@ -137,10 +129,6 @@ const cardBorder = computed(() => {
     var(--tooltip-border, linear-gradient(var(--bg-overlay), var(--bg-overlay))) border-box;
 }
 
-.player-tooltip[data-thumb-base] .player-tooltip__stat {
-  background: color-mix(in srgb, var(--thumb-ink) 62%, transparent);
-}
-
 .player-tooltip__content {
   position: relative;
   display: flex;
@@ -148,6 +136,13 @@ const cardBorder = computed(() => {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-md);
+}
+
+.player-tooltip__badge--loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .player-tooltip__badge :deep(.level-badge) {
@@ -170,126 +165,60 @@ const cardBorder = computed(() => {
   font-size: var(--text-caption);
 }
 
-.player-tooltip__badge-skeleton {
+.player-tooltip__info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
-  animation: shimmer 1.5s infinite;
-}
-
-.player-tooltip__badge-skeleton-stack {
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius-avatar);
-  background: var(--bg-elevated);
-}
-
-.player-tooltip__badge-skeleton-line {
-  width: 104px;
-  height: 18px;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-sm);
   border-radius: var(--radius-btn);
-  background: var(--bg-elevated);
 }
 
-.player-tooltip__info {
+.player-tooltip[data-thumb-base] .player-tooltip__info {
+  background: color-mix(in srgb, var(--thumb-ink) 62%, transparent);
+}
+
+.player-tooltip__identity {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  max-width: 100%;
 }
 
 .player-tooltip__name {
   font-size: var(--text-body);
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
 }
 
-.player-tooltip__country {
-  flex-shrink: 0;
-}
-
-.player-tooltip__clan {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin-top: calc(-1 * var(--space-xs));
-  max-width: 100%;
-  font-size: var(--text-body);
-}
-
+.player-tooltip__name,
 .player-tooltip__clan-name {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .player-tooltip__stats {
-  display: flex;
-  gap: var(--space-xs);
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr;
   width: 100%;
+  margin-top: var(--space-xs);
 }
 
-.player-tooltip__stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.player-tooltip__stats :deep(.stat-block) {
   align-items: center;
-  gap: 2px;
-  padding: var(--space-xs);
-  background: var(--bg-elevated);
-  border-radius: var(--radius-btn);
+  gap: 0;
+  padding: 0;
 }
 
-.player-tooltip__stat--loading {
-  height: 36px;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    opacity: 0.5;
-  }
-
-  50% {
-    opacity: 0.8;
-  }
-
-  100% {
-    opacity: 0.5;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .player-tooltip__badge-skeleton,
-  .player-tooltip__stat--loading {
-    animation: none;
-  }
-}
-
-.player-tooltip__stat-label {
-  font-size: 0.625rem;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.player-tooltip__stat-value {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--text-primary);
+.player-tooltip__stats :deep(.stat-block__value) {
+  font-size: var(--text-body);
 }
 
 .player-tooltip__actions {
   justify-content: center;
   width: 100%;
-  margin-top: 2px;
 }
 </style>

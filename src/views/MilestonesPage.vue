@@ -6,7 +6,7 @@ import MilestoneListView from '@/components/domain/MilestoneListView.vue'
 import ProgressStat from '@/components/domain/ProgressStat.vue'
 import MilestoneCanvas from '@/views/milestones/MilestoneCanvas.vue'
 import MilestoneInspector, { type MilestoneIndexEntry } from '@/views/milestones/MilestoneInspector.vue'
-import { useMediaQuery } from '@/composables/useMediaQuery'
+import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useSetGroups } from '@/composables/useSetGroups'
 import { useSupporter } from '@/composables/useSupporter'
@@ -33,7 +33,7 @@ const loading = ref(true)
 const sets = ref<MilestoneSetResponse[]>([])
 const milestones = ref<MilestoneCompletionResponse[]>([])
 const prerequisites = ref<PrerequisiteLinkResponse[]>([])
-const isMobile = useMediaQuery('(max-width: 767px)')
+const isMobile = useMediaQuery(PHONE_MEDIA_QUERY)
 const viewMode = ref('map')
 const filter = ref('all')
 const sort = ref<MilestoneSort>('tier')

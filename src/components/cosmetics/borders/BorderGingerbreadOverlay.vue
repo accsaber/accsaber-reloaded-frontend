@@ -3,7 +3,7 @@ import { useElementCanvas } from '@/composables/useCanvasScene'
 import { useStackPointer } from '@/composables/useStackPointer'
 import type { BorderGingerbreadOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { biteMark, GINGERBREAD_BITES, paintGingerbread } from '@/utils/cosmetics/gingerbread'
-import { frameDelta, overlaySpace, primaryFillHex } from '@/utils/cosmetics/overlayCanvas'
+import { enterUnitSpace, frameDelta, primaryFillHex } from '@/utils/cosmetics/overlayCanvas'
 import { blitSceneLayer, clearSceneLayer, createSceneLayer, paintSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import { clamp01 } from '@/utils/math'
 import { hash01, randBetween as rand } from '@/utils/random'
@@ -32,7 +32,6 @@ interface Crumb {
   r: number
   seed: number
   rest: boolean
-  dark: boolean
   leaving: number
   tx: number
   ty: number
@@ -49,11 +48,13 @@ let last = 0
 let nextAt = 0
 let art: HTMLCanvasElement | null = null
 let work: HTMLCanvasElement | null = null
+let stale = true
 
 const icing = computed(() => primaryFillHex(props.color?.states?.[0]?.fill) ?? props.overlay.icing)
 
 watch([icing, () => props.overlay], () => {
   art = null
+  stale = true
 })
 
 function idle(): number {
@@ -82,7 +83,6 @@ function spawnCrumbs(i: number): void {
       r: rand(0.6, 1.4),
       seed: rand(0, 100),
       rest: false,
-      dark: k % 3 === 0,
       leaving: -1,
       tx: 0,
       ty: 0,
@@ -143,10 +143,11 @@ function stepPhase(): void {
 }
 
 function stepBites(dt: number): void {
-  amount = amount.map((a, i) => {
-    const rate = target[i] > a ? dt / BITE_S : -dt / TICK_S
-    return target[i] > a ? Math.min(target[i], a + rate) : Math.max(target[i], a + rate)
-  })
+  for (let i = 0; i < amount.length; i++) {
+    if (amount[i] === target[i]) continue
+    amount[i] = target[i] > amount[i] ? Math.min(target[i], amount[i] + dt / BITE_S) : Math.max(target[i], amount[i] - dt / TICK_S)
+    stale = true
+  }
 }
 
 function stepCrumbs(dt: number): void {
@@ -184,35 +185,27 @@ function pressed(): void {
   bite(best)
 }
 
-function toUnits(ctx: Ctx, w: number, h: number): void {
-  const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
-  ctx.translate(toX(0), toY(0))
-  ctx.scale(sx, sy)
-}
-
 function cookieArt(ctx: Ctx, w: number, h: number): HTMLCanvasElement {
   art ??= paintSceneLayer(ctx, (lctx) => {
-    toUnits(lctx, w, h)
+    enterUnitSpace(lctx, w, h, MARGIN)
     paintGingerbread(lctx, props.overlay, icing.value)
   })
   return art
 }
 
 function bitten(ctx: Ctx, w: number, h: number): HTMLCanvasElement {
+  if (work && !stale) return work
   work ??= createSceneLayer(ctx)
+  stale = false
   clearSceneLayer(work)
   const wctx = work.getContext('2d')
   if (!wctx) return work
   blitSceneLayer(wctx, cookieArt(ctx, w, h), 'source-over')
   wctx.save()
-  toUnits(wctx, w, h)
+  enterUnitSpace(wctx, w, h, MARGIN)
   GINGERBREAD_BITES.forEach(([x, y, r], i) => {
     if (amount[i] <= 0) return
     const size = r * (1 - (1 - amount[i]) ** 3)
-    wctx.globalCompositeOperation = 'source-atop'
-    wctx.fillStyle = props.overlay.edge
-    biteMark(wctx, x, y, size + 0.9)
-    wctx.fill()
     wctx.globalCompositeOperation = 'destination-out'
     biteMark(wctx, x, y, size)
     wctx.fill()
@@ -226,7 +219,7 @@ function drawCrumb(ctx: Ctx, c: Crumb): void {
   const x = c.x + (c.tx - c.x) * back
   const y = c.y + (c.ty - c.y) * back
   const r = c.r * (1 - back * 0.7)
-  ctx.fillStyle = c.dark ? props.overlay.edge : props.overlay.cookie
+  ctx.fillStyle = props.overlay.cookie
   ctx.beginPath()
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2 + c.seed
@@ -242,7 +235,7 @@ function drawScene(ctx: Ctx, w: number, h: number): void {
   const none = amount.every((a) => a >= 1)
   if (!none) blitSceneLayer(ctx, whole ? cookieArt(ctx, w, h) : bitten(ctx, w, h), 'source-over')
   ctx.save()
-  toUnits(ctx, w, h)
+  enterUnitSpace(ctx, w, h, MARGIN)
   for (const c of crumbs) drawCrumb(ctx, c)
   ctx.restore()
 }
@@ -253,6 +246,7 @@ const pointer = useStackPointer(canvasRef, MARGIN, () => props.overlay.hover !==
 function reset(nowMs: number): void {
   art = null
   work = null
+  stale = true
   last = nowMs
 }
 

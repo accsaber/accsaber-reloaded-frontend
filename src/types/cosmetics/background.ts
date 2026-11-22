@@ -138,7 +138,18 @@ export interface FullMoonScene {
   bat: string
 }
 
+export interface BorealisScene {
+  type: 'borealis'
+  base?: 'light' | 'dark'
+  skyTop: string
+  skyBottom: string
+  colors: string[]
+  star: string
+  ridge: string
+}
+
 export type ThumbnailScene =
+  | BorealisScene
   | HallwayScene
   | GraveyardScene
   | PumpkinPatchScene

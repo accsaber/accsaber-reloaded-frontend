@@ -278,7 +278,6 @@ export interface BorderGingerbreadOverlaySpec {
   type: 'gingerbread'
   enabled: boolean
   cookie: string
-  edge: string
   icing: string
   ink: string
   bow: string
@@ -448,6 +447,23 @@ export interface WoodFill {
   plank?: number
 }
 
+export type LightsPattern =
+  | 'chase' | 'alternate' | 'twinkle' | 'wave' | 'cascade' | 'breathe' | 'sequential' | 'fade' | 'steady'
+
+export interface LightsFill {
+  type: 'lights'
+  base: string
+  wire: string
+  colors: string[]
+  program: LightsPattern[]
+  bulb?: 'drop' | 'globe' | 'icicle'
+  flash?: string
+  size?: number
+  count?: number
+  speed?: number
+  hover?: boolean
+}
+
 export type StarshineFlow = 'fall' | 'rise' | 'drift' | 'still'
 export type StarshineGlint = 'star' | 'snowflake' | 'bubble'
 
@@ -561,6 +577,7 @@ export type BorderColorFill =
   | EclipseFill
   | CandleFill
   | StarshineFill
+  | LightsFill
   | WoodFill
   | BrewFill
   | Gradient
