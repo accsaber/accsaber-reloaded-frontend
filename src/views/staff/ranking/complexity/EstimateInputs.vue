@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/complexity'
-import { formatChartDuration } from '@/utils/chartMetadata'
 import { CX_DECIMALS, SCENARIO_LABELS } from '@/utils/complexity'
 import { formatAccuracy, formatCount, formatFixed, formatRelativeDate } from '@/utils/formatters'
 import { clamp } from '@/utils/math'
 import {
-  COEFFICIENT_ROWS,
   COEFFICIENT_SETS,
   ESTIMATE_GROUPS,
   type EstimateField,
   readNumber,
   readObject,
   readString,
-  worstShareLabel,
 } from './estimates'
+import { COEFFICIENT_FIELDS } from './tuning'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -30,19 +28,11 @@ function blank(field: EstimateField): string | null {
 }
 
 function formatField(field: EstimateField): string | null {
-  const source = inputs.value
-  if (field.format === 'text') return readString(source, field.key)
-  const value = readNumber(source, field.key)
-  if (field.format === 'duration') return formatChartDuration(value) ?? blank(field)
+  const value = readNumber(inputs.value, field.key)
   if (value == null) return blank(field)
   if (field.format === 'percent') return formatAccuracy(value)
   if (field.format === 'count') return formatCount(value)
   return formatFixed(value, field.decimals ?? 3)
-}
-
-function fieldLabel(field: EstimateField): string {
-  const share = worstShareLabel(inputs.value)
-  return field.key === 'worstNoteAccuracy' && share ? `Worst ${share} accuracy` : field.label
 }
 
 const groups = computed(() =>
@@ -51,7 +41,7 @@ const groups = computed(() =>
       key: group.key,
       title: group.title,
       fields: group.fields
-        .map((field) => ({ key: field.key, label: fieldLabel(field), value: formatField(field) }))
+        .map((field) => ({ key: field.key, label: field.label, value: formatField(field) }))
         .filter((field): field is { key: string; label: string; value: string } => !!field.value),
     }))
     .filter((group) => group.fields.length > 0),
@@ -63,7 +53,7 @@ const coefficientSets = computed(() =>
     return {
       key: set.key,
       title: set.title,
-      rows: COEFFICIENT_ROWS.map((row) => ({
+      rows: COEFFICIENT_FIELDS.map((row) => ({
         key: row.key,
         label: row.label,
         value: formatFixed(readNumber(values ?? undefined, row.key), 3),
@@ -79,14 +69,10 @@ const chartLine = computed(() => {
   if (!chart || chartComplexity == null) return null
   const terms: [string, number | null][] = [
     ['meanSlope', readNumber(inputs.value, 'meanTerm')],
-    ['worstSlope', readNumber(inputs.value, 'worstTerm')],
     ['resetSlope', readNumber(inputs.value, 'resetShare')],
     ['dotSlope', readNumber(inputs.value, 'dotShare')],
     ['bottomUpSlope', readNumber(inputs.value, 'bottomUpShare')],
-    ['midDiagDoubleSlope', readNumber(inputs.value, 'midDiagDoubleShare')],
-    ['topDownSlope', readNumber(inputs.value, 'topDownShare')],
     ['notesSlope', readNumber(inputs.value, 'notesTerm')],
-    ['npsSlope', readNumber(inputs.value, 'npsTerm')],
     ['njsSlope', readNumber(inputs.value, 'njs')],
     ['boardSlope', readNumber(inputs.value, 'boardEase')],
   ]
@@ -107,12 +93,12 @@ const boardLine = computed(() => {
   const boardComplexity = readNumber(inputs.value, 'boardComplexity')
   if (!weight || weight <= 0 || chartComplexity == null || boardComplexity == null) return null
   const move = weight * (boardComplexity - chartComplexity)
-  const bound = props.maxNudge ?? null
+  const bound = props.maxNudge || null
   const clamped = bound == null ? move : clamp(move, -bound, bound)
-  const limit = bound == null ? '' : `, ±${formatFixed(bound, 2)}`
   const inner = `${formatFixed(weight, 2)} x (${formatFixed(boardComplexity, CX_DECIMALS)} − ${formatFixed(chartComplexity, CX_DECIMALS)})`
+  const nudge = bound == null ? inner : `clamp(${inner}, ±${formatFixed(bound, 2)})`
   const final = formatFixed(chartComplexity + clamped, CX_DECIMALS)
-  return `${formatFixed(chartComplexity, CX_DECIMALS)} + clamp(${inner}${limit}) = ${final}`
+  return `${formatFixed(chartComplexity, CX_DECIMALS)} + ${nudge} = ${final}`
 })
 
 const nudgeNote = computed(() => {

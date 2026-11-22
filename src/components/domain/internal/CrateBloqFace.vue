@@ -36,7 +36,7 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
   </div>
   <div class="bloq-caption">
     <div class="bloq-caption__name">{{ name }}</div>
-    <div class="bloq-caption__rarity">{{ item.rarity }}</div>
+    <div class="bloq-caption__rarity rarity-text">{{ item.rarity }}</div>
   </div>
 </template>
 
@@ -46,7 +46,7 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
   width: 100%;
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-avatar);
   background: linear-gradient(
     145deg,
     color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 26%, var(--bg-elevated)) 0%,
@@ -59,7 +59,7 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
 .bloq__bevel {
   position: absolute;
   inset: 4px;
-  border-radius: 5px;
+  border-radius: var(--radius-card);
   border-top: 2px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 38%, transparent);
   border-left: 2px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 30%, transparent);
   border-right: 2px solid color-mix(in srgb, var(--bg-base) 55%, transparent);
@@ -75,17 +75,13 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
   height: 18px;
   margin-left: -9px;
   color: var(--text-primary);
-  animation: bloq-arrow-in 140ms ease-out backwards;
+  animation: bloq-arrow-in var(--dur-fast) var(--ease-out) backwards;
 }
 
 @keyframes bloq-arrow-in {
   from {
     opacity: 0;
     transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -126,11 +122,7 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
 }
 
 .bloq-caption__rarity {
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-  color: var(--rarity-color, var(--text-tertiary));
+  font-size: var(--text-caption);
 }
 
 @media (prefers-reduced-motion: reduce) {

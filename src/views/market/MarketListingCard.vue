@@ -54,7 +54,7 @@ const settledLabel = computed(() => {
     <div class="market-card__body">
       <span class="market-card__line card-title">{{ listing.title }}</span>
       <span class="market-card__line market-card__item">
-        <span class="market-card__rarity" :class="rarityClass(listing.item.item.rarity)">
+        <span class="rarity-text" :class="rarityClass(listing.item.item.rarity)">
           {{ listing.item.item.rarity }}
         </span>
         <template v-if="renamed">{{ ` ${itemName}` }}</template>
@@ -172,11 +172,6 @@ const settledLabel = computed(() => {
   color: var(--text-secondary);
 }
 
-.market-card__rarity {
-  font-weight: 600;
-  color: var(--rarity-color);
-  text-transform: capitalize;
-}
 
 .market-card__row {
   display: flex;

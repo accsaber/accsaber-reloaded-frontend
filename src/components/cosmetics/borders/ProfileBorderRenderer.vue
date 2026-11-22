@@ -2,6 +2,7 @@
 import { useReducedMotion } from '@/composables/useReducedMotion'
 import { useTimeline } from '@/composables/useTimeline'
 import { fillRenderer } from '@/components/cosmetics/borders/fillRenderers'
+import type { ShapeTrace } from '@/utils/cosmetics/shapeTrace'
 import type {
   BorderColorStateValue,
   BorderColorValue,
@@ -57,7 +58,6 @@ const canvasFillActive = computed(() => !!canvasFill.value)
 
 const cosmicFill = computed(() => (canvasFill.value?.type === 'cosmic' ? canvasFill.value : null))
 const dominionFill = computed(() => (canvasFill.value?.type === 'dominion' ? canvasFill.value : null))
-const laserFill = computed(() => (canvasFill.value?.type === 'laser' ? canvasFill.value : null))
 
 const fillView = computed(() => {
   const fill = canvasFill.value
@@ -66,8 +66,14 @@ const fillView = computed(() => {
   const attrs: Record<string, unknown> = { fill }
   if (renderer.margin) attrs.margin = fillMargin.value
   if (fill.type === 'cosmic') attrs.sink = cosmicSink.value
-  if (fill.type === 'laser') attrs.trace = laserTrace.value
+  if (renderer.trace) attrs.trace = fillTrace.value
   return { component: renderer.component, attrs, key: `${JSON.stringify(fill)}:${renderer.margin ? fillMargin.value : 0}` }
+})
+
+const fillAura = computed(() => {
+  const view = fillView.value
+  const aura = canvasFill.value ? fillRenderer(canvasFill.value).aura : undefined
+  return view && aura ? { component: aura, attrs: view.attrs, key: `aura:${view.key}` } : null
 })
 
 const rimStyle = computed(() => (canvasFill.value ? fillRenderer(canvasFill.value).rim(canvasFill.value) : null))
@@ -452,11 +458,14 @@ const cosmicHostStyle = computed<Record<string, string>>(() => {
   }
 })
 
-const laserTrace = computed<{ ds: string[]; viewBox: string } | null>(() => {
-  if (!laserFill.value || !shape.value) return null
-  const ds = basePaths.value
-    .filter((p) => !p.transform && ((!!p.fill && isThemedRef(p.fill)) || (!!p.stroke && isThemedRef(p.stroke))))
-    .map((p) => p.d)
+const fillTrace = computed<ShapeTrace | null>(() => {
+  const mode = canvasFill.value ? fillRenderer(canvasFill.value).trace : undefined
+  if (!mode || (mode === 'shape' && !shape.value)) return null
+  const ds = shape.value
+    ? basePaths.value
+        .filter((p) => p.trace !== false && !p.transform && ((!!p.fill && isThemedRef(p.fill)) || (!!p.stroke && isThemedRef(p.stroke))))
+        .map((p) => p.d)
+    : [DEFAULT_RING_D]
   return ds.length ? { ds, viewBox: cosmicViewBox.value } : null
 })
 
@@ -662,6 +671,14 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
       />
     </g>
   </svg>
+  <component
+    :is="fillAura.component"
+    v-if="fillAura"
+    :key="fillAura.key"
+    class="profile-border__echo"
+    :style="cosmicHostStyle"
+    v-bind="fillAura.attrs"
+  />
   </template>
   <div
     v-else-if="basePaths.length && colorIsConic"

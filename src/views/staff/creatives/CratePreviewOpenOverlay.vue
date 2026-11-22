@@ -5,7 +5,6 @@ import CrateOpenStage from '@/components/domain/CrateOpenStage.vue'
 import type {
   CrateContentResponse,
   CrateModifierResponse,
-  ItemModifierResponse,
   ItemResponse,
   UnusualEffectRef,
 } from '@/types/api/items'
@@ -16,7 +15,6 @@ const props = defineProps<{
   crate: ItemResponse
   contents: CrateContentResponse[]
   crateModifiers: CrateModifierResponse[]
-  globalModifiers: ItemModifierResponse[]
   unusualEffects: UnusualEffectRef[]
 }>()
 
@@ -32,7 +30,7 @@ function rollOnce() {
   const next = createCrateRoller({
     contents: props.contents,
     crateModifiers: props.crateModifiers,
-    globalModifiers: props.globalModifiers,
+    globalModifiers: [],
     unusualEffects: props.unusualEffects,
   })()
   if (!next) return
@@ -65,16 +63,12 @@ onUnmounted(() => {
     :label="`Preview opening ${crate.name}`"
     @dismiss="emit('close')"
   >
-    <template #title>
-      Preview open
-      <span class="crate-preview-open__title-name">{{ crate.name }}</span>
-    </template>
+    <template #title>{{ crate.name }}</template>
 
     <CrateOpenAnimation
       v-if="roll"
       :contents="contents"
       :crate-modifiers="crateModifiers"
-      :global-modifiers="globalModifiers"
       :unusual-effects="unusualEffects"
       :result="roll.item"
       :result-modifiers="roll.modifiers"
@@ -83,7 +77,7 @@ onUnmounted(() => {
       :height="320"
       @complete="settled = true"
     />
-    <p v-else class="crate-preview-open__empty">This crate has no rewards to roll.</p>
+    <p v-else class="caption">This crate has no rewards to roll</p>
 
     <template #actions>
       <BaseButton variant="primary" :disabled="!settled || !roll" @click="rollOnce">
@@ -93,19 +87,3 @@ onUnmounted(() => {
     </template>
   </CrateOpenStage>
 </template>
-
-<style scoped>
-.crate-preview-open__title-name {
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--text-primary);
-}
-
-.crate-preview-open__empty {
-  margin: 0;
-  padding: var(--space-lg);
-  text-align: center;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-</style>

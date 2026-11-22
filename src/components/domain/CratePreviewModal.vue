@@ -22,8 +22,9 @@ import {
   rarityClass,
   type ItemVariantPreview,
 } from '@/utils/items'
+import { knownCount, rememberCount } from '@/utils/knownCount'
 import { formatChancePercent } from '@/utils/modifiers'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   open: boolean
@@ -73,6 +74,16 @@ const flatTiles = computed<FlatTile[]>(() =>
   ),
 )
 
+const countKey = computed(() => `crate-pool:${props.crate?.id}`)
+const ghostTiles = computed(() => knownCount(countKey.value, 12))
+
+watch(
+  () => props.contents,
+  (contents) => {
+    if (contents.length) rememberCount(countKey.value, contents.length)
+  },
+)
+
 function typeName(typeKey: string): string {
   return typeKey.replace(/^profile_/, '').replace(/_/g, ' ')
 }
@@ -107,114 +118,41 @@ function openEffect(effect: UnusualEffectResponse) {
 onMounted(() => {
   modifierStore.fetchModifiers()
 })
-
-const rootRef = ref<HTMLElement | null>(null)
-const identityRef = ref<HTMLElement | null>(null)
-const modifiersRef = ref<HTMLElement | null>(null)
-
-function stretchColumnsToAdjacentRows(
-  columns: HTMLElement[],
-  tiles: NodeListOf<HTMLElement>,
-): boolean {
-  let changed = false
-  for (const col of columns) {
-    if (getComputedStyle(col).float === 'none') continue
-    const rect = col.getBoundingClientRect()
-    let target = rect.bottom
-    for (const tile of tiles) {
-      const t = tile.getBoundingClientRect()
-      if (t.top < rect.bottom - 1 && t.bottom > target) target = t.bottom
-    }
-    if (target > rect.bottom + 1) {
-      col.style.minHeight = `${Math.round(target - rect.top)}px`
-      changed = true
-    }
-  }
-  return changed
-}
-
-function extendColumnDividers() {
-  const columns = [identityRef.value, modifiersRef.value].filter(
-    (c): c is HTMLElement => !!c,
-  )
-  for (const col of columns) col.style.minHeight = ''
-  const root = rootRef.value
-  if (!root || !columns.length) return
-  const tiles = root.querySelectorAll<HTMLElement>('.crate-preview__tile')
-  if (!tiles.length) return
-  for (let pass = 0; pass < 4 && stretchColumnsToAdjacentRows(columns, tiles); pass++) {
-    continue
-  }
-}
-
-let resizeFrame = 0
-function onResize() {
-  cancelAnimationFrame(resizeFrame)
-  resizeFrame = requestAnimationFrame(extendColumnDividers)
-}
-
-watch(
-  () => [props.open, props.contents, props.modifiers, props.effects] as const,
-  async ([open]) => {
-    if (!open) return
-    await nextTick()
-    extendColumnDividers()
-  },
-  { immediate: true },
-)
-
-watch(
-  () => props.open,
-  (open) => {
-    if (open) window.addEventListener('resize', onResize)
-    else window.removeEventListener('resize', onResize)
-  },
-  { immediate: true },
-)
-
-onUnmounted(() => {
-  window.removeEventListener('resize', onResize)
-  cancelAnimationFrame(resizeFrame)
-})
 </script>
 
 <template>
-  <BaseModal :open="open" title="Crate Preview" max-width="1200px" @close="$emit('close')">
-    <div v-if="crate" ref="rootRef" class="crate-preview">
-      <aside ref="identityRef" class="crate-preview__identity">
-        <div class="crate-preview__art" :class="rarityClass(crate.rarity)">
+  <BaseModal :open="open" :title="crate?.name" max-width="1200px" height="calc(100vh - var(--space-xl) * 2)"
+    @close="$emit('close')">
+    <div v-if="crate" class="crate-preview">
+      <aside class="crate-preview__identity">
+        <div class="crate-preview__art">
           <ItemPreview :item="crate" />
         </div>
-        <h3 class="card-title">{{ crate.name }}</h3>
-        <span class="crate-preview__rarity" :class="rarityClass(crate.rarity)">
+        <span class="caption rarity-text" :class="rarityClass(crate.rarity)">
           {{ crate.rarity }}
         </span>
         <p v-if="crate.description" class="caption">{{ crate.description }}</p>
-        <p v-if="obtainableSentence" class="crate-preview__obtainable">{{ obtainableSentence }}</p>
+        <p v-if="obtainableSentence" class="caption">{{ obtainableSentence }}</p>
       </aside>
 
-      <aside ref="modifiersRef" class="crate-preview__modifiers" aria-label="Possible modifiers">
-        <div class="crate-preview__section-head">
-          <span class="field-label">Modifiers</span>
-        </div>
+      <aside class="crate-preview__modifiers" aria-label="Possible modifiers">
+        <span class="field-label">Modifiers</span>
 
         <ul v-if="modifiersLoading" class="crate-preview__modifiers-body">
-          <li v-for="i in 3" :key="i" class="crate-preview__modifier-row">
+          <li v-for="i in 3" :key="i">
             <SkeletonLoader width="180px" :lines="2" />
           </li>
         </ul>
 
-        <p v-else-if="!modifiers.length" class="crate-preview__empty">
-          No modifiers roll on this crate.
-        </p>
+        <p v-else-if="!modifiers.length" class="caption">No modifiers roll on this crate</p>
 
         <ul v-else class="crate-preview__modifiers-body">
           <li v-for="cm in modifiers" :key="cm.modifier.id" class="crate-preview__modifier-row">
             <span class="crate-preview__modifier-head">
               <ModifierChip :modifier="cm.modifier" />
-              <span class="crate-preview__modifier-chance">{{ formatChancePercent(cm.dropChance) }}</span>
+              <span class="caption">{{ formatChancePercent(cm.dropChance) }}</span>
             </span>
-            <span v-if="modifierDescription(cm.modifier.key)" class="crate-preview__modifier-desc">
+            <span v-if="modifierDescription(cm.modifier.key)" class="caption">
               {{ modifierDescription(cm.modifier.key) }}
             </span>
           </li>
@@ -222,37 +160,33 @@ onUnmounted(() => {
       </aside>
 
       <section class="crate-preview__items" aria-label="Possible items">
-        <div class="crate-preview__section-head">
-          <span class="field-label">Items</span>
-          <span v-if="!contentsLoading && contents.length" class="crate-preview__section-count">
-            {{ contents.length }} {{ contents.length === 1 ? 'item' : 'items' }}
-          </span>
-        </div>
+        <span class="field-label">
+          Items<template v-if="!contentsLoading && contents.length"> · {{ contents.length }}</template>
+        </span>
 
         <div v-if="contentsLoading" class="crate-preview__items-body">
-          <span v-for="i in 12" :key="i" class="crate-preview__tile">
-            <SkeletonLoader width="116px" height="116px" />
-            <SkeletonLoader :lines="2" />
+          <span v-for="i in ghostTiles" :key="i" class="crate-preview__tile crate-preview__tile--ghost placeholder">
+            <span class="crate-preview__tile-art" />
+            <span class="crate-preview__tile-line">&nbsp;</span>
+            <span class="crate-preview__tile-line">&nbsp;</span>
           </span>
         </div>
 
-        <p v-else-if="!contents.length" class="crate-preview__empty">
-          Its contents are a mystery for now.
-        </p>
+        <p v-else-if="!contents.length" class="caption">Its contents are a mystery for now</p>
 
         <div v-else class="crate-preview__items-body">
           <button
             v-for="t in flatTiles"
             :key="t.content.rewardItem.id"
             type="button"
-            class="crate-preview__tile"
+            class="crate-preview__tile pressable"
             :class="[rarityClass(t.content.rewardItem.rarity), { 'crate-preview__tile--run-end': t.runEnd }]"
-            :title="`${t.content.rewardItem.name} - ${formatChancePercent(t.content.dropChance)} (click to preview)`"
+            :title="`${t.content.rewardItem.name} · ${formatChancePercent(t.content.dropChance)}`"
             @click="openItem(t.content.rewardItem)"
           >
             <span v-if="t.label" class="crate-preview__run-label">
-              <span class="crate-preview__run-label-name">{{ t.label.rarity }}</span>
-              <span class="crate-preview__run-label-chance">{{ formatChancePercent(t.label.chance) }}</span>
+              <span class="caption rarity-text">{{ t.label.rarity }}</span>
+              <span class="caption">{{ formatChancePercent(t.label.chance) }}</span>
             </span>
             <span class="crate-preview__tile-art">
               <VariantSplitPreview
@@ -261,9 +195,12 @@ onUnmounted(() => {
                 :variants="t.variants"
               />
               <ItemPreview v-else :item="t.content.rewardItem" />
+              <span v-if="t.variants" class="crate-preview__tile-mark crate-preview__tile-variants">
+                {{ t.variants.length }} variants
+              </span>
               <span
                 v-if="isOwned(t.content.rewardItem.id)"
-                class="crate-preview__tile-owned"
+                class="crate-preview__tile-mark crate-preview__tile-owned"
                 role="img"
                 aria-label="You own this"
               >
@@ -273,11 +210,8 @@ onUnmounted(() => {
                 </svg>
               </span>
             </span>
-            <span class="crate-preview__tile-name">{{ t.content.rewardItem.name }}</span>
-            <span class="crate-preview__tile-type">{{ typeName(t.content.rewardItem.typeKey) }}</span>
-            <span v-if="t.variants" class="crate-preview__tile-variants">
-              {{ t.variants.length }} variants!
-            </span>
+            <span class="crate-preview__tile-line crate-preview__tile-name">{{ t.content.rewardItem.name }}</span>
+            <span class="crate-preview__tile-line crate-preview__tile-meta">{{ typeName(t.content.rewardItem.typeKey) }}</span>
           </button>
         </div>
       </section>
@@ -287,27 +221,22 @@ onUnmounted(() => {
         class="crate-preview__effects"
         aria-label="Possible unusual effects"
       >
-        <div class="crate-preview__section-head">
-          <span class="field-label">Unusual Effects</span>
-          <span v-if="!effectsLoading && effects.length" class="crate-preview__section-count">
-            On an Unusual roll you get one of these, equal chance.
-          </span>
-        </div>
+        <span class="field-label">
+          Unusual Effects<template v-if="!effectsLoading && effects.length"> · Equal chance</template>
+        </span>
 
         <div v-if="effectsLoading" class="crate-preview__effects-grid">
-          <SkeletonLoader v-for="i in 10" :key="i" width="96px" height="120px" />
+          <SkeletonLoader v-for="i in 10" :key="i" width="96px" height="118px" />
         </div>
 
-        <p v-else-if="!effects.length" class="crate-preview__empty">
-          Rolls the default Unusual sparkle.
-        </p>
+        <p v-else-if="!effects.length" class="caption">Rolls the default Unusual sparkle</p>
 
         <ul v-else class="crate-preview__effects-grid">
           <li v-for="effect in effects" :key="effect.id">
             <button
               type="button"
-              class="crate-preview__effect-btn"
-              :title="`${effect.name} (click to preview)`"
+              class="crate-preview__effect-btn pressable"
+              :title="effect.name"
               @click="openEffect(effect)"
             >
               <UnusualEffectTile :name="effect.name" :effect-spec="effect.effectSpec" />
@@ -339,73 +268,50 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  padding-right: var(--space-lg);
-  border-right: 1px solid var(--bg-overlay);
-  margin: 0 var(--space-lg) 0 0;
+  margin: 0 var(--space-xl) var(--space-lg) 0;
 }
 
 .crate-preview__art {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
   aspect-ratio: 1 / 1;
   background: var(--bg-base);
-  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 35%, var(--bg-overlay));
   border-radius: var(--radius-card);
   overflow: hidden;
 }
 
-.crate-preview__art :deep(img) {
+.crate-preview__art :deep(img),
+.crate-preview__tile-art :deep(img) {
   max-width: 75%;
   max-height: 75%;
   object-fit: contain;
 }
 
-.crate-preview__rarity {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rarity-color, var(--text-tertiary));
-}
-
-
-.crate-preview__obtainable {
-  margin: 0;
-  font-size: var(--text-caption);
-  line-height: 1.5;
-  color: var(--text-tertiary);
-}
 
 .crate-preview__items {
   min-width: 0;
 }
 
-.crate-preview__items > .crate-preview__section-head {
-  margin-bottom: var(--space-md);
-}
-
 .crate-preview__items-body {
   min-width: 0;
+  margin-top: var(--space-sm);
   font-size: 0;
 }
 
 .crate-preview__modifiers {
   float: right;
-  max-width: 240px;
+  width: 240px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding-left: var(--space-lg);
-  border-left: 1px solid var(--bg-overlay);
-  margin: 0 0 0 var(--space-lg);
+  gap: var(--space-md);
+  margin: 0 0 var(--space-lg) var(--space-xl);
 }
 
 .crate-preview__modifiers-body {
   display: flex;
   flex-direction: column;
+  gap: var(--space-md);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -415,11 +321,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  padding: var(--space-sm) 0;
-}
-
-.crate-preview__modifier-row + .crate-preview__modifier-row {
-  border-top: 1px solid color-mix(in srgb, var(--bg-overlay) 60%, transparent);
 }
 
 .crate-preview__modifier-head {
@@ -427,43 +328,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-}
-
-.crate-preview__modifier-desc {
-  font-size: 0.6875rem;
-  line-height: 1.4;
-  color: var(--text-secondary);
-}
-
-.crate-preview__modifier-chance {
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-}
-
-.crate-preview__section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
-.crate-preview__section-count {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-}
-
-.crate-preview__empty {
-  display: flow-root;
-  margin: 0;
-  padding: var(--space-md);
-  text-align: center;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-card);
 }
 
 .crate-preview__run-label {
@@ -476,21 +340,6 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.crate-preview__run-label-name {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rarity-color, var(--text-tertiary));
-}
-
-.crate-preview__run-label-chance {
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
-}
-
 .crate-preview__tile {
   position: relative;
   display: inline-flex;
@@ -500,7 +349,7 @@ onUnmounted(() => {
   min-width: 0;
   vertical-align: top;
   margin: 26px var(--space-sm) var(--space-sm) 0;
-  padding-top: var(--space-xs);
+  padding: var(--space-xs) 0 0;
   appearance: none;
   border: 0;
   background: none;
@@ -510,8 +359,98 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+.crate-preview__tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: calc(-1 * var(--space-sm));
+  height: 1px;
+  background: var(--rarity-color, var(--text-tertiary));
+}
+
+.crate-preview__tile--run-end::before {
+  right: 0;
+}
+
+.crate-preview__tile--ghost::before {
+  content: none;
+}
+
+.crate-preview__tile-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--bg-base);
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
 .crate-preview__tile:hover .crate-preview__tile-art {
-  border-color: color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 75%, var(--text-primary));
+  border-color: var(--text-tertiary);
+}
+
+.crate-preview__tile-mark {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  background: var(--bg-base);
+  border-radius: var(--radius-pill);
+}
+
+.crate-preview__tile-owned {
+  top: var(--space-xs);
+  right: var(--space-xs);
+  width: 16px;
+  color: var(--success);
+}
+
+.crate-preview__tile-variants {
+  left: var(--space-xs);
+  bottom: var(--space-xs);
+  padding: 0 var(--space-xs);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
+.crate-preview__tile-line {
+  font-size: var(--text-caption);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crate-preview__tile-name {
+  color: var(--text-primary);
+}
+
+.crate-preview__tile-meta {
+  color: var(--text-tertiary);
+  text-transform: capitalize;
+}
+
+.crate-preview__effects {
+  clear: both;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-top: var(--space-md);
+}
+
+.crate-preview__effects-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .crate-preview__effect-btn {
@@ -527,107 +466,11 @@ onUnmounted(() => {
   border-color: var(--text-tertiary);
 }
 
-.crate-preview__tile::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: calc(-1 * var(--space-sm));
-  height: 1px;
-  background: color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 40%, var(--bg-overlay));
-}
-
-.crate-preview__tile--run-end::before {
-  right: 0;
-}
-
-.crate-preview__tile-art {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  background: var(--bg-base);
-  border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 35%, var(--bg-overlay));
-  border-radius: var(--radius-input);
-  overflow: hidden;
-}
-
-.crate-preview__tile-art :deep(img) {
-  max-width: 75%;
-  max-height: 75%;
-  object-fit: contain;
-}
-
-.crate-preview__tile-owned {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  color: var(--success);
-  background: color-mix(in srgb, var(--bg-base) 80%, transparent);
-  border-radius: var(--radius-pill);
-}
-
-.crate-preview__tile-name {
-  font-size: 0.6875rem;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.crate-preview__tile-type {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.crate-preview__tile-variants {
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tier-gold);
-  white-space: nowrap;
-}
-
-.crate-preview__effects {
-  clear: both;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--bg-overlay);
-}
-
-.crate-preview__effects-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 @media (max-width: 767px) {
   .crate-preview__identity,
   .crate-preview__modifiers {
     float: none;
     width: auto;
-    max-width: none;
-    padding: 0;
-    border: none;
     margin: 0 0 var(--space-lg);
   }
 

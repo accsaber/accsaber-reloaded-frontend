@@ -156,6 +156,7 @@ function fillTriple(fill: BorderColorFill): MetalTriple | null {
     case 'cosmic': return [fill.space, fill.nebulas[0] ?? fill.accent, lighten(fill.star, 0.1)]
     case 'toon': return [darken(fill.ink, 0.3), fill.ink, fill.line]
     case 'laser': return [fill.dark, fill.glow, fill.core]
+    case 'starshine': return [fill.deep, fill.base, fill.light]
     case 'candle': return tripleFromColors([fill.dark, fill.glow, fill.flame])
     case 'wood': return [fill.dark, fill.base, fill.light]
     case 'brew': return tripleFromColors([...fill.colors, fill.bone])

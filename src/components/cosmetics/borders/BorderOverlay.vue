@@ -5,7 +5,9 @@ import BorderBlueprintOverlay from '@/components/cosmetics/borders/BorderBluepri
 import BorderCoffinOverlay from '@/components/cosmetics/borders/BorderCoffinOverlay.vue'
 import BorderDripOverlay from '@/components/cosmetics/borders/BorderDripOverlay.vue'
 import BorderDryBonesOverlay from '@/components/cosmetics/borders/BorderDryBonesOverlay.vue'
+import BorderGingerbreadOverlay from '@/components/cosmetics/borders/BorderGingerbreadOverlay.vue'
 import BorderRainOverlay from '@/components/cosmetics/borders/BorderRainOverlay.vue'
+import BorderSnowGlobeOverlay from '@/components/cosmetics/borders/BorderSnowGlobeOverlay.vue'
 import BorderThermalOverlay from '@/components/cosmetics/borders/BorderThermalOverlay.vue'
 import BorderUmbraOverlay from '@/components/cosmetics/borders/BorderUmbraOverlay.vue'
 import type {
@@ -25,6 +27,8 @@ const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {
   drip: BorderDripOverlay,
   drybones: BorderDryBonesOverlay,
   umbra: BorderUmbraOverlay,
+  snowglobe: BorderSnowGlobeOverlay,
+  gingerbread: BorderGingerbreadOverlay,
 }
 
 defineProps<BorderOverlayHost & { overlay: BorderOverlaySpec }>()

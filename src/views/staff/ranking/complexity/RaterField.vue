@@ -17,7 +17,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
 
-const DECIMALS: Record<FieldKind, number> = { count: 0, share: 3, nudge: 2, intercept: 3, slope: 3 }
+const DECIMALS: Record<FieldKind, number> = { count: 0, nudge: 2, intercept: 3, slope: 3 }
 const SAME = 1e-9
 
 const decimals = computed(() => DECIMALS[props.kind])

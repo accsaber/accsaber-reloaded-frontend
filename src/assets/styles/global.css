@@ -438,3 +438,9 @@ h1 {
 .rarity--epic { --rarity-color: var(--tier-apex); }
 .rarity--legendary { --rarity-color: var(--tier-gold); }
 .rarity--mythic { --rarity-color: var(--error); }
+
+.rarity-text {
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--rarity-color);
+}

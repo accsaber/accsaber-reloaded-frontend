@@ -24,6 +24,17 @@ export function win(c: number, a: number, b: number): number {
   return c >= a && c < b ? (c - a) / (b - a) : -1
 }
 
+export function sparkle(ctx: Ctx, x: number, y: number, r: number): void {
+  if (r <= 0) return
+  ctx.beginPath()
+  ctx.moveTo(x, y - r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.quadraticCurveTo(x, y, x, y + r)
+  ctx.quadraticCurveTo(x, y, x - r, y)
+  ctx.quadraticCurveTo(x, y, x, y - r)
+  ctx.fill()
+}
+
 export function fillCircle(ctx: Ctx, x: number, y: number, r: number) {
   ctx.beginPath()
   ctx.arc(x, y, r, 0, Math.PI * 2)

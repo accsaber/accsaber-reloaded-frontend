@@ -9,7 +9,7 @@ export type CoefficientKey = keyof RaterCoefficients
 
 export type GateKey = keyof RaterBoardGate
 
-export type FieldKind = 'intercept' | 'slope' | 'share' | 'count' | 'nudge'
+export type FieldKind = 'intercept' | 'slope' | 'count' | 'nudge'
 
 export interface FieldRange {
   min: number
@@ -36,12 +36,6 @@ export const COEFFICIENT_FIELDS: {
     hint: 'How much the average note counts. The model guesses how accurately each note gets hit, and this weights that average.',
   },
   {
-    key: 'worstSlope',
-    label: 'Worst',
-    kind: 'slope',
-    hint: "How much the map's hardest notes count, the slice that worst share picks out.",
-  },
-  {
     key: 'resetSlope',
     label: 'Resets',
     kind: 'slope',
@@ -60,28 +54,10 @@ export const COEFFICIENT_FIELDS: {
     hint: 'How much bottom-row notes cut upward count. The model reads those as harder than they play, so a negative value pulls those maps back down.',
   },
   {
-    key: 'midDiagDoubleSlope',
-    label: 'Mid-Row Diagonal Doubles',
-    kind: 'slope',
-    hint: 'How much middle-row diagonal doubles count, one note cut up and one cut down on the same beat. A positive value raises maps that have them.',
-  },
-  {
-    key: 'topDownSlope',
-    label: 'Top-Row Down Swings',
-    kind: 'slope',
-    hint: 'How much top-row notes cut downward count, the mirror of bottom-row ups. A positive value raises maps that have them.',
-  },
-  {
     key: 'notesSlope',
     label: 'Notes',
     kind: 'slope',
     hint: 'How much the map length counts. Doubling the notes moves it by a fixed step, so a long map is not twice a short one.',
-  },
-  {
-    key: 'npsSlope',
-    label: 'NPS',
-    kind: 'slope',
-    hint: 'How much note density counts, meaning how tightly the notes sit over the map length. Negative raises sparse maps, positive lowers them.',
   },
   {
     key: 'njsSlope',
@@ -146,17 +122,9 @@ export const GATE_FIELDS: {
 
 export const SLOW_GATE_NOTE = 'Top plays and min plays per player re-read every leaderboard, so they weight on release and take a moment the first time.'
 
-export const WORST_SHARE_HINT = "How much of the map's hardest part the script reads. At 0.05 it looks at the worst 5 percent of notes, so a short brutal section counts for more than a wider slice would let it."
-
 const NICE_STEPS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
 
-const BASE_SPAN: Record<FieldKind, number> = {
-  intercept: 5,
-  slope: 2,
-  share: 0,
-  count: 0,
-  nudge: 0,
-}
+const BASE_SPAN = { intercept: 5, slope: 2 }
 
 function niceCeil(value: number): number {
   return NICE_STEPS.find((step) => step >= value) ?? NICE_STEPS[NICE_STEPS.length - 1]
@@ -167,7 +135,6 @@ function onStep(value: number, step: number): number {
 }
 
 export function fieldRange(kind: FieldKind, live: number, current: number): FieldRange {
-  if (kind === 'share') return { min: 0.005, max: 0.5, step: 0.005 }
   if (kind === 'count') {
     return { min: 0, max: niceCeil(Math.max(live, current, 1) * 4), step: 1 }
   }
@@ -183,7 +150,6 @@ export function fieldRange(kind: FieldKind, live: number, current: number): Fiel
 
 const live = ref<ComplexityRaterSpec | null>(null)
 const edited = ref<ComplexityRaterSpec | null>(null)
-const bands = ref<number[]>([])
 const version = ref('')
 
 const dirty = computed(
@@ -191,9 +157,8 @@ const dirty = computed(
     && JSON.stringify(live.value) !== JSON.stringify(edited.value),
 )
 
-export function cloneRater(rater: ComplexityRaterSpec): ComplexityRaterSpec {
+function cloneRater(rater: ComplexityRaterSpec): ComplexityRaterSpec {
   return {
-    worstShare: rater.worstShare,
     board: { ...rater.board },
     categories: Object.fromEntries(
       Object.entries(rater.categories).map(([code, values]) => [code, { ...values }]),
@@ -207,15 +172,13 @@ export function cloneRater(rater: ComplexityRaterSpec): ComplexityRaterSpec {
 export function useTuningState(): {
   live: Ref<ComplexityRaterSpec | null>
   edited: Ref<ComplexityRaterSpec | null>
-  bands: Ref<number[]>
   version: Ref<string>
-  adopt: (spec: ComplexityRaterSpec, worstBands: number[], raterVersion: string) => void
+  adopt: (spec: ComplexityRaterSpec, raterVersion: string) => void
   reset: () => void
   dirty: ComputedRef<boolean>
 } {
-  function adopt(spec: ComplexityRaterSpec, worstBands: number[], raterVersion: string) {
+  function adopt(spec: ComplexityRaterSpec, raterVersion: string) {
     live.value = cloneRater(spec)
-    bands.value = worstBands
     version.value = raterVersion
     if (!edited.value) edited.value = cloneRater(spec)
   }
@@ -224,14 +187,7 @@ export function useTuningState(): {
     edited.value = live.value ? cloneRater(live.value) : null
   }
 
-  return { live, edited, bands, version, adopt, reset, dirty }
-}
-
-export function nearestBand(share: number, worstBands: number[]): number | null {
-  if (!worstBands.length) return null
-  return worstBands.reduce((closest, band) =>
-    Math.abs(band - share) < Math.abs(closest - share) ? band : closest,
-  )
+  return { live, edited, version, adopt, reset, dirty }
 }
 
 export function categoryCodes(rater: ComplexityRaterSpec): string[] {

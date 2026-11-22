@@ -15,7 +15,6 @@ defineEmits<{ close: [] }>()
   <BaseModal :open="open" :title="effect?.name" max-width="340px" @close="$emit('close')">
     <div v-if="effect" class="epm">
       <UnusualEffectTile :name="effect.name" :effect-spec="effect.effectSpec" :size="220" />
-      <span class="epm__type">Unusual effect</span>
     </div>
   </BaseModal>
 </template>
@@ -30,13 +29,5 @@ defineEmits<{ close: [] }>()
 
 .epm :deep(.ue-tile__name) {
   display: none;
-}
-
-.epm__type {
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
 }
 </style>

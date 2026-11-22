@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ItemPreview from '@/components/domain/ItemPreview.vue'
-import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
+import CratePoolPreview from '@/components/domain/CratePoolPreview.vue'
 import VariantSplitPreview from '@/components/domain/VariantSplitPreview.vue'
 import ItemPreviewModal from '@/components/domain/ItemPreviewModal.vue'
 import { useItemTypeStore } from '@/stores/itemTypes'
@@ -58,7 +58,7 @@ const hoverTitle = computed(() => {
       </svg>
     </span>
 
-    <PublicCratePreview v-if="isCrate" :open="open" :crate="item" @close="open = false" />
+    <CratePoolPreview v-if="isCrate" :open="open" :crate="item" @close="open = false" />
     <ItemPreviewModal v-else :open="open" :item="item" @close="open = false" />
   </button>
 </template>

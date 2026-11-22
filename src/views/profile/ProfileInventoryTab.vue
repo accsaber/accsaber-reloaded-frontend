@@ -9,7 +9,7 @@ import InventoryToolbar from '@/views/profile/InventoryToolbar.vue'
 import InventoryDetailPanel from '@/components/domain/InventoryDetailPanel.vue'
 import InventoryItemCell from '@/components/domain/InventoryItemCell.vue'
 import InventoryLayout, { INVENTORY_NARROW_QUERY } from '@/components/domain/InventoryLayout.vue'
-import PublicCratePreview from '@/components/domain/PublicCratePreview.vue'
+import CratePoolPreview from '@/components/domain/CratePoolPreview.vue'
 import { useCrateContents } from '@/composables/useCrateContents'
 import { useCrateModifiers } from '@/composables/useCrateModifiers'
 import { useCrateUnusualEffects } from '@/composables/useCrateUnusualEffects'
@@ -669,7 +669,7 @@ onUnmounted(() => {
       </template>
     </InventoryLayout>
 
-    <PublicCratePreview
+    <CratePoolPreview
       :open="previewCrate !== null"
       :crate="previewCrate"
       @close="previewCrate = null"

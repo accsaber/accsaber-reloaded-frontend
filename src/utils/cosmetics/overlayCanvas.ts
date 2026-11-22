@@ -61,5 +61,6 @@ export function primaryFillHex(fill: BorderColorFill | undefined): string | null
   if (fill.type === 'pixel_metal') return fill.highlight
   if (fill.type === 'cosmic') return fill.star
   if (fill.type === 'toon') return fill.line
+  if (fill.type === 'starshine') return fill.light
   return null
 }

@@ -286,7 +286,7 @@ const sourceLabel = computed(() => {
         {{ fullItemName }}
       </h3>
       <span class="inv-detail__kind">
-        <span class="inv-detail__rarity" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
+        <span class="rarity-text" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
         {{ typeName }}
       </span>
     </div>
@@ -560,11 +560,6 @@ const sourceLabel = computed(() => {
   color: var(--text-secondary);
 }
 
-.inv-detail__rarity {
-  font-weight: 600;
-  color: var(--rarity-color);
-  text-transform: capitalize;
-}
 
 .inv-detail__description {
   margin: 0;

@@ -19,7 +19,7 @@ defineEmits<{
       @click.self="$emit('dismiss')"
     >
       <div class="crate-stage__panel">
-        <div class="crate-stage__title"><slot name="title" /></div>
+        <div class="card-title"><slot name="title" /></div>
         <slot />
         <div class="crate-stage__actions" :class="{ 'crate-stage__actions--ready': ready }">
           <slot name="actions" />
@@ -40,7 +40,7 @@ defineEmits<{
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1001;
-  animation: crate-stage-in 150ms ease-out;
+  animation: crate-stage-in var(--dur-enter) var(--ease-out);
 }
 
 .crate-stage__panel {
@@ -52,17 +52,6 @@ defineEmits<{
   max-width: 960px;
 }
 
-.crate-stage__title {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .crate-stage :deep(.crate-anim) {
   width: 100%;
 }
@@ -70,10 +59,10 @@ defineEmits<{
 .crate-stage__actions {
   display: flex;
   gap: var(--space-sm);
-  min-height: 38px;
+  min-height: var(--control-h);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease-out;
+  transition: opacity var(--dur-enter) var(--ease-out);
 }
 
 .crate-stage__actions--ready {
@@ -84,9 +73,6 @@ defineEmits<{
 @keyframes crate-stage-in {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 

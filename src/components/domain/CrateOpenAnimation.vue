@@ -333,7 +333,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
       </div>
       <div class="crate-anim__reveal-name card-title">{{ revealName }}</div>
       <div v-if="typeName" class="crate-anim__reveal-type">{{ typeName }}</div>
-      <div class="crate-anim__reveal-rarity">{{ result.rarity }}</div>
+      <div class="crate-anim__reveal-rarity rarity-text">{{ result.rarity }}</div>
       <div v-if="resultModifiers.length" class="crate-anim__reveal-chips">
         <ModifierChip v-for="(m, i) in resultModifiers" :key="`${m.id}-${i}`" :modifier="m" />
       </div>
@@ -451,7 +451,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   inset: 0;
   z-index: 1;
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-  transition: opacity 260ms ease-in;
+  transition: opacity var(--dur-exit) var(--ease-in);
 }
 
 .crate-anim__strip-wrap--fading {
@@ -474,7 +474,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   height: var(--card-h);
   display: flex;
   flex-direction: column;
-  transition: opacity 240ms ease;
+  transition: opacity var(--dur-enter) var(--ease-out);
 }
 
 .crate-anim__card--winner :deep(.bloq) {
@@ -513,15 +513,12 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
     color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 40%, var(--text-primary)),
     var(--rarity-color, var(--text-tertiary))
   );
-  animation: edge-cool 480ms ease-out forwards;
+  animation: edge-cool var(--dur-move) var(--ease-out) forwards;
   pointer-events: none;
 }
 
 @keyframes edge-cool {
-  0% {
-    opacity: 1;
-  }
-  100% {
+  to {
     opacity: 0;
   }
 }
@@ -545,7 +542,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   gap: 2px;
   z-index: 7;
   pointer-events: none;
-  animation: score-float 900ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  animation: score-float 900ms var(--ease-out) forwards;
 }
 
 .crate-anim__score-num {
@@ -618,7 +615,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   z-index: 5;
   transform: translate(-50%, -50%);
   overflow: hidden;
-  animation: reveal-rise 340ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+  animation: reveal-rise 340ms var(--ease-out) backwards;
 }
 
 @keyframes reveal-rise {
@@ -651,20 +648,13 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 }
 
 .crate-anim__reveal-type {
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
-  font-weight: 600;
   text-align: center;
 }
 
 .crate-anim__reveal-rarity {
   font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--rarity-color, var(--text-tertiary));
-  font-weight: 700;
 }
 
 .crate-anim__reveal-chips {
@@ -681,10 +671,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 }
 
 .crate-anim__reveal-effect-label {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--text-caption);
   color: var(--text-secondary);
 }
 
@@ -695,9 +682,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 }
 
 .crate-anim__reveal-serial {
-  font-family: var(--font-mono);
   font-size: var(--text-caption);
-  font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
 }
 
@@ -722,7 +707,9 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 .crate-anim__control:hover {

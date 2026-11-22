@@ -12,6 +12,8 @@ import JewelBorderFill from '@/components/cosmetics/borders/JewelBorderFill.vue'
 import LaserBorderFill from '@/components/cosmetics/borders/LaserBorderFill.vue'
 import PrismBorderFill from '@/components/cosmetics/borders/PrismBorderFill.vue'
 import RegaliaBorderFill from '@/components/cosmetics/borders/RegaliaBorderFill.vue'
+import StarshineAura from '@/components/cosmetics/borders/StarshineAura.vue'
+import StarshineBorderFill from '@/components/cosmetics/borders/StarshineBorderFill.vue'
 import StolenFlameBorderFill from '@/components/cosmetics/borders/StolenFlameBorderFill.vue'
 import ToonBorderFill from '@/components/cosmetics/borders/ToonBorderFill.vue'
 import WarpBorderFill from '@/components/cosmetics/borders/WarpBorderFill.vue'
@@ -28,6 +30,8 @@ export interface RimStyle {
 interface FillRenderer<F extends CanvasFill> {
   component: Component
   margin: boolean
+  aura?: Component
+  trace?: 'shape' | 'ring'
   rim: (fill: F) => RimStyle
 }
 
@@ -46,9 +50,10 @@ export const FILL_RENDERERS: FillRegistry = {
   stolenflame: { component: StolenFlameBorderFill, margin: true, rim: (f) => ({ stroke: f.flame, width: 0.9, opacity: 0.5 }) },
   dominion: { component: DominionBorderFill, margin: true, rim: (f) => ({ stroke: f.body ?? '#ffffff', width: 0.9, opacity: 0.65 }) },
   eclipse: { component: EclipseBorderFill, margin: true, rim: (f) => ({ stroke: f.corona, width: 0.9, opacity: 0.5 }) },
+  starshine: { component: StarshineBorderFill, margin: true, aura: StarshineAura, trace: 'ring', rim: (f) => ({ stroke: f.glint, width: 0.8, opacity: 0.5 }) },
   confetti: { component: ConfettiBorderFill, margin: false, rim: (f) => ({ stroke: f.colors[0] ?? f.dark, width: 0.8, opacity: 0.45 }) },
   jewel: { component: JewelBorderFill, margin: false, rim: (f) => ({ stroke: f.glint ?? '#ffffff', width: 0.8, opacity: 0.5 }) },
-  laser: { component: LaserBorderFill, margin: false, rim: (f) => ({ stroke: f.core, width: 0.9, opacity: 0.55 }) },
+  laser: { component: LaserBorderFill, margin: false, trace: 'shape', rim: (f) => ({ stroke: f.core, width: 0.9, opacity: 0.55 }) },
   chart: { component: ChartBorderFill, margin: false, rim: (f) => ({ stroke: f.ink, width: 1, opacity: 0.7 }) },
   hazard: { component: HazardBorderFill, margin: false, rim: (f) => ({ stroke: f.a, width: 0.9, opacity: 0.6 }) },
   warp: { component: WarpBorderFill, margin: false, rim: (f) => ({ stroke: f.streak, width: 0.8, opacity: 0.45 }) },

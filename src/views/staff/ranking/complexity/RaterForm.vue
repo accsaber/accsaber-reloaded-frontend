@@ -6,15 +6,12 @@ import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import StoredFold from '@/components/common/StoredFold.vue'
 import { useCategoryStore } from '@/stores/categories'
 import type { Tab } from '@/types/display'
-import { formatFixed } from '@/utils/formatters'
 import RaterField from './RaterField.vue'
 import {
   COEFFICIENT_FIELDS,
   GATE_FIELDS,
   SLOW_GATE_NOTE,
-  WORST_SHARE_HINT,
   categoryCodes,
-  nearestBand,
   useTuningState,
 } from './tuning'
 import { computed, ref } from 'vue'
@@ -42,10 +39,9 @@ const LINES: { key: LineKey; title: string; hint: string; fold: string; collapse
     collapsed: true,
   },
 ]
-const SNAP_MATCH = 0.0001
 
 const categoryStore = useCategoryStore()
-const { live, edited, bands, version, reset, dirty } = useTuningState()
+const { live, edited, version, reset, dirty } = useTuningState()
 
 const codes = computed(() => (edited.value ? categoryCodes(edited.value) : []))
 const picked = ref('')
@@ -66,17 +62,6 @@ function lineEdited(key: string): boolean {
 const editedElsewhere = computed(() =>
   codes.value.filter((key) => key !== code.value && lineEdited(key)).map((key) => categoryStore.getShortName(key)).join(', '),
 )
-
-const snapped = computed(() => {
-  if (!edited.value) return null
-  const band = nearestBand(edited.value.worstShare, bands.value)
-  return band == null || Math.abs(band - edited.value.worstShare) < SNAP_MATCH ? null : band
-})
-
-const bandNote = computed(() => {
-  const list = bands.value.map((band) => formatFixed(band, 3)).join(', ')
-  return snapped.value == null ? `Weights exactly at ${list}` : `Weights exactly at ${list}. Snaps to ${formatFixed(snapped.value, 3)}`
-})
 </script>
 
 <template>
@@ -95,14 +80,6 @@ const bandNote = computed(() => {
         </span>
         <BaseButton :disabled="!dirty" @click="reset">Reset to Live</BaseButton>
       </div>
-
-      <StoredFold class="rater-form__fold" label="Worst Share" storage-key="script-worst-share">
-        <template #meta><HintTooltip :text="bandNote" label="Worst share" /></template>
-        <div class="rater-form__fields">
-          <RaterField label="Share of Notes" :hint="WORST_SHARE_HINT" kind="share" :live="live?.worstShare ?? edited.worstShare"
-            :model-value="edited.worstShare" @update:model-value="edited.worstShare = $event" />
-        </div>
-      </StoredFold>
 
       <StoredFold class="rater-form__fold" label="Board Gate" storage-key="script-board-gate">
         <template #meta><HintTooltip :text="SLOW_GATE_NOTE" label="Board gate" /></template>

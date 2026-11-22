@@ -13,6 +13,7 @@ export interface BorderShapePathValue {
   fillOpacity?: number
   transform?: string
   twinkle?: boolean
+  trace?: boolean
 }
 
 export interface BorderShapeStateValue {
@@ -244,7 +245,54 @@ export interface BorderUmbraOverlaySpec {
   annular?: boolean
 }
 
+export type SnowGlobeScene = 'nordic' | 'city' | 'elven'
+
+export interface BorderSnowGlobeOverlaySpec {
+  type: 'snowglobe'
+  enabled: boolean
+  scene: SnowGlobeScene
+  snow: string
+  shade: string
+  ink: string
+  body: string
+  pine: string
+  water: string
+  light: string
+  lights: string[]
+  accent: string
+  glass: string
+  flakes?: number
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  hover?: boolean
+  star?: {
+    fillType: StarshineFill['type']
+    holder: string
+    wood: string
+    grain: string
+    trim: string
+  }
+}
+
+export interface BorderGingerbreadOverlaySpec {
+  type: 'gingerbread'
+  enabled: boolean
+  cookie: string
+  edge: string
+  icing: string
+  ink: string
+  bow: string
+  gumdrops: string[]
+  face?: 'smile' | 'frown' | 'wink'
+  sprinkles?: string[]
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  hover?: boolean
+}
+
 export type BorderOverlaySpec =
+  | BorderGingerbreadOverlaySpec
+  | BorderSnowGlobeOverlaySpec
   | BorderUmbraOverlaySpec
   | BorderRainOverlaySpec
   | BorderDripOverlaySpec
@@ -400,6 +448,24 @@ export interface WoodFill {
   plank?: number
 }
 
+export type StarshineFlow = 'fall' | 'rise' | 'drift' | 'still'
+export type StarshineGlint = 'star' | 'snowflake' | 'bubble'
+
+export interface StarshineFill {
+  type: 'starshine'
+  base: string
+  deep: string
+  light: string
+  glint: string
+  flow?: StarshineFlow
+  glintShape?: StarshineGlint
+  lightShape?: 'disc' | 'ring'
+  streaks?: boolean
+  lights?: number
+  glints?: number
+  speed?: number
+}
+
 export interface CandleFill {
   type: 'candle'
   dark: string
@@ -494,6 +560,7 @@ export type BorderColorFill =
   | WarpFill
   | EclipseFill
   | CandleFill
+  | StarshineFill
   | WoodFill
   | BrewFill
   | Gradient

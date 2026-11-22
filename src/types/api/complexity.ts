@@ -128,14 +128,10 @@ export interface ComplexityPlayerParams {
 export interface RaterCoefficients {
   intercept: number
   meanSlope: number
-  worstSlope: number
   resetSlope: number
   dotSlope: number
   bottomUpSlope: number
-  midDiagDoubleSlope: number
-  topDownSlope: number
   notesSlope: number
-  npsSlope: number
   njsSlope: number
   boardSlope: number
 }
@@ -150,7 +146,6 @@ export interface RaterBoardGate {
 }
 
 export interface ComplexityRaterSpec {
-  worstShare: number
   board: RaterBoardGate
   categories: Record<string, RaterCoefficients>
   boardCategories: Record<string, RaterCoefficients>
@@ -158,7 +153,6 @@ export interface ComplexityRaterSpec {
 
 export interface ComplexityRaterResponse {
   version: string
-  worstBands: number[]
   rater: ComplexityRaterSpec
 }
 

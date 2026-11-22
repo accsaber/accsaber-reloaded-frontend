@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
+import BaseTabs from '@/components/common/BaseTabs.vue'
 import BorderComposition from '@/components/domain/BorderComposition.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -20,12 +21,12 @@ const authStore = useAuthStore()
 const avatarUrl = computed(() => authStore.userProfile?.avatarUrl ?? null)
 
 const variants = computed(() => (props.item ? itemVariantPreviews(props.item) : null))
-const activeVariant = ref<string | null>(null)
+const activeVariant = ref('')
 
 watch(
   () => [props.item, props.open] as const,
   () => {
-    if (props.open) activeVariant.value = variants.value?.[0]?.key ?? null
+    if (props.open) activeVariant.value = variants.value?.[0]?.key ?? ''
   },
   { immediate: true },
 )
@@ -63,10 +64,8 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 <template>
   <BaseModal :open="open" :title="item?.name" max-width="460px" @close="emit('close')">
     <div v-if="item" class="ipm">
-      <div
-        class="ipm__art"
-        :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle,'ipm__art--border': isBorder }]"
-      >
+      <div class="ipm__art"
+        :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle, 'ipm__art--border': isBorder }]">
         <BorderComposition
           v-if="isBorder"
           :shape="shapeValue"
@@ -76,23 +75,15 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
         <ItemPreview v-else :item="previewItem ?? item" />
       </div>
 
-      <span class="ipm__type">{{ typeLabel }}</span>
+      <span class="caption">
+        <span class="rarity-text" :class="rarityClass(item.rarity)">{{ item.rarity }}</span> · {{ typeLabel }}
+      </span>
       <p v-if="item.description" class="ipm__desc">{{ item.description }}</p>
 
-      <div v-if="variants" class="ipm__variants">
-        <button
-          v-for="v in variants"
-          :key="v.key"
-          type="button"
-          class="ipm__variant"
-          :class="{ 'ipm__variant--active': v.key === activeVariant }"
-          @click="activeVariant = v.key"
-        >
-          {{ v.label }}
-        </button>
-      </div>
+      <BaseTabs v-if="variants" v-model="activeVariant" class="ipm__variants" :tabs="variants" variant="segmented"
+        label="Variants" />
 
-      <p v-if="isBorder && !avatarUrl" class="ipm__note">Log in to preview this on your profile picture.</p>
+      <p v-if="isBorder && !avatarUrl" class="caption">Log in to preview this on your profile picture</p>
     </div>
   </BaseModal>
 </template>
@@ -113,7 +104,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
   justify-content: center;
   width: 172px;
   height: 172px;
-  border: 1px solid var(--rarity-color, var(--text-tertiary));
   border-radius: var(--radius-card);
   background: var(--bg-base);
   overflow: hidden;
@@ -130,7 +120,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 .ipm__art--border {
   width: 208px;
   height: 208px;
-  border: none;
   background: none;
   overflow: visible;
 }
@@ -142,13 +131,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
   text-overflow: clip;
 }
 
-.ipm__type {
-  font-size: var(--text-caption);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-}
 
 .ipm__desc {
   margin: 0;
@@ -159,39 +141,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
 }
 
 .ipm__variants {
-  display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: var(--space-xs);
-}
-
-.ipm__variant {
-  padding: var(--space-xs) 12px;
-  border: 1px solid var(--bg-overlay);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
-}
-
-.ipm__variant:hover {
-  color: var(--text-primary);
-  border-color: var(--text-tertiary);
-}
-
-.ipm__variant--active {
-  border-color: var(--page-accent, var(--accent));
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--page-accent, var(--accent)) 12%, transparent);
-}
-
-.ipm__note {
-  margin: 0;
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
 }
 </style>

@@ -2,12 +2,13 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { LaserFill } from '@/types/cosmetics/border'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { loopPoint, traceShape, type ShapeTrace } from '@/utils/cosmetics/shapeTrace'
 import { hash01, randBetween as rand } from '@/utils/random'
 import { useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   fill: LaserFill
-  trace?: { ds: string[]; viewBox: string } | null
+  trace?: ShapeTrace | null
 }>()
 
 const STATIC_T = 4
@@ -41,11 +42,6 @@ interface Wave {
   u: number
 }
 
-interface Loop {
-  pts: { x: number; y: number }[]
-  len: number
-}
-
 let sparks: Spark[] = []
 let motes: Mote[] = []
 let slashes: Slash[] = []
@@ -54,56 +50,13 @@ let nextSlashAt = 0
 let nextWaveAt = 0
 let lattice: HTMLCanvasElement | null = null
 let startTime = 0
-let loops: Loop[] = []
-let mainLoop = 0
-let vb = { x: 0, y: 0, w: 100, h: 100 }
+let traced = traceShape(props.trace)
 
 function buildLoops(): void {
-  loops = []
-  mainLoop = 0
-  const tr = props.trace
-  if (!tr || tr.ds.length === 0 || typeof document === 'undefined') return
-  const nums = tr.viewBox.split(' ').map(Number)
-  if (nums.length === 4 && nums.every((n) => Number.isFinite(n)) && nums[2] > 0 && nums[3] > 0) {
-    vb = { x: nums[0], y: nums[1], w: nums[2], h: nums[3] }
-  }
-  for (const d of tr.ds) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    el.setAttribute('d', d)
-    let len = 0
-    try {
-      len = el.getTotalLength()
-    } catch {
-      continue
-    }
-    if (!Number.isFinite(len) || len < 4) continue
-    const n = 150
-    const pts: { x: number; y: number }[] = []
-    for (let k = 0; k <= n; k++) {
-      const p = el.getPointAtLength((len * k) / n)
-      pts.push({ x: p.x, y: p.y })
-    }
-    loops.push({ pts, len })
-  }
-  for (const [i, lp] of loops.entries()) {
-    if (lp.len > loops[mainLoop].len) mainLoop = i
-  }
+  traced = traceShape(props.trace)
 }
 
 watch(() => props.trace, () => buildLoops())
-
-function loopPoint(lp: Loop, u: number, w: number, h: number): { x: number; y: number } {
-  const n = lp.pts.length - 1
-  const f = (((u % 1) + 1) % 1) * n
-  const i = Math.floor(f)
-  const frac = f - i
-  const a = lp.pts[i]
-  const b = lp.pts[Math.min(n, i + 1)]
-  return {
-    x: ((a.x + (b.x - a.x) * frac - vb.x) / vb.w) * w,
-    y: ((a.y + (b.y - a.y) * frac - vb.y) / vb.h) * h,
-  }
-}
 
 function seedMotes(): void {
   motes = Array.from({ length: 26 }, () => ({
@@ -143,7 +96,7 @@ function renderLattice(w: number, h: number): void {
 }
 
 function beamPoint(u: number, w: number, h: number): { x: number; y: number } {
-  if (loops.length) return loopPoint(loops[mainLoop], u, w, h)
+  if (traced.loops.length) return loopPoint(traced.loops[traced.main], u, traced.vb, w, h)
   return ringPoint(u, w, h)
 }
 
@@ -227,11 +180,11 @@ useElementCanvas(canvasRef, {
     ]) {
       ctx.strokeStyle = layer.color
       ctx.lineWidth = Math.max(0.8, layer.width)
-      if (loops.length) {
-        for (const lp of loops) {
+      if (traced.loops.length) {
+        for (const lp of traced.loops) {
           ctx.beginPath()
           for (let s = 0; s <= steps; s++) {
-            const p = loopPoint(lp, s / steps, w, h)
+            const p = loopPoint(lp, s / steps, traced.vb, w, h)
             if (s === 0) ctx.moveTo(p.x, p.y)
             else ctx.lineTo(p.x, p.y)
           }

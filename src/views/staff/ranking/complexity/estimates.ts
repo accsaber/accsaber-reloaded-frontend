@@ -1,12 +1,9 @@
 import type { ComplexityEstimateInfo, EstimateScenario } from '@/types/api/complexity'
-import { COEFFICIENT_FIELDS } from './tuning'
-
-export type EstimateFormat = 'percent' | 'number' | 'count' | 'duration' | 'text'
 
 export interface EstimateField {
   key: string
   label: string
-  format: EstimateFormat
+  format: 'percent' | 'number' | 'count'
   decimals?: number
   always?: boolean
 }
@@ -24,13 +21,9 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
       title: 'Note terms',
       fields: [
         { key: 'meanNoteAccuracy', label: 'Mean note accuracy', format: 'percent' },
-        { key: 'worstNoteAccuracy', label: 'Worst note accuracy', format: 'percent' },
         { key: 'meanTerm', label: 'Mean term', format: 'number', decimals: 4 },
-        { key: 'worstTerm', label: 'Worst term', format: 'number', decimals: 4 },
         { key: 'notes', label: 'Notes', format: 'count' },
         { key: 'notesTerm', label: 'Notes term', format: 'number', decimals: 4 },
-        { key: 'duration', label: 'Duration', format: 'duration', always: true },
-        { key: 'npsTerm', label: 'NPS term', format: 'number', decimals: 4, always: true },
         { key: 'njs', label: 'Note jump speed', format: 'number', decimals: 2 },
       ],
     },
@@ -41,8 +34,6 @@ export const ESTIMATE_GROUPS: Record<EstimateScenario, EstimateGroup[]> = {
         { key: 'resetShare', label: 'Resets', format: 'percent' },
         { key: 'dotShare', label: 'Dots', format: 'percent' },
         { key: 'bottomUpShare', label: 'Bottom-row ups', format: 'percent', always: true },
-        { key: 'midDiagDoubleShare', label: 'Mid-row diagonal doubles', format: 'percent', always: true },
-        { key: 'topDownShare', label: 'Top-row down swings', format: 'percent', always: true },
       ],
     },
     {
@@ -64,8 +55,6 @@ export const COEFFICIENT_SETS: { key: 'chart' | 'board'; title: string }[] = [
   { key: 'board', title: 'Board coefficients' },
   { key: 'chart', title: 'Chart coefficients' },
 ]
-
-export const COEFFICIENT_ROWS = COEFFICIENT_FIELDS
 
 export function readNumber(
   inputs: Record<string, unknown> | undefined,
@@ -98,12 +87,6 @@ export function readObject(
   return raw && typeof raw === 'object' && !Array.isArray(raw)
     ? (raw as Record<string, unknown>)
     : null
-}
-
-export function worstShareLabel(inputs: Record<string, unknown> | undefined): string | null {
-  const share = readNumber(inputs, 'worstShare')
-  if (share == null || share <= 0) return null
-  return `${(share * 100).toFixed(share * 100 < 1 ? 1 : 0)}%`
 }
 
 export function isStaleEstimate(

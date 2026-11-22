@@ -349,7 +349,7 @@ itemTypeStore.fetchItemTypes()
 
       <section class="listing-page__item" aria-label="Item details">
         <p class="listing-page__kind">
-          <span class="listing-page__rarity" :class="rarityClass(listing.item.item.rarity)">
+          <span class="rarity-text" :class="rarityClass(listing.item.item.rarity)">
             {{ listing.item.item.rarity }}
           </span>
           {{ typeLabel }}
@@ -490,11 +490,6 @@ itemTypeStore.fetchItemTypes()
   color: var(--text-secondary);
 }
 
-.listing-page__rarity {
-  font-weight: 600;
-  color: var(--rarity-color);
-  text-transform: capitalize;
-}
 
 .listing-page__text {
   max-width: 65ch;

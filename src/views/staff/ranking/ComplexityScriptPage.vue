@@ -381,7 +381,7 @@ async function loadRater() {
   try {
     const { getComplexityRater } = await import('@/api/ranking/complexity')
     const response = await getComplexityRater()
-    tuning.adopt(response.rater, response.worstBands, response.version)
+    tuning.adopt(response.rater, response.version)
   } catch (err) {
     previewError.value = failure(err, 'Could not load the live constants.')
   }
