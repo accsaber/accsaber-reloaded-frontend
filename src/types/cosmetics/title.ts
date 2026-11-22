@@ -2,6 +2,8 @@ import type { BorderShapePathValue } from './border'
 import type { Easing, Gradient, ItemVariant, Loop } from './common'
 import type { ModifierEffectSpec } from './effects'
 
+type Pigments<K extends string> = { [P in K]?: string } & { [P in K as `light${Capitalize<P>}`]?: string }
+
 export interface TitleGlistenSpec {
   enabled: boolean
   highlight?: string
@@ -10,11 +12,9 @@ export interface TitleGlistenSpec {
   bandPctOfDiagonal?: number
 }
 
-export interface TitleStateValue {
+export interface TitleStateValue extends Pigments<'color'> {
   atMs: number
-  color?: string
   gradient?: Gradient
-  lightColor?: string
   lightGradient?: Gradient
   fontWeight?: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
   fontStyle?: 'normal' | 'italic'
@@ -38,10 +38,8 @@ export interface TitleOutlineSpec {
 
 export type TitleFont = 'pixel_8bit' | 'varela_round' | 'graffiti' | (string & {})
 
-export interface TitleFlashSpec {
+export interface TitleFlashSpec extends Pigments<'color'> {
   enabled: boolean
-  color?: string
-  lightColor?: string
   minIntervalMs?: number
   maxIntervalMs?: number
   durationMs?: number
@@ -49,10 +47,8 @@ export interface TitleFlashSpec {
 
 export type TitleSparkleShape = 'star' | 'paw' | 'firefly' | 'snowflake'
 
-export interface TitleSparkleSpec {
+export interface TitleSparkleSpec extends Pigments<'color'> {
   enabled: boolean
-  color?: string
-  lightColor?: string
   perSecond?: number
   sizePx?: number
   fadeMs?: number
@@ -62,13 +58,11 @@ export interface TitleSparkleSpec {
 
 export type TitleOrnamentIcon = 'yarn_ball' | 'alpha' | (string & {})
 
-export interface TitleOrnamentSpec {
+export interface TitleOrnamentSpec extends Pigments<'color'> {
   icon?: TitleOrnamentIcon
   viewBox?: string
   paths?: Omit<BorderShapePathValue, 'twinkle'>[]
   fillRule?: 'evenodd'
-  color?: string
-  lightColor?: string
   sizeEm?: number
   orbit?: TitleOrnamentOrbitSpec
 }
@@ -81,24 +75,14 @@ export interface TitleOrnamentOrbitSpec {
   tiltDeg?: number
 }
 
-export interface TitleFlameAuraSpec {
+export interface TitleFlameAuraSpec extends Pigments<'inner' | 'outer' | 'spark'> {
   type: 'flame'
   enabled: boolean
-  inner?: string
-  outer?: string
-  spark?: string
-  lightInner?: string
-  lightOuter?: string
-  lightSpark?: string
 }
 
-export interface TitleHazeAuraSpec {
+export interface TitleHazeAuraSpec extends Pigments<'color' | 'glow'> {
   type: 'haze'
   enabled: boolean
-  color?: string
-  glow?: string
-  lightColor?: string
-  lightGlow?: string
   orbs?: boolean
   motes?: boolean
 }
@@ -116,194 +100,118 @@ export interface TitleCoronaAuraSpec {
   annular?: boolean
 }
 
-export interface TitleAuroraAuraSpec {
+export interface TitleAuroraAuraSpec extends Pigments<'star'> {
   type: 'aurora'
   enabled: boolean
   colors: string[]
   lightColors?: string[]
-  star?: string
-  lightStar?: string
   curtains?: number
   stars?: number
   speed?: number
 }
 
-export interface TitleLanternAuraSpec {
+export interface TitleLanternAuraSpec extends Pigments<'glow' | 'core'> {
   type: 'lantern'
   enabled: boolean
-  glow?: string
-  core?: string
-  lightGlow?: string
-  lightCore?: string
   embers?: number
 }
 
-export interface TitleGhostsAuraSpec {
+export interface TitleGhostsAuraSpec extends Pigments<'color' | 'glow'> {
   type: 'ghosts'
   enabled: boolean
-  color?: string
-  glow?: string
-  lightColor?: string
-  lightGlow?: string
   count?: number
 }
 
-export interface TitleSmokeAuraSpec {
+export interface TitleSmokeAuraSpec extends Pigments<'smoke' | 'ember'> {
   type: 'smoke'
   enabled: boolean
-  smoke?: string
-  ember?: string
-  lightSmoke?: string
-  lightEmber?: string
 }
 
-export interface TitleAscensionAuraSpec {
+export interface TitleAscensionAuraSpec extends Pigments<'ray' | 'shine'> {
   type: 'ascension'
   enabled: boolean
-  ray?: string
-  shine?: string
-  lightRay?: string
-  lightShine?: string
   lift?: boolean
   intervalS?: number
 }
 
-export interface TitleRunesAuraSpec {
+export interface TitleRunesAuraSpec extends Pigments<'color' | 'glow'> {
   type: 'runes'
   enabled: boolean
-  color?: string
-  glow?: string
-  lightColor?: string
-  lightGlow?: string
   count?: number
 }
 
-export interface TitleStormAuraSpec {
+export interface TitleStormAuraSpec extends Pigments<'arc' | 'glow'> {
   type: 'storm'
   enabled: boolean
-  arc?: string
-  glow?: string
-  lightArc?: string
-  lightGlow?: string
   intervalMs?: number
 }
 
-export interface TitleSigilAuraSpec {
+export interface TitleSigilAuraSpec extends Pigments<'color'> {
   type: 'sigil'
   enabled: boolean
-  color?: string
-  lightColor?: string
   periodS?: number
 }
 
-export interface TitleEarthAuraSpec {
+export interface TitleEarthAuraSpec extends Pigments<'stone' | 'dust'> {
   type: 'earth'
   enabled: boolean
-  stone?: string
-  lightStone?: string
-  dust?: string
-  lightDust?: string
   count?: number
 }
 
-export interface TitleWindAuraSpec {
+export interface TitleWindAuraSpec extends Pigments<'color' | 'leaf'> {
   type: 'wind'
   enabled: boolean
-  color?: string
-  lightColor?: string
-  leaf?: string
-  lightLeaf?: string
   gustMs?: number
 }
 
-export interface TitleWaterAuraSpec {
+export interface TitleWaterAuraSpec extends Pigments<'color' | 'foam'> {
   type: 'water'
   enabled: boolean
-  color?: string
-  lightColor?: string
-  foam?: string
-  lightFoam?: string
 }
 
-export interface TitleFairyAuraSpec {
+export interface TitleFairyAuraSpec extends Pigments<'spark'> {
   type: 'fairy'
   enabled: boolean
   colors?: string[]
   lightColors?: string[]
-  spark?: string
-  lightSpark?: string
   count?: number
 }
 
-export interface TitleBloodAuraSpec {
+export interface TitleBloodAuraSpec extends Pigments<'color' | 'glow' | 'bat'> {
   type: 'blood'
   enabled: boolean
-  color?: string
-  lightColor?: string
-  glow?: string
-  lightGlow?: string
-  bat?: string
-  lightBat?: string
   bats?: number
 }
 
-export interface TitleCosmicAuraSpec {
+export interface TitleCosmicAuraSpec extends Pigments<'star' | 'nebula' | 'planet'> {
   type: 'cosmic'
   enabled: boolean
-  star?: string
-  lightStar?: string
-  nebula?: string
-  lightNebula?: string
-  planet?: string
-  lightPlanet?: string
 }
 
-export interface TitleLightAuraSpec {
+export interface TitleLightAuraSpec extends Pigments<'color' | 'flare'> {
   type: 'light'
   enabled: boolean
-  color?: string
-  lightColor?: string
-  flare?: string
-  lightFlare?: string
 }
 
-export interface TitleVoidAuraSpec {
+export interface TitleVoidAuraSpec extends Pigments<'color' | 'rim'> {
   type: 'void'
   enabled: boolean
-  color?: string
-  lightColor?: string
-  rim?: string
-  lightRim?: string
 }
 
-export interface TitleInfernoAuraSpec {
+export interface TitleInfernoAuraSpec extends Pigments<'core' | 'flame' | 'ember'> {
   type: 'inferno'
   enabled: boolean
-  core?: string
-  flame?: string
-  ember?: string
-  lightCore?: string
-  lightFlame?: string
-  lightEmber?: string
   tongues?: number
 }
 
-export interface TitleIceAuraSpec {
+export interface TitleIceAuraSpec extends Pigments<'frost' | 'ice' | 'snow'> {
   type: 'ice'
   enabled: boolean
-  frost?: string
-  ice?: string
-  lightFrost?: string
-  lightIce?: string
-  snow?: string
-  lightSnow?: string
 }
 
-export interface TitleSpotlightAuraSpec {
+export interface TitleSpotlightAuraSpec extends Pigments<'beam'> {
   type: 'spotlight'
   enabled: boolean
-  beam?: string
-  lightBeam?: string
   beams?: number
   periodS?: number
 }
@@ -316,30 +224,16 @@ export interface TitleStampsAuraSpec {
   intervalMs?: number
 }
 
-export interface TitleMeadowAuraSpec {
+export interface TitleMeadowAuraSpec extends Pigments<'grass' | 'seed'> {
   type: 'meadow'
   enabled: boolean
-  grass?: string
-  lightGrass?: string
-  seed?: string
-  lightSeed?: string
   blades?: number
 }
 
-export interface TitleHoardAuraSpec {
+export interface TitleHoardAuraSpec extends Pigments<'coin' | 'rim' | 'smoke' | 'flame' | 'eye'> {
   type: 'hoard'
   enabled: boolean
-  coin?: string
-  rim?: string
-  smoke?: string
-  flame?: string
-  eye?: string
   gems?: string[]
-  lightCoin?: string
-  lightRim?: string
-  lightSmoke?: string
-  lightFlame?: string
-  lightEye?: string
   lightGems?: string[]
   dropEveryS?: number
   breatheEveryS?: number
@@ -348,62 +242,34 @@ export interface TitleHoardAuraSpec {
 
 export type TitleSeasonKey = 'spring' | 'summer' | 'autumn' | 'winter'
 
-export interface TitleSeasonsAuraSpec {
+export interface TitleSeasonsAuraSpec extends Pigments<'spring' | 'summer' | 'autumn' | 'winter'> {
   type: 'seasons'
   enabled: boolean
   season?: TitleSeasonKey | 'cycle'
-  spring?: string
-  summer?: string
-  autumn?: string
-  winter?: string
-  lightSpring?: string
-  lightSummer?: string
-  lightAutumn?: string
-  lightWinter?: string
   seasonS?: number
 }
 
-export interface TitleCurioAuraSpec {
+export interface TitleCurioAuraSpec extends Pigments<'color' | 'glint'> {
   type: 'curio'
   enabled: boolean
-  color?: string
-  glint?: string
-  lightColor?: string
-  lightGlint?: string
   count?: number
 }
 
-export interface TitleRadarAuraSpec {
+export interface TitleRadarAuraSpec extends Pigments<'sweep' | 'blip'> {
   type: 'radar'
   enabled: boolean
-  sweep?: string
-  blip?: string
-  lightSweep?: string
-  lightBlip?: string
   periodS?: number
 }
 
-export interface TitleWaypointsAuraSpec {
+export interface TitleWaypointsAuraSpec extends Pigments<'path' | 'flag'> {
   type: 'waypoints'
   enabled: boolean
-  path?: string
-  flag?: string
-  lightPath?: string
-  lightFlag?: string
   periodS?: number
 }
 
-export interface TitleBloqsAuraSpec {
+export interface TitleBloqsAuraSpec extends Pigments<'left' | 'right' | 'streak' | 'score'> {
   type: 'bloqs'
   enabled: boolean
-  left?: string
-  right?: string
-  streak?: string
-  score?: string
-  lightLeft?: string
-  lightRight?: string
-  lightStreak?: string
-  lightScore?: string
   intervalMs?: number
 }
 
@@ -416,25 +282,17 @@ export interface TitleSplatterAuraSpec {
   lifeMs?: number
 }
 
-export interface TitleConstellationAuraSpec {
+export interface TitleConstellationAuraSpec extends Pigments<'star' | 'accent' | 'letter'> {
   type: 'constellation'
   enabled: boolean
-  star?: string
-  lightStar?: string
-  accent?: string
-  lightAccent?: string
-  letter?: string
-  lightLetter?: string
   nodesPerLetter?: number
   breakEveryMs?: number
   pull?: number
 }
 
-export interface TitleGraffitiAuraSpec {
+export interface TitleGraffitiAuraSpec extends Pigments<'color'> {
   type: 'graffiti'
   enabled: boolean
-  color?: string
-  lightColor?: string
 }
 
 export type TitleAuraSpec =
@@ -474,65 +332,34 @@ export type TitleAuraSpec =
 
 export type TitleAuraType = TitleAuraSpec['type']
 
-export interface TitleChromaticSplitSpec {
+export interface TitleChromaticSplitSpec extends Pigments<'colorA' | 'colorB'> {
   enabled: boolean
-  colorA?: string
-  colorB?: string
-  lightColorA?: string
-  lightColorB?: string
   offsetPx?: number
   minIntervalMs?: number
   maxIntervalMs?: number
   durationMs?: number
 }
 
-export interface TitleForgeSpec {
+export interface TitleForgeSpec extends Pigments<'raw' | 'hot' | 'heat'> {
   enabled: boolean
-  raw?: string
-  hot?: string
-  heat?: string
-  lightRaw?: string
-  lightHot?: string
-  lightHeat?: string
   intervalMs?: number
   staggerMs?: number
   stampMs?: number
   coolMs?: number
 }
 
-export interface TitleBlazeSpec {
+export interface TitleBlazeSpec extends Pigments<'ember' | 'flame' | 'hot'> {
   enabled: boolean
-  ember?: string
-  flame?: string
-  hot?: string
-  lightEmber?: string
-  lightFlame?: string
-  lightHot?: string
   intervalMs?: number
   spreadMs?: number
   burnMs?: number
   dieMs?: number
 }
 
-export interface TitleCrustSpec {
-  enabled: boolean
-  crust?: string
-  crack?: string
-  molten?: string
-  moltenHot?: string
-  lightCrust?: string
-  lightCrack?: string
-  minIntervalMs?: number
-  maxIntervalMs?: number
-  eruptMs?: number
-}
-
-export interface TitleSpectrumSplitSpec {
+export interface TitleSpectrumSplitSpec extends Pigments<'fused'> {
   enabled: boolean
   colors?: string[]
   lightColors?: string[]
-  fused?: string
-  lightFused?: string
   offsetPx?: number
   intervalMs?: number
   splitMs?: number
@@ -542,59 +369,37 @@ export interface TitleSpectrumSplitSpec {
 
 export type TitleHauntMode = 'poltergeist' | 'phantom' | 'possessed' | 'wraith' | 'banshee'
 
-export interface TitleHauntSpec {
+export interface TitleHauntSpec extends Pigments<'ghost' | 'bleed'> {
   enabled: boolean
   mode?: TitleHauntMode
-  ghost?: string
-  lightGhost?: string
-  bleed?: string
-  lightBleed?: string
   intervalMs?: number
 }
 
-export interface TitleFrostSpec {
+export interface TitleFrostSpec extends Pigments<'frost' | 'glint'> {
   enabled: boolean
-  frost?: string
-  glint?: string
-  lightFrost?: string
-  lightGlint?: string
   intervalMs?: number
   creepMs?: number
   holdMs?: number
   thawMs?: number
 }
 
-export interface TitleStarlitSpec {
+export interface TitleStarlitSpec extends Pigments<'flash' | 'tint' | 'ink'> {
   enabled: boolean
-  flash?: string
-  lightFlash?: string
-  tint?: string
-  lightTint?: string
-  ink?: string
-  lightInk?: string
   intervalMs?: number
   travelMs?: number
   floatEm?: number
   floatMs?: number
 }
 
-export interface TitleTransmuteSpec {
+export interface TitleTransmuteSpec extends Pigments<'lead' | 'gold' | 'glint'> {
   enabled: boolean
-  lead?: string
-  gold?: string
-  glint?: string
-  lightLead?: string
-  lightGold?: string
-  lightGlint?: string
   intervalMs?: number
   stepMs?: number
   failChance?: number
 }
 
-export interface TitleRuneSpec {
+export interface TitleRuneSpec extends Pigments<'color'> {
   enabled: boolean
-  color?: string
-  lightColor?: string
   intervalMs?: number
   holdMs?: number
 }
@@ -608,14 +413,8 @@ export interface TitleEclipseSpec {
   annular?: boolean
 }
 
-export interface TitleLanternSpec {
+export interface TitleLanternSpec extends Pigments<'dim' | 'lit' | 'glow'> {
   enabled: boolean
-  dim?: string
-  lit?: string
-  glow?: string
-  lightDim?: string
-  lightLit?: string
-  lightGlow?: string
   gutterEveryS?: number
   gutterS?: number
 }
@@ -634,6 +433,7 @@ export interface TitleBrewSpec {
   ingredients: TitleBrewIngredient[]
   bone: string
   floats?: 'bones' | 'marshmallows'
+  depth?: number
   bubbles?: number
   dropMinS?: number
   dropMaxS?: number
@@ -641,33 +441,19 @@ export interface TitleBrewSpec {
   bobEm?: number
 }
 
-export interface TitleTorchSpec {
+export interface TitleTorchSpec extends Pigments<'flame' | 'core' | 'lit'> {
   enabled: boolean
-  flame?: string
-  core?: string
-  lit?: string
-  lightFlame?: string
-  lightCore?: string
-  lightLit?: string
   stepMs?: number
 }
 
-export interface TitleWarcrySpec {
+export interface TitleWarcrySpec extends Pigments<'strain' | 'wave'> {
   enabled: boolean
-  strain?: string
-  wave?: string
-  lightStrain?: string
-  lightWave?: string
   intervalMs?: number
   strainMs?: number
 }
 
-export interface TitleQuakeSpec {
+export interface TitleQuakeSpec extends Pigments<'stone' | 'crack'> {
   enabled: boolean
-  stone?: string
-  lightStone?: string
-  crack?: string
-  lightCrack?: string
   intervalMs?: number
 }
 
@@ -678,14 +464,8 @@ export interface TitleGustSpec {
   throwEm?: number
 }
 
-export interface TitleRippleSpec {
+export interface TitleRippleSpec extends Pigments<'deep' | 'shallow' | 'glint'> {
   enabled: boolean
-  deep?: string
-  shallow?: string
-  lightDeep?: string
-  lightShallow?: string
-  glint?: string
-  lightGlint?: string
   ampEm?: number
   periodMs?: number
   intervalMs?: number
@@ -698,10 +478,8 @@ export interface TitlePixieSpec {
   intervalMs?: number
 }
 
-export interface TitleBleedSpec {
+export interface TitleBleedSpec extends Pigments<'blood'> {
   enabled: boolean
-  blood?: string
-  lightBlood?: string
   bpm?: number
   intervalMs?: number
 }
@@ -713,45 +491,28 @@ export interface TitleGalaxySpec {
   intervalMs?: number
 }
 
-export interface TitleFlareSpec {
+export interface TitleFlareSpec extends Pigments<'color' | 'core'> {
   enabled: boolean
-  color?: string
-  lightColor?: string
-  core?: string
-  lightCore?: string
   intervalMs?: number
 }
 
-export interface TitleDevourSpec {
+export interface TitleDevourSpec extends Pigments<'dark' | 'edge'> {
   enabled: boolean
-  dark?: string
-  lightDark?: string
-  edge?: string
-  lightEdge?: string
   intervalMs?: number
 }
 
-export interface TitleSearSpec {
+export interface TitleShiverSpec extends Pigments<'cold' | 'breath'> {
   enabled: boolean
-  hot?: string
-  ember?: string
-  lightHot?: string
-  lightEmber?: string
-  core?: string
-  lightCore?: string
   intervalMs?: number
 }
 
-export interface TitleShockSpec {
+export interface TitleSearSpec extends Pigments<'hot' | 'ember' | 'core'> {
   enabled: boolean
-  arc?: string
-  lightArc?: string
-  flash?: string
-  lightFlash?: string
-  splitA?: string
-  lightSplitA?: string
-  splitB?: string
-  lightSplitB?: string
+  intervalMs?: number
+}
+
+export interface TitleShockSpec extends Pigments<'arc' | 'flash' | 'splitA' | 'splitB'> {
+  enabled: boolean
   intervalMs?: number
 }
 
@@ -770,7 +531,7 @@ export interface TitleFloatSpec {
   tiltDeg?: number
 }
 
-export interface TitleJoltSpec {
+export interface TitleJoltSpec extends Pigments<'flash' | 'screamColor'> {
   enabled: boolean
   scale?: number
   windupMs?: number
@@ -778,64 +539,46 @@ export interface TitleJoltSpec {
   recoilMs?: number
   minIntervalMs?: number
   maxIntervalMs?: number
-  flash?: string
-  lightFlash?: string
-  screamColor?: string
-  lightScreamColor?: string
   rings?: boolean
 }
 
-export interface TitleSproutSpec {
+export interface TitleSproutSpec extends Pigments<'glint'> {
   enabled: boolean
-  glint?: string
-  lightGlint?: string
   intervalMs?: number
   stepMs?: number
 }
 
-export interface TitleAscentSpec {
+export interface TitleAscentSpec extends Pigments<'glow'> {
   enabled: boolean
-  glow?: string
-  lightGlow?: string
   riseEm?: number
   periodMs?: number
 }
 
-export interface TitleSliceSpec {
+export interface TitleSliceSpec extends Pigments<'flash'> {
   enabled: boolean
-  flash?: string
-  lightFlash?: string
   intervalMs?: number
   gapEm?: number
 }
 
-export interface TitleTickSpec {
+export interface TitleTickSpec extends Pigments<'done'> {
   enabled: boolean
-  done?: string
-  lightDone?: string
   intervalMs?: number
   stepMs?: number
 }
 
-export interface TitleMetronomeSpec {
+export interface TitleMetronomeSpec extends Pigments<'accent'> {
   enabled: boolean
-  accent?: string
-  lightAccent?: string
   beatMs?: number
   tiltDeg?: number
 }
 
-export interface TitleScrawlSpec {
+export interface TitleScrawlSpec extends Pigments<'ink'> {
   enabled: boolean
-  ink?: string
-  lightInk?: string
   intervalMs?: number
 }
 
-export interface TitleReelSpec {
+export interface TitleReelSpec extends Pigments<'gold'> {
   enabled: boolean
-  gold?: string
-  lightGold?: string
   intervalMs?: number
   spinMs?: number
   stepMs?: number
@@ -847,50 +590,30 @@ export interface TitleRestartSpec {
   intervalMs?: number
 }
 
-export interface TitlePunchSpec {
+export interface TitlePunchSpec extends Pigments<'ink'> {
   enabled: boolean
-  ink?: string
-  lightInk?: string
   intervalMs?: number
 }
 
-export interface TitleHammerSpec {
+export interface TitleHammerSpec extends Pigments<'hot' | 'spark'> {
   enabled: boolean
-  hot?: string
-  spark?: string
-  lightHot?: string
-  lightSpark?: string
   intervalMs?: number
   stepMs?: number
 }
 
-export interface TitleExcavateSpec {
+export interface TitleExcavateSpec extends Pigments<'sand' | 'gold'> {
   enabled: boolean
-  sand?: string
-  gold?: string
-  lightSand?: string
-  lightGold?: string
   intervalMs?: number
   stepMs?: number
 }
 
-export interface TitleQuestSpec {
+export interface TitleQuestSpec extends Pigments<'mark' | 'done'> {
   enabled: boolean
-  mark?: string
-  done?: string
-  lightMark?: string
-  lightDone?: string
   intervalMs?: number
 }
 
-export interface TitleScalesSpec {
+export interface TitleScalesSpec extends Pigments<'deep' | 'ridge' | 'glint'> {
   enabled: boolean
-  deep?: string
-  ridge?: string
-  glint?: string
-  lightDeep?: string
-  lightRidge?: string
-  lightGlint?: string
   shimmerMs?: number
   sizeEm?: number
 }
@@ -906,7 +629,6 @@ export interface TitleValue {
   chromaticSplit?: TitleChromaticSplitSpec
   forge?: TitleForgeSpec
   blaze?: TitleBlazeSpec
-  crust?: TitleCrustSpec
   spectrumSplit?: TitleSpectrumSplitSpec
   haunt?: TitleHauntSpec
   jolt?: TitleJoltSpec
@@ -927,6 +649,7 @@ export interface TitleValue {
   devour?: TitleDevourSpec
   shock?: TitleShockSpec
   sear?: TitleSearSpec
+  shiver?: TitleShiverSpec
   frost?: TitleFrostSpec
   transmute?: TitleTransmuteSpec
   starlit?: TitleStarlitSpec

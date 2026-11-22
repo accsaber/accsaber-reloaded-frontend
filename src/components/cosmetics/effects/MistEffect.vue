@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/cosmetics/effects'
-import { asColor, asNumber, clampNumber, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asColor, asNumber, clampNumber, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 interface MistConfig {
   color: string
@@ -98,7 +93,7 @@ const bedStyle = computed(() => {
 </script>
 
 <template>
-  <div class="comp-fx-region">
+  <div class="comp-fx-region comp-fx-region--clip">
     <span class="comp-fx-mist-bed" :style="bedStyle"></span>
     <span
       v-for="(p, j) in puffs"
@@ -122,10 +117,6 @@ const bedStyle = computed(() => {
 
 <style scoped>
 .comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
   mask-image: linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
 }

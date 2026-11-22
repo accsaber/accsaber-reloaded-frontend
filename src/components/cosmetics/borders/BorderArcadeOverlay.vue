@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { BorderArcadeOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
-import { frameDelta, overlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, overlaySpace, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderArcadeOverlaySpec }>()
 
-const MARGIN = 20
 const CELL = 1.0
 const INV_W = 11
 const INV_SPACING = 20
@@ -70,7 +69,7 @@ useElementCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
-    const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
+    const { sx, sy, toX, toY } = overlaySpace(w, h, OVERLAY_MARGIN)
     const dt = frameDelta(now, lastNow, reduced)
     lastNow = now
 

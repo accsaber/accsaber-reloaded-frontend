@@ -1,6 +1,6 @@
 import type { EclipseCreatureKind } from '@/types/cosmetics/border'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { fillCircle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 
 export interface CreaturePalette {
   shadow: string
@@ -40,9 +40,7 @@ function body(ctx: Ctx, pts: [number, number][]): void {
 function eyes(ctx: Ctx, pal: CreaturePalette, pts: [number, number][], r = 0.32): void {
   ctx.fillStyle = pal.corona
   for (const [x, y] of pts) {
-    ctx.beginPath()
-    ctx.arc(x, y, r, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, x, y, r)
   }
 }
 
@@ -126,9 +124,7 @@ const deepone: Painter = (ctx, p, pal) => {
 const vampire: Painter = (ctx, p, pal) => {
   begin(ctx, p, pal)
   body(ctx, [[-3.2, 0], [-2.2, -4], [-1.2, -6.4], [0, -7], [1.2, -6.4], [2.2, -4], [3.2, 0]])
-  ctx.beginPath()
-  ctx.arc(0, -7.8, 1.3, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, 0, -7.8, 1.3)
   ctx.stroke()
   const flare = 0.6 + 0.4 * Math.sin(p.t * 3)
   body(ctx, [[-2.2, -5.5], [-5 * flare, -8.5], [-3.6, -3], [-2.6, -1]])
@@ -180,9 +176,7 @@ const zombie: Painter = (ctx, p, pal) => {
   ctx.rect(0.7, -2.6, 0.9, 2.6 - g * 0.4)
   ctx.fill()
   body(ctx, [[-2, -2.4], [-2.4, -6.2], [-1.2, -7.2], [1.2, -7.2], [2.4, -6.2], [2, -2.4]])
-  ctx.beginPath()
-  ctx.arc(0.3, -8.2, 1.2, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, 0.3, -8.2, 1.2)
   ctx.stroke()
   ctx.fillRect(-2.2, -6, 5.2, 0.9)
   ctx.fillRect(2.4, -6, 0.9, 1.6)
@@ -192,9 +186,7 @@ const zombie: Painter = (ctx, p, pal) => {
 
 const eye: Painter = (ctx, p, pal) => {
   begin(ctx, p, pal)
-  ctx.beginPath()
-  ctx.arc(0, 0, 2.4, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, 0, 0, 2.4)
   ctx.stroke()
   for (let i = 0; i < 4; i++) {
     ctx.strokeStyle = withAlpha(pal.corona, 0.4)
@@ -206,9 +198,7 @@ const eye: Painter = (ctx, p, pal) => {
   }
   eyes(ctx, pal, [[Math.sin(p.t * 1.3) * 0.5, 0]], 1.1)
   ctx.fillStyle = pal.shadow
-  ctx.beginPath()
-  ctx.arc(Math.sin(p.t * 1.3) * 0.6, 0, 0.5, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, Math.sin(p.t * 1.3) * 0.6, 0, 0.5)
   ctx.restore()
 }
 
@@ -231,9 +221,7 @@ const wisp: Painter = (ctx, p, pal) => {
 
 const skull: Painter = (ctx, p, pal) => {
   begin(ctx, p, pal)
-  ctx.beginPath()
-  ctx.arc(0, -0.4, 2, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, 0, -0.4, 2)
   ctx.stroke()
   ctx.fillRect(-1.2, 1, 2.4, 1.3)
   eyes(ctx, pal, [[-0.75, -0.6], [0.75, -0.6]], 0.5)
@@ -263,9 +251,7 @@ const moth: Painter = (ctx, p, pal) => {
   wings(ctx, flap, 3.4, 2.6)
   ctx.fillStyle = withAlpha(pal.corona, 0.5)
   for (const sd of [-1, 1]) {
-    ctx.beginPath()
-    ctx.arc(sd * 2 * flap, -0.4, 0.4, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, sd * 2 * flap, -0.4, 0.4)
   }
   ctx.restore()
 }
@@ -332,9 +318,7 @@ const fly: Painter = (ctx, p, pal) => {
 const dragonfly: Painter = (ctx, p, pal) => {
   begin(ctx, p, pal)
   ctx.fillRect(-0.35, -0.5, 0.7, 4.2)
-  ctx.beginPath()
-  ctx.arc(0, -0.8, 0.7, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, 0, -0.8, 0.7)
   ctx.strokeStyle = withAlpha(pal.corona, 0.5)
   ctx.lineWidth = 0.25
   const flap = Math.sin(p.t * 30 + p.seed) * 0.3

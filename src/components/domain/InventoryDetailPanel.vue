@@ -8,14 +8,13 @@ import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierChip from '@/components/domain/ModifierChip.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import { useModifierColor } from '@/composables/useModifierColor'
+import { useItemEffects } from '@/composables/useItemEffects'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import { useThemeStore } from '@/stores/theme'
 import type { BorderColorValue, BorderShapeValue } from '@/types/cosmetics/border'
 import type {
   CrateContentResponse,
   CrateModifierResponse,
-  ItemModifierRef,
   ItemResponse,
   UnusualEffectResponse,
   UserItemResponse,
@@ -23,8 +22,7 @@ import type {
 import type { ItemVariant } from '@/types/cosmetics/common'
 import { formatEssence } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
-import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
-import { displayItemName, isBorderTypeKey, isEquippableTypeKey, isTitleItem, obtainableUntilSentence, rarityClass, readItemVariants, resolveItemVariant, sortModifiersByKey, userItemTokenContext } from '@/utils/items'
+import { displayItemName, isEquippableTypeKey, isTitleItem, obtainableUntilSentence, rarityClass, readItemVariants, resolveItemVariant } from '@/utils/items'
 import {
   readBorderColorValue,
   readBorderShapeValue,
@@ -131,21 +129,12 @@ const showComposition = computed(() =>
   props.canManage && (isBorderShapeItem.value || isBorderColorItem.value),
 )
 
-const modifiers = computed<ItemModifierRef[]>(() =>
-  sortModifiersByKey(props.userItem?.modifiers ?? []),
+const { modifiers, effectLayers, fragmentSpec, overlayLayers, tokenCtx, accent } = useItemEffects(
+  () => props.userItem,
 )
 const unusualEffect = computed(() => props.userItem?.unusualEffect ?? null)
-const effectLayers = computed(() =>
-  buildEffectLayers(props.userItem?.modifiers, props.userItem?.unusualEffect),
-)
-const ownFx = computed(() => isBorderTypeKey(item.value?.typeKey))
-const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.userItem?.unusualEffect)))
-const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
-const tokenCtx = computed(() => props.userItem ? userItemTokenContext(props.userItem) : {})
 const quantity = computed(() => props.userItem?.quantity ?? 1)
 const pbCount = computed(() => props.userItem?.counters?.play_count ?? null)
-
-const { accent } = useModifierColor(modifiers)
 
 const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))
 

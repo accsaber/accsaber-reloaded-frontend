@@ -24,7 +24,7 @@ function shapePaths(shape: BorderShapeValue): BorderShapePathValue[] {
   return shape.states.flatMap((state) => state.paths ?? [])
 }
 
-export function shapeViewBox(shape: BorderShapeValue | null | undefined): FrameBounds {
+function shapeViewBox(shape: BorderShapeValue | null | undefined): FrameBounds {
   const parts = (shape?.viewBox ?? '0 0 100 100').split(/[\s,]+/).map(Number)
   if (parts.length !== 4 || !parts.every((n) => Number.isFinite(n))) return { x: 0, y: 0, w: 100, h: 100 }
   const [x, y, w, h] = parts as [number, number, number, number]
@@ -113,14 +113,26 @@ function pathsKey(paths: BorderShapePathValue[]): string {
   return paths.map((p) => `${p.d}|${p.transform ?? ''}|${p.strokeWidth ?? ''}`).join(';')
 }
 
-function basePath(shape: BorderShapeValue, viewBox: FrameBounds): { path: BorderShapePathValue; bounds: FrameBounds } | null {
+interface BasePath {
+  path: BorderShapePathValue
+  bounds: FrameBounds
+}
+
+const baseCache = new Map<string, BasePath | null>()
+
+function basePath(shape: BorderShapeValue, viewBox: FrameBounds): BasePath | null {
   const pool = themedPool(shape)
   if (pool.length === 0) return null
+  const key = `${shape.viewBox ?? ''}|${pathsKey(pool)}`
+  const hit = baseCache.get(key)
+  if (hit !== undefined) return hit
   const boxes = pathBounds(pool, viewBox)
   const i = pickBase(boxes, viewBox)
   const path = pool[i]
   const bounds = boxes[i]
-  return path && bounds ? { path, bounds } : null
+  const base = path && bounds ? { path, bounds } : null
+  baseCache.set(key, base)
+  return base
 }
 
 export function shapeFrameBounds(shape: BorderShapeValue | null | undefined): FrameBounds {
@@ -129,7 +141,7 @@ export function shapeFrameBounds(shape: BorderShapeValue | null | undefined): Fr
   return cachedBounds(`base|${shape.viewBox ?? ''}|${pathsKey(themedPool(shape))}`, () => basePath(shape, viewBox)?.bounds ?? null, viewBox)
 }
 
-export function shapeExtentBounds(shape: BorderShapeValue | null | undefined): FrameBounds {
+function shapeExtentBounds(shape: BorderShapeValue | null | undefined): FrameBounds {
   const viewBox = shapeViewBox(shape)
   if (!shape) return viewBox
   const paths = shapePaths(shape)
@@ -182,7 +194,7 @@ export function shapeSilhouetteMask(shape: BorderShapeValue | null | undefined):
   }
 }
 
-export interface RingVec {
+interface RingVec {
   x: number
   y: number
 }

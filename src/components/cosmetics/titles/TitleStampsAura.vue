@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { useTitleAura } from '@/composables/useTitleAura'
 import type { TitleStampsAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import { pickVariant, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleStampsAuraSpec
@@ -21,12 +20,11 @@ interface Stamp {
   colorIdx: number
 }
 
-const STATIC_T = 2
 const LIFE = 4.2
 
-let rect: TitleAuraRect | null = null
 let stamps: Stamp[] = []
 let nextAt = 0
+let seededAt = 0
 let spawned = 0
 
 function palette(): string[] {
@@ -89,25 +87,20 @@ function drawStamp(ctx: CanvasRenderingContext2D, s: Stamp, t: number, r: TitleA
   ctx.restore()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+useTitleAura({
+  init(_rect, now) {
     const t = now / 1000
+    seededAt = t
     stamps = [spawn(t - 1.2), spawn(t - 2.8)]
     nextAt = t + (props.aura.intervalMs ?? 2200) / 1000
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const t = reduced ? STATIC_T : now / 1000
+  draw(ctx, { rect, now, reduced }) {
+    const t = reduced ? seededAt : now / 1000
     if (!reduced && t >= nextAt) {
       stamps.push(spawn(t))
       nextAt = t + ((props.aura.intervalMs ?? 2200) / 1000) * rand(0.7, 1.4)
     }
     stamps = stamps.filter((s) => t - s.born < LIFE)
-    if (reduced && stamps.length === 0) stamps = [spawn(t - 1)]
     for (const s of stamps) drawStamp(ctx, s, t, rect)
   },
 })

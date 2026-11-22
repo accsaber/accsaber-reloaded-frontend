@@ -65,6 +65,7 @@ useElementCanvas(canvasRef, {
     ctx.fillRect(0, 0, w, h)
     ctx.lineCap = 'round'
     const tint = props.fill.tint ?? props.fill.core
+    const streak = props.fill.streak
     for (const s of stars) {
       const u = ((t * speed) / s.cycle + s.offset) % 1
       const r1 = Math.pow(u, 2.1) * maxR
@@ -74,8 +75,7 @@ useElementCanvas(canvasRef, {
       const a = Math.min(1, u * 3) * (0.35 + u * 0.6)
       const dx = Math.cos(s.ang)
       const dy = Math.sin(s.ang)
-      const color = s.tinted ? tint : props.fill.streak
-      ctx.strokeStyle = withAlpha(color, a)
+      ctx.strokeStyle = withAlpha(s.tinted ? tint : streak, a)
       ctx.lineWidth = Math.max(0.6, s.size * (0.6 + u * 1.6) * (Math.min(w, h) / 100))
       ctx.beginPath()
       ctx.moveTo(cx + dx * r1, cy + dy * r1)

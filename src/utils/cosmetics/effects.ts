@@ -1,5 +1,6 @@
 import type { Composition } from '@/types/cosmetics/effects'
 import type { ItemTypeKey } from '@/types/api/items'
+import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import type { ShapeRing } from '@/utils/shapeSilhouette'
 import { clamp, clamp01 } from '@/utils/math'
@@ -34,6 +35,12 @@ export interface EffectMeasure {
   typeKey?: ItemTypeKey
   host?: EffectHostContext
   frame?: ContentBox
+}
+
+export interface EffectProps {
+  composition: Composition
+  ctx: TokenContext
+  measure: EffectMeasure
 }
 
 export function asString(v: unknown): string | undefined {
@@ -309,6 +316,10 @@ export function easeOut(x: number): number {
 export function easeIn(x: number): number {
   const c = clamp01(x)
   return c * c * c
+}
+
+export function easeInOut(t: number): number {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
 
 export interface GeometryMemo<T> {

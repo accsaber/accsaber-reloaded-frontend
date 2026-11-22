@@ -6,7 +6,8 @@ import type {
   ThermalPalette,
 } from '@/types/cosmetics/border'
 import { primaryFillHex } from '@/utils/cosmetics/overlayCanvas'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { observeVisible } from '@/utils/observe'
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderThermalOverlaySpec }>()
 
@@ -86,7 +87,9 @@ const grainStyle = {
   background: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)',
 }
 
-let visibilityHandler: (() => void) | null = null
+let stopWatching: (() => void) | null = null
+let onScreen = true
+const rootRef = useTemplateRef<HTMLElement>('root')
 let timers: ReturnType<typeof setTimeout>[] = []
 let intervals: ReturnType<typeof setInterval>[] = []
 let cycleTimer: ReturnType<typeof setInterval> | null = null
@@ -195,8 +198,8 @@ function runCycle() {
 
 function schedule() {
   stop()
-  if (reducedMotion.value) return
-  if (typeof document !== 'undefined' && document.hidden) return
+  if (reducedMotion.value || !onScreen || document.hidden) return
+  if (rootRef.value?.closest('[data-fx-static]')) return
   const interval = Math.max(3000, props.overlay.intervalMs ?? 7400)
   cycleTimer = setInterval(runCycle, interval)
   timers.push(setTimeout(runCycle, 1200))
@@ -212,8 +215,14 @@ function stop() {
 }
 
 onMounted(() => {
-  visibilityHandler = () => schedule()
-  document.addEventListener('visibilitychange', visibilityHandler)
+  document.addEventListener('visibilitychange', schedule)
+  if (rootRef.value) {
+    stopWatching = observeVisible(rootRef.value, (visible) => {
+      if (visible === onScreen) return
+      onScreen = visible
+      schedule()
+    })
+  }
   schedule()
 })
 
@@ -221,14 +230,15 @@ watch(reducedMotion, schedule)
 
 onUnmounted(() => {
   stop()
-  if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
+  stopWatching?.()
+  document.removeEventListener('visibilitychange', schedule)
 })
 
 watch(() => props.overlay, () => schedule(), { deep: true })
 </script>
 
 <template>
-  <div :style="styleVars" aria-hidden="true">
+  <div ref="root" :style="styleVars" aria-hidden="true">
     <div class="bto-stack">
       <div class="bto-window" :style="windowStyle">
         <div class="bto-map" :class="{ 'bto-map--on': thermalOn }">

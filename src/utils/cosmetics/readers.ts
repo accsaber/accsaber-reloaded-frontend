@@ -128,7 +128,7 @@ export function readThumbnailBackgroundValue(value: unknown): ProfileThumbnailBa
   return { ...value, scene } as unknown as ProfileThumbnailBackgroundValue
 }
 
-export function thumbnailSceneInk(scene: ThumbnailScene): string {
+function thumbnailSceneInk(scene: ThumbnailScene): string {
   switch (scene.type) {
     case 'facet_vault': return scene.ink
     case 'grove': return scene.skyBottom

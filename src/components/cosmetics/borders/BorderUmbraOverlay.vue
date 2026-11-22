@@ -2,17 +2,16 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { BorderOverlayHost, BorderUmbraOverlaySpec } from '@/types/cosmetics/border'
 import { lighten } from '@/utils/color'
-import { easeOut } from '@/utils/cosmetics/effects'
+import { easeInOut, easeOut } from '@/utils/cosmetics/effects'
 import { eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
-import { overlaySpace, withAlpha, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { overlaySpace, withAlpha, type OverlaySpace, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import { hash01 } from '@/utils/random'
 import { computed, useTemplateRef, watch } from 'vue'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { fillCircle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderUmbraOverlaySpec }>()
 
-const MARGIN = 20
 const CENTER = 50
 const RADIUS = 44
 const STATIC_T = 10.5
@@ -36,7 +35,7 @@ function travelDir(ph: EclipsePhase): number {
 
 function moonX(ph: EclipsePhase): number {
   const dir = travelDir(ph)
-  const k = ph.cover < 0.5 ? 2 * ph.cover * ph.cover : 1 - Math.pow(-2 * ph.cover + 2, 2) / 2
+  const k = easeInOut(ph.cover)
   return CENTER - dir * (1 - k) * RADIUS * 1.9
 }
 
@@ -55,9 +54,7 @@ function drawCoronaGlow(ctx: Ctx, sp: OverlaySpace): void {
   g.addColorStop(0.45, withAlpha(corona(), 0.16))
   g.addColorStop(1, withAlpha(corona(), 0))
   ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.arc(cx, cy, R * sp.s * 1.7, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, cx, cy, R * sp.s * 1.7)
 }
 
 function drawStreamers(ctx: Ctx, sp: OverlaySpace): void {
@@ -157,9 +154,7 @@ function drawFlares(ctx: Ctx, sp: OverlaySpace, t: number, level: number): void 
     g.addColorStop(0.4, withAlpha(corona(), 0.5 * pulse * level))
     g.addColorStop(1, withAlpha(corona(), 0))
     ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.arc(x, y, R * 0.18 * pulse + 0.01, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, x, y, R * 0.18 * pulse + 0.01)
   }
 }
 
@@ -171,16 +166,12 @@ function drawMoon(ctx: Ctx, sp: OverlaySpace, mx: number, alpha: number): void {
   if (alpha <= 0.01 || Math.abs(mx - CENTER) > RADIUS * 2.2) return
   ctx.globalAlpha = alpha
   ctx.fillStyle = props.overlay.moon
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, r)
   ctx.fillStyle = moonCrater.value
   for (let i = 0; i < 4; i++) {
     const a = hash01(i * 11) * Math.PI * 2
     const d = r * (0.2 + hash01(i * 5) * 0.55)
-    ctx.beginPath()
-    ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.05 + hash01(i * 3) * 0.08), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.05 + hash01(i * 3) * 0.08))
   }
   ctx.strokeStyle = moonRim.value
   ctx.lineWidth = Math.max(0.6, r * 0.02)
@@ -200,9 +191,7 @@ function drawBeads(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase, mx: number): vo
   ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * k})`
   for (let i = 0; i < 5; i++) {
     const a = (side > 0 ? 0 : Math.PI) + (i - 2) * 0.26
-    ctx.beginPath()
-    ctx.arc(cx + Math.cos(a) * R * sp.s, cy + Math.sin(a) * R * sp.s, R * sp.s * (0.02 + hash01(i * 9) * 0.02) * (1 + k), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, cx + Math.cos(a) * R * sp.s, cy + Math.sin(a) * R * sp.s, R * sp.s * (0.02 + hash01(i * 9) * 0.02) * (1 + k))
   }
 }
 
@@ -220,9 +209,7 @@ function drawDiamondRing(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase): void {
   g.addColorStop(0.35, withAlpha(corona(), 0.6 * k))
   g.addColorStop(1, withAlpha(corona(), 0))
   ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.arc(x, y, rad, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, rad)
   ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 * k})`
   ctx.lineWidth = Math.max(0.6, R * 0.02)
   for (let i = 0; i < 6; i++) {
@@ -243,7 +230,7 @@ function paintCorona(w: number, h: number, scale: number): void {
   coronaStale = false
   const [layer, lctx] = offscreenLayer(w, h, scale)
   if (lctx) {
-    const sp = overlaySpace(w, h, MARGIN)
+    const sp = overlaySpace(w, h, OVERLAY_MARGIN)
     drawCoronaGlow(lctx, sp)
     drawStreamers(lctx, sp)
     drawPlumes(lctx, sp)
@@ -281,7 +268,7 @@ useElementCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
-    const sp = overlaySpace(w, h, MARGIN)
+    const sp = overlaySpace(w, h, OVERLAY_MARGIN)
     const t = reduced ? STATIC_T : now / 1000
     const ph = eclipsePhase(t)
     const mx = moonX(ph)

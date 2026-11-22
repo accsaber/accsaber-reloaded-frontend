@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, boxScale, type ContentBox, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, boxScale, type ContentBox, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 interface NightConfig {
   count: number
@@ -126,7 +121,7 @@ const moons = computed<Array<{ x: number, y: number, sizePx: number }>>(() => {
 </script>
 
 <template>
-  <div class="comp-fx-region">
+  <div class="comp-fx-region comp-fx-region--clip">
     <div class="comp-fx-night-sky" :style="skyStyle">
       <div class="comp-fx-night-fade">
         <div class="comp-fx-night-veil" :style="{ background: veil }"></div>
@@ -170,13 +165,6 @@ const moons = computed<Array<{ x: number, y: number, sizePx: number }>>(() => {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
 .comp-fx-night-sky {
   position: absolute;
   overflow: hidden;

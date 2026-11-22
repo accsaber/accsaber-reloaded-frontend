@@ -1,9 +1,10 @@
 import { lerpHex, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import { hash01 } from '@/utils/random'
 import { fillCircle as circle, type Ctx, type Point } from '@/utils/cosmetics/canvasShapes'
 
-export interface HorrorFaceColors {
+interface HorrorFaceColors {
   figure: string
   face: string
   tints?: string[]
@@ -149,12 +150,8 @@ function paintVignetteAndGrain(o: Ctx, tint: string | null, c: HorrorFaceColors)
 }
 
 function paintFace(seed: number, tint: string | null, c: HorrorFaceColors, hair: number): HTMLCanvasElement {
-  const layer = document.createElement('canvas')
-  layer.width = FACE_W * FACE_RES
-  layer.height = FACE_H * FACE_RES
-  const o = layer.getContext('2d')
+  const [layer, o] = offscreenLayer(FACE_W, FACE_H, FACE_RES)
   if (!o) return layer
-  o.setTransform(FACE_RES, 0, 0, FACE_RES, 0, 0)
   paintHeadMass(o, seed, c)
   paintLitSkin(o, seed, c)
   paintFeatures(o, seed, c)

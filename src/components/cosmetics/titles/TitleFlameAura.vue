@@ -1,24 +1,18 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleFlameAuraSpec } from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleFlameAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => {
-  const a = props.aura
-  const inner = pickVariant(props.light, a.lightInner, a.inner, '#fff3b0')
-  const outer = pickVariant(props.light, a.lightOuter, a.outer, '#f5a300')
-  const spark = pickVariant(props.light, a.lightSpark, a.spark, '#fefce8')
-  return { inner, outer, spark, mid: lerpHex(outer, inner, 0.45) }
-})
+const { inner, outer, spark } = pigments(props.aura, props.light, { inner: '#fff3b0', outer: '#f5a300', spark: '#fefce8' })
+const mid = lerpHex(outer, inner, 0.45)
 
 interface Spark {
   x: number
@@ -38,12 +32,10 @@ interface Arc {
   life: number
 }
 
-let rect: TitleAuraRect | null = null
 let sparks: Spark[] = []
 let arcs: Arc[] = []
 
-function resetSpark(s: Spark, now: number, warm: boolean) {
-  if (!rect) return
+function resetSpark(s: Spark, rect: TitleAuraRect, now: number, warm: boolean) {
   s.x = rect.x + rand(0, rect.w)
   s.y = rect.y + rect.h * rand(0.2, 1)
   s.vy = rect.fs * rand(1.3, 2.4)
@@ -53,8 +45,7 @@ function resetSpark(s: Spark, now: number, warm: boolean) {
   s.size = rect.fs * rand(0.06, 0.11)
 }
 
-function resetArc(a: Arc, now: number, warm: boolean) {
-  if (!rect) return
+function resetArc(a: Arc, rect: TitleAuraRect, now: number, warm: boolean) {
   const fs = rect.fs
   a.x = rect.x + rect.w * rand(0.15, 0.85)
   a.y = rect.y + rect.h - fs * rand(0.6, 1.6)
@@ -80,36 +71,28 @@ const LAYERS = [
   { part: 'inner', alpha: 0.62, lightAlpha: 0.55, extraH: 0.3, k1: 5.1, k2: 9.2, s1: 3.8, s2: 5.6, ph: 4.4, envP: 1.25 },
 ] as const
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    if (!canvasRef.value) return
-    rect = titleAuraRect(canvasRef.value)
+useTitleAura({
+  staticT: 1.7,
+  additive: () => !props.light,
+  layout(rect, now) {
     sparks = Array.from({ length: 9 }, () => {
       const s = {} as Spark
-      resetSpark(s, now, true)
+      resetSpark(s, rect, now, true)
       return s
     })
     arcs = Array.from({ length: 2 }, () => {
       const a = {} as Arc
-      resetArc(a, now, true)
+      resetArc(a, rect, now, true)
       return a
     })
   },
-  draw(ctx, w, h, now, reduced) {
-    if (!rect) return
-    ctx.clearRect(0, 0, w, h)
-    const { inner, outer, spark, mid } = palette.value
+  draw(ctx, { rect, t, now, reduced, w, h }) {
     const fs = rect.fs
-    const t = reduced ? 1.7 : now / 1000
     const x0 = rect.x - fs * 0.55
     const x1 = rect.x + rect.w + fs * 0.55
     const span = x1 - x0
     const baseY = rect.y + rect.h + fs * 0.12
     const surge = 1 + 0.16 * Math.sin(t * 1.15)
-
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
 
     const glow = ctx.createRadialGradient(
       rect.x + rect.w / 2, baseY - rect.h * 0.4, 0,
@@ -160,7 +143,7 @@ useElementCanvas(canvasRef, {
       let p = (now - s.born) / s.life
       if (reduced) p = ((s.born * 7) % 100) / 100
       if (p >= 1) {
-        resetSpark(s, now, false)
+        resetSpark(s, rect, now, false)
         continue
       }
       const sx = s.x + Math.sin(p * 6 + s.born) * s.drift
@@ -175,7 +158,7 @@ useElementCanvas(canvasRef, {
       for (const a of arcs) {
         const p = (now - a.born) / a.life
         if (p >= 1) {
-          resetArc(a, now, false)
+          resetArc(a, rect, now, false)
           continue
         }
         if (p < 0) continue
@@ -193,7 +176,6 @@ useElementCanvas(canvasRef, {
         ctx.stroke()
       }
     }
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

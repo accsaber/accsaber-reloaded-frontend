@@ -3,16 +3,10 @@ import BorderComposition from '@/components/domain/BorderComposition.vue'
 import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
-import { useModifierColor } from '@/composables/useModifierColor'
+import { useItemEffects } from '@/composables/useItemEffects'
 import { useItemModifierStore } from '@/stores/itemModifiers'
-import type { ItemModifierRef, ItemResponse, UserItemResponse } from '@/types/api/items'
-import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
-import {
-  isBorderTypeKey,
-  rarityClass,
-  sortModifiersByKey,
-  userItemTokenContext,
-} from '@/utils/items'
+import type { ItemResponse, UserItemResponse } from '@/types/api/items'
+import { rarityClass } from '@/utils/items'
 import { readBorderColorValue, readBorderShapeValue } from '@/utils/cosmetics/readers'
 import { computed, onMounted } from 'vue'
 
@@ -28,7 +22,10 @@ const modifierStore = useItemModifierStore()
 
 const item = computed(() => props.itemOverride ?? props.userItem.item)
 
-const ownFx = computed(() => isBorderTypeKey(item.value.typeKey))
+const { effectLayers, ownFx, fragmentSpec, overlayLayers, tokenCtx, accent } = useItemEffects(
+  () => props.userItem,
+  () => item.value.typeKey,
+)
 const composedView = computed(() => props.composeBorders === true && ownFx.value)
 
 const shapeValue = computed(() =>
@@ -42,16 +39,8 @@ const colorValue = computed(() =>
     ? readBorderColorValue(item.value.value)
     : null,
 )
-const modifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(props.userItem.modifiers ?? []))
-const effectLayers = computed(() =>
-  buildEffectLayers(props.userItem.modifiers, props.userItem.unusualEffect),
-)
-const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.userItem.unusualEffect)))
-const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
-const tokenCtx = computed(() => userItemTokenContext(props.userItem))
 const shownQuantity = computed(() => props.quantity ?? props.userItem.quantity ?? 1)
 
-const { accent } = useModifierColor(modifiers)
 const accentStyle = computed(() => (accent.value ? { '--cell-accent': accent.value } : undefined))
 
 onMounted(() => {

@@ -1,5 +1,6 @@
 import type { RGB } from '@/utils/color'
 import { hash01 } from '@/utils/random'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 export function createSceneLayer(ctx: CanvasRenderingContext2D): HTMLCanvasElement {
   const layer = document.createElement('canvas')
@@ -77,9 +78,7 @@ export function drawGlow(
   grad.addColorStop(0, inner)
   grad.addColorStop(1, outer)
   ctx.fillStyle = grad
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, r)
 }
 
 export function offscreenLayer(
@@ -153,9 +152,7 @@ export function drawStarField(ctx: CanvasRenderingContext2D, stars: FieldStar[],
   ctx.fillStyle = color
   for (const st of stars) {
     ctx.globalAlpha = 0.18 + 0.5 * (0.5 + 0.5 * Math.sin(t * st.rate + st.phase))
-    ctx.beginPath()
-    ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, st.x, st.y, st.r)
   }
   ctx.globalAlpha = 1
 }

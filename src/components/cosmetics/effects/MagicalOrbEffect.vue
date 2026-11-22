@@ -2,17 +2,13 @@
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/cosmetics/effects'
-import { asColor, asNumber, clampNumber, pctSize, readPctSizing, ringAt, ringExtreme, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
+import { asColor, asNumber, clampNumber, pctSize, readPctSizing, ringAt, ringExtreme, type ContentBox, type EffectFrame, type PctSizing, type RingGeometry, type Vec, type EffectProps } from '@/utils/cosmetics/effects'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import type { TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 type Ctx = CanvasRenderingContext2D
 
@@ -108,14 +104,10 @@ function drawOrb(g: Ctx, o: Vec, D: number, t: number) {
   g.save()
   g.scale(pulse, pulse)
   g.fillStyle = glow
-  g.beginPath()
-  g.arc(0, 0, r * 2.2, 0, Math.PI * 2)
-  g.fill()
+  fillCircle(g, 0, 0, r * 2.2)
   g.restore()
   g.fillStyle = sphere
-  g.beginPath()
-  g.arc(0, 0, r, 0, Math.PI * 2)
-  g.fill()
+  fillCircle(g, 0, 0, r)
   g.save()
   g.beginPath()
   g.arc(0, 0, r * 0.92, 0, Math.PI * 2)
@@ -228,9 +220,7 @@ function drawMotes(g: Ctx, place: (m: number, u: number) => Vec, D: number, t: n
     const p = place(m, u)
     const tw = 0.5 + 0.5 * Math.sin(t * 3 + m * 1.9)
     g.globalAlpha = 0.35 + tw * 0.5
-    g.beginPath()
-    g.arc(p.x, p.y, Math.max(0.6, D * 0.05 * (0.6 + tw * 0.6)), 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, p.x, p.y, Math.max(0.6, D * 0.05 * (0.6 + tw * 0.6)))
   }
   g.globalAlpha = 1
 }

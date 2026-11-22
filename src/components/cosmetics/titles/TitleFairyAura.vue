@@ -1,23 +1,19 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { useTitleAura } from '@/composables/useTitleAura'
 import type { TitleFairyAuraSpec } from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import { pickVariant, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleFairyAuraSpec
   light: boolean
 }>()
 
-const colors = computed(() => {
-  const list = pickVariant(props.light, props.aura.lightColors, props.aura.colors)
-  return list && list.length ? list : ['#f9a8d4', '#a7f3d0', '#fde68a', '#c4b5fd']
-})
-
-const spark = computed(() => pickVariant(props.light, props.aura.lightSpark, props.aura.spark, colors.value[0]))
+const list = pickVariant(props.light, props.aura.lightColors, props.aura.colors)
+const colors = list && list.length ? list : ['#f9a8d4', '#a7f3d0', '#fde68a', '#c4b5fd']
+const spark = pickVariant(props.light, props.aura.lightSpark, props.aura.spark, colors[0])
 
 const TRAIL = 22
 
@@ -30,14 +26,12 @@ interface Pixie {
   trail: [number, number][]
 }
 
-let rect: TitleAuraRect | null = null
 let pixies: Pixie[] = []
 
 function tint(p: Pixie, t: number): string {
-  const cs = colors.value
   const pos = t * 0.35 + p.hue
-  const i = Math.floor(pos) % cs.length
-  return lerpHex(cs[i], cs[(i + 1) % cs.length], pos % 1)
+  const i = Math.floor(pos) % colors.length
+  return lerpHex(colors[i], colors[(i + 1) % colors.length], pos % 1)
 }
 
 function pixiePos(p: Pixie, t: number, r: TitleAuraRect): [number, number] {
@@ -71,26 +65,23 @@ function drawPixie(ctx: CanvasRenderingContext2D, p: Pixie, t: number, r: TitleA
   }
   const [x, y] = p.trail[p.trail.length - 1] ?? [0, 0]
   const glow = ctx.createRadialGradient(x, y, 0, x, y, r.fs * 0.28)
-  glow.addColorStop(0, withAlpha(spark.value, 0.95))
+  glow.addColorStop(0, withAlpha(spark, 0.95))
   glow.addColorStop(0.35, withAlpha(color, 0.7))
   glow.addColorStop(1, withAlpha(color, 0))
   ctx.fillStyle = glow
   ctx.fillRect(x - r.fs * 0.3, y - r.fs * 0.3, r.fs * 0.6, r.fs * 0.6)
-  drawSpark(ctx, x, y, r.fs * 0.14 * (0.7 + 0.3 * Math.sin(t * 9 + p.phase)), spark.value, 0.9)
+  drawSpark(ctx, x, y, r.fs * 0.14 * (0.7 + 0.3 * Math.sin(t * 9 + p.phase)), spark, 0.9)
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
+useTitleAura({
+  additive: () => !props.light,
   init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
     pixies = Array.from({ length: props.aura.count ?? 3 }, (_, i) => ({ a: rand(0.8, 1.3), b: rand(1.4, 2.2), phase: i * 2.1, speed: rand(0.5, 0.8), hue: i * 1.3, trail: [] }))
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const t = reduced ? 3 : now / 1000
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
+  layout() {
+    for (const p of pixies) p.trail.length = 0
+  },
+  draw(ctx, { rect, t, reduced }) {
     for (const p of pixies) {
       if (reduced && p.trail.length === 0) {
         for (let k = TRAIL; k >= 0; k--) p.trail.push(pixiePos(p, t - k * 0.04, rect))
@@ -100,7 +91,6 @@ useElementCanvas(canvasRef, {
       }
       drawPixie(ctx, p, t, rect)
     }
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

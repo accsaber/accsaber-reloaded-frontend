@@ -1,27 +1,16 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleWaypointsAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleWaypointsAuraSpec
   light: boolean
 }>()
 
-const STATIC_T = 5
-
-let rect: TitleAuraRect | null = null
-
-function pathColor(): string {
-  return pickVariant(props.light, props.aura.lightPath, props.aura.path, '#d9c06a')
-}
-
-function flagColor(): string {
-  return pickVariant(props.light, props.aura.lightFlag, props.aura.flag, '#62d98a')
-}
+const palette = pigments(props.aura, props.light, { path: '#d9c06a', flag: '#62d98a' })
 
 interface Node {
   x: number
@@ -53,13 +42,13 @@ function pointAt(nodes: Node[], u: number, r: TitleAuraRect): { x: number; y: nu
 
 function drawFlag(ctx: CanvasRenderingContext2D, x: number, y: number, fs: number, pop: number, a: number): void {
   const hgt = fs * 0.55 * pop
-  ctx.strokeStyle = withAlpha(flagColor(), a)
+  ctx.strokeStyle = withAlpha(palette.flag, a)
   ctx.lineWidth = Math.max(0.8, fs * 0.055)
   ctx.beginPath()
   ctx.moveTo(x, y)
   ctx.lineTo(x, y - hgt)
   ctx.stroke()
-  ctx.fillStyle = withAlpha(flagColor(), a)
+  ctx.fillStyle = withAlpha(palette.flag, a)
   ctx.beginPath()
   ctx.moveTo(x, y - hgt)
   ctx.lineTo(x + fs * 0.34 * pop, y - hgt + fs * 0.13 * pop)
@@ -68,18 +57,10 @@ function drawFlag(ctx: CanvasRenderingContext2D, x: number, y: number, fs: numbe
   ctx.fill()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-  },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const r = rect
+useTitleAura({
+  staticT: 5,
+  draw(ctx, { rect: r, t, reduced }) {
     const period = props.aura.periodS ?? 9
-    const t = reduced ? STATIC_T : now / 1000
     const cycle = Math.floor(t / period)
     const u = (t % period) / period
     const drawn = u < 0.6 ? u / 0.6 : 1
@@ -87,7 +68,7 @@ useElementCanvas(canvasRef, {
     if (u > 0.9) fade = (1 - u) / 0.1
     const nodes = routeNodes(cycle)
     ctx.setLineDash([Math.max(2, r.fs * 0.16), Math.max(2, r.fs * 0.14)])
-    ctx.strokeStyle = withAlpha(pathColor(), 0.75 * fade)
+    ctx.strokeStyle = withAlpha(palette.path, 0.75 * fade)
     ctx.lineWidth = Math.max(0.9, r.fs * 0.06)
     ctx.beginPath()
     const steps = 40
@@ -105,7 +86,7 @@ useElementCanvas(canvasRef, {
       const p = pointAt(nodes, k / (nodes.length - 1) * 0.999, r)
       if (k === nodes.length - 1) {
         const s = r.fs * 0.2 * pop
-        ctx.strokeStyle = withAlpha(flagColor(), 0.95 * fade)
+        ctx.strokeStyle = withAlpha(palette.flag, 0.95 * fade)
         ctx.lineWidth = Math.max(1, r.fs * 0.08)
         ctx.beginPath()
         ctx.moveTo(p.x - s, p.y - s)
@@ -119,7 +100,7 @@ useElementCanvas(canvasRef, {
     }
     if (!reduced && drawn < 1) {
       const tip = pointAt(nodes, drawn * 0.999, r)
-      ctx.fillStyle = withAlpha(pathColor(), 0.95)
+      ctx.fillStyle = withAlpha(palette.path, 0.95)
       ctx.beginPath()
       ctx.arc(tip.x, tip.y, Math.max(1, r.fs * 0.08), 0, Math.PI * 2)
       ctx.fill()

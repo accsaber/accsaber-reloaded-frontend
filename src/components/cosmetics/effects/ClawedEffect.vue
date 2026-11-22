@@ -2,16 +2,11 @@
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/cosmetics/effects'
-import { activeEvents, asColor, asNumber, clampNumber, easeIn, easeOut, geometryMemo, pctSize, polyBounds, readPctSizing, ringAt, type ContentBox, type CycleEvent, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { activeEvents, asColor, asNumber, clampNumber, easeIn, easeOut, geometryMemo, pctSize, polyBounds, readPctSizing, ringAt, type ContentBox, type CycleEvent, type EffectFrame, type PctSizing, type RingGeometry, type Vec, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed, watch } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 type Ctx = CanvasRenderingContext2D
 

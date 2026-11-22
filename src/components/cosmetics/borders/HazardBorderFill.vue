@@ -42,11 +42,12 @@ useElementCanvas(canvasRef, {
       ctx.fill()
     }
     ctx.restore()
+    const scuff = darken(props.fill.b, 0.4)
     for (let k = 0; k < 26; k++) {
       const sx = hash01(k * 13 + 1) * w
       const sy = hash01(k * 29 + 4) * h
       const sw = (2 + hash01(k * 7) * 8) * (w / 100)
-      ctx.fillStyle = withAlpha(darken(props.fill.b, 0.4), 0.14 + hash01(k * 3) * 0.14)
+      ctx.fillStyle = withAlpha(scuff, 0.14 + hash01(k * 3) * 0.14)
       ctx.fillRect(sx, sy, sw, sw * (0.3 + hash01(k * 5) * 0.4))
     }
     const au = (t % ALARM_S) / 1.1

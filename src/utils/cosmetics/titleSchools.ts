@@ -8,6 +8,7 @@ import type {
   TitleQuakeSpec,
   TitleRippleSpec,
   TitleSearSpec,
+  TitleShiverSpec,
   TitleShockSpec,
   TitleTorchSpec,
   TitleWarcrySpec,
@@ -15,8 +16,9 @@ import type {
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant as pick } from '@/utils/cosmetics/titleAura'
+import { TITLE_HIGHLIGHT } from '@/utils/cosmetics/titleEffects'
 import { hash01 } from '@/utils/random'
-import { clamp01 } from '@/utils/math'
+import { clamp01, smoothstep01 } from '@/utils/math'
 
 type Style = Record<string, string>
 
@@ -27,6 +29,43 @@ export function heartbeat(tSec: number, bpm: number): number {
 
 function easeOut(u: number): number {
   return 1 - Math.pow(1 - u, 3)
+}
+
+const SHIVER = { idle: 1400, chill: 2200, hold: 1900, shake: 700, thaw: 900 }
+
+function shiverCold(local: number, order: number): number {
+  const start = SHIVER.idle + order * SHIVER.chill * 0.6
+  const thawAt = SHIVER.idle + SHIVER.chill + SHIVER.hold + SHIVER.shake * 0.4
+  return smoothstep01((local - start) / (SHIVER.chill * 0.4)) * (1 - smoothstep01((local - thawAt) / SHIVER.thaw))
+}
+
+function shiverBreath(local: number, i: number, breath: string): string {
+  const from = SHIVER.idle + SHIVER.chill * 0.7 + (i % 2) * 500
+  const u = ((local - from) % 1100) / 1100
+  if (local < from || local > SHIVER.idle + SHIVER.chill + SHIVER.hold || u < 0) return 'none'
+  const fade = Math.sin(u * Math.PI) * 0.5
+  return `${(Math.sin(i * 2.1) * 0.08).toFixed(3)}em ${(-0.25 - u * 0.55).toFixed(3)}em ${(0.12 + u * 0.3).toFixed(2)}em ${withAlpha(breath, fade)}`
+}
+
+export function shiverCharStyle(tMs: number, i: number, n: number, spec: TitleShiverSpec, light: boolean, base: string): Style {
+  const interval = spec.intervalMs ?? 8500
+  const cold = pick(light, spec.lightCold, spec.cold, '#7cc4ff')
+  const breath = pick(light, spec.lightBreath, spec.breath, TITLE_HIGHLIGHT)
+  const local = tMs % interval
+  const flip = Math.floor(tMs / interval) % 2 === 1
+  const order = (flip ? n - 1 - i : i) / Math.max(1, n - 1)
+  const chill = shiverCold(local, order)
+  const shakeAt = SHIVER.idle + SHIVER.chill + SHIVER.hold
+  const shake = local >= shakeAt && local < shakeAt + SHIVER.shake ? Math.sin(((local - shakeAt) / SHIVER.shake) * Math.PI) : 0
+  const chatter = 0.006 + 0.03 * chill
+  const jx = Math.sin(tMs * 0.085 + i * 1.9) * chatter + Math.sin(tMs * 0.03 + i) * 0.07 * shake
+  const jy = Math.cos(tMs * 0.11 + i * 2.7) * chatter * 0.5 - 0.09 * shake
+  const rot = Math.sin(tMs * 0.03 + i * 1.3) * 9 * shake
+  return {
+    color: lerpHex(base, cold, chill),
+    transform: `translate(${jx.toFixed(3)}em, ${jy.toFixed(3)}em) rotate(${rot.toFixed(1)}deg)`,
+    textShadow: shiverBreath(local, i, breath),
+  }
 }
 
 const QUAKE_PETRIFY = 500

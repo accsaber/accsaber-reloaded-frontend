@@ -289,7 +289,27 @@ export interface BorderGingerbreadOverlaySpec {
   hover?: boolean
 }
 
+export interface BorderFrostOverlaySpec {
+  type: 'frost'
+  enabled: boolean
+  frost: string
+  snow: string
+  shade: string
+  muntins?: boolean
+  refrostMs?: number
+  hover?: boolean
+}
+
+export interface BorderScarfOverlaySpec {
+  type: 'scarf'
+  enabled: boolean
+  tone: 'dark' | 'light'
+  fallback: string
+}
+
 export type BorderOverlaySpec =
+  | BorderScarfOverlaySpec
+  | BorderFrostOverlaySpec
   | BorderGingerbreadOverlaySpec
   | BorderSnowGlobeOverlaySpec
   | BorderUmbraOverlaySpec
@@ -418,7 +438,6 @@ export interface StolenFlameFill {
   flame: string
   flameDeep: string
   ember: string
-  intervalS?: number
 }
 
 export interface DominionFill {
@@ -445,6 +464,14 @@ export interface WoodFill {
   dark: string
   light: string
   plank?: number
+}
+
+export interface KnitFill {
+  type: 'knit'
+  wool: string
+  shade: string
+  motif: string
+  stitch?: number
 }
 
 export type LightsPattern =
@@ -508,7 +535,7 @@ export interface EclipseFill {
   sky: string
   dusk: string
   corona: string
-  prominence: string
+  prominence?: string
   shadow: string
   roster: EclipseRoster
 }
@@ -526,7 +553,6 @@ export interface JewelFill {
   velvet: string
   gems: string[]
   glint?: string
-  seam?: string
   count?: number
   pace?: number
 }
@@ -579,6 +605,7 @@ export type BorderColorFill =
   | StarshineFill
   | LightsFill
   | WoodFill
+  | KnitFill
   | BrewFill
   | Gradient
   | PixelMetalFill

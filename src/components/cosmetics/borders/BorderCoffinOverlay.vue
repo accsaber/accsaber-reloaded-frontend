@@ -3,14 +3,15 @@ import { useElementCanvas } from '@/composables/useCanvasScene'
 import { useStackPointer } from '@/composables/useStackPointer'
 import type { BorderCoffinOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { darken, lighten } from '@/utils/color'
-import type { Ctx, Point } from '@/utils/cosmetics/canvasShapes'
-import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { fillCircle, type Ctx } from '@/utils/cosmetics/canvasShapes'
+import { drawHandprint, outset, pathOf, polygonOf } from '@/utils/cosmetics/coffinLid'
+import { easeOut } from '@/utils/cosmetics/effects'
+import { frameDelta, overlaySpace, withAlpha, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { hash01, randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderCoffinOverlaySpec }>()
 
-const MARGIN = 20
 const LID_OUTSET = 1.5
 const SOIL_TOP = 88
 const SOIL_BASE = 116
@@ -23,7 +24,6 @@ const WAIT_S = 0.8
 const OPEN_S = 0.7
 const KNOCK_S = 0.4
 const CREAK_OPEN = 0.16
-const FINGER_LENGTHS = [6.6, 8, 7.6, 6.2]
 
 type Phase = 'shut' | 'hold' | 'rise' | 'creak' | 'peek' | 'slam' | 'wait' | 'open' | 'idle'
 
@@ -68,34 +68,6 @@ let knockK = 0
 let knockMark: Knock | null = null
 let mound: Path2D | null = null
 
-function polygonOf(mask: string): Point[] {
-  const nums = /^[\sMLZ\d.,-]+$/i.test(mask) ? (mask.match(/-?\d*\.?\d+/g) ?? []).map(Number) : []
-  const pts: Point[] = []
-  for (let i = 0; i + 1 < nums.length; i += 2) pts.push([nums[i], nums[i + 1]])
-  return pts.length >= 3 ? pts : [[0, 0], [100, 0], [100, 100], [0, 100]]
-}
-
-function edgeNormal(a: Point, b: Point): Point {
-  const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
-  return [(b[1] - a[1]) / len, -(b[0] - a[0]) / len]
-}
-
-function outset(pts: Point[], d: number): Point[] {
-  return pts.map((p, i) => {
-    const n1 = edgeNormal(pts[(i + pts.length - 1) % pts.length], p)
-    const n2 = edgeNormal(p, pts[(i + 1) % pts.length])
-    const k = d / (1 + n1[0] * n2[0] + n1[1] * n2[1])
-    return [p[0] + (n1[0] + n2[0]) * k, p[1] + (n1[1] + n2[1]) * k]
-  })
-}
-
-function pathOf(pts: Point[], closed: boolean): Path2D {
-  const p = new Path2D()
-  pts.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y)))
-  if (closed) p.closePath()
-  return p
-}
-
 const geometry = computed(() => {
   const opening = polygonOf(props.avatarMask ?? '')
   const lid = outset(opening, LID_OUTSET)
@@ -136,10 +108,6 @@ const intervalS = computed(() => Math.max((props.overlay.intervalMs ?? 14000) / 
 
 function pulse(u: number): number {
   return u < 0 || u > 1 ? 0 : Math.sin(u * Math.PI)
-}
-
-function easeOut(u: number): number {
-  return 1 - Math.pow(1 - u, 3)
 }
 
 function seedCycle(n: number): void {
@@ -316,9 +284,7 @@ function drawRivets(ctx: Ctx, px: number): void {
   ctx.fillStyle = tones.value.rivet
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 3; c++) {
-      ctx.beginPath()
-      ctx.arc(28 + c * 22 + (r % 2) * 11, 12 + r * 19, 1.3, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, 28 + c * 22 + (r % 2) * 11, 12 + r * 19, 1.3)
     }
   }
   const rust = props.overlay.rust
@@ -353,9 +319,7 @@ function drawGlassSheen(ctx: Ctx, px: number): void {
   }
   ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
   for (let i = 0; i < 14; i++) {
-    ctx.beginPath()
-    ctx.arc(18 + hash01(i * 3) * 64, 10 + hash01(i * 5) * 80, 0.5 + hash01(i * 7), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, 18 + hash01(i * 3) * 64, 10 + hash01(i * 5) * 80, 0.5 + hash01(i * 7))
   }
 }
 
@@ -374,31 +338,7 @@ function drawBulge(ctx: Ctx, m: Mark, k: number): void {
   g.addColorStop(0.7, withAlpha(tones.value.bulgeDark, 0.4 * k))
   g.addColorStop(1, withAlpha(props.overlay.lid, 0))
   ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.arc(m.x, m.y, r, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function drawHandprint(ctx: Ctx, x: number, y: number, alpha: number): void {
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.scale(1.4, 1.4)
-  ctx.rotate(-0.2)
-  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
-  ctx.beginPath()
-  ctx.moveTo(4.4, -0.5)
-  ctx.quadraticCurveTo(4.8, 4, 3.2, 7.2)
-  ctx.quadraticCurveTo(0, 9, -3.2, 7.2)
-  ctx.quadraticCurveTo(-4.8, 4, -4.4, -0.5)
-  ctx.closePath()
-  FINGER_LENGTHS.forEach((len, i) => ctx.roundRect(-3.9 + i * 2.5 - 1.05, 1 - len, 2.1, len + 1, 1.05))
-  ctx.save()
-  ctx.translate(3.6, 3.2)
-  ctx.rotate(1.05)
-  ctx.roundRect(-1.05, -6.4, 2.1, 7.4, 1.05)
-  ctx.restore()
-  ctx.fill()
-  ctx.restore()
+  fillCircle(ctx, m.x, m.y, r)
 }
 
 function drawMark(ctx: Ctx, m: Mark, px: number): void {
@@ -533,9 +473,7 @@ function drawParticles(ctx: Ctx, px: number): void {
   for (const d of dust) {
     const u = (clock - d.born) / d.life
     ctx.globalAlpha = 0.7 * (1 - u)
-    ctx.beginPath()
-    ctx.arc(d.x, d.y, 0.6 + u * 0.8, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, d.x, d.y, 0.6 + u * 0.8)
   }
   ctx.strokeStyle = props.overlay.seam
   ctx.lineWidth = Math.max(0.5 * px, 0.7)
@@ -550,7 +488,7 @@ function drawParticles(ctx: Ctx, px: number): void {
 }
 
 function drawScene(ctx: Ctx, w: number, h: number, fr: Frame, c: number): void {
-  const sp = overlaySpace(w, h, MARGIN)
+  const sp = overlaySpace(w, h, OVERLAY_MARGIN)
   const px = 1 / sp.s
   ctx.save()
   ctx.translate(sp.toX(0), sp.toY(0))
@@ -565,7 +503,7 @@ function drawScene(ctx: Ctx, w: number, h: number, fr: Frame, c: number): void {
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-const pointer = useStackPointer(canvasRef, MARGIN, () => props.overlay.hover !== false)
+const pointer = useStackPointer(canvasRef, OVERLAY_MARGIN, () => props.overlay.hover !== false)
 
 useElementCanvas(canvasRef, {
   init(_w, _h, nowMs) {

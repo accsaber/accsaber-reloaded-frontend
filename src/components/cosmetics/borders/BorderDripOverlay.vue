@@ -2,13 +2,12 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { BorderDripOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { lighten } from '@/utils/color'
-import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, overlaySpace, withAlpha, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderDripOverlaySpec }>()
 
-const MARGIN = 20
 const FLOOR = 118
 const TRAIL_S = 0.21
 
@@ -127,7 +126,7 @@ useElementCanvas(canvasRef, {
   resize() {},
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
-    const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
+    const { sx, sy, toX, toY } = overlaySpace(w, h, OVERLAY_MARGIN)
     const color = props.overlay.color
     if (reduced) {
       drawStatic(ctx, sx, sy, toX, toY, color)

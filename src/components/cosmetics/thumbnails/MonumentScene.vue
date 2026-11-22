@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { MonumentScene } from '@/types/cosmetics/background'
-import { cyc, win } from '@/utils/cosmetics/canvasShapes'
+import { cyc, win, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
@@ -14,7 +14,6 @@ const WIDTHS = [0.72, 0.56, 0.4, 0.26, 0.13]
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 4.2 : now / 1000
     const e = cyc(t, 8)
@@ -36,9 +35,7 @@ useElementCanvas(canvasRef, {
       g.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.globalAlpha = clamp01(a)
       ctx.fillStyle = g
-      ctx.beginPath()
-      ctx.arc(x, y, pr, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, x, y, pr)
       ctx.globalAlpha = 1
     }
 
@@ -53,9 +50,7 @@ useElementCanvas(canvasRef, {
       cg.addColorStop(0, withAlpha(cloudColor, 0.1))
       cg.addColorStop(1, withAlpha(cloudColor, 0))
       ctx.fillStyle = cg
-      ctx.beginPath()
-      ctx.arc(0, 0, 9 * s, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, 0, 0, 9 * s)
       ctx.restore()
     }
 

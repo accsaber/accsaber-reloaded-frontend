@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleSigilAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleSigilAuraSpec
   light: boolean
 }>()
 
-const color = computed(() => pickVariant(props.light, props.aura.lightColor, props.aura.color, '#f2c94c'))
-
-let rect: TitleAuraRect | null = null
+const { color } = pigments(props.aura, props.light, { color: '#f2c94c' })
 
 function ring(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, width: number, alpha: number): void {
-  ctx.strokeStyle = withAlpha(color.value, alpha)
+  ctx.strokeStyle = withAlpha(color, alpha)
   ctx.lineWidth = width
   ctx.beginPath()
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
@@ -23,7 +19,7 @@ function ring(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number,
 }
 
 function ticks(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, count: number, rot: number, len: number, alpha: number): void {
-  ctx.strokeStyle = withAlpha(color.value, alpha)
+  ctx.strokeStyle = withAlpha(color, alpha)
   ctx.lineWidth = 1
   const k = 1 + len / rx
   for (let i = 0; i < count; i++) {
@@ -38,7 +34,7 @@ function ticks(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number
 }
 
 function triangle(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, rot: number, alpha: number): void {
-  ctx.strokeStyle = withAlpha(color.value, alpha)
+  ctx.strokeStyle = withAlpha(color, alpha)
   ctx.lineWidth = 1
   ctx.beginPath()
   for (let i = 0; i < 3; i++) {
@@ -52,16 +48,10 @@ function triangle(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: num
   ctx.stroke()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-  },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const t = reduced ? 2 : now / 1000
+useTitleAura({
+  staticT: 2,
+  additive: () => !props.light,
+  draw(ctx, { rect, t, w, h }) {
     const period = props.aura.periodS ?? 12
     const rot = (t / period) * Math.PI * 2
     const cx = rect.x + rect.w / 2
@@ -69,10 +59,9 @@ useElementCanvas(canvasRef, {
     const R = Math.min(rect.w * 0.62 + rect.fs * 0.4, cx - 1, w - cx - 1)
     const ry = Math.min(R * 0.42, cy - 1, h - cy - 1)
     const pulse = 0.55 + 0.45 * Math.sin(t * 1.4)
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R)
-    g.addColorStop(0, withAlpha(color.value, 0.12 * pulse))
-    g.addColorStop(1, withAlpha(color.value, 0))
+    g.addColorStop(0, withAlpha(color, 0.12 * pulse))
+    g.addColorStop(1, withAlpha(color, 0))
     ctx.fillStyle = g
     ctx.fillRect(0, 0, w, h)
     ring(ctx, cx, cy, R, ry, 1.2, 0.5 + 0.3 * pulse)
@@ -82,7 +71,6 @@ useElementCanvas(canvasRef, {
     triangle(ctx, cx, cy, R * 0.8, ry * 0.8, rot * 0.35, 0.45)
     triangle(ctx, cx, cy, R * 0.8, ry * 0.8, rot * 0.35 + Math.PI, 0.45)
     ring(ctx, cx, cy, R * 0.45, ry * 0.45, 0.8, 0.3 + 0.3 * pulse)
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

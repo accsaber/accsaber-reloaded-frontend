@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleBloqsAuraSpec } from '@/types/cosmetics/title'
 import { darken } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleBloqsAuraSpec
   light: boolean
 }>()
+
+const palette = pigments(props.aura, props.light, { left: '#ef4444', right: '#3b82f6', streak: '#ffffff', score: '#e0f2fe' })
 
 interface Bloq {
   born: number
@@ -28,35 +29,12 @@ interface Score {
   y: number
 }
 
-const STATIC_T = 3
 const SLICE_FADE = 0.65
 const EXT_EM = 9
 
-let rect: TitleAuraRect | null = null
 let bloqs: Bloq[] = []
 let scores: Score[] = []
 let nextAt = 0
-
-function textRect(canvas: HTMLCanvasElement): TitleAuraRect {
-  const r = titleAuraRect(canvas)
-  return { ...r, w: r.w - EXT_EM * r.fs }
-}
-
-function leftColor(): string {
-  return pickVariant(props.light, props.aura.lightLeft, props.aura.left, '#ef4444')
-}
-
-function rightColor(): string {
-  return pickVariant(props.light, props.aura.lightRight, props.aura.right, '#3b82f6')
-}
-
-function streakColor(): string {
-  return pickVariant(props.light, props.aura.lightStreak, props.aura.streak, '#ffffff')
-}
-
-function scoreColor(): string {
-  return pickVariant(props.light, props.aura.lightScore, props.aura.score, '#e0f2fe')
-}
 
 function spawn(now: number): Bloq {
   return {
@@ -105,7 +83,7 @@ function drawBloqBody(ctx: CanvasRenderingContext2D, s: number, color: string, a
 }
 
 function drawBloq(ctx: CanvasRenderingContext2D, b: Bloq, t: number, r: TitleAuraRect): void {
-  const color = b.isLeft ? leftColor() : rightColor()
+  const color = b.isLeft ? palette.left : palette.right
   const s = r.fs * 0.78
   const x = b.slicedAt < 0 ? bloqX(b, t, r) : sliceX(b, r)
   const y = r.y + r.h * b.y
@@ -145,7 +123,7 @@ function drawBloq(ctx: CanvasRenderingContext2D, b: Bloq, t: number, r: TitleAur
     const k = Math.sin((age / 0.16) * Math.PI)
     const px = Math.cos(cutAngle + Math.PI / 2) * s * 0.95
     const py = Math.sin(cutAngle + Math.PI / 2) * s * 0.95
-    ctx.strokeStyle = withAlpha(streakColor(), k)
+    ctx.strokeStyle = withAlpha(palette.streak, k)
     ctx.lineCap = 'round'
     ctx.lineWidth = Math.max(1.2, r.fs * 0.09)
     ctx.beginPath()
@@ -161,30 +139,24 @@ function drawScore(ctx: CanvasRenderingContext2D, sc: Score, t: number, r: Title
   const a = u < 0.15 ? u / 0.15 : Math.pow(1 - (u - 0.15) / 0.85, 1.3)
   ctx.font = `700 ${(r.fs * 0.52).toFixed(1)}px 'DM Sans', sans-serif`
   ctx.textAlign = 'center'
-  ctx.fillStyle = withAlpha(scoreColor(), a)
+  ctx.fillStyle = withAlpha(palette.score, a)
   ctx.fillText('115', sc.x, sc.y - u * r.fs * 0.9)
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? textRect(canvasRef.value) : null
+useTitleAura({
+  init(_rect, now) {
     const t = now / 1000
     bloqs = [spawn(t - 0.25)]
     scores = []
     nextAt = t + 0.4
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const r = rect
-    const t = reduced ? STATIC_T : now / 1000
+  draw(ctx, { rect, t, reduced }) {
+    const r = { ...rect, w: rect.w - EXT_EM * rect.fs }
     if (reduced) {
       for (const [k, ex] of [2.2, 5.4].entries()) {
         ctx.save()
         ctx.translate(r.x + r.w + ex * r.fs, r.y + r.h * 0.4)
-        drawBloqBody(ctx, r.fs * 0.78, k === 0 ? leftColor() : rightColor(), 0.95, k)
+        drawBloqBody(ctx, r.fs * 0.78, k === 0 ? palette.left : palette.right, 0.95, k)
         ctx.restore()
       }
       drawScore(ctx, { born: t - 0.35, x: r.x + r.w * 0.5, y: r.y }, t, r)

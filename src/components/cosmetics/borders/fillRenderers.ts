@@ -1,26 +1,28 @@
-import BrewBorderFill from '@/components/cosmetics/borders/BrewBorderFill.vue'
-import CandleBorderFill from '@/components/cosmetics/borders/CandleBorderFill.vue'
-import ChartBorderFill from '@/components/cosmetics/borders/ChartBorderFill.vue'
-import ColossusBorderFill from '@/components/cosmetics/borders/ColossusBorderFill.vue'
-import ConfettiBorderFill from '@/components/cosmetics/borders/ConfettiBorderFill.vue'
-import CosmicBorderFill from '@/components/cosmetics/borders/CosmicBorderFill.vue'
-import DominionBorderFill from '@/components/cosmetics/borders/DominionBorderFill.vue'
-import EclipseBorderFill from '@/components/cosmetics/borders/EclipseBorderFill.vue'
-import GroveBorderFill from '@/components/cosmetics/borders/GroveBorderFill.vue'
-import HazardBorderFill from '@/components/cosmetics/borders/HazardBorderFill.vue'
-import JewelBorderFill from '@/components/cosmetics/borders/JewelBorderFill.vue'
-import LaserBorderFill from '@/components/cosmetics/borders/LaserBorderFill.vue'
-import LightsBorderFill from '@/components/cosmetics/borders/LightsBorderFill.vue'
-import PrismBorderFill from '@/components/cosmetics/borders/PrismBorderFill.vue'
-import RegaliaBorderFill from '@/components/cosmetics/borders/RegaliaBorderFill.vue'
-import StarshineAura from '@/components/cosmetics/borders/StarshineAura.vue'
-import StarshineBorderFill from '@/components/cosmetics/borders/StarshineBorderFill.vue'
-import StolenFlameBorderFill from '@/components/cosmetics/borders/StolenFlameBorderFill.vue'
-import ToonBorderFill from '@/components/cosmetics/borders/ToonBorderFill.vue'
-import WarpBorderFill from '@/components/cosmetics/borders/WarpBorderFill.vue'
-import WoodBorderFill from '@/components/cosmetics/borders/WoodBorderFill.vue'
 import type { CanvasFill } from '@/utils/cosmetics/interpolate'
-import type { Component } from 'vue'
+import { defineAsyncComponent, type Component } from 'vue'
+
+const BrewBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/BrewBorderFill.vue'))
+const CandleBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/CandleBorderFill.vue'))
+const ChartBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/ChartBorderFill.vue'))
+const ColossusBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/ColossusBorderFill.vue'))
+const ConfettiBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/ConfettiBorderFill.vue'))
+const CosmicBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/CosmicBorderFill.vue'))
+const DominionBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/DominionBorderFill.vue'))
+const EclipseBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/EclipseBorderFill.vue'))
+const GroveBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/GroveBorderFill.vue'))
+const HazardBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/HazardBorderFill.vue'))
+const JewelBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/JewelBorderFill.vue'))
+const KnitBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/KnitBorderFill.vue'))
+const LaserBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/LaserBorderFill.vue'))
+const LightsBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/LightsBorderFill.vue'))
+const PrismBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/PrismBorderFill.vue'))
+const RegaliaBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/RegaliaBorderFill.vue'))
+const StarshineAura = defineAsyncComponent(() => import('@/components/cosmetics/borders/StarshineAura.vue'))
+const StarshineBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/StarshineBorderFill.vue'))
+const StolenFlameBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/StolenFlameBorderFill.vue'))
+const ToonBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/ToonBorderFill.vue'))
+const WarpBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/WarpBorderFill.vue'))
+const WoodBorderFill = defineAsyncComponent(() => import('@/components/cosmetics/borders/WoodBorderFill.vue'))
 
 export interface RimStyle {
   stroke: string
@@ -41,8 +43,9 @@ type FillRegistry = { [K in CanvasFill['type']]: FillRenderer<Extract<CanvasFill
 export const FILL_RENDERERS: FillRegistry = {
   cosmic: { component: CosmicBorderFill, margin: true, rim: (f) => ({ stroke: f.star, width: 0.8, opacity: 0.45 }) },
   toon: { component: ToonBorderFill, margin: true, rim: (f) => ({ stroke: f.line, width: 1.4, opacity: 1 }) },
-  candle: { component: CandleBorderFill, margin: true, rim: (f) => ({ stroke: f.glow, width: 0.8, opacity: 0.35 }) },
+  candle: { component: CandleBorderFill, margin: true, trace: 'wall', rim: (f) => ({ stroke: f.glow, width: 0.8, opacity: 0.35 }) },
   wood: { component: WoodBorderFill, margin: true, rim: (f) => ({ stroke: f.dark, width: 1, opacity: 0.7 }) },
+  knit: { component: KnitBorderFill, margin: true, rim: (f) => ({ stroke: f.shade, width: 1, opacity: 0.7 }) },
   brew: { component: BrewBorderFill, margin: true, rim: (f) => ({ stroke: f.bone, width: 0.8, opacity: 0.5 }) },
   prism: { component: PrismBorderFill, margin: true, rim: (f) => ({ stroke: f.edge, width: 0.9, opacity: 0.5 }) },
   grove: { component: GroveBorderFill, margin: true, rim: (f) => ({ stroke: f.firefly, width: 0.8, opacity: 0.45 }) },

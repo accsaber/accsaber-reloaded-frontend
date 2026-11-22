@@ -3,11 +3,10 @@ import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import { useFloatingPanel } from '@/composables/useFloatingPanel'
-import { useModifierColor } from '@/composables/useModifierColor'
+import { useItemEffects } from '@/composables/useItemEffects'
 import { useItemModifierStore } from '@/stores/itemModifiers'
-import type { ItemModifierRef, UserItemResponse } from '@/types/api/items'
-import { buildEffectLayers, readFragmentSpec } from '@/utils/cosmetics/effectLayers'
-import { displayItemName, isBorderTypeKey, isTitleItem, rarityClass, sortModifiersByKey, userItemTokenContext } from '@/utils/items'
+import type { UserItemResponse } from '@/types/api/items'
+import { displayItemName, isTitleItem, rarityClass } from '@/utils/items'
 import { computed, onMounted, ref, useId, watch } from 'vue'
 
 const props = defineProps<{
@@ -37,18 +36,11 @@ function onClick() {
 const modifierStore = useItemModifierStore()
 
 const item = computed(() => props.userItem.item)
-const modifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(props.userItem.modifiers ?? []))
-const effectLayers = computed(() =>
-  buildEffectLayers(props.userItem.modifiers, props.userItem.unusualEffect),
+const { modifiers, effectLayers, fragmentSpec, overlayLayers, tokenCtx, accent } = useItemEffects(
+  () => props.userItem,
 )
-const ownFx = computed(() => isBorderTypeKey(item.value.typeKey))
-const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.userItem.unusualEffect)))
-const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))
-const tokenCtx = computed(() => userItemTokenContext(props.userItem))
 const quantity = computed(() => props.userItem.quantity ?? 1)
 const plain = computed(() => item.value.rarity === 'common' && modifiers.value.every((m) => m.key === 'normal'))
-
-const { accent } = useModifierColor(modifiers)
 
 const cellAccentStyle = computed(() => (accent.value ? { '--cell-accent': accent.value } : undefined))
 const itemNameStyle = computed(() => (accent.value ? { color: accent.value } : undefined))

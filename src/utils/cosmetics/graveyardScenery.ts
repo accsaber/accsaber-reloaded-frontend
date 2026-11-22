@@ -255,9 +255,7 @@ export function drawCrypt(ctx: Ctx, x: number, y: number, s: number, c: GraveCol
   ctx.lineTo(x + s * 4.2, y - s * 8)
   ctx.stroke()
   ctx.fillStyle = dark
-  ctx.beginPath()
-  ctx.arc(x, y - s * 21, s * 1.6, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y - s * 21, s * 1.6)
   ctx.strokeStyle = withAlpha(lighten(body, 0.3), 0.5)
   ctx.beginPath()
   ctx.moveTo(x - s * 1.6, y - s * 21)
@@ -325,9 +323,7 @@ export function drawRaven(ctx: Ctx, x: number, y: number, s: number, color: stri
   ctx.beginPath()
   ctx.ellipse(x, y - s * 1.6, s * 2.2, s * 1.3, -0.2, 0, Math.PI * 2)
   ctx.fill()
-  ctx.beginPath()
-  ctx.arc(x + s * 1.8, y - s * 3, s * 0.9, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x + s * 1.8, y - s * 3, s * 0.9)
   ctx.beginPath()
   ctx.moveTo(x + s * 2.6, y - s * 3)
   ctx.lineTo(x + s * 3.8, y - s * 2.7)
@@ -391,12 +387,8 @@ export function drawWisp(ctx: Ctx, at: (lag: number) => [number, number], s: num
   for (let i = 1; i <= 5; i++) {
     const [tx, ty] = at(i * 0.12)
     ctx.fillStyle = withAlpha(color, 0.5 - i * 0.09)
-    ctx.beginPath()
-    ctx.arc(tx, ty, s * (1.6 - i * 0.25), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, tx, ty, s * (1.6 - i * 0.25))
   }
   ctx.fillStyle = withAlpha(lighten(color, 0.5), 0.9)
-  ctx.beginPath()
-  ctx.arc(x, y, s * 1.8, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, s * 1.8)
 }

@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleGhostsAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleGhostsAuraSpec
   light: boolean
 }>()
+
+const palette = pigments(props.aura, props.light, { color: '#e9e3d0', glow: '#8c7bb8' })
 
 interface Ghost {
   born: number
@@ -23,17 +24,8 @@ interface Ghost {
 
 const STATIC_T = 2
 
-let rect: TitleAuraRect | null = null
 let ghosts: Ghost[] = []
 let startMs = 0
-
-function sheet(): string {
-  return pickVariant(props.light, props.aura.lightColor, props.aura.color, '#e9e3d0')
-}
-
-function glow(): string {
-  return pickVariant(props.light, props.aura.lightGlow, props.aura.glow, '#8c7bb8')
-}
 
 function spawn(now: number, first: boolean): Ghost {
   return {
@@ -71,12 +63,12 @@ function drawGhost(ctx: CanvasRenderingContext2D, g: Ghost, t: number, r: TitleA
   const a = Math.min(0.6, Math.sin(u * Math.PI) * 0.9)
   ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
   const halo = ctx.createRadialGradient(x, y + s * 0.2, 0, x, y + s * 0.2, s * 1.3)
-  halo.addColorStop(0, withAlpha(glow(), 0.35 * a))
-  halo.addColorStop(1, withAlpha(glow(), 0))
+  halo.addColorStop(0, withAlpha(palette.glow, 0.35 * a))
+  halo.addColorStop(1, withAlpha(palette.glow, 0))
   ctx.fillStyle = halo
   ctx.fillRect(x - s * 1.3, y - s * 1.1, s * 2.6, s * 2.6)
   ctx.globalCompositeOperation = 'source-over'
-  ctx.fillStyle = withAlpha(sheet(), a)
+  ctx.fillStyle = withAlpha(palette.color, a)
   ghostPath(ctx, x, y, s, t)
   ctx.fill()
   ctx.globalCompositeOperation = 'destination-out'
@@ -89,17 +81,12 @@ function drawGhost(ctx: CanvasRenderingContext2D, g: Ghost, t: number, r: TitleA
   ctx.globalCompositeOperation = 'source-over'
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+useTitleAura({
+  init(_rect, now) {
     startMs = now
     ghosts = Array.from({ length: props.aura.count ?? 4 }, () => spawn(0, true))
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
+  draw(ctx, { rect, now, reduced }) {
     const t = reduced ? STATIC_T : (now - startMs) / 1000
     for (let i = 0; i < ghosts.length; i++) {
       const g = ghosts[i]

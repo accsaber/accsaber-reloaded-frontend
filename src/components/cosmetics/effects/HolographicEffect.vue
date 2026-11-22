@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, type ContentBox, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, type ContentBox, type EffectProps } from '@/utils/cosmetics/effects'
 import { subscribeWindowPointer } from '@/utils/windowPointer'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const root = ref<HTMLElement | null>(null)
 const titleText = ref('')

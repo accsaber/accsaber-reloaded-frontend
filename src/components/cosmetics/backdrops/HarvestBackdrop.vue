@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
-import { type Ctx, flickerNoise, sceneUnit } from '@/utils/cosmetics/canvasShapes'
+import { type Ctx, flickerNoise, sceneUnit, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { darken, lerpHex, parseHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { cloudMask, createRadialSprite, offscreenLayer, tintLayer, wrapX } from '@/utils/cosmetics/sceneLayer'
@@ -86,9 +86,7 @@ function drawSky(ctx: Ctx, w: number, h: number): void {
     const y = h01(i * 5 + 9) * h * HORIZON * 0.8
     const r = unit * (0.15 + h01(i * 7 + 11) * 0.4)
     ctx.fillStyle = withAlpha(props.config.flareColor, 0.25 + h01(i * 11 + 13) * 0.5)
-    ctx.beginPath()
-    ctx.arc(x, y, r, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, x, y, r)
   }
 }
 
@@ -376,9 +374,7 @@ function drawScarecrow(ctx: Ctx, x: number, base: number, color: string): void {
     ctx.lineTo(x - u * 3.4 + i * u * 1.3 + (i % 2 ? u * 0.5 : -u * 0.4), base - u * 3.6)
     ctx.stroke()
   }
-  ctx.beginPath()
-  ctx.arc(x, base - u * 19.5, u * 2.6, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, base - u * 19.5, u * 2.6)
   ctx.fillRect(x - u * 4.5, base - u * 21.6, u * 9, u * 0.7)
   ctx.fillRect(x - u * 2.4, base - u * 25, u * 4.8, u * 3.6)
   ctx.strokeStyle = color

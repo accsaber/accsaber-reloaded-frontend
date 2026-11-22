@@ -1,6 +1,6 @@
 import { darken, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { fillCircle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { drawGlow } from '@/utils/cosmetics/sceneLayer'
 
 export function drawCosmicStar(ctx: Ctx, x: number, y: number, r: number, color: string, twinkle: number, bright: boolean, alpha: number): void {
@@ -9,9 +9,7 @@ export function drawCosmicStar(ctx: Ctx, x: number, y: number, r: number, color:
   }
   ctx.globalAlpha = (0.35 + 0.65 * twinkle) * alpha
   ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.arc(x, y, Math.max(0.5, r * 0.8), 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, Math.max(0.5, r * 0.8))
   ctx.globalAlpha = 1
 }
 
@@ -26,9 +24,7 @@ export function drawCosmicPlanet(ctx: Ctx, x: number, y: number, radius: number,
   grad.addColorStop(0.7, color)
   grad.addColorStop(1, darken(color, 0.55))
   ctx.fillStyle = grad
-  ctx.beginPath()
-  ctx.arc(x, y, radius, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, radius)
   if (ringed) {
     ctx.strokeStyle = withAlpha(lighten(color, 0.35), 0.8 * alpha)
     ctx.lineWidth = Math.max(0.6, radius * 0.22)
@@ -51,7 +47,5 @@ export function drawCosmicStreak(ctx: Ctx, x: number, y: number, dx: number, dy:
   ctx.lineTo(x - dx * len, y - dy * len)
   ctx.stroke()
   ctx.fillStyle = withAlpha(color, alpha)
-  ctx.beginPath()
-  ctx.arc(x, y, width * 0.9, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, width * 0.9)
 }

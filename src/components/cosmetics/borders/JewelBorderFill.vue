@@ -4,7 +4,7 @@ import type { JewelFill } from '@/types/cosmetics/border'
 import { darken, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
-import { useTemplateRef, watch } from 'vue'
+import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   fill: JewelFill
@@ -51,8 +51,6 @@ function seed(): void {
     }
   })
 }
-
-watch(() => props.fill, () => seed())
 
 function gemPath(ctx: CanvasRenderingContext2D, shape: GemShape, s: number): void {
   ctx.beginPath()
@@ -108,8 +106,10 @@ function drawFacets(ctx: CanvasRenderingContext2D, shape: GemShape, s: number, c
   }
 }
 
+const gemColors = props.fill.gems
+
 function drawGem(ctx: CanvasRenderingContext2D, g: Gem, t: number, ux: number, uy: number): void {
-  const color = props.fill.gems[g.colorIdx % props.fill.gems.length]
+  const color = gemColors[g.colorIdx % gemColors.length]
   const y = ((g.y + t * g.speed) % 118) - 9
   const x = g.x + Math.sin(t * 0.9 + g.phase) * g.sway
   const s = g.size * ux

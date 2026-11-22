@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { anchorCrack, bitePath, crackPath, wearBites, wearCracks, type WearSpec } from '@/utils/cosmetics/wear'
-import { computed, onMounted, onUnmounted, ref, useId, useTemplateRef } from 'vue'
+import { observeSize } from '@/utils/observe'
+import { computed, ref, useId, useTemplateRef, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -18,22 +19,19 @@ const maskId = `worn-${useId()}`
 
 const baseEl = useTemplateRef<HTMLElement>('base')
 const size = ref({ w: 0, h: 0, px: 0, py: 0 })
-let ro: ResizeObserver | null = null
-
-onMounted(() => {
-  if (!baseEl.value || typeof ResizeObserver === 'undefined') return
-  ro = new ResizeObserver(([entry]) => {
-    if (!entry) return
-    const r = entry.contentRect
-    size.value = { w: r.width, h: r.height, px: r.left, py: r.top }
-  })
-  ro.observe(baseEl.value)
-})
-
-onUnmounted(() => {
-  ro?.disconnect()
-  ro = null
-})
+watch(
+  () => (props.spec ? baseEl.value : null),
+  (el, _old, onCleanup) => {
+    if (!el) return
+    onCleanup(
+      observeSize(el, (entry) => {
+        const r = entry.contentRect
+        size.value = { w: r.width, h: r.height, px: r.left, py: r.top }
+      }),
+    )
+  },
+  { flush: 'post', immediate: true },
+)
 
 const bites = computed(() => (props.spec ? wearBites(props.seed, props.spec.chips) : []))
 const cracks = computed(() => (props.spec ? wearCracks(props.seed, bites.value, props.spec.cracks) : []))

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { GroveFill } from '@/types/cosmetics/border'
-import { cyc, win } from '@/utils/cosmetics/canvasShapes'
+import { cyc, win, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
@@ -30,7 +30,6 @@ function vineY(row: number, s: number, t: number): number {
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 4.2 : now / 1000
     const interval = props.fill.intervalS ?? 9
@@ -70,9 +69,7 @@ useElementCanvas(canvasRef, {
       g.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.globalAlpha = clamp01(a)
       ctx.fillStyle = g
-      ctx.beginPath()
-      ctx.arc(px, py, pr, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, px, py, pr)
       ctx.globalAlpha = 1
     }
 
@@ -86,13 +83,9 @@ useElementCanvas(canvasRef, {
       const pulse = 0.5 + 0.45 * Math.sin(t * 1.6 + i * 1.7) + b * 0.8
       glowDot(x, y, 1, col, Math.min(1, pulse))
       ctx.fillStyle = col
-      ctx.beginPath()
-      ctx.arc(toX(x), toY(y), Math.max(1, (1.5 + b) * s), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, toX(x), toY(y), Math.max(1, (1.5 + b) * s))
       ctx.fillStyle = 'rgba(255,255,255,0.8)'
-      ctx.beginPath()
-      ctx.arc(toX(x - 0.5), toY(y - 0.5), Math.max(0.5, 0.5 * s), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, toX(x - 0.5), toY(y - 0.5), Math.max(0.5, 0.5 * s))
     }
 
     const mushroomA = props.fill.mushroomA ?? '#5ce0c8'

@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, ringGeometry, ringPathD, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, ringGeometry, ringPathD, type EffectProps } from '@/utils/cosmetics/effects'
 import { computed } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const color = computed(() => asString(props.composition.color) ?? 'currentColor')
 const widthPx = computed(() => asNumber(props.composition.widthPx) ?? 2)

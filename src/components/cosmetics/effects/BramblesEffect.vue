@@ -2,17 +2,13 @@
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/cosmetics/effects'
-import { asColor, asNumber, clampNumber, easeOut, geometryMemo, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asColor, asNumber, clampNumber, easeOut, geometryMemo, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type PctSizing, type RingGeometry, type RingPoly, type Vec, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed, watch } from 'vue'
 import { clamp } from '@/utils/math'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 type Ctx = CanvasRenderingContext2D
 
@@ -231,13 +227,9 @@ function drawLeaf(g: Ctx, v: Vine, nd: Node, s: number, droop: number) {
     const bx = nd.p.x - ax * r * 0.6 + px * r * 1.6
     const by = nd.p.y - ay * r * 0.6 + py * r * 1.6
     g.fillStyle = cfg.value.berry
-    g.beginPath()
-    g.arc(bx, by, r, 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, bx, by, r)
     g.fillStyle = 'rgba(255, 255, 255, 0.5)'
-    g.beginPath()
-    g.arc(bx - r * 0.3, by - r * 0.3, r * 0.3, 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, bx - r * 0.3, by - r * 0.3, r * 0.3)
   }
 }
 

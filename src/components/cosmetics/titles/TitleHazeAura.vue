@@ -1,23 +1,16 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleHazeAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleHazeAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => {
-  const a = props.aura
-  return {
-    color: pickVariant(props.light, a.lightColor, a.color, '#3b82f6'),
-    glow: pickVariant(props.light, a.lightGlow, a.glow, '#93c5fd'),
-  }
-})
+const { color, glow } = pigments(props.aura, props.light, { color: '#3b82f6', glow: '#93c5fd' })
 
 interface Orb {
   sx: number
@@ -41,17 +34,13 @@ interface Ripple {
   born: number
 }
 
-let rect: TitleAuraRect | null = null
-let cw = 0
-let ch = 0
 let orbs: Orb[] = []
 let motes: Mote[] = []
 let ripples: Ripple[] = []
 let swell = 0
 let swellAt = 0
 
-function resetOrb(o: Orb, now: number, warm: boolean) {
-  if (!rect) return
+function resetOrb(o: Orb, rect: TitleAuraRect, cw: number, ch: number, now: number, warm: boolean) {
   const fs = rect.fs
   const edge = Math.floor(rand(0, 4))
   if (edge === 0) {
@@ -74,8 +63,7 @@ function resetOrb(o: Orb, now: number, warm: boolean) {
   o.bend = rand(-1, 1) * fs * 1.6
 }
 
-function ellipsePoint(theta: number, padX: number, padY: number, t: number, wobAmp = 1): [number, number] {
-  const r = rect as TitleAuraRect
+function ellipsePoint(r: TitleAuraRect, theta: number, padX: number, padY: number, t: number, wobAmp = 1): [number, number] {
   const cx = r.x + r.w / 2
   const cy = r.y + r.h / 2
   const wob = 1 + wobAmp * (0.045 * Math.sin(3 * theta + t * 0.9) + 0.03 * Math.sin(5 * theta - t * 1.4))
@@ -92,19 +80,10 @@ const BANDS = [
 
 const RIPPLE_MS = 650
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(w, h, now) {
-    if (!canvasRef.value) return
-    rect = titleAuraRect(canvasRef.value)
-    cw = w
-    ch = h
-    orbs = Array.from({ length: 3 }, () => {
-      const o = {} as Orb
-      resetOrb(o, now, true)
-      return o
-    })
+const canvas = useTitleAura({
+  staticT: 1.2,
+  additive: () => !props.light,
+  init() {
     motes = Array.from({ length: 6 }, () => ({
       theta: rand(0, Math.PI * 2),
       speed: rand(0.12, 0.3) * (Math.random() < 0.5 ? -1 : 1),
@@ -114,17 +93,20 @@ useElementCanvas(canvasRef, {
     ripples = []
     swell = 0
   },
-  draw(ctx, w, h, now, reduced) {
-    if (!rect) return
-    ctx.clearRect(0, 0, w, h)
-    const { color, glow } = palette.value
+  layout(rect, now) {
+    const el = canvas.value
+    if (!el) return
+    orbs = Array.from({ length: 3 }, () => {
+      const o = {} as Orb
+      resetOrb(o, rect, el.clientWidth, el.clientHeight, now, true)
+      return o
+    })
+  },
+  draw(ctx, { rect, t, now, reduced, w, h }) {
     const fs = rect.fs
-    const t = reduced ? 1.2 : now / 1000
     const cx = rect.x + rect.w / 2
     const cy = rect.y + rect.h / 2
     const sw = swell * Math.exp(-(now - swellAt) / 500)
-
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
 
     const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, rect.w * 0.62)
     core.addColorStop(0, withAlpha(glow, (props.light ? 0.1 : 0.14) + sw * 0.07))
@@ -143,6 +125,7 @@ useElementCanvas(canvasRef, {
       for (let i = 0; i <= K; i++) {
         const theta = (i / K) * Math.PI * 2
         const [px, py] = ellipsePoint(
+          rect,
           theta,
           b.padX * fs + sw * fs * 0.22,
           b.padY * fs + sw * fs * 0.16,
@@ -164,7 +147,7 @@ useElementCanvas(canvasRef, {
 
     for (const m of motesOn ? motes : []) {
       const theta = m.theta + t * m.speed
-      const [px, py] = ellipsePoint(theta, fs * (0.3 + m.pad * 0.7), fs * (0.25 + m.pad * 0.5), t)
+      const [px, py] = ellipsePoint(rect, theta, fs * (0.3 + m.pad * 0.7), fs * (0.25 + m.pad * 0.5), t)
       const a = 0.35 + 0.35 * Math.sin(t * 2.2 + m.tw)
       ctx.fillStyle = withAlpha(glow, a)
       ctx.beginPath()
@@ -179,12 +162,12 @@ useElementCanvas(canvasRef, {
         swell = Math.min(1, sw + 1)
         swellAt = now
         ripples.push({ theta: o.theta, born: now })
-        resetOrb(o, now, false)
+        resetOrb(o, rect, w, h, now, false)
         continue
       }
       if (p < 0) continue
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2
-      const [tx, ty] = ellipsePoint(o.theta, fs * 0.3, fs * 0.25, t)
+      const [tx, ty] = ellipsePoint(rect, o.theta, fs * 0.3, fs * 0.25, t)
       const mx = (o.sx + tx) / 2 + o.bend
       const my = (o.sy + ty) / 2 + o.bend * 0.4
       const q = (a: number, b: number, c: number, s: number) =>
@@ -204,14 +187,13 @@ useElementCanvas(canvasRef, {
     ripples = ripples.filter((r) => now - r.born < RIPPLE_MS)
     for (const r of ripples) {
       const p = (now - r.born) / RIPPLE_MS
-      const [px, py] = ellipsePoint(r.theta, fs * 0.3, fs * 0.25, t)
+      const [px, py] = ellipsePoint(rect, r.theta, fs * 0.3, fs * 0.25, t)
       ctx.strokeStyle = withAlpha(glow, (1 - p) * 0.35)
       ctx.lineWidth = fs * 0.04
       ctx.beginPath()
       ctx.arc(px, py, fs * (0.15 + p * 1.1), 0, Math.PI * 2)
       ctx.stroke()
     }
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

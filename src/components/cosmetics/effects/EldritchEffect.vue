@@ -2,16 +2,12 @@
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/cosmetics/effects'
-import { asColor, asNumber, boxRing, clampNumber, easeIn, easeOut, geometryMemo, hostMatches, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type RingPoly, type Vec } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asColor, asNumber, boxRing, clampNumber, easeIn, easeOut, geometryMemo, hostMatches, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type PctSizing, type RingGeometry, type RingPoly, type Vec, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed, watch } from 'vue'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 type Ctx = CanvasRenderingContext2D
 
@@ -232,9 +228,7 @@ function drawTentacle(g: Ctx, t: Tentacle, count: number, thick: number, reduced
     const nn = spineNormals[i]
     const w = widthAt(thick, i)
     const pulse = reduced ? 1 : 0.85 + Math.sin(tSec * 3 + i) * 0.15
-    g.beginPath()
-    g.arc(p.x + nn.x * w * side * 0.55, p.y + nn.y * w * side * 0.55, Math.max(0.6, w * 0.32 * pulse), 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, p.x + nn.x * w * side * 0.55, p.y + nn.y * w * side * 0.55, Math.max(0.6, w * 0.32 * pulse))
   }
 }
 
@@ -246,9 +240,7 @@ function drawDrips(g: Ctx, t: Tentacle, count: number, tSec: number) {
     const fall = ((tSec + hash01(seed + 1) * period) % period) / period
     const p = spinePts[Math.min(count - 1, Math.round(8 + hash01(seed + 2) * (count - 10)))]
     g.globalAlpha = 1 - fall
-    g.beginPath()
-    g.arc(p.x, p.y + fall * fall * t.len * 0.5, Math.max(0.8, t.thick * 0.12) * (1 - fall * 0.3), 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, p.x, p.y + fall * fall * t.len * 0.5, Math.max(0.8, t.thick * 0.12) * (1 - fall * 0.3))
   }
   g.globalAlpha = 1
 }

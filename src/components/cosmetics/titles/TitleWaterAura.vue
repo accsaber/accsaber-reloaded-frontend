@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleWaterAuraSpec } from '@/types/cosmetics/title'
 import { lighten } from '@/utils/color'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleWaterAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => ({
-  color: pickVariant(props.light, props.aura.lightColor, props.aura.color, '#3b82f6'),
-  foam: pickVariant(props.light, props.aura.lightFoam, props.aura.foam, '#e0f2fe'),
-}))
+const palette = pigments(props.aura, props.light, { color: '#3b82f6', foam: '#e0f2fe' })
 
 interface Ring {
   x: number
@@ -29,10 +25,9 @@ interface Drop {
   vy: number
 }
 
-let rect: TitleAuraRect | null = null
 let rings: Ring[] = []
 let drops: Drop[] = []
-let nextRing = 0
+let nextRing = 0.4
 let last = 0
 let clock = 0
 
@@ -47,10 +42,10 @@ function drawWave(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): v
   for (const layer of [0, 1]) {
     const g = ctx.createLinearGradient(x0, 0, x1, 0)
     const a = layer ? 0.16 : 0.3
-    g.addColorStop(0, withAlpha(palette.value.color, 0))
-    g.addColorStop(0.18, withAlpha(palette.value.color, a))
-    g.addColorStop(0.82, withAlpha(palette.value.color, a))
-    g.addColorStop(1, withAlpha(palette.value.color, 0))
+    g.addColorStop(0, withAlpha(palette.color, 0))
+    g.addColorStop(0.18, withAlpha(palette.color, a))
+    g.addColorStop(0.82, withAlpha(palette.color, a))
+    g.addColorStop(1, withAlpha(palette.color, 0))
     ctx.fillStyle = g
     ctx.beginPath()
     ctx.moveTo(x0, bottom)
@@ -63,10 +58,10 @@ function drawWave(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): v
     ctx.fill()
   }
   const foam = ctx.createLinearGradient(x0, 0, x1, 0)
-  foam.addColorStop(0, withAlpha(palette.value.foam, 0))
-  foam.addColorStop(0.2, withAlpha(palette.value.foam, 0.6))
-  foam.addColorStop(0.8, withAlpha(palette.value.foam, 0.6))
-  foam.addColorStop(1, withAlpha(palette.value.foam, 0))
+  foam.addColorStop(0, withAlpha(palette.foam, 0))
+  foam.addColorStop(0.2, withAlpha(palette.foam, 0.6))
+  foam.addColorStop(0.8, withAlpha(palette.foam, 0.6))
+  foam.addColorStop(1, withAlpha(palette.foam, 0))
   ctx.strokeStyle = foam
   ctx.lineWidth = Math.max(0.6, r.fs * 0.04)
   ctx.beginPath()
@@ -83,7 +78,7 @@ function drawRings(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): 
   for (const ring of rings) {
     const u = (clock - ring.born) / 1.4
     const x = r.x + r.w * ring.x
-    ctx.strokeStyle = withAlpha(palette.value.foam, 0.7 * (1 - u))
+    ctx.strokeStyle = withAlpha(palette.foam, 0.7 * (1 - u))
     ctx.lineWidth = Math.max(0.5, r.fs * 0.035 * (1 - u * 0.6))
     ctx.beginPath()
     ctx.ellipse(x, waveY(r, ring.x, t), r.fs * (0.1 + u * 0.9), r.fs * (0.03 + u * 0.22), 0, 0, Math.PI * 2)
@@ -96,27 +91,18 @@ function drawDrops(ctx: CanvasRenderingContext2D, r: TitleAuraRect): void {
     const age = clock - d.born
     const x = r.x + r.w * d.x + d.vx * age * r.fs
     const y = waveY(r, d.x, clock) - (d.vy * age - 6 * age * age) * r.fs
-    ctx.fillStyle = withAlpha(lighten(palette.value.color, 0.3), 0.85)
+    ctx.fillStyle = withAlpha(lighten(palette.color, 0.3), 0.85)
     ctx.beginPath()
     ctx.ellipse(x, y, r.fs * 0.05, r.fs * 0.075, 0, 0, Math.PI * 2)
     ctx.fill()
   }
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-    rings = []
-    drops = []
+useTitleAura({
+  init(_rect, now) {
     last = now
-    clock = 0
-    nextRing = 0.4
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
+  draw(ctx, { rect, now, reduced }) {
     const dt = frameDelta(now, last, reduced)
     last = now
     clock = reduced ? 3 : clock + dt

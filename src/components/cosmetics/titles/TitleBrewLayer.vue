@@ -21,7 +21,7 @@ import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
+import { useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   brew: TitleBrewSpec
@@ -99,6 +99,16 @@ const sim: BrewState = brewState(
   rand(1.5, 3),
 )
 
+watch(
+  () => props.brew.ingredients.map((ing) => `${ing.color}${ing.lightColor}${ing.ink}`).join(),
+  () => {
+    sim.from = sim.to = ingredientColor(ingredientIdx)
+    sim.blend = 1
+    for (const d of sim.drops) d.splash = Math.max(d.splash, SINK_S)
+    emit('liquid', sim.to)
+  },
+)
+
 function surfaceY(): number {
   return rect ? rect.y + rect.h * (props.brew.surface ?? 0.66) : 0
 }
@@ -148,8 +158,9 @@ function drawLiquid(ctx: Ctx, t: number, color: string): void {
   if (!rect) return
   liquidPath(ctx, t)
   const g = ctx.createLinearGradient(0, surfaceY(), 0, bottomY())
-  g.addColorStop(0, darken(color, 0.2))
-  g.addColorStop(1, darken(color, 0.65))
+  const depth = props.brew.depth ?? 0.65
+  g.addColorStop(0, darken(color, depth * 0.3))
+  g.addColorStop(1, darken(color, depth))
   ctx.fillStyle = g
   ctx.fill()
   ctx.save()

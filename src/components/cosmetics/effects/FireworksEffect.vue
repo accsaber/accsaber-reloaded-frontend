@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, boxScale, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, boxScale, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const FW_COLORS = ['#ff5a5a', '#ffd75e', '#6ee7ff', '#8dff7a', '#c99bff', '#ff9c58']
 
@@ -112,13 +107,6 @@ const fireworks = computed<Firework[]>(() => {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
 .comp-fx-fw {
   position: absolute;
   width: 0;

@@ -7,14 +7,14 @@ import type {
   DryBonesPart,
   DryBonesPathKind,
 } from '@/types/cosmetics/border'
-import { enterUnitSpace, frameDelta, primaryFillHex, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { enterUnitSpace, frameDelta, primaryFillHex, withAlpha, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
 import { clamp01 } from '@/utils/math'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderDryBonesOverlaySpec }>()
 
-const MARGIN = 20
 const FLOOR = 98.5
 const GRAVITY = 260
 const REBUILD_S = 0.5
@@ -332,9 +332,7 @@ function drawPuffs(ctx: CanvasRenderingContext2D): void {
     const age = (clock - p.born) / PUFF_LIFE_S
     ctx.fillStyle = withAlpha(props.overlay.shade, 0.45 * (1 - age))
     for (let k = -1; k <= 1; k++) {
-      ctx.beginPath()
-      ctx.arc(p.x + k * (2 + age * 4), p.y - age * 3, 1 + age * 2.5, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, p.x + k * (2 + age * 4), p.y - age * 3, 1 + age * 2.5)
     }
   }
 }
@@ -343,7 +341,7 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const lit = socketHex.value
   const amp = jitterAmp()
   ctx.save()
-  enterUnitSpace(ctx, w, h, MARGIN)
+  enterUnitSpace(ctx, w, h, OVERLAY_MARGIN)
   drawPuffs(ctx)
   if (phase === 'collapse' || phase === 'pile') {
     let i = 0
@@ -356,7 +354,7 @@ function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number): void {
 }
 
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-const pointer = useStackPointer(canvasRef, MARGIN, () => props.overlay.hover !== false)
+const pointer = useStackPointer(canvasRef, OVERLAY_MARGIN, () => props.overlay.hover !== false)
 
 useElementCanvas(canvasRef, {
   init(_w, _h, nowMs) {

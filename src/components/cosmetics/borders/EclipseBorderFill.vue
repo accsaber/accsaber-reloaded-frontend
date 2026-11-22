@@ -8,7 +8,7 @@ import { overlaySpace, withAlpha, type OverlaySpace } from '@/utils/cosmetics/ov
 import { blitSceneLayer, paintSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import { hash01 } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { fillCircle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
@@ -89,9 +89,7 @@ function drawStars(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase): void {
   for (let i = 0; i < STARS; i++) {
     const tw = 0.5 + 0.5 * Math.sin(ph.c * (2 + hash01(i * 3)) + i)
     ctx.globalAlpha = ph.tot * (0.35 + 0.55 * tw)
-    ctx.beginPath()
-    ctx.arc(sp.toX(hash01(i * 7) * 150 - 25), sp.toY(hash01(i * 11) * 118 - 25), (0.35 + hash01(i * 13) * 0.55) * sp.s, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, sp.toX(hash01(i * 7) * 150 - 25), sp.toY(hash01(i * 11) * 118 - 25), (0.35 + hash01(i * 13) * 0.55) * sp.s)
   }
   ctx.globalAlpha = 1
 }
@@ -117,7 +115,7 @@ function drawCorona(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase): void {
     ctx.quadraticCurveTo(cx + Math.cos(a + 0.12) * (r + len * 0.5), cy + Math.sin(a + 0.12) * (r + len * 0.5), cx + Math.cos(a) * (r + len), cy + Math.sin(a) * (r + len))
     ctx.stroke()
   }
-  ctx.strokeStyle = withAlpha(props.fill.prominence, 0.9 * ph.tot)
+  ctx.strokeStyle = withAlpha(props.fill.prominence ?? props.fill.corona, 0.9 * ph.tot)
   ctx.lineWidth = Math.max(0.6, 0.6 * sp.s)
   for (let i = 0; i < 4; i++) {
     const a = i * 1.7 + ph.c * 0.05
@@ -184,13 +182,9 @@ function drawSunAndMoon(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase): void {
     ctx.fillRect(cx - r * 3, cy - r * 3, r * 6, r * 6)
   }
   ctx.fillStyle = ink.value.pale
-  ctx.beginPath()
-  ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, cx, cy, r)
   ctx.fillStyle = ink.value.moon
-  ctx.beginPath()
-  ctx.arc(sp.toX(ph.moonX), cy, r * 1.02, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, sp.toX(ph.moonX), cy, r * 1.02)
   drawBeads(ctx, sp, ph, cx, cy, r)
 }
 
@@ -207,9 +201,7 @@ function drawBeads(ctx: Ctx, sp: OverlaySpace, ph: EclipsePhase, cx: number, cy:
   ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * edge})`
   for (let i = -2; i <= 2; i++) {
     const a = side > 0 ? i * 0.35 : Math.PI + i * 0.35
-    ctx.beginPath()
-    ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, sp.s * 0.35 * (1 - Math.abs(i) * 0.25), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r, sp.s * 0.35 * (1 - Math.abs(i) * 0.25))
   }
 }
 
@@ -374,7 +366,6 @@ function drawScene(ctx: Ctx, w: number, h: number, t: number): void {
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   resize() {
     groundFill = null
     groundLine = null

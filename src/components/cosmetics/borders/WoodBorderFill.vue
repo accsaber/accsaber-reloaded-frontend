@@ -104,7 +104,6 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
   animated: false,
-  init() {},
   draw: paintBoard,
 })
 </script>

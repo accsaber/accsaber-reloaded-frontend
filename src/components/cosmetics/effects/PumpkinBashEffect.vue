@@ -2,19 +2,15 @@
 import EffectCanvas from '@/components/cosmetics/effects/EffectCanvas.vue'
 import { useEffectSurface } from '@/composables/useEffectSurface'
 import type { Composition } from '@/types/cosmetics/effects'
-import { activeEvents, asColor, asNumber, boxRing, easeOut, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type EffectMeasure, type PctSizing, type RingGeometry, type Vec } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { activeEvents, asColor, asNumber, boxRing, easeOut, pctSize, readPctSizing, ringAt, type ContentBox, type EffectFrame, type PctSizing, type RingGeometry, type Vec, type EffectProps } from '@/utils/cosmetics/effects'
 import { lerpHex } from '@/utils/color'
 import { stainPath } from '@/utils/cosmetics/splat'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 import { clamp01 } from '@/utils/math'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 type Ctx = CanvasRenderingContext2D
 
@@ -153,9 +149,7 @@ function drawStain(g: Ctx, t: Vec, R: number, seed: number, look: SplatLook) {
     const a = hash01(s) * Math.PI * 2
     const d = R * (1.05 + hash01(s + 1) * 0.55)
     const r = R * (0.06 + hash01(s + 2) * 0.1)
-    g.beginPath()
-    g.arc(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d, r, 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, t.x + Math.cos(a) * d, t.y + Math.sin(a) * d, r)
   }
   g.globalAlpha = look.alpha * 0.95
   g.fillStyle = look.pulp
@@ -193,9 +187,7 @@ function drawPips(g: Ctx, t: Vec, R: number, seed: number, look: SplatLook) {
     g.quadraticCurveTo(0, rx * 0.75, -rx, 0)
     g.fill()
     g.fillStyle = look.base
-    g.beginPath()
-    g.arc(rx * 0.45, 0, rx * 0.18, 0, Math.PI * 2)
-    g.fill()
+    fillCircle(g, rx * 0.45, 0, rx * 0.18)
     g.restore()
   }
 }

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleBoilSpec, TitleGraffitiAuraSpec } from '@/types/cosmetics/title'
 import { dripPath } from '@/utils/cosmetics/splat'
 import { boilOffsetEm, boilStep } from '@/utils/cosmetics/titleBoil'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleGraffitiAuraSpec
@@ -16,13 +15,12 @@ const props = defineProps<{
 type Ctx = CanvasRenderingContext2D
 type Pt = [number, number]
 
-const paint = computed(() => pickVariant(props.light, props.aura.lightColor, props.aura.color, '#ffffff'))
+const paint = pigments(props.aura, props.light, { color: '#ffffff' }).color
 
 const SPRITES = 4
 const CAP_HEIGHT = 0.72
 
 let sprites: HTMLCanvasElement[] = []
-let rect: TitleAuraRect | null = null
 let drawn = -1
 
 function jitter(pts: Pt[], amp: number, seed: number): Pt[] {
@@ -94,9 +92,7 @@ function paintMarks(g: Ctx, r: TitleAuraRect, seed: number): void {
   g.globalAlpha = 1
 }
 
-function buildSprites(w: number, h: number, scale: number): void {
-  const r = rect
-  if (!r) return
+function buildSprites(r: TitleAuraRect, w: number, h: number, scale: number): void {
   sprites = Array.from({ length: SPRITES }, (_, i) => {
     const c = document.createElement('canvas')
     c.width = Math.ceil(w * scale)
@@ -104,27 +100,23 @@ function buildSprites(w: number, h: number, scale: number): void {
     const g = c.getContext('2d')
     if (!g) return c
     g.scale(scale, scale)
-    g.fillStyle = paint.value
-    g.strokeStyle = paint.value
+    g.fillStyle = paint
+    g.strokeStyle = paint
     paintMarks(g, r, 1000 + i * 211)
     return c
   })
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-function setup(w: number, h: number, _now: number, scale: number): void {
-  rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-  buildSprites(w, h, scale)
-  drawn = -1
-}
-
-useElementCanvas(canvasRef, {
-  init: setup,
-  resize: setup,
-  draw(ctx, w, h, now, reduced) {
+const canvasRef = useTitleAura({
+  keep: true,
+  layout(rect, _now, scale) {
+    const el = canvasRef.value
+    if (el) buildSprites(rect, el.clientWidth, el.clientHeight, scale)
+    drawn = -1
+  },
+  draw(ctx, { rect, now, reduced, w, h }) {
     const step = reduced ? 0 : boilStep(now, props.boil)
-    if (step === drawn || !rect || sprites.length === 0) return
+    if (step === drawn || sprites.length === 0) return
     drawn = step
     const [dx, dy] = reduced ? [0, 0] : boilOffsetEm(step, props.boil)
     ctx.clearRect(0, 0, w, h)

@@ -1,5 +1,8 @@
+import { fillTriple } from '@/utils/cosmetics/fillColors'
 import type { BorderColorFill } from '@/types/cosmetics/border'
 import { luminance, parseHex } from '@/utils/color'
+
+export const OVERLAY_MARGIN = 20
 
 export interface OverlaySpace {
   sx: number
@@ -69,5 +72,5 @@ export function primaryFillHex(fill: BorderColorFill | undefined): string | null
   if (fill.type === 'toon') return fill.line
   if (fill.type === 'starshine') return fill.light
   if (fill.type === 'lights') return fill.colors[0] ?? null
-  return null
+  return fillTriple(fill)?.[1] ?? null
 }

@@ -12,19 +12,17 @@ import type {
 } from '@/types/cosmetics/border'
 import type { Gradient } from '@/types/cosmetics/common'
 import {
-  gradientToCss,
   interpolateBorderColorState,
   isAnimated,
   isCanvasFill,
   pickInterpolatedState,
-  shapeTracks,
-  trackPathD,
 } from '@/utils/cosmetics/interpolate'
-import { randBetween as rand } from '@/utils/random'
+import { shapeTracks, trackPathD } from '@/utils/cosmetics/shapeMorph'
 import { DEFAULT_AVATAR_MASK } from '@/utils/avatarBox'
-import { ringFrom, ringPathD } from '@/utils/cosmetics/effects'
+import { easeInOut, ringFrom, ringPathD } from '@/utils/cosmetics/effects'
 import { outerWall, shapeFrameBounds, shapeFrameMargin, shapeRing, type FrameBounds } from '@/utils/shapeSilhouette'
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, useTemplateRef } from 'vue'
+import DominionEcho from '@/components/cosmetics/borders/DominionEcho.vue'
 import PixelBorderRenderer from '@/components/cosmetics/borders/PixelBorderRenderer.vue'
 import { clamp } from '@/utils/math'
 
@@ -54,7 +52,6 @@ const shape = computed<BorderShapeValue | null>(() =>
 
 const isPixelShape = computed(() => shape.value?.renderMode === 'pixel')
 
-const colorIsConic = computed(() => props.color?.states?.[0]?.fill?.type === 'conic')
 
 const canvasFillActive = computed(() => !!canvasFill.value)
 
@@ -92,16 +89,14 @@ const shapeFxActive = computed(
   () =>
     !reducedMotion.value
     && !isPixelShape.value
-    && (!!shape.value?.glisten?.enabled || !!shape.value?.sparkles?.enabled),
+    && !!shape.value?.glisten?.enabled,
 )
 
 const needsTimeline = computed(
   () =>
     isAnimated(props.color)
-    || (colorIsConic.value && isAnimated(shape.value))
     || isAnimated(shape.value)
     || shapeFxActive.value
-    || (!!dominionFill.value && !reducedMotion.value),
 )
 
 const frameRef = useTemplateRef<Element>('frame')
@@ -120,7 +115,7 @@ const colorState = computed<BorderColorStateValue | null>(() => {
 const effectiveGradient = computed<Gradient | null>(() => {
   const fill = colorState.value?.fill
   if (!fill) return null
-  if (fill.type === 'linear' || fill.type === 'radial' || fill.type === 'conic') return fill
+  if (fill.type === 'linear' || fill.type === 'radial') return fill
   if (fill.type === 'pixel_metal') {
     return {
       type: 'linear',
@@ -199,10 +194,6 @@ const tracks = computed(() => {
   }
 })
 
-function easeInOutLocal(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-}
-
 interface ShapeBracket {
   idxA: number
   idxB: number
@@ -245,6 +236,8 @@ function currentShapeBracket(): ShapeBracket | null {
   return { idxA: states.length - 1, idxB: states.length - 1, localT: 0 }
 }
 
+let heldPaths: string[] | null = null
+
 const lerpedPaths = computed<string[] | null>(() => {
   const states = sortedShapeStates.value
   if (states.length === 0) return null
@@ -253,8 +246,11 @@ const lerpedPaths = computed<string[] | null>(() => {
   const bracket = currentShapeBracket()
   if (!list || !bracket) return (states[0].paths ?? []).map((p) => p.d)
   const { idxA, idxB } = bracket
-  const eased = idxA === idxB ? 0 : easeInOutLocal(bracket.localT)
-  return list.map((track) => trackPathD(track, idxA, idxB, eased))
+  const eased = idxA === idxB ? 0 : easeInOut(bracket.localT)
+  const next = list.map((track) => trackPathD(track, idxA, idxB, eased))
+  if (heldPaths && next.length === heldPaths.length && next.every((d, i) => d === heldPaths![i])) return heldPaths
+  heldPaths = next
+  return next
 })
 
 let gradientIdCounter = 0
@@ -284,61 +280,6 @@ const glistenBand = computed(() => {
   }
 })
 
-const SHAPE_STAR_D = 'M0,-5 Q0.9,-0.9 5,0 Q0.9,0.9 0,5 Q-0.9,0.9 -5,0 Q-0.9,-0.9 0,-5 Z'
-
-interface ShapeSparkle {
-  id: number
-  bornAt: number
-  x: number
-  y: number
-  size: number
-  rot: number
-}
-
-let shapeSparkleId = 0
-let nextShapeSparkleAt = -1
-const activeShapeSparkles = ref<ShapeSparkle[]>([])
-
-watch(() => shape.value, () => {
-  activeShapeSparkles.value = []
-  nextShapeSparkleAt = -1
-})
-
-watch(tMs, (now) => {
-  const spec = shape.value?.sparkles
-  if (!spec?.enabled || reducedMotion.value || isPixelShape.value) return
-  const fade = spec.fadeMs ?? 900
-  if (nextShapeSparkleAt < 0) nextShapeSparkleAt = now
-  if (now >= nextShapeSparkleAt) {
-    const { minX, minY, w, h } = vbBounds.value
-    activeShapeSparkles.value.push({
-      id: ++shapeSparkleId,
-      bornAt: now,
-      x: rand(minX - 15, minX + w + 15),
-      y: rand(minY - 35, minY + h + 20),
-      size: (spec.sizePx ?? 4) * rand(0.8, 1.4),
-      rot: rand(0, 90),
-    })
-    nextShapeSparkleAt = now + (1000 / (spec.perSecond ?? 2)) * rand(0.5, 1.5)
-  }
-  if (activeShapeSparkles.value.some((s) => now - s.bornAt >= fade)) {
-    activeShapeSparkles.value = activeShapeSparkles.value.filter((s) => now - s.bornAt < fade)
-  }
-})
-
-function shapeSparkleOpacity(s: ShapeSparkle): number {
-  const fade = shape.value?.sparkles?.fadeMs ?? 900
-  const p = Math.min(1, (tMs.value - s.bornAt) / fade)
-  return Math.sin(Math.PI * p)
-}
-
-function shapeSparkleTransform(s: ShapeSparkle): string {
-  const fade = shape.value?.sparkles?.fadeMs ?? 900
-  const p = Math.min(1, (tMs.value - s.bornAt) / fade)
-  const k = (s.size / 10) * (0.6 + 0.5 * Math.sin(Math.PI * p))
-  return `translate(${s.x} ${s.y}) rotate(${s.rot}) scale(${k})`
-}
-
 const fallbackColor = 'currentColor'
 const svgColor = computed(() => solidColor.value ?? fallbackColor)
 
@@ -360,8 +301,6 @@ function pathFillRef(p: BorderShapePathValue): string | undefined {
   return fill
 }
 
-const conicMaskId = `pbr-kmask-${Math.random().toString(36).slice(2, 9)}`
-
 interface MaskPathEntry {
   d: string
   fill: string
@@ -371,38 +310,6 @@ interface MaskPathEntry {
   strokeLinejoin: 'miter' | 'round' | 'bevel'
   transform?: string
 }
-
-const conicMaskPaths = computed<MaskPathEntry[]>(() => {
-  if (!colorIsConic.value) return []
-  const lerped = lerpedPaths.value
-  const reference = basePaths.value
-  if (!lerped || reference.length === 0) return []
-  return reference.map((p, i) => ({
-    d: lerped[i] ?? p.d,
-    stroke: p.stroke && p.stroke !== 'currentColor' && p.stroke !== 'inherit' ? p.stroke : 'white',
-    fill: p.fill && p.fill !== 'currentColor' && p.fill !== 'inherit' ? p.fill : 'none',
-    strokeWidth: p.strokeWidth ?? 1,
-    strokeLinecap: (p.strokeLinecap ?? 'butt') as MaskPathEntry['strokeLinecap'],
-    strokeLinejoin: (p.strokeLinejoin ?? 'miter') as MaskPathEntry['strokeLinejoin'],
-    transform: p.transform,
-  }))
-})
-
-const conicMaskTransform = computed(() => {
-  const { minX, minY, w, h } = vbBounds.value
-  return `scale(${1 / w} ${1 / h}) translate(${-minX} ${-minY})`
-})
-
-const conicMaskStyle = computed<Record<string, string> | undefined>(() => {
-  if (!colorIsConic.value) return undefined
-  if (!colorState.value || colorState.value.fill.type !== 'conic') return undefined
-  if (conicMaskPaths.value.length === 0) return undefined
-  return {
-    background: gradientToCss(colorState.value.fill),
-    mask: `url(#${conicMaskId})`,
-    WebkitMask: `url(#${conicMaskId})`,
-  }
-})
 
 function isThemedRef(ref: string | undefined): boolean {
   return ref === 'currentColor' || ref === 'inherit'
@@ -507,15 +414,6 @@ const cosmicMaskStyle = computed<Record<string, string> | undefined>(() => {
   }
 })
 
-function echoWin(c: number, a: number, b: number): number {
-  return c >= a && c < b ? (c - a) / (b - a) : -1
-}
-
-function echoDir(i: number, n: number): [number, number] {
-  const ang = (i / Math.max(1, n)) * Math.PI * 2 - Math.PI / 2
-  return [Math.cos(ang), Math.sin(ang)]
-}
-
 const echoPaths = computed<{ d: string; transform?: string }[]>(() => {
   if (rimPaths.value.length) {
     return rimPaths.value.map((e) => ({ d: e.d, transform: e.path.transform }))
@@ -523,53 +421,7 @@ const echoPaths = computed<{ d: string; transform?: string }[]>(() => {
   return [{ d: DEFAULT_RING_D }]
 })
 
-const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string; opacity: number }[] } | null>(() => {
-  const fill = dominionFill.value
-  if (!fill || reducedMotion.value) return null
-  const interval = (fill.intervalS ?? 5) * 1000
-  const micro = (fill.microS ?? 1.9) * 1000
-  const t = tMs.value
-  const c = (t % interval) / interval
-  const split = echoWin(c, 0.6, 0.72)
-  const hold = echoWin(c, 0.72, 0.82)
-  const fuse = echoWin(c, 0.82, 0.92)
-  const flash = echoWin(c, 0.92, 1)
-  let amt = 0
-  if (split >= 0) amt = 1 - Math.pow(1 - split, 3)
-  else if (hold >= 0) amt = 1
-  else if (fuse >= 0) amt = 1 - Math.pow(fuse, 2)
-  const colors = fill.colors
-  const { w, h } = vbBounds.value
-  const unit = Math.max(w, h) / 100
-  const ghosts: { dx: number; dy: number; color: string; opacity: number }[] = []
-  if (amt > 0.02) {
-    for (let i = 0; i < colors.length; i++) {
-      const d = echoDir(i, colors.length)
-      const wob = Math.sin((t / 1000) * 3.1 + i * 2.2) * 1.6 * amt
-      ghosts.push({
-        dx: (d[0] * 7 * amt + wob * d[1]) * unit,
-        dy: (d[1] * 7 * amt + wob * d[0]) * unit,
-        color: colors[i],
-        opacity: 0.7,
-      })
-    }
-  } else if (flash < 0 && colors.length > 1) {
-    const mc = (t % micro) / micro
-    const tb = echoWin(mc, 0.72, 0.94)
-    if (tb >= 0) {
-      const ta = Math.sin(tb * Math.PI)
-      ghosts.push(
-        { dx: 2.6 * ta * unit, dy: -1.4 * ta * unit, color: colors[0], opacity: 0.6 * ta },
-        { dx: -2.6 * ta * unit, dy: 1.4 * ta * unit, color: colors[colors.length - 1], opacity: 0.6 * ta },
-      )
-    }
-  }
-  const flashAlpha = flash >= 0 ? Math.sin(flash * Math.PI) : 0
-  if (flashAlpha > 0.02) {
-    ghosts.push({ dx: 0, dy: 0, color: fill.body ?? '#ffffff', opacity: flashAlpha })
-  }
-  return ghosts.length > 0 ? { ghosts } : null
-})
+const echoUnit = computed(() => Math.max(vbBounds.value.w, vbBounds.value.h) / 100)
 </script>
 
 <template>
@@ -653,32 +505,15 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
       />
     </svg>
   </div>
-  <svg
-    v-if="dominionEcho"
+  <DominionEcho
+    v-if="dominionFill"
     class="profile-border__echo"
     :style="cosmicHostStyle"
-    :viewBox="cosmicViewBox"
-    preserveAspectRatio="none"
-    aria-hidden="true"
-  >
-    <g
-      v-for="(gh, gi) in dominionEcho.ghosts"
-      :key="gi"
-      :transform="`translate(${gh.dx} ${gh.dy})`"
-      :opacity="gh.opacity"
-    >
-      <path
-        v-for="(entry, i) in echoPaths"
-        :key="i"
-        :d="entry.d"
-        fill="none"
-        :stroke="gh.color"
-        stroke-width="1.6"
-        stroke-linejoin="round"
-        :transform="entry.transform"
-      />
-    </g>
-  </svg>
+    :fill="dominionFill"
+    :paths="echoPaths"
+    :view-box="cosmicViewBox"
+    :unit="echoUnit"
+  />
   <component
     :is="fillAura.component"
     v-if="fillAura"
@@ -688,42 +523,6 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
     v-bind="fillAura.attrs"
   />
   </template>
-  <div
-    v-else-if="basePaths.length && colorIsConic"
-    ref="frame"
-    class="profile-border__conic"
-    :style="conicMaskStyle"
-    aria-hidden="true"
-  >
-    <svg class="profile-border__mask-defs" aria-hidden="true">
-      <defs>
-        <mask
-          :id="conicMaskId"
-          mask-type="alpha"
-          maskUnits="objectBoundingBox"
-          maskContentUnits="objectBoundingBox"
-          x="0"
-          y="0"
-          width="1"
-          height="1"
-        >
-          <g :transform="conicMaskTransform">
-            <path
-              v-for="(entry, i) in conicMaskPaths"
-              :key="i"
-              :d="entry.d"
-              :fill="entry.fill"
-              :stroke="entry.stroke"
-              :stroke-width="entry.strokeWidth"
-              :stroke-linecap="entry.strokeLinecap"
-              :stroke-linejoin="entry.strokeLinejoin"
-              :transform="entry.transform"
-            />
-          </g>
-        </mask>
-      </defs>
-    </svg>
-  </div>
   <svg
     v-else-if="basePaths.length"
     ref="frame"
@@ -807,22 +606,11 @@ const dominionEcho = computed<{ ghosts: { dx: number; dy: number; color: string;
         :fill="`url(#${glistenGradId})`"
       />
     </g>
-    <g v-if="shapeFxActive && activeShapeSparkles.length" :clip-path="`url(#${clipId})`">
-      <path
-        v-for="s in activeShapeSparkles"
-        :key="s.id"
-        :d="SHAPE_STAR_D"
-        fill="#ffffff"
-        :opacity="shapeSparkleOpacity(s)"
-        :transform="shapeSparkleTransform(s)"
-      />
-    </g>
   </svg>
 </template>
 
 <style scoped>
-.profile-border__shape,
-.profile-border__conic {
+.profile-border__shape {
   position: absolute;
   inset: 0;
   width: 100%;

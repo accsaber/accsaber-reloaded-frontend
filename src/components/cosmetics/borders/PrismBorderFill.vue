@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { PrismFill } from '@/types/cosmetics/border'
+import { parseHex, type RGB } from '@/utils/color'
 import { overlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { blitSceneLayer, paintSceneLayer } from '@/utils/cosmetics/sceneLayer'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 
@@ -14,6 +16,8 @@ const MARGIN = props.margin ?? 25
 const LO = -MARGIN
 const HI = 100 + MARGIN
 const GRID = 9
+const DEFAULT_FRINGE_A = 'rgba(255,50,170,0.6)'
+const DEFAULT_FRINGE_B = 'rgba(50,190,255,0.6)'
 
 interface Facet {
   pts: [number, number][]
@@ -38,16 +42,8 @@ let stepAt = 0
 let nextSnap = 0
 let glitchUntil = 0
 let flare: { facet: Facet; start: number } | null = null
-
-function parseRgb(hex: string): [number, number, number] {
-  const m = hex.match(/^#([0-9a-fA-F]{6})/)
-  if (!m) return [249, 168, 212]
-  return [
-    parseInt(m[1].slice(0, 2), 16),
-    parseInt(m[1].slice(2, 4), 16),
-    parseInt(m[1].slice(4, 6), 16),
-  ]
-}
+let base: HTMLCanvasElement | null = null
+let baseFringe = false
 
 function buildFacets() {
   const span = HI - LO
@@ -88,6 +84,7 @@ function buildFacets() {
 }
 
 function assignGlitch() {
+  base = null
   const shearPct = props.fill.shearPct ?? 0.45
   for (const facet of facets) {
     if (Math.random() < shearPct) {
@@ -109,6 +106,55 @@ function assignGlitch() {
   }
 }
 
+const FALLBACK_LO: RGB = [249, 168, 212]
+
+function paintFacets(ctx: CanvasRenderingContext2D, w: number, h: number, fringe: boolean) {
+  const lo = parseHex(props.fill.lo ?? props.fill.rose) ?? FALLBACK_LO
+  const hi = (props.fill.hi ? parseHex(props.fill.hi) : null) ?? [255, 255, 255]
+  const edge = props.fill.edge
+  const fringeA = props.fill.fringeA ?? DEFAULT_FRINGE_A
+  const fringeB = props.fill.fringeB ?? DEFAULT_FRINGE_B
+  const { sx, toX, toY } = overlaySpace(w, h, MARGIN)
+
+  ctx.clearRect(0, 0, w, h)
+  ctx.fillStyle = props.fill.ink ?? '#2a1020'
+  ctx.fillRect(0, 0, w, h)
+
+  for (const facet of facets) {
+    const b = 0.3 + facet.bias + 0.55 * Math.pow(Math.max(0, Math.cos(facet.th - light)), 2)
+    const v = Math.min(1, b)
+    const r = Math.round(lo[0] + (hi[0] - lo[0]) * v)
+    const g = Math.round(lo[1] + (hi[1] - lo[1]) * v)
+    const bl = Math.round(lo[2] + (hi[2] - lo[2]) * v)
+    const ox = fringe ? facet.gx : 0
+    const oy = fringe ? facet.gy : 0
+
+    ctx.beginPath()
+    ctx.moveTo(toX(facet.pts[0][0] + ox), toY(facet.pts[0][1] + oy))
+    ctx.lineTo(toX(facet.pts[1][0] + ox), toY(facet.pts[1][1] + oy))
+    ctx.lineTo(toX(facet.pts[2][0] + ox), toY(facet.pts[2][1] + oy))
+    ctx.closePath()
+    ctx.fillStyle = `rgba(${r},${g},${bl},${0.68 + 0.32 * v})`
+    ctx.fill()
+    ctx.lineWidth = Math.max(1, sx * 0.5)
+    ctx.strokeStyle = edge
+    ctx.globalAlpha = 0.38
+    ctx.stroke()
+    ctx.globalAlpha = 1
+    if (fringe) {
+      ctx.save()
+      ctx.lineWidth = Math.max(1, sx * 0.7)
+      ctx.translate(sx * 1.4, 0)
+      ctx.strokeStyle = fringeA
+      ctx.stroke()
+      ctx.translate(-sx * 2.8, 0)
+      ctx.strokeStyle = fringeB
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+}
+
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
@@ -123,11 +169,8 @@ useElementCanvas(canvasRef, {
     flare = null
   },
   draw(ctx, w, h, now, reduced) {
-    const lo = parseRgb(props.fill.lo ?? props.fill.rose)
-    const hi = props.fill.hi ? parseRgb(props.fill.hi) : [255, 255, 255]
-    const edge = props.fill.edge
-    const fringeA = props.fill.fringeA ?? 'rgba(255,50,170,0.6)'
-    const fringeB = props.fill.fringeB ?? 'rgba(50,190,255,0.6)'
+    const fringeA = props.fill.fringeA ?? DEFAULT_FRINGE_A
+    const fringeB = props.fill.fringeB ?? DEFAULT_FRINGE_B
     const glitchMs = props.fill.glitchMs ?? 400
     const steps = props.fill.steps ?? 3
 
@@ -154,43 +197,11 @@ useElementCanvas(canvasRef, {
     const fringe = reduced || now < glitchUntil
     const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
 
-    ctx.clearRect(0, 0, w, h)
-    ctx.fillStyle = props.fill.ink ?? '#2a1020'
-    ctx.fillRect(0, 0, w, h)
-
-    for (const facet of facets) {
-      const b = 0.3 + facet.bias + 0.55 * Math.pow(Math.max(0, Math.cos(facet.th - light)), 2)
-      const v = Math.min(1, b)
-      const r = Math.round(lo[0] + (hi[0] - lo[0]) * v)
-      const g = Math.round(lo[1] + (hi[1] - lo[1]) * v)
-      const bl = Math.round(lo[2] + (hi[2] - lo[2]) * v)
-      const ox = fringe ? facet.gx : 0
-      const oy = fringe ? facet.gy : 0
-
-      ctx.beginPath()
-      ctx.moveTo(toX(facet.pts[0][0] + ox), toY(facet.pts[0][1] + oy))
-      ctx.lineTo(toX(facet.pts[1][0] + ox), toY(facet.pts[1][1] + oy))
-      ctx.lineTo(toX(facet.pts[2][0] + ox), toY(facet.pts[2][1] + oy))
-      ctx.closePath()
-      ctx.fillStyle = `rgba(${r},${g},${bl},${0.68 + 0.32 * v})`
-      ctx.fill()
-      ctx.lineWidth = Math.max(1, sx * 0.5)
-      ctx.strokeStyle = edge
-      ctx.globalAlpha = 0.38
-      ctx.stroke()
-      ctx.globalAlpha = 1
-      if (fringe) {
-        ctx.save()
-        ctx.lineWidth = Math.max(1, sx * 0.7)
-        ctx.translate(sx * 1.4, 0)
-        ctx.strokeStyle = fringeA
-        ctx.stroke()
-        ctx.translate(-sx * 2.8, 0)
-        ctx.strokeStyle = fringeB
-        ctx.stroke()
-        ctx.restore()
-      }
+    if (!base || baseFringe !== fringe) {
+      base = paintSceneLayer(ctx, (layer) => paintFacets(layer, w, h, fringe))
+      baseFringe = fringe
     }
+    blitSceneLayer(ctx, base)
 
     if (!reduced) {
       if (!flare && Math.random() < 0.004) {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { useTitleAura } from '@/composables/useTitleAura'
 import type { TitleSplatterAuraSpec } from '@/types/cosmetics/title'
 import { easeOut } from '@/utils/cosmetics/effects'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { dripPath, stainPath } from '@/utils/cosmetics/splat'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import { pickVariant, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
   aura: TitleSplatterAuraSpec
@@ -35,7 +35,6 @@ interface Splat {
   alpha: number
 }
 
-let rect: TitleAuraRect | null = null
 let start = 0
 
 function splatAt(k: number, t: number, r: TitleAuraRect): Splat {
@@ -112,21 +111,11 @@ function drawAt(g: Ctx, t: number, r: TitleAuraRect): void {
   for (let k = first; k <= last; k++) drawSplat(g, splatAt(k, t, r), r.fs)
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-function measure(): void {
-  rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-}
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    measure()
+useTitleAura({
+  init(_rect, now) {
     start = now
   },
-  resize: measure,
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
+  draw(ctx, { rect, now, reduced }) {
     drawAt(ctx, reduced ? STATIC_T : lifeS.value + (now - start) / 1000, rect)
   },
 })

@@ -377,9 +377,7 @@ function worshipper(ctx: Ctx, x: number, z: number, k: number): void {
   ctx.ellipse(sh[0], sh[1], r * 2.3, r * 2.2, 0, Math.PI, 0)
   ctx.fill()
   ctx.fillRect(sh[0] - r * 0.45, sh[1] - r * 2.8, r * 0.9, r * 1.4)
-  ctx.beginPath()
-  ctx.arc(sh[0] + (bowed ? r * 0.3 : 0), sh[1] - (bowed ? r * 2.7 : r * 3.3), r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, sh[0] + (bowed ? r * 0.3 : 0), sh[1] - (bowed ? r * 2.7 : r * 3.3), r)
 }
 
 function drawPews(ctx: Ctx) {
@@ -641,9 +639,7 @@ function paintCrouched(o: Ctx, c: string): void {
     o.stroke()
   }
   o.fillRect(-2.5, -22, 5, 6)
-  o.beginPath()
-  o.arc(0, -26, 6.5, 0, Math.PI * 2)
-  o.fill()
+  fillCircle(o, 0, -26, 6.5)
 }
 
 function paintStanding(o: Ctx, c: string): void {
@@ -655,9 +651,7 @@ function paintStanding(o: Ctx, c: string): void {
   o.lineTo(9, 0)
   o.closePath()
   o.fill()
-  o.beginPath()
-  o.arc(0, -51, 6.5, 0, Math.PI * 2)
-  o.fill()
+  fillCircle(o, 0, -51, 6.5)
 }
 
 function paintFigure(seed: number, crouch: boolean): HTMLCanvasElement {

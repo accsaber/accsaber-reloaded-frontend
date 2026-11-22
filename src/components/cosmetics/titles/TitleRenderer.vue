@@ -29,14 +29,14 @@ import { hauntCharStyle } from '@/utils/cosmetics/titleHaunt'
 import { starlitCharStyle } from '@/utils/cosmetics/starPass'
 import { joltDurations, joltFrame } from '@/utils/cosmetics/titleJolt'
 import { ascentCharStyle, excavateCharStyle, hammerCharStyle, metronomeCharStyle, punchCharStyle, questCharStyle, questMarkers, reelCharAt, reelCharStyle, restartCharStyle, scalesCharStyle, scrawlCharStyle, sliceCharStyle, sproutCharStyle, tickCharStyle } from '@/utils/cosmetics/titleMilestones'
-import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shockCharStyle, torchCharStyle, torchFlameStyle, warcryArcStyles, warcryCharStyle } from '@/utils/cosmetics/titleSchools'
+import { bleedCharStyle, devourCharStyle, flareCharStyle, galaxyCharStyle, gustCharStyle, pixieCharStyle, quakeCharStyle, rippleCharStyle, searCharStyle, shiverCharStyle, shockCharStyle, torchCharStyle, torchFlameStyle, warcryArcStyles, warcryCharStyle } from '@/utils/cosmetics/titleSchools'
 import {
   gradientToCss,
   interpolateTitleState,
   isAnimated,
   pickInterpolatedState,
 } from '@/utils/cosmetics/interpolate'
-import { randBetween as rand, sinHash01 } from '@/utils/random'
+import { randBetween as rand } from '@/utils/random'
 import { computed, ref, useId, useTemplateRef, watch } from 'vue'
 import { clamp01 } from '@/utils/math'
 
@@ -49,7 +49,7 @@ type CharStyle = Record<string, string>
 type GlyphKey =
   | 'brew' | 'sprout' | 'ascent' | 'slice' | 'tick' | 'metronome' | 'scrawl' | 'reel' | 'restart'
   | 'punch' | 'hammer' | 'excavate' | 'quest' | 'scales'
-  | 'quake' | 'warcry' | 'torch' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear'
+  | 'quake' | 'warcry' | 'torch' | 'gust' | 'ripple' | 'pixie' | 'bleed' | 'galaxy' | 'flare' | 'devour' | 'shock' | 'sear' | 'shiver'
   | 'forge' | 'blaze' | 'haunt' | 'frost' | 'lantern' | 'eclipse' | 'transmute' | 'rune' | 'starlit'
 
 type GlyphFx<K extends GlyphKey> = (
@@ -176,6 +176,7 @@ const GLYPH_EFFECTS: GlyphEffect[] = [
   glyph('devour', devourCharStyle),
   glyph('shock', shockCharStyle),
   glyph('sear', searCharStyle),
+  glyph('shiver', shiverCharStyle),
   glyph('forge', (t, i, n, spec, light) => forgeCharStyle(t, i, n, spec, light, state.value.color)),
   glyph('blaze', blazeCharStyle),
   glyph('haunt', hauntCharStyle),
@@ -224,7 +225,6 @@ const brewSpec = computed(() => (props.value.brew?.enabled ? props.value.brew : 
 const joltSpec = computed(() => motionSpec(props.value.jolt))
 const floatSpec = computed(() => motionSpec(props.value.float))
 const forgeSpec = computed(() => motionSpec(props.value.forge))
-const crustSpec = computed(() => motionSpec(props.value.crust))
 
 const fxEnabled = computed(() =>
   !reducedMotion.value
@@ -233,7 +233,6 @@ const fxEnabled = computed(() =>
     || !!props.value.flashes?.enabled
     || !!props.value.sparkles?.enabled
     || !!props.value.chromaticSplit?.enabled
-    || !!props.value.crust?.enabled
     || !!props.value.spectrumSplit?.enabled
     || !!props.value.jolt?.enabled
     || !!props.value.float?.enabled
@@ -358,14 +357,6 @@ const ORNAMENT_ICONS: Record<string, { viewBox: string; d: string; fillRule?: 'e
   yarn_ball: {
     viewBox: '0 0 256 256',
     d: 'M69.4 144.89a221 221 0 0 0-18.77 42.6a4 4 0 0 1-7 1.19a103.44 103.44 0 0 1-18.83-48.11a4 4 0 0 1 4.13-4.47a119 119 0 0 1 40.47 8.79M44 77.14a180.1 180.1 0 0 1 63 19.12a227 227 0 0 1 22.6-19.49a206.4 206.4 0 0 0-69.28-25.6a4 4 0 0 0-3.42 1A105.3 105.3 0 0 0 41.08 71A4 4 0 0 0 44 77.14m195.58 144.21A7.91 7.91 0 0 0 232 216h-48.64a104.25 104.25 0 0 0 46.89-69a4 4 0 0 0-5.27-4.52a120.6 120.6 0 0 0-74.1 73.52H134a136.55 136.55 0 0 1 94.78-91.37a4 4 0 0 0 2.92-4.15a102.6 102.6 0 0 0-3.58-20.56a4 4 0 0 0-4.89-2.8A164.53 164.53 0 0 0 103 225a4 4 0 0 0 3.08 4.69A104 104 0 0 0 128 232h104a8 8 0 0 0 7.58-10.65m-211-101.27a134.5 134.5 0 0 1 49.39 11a224 224 0 0 1 17.55-22.68a164.3 164.3 0 0 0-62.16-16.12a4 4 0 0 0-4 2.75a103 103 0 0 0-4.63 20.61a4 4 0 0 0 3.84 4.44Zm57.26-79.42A222.8 222.8 0 0 1 144 66.8a221.3 221.3 0 0 1 38.8-19.67a4 4 0 0 0 .7-7.08a103.86 103.86 0 0 0-98.2-6.85a4 4 0 0 0 .54 7.46M216 82.51a4 4 0 0 0 2.4-5.87a105 105 0 0 0-12.82-17.81a4 4 0 0 0-4.21-1.19A208.81 208.81 0 0 0 62.21 205.51a4 4 0 0 0 1.44 4.13a104.3 104.3 0 0 0 18.55 11.72a4 4 0 0 0 5.71-2.75A180.61 180.61 0 0 1 216 82.51',
-  },
-  witch_hat: {
-    viewBox: '0 0 24 24',
-    d: 'M2,19.5 L22,19.5 L19.2,16.6 L4.8,16.6 Z M6.6,16.6 L9.4,6.2 L16.4,9.8 L14.9,16.6 Z M7.9,13.2 L15.4,13.2 L15.1,14.6 L7.6,14.6 Z',
-  },
-  pumpkin: {
-    viewBox: '0 0 24 24',
-    d: 'M11.2,5.6 C11.1,4 11.6,2.8 12.6,2 L14.1,2.7 C13.3,3.5 12.9,4.5 12.9,5.6 Z M12,6 C6.6,6 3,9.2 3,13.4 C3,17.6 6.6,21 12,21 C17.4,21 21,17.6 21,13.4 C21,9.2 17.4,6 12,6 Z',
   },
   alpha: {
     viewBox: '0 0 24 24',
@@ -540,82 +531,6 @@ const forgeHeadStyle = computed<Record<string, string> | undefined>(() => {
     left: `${(local / span) * 100}%`,
     '--fx-c': hot,
   }
-})
-
-const crustCycle = computed(() => {
-  const spec = crustSpec.value
-  if (!spec) return null
-  const interval = ((spec.minIntervalMs ?? 7000) + (spec.maxIntervalMs ?? 9000)) / 2
-  return { interval, c: (tMs.value % interval) / interval }
-})
-
-const crustBaseStyle = computed<Record<string, string> | undefined>(() => {
-  const spec = crustSpec.value
-  const cycle = crustCycle.value
-  if (!spec || !cycle) return undefined
-  const crust = tone(spec.lightCrust, spec.crust, '#4a1a0e')
-  const crack = tone(spec.lightCrack, spec.crack, '#ff7a45')
-  const pos = (cycle.c * 34) % 100
-  return {
-    background: `repeating-linear-gradient(68deg, ${crust} 0 5px, ${crack} 5px 7px, ${crust} 7px 12px)`,
-    backgroundSize: '200% 100%',
-    backgroundPosition: `${pos.toFixed(2)}% 0`,
-    webkitBackgroundClip: 'text',
-    backgroundClip: 'text',
-    color: 'transparent',
-    filter: `drop-shadow(0 0 0.3em ${crack}59)`,
-  }
-})
-
-const crustEruption = computed(() => {
-  const spec = crustSpec.value
-  const cycle = crustCycle.value
-  if (!spec || !cycle) return 0
-  const eruptMs = spec.eruptMs ?? 600
-  const frac = eruptMs / cycle.interval
-  const p = win(cycle.c, 0.76, 0.76 + frac)
-  return p >= 0 ? Math.sin(p * Math.PI) : 0
-})
-
-const crustMoltenStyle = computed<Record<string, string> | undefined>(() => {
-  const spec = crustSpec.value
-  if (!spec || crustEruption.value <= 0.01) return undefined
-  const molten = spec.molten ?? '#ff8a3d'
-  const hot = spec.moltenHot ?? '#ffd9a0'
-  return {
-    background: `linear-gradient(${hot}, ${molten})`,
-    webkitBackgroundClip: 'text',
-    backgroundClip: 'text',
-    color: 'transparent',
-    opacity: crustEruption.value.toFixed(3),
-    filter: `drop-shadow(0 0 0.4em ${molten})`,
-  }
-})
-
-const crustEmbers = computed<{ id: number; style: Record<string, string> }[]>(() => {
-  const spec = crustSpec.value
-  const cycle = crustCycle.value
-  if (!spec || !cycle) return []
-  const p = win(cycle.c, 0.76, 0.9)
-  if (p < 0) return []
-  const seed = Math.floor(tMs.value / cycle.interval)
-  const out = []
-  for (let i = 0; i < 3; i++) {
-    const delay = i * 0.12
-    const q = clamp01((p - delay) / (1 - delay))
-    if (q <= 0 || q >= 1) continue
-    out.push({
-      id: i,
-      style: {
-        left: `${(12 + sinHash01(seed * 7 + i) * 70).toFixed(1)}%`,
-        top: `${(25 + sinHash01(seed * 13 + i) * 30).toFixed(1)}%`,
-        background: spec.moltenHot ?? '#ffd9a0',
-        transform: `translateY(${(-q * 1.6).toFixed(2)}em)`,
-        opacity: String(Math.sin(q * Math.PI)),
-      },
-    })
-  }
-  return out
 })
 
 const spectrumStyle = computed<Record<string, string> | undefined>(() => {
@@ -896,21 +811,8 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
     <span
       v-else
       class="title-renderer__text"
-      :style="[edgeStyle ?? {}, legacyGradientStyle ?? {}, splitShadowStyle ?? {}, crustBaseStyle ?? {}, spectrumStyle ?? {}, floatStyle ?? {}, joltStyle ?? {}]"
+      :style="[edgeStyle ?? {}, legacyGradientStyle ?? {}, splitShadowStyle ?? {}, spectrumStyle ?? {}, floatStyle ?? {}, joltStyle ?? {}]"
     >{{ value.text }}</span>
-    <span
-      v-if="crustMoltenStyle"
-      class="title-renderer__crust-molten"
-      :style="crustMoltenStyle"
-      aria-hidden="true"
-    >{{ value.text }}</span>
-    <span
-      v-for="em in crustEmbers"
-      :key="`ce${em.id}`"
-      class="title-renderer__ember"
-      :style="em.style"
-      aria-hidden="true"
-    />
     <span
       v-if="glistenClipStyle"
       class="title-renderer__glint"
@@ -1122,23 +1024,4 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   pointer-events: none;
 }
 
-.title-renderer__crust-molten {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  white-space: inherit;
-}
-
-.title-renderer__ember {
-  position: absolute;
-  width: 0.16em;
-  height: 0.16em;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 3;
-}
 </style>

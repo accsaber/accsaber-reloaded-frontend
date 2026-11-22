@@ -38,7 +38,6 @@ function ribbonY(r: Ribbon, x: number, t: number): number {
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 4.2 : now / 1000
     const interval = props.fill.intervalS ?? 7

@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const box = computed(() => props.measure.box)
 const overlayBox = computed(() => props.measure.overlayBox)
@@ -218,7 +213,7 @@ const lines = computed<AuroraLine[]>(() => {
 </script>
 
 <template>
-  <div class="comp-fx-region comp-fx-region--bleed">
+  <div class="comp-fx-region">
     <span
       v-for="(sp, j) in spikes"
       :key="j"
@@ -261,13 +256,6 @@ const lines = computed<AuroraLine[]>(() => {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
 .comp-fx-aurora {
   position: absolute;
   transform-origin: 50% 100%;

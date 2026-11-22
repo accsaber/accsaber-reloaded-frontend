@@ -2,10 +2,11 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { StolenFlameFill } from '@/types/cosmetics/border'
 import { luminance } from '@/utils/color'
-import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { drawFlame, glowDot, type FlameInk } from '@/utils/cosmetics/flame'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
-import { clamp01 } from '@/utils/math'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{
   fill: StolenFlameFill
@@ -89,7 +90,8 @@ useElementCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 2.5 : now / 1000
-    const dark = luminance(props.fill.night) < 0.5
+    const { night, flame, flameDeep, ember } = props.fill
+    const dark = luminance(night) < 0.5
     const blend = dark ? 'lighter' : 'source-over'
     const smokeColor = dark ? 'rgba(200,190,180,1)' : 'rgba(60,70,80,1)'
     const { toX, toY } = overlaySpace(w, h, MARGIN)
@@ -115,8 +117,9 @@ useElementCanvas(canvasRef, {
       lastNow = now
     }
 
-    const dt = reduced ? 0 : Math.min(0.05, (now - lastNow) / 1000)
+    const dt = frameDelta(now, lastNow, reduced)
     lastNow = now
+    const step = dt * 60
     const speed = Math.max(stackW, stackH) * 0.24
     const mx = stackW * 0.03
     const myTop = stackH * 0.05
@@ -147,55 +150,21 @@ useElementCanvas(canvasRef, {
     const bump = reduced ? 0 : Math.exp(-(now - bounceAt) / 200)
 
     ctx.clearRect(0, 0, w, h)
-    ctx.fillStyle = props.fill.night
+    ctx.fillStyle = night
     ctx.fillRect(0, 0, w, h)
     const under = ctx.createRadialGradient(
       w / 2, h * 0.75, 0,
       w / 2, h * 0.75, Math.max(stackW, stackH) * 0.8,
     )
-    under.addColorStop(0, withAlpha(props.fill.flameDeep, dark ? 0.07 : 0.1))
-    under.addColorStop(1, withAlpha(props.fill.flameDeep, 0))
+    under.addColorStop(0, withAlpha(flameDeep, dark ? 0.07 : 0.1))
+    under.addColorStop(1, withAlpha(flameDeep, 0))
     ctx.fillStyle = under
     ctx.fillRect(0, 0, w, h)
 
-    const glow = (x: number, y: number, r: number, color: string, a: number) => {
-      const pr = Math.max(2, r)
-      const g = ctx.createRadialGradient(x, y, 0, x, y, pr)
-      g.addColorStop(0, color)
-      g.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.globalAlpha = clamp01(a)
-      ctx.fillStyle = g
-      ctx.beginPath()
-      ctx.arc(x, y, pr, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.globalAlpha = 1
-    }
-
-    const drawFlame = (x: number, y: number, size: number, strength: number, seed: number, lean = 0) => {
-      if (strength < 0.04 || size < 1) return
-      const tip = size * (1.7 + 0.35 * Math.sin(t * 9 + seed) + 0.15 * Math.sin(t * 23 + seed * 2))
-      const sway = size * 0.3 * Math.sin(t * 7 + seed) + lean * tip * 0.45
-      const w0 = Math.max(0.8, size * 0.55) * (0.7 + 0.3 * strength)
-      ctx.globalCompositeOperation = blend
-      glow(x, y - tip * 0.35, size * 2.1, props.fill.flameDeep, 0.4 * strength)
-      ctx.fillStyle = withAlpha(props.fill.flameDeep, 0.85 * strength)
-      ctx.beginPath()
-      ctx.moveTo(x - w0, y)
-      ctx.quadraticCurveTo(x - w0 * 0.95, y - tip * 0.45, x + sway, y - tip)
-      ctx.quadraticCurveTo(x + w0 * 0.95, y - tip * 0.45, x + w0, y)
-      ctx.quadraticCurveTo(x, y + w0 * 0.55, x - w0, y)
-      ctx.fill()
-      const tip2 = tip * 0.55
-      const w2 = w0 * 0.5
-      ctx.fillStyle = withAlpha(props.fill.flame, 0.95 * strength)
-      ctx.beginPath()
-      ctx.moveTo(x - w2, y)
-      ctx.quadraticCurveTo(x - w2 * 0.85, y - tip2 * 0.5, x + sway * 0.6, y - tip2)
-      ctx.quadraticCurveTo(x + w2 * 0.85, y - tip2 * 0.5, x + w2, y)
-      ctx.quadraticCurveTo(x, y + w2 * 0.55, x - w2, y)
-      ctx.fill()
-      ctx.globalCompositeOperation = 'source-over'
-    }
+    const ink: FlameInk = { deep: flameDeep, core: flame, blend }
+    const glow = (x: number, y: number, r: number, color: string, a: number) => glowDot(ctx, x, y, r, color, a)
+    const flameAt = (x: number, y: number, size: number, strength: number, seed: number, lean = 0) =>
+      drawFlame(ctx, ink, t, x, y, size, strength, seed, lean)
 
     if (!reduced && now - lastTrail > 45) {
       lastTrail = now
@@ -217,7 +186,7 @@ useElementCanvas(canvasRef, {
       const sx = toX((sinHash01(sp + 90) * 100 + t * (2 + sinHash01(sp + 30) * 3)) % 100)
       const sy = toY((sinHash01(sp + 55) * 100 - t * (1.4 + sinHash01(sp + 70) * 2) % 100 + 100) % 100)
       const flick = 0.25 + 0.45 * Math.max(0, Math.sin(t * (1.6 + sinHash01(sp) * 1.8) + sp * 2.3))
-      glow(sx, sy, cell * 0.09, props.fill.ember, flick)
+      glow(sx, sy, cell * 0.09, ember, flick)
     }
 
     for (const b of braziers) {
@@ -229,29 +198,27 @@ useElementCanvas(canvasRef, {
       let lit = reduced ? 0.5 : Math.exp(-(now - b.litAt) / 6500)
       lit = Math.min(1, lit + fl * 0.8)
       if (lit < 0.04) {
-        ctx.fillStyle = withAlpha(props.fill.ember, 0.18)
-        ctx.beginPath()
-        ctx.arc(px, py, Math.max(1, cell * 0.05), 0, Math.PI * 2)
-        ctx.fill()
+        ctx.fillStyle = withAlpha(ember, 0.18)
+        fillCircle(ctx, px, py, Math.max(1, cell * 0.05))
         continue
       }
-      glow(px, py + cell * 0.1, cell * 0.7 * lit, props.fill.flameDeep, 0.2 * lit)
-      drawFlame(px, py, cell * 0.3, lit, px * 0.13)
+      glow(px, py + cell * 0.1, cell * 0.7 * lit, flameDeep, 0.2 * lit)
+      flameAt(px, py, cell * 0.3, lit, px * 0.13)
     }
 
     for (const tp of trail) {
       const age = (now - tp.bornAt) / TRAIL_LIFE
       if (age >= 1) continue
       const decay = Math.min(1, (1 - age) * 1.4) * (0.8 + 0.2 * Math.sin(t * 13 + tp.seed))
-      drawFlame(tp.x, tp.y, cell * (0.1 + 0.16 * (1 - age)), decay * 0.85, tp.seed)
+      flameAt(tp.x, tp.y, cell * (0.1 + 0.16 * (1 - age)), decay * 0.85, tp.seed)
     }
 
     ctx.globalCompositeOperation = blend
-    glow(bx, by, cell * (2 + bump * 0.8), props.fill.flameDeep, 0.35 + fl * 0.25 + bump * 0.2)
+    glow(bx, by, cell * (2 + bump * 0.8), flameDeep, 0.35 + fl * 0.25 + bump * 0.2)
     ctx.globalCompositeOperation = 'source-over'
     const ballSize = cell * 0.5 * (1 + bump * 0.35)
-    glow(bx, by, ballSize * 0.9, props.fill.flame, 0.75)
-    drawFlame(bx, by + ballSize * 0.35, ballSize, 1, 3.7, -dirX * 0.8)
+    glow(bx, by, ballSize * 0.9, flame, 0.75)
+    flameAt(bx, by + ballSize * 0.35, ballSize, 1, 3.7, -dirX * 0.8)
 
     if (!reduced && now - lastEmber > 70 && embers.length < 34) {
       lastEmber = now
@@ -265,14 +232,14 @@ useElementCanvas(canvasRef, {
     }
     for (let i = embers.length - 1; i >= 0; i--) {
       const em = embers[i]
-      em.x += em.vx
-      em.y += em.vy
-      em.life -= 0.02
+      em.x += em.vx * step
+      em.y += em.vy * step
+      em.life -= 0.02 * step
       if (em.life <= 0) {
         embers.splice(i, 1)
         continue
       }
-      glow(em.x, em.y, cell * 0.12, props.fill.ember, em.life * 0.7)
+      glow(em.x, em.y, cell * 0.12, ember, em.life * 0.7)
     }
 
     if (!reduced && now - lastSmoke > 420 && smokes.length < 6 && trail.length > 4) {
@@ -293,7 +260,7 @@ useElementCanvas(canvasRef, {
     }
 
     if (fl > 0.02) {
-      ctx.fillStyle = withAlpha(props.fill.flameDeep, fl * 0.24)
+      ctx.fillStyle = withAlpha(flameDeep, fl * 0.24)
       ctx.fillRect(0, 0, w, h)
     }
   },

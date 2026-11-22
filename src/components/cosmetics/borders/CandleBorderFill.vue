@@ -2,15 +2,18 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { CandleFill } from '@/types/cosmetics/border'
 import { lighten, parseHex } from '@/utils/color'
-import { flickerNoise, type Ctx } from '@/utils/cosmetics/canvasShapes'
-import { framePoint, overlaySpace, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { flickerNoise, type Ctx, fillCircle } from '@/utils/cosmetics/canvasShapes'
+import { overlaySpace, type OverlaySpace } from '@/utils/cosmetics/overlayCanvas'
 import { createRadialSprite } from '@/utils/cosmetics/sceneLayer'
+import { bandToCanvas, shapeBand } from '@/utils/cosmetics/shapeBand'
+import type { ShapeTrace } from '@/utils/cosmetics/shapeTrace'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
+import { computed, useTemplateRef, watch } from 'vue'
 
 const props = defineProps<{
   fill: CandleFill
   margin?: number
+  trace?: ShapeTrace | null
 }>()
 
 const MARGIN = props.margin ?? 25
@@ -20,6 +23,8 @@ const EMBERS = 12
 const GLOW_PX = 128
 
 interface Flame {
+  u: number
+  across: number
   x: number
   y: number
   size: number
@@ -37,10 +42,35 @@ interface Ember {
 }
 
 const count = props.fill.count ?? 7
-const flames: Flame[] = Array.from({ length: count }, (_, i) => {
-  const { x, y } = framePoint((i + rand(-0.3, 0.3)) / count, rand(1.5, 5))
-  return { x, y, size: rand(1.1, 1.9), phase: rand(0, 9), rate: rand(0.9, 1.6), gutterAt: rand(6, 20), level: STATIC_LEVEL }
-})
+const wicks: Flame[] = Array.from({ length: count }, (_, i) => ({
+  u: (i + rand(-0.3, 0.3)) / count,
+  across: rand(-0.25, 0.25),
+  x: 0,
+  y: 0,
+  size: rand(1.1, 1.9),
+  phase: rand(0, 9),
+  rate: rand(0.9, 1.6),
+  gutterAt: rand(6, 20),
+  level: STATIC_LEVEL,
+}))
+let flames: Flame[] = []
+
+function place(): void {
+  const band = shapeBand(props.trace)
+  flames = band
+    ? wicks.filter((f) => {
+        const spot = band.at(f.u)
+        if (!spot) return false
+        const at = bandToCanvas(band, { x: spot.x + spot.nx * spot.thick * f.across, y: spot.y + spot.ny * spot.thick * f.across }, 1, 1)
+        f.x = at.x
+        f.y = at.y
+        return true
+      })
+    : []
+}
+
+place()
+watch(() => props.trace, place)
 const embers: Ember[] = Array.from({ length: EMBERS }, () => ({ x: rand(-20, 120), y: rand(-20, 120), speed: rand(2, 5), phase: rand(0, 6.28) }))
 
 const core = computed(() => lighten(props.fill.flame, 0.6))
@@ -84,9 +114,7 @@ function drawEmbers(ctx: Ctx, sp: OverlaySpace, t: number): void {
     const y = ((((e.y - t * e.speed) % 140) + 140) % 140) - 20
     const x = e.x + Math.sin(t * 0.8 + e.phase) * 3
     ctx.globalAlpha = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.3 + e.phase))
-    ctx.beginPath()
-    ctx.arc(sp.toX(x), sp.toY(y), Math.max(0.5, 0.45 * sp.sx), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, sp.toX(x), sp.toY(y), Math.max(0.5, 0.45 * sp.sx))
   }
   ctx.globalAlpha = 1
 }
@@ -95,9 +123,8 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
   init(_w, _h, now) {
-    startTime = now
+    startTime ||= now
   },
-  resize() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? STATIC_T : (now - startTime) / 1000
     const sp = overlaySpace(w, h, MARGIN)
@@ -108,11 +135,11 @@ useElementCanvas(canvasRef, {
       f.level = reduced ? STATIC_LEVEL : flameLevel(f, t)
       const r = f.size * 19 * sp.sx
       ctx.globalAlpha = f.level
-      ctx.drawImage(sprite, sp.toX(f.x) - r, sp.toY(f.y) - r, r * 2, r * 2)
+      ctx.drawImage(sprite, f.x * w - r, f.y * h - r, r * 2, r * 2)
     }
     ctx.globalAlpha = 1
     if (!reduced) drawEmbers(ctx, sp, t)
-    for (const f of flames) drawFlame(ctx, sp.toX(f.x), sp.toY(f.y), sp, f, t)
+    for (const f of flames) drawFlame(ctx, f.x * w, f.y * h, sp, f, t)
   },
 })
 </script>

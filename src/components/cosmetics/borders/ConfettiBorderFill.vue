@@ -62,6 +62,7 @@ useElementCanvas(canvasRef, {
     ctx.fillRect(0, 0, w, h)
     const ux = w / 100
     const uy = h / 100
+    const inks = props.fill.colors.map((c) => withAlpha(c, 0.9))
     for (const p of pieces) {
       const y = ((p.y + t * p.speed) % 112) - 6
       const x = p.x + Math.sin(t * 1.1 + p.phase) * p.sway
@@ -70,7 +71,7 @@ useElementCanvas(canvasRef, {
       ctx.save()
       ctx.translate(x * ux, y * uy)
       ctx.rotate(ang)
-      ctx.fillStyle = withAlpha(props.fill.colors[p.colorIdx], 0.9)
+      ctx.fillStyle = inks[p.colorIdx]
       ctx.fillRect((-p.size / 2) * ux, (-p.size * 0.3 * (0.3 + wob * 0.7)) * uy, p.size * ux, p.size * 0.6 * (0.3 + wob * 0.7) * uy)
       ctx.restore()
     }

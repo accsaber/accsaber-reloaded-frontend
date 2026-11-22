@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleSeasonKey, TitleSeasonsAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleSeasonsAuraSpec
@@ -21,17 +19,9 @@ interface Particle {
 }
 
 const SEASONS: TitleSeasonKey[] = ['spring', 'summer', 'autumn', 'winter']
-const STATIC_T = 3
+const palette = pigments<TitleSeasonKey>(props.aura, props.light, { spring: '#f9a8d4', summer: '#d9f99d', autumn: '#f59e0b', winter: '#e0f2fe' })
 
-let rect: TitleAuraRect | null = null
 let particles: Particle[] = []
-
-function seasonColor(key: TitleSeasonKey): string {
-  if (key === 'spring') return pickVariant(props.light, props.aura.lightSpring, props.aura.spring, '#f9a8d4')
-  if (key === 'summer') return pickVariant(props.light, props.aura.lightSummer, props.aura.summer, '#d9f99d')
-  if (key === 'autumn') return pickVariant(props.light, props.aura.lightAutumn, props.aura.autumn, '#f59e0b')
-  return pickVariant(props.light, props.aura.lightWinter, props.aura.winter, '#e0f2fe')
-}
 
 function seedParticles(): void {
   particles = Array.from({ length: 14 }, () => ({
@@ -116,21 +106,12 @@ function drawFirefly(ctx: CanvasRenderingContext2D, x: number, y: number, s: num
   ctx.fill()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-    seedParticles()
-  },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const r = rect
-    const t = reduced ? STATIC_T : now / 1000
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
+useTitleAura({
+  additive: () => !props.light,
+  init: seedParticles,
+  draw(ctx, { rect: r, t }) {
     for (const { key, alpha } of activeSeasons(t)) {
-      const color = seasonColor(key)
+      const color = palette[key]
       for (const [pi, p] of particles.entries()) {
         const s = r.fs * p.size
         const fallY = ((p.y + t * p.speed) % 1.3) - 0.15
@@ -149,7 +130,6 @@ useElementCanvas(canvasRef, {
         }
       }
     }
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

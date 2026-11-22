@@ -5,6 +5,7 @@ import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { loopPoint, traceShape, type ShapeTrace } from '@/utils/cosmetics/shapeTrace'
 import { hash01, randBetween as rand } from '@/utils/random'
 import { useTemplateRef, watch } from 'vue'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{
   fill: LaserFill
@@ -165,9 +166,7 @@ useElementCanvas(canvasRef, {
       const my = ((m.y + t * m.dy) % 104 + 104) % 104 - 2
       const a = 0.2 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.8 + m.phase))
       ctx.fillStyle = withAlpha(props.fill.glow, a)
-      ctx.beginPath()
-      ctx.arc((mx / 100) * w, (my / 100) * h, Math.max(0.5, m.size * unit * 0.8), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, (mx / 100) * w, (my / 100) * h, Math.max(0.5, m.size * unit * 0.8))
     }
     const pulse = 0.75 + 0.25 * Math.sin(t * 5.2)
     const steps = 90
@@ -207,9 +206,7 @@ useElementCanvas(canvasRef, {
       const p = beamPoint(head - s * 0.006, w, h)
       const a = (1 - s / 14) * 0.9
       ctx.fillStyle = withAlpha('#ffffff', a)
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, Math.max(1, (2.4 - s * 0.12) * unit), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, p.x, p.y, Math.max(1, (2.4 - s * 0.12) * unit))
     }
     if (!reduced) {
       if (t >= nextWaveAt) {
@@ -250,9 +247,7 @@ useElementCanvas(canvasRef, {
       const y = p.y + Math.sin(sp.ang) * sp.speed * age * unit
       const a = Math.pow(1 - age / 0.6, 1.6)
       ctx.fillStyle = withAlpha(props.fill.spark ?? props.fill.core, a)
-      ctx.beginPath()
-      ctx.arc(x, y, Math.max(0.6, unit * 0.8), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, x, y, Math.max(0.6, unit * 0.8))
     }
   },
 })

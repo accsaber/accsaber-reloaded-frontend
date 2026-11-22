@@ -182,136 +182,26 @@ function readOpacity(tokens: Record<string, string>): number {
   return clamp(v, 0.05, 1)
 }
 
-function parseStarfield(tokens: Record<string, string>): StarfieldBackdropConfig {
-  return {
-    type: 'starfield',
-    opacity: readOpacity(tokens),
-    starColor: readHex(tokens, 'fx-star-color', '#dbe4ff'),
-    starDensity: readNumber(tokens, 'fx-star-density', 1),
-    shooting: readFlag(tokens, 'fx-shooting', false),
-    shootingMinMs: readNumber(tokens, 'fx-shooting-min-s', 2.5) * 1000,
-    shootingMaxMs: readNumber(tokens, 'fx-shooting-max-s', 6.5) * 1000,
-    comets: readFlag(tokens, 'fx-comets', false),
-    cometMinMs: readNumber(tokens, 'fx-comet-min-s', 25) * 1000,
-    cometMaxMs: readNumber(tokens, 'fx-comet-max-s', 55) * 1000,
-    nebulas: readFlag(tokens, 'fx-nebulas', false),
-    nebulaCount: readNumber(tokens, 'fx-nebula-count', 3),
-    nebulaColors: readHexList(tokens, 'fx-nebula-colors', ['#312e81', '#155e75', '#4a1d6e']),
-    nebulaOpacity: readNumber(tokens, 'fx-nebula-opacity', 0.08),
-    nebulaSize: readNumber(tokens, 'fx-nebula-size', 1),
-  }
+function readMs(tokens: Record<string, string>, key: string, fallback: number): number {
+  return readNumber(tokens, key, fallback) * 1000
 }
 
-function parsePixelField(tokens: Record<string, string>): PixelFieldBackdropConfig {
-  return {
-    type: 'pixel_field',
-    opacity: readOpacity(tokens),
-    pixelSize: readNumber(tokens, 'fx-field-pixel-size', 5),
-    fieldHeightPct: readNumber(tokens, 'fx-field-height-pct', 13),
-    fieldRows: Math.max(1, Math.round(readNumber(tokens, 'fx-field-rows', 3))),
-    wheatColors: readHexList(tokens, 'fx-field-wheat-colors', ['#d69a24', '#e0a82e', '#c9861d']),
-    skyColors: readHexList(tokens, 'fx-field-sky-colors', ['#7d6bb8', '#b56aa8', '#e06a9f', '#e88a52', '#cf8f1f']),
-    sunColor: readHex(tokens, 'fx-field-sun-color', '#f5b800'),
-    leaves: readFlag(tokens, 'fx-field-leaves', false),
-    leafColors: readHexList(tokens, 'fx-field-leaf-colors', ['#e0a82e', '#f472b6', '#d69a24']),
-    birds: readFlag(tokens, 'fx-field-birds', false),
-    birdColor: readHex(tokens, 'fx-field-bird-color', '#3d1f2e'),
-    windSpeed: readNumber(tokens, 'fx-field-wind', 1),
-  }
+function readCount(tokens: Record<string, string>, key: string, fallback: number): number {
+  return Math.max(1, Math.round(readNumber(tokens, key, fallback)))
 }
 
-function parseForest(tokens: Record<string, string>): ForestBackdropConfig {
-  return {
-    type: 'forest',
-    opacity: readOpacity(tokens),
-    pixelSize: readNumber(tokens, 'fx-forest-pixel-size', 5),
-    canopyColors: readHexList(tokens, 'fx-forest-canopy-colors', ['#04060a', '#050b11', '#071118', '#08171c']),
-    treeColors: readHexList(tokens, 'fx-forest-tree-colors', ['#1c2624', '#231710', '#120a06']),
-    groundColors: readHexList(tokens, 'fx-forest-ground-colors', ['#081410', '#0a1c16', '#0d231b']),
-    pathColor: readHex(tokens, 'fx-forest-path-color', '#1a382b'),
-    mushroomColors: readHexList(tokens, 'fx-forest-mushroom-colors', ['#60a5fa', '#5eead4', '#c084fc']),
-    wisps: readFlag(tokens, 'fx-forest-wisps', false),
-    wispColors: readHexList(tokens, 'fx-forest-wisp-colors', ['#93c5fd', '#a5f3fc', '#ddd6fe']),
-    fireflies: readFlag(tokens, 'fx-forest-fireflies', false),
-    fireflyColor: readHex(tokens, 'fx-forest-firefly-color', '#d9f99d'),
-    eyes: readFlag(tokens, 'fx-forest-eyes', false),
-    eyeColors: readHexList(tokens, 'fx-forest-eye-colors', ['#fbbf24', '#5eead4', '#f472b6']),
-    spores: readFlag(tokens, 'fx-forest-spores', false),
-    bloom: readFlag(tokens, 'fx-forest-bloom', false),
-    driftSpeed: readNumber(tokens, 'fx-forest-drift', 1),
-  }
-}
+type BackdropField<V> = [read: (tokens: Record<string, string>, key: string, fallback: V) => V, key: string, fallback: V]
 
-function parseGraveyard(tokens: Record<string, string>): GraveyardBackdropConfig {
-  return {
-    type: 'graveyard',
-    opacity: readOpacity(tokens),
-    skyColors: readHexList(tokens, 'fx-grave-sky-colors', ['#05070f', '#0d1220']),
-    groundColor: readHex(tokens, 'fx-grave-ground-color', '#0a0e18'),
-    stoneColor: readHex(tokens, 'fx-grave-stone-color', '#1a2030'),
-    treeColor: readHex(tokens, 'fx-grave-tree-color', '#05070c'),
-    moonColor: readHex(tokens, 'fx-grave-moon-color', '#d8dce8'),
-    fogColor: readHex(tokens, 'fx-grave-fog-color', '#9aa6bf'),
-    wispColor: readHex(tokens, 'fx-grave-wisp-color', '#b6e34a'),
-    ghostColor: readHex(tokens, 'fx-grave-ghost-color', '#dfe6f5'),
-    batColor: readHex(tokens, 'fx-grave-bat-color', '#05070f'),
-  }
-}
+type BackdropTable<C> = { [K in Exclude<keyof C, 'type' | 'opacity'>]: BackdropField<C[K]> }
 
-function parseChurch(tokens: Record<string, string>): ChurchBackdropConfig {
-  return {
-    type: 'church',
-    opacity: readOpacity(tokens),
-    wallTop: readHex(tokens, 'fx-church-wall-top', '#0a0916'),
-    wallBottom: readHex(tokens, 'fx-church-wall-bottom', '#1a1730'),
-    floorColor: readHex(tokens, 'fx-church-floor-color', '#13102a'),
-    pewColor: readHex(tokens, 'fx-church-pew-color', '#3a2617'),
-    carpetColor: readHex(tokens, 'fx-church-carpet-color', '#4a1418'),
-    glassColors: readHexList(tokens, 'fx-church-glass-colors', ['#c0392b', '#2e86c1', '#f2b552', '#7cb342', '#8e44ad']),
-    candleColor: readHex(tokens, 'fx-church-candle-color', '#f2b552'),
-    figureColor: readHex(tokens, 'fx-church-figure-color', '#05040c'),
-    faceColor: readHex(tokens, 'fx-church-face-color', '#d9cfc4'),
-  }
-}
-
-function parseMineshaft(tokens: Record<string, string>): MineshaftBackdropConfig {
-  return {
-    type: 'mineshaft',
-    opacity: readOpacity(tokens),
-    timberColor: readHex(tokens, 'fx-mine-timber-color', '#4a3420'),
-    timberDark: readHex(tokens, 'fx-mine-timber-dark', '#1e160e'),
-    railColor: readHex(tokens, 'fx-mine-rail-color', '#4a3a2a'),
-    lanternColor: readHex(tokens, 'fx-mine-lantern-color', '#f2b552'),
-    dustColor: readHex(tokens, 'fx-mine-dust-color', '#8a7150'),
-  }
-}
-
-function parseDarkHour(tokens: Record<string, string>): DarkHourBackdropConfig {
-  return {
-    type: 'dark_hour',
-    opacity: readOpacity(tokens),
-    skyColors: readHexList(tokens, 'fx-hour-sky-colors', ['#02100a', '#0a2814', '#1a4a20']),
-    moonColor: readHex(tokens, 'fx-hour-moon-color', '#c9e88a'),
-    cloudColor: readHex(tokens, 'fx-hour-cloud-color', '#05170b'),
-    cityColor: readHex(tokens, 'fx-hour-city-color', '#020806'),
-    windowColor: readHex(tokens, 'fx-hour-window-color', '#7cb342'),
-    waterColor: readHex(tokens, 'fx-hour-water-color', '#3a0a0e'),
-  }
-}
-
-function parseHarvest(tokens: Record<string, string>): HarvestBackdropConfig {
-  return {
-    type: 'harvest',
-    opacity: readOpacity(tokens),
-    skyColors: readHexList(tokens, 'fx-harvest-sky-colors', ['#b9a4cf', '#d09aa6', '#e8a25a', '#f2c27a']),
-    moonColor: readHex(tokens, 'fx-harvest-moon-color', '#e8781e'),
-    moonShade: readHex(tokens, 'fx-harvest-moon-shade', '#8a3a10'),
-    flareColor: readHex(tokens, 'fx-harvest-flare-color', '#ffe08a'),
-    fieldColor: readHex(tokens, 'fx-harvest-field-color', '#2a1a22'),
-    farmColor: readHex(tokens, 'fx-harvest-farm-color', '#321f2c'),
-    leafColors: readHexList(tokens, 'fx-harvest-leaf-colors', ['#b8531c', '#d9782e', '#7a3a10']),
-    crowColor: readHex(tokens, 'fx-harvest-crow-color', '#1a0f18'),
-    stars: readFlag(tokens, 'fx-harvest-stars', false),
+function tableParser<C extends ThemeBackdropConfig>(type: C['type'], table: BackdropTable<C>) {
+  return (tokens: Record<string, string>): C => {
+    const config: Record<string, unknown> = { type, opacity: readOpacity(tokens) }
+    for (const field of Object.keys(table) as (keyof typeof table & string)[]) {
+      const [read, key, fallback] = table[field]
+      config[field] = read(tokens, key, fallback)
+    }
+    return config as C
   }
 }
 
@@ -333,24 +223,103 @@ function parseSnowfield(tokens: Record<string, string>): SnowfieldBackdropConfig
   }
 }
 
-function parseWatchers(tokens: Record<string, string>): WatchersBackdropConfig {
-  return {
-    type: 'watchers',
-    opacity: readOpacity(tokens),
-    count: Math.max(1, Math.round(readNumber(tokens, 'fx-watch-count', 10))),
-  }
-}
-
 const BACKDROP_PARSERS: Record<string, (tokens: Record<string, string>) => ThemeBackdropConfig> = {
-  starfield: parseStarfield,
-  pixel_field: parsePixelField,
-  forest: parseForest,
-  graveyard: parseGraveyard,
-  church: parseChurch,
-  mineshaft: parseMineshaft,
-  watchers: parseWatchers,
-  dark_hour: parseDarkHour,
-  harvest: parseHarvest,
+  starfield: tableParser<StarfieldBackdropConfig>('starfield', {
+    starColor: [readHex, 'fx-star-color', '#dbe4ff'],
+    starDensity: [readNumber, 'fx-star-density', 1],
+    shooting: [readFlag, 'fx-shooting', false],
+    shootingMinMs: [readMs, 'fx-shooting-min-s', 2.5],
+    shootingMaxMs: [readMs, 'fx-shooting-max-s', 6.5],
+    comets: [readFlag, 'fx-comets', false],
+    cometMinMs: [readMs, 'fx-comet-min-s', 25],
+    cometMaxMs: [readMs, 'fx-comet-max-s', 55],
+    nebulas: [readFlag, 'fx-nebulas', false],
+    nebulaCount: [readNumber, 'fx-nebula-count', 3],
+    nebulaColors: [readHexList, 'fx-nebula-colors', ['#312e81', '#155e75', '#4a1d6e']],
+    nebulaOpacity: [readNumber, 'fx-nebula-opacity', 0.08],
+    nebulaSize: [readNumber, 'fx-nebula-size', 1],
+  }),
+  pixel_field: tableParser<PixelFieldBackdropConfig>('pixel_field', {
+    pixelSize: [readNumber, 'fx-field-pixel-size', 5],
+    fieldHeightPct: [readNumber, 'fx-field-height-pct', 13],
+    fieldRows: [readCount, 'fx-field-rows', 3],
+    wheatColors: [readHexList, 'fx-field-wheat-colors', ['#d69a24', '#e0a82e', '#c9861d']],
+    skyColors: [readHexList, 'fx-field-sky-colors', ['#7d6bb8', '#b56aa8', '#e06a9f', '#e88a52', '#cf8f1f']],
+    sunColor: [readHex, 'fx-field-sun-color', '#f5b800'],
+    leaves: [readFlag, 'fx-field-leaves', false],
+    leafColors: [readHexList, 'fx-field-leaf-colors', ['#e0a82e', '#f472b6', '#d69a24']],
+    birds: [readFlag, 'fx-field-birds', false],
+    birdColor: [readHex, 'fx-field-bird-color', '#3d1f2e'],
+    windSpeed: [readNumber, 'fx-field-wind', 1],
+  }),
+  forest: tableParser<ForestBackdropConfig>('forest', {
+    pixelSize: [readNumber, 'fx-forest-pixel-size', 5],
+    canopyColors: [readHexList, 'fx-forest-canopy-colors', ['#04060a', '#050b11', '#071118', '#08171c']],
+    treeColors: [readHexList, 'fx-forest-tree-colors', ['#1c2624', '#231710', '#120a06']],
+    groundColors: [readHexList, 'fx-forest-ground-colors', ['#081410', '#0a1c16', '#0d231b']],
+    pathColor: [readHex, 'fx-forest-path-color', '#1a382b'],
+    mushroomColors: [readHexList, 'fx-forest-mushroom-colors', ['#60a5fa', '#5eead4', '#c084fc']],
+    wisps: [readFlag, 'fx-forest-wisps', false],
+    wispColors: [readHexList, 'fx-forest-wisp-colors', ['#93c5fd', '#a5f3fc', '#ddd6fe']],
+    fireflies: [readFlag, 'fx-forest-fireflies', false],
+    fireflyColor: [readHex, 'fx-forest-firefly-color', '#d9f99d'],
+    eyes: [readFlag, 'fx-forest-eyes', false],
+    eyeColors: [readHexList, 'fx-forest-eye-colors', ['#fbbf24', '#5eead4', '#f472b6']],
+    spores: [readFlag, 'fx-forest-spores', false],
+    bloom: [readFlag, 'fx-forest-bloom', false],
+    driftSpeed: [readNumber, 'fx-forest-drift', 1],
+  }),
+  graveyard: tableParser<GraveyardBackdropConfig>('graveyard', {
+    skyColors: [readHexList, 'fx-grave-sky-colors', ['#05070f', '#0d1220']],
+    groundColor: [readHex, 'fx-grave-ground-color', '#0a0e18'],
+    stoneColor: [readHex, 'fx-grave-stone-color', '#1a2030'],
+    treeColor: [readHex, 'fx-grave-tree-color', '#05070c'],
+    moonColor: [readHex, 'fx-grave-moon-color', '#d8dce8'],
+    fogColor: [readHex, 'fx-grave-fog-color', '#9aa6bf'],
+    wispColor: [readHex, 'fx-grave-wisp-color', '#b6e34a'],
+    ghostColor: [readHex, 'fx-grave-ghost-color', '#dfe6f5'],
+    batColor: [readHex, 'fx-grave-bat-color', '#05070f'],
+  }),
+  church: tableParser<ChurchBackdropConfig>('church', {
+    wallTop: [readHex, 'fx-church-wall-top', '#0a0916'],
+    wallBottom: [readHex, 'fx-church-wall-bottom', '#1a1730'],
+    floorColor: [readHex, 'fx-church-floor-color', '#13102a'],
+    pewColor: [readHex, 'fx-church-pew-color', '#3a2617'],
+    carpetColor: [readHex, 'fx-church-carpet-color', '#4a1418'],
+    glassColors: [readHexList, 'fx-church-glass-colors', ['#c0392b', '#2e86c1', '#f2b552', '#7cb342', '#8e44ad']],
+    candleColor: [readHex, 'fx-church-candle-color', '#f2b552'],
+    figureColor: [readHex, 'fx-church-figure-color', '#05040c'],
+    faceColor: [readHex, 'fx-church-face-color', '#d9cfc4'],
+  }),
+  mineshaft: tableParser<MineshaftBackdropConfig>('mineshaft', {
+    timberColor: [readHex, 'fx-mine-timber-color', '#4a3420'],
+    timberDark: [readHex, 'fx-mine-timber-dark', '#1e160e'],
+    railColor: [readHex, 'fx-mine-rail-color', '#4a3a2a'],
+    lanternColor: [readHex, 'fx-mine-lantern-color', '#f2b552'],
+    dustColor: [readHex, 'fx-mine-dust-color', '#8a7150'],
+  }),
+  watchers: tableParser<WatchersBackdropConfig>('watchers', {
+    count: [readCount, 'fx-watch-count', 10],
+  }),
+  dark_hour: tableParser<DarkHourBackdropConfig>('dark_hour', {
+    skyColors: [readHexList, 'fx-hour-sky-colors', ['#02100a', '#0a2814', '#1a4a20']],
+    moonColor: [readHex, 'fx-hour-moon-color', '#c9e88a'],
+    cloudColor: [readHex, 'fx-hour-cloud-color', '#05170b'],
+    cityColor: [readHex, 'fx-hour-city-color', '#020806'],
+    windowColor: [readHex, 'fx-hour-window-color', '#7cb342'],
+    waterColor: [readHex, 'fx-hour-water-color', '#3a0a0e'],
+  }),
+  harvest: tableParser<HarvestBackdropConfig>('harvest', {
+    skyColors: [readHexList, 'fx-harvest-sky-colors', ['#b9a4cf', '#d09aa6', '#e8a25a', '#f2c27a']],
+    moonColor: [readHex, 'fx-harvest-moon-color', '#e8781e'],
+    moonShade: [readHex, 'fx-harvest-moon-shade', '#8a3a10'],
+    flareColor: [readHex, 'fx-harvest-flare-color', '#ffe08a'],
+    fieldColor: [readHex, 'fx-harvest-field-color', '#2a1a22'],
+    farmColor: [readHex, 'fx-harvest-farm-color', '#321f2c'],
+    leafColors: [readHexList, 'fx-harvest-leaf-colors', ['#b8531c', '#d9782e', '#7a3a10']],
+    crowColor: [readHex, 'fx-harvest-crow-color', '#1a0f18'],
+    stars: [readFlag, 'fx-harvest-stars', false],
+  }),
   snowfield: parseSnowfield,
 }
 

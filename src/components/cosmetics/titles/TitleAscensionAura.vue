@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleAscensionAuraSpec } from '@/types/cosmetics/title'
 import { cyc, win } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleAscensionAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => {
-  const a = props.aura
-  return {
-    ray: pickVariant(props.light, a.lightRay, a.ray, '#f5f3ff'),
-    shine: pickVariant(props.light, a.lightShine, a.shine, '#ffffff'),
-  }
-})
+const palette = pigments(props.aura, props.light, { ray: '#f5f3ff', shine: '#ffffff' })
 
 interface Ray {
   x: number
@@ -34,13 +27,10 @@ interface Mote {
   drift: number
 }
 
-let rect: TitleAuraRect | null = null
-let ch = 0
 let rays: Ray[] = []
 let motes: Mote[] = []
 
-function resetMote(m: Mote, now: number, warm: boolean) {
-  if (!rect) return
+function resetMote(m: Mote, rect: TitleAuraRect, now: number, warm: boolean) {
   m.x = rect.x + rand(0.05, 0.95) * rect.w
   m.born = now + (warm ? rand(-2400, 0) : rand(0, 1200))
   m.dur = rand(1800, 3000)
@@ -48,37 +38,29 @@ function resetMote(m: Mote, now: number, warm: boolean) {
   m.drift = rand(-1, 1) * rect.fs * 0.2
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(w, h, now) {
-    if (!canvasRef.value) return
-    rect = titleAuraRect(canvasRef.value)
-    ch = h
+useTitleAura({
+  staticT: 1.2,
+  additive: () => !props.light,
+  layout(rect, now) {
     rays = Array.from({ length: 7 }, (_, i) => ({
-      x: rect!.x + ((i + 0.5) / 7) * rect!.w + rand(-0.04, 0.04) * rect!.w,
-      width: rect!.fs * rand(0.12, 0.22),
+      x: rect.x + ((i + 0.5) / 7) * rect.w + rand(-0.04, 0.04) * rect.w,
+      width: rect.fs * rand(0.12, 0.22),
       ph: rand(0, Math.PI * 2),
     }))
     motes = Array.from({ length: 9 }, () => {
       const m = {} as Mote
-      resetMote(m, now, true)
+      resetMote(m, rect, now, true)
       return m
     })
   },
-  draw(ctx, w, h, now, reduced) {
-    if (!rect) return
-    ctx.clearRect(0, 0, w, h)
-    const { ray, shine } = palette.value
+  draw(ctx, { rect, t, now, reduced, h: ch }) {
+    const { ray, shine } = palette
     const fs = rect.fs
-    const t = reduced ? 1.2 : now / 1000
     const e = cyc(t, 7)
     const surge = reduced ? -1 : win(e, 0.74, 0.95)
     const lift = surge >= 0 ? Math.sin(surge * Math.PI) : 0
     const bottom = rect.y + rect.h + fs * 0.25
     const top = rect.y - fs * 0.6
-
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
 
     const padRx = rect.w * 0.6
     const padRy = Math.min(padRx, ch - bottom)
@@ -108,7 +90,7 @@ useElementCanvas(canvasRef, {
       let p = (now - m.born) / m.dur
       if (reduced) p = 0.5
       if (p >= 1) {
-        resetMote(m, now, false)
+        resetMote(m, rect, now, false)
         continue
       }
       if (p < 0) continue
@@ -136,8 +118,6 @@ useElementCanvas(canvasRef, {
       ctx.fillRect(-haloRx, -haloRx, haloRx * 2, haloRx * 2)
       ctx.restore()
     }
-
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

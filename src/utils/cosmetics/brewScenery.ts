@@ -1,7 +1,7 @@
 import type { BrewIngredientKind } from '@/types/cosmetics/title'
 import { darken, lerpHex, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import type { Ctx } from '@/utils/cosmetics/canvasShapes'
+import { fillCircle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 
 export const BREW_INGREDIENT_KINDS: BrewIngredientKind[] = ['eye', 'mushroom', 'newt', 'spider']
 
@@ -136,23 +136,17 @@ export function boneShape(ctx: Ctx, size: number): void {
   ctx.fill()
   for (const ex of [-1, 1]) {
     for (const ey of [-1, 1]) {
-      ctx.beginPath()
-      ctx.arc(ex * size, ey * size * 0.22, size * 0.3, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, ex * size, ey * size * 0.22, size * 0.3)
     }
   }
 }
 
 export function skullShape(ctx: Ctx, size: number, color: string): void {
-  ctx.beginPath()
-  ctx.arc(0, -size * 0.2, size * 0.85, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, 0, -size * 0.2, size * 0.85)
   ctx.fillRect(-size * 0.5, size * 0.3, size, size * 0.55)
   ctx.fillStyle = color
   for (const ex of [-0.33, 0.33]) {
-    ctx.beginPath()
-    ctx.arc(ex * size, -size * 0.25, size * 0.24, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, ex * size, -size * 0.25, size * 0.24)
   }
   ctx.beginPath()
   ctx.moveTo(0, size * 0.05)
@@ -175,19 +169,13 @@ export function drawBubble(ctx: Ctx, x: number, y: number, r: number, pop: numbe
     return
   }
   ctx.fillStyle = ink.fill
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, r)
   ctx.fillStyle = BUBBLE_GLINT
-  ctx.beginPath()
-  ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.25, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x - r * 0.3, y - r * 0.3, r * 0.25)
 }
 
 function dot(ctx: Ctx, x: number, y: number, r: number): void {
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, x, y, r)
 }
 
 function drawEye(ctx: Ctx, s: number, body: string, bone: string): void {

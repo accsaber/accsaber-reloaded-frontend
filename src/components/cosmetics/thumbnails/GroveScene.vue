@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { GroveScene } from '@/types/cosmetics/background'
-import { cyc, win } from '@/utils/cosmetics/canvasShapes'
+import { cyc, win, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
@@ -12,7 +12,6 @@ const props = defineProps<{ scene: GroveScene }>()
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 4.2 : now / 1000
     const e = cyc(t, 9)
@@ -38,9 +37,7 @@ useElementCanvas(canvasRef, {
       g.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.globalAlpha = clamp01(a * gm)
       ctx.fillStyle = g
-      ctx.beginPath()
-      ctx.arc(x, y, pr, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, x, y, pr)
       ctx.globalAlpha = 1
     }
 
@@ -86,13 +83,9 @@ useElementCanvas(canvasRef, {
       const pulse = 0.5 + 0.3 * Math.sin(t * 1.2 + vn * 2) + flare * 0.7
       glowDot(fx, fy, 8 + flare * 4, col, Math.min(1, pulse))
       ctx.fillStyle = col
-      ctx.beginPath()
-      ctx.arc(fx, fy, Math.max(1, 2 * s), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, fx, fy, Math.max(1, 2 * s))
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
-      ctx.beginPath()
-      ctx.arc(fx - 0.6 * s, fy - 0.6 * s, Math.max(0.5, 0.6 * s), 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, fx - 0.6 * s, fy - 0.6 * s, Math.max(0.5, 0.6 * s))
     }
 
     const mushroomA = sc.mushroomA ?? '#5ce0c8'
@@ -125,9 +118,7 @@ useElementCanvas(canvasRef, {
     }
     glowDot(wx, wy, 10, wispColor, 0.7 + flare * 0.3)
     ctx.fillStyle = '#eaf6ff'
-    ctx.beginPath()
-    ctx.arc(wx, wy, Math.max(1, 1.6 * s), 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, wx, wy, Math.max(1, 1.6 * s))
 
     for (let ff = 0; ff < 12; ff++) {
       const px = sinHash01(ff + 50) * w + 12 * s * Math.sin(t * 0.2 + ff)

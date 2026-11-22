@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { BorderOverlayHost, BorderRainOverlaySpec } from '@/types/cosmetics/border'
-import { frameDelta, overlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { frameDelta, overlaySpace, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
+import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef, watch } from 'vue'
 import { clamp } from '@/utils/math'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderRainOverlaySpec }>()
 
-const MARGIN = 20
 const SPLASH_MS = 260
 const RIPPLE_MS = 700
 const SURFACE = 97
@@ -47,10 +48,7 @@ watch(
     if (!url || props.overlay.puddle !== true) return
     const img = new Image()
     img.onload = () => {
-      const off = document.createElement('canvas')
-      off.width = 12
-      off.height = 12
-      const octx = off.getContext('2d')
+      const [off, octx] = offscreenLayer(12, 12, 1)
       if (!octx) return
       octx.drawImage(img, 0, 0, 12, 12)
       reflection = off
@@ -85,7 +83,7 @@ useElementCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
-    const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
+    const { sx, sy, toX, toY } = overlaySpace(w, h, OVERLAY_MARGIN)
     const color = props.overlay.color ?? '#a4c6e8'
     const dt = frameDelta(now, lastNow, reduced)
     lastNow = now
@@ -152,9 +150,7 @@ useElementCanvas(canvasRef, {
         ctx.arc(toX(sp.x) + spread, rise, r, 0, Math.PI * 2)
         ctx.fill()
         ctx.globalAlpha = (1 - p) * 0.4
-        ctx.beginPath()
-        ctx.arc(toX(sp.x), toY(SURFACE - 2 - p * 5.5), r, 0, Math.PI * 2)
-        ctx.fill()
+        fillCircle(ctx, toX(sp.x), toY(SURFACE - 2 - p * 5.5), r)
       }
     }
 

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { BorderBlueprintOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
-import { overlaySpace } from '@/utils/cosmetics/overlayCanvas'
+import { easeInOut } from '@/utils/cosmetics/effects'
+import { overlaySpace, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { useTemplateRef } from 'vue'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderBlueprintOverlaySpec }>()
 
-const MARGIN = 20
 const BASE_TIP_DEG = 60.98
 const DEG = Math.PI / 180
 
@@ -42,10 +42,6 @@ interface BlueprintPhase {
   arcAlpha: number
   dimP: number
   dimAlpha: number
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
 
 function phaseAt(now: number, from: number, to: number, periodMs: number, reduced: boolean): BlueprintPhase {
@@ -84,10 +80,9 @@ function phaseAt(now: number, from: number, to: number, periodMs: number, reduce
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
-    const { sx, sy, toX, toY } = overlaySpace(w, h, MARGIN)
+    const { sx, sy, toX, toY } = overlaySpace(w, h, OVERLAY_MARGIN)
     const ov = props.overlay
     const draft = ov.draft ?? '#4ab8f7'
     const draftDim = ov.draftDim ?? '#2f8fd0'

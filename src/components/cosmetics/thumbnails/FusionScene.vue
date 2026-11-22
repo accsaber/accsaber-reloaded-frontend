@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { FusionScene } from '@/types/cosmetics/background'
-import { cyc, win } from '@/utils/cosmetics/canvasShapes'
+import { cyc, win, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
@@ -22,7 +22,6 @@ function fissionAmt(e: number): number {
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 2 : now / 1000
     const e = cyc(t, 5)
@@ -92,9 +91,7 @@ useElementCanvas(canvasRef, {
       kg.addColorStop(1, withAlpha(sc.beam, 0))
       ctx.globalAlpha = 0.7 + 0.2 * Math.sin(t * 2.9)
       ctx.fillStyle = kg
-      ctx.beginPath()
-      ctx.arc(kx, ky, 8 * s, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, kx, ky, 8 * s)
       ctx.globalAlpha = 1
 
       const tearCycle = Math.floor(t / 3.9)

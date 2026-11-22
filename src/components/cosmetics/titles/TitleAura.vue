@@ -1,41 +1,42 @@
 <script setup lang="ts">
-import TitleAscensionAura from '@/components/cosmetics/titles/TitleAscensionAura.vue'
-import TitleAuroraAura from '@/components/cosmetics/titles/TitleAuroraAura.vue'
-import TitleBloodAura from '@/components/cosmetics/titles/TitleBloodAura.vue'
 import TitleConstellationAura from '@/components/cosmetics/titles/TitleConstellationAura.vue'
-import TitleCoronaAura from '@/components/cosmetics/titles/TitleCoronaAura.vue'
-import TitleCosmicAura from '@/components/cosmetics/titles/TitleCosmicAura.vue'
-import TitleEarthAura from '@/components/cosmetics/titles/TitleEarthAura.vue'
-import TitleFairyAura from '@/components/cosmetics/titles/TitleFairyAura.vue'
-import TitleFlameAura from '@/components/cosmetics/titles/TitleFlameAura.vue'
-import TitleGhostsAura from '@/components/cosmetics/titles/TitleGhostsAura.vue'
-import TitleGraffitiAura from '@/components/cosmetics/titles/TitleGraffitiAura.vue'
-import TitleHazeAura from '@/components/cosmetics/titles/TitleHazeAura.vue'
-import TitleIceAura from '@/components/cosmetics/titles/TitleIceAura.vue'
-import TitleInfernoAura from '@/components/cosmetics/titles/TitleInfernoAura.vue'
-import TitleLanternAura from '@/components/cosmetics/titles/TitleLanternAura.vue'
-import TitleLayerHost from '@/components/cosmetics/titles/TitleLayerHost.vue'
-import TitleLightAura from '@/components/cosmetics/titles/TitleLightAura.vue'
-import TitleRunesAura from '@/components/cosmetics/titles/TitleRunesAura.vue'
-import TitleSigilAura from '@/components/cosmetics/titles/TitleSigilAura.vue'
-import TitleSmokeAura from '@/components/cosmetics/titles/TitleSmokeAura.vue'
-import TitleStormAura from '@/components/cosmetics/titles/TitleStormAura.vue'
-import TitleVoidAura from '@/components/cosmetics/titles/TitleVoidAura.vue'
-import TitleWaterAura from '@/components/cosmetics/titles/TitleWaterAura.vue'
-import TitleWindAura from '@/components/cosmetics/titles/TitleWindAura.vue'
-import TitleBloqsAura from '@/components/cosmetics/titles/TitleBloqsAura.vue'
-import TitleSplatterAura from '@/components/cosmetics/titles/TitleSplatterAura.vue'
-import TitleSpotlightAura from '@/components/cosmetics/titles/TitleSpotlightAura.vue'
-import TitleStampsAura from '@/components/cosmetics/titles/TitleStampsAura.vue'
-import TitleMeadowAura from '@/components/cosmetics/titles/TitleMeadowAura.vue'
-import TitleHoardAura from '@/components/cosmetics/titles/TitleHoardAura.vue'
-import TitleSeasonsAura from '@/components/cosmetics/titles/TitleSeasonsAura.vue'
-import TitleCurioAura from '@/components/cosmetics/titles/TitleCurioAura.vue'
-import TitleRadarAura from '@/components/cosmetics/titles/TitleRadarAura.vue'
-import TitleWaypointsAura from '@/components/cosmetics/titles/TitleWaypointsAura.vue'
 import type { TitleAuraSpec, TitleAuraType } from '@/types/cosmetics/title'
 import type { TitleAuraLinks } from '@/utils/cosmetics/titleAura'
-import { computed, type Component } from 'vue'
+import { computed, defineAsyncComponent, type Component } from 'vue'
+
+const TitleAscensionAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleAscensionAura.vue'))
+const TitleAuroraAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleAuroraAura.vue'))
+const TitleBloodAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleBloodAura.vue'))
+const TitleCoronaAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleCoronaAura.vue'))
+const TitleCosmicAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleCosmicAura.vue'))
+const TitleEarthAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleEarthAura.vue'))
+const TitleFairyAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleFairyAura.vue'))
+const TitleFlameAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleFlameAura.vue'))
+const TitleGhostsAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleGhostsAura.vue'))
+const TitleGraffitiAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleGraffitiAura.vue'))
+const TitleHazeAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleHazeAura.vue'))
+const TitleIceAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleIceAura.vue'))
+const TitleInfernoAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleInfernoAura.vue'))
+const TitleLanternAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleLanternAura.vue'))
+const TitleLayerHost = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleLayerHost.vue'))
+const TitleLightAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleLightAura.vue'))
+const TitleRunesAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleRunesAura.vue'))
+const TitleSigilAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleSigilAura.vue'))
+const TitleSmokeAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleSmokeAura.vue'))
+const TitleStormAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleStormAura.vue'))
+const TitleVoidAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleVoidAura.vue'))
+const TitleWaterAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleWaterAura.vue'))
+const TitleWindAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleWindAura.vue'))
+const TitleBloqsAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleBloqsAura.vue'))
+const TitleSplatterAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleSplatterAura.vue'))
+const TitleSpotlightAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleSpotlightAura.vue'))
+const TitleStampsAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleStampsAura.vue'))
+const TitleMeadowAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleMeadowAura.vue'))
+const TitleHoardAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleHoardAura.vue'))
+const TitleSeasonsAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleSeasonsAura.vue'))
+const TitleCurioAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleCurioAura.vue'))
+const TitleRadarAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleRadarAura.vue'))
+const TitleWaypointsAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleWaypointsAura.vue'))
 
 const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   flame: TitleFlameAura,

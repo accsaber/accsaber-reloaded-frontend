@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, type EffectProps } from '@/utils/cosmetics/effects'
 import { computed } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const FILTER_CSS: Record<string, (amount: number) => string> = {
   sepia: (a) => `sepia(${a})`,

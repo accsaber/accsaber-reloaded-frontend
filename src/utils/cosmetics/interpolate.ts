@@ -1,7 +1,8 @@
-import type { BorderColorFill, BorderColorStateValue, BorderShapeStateValue } from '@/types/cosmetics/border'
+import type { BorderColorFill, BorderColorStateValue } from '@/types/cosmetics/border'
 import type { Gradient, GradientStop, Loop } from '@/types/cosmetics/common'
 import type { TitleStateValue } from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
+import { easeInOut } from '@/utils/cosmetics/effects'
 import { clamp } from '@/utils/math'
 
 export function gradientToCss(g: Gradient): string {
@@ -41,6 +42,9 @@ export function fillToCss(fill: BorderColorFill): string {
   }
   if (fill.type === 'wood') {
     return `repeating-linear-gradient(180deg, ${fill.base} 0px, ${fill.light} 5px, ${fill.base} 9px, ${fill.dark} 11px, ${fill.dark} 12px)`
+  }
+  if (fill.type === 'knit') {
+    return `repeating-linear-gradient(180deg, ${fill.wool} 0px, ${fill.wool} 8px, ${fill.motif} 8px, ${fill.motif} 10px, ${fill.wool} 10px, ${fill.wool} 12px)`
   }
   if (fill.type === 'lights') {
     const dots = fill.colors.map((c, i) => `radial-gradient(circle at ${Math.round(((i + 0.5) / fill.colors.length) * 100)}% 50%, ${c} 0 12%, transparent 13%)`)
@@ -100,11 +104,7 @@ export function fillToCss(fill: BorderColorFill): string {
   return gradientToCss(fill)
 }
 
-function easeInOut(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-}
-
-export function lerpNumber(a: number, b: number, t: number): number {
+function lerpNumber(a: number, b: number, t: number): number {
   return a + (b - a) * t
 }
 
@@ -116,7 +116,7 @@ function lerpStops(a: GradientStop[], b: GradientStop[], t: number): GradientSto
   }))
 }
 
-export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradient {
+function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradient {
   if (a.type !== b.type) return t < 0.5 ? a : b
   if (a.type === 'linear' && b.type === 'linear') {
     return {
@@ -147,7 +147,7 @@ export function interpolateGradient(a: Gradient, b: Gradient, t: number): Gradie
 }
 
 const CANVAS_FILL_LIST = [
-  'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion', 'eclipse', 'candle', 'wood', 'brew',
+  'cosmic', 'toon', 'prism', 'grove', 'regalia', 'colossus', 'stolenflame', 'dominion', 'eclipse', 'candle', 'wood', 'knit', 'brew',
   'starshine', 'lights',
   'confetti', 'jewel', 'laser', 'chart', 'hazard', 'warp',
 ] as const
@@ -160,7 +160,7 @@ export function isCanvasFill(fill: BorderColorFill): fill is CanvasFill {
   return CANVAS_FILL_TYPES.has(fill.type)
 }
 
-export function interpolateFill(a: BorderColorFill, b: BorderColorFill, t: number): BorderColorFill {
+function interpolateFill(a: BorderColorFill, b: BorderColorFill, t: number): BorderColorFill {
   if (isCanvasFill(a) || isCanvasFill(b)) {
     return t < 0.5 ? a : b
   }
@@ -263,116 +263,4 @@ export function pickInterpolatedState<S extends { atMs: number }>(
 export function isAnimated(value: { states: Array<unknown>; durationMs?: number } | null | undefined): boolean {
   if (!value) return false
   return value.states.length > 1
-}
-
-type MorphPoint = [number, number]
-
-export interface MorphRun {
-  closed: boolean
-  frames: MorphPoint[][]
-}
-
-export type ShapeTrack = string | MorphRun[]
-
-function sampleRun(pathEl: SVGPathElement, samples: number, closed: boolean): MorphPoint[] {
-  const total = pathEl.getTotalLength()
-  if (total === 0 || samples < 2) return []
-  const span = closed ? samples : samples - 1
-  const out: MorphPoint[] = new Array(samples)
-  for (let i = 0; i < samples; i++) {
-    const p = pathEl.getPointAtLength((i / span) * total)
-    out[i] = [p.x, p.y]
-  }
-  return out
-}
-
-function alignmentCost(a: MorphPoint[], b: MorphPoint[], offset: number, reverse: boolean): number {
-  const n = a.length
-  let cost = 0
-  for (let i = 0; i < n; i++) {
-    const j = reverse ? (n - 1 - ((i + offset) % n) + n) % n : (i + offset) % n
-    const dx = a[i][0] - b[j][0]
-    const dy = a[i][1] - b[j][1]
-    cost += dx * dx + dy * dy
-  }
-  return cost
-}
-
-function alignRun(reference: MorphPoint[], target: MorphPoint[], closed: boolean): MorphPoint[] {
-  const n = reference.length
-  if (n === 0 || target.length !== n) return target
-  const offsets = closed ? n : 1
-  let best = { cost: Infinity, offset: 0, reverse: false }
-  for (const reverse of [false, true]) {
-    for (let offset = 0; offset < offsets; offset++) {
-      const cost = alignmentCost(reference, target, offset, reverse)
-      if (cost < best.cost) best = { cost, offset, reverse }
-    }
-  }
-  return target.map((_, i) => {
-    const j = best.reverse ? (n - 1 - ((i + best.offset) % n) + n) % n : (i + best.offset) % n
-    return target[j]
-  })
-}
-
-function splitSubpaths(d: string): string[] {
-  return d.split(/(?=M)/).map((part) => part.trim()).filter(Boolean)
-}
-
-function isClosed(d: string): boolean {
-  return /z\s*$/i.test(d)
-}
-
-function morphRuns(ds: string[], svg: SVGSVGElement, samples: number): MorphRun[] | null {
-  const split = ds.map(splitSubpaths)
-  const count = split[0].length
-  if (split.some((runs) => runs.length !== count)) return null
-  const path = document.createElementNS(svg.namespaceURI, 'path') as SVGPathElement
-  svg.appendChild(path)
-  try {
-    return split[0].map((first, ri) => {
-      const closed = isClosed(first)
-      const frames = split.map((runs) => {
-        path.setAttribute('d', runs[ri])
-        return sampleRun(path, samples, closed)
-      })
-      return { closed, frames: frames.map((f) => alignRun(frames[0], f, closed)) }
-    })
-  } finally {
-    svg.removeChild(path)
-  }
-}
-
-export function shapeTracks(states: BorderShapeStateValue[], samples: number): ShapeTrack[] {
-  const first = states[0]?.paths ?? []
-  if (typeof document === 'undefined') return first.map((p) => p.d)
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.setAttribute('style', 'position:absolute;width:0;height:0;visibility:hidden;pointer-events:none;')
-  document.body.appendChild(svg)
-  try {
-    return first.map((p, pi) => {
-      const ds = states.map((st) => st.paths?.[pi]?.d ?? p.d)
-      if (ds.every((d) => d === p.d)) return p.d
-      return morphRuns(ds, svg, samples) ?? p.d
-    })
-  } finally {
-    document.body.removeChild(svg)
-  }
-}
-
-function pointsToPathD(points: MorphPoint[], closed: boolean): string {
-  if (points.length === 0) return ''
-  let d = `M${points[0][0].toFixed(2)},${points[0][1].toFixed(2)}`
-  for (let i = 1; i < points.length; i++) d += `L${points[i][0].toFixed(2)},${points[i][1].toFixed(2)}`
-  return closed ? `${d}Z` : d
-}
-
-function lerpRun(a: MorphPoint[], b: MorphPoint[], t: number): MorphPoint[] {
-  if (t === 0 || a.length !== b.length) return a
-  return a.map(([ax, ay], i) => [ax + (b[i][0] - ax) * t, ay + (b[i][1] - ay) * t])
-}
-
-export function trackPathD(track: ShapeTrack, from: number, to: number, t: number): string {
-  if (typeof track === 'string') return track
-  return track.map((run) => pointsToPathD(lerpRun(run.frames[from], run.frames[to], t), run.closed)).join('')
 }

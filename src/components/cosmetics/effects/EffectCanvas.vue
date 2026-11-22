@@ -52,13 +52,6 @@ useElementCanvas(canvasRef, {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
 .comp-fx-canvas {
   position: absolute;
   display: block;

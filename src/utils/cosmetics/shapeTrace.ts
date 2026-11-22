@@ -31,6 +31,10 @@ export function traceBox(viewBox: string): TraceBox {
   return ok ? { x: nums[0], y: nums[1], w: nums[2], h: nums[3] } : { x: 0, y: 0, w: 100, h: 100 }
 }
 
+export function splitSubpaths(d: string): string[] {
+  return d.split(/(?=M)/).map((part) => part.trim()).filter(Boolean)
+}
+
 function sampleLoop(d: string): TraceLoop | null {
   const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   el.setAttribute('d', d)
@@ -53,7 +57,7 @@ export function traceShape(trace: ShapeTrace | null | undefined): TracedShape {
   if (!trace || trace.ds.length === 0 || typeof document === 'undefined') {
     return { loops: [], main: 0, vb: { x: 0, y: 0, w: 100, h: 100 } }
   }
-  const loops = trace.ds.map(sampleLoop).filter((l): l is TraceLoop => !!l)
+  const loops = trace.ds.flatMap(splitSubpaths).map(sampleLoop).filter((l): l is TraceLoop => !!l)
   let main = 0
   loops.forEach((lp, i) => {
     if (lp.len > loops[main].len) main = i

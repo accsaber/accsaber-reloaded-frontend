@@ -1,21 +1,24 @@
 <script setup lang="ts">
-import BorderArcadeOverlay from '@/components/cosmetics/borders/BorderArcadeOverlay.vue'
-import BorderBlackHoleOverlay from '@/components/cosmetics/borders/BorderBlackHoleOverlay.vue'
-import BorderBlueprintOverlay from '@/components/cosmetics/borders/BorderBlueprintOverlay.vue'
-import BorderCoffinOverlay from '@/components/cosmetics/borders/BorderCoffinOverlay.vue'
-import BorderDripOverlay from '@/components/cosmetics/borders/BorderDripOverlay.vue'
-import BorderDryBonesOverlay from '@/components/cosmetics/borders/BorderDryBonesOverlay.vue'
-import BorderGingerbreadOverlay from '@/components/cosmetics/borders/BorderGingerbreadOverlay.vue'
-import BorderRainOverlay from '@/components/cosmetics/borders/BorderRainOverlay.vue'
-import BorderSnowGlobeOverlay from '@/components/cosmetics/borders/BorderSnowGlobeOverlay.vue'
-import BorderThermalOverlay from '@/components/cosmetics/borders/BorderThermalOverlay.vue'
-import BorderUmbraOverlay from '@/components/cosmetics/borders/BorderUmbraOverlay.vue'
 import type {
   BorderOverlayHost,
   BorderOverlaySpec,
   BorderOverlayType,
 } from '@/types/cosmetics/border'
-import type { Component } from 'vue'
+import { defineAsyncComponent, type Component } from 'vue'
+
+const BorderArcadeOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderArcadeOverlay.vue'))
+const BorderBlackHoleOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderBlackHoleOverlay.vue'))
+const BorderBlueprintOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderBlueprintOverlay.vue'))
+const BorderCoffinOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderCoffinOverlay.vue'))
+const BorderDripOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderDripOverlay.vue'))
+const BorderDryBonesOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderDryBonesOverlay.vue'))
+const BorderFrostOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderFrostOverlay.vue'))
+const BorderGingerbreadOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderGingerbreadOverlay.vue'))
+const BorderRainOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderRainOverlay.vue'))
+const BorderScarfOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderScarfOverlay.vue'))
+const BorderSnowGlobeOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderSnowGlobeOverlay.vue'))
+const BorderThermalOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderThermalOverlay.vue'))
+const BorderUmbraOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderUmbraOverlay.vue'))
 
 const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {
   rain: BorderRainOverlay,
@@ -29,6 +32,8 @@ const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {
   umbra: BorderUmbraOverlay,
   snowglobe: BorderSnowGlobeOverlay,
   gingerbread: BorderGingerbreadOverlay,
+  frost: BorderFrostOverlay,
+  scarf: BorderScarfOverlay,
 }
 
 defineProps<BorderOverlayHost & { overlay: BorderOverlaySpec }>()

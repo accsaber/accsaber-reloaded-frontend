@@ -2,13 +2,13 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { BorderBlackHoleOverlaySpec, BorderOverlayHost } from '@/types/cosmetics/border'
 import { darken, lerpHex } from '@/utils/color'
-import { fillMeanLuminance, frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
+import { fillMeanLuminance, frameDelta, overlaySpace, withAlpha, OVERLAY_MARGIN } from '@/utils/cosmetics/overlayCanvas'
 import { randBetween as rand } from '@/utils/random'
 import { computed, useTemplateRef } from 'vue'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<BorderOverlayHost & { overlay: BorderBlackHoleOverlaySpec }>()
 
-const MARGIN = 20
 const HOLE_X = 50
 const HOLE_Y = 100
 const R = 8.8
@@ -70,7 +70,7 @@ useElementCanvas(canvasRef, {
   },
   draw(ctx, w, h, now, reduced) {
     ctx.clearRect(0, 0, w, h)
-    const { s, toX, toY } = overlaySpace(w, h, MARGIN)
+    const { s, toX, toY } = overlaySpace(w, h, OVERLAY_MARGIN)
     const glow = props.overlay.glow ?? DEFAULT_GLOW
     const dt = frameDelta(now, lastNow, reduced)
     lastNow = now
@@ -160,14 +160,10 @@ useElementCanvas(canvasRef, {
     halo.addColorStop(0, withAlpha(glow, 0.32 + pulse * 0.14))
     halo.addColorStop(1, withAlpha(glow, 0))
     ctx.fillStyle = halo
-    ctx.beginPath()
-    ctx.arc(cx, cy, rp * 1.45, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, cx, cy, rp * 1.45)
 
     ctx.fillStyle = '#000000'
-    ctx.beginPath()
-    ctx.arc(cx, cy, rp, 0, Math.PI * 2)
-    ctx.fill()
+    fillCircle(ctx, cx, cy, rp)
     ctx.strokeStyle = withAlpha(glow, 0.85 + pulse * 0.15)
     ctx.lineWidth = Math.max(1, 0.9 * s)
     ctx.beginPath()

@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, type EffectProps } from '@/utils/cosmetics/effects'
 import { computed } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const isPage = computed(() => props.measure.typeKey === 'theme')
 
@@ -37,20 +31,13 @@ function glowVars(core: boolean): Record<string, string> {
 </script>
 
 <template>
-  <div class="comp-fx-region">
+  <div class="comp-fx-region comp-fx-region--clip">
     <div class="comp-fx-glow" :class="anchorClass" :style="glowVars(false)"></div>
     <div v-if="hasCore" class="comp-fx-glow" :class="anchorClass" :style="glowVars(true)"></div>
   </div>
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
 .comp-fx-glow {
   position: absolute;
   left: 0;

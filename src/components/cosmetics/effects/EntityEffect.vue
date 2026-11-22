@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, type EffectProps } from '@/utils/cosmetics/effects'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 interface EntityConfig {
   widthPct: number
@@ -107,13 +102,6 @@ const entities = computed<EntityRender[]>(() => {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
 .comp-fx-entity {
   position: absolute;
   animation: comp-fx-entity-float var(--efloat, 7s) ease-in-out infinite;

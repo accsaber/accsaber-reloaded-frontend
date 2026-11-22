@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, type EffectProps } from '@/utils/cosmetics/effects'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 type ParticleMotion = 'rise' | 'fall' | 'drift' | 'twinkle' | 'gust'
 
@@ -87,7 +82,7 @@ const particles = computed<FieldParticle[]>(() => {
 </script>
 
 <template>
-  <div class="comp-fx-region">
+  <div class="comp-fx-region comp-fx-region--clip">
     <span
       v-for="(p, j) in particles"
       :key="j"
@@ -110,13 +105,6 @@ const particles = computed<FieldParticle[]>(() => {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
 .comp-fx-particle {
   position: absolute;
   mix-blend-mode: var(--fx-blend, screen);

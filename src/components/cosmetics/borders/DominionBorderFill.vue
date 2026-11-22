@@ -2,7 +2,8 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { DominionFill } from '@/types/cosmetics/border'
 import { luminance } from '@/utils/color'
-import { cyc, win } from '@/utils/cosmetics/canvasShapes'
+import { cyc, win, fillCircle } from '@/utils/cosmetics/canvasShapes'
+import { fissionAmt, splitDir } from '@/utils/cosmetics/dominion'
 import { overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { sinHash01 } from '@/utils/random'
 import { useTemplateRef } from 'vue'
@@ -15,11 +16,6 @@ const props = defineProps<{
 
 const MARGIN = props.margin ?? 25
 
-function splitDir(i: number, n: number): [number, number] {
-  const ang = (i / Math.max(1, n)) * Math.PI * 2 - Math.PI / 2
-  return [Math.cos(ang), Math.sin(ang)]
-}
-
 const KNOTS: [number, number][] = [
   [16, 22],
   [86, 14],
@@ -27,20 +23,9 @@ const KNOTS: [number, number][] = [
   [12, 76],
 ]
 
-function fissionAmt(e: number): number {
-  const split = win(e, 0.6, 0.72)
-  const hold = win(e, 0.72, 0.82)
-  const fuse = win(e, 0.82, 0.92)
-  if (split >= 0) return 1 - Math.pow(1 - split, 3)
-  if (hold >= 0) return 1
-  if (fuse >= 0) return 1 - Math.pow(fuse, 2)
-  return 0
-}
-
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
 
 useElementCanvas(canvasRef, {
-  init() {},
   draw(ctx, w, h, now, reduced) {
     const t = reduced ? 2 : now / 1000
     const interval = props.fill.intervalS ?? 5
@@ -77,9 +62,7 @@ useElementCanvas(canvasRef, {
         kg.addColorStop(0, color)
         kg.addColorStop(1, withAlpha(color, 0))
         ctx.fillStyle = kg
-        ctx.beginPath()
-        ctx.arc(kx, ky, kr, 0, Math.PI * 2)
-        ctx.fill()
+        fillCircle(ctx, kx, ky, kr)
       }
       ctx.globalAlpha = 1
     }

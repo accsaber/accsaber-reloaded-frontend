@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleHoardAuraSpec } from '@/types/cosmetics/title'
 import { darken, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import { pickVariant, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleHoardAuraSpec
   light: boolean
 }>()
+
+const palette = pigments(props.aura, props.light, { coin: '#f2c94c', rim: '#a16207', smoke: '#8c87a3', flame: '#ff8a3d', eye: '#fbbf24' })
+const gemColors = pickVariant(props.light, props.aura.lightGems, props.aura.gems, ['#e11d48', '#2563eb', '#8b5cf6'])
 
 type TreasureKind = 'coin' | 'gem' | 'goblet' | 'crown'
 
@@ -36,12 +38,10 @@ interface Puff {
   x: number
 }
 
-const STATIC_T = 3
 const DROP_S = 0.85
 const BREATH_S = 1.2
 const EYES_S = 3.4
 
-let rect: TitleAuraRect | null = null
 let pile: Treasure[] = []
 let drop: Drop | null = null
 let puffs: Puff[] = []
@@ -53,30 +53,6 @@ let nextBreathAt = 0
 let eyesAt = -10
 let eyesSeed = 0
 let nextEyesAt = 0
-
-function coin(): string {
-  return pickVariant(props.light, props.aura.lightCoin, props.aura.coin, '#f2c94c')
-}
-
-function rim(): string {
-  return pickVariant(props.light, props.aura.lightRim, props.aura.rim, '#a16207')
-}
-
-function smoke(): string {
-  return pickVariant(props.light, props.aura.lightSmoke, props.aura.smoke, '#8c87a3')
-}
-
-function flame(): string {
-  return pickVariant(props.light, props.aura.lightFlame, props.aura.flame, '#ff8a3d')
-}
-
-function eye(): string {
-  return pickVariant(props.light, props.aura.lightEye, props.aura.eye, '#fbbf24')
-}
-
-function gemColors(): string[] {
-  return pickVariant(props.light, props.aura.lightGems, props.aura.gems, ['#e11d48', '#2563eb', '#8b5cf6'])
-}
 
 function seedPile(): void {
   pile = []
@@ -101,15 +77,15 @@ function seedPile(): void {
 function drawCoin(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: number, a: number): void {
   const rx = r.fs * 0.24 * size
   const ry = rx * 0.42
-  ctx.fillStyle = withAlpha(rim(), a)
+  ctx.fillStyle = withAlpha(palette.rim, a)
   ctx.beginPath()
   ctx.ellipse(0, ry * 0.35, rx, ry, 0, 0, Math.PI * 2)
   ctx.fill()
-  ctx.fillStyle = withAlpha(coin(), a)
+  ctx.fillStyle = withAlpha(palette.coin, a)
   ctx.beginPath()
   ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2)
   ctx.fill()
-  ctx.strokeStyle = withAlpha(darken(coin(), 0.25), a * 0.8)
+  ctx.strokeStyle = withAlpha(darken(palette.coin, 0.25), a * 0.8)
   ctx.lineWidth = Math.max(0.5, r.fs * 0.03)
   ctx.beginPath()
   ctx.ellipse(0, 0, rx * 0.62, ry * 0.62, 0, 0, Math.PI * 2)
@@ -137,7 +113,7 @@ function drawGem(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: number, 
 
 function drawGoblet(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: number, a: number): void {
   const s = r.fs * 0.24 * size
-  ctx.fillStyle = withAlpha(coin(), a)
+  ctx.fillStyle = withAlpha(palette.coin, a)
   ctx.beginPath()
   ctx.moveTo(-s * 0.5, -s * 0.85)
   ctx.quadraticCurveTo(-s * 0.42, -s * 0.15, 0, -s * 0.1)
@@ -148,7 +124,7 @@ function drawGoblet(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: numbe
   ctx.beginPath()
   ctx.ellipse(0, s * 0.34, s * 0.3, s * 0.1, 0, 0, Math.PI * 2)
   ctx.fill()
-  ctx.strokeStyle = withAlpha(darken(coin(), 0.3), a * 0.8)
+  ctx.strokeStyle = withAlpha(darken(palette.coin, 0.3), a * 0.8)
   ctx.lineWidth = Math.max(0.5, r.fs * 0.025)
   ctx.beginPath()
   ctx.moveTo(-s * 0.44, -s * 0.62)
@@ -158,7 +134,7 @@ function drawGoblet(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: numbe
 
 function drawCrown(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: number, a: number): void {
   const s = r.fs * 0.28 * size
-  ctx.fillStyle = withAlpha(coin(), a)
+  ctx.fillStyle = withAlpha(palette.coin, a)
   ctx.beginPath()
   ctx.moveTo(-s * 0.6, 0)
   ctx.lineTo(-s * 0.6, -s * 0.35)
@@ -170,9 +146,8 @@ function drawCrown(ctx: CanvasRenderingContext2D, r: TitleAuraRect, size: number
   ctx.closePath()
   ctx.fill()
   ctx.fillRect(-s * 0.6, 0, s * 1.2, s * 0.16)
-  const gems = gemColors()
   for (const [gi, gx] of [-0.38, 0, 0.38].entries()) {
-    ctx.fillStyle = withAlpha(gems[gi % gems.length], a)
+    ctx.fillStyle = withAlpha(gemColors[gi % gemColors.length], a)
     ctx.beginPath()
     ctx.arc(gx * s, s * 0.08, s * 0.07, 0, Math.PI * 2)
     ctx.fill()
@@ -184,7 +159,7 @@ function drawTreasure(ctx: CanvasRenderingContext2D, tr: Treasure, r: TitleAuraR
   ctx.translate(x, y)
   ctx.rotate(rot)
   if (tr.kind === 'coin') drawCoin(ctx, r, tr.size, a)
-  else if (tr.kind === 'gem') drawGem(ctx, r, tr.size, a, gemColors()[tr.gemIdx % gemColors().length])
+  else if (tr.kind === 'gem') drawGem(ctx, r, tr.size, a, gemColors[tr.gemIdx % gemColors.length])
   else if (tr.kind === 'goblet') drawGoblet(ctx, r, tr.size, a)
   else drawCrown(ctx, r, tr.size, a)
   ctx.restore()
@@ -208,7 +183,7 @@ function drawBreath(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number):
     const s = r.fs * (0.16 + frac * 0.34) * env * flick
     if (s < 0.5) continue
     const y = y0 + Math.sin(t * 9 + k * 1.6) * r.fs * 0.09 - frac * r.fs * 0.22
-    const c = frac < 0.3 ? lighten(flame(), 0.45) : flame()
+    const c = frac < 0.3 ? lighten(palette.flame, 0.45) : palette.flame
     const g = ctx.createRadialGradient(x, y, 0, x, y, s * 2)
     g.addColorStop(0, withAlpha(c, 0.5 * env))
     g.addColorStop(1, withAlpha(c, 0))
@@ -225,7 +200,7 @@ function drawBreath(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number):
     const eu = (u + k * 0.13) % 1
     const x = x0 + dir * reach * hash01(breathSeed * 7 + k * 3)
     const y = y0 - eu * r.fs * 0.9
-    ctx.fillStyle = withAlpha(flame(), (1 - eu) * env * 0.8)
+    ctx.fillStyle = withAlpha(palette.flame, (1 - eu) * env * 0.8)
     ctx.beginPath()
     ctx.arc(x, y, Math.max(0.5, r.fs * 0.045), 0, Math.PI * 2)
     ctx.fill()
@@ -250,11 +225,11 @@ function drawEyes(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): v
   for (const side of [-1, 1]) {
     const ex = cx + side * gap * 0.5
     const g = ctx.createRadialGradient(ex, cy, 0, ex, cy, ew * 1.8)
-    g.addColorStop(0, withAlpha(eye(), 0.3 * a))
-    g.addColorStop(1, withAlpha(eye(), 0))
+    g.addColorStop(0, withAlpha(palette.eye, 0.3 * a))
+    g.addColorStop(1, withAlpha(palette.eye, 0))
     ctx.fillStyle = g
     ctx.fillRect(ex - ew * 1.8, cy - ew * 1.8, ew * 3.6, ew * 3.6)
-    ctx.fillStyle = withAlpha(eye(), 0.92 * a)
+    ctx.fillStyle = withAlpha(palette.eye, 0.92 * a)
     ctx.beginPath()
     ctx.moveTo(ex - ew / 2, cy)
     ctx.quadraticCurveTo(ex, cy - eh, ex + ew / 2, cy)
@@ -269,11 +244,8 @@ function drawEyes(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): v
   }
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+useTitleAura({
+  init(_rect, now) {
     seedPile()
     const t = now / 1000
     nextDropAt = t + rand(1, props.aura.dropEveryS ?? 5)
@@ -285,11 +257,7 @@ useElementCanvas(canvasRef, {
     drop = null
     puffs = []
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const r = rect
-    const t = reduced ? STATIC_T : now / 1000
+  draw(ctx, { rect: r, t, reduced }) {
     const baseY = r.y + r.h + r.fs * 0.75
     if (reduced) {
       eyesAt = t - EYES_S * 0.3
@@ -352,7 +320,7 @@ useElementCanvas(canvasRef, {
       const x = r.x + r.w * p.x + Math.sin(t * 1.1 + p.born) * r.fs * 0.2
       const y = baseY - r.fs * 0.4 - u * r.fs * 1.6
       const a = Math.sin(u * Math.PI) * 0.3
-      ctx.fillStyle = withAlpha(smoke(), a)
+      ctx.fillStyle = withAlpha(palette.smoke, a)
       ctx.beginPath()
       ctx.arc(x, y, r.fs * (0.14 + u * 0.24), 0, Math.PI * 2)
       ctx.fill()

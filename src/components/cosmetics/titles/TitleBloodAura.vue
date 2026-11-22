@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleBleedSpec, TitleBloodAuraSpec } from '@/types/cosmetics/title'
 import { lighten } from '@/utils/color'
 import { drawCreature } from '@/utils/cosmetics/eclipseCreatures'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { heartbeat } from '@/utils/cosmetics/titleSchools'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleBloodAuraSpec
@@ -15,11 +14,7 @@ const props = defineProps<{
   bleed?: TitleBleedSpec
 }>()
 
-const palette = computed(() => ({
-  color: pickVariant(props.light, props.aura.lightColor, props.aura.color, '#b91c1c'),
-  glow: pickVariant(props.light, props.aura.lightGlow, props.aura.glow, '#7f1d1d'),
-  bat: pickVariant(props.light, props.aura.lightBat, props.aura.bat, '#dc2626'),
-}))
+const palette = pigments(props.aura, props.light, { color: '#b91c1c', glow: '#7f1d1d', bat: '#dc2626' })
 
 const DRIP_TOP = 0.74
 const FLOOR = 1.9
@@ -38,7 +33,6 @@ interface Splat {
   born: number
 }
 
-let rect: TitleAuraRect | null = null
 let drops: Drop[] = []
 let splats: Splat[] = []
 let nextDrop = 0
@@ -72,9 +66,9 @@ function drawDrop(ctx: CanvasRenderingContext2D, d: Drop, r: TitleAuraRect): voi
   const y = top + d.y * r.fs
   const rad = r.fs * d.r * grow
   const stretch = 1 + Math.min(1.5, d.vy * 0.35)
-  ctx.fillStyle = palette.value.color
+  ctx.fillStyle = palette.color
   if (d.y > 0.02) {
-    ctx.strokeStyle = withAlpha(palette.value.color, 0.55)
+    ctx.strokeStyle = withAlpha(palette.color, 0.55)
     ctx.lineWidth = Math.max(0.5, rad * 0.9)
     ctx.beginPath()
     ctx.moveTo(x, top)
@@ -86,7 +80,7 @@ function drawDrop(ctx: CanvasRenderingContext2D, d: Drop, r: TitleAuraRect): voi
   ctx.quadraticCurveTo(x + rad * 1.1, y, x, y + rad)
   ctx.quadraticCurveTo(x - rad * 1.1, y, x, y - rad * stretch)
   ctx.fill()
-  ctx.fillStyle = withAlpha(lighten(palette.value.color, 0.4), 0.5)
+  ctx.fillStyle = withAlpha(lighten(palette.color, 0.4), 0.5)
   ctx.beginPath()
   ctx.arc(x - rad * 0.3, y - rad * 0.2, rad * 0.22, 0, Math.PI * 2)
   ctx.fill()
@@ -97,7 +91,7 @@ function drawSplats(ctx: CanvasRenderingContext2D, r: TitleAuraRect): void {
     const u = (clock - s.born) / 0.8
     const x = r.x + r.w * s.x
     const y = r.y + r.h * DRIP_TOP + FLOOR * r.fs
-    ctx.fillStyle = withAlpha(palette.value.color, 0.7 * (1 - u))
+    ctx.fillStyle = withAlpha(palette.color, 0.7 * (1 - u))
     ctx.beginPath()
     ctx.ellipse(x, y, r.fs * (0.08 + u * 0.22), r.fs * (0.025 + u * 0.05), 0, 0, Math.PI * 2)
     ctx.fill()
@@ -111,7 +105,7 @@ function drawSplats(ctx: CanvasRenderingContext2D, r: TitleAuraRect): void {
 
 function drawBats(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): void {
   const n = props.aura.bats ?? 4
-  const pal = { shadow: palette.value.bat, corona: palette.value.color }
+  const pal = { shadow: palette.bat, corona: palette.color }
   for (let i = 0; i < n; i++) {
     const a = t * (0.5 + 0.12 * i) + (i / n) * Math.PI * 2
     const x = r.x + r.w / 2 + Math.cos(a) * (r.w / 2 + r.fs * 0.6)
@@ -121,20 +115,15 @@ function drawBats(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number): v
   }
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
+useTitleAura({
+  init(_rect, now) {
     drops = []
     splats = []
     last = now
     clock = 0
     nextDrop = 0.3
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
+  draw(ctx, { rect, now, reduced, w, h }) {
     const dt = frameDelta(now, last, reduced)
     last = now
     clock = reduced ? 3 : clock + dt
@@ -142,8 +131,8 @@ useElementCanvas(canvasRef, {
     const cx = rect.x + rect.w / 2
     const cy = rect.y + rect.h / 2
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rect.w * 0.55 + rect.fs * 0.5)
-    g.addColorStop(0, withAlpha(palette.value.glow, 0.12 + 0.28 * beat))
-    g.addColorStop(1, withAlpha(palette.value.glow, 0))
+    g.addColorStop(0, withAlpha(palette.glow, 0.12 + 0.28 * beat))
+    g.addColorStop(1, withAlpha(palette.glow, 0))
     ctx.fillStyle = g
     ctx.fillRect(0, 0, w, h)
     if (!reduced) stepDrops(dt)

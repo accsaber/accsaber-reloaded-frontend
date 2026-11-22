@@ -1,23 +1,15 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleRunesAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleRunesAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => {
-  const a = props.aura
-  return {
-    color: pickVariant(props.light, a.lightColor, a.color, '#c4b5fd'),
-    glow: pickVariant(props.light, a.lightGlow, a.glow, '#7c3aed'),
-  }
-})
+const palette = pigments(props.aura, props.light, { color: '#c4b5fd', glow: '#7c3aed' })
 
 const RUNES: number[][][] = [
   [[0.5, 0], [0.5, 1]],
@@ -38,7 +30,6 @@ interface Rune {
   tilt: number
 }
 
-let rect: TitleAuraRect | null = null
 let runes: Rune[] = []
 
 function makeRune(i: number): Rune {
@@ -59,7 +50,7 @@ function drawRune(ctx: CanvasRenderingContext2D, r: Rune, x: number, y: number, 
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   for (const pass of [0, 1]) {
-    ctx.strokeStyle = withAlpha(pass ? palette.value.color : palette.value.glow, pass ? a : a * 0.5)
+    ctx.strokeStyle = withAlpha(pass ? palette.color : palette.glow, pass ? a : a * 0.5)
     ctx.lineWidth = pass ? Math.max(1, s * 0.12) : Math.max(2, s * 0.3)
     ctx.beginPath()
     r.shape.forEach((p, i) => (i ? ctx.lineTo((p[0] - 0.5) * s, (p[1] - 0.5) * s) : ctx.moveTo((p[0] - 0.5) * s, (p[1] - 0.5) * s)))
@@ -68,22 +59,17 @@ function drawRune(ctx: CanvasRenderingContext2D, r: Rune, x: number, y: number, 
   ctx.restore()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
+useTitleAura({
+  staticT: 4,
+  additive: () => !props.light,
   init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
     runes = Array.from({ length: props.aura.count ?? 7 }, (_, i) => makeRune(i))
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const t = reduced ? 4 : now / 1000
+  draw(ctx, { rect, t }) {
     const cx = rect.x + rect.w / 2
     const cy = rect.y + rect.h / 2
     const rx = rect.w / 2 + rect.fs * 0.5
     const ry = rect.h / 2 + rect.fs * 0.45
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     for (const r of runes) {
       const ang = r.phase + t * r.speed
       const x = cx + Math.cos(ang) * rx
@@ -92,7 +78,6 @@ useElementCanvas(canvasRef, {
       const depth = 0.55 + 0.45 * (Math.sin(ang) + 1) / 2
       drawRune(ctx, r, x, y, rect.fs * r.size * depth, fl * depth)
     }
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

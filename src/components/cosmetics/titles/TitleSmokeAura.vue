@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleSmokeAuraSpec } from '@/types/cosmetics/title'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 import { clamp01 } from '@/utils/math'
 
 const props = defineProps<{
@@ -13,13 +12,7 @@ const props = defineProps<{
   light: boolean
 }>()
 
-const palette = computed(() => {
-  const a = props.aura
-  return {
-    smoke: pickVariant(props.light, a.lightSmoke, a.smoke, '#2a1a3e'),
-    ember: pickVariant(props.light, a.lightEmber, a.ember, '#dc2626'),
-  }
-})
+const palette = pigments(props.aura, props.light, { smoke: '#2a1a3e', ember: '#dc2626' })
 
 interface Puff {
   x: number
@@ -46,7 +39,6 @@ interface Ember {
   size: number
 }
 
-let rect: TitleAuraRect | null = null
 let puffs: Puff[] = []
 let embers: Ember[] = []
 let sprites: HTMLCanvasElement[] = []
@@ -78,8 +70,7 @@ function makeSprite(color: string, edge: string | null): HTMLCanvasElement {
   return c
 }
 
-function resetPuff(p: Puff, now: number, warm: boolean) {
-  if (!rect) return
+function resetPuff(p: Puff, rect: TitleAuraRect, now: number, warm: boolean) {
   const fs = rect.fs
   const bias = Math.pow(Math.random(), 0.7) * (Math.random() < 0.5 ? -1 : 1)
   p.x = rect.x + rect.w / 2 + bias * rect.w * 0.44
@@ -96,8 +87,7 @@ function resetPuff(p: Puff, now: number, warm: boolean) {
   p.maxA = rand(0.28, 0.48) * (props.light ? 0.85 : 1)
 }
 
-function resetEmber(e: Ember, now: number, warm: boolean) {
-  if (!rect) return
+function resetEmber(e: Ember, rect: TitleAuraRect, now: number, warm: boolean) {
   const fs = rect.fs
   e.x = rect.x + rand(0, rect.w)
   e.y = rect.y + rect.h * rand(0.3, 1)
@@ -108,36 +98,32 @@ function resetEmber(e: Ember, now: number, warm: boolean) {
   e.size = fs * rand(0.05, 0.09)
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    if (!canvasRef.value) return
-    rect = titleAuraRect(canvasRef.value)
-    const { smoke, ember } = palette.value
+useTitleAura({
+  staticT: 0.9,
+  init() {
+    const { smoke, ember } = palette
     sprites = [
       makeSprite(smoke, null),
       makeSprite(smoke, null),
       makeSprite(smoke, ember),
       makeSprite(lerpHex(smoke, ember, 0.3), ember),
     ]
+  },
+  layout(rect, now) {
     puffs = Array.from({ length: 12 }, () => {
       const p = {} as Puff
-      resetPuff(p, now, true)
+      resetPuff(p, rect, now, true)
       return p
     })
     embers = Array.from({ length: 7 }, () => {
       const e = {} as Ember
-      resetEmber(e, now, true)
+      resetEmber(e, rect, now, true)
       return e
     })
   },
-  draw(ctx, w, h, now, reduced) {
-    if (!rect) return
-    ctx.clearRect(0, 0, w, h)
-    const { ember } = palette.value
+  draw(ctx, { rect, t, now, reduced, w, h }) {
+    const { ember } = palette
     const fs = rect.fs
-    const t = reduced ? 0.9 : now / 1000
     const cx = rect.x + rect.w / 2
 
     const glow = ctx.createRadialGradient(cx, rect.y + rect.h, 0, cx, rect.y + rect.h, rect.w * 0.62)
@@ -150,7 +136,7 @@ useElementCanvas(canvasRef, {
       let lp = (now - p.born) / p.life
       if (reduced) lp = ((p.born * 13) % 100) / 100
       if (lp >= 1) {
-        resetPuff(p, now, false)
+        resetPuff(p, rect, now, false)
         continue
       }
       const px = p.x + Math.sin(t * p.swayFreq * Math.PI * 2 + p.born) * p.swayAmp
@@ -172,7 +158,7 @@ useElementCanvas(canvasRef, {
       let lp = (now - e.born) / e.life
       if (reduced) lp = ((e.born * 11) % 100) / 100
       if (lp >= 1) {
-        resetEmber(e, now, false)
+        resetEmber(e, rect, now, false)
         continue
       }
       const flick = 0.55 + 0.45 * Math.sin(t * 8 + e.born)

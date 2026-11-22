@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBackdropCanvas } from '@/composables/useCanvasScene'
-import { type Ctx, sceneUnit } from '@/utils/cosmetics/canvasShapes'
+import { type Ctx, sceneUnit, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { lerpHex } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { cloudMask, offscreenLayer, tintLayer, wrapX } from '@/utils/cosmetics/sceneLayer'
@@ -357,9 +357,7 @@ function drawMoon(ctx: Ctx, w: number, h: number): void {
   ctx.fillStyle = halo
   ctx.fillRect(0, 0, w, h * HORIZON)
   ctx.fillStyle = props.config.moonColor
-  ctx.beginPath()
-  ctx.arc(mx, my, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, mx, my, r)
   const shade = lerpHex(props.config.moonColor, props.config.skyColors[0], 0.35)
   ctx.fillStyle = withAlpha(shade, 0.28)
   for (const [ox, oy, sr] of [[-0.3, -0.22, 0.26], [0.22, 0.08, 0.2], [-0.08, 0.42, 0.15], [0.44, 0.4, 0.09], [0.1, -0.5, 0.08]]) {
@@ -371,9 +369,7 @@ function drawMoon(ctx: Ctx, w: number, h: number): void {
   limb.addColorStop(0, withAlpha(shade, 0))
   limb.addColorStop(1, withAlpha(shade, 0.45))
   ctx.fillStyle = limb
-  ctx.beginPath()
-  ctx.arc(mx, my, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, mx, my, r)
 }
 
 function litSize(): number {

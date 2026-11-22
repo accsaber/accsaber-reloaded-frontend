@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/cosmetics/effects'
-import { isFieldKey, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { isFieldKey, type EffectProps } from '@/utils/cosmetics/effects'
 import { readHauntSpec } from '@/utils/cosmetics/wear'
 import { computed, ref } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const VIEWPORT_GHOSTS = 5
 const VIEWPORT_GHOST_PX = 44

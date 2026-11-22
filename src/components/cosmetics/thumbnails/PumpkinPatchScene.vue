@@ -2,7 +2,7 @@
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { PumpkinPatchScene } from '@/types/cosmetics/background'
 import { darken, lerpHex, lighten, parseHex } from '@/utils/color'
-import { flickerNoise, type Ctx, type Point } from '@/utils/cosmetics/canvasShapes'
+import { flickerNoise, type Ctx, type Point, fillCircle } from '@/utils/cosmetics/canvasShapes'
 import { drawBranch } from '@/utils/cosmetics/graveyardScenery'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { createRadialSprite, offscreenLayer, wrapX } from '@/utils/cosmetics/sceneLayer'
@@ -83,9 +83,7 @@ function drawMoon(ctx: Ctx, w: number, h: number, s: number): void {
   ctx.fillStyle = halo
   ctx.fillRect(0, 0, w, h)
   ctx.fillStyle = props.scene.moon
-  ctx.beginPath()
-  ctx.arc(mx, my, r, 0, Math.PI * 2)
-  ctx.fill()
+  fillCircle(ctx, mx, my, r)
   ctx.fillStyle = withAlpha(darken(props.scene.moon, 0.25), 0.3)
   for (const [ox, oy, sr] of [[-0.3, -0.2, 0.28], [0.25, 0.1, 0.2], [-0.05, 0.42, 0.14]]) {
     ctx.beginPath()

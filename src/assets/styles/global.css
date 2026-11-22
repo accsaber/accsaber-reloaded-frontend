@@ -353,6 +353,17 @@ h1 {
   animation: none;
 }
 
+.comp-fx-region {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.comp-fx-region--clip {
+  overflow: hidden;
+}
+
 .fx-canvas {
   position: absolute;
   inset: 0;

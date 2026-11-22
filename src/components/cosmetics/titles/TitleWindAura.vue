@@ -1,20 +1,16 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleWindAuraSpec } from '@/types/cosmetics/title'
 import { frameDelta, withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleWindAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => ({
-  color: pickVariant(props.light, props.aura.lightColor, props.aura.color, '#c8ece0'),
-  leaf: pickVariant(props.light, props.aura.lightLeaf, props.aura.leaf, '#7cb342'),
-}))
+const palette = pigments(props.aura, props.light, { color: '#c8ece0', leaf: '#7cb342' })
 
 interface Streak {
   y: number
@@ -32,11 +28,10 @@ interface Leaf {
   size: number
 }
 
-let rect: TitleAuraRect | null = null
 let streaks: Streak[] = []
 let leaves: Leaf[] = []
 let nextStreak = 0
-let nextLeaf = 0
+let nextLeaf = 1
 let last = 0
 let clock = 0
 
@@ -50,7 +45,7 @@ function drawStreak(ctx: CanvasRenderingContext2D, s: Streak, r: TitleAuraRect):
   const u = (clock - s.born) / s.life
   const x0 = r.x - r.fs * 0.8 + (r.w + r.fs * 1.6 + s.len) * u - s.len
   const y = r.y + r.h * s.y
-  ctx.strokeStyle = withAlpha(palette.value.color, 0.55 * Math.sin(u * Math.PI))
+  ctx.strokeStyle = withAlpha(palette.color, 0.55 * Math.sin(u * Math.PI))
   ctx.lineWidth = Math.max(0.6, r.fs * 0.045)
   ctx.lineCap = 'round'
   ctx.beginPath()
@@ -71,14 +66,14 @@ function drawLeaf(ctx: CanvasRenderingContext2D, lf: Leaf, r: TitleAuraRect): vo
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(clock * lf.spin)
-  ctx.fillStyle = withAlpha(palette.value.leaf, 0.85 * Math.sin(u * Math.PI))
+  ctx.fillStyle = withAlpha(palette.leaf, 0.85 * Math.sin(u * Math.PI))
   ctx.beginPath()
   ctx.moveTo(-s, 0)
   ctx.quadraticCurveTo(0, -s * 0.9, s, 0)
   ctx.quadraticCurveTo(0, s * 0.9, -s, 0)
   ctx.closePath()
   ctx.fill()
-  ctx.strokeStyle = withAlpha(palette.value.color, 0.5)
+  ctx.strokeStyle = withAlpha(palette.color, 0.5)
   ctx.lineWidth = Math.max(0.5, s * 0.12)
   ctx.beginPath()
   ctx.moveTo(-s * 0.8, 0)
@@ -87,21 +82,14 @@ function drawLeaf(ctx: CanvasRenderingContext2D, lf: Leaf, r: TitleAuraRect): vo
   ctx.restore()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, now) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-    streaks = []
-    leaves = []
+useTitleAura({
+  init(_rect, now) {
     last = now
-    clock = 0
-    nextStreak = 0
-    nextLeaf = 1
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
+  layout() {
+    streaks = []
+  },
+  draw(ctx, { rect, now, reduced }) {
     const dt = frameDelta(now, last, reduced)
     last = now
     clock = reduced ? 3 : clock + dt
@@ -115,7 +103,7 @@ useElementCanvas(canvasRef, {
       nextLeaf = clock + rand(0.8, 2.2) / (1 + g * 2)
     }
     if (reduced && streaks.length === 0) {
-      streaks = [0.1, 0.5, 0.9].map((y, i) => ({ y, born: 2.4 - i * 0.2, life: 1.2, len: rect!.fs * 2, wave: i }))
+      streaks = [0.1, 0.5, 0.9].map((y, i) => ({ y, born: 2.4 - i * 0.2, life: 1.2, len: rect.fs * 2, wave: i }))
     }
     streaks = streaks.filter((s) => clock - s.born < s.life)
     leaves = leaves.filter((l) => clock - l.born < l.life)

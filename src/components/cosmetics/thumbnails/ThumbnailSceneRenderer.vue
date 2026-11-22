@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import type { ThumbnailScene } from '@/types/cosmetics/background'
-import type { Component } from 'vue'
-import TorchlitScene from '@/components/cosmetics/thumbnails/TorchlitScene.vue'
-import HallwayScene from '@/components/cosmetics/thumbnails/HallwayScene.vue'
-import GraveyardScene from '@/components/cosmetics/thumbnails/GraveyardScene.vue'
-import PumpkinPatchScene from '@/components/cosmetics/thumbnails/PumpkinPatchScene.vue'
-import BorealisScene from '@/components/cosmetics/thumbnails/BorealisScene.vue'
-import FullMoonScene from '@/components/cosmetics/thumbnails/FullMoonScene.vue'
-import FacetVaultScene from '@/components/cosmetics/thumbnails/FacetVaultScene.vue'
-import FusionScene from '@/components/cosmetics/thumbnails/FusionScene.vue'
-import GroveScene from '@/components/cosmetics/thumbnails/GroveScene.vue'
-import MonumentScene from '@/components/cosmetics/thumbnails/MonumentScene.vue'
-import SanctumScene from '@/components/cosmetics/thumbnails/SanctumScene.vue'
+import { defineAsyncComponent, type Component } from 'vue'
+
+const TorchlitScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/TorchlitScene.vue'))
+const HallwayScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/HallwayScene.vue'))
+const GraveyardScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/GraveyardScene.vue'))
+const PumpkinPatchScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/PumpkinPatchScene.vue'))
+const BorealisScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/BorealisScene.vue'))
+const FullMoonScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FullMoonScene.vue'))
+const FacetVaultScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FacetVaultScene.vue'))
+const FusionScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FusionScene.vue'))
+const GroveScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/GroveScene.vue'))
+const MonumentScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/MonumentScene.vue'))
+const SanctumScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/SanctumScene.vue'))
 
 const SCENE_RENDERERS: Record<ThumbnailScene['type'], Component> = {
   facet_vault: FacetVaultScene,

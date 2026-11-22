@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleCurioAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleCurioAuraSpec
   light: boolean
 }>()
+
+const palette = pigments(props.aura, props.light, { color: '#f2c94c', glint: '#fff7d6' })
 
 type CurioKind = 'crate' | 'gem' | 'coin' | 'trophy' | 'star'
 
@@ -20,19 +20,9 @@ interface Slot {
 }
 
 const KINDS: CurioKind[] = ['crate', 'gem', 'coin', 'trophy', 'star']
-const STATIC_T = 3
 const CYCLE = 6
 
-let rect: TitleAuraRect | null = null
 let slots: Slot[] = []
-
-function color(): string {
-  return pickVariant(props.light, props.aura.lightColor, props.aura.color, '#f2c94c')
-}
-
-function glint(): string {
-  return pickVariant(props.light, props.aura.lightGlint, props.aura.glint, '#fff7d6')
-}
 
 function seedSlots(): void {
   const n = props.aura.count ?? 5
@@ -85,18 +75,9 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: CurioKind, s: number): vo
   }
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-    seedSlots()
-  },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const r = rect
-    const t = reduced ? STATIC_T : now / 1000
+useTitleAura({
+  init: seedSlots,
+  draw(ctx, { rect: r, t }) {
     for (const [si, slot] of slots.entries()) {
       const cycle = Math.floor(t / CYCLE + si * 0.37)
       const local = ((t / CYCLE + si * 0.37) % 1)
@@ -109,7 +90,7 @@ useElementCanvas(canvasRef, {
       const y = r.y + r.h * slot.y + Math.sin(t * 0.9 + si * 2) * r.fs * 0.05
       ctx.save()
       ctx.translate(x, y)
-      ctx.strokeStyle = withAlpha(color(), a)
+      ctx.strokeStyle = withAlpha(palette.color, a)
       ctx.lineWidth = Math.max(0.8, r.fs * 0.06)
       ctx.lineJoin = 'round'
       drawKind(ctx, kind, s)
@@ -117,7 +98,7 @@ useElementCanvas(canvasRef, {
       const gp = ((t * 0.6 + si * 0.7) % 3) / 0.5
       if (gp < 1) {
         const gx = -s * 0.5 + gp * s
-        ctx.strokeStyle = withAlpha(glint(), a * Math.sin(gp * Math.PI))
+        ctx.strokeStyle = withAlpha(palette.glint, a * Math.sin(gp * Math.PI))
         ctx.lineWidth = Math.max(0.6, r.fs * 0.04)
         ctx.beginPath()
         ctx.moveTo(gx + s * 0.14, -s * 0.5)

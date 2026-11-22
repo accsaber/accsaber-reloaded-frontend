@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { useTitleAura } from '@/composables/useTitleAura'
 import type { TitleCoronaAuraSpec } from '@/types/cosmetics/title'
 import { eclipsePhase, type EclipsePhase } from '@/utils/cosmetics/eclipseCycle'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { offscreenLayer } from '@/utils/cosmetics/sceneLayer'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import { pickVariant, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01 } from '@/utils/random'
-import { useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleCoronaAuraSpec
@@ -15,12 +14,7 @@ const props = defineProps<{
 
 type Ctx = CanvasRenderingContext2D
 
-const STATIC_T = 10.5
-
-let rect: TitleAuraRect | null = null
 let corona: HTMLCanvasElement | null = null
-let coronaLight = false
-let layerScale = 1
 
 function color(): string {
   return pickVariant(props.light, props.aura.lightColor, props.aura.color)
@@ -169,8 +163,6 @@ function drawRing(ctx: Ctx, r: TitleAuraRect, ph: EclipsePhase): void {
   }
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
 function paintCorona(w: number, h: number, scale: number, r: TitleAuraRect): HTMLCanvasElement {
   const [layer, lctx] = offscreenLayer(w, h, scale)
   if (!lctx) return layer
@@ -183,29 +175,16 @@ function paintCorona(w: number, h: number, scale: number, r: TitleAuraRect): HTM
   return layer
 }
 
-function layout(w: number, h: number, scale: number): void {
-  rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-  coronaLight = props.light
-  corona = rect ? paintCorona(w, h, scale, rect) : null
-}
-
-useElementCanvas(canvasRef, {
-  init(w, h, _now, scale) {
-    layerScale = scale
-    layout(w, h, scale)
+const canvas = useTitleAura({
+  staticT: 10.5,
+  additive: () => !props.light,
+  layout(rect, _now, scale) {
+    const el = canvas.value
+    corona = el ? paintCorona(el.clientWidth, el.clientHeight, scale, rect) : null
   },
-  resize(w, h, _now, scale) {
-    layerScale = scale
-    layout(w, h, scale)
-  },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (coronaLight !== props.light) layout(w, h, layerScale)
-    if (!rect) return
-    const t = reduced ? STATIC_T : now / 1000
+  draw(ctx, { rect, t, reduced, w, h }) {
     const ph = eclipsePhase(t)
     const level = ph.tot
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     if (level > 0) {
       if (corona) {
         ctx.globalAlpha = level
@@ -217,7 +196,6 @@ useElementCanvas(canvasRef, {
       else drawProminences(ctx, rim, rect.fs, t, level)
     }
     if (!reduced) drawRing(ctx, rect, ph)
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { Composition } from '@/types/cosmetics/effects'
-import { ringGeometry, ringPathD, type EffectMeasure } from '@/utils/cosmetics/effects'
+import { ringGeometry, ringPathD, type EffectProps } from '@/utils/cosmetics/effects'
 import {
   crackPath,
   readWearSpec,
@@ -10,15 +9,10 @@ import {
   type WearCrack,
   wearCracks,
 } from '@/utils/cosmetics/wear'
-import { type TokenContext } from '@/utils/items'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const THEME_CRACK_PX = 3.2
 

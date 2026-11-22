@@ -1,23 +1,16 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleStormAuraSpec } from '@/types/cosmetics/title'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleStormAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => {
-  const a = props.aura
-  return {
-    arc: pickVariant(props.light, a.lightArc, a.arc, '#dbeafe'),
-    glow: pickVariant(props.light, a.lightGlow, a.glow, '#60a5fa'),
-  }
-})
+const palette = pigments(props.aura, props.light, { arc: '#dbeafe', glow: '#60a5fa' })
 
 interface Arc {
   pts: [number, number][]
@@ -26,7 +19,6 @@ interface Arc {
   width: number
 }
 
-let rect: TitleAuraRect | null = null
 let arcs: Arc[] = []
 let nextArcAt = 0
 let cycleStart = 0
@@ -54,7 +46,7 @@ function spawnArc(now: number, r: TitleAuraRect, strike: boolean): void {
 
 function drawArc(ctx: CanvasRenderingContext2D, a: Arc, alpha: number): void {
   for (const pass of [0, 1]) {
-    ctx.strokeStyle = withAlpha(pass ? palette.value.arc : palette.value.glow, pass ? alpha : alpha * 0.45)
+    ctx.strokeStyle = withAlpha(pass ? palette.arc : palette.glow, pass ? alpha : alpha * 0.45)
     ctx.lineWidth = pass ? Math.max(1, a.width) : Math.max(2, a.width * 3)
     ctx.beginPath()
     a.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])))
@@ -62,30 +54,26 @@ function drawArc(ctx: CanvasRenderingContext2D, a: Arc, alpha: number): void {
   }
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
-  init(_w, _h, nowMs) {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
-    arcs = []
-    nextArcAt = nowMs
-    cycleStart = nowMs
+useTitleAura({
+  additive: () => !props.light,
+  init(_rect, now) {
+    nextArcAt = now
+    cycleStart = now
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const r = rect
+  layout() {
+    arcs = []
+  },
+  draw(ctx, { rect: r, now, reduced, w, h }) {
     const interval = props.aura.intervalMs ?? 4200
     const c = reduced ? 0.6 : ((now - cycleStart) % interval) / interval
     if (!reduced && now - cycleStart >= interval) cycleStart += interval
     const strike = c > 0.93
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     const charge = Math.pow(c, 2)
     const g = ctx.createRadialGradient(r.x + r.w / 2, r.y + r.h / 2, 0, r.x + r.w / 2, r.y + r.h / 2, r.w * 0.55 + r.fs)
-    g.addColorStop(0, withAlpha(palette.value.glow, (strike ? 0.55 : 0.22 * charge)))
-    g.addColorStop(1, withAlpha(palette.value.glow, 0))
+    g.addColorStop(0, withAlpha(palette.glow, (strike ? 0.55 : 0.22 * charge)))
+    g.addColorStop(1, withAlpha(palette.glow, 0))
     ctx.fillStyle = g
     ctx.fillRect(0, 0, w, h)
     if (!reduced && now >= nextArcAt) {
@@ -95,7 +83,6 @@ useElementCanvas(canvasRef, {
     if (reduced && arcs.length === 0) spawnArc(now, r, false)
     arcs = arcs.filter((a) => reduced || now - a.born < a.life)
     for (const a of arcs) drawArc(ctx, a, reduced ? 0.8 : 1 - (now - a.born) / a.life)
-    ctx.globalCompositeOperation = 'source-over'
   },
 })
 </script>

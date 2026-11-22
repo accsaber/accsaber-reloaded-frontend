@@ -1,21 +1,16 @@
 <script setup lang="ts">
-import { useElementCanvas } from '@/composables/useCanvasScene'
+import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleEarthAuraSpec } from '@/types/cosmetics/title'
 import { darken, lighten } from '@/utils/color'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { pickVariant, titleAuraRect, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { hash01, randBetween as rand } from '@/utils/random'
-import { computed, useTemplateRef } from 'vue'
 
 const props = defineProps<{
   aura: TitleEarthAuraSpec
   light: boolean
 }>()
 
-const palette = computed(() => ({
-  stone: pickVariant(props.light, props.aura.lightStone, props.aura.stone, '#8a7a62'),
-  dust: pickVariant(props.light, props.aura.lightDust, props.aura.dust, '#c9a86a'),
-}))
+const palette = pigments(props.aura, props.light, { stone: '#8a7a62', dust: '#c9a86a' })
 
 interface Stone {
   phase: number
@@ -33,7 +28,6 @@ interface Mote {
   size: number
 }
 
-let rect: TitleAuraRect | null = null
 let stones: Stone[] = []
 let motes: Mote[] = []
 
@@ -52,12 +46,12 @@ function drawStone(ctx: CanvasRenderingContext2D, st: Stone, x: number, y: numbe
     ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r)
   }
   ctx.closePath()
-  ctx.fillStyle = withAlpha(palette.value.stone, depth)
+  ctx.fillStyle = withAlpha(palette.stone, depth)
   ctx.fill()
-  ctx.strokeStyle = withAlpha(lighten(palette.value.stone, 0.35), 0.6 * depth)
+  ctx.strokeStyle = withAlpha(lighten(palette.stone, 0.35), 0.6 * depth)
   ctx.lineWidth = Math.max(0.6, s * 0.12)
   ctx.stroke()
-  ctx.strokeStyle = withAlpha(darken(palette.value.stone, 0.5), 0.7 * depth)
+  ctx.strokeStyle = withAlpha(darken(palette.stone, 0.5), 0.7 * depth)
   ctx.beginPath()
   ctx.moveTo(-s * 0.4, -s * 0.1)
   ctx.lineTo(s * 0.1, s * 0.15)
@@ -66,19 +60,13 @@ function drawStone(ctx: CanvasRenderingContext2D, st: Stone, x: number, y: numbe
   ctx.restore()
 }
 
-const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas')
-
-useElementCanvas(canvasRef, {
+useTitleAura({
   init() {
-    rect = canvasRef.value ? titleAuraRect(canvasRef.value) : null
     const n = props.aura.count ?? 5
     stones = Array.from({ length: n }, (_, i) => makeStone(i, n))
     motes = Array.from({ length: 14 }, () => ({ x: rand(0, 1), y: rand(0, 1), speed: rand(0.04, 0.09), size: rand(0.03, 0.06) }))
   },
-  draw(ctx, w, h, now, reduced) {
-    ctx.clearRect(0, 0, w, h)
-    if (!rect) return
-    const t = reduced ? 3 : now / 1000
+  draw(ctx, { rect, t }) {
     const cx = rect.x + rect.w / 2
     const cy = rect.y + rect.h / 2
     const rx = rect.w / 2 + rect.fs * 0.55
@@ -86,7 +74,7 @@ useElementCanvas(canvasRef, {
     for (const m of motes) {
       const y = (m.y + t * m.speed) % 1
       const x = m.x + Math.sin(t * 0.8 + m.y * 9) * 0.02
-      ctx.fillStyle = withAlpha(palette.value.dust, 0.35 * Math.sin(y * Math.PI))
+      ctx.fillStyle = withAlpha(palette.dust, 0.35 * Math.sin(y * Math.PI))
       ctx.beginPath()
       ctx.arc(rect.x + rect.w * x, rect.y - rect.fs * 0.6 + (rect.h + rect.fs * 1.2) * y, rect.fs * m.size, 0, Math.PI * 2)
       ctx.fill()

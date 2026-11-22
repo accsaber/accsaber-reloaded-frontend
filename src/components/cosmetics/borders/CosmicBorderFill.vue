@@ -7,6 +7,7 @@ import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCa
 import { randBetween as rand } from '@/utils/random'
 import { useTemplateRef } from 'vue'
 import { clamp } from '@/utils/math'
+import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
 const props = defineProps<{
   fill: CosmicFill
@@ -288,18 +289,14 @@ useElementCanvas(canvasRef, {
       glow.addColorStop(0, withAlpha(props.fill.accent, 0.5))
       glow.addColorStop(1, withAlpha(props.fill.accent, 0))
       ctx.fillStyle = glow
-      ctx.beginPath()
-      ctx.arc(px, py, r * 2.4, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, px, py, r * 2.4)
       ctx.strokeStyle = withAlpha(lighten(props.fill.accent, 0.4), 0.95)
       ctx.lineWidth = Math.max(0.7, r * 0.28)
       ctx.beginPath()
       ctx.ellipse(px, py, r * 1.5, r * 0.5, hole.tilt, 0, Math.PI * 2)
       ctx.stroke()
       ctx.fillStyle = '#000000'
-      ctx.beginPath()
-      ctx.arc(px, py, r * 0.85, 0, Math.PI * 2)
-      ctx.fill()
+      fillCircle(ctx, px, py, r * 0.85)
     }
 
     ctx.restore()

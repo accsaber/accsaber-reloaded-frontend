@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, boxScale, type EffectMeasure } from '@/utils/cosmetics/effects'
-import type { TokenContext } from '@/utils/items'
+import { asNumber, asString, boxScale, type EffectProps } from '@/utils/cosmetics/effects'
 import { hash01 } from '@/utils/random'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
-const props = defineProps<{
-  composition: Composition
-  ctx: TokenContext
-  measure: EffectMeasure
-}>()
+const props = defineProps<EffectProps>()
 
 const SNOW_SPOKE = 'M12 12 L12 2.2 M12 5.4 L9.7 3.6 M12 5.4 L14.3 3.6 M12 8.4 L10.1 6.8 M12 8.4 L13.9 6.8'
 const SNOW_ANGLES = [0, 60, 120, 180, 240, 300]
@@ -140,13 +135,6 @@ const flakes = computed<SnowFlake[]>(() => {
 </template>
 
 <style scoped>
-.comp-fx-region {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
 .comp-fx-snow {
   position: absolute;
   opacity: 0;
