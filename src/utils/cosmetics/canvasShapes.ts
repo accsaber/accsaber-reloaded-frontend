@@ -24,6 +24,11 @@ export function win(c: number, a: number, b: number): number {
   return c >= a && c < b ? (c - a) / (b - a) : -1
 }
 
+export function lazyPath(d: string): () => Path2D {
+  let path: Path2D | null = null
+  return () => (path ??= new Path2D(d))
+}
+
 export function sparkle(ctx: Ctx, x: number, y: number, r: number): void {
   if (r <= 0) return
   ctx.beginPath()

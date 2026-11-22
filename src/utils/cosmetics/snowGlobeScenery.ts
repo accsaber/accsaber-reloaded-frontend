@@ -1,5 +1,5 @@
 import type { BorderSnowGlobeOverlaySpec, SnowGlobeScene } from '@/types/cosmetics/border'
-import { sparkle } from '@/utils/cosmetics/canvasShapes'
+import { lazyPath, sparkle } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { clamp, clamp01 } from '@/utils/math'
 import { hash01, randBetween as rand } from '@/utils/random'
@@ -185,17 +185,17 @@ function cabin(ctx: Ctx, env: GlobeEnv, x: number, lit: number, bend: number): v
   ctx.restore()
 }
 
-const DEER_BODY = new Path2D(
+const DEER_BODY = lazyPath(
   'M-5.2,-6.6 C-4.6,-8 -2,-8.2 0,-7.9 C1.8,-7.8 3.4,-7.9 4.3,-7.2 C5,-6.4 4.4,-5 3,-4.4 L3.2,0 L2.4,0 L2.1,-3.9 L1.5,-4 L1.3,0 L0.5,0 L0.6,-4.4 C-0.6,-4 -1.8,-4 -2.6,-4.3 L-2.8,0 L-3.6,0 L-3.5,-3.6 L-4.1,-4 L-4.6,0 L-5.4,0 L-5,-4.6 C-5.6,-5.2 -5.6,-6 -5.2,-6.6 Z',
 )
-const DEER_HEAD = new Path2D(
+const DEER_HEAD = lazyPath(
   'M0.3,-4.2 C0.6,-5.4 1.8,-5.8 2.6,-5.2 L4.4,-4.3 C4.7,-4.1 4.6,-3.6 4.2,-3.6 L2.6,-3.3 C1.6,-3.1 0.6,-3.4 0.3,-4.2 Z M0.9,-5.2 L0.2,-6.6 L1.6,-5.6 Z',
 )
-const DEER_ANTLER = new Path2D('M1.2,-5.6 C1,-7 0.4,-7.8 -0.4,-8.4 M0.9,-6.9 L1.9,-7.9 M0.4,-7.7 L0.9,-8.9')
+const DEER_ANTLER = lazyPath('M1.2,-5.6 C1,-7 0.4,-7.8 -0.4,-8.4 M0.9,-6.9 L1.9,-7.9 M0.4,-7.7 L0.9,-8.9')
 
 function deerShape(ctx: Ctx, o: Palette, neck: number, nose?: string): void {
   ctx.fillStyle = o.body
-  ctx.fill(DEER_BODY)
+  ctx.fill(DEER_BODY())
   ctx.fillStyle = o.snow
   disc(ctx, -5.3, -6.6, 0.7)
   ctx.save()
@@ -206,10 +206,10 @@ function deerShape(ctx: Ctx, o: Palette, neck: number, nose?: string): void {
   ctx.lineCap = 'round'
   line(ctx, 0, 0, 1.2, -3.9)
   ctx.fillStyle = o.body
-  ctx.fill(DEER_HEAD)
+  ctx.fill(DEER_HEAD())
   ctx.strokeStyle = o.ink
   ctx.lineWidth = 0.4
-  ctx.stroke(DEER_ANTLER)
+  ctx.stroke(DEER_ANTLER())
   ctx.fillStyle = o.ink
   disc(ctx, 2.3, -4.5, 0.28)
   if (nose) {

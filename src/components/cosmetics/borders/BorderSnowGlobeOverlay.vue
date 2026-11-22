@@ -8,7 +8,7 @@ import type {
   StarshineGlint,
 } from '@/types/cosmetics/border'
 import { darken } from '@/utils/color'
-import { sparkle } from '@/utils/cosmetics/canvasShapes'
+import { lazyPath, sparkle } from '@/utils/cosmetics/canvasShapes'
 import { frameDelta, overlaySpace, withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import {
   createGlobeScene,
@@ -36,9 +36,9 @@ const REACT_AT = 0.45
 const DRIZZLE_S = 0.3
 const SHED_REGROW_S = 7
 const FLAKE_FADE_S = 0.6
-const GLASS = new Path2D('M26.48,85 A43,43 0 1 1 73.52,85 Z')
-const COLLAR = new Path2D('M24,85 H76 Q78,85 78,87 V91 H22 V87 Q22,85 24,85 Z')
-const PLINTH = new Path2D('M16,91 H84 L90,109 Q90,111 88,111 H12 Q10,111 10,109 Z')
+const GLASS = lazyPath('M26.48,85 A43,43 0 1 1 73.52,85 Z')
+const COLLAR = lazyPath('M24,85 H76 Q78,85 78,87 V91 H22 V87 Q22,85 24,85 Z')
+const PLINTH = lazyPath('M16,91 H84 L90,109 Q90,111 88,111 H12 Q10,111 10,109 Z')
 const TOPPER = { x: 50, y: -2, r: 12, specks: 22, gleamS: 7, pops: [[33, -8], [67, -10], [38, 8], [63, 7]] }
 
 interface Flake {
@@ -295,9 +295,9 @@ function drawPlaque(ctx: Ctx, trim: string): void {
 
 function drawWoodBase(ctx: Ctx, star: NonNullable<BorderSnowGlobeOverlaySpec['star']>): void {
   ctx.fillStyle = star.wood
-  ctx.fill(PLINTH)
+  ctx.fill(PLINTH())
   ctx.save()
-  ctx.clip(PLINTH)
+  ctx.clip(PLINTH())
   ctx.strokeStyle = star.grain
   ctx.lineWidth = 0.45
   for (const y of [94, 97.4, 100.6, 103.2]) {
@@ -310,7 +310,7 @@ function drawWoodBase(ctx: Ctx, star: NonNullable<BorderSnowGlobeOverlaySpec['st
   ctx.restore()
   drawPlaque(ctx, star.trim)
   ctx.fillStyle = star.holder
-  ctx.fill(COLLAR)
+  ctx.fill(COLLAR())
   ctx.fillStyle = star.trim
   ctx.fillRect(22, 87, 56, 1.4)
 }
@@ -319,7 +319,7 @@ function drawInside(ctx: Ctx, gold: string): void {
   const o = props.overlay
   const view = env(0, null)
   ctx.save()
-  ctx.clip(GLASS)
+  ctx.clip(GLASS())
   scene.back(ctx, view)
   drawBank(ctx, 0, o.snow)
   drawBank(ctx, 4.5, o.shade)
