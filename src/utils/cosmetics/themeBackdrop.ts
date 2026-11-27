@@ -132,6 +132,16 @@ export interface SnowfieldBackdropConfig {
   flakeColor: string
 }
 
+export interface AuroraBackdropConfig {
+  type: 'aurora'
+  opacity: number
+  hues?: string[]
+  skyColors: string[]
+  colors: string[]
+  starColor: string
+  ridgeColor: string
+}
+
 export interface WatchersBackdropConfig {
   type: 'watchers'
   opacity: number
@@ -147,6 +157,7 @@ export type ThemeBackdropConfig =
   | DarkHourBackdropConfig
   | HarvestBackdropConfig
   | SnowfieldBackdropConfig
+  | AuroraBackdropConfig
   | PixelFieldBackdropConfig
   | ForestBackdropConfig
 
@@ -220,6 +231,17 @@ function parseSnowfield(tokens: Record<string, string>): SnowfieldBackdropConfig
     smokeColor: readHex(tokens, 'fx-snow-smoke-color', '#6c7a94'),
     starColor: readHex(tokens, 'fx-snow-star-color', '#c9d6ee'),
     flakeColor: readHex(tokens, 'fx-snow-flake-color', '#dfe8f5'),
+  }
+}
+
+function parseAurora(tokens: Record<string, string>): AuroraBackdropConfig {
+  return {
+    type: 'aurora',
+    opacity: readOpacity(tokens),
+    skyColors: readHexList(tokens, 'fx-aurora-sky-colors', ['#050b1c', '#0c1c30']),
+    colors: readHexList(tokens, 'fx-aurora-colors', ['#3fe0a0', '#39b8d8', '#8a6be0']),
+    starColor: readHex(tokens, 'fx-aurora-star-color', '#e8f1ff'),
+    ridgeColor: readHex(tokens, 'fx-aurora-ridge-color', '#070e1a'),
   }
 }
 
@@ -321,6 +343,7 @@ const BACKDROP_PARSERS: Record<string, (tokens: Record<string, string>) => Theme
     stars: [readFlag, 'fx-harvest-stars', false],
   }),
   snowfield: parseSnowfield,
+  aurora: parseAurora,
 }
 
 export function readBackdropConfig(

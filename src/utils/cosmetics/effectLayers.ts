@@ -1,6 +1,6 @@
 import type { ItemModifierRef, UnusualEffectRef } from '@/types/api/items'
 import type { Composition, ModifierEffectSpec } from '@/types/cosmetics/effects'
-import { asNumber, asString } from '@/utils/cosmetics/effects'
+import { asNumber, asString, hostMatches, type EffectHostContext } from '@/utils/cosmetics/effects'
 import { readHauntSpec, readWearSpec, type HauntSpec, type WearSpec } from '@/utils/cosmetics/wear'
 import { sortModifiersByKey, UNUSUAL_MODIFIER_KEY } from '@/utils/items'
 import { clamp } from '@/utils/math'
@@ -10,18 +10,30 @@ export interface EffectLayer {
   spec: ModifierEffectSpec
 }
 
+function seedCompositions(list: Composition[] | undefined, serial: number): Composition[] | undefined {
+  return list?.map((c) => (c.seedBy === 'serial' ? { ...c, seed: serial } : c))
+}
+
+function seedSpec(spec: ModifierEffectSpec, serial: number | null | undefined): ModifierEffectSpec {
+  if (serial == null) return spec
+  const seeded = (list: Composition[] | undefined) => !!list?.some((c) => c.seedBy === 'serial')
+  if (!seeded(spec.compositions) && !seeded(spec.themeCompositions)) return spec
+  return { ...spec, compositions: seedCompositions(spec.compositions, serial) ?? [], themeCompositions: seedCompositions(spec.themeCompositions, serial) }
+}
+
 export function buildEffectLayers(
   modifiers: ItemModifierRef[] | null | undefined,
   unusualEffect?: UnusualEffectRef | null,
+  serial?: number | null,
 ): EffectLayer[] {
   const hasRolledEffect = !!unusualEffect?.effectSpec
   const layers: EffectLayer[] = []
   for (const m of sortModifiersByKey(modifiers ?? [])) {
     if (hasRolledEffect && m.key === UNUSUAL_MODIFIER_KEY) continue
-    if (m.effectSpec) layers.push({ key: `m:${m.id}`, spec: m.effectSpec })
+    if (m.effectSpec) layers.push({ key: `m:${m.id}`, spec: seedSpec(m.effectSpec, serial) })
   }
   if (unusualEffect?.effectSpec) {
-    layers.push({ key: `u:${unusualEffect.id}`, spec: unusualEffect.effectSpec })
+    layers.push({ key: `u:${unusualEffect.id}`, spec: seedSpec(unusualEffect.effectSpec, serial) })
   }
   return layers
 }
@@ -44,6 +56,19 @@ export function themeCompositionLayers(
       return [{ key: layer.key, spec: { contractVersion: 1 as const, compositions } }]
     }),
   )
+}
+
+export function absorbEffects<L extends EffectLayer>(layers: L[], host: EffectHostContext): { layers: L[]; hues: string[] | undefined } {
+  let hues: string[] | undefined
+  const kept = layers.flatMap((layer) => {
+    const compositions = (layer.spec.compositions ?? []).filter((c) => {
+      const absorbed = Array.isArray(c.absorb) && c.absorb.some((condition) => hostMatches(condition, host))
+      if (absorbed && Array.isArray(c.hues)) hues = c.hues as string[]
+      return !absorbed
+    })
+    return compositions.length ? [{ ...layer, spec: { ...layer.spec, compositions } }] : []
+  })
+  return { layers: kept, hues }
 }
 
 export function annotateEffectLayerStacks(

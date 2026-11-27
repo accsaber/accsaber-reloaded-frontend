@@ -3,7 +3,7 @@ import { useBackdropCanvas } from '@/composables/useCanvasScene'
 import { lerpHex, parseHex } from '@/utils/color'
 import { flickerNoise, sceneUnit, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import { createRadialSprite, drawStarField, layeredWave, offscreenLayer, starField, type FieldStar } from '@/utils/cosmetics/sceneLayer'
+import { createRadialSprite, drawStarField, layeredWave, offscreenLayer, paintSky, skyStars, type FieldStar } from '@/utils/cosmetics/sceneLayer'
 import { CABIN_WINDOW, drawCabin, drawPine, drawSmoke, groundY, makePine, type Pine } from '@/utils/cosmetics/snowGlobeKit'
 import type { SnowfieldBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { hash01 } from '@/utils/random'
@@ -19,7 +19,6 @@ const ROWS = [
   { count: 46, scale: [0.7, 1.1], lift: -4, fade: 0.45 },
   { count: 26, scale: [1.2, 2], lift: 2, fade: 0 },
 ]
-const STARS = 70
 const FLAKES = 80
 const TAU = Math.PI * 2
 
@@ -72,10 +71,7 @@ function paintRow(ctx: Ctx, w: number, h: number, r: number): void {
 
 function paintBase(ctx: Ctx, w: number, h: number): void {
   const c = props.config
-  const sky = ctx.createLinearGradient(0, 0, 0, h * HORIZON)
-  c.skyColors.forEach((color, i) => sky.addColorStop(c.skyColors.length > 1 ? i / (c.skyColors.length - 1) : 0, color))
-  ctx.fillStyle = sky
-  ctx.fillRect(0, 0, w, h)
+  paintSky(ctx, w, h, c.skyColors, h * HORIZON)
   paintLand(ctx, w, h, -unit * 7, lerpHex(c.snowColor, c.skyColors[c.skyColors.length - 1] ?? c.snowColor, 0.55))
   paintRow(ctx, w, h, 0)
   ctx.save()
@@ -119,7 +115,7 @@ function drawSnowfall(ctx: Ctx, w: number, h: number, t: number): void {
 
 function layout(w: number, h: number, scale: number): void {
   unit = sceneUnit(w, h)
-  stars = starField(STARS, w, h * HORIZON * 0.9, unit * 2)
+  stars = skyStars(w, h * HORIZON * 0.9, w * h * HORIZON)
   const [layer, lctx] = offscreenLayer(w, h, scale)
   if (lctx) paintBase(lctx, w, h)
   base = layer

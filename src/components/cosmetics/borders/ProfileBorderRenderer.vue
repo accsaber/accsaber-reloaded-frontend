@@ -518,7 +518,7 @@ const echoUnit = computed(() => Math.max(vbBounds.value.w, vbBounds.value.h) / 1
     :is="fillAura.component"
     v-if="fillAura"
     :key="fillAura.key"
-    class="profile-border__echo"
+    class="profile-border__echo profile-border__aura"
     :style="cosmicHostStyle"
     v-bind="fillAura.attrs"
   />
@@ -643,6 +643,10 @@ const echoUnit = computed(() => Math.max(vbBounds.value.w, vbBounds.value.h) / 1
   max-width: none;
   max-height: none;
   pointer-events: none;
+}
+
+.profile-border__aura {
+  z-index: 3;
 }
 
 .profile-border__echo {

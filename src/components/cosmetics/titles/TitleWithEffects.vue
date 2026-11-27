@@ -4,7 +4,7 @@ import ModifierCompositions from '@/components/cosmetics/effects/ModifierComposi
 import TitleRenderer from '@/components/cosmetics/titles/TitleRenderer.vue'
 import type { TitleValue } from '@/types/cosmetics/title'
 import type { EffectHostContext } from '@/utils/cosmetics/effects'
-import { annotateEffectLayerStacks, type EffectLayer } from '@/utils/cosmetics/effectLayers'
+import { absorbEffects, annotateEffectLayerStacks, type EffectLayer } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -12,8 +12,16 @@ const props = defineProps<{
   effects?: EffectLayer[]
 }>()
 
-const layers = computed(() => annotateEffectLayerStacks(props.effects))
-const host = computed<EffectHostContext>(() => ({ auraType: props.value.aura?.type }))
+const host = computed<EffectHostContext>(() => {
+  const state = props.value.states[0]
+  return { auraType: props.value.aura?.type, color: state?.color ?? state?.gradient?.stops[0]?.hex }
+})
+const fx = computed(() => absorbEffects(annotateEffectLayerStacks(props.effects), host.value))
+const layers = computed(() => fx.value.layers)
+const shown = computed<TitleValue>(() => {
+  const { aura } = props.value
+  return fx.value.hues && aura?.type === 'aurora' ? { ...props.value, aura: { ...aura, hues: fx.value.hues } } : props.value
+})
 </script>
 
 <template>
@@ -31,7 +39,7 @@ const host = computed<EffectHostContext>(() => ({ auraType: props.value.aura?.ty
     />
     <span class="title-fx__text">
       <ContentEffects :layers="effects ?? null" :fill="false" subtle seed="title">
-        <TitleRenderer :value="value" />
+        <TitleRenderer :value="shown" />
       </ContentEffects>
     </span>
   </span>

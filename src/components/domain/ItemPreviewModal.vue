@@ -6,7 +6,7 @@ import ItemPreview from '@/components/domain/ItemPreview.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useItemTypeStore } from '@/stores/itemTypes'
 import type { ItemResponse } from '@/types/api/items'
-import { isTitleItem, itemVariantPreviews, rarityClass, variantColumns } from '@/utils/items'
+import { isTitleItem, itemVariantPreviews, rarityClass, readTrait, variantColumns } from '@/utils/items'
 import { readBorderColorValue, readBorderShapeValue } from '@/utils/cosmetics/readers'
 import { computed, ref, watch } from 'vue'
 import { PHONE_MEDIA_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
@@ -22,6 +22,7 @@ const authStore = useAuthStore()
 const avatarUrl = computed(() => authStore.userProfile?.avatarUrl ?? null)
 
 const variants = computed(() => (props.item ? itemVariantPreviews(props.item) : null))
+const trait = computed(() => readTrait(props.item?.value))
 const activeVariant = ref('')
 const phone = useMediaQuery(PHONE_MEDIA_QUERY)
 
@@ -81,6 +82,7 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
         <span class="rarity-text" :class="rarityClass(item.rarity)">{{ item.rarity }}</span> {{ typeLabel }}
       </span>
       <p v-if="item.description" class="ipm__desc">{{ item.description }}</p>
+      <p v-if="trait" class="caption">{{ trait }}</p>
 
       <BaseTabs v-if="variants" v-model="activeVariant" class="ipm__variants" :tabs="variants" variant="segmented"
         :columns="variantColumns(variants.length, phone)" label="Variants" />

@@ -16,7 +16,7 @@ const props = defineProps<{
 
 const sortedModifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(props.itemRef.modifiers ?? []))
 const effectLayers = computed(() =>
-  buildEffectLayers(props.itemRef.modifiers, props.itemRef.unusualEffect),
+  buildEffectLayers(props.itemRef.modifiers, props.itemRef.unusualEffect, props.itemRef.serialNumber),
 )
 const ownFx = computed(() => isBorderTypeKey(props.itemRef.item.typeKey))
 const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(props.itemRef.unusualEffect)))

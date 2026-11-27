@@ -37,8 +37,10 @@ import {
   pickInterpolatedState,
 } from '@/utils/cosmetics/interpolate'
 import { randBetween as rand } from '@/utils/random'
-import { computed, ref, useId, useTemplateRef, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, useId, useTemplateRef, watch } from 'vue'
 import { clamp01 } from '@/utils/math'
+
+const TitleVerdict = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleVerdict.vue'))
 
 const props = defineProps<{
   value: TitleValue
@@ -73,6 +75,7 @@ const FONT_CLASSES: Record<string, string> = {
   pixel_8bit: 'title-renderer--pixel',
   varela_round: 'title-renderer--rounded',
   graffiti: 'title-renderer--graffiti',
+  storybook: 'title-renderer--storybook',
 }
 
 const isPixelFont = computed(() => props.value.font === 'pixel_8bit')
@@ -701,7 +704,9 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 </script>
 
 <template>
+  <TitleVerdict v-if="value.verdict?.enabled" :value="value" :verdict="value.verdict" />
   <span
+    v-else
     ref="root"
     class="title-renderer"
     :class="fontClass"
@@ -855,6 +860,14 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
   font-family: 'Permanent Marker', var(--font-sans);
   font-weight: 400;
   letter-spacing: 0.04em;
+}
+
+.title-renderer--storybook {
+  font-family: 'Emilys Candy', var(--font-sans);
+  font-size: 1.25em;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 .title-renderer--rounded {

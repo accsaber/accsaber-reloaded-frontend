@@ -22,7 +22,7 @@ import type {
 import type { ItemVariant } from '@/types/cosmetics/common'
 import { formatEssence } from '@/utils/essence'
 import { formatRelativeDate } from '@/utils/formatters'
-import { displayItemName, isEquippableTypeKey, isTitleItem, obtainableUntilSentence, rarityClass, readItemVariants, resolveItemVariant } from '@/utils/items'
+import { displayItemName, isEquippableTypeKey, isTitleItem, obtainableUntilSentence, rarityClass, readItemVariants, readTrait, resolveItemVariant } from '@/utils/items'
 import {
   readBorderColorValue,
   readBorderShapeValue,
@@ -133,6 +133,9 @@ const { modifiers, effectLayers, fragmentSpec, overlayLayers, tokenCtx, accent }
   () => props.userItem,
 )
 const unusualEffect = computed(() => props.userItem?.unusualEffect ?? null)
+const traits = computed(() =>
+  [readTrait(props.userItem?.item.value), readTrait(unusualEffect.value?.effectSpec)].filter((t): t is string => !!t),
+)
 const quantity = computed(() => props.userItem?.quantity ?? 1)
 const pbCount = computed(() => props.userItem?.counters?.play_count ?? null)
 
@@ -281,6 +284,7 @@ const sourceLabel = computed(() => {
     </div>
 
     <p v-if="item.description" class="inv-detail__description">{{ item.description }}</p>
+    <p v-for="trait in traits" :key="trait" class="caption">{{ trait }}</p>
 
     <div v-if="isCrate" class="inv-detail__crate-open-row">
       <BaseButton

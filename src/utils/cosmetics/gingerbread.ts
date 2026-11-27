@@ -1,6 +1,5 @@
 import type { BorderGingerbreadOverlaySpec } from '@/types/cosmetics/border'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
-import { framePoint } from '@/utils/cosmetics/overlayCanvas'
 import { hash01 } from '@/utils/random'
 
 const TAU = Math.PI * 2
@@ -12,12 +11,9 @@ const LIMBS: [number, number, number, number][] = [
   [70, 98, 74, 111],
 ]
 const LIMB_WIDTH = 14
-const CUFFS: [number, number, number, number][] = [
-  [-9.5, 25.5, -4.5, 36.5],
-  [109.5, 25.5, 104.5, 36.5],
-  [19.5, 106.5, 33.5, 108.5],
-  [66.5, 108.5, 80.5, 106.5],
-]
+const CUFF = { along: 0.7, half: 5.2 }
+const BODY = { out: 0.6, r: 14 }
+const PIPING = { inset: 4.5, r: 12.5 }
 
 export const GINGERBREAD_BITES: [number, number, number][] = [
   [50, -7, 15], [-9, 32, 13], [109, 32, 13], [27, 110, 13], [73, 110, 13],
@@ -38,19 +34,35 @@ function silhouette(ctx: Ctx, color: string): void {
     ctx.stroke()
   }
   ctx.beginPath()
-  ctx.roundRect(0, 0, 100, 100, 16)
+  ctx.roundRect(-BODY.out, -BODY.out, 100 + BODY.out * 2, 100 + BODY.out * 2, BODY.r + BODY.out)
   ctx.arc(HEAD.x, HEAD.y, HEAD.r, 0, TAU)
   ctx.fill()
 }
 
+function ringPoint(u: number, inset: number, r: number): { x: number; y: number; nx: number; ny: number } {
+  const side = 100 - inset * 2 - r * 2
+  const arc = (Math.PI / 2) * r
+  let d = (((u % 1) + 1) % 1) * (side + arc) * 4
+  const turn = Math.floor(d / (side + arc))
+  d -= turn * (side + arc)
+  const bend = d > side ? (d - side) / r : 0
+  const x = Math.min(d, side) - side / 2 + Math.sin(bend) * r
+  const y = -50 + inset + r - Math.cos(bend) * r
+  const cos = [1, 0, -1, 0][turn]
+  const sin = [0, 1, 0, -1][turn]
+  const nx = Math.sin(bend)
+  const ny = -Math.cos(bend)
+  return { x: 50 + x * cos - y * sin, y: 50 + x * sin + y * cos, nx: nx * cos - ny * sin, ny: nx * sin + ny * cos }
+}
+
 function piping(ctx: Ctx): void {
-  const steps = 280
+  const steps = 320
   ctx.beginPath()
   for (let i = 0; i <= steps; i++) {
     const u = i / steps
-    const p = framePoint(u, 4.6)
+    const p = ringPoint(u, PIPING.inset, PIPING.r)
     const wave = Math.sin(u * TAU * 34)
-    ctx.lineTo(p.x + Math.sin(p.angle) * wave, p.y - Math.cos(p.angle) * wave)
+    ctx.lineTo(p.x + p.nx * wave, p.y + p.ny * wave)
   }
   ctx.stroke()
 }
@@ -123,7 +135,7 @@ function sprinkles(ctx: Ctx, colors: string[]): void {
   ctx.lineWidth = 0.9
   ctx.lineCap = 'round'
   for (let i = 0; i < 30; i++) {
-    const p = framePoint(hash01(i * 3.7 + 1), 1.6 + hash01(i * 9.1) * 6)
+    const p = ringPoint(hash01(i * 3.7 + 1), 1.8 + hash01(i * 9.1) * 5.4, PIPING.r)
     const a = hash01(i * 5.3) * Math.PI
     ctx.strokeStyle = colors[i % colors.length]
     ctx.beginPath()
@@ -144,7 +156,14 @@ export function paintGingerbread(ctx: Ctx, o: BorderGingerbreadOverlaySpec, icin
   else piping(ctx)
   ctx.strokeStyle = icing
   ctx.lineWidth = 1
-  for (const [ax, ay, bx, by] of CUFFS) zigzag(ctx, ax, ay, bx, by)
+  for (const [ax, ay, bx, by] of LIMBS) {
+    const len = Math.hypot(bx - ax, by - ay)
+    const cx = ax + (bx - ax) * CUFF.along
+    const cy = ay + (by - ay) * CUFF.along
+    const px = (-(by - ay) / len) * CUFF.half
+    const py = ((bx - ax) / len) * CUFF.half
+    zigzag(ctx, cx - px, cy - py, cx + px, cy + py)
+  }
   face(ctx, o, icing)
   bow(ctx, o.bow, icing)
   gumdrops(ctx, o.gumdrops)

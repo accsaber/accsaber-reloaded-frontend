@@ -117,6 +117,7 @@ function isThumbnailScene(v: unknown): boolean {
     return isString(v.skyTop) && isString(v.skyBottom) && isString(v.star) && isString(v.ridge)
       && Array.isArray(v.colors) && v.colors.every(isString)
   }
+  if (v.type === 'frozen_lake') return [v.iceTop, v.iceBottom, v.crack, v.shore, v.trail, v.skater].every(isString)
   if (v.type === 'full_moon') return isString(v.skyTop) && isString(v.skyBottom) && isString(v.moon) && isString(v.crater) && isString(v.cloud) && isString(v.bat)
   return false
 }
@@ -141,6 +142,7 @@ function thumbnailSceneInk(scene: ThumbnailScene): string {
     case 'pumpkin_patch': return scene.skyTop
     case 'full_moon': return scene.skyTop
     case 'borealis': return scene.skyTop
+    case 'frozen_lake': return scene.iceBottom
   }
 }
 

@@ -34,3 +34,33 @@ export function drawAuroraCurtain(ctx: Ctx, band: AuroraBand, t: number, k: numb
   }
   ctx.globalAlpha = 1
 }
+
+const HUE_DRIFT = 0.05
+const HUE_CYCLE = 1.6
+export const AURORA_UNTINTED = '#ffffff'
+
+export function tintAurora(ctx: Ctx, w: number, h: number, t: number, hues: string[]): void {
+  const cycle = Math.min(w, h * HUE_CYCLE)
+  const repeats = Math.ceil(w / cycle) + 1
+  const shift = ((t * HUE_DRIFT) % 1) * cycle
+  const sweep = ctx.createLinearGradient(-shift, 0, cycle * repeats - shift, 0)
+  const stops = hues.length * repeats
+  for (let i = 0; i <= stops; i++) sweep.addColorStop(i / stops, hues[i % hues.length])
+  ctx.globalCompositeOperation = 'source-atop'
+  ctx.globalAlpha = 1
+  ctx.fillStyle = sweep
+  ctx.fillRect(0, 0, w, h)
+}
+
+export function drawAuroraLayer(ctx: Ctx, layer: HTMLCanvasElement, w: number, h: number, t: number, colors: string[], band: (k: number) => AuroraBand, hues?: string[]): void {
+  const lctx = layer.getContext('2d')
+  if (!lctx) return
+  lctx.clearRect(0, 0, w, h)
+  lctx.globalCompositeOperation = 'lighter'
+  colors.forEach((color, k) => drawAuroraCurtain(lctx, band(k), t, k, hues?.length ? AURORA_UNTINTED : color))
+  if (hues?.length) tintAurora(lctx, w, h, t, hues)
+  lctx.globalCompositeOperation = 'source-over'
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.drawImage(layer, 0, 0, w, h)
+  ctx.globalCompositeOperation = 'source-over'
+}

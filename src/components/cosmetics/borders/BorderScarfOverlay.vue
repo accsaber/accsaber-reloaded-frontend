@@ -4,6 +4,7 @@ import type { BorderOverlayHost, BorderScarfOverlaySpec } from '@/types/cosmetic
 import { darken, lighten, luminance } from '@/utils/color'
 import type { Ctx } from '@/utils/cosmetics/canvasShapes'
 import { fillTriple, tripleFromHex } from '@/utils/cosmetics/fillColors'
+import { paintKnit } from '@/utils/cosmetics/knit'
 import { enterUnitSpace } from '@/utils/cosmetics/overlayCanvas'
 import { computed, useTemplateRef } from 'vue'
 
@@ -22,11 +23,14 @@ const TOP = [-3, 76, 25, 82, 50, 80, 75, 78, 103, 74]
 const DROP = 19
 const STRIPE_XS = [3, 19, 35, 51, 83]
 const STRIPE_W = 7
+const WORN_STITCH = 2.2
+const WORN_AREA = { x0: -12, y0: 60, x1: 112, y1: 124 }
 const KNOT = { x: 73, y: 86 }
 const TAIL = { top: 90, bottom: 117, left: -6, right: 7 }
 
 const palette = computed<Palette>(() => {
   const fill = props.color?.states?.[0]?.fill
+  if (worn.value) return { wool: worn.value.wool, stripe: worn.value.motif, ink: darken(worn.value.shade, 0.4) }
   const [dark, , light] = (fill && fillTriple(fill)) || tripleFromHex(props.overlay.fallback)
   const lightWool = props.overlay.tone === 'light'
   const wool = lightWool ? light : dark
@@ -34,6 +38,15 @@ const palette = computed<Palette>(() => {
   if (Math.abs(luminance(wool) - luminance(stripe)) < MIN_GAP) stripe = luminance(wool) > 0.5 ? darken(wool, 0.6) : lighten(wool, 0.6)
   return { wool, stripe, ink: darken(wool, 0.55) }
 })
+
+const worn = computed(() => {
+  const fill = props.color?.states?.[0]?.fill
+  return fill?.type === 'knit' && props.overlay.wears === 'knit' ? { ...fill, stitch: WORN_STITCH } : null
+})
+
+function wear(ctx: Ctx): void {
+  if (worn.value) paintKnit(ctx, worn.value, WORN_AREA)
+}
 
 function topAt(x: number): number {
   const k = x < 50 ? 0 : 4
@@ -62,8 +75,9 @@ function drawBand(ctx: Ctx, p: Palette): void {
   ctx.fill()
   ctx.save()
   ctx.clip()
+  wear(ctx)
   ctx.fillStyle = p.stripe
-  for (const x of STRIPE_XS) {
+  for (const x of worn.value ? [] : STRIPE_XS) {
     ctx.beginPath()
     ctx.moveTo(x, topAt(x) - 1)
     ctx.lineTo(x + STRIPE_W, topAt(x + STRIPE_W) - 1)
@@ -87,25 +101,44 @@ function drawBand(ctx: Ctx, p: Palette): void {
   ctx.globalAlpha = 1
 }
 
-function drawTail(ctx: Ctx, p: Palette, t: number): void {
-  const len = TAIL.bottom - TAIL.top
-  ctx.save()
-  ctx.translate(KNOT.x, TAIL.top)
-  ctx.rotate(Math.sin(t * 1.1) * 0.05)
+function tailPath(ctx: Ctx, len: number): void {
   ctx.beginPath()
   ctx.moveTo(TAIL.left, 0)
   ctx.lineTo(TAIL.left - 2, len)
   ctx.lineTo(TAIL.right, len)
   ctx.lineTo(TAIL.right, 0)
   ctx.closePath()
+}
+
+function knotPath(ctx: Ctx): void {
+  ctx.beginPath()
+  ctx.moveTo(65, 79.5)
+  ctx.quadraticCurveTo(73, 76, 81, 79)
+  ctx.quadraticCurveTo(84, 86, 81, 93.5)
+  ctx.quadraticCurveTo(73, 96.5, 65, 94)
+  ctx.quadraticCurveTo(62.5, 86.5, 65, 79.5)
+}
+
+function drawTail(ctx: Ctx, p: Palette, t: number): void {
+  const len = TAIL.bottom - TAIL.top
+  ctx.save()
+  ctx.translate(KNOT.x, TAIL.top)
+  ctx.rotate(Math.sin(t * 1.1) * 0.05)
+  tailPath(ctx, len)
   ctx.fillStyle = p.wool
   ctx.fill()
   ctx.save()
   ctx.clip()
-  ctx.fillStyle = p.stripe
-  ctx.fillRect(-10, 8, 20, 5)
-  ctx.fillRect(-10, 18, 20, 5)
+  if (worn.value) {
+    ctx.translate(-KNOT.x, -TAIL.top)
+    wear(ctx)
+  } else {
+    ctx.fillStyle = p.stripe
+    ctx.fillRect(-10, 8, 20, 5)
+    ctx.fillRect(-10, 18, 20, 5)
+  }
   ctx.restore()
+  tailPath(ctx, len)
   ctx.strokeStyle = p.ink
   ctx.globalAlpha = 0.5
   ctx.lineWidth = 0.8
@@ -124,14 +157,14 @@ function drawTail(ctx: Ctx, p: Palette, t: number): void {
 }
 
 function drawKnot(ctx: Ctx, p: Palette): void {
-  ctx.beginPath()
-  ctx.moveTo(65, 79.5)
-  ctx.quadraticCurveTo(73, 76, 81, 79)
-  ctx.quadraticCurveTo(84, 86, 81, 93.5)
-  ctx.quadraticCurveTo(73, 96.5, 65, 94)
-  ctx.quadraticCurveTo(62.5, 86.5, 65, 79.5)
+  knotPath(ctx)
   ctx.fillStyle = p.wool
   ctx.fill()
+  ctx.save()
+  ctx.clip()
+  wear(ctx)
+  ctx.restore()
+  knotPath(ctx)
   ctx.strokeStyle = p.ink
   ctx.lineWidth = 0.9
   ctx.globalAlpha = 0.55

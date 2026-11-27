@@ -26,6 +26,10 @@ export const EFFECT_REGISTRY: Record<string, Component> = {
   shackled: defineAsyncComponent(() => import('@/components/cosmetics/effects/ShackledEffect.vue')),
   brambles: defineAsyncComponent(() => import('@/components/cosmetics/effects/BramblesEffect.vue')),
   magical_orb: defineAsyncComponent(() => import('@/components/cosmetics/effects/MagicalOrbEffect.vue')),
+  caroling: defineAsyncComponent(() => import('@/components/cosmetics/effects/CarolingEffect.vue')),
+  twinkling: defineAsyncComponent(() => import('@/components/cosmetics/effects/TwinklingEffect.vue')),
+  baubles: defineAsyncComponent(() => import('@/components/cosmetics/effects/BaublesEffect.vue')),
+  frozen: defineAsyncComponent(() => import('@/components/cosmetics/effects/FrozenEffect.vue')),
 }
 
 export const ABOVE_CONTENT_TYPES = new Set(['shackled'])
@@ -43,4 +47,7 @@ export const BLEED_TYPES = new Set([
   'eldritch',
   'brambles',
   'magical_orb',
+  'caroling',
+  'twinkling',
+  'baubles',
 ])

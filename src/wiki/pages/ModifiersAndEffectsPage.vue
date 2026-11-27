@@ -21,7 +21,7 @@ const MODIFIERS = [
   { name: 'Holographic', does: 'Sweeps a shimmer across the item', from: 'Crate roll, the rarest of the modifiers' },
   { name: 'Battle-Worn', does: 'Chips and cracks the item and flakes fall off it', from: 'Crate roll during an event' },
   { name: 'Haunted', does: 'Phases the item out for a few seconds at a time', from: 'Specific crate roll or roll any between October 25 and November 1' },
-  { name: 'Jolly', does: 'Trims the item with festive particles', from: 'Specific crate roll or roll any between December 20 and December 31' },
+  { name: 'Jolly', does: 'Drops holly leaves and berries past the item', from: 'Specific crate roll or roll any between December 20 and December 31' },
   { name: "Founder's", does: "Shows it's one of the first five copies ever given out", from: 'Automatic on serials 1 to 5' },
   { name: 'Vintage', does: 'Nothing: Stays as it was', from: 'Automatic on every copy when an item gets reworked' },
   { name: 'Genuine', does: 'Outlines the item', from: 'Promotions run with somebody outside AccSaber, or user resolved a bug that prevented item granting' },

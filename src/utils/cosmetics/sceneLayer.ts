@@ -1,4 +1,5 @@
 import type { RGB } from '@/utils/color'
+import { clamp } from '@/utils/math'
 import { hash01 } from '@/utils/random'
 import { fillCircle } from '@/utils/cosmetics/canvasShapes'
 
@@ -146,6 +147,30 @@ export function starField(count: number, w: number, h: number, unit: number): Fi
       rate: 0.6 + hash01(i * 59 + 13) * 1.2,
     }
   })
+}
+
+const SKY_STAR_AREA = 9000
+const SKY_STAR_PX = 1.3
+
+export function skyStars(w: number, reach: number, area = w * reach): FieldStar[] {
+  return starField(clamp(Math.round(area / SKY_STAR_AREA), 60, 380), w, reach, SKY_STAR_PX)
+}
+
+export function paintSky(ctx: CanvasRenderingContext2D, w: number, h: number, colors: string[], reach = h): void {
+  const sky = ctx.createLinearGradient(0, 0, 0, reach)
+  colors.forEach((color, i) => sky.addColorStop(colors.length > 1 ? i / (colors.length - 1) : 0, color))
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, w, h)
+}
+
+export function paintRidge(ctx: CanvasRenderingContext2D, w: number, h: number, unit: number, level: number, rise: number, seed: number, color: string): void {
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(0, h)
+  for (let x = 0; x <= w; x += unit * 2) ctx.lineTo(x, h * level - layeredWave((x / w) * 4, seed) * unit * rise)
+  ctx.lineTo(w, h)
+  ctx.closePath()
+  ctx.fill()
 }
 
 export function drawStarField(ctx: CanvasRenderingContext2D, stars: FieldStar[], t: number, color: string): void {

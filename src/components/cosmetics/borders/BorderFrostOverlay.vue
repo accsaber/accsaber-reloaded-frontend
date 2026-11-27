@@ -22,7 +22,7 @@ const PANE = { x: 7, y: 7, size: 86, r: 3 }
 const CREEP_S = 46
 const WIPE_R = 11
 const WIPE_STEP = 3.5
-const WIPE_MAX = 48
+const WIPE_MAX = 400
 const FOG_S = 5
 const CORNERS: [number, number, number][] = [[7, 7, 0.78], [93, 7, 2.36], [93, 93, 3.93], [7, 93, 5.5]]
 const SILL = [7, 93, 14, 87.5, 24, 89.5, 36, 86.5, 50, 89, 63, 86.5, 76, 89.5, 86, 87.5, 93, 93]
@@ -109,13 +109,15 @@ function compose(ctx: Ctx, w: number, h: number, level: number): HTMLCanvasEleme
   wctx.save()
   enterUnitSpace(wctx, w, h, MARGIN)
   wctx.globalCompositeOperation = 'destination-out'
+  const g = wctx.createRadialGradient(0, 0, WIPE_R * 0.35, 0, 0, WIPE_R)
+  g.addColorStop(0, 'rgba(0, 0, 0, 1)')
+  g.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  wctx.fillStyle = g
   for (const wipe of wipes) {
-    const fade = 1 - smoothstep01((clock - wipe.at) / keep)
-    const g = wctx.createRadialGradient(wipe.x, wipe.y, WIPE_R * 0.35, wipe.x, wipe.y, WIPE_R)
-    g.addColorStop(0, `rgba(0, 0, 0, ${fade})`)
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)')
-    wctx.fillStyle = g
-    wctx.fillRect(wipe.x - WIPE_R, wipe.y - WIPE_R, WIPE_R * 2, WIPE_R * 2)
+    wctx.globalAlpha = 1 - smoothstep01((clock - wipe.at) / keep)
+    wctx.translate(wipe.x, wipe.y)
+    wctx.fillRect(-WIPE_R, -WIPE_R, WIPE_R * 2, WIPE_R * 2)
+    wctx.translate(-wipe.x, -wipe.y)
   }
   wctx.restore()
   return work

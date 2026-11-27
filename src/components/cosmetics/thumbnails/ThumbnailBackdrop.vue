@@ -3,7 +3,7 @@ import ModifierCompositions from '@/components/cosmetics/effects/ModifierComposi
 import ThumbnailSceneRenderer from '@/components/cosmetics/thumbnails/ThumbnailSceneRenderer.vue'
 import type { ProfileThumbnailBackgroundValue } from '@/types/cosmetics/background'
 import { pickAssetUrl } from '@/utils/cosmetics/readers'
-import { type EffectLayer, themeCompositionLayers } from '@/utils/cosmetics/effectLayers'
+import { absorbEffects, type EffectLayer, themeCompositionLayers } from '@/utils/cosmetics/effectLayers'
 import { computed } from 'vue'
 
 const props = defineProps<{
@@ -11,10 +11,15 @@ const props = defineProps<{
   effects?: EffectLayer[] | null
 }>()
 
-const scene = computed(() => props.value?.scene ?? null)
+const ownScene = computed(() => props.value?.scene ?? null)
 const imageUrl = computed(() => pickAssetUrl(props.value?.asset))
-const layers = computed(() => themeCompositionLayers(props.effects))
-const fxHost = computed(() => ({ sceneType: scene.value?.type, base: scene.value?.base ?? 'dark' }))
+const fxHost = computed(() => ({ sceneType: ownScene.value?.type, base: ownScene.value?.base ?? 'dark' }))
+const fx = computed(() => absorbEffects(themeCompositionLayers(props.effects), fxHost.value))
+const layers = computed(() => fx.value.layers)
+const scene = computed(() => {
+  const own = ownScene.value
+  return fx.value.hues && own?.type === 'borealis' ? { ...own, hues: fx.value.hues } : own
+})
 const layerStyle = computed<Record<string, string> | undefined>(() => {
   const opacity = props.value?.opacity
   return opacity != null ? { opacity: String(opacity) } : undefined

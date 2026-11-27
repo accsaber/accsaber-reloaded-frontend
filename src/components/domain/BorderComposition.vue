@@ -10,6 +10,8 @@ import type { BorderColorValue, BorderShapeValue } from '@/types/cosmetics/borde
 import { DEFAULT_AVATAR_MASK, resolveAvatarImageBox } from '@/utils/avatarBox'
 import type { EffectHostContext } from '@/utils/cosmetics/effects'
 import { annotateEffectLayerStacks, type EffectLayer } from '@/utils/cosmetics/effectLayers'
+import { fillTriple } from '@/utils/cosmetics/fillColors'
+import { primaryFillHex } from '@/utils/cosmetics/overlayCanvas'
 import { type TokenContext } from '@/utils/items'
 import { shapeRing, shapeSilhouetteMask } from '@/utils/shapeSilhouette'
 import { computed } from 'vue'
@@ -37,10 +39,18 @@ const isUnder = (layer: EffectLayer) =>
 const underLayers = computed(() => fxLayers.value.filter(isUnder))
 const overLayers = computed(() => fxLayers.value.filter((l) => !isUnder(l)))
 
+const frameColor = computed<BorderColorValue | null>(() => {
+  const state = props.color?.states?.[0]
+  const worn = overlay.value?.type === 'scarf' && state && overlay.value.wears === state.fill.type ? fillTriple(state.fill) : null
+  return props.color && state && worn ? { ...props.color, states: [{ ...state, fill: { type: 'solid', hex: worn[1] } }] } : props.color
+})
+
 const fxMask = computed(() => (fxLayers.value.length ? shapeSilhouetteMask(props.shape) : null))
 const fxHost = computed<EffectHostContext>(() => ({
   ring: fxLayers.value.length ? shapeRing(props.shape) : null,
   fillType: props.color?.states?.[0]?.fill?.type,
+  color: primaryFillHex(props.color?.states?.[0]?.fill) ?? undefined,
+  avatarMask: avatarMaskPath.value,
   overlayType: overlay.value?.type,
 }))
 </script>
@@ -48,7 +58,7 @@ const fxHost = computed<EffectHostContext>(() => ({
 <template>
   <div class="border-composition">
     <ContentEffects :layers="effects" seed="border">
-      <ProfileBorderRenderer :shape="shape" :color="color" />
+      <ProfileBorderRenderer :shape="shape" :color="frameColor" />
       <ModifierCompositions
         v-for="layer in underLayers"
         :key="layer.key"

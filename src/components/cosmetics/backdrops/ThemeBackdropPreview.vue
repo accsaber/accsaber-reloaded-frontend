@@ -18,6 +18,7 @@ const PREVIEW_ZOOM: Record<ThemeBackdropType, number> = {
   dark_hour: 3,
   harvest: 3,
   snowfield: 3,
+  aurora: 3,
 }
 
 const config = computed(() => readBackdropConfig(props.tokens))

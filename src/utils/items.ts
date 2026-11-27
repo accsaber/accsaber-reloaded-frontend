@@ -169,6 +169,19 @@ export function readClanTitle(clan: { name: string; equipped: ItemResponse[] | n
   return effect ? { ...effect, text: clan.name } : null
 }
 
+export function isInteractive(value: unknown): boolean {
+  return isObj(value) && value.interactive === true
+}
+
+export function isSeeded(spec: unknown): boolean {
+  if (!isObj(spec)) return false
+  return [spec.compositions, spec.themeCompositions].some((list) => Array.isArray(list) && list.some((c) => isObj(c) && isString(c.seedBy)))
+}
+
+export function readTrait(source: unknown): string | null {
+  return isObj(source) && isString(source.trait) && source.trait ? source.trait : null
+}
+
 export function readItemVariants(value: unknown): ItemVariant[] | null {
   if (!isObj(value) || !Array.isArray(value.variants)) return null
   const variants = value.variants.filter(

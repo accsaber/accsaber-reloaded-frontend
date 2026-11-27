@@ -157,7 +157,7 @@ export const useThemeStore = defineStore('theme', () => {
     if (theme.value === themeKey) return
     const value = readThemeValue(resolveItemVariant(slot.item.value as ItemVariantValue, slot.variantKey))
     if (!value) return
-    setThemeFromTokens(themeKey, value.tokens, buildEffectLayers(slot.modifiers, slot.unusualEffect))
+    setThemeFromTokens(themeKey, value.tokens, buildEffectLayers(slot.modifiers, slot.unusualEffect, slot.serialNumber))
   }
 
   const authStore = useAuthStore()

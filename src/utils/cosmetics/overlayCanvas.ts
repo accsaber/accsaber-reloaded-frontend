@@ -31,18 +31,6 @@ export function enterUnitSpace(ctx: CanvasRenderingContext2D, w: number, h: numb
   ctx.scale(sx, sy)
 }
 
-export function framePoint(u: number, inset: number): { x: number; y: number; angle: number } {
-  const lo = inset
-  const hi = 100 - inset
-  const d = (((u % 1) + 1) % 1) * 4
-  const side = Math.floor(d)
-  const f = (d - side) * (hi - lo)
-  if (side === 0) return { x: lo + f, y: lo, angle: 0 }
-  if (side === 1) return { x: hi, y: lo + f, angle: Math.PI / 2 }
-  if (side === 2) return { x: hi - f, y: hi, angle: Math.PI }
-  return { x: lo, y: hi - f, angle: -Math.PI / 2 }
-}
-
 export function withAlpha(hex: string, alpha: number): string {
   const rgb = parseHex(hex)
   if (!rgb) return hex

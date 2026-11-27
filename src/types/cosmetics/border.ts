@@ -300,14 +300,29 @@ export interface BorderFrostOverlaySpec {
   hover?: boolean
 }
 
+export interface BorderPondOverlaySpec {
+  type: 'pond'
+  enabled: boolean
+  water: string
+  coin: string
+  glint: string
+  pad: string
+  padShade: string
+  flower: string
+  flowerCore: string
+  hover?: boolean
+}
+
 export interface BorderScarfOverlaySpec {
   type: 'scarf'
   enabled: boolean
   tone: 'dark' | 'light'
   fallback: string
+  wears?: BorderColorFill['type']
 }
 
 export type BorderOverlaySpec =
+  | BorderPondOverlaySpec
   | BorderScarfOverlaySpec
   | BorderFrostOverlaySpec
   | BorderGingerbreadOverlaySpec

@@ -21,6 +21,9 @@ const MARGIN = props.margin ?? 25
 const TAU = Math.PI * 2
 const STATIC_T = 3
 const SPACING = 9
+const WALK_SAMPLES = 480
+const SMOOTH = 7
+const SMOOTH_REACH = 9
 const BODY_MID = 1.5
 const BODY_WIDTH = 3.7
 const PATTERN_S = 6
@@ -56,7 +59,29 @@ let offset = 0
 let clickAt = -10
 
 function spread(walk: ShapeBand, count: number): BandSpot[] {
-  return Array.from({ length: count }, (_, i) => walk.at((i + 0.5) / count)).filter((s): s is BandSpot => !!s)
+  const raw = Array.from({ length: WALK_SAMPLES }, (_, i) => walk.at(i / WALK_SAMPLES)).filter((s): s is BandSpot => !!s)
+  const n = raw.length
+  if (!n) return []
+  const path = raw.map((spot, i) => {
+    let x = 0
+    let y = 0
+    let used = 0
+    for (let k = -SMOOTH; k <= SMOOTH; k++) {
+      const near = raw[(i + k + n) % n]
+      if (Math.hypot(near.x - spot.x, near.y - spot.y) > SMOOTH_REACH) continue
+      x += near.x
+      y += near.y
+      used++
+    }
+    return { ...spot, x: x / used, y: y / used }
+  })
+  const along = [0]
+  for (let i = 1; i <= n; i++) along.push(along[i - 1] + Math.hypot(path[i % n].x - path[i - 1].x, path[i % n].y - path[i - 1].y))
+  let k = 0
+  return Array.from({ length: count }, (_, i) => {
+    while (k < n - 1 && along[k] < ((i + 0.5) / count) * along[n]) k++
+    return path[k]
+  })
 }
 
 function bulbAt(spot: BandSpot, i: number, tones: number): Bulb {

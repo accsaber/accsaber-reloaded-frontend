@@ -141,6 +141,7 @@ export interface FullMoonScene {
 export interface BorealisScene {
   type: 'borealis'
   base?: 'light' | 'dark'
+  hues?: string[]
   skyTop: string
   skyBottom: string
   colors: string[]
@@ -148,7 +149,19 @@ export interface BorealisScene {
   ridge: string
 }
 
+export interface FrozenLakeScene {
+  type: 'frozen_lake'
+  base?: 'light' | 'dark'
+  iceTop: string
+  iceBottom: string
+  crack: string
+  shore: string
+  trail: string
+  skater: string
+}
+
 export type ThumbnailScene =
+  | FrozenLakeScene
   | BorealisScene
   | HallwayScene
   | GraveyardScene

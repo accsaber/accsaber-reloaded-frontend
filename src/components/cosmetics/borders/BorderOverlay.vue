@@ -14,6 +14,7 @@ const BorderDripOverlay = defineAsyncComponent(() => import('@/components/cosmet
 const BorderDryBonesOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderDryBonesOverlay.vue'))
 const BorderFrostOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderFrostOverlay.vue'))
 const BorderGingerbreadOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderGingerbreadOverlay.vue'))
+const BorderPondOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderPondOverlay.vue'))
 const BorderRainOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderRainOverlay.vue'))
 const BorderScarfOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderScarfOverlay.vue'))
 const BorderSnowGlobeOverlay = defineAsyncComponent(() => import('@/components/cosmetics/borders/BorderSnowGlobeOverlay.vue'))
@@ -34,6 +35,7 @@ const OVERLAY_RENDERERS: Record<BorderOverlayType, Component> = {
   gingerbread: BorderGingerbreadOverlay,
   frost: BorderFrostOverlay,
   scarf: BorderScarfOverlay,
+  pond: BorderPondOverlay,
 }
 
 defineProps<BorderOverlayHost & { overlay: BorderOverlaySpec }>()

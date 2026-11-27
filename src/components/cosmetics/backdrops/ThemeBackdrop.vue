@@ -2,16 +2,21 @@
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import { BACKDROP_RENDERERS, LANDSCAPE_BACKDROPS } from '@/components/cosmetics/backdrops/backdropRenderers'
 import { useThemeStore } from '@/stores/theme'
-import { themeCompositionLayers } from '@/utils/cosmetics/effectLayers'
+import { absorbEffects, themeCompositionLayers } from '@/utils/cosmetics/effectLayers'
 import { readBackdropConfig } from '@/utils/cosmetics/themeBackdrop'
 import { computed } from 'vue'
 
 const themeStore = useThemeStore()
 
-const config = computed(() => readBackdropConfig(themeStore.activeTokens))
+const ownConfig = computed(() => readBackdropConfig(themeStore.activeTokens))
+const fxHost = computed(() => ({ backdropType: ownConfig.value?.type, viewport: true }))
+const fx = computed(() => absorbEffects(themeCompositionLayers(themeStore.activeEffects), fxHost.value))
+const effectLayers = computed(() => fx.value.layers)
+const config = computed(() => {
+  const own = ownConfig.value
+  return fx.value.hues && own?.type === 'aurora' ? { ...own, hues: fx.value.hues } : own
+})
 const configKey = computed(() => (config.value ? JSON.stringify(config.value) : ''))
-const effectLayers = computed(() => themeCompositionLayers(themeStore.activeEffects))
-const fxHost = computed(() => ({ backdropType: config.value?.type, viewport: true }))
 </script>
 
 <template>

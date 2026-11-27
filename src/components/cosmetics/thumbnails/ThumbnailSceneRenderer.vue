@@ -7,6 +7,7 @@ const HallwayScene = defineAsyncComponent(() => import('@/components/cosmetics/t
 const GraveyardScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/GraveyardScene.vue'))
 const PumpkinPatchScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/PumpkinPatchScene.vue'))
 const BorealisScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/BorealisScene.vue'))
+const FrozenLakeScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FrozenLakeScene.vue'))
 const FullMoonScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FullMoonScene.vue'))
 const FacetVaultScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FacetVaultScene.vue'))
 const FusionScene = defineAsyncComponent(() => import('@/components/cosmetics/thumbnails/FusionScene.vue'))
@@ -26,6 +27,7 @@ const SCENE_RENDERERS: Record<ThumbnailScene['type'], Component> = {
   pumpkin_patch: PumpkinPatchScene,
   full_moon: FullMoonScene,
   borealis: BorealisScene,
+  frozen_lake: FrozenLakeScene,
 }
 
 defineProps<{ scene: ThumbnailScene }>()

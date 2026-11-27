@@ -200,7 +200,7 @@ export function brewCharStyle(
 ): Style {
   const { bob, rot } = brewBob(tMs, i, n, spec, brew.splashes, brew.still)
   const first = spec.ingredients[0]
-  const sub = lerpHex(base, brew.liquid || pick(light, first?.lightColor, first?.color, base), 0.32)
+  const sub = spec.opaque ? 'transparent' : lerpHex(base, brew.liquid || pick(light, first?.lightColor, first?.color, base), 0.32)
   const waterline = (((spec.surface ?? 0.66) - bob) * 100).toFixed(1)
   return {
     display: 'inline-block',

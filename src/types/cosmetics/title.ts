@@ -36,7 +36,7 @@ export interface TitleOutlineSpec {
   widthPx: number
 }
 
-export type TitleFont = 'pixel_8bit' | 'varela_round' | 'graffiti' | (string & {})
+export type TitleFont = 'pixel_8bit' | 'varela_round' | 'graffiti' | 'storybook' | (string & {})
 
 export interface TitleFlashSpec extends Pigments<'color'> {
   enabled: boolean
@@ -104,6 +104,7 @@ export interface TitleAuroraAuraSpec extends Pigments<'star'> {
   type: 'aurora'
   enabled: boolean
   colors: string[]
+  hues?: string[]
   lightColors?: string[]
   curtains?: number
   stars?: number
@@ -114,6 +115,15 @@ export interface TitleLanternAuraSpec extends Pigments<'glow' | 'core'> {
   type: 'lantern'
   enabled: boolean
   embers?: number
+}
+
+export interface TitleWishAuraSpec extends Pigments<'color' | 'glow'> {
+  type: 'wish'
+  enabled: boolean
+  kind: 'star' | 'candle' | 'lantern' | 'coin'
+  everyS?: number
+  before?: string
+  glyph?: string
 }
 
 export interface TitleGhostsAuraSpec extends Pigments<'color' | 'glow'> {
@@ -296,6 +306,7 @@ export interface TitleGraffitiAuraSpec extends Pigments<'color'> {
 }
 
 export type TitleAuraSpec =
+  | TitleWishAuraSpec
   | TitleConstellationAuraSpec
   | TitleGraffitiAuraSpec
   | TitleSplatterAuraSpec
@@ -438,6 +449,7 @@ export interface TitleBrewSpec {
   dropMinS?: number
   dropMaxS?: number
   surface?: number
+  opaque?: boolean
   bobEm?: number
 }
 
@@ -499,6 +511,11 @@ export interface TitleFlareSpec extends Pigments<'color' | 'core'> {
 export interface TitleDevourSpec extends Pigments<'dark' | 'edge'> {
   enabled: boolean
   intervalMs?: number
+}
+
+export interface TitleVerdictSpec {
+  enabled: boolean
+  outcomes: Partial<Omit<TitleValue, 'verdict' | 'variants'>>[]
 }
 
 export interface TitleShiverSpec extends Pigments<'cold' | 'breath'> {
@@ -650,6 +667,7 @@ export interface TitleValue {
   shock?: TitleShockSpec
   sear?: TitleSearSpec
   shiver?: TitleShiverSpec
+  verdict?: TitleVerdictSpec
   frost?: TitleFrostSpec
   transmute?: TitleTransmuteSpec
   starlit?: TitleStarlitSpec

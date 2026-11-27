@@ -182,7 +182,7 @@ async function pickTheme(card: ThemeCard, option: ThemeOption) {
     const owned = ownedThemeByItemId.value.get(card.id)
     if (!owned || !option.tokens) return
     await equipItem(option.variantKey ? { linkId: owned.linkId, variantKey: option.variantKey } : { linkId: owned.linkId })
-    themeStore.setThemeFromTokens(card.themeKey, option.tokens, buildEffectLayers(owned.modifiers, owned.unusualEffect))
+    themeStore.setThemeFromTokens(card.themeKey, option.tokens, buildEffectLayers(owned.modifiers, owned.unusualEffect, owned.serialNumber))
   } catch {
   } finally {
     themeBusy.value = null

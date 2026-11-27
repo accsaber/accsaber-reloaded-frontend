@@ -9,7 +9,7 @@ export function useItemEffects(
   typeKey: () => string | null | undefined = () => userItem()?.item.typeKey,
 ) {
   const modifiers = computed<ItemModifierRef[]>(() => sortModifiersByKey(userItem()?.modifiers ?? []))
-  const effectLayers = computed(() => buildEffectLayers(userItem()?.modifiers, userItem()?.unusualEffect))
+  const effectLayers = computed(() => buildEffectLayers(userItem()?.modifiers, userItem()?.unusualEffect, userItem()?.serialNumber))
   const ownFx = computed(() => isBorderTypeKey(typeKey()))
   const fragmentSpec = computed(() => (ownFx.value ? null : readFragmentSpec(userItem()?.unusualEffect)))
   const overlayLayers = computed(() => (ownFx.value ? [] : effectLayers.value))

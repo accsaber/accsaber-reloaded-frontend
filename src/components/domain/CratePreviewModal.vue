@@ -15,13 +15,7 @@ import type {
   ItemResponse,
   UnusualEffectResponse,
 } from '@/types/api/items'
-import {
-  groupCrateContentsByRarity,
-  itemVariantPreviews,
-  obtainableUntilSentence,
-  rarityClass,
-  type ItemVariantPreview,
-} from '@/utils/items'
+import { groupCrateContentsByRarity, isInteractive, isSeeded, type ItemVariantPreview, itemVariantPreviews, obtainableUntilSentence, rarityClass } from '@/utils/items'
 import { knownCount, rememberCount } from '@/utils/knownCount'
 import { formatChancePercent } from '@/utils/modifiers'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -195,6 +189,7 @@ onMounted(() => {
                 :variants="t.variants"
               />
               <ItemPreview v-else :item="t.content.rewardItem" />
+              <span v-if="isInteractive(t.content.rewardItem.value)" class="crate-preview__tile-mark crate-preview__tile-flag">Interactive</span>
               <span v-if="t.variants" class="crate-preview__tile-mark crate-preview__tile-variants">
                 {{ t.variants.length }} variants
               </span>
@@ -240,6 +235,7 @@ onMounted(() => {
               @click="openEffect(effect)"
             >
               <UnusualEffectTile :name="effect.name" :effect-spec="effect.effectSpec" />
+              <span v-if="isSeeded(effect.effectSpec)" class="crate-preview__tile-mark crate-preview__tile-flag">Seeded</span>
             </button>
           </li>
         </ul>
@@ -412,6 +408,14 @@ onMounted(() => {
   color: var(--success);
 }
 
+.crate-preview__tile-flag {
+  left: var(--space-xs);
+  top: var(--space-xs);
+  padding: 0 var(--space-xs);
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+}
+
 .crate-preview__tile-variants {
   left: var(--space-xs);
   bottom: var(--space-xs);
@@ -460,6 +464,7 @@ onMounted(() => {
   padding: 0;
   cursor: pointer;
   display: block;
+  position: relative;
 }
 
 .crate-preview__effect-btn:hover :deep(.ue-tile__frame) {

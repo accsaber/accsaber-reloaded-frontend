@@ -271,14 +271,16 @@ function sortIcon(col: TableColumn): string {
 .data-table__row {
   height: var(--row-h);
   background: var(--bg-surface);
-  border-left: 2px solid transparent;
-  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.data-table__row > :first-child {
+  transition: box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .row-move {
   transition:
     transform var(--dur-enter) var(--ease-in-out),
-    border-color var(--dur-fast) var(--ease-out),
     background-color var(--dur-fast) var(--ease-out);
 }
 
@@ -304,8 +306,11 @@ function sortIcon(col: TableColumn): string {
 }
 
 .data-table__row--clickable:hover {
-  border-left-color: var(--accent);
   background: color-mix(in srgb, var(--bg-elevated) 80%, var(--accent) 5%);
+}
+
+.data-table__row--clickable:hover > :first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .data-table__td {

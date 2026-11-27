@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useElementCanvas } from '@/composables/useCanvasScene'
 import type { TitleAuroraAuraSpec, TitleStarlitSpec } from '@/types/cosmetics/title'
-import { drawAuroraCurtain, type AuroraBand } from '@/utils/cosmetics/aurora'
+import { AURORA_UNTINTED, drawAuroraCurtain, tintAurora, type AuroraBand } from '@/utils/cosmetics/aurora'
 import { sparkle, type Ctx } from '@/utils/cosmetics/canvasShapes'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
 import { starPass } from '@/utils/cosmetics/starPass'
@@ -45,7 +45,7 @@ function band(r: TitleAuraRect, k: number): AuroraBand {
     base: r.y + r.h * (0.42 - k * 0.14),
     reach: r.fs * (1.9 - k * 0.22),
     sway: r.fs,
-    step: Math.max(2, r.fs * 0.08),
+    step: 1,
   }
 }
 
@@ -109,7 +109,12 @@ useElementCanvas(canvasRef, {
     ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
     const palette = colors()
     const count = props.aura.curtains ?? palette.length
-    for (let k = 0; k < count; k++) drawAuroraCurtain(ctx, band(rect, k), t, k, palette[k % palette.length])
+    const hues = props.aura.hues
+    for (let k = 0; k < count; k++) drawAuroraCurtain(ctx, band(rect, k), t, k, hues?.length ? AURORA_UNTINTED : palette[k % palette.length])
+    if (hues?.length) {
+      tintAurora(ctx, w, h, t, hues)
+      ctx.globalCompositeOperation = props.light ? 'source-over' : 'lighter'
+    }
     drawTwinkles(ctx, rect, t)
     if (!reduced) drawShootingStar(ctx, rect, now)
     ctx.globalCompositeOperation = 'source-over'

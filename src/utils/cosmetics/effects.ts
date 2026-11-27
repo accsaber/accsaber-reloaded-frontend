@@ -19,6 +19,8 @@ export interface ContentBox {
 
 export interface EffectHostContext {
   base?: 'light' | 'dark'
+  color?: string
+  avatarMask?: string
   ring?: ShapeRing | null
   fillType?: string
   overlayType?: string
@@ -65,6 +67,22 @@ export function boxScale(minD: number, min = 0.7): number {
 
 export function isFieldKey(typeKey: ItemTypeKey | undefined): boolean {
   return typeKey === 'theme' || typeKey === 'profile_thumbnail_background'
+}
+
+function readRange(v: unknown, fallback: [number, number]): [number, number] {
+  if (Array.isArray(v) && typeof v[0] === 'number' && typeof v[1] === 'number') return [v[0], Math.max(v[0], v[1])]
+  const n = asNumber(v)
+  return n === undefined ? fallback : [n, n]
+}
+
+export function seededCount(v: unknown, fallback: [number, number], roll: number): number {
+  const [lo, hi] = readRange(v, fallback)
+  return Math.max(1, Math.round(lo + roll * (hi - lo)))
+}
+
+export function seededPick<T>(items: T[], seed: number, count: number): T[] {
+  const order = items.map((_, i) => i).sort((a, b) => hash01(seed * 13 + a * 31) - hash01(seed * 13 + b * 31))
+  return order.slice(0, count).map((i) => items[i])
 }
 
 export interface PctSizing {
@@ -277,6 +295,11 @@ export function ringSpan(poly: RingPoly, y: number): { x0: number; x1: number } 
     if (x > x1) x1 = x
   }
   return { x0, x1 }
+}
+
+export function ringColumn(poly: RingPoly, x: number): { y0: number; y1: number } | null {
+  const span = ringSpan({ ...poly, pts: poly.pts.map((q) => ({ x: q.y, y: q.x })) }, x)
+  return span && { y0: span.x0, y1: span.x1 }
 }
 
 export function ringExtreme(poly: RingPoly, dir: Vec): RingSample {

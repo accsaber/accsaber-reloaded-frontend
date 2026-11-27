@@ -38,16 +38,18 @@ export function useEquippedRenderProps(
     resolveEquippedVariant(equipped.value.profile_border_color, readBorderColorValue),
   )
   const titleEffects = computed(() =>
-    buildEffectLayers(equipped.value.title?.modifiers, equipped.value.title?.unusualEffect),
+    buildEffectLayers(equipped.value.title?.modifiers, equipped.value.title?.unusualEffect, equipped.value.title?.serialNumber),
   )
   const borderEffects = computed(() => [
     ...buildEffectLayers(
       equipped.value.profile_border_shape?.modifiers,
       equipped.value.profile_border_shape?.unusualEffect,
+      equipped.value.profile_border_shape?.serialNumber,
     ),
     ...buildEffectLayers(
       equipped.value.profile_border_color?.modifiers,
       equipped.value.profile_border_color?.unusualEffect,
+      equipped.value.profile_border_color?.serialNumber,
     ),
   ])
 
@@ -58,6 +60,7 @@ export function useEquippedRenderProps(
     buildEffectLayers(
       equipped.value.profile_thumbnail_background?.modifiers,
       equipped.value.profile_thumbnail_background?.unusualEffect,
+      equipped.value.profile_thumbnail_background?.serialNumber,
     ),
   )
 

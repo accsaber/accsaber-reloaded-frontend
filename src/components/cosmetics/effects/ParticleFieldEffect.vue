@@ -1,25 +1,37 @@
 <script setup lang="ts">
 import type { Composition } from '@/types/cosmetics/effects'
-import { asNumber, asString, type EffectProps } from '@/utils/cosmetics/effects'
+import { asNumber, asString, polyBounds, ringColumn, ringGeometry, type EffectProps } from '@/utils/cosmetics/effects'
 import { computed } from 'vue'
 import { clamp } from '@/utils/math'
 
 const props = defineProps<EffectProps>()
 
-type ParticleMotion = 'rise' | 'fall' | 'drift' | 'twinkle' | 'gust'
+type ParticleMotion = 'rise' | 'fall' | 'drift' | 'twinkle' | 'gust' | 'flutter'
+
+const SHAPES = ['dot', 'spark', 'dust', 'holly']
 
 function particleMotion(c: Composition): ParticleMotion {
   const m = asString(c.motion)
-  return m === 'fall' || m === 'drift' || m === 'twinkle' || m === 'gust' ? m : 'rise'
+  return m === 'fall' || m === 'drift' || m === 'twinkle' || m === 'gust' || m === 'flutter' ? m : 'rise'
 }
 
 const particleClasses = computed(() => {
   const shape = asString(props.composition.shape)
-  const shapeClass = shape === 'dot' || shape === 'spark' || shape === 'dust' ? shape : 'ember'
+  const shapeClass = shape && SHAPES.includes(shape) ? shape : 'ember'
   return [`comp-fx-particle--${shapeClass}`, `comp-fx-particle--${particleMotion(props.composition)}`]
 })
 
 const color = computed(() => asString(props.composition.color) ?? '#ffb04a')
+const accent = computed(() => asString(props.composition.accent) ?? color.value)
+const ring = computed(() => ringGeometry(props.measure).outer)
+
+function shapeColumn(i: number): { x: number; y: number; travel: number } {
+  const o = props.measure.overlayBox
+  const bounds = polyBounds(ring.value)
+  const px = bounds.x + bounds.w * (0.08 + ((i * 61) % 84) / 100)
+  const col = ringColumn(ring.value, px) ?? { y0: bounds.y, y1: bounds.y + bounds.h }
+  return { x: (px / (o.w || 1)) * 100, y: (col.y0 / (o.h || 1)) * 100, travel: col.y1 - col.y0 }
+}
 
 interface FieldParticle {
   x: number
@@ -49,7 +61,7 @@ const particles = computed<FieldParticle[]>(() => {
   const fromLeft = asString(c.from) === 'left'
   const out: FieldParticle[] = []
   for (let i = 0; i < count; i++) {
-    const travel = travelBase + ((i * 37) % 40)
+    let travel = travelBase + ((i * 37) % 40)
     let x: number
     let y: number
     let dx: number
@@ -59,9 +71,13 @@ const particles = computed<FieldParticle[]>(() => {
       y = 70 + ((i * 53) % 24)
       dx = (fromLeft ? 1 : -1) * (travel + 22)
       peak = -(12 + ((i * 23) % 18))
+    } else if (motion === 'flutter' && !wide) {
+      ;({ x, y, travel } = shapeColumn(i))
+      dx = ((i * 53) % 24) - 12
+      peak = 0
     } else {
       const near = 2 + ((i * 29) % 13)
-      y = motion === 'rise' ? 100 - near : motion === 'fall' ? near : 6 + ((i * 53) % 84)
+      y = motion === 'rise' ? 100 - near : motion === 'fall' || motion === 'flutter' ? near : 6 + ((i * 53) % 84)
       x = spreadLo + ((i * 61) % spreadSpan)
       dx = ((i * 53) % 24) - 12
       peak = 0
@@ -94,10 +110,14 @@ const particles = computed<FieldParticle[]>(() => {
         width: `${p.size}px`,
         height: `${p.size}px`,
         '--pcolor': color,
+        '--paccent': accent,
+        '--psize': `${p.size}px`,
         '--dur': `${p.duration}s`,
         '--delay': `${p.delay}s`,
         '--travel': `${p.travel}px`,
         '--dx': `${p.dx}px`,
+        '--turn': `${p.dx * 5}deg`,
+        '--sway': `${p.duration / 2.6}s`,
         '--peak': `${p.peak}px`,
       }"
     ></span>
@@ -139,10 +159,41 @@ const particles = computed<FieldParticle[]>(() => {
     transparent 70%);
 }
 
+.comp-fx-particle--holly {
+  margin: calc(var(--psize) * -0.5);
+  mix-blend-mode: normal;
+}
+
+.comp-fx-particle--holly::before,
+.comp-fx-particle--holly::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.comp-fx-particle--holly::before {
+  background: var(--pcolor);
+  clip-path: polygon(50.0% 86.0%, 44.4% 67.1%, 55.2% 59.5%, 40.2% 51.0%, 44.1% 36.8%, 29.4% 37.6%, 25.6% 21.2%, 16.6% 29.4%, 5.3% 22.1%, 8.3% 35.2%, -2.5% 40.9%, 11.5% 50.1%, 5.8% 63.6%, 20.4% 64.8%, 23.3% 81.9%, 34.2% 74.2%, 50.0% 86.0%, 65.8% 74.2%, 76.7% 81.9%, 79.6% 64.8%, 94.2% 63.6%, 88.5% 50.1%, 102.5% 40.9%, 91.7% 35.2%, 94.7% 22.1%, 83.4% 29.4%, 74.4% 21.2%, 70.6% 37.6%, 55.9% 36.8%, 59.8% 51.0%, 44.8% 59.5%, 55.6% 67.1%);
+}
+
+.comp-fx-particle--holly::after {
+  --berry: circle calc(var(--psize) * 0.11);
+  background:
+    radial-gradient(var(--berry) at 50% 70%, var(--paccent) 92%, transparent),
+    radial-gradient(var(--berry) at 37% 86%, var(--paccent) 92%, transparent),
+    radial-gradient(var(--berry) at 63% 86%, var(--paccent) 92%, transparent);
+}
+
 .comp-fx-particle--rise { animation: comp-fx-rise var(--dur, 3.6s) linear infinite; animation-delay: var(--delay, 0s); }
 .comp-fx-particle--fall { animation: comp-fx-fall var(--dur, 4s) linear infinite; animation-delay: var(--delay, 0s); }
 .comp-fx-particle--drift { animation: comp-fx-drift var(--dur, 5s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
 .comp-fx-particle--twinkle { animation: comp-fx-twinkle var(--dur, 2.4s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
+.comp-fx-particle--flutter {
+  animation:
+    comp-fx-flutter-fall var(--dur, 7s) linear infinite,
+    comp-fx-flutter-sway var(--sway, 2.7s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
 .comp-fx-particle--gust { animation: comp-fx-gust var(--dur, 4s) linear infinite; animation-delay: var(--delay, 0s); }
 
 @keyframes comp-fx-rise {
@@ -171,6 +222,18 @@ const particles = computed<FieldParticle[]>(() => {
   0%, 100% { opacity: 0; transform: scale(0.4); }
   45%      { opacity: 0.9; transform: scale(1); }
   70%      { opacity: 0.5; transform: scale(0.7); }
+}
+
+@keyframes comp-fx-flutter-fall {
+  0%   { opacity: 0; translate: 0 0; }
+  12%  { opacity: 0.95; }
+  85%  { opacity: 0.85; }
+  100% { opacity: 0; translate: 0 var(--travel, 82px); }
+}
+
+@keyframes comp-fx-flutter-sway {
+  from { transform: translateX(calc(-1 * var(--dx, 8px))) rotate(calc(var(--turn, 0deg) - 16deg)); }
+  to   { transform: translateX(var(--dx, 8px)) rotate(calc(var(--turn, 0deg) + 16deg)); }
 }
 
 @keyframes comp-fx-gust {

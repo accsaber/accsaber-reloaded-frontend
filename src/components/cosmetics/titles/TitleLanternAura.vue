@@ -3,7 +3,7 @@ import { pigments, useTitleAura } from '@/composables/useTitleAura'
 import type { TitleLanternAuraSpec, TitleLanternSpec } from '@/types/cosmetics/title'
 import { lanternLevel } from '@/utils/cosmetics/lanternFlicker'
 import { withAlpha } from '@/utils/cosmetics/overlayCanvas'
-import type { TitleAuraRect } from '@/utils/cosmetics/titleAura'
+import { drawTitleHalo, type TitleAuraRect } from '@/utils/cosmetics/titleAura'
 import { randBetween as rand } from '@/utils/random'
 
 const props = defineProps<{
@@ -22,23 +22,6 @@ interface Ember {
 const palette = pigments(props.aura, props.light, { glow: '#e8781e', core: '#ffe08a' })
 
 let embers: Ember[] = []
-
-function drawGlow(ctx: CanvasRenderingContext2D, r: TitleAuraRect, level: number): void {
-  const cx = r.x + r.w * 0.5
-  const cy = r.y + r.h * 0.55
-  const rx = r.w * 0.62 + r.fs * 0.6
-  const ry = r.fs * 1.1
-  ctx.save()
-  ctx.translate(cx, cy)
-  ctx.scale(rx, ry)
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
-  g.addColorStop(0, withAlpha(palette.core, 0.34 * level))
-  g.addColorStop(0.35, withAlpha(palette.glow, 0.22 * level))
-  g.addColorStop(1, withAlpha(palette.glow, 0))
-  ctx.fillStyle = g
-  ctx.fillRect(-1, -1, 2, 2)
-  ctx.restore()
-}
 
 function drawEmbers(ctx: CanvasRenderingContext2D, r: TitleAuraRect, t: number, level: number): void {
   for (const e of embers) {
@@ -61,7 +44,7 @@ useTitleAura({
   },
   draw(ctx, { rect, t, reduced }) {
     const level = reduced ? 0.85 : lanternLevel(t, 0, props.lantern)
-    drawGlow(ctx, rect, level)
+    drawTitleHalo(ctx, rect, palette.core, palette.glow, level)
     if (!reduced) drawEmbers(ctx, rect, t, level)
   },
 })

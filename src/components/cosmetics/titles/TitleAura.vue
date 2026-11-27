@@ -26,6 +26,7 @@ const TitleSmokeAura = defineAsyncComponent(() => import('@/components/cosmetics
 const TitleStormAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleStormAura.vue'))
 const TitleVoidAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleVoidAura.vue'))
 const TitleWaterAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleWaterAura.vue'))
+const TitleWishAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleWishAura.vue'))
 const TitleWindAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleWindAura.vue'))
 const TitleBloqsAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleBloqsAura.vue'))
 const TitleSplatterAura = defineAsyncComponent(() => import('@/components/cosmetics/titles/TitleSplatterAura.vue'))
@@ -72,6 +73,7 @@ const AURA_RENDERERS: Record<TitleAuraType, Component> = {
   splatter: TitleSplatterAura,
   constellation: TitleConstellationAura,
   graffiti: TitleGraffitiAura,
+  wish: TitleWishAura,
 }
 
 const LINKED: Partial<Record<TitleAuraType, keyof TitleAuraLinks>> = {

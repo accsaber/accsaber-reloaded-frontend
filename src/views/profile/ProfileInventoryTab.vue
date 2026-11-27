@@ -313,7 +313,7 @@ function applyTheme(userItem: UserItemResponse, tokens: Record<string, string> |
   themeStore.setThemeFromTokens(
     `item:${userItem.item.id}`,
     tokens,
-    buildEffectLayers(userItem.modifiers, userItem.unusualEffect),
+    buildEffectLayers(userItem.modifiers, userItem.unusualEffect, userItem.serialNumber),
   )
 }
 
