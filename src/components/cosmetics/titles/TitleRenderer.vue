@@ -864,10 +864,13 @@ function sparkleStyle(sp: SparkleInstance): Record<string, string> {
 
 .title-renderer--storybook {
   font-family: 'Emilys Candy', var(--font-sans);
-  font-size: 1.25em;
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0.01em;
+}
+
+.title-renderer--storybook .title-renderer__text {
+  font-size: 1.25em;
 }
 
 .title-renderer--rounded {
