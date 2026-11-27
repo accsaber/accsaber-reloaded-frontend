@@ -24,7 +24,7 @@ const compositions = computed<Composition[]>(() => props.spec?.compositions ?? [
 const ctx = computed<TokenContext>(() => props.context ?? {})
 
 const overlayEl = ref<HTMLElement | null>(null)
-const { overlayBox, box } = useOverlayMeasure(overlayEl, () => props.measureSelector)
+const { overlayBox, box, ink } = useOverlayMeasure(overlayEl, () => props.measureSelector)
 
 const stack = computed(() => clamp(Math.round(props.stackIndex ?? 0), 0, 3))
 const bleeds = computed(() => compositions.value.some((c) => BLEED_TYPES.has(c.type)))
@@ -49,6 +49,7 @@ const clipRect = computed<ContentBox>(() => {
 const measure = computed<EffectMeasure>(() => ({
   overlayBox: overlayBox.value,
   box: box.value,
+  ink: ink.value ?? undefined,
   stack: stack.value,
   typeKey: props.typeKey,
   host: props.host,

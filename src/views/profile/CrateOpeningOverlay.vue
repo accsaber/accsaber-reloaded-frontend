@@ -94,6 +94,8 @@ onUnmounted(() => {
       :crate-modifiers="crateModifiers"
       :global-modifiers="globalModifiers"
       :unusual-effects="unusualEffects"
+      :crate="crate"
+      :error="error"
       :result="result?.item ?? null"
       :result-modifiers="result?.modifiers ?? []"
       :result-unusual-effect="result?.unusualEffect ?? null"
@@ -103,25 +105,16 @@ onUnmounted(() => {
       @complete="onOpened"
     />
 
-    <p v-if="error" class="crate-open__error" role="alert">{{ error }}</p>
-
     <template #actions>
       <BaseButton
-        v-if="reward && rewardEquippable && !rewardEquipped && !error"
+        v-if="reward && rewardEquippable && !error"
         variant="primary"
         :loading="equipBusy"
-        :disabled="!settled"
+        :disabled="!settled || rewardEquipped"
         @click="emit('equip', reward)"
       >
-        Equip
+        {{ rewardEquipped ? 'Equipped' : 'Equip' }}
       </BaseButton>
-      <span v-else-if="reward && rewardEquippable && rewardEquipped" class="crate-open__equipped">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-        Equipped
-      </span>
       <BaseButton
         v-if="canOpenAnother && !error"
         :variant="rewardEquippable ? 'default' : 'primary'"
@@ -136,28 +129,3 @@ onUnmounted(() => {
   </CrateOpenStage>
 </template>
 
-<style scoped>
-.crate-open__error {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
-  border-radius: var(--radius-card);
-  color: var(--error);
-  font-size: var(--text-caption);
-}
-
-.crate-open__equipped {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: 0 var(--space-md);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-</style>

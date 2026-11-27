@@ -1,0 +1,4 @@
+Every sound in this folder is CC0 (public domain).
+
+shake        Kenney Casino Audio      https://kenney.nl/assets/casino-audio
+tick         Kenney Interface Sounds  https://kenney.nl/assets/interface-sounds

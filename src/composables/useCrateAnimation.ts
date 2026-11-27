@@ -29,6 +29,7 @@ import { clamp, clamp01 } from '@/utils/math'
 export type CratePhase =
   | 'idle'
   | 'ready'
+  | 'opening'
   | 'spinning'
   | 'landed'
   | 'slicing'
@@ -52,6 +53,8 @@ interface UseCrateAnimationOptions {
   spinDurationMs: Ref<number>
   stageEl: Ref<HTMLElement | null>
   sparksEl: Ref<HTMLCanvasElement | null>
+  preload?: () => Promise<unknown>
+  onWindup?: (durationMs: number) => void
   onTicks?: (ticks: CrateTick[]) => void
   onLand?: () => void
   onSwing?: () => void
@@ -61,12 +64,18 @@ interface UseCrateAnimationOptions {
   onSkip?: () => void
 }
 
+export const CRATE_WINDUP_MS = 640
+export const CRATE_SABER_MS = 320
+export const CRATE_REVEAL_MS = 340
+
 const TIMING = {
+  hitStop: 40,
+  hitStopPerTier: 22,
   landedHold: 430,
   bladeLead: 80,
   halvesLife: HALVES_LIFE_MS,
   revealDelay: 400,
-  revealIn: 340,
+  revealIn: CRATE_REVEAL_MS,
   shake: 240,
 } as const
 
@@ -125,7 +134,12 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
   const shakeX = ref(0)
   const shakeY = ref(0)
   const scoreVisible = ref(false)
+  const underIndex = ref(-1)
+  const impact = ref(false)
 
+  let tier = 0
+  let freezeUntil = 0
+  let contact = false
   let rafId = 0
   let playSeq = 0
   let startAt = 0
@@ -171,6 +185,10 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     sparks = []
     cutReleased = false
     revealBurstFired = false
+    underIndex.value = -1
+    impact.value = false
+    freezeUntil = 0
+    contact = false
     clearSparksCanvas()
   }
 
@@ -267,14 +285,15 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     bodies = createSliceBodies(power, cutPct.value)
     halvesActive.value = true
     scoreVisible.value = true
-    spawnCutSparks(sparks, {
-      x: stageW / 2,
-      y: stageH / 2,
-      spreadY: opts.cardHeight.value * 0.9,
-      shiftPx: (cutShiftPct.value / 100) * opts.cardWidth.value,
-      power,
-    })
-    opts.onSlice?.(power)
+    for (let burst = 0; burst <= tier / 2; burst++) {
+      spawnCutSparks(sparks, {
+        x: stageW / 2,
+        y: stageH / 2,
+        spreadY: opts.cardHeight.value * 0.9,
+        shiftPx: (cutShiftPct.value / 100) * opts.cardWidth.value,
+        power,
+      })
+    }
   }
 
   function updateHalves(dt: number, t: number, cutAt: number) {
@@ -302,7 +321,7 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
       shakeY.value = 0
       return
     }
-    const amp = (1.5 + 3.5 * score01()) * Math.exp(-4 * u)
+    const amp = (1.5 + 3.5 * score01()) * (1 + tier * 0.25) * Math.exp(-4 * u)
     shakeX.value = amp * Math.sin(u * 32)
     shakeY.value = amp * 0.6 * Math.sin(u * 47 + 1.3)
   }
@@ -313,13 +332,24 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
   }
 
   function frame(now: number) {
-    const t = now - startAt
-    const dt = Math.min(0.05, (now - lastFrameAt) / 1000)
+    const elapsed = now - lastFrameAt
     lastFrameAt = now
+    if (freezeUntil) {
+      if (now < freezeUntil) {
+        startAt += elapsed
+        rafId = requestAnimationFrame(frame)
+        return
+      }
+      freezeUntil = 0
+    }
+    const t = now - startAt
+    const dt = Math.min(0.05, elapsed / 1000)
     const marks = anchors()
 
     if (phase.value === 'spinning') {
       carouselOffset.value = sampleOffset(t, marks.spin)
+      const under = reticleIndex(carouselOffset.value)
+      if (under !== underIndex.value) underIndex.value = under
       if (t >= marks.land) {
         carouselOffset.value = targetOffset
         phase.value = 'landed'
@@ -333,7 +363,15 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
       opts.onSwing?.()
     }
     if (phase.value === 'slicing') {
-      if (!cutReleased && t >= marks.cut) {
+      if (!contact && t >= marks.cut) {
+        contact = true
+        impact.value = true
+        freezeUntil = now + TIMING.hitStop + tier * TIMING.hitStopPerTier
+        opts.onSlice?.(score01())
+        rafId = requestAnimationFrame(frame)
+        return
+      }
+      if (contact && !cutReleased) {
         cutReleased = true
         releaseHalves()
       }
@@ -409,14 +447,20 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     measureStage()
     rollGeometry()
     sparkColor = rarityCssColor(result.rarity)
+    tier = Math.max(0, RARITY_ORDER.indexOf(result.rarity))
 
     const urls = Array.from(
       new Set(carousel.value.map((c) => c.item.iconUrl).filter((u): u is string => !!u)),
     )
-    await Promise.race([decodeImages(urls), delay(MAX_PRELOAD_MS)])
+    await Promise.race([Promise.all([decodeImages(urls), opts.preload?.()]), delay(MAX_PRELOAD_MS)])
     if (seq !== playSeq) return
     await raf()
     await raf()
+    if (seq !== playSeq) return
+
+    phase.value = 'opening'
+    opts.onWindup?.(CRATE_WINDUP_MS)
+    await delay(CRATE_WINDUP_MS)
     if (seq !== playSeq) return
 
     startAt = performance.now()
@@ -457,6 +501,8 @@ export function useCrateAnimation(opts: UseCrateAnimationOptions) {
     shakeX,
     shakeY,
     scoreVisible,
+    underIndex,
+    impact,
     play,
     skip,
   }

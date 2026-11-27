@@ -163,7 +163,7 @@ function hang(box: ContentBox, ring: RingGeometry, picture: Picture | null): Bau
     const thread = size * (0.8 + hash01(s + 3) * 2.2)
     const x = box.x + box.w * (0.22 + ((i + 0.2 + hash01(s + 1) * 0.6) / c.count) * 0.56)
     const inside = picture?.span(x) ?? (framed.value ? [edgeAt(ring.inner, x, false, box.y), edgeAt(ring.inner, x, true, box.y + box.h)] : null)
-    const y = inside ? inside[0] : field.value ? box.y : box.y + box.h
+    const y = inside ? inside[0] : field.value ? box.y : box.y + (props.measure.ink?.bottom ?? box.h)
     const rest = y + thread + r * 1.28
     const floor = inside ? inside[1] - r : field.value ? box.y + box.h - r : rest + r * FREE_DROP
     return {

@@ -34,7 +34,7 @@ const hoverTitle = computed(() => {
   <button
     type="button"
     class="reward-tile"
-    :class="[rarityClass(item.rarity), { 'reward-tile--wide': isTitle }]"
+    :class="[rarityClass(item.rarity), { 'reward-tile--wide title-unclipped': isTitle }]"
     :style="{ '--tile-size': `${size}px` }"
     :title="hoverTitle"
     :aria-label="isCrate ? `Preview crate: ${item.name}` : `Preview ${item.name}`"
@@ -113,12 +113,6 @@ const hoverTitle = computed(() => {
   font-size: 1.05rem;
 }
 
-.reward-tile--wide :deep(.item-preview__title),
-.reward-tile--wide :deep(.item-preview__title .title-renderer__text) {
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-}
 
 .reward-tile__variant-count {
   position: absolute;

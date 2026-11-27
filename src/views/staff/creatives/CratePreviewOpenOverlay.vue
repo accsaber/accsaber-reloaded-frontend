@@ -67,6 +67,7 @@ onUnmounted(() => {
 
     <CrateOpenAnimation
       v-if="roll"
+      :crate="crate"
       :contents="contents"
       :crate-modifiers="crateModifiers"
       :unusual-effects="unusualEffects"

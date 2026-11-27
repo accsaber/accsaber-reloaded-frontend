@@ -30,9 +30,15 @@ export interface EffectHostContext {
   viewport?: boolean
 }
 
+export interface TextInk {
+  top: number
+  bottom: number
+}
+
 export interface EffectMeasure {
   overlayBox: OverlayBox
   box: ContentBox
+  ink?: TextInk
   stack: number
   typeKey?: ItemTypeKey
   host?: EffectHostContext

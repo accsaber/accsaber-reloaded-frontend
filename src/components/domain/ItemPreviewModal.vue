@@ -68,7 +68,7 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
   <BaseModal :open="open" :title="item?.name" max-width="520px" @close="emit('close')">
     <div v-if="item" class="ipm">
       <div class="ipm__art"
-        :class="[rarityClass(item.rarity), { 'ipm__art--wide': isTitle, 'ipm__art--border': isBorder }]">
+        :class="[rarityClass(item.rarity), { 'ipm__art--wide title-unclipped': isTitle, 'ipm__art--border': isBorder }]">
         <BorderComposition
           v-if="isBorder"
           :shape="shapeValue"
@@ -128,12 +128,6 @@ const typeLabel = computed(() => (props.item ? itemTypeStore.typeLabel(props.ite
   overflow: visible;
 }
 
-.ipm__art--wide :deep(.item-preview__title),
-.ipm__art--wide :deep(.title-renderer__text) {
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-}
 
 
 .ipm__desc {

@@ -21,7 +21,7 @@ export const useItemTypeStore = defineStore('itemTypes', () => {
   })
 
   function typeLabel(key: string): string {
-    return byKey.value.get(key)?.name ?? key.replace(/_/g, ' ')
+    return byKey.value.get(key)?.name ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   }
 
   async function fetchItemTypes(force = false): Promise<void> {

@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import FragmentedItem from '@/components/cosmetics/effects/FragmentedItem.vue'
 import ItemPreview from '@/components/domain/ItemPreview.vue'
-import ModifierChip from '@/components/domain/ModifierChip.vue'
 import ModifierCompositions from '@/components/cosmetics/effects/ModifierCompositions.vue'
 import CrateBloqFace from '@/components/domain/internal/CrateBloqFace.vue'
-import { useCrateAnimation, type CrateHalfMotion } from '@/composables/useCrateAnimation'
+import {
+  CRATE_REVEAL_MS,
+  CRATE_SABER_MS,
+  CRATE_WINDUP_MS,
+  useCrateAnimation,
+  type CrateHalfMotion,
+} from '@/composables/useCrateAnimation'
 import { useCrateSounds } from '@/composables/useCrateSounds'
 import type {
   CrateContentResponse,
@@ -17,6 +22,7 @@ import type {
 import {
   displayItemName,
   isBorderTypeKey,
+  isTitleItem,
   RARITY_ORDER,
   rarityClass,
   userItemTokenContext,
@@ -34,6 +40,8 @@ const props = withDefaults(
     contents: CrateContentResponse[]
     result: ItemResponse | null
     playToken: number
+    crate?: ItemResponse | null
+    error?: string | null
     crateModifiers?: CrateModifierResponse[]
     globalModifiers?: ItemModifierResponse[]
     unusualEffects?: UnusualEffectRef[]
@@ -48,6 +56,8 @@ const props = withDefaults(
     spinDurationMs?: number
   }>(),
   {
+    crate: null,
+    error: null,
     crateModifiers: () => [],
     globalModifiers: () => [],
     unusualEffects: () => [],
@@ -89,6 +99,8 @@ const {
   shakeX,
   shakeY,
   scoreVisible,
+  underIndex,
+  impact,
   play,
   skip,
 } = useCrateAnimation({
@@ -106,6 +118,8 @@ const {
   spinDurationMs: toRef(props, 'spinDurationMs'),
   stageEl,
   sparksEl,
+  preload: sounds.prime,
+  onWindup: sounds.windup,
   onTicks: sounds.scheduleTicks,
   onLand: sounds.land,
   onSwing: sounds.swing,
@@ -123,7 +137,6 @@ watch(
   () => props.playToken,
   () => {
     sounds.reset()
-    sounds.prime()
     play()
   },
 )
@@ -153,10 +166,7 @@ const itemTypeStore = useItemTypeStore()
 const typeName = computed(() => {
   const key = props.result?.typeKey
   if (!key) return ''
-  return (
-    itemTypeStore.byKey.get(key)?.name ??
-    key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-  )
+  return itemTypeStore.typeLabel(key)
 })
 const tokenCtx = computed(() =>
   userItemTokenContext({ serialNumber: props.resultSerialNumber ?? null }),
@@ -164,16 +174,20 @@ const tokenCtx = computed(() =>
 
 const stripVisible = computed(
   () =>
-    armed.value && ['ready', 'spinning', 'landed', 'slicing', 'revealing'].includes(phase.value),
+    armed.value &&
+    ['ready', 'opening', 'spinning', 'landed', 'slicing', 'revealing'].includes(phase.value),
 )
-const reticleVisible = computed(() =>
-  ['idle', 'ready', 'spinning', 'landed'].includes(phase.value),
+const crateVisible = computed(
+  () => !props.error && ['idle', 'ready', 'opening'].includes(phase.value),
 )
+const reticleVisible = computed(() => phase.value === 'spinning' || phase.value === 'landed')
+const underRarity = computed(() => carousel.value[underIndex.value]?.item.rarity ?? null)
+const tier = computed(() => Math.max(0, RARITY_ORDER.indexOf(props.result?.rarity ?? 'common')))
 const revealVisible = computed(
   () => (phase.value === 'revealing' || phase.value === 'revealed') && props.result !== null,
 )
 const skipVisible = computed(() =>
-  ['ready', 'spinning', 'landed', 'slicing', 'revealing'].includes(phase.value),
+  ['ready', 'opening', 'spinning', 'landed', 'slicing', 'revealing'].includes(phase.value),
 )
 const halvesMounted = computed(
   () =>
@@ -185,6 +199,10 @@ const stageStyle = computed(() => ({
   height: `${props.height}px`,
   '--card-w': `${props.cardWidth}px`,
   '--card-h': `${props.cardHeight}px`,
+  '--windup': `${CRATE_WINDUP_MS}ms`,
+  '--saber': `${CRATE_SABER_MS}ms`,
+  '--reveal': `${CRATE_REVEAL_MS}ms`,
+  '--flash': 0.12 + tier.value * 0.05,
 }))
 
 const worldStyle = computed(() => ({
@@ -235,137 +253,89 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 </script>
 
 <template>
-  <div ref="stageEl" class="crate-anim" :class="`crate-anim--${phase}`" :style="stageStyle">
+  <div ref="stageEl" class="crate-anim"
+    :class="[`crate-anim--${phase}`, revealVisible && result ? rarityClass(result.rarity) : null]" :style="stageStyle">
     <div class="crate-anim__world" :style="worldStyle">
-      <div v-if="reticleVisible" class="crate-anim__reticle" aria-hidden="true" />
+      <div v-if="crateVisible && crate" class="crate-anim__crate" aria-hidden="true">
+        <ItemPreview :item="crate" />
+      </div>
 
-      <div
-        v-if="stripVisible"
-        class="crate-anim__strip-wrap"
-        :class="{ 'crate-anim__strip-wrap--fading': phase === 'revealing' }"
-        data-fx-static
-      >
+      <div v-if="reticleVisible" class="crate-anim__reticle" :class="underRarity ? rarityClass(underRarity) : null"
+        aria-hidden="true" />
+
+      <div v-if="stripVisible" class="crate-anim__strip-wrap"
+        :class="{ 'crate-anim__strip-wrap--fading': phase === 'revealing' }" data-fx-static>
         <div class="crate-anim__strip" :style="stripStyle">
-          <div
-            v-for="(card, i) in cards"
-            :key="i"
-            v-memo="[phase, landingIndex]"
-            class="crate-anim__card"
-            :class="[
+          <div v-for="(card, i) in cards" :key="i" v-memo="[phase, landingIndex, i === underIndex]"
+            class="crate-anim__card" :class="[
               rarityClass(card.slot.item.rarity),
               {
+                'crate-anim__card--under': phase === 'spinning' && i === underIndex,
                 'crate-anim__card--winner': i === landingIndex && phase === 'landed',
                 'crate-anim__card--dim': phase !== 'spinning' && i !== landingIndex,
                 'crate-anim__card--consumed':
                   i === landingIndex && (phase === 'slicing' || phase === 'revealing'),
               },
-            ]"
-          >
-            <CrateBloqFace
-              :item="card.slot.item"
-              :modifiers="card.slot.modifiers"
-              :arrow="i === landingIndex && phase === 'landed'"
-              :icon="i !== landingIndex"
-            />
+            ]">
+            <CrateBloqFace :item="card.slot.item" :modifiers="card.slot.modifiers"
+              :arrow="i === landingIndex && phase === 'landed'" :icon="i !== landingIndex" />
             <template v-if="i === landingIndex">
-              <ModifierCompositions
-                v-for="layer in card.layers"
-                :key="layer.key"
-                :spec="layer.spec"
-                :type-key="card.slot.item.typeKey"
-                measure-selector=".bloq"
-              />
+              <ModifierCompositions v-for="layer in card.layers" :key="layer.key" :spec="layer.spec"
+                :type-key="card.slot.item.typeKey" measure-selector=".title-renderer, .item-preview > *" />
             </template>
           </div>
         </div>
       </div>
 
       <template v-if="halvesMounted && result">
-        <div
-          v-for="side in ['left', 'right'] as const"
-          :key="side"
-          class="crate-anim__half"
-          :class="`rarity--${result.rarity}`"
-          :style="halfStyle(side, side === 'left' ? halfLeft : halfRight)"
-          aria-hidden="true"
-        >
+        <div v-for="side in ['left', 'right'] as const" :key="side" class="crate-anim__half"
+          :class="rarityClass(result.rarity)" :style="halfStyle(side, side === 'left' ? halfLeft : halfRight)"
+          aria-hidden="true">
           <CrateBloqFace :item="result" :modifiers="resultModifiers" />
-          <div
-            v-if="halvesActive"
-            class="crate-anim__half-edge"
-            :style="edgeStyle"
-            aria-hidden="true"
-          />
+          <div v-if="halvesActive" class="crate-anim__half-edge" :style="edgeStyle" aria-hidden="true" />
         </div>
       </template>
 
-      <div
-        v-if="scoreVisible"
-        :key="`score-${playToken}`"
-        class="crate-anim__score"
-        :class="`crate-anim__score--${scoreTier}`"
-        aria-hidden="true"
-      >
+      <div v-if="phase === 'slicing' && result" class="crate-anim__saber" :class="rarityClass(result.rarity)"
+        aria-hidden="true" />
+
+      <div v-if="scoreVisible" :key="`score-${playToken}`" class="crate-anim__score"
+        :class="`crate-anim__score--${scoreTier}`" aria-hidden="true">
         <span class="crate-anim__score-num">{{ hitScore }}</span>
         <span v-if="scoreTier === 'perfect'" class="crate-anim__score-label">PERFECT</span>
       </div>
     </div>
 
+    <div v-if="impact && result" class="crate-anim__flash" :class="rarityClass(result.rarity)" aria-hidden="true" />
+
     <canvas ref="sparksEl" class="crate-anim__sparks" aria-hidden="true" />
 
-    <div v-if="revealVisible && result" class="crate-anim__reveal" :class="rarityClass(result.rarity)">
-      <div class="crate-anim__reveal-icon">
-        <FragmentedItem
-          v-if="resultFragmentSpec"
-          :item="result"
-          :spec="resultFragmentSpec"
-          :selected="true"
-        />
+    <div v-if="revealVisible && result" class="crate-anim__reveal">
+      <div class="crate-anim__reveal-icon" :class="{ 'crate-anim__reveal-icon--title title-unclipped': isTitleItem(result.typeKey) }">
+        <FragmentedItem v-if="resultFragmentSpec" :item="result" :spec="resultFragmentSpec" :selected="true" />
         <ItemPreview v-else :item="result" :effects="resultEffects" :context="tokenCtx" selected />
-        <ModifierCompositions
-          v-for="layer in resultLayers"
-          :key="layer.key"
-          :spec="layer.spec"
-          :context="tokenCtx"
-          :type-key="result.typeKey"
-          measure-selector=".title-renderer, .item-preview > *"
-        />
+        <ModifierCompositions v-for="layer in resultLayers" :key="layer.key" :spec="layer.spec" :context="tokenCtx"
+          :type-key="result.typeKey" measure-selector=".title-renderer, .item-preview > *" />
       </div>
-      <div class="crate-anim__reveal-name card-title">{{ revealName }}</div>
-      <div v-if="typeName" class="crate-anim__reveal-type">{{ typeName }}</div>
-      <div class="crate-anim__reveal-rarity rarity-text">{{ result.rarity }}</div>
-      <div v-if="resultModifiers.length" class="crate-anim__reveal-chips">
-        <ModifierChip v-for="(m, i) in resultModifiers" :key="`${m.id}-${i}`" :modifier="m" />
-      </div>
-      <div v-if="resultUnusualEffect" class="crate-anim__reveal-effect">
-        <span class="crate-anim__reveal-effect-label">Effect</span>
-        <span class="crate-anim__reveal-effect-name">
-          {{ resultUnusualEffect.name || resultUnusualEffect.key }}
+      <div class="crate-anim__reveal-facts stagger" :style="{ '--n': 4 }">
+        <span class="section-title" :style="{ '--i': 0 }">{{ revealName }}</span>
+        <span class="caption" :style="{ '--i': 1 }">
+          <span class="rarity-text">{{ result.rarity }}</span> {{ typeName }}
         </span>
-      </div>
-      <div v-if="resultSerialNumber != null" class="crate-anim__reveal-serial">
-        #{{ resultSerialNumber }}
+        <span v-if="resultUnusualEffect" class="caption" :style="{ '--i': 2 }">
+          {{ resultUnusualEffect.name || resultUnusualEffect.key }} effect
+        </span>
+        <span v-if="resultSerialNumber != null" class="caption" :style="{ '--i': 3 }">#{{ resultSerialNumber }}</span>
       </div>
     </div>
 
+    <p v-if="error" class="crate-anim__error" role="alert">{{ error }}</p>
+
     <div class="crate-anim__controls">
-      <button
-        type="button"
-        class="crate-anim__control"
-        :aria-label="sounds.muted.value ? 'Unmute crate sounds' : 'Mute crate sounds'"
-        @click.stop="sounds.toggleMute"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
+      <button type="button" class="crate-anim__control"
+        :aria-label="sounds.muted.value ? 'Unmute crate sounds' : 'Mute crate sounds'" @click.stop="sounds.toggleMute">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <template v-if="sounds.muted.value">
             <line x1="23" y1="9" x2="17" y2="15" />
@@ -377,14 +347,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
           </template>
         </svg>
       </button>
-      <button
-        v-if="skipVisible"
-        type="button"
-        class="crate-anim__control crate-anim__control--skip"
-        @click.stop="skip"
-      >
-        Skip
-      </button>
+      <button v-if="skipVisible" type="button" class="crate-anim__control" @click.stop="skip">Skip</button>
     </div>
   </div>
 </template>
@@ -395,10 +358,51 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   width: 100%;
   overflow: hidden;
   background: var(--bg-base);
-  border: 1px solid var(--bg-overlay);
+  border: 1px solid var(--rarity-color, var(--bg-overlay));
   border-radius: var(--radius-card);
   user-select: none;
   isolation: isolate;
+  transition: border-color var(--dur-enter) var(--ease-out);
+}
+
+.crate-anim__crate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  margin: -100px 0 0 -100px;
+  z-index: 2;
+}
+
+.crate-anim--opening .crate-anim__crate {
+  animation: crate-windup var(--windup) var(--ease-in) forwards;
+}
+
+@keyframes crate-windup {
+  15% {
+    transform: rotate(-4deg);
+  }
+  30% {
+    transform: rotate(5deg) scale(1.03);
+  }
+  45% {
+    transform: rotate(-7deg) scale(1.06);
+  }
+  60% {
+    transform: rotate(8deg) scale(1.1);
+  }
+  75% {
+    transform: rotate(-10deg) scale(1.14);
+  }
+  88% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
 }
 
 .crate-anim__world {
@@ -414,16 +418,11 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   left: 50%;
   width: 2px;
   margin-left: -1px;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    var(--accent) 30%,
-    var(--accent) 70%,
-    transparent
-  );
-  opacity: 0.55;
+  color: var(--rarity-color, var(--accent));
+  background: currentColor;
   z-index: 2;
   pointer-events: none;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .crate-anim__reticle::before,
@@ -433,7 +432,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   left: -4px;
   width: 10px;
   height: 10px;
-  background: var(--accent);
+  background: currentColor;
   clip-path: polygon(50% 100%, 0 0, 100% 0);
 }
 
@@ -458,6 +457,22 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   opacity: 0;
 }
 
+.crate-anim--ready .crate-anim__strip-wrap,
+.crate-anim--opening .crate-anim__strip-wrap {
+  visibility: hidden;
+}
+
+.crate-anim--spinning .crate-anim__strip-wrap {
+  animation: strip-unroll var(--dur-enter) var(--ease-out) backwards;
+}
+
+@keyframes strip-unroll {
+  from {
+    opacity: 0;
+    transform: scaleX(0.3);
+  }
+}
+
 .crate-anim__strip {
   position: absolute;
   top: 50%;
@@ -474,7 +489,17 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   height: var(--card-h);
   display: flex;
   flex-direction: column;
-  transition: opacity var(--dur-enter) var(--ease-out);
+  transition:
+    opacity var(--dur-enter) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.crate-anim__card--under {
+  transform: translateY(-4px) scale(1.05);
+}
+
+.crate-anim__card--winner {
+  transform: translateY(-6px) scale(1.1);
 }
 
 .crate-anim__card--winner :deep(.bloq) {
@@ -518,6 +543,52 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 }
 
 @keyframes edge-cool {
+  to {
+    opacity: 0;
+  }
+}
+
+.crate-anim__saber {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 4px;
+  margin-left: -2px;
+  background: var(--rarity-color);
+  transform-origin: 50% 0;
+  z-index: 4;
+  pointer-events: none;
+  animation: saber-sweep var(--saber) var(--ease-out) forwards;
+}
+
+@keyframes saber-sweep {
+  0% {
+    transform: scaleY(0);
+  }
+  25% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+.crate-anim__flash {
+  position: absolute;
+  inset: 0;
+  background: var(--rarity-color);
+  z-index: 6;
+  pointer-events: none;
+  animation: impact-flash var(--dur-enter) var(--ease-out) forwards;
+}
+
+@keyframes impact-flash {
+  from {
+    opacity: var(--flash);
+  }
   to {
     opacity: 0;
   }
@@ -599,91 +670,71 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
 
 .crate-anim__reveal {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(var(--card-w) * 1.5);
-  min-height: var(--card-h);
+  inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-xs);
-  padding: var(--space-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--rarity-color, var(--bg-overlay));
-  border-radius: var(--radius-card);
+  gap: var(--space-xl);
+  padding: var(--space-lg) var(--space-2xl);
   z-index: 5;
-  transform: translate(-50%, -50%);
-  overflow: hidden;
-  animation: reveal-rise 340ms var(--ease-out) backwards;
-}
-
-@keyframes reveal-rise {
-  0% {
-    transform: translate(-50%, calc(-50% + 44px)) scale(0.92);
-    opacity: 0;
-    border-color: var(--text-primary);
-  }
-  60% {
-    border-color: var(--text-primary);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-    border-color: var(--rarity-color, var(--bg-overlay));
-  }
 }
 
 .crate-anim__reveal-icon {
   position: relative;
-  width: 96px;
-  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  width: 176px;
+  height: 176px;
+  animation: reveal-rise var(--reveal) var(--ease-out) backwards;
 }
 
-.crate-anim__reveal-name {
-  text-align: center;
+@keyframes reveal-rise {
+  from {
+    transform: translateY(44px) scale(0.8);
+    opacity: 0;
+  }
 }
 
-.crate-anim__reveal-type {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-  text-align: center;
+.crate-anim__reveal-icon :deep(.item-preview) {
+  overflow: visible;
 }
 
-.crate-anim__reveal-rarity {
-  font-size: var(--text-caption);
+.crate-anim__reveal-icon--title {
+  width: auto;
+  min-width: 176px;
+  padding-inline: var(--space-xl);
 }
 
-.crate-anim__reveal-chips {
+.crate-anim__reveal-icon--title :deep(.item-preview) {
+  container-type: normal;
+  width: max-content;
+}
+
+.crate-anim__reveal-icon--title :deep(.title-renderer) {
+  font-size: 1.75rem;
+}
+
+
+.crate-anim__reveal-facts {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.crate-anim__error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: var(--space-xs);
-}
-
-.crate-anim__reveal-effect {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-}
-
-.crate-anim__reveal-effect-label {
-  font-size: var(--text-caption);
-  color: var(--text-secondary);
-}
-
-.crate-anim__reveal-effect-name {
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.crate-anim__reveal-serial {
-  font-size: var(--text-caption);
-  color: var(--text-tertiary);
+  margin: 0;
+  padding: var(--space-lg);
+  color: var(--error);
+  font-size: var(--text-body);
+  text-align: center;
 }
 
 .crate-anim__controls {
@@ -700,7 +751,7 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
-  background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+  background: var(--bg-elevated);
   border: 1px solid var(--bg-overlay);
   border-radius: var(--radius-btn);
   color: var(--text-secondary);
@@ -717,10 +768,28 @@ const scoreTier = computed<'perfect' | 'great' | 'good' | 'ok'>(() => {
   border-color: var(--text-tertiary);
 }
 
+@media (max-width: 767px) {
+  .crate-anim__reveal {
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    text-align: center;
+  }
+
+  .crate-anim__reveal-icon {
+    width: 112px;
+    height: 112px;
+  }
+
+  .crate-anim__reveal-facts {
+    align-items: center;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .crate-anim__card,
   .crate-anim__score,
-  .crate-anim__reveal,
+  .crate-anim__reveal-icon,
   .crate-anim__half-edge,
   .crate-anim__strip-wrap {
     animation: none !important;

@@ -16,7 +16,6 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
 
 <template>
   <div class="bloq">
-    <div class="bloq__bevel" aria-hidden="true" />
     <svg
       v-if="arrow"
       class="bloq__arrow"
@@ -47,25 +46,11 @@ const name = computed(() => displayItemName(props.modifiers, props.item.name))
   aspect-ratio: 1 / 1;
   flex-shrink: 0;
   border-radius: var(--radius-avatar);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 26%, var(--bg-elevated)) 0%,
-    color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 10%, var(--bg-surface)) 100%
-  );
+  background: color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 16%, var(--bg-elevated));
   border: 1px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 40%, var(--bg-overlay));
   overflow: hidden;
 }
 
-.bloq__bevel {
-  position: absolute;
-  inset: 4px;
-  border-radius: var(--radius-card);
-  border-top: 2px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 38%, transparent);
-  border-left: 2px solid color-mix(in srgb, var(--rarity-color, var(--text-tertiary)) 30%, transparent);
-  border-right: 2px solid color-mix(in srgb, var(--bg-base) 55%, transparent);
-  border-bottom: 2px solid color-mix(in srgb, var(--bg-base) 65%, transparent);
-  pointer-events: none;
-}
 
 .bloq__arrow {
   position: absolute;

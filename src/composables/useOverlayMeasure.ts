@@ -1,5 +1,19 @@
 import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue'
-import type { ContentBox, OverlayBox } from '@/utils/cosmetics/effects'
+import type { ContentBox, OverlayBox, TextInk } from '@/utils/cosmetics/effects'
+
+let ruler: CanvasRenderingContext2D | null = null
+
+function textInk(target: Element, height: number): TextInk | null {
+  const text = target.textContent?.trim()
+  if (!text) return null
+  ruler ??= document.createElement('canvas').getContext('2d')
+  if (!ruler) return null
+  const style = getComputedStyle(target)
+  ruler.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+  const m = ruler.measureText(style.textTransform === 'uppercase' ? text.toUpperCase() : text)
+  const baseline = (height - m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2 + m.fontBoundingBoxAscent
+  return { top: baseline - m.actualBoundingBoxAscent, bottom: baseline + m.actualBoundingBoxDescent }
+}
 
 export function useOverlayMeasure(
   overlayEl: Ref<HTMLElement | null>,
@@ -7,6 +21,7 @@ export function useOverlayMeasure(
 ) {
   const overlayBox = ref<OverlayBox>({ w: 0, h: 0 })
   const contentBox = ref<ContentBox | null>(null)
+  const ink = ref<TextInk | null>(null)
   let ro: ResizeObserver | null = null
   let observedTarget: Element | null = null
   let layoutSize: { w: number; h: number } | null = null
@@ -41,6 +56,8 @@ export function useOverlayMeasure(
           h: tr.height * ky,
         }
       : null
+    const raw = target && tr?.height ? textInk(target, tr.height) : null
+    ink.value = raw ? { top: raw.top * ky, bottom: raw.bottom * ky } : null
   }
 
   onMounted(() => {
@@ -59,5 +76,5 @@ export function useOverlayMeasure(
 
   const box = computed<ContentBox>(() => contentBox.value ?? { x: 0, y: 0, ...overlayBox.value })
 
-  return { overlayBox, box }
+  return { overlayBox, box, ink }
 }

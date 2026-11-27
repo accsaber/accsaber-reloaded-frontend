@@ -450,6 +450,12 @@ h1 {
 .rarity--legendary { --rarity-color: var(--tier-gold); }
 .rarity--mythic { --rarity-color: var(--error); }
 
+.title-unclipped .item-preview :is(.item-preview__title, .title-renderer__text) {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .rarity-text {
   font-weight: 600;
   text-transform: capitalize;
