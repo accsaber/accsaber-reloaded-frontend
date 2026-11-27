@@ -247,7 +247,7 @@ const xpLeft = computed(() =>
   padding-bottom: var(--space-md);
 }
 
-.clan-header__icon {
+.clan-header__icon:where(.clan-icon--plain) {
   background: var(--bg-base);
   border-radius: var(--radius-avatar);
 }
