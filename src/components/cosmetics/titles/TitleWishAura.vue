@@ -27,7 +27,7 @@ const COIN = { everyS: 5, dropS: 1.2, sinkS: 0.7, rippleS: 2.8, waves: 5, glints
 
 const ink = pigments(props.aura, props.light, DEFAULTS[props.aura.kind])
 const every = props.aura.everyS
-let wickX = 0
+let wick: { x: number; y: number; size: number } | null = null
 
 function capTop(r: TitleAuraRect): number {
   return r.y + r.h * 0.5 - r.fs * 0.45
@@ -76,8 +76,9 @@ function drawStar(ctx: Ctx, r: TitleAuraRect, t: number): void {
 function drawCandle(ctx: Ctx, r: TitleAuraRect, t: number): void {
   const span = every ?? CANDLE.everyS
   const cyc = t % span
-  const x = r.x + wickX
-  const y = r.y + r.h * 0.5 - r.fs * 0.42
+  const x = wick?.x ?? r.x
+  const y = wick?.y ?? r.y
+  const size = wick?.size ?? r.fs
   const blown = smoothstep01((cyc - CANDLE.outAt) / (CANDLE.darkAt - CANDLE.outAt))
   const relit = smoothstep01((cyc - CANDLE.relightAt) / (span - CANDLE.relightAt))
   const strength = cyc < CANDLE.relightAt ? 1 - blown : relit
@@ -89,11 +90,11 @@ function drawCandle(ctx: Ctx, r: TitleAuraRect, t: number): void {
       if (s <= 0) continue
       ctx.fillStyle = withAlpha(ink.glow, 0.32 * Math.sin(Math.PI * clamp01(s / 1.7)))
       ctx.beginPath()
-      ctx.arc(x + Math.sin(s * 2.2 + k) * r.fs * 0.12, y - s * r.fs * 0.5, r.fs * (0.06 + s * 0.05), 0, TAU)
+      ctx.arc(x + Math.sin(s * 2.2 + k) * size * 0.12, y - s * size * 0.5, size * (0.06 + s * 0.05), 0, TAU)
       ctx.fill()
     }
   }
-  drawFlame(ctx, { deep: ink.color, core: ink.glow, blend: props.light ? 'source-over' : 'lighter' }, t, x, y, r.fs * 0.3, strength, 1, blown * (1 - blown) * 5)
+  drawFlame(ctx, { deep: ink.color, core: ink.glow, blend: props.light ? 'source-over' : 'lighter' }, t, x, y, size * 0.26, strength, 1, blown * (1 - blown) * 5)
 }
 
 function drawLanterns(ctx: Ctx, r: TitleAuraRect, t: number): void {
@@ -206,17 +207,23 @@ const PAINTERS = { star: drawStar, candle: drawCandle, lantern: drawLanterns, co
 
 const canvasRef = useTitleAura({
   staticT: 2.2,
-  layout(rect) {
+  layout() {
     const el = canvasRef.value
+    const text = el?.closest('.title-renderer')?.querySelector('.title-renderer__text')
     const ctx = el?.getContext('2d')
-    if (!el || !ctx || props.aura.kind !== 'candle') return
-    const style = getComputedStyle(el)
-    const shown = (text: string) => (style.textTransform === 'uppercase' ? text.toUpperCase() : text)
+    if (!el || !text || !ctx || props.aura.kind !== 'candle') return
+    const style = getComputedStyle(text)
+    const size = parseFloat(style.fontSize) || 12
+    const shown = (word: string) => (style.textTransform === 'uppercase' ? word.toUpperCase() : word)
     const before = shown(props.aura.before ?? '')
+    const box = text.getBoundingClientRect()
+    const host = el.getBoundingClientRect()
+    const scale = el.clientWidth / (host.width || 1)
     ctx.save()
-    ctx.font = `${style.fontStyle} ${style.fontWeight} ${rect.fs}px ${style.fontFamily}`
-    wickX = ctx.measureText(before).width + (parseFloat(style.letterSpacing) || 0) * before.length + ctx.measureText(shown(props.aura.glyph ?? 'i')).width / 2
+    ctx.font = `${style.fontStyle} ${style.fontWeight} ${size}px ${style.fontFamily}`
+    const along = ctx.measureText(before).width + (parseFloat(style.letterSpacing) || 0) * before.length + ctx.measureText(shown(props.aura.glyph ?? 'i')).width / 2
     ctx.restore()
+    wick = { x: (box.left - host.left) * scale + along, y: (box.top - host.top + box.height * 0.5) * scale - size * 0.42, size }
   },
   draw(ctx, { rect, t }) {
     PAINTERS[props.aura.kind](ctx, rect, t)
